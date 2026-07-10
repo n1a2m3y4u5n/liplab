@@ -130,7 +130,6 @@ export default function LipSyncPlayer3D({
       >
         <AvatarVRM
           visemeId={currentViseme?.viseme ?? 15}
-          modelUrl="/models/avatar.vrm"
         />
 
         {/* Status badge */}

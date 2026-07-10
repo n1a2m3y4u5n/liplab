@@ -3,34 +3,77 @@ Advanced Viseme Engine for Korean Speechreading
 Converts Korean text to 15 fine-grained visemes with co-articulation modeling
 g2pk-free version: uses built-in Korean phonological rules
 """
-import re
 from typing import List, Dict
 
-# 한국어 발음 변환 규칙 (g2pk 없이 자체 구현)
-# 주요 연음/변음 규칙을 커버
+# 한국어 발음 변환 (g2p) — g2pk 없이 자체 구현
+#
+# 독화 앱은 '철자'가 아니라 '소리 나는 대로'의 입모양을 보여줘야 한다.
+# 이 viseme 시스템은 음소를 10개 그룹으로 뭉치므로, 모든 표준 발음 규칙을
+# 구현할 필요는 없고 **입모양(viseme 그룹)을 실제로 바꾸는 규칙만** 구현한다:
+#   ① 겹받침 단순화(음절 말 자음군)  ② 연음(받침 이동)
+#   ③ ㅎ 탈락  ④ 초성 ㅇ 무음화
+# (비음화·경음화·격음화 등은 대개 같은 viseme 그룹 안에서 바뀌어 입모양이
+#  변하지 않으므로, 과설계를 피하기 위해 생략한다.)
 
-def apply_phonological_rules(text: str) -> str:
+# 겹받침 → 음절 말 대표 발음(단독/자음 앞에서 하나로 줄어듦)
+DOUBLE_FINAL = {
+    'ㄳ': 'ㄱ', 'ㄵ': 'ㄴ', 'ㄶ': 'ㄴ', 'ㄺ': 'ㄱ', 'ㄻ': 'ㅁ', 'ㄼ': 'ㄹ',
+    'ㄽ': 'ㄹ', 'ㄾ': 'ㄹ', 'ㄿ': 'ㅂ', 'ㅀ': 'ㄹ', 'ㅄ': 'ㅂ',
+}
+
+# 겹받침 + 모음(연음) 시 → (앞 자음은 종성으로 남고, 뒤 자음이 다음 초성으로)
+DOUBLE_FINAL_LINK = {
+    'ㄳ': ('ㄱ', 'ㅅ'), 'ㄵ': ('ㄴ', 'ㅈ'), 'ㄶ': ('ㄴ', 'ㅎ'), 'ㄺ': ('ㄹ', 'ㄱ'),
+    'ㄻ': ('ㄹ', 'ㅁ'), 'ㄼ': ('ㄹ', 'ㅂ'), 'ㄽ': ('ㄹ', 'ㅅ'), 'ㄾ': ('ㄹ', 'ㅌ'),
+    'ㄿ': ('ㄹ', 'ㅍ'), 'ㅀ': ('ㄹ', 'ㅎ'), 'ㅄ': ('ㅂ', 'ㅅ'),
+}
+
+
+def to_pronounced_syllables(text: str):
     """
-    기본적인 한국어 발음 규칙 적용
-    (연음, 격음화, 경음화 등 핵심 규칙)
+    한국어 텍스트를 '소리 나는 대로'의 음절 리스트로 변환.
+    한글 음절은 [초성, 중성, 종성] 리스트로(초성 ''는 무음 ㅇ),
+    그 외 문자는 원래 문자열 그대로 담아 반환한다.
     """
-    result = text
+    tokens = []  # 한글: ['초','중','종'], 그 외: 원문자
+    for ch in text:
+        if '가' <= ch <= '힣':
+            ini, med, fin = decompose_hangul(ch)
+            tokens.append([ini, med, fin])
+        else:
+            tokens.append(ch)
 
-    # 1. 연음 법칙: 받침 + 모음 → 받침이 다음 음절 초성으로
-    # (간단한 규칙 - 실제 g2pk보다 단순하지만 충분히 작동)
+    # 인접 음절 간 규칙 적용 (연음 / ㅎ탈락)
+    for i in range(len(tokens) - 1):
+        cur, nxt = tokens[i], tokens[i + 1]
+        if not isinstance(cur, list) or not isinstance(nxt, list):
+            continue
+        fin = cur[2]
+        if not fin or nxt[0] != 'ㅇ':
+            continue  # 받침이 없거나 다음 초성이 무음 ㅇ이 아니면 연음 대상 아님
+        if fin == 'ㅇ':
+            continue  # 종성 ㅇ[ŋ]은 넘어가지 않음 (강아지→강아지)
+        elif fin == 'ㅎ':
+            cur[2] = ''  # ㅎ 탈락 (좋아→조아), 다음 초성은 무음 ㅇ 유지
+        elif fin in DOUBLE_FINAL_LINK:
+            keep, move = DOUBLE_FINAL_LINK[fin]
+            cur[2] = keep
+            nxt[0] = move  # 뒤 자음만 다음 초성으로 (닭이→달기)
+        else:
+            nxt[0] = fin   # 받침이 통째로 다음 초성으로 (밥을→바블)
+            cur[2] = ''
 
-    # 2. ㅎ 탈락: 모음 사이 ㅎ
-    result = re.sub(r'ㅎ([아어오우이에애])', r'\1', result)
+    for tok in tokens:
+        if not isinstance(tok, list):
+            continue
+        # 연음되지 않고 남은 겹받침 단순화 (값→갑, 닭→닥)
+        if tok[2] in DOUBLE_FINAL:
+            tok[2] = DOUBLE_FINAL[tok[2]]
+        # 무음 초성 ㅇ → '' (입모양 프레임 없음). 종성 ㅇ[ŋ]은 그대로 둔다.
+        if tok[0] == 'ㅇ':
+            tok[0] = ''
 
-    # 3. 격음화: ㅎ + ㄱ/ㄷ/ㅂ/ㅈ → ㅋ/ㅌ/ㅍ/ㅊ
-    replacements = {
-        'ㅎㄱ': 'ㅋ', 'ㅎㄷ': 'ㅌ', 'ㅎㅂ': 'ㅍ', 'ㅎㅈ': 'ㅊ',
-        'ㄱㅎ': 'ㅋ', 'ㄷㅎ': 'ㅌ', 'ㅂㅎ': 'ㅍ', 'ㅈㅎ': 'ㅊ',
-    }
-    for k, v in replacements.items():
-        result = result.replace(k, v)
-
-    return result
+    return tokens
 
 
 # 15 Viseme Classification for Korean
@@ -165,92 +208,74 @@ def get_transition_viseme(current_final: str, next_initial: str) -> tuple:
 
 async def text_to_visemes(text: str) -> List[Dict]:
     """
-    한국어 텍스트를 Viseme 애니메이션 프레임 배열로 변환
-    g2pk 없이 직접 한글 분해 방식 사용
+    한국어 텍스트를 Viseme 애니메이션 프레임 배열로 변환.
+    먼저 '소리 나는 대로'(연음·겹받침·ㅎ탈락·무음 초성 ㅇ)로 변환한 뒤
+    음절별 초성/중성/종성 입모양 프레임을 생성한다.
     """
     text = text.strip()
     if not text:
         return []
 
-    # 기본 발음 규칙 적용
     try:
-        phonetic = apply_phonological_rules(text)
+        tokens = to_pronounced_syllables(text)
     except Exception:
-        phonetic = text
+        # 변환 실패 시 원문자 그대로라도 처리
+        tokens = [list(decompose_hangul(c)) if '가' <= c <= '힣' else c for c in text]
 
     viseme_frames = []
-    chars = list(phonetic)
 
-    for i, char in enumerate(chars):
-        # 공백/구두점 처리
-        if char in [' ', '.', ',', '?', '!', '\n']:
-            viseme_frames.append({
-                "viseme": 14,
-                "duration_ms": DURATION_MAP['silence'],
-                "transition_ms": 0
-            })
+    for i, tok in enumerate(tokens):
+        # 한글이 아닌 문자 (공백/구두점/기타)
+        if not isinstance(tok, list):
+            if tok in [' ', '.', ',', '?', '!', '\n']:
+                viseme_frames.append({
+                    "viseme": 14, "duration_ms": DURATION_MAP['silence'], "transition_ms": 0
+                })
+            else:
+                viseme_frames.append({
+                    "viseme": VISEME_MAP.get(tok, 15), "duration_ms": 100, "transition_ms": 30
+                })
             continue
 
-        # 한글이 아닌 문자
-        if not ('가' <= char <= '힣'):
-            viseme = VISEME_MAP.get(char, 15)
-            viseme_frames.append({
-                "viseme": viseme,
-                "duration_ms": 100,
-                "transition_ms": 30
-            })
+        initial, medial, final = tok
+        if not medial:
             continue
 
-        # 한글 분해
-        initial, medial, final = decompose_hangul(char)
-        if not initial:
-            continue
-
-        # 다음 글자 확인 (동시조음)
-        next_char = chars[i + 1] if i + 1 < len(chars) else None
+        # 다음 음절의 초성 (동시조음 전환용)
         next_initial = None
-        if next_char and '가' <= next_char <= '힣':
-            next_initial, _, _ = decompose_hangul(next_char)
+        if i + 1 < len(tokens) and isinstance(tokens[i + 1], list):
+            next_initial = tokens[i + 1][0]
 
-        # 초성 프레임
-        initial_viseme = VISEME_MAP.get(initial, 15)
-        initial_type = get_phoneme_type(initial, 'initial')
-        initial_duration = DURATION_MAP.get(initial_type, 80)
-        transition_time = 40 if medial in ['ㅗ', 'ㅜ', 'ㅚ', 'ㅟ'] else 30
-
-        viseme_frames.append({
-            "viseme": initial_viseme,
-            "duration_ms": initial_duration,
-            "transition_ms": transition_time
-        })
+        # 초성 프레임 — 무음 초성 ㅇ('')은 건너뜀 (소리 없이 바로 모음으로)
+        if initial:
+            initial_type = get_phoneme_type(initial, 'initial')
+            viseme_frames.append({
+                "viseme": VISEME_MAP.get(initial, 15),
+                "duration_ms": DURATION_MAP.get(initial_type, 80),
+                "transition_ms": 40 if medial in ['ㅗ', 'ㅜ', 'ㅚ', 'ㅟ'] else 30,
+            })
 
         # 중성 프레임
-        medial_viseme = VISEME_MAP.get(medial, 15)
         medial_type = get_phoneme_type(medial, 'medial')
-        medial_duration = DURATION_MAP.get(medial_type, 150)
-
         viseme_frames.append({
-            "viseme": medial_viseme,
-            "duration_ms": medial_duration,
-            "transition_ms": 40 if final else 30
+            "viseme": VISEME_MAP.get(medial, 15),
+            "duration_ms": DURATION_MAP.get(medial_type, 150),
+            "transition_ms": 40 if final else 30,
         })
 
         # 종성 프레임
         if final:
-            final_viseme = VISEME_MAP.get(final, 15)
             trans_viseme, trans_duration = get_transition_viseme(final, next_initial)
-
             viseme_frames.append({
-                "viseme": final_viseme,
+                "viseme": VISEME_MAP.get(final, 15),
                 "duration_ms": DURATION_MAP['final_consonant'],
-                "transition_ms": trans_duration if trans_viseme else 30
+                "transition_ms": trans_duration if trans_viseme else 30,
             })
-
             if trans_viseme:
                 viseme_frames.append({
                     "viseme": trans_viseme,
                     "duration_ms": trans_duration,
-                    "transition_ms": 20
+                    "transition_ms": 20,
                 })
 
     # 너무 짧은 프레임 보정

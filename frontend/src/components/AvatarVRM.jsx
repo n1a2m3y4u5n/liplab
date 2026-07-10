@@ -2,40 +2,15 @@ import { useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { VISEME_BLENDSHAPES, ACTIVE_MORPH_KEYS } from '../lib/visemeShapes'
 
 /**
- * Oculus OVR LipSync viseme → Korean phoneme mapping
- * Maps our 15 Korean viseme IDs to Oculus morph target weights.
+ * 한국어 Viseme → 3D 입모양 렌더링
  *
- * 자음 morph target(DD, kk, CH 등)이 모델에 없을 경우를 대비해
- * 모음 계열 morph target(aa, E, I)을 보조로 함께 사용.
- * 이렇게 하면 입모양이 완전히 멈추지 않고 해당 조음 위치에 가까운
- * 형태를 시각적으로 보여줄 수 있음.
+ * viseme_* (Oculus) 뿐 아니라 ARKit 블렌드셰이프(jawOpen, mouthPucker,
+ * mouthFunnel, mouthClose 등)를 조합한 정밀 매핑(../lib/visemeShapes)을 사용해
+ * 원순·개방·폐쇄 등 한국어 조음을 정확히 표현한다.
  */
-const KOREAN_TO_OCULUS = {
-  1:  { viseme_PP: 0.95 },                               // bilabial: ㅂ/ㅍ/ㅁ (lips pressed)
-  2:  { viseme_aa: 0.95 },                               // open vowel: ㅏ/ㅐ
-  3:  { viseme_I: 0.85 },                                // front vowel: ㅣ/ㅔ
-  4:  { viseme_O: 0.6, viseme_U: 0.5 },                  // rounded: ㅗ/ㅜ
-  5:  { viseme_E: 0.75 },                                // central: ㅓ/ㅡ
-  6:  { viseme_DD: 0.7, viseme_nn: 0.4, viseme_E: 0.3 }, // alveolar: ㄷ/ㄴ/ㄹ/ㅅ (tongue-teeth + slight open)
-  7:  { viseme_kk: 0.7, viseme_aa: 0.2 },               // velar: ㄱ/ㅇ (back throat + slight open)
-  8:  { viseme_SS: 0.65, viseme_aa: 0.35 },             // glottal: ㅎ (open breath)
-  9:  { viseme_aa: 0.55, viseme_I: 0.45 },              // diphthong
-  10: { viseme_CH: 0.8, viseme_I: 0.3 },                // palatal: ㅈ/ㅊ (front + lip spread)
-  11: { viseme_PP: 0.2 },                               // transition bilabial
-  12: { viseme_DD: 0.25, viseme_E: 0.15 },              // transition alveolar
-  13: { viseme_kk: 0.25, viseme_aa: 0.1 },              // transition velar
-  14: {},                                               // silence
-  15: {},                                               // neutral
-}
-
-const ALL_VISEME_KEYS = [
-  'viseme_sil', 'viseme_PP', 'viseme_FF', 'viseme_TH', 'viseme_DD',
-  'viseme_kk', 'viseme_CH', 'viseme_SS', 'viseme_nn', 'viseme_RR',
-  'viseme_aa', 'viseme_E', 'viseme_I', 'viseme_O', 'viseme_U',
-]
-
 function RealisticFace({ visemeId = 15 }) {
   const { scene } = useGLTF('/models/realistic_face.glb')
   const meshesRef = useRef([])
@@ -53,10 +28,10 @@ function RealisticFace({ visemeId = 15 }) {
   useFrame((_, delta) => {
     if (meshesRef.current.length === 0) return
 
-    const target = KOREAN_TO_OCULUS[visemeId] || {}
+    const target = VISEME_BLENDSHAPES[visemeId] || {}
     const LERP = Math.min(1, delta * 22) // ~45ms transition (자음 80ms 프레임 내 충분히 도달)
 
-    for (const key of ALL_VISEME_KEYS) {
+    for (const key of ACTIVE_MORPH_KEYS) {
       const tgt = target[key] || 0
       const cur = currentWeightsRef.current[key] || 0
       const next = THREE.MathUtils.lerp(cur, tgt, LERP)
