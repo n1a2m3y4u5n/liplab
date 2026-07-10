@@ -50,3 +50,37 @@ logs/
 coverage/
 htmlcov/
 .coverage
+
+# === 백업용 공통 제외 규칙 (자동 추가) ===
+# === 자동 생성/의존성 (깃허브에 올리지 않음) ===
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+dist/
+build/
+.next/
+.expo/
+.turbo/
+.cache/
+*.tsbuildinfo
+coverage/
+
+# === 환경변수·비밀정보 (.example 템플릿은 유지) ===
+.env
+.env.*
+!.env.example
+!.env.sample
+*.key
+*.pem
+serviceAccount*.json
+
+# === OS·에디터 ===
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
