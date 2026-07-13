@@ -1,54 +1,71 @@
 /**
  * 한국어 Viseme → 3D 모프타깃(blendshape) 정밀 매핑
+ * ------------------------------------------------------------------
+ * 이 매핑은 실제 모델(realistic_face.glb)의 모프타깃을 **직접 감사(audit)** 하여
+ * 존재가 확인된 ARKit 블렌드셰이프만 사용해 작성했다.
  *
- * 기존 매핑은 Oculus OVR 비심(viseme_aa, viseme_PP 등) 15종만 사용해
- * 입모양이 거칠었다. 모델(realistic_face.glb)에는 ARKit 표준 52 블렌드셰이프
- * (jawOpen, mouthPucker, mouthFunnel, mouthClose, mouthStretch 등)가 함께
- * 들어 있으므로, 이를 조합해 한국어 조음(調音) 위치를 훨씬 정확히 표현한다.
+ * base 메시(66개 모프)에 확인된 ARKit 셰이프(발췌):
+ *   jawOpen, mouthClose, mouthFunnel, mouthPucker,
+ *   mouthPressLeft/Right, mouthRollUpper/Lower,
+ *   mouthSmileLeft/Right, mouthStretchLeft/Right,
+ *   mouthUpperUpLeft/Right, mouthLowerDownLeft/Right,
+ *   mouthShrugUpper, tongueOut ...
+ *
+ * 설계 원칙
+ * 1) Oculus viseme_*(viseme_aa 등) 모프는 이 모델에서 메시를 과하게 왜곡시켜
+ *    쓰지 않고, 표준 ARKit 셰이프만 조합한다.
+ * 2) 기본(rest) 자세가 이미 '입술을 편하게 다문' 상태이므로, 각 viseme은
+ *    거기서 필요한 만큼만 벌리고(jawOpen) / 오므리고(pucker·funnel) /
+ *    당기고(smile·stretch) / 닫는다(mouthClose).
+ * 3) jawOpen 은 base·teeth·tongue 세 메시에 공통 존재하여 턱·치아·혀가 함께
+ *    움직인다. 반면 입술 셰이프(pucker/funnel/smile 등)는 base 메시 전용이다.
+ *    → '벌림'은 jawOpen, '입술 모양'은 ARKit 립 셰이프로 역할을 분담한다.
+ *
+ * 이전 매핑 대비 개선점
+ *   · 양순음(1): mouthClose 를 추가해 두 입술을 확실히 붙임(ㅂ/ㅍ/ㅁ 폐쇄 강화).
+ *   · 원순모음(4)·이중모음(9): mouthFunnel + mouthPucker 를 결합해 앞으로
+ *     내민 둥근 'O' 형태를 정확히 표현(기존 pucker 단독 → 납작한 오므림 문제 해소).
+ *   · 치경음(6): 조음상 혀끝이 잇몸 뒤에 있어 밖으로 나오지 않는데도 쓰였던
+ *     tongueOut 을 제거하고, 윗니가 살짝 보이도록 mouthUpperUp 으로 교정.
+ *   · 전설모음(3)·개방모음(2): mouthUpperUp/stretch 를 더해 벌림·좌우 확장을 명확화.
  *
  * 가중치는 0~1. 모델에 없는 키는 렌더러가 자동으로 건너뛴다.
- * 이 매핑은 한국어 조음음성학(입술 원순/개방/폐쇄, 혀 위치)에 근거한다.
  */
-// 설계 원칙: 이 모델의 Oculus viseme_* 모프는 메시를 왜곡시켜 사용하지 않는다.
-// 대신 표준 ARKit 블렌드셰이프(jawOpen, mouthPucker, mouthFunnel, mouthSmile,
-// mouthStretch, mouthPress 등)만 조합해 한국어 조음 위치를 표현한다.
-// 기본(rest) 자세가 이미 '입술을 편하게 다문' 상태이므로, 각 viseme은
-// 여기서 필요한 만큼만 벌리거나(jawOpen) 오므리거나(pucker) 당긴다(smile).
 export const VISEME_BLENDSHAPES = {
-  // 1) 양순음 ㅂ/ㅃ/ㅍ/ㅁ — 두 입술을 붙여 막고 살짝 압착 (rest + 압착)
-  1: { mouthPressLeft: 0.25, mouthPressRight: 0.25, mouthRollLower: 0.15, mouthRollUpper: 0.15 },
+  // 1) 양순음 ㅂ/ㅃ/ㅍ/ㅁ — 두 입술을 붙여 확실히 막고 살짝 압착
+  1: { mouthClose: 0.35, mouthPressLeft: 0.22, mouthPressRight: 0.22, mouthRollLower: 0.12, mouthRollUpper: 0.12 },
 
-  // 2) 개방모음 ㅏ/ㅐ — 턱을 크게 내려 입을 벌림
-  2: { jawOpen: 0.42, mouthLowerDownLeft: 0.12, mouthLowerDownRight: 0.12 },
+  // 2) 개방모음 ㅏ/ㅐ/ㅑ/ㅒ — 턱을 크게 내리고 윗입술도 살짝 올려 크게 벌림
+  2: { jawOpen: 0.5, mouthLowerDownLeft: 0.12, mouthLowerDownRight: 0.12, mouthUpperUpLeft: 0.06, mouthUpperUpRight: 0.06 },
 
-  // 3) 전설모음 ㅣ/ㅔ/ㅖ — 입술을 좌우로 당겨 옆으로 벌림(미소형)
-  3: { mouthSmileLeft: 0.5, mouthSmileRight: 0.5, jawOpen: 0.08, mouthStretchLeft: 0.15, mouthStretchRight: 0.15 },
+  // 3) 전설모음 ㅣ/ㅔ/ㅖ — 입술을 좌우로 당겨 옆으로 벌리고 윗니가 살짝 보임
+  3: { mouthSmileLeft: 0.45, mouthSmileRight: 0.45, mouthStretchLeft: 0.2, mouthStretchRight: 0.2, jawOpen: 0.1, mouthUpperUpLeft: 0.08, mouthUpperUpRight: 0.08 },
 
-  // 4) 원순모음 ㅗ/ㅛ/ㅜ/ㅠ — 입술을 둥글게 오므려 앞으로 내밈
-  4: { mouthPucker: 0.95 },
+  // 4) 원순모음 ㅗ/ㅛ/ㅜ/ㅠ — 입술을 둥글게 오므려 앞으로 내민 'O'
+  4: { mouthFunnel: 0.55, mouthPucker: 0.6, jawOpen: 0.08 },
 
   // 5) 중설모음 ㅓ/ㅕ/ㅡ — 중립에서 살짝 벌림
-  5: { jawOpen: 0.2 },
+  5: { jawOpen: 0.22, mouthFunnel: 0.06 },
 
-  // 6) 치경음 ㄷ/ㄸ/ㅌ/ㄴ/ㄹ/ㅅ/ㅆ — 이가 가깝게 살짝 벌리고 혀끝이 보임
-  6: { jawOpen: 0.12, tongueOut: 0.06 },
+  // 6) 치경음 ㄷ/ㄸ/ㅌ/ㄴ/ㄹ/ㅅ/ㅆ — 이가 가깝게 살짝 벌리고 윗니가 보임
+  6: { jawOpen: 0.12, mouthUpperUpLeft: 0.1, mouthUpperUpRight: 0.1, mouthShrugUpper: 0.05 },
 
-  // 7) 연구개음 ㄱ/ㄲ/ㅋ/ㅇ — 입을 조금 벌림
-  7: { jawOpen: 0.16 },
+  // 7) 연구개음 ㄱ/ㄲ/ㅋ/ㅇ — 입을 조금 벌림(조음은 안쪽이라 외형은 중립)
+  7: { jawOpen: 0.18 },
 
   // 8) 성문음 ㅎ — 숨을 내쉬며 입을 열고 이완
-  8: { jawOpen: 0.24 },
+  8: { jawOpen: 0.26 },
 
   // 9) 이중모음 ㅘ/ㅙ/ㅚ/ㅝ/ㅞ/ㅟ/ㅢ — 원순+개방이 섞인 중간 형태
-  9: { jawOpen: 0.16, mouthPucker: 0.28 },
+  9: { jawOpen: 0.2, mouthFunnel: 0.28, mouthPucker: 0.22 },
 
-  // 10) 경구개음 ㅈ/ㅉ/ㅊ — 입술을 살짝 벌리고 옆으로 조금 당김
-  10: { jawOpen: 0.1, mouthSmileLeft: 0.2, mouthSmileRight: 0.2 },
+  // 10) 경구개음 ㅈ/ㅉ/ㅊ — 입술을 살짝 내밀고 옆으로 조금 당김
+  10: { jawOpen: 0.12, mouthFunnel: 0.14, mouthSmileLeft: 0.12, mouthSmileRight: 0.12 },
 
   // 11~13) 동시조음 전환 프레임 — 다음 조음으로 가는 약한 중간 상태
-  11: { mouthPressLeft: 0.12, mouthPressRight: 0.12 },  // → 양순
-  12: { jawOpen: 0.07 },                                 // → 치경
-  13: { jawOpen: 0.09 },                                 // → 연구개
+  11: { mouthClose: 0.18, mouthPressLeft: 0.1, mouthPressRight: 0.1 }, // → 양순
+  12: { jawOpen: 0.08 },                                              // → 치경
+  13: { jawOpen: 0.1 },                                               // → 연구개
 
   // 14) 휴지기 · 15) 중립 — 편하게 다문 기본 자세
   14: {},
