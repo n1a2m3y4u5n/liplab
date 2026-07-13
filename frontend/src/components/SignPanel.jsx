@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { learningAPI } from '../api'
-import LipSyncPlayer3D from './LipSyncPlayer3D'
 import { fingerspellImage } from '../lib/fingerspell'
+
+// 입모양(three)은 "입모양 함께" 토글 시에만 로드 → 수어 영상만 볼 땐 three 안 받음.
+const LipSyncPlayer3D = lazy(() => import('./LipSyncPlayer3D'))
 
 /**
  * 수어 결과 패널 — 문장(text)을 받아 번역하고, **실제 국립국어원 수어 영상을 메인으로**
@@ -177,7 +179,9 @@ export default function SignPanel({ text }) {
         {showMouth && (
           <div className="md:col-span-2">
             <p className="text-xs text-gray-500 mb-1">입모양</p>
-            <LipSyncPlayer3D visemes={token.visemes || []} isPlaying={false} />
+            <Suspense fallback={<div className="py-10 text-center text-xs text-gray-400">입모양 불러오는 중…</div>}>
+              <LipSyncPlayer3D visemes={token.visemes || []} isPlaying={false} />
+            </Suspense>
           </div>
         )}
       </div>
