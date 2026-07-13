@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
 import { learningAPI } from '../api'
+import DashboardInsights from '../components/DashboardInsights'
 
 const PRESET_SITUATIONS = [
   { id: '카페', label: '카페', icon: '☕' },
@@ -248,6 +249,15 @@ export default function Dashboard() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        <DashboardInsights
+          user={user}
+          statistics={statistics}
+          calendarData={calendarData}
+          currentMode={mode}
+          onSelectMode={setMode}
+          onOpenAnalysis={() => navigate('/analysis')}
+        />
 
         {/* Stats Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { learningAPI } from '../api'
@@ -10,10 +10,23 @@ export default function Bookmarks() {
   const [bookmarks, setBookmarks] = useState([])
   const [loading, setLoading] = useState(true)
   const [removing, setRemoving] = useState(null)
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     learningAPI.getBookmarks().then(setBookmarks).catch(() => {}).finally(() => setLoading(false))
   }, [])
+
+  const filteredBookmarks = useMemo(() => {
+    const trimmed = query.trim().toLowerCase()
+
+    if (!trimmed) return bookmarks
+
+    return bookmarks.filter((bookmark) =>
+      [bookmark.sentence, bookmark.situation]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(trimmed))
+    )
+  }, [bookmarks, query])
 
   const remove = async (id) => {
     setRemoving(id)
@@ -36,6 +49,26 @@ export default function Bookmarks() {
       scenario_id: `bookmark_${bm.id}`,
     }
     setScenario(scenario, 'test')
+    navigate('/practice')
+  }
+
+  const practiceBatch = (items, shuffle = false) => {
+    if (!items.length) return
+
+    const sentences = items.map((item) => item.sentence)
+    const orderedSentences = shuffle
+      ? [...sentences].sort(() => Math.random() - 0.5)
+      : sentences
+
+    setScenario(
+      {
+        situation: '북마크 묶음 연습',
+        level: Math.max(...items.map((item) => item.level || 1)),
+        sentences: orderedSentences,
+        scenario_id: `bookmark_batch_${Date.now()}`,
+      },
+      'test'
+    )
     navigate('/practice')
   }
 
@@ -70,8 +103,41 @@ export default function Bookmarks() {
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-gray-500">{bookmarks.length}개의 북마크된 문장</p>
+            <div className="card">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div className="flex-1">
+                  <label htmlFor="bookmark-search" className="label">저장한 문장 검색</label>
+                  <input
+                    id="bookmark-search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    className="input-field"
+                    placeholder="문장이나 상황으로 검색하세요"
+                  />
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    onClick={() => practiceBatch(filteredBookmarks)}
+                    disabled={filteredBookmarks.length === 0}
+                    className="btn-primary whitespace-nowrap"
+                  >
+                    검색 결과 연습
+                  </button>
+                  <button
+                    onClick={() => practiceBatch(filteredBookmarks, true)}
+                    disabled={filteredBookmarks.length === 0}
+                    className="btn-secondary whitespace-nowrap"
+                  >
+                    섞어서 연습
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500">
+              전체 {bookmarks.length}개 중 {filteredBookmarks.length}개 문장 표시
+            </p>
             <AnimatePresence>
-              {bookmarks.map((bm) => (
+              {filteredBookmarks.map((bm) => (
                 <motion.div
                   key={bm.id}
                   initial={{ opacity: 0, y: 8 }}
