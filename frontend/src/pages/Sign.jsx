@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { learningAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
@@ -109,6 +109,17 @@ export default function Sign() {
       setLoading(false)
     }
   }, [text])
+
+  // Practice 등에서 /sign?text=문장 으로 넘어오면 자동 번역
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get('text')
+    if (raw) {
+      const q = raw.slice(0, 200)   // 백엔드 200자 제한과 정합(입력창 maxLength 우회 방지)
+      setText(q)
+      translate(q)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const tokens = result?.tokens || []
   const currentToken = tokens[current] || null
@@ -234,6 +245,20 @@ export default function Sign() {
         {result && tokens.length === 0 && !loading && (
           <div className="mt-6 text-sm text-gray-500">변환할 단어가 없습니다.</div>
         )}
+
+        {/* 출처표시(공공누리/CC 라이선스 의무) */}
+        <footer className="mt-10 pt-4 border-t border-gray-200 text-[11px] leading-relaxed text-gray-400">
+          <p>
+            <b>수어 영상 출처</b>: 국립국어원 「한국수어사전」(
+            <a href="https://sldict.korean.go.kr" target="_blank" rel="noopener noreferrer" className="underline">sldict.korean.go.kr</a>
+            ) — CC BY-NC-ND 2.0 KR(저작자표시·비영리·변경금지). 본 도구는 영상을 변경 없이 비영리·학습 목적으로 <b>딥링크</b>만 연결합니다.
+          </p>
+          <p className="mt-1">
+            <b>데이터 출처</b>: 국립국어원 「한국수어사전 한국어대응표현정보」, 공공데이터포털(
+            <a href="https://www.data.go.kr/data/15135637/fileData.do" target="_blank" rel="noopener noreferrer" className="underline">data.go.kr</a>
+            , 이용허락범위 제한 없음).
+          </p>
+        </footer>
       </main>
     </div>
   )

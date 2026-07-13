@@ -36,11 +36,12 @@ def test_fingerspell():
 
 
 def test_translate_rule_path():
-    result = asyncio.run(ss.translate_to_ksl("학교에 갔어요"))
+    # 규칙 폴백: 완전일치만 수어, 나머지는 지문자. "학교"는 등재어(수어), "갔어요"는 지문자.
+    result = asyncio.run(ss.translate_to_ksl("학교 갔어요"))
     assert result["method"] == "rule"           # 키 없음 → 규칙 폴백
-    words = [t["word"] for t in result["tokens"]]
-    assert "학교" in words                        # '학교에'에서 조사 제거 후 매칭
-    # 매칭/지문자 카운트 합 = 전체
+    by_type = {t["word"]: t["type"] for t in result["tokens"]}
+    assert by_type.get("학교") == "sign"
+    assert by_type.get("갔어요") == "fingerspell"   # 원형화 안 함 → 정직하게 지문자
     cov = result["coverage"]
     assert cov["total"] == cov["matched"] + cov["fingerspelled"]
 
@@ -53,6 +54,26 @@ def test_translate_all_matched():
         assert t["type"] == "sign"
         assert t["dict_url"]
         assert isinstance(t["visemes"], list)
+
+
+def test_exact_only_no_conjugation_falsematch():
+    # 불규칙 활용형은 '사전에 실재하는 다른 표제어'로 절대 오매칭되면 안 됨(→ None → 지문자).
+    # (지었다→지다, 물었다→물다=bite, 나았다→나다 류 오매칭 방지)
+    for w in ["지었다", "물었다", "나았다", "들었다", "이었다"]:
+        assert ss.lookup_sign(w) is None, f"'{w}'가 오매칭됨"
+
+
+def test_exact_only_no_noun_overstrip():
+    # 조사동형 음절로 끝나는 기본형 명사가 접두 표제어로 오매칭되면 안 됨.
+    # '정의'는 사전 미등재 → 조사 '의' 절단해 '정'으로 매칭하면 안 됨(→ None → 지문자).
+    assert ss.lookup_sign("정의") is None      # not '정'
+    assert ss.lookup_sign("먹이") is None      # not '먹'
+
+
+def test_exact_match_still_works():
+    # 등재 표제어는 그대로 매칭(가요=歌謠도 실재)
+    assert ss.lookup_sign("가요") is not None
+    assert ss.lookup_sign("학교") is not None
 
 
 def test_fingerspell_fallback_token():
