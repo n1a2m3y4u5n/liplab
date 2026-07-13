@@ -67,9 +67,9 @@ function BookmarkButton({ sentence, situation, level }) {
  * Level 0: 힌트 없음
  * Level 1: 음절 수 (● ● ● ●)
  * Level 2: 첫 글자 공개 (안● ● ●)
- * Level 3: 전체 공개
+ * Level 3: 발음 타이밍에 맞춰 전체 공개
  */
-function HintDisplay({ sentence, hintLevel }) {
+function HintDisplay({ sentence, hintLevel, revealedTextIndex = -1 }) {
   if (!sentence) return null
 
   const chars = sentence.replace(/ /g, '')
@@ -123,11 +123,31 @@ function HintDisplay({ sentence, hintLevel }) {
   }
 
   if (hintLevel >= 3) {
-    // 전체 공개
+    // 입모양 프레임의 원문 위치에 맞춰 음절별로 공개
+    const sentenceChars = Array.from(sentence)
+
     return (
       <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-        <p className="text-xs text-green-600 font-medium mb-1">힌트 3 — 전체 공개</p>
-        <p className="text-lg font-bold text-green-800 tracking-wide">{sentence}</p>
+        <p className="text-xs text-green-600 font-medium mb-1">힌트 3 — 발음 자막</p>
+        <p className="sr-only">{sentence}</p>
+        <p aria-hidden="true" className="text-lg font-bold text-green-800 tracking-wide">
+          {sentenceChars.map((char, index) => (
+            <motion.span
+              key={`${index}-${char}`}
+              className="inline-block whitespace-pre"
+              initial={false}
+              animate={index <= revealedTextIndex
+                ? { opacity: 1, y: 0, filter: 'blur(0px)' }
+                : { opacity: 0, y: 4, filter: 'blur(3px)' }}
+              transition={{ duration: 0.28, ease: 'easeOut' }}
+            >
+              {char}
+            </motion.span>
+          ))}
+        </p>
+        <p className="text-xs text-green-600/80 mt-1.5">
+          입모양 재생에 맞춰 자막이 나타납니다.
+        </p>
       </div>
     )
   }
@@ -157,6 +177,8 @@ export default function Practice() {
   const [result, setResult] = useState(null)
   const [startTime, setStartTime] = useState(null)
   const [hintLevel, setHintLevel] = useState(0)
+  const [revealedTextIndex, setRevealedTextIndex] = useState(-1)
+  const [subtitleRestartKey, setSubtitleRestartKey] = useState(0)
   const [selectedChoice, setSelectedChoice] = useState(null) // 4지선다에서 선택한 보기
   const [signOpen, setSignOpen] = useState(false)            // 수어 보기 모달
 
@@ -187,6 +209,7 @@ export default function Practice() {
     setLoading(true)
     setResult(null)
     setHintLevel(0)
+    setRevealedTextIndex(-1)
     setStartTime(Date.now())
 
     try {
@@ -234,11 +257,13 @@ export default function Practice() {
     setResult(null)
     setSelectedChoice(null)
     setHintLevel(0)
+    setRevealedTextIndex(-1)
   }
 
   const handleRetry = () => {
     setResult(null)
     setHintLevel(0)
+    setRevealedTextIndex(-1)
     setSelectedChoice(null)
     setIsPlaying(true)
     setStartTime(Date.now())
@@ -250,8 +275,34 @@ export default function Practice() {
   }
 
   const showNextHint = () => {
-    setHintLevel((prev) => Math.min(prev + 1, 3))
+    if (hintLevel >= 3) return
+
+    const nextHintLevel = hintLevel + 1
+    setHintLevel(nextHintLevel)
+
+    if (nextHintLevel === 3) {
+      setRevealedTextIndex(-1)
+      setSubtitleRestartKey((key) => key + 1)
+      setIsPlaying(true)
+    }
   }
+
+  const handleSubtitleFrame = useCallback(({ textIndex, progress, completed, cycleComplete }) => {
+    if (hintLevel < 3 || result) return
+
+    if (cycleComplete) {
+      setRevealedTextIndex(-1)
+      return
+    }
+
+    const sentenceLength = Array.from(currentSentence || '').length
+    const fallbackIndex = Math.max(0, Math.ceil(progress * sentenceLength) - 1)
+    setRevealedTextIndex(
+      completed
+        ? sentenceLength - 1
+        : Number.isInteger(textIndex) ? textIndex : fallbackIndex
+    )
+  }, [currentSentence, hintLevel, result])
 
   const isLastSentence =
     currentSentenceIndex >= (currentScenario?.sentences?.length || 0) - 1
@@ -472,7 +523,9 @@ export default function Practice() {
                     visemes={visemes}
                     isPlaying={isPlaying}
                     onComplete={() => setIsPlaying(false)}
+                    onFrameChange={handleSubtitleFrame}
                     loop={!result}
+                    restartKey={subtitleRestartKey}
                   />
                 )}
               </motion.div>
@@ -504,7 +557,11 @@ export default function Practice() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
                     >
-                      <HintDisplay sentence={currentSentence} hintLevel={hintLevel} />
+                      <HintDisplay
+                        sentence={currentSentence}
+                        hintLevel={hintLevel}
+                        revealedTextIndex={revealedTextIndex}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
