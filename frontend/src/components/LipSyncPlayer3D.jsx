@@ -13,7 +13,9 @@ export default function LipSyncPlayer3D({
   visemes = [],
   isPlaying = false,
   onComplete = () => {},
+  onFrameChange = () => {},
   loop = false,
+  restartKey = 0,
 }) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [speed, setSpeed] = useState(1.0)
@@ -24,8 +26,16 @@ export default function LipSyncPlayer3D({
   const isPlayingRef = useRef(false)
   const indexRef = useRef(0)
   const speedRef = useRef(1.0)
+  const loopRef = useRef(loop)
+  const onCompleteRef = useRef(onComplete)
+  const onFrameChangeRef = useRef(onFrameChange)
+  const previousRestartKeyRef = useRef(restartKey)
 
   const currentViseme = visemes[currentIndex] || null
+
+  loopRef.current = loop
+  onCompleteRef.current = onComplete
+  onFrameChangeRef.current = onFrameChange
 
   // Sync speed ref
   useEffect(() => {
@@ -39,17 +49,36 @@ export default function LipSyncPlayer3D({
     }
   }, [])
 
+  const emitFrameChange = useCallback((index, options = {}) => {
+    const frame = visemes[index] || null
+    const progress = options.progress ?? (
+      visemes.length > 0 ? Math.min(1, (index + 1) / visemes.length) : 0
+    )
+
+    onFrameChangeRef.current({
+      index,
+      total: visemes.length,
+      frame,
+      textIndex: Number.isInteger(frame?.text_index) ? frame.text_index : null,
+      progress,
+      completed: Boolean(options.completed),
+      cycleComplete: Boolean(options.cycleComplete),
+    })
+  }, [visemes])
+
   const scheduleNext = useCallback((index) => {
     if (!visemes || index >= visemes.length) {
       isPlayingRef.current = false
       setIsPaused(false)
-      if (loop) {
-        setTimeout(() => {
+      if (loopRef.current) {
+        emitFrameChange(-1, { progress: 0, cycleComplete: true })
+        timeoutRef.current = setTimeout(() => {
           if (isPlayingRef.current) return
           startFromIndex(0)
         }, 400)
       } else {
-        onComplete()
+        emitFrameChange(visemes.length - 1, { progress: 1, completed: true })
+        onCompleteRef.current()
       }
       return
     }
@@ -57,12 +86,13 @@ export default function LipSyncPlayer3D({
     const frame = visemes[index]
     indexRef.current = index
     setCurrentIndex(index)
+    emitFrameChange(index)
 
     timeoutRef.current = setTimeout(() => {
       if (!isPlayingRef.current) return
       scheduleNext(index + 1)
     }, frame.duration_ms / speedRef.current)
-  }, [visemes, loop, onComplete])
+  }, [visemes, emitFrameChange])
 
   const startFromIndex = useCallback((fromIndex = 0) => {
     clearTimer()
@@ -90,13 +120,22 @@ export default function LipSyncPlayer3D({
     return clearTimer
   }, [isPlaying, visemes])
 
+  // Restart an active cycle when the parent reveals the timed subtitle.
+  useEffect(() => {
+    if (previousRestartKeyRef.current === restartKey) return
+    previousRestartKeyRef.current = restartKey
+
+    if (visemes.length > 0) startFromIndex(0)
+  }, [restartKey])
+
   // Frame-by-frame navigation
   const goToFrame = useCallback((idx) => {
     stopPlayback()
     const clamped = Math.max(0, Math.min(idx, visemes.length - 1))
     indexRef.current = clamped
     setCurrentIndex(clamped)
-  }, [visemes.length, stopPlayback])
+    emitFrameChange(clamped)
+  }, [visemes.length, stopPlayback, emitFrameChange])
 
   const prevFrame = () => goToFrame(currentIndex - 1)
   const nextFrame = () => goToFrame(currentIndex + 1)

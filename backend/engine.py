@@ -229,11 +229,17 @@ async def text_to_visemes(text: str) -> List[Dict]:
         if not isinstance(tok, list):
             if tok in [' ', '.', ',', '?', '!', '\n']:
                 viseme_frames.append({
-                    "viseme": 14, "duration_ms": DURATION_MAP['silence'], "transition_ms": 0
+                    "viseme": 14,
+                    "duration_ms": DURATION_MAP['silence'],
+                    "transition_ms": 0,
+                    "text_index": i,
                 })
             else:
                 viseme_frames.append({
-                    "viseme": VISEME_MAP.get(tok, 15), "duration_ms": 100, "transition_ms": 30
+                    "viseme": VISEME_MAP.get(tok, 15),
+                    "duration_ms": 100,
+                    "transition_ms": 30,
+                    "text_index": i,
                 })
             continue
 
@@ -253,6 +259,7 @@ async def text_to_visemes(text: str) -> List[Dict]:
                 "viseme": VISEME_MAP.get(initial, 15),
                 "duration_ms": DURATION_MAP.get(initial_type, 80),
                 "transition_ms": 40 if medial in ['ㅗ', 'ㅜ', 'ㅚ', 'ㅟ'] else 30,
+                "text_index": i,
             })
 
         # 중성 프레임
@@ -261,6 +268,7 @@ async def text_to_visemes(text: str) -> List[Dict]:
             "viseme": VISEME_MAP.get(medial, 15),
             "duration_ms": DURATION_MAP.get(medial_type, 150),
             "transition_ms": 40 if final else 30,
+            "text_index": i,
         })
 
         # 종성 프레임
@@ -270,12 +278,14 @@ async def text_to_visemes(text: str) -> List[Dict]:
                 "viseme": VISEME_MAP.get(final, 15),
                 "duration_ms": DURATION_MAP['final_consonant'],
                 "transition_ms": trans_duration if trans_viseme else 30,
+                "text_index": i,
             })
             if trans_viseme:
                 viseme_frames.append({
                     "viseme": trans_viseme,
                     "duration_ms": trans_duration,
                     "transition_ms": 20,
+                    "text_index": i,
                 })
 
     # 너무 짧은 프레임 보정
