@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
-import { learningAPI } from '../api'
+import { learningAPI, curriculumAPI } from '../api'
 
 const PRESET_SITUATIONS = [
   { id: '카페', label: '카페', icon: '☕' },
@@ -65,6 +65,93 @@ function ActivityCalendar({ data }) {
         <span>많음</span>
       </div>
     </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── 단계형 커리큘럼 경로 (재설계 Phase 1) ────────────────────────────────────
+const TRACKS = [
+  { id: 'perception', title: '독화 지각 트랙', desc: '한국어를 이미 아는 분. 입모양 읽기 능력에 집중.', icon: '👂' },
+  { id: 'language', title: '언어+독화 트랙', desc: '수어가 더 편한 분. 뜻(수어)부터 익히고 입모양으로.', icon: '🤟' },
+]
+
+const STAGE_STATUS = {
+  mastered:    { label: '완료',     cls: 'bg-green-100 text-green-700' },
+  in_progress: { label: '진행 중',  cls: 'bg-blue-100 text-blue-700' },
+  unlocked:    { label: '시작 가능', cls: 'bg-primary-100 text-primary-700' },
+  available:   { label: '연습',     cls: 'bg-gray-100 text-gray-600' },
+  locked:      { label: '잠김',     cls: 'bg-gray-100 text-gray-400' },
+  coming_soon: { label: '준비 중',  cls: 'bg-gray-100 text-gray-400' },
+}
+
+function CurriculumPath() {
+  const navigate = useNavigate()
+  const [state, setState] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  const load = () => curriculumAPI.getStages().then(setState).catch(() => setState(null)).finally(() => setLoading(false))
+  useEffect(() => { load() }, [])
+
+  const pickTrack = async (track) => {
+    setSaving(true)
+    try { await curriculumAPI.setTrack(track); await load() } finally { setSaving(false) }
+  }
+
+  const go = (s) => {
+    if (s.status === 'locked' || s.status === 'coming_soon' || !s.route) return
+    navigate(s.route)
+  }
+
+  if (loading || !state) return null
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card mb-8">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-bold text-gray-900">학습 커리큘럼</h2>
+        <span className="text-xs text-gray-400">기초부터 단계별로</span>
+      </div>
+
+      {!state.placed ? (
+        <div>
+          <p className="text-sm text-gray-500 mb-3">시작 전에 나에게 맞는 트랙을 골라주세요.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {TRACKS.map((t) => (
+              <button key={t.id} disabled={saving} onClick={() => pickTrack(t.id)}
+                className="text-left p-4 rounded-xl border-2 border-gray-200 hover:border-primary-400 hover:bg-primary-50 transition-all disabled:opacity-60">
+                <div className="text-2xl mb-1">{t.icon}</div>
+                <div className="font-bold text-gray-800">{t.title}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{t.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-3">
+          {state.stages.map((s) => {
+            const st = STAGE_STATUS[s.status] || STAGE_STATUS.locked
+            const clickable = s.status !== 'locked' && s.status !== 'coming_soon' && !!s.route
+            return (
+              <button key={s.stage} onClick={() => go(s)} disabled={!clickable}
+                className={`text-left p-3 rounded-xl border-2 transition-all ${clickable ? 'border-gray-200 bg-white hover:border-primary-400 hover:bg-primary-50 cursor-pointer' : 'border-gray-100 bg-gray-50 cursor-default'}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400">{s.stage}단계</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
+                </div>
+                <div className={`text-sm font-bold mt-1 ${clickable ? 'text-gray-800' : 'text-gray-400'}`}>{s.title}</div>
+                <div className="text-[11px] text-gray-400 mt-0.5 leading-tight">{s.desc}</div>
+                {s.stage === 1 && s.mastery_score != null && (
+                  <div className="mt-1.5 bg-gray-200 rounded-full h-1 overflow-hidden">
+                    <div className="bg-primary-500 h-full" style={{ width: `${Math.min(s.mastery_score, 100)}%` }} />
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </motion.div>
   )
 }
 
@@ -242,6 +329,9 @@ export default function Dashboard() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* 단계형 커리큘럼 경로 (오늘의 학습) */}
+        <CurriculumPath />
 
         {/* Stats Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">

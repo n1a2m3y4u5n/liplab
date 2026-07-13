@@ -606,6 +606,164 @@ async def get_review_sentences(current_user=Depends(get_current_user), db: Async
     return unique
 
 
+# ============================================
+# Curriculum (단계형 커리큘럼) — 재설계 Phase 1
+# ============================================
+import curriculum as _curriculum
+
+_STAGE1_MIN_ATTEMPTS = 15      # 숙달 판정 최소 시도
+_STAGE1_MASTERY = 80.0         # 숙달 판정 정확도(%)
+
+
+async def _get_or_create_profile(user_id: int, db: AsyncSession):
+    from database import LearningProfile
+    from sqlalchemy import select
+    r = await db.execute(select(LearningProfile).where(LearningProfile.user_id == user_id))
+    prof = r.scalar_one_or_none()
+    if prof is None:
+        prof = LearningProfile(user_id=user_id)
+        db.add(prof)
+        await db.commit()
+        await db.refresh(prof)
+    return prof
+
+
+@app.get("/api/curriculum/stages")
+async def curriculum_stages(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """단계형 학습 경로 + 사용자별 상태(대시보드/오늘의 학습 구동)."""
+    from database import StageProgress
+    from sqlalchemy import select
+
+    prof = await _get_or_create_profile(current_user.id, db)
+    r = await db.execute(select(StageProgress).where(StageProgress.user_id == current_user.id))
+    sp_map = {sp.stage: sp for sp in r.scalars().all()}
+
+    stages = []
+    for s in _curriculum.STAGES:
+        st = dict(s)
+        stage = s["stage"]
+        if s.get("coming_soon"):
+            st["status"] = "coming_soon"
+        elif stage == 0:
+            st["status"] = "mastered" if prof.placed else "unlocked"
+        elif stage == 1:
+            sp = sp_map.get(1)
+            if not prof.placed:
+                st["status"] = "locked"
+            elif sp is None:
+                st["status"] = "unlocked"
+            else:
+                st["status"] = sp.status
+                st["mastery_score"] = round(sp.mastery_score, 1)
+                st["attempts"] = sp.attempts
+        else:  # 3·4 기존 모드 — Phase 1에서는 항상 접근 가능
+            st["status"] = "available"
+        stages.append(st)
+
+    return {"track": prof.track, "placed": prof.placed,
+            "current_stage": prof.current_stage, "stages": stages}
+
+
+class TrackSelect(BaseModel):
+    track: str  # 'perception' | 'language'
+
+
+@app.post("/api/curriculum/track")
+async def curriculum_set_track(data: TrackSelect, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """배치: 트랙 선택 → 1단계(입모양 인지) 잠금 해제."""
+    if data.track not in ("perception", "language"):
+        raise HTTPException(status_code=400, detail="track must be 'perception' or 'language'")
+    prof = await _get_or_create_profile(current_user.id, db)
+    prof.track = data.track
+    prof.placed = True
+    prof.current_stage = max(prof.current_stage or 0, 1)
+    await db.commit()
+    return {"track": prof.track, "placed": prof.placed, "current_stage": prof.current_stage}
+
+
+@app.get("/api/curriculum/viseme-lessons")
+async def curriculum_viseme_lessons(current_user=Depends(get_current_user)):
+    """1단계 콘텐츠: 입모양 10그룹 레슨 + 동구형이음 무리 + 최소대립쌍."""
+    lessons = []
+    for l in _curriculum.VISEME_LESSONS:
+        lessons.append({
+            **l,
+            "demo_syllable": _curriculum.DEMO_SYLLABLE.get(l["viseme_id"]),
+            "quizzable": l["visibility"] != "low",
+            "homophene_cluster": (_curriculum.homophene_cluster_of(l["viseme_id"]) or {}).get("id"),
+        })
+    return {
+        "lessons": lessons,
+        "homophene_clusters": _curriculum.HOMOPHENE_CLUSTERS,
+        "minimal_pairs": _curriculum.MINIMAL_PAIRS,
+        "anchors": _curriculum.VISIBLE_ANCHORS,
+    }
+
+
+class RecognitionSubmit(BaseModel):
+    viseme_id: int   # 제시된(정답) 그룹
+    chosen_id: int   # 사용자가 고른 그룹
+
+
+@app.post("/api/curriculum/recognition")
+async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """입모양 인지퀴즈 채점 + 1단계 숙달 갱신 + 취약 입모양(WeakViseme) 통합 반영."""
+    from database import StageProgress, WeakViseme
+    from sqlalchemy import select
+    from datetime import datetime as _dt
+
+    target = _curriculum.lesson_by_id(data.viseme_id)
+    if target is None:
+        raise HTTPException(status_code=400, detail="invalid viseme_id")
+    correct = (data.viseme_id == data.chosen_id)
+    # '같아 보이는 무리'로 틀렸는지 — 동구형이음 학습 취지의 피드백용
+    same_cluster = _curriculum.same_homophene_cluster(data.viseme_id, data.chosen_id)
+
+    try:
+        # 1단계 진행/숙달 갱신
+        r = await db.execute(select(StageProgress).where(
+            StageProgress.user_id == current_user.id, StageProgress.stage == 1))
+        sp = r.scalar_one_or_none()
+        if sp is None:
+            # default=0은 flush 시점에 적용되므로 즉시 증감하려면 초기값을 명시한다
+            sp = StageProgress(user_id=current_user.id, stage=1, status="in_progress",
+                               attempts=0, correct=0, mastery_score=0.0)
+            db.add(sp)
+        sp.attempts += 1
+        if correct:
+            sp.correct += 1
+        sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
+        sp.status = "mastered" if (sp.attempts >= _STAGE1_MIN_ATTEMPTS and sp.mastery_score >= _STAGE1_MASTERY) else "in_progress"
+
+        # 취약 입모양 반영 — 기존 분석·적응 로직과 통합
+        r2 = await db.execute(select(WeakViseme).where(
+            WeakViseme.user_id == current_user.id, WeakViseme.viseme_id == data.viseme_id))
+        wv = r2.scalar_one_or_none()
+        if wv is None:
+            wv = WeakViseme(user_id=current_user.id, viseme_id=data.viseme_id,
+                            error_count=0, total_attempts=0, phonological_feature=target["name"])
+            db.add(wv)
+        wv.total_attempts += 1
+        if not correct:
+            wv.error_count += 1
+            wv.last_error_at = _dt.utcnow()
+
+        await db.commit()
+        await db.refresh(sp)
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"recognition submit failed: {str(e)}")
+
+    return {
+        "correct": correct,
+        "same_cluster": same_cluster,
+        "target": {"viseme_id": data.viseme_id, "name": target["name"], "teach": target["teach"]},
+        "mastery_score": round(sp.mastery_score, 1),
+        "attempts": sp.attempts,
+        "mastered": sp.status == "mastered",
+    }
+
+
 class ConversationRequest(BaseModel):
     situation: str
     level: int = 1
