@@ -356,6 +356,17 @@ function ReviewSection() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+// 두 스킬 기둥(독화 / 말하기) 구분용 구역 헤더
+function ZoneHeader({ icon, title, sub, divider }) {
+  return (
+    <div className={`flex items-baseline gap-2 mb-4 ${divider ? 'mt-12 pt-8 border-t border-gray-200' : 'mt-2'}`}>
+      <span className="text-2xl">{icon}</span>
+      <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+      <span className="hidden sm:inline text-xs text-gray-400">{sub}</span>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const user = useStore((state) => state.user)
@@ -557,7 +568,7 @@ export default function Dashboard() {
             transition={{ delay: 0.2 }}
             className="card"
           >
-            <h3 className="text-sm font-semibold text-gray-500 mb-3">취약 입모양</h3>
+            <h3 className="text-sm font-semibold text-gray-500 mb-3">취약 입모양 <span className="text-[10px] text-gray-400">(독화)</span></h3>
             {!statsLoading && statistics?.weak_visemes?.length > 0 ? (
               <ul className="space-y-1.5">
                 {statistics.weak_visemes.slice(0, 3).map((wv, idx) => (
@@ -584,11 +595,11 @@ export default function Dashboard() {
           <ActivityCalendar data={calendarData} />
         </motion.div>
 
+        {/* ── 독화(입 읽기) 기둥: 학습 · 테스트 · 복습 ── */}
+        <ZoneHeader icon="👂" title="독화 — 입 읽기" sub="남의 말을 입모양으로 읽는 훈련" />
+
         {/* 단계형 커리큘럼 경로 (오늘의 학습) */}
         <CurriculumPath />
-
-        {/* 말하기 커리큘럼 — 독화(읽기)의 짝: 6단계 사다리 */}
-        <SpeakCurriculumPath />
 
         {/* Practice Setup */}
         <motion.div
@@ -703,6 +714,10 @@ export default function Dashboard() {
         </motion.div>
 
         <ReviewSection />
+
+        {/* ── 말하기(발음) 기둥: 발화 6단계 ── */}
+        <ZoneHeader icon="🎤" title="말하기 — 발음" sub="내 발음을 눈으로 보며 다듬는 훈련" divider />
+        <SpeakCurriculumPath />
       </main>
     </div>
   )
