@@ -138,6 +138,12 @@ export const learningAPI = {
     const response = await api.get('/review-sentences')
     return response.data
   },
+
+  // 한국어 → 한국수어(KSL) 학습 보조 번역
+  translateSign: async (text) => {
+    const response = await api.post('/sign/translate', { text }, { timeout: 60000 })
+    return response.data
+  },
 }
 
 export default api

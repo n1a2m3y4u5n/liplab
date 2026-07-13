@@ -211,6 +211,12 @@ export default function Dashboard() {
               >
                 분석
               </button>
+              <button
+                onClick={() => navigate('/sign')}
+                className="px-3 py-1.5 text-sm text-white bg-primary-500 hover:bg-primary-600 transition-colors rounded-lg"
+              >
+                수어
+              </button>
               <div className="text-right hidden sm:block">
                 <p className="text-xs text-gray-500">안녕하세요,</p>
                 <p className="font-semibold text-gray-900 text-sm">{user?.username}님</p>
