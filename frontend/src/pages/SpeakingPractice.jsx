@@ -6,21 +6,18 @@ import MouthAvatar from '../components/MouthAvatar'
 
 /**
  * 말하기 연습 (발화 피드백)
- * ------------------------------------------------------------------
- * 청각장애인은 자기 발음을 못 들어 피드백 루프가 끊겨 있다. 이 화면은 그 끊긴
- * 청각 피드백을 '눈/AI'로 대체한다.
- *  1) 말하는 동안 볼륨·톤(피치)·파형을 실시간으로 보여준다 (Web Audio, 서버 0).
- *  2) 녹음을 서버로 보내 Whisper가 받아쓰고, 기존 음운 채점으로 '어떤 소리가
- *     다르게 났는지' + Claude 발음 코칭을 돌려준다.
+ *  1) 말하는 동안 볼륨·톤(피치)·파형 실시간 (Web Audio) — 귀 대신 눈.
+ *  2) 녹음을 서버로 → Whisper 전사 + 기존 음운 채점 + Claude 코칭.
+ * 정량 지표(목소리 크기 0~100, 억양 폭 Hz, 길이 s)를 함께 보여주고 코칭에도 반영한다.
  */
 
-// 자기상관 기반 기본주파수(피치) 추정: 마이크 시간영역 버퍼 → Hz
+// 자기상관 기반 기본주파수(피치) 추정
 function autoCorrelate(buf, sampleRate) {
   const SIZE = buf.length
   let rms = 0
   for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i]
   rms = Math.sqrt(rms / SIZE)
-  if (rms < 0.01) return -1
+  if (rms < 0.006) return -1
   let r1 = 0, r2 = SIZE - 1
   const thres = 0.2
   for (let i = 0; i < SIZE / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break }
@@ -53,7 +50,7 @@ export default function SpeakingPractice() {
   const [err, setErr] = useState(null)
   const [summary, setSummary] = useState(null)
   const [assessing, setAssessing] = useState(false)
-  const [assessment, setAssessment] = useState(null)   // {transcript, score, confusions, coaching} | {error}
+  const [assessment, setAssessment] = useState(null)
 
   const acRef = useRef(null)
   const analyserRef = useRef(null)
@@ -62,8 +59,10 @@ export default function SpeakingPractice() {
   const canvasRef = useRef(null)
   const recorderRef = useRef(null)
   const chunksRef = useRef([])
-  const volHist = useRef([])
+  const volHist = useRef([])       // 원본 RMS(무음 포함)
   const pitchHist = useRef([])
+  const startRef = useRef(0)
+  const summaryRef = useRef(null)
 
   useEffect(() => {
     curriculumAPI.getWords()
@@ -99,14 +98,18 @@ export default function SpeakingPractice() {
     setErr(null); setSummary(null); setAssessment(null)
     volHist.current = []; pitchHist.current = []; chunksRef.current = []
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      })
       streamRef.current = stream
       const AC = window.AudioContext || window.webkitAudioContext
       const ac = new AC(); acRef.current = ac
+      // 중요: 사용자 제스처 없이 만든 AudioContext는 suspended 상태로 시작할 수 있어
+      // 분석 버퍼가 0으로만 읽힌다("소리 안 잡힘"의 주범) → 반드시 resume.
+      if (ac.state === 'suspended') { try { await ac.resume() } catch { /* noop */ } }
       const src = ac.createMediaStreamSource(stream)
       const analyser = ac.createAnalyser(); analyser.fftSize = 2048
       src.connect(analyser); analyserRef.current = analyser
-      // 녹음(서버 전사용) — 미지원 브라우저면 시각화만 동작
       try {
         const rec = new MediaRecorder(stream)
         rec.ondataavailable = (e) => { if (e.data && e.data.size) chunksRef.current.push(e.data) }
@@ -114,6 +117,7 @@ export default function SpeakingPractice() {
         rec.start()
         recorderRef.current = rec
       } catch { recorderRef.current = null }
+      startRef.current = performance.now()
       setRecording(true)
       loop()
     } catch {
@@ -126,10 +130,11 @@ export default function SpeakingPractice() {
     const blob = new Blob(chunksRef.current, { type: (rec && rec.mimeType) || 'audio/webm' })
     closeAudio()
     if (blob.size > 500 && target) {
+      const s = summaryRef.current || {}
+      const metrics = { loudness: s.loudness ?? 0, pitch_range: s.pitchRange ?? 0, duration: s.duration ?? 0 }
       setAssessing(true)
       try {
-        const r = await speakAPI.assess(target, blob)
-        setAssessment(r)
+        setAssessment(await speakAPI.assess(target, blob, metrics))
       } catch (e) {
         setAssessment({ error: e?.response?.data?.detail || '발음 분석에 실패했어요. 잠시 후 다시 시도해 주세요.' })
       } finally {
@@ -142,29 +147,44 @@ export default function SpeakingPractice() {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     rafRef.current = null
     setRecording(false); setVol(0); setPitch(null)
-    setSummary(computeSummary())
+    const s = computeSummary()
+    summaryRef.current = s
+    setSummary(s)
     const rec = recorderRef.current
-    if (rec && rec.state !== 'inactive') rec.stop()   // → onRecStop (업로드) → closeAudio
+    if (rec && rec.state !== 'inactive') rec.stop()   // → onRecStop → 서버 분석
     else closeAudio()
   }
 
   const computeSummary = () => {
-    const vs = volHist.current, ps = pitchHist.current
-    if (vs.length < 5) return { volMsg: '소리가 거의 안 잡혔어요. 마이크에 가까이서 말해보세요.', volOk: false, toneMsg: '', toneOk: null }
-    const avgVol = vs.reduce((a, b) => a + b, 0) / vs.length
-    let volMsg, volOk
-    if (avgVol < 0.12) { volMsg = '너무 작았어요. 배에 힘을 주고 더 크게 말해보세요.'; volOk = false }
-    else if (avgVol > 0.8) { volMsg = '조금 컸어요. 편하게 낮춰도 괜찮아요.'; volOk = true }
-    else { volMsg = '볼륨이 적당했어요. 좋아요!'; volOk = true }
-    let toneMsg, toneOk
-    if (ps.length < 4) { toneMsg = '소리를 조금 더 이어서 내보면 톤을 볼 수 있어요.'; toneOk = null }
-    else {
-      const m = ps.reduce((a, b) => a + b, 0) / ps.length
-      const sd = Math.sqrt(ps.reduce((a, b) => a + (b - m) ** 2, 0) / ps.length)
-      if (sd < 12) { toneMsg = '톤이 평평했어요. 끝을 올리거나 내리며 억양을 넣어보세요.'; toneOk = false }
-      else { toneMsg = '톤에 자연스러운 변화가 있었어요!'; toneOk = true }
+    const raw = volHist.current, ps = pitchHist.current
+    const dur = startRef.current ? Math.round((performance.now() - startRef.current) / 100) / 10 : 0
+    if (!raw.length) {
+      return { micIssue: true, loudness: 0, volMsg: '마이크 소리가 안 잡혔어요. 권한/연결을 확인하고 가까이서 말해보세요.', volOk: false, toneMsg: '', toneOk: null, pitchRange: 0, duration: dur }
     }
-    return { volMsg, volOk, toneMsg, toneOk }
+    const peak = raw.reduce((m, v) => (v > m ? v : m), 0)
+    const voiced = raw.filter((v) => v > 0.01)   // 발성 프레임만 (무음 제외 → '항상 작음' 버그 방지)
+    const voicedAvg = voiced.length ? voiced.reduce((a, b) => a + b, 0) / voiced.length : 0
+    const loudness = Math.max(0, Math.min(100, Math.round(((voicedAvg - 0.01) / 0.13) * 100)))
+
+    let volMsg, volOk, micIssue = false
+    if (peak < 0.008) { volMsg = '마이크 소리가 거의 안 잡혔어요. 권한/연결을 확인하고 가까이서 말해보세요.'; volOk = false; micIssue = true }
+    else if (loudness < 40) { volMsg = `목소리가 작아요(크기 ${loudness}/100). 배에 힘을 주고 더 크게 말해보세요.`; volOk = false }
+    else if (loudness > 92) { volMsg = `조금 컸어요(크기 ${loudness}/100). 편하게 낮춰도 괜찮아요.`; volOk = true }
+    else { volMsg = `볼륨 적당해요(크기 ${loudness}/100). 좋아요!`; volOk = true }
+
+    let pitchRange = 0, pitchMean = 0, toneMsg, toneOk = null
+    if (ps.length >= 4) {
+      const sorted = [...ps].sort((a, b) => a - b)
+      const lo = sorted[Math.floor(sorted.length * 0.1)]
+      const hi = sorted[Math.floor(sorted.length * 0.9)]
+      pitchRange = Math.round(hi - lo)
+      pitchMean = Math.round(ps.reduce((a, b) => a + b, 0) / ps.length)
+      if (pitchRange < 25) { toneMsg = `톤이 평평했어요(억양 폭 ${pitchRange}Hz). 끝을 올리거나 내리며 억양을 넣어보세요.`; toneOk = false }
+      else { toneMsg = `톤에 자연스러운 변화가 있었어요(억양 폭 ${pitchRange}Hz)!`; toneOk = true }
+    } else {
+      toneMsg = '소리를 조금 더 이어서 내보면 억양을 볼 수 있어요.'
+    }
+    return { micIssue, loudness, volMsg, volOk, pitchRange, pitchMean, toneMsg, toneOk, duration: dur }
   }
 
   const loop = () => {
@@ -178,14 +198,14 @@ export default function SpeakingPractice() {
       let rms = 0
       for (let i = 0; i < buf.length; i++) rms += buf[i] * buf[i]
       rms = Math.sqrt(rms / buf.length)
-      const v = Math.min(1, rms * 4)
-      volHist.current.push(v)
-      drawWave(buf, v)
+      volHist.current.push(rms)                       // 원본 RMS 저장
+      const disp = Math.min(1, rms / 0.12)            // 표시용 스케일(0.12 RMS ≈ 꽉 참)
+      drawWave(buf, disp)
       if (frame % 4 === 0) {
         const p = autoCorrelate(buf, acRef.current.sampleRate)
         const hz = p > 70 && p < 500 ? Math.round(p) : null
         if (hz) pitchHist.current.push(hz)
-        setVol(v); setPitch(hz)
+        setVol(disp); setPitch(hz)
       }
       frame++
       rafRef.current = requestAnimationFrame(tick)
@@ -200,7 +220,7 @@ export default function SpeakingPractice() {
     const W = cv.width, H = cv.height
     ctx.clearRect(0, 0, W, H)
     ctx.lineWidth = 2
-    ctx.strokeStyle = v > 0.12 ? '#4f46e5' : '#cbd5e1'
+    ctx.strokeStyle = v > 0.15 ? '#4f46e5' : '#cbd5e1'
     ctx.beginPath()
     const step = Math.max(1, Math.ceil(buf.length / W))
     for (let x = 0; x < W; x++) {
@@ -211,7 +231,7 @@ export default function SpeakingPractice() {
     ctx.stroke()
   }
 
-  const volLabel = !recording ? '-' : vol < 0.12 ? '너무 작음' : vol > 0.8 ? '큼' : '적당'
+  const volLabel = !recording ? '-' : vol < 0.15 ? '작게' : vol > 0.95 ? '크게' : '좋아요'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
@@ -243,7 +263,7 @@ export default function SpeakingPractice() {
             <div className="mt-4">
               <div className="flex justify-between text-xs text-gray-500 mb-1"><span>볼륨</span><span>{volLabel}</span></div>
               <div className="bg-gray-200 rounded-full h-3 overflow-hidden">
-                <div className={`h-full rounded-full transition-[width] duration-75 ${vol < 0.12 ? 'bg-gray-300' : vol > 0.8 ? 'bg-amber-400' : 'bg-primary-500'}`}
+                <div className={`h-full rounded-full transition-[width] duration-75 ${vol < 0.15 ? 'bg-gray-300' : vol > 0.95 ? 'bg-amber-400' : 'bg-primary-500'}`}
                   style={{ width: `${Math.round(vol * 100)}%` }} />
               </div>
             </div>
@@ -267,13 +287,21 @@ export default function SpeakingPractice() {
           {summary && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="card mt-6">
               <h3 className="font-bold text-gray-900 mb-3">이번 발화 피드백</h3>
+
+              {/* 정량 지표 */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                <Stat label="목소리 크기" value={`${summary.loudness}/100`} />
+                <Stat label="억양 폭" value={`${summary.pitchRange}Hz`} />
+                <Stat label="길이" value={`${summary.duration}s`} />
+                <Stat label="발음 점수" value={assessment && !assessment.error ? `${assessment.score}점` : assessing ? '…' : '-'} />
+              </div>
+
               <div className="space-y-2">
                 <div className={`p-3 rounded-lg text-sm ${summary.volOk ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>🔊 {summary.volMsg}</div>
                 {summary.toneMsg && (
                   <div className={`p-3 rounded-lg text-sm ${summary.toneOk === false ? 'bg-amber-50 text-amber-700' : summary.toneOk ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-600'}`}>🎵 {summary.toneMsg}</div>
                 )}
 
-                {/* 서버 발음 분석 (Whisper 전사 + 채점 + Claude 코칭) */}
                 {assessing && (
                   <div className="p-3 rounded-lg bg-primary-50 text-primary-600 text-sm flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
@@ -286,19 +314,12 @@ export default function SpeakingPractice() {
                       <span className="text-gray-400 text-xs">이렇게 들렸어요</span>
                       <p className="font-bold text-gray-900">"{assessment.transcript || '(잘 안 들렸어요)'}"</p>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-gray-500 shrink-0">발음 점수</span>
-                      <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <div className="bg-primary-500 h-full rounded-full" style={{ width: `${Math.min(assessment.score, 100)}%` }} />
-                      </div>
-                      <span className="font-semibold text-primary-600 shrink-0">{assessment.score}점</span>
-                    </div>
                     {assessment.confusions?.length > 0 && (
                       <div className="p-2 rounded-lg bg-amber-50 text-amber-700 text-xs">
                         다르게 들린 소리: {assessment.confusions.map((c) => `${c.correct}→${c.confused_as}`).join(', ')}
                       </div>
                     )}
-                    <div className="p-3 rounded-lg bg-primary-50 text-primary-800 text-sm">🗣️ {assessment.coaching}</div>
+                    <div className="p-3 rounded-lg bg-primary-50 text-primary-800 text-sm leading-relaxed">🗣️ {assessment.coaching}</div>
                   </>
                 )}
                 {assessment?.error && (
@@ -314,6 +335,15 @@ export default function SpeakingPractice() {
           )}
         </AnimatePresence>
       </main>
+    </div>
+  )
+}
+
+function Stat({ label, value }) {
+  return (
+    <div className="p-2 rounded-lg bg-gray-50 text-center">
+      <p className="text-[10px] text-gray-400">{label}</p>
+      <p className="font-bold text-gray-800 text-sm">{value}</p>
     </div>
   )
 }
