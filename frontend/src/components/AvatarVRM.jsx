@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
-import { VISEME_BLENDSHAPES, ACTIVE_MORPH_KEYS } from '../lib/visemeShapes'
+import { VISEME_BLENDSHAPES, ACTIVE_MORPH_KEYS, VISEME_TONGUE, ACTIVE_TONGUE_KEYS } from '../lib/visemeShapes'
 
 /**
  * 한국어 Viseme → 3D 입모양 렌더링
@@ -14,13 +14,21 @@ import { VISEME_BLENDSHAPES, ACTIVE_MORPH_KEYS } from '../lib/visemeShapes'
 function RealisticFace({ visemeId = 15 }) {
   const { scene } = useGLTF('/models/realistic_face.glb')
   const meshesRef = useRef([])
+  const tongueMeshRef = useRef(null)
   const currentWeightsRef = useRef({})
+  const tongueWeightsRef = useRef({})
 
   // Find all meshes with morph targets on first render
   if (meshesRef.current.length === 0) {
     scene.traverse((obj) => {
       if (obj.isMesh && obj.morphTargetDictionary && obj.morphTargetInfluences) {
         meshesRef.current.push(obj)
+        // 혀 메시 식별: tongueOut은 있고 mouthSmileLeft(얼굴 전용)는 없는 메시.
+        // (얼굴=둘 다 있음, 치아=둘 다 없음, 혀=tongueOut만 있음 → 유일하게 구분됨)
+        const dict = obj.morphTargetDictionary
+        if ('tongueOut' in dict && !('mouthSmileLeft' in dict)) {
+          tongueMeshRef.current = obj
+        }
       }
     })
   }
@@ -31,6 +39,7 @@ function RealisticFace({ visemeId = 15 }) {
     const target = VISEME_BLENDSHAPES[visemeId] || {}
     const LERP = Math.min(1, delta * 22) // ~45ms transition (자음 80ms 프레임 내 충분히 도달)
 
+    // 얼굴·턱 모프 — 모든 메시에 이름으로 일괄 적용 (jawOpen은 혀도 함께 따라감)
     for (const key of ACTIVE_MORPH_KEYS) {
       const tgt = target[key] || 0
       const cur = currentWeightsRef.current[key] || 0
@@ -41,6 +50,25 @@ function RealisticFace({ visemeId = 15 }) {
         const idx = mesh.morphTargetDictionary?.[key]
         if (idx !== undefined) {
           mesh.morphTargetInfluences[idx] = next
+        }
+      }
+    }
+
+    // 혀 전용 모프 — 혀 메시에만 적용해 얼굴 왜곡을 방지 (mesh-scoped)
+    // 혀는 얼굴보다 살짝 느리게 보간해 '이동'이 눈에 띄도록 한다 (~65ms).
+    const TONGUE_LERP = Math.min(1, delta * 15)
+    const tongue = tongueMeshRef.current
+    if (tongue) {
+      const tTarget = VISEME_TONGUE[visemeId] || {}
+      for (const key of ACTIVE_TONGUE_KEYS) {
+        const tgt = tTarget[key] || 0
+        const cur = tongueWeightsRef.current[key] || 0
+        const next = THREE.MathUtils.lerp(cur, tgt, TONGUE_LERP)
+        tongueWeightsRef.current[key] = next
+
+        const idx = tongue.morphTargetDictionary?.[key]
+        if (idx !== undefined) {
+          tongue.morphTargetInfluences[idx] = next
         }
       }
     }
