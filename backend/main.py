@@ -610,6 +610,34 @@ async def conversation_turn(
         raise HTTPException(status_code=500, detail=f"Conversation generation failed: {str(e)}")
 
 
+class SignRequest(BaseModel):
+    text: str
+
+
+@app.post("/api/sign/translate")
+async def sign_translate(
+    request: SignRequest,
+    current_user = Depends(get_current_user)
+):
+    """
+    한국어 문장을 한국수어(KSL) 학습 보조 시퀀스로 변환.
+    Stage A(Claude gloss 번역) → Stage B(국립국어원 사전 조회 + 지문자 폴백) + 입모양.
+    학습·이해 보조용이며 통역 서비스가 아니다.
+    """
+    text = (request.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="text is required")
+    if len(text) > 200:
+        raise HTTPException(status_code=400, detail="text too long (max 200)")
+    try:
+        from sign_service import translate_to_ksl
+        return await translate_to_ksl(text)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sign translation failed: {str(e)}")
+
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():

@@ -23,6 +23,7 @@ import Analysis from './pages/Analysis'
 import Bookmarks from './pages/Bookmarks'
 import Guide from './pages/Guide'
 import DevViseme from './pages/DevViseme'
+import Sign from './pages/Sign'
 
 /**
  * Protected Route wrapper
@@ -71,6 +72,7 @@ function App() {
           }
         />
         <Route path="/analysis" element={<ProtectedRoute><Analysis /></ProtectedRoute>} />
+        <Route path="/sign" element={<ProtectedRoute><Sign /></ProtectedRoute>} />
         <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
         <Route path="/guide" element={<Guide />} />
         <Route path="/dev-viseme" element={<DevViseme />} />
