@@ -616,17 +616,17 @@ async def get_review_sentences(current_user=Depends(get_current_user), db: Async
 # ============================================
 import curriculum as _curriculum
 
-_STAGE1_MIN_ATTEMPTS = 15      # 숙달 판정 최소 시도
-_STAGE1_MASTERY = 80.0         # 숙달 판정 정확도(%)
-_STAGE2_MIN_ATTEMPTS = 12
-_STAGE2_MASTERY = 80.0
+_STAGE1_MIN_ATTEMPTS = 8       # 숙달 판정 최소 시도
+_STAGE1_MASTERY = 70.0         # 숙달 판정 정확도(%)
+_STAGE2_MIN_ATTEMPTS = 6
+_STAGE2_MASTERY = 70.0
 # 3·4단계는 점수(0~100)를 내는 활동이라 'PASS 이상이면 성공 1회'로 환산해 누적한다.
-_STAGE3_MIN_ATTEMPTS = 10      # 문장 연습
-_STAGE3_MASTERY = 75.0
-_STAGE3_PASS = 70.0            # 문장 1건을 '성공'으로 볼 최소 점수
-_STAGE4_MIN_ATTEMPTS = 8       # 대화 실전
-_STAGE4_MASTERY = 70.0
-_STAGE4_PASS = 65.0            # 대화 1턴을 '성공'으로 볼 최소 이해도
+_STAGE3_MIN_ATTEMPTS = 5       # 문장 연습
+_STAGE3_MASTERY = 65.0
+_STAGE3_PASS = 60.0            # 문장 1건을 '성공'으로 볼 최소 점수
+_STAGE4_MIN_ATTEMPTS = 4       # 대화 실전
+_STAGE4_MASTERY = 60.0
+_STAGE4_PASS = 55.0            # 대화 1턴을 '성공'으로 볼 최소 이해도
 
 
 async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
