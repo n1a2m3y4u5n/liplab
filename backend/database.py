@@ -160,6 +160,21 @@ class StageProgress(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class ReviewItem(Base):
+    """간격 반복(SRS) 복습 큐 — 틀린 항목이 due_date에 다시 등장한다.
+    kind: 'viseme'(입모양 그룹, ref=id 문자열) | 'word'(단어, ref=단어)."""
+    __tablename__ = "review_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    kind = Column(String(20), nullable=False)       # 'viseme' | 'word'
+    ref = Column(String(100), nullable=False)       # viseme_id(str) 또는 단어
+    due_date = Column(String(10), nullable=False)   # 'YYYY-MM-DD'
+    interval_days = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 # Dependency for getting DB session
 async def get_db():
     """Dependency for FastAPI routes to get database session"""

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
-import { learningAPI, curriculumAPI } from '../api'
+import { learningAPI, curriculumAPI, reviewAPI } from '../api'
 
 const PRESET_SITUATIONS = [
   { id: '카페', label: '카페', icon: '☕' },
@@ -90,9 +90,13 @@ function CurriculumPath() {
   const [state, setState] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [due, setDue] = useState(0)
 
   const load = () => curriculumAPI.getStages().then(setState).catch(() => setState(null)).finally(() => setLoading(false))
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    reviewAPI.getDue().then((d) => setDue(d.count || 0)).catch(() => {})
+  }, [])
 
   const pickTrack = async (track) => {
     setSaving(true)
@@ -128,6 +132,7 @@ function CurriculumPath() {
           </div>
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-3">
           {state.stages.map((s) => {
             const st = STAGE_STATUS[s.status] || STAGE_STATUS.locked
@@ -150,6 +155,11 @@ function CurriculumPath() {
             )
           })}
         </div>
+        <button onClick={() => navigate('/review')}
+          className={`mt-3 w-full py-2.5 rounded-xl text-sm font-semibold transition-all ${due > 0 ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-gray-100 text-gray-400'}`}>
+          🔁 오늘의 복습 {due > 0 ? `${due}개` : '(없음)'}
+        </button>
+        </>
       )}
     </motion.div>
   )

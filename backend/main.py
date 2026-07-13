@@ -613,6 +613,25 @@ import curriculum as _curriculum
 
 _STAGE1_MIN_ATTEMPTS = 15      # 숙달 판정 최소 시도
 _STAGE1_MASTERY = 80.0         # 숙달 판정 정확도(%)
+_STAGE2_MIN_ATTEMPTS = 12
+_STAGE2_MASTERY = 80.0
+
+from datetime import date as _sr_date, timedelta as _sr_delta
+
+
+async def _srs_schedule_wrong(user_id: int, kind: str, ref, db: AsyncSession):
+    """오답 → 내일 복습 예약(SRS). 기존 항목이면 간격 리셋. commit은 호출부에서."""
+    from database import ReviewItem
+    from sqlalchemy import select
+    tomorrow = (_sr_date.today() + _sr_delta(days=1)).isoformat()
+    r = await db.execute(select(ReviewItem).where(
+        ReviewItem.user_id == user_id, ReviewItem.kind == kind, ReviewItem.ref == str(ref)))
+    item = r.scalar_one_or_none()
+    if item is None:
+        db.add(ReviewItem(user_id=user_id, kind=kind, ref=str(ref), due_date=tomorrow, interval_days=1))
+    else:
+        item.interval_days = 1
+        item.due_date = tomorrow
 
 
 async def _get_or_create_profile(user_id: int, db: AsyncSession):
@@ -656,7 +675,18 @@ async def curriculum_stages(current_user=Depends(get_current_user), db: AsyncSes
                 st["status"] = sp.status
                 st["mastery_score"] = round(sp.mastery_score, 1)
                 st["attempts"] = sp.attempts
-        else:  # 3·4 기존 모드 — Phase 1에서는 항상 접근 가능
+        elif stage == 2:
+            s1 = sp_map.get(1)
+            sp = sp_map.get(2)
+            if not (s1 is not None and s1.status == "mastered"):
+                st["status"] = "locked"        # 1단계 숙달 후 열림
+            elif sp is None:
+                st["status"] = "unlocked"
+            else:
+                st["status"] = sp.status
+                st["mastery_score"] = round(sp.mastery_score, 1)
+                st["attempts"] = sp.attempts
+        else:  # 3·4 기존 모드 — 항상 접근 가능
             st["status"] = "available"
         stages.append(st)
 
@@ -747,6 +777,7 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
         if not correct:
             wv.error_count += 1
             wv.last_error_at = _dt.utcnow()
+            await _srs_schedule_wrong(current_user.id, "viseme", str(data.viseme_id), db)
 
         await db.commit()
         await db.refresh(sp)
@@ -762,6 +793,101 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
         "attempts": sp.attempts,
         "mastered": sp.status == "mastered",
     }
+
+
+class WordAnswer(BaseModel):
+    word: str
+    correct: bool
+
+
+@app.get("/api/curriculum/words")
+async def curriculum_words(current_user=Depends(get_current_user)):
+    """2단계 콘텐츠: 큐레이션 단어 은행 + 최소대립쌍(프론트가 단어 퀴즈를 구성)."""
+    return {"words": _curriculum.WORD_BANK, "minimal_pairs": _curriculum.MINIMAL_PAIRS}
+
+
+@app.post("/api/curriculum/word-answer")
+async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """단어 인식 채점 → 2단계 숙달 갱신 + 오답 시 SRS 예약."""
+    if not _curriculum.is_word(data.word):
+        raise HTTPException(status_code=400, detail="unknown word")
+    from database import StageProgress
+    from sqlalchemy import select
+    try:
+        r = await db.execute(select(StageProgress).where(
+            StageProgress.user_id == current_user.id, StageProgress.stage == 2))
+        sp = r.scalar_one_or_none()
+        if sp is None:
+            sp = StageProgress(user_id=current_user.id, stage=2, status="in_progress",
+                               attempts=0, correct=0, mastery_score=0.0)
+            db.add(sp)
+        sp.attempts += 1
+        if data.correct:
+            sp.correct += 1
+        sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
+        sp.status = "mastered" if (sp.attempts >= _STAGE2_MIN_ATTEMPTS and sp.mastery_score >= _STAGE2_MASTERY) else "in_progress"
+        if not data.correct:
+            await _srs_schedule_wrong(current_user.id, "word", data.word, db)
+        await db.commit()
+        await db.refresh(sp)
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"word answer failed: {str(e)}")
+    return {"mastery_score": round(sp.mastery_score, 1), "attempts": sp.attempts, "mastered": sp.status == "mastered"}
+
+
+# ── 간격 반복 복습 (SRS) ──────────────────────────────────────────────────
+@app.get("/api/review/due")
+async def review_due(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """오늘까지 복습 예정인 항목(입모양/단어)."""
+    from database import ReviewItem
+    from sqlalchemy import select
+    today = _sr_date.today().isoformat()
+    r = await db.execute(select(ReviewItem).where(
+        ReviewItem.user_id == current_user.id, ReviewItem.due_date <= today).order_by(ReviewItem.due_date))
+    items = r.scalars().all()
+    out = []
+    for it in items:
+        entry = {"kind": it.kind, "ref": it.ref}
+        if it.kind == "viseme" and it.ref.isdigit():
+            les = _curriculum.lesson_by_id(int(it.ref))
+            if les:
+                entry["name"] = les["name"]
+        out.append(entry)
+    return {"count": len(out), "items": out}
+
+
+class ReviewAnswer(BaseModel):
+    kind: str
+    ref: str
+    correct: bool
+
+
+@app.post("/api/review/answer")
+async def review_answer(data: ReviewAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """복습 결과로 다음 등장일 재조정(정답=간격 2배, 오답=내일). 간격이 충분히 커지면 졸업(제거)."""
+    from database import ReviewItem
+    from sqlalchemy import select
+    r = await db.execute(select(ReviewItem).where(
+        ReviewItem.user_id == current_user.id, ReviewItem.kind == data.kind, ReviewItem.ref == data.ref))
+    item = r.scalar_one_or_none()
+    if item is None:
+        return {"ok": True, "removed": False}
+    if data.correct:
+        new_interval = min((item.interval_days or 1) * 2, 32)
+        if new_interval >= 32:
+            await db.delete(item)          # 졸업 — 큐에서 제거
+            await db.commit()
+            return {"ok": True, "removed": True}
+        item.interval_days = new_interval
+        item.due_date = (_sr_date.today() + _sr_delta(days=new_interval)).isoformat()
+    else:
+        item.interval_days = 1
+        item.due_date = (_sr_date.today() + _sr_delta(days=1)).isoformat()
+    await db.commit()
+    return {"ok": True, "removed": False, "next_due": item.due_date, "interval_days": item.interval_days}
 
 
 class ConversationRequest(BaseModel):
