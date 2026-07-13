@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
-import { learningAPI, curriculumAPI, reviewAPI } from '../api'
+import { learningAPI, curriculumAPI } from '../api'
 
 const PRESET_SITUATIONS = [
   { id: '카페', label: '카페', icon: '☕' },
@@ -101,12 +101,10 @@ function CurriculumPath() {
   const [state, setState] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [due, setDue] = useState(0)
 
   const load = () => curriculumAPI.getStages().then(setState).catch(() => setState(null)).finally(() => setLoading(false))
   useEffect(() => {
     load()
-    reviewAPI.getDue().then((d) => setDue(d.count || 0)).catch(() => {})
   }, [])
 
   const pickTrack = async (track) => {
@@ -187,13 +185,9 @@ function CurriculumPath() {
             )
           })}
         </div>
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <button onClick={() => navigate('/review')}
-            className={`py-2.5 rounded-xl text-sm font-semibold transition-all ${due > 0 ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-gray-100 text-gray-400'}`}>
-            🔁 오늘의 복습 {due > 0 ? `${due}개` : '(없음)'}
-          </button>
+        <div className="mt-3">
           <button onClick={() => navigate('/learn/closure')}
-            className="py-2.5 rounded-xl text-sm font-semibold bg-primary-50 text-primary-700 hover:bg-primary-100 transition-all">
+            className="w-full py-2.5 rounded-xl text-sm font-semibold bg-primary-50 text-primary-700 hover:bg-primary-100 transition-all">
             🧩 문맥 추론 훈련
           </button>
         </div>
@@ -247,7 +241,8 @@ function ReviewSection() {
       scenario_id: `review_${Date.now()}`,
     }
     setScenario(scenario, 'test')
-    navigate('/practice')
+    // 복습은 단계 잠금과 무관하게 항상 허용 — StageGate가 이 state로 예외 처리한다.
+    navigate('/practice', { state: { review: true } })
   }
 
   const wrongCount = items ? items.filter((i) => i.source !== 'bookmark').length : 0

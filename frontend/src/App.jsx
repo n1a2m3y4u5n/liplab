@@ -1,5 +1,5 @@
 import { Component, lazy, Suspense, useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null } }
@@ -96,8 +96,14 @@ function AuthGate({ children }) {
  * 조회 실패 시엔 막지 않는다(네트워크 오류로 학습이 통째로 막히지 않도록 — 가용성 우선).
  */
 function StageGate({ stage, children }) {
-  const [state, setState] = useState('loading')   // loading | allowed | denied
+  const location = useLocation()
+  // 복습 세션(틀린 문장·북마크 다시 풀기)은 단계 잠금과 무관하게 항상 허용.
+  // 복습은 /practice를 재사용하므로, 복습 진입은 navigate state({review:true})로 표시해 예외 처리한다.
+  // (스토어가 아닌 라우터 state를 쓰는 이유: 이 이동에만 붙어 이후 직접 진입엔 남지 않아 우회 누수가 없다.)
+  const isReview = location.state?.review === true
+  const [state, setState] = useState(isReview ? 'allowed' : 'loading')   // loading | allowed | denied
   useEffect(() => {
+    if (isReview) { setState('allowed'); return }
     let cancelled = false
     curriculumAPI.getStages()
       .then((data) => {
@@ -107,7 +113,7 @@ function StageGate({ stage, children }) {
       })
       .catch(() => { if (!cancelled) setState('allowed') })
     return () => { cancelled = true }
-  }, [stage])
+  }, [stage, isReview])
 
   if (state === 'loading') return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>불러오는 중…</div>
   if (state === 'denied') return <Navigate to="/dashboard" replace />
