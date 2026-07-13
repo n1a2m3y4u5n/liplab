@@ -10,6 +10,12 @@ os.environ.pop("ANTHROPIC_API_KEY", None)  # 규칙기반 폴백 경로 강제
 import sign_service as ss
 
 
+# 영상 URL 해석은 네트워크 I/O이므로 테스트에서는 스텁(hermetic 유지).
+async def _no_video(origin_no):
+    return None
+ss.resolve_video_url = _no_video
+
+
 def test_index_loaded():
     idx = ss.load_index()
     assert len(idx) > 10000, f"인덱스가 너무 작음: {len(idx)}"
