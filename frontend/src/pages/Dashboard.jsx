@@ -313,7 +313,8 @@ function ReviewSection() {
       scenario_id: `review_${Date.now()}`,
     }
     setScenario(scenario, 'test')
-    navigate('/practice')
+    // 복습은 단계 잠금과 무관하게 허용 — App.jsx StageGate가 이 state로 예외 처리(duadnwls)
+    navigate('/practice', { state: { review: true } })
   }
 
   const wrongCount = items ? items.filter((i) => i.source !== 'bookmark').length : 0
