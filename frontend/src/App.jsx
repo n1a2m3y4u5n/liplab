@@ -50,6 +50,7 @@ const Practice = lazy(() => import('./pages/Practice'))
 const Conversation = lazy(() => import('./pages/Conversation'))
 const DevViseme = lazy(() => import('./pages/DevViseme'))
 const Sign = lazy(() => import('./pages/Sign'))
+const VisemeLiteracy = lazy(() => import('./pages/VisemeLiteracy'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
@@ -101,6 +102,7 @@ function App() {
         <Route path="/conversation" element={<Conversation />} />
         <Route path="/analysis" element={<Analysis />} />
         <Route path="/sign" element={<Sign />} />
+        <Route path="/learn/viseme" element={<VisemeLiteracy />} />
         <Route path="/bookmarks" element={<Bookmarks />} />
         <Route path="/guide" element={<Guide />} />
         <Route path="/dev-viseme" element={<DevViseme />} />

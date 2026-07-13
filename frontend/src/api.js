@@ -150,4 +150,16 @@ export const learningAPI = {
   },
 }
 
+// ============================================
+// Curriculum (단계형 커리큘럼) API
+// ============================================
+
+export const curriculumAPI = {
+  getStages: async () => (await api.get('/curriculum/stages')).data,
+  setTrack: async (track) => (await api.post('/curriculum/track', { track })).data,
+  getVisemeLessons: async () => (await api.get('/curriculum/viseme-lessons')).data,
+  submitRecognition: async (viseme_id, chosen_id) =>
+    (await api.post('/curriculum/recognition', { viseme_id, chosen_id })).data,
+}
+
 export default api

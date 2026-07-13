@@ -130,6 +130,22 @@ MINIMAL_PAIRS: List[Dict] = [
      "note": "둥근 입(우) vs 옆으로 퍼진 입(이) — 정반대."},
 ]
 
+# 각 그룹의 대표 음절 — 아바타로 그 입모양 하나를 명확히 보여줄 때 사용.
+#   자음은 초성으로, 모음은 그 자체로 해당 viseme가 도드라진다.
+DEMO_SYLLABLE: Dict[int, str] = {
+    1: "마", 2: "아", 3: "이", 4: "우", 5: "어",
+    6: "다", 7: "가", 8: "하", 9: "와", 10: "자",
+}
+
+# 단계형 커리큘럼 척추(5단계). 0·1은 신설, 2는 Phase 2 예정, 3·4는 기존 모드에 연결.
+STAGES: List[Dict] = [
+    {"stage": 0, "key": "onboarding", "title": "입문·배치", "desc": "독화가 뭔지 + 나에게 맞는 시작점", "kind": "intro"},
+    {"stage": 1, "key": "viseme", "title": "입모양 인지", "desc": "10개 입모양 그룹을 익힌다", "kind": "literacy", "route": "/learn/viseme"},
+    {"stage": 2, "key": "word", "title": "음절·단어", "desc": "최소대립쌍으로 단어 독화", "kind": "word", "coming_soon": True},
+    {"stage": 3, "key": "sentence", "title": "문장 (상황별)", "desc": "상황별 문장 독화 연습", "kind": "sentence", "route": "/practice"},
+    {"stage": 4, "key": "conversation", "title": "대화 실전", "desc": "AI와 실전 대화", "kind": "conversation", "route": "/conversation"},
+]
+
 _BY_ID: Dict[int, Dict] = {l["viseme_id"]: l for l in VISEME_LESSONS}
 
 
@@ -165,3 +181,9 @@ def same_homophene_cluster(a: int, b: int) -> bool:
 def all_viseme_ids() -> List[int]:
     """가르치는 viseme 그룹 id 목록(1~10)."""
     return [l["viseme_id"] for l in VISEME_LESSONS]
+
+
+def quizzable_lessons() -> List[Dict]:
+    """겉으로 구별 가능한 그룹만(인지퀴즈 대상). 입 안쪽 자음(visibility='low')은
+    애초에 입모양만으로 구별 불가라 퀴즈에서 제외하고 '문맥 필요'로 가르친다."""
+    return [l for l in VISEME_LESSONS if l["visibility"] != "low"]

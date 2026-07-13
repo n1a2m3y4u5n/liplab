@@ -131,6 +131,35 @@ class ScenarioCache(Base):
     )
 
 
+class LearningProfile(Base):
+    """단계형 커리큘럼의 사용자별 상태(트랙·현재 단계).
+    기존 테이블 무변경 원칙에 따라 User에 컬럼을 더하지 않고 별도 테이블로 둔다
+    (신규 테이블 → create_all이 자동 생성, 마이그레이션 불필요)."""
+    __tablename__ = "learning_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    track = Column(String(20), nullable=True)      # 'perception'(중도·난청) | 'language'(선천성) | None(미배치)
+    current_stage = Column(Integer, default=0)     # 0 입문 ~ 4 대화
+    placed = Column(Boolean, default=False)        # 배치(트랙 선택) 완료 여부
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class StageProgress(Base):
+    """단계별 진행·숙달 상태. 인지퀴즈 등 활동 결과가 rolling으로 반영된다."""
+    __tablename__ = "stage_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    stage = Column(Integer, nullable=False)        # 0..4
+    status = Column(String(20), default="locked")  # locked | unlocked | in_progress | mastered
+    mastery_score = Column(Float, default=0.0)     # 0-100 (correct/attempts*100)
+    attempts = Column(Integer, default=0)
+    correct = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 # Dependency for getting DB session
 async def get_db():
     """Dependency for FastAPI routes to get database session"""
