@@ -17,12 +17,15 @@ import os
 import re
 import csv
 import json
+import asyncio
+import urllib.request
 from typing import List, Dict, Optional
 
 from engine import decompose_hangul, text_to_visemes
 
+SLDICT_BASE = "https://sldict.korean.go.kr"
 # 국립국어원 한국수어사전 표제어 상세(영상) 딥링크 베이스
-DICT_VIEW_URL = "https://sldict.korean.go.kr/front/sign/signContentsView.do?origin_no="
+DICT_VIEW_URL = SLDICT_BASE + "/front/sign/signContentsView.do?origin_no="
 
 DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "ksl_dictionary.csv")
 
@@ -96,6 +99,45 @@ def lookup_sign(word: str) -> Optional[Dict]:
         "dict_url": DICT_VIEW_URL + first["origin_no"] if first["origin_no"] else None,
         "alt_count": len(entries),   # 동형어(같은 표제어의 다른 수어) 개수
     }
+
+
+# ---------------------------------------------------------------------------
+# 수어 영상 URL 해석 — origin_no → 실제 mp4 (화면 안에서 인라인 재생용)
+# ---------------------------------------------------------------------------
+# 표제어 상세 페이지(raw HTML)에는 영상 썸네일 경로
+#   //sldict.korean.go.kr/multimedia/multimedia_files/convert/DATE/ID/MOV{num}_105X105.jpg
+# 가 들어 있고, 실제 영상은 같은 경로의 MOV{num}_700X466.mp4 (HTTPS 재생 가능)다.
+# origin_no에서 이 경로를 유도할 공식이 없어(항목마다 DATE/ID 상이), 상세 페이지를
+# 1회 조회해 추출하고 캐시한다. (robots.txt의 /front/sign 차단은 Googlebot 전용)
+_VIDEO_CACHE: Dict[str, Optional[str]] = {}
+_MOV_RE = re.compile(r'(multimedia/multimedia_files/convert/\d+/\d+/MOV\d+)_\d+X\d+\.(?:jpg|png)', re.I)
+
+
+def _resolve_video_url_sync(origin_no: str) -> Optional[str]:
+    if not origin_no:
+        return None
+    if origin_no in _VIDEO_CACHE:
+        return _VIDEO_CACHE[origin_no]
+    url = None
+    try:
+        req = urllib.request.Request(
+            DICT_VIEW_URL + origin_no,
+            headers={"User-Agent": "Mozilla/5.0 (LIPLAB learning aid)"},
+        )
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            html = resp.read().decode("utf-8", "replace")
+        m = _MOV_RE.search(html)
+        if m:
+            url = f"{SLDICT_BASE}/{m.group(1)}_700X466.mp4"
+    except Exception:
+        url = None
+    _VIDEO_CACHE[origin_no] = url
+    return url
+
+
+async def resolve_video_url(origin_no: str) -> Optional[str]:
+    """상세 페이지에서 mp4 URL을 유도(블로킹 fetch는 스레드로). 실패 시 None."""
+    return await asyncio.to_thread(_resolve_video_url_sync, origin_no)
 
 
 # ---------------------------------------------------------------------------
@@ -226,6 +268,13 @@ async def translate_to_ksl(text: str) -> Dict:
                 "jamo": fingerspell(word),
                 "visemes": visemes,
             })
+
+    # 수어 토큰의 실제 영상 URL을 병렬로 해석해 인라인 재생에 쓴다(캐시됨).
+    sign_tokens = [t for t in tokens if t["type"] == "sign" and t.get("origin_no")]
+    if sign_tokens:
+        urls = await asyncio.gather(*(resolve_video_url(t["origin_no"]) for t in sign_tokens))
+        for t, u in zip(sign_tokens, urls):
+            t["video_url"] = u
 
     return {
         "source": text,

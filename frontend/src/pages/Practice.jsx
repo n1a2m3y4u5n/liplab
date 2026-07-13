@@ -5,6 +5,7 @@ import useStore from '../store/useStore'
 import { learningAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
 import QuizForm from '../components/QuizForm'
+import SignPanel from '../components/SignPanel'
 
 function BookmarkButton({ sentence, situation, level }) {
   const [bookmarkId, setBookmarkId] = useState(null)
@@ -151,6 +152,7 @@ export default function Practice() {
   const [startTime, setStartTime] = useState(null)
   const [hintLevel, setHintLevel] = useState(0)
   const [selectedChoice, setSelectedChoice] = useState(null) // 4지선다에서 선택한 보기
+  const [signOpen, setSignOpen] = useState(false)            // 수어 보기 모달
 
   // 4지선다 보기 생성 — 정답 1개 + 다른 문장 3개, 랜덤 순서
   const choices = useMemo(() => {
@@ -333,7 +335,7 @@ export default function Practice() {
                     </p>
                   </div>
                   <button
-                    onClick={() => navigate(`/sign?text=${encodeURIComponent(currentSentence)}`)}
+                    onClick={() => setSignOpen(true)}
                     className="mt-2 w-full py-2 rounded-lg border border-primary-300 text-primary-600 text-sm font-medium hover:bg-primary-50 transition-colors"
                   >
                     🤟 이 문장 수어로 보기
@@ -562,6 +564,38 @@ export default function Practice() {
           </motion.div>
         )}
       </main>
+
+      {/* 수어 보기 — 학습 화면을 벗어나지 않는 슬라이드오버 모달 */}
+      <AnimatePresence>
+        {signOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 bg-black/40 flex justify-end"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setSignOpen(false)}
+          >
+            <motion.div
+              className="w-full max-w-2xl h-full bg-white shadow-2xl overflow-y-auto"
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.25 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400">이 문장을 수어로</p>
+                  <p className="font-bold text-gray-900">{currentSentence}</p>
+                </div>
+                <button onClick={() => setSignOpen(false)}
+                  className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-lg">
+                  닫기 ✕
+                </button>
+              </div>
+              <div className="p-5">
+                {signOpen && <SignPanel text={currentSentence} />}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
