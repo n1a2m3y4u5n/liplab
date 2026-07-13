@@ -5,6 +5,8 @@ import useStore from '../store/useStore'
 import { learningAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
 import QuizForm from '../components/QuizForm'
+import SessionSummary from '../components/SessionSummary'
+import { buildSessionSummary } from '../utils/practiceInsights'
 
 function BookmarkButton({ sentence, situation, level }) {
   const [bookmarkId, setBookmarkId] = useState(null)
@@ -139,6 +141,7 @@ export default function Practice() {
   const currentSentence = useStore((state) => state.currentSentence)
   const currentSentenceIndex = useStore((state) => state.currentSentenceIndex)
   const nextSentence = useStore((state) => state.nextSentence)
+  const setScenario = useStore((state) => state.setScenario)
   const resetPractice = useStore((state) => state.resetPractice)
   const updateUser = useStore((state) => state.updateUser)
   const practiceMode = useStore((state) => state.practiceMode) // 'study' | 'test' | 'test-multiple'
@@ -150,6 +153,8 @@ export default function Practice() {
   const [result, setResult] = useState(null)
   const [startTime, setStartTime] = useState(null)
   const [hintLevel, setHintLevel] = useState(0)
+  const [sessionResults, setSessionResults] = useState([])
+  const [showSessionSummary, setShowSessionSummary] = useState(false)
   const [selectedChoice, setSelectedChoice] = useState(null) // 4지선다에서 선택한 보기
 
   // 4지선다 보기 생성 — 정답 1개 + 다른 문장 3개, 랜덤 순서
@@ -162,6 +167,8 @@ export default function Practice() {
     return [...others, currentSentence].sort(() => Math.random() - 0.5)
   }, [currentSentence])
 
+  const sessionSummary = useMemo(() => buildSessionSummary(sessionResults), [sessionResults])
+
   useEffect(() => {
     if (!currentScenario) {
       navigate('/dashboard')
@@ -169,6 +176,13 @@ export default function Practice() {
     }
     loadVisemes()
   }, [currentSentence])
+
+  useEffect(() => {
+    setSessionResults([])
+    setShowSessionSummary(false)
+    setResult(null)
+    setSelectedChoice(null)
+  }, [currentScenario?.scenario_id])
 
   const loadVisemes = async () => {
     if (!currentSentence) {
@@ -208,6 +222,17 @@ export default function Practice() {
 
       setResult(response)
       setIsPlaying(false)
+      setSessionResults((prev) => [
+        ...prev,
+        {
+          sentence: currentSentence,
+          score: response.score,
+          xpGained: response.xp_gained || 0,
+          phonemeAccuracy: response.phoneme_accuracy || {},
+          timeSpentSeconds: timeSpent,
+          answer: userAnswer,
+        },
+      ])
 
       const updates = {}
       if (response.new_level) updates.current_level = response.new_level
@@ -236,6 +261,39 @@ export default function Practice() {
   const handleFinish = () => {
     resetPractice()
     navigate('/dashboard')
+  }
+
+  const openSessionSummary = () => {
+    setShowSessionSummary(true)
+  }
+
+  const handleRestartScenario = () => {
+    if (!currentScenario) return
+
+    setScenario(
+      {
+        ...currentScenario,
+        sentences: [...currentScenario.sentences],
+        scenario_id: `${currentScenario.scenario_id}_restart_${Date.now()}`,
+      },
+      practiceMode
+    )
+  }
+
+  const handleRetryIncorrect = () => {
+    const incorrectSentences = [...new Set(sessionSummary.incorrectItems.map((item) => item.sentence))]
+
+    if (incorrectSentences.length === 0) return
+
+    setScenario(
+      {
+        situation: `${currentScenario?.situation || 'Review'} focus`,
+        level: currentScenario?.level || 1,
+        sentences: incorrectSentences,
+        scenario_id: `retry_${Date.now()}`,
+      },
+      practiceMode === 'study' ? 'test' : practiceMode
+    )
   }
 
   const showNextHint = () => {
@@ -303,7 +361,17 @@ export default function Practice() {
           </div>
         </div>
 
-        {currentSentence ? (
+        {showSessionSummary ? (
+          <SessionSummary
+            practiceMode={practiceMode}
+            scenario={currentScenario}
+            summary={sessionSummary}
+            onRetryIncorrect={handleRetryIncorrect}
+            onRestart={handleRestartScenario}
+            onOpenAnalysis={() => navigate('/analysis')}
+            onExit={handleFinish}
+          />
+        ) : currentSentence ? (
           practiceMode === 'study' ? (
             /* ── 학습 모드 ── */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -312,7 +380,7 @@ export default function Practice() {
                 {loading ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-3">
                     <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-                    <p className="text-gray-500 text-sm">Viseme 생성 중...</p>
+                    <p className="text-gray-500 text-sm">입모 데이터를 생성하는 중...</p>
                   </div>
                 ) : (
                   <LipSyncPlayer3D
@@ -343,8 +411,8 @@ export default function Practice() {
 
                 <div className="mt-auto space-y-2">
                   {isLastSentence ? (
-                    <button onClick={handleFinish} className="btn-primary w-full">
-                      학습 완료, 대시보드로
+                    <button onClick={openSessionSummary} className="btn-primary w-full">
+                      세션 요약 보기
                     </button>
                   ) : (
                     <button onClick={handleNext} className="btn-primary w-full">
@@ -362,7 +430,7 @@ export default function Practice() {
                 {loading ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-3">
                     <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-                    <p className="text-gray-500 text-sm">Viseme 생성 중...</p>
+                    <p className="text-gray-500 text-sm">입모 데이터를 생성하는 중...</p>
                   </div>
                 ) : (
                   <LipSyncPlayer3D
@@ -438,8 +506,8 @@ export default function Practice() {
                         ↩ 다시 도전
                       </button>
                       {isLastSentence ? (
-                        <button onClick={handleFinish} className="flex-1 btn-primary py-2 text-sm">
-                          완료
+                        <button onClick={openSessionSummary} className="flex-1 btn-primary py-2 text-sm">
+                          세션 요약
                         </button>
                       ) : (
                         <button onClick={handleNext} className="flex-1 btn-primary py-2 text-sm">
@@ -463,7 +531,7 @@ export default function Practice() {
                 {loading ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-3">
                     <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-                    <p className="text-gray-500 text-sm">Viseme 생성 중...</p>
+                    <p className="text-gray-500 text-sm">입모 데이터를 생성하는 중...</p>
                   </div>
                 ) : (
                   <LipSyncPlayer3D
@@ -528,8 +596,8 @@ export default function Practice() {
                       </p>
                     )}
                     {isLastSentence ? (
-                      <button onClick={handleFinish} className="btn-primary w-full">
-                        완료하고 대시보드로
+                      <button onClick={openSessionSummary} className="btn-primary w-full">
+                        세션 요약 보기
                       </button>
                     ) : (
                       <button onClick={handleNext} className="btn-primary w-full">
@@ -550,8 +618,8 @@ export default function Practice() {
             <div className="text-6xl mb-4">완료</div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">연습 완료!</h2>
             <p className="text-gray-600 mb-6">모든 문장을 완료했습니다. 수고하셨습니다!</p>
-            <button onClick={handleFinish} className="btn-primary">
-              대시보드로 돌아가기
+            <button onClick={openSessionSummary} className="btn-primary">
+              세션 요약 보기
             </button>
           </motion.div>
         )}
