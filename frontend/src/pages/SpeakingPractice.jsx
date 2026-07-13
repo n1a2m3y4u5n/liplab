@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, learningAPI, speakAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
@@ -41,9 +41,15 @@ function autoCorrelate(buf, sampleRate) {
 
 export default function SpeakingPractice() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const stageNo = searchParams.get('stage') != null ? parseInt(searchParams.get('stage'), 10) : null
+
   const [words, setWords] = useState([])
   const [target, setTarget] = useState(null)
   const [frames, setFrames] = useState([])
+  const [stageInfo, setStageInfo] = useState(null)   // 단계 콘텐츠(있으면 단계 모드)
+  const [itemIdx, setItemIdx] = useState(0)
+  const [progress, setProgress] = useState(null)     // 단계 진행률(마지막 채점 결과)
   const [recording, setRecording] = useState(false)
   const [vol, setVol] = useState(0)
   const [pitch, setPitch] = useState(null)
@@ -51,6 +57,13 @@ export default function SpeakingPractice() {
   const [summary, setSummary] = useState(null)
   const [assessing, setAssessing] = useState(false)
   const [assessment, setAssessment] = useState(null)
+
+  const items = stageInfo?.items || []
+  const curItem = items[itemIdx] || null
+  const mode = stageInfo?.mode || (stageNo != null ? '' : 'word')
+  const drill = curItem?.drill || null
+  const prompt = curItem?.prompt || null
+  const metricMode = mode === 'voicing' || mode === 'prosody'   // 지표 기반(전사 없음)
 
   const acRef = useRef(null)
   const analyserRef = useRef(null)
@@ -66,19 +79,41 @@ export default function SpeakingPractice() {
   const summaryRef = useRef(null)
 
   useEffect(() => {
-    curriculumAPI.getWords()
-      .then((d) => { const ws = d.words.map((w) => w.word); setWords(ws); pickWord(ws) })
-      .catch(() => setErr('콘텐츠를 불러오지 못했어요.'))
+    if (stageNo != null) {
+      speakAPI.getStage(stageNo)
+        .then((d) => { setStageInfo(d); applyItem(d.items, 0) })
+        .catch(() => setErr('단계를 불러오지 못했어요.'))
+    } else {
+      curriculumAPI.getWords()
+        .then((d) => { const ws = d.words.map((w) => w.word); setWords(ws); pickWord(ws) })
+        .catch(() => setErr('콘텐츠를 불러오지 못했어요.'))
+    }
     return () => teardown()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [stageNo])
+
+  const loadFrames = async (t) => {
+    setTarget(t); setFrames([]); setSummary(null); setAssessment(null)
+    try { setFrames(await learningAPI.getVisemes(t)) } catch { /* ignore */ }
+  }
+
+  const applyItem = (its, idx) => {
+    const it = its?.[idx]
+    if (!it) return
+    setItemIdx(idx)
+    loadFrames(it.target)
+  }
 
   const pickWord = async (ws) => {
     const list = ws && ws.length ? ws : words
     if (!list.length) return
-    const t = list[Math.floor(Math.random() * list.length)]
-    setTarget(t); setFrames([]); setSummary(null); setAssessment(null)
-    try { setFrames(await learningAPI.getVisemes(t)) } catch { /* ignore */ }
+    loadFrames(list[Math.floor(Math.random() * list.length)])
+  }
+
+  // 다음 항목(단계) 또는 다음 단어(자유)
+  const nextItem = () => {
+    if (stageNo != null && items.length) applyItem(items, (itemIdx + 1) % items.length)
+    else pickWord()
   }
 
   const closeAudio = () => {
@@ -132,10 +167,16 @@ export default function SpeakingPractice() {
     closeAudio()
     if (blob.size > 500 && target) {
       const s = summaryRef.current || {}
-      const metrics = { loudness: s.loudness ?? 0, pitch_range: s.pitchRange ?? 0, duration: s.duration ?? 0 }
+      const metrics = {
+        loudness: s.loudness ?? 0, pitch_range: s.pitchRange ?? 0, duration: s.duration ?? 0,
+        pitch_start: s.pitchStart ?? 0, pitch_end: s.pitchEnd ?? 0,
+      }
+      const opts = stageNo != null ? { stage: stageNo, drill } : {}
       setAssessing(true)
       try {
-        setAssessment(await speakAPI.assess(target, blob, metrics))
+        const res = await speakAPI.assess(target, blob, metrics, opts)
+        setAssessment(res)
+        if (res.progress) setProgress(res.progress)
       } catch (e) {
         setAssessment({ error: e?.response?.data?.detail || '발음 분석에 실패했어요. 잠시 후 다시 시도해 주세요.' })
       } finally {
@@ -174,19 +215,24 @@ export default function SpeakingPractice() {
     else if (loudness > 92) { volMsg = `조금 컸어요(크기 ${loudness}/100). 편하게 낮춰도 괜찮아요.`; volOk = true }
     else { volMsg = `볼륨 적당해요(크기 ${loudness}/100). 좋아요!`; volOk = true }
 
-    let pitchRange = 0, pitchMean = 0, toneMsg, toneOk = null
+    let pitchRange = 0, pitchMean = 0, pitchStart = 0, pitchEnd = 0, toneMsg, toneOk = null
     if (ps.length >= 4) {
       const sorted = [...ps].sort((a, b) => a - b)
       const lo = sorted[Math.floor(sorted.length * 0.1)]
       const hi = sorted[Math.floor(sorted.length * 0.9)]
       pitchRange = Math.round(hi - lo)
       pitchMean = Math.round(ps.reduce((a, b) => a + b, 0) / ps.length)
+      // 억양 방향 판정용: 앞 30% vs 뒤 30% 평균
+      const head = ps.slice(0, Math.max(1, Math.round(ps.length * 0.3)))
+      const tail = ps.slice(Math.floor(ps.length * 0.7))
+      pitchStart = Math.round(head.reduce((a, b) => a + b, 0) / head.length)
+      pitchEnd = Math.round(tail.reduce((a, b) => a + b, 0) / tail.length)
       if (pitchRange < 25) { toneMsg = `톤이 평평했어요(억양 폭 ${pitchRange}Hz). 끝을 올리거나 내리며 억양을 넣어보세요.`; toneOk = false }
       else { toneMsg = `톤에 자연스러운 변화가 있었어요(억양 폭 ${pitchRange}Hz)!`; toneOk = true }
     } else {
       toneMsg = '소리를 조금 더 이어서 내보면 억양을 볼 수 있어요.'
     }
-    return { micIssue, loudness, volMsg, volOk, pitchRange, pitchMean, toneMsg, toneOk, duration: dur }
+    return { micIssue, loudness, volMsg, volOk, pitchRange, pitchMean, pitchStart, pitchEnd, toneMsg, toneOk, duration: dur }
   }
 
   const loop = () => {
@@ -241,8 +287,12 @@ export default function SpeakingPractice() {
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">말하기 연습</h1>
-            <p className="text-sm text-gray-500">귀 대신 눈으로 — 내 목소리를 보면서 발음을 다듬어요</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {stageInfo ? `${stageInfo.icon} ${stageInfo.stage}단계 · ${stageInfo.title}` : '말하기 연습'}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {stageInfo?.guide || '귀 대신 눈으로 — 내 목소리를 보면서 발음을 다듬어요'}
+            </p>
           </div>
           <button onClick={() => { teardown(); navigate('/dashboard') }} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
         </div>
@@ -251,10 +301,24 @@ export default function SpeakingPractice() {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="card">
-            <p className="text-sm text-gray-500 mb-1">이렇게 말해보세요</p>
+            <p className="text-sm text-gray-500 mb-1">{prompt ? '이렇게 해보세요' : '이렇게 말해보세요'}</p>
+            {prompt && <p className="text-base font-semibold text-rose-600 text-center mb-1">{prompt}</p>}
             <p className="text-3xl font-bold text-gray-900 text-center py-2">{target || '…'}</p>
             <MouthAvatar frames={frames} height={230} />
-            <p className="text-xs text-gray-400 mt-2 text-center">위 입모양을 참고해 또박또박 말해보세요</p>
+            <p className="text-xs text-gray-400 mt-2 text-center">
+              {metricMode ? '아래 그래프로 목소리 크기·억양을 확인해요' : '위 입모양을 참고해 또박또박 말해보세요'}
+            </p>
+            {progress && (
+              <div className="mt-3">
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>이 단계 숙달</span><span>{progress.mastery_score}% · {progress.attempts}회</span>
+                </div>
+                <div className="bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                  <div className="bg-rose-500 h-full transition-[width]" style={{ width: `${Math.min(progress.mastery_score, 100)}%` }} />
+                </div>
+                {progress.mastered && <p className="mt-1 text-xs font-semibold text-green-600">🎉 이 단계를 숙달했어요! 다음 단계가 열렸어요.</p>}
+              </div>
+            )}
           </div>
 
           <div className="card flex flex-col">
@@ -289,14 +353,21 @@ export default function SpeakingPractice() {
         <AnimatePresence>
           {summary && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="card mt-6">
-              <h3 className="font-bold text-gray-900 mb-3">이번 발화 피드백</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-gray-900">이번 발화 피드백</h3>
+                {assessment && !assessment.error && assessment.passed != null && (
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${assessment.passed ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {assessment.passed ? '성공 ✓' : '조금 더 연습'}
+                  </span>
+                )}
+              </div>
 
               {/* 정량 지표 */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                 <Stat label="목소리 크기" value={`${summary.loudness}/100`} />
                 <Stat label="억양 폭" value={`${summary.pitchRange}Hz`} />
                 <Stat label="길이" value={`${summary.duration}s`} />
-                <Stat label="발음 점수" value={assessment && !assessment.error ? `${assessment.score}점` : assessing ? '…' : '-'} />
+                <Stat label="점수" value={assessment && !assessment.error ? `${assessment.score}점` : assessing ? '…' : '-'} />
               </div>
 
               {/* 내 목소리 곡선 — 억양(높낮이) + 크기를 시간축으로 '보이게' */}
@@ -308,29 +379,36 @@ export default function SpeakingPractice() {
               )}
 
               <div className="space-y-2">
-                <div className={`p-3 rounded-lg text-sm ${summary.volOk ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>🔊 {summary.volMsg}</div>
-                {summary.toneMsg && (
+                {/* 발성·운율(지표 모드)은 드릴 목표와 상충할 수 있어 일반 크기/톤 메시지는 숨김 */}
+                {!metricMode && (
+                  <div className={`p-3 rounded-lg text-sm ${summary.volOk ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>🔊 {summary.volMsg}</div>
+                )}
+                {!metricMode && summary.toneMsg && (
                   <div className={`p-3 rounded-lg text-sm ${summary.toneOk === false ? 'bg-amber-50 text-amber-700' : summary.toneOk ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-600'}`}>🎵 {summary.toneMsg}</div>
                 )}
 
                 {assessing && (
                   <div className="p-3 rounded-lg bg-primary-50 text-primary-600 text-sm flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
-                    발음을 분석하는 중…
+                    {metricMode ? '결과를 확인하는 중…' : '발음을 분석하는 중…'}
                   </div>
                 )}
                 {assessment && !assessment.error && (
                   <>
-                    <div className="p-3 rounded-lg bg-white border border-gray-200 text-sm">
-                      <span className="text-gray-400 text-xs">이렇게 들렸어요</span>
-                      <p className="font-bold text-gray-900">"{assessment.transcript || '(잘 안 들렸어요)'}"</p>
-                    </div>
+                    {assessment.transcript != null && (
+                      <div className="p-3 rounded-lg bg-white border border-gray-200 text-sm">
+                        <span className="text-gray-400 text-xs">이렇게 들렸어요</span>
+                        <p className="font-bold text-gray-900">"{assessment.transcript || '(잘 안 들렸어요)'}"</p>
+                      </div>
+                    )}
                     {assessment.confusions?.length > 0 && (
                       <div className="p-2 rounded-lg bg-amber-50 text-amber-700 text-xs">
                         다르게 들린 소리: {assessment.confusions.map((c) => `${c.correct}→${c.confused_as}`).join(', ')}
                       </div>
                     )}
-                    <div className="p-3 rounded-lg bg-primary-50 text-primary-800 text-sm leading-relaxed">🗣️ {assessment.coaching}</div>
+                    {assessment.coaching && (
+                      <div className="p-3 rounded-lg bg-primary-50 text-primary-800 text-sm leading-relaxed">🗣️ {assessment.coaching}</div>
+                    )}
                   </>
                 )}
                 {assessment?.error && (
@@ -340,7 +418,7 @@ export default function SpeakingPractice() {
 
               <div className="flex gap-2 mt-4">
                 <button onClick={() => { setSummary(null); setAssessment(null) }} className="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">다시 말하기</button>
-                <button onClick={() => pickWord()} className="flex-1 btn-primary py-2 text-sm">다음 단어 →</button>
+                <button onClick={nextItem} className="flex-1 btn-primary py-2 text-sm">{stageNo != null ? '다음 →' : '다음 단어 →'}</button>
               </div>
             </motion.div>
           )}
