@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import AvatarVRM from './AvatarVRM'
+import AvatarVRM, { DISTANCE_NEAR_M, DISTANCE_FAR_M } from './AvatarVRM'
 
 /**
  * 3D LipSync Player - VRM-based avatar with full playback controls
@@ -20,6 +20,8 @@ export default function LipSyncPlayer3D({
   const [currentIndex, setCurrentIndex] = useState(0)
   const [speed, setSpeed] = useState(1.0)
   const [isPaused, setIsPaused] = useState(false)
+  const [view, setView] = useState('front')
+  const [distance, setDistance] = useState(0)
 
   // Refs to avoid stale closure issues
   const timeoutRef = useRef(null)
@@ -169,7 +171,32 @@ export default function LipSyncPlayer3D({
       >
         <AvatarVRM
           visemeId={currentViseme?.viseme ?? 15}
+          transitionMs={currentViseme?.transition_ms ?? 30}
+          durationMs={currentViseme?.duration_ms ?? 120}
+          speed={speed}
+          view={view}
+          distance={distance}
         />
+
+        {/* 정면에서 구별하기 어려운 입술 돌출은 측면 보기로 확인한다. */}
+        <div className="absolute top-3 left-3 flex rounded-lg overflow-hidden bg-black/40 backdrop-blur-sm text-xs">
+          {[
+            ['front', '정면'],
+            ['side', '측면'],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => setView(value)}
+              className={`px-2.5 py-1 font-medium transition-colors ${
+                view === value
+                  ? 'bg-primary-500 text-white'
+                  : 'text-gray-200 hover:bg-white/10'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         {/* Status badge */}
         {isRunning && (
@@ -259,6 +286,23 @@ export default function LipSyncPlayer3D({
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="mt-3 flex items-center gap-3">
+        <span className="text-xs text-gray-500 shrink-0">거리</span>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={distance}
+          onChange={(event) => setDistance(Number(event.target.value))}
+          className="flex-1 accent-primary-500 cursor-pointer"
+          aria-label="아바타 거리 조절"
+        />
+        <span className="text-xs text-gray-500 shrink-0 tabular-nums w-16 text-right">
+          약 {(DISTANCE_NEAR_M + distance * (DISTANCE_FAR_M - DISTANCE_NEAR_M)).toFixed(2)}m
+        </span>
       </div>
     </div>
   )
