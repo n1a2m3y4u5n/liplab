@@ -61,6 +61,7 @@ export default function SpeakingPractice() {
   const chunksRef = useRef([])
   const volHist = useRef([])       // 원본 RMS(무음 포함)
   const pitchHist = useRef([])
+  const traceRef = useRef([])      // {t, rms, hz|null} 시계열 — 결과 그래프용
   const startRef = useRef(0)
   const summaryRef = useRef(null)
 
@@ -96,7 +97,7 @@ export default function SpeakingPractice() {
 
   const start = async () => {
     setErr(null); setSummary(null); setAssessment(null)
-    volHist.current = []; pitchHist.current = []; chunksRef.current = []
+    volHist.current = []; pitchHist.current = []; traceRef.current = []; chunksRef.current = []
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -148,6 +149,7 @@ export default function SpeakingPractice() {
     rafRef.current = null
     setRecording(false); setVol(0); setPitch(null)
     const s = computeSummary()
+    s.trace = traceRef.current.slice()
     summaryRef.current = s
     setSummary(s)
     const rec = recorderRef.current
@@ -205,6 +207,7 @@ export default function SpeakingPractice() {
         const p = autoCorrelate(buf, acRef.current.sampleRate)
         const hz = p > 70 && p < 500 ? Math.round(p) : null
         if (hz) pitchHist.current.push(hz)
+        traceRef.current.push({ t: (performance.now() - startRef.current) / 1000, rms, hz })
         setVol(disp); setPitch(hz)
       }
       frame++
@@ -296,6 +299,14 @@ export default function SpeakingPractice() {
                 <Stat label="발음 점수" value={assessment && !assessment.error ? `${assessment.score}점` : assessing ? '…' : '-'} />
               </div>
 
+              {/* 내 목소리 곡선 — 억양(높낮이) + 크기를 시간축으로 '보이게' */}
+              {summary.trace && summary.trace.length >= 3 && !summary.micIssue && (
+                <div className="mb-3 p-3 rounded-xl bg-white border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1">내 목소리 곡선</p>
+                  <PitchEnergyGraph trace={summary.trace} summary={summary} />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <div className={`p-3 rounded-lg text-sm ${summary.volOk ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>🔊 {summary.volMsg}</div>
                 {summary.toneMsg && (
@@ -344,6 +355,100 @@ function Stat({ label, value }) {
     <div className="p-2 rounded-lg bg-gray-50 text-center">
       <p className="text-[10px] text-gray-400">{label}</p>
       <p className="font-bold text-gray-800 text-sm">{value}</p>
+    </div>
+  )
+}
+
+/**
+ * 피치·강세 그래프 — 청각장애 학습자가 자기 발음을 '들을' 수 없으니 곡선으로 '본다'.
+ *  위 레인: 억양(높낮이). 평균 피치를 중심으로 ±90Hz 매핑 → 기준 목소리 높이와 무관하게
+ *           '변화량'만 곡선으로 드러난다(평평하게 말하면 가운데 점선에 붙은 평평한 선).
+ *  아래 레인: 목소리 크기(에너지 포락선) + '적정' 기준 점선. 자주 아래로 내려가면 너무 작았다는 뜻.
+ */
+function PitchEnergyGraph({ trace, summary }) {
+  if (!trace || trace.length < 3) return null
+  const W = 480, H = 250
+  const padL = 40, padR = 12, padT = 16, padB = 22
+  const innerW = W - padL - padR
+  const last = trace[trace.length - 1]
+  const tMax = Math.max(summary?.duration || 0, last.t || 0.1, 0.1)
+  const X = (t) => padL + (t / tMax) * innerW
+
+  // 위: 억양 레인 / 아래: 크기 레인
+  const pTop = padT, pBot = padT + 92
+  const eTop = pBot + 26, eBot = H - padB
+
+  // 억양: 평균 중심 ±90Hz
+  const voiced = trace.filter((s) => s.hz)
+  const center = summary?.pitchMean ||
+    (voiced.length ? Math.round(voiced.reduce((a, b) => a + b.hz, 0) / voiced.length) : 180)
+  const span = 90
+  const PY = (hz) => {
+    const c = Math.max(center - span, Math.min(center + span, hz))
+    return pBot - ((c - (center - span)) / (2 * span)) * (pBot - pTop)
+  }
+  const segs = []
+  let cur = []
+  for (const s of trace) {
+    if (s.hz) cur.push([X(s.t), PY(s.hz)])
+    else { if (cur.length > 1) segs.push(cur); cur = [] }
+  }
+  if (cur.length > 1) segs.push(cur)
+  const toPath = (pts) => pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')
+
+  // 크기: 에너지 포락선(면적)
+  const eMax = 0.14
+  const EY = (rms) => eBot - Math.min(1, Math.max(0, rms) / eMax) * (eBot - eTop)
+  const yTh = EY(0.062)   // ≈ 크기 40/100 (적정 기준선)
+  const areaPath = `M${X(trace[0].t).toFixed(1)} ${eBot} ` +
+    trace.map((s) => `L${X(s.t).toFixed(1)} ${EY(s.rms).toFixed(1)}`).join(' ') +
+    ` L${X(last.t).toFixed(1)} ${eBot} Z`
+
+  const flat = summary?.toneOk === false
+  const quiet = summary?.volOk === false && !summary?.micIssue
+  const midY = (pTop + pBot) / 2
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: 260 }}
+           role="img" aria-label="발음 피치·강세 그래프">
+        {/* 레인 배경 */}
+        <rect x={padL} y={pTop} width={innerW} height={pBot - pTop} rx="8" fill="#eef2ff" />
+        <rect x={padL} y={eTop} width={innerW} height={eBot - eTop} rx="8" fill="#f1f5f9" />
+
+        {/* 억양 기준선(평균=평평의 기준) */}
+        <line x1={padL} y1={midY} x2={W - padR} y2={midY} stroke="#a5b4fc" strokeWidth="1" strokeDasharray="4 4" />
+        {/* 억양 곡선 */}
+        {segs.map((pts, i) => (
+          <path key={i} d={toPath(pts)} fill="none" stroke="#4f46e5" strokeWidth="2.5"
+                strokeLinejoin="round" strokeLinecap="round" />
+        ))}
+
+        {/* 크기 포락선 + 적정 기준선 */}
+        <path d={areaPath} fill="#6366f1" fillOpacity="0.18" stroke="#6366f1" strokeWidth="1.5" strokeLinejoin="round" />
+        <line x1={padL} y1={yTh} x2={W - padR} y2={yTh} stroke="#f59e0b" strokeWidth="1" strokeDasharray="5 4" />
+        <text x={W - padR} y={yTh - 3} textAnchor="end" fontSize="9" fill="#d97706">적정</text>
+
+        {/* 레인 라벨 */}
+        <text x="4" y={midY - 3} fontSize="10" fill="#6366f1" fontWeight="600">억양</text>
+        <text x="4" y={midY + 9} fontSize="8" fill="#94a3b8">높낮이</text>
+        <text x="4" y={(eTop + eBot) / 2 + 3} fontSize="10" fill="#64748b" fontWeight="600">크기</text>
+
+        {/* 시간축 */}
+        <text x={padL} y={H - 5} fontSize="9" fill="#94a3b8">0s</text>
+        <text x={W - padR} y={H - 5} textAnchor="end" fontSize="9" fill="#94a3b8">{tMax.toFixed(1)}s</text>
+      </svg>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-gray-500">
+        <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-[2px] bg-primary-600" /> 억양선</span>
+        <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-2 bg-primary-100 border border-primary-500" /> 목소리 크기</span>
+        <span className="inline-flex items-center gap-1"><span className="inline-block w-3 border-t border-dashed border-amber-500" /> 적정 크기</span>
+      </div>
+      <div className="mt-1 space-y-0.5">
+        {flat && <p className="text-[11px] text-amber-600">억양선이 가운데 점선을 거의 안 벗어났어요 → 문장 끝에서 선을 올리거나 내려보세요.</p>}
+        {quiet && <p className="text-[11px] text-amber-600">크기 곡선이 적정선 아래로 자주 내려갔어요 → 배에 힘을 주고 더 크게.</p>}
+        {!flat && !quiet && <p className="text-[11px] text-emerald-600">억양선과 크기 곡선이 잘 살아있어요 👍</p>}
+      </div>
     </div>
   )
 }
