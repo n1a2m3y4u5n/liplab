@@ -405,12 +405,6 @@ export default function Dashboard() {
                 분석
               </button>
               <button
-                onClick={() => navigate('/speak')}
-                className="px-3 py-1.5 text-sm text-white bg-rose-500 hover:bg-rose-600 transition-colors rounded-lg"
-              >
-                🎤 말하기
-              </button>
-              <button
                 onClick={() => navigate('/sign')}
                 className="px-3 py-1.5 text-sm text-white bg-primary-500 hover:bg-primary-600 transition-colors rounded-lg"
               >
@@ -534,6 +528,43 @@ export default function Dashboard() {
 
         {/* 단계형 커리큘럼 경로 (오늘의 학습) */}
         <CurriculumPath />
+
+        {/* 말하기 연습 — 독화(읽기)의 짝: 내 발음을 눈으로 보고 다듬기 */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28 }}
+          className="card mb-8"
+        >
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-lg font-bold text-gray-900">말하기 연습</h2>
+            <span className="text-xs text-gray-400">읽기의 짝 · 발음 다듬기</span>
+          </div>
+          <p className="text-sm text-gray-500 mb-4">
+            내 발음은 스스로 듣기 어렵죠. 목소리 크기·억양을 <b className="text-gray-700">곡선</b>으로 보고,
+            AI가 어떤 소리를 어떻게 고칠지 짚어줍니다.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="grid grid-cols-3 gap-2 flex-1">
+              {[
+                { icon: '🔊', label: '목소리 크기' },
+                { icon: '📈', label: '억양 곡선' },
+                { icon: '🗣️', label: 'AI 발음 코칭' },
+              ].map((f) => (
+                <div key={f.label} className="bg-rose-50 rounded-xl p-3 text-center">
+                  <div className="text-2xl mb-1">{f.icon}</div>
+                  <div className="text-xs font-medium text-gray-600 leading-tight">{f.label}</div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => navigate('/speak')}
+              className="sm:w-44 py-3 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-600 transition-colors"
+            >
+              🎤 말하기 시작
+            </button>
+          </div>
+        </motion.div>
 
         {/* Practice Setup */}
         <motion.div
