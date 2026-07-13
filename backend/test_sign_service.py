@@ -108,6 +108,16 @@ def test_number_to_sign():
     assert [tk.get("signed_as") for tk in r2["tokens"]] == ["둘", "다섯"]
 
 
+def test_zero_is_number_sign():
+    # 0도 숫자 수어(영, 개념>수 카테고리 origin 1214)로 나와야 한다(지문자 아님).
+    r = asyncio.run(ss.translate_to_ksl("10"))
+    zero = r["tokens"][1]
+    assert zero["type"] == "sign" and zero["word"] == "0" and zero.get("signed_as") == "영"
+    assert zero["origin_no"] == "1214"          # 천주교 동형어(17688)가 아닌 숫자 0
+    # 동형어 중 '수' 카테고리를 골랐는지 직접 확인
+    assert ss.lookup_number_sign("영")["origin_no"] == "1214"
+
+
 def test_fingerspell_fallback_token():
     result = asyncio.run(ss.translate_to_ksl("컴퓨터공학과우주정거장"))
     assert result["tokens"][0]["type"] == "fingerspell"

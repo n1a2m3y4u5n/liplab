@@ -42,11 +42,11 @@ _ALIASES = {
     '많이': '많다', '열심히': '열심', '천천히': '느리다',
 }
 
-# 아라비아 숫자 → 한국수어 숫자 수어. 고유어 수사(하나~아홉)는 표제어가 '숫자 수형'으로
-# 명확하고 동형어가 적어 안전(한자어 일·이·사 등은 동형어가 많아 오매칭 위험 → 미사용).
-# 0은 명확한 표제어가 없어 매핑에서 제외(텍스트 폴백). 자리별로 각 숫자 수어를 낸다.
+# 아라비아 숫자 → 한국수어 숫자 수어. 1~9는 고유어 수사(하나~아홉), 0은 '영'(零).
+# 조회는 lookup_number_sign이 동형어 중 '개념 > 수' 카테고리를 우선 선택하므로,
+# 영(천주교)·셋(기독교) 같은 비숫자 동형어를 피해 숫자 수어만 정확히 고른다.
 _DIGIT_TO_KO = {
-    '1': '하나', '2': '둘', '3': '셋', '4': '넷', '5': '다섯',
+    '0': '영', '1': '하나', '2': '둘', '3': '셋', '4': '넷', '5': '다섯',
     '6': '여섯', '7': '일곱', '8': '여덟', '9': '아홉',
 }
 
@@ -116,6 +116,22 @@ def lookup_sign(word: str) -> Optional[Dict]:
         "description": first["description"],
         "dict_url": DICT_VIEW_URL + first["origin_no"] if first["origin_no"] else None,
         "alt_count": len(entries),   # 동형어(같은 표제어의 다른 수어) 개수
+    }
+
+
+def lookup_number_sign(word: str) -> Optional[Dict]:
+    """숫자 수어 조회. 동형어 중 '개념 > 수' 카테고리를 우선 선택한다.
+    (예: '영'은 entries[0]이 천주교 수어라 일반 조회론 숫자 0을 못 잡음 → 여기서 origin 1214 선택)"""
+    index = load_index()
+    entries = index.get(word)
+    if not entries:
+        return None
+    num = next((e for e in entries if e.get("category", "").split(">")[-1].strip() == "수"), entries[0])
+    return {
+        "origin_no": num["origin_no"],
+        "description": num["description"],
+        "dict_url": DICT_VIEW_URL + num["origin_no"] if num["origin_no"] else None,
+        "alt_count": len(entries),
     }
 
 
@@ -267,7 +283,7 @@ async def translate_to_ksl(text: str) -> Dict:
         if word.isdigit():
             for d in word:
                 kw = _DIGIT_TO_KO.get(d)
-                s = lookup_sign(kw) if kw else None
+                s = lookup_number_sign(kw) if kw else None
                 try:
                     dv = await text_to_visemes(kw or d)
                 except Exception:
