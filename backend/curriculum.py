@@ -128,6 +128,10 @@ MINIMAL_PAIRS: List[Dict] = [
      "note": "입술 닫힘(밥) vs 크게 벌림(입) — 뚜렷이 다르다."},
     {"a": "우유", "b": "이유", "visemes": [4, 3], "same_looking": False,
      "note": "둥근 입(우) vs 옆으로 퍼진 입(이) — 정반대."},
+    {"a": "말", "b": "발", "visemes": [1], "same_looking": True,
+     "note": "ㅁ↔ㅂ 양순음."},
+    {"a": "자", "b": "차", "visemes": [10], "same_looking": True,
+     "note": "ㅈ↔ㅊ 경구개음."},
 ]
 
 # 각 그룹의 대표 음절 — 아바타로 그 입모양 하나를 명확히 보여줄 때 사용.
@@ -141,7 +145,7 @@ DEMO_SYLLABLE: Dict[int, str] = {
 STAGES: List[Dict] = [
     {"stage": 0, "key": "onboarding", "title": "입문·배치", "desc": "독화가 뭔지 + 나에게 맞는 시작점", "kind": "intro"},
     {"stage": 1, "key": "viseme", "title": "입모양 인지", "desc": "10개 입모양 그룹을 익힌다", "kind": "literacy", "route": "/learn/viseme"},
-    {"stage": 2, "key": "word", "title": "음절·단어", "desc": "최소대립쌍으로 단어 독화", "kind": "word", "coming_soon": True},
+    {"stage": 2, "key": "word", "title": "음절·단어", "desc": "최소대립쌍으로 단어 독화", "kind": "word", "route": "/learn/word"},
     {"stage": 3, "key": "sentence", "title": "문장 (상황별)", "desc": "상황별 문장 독화 연습", "kind": "sentence", "route": "/practice"},
     {"stage": 4, "key": "conversation", "title": "대화 실전", "desc": "AI와 실전 대화", "kind": "conversation", "route": "/conversation"},
 ]
@@ -187,3 +191,34 @@ def quizzable_lessons() -> List[Dict]:
     """겉으로 구별 가능한 그룹만(인지퀴즈 대상). 입 안쪽 자음(visibility='low')은
     애초에 입모양만으로 구별 불가라 퀴즈에서 제외하고 '문맥 필요'로 가르친다."""
     return [l for l in VISEME_LESSONS if l["visibility"] != "low"]
+
+
+# ── 2단계: 큐레이션 단어(음절·단어) ──────────────────────────────────────────
+# tier 1: 시각적으로 뚜렷이 구별되는 쉬운 단어 / tier 2: 최소대립(비슷하게 보이는)이 섞임
+WORD_BANK: List[Dict] = [
+    {"word": "밥", "tier": 1}, {"word": "물", "tier": 1}, {"word": "이", "tier": 1},
+    {"word": "우유", "tier": 1}, {"word": "사과", "tier": 1}, {"word": "가방", "tier": 1},
+    {"word": "하늘", "tier": 1}, {"word": "바다", "tier": 1}, {"word": "나무", "tier": 1},
+    {"word": "오이", "tier": 1}, {"word": "코", "tier": 1}, {"word": "자", "tier": 1},
+    {"word": "맘", "tier": 2}, {"word": "불", "tier": 2}, {"word": "파도", "tier": 2},
+    {"word": "달", "tier": 2}, {"word": "탈", "tier": 2}, {"word": "살", "tier": 2},
+    {"word": "쌀", "tier": 2}, {"word": "말", "tier": 2}, {"word": "발", "tier": 2},
+    {"word": "차", "tier": 2}, {"word": "그림", "tier": 2}, {"word": "서점", "tier": 2},
+]
+
+_WORDS = {w["word"] for w in WORD_BANK}
+
+# 최소대립 파트너 색인(양방향) — 비슷하게 보이는 단어를 오답 보기로 우선 제시
+_PAIR_PARTNER: Dict[str, set] = {}
+for _m in MINIMAL_PAIRS:
+    _PAIR_PARTNER.setdefault(_m["a"], set()).add(_m["b"])
+    _PAIR_PARTNER.setdefault(_m["b"], set()).add(_m["a"])
+
+
+def is_word(word: str) -> bool:
+    return word in _WORDS
+
+
+def word_partners(word: str) -> List[str]:
+    """해당 단어와 '비슷하게 보이는' 최소대립 파트너(단어은행에 있는 것만)."""
+    return [p for p in _PAIR_PARTNER.get(word, ()) if p in _WORDS]

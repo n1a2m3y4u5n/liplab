@@ -160,6 +160,13 @@ export const curriculumAPI = {
   getVisemeLessons: async () => (await api.get('/curriculum/viseme-lessons')).data,
   submitRecognition: async (viseme_id, chosen_id) =>
     (await api.post('/curriculum/recognition', { viseme_id, chosen_id })).data,
+  getWords: async () => (await api.get('/curriculum/words')).data,
+  submitWord: async (word, correct) => (await api.post('/curriculum/word-answer', { word, correct })).data,
+}
+
+export const reviewAPI = {
+  getDue: async () => (await api.get('/review/due')).data,
+  answer: async (kind, ref, correct) => (await api.post('/review/answer', { kind, ref, correct })).data,
 }
 
 export default api
