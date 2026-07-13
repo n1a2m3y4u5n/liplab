@@ -178,10 +178,13 @@ export const reviewAPI = {
 
 // 발화(말하기) — 녹음 오디오를 서버로 보내 전사·채점·코칭을 받는다.
 export const speakAPI = {
-  assess: async (target, blob) => {
+  assess: async (target, blob, metrics = {}) => {
     const fd = new FormData()
     fd.append('target', target)
     fd.append('audio', blob, 'speech.webm')
+    if (metrics.loudness != null) fd.append('loudness', String(metrics.loudness))
+    if (metrics.pitch_range != null) fd.append('pitch_range', String(metrics.pitch_range))
+    if (metrics.duration != null) fd.append('duration', String(metrics.duration))
     // FormData는 브라우저가 multipart 경계를 붙이도록 Content-Type을 비운다(인스턴스 기본 json 무효화).
     const res = await api.post('/speak/assess', fd, { headers: { 'Content-Type': undefined }, timeout: 60000 })
     return res.data

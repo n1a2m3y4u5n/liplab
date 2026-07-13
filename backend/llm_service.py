@@ -18,34 +18,55 @@ from engine import get_viseme_feature
 anthropic_client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 
-async def generate_speaking_coaching(target: str, transcript: str, score: float, confusions: list = None) -> str:
-    """발화(말하기) 채점 결과를 격려형 발음 코칭으로. 음성인식 텍스트 vs 목표 비교 기반.
-    Whisper 오인식 가능성을 감안해 단정하지 않고 부드럽게 코칭한다. 실패 시 규칙 폴백."""
+async def generate_speaking_coaching(target: str, transcript: str, score: float,
+                                     confusions: list = None, metrics: dict = None) -> str:
+    """발화 채점 + 측정값(크기·억양·길이)을 근거로 '수치 기반·구체적' 발음 코칭.
+    Whisper 오인식 가능성을 감안해 발음 부분은 단정하지 않고 부드럽게. 실패 시 규칙 폴백."""
     conf_txt = ""
     if confusions:
-        conf_txt = "다르게 들린 소리: " + ", ".join(f"{c.get('correct')}→{c.get('confused_as')}" for c in confusions[:4])
-    prompt = f"""당신은 청각장애인의 발음(구화) 연습을 돕는 따뜻한 코치입니다.
-사용자가 "{target}"라고 말했고, 음성인식은 "{transcript or '(잘 인식되지 않음)'}"로 들었습니다. 발음 유사도 점수: {round(score)}점.
-{conf_txt}
+        conf_txt = "다르게 들린 소리: " + ", ".join(f"{c.get('correct')}→{c.get('confused_as')}" for c in confusions[:4]) + "\n"
+    met_txt = ""
+    m = metrics or {}
+    parts = []
+    if m.get("loudness") is not None:
+        parts.append(f"목소리 크기 {round(m['loudness'])}/100")
+    if m.get("pitch_range"):
+        parts.append(f"억양 변화 {round(m['pitch_range'])}Hz")
+    if m.get("duration"):
+        parts.append(f"발화 길이 {float(m['duration']):.1f}초")
+    if parts:
+        met_txt = "측정값 — " + ", ".join(parts) + "\n"
 
-주의: 음성인식은 완벽하지 않아 실제 발음과 다를 수 있으니 단정하지 말고 부드럽게 말하세요.
-아래를 한국어로, 200자 이내, 격려 위주로 자연스러운 3~4문장(번호·머리말 없이):
-1) 잘한 점 한 가지
-2) 다르게 들린 소리가 있으면 '어떻게' 고칠지 구체적으로(입술/혀 위치). 없으면 칭찬만.
-3) 짧은 격려 한마디"""
+    prompt = f"""당신은 청각장애인의 발음(구화) 연습을 돕는 따뜻하고 구체적인 코치입니다.
+목표: "{target}" / 음성인식 결과: "{transcript or '(잘 인식되지 않음)'}" / 발음 유사도 {round(score)}점
+{conf_txt}{met_txt}
+아래 지침으로 한국어 3~5문장(250자 이내, 번호·머리말 없이 자연스럽게):
+1) 잘한 점을 측정값 근거로 구체적으로(발음 점수·크기·억양 중 좋았던 것을 수치와 함께).
+2) 개선점을 '수치 + 방법'으로 구체적으로:
+   - 목소리 크기 40/100 미만이면 더 크게 말하라고 강조.
+   - 억양 변화 25Hz 미만이면 톤이 평평하다고 알리고 끝을 올리거나 내리라고.
+   - 다르게 들린 소리가 있으면 그 소리를 입술/혀를 '어떻게' 하는지 구체적으로.
+3) 짧은 격려.
+주의: 음성인식은 완벽하지 않으니 발음 부분은 단정하지 말고 "~로 들렸어요" 식으로 부드럽게."""
     try:
         resp = await anthropic_client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=400,
+            max_tokens=500,
             messages=[{"role": "user", "content": prompt}],
         )
         return resp.content[0].text.strip()
     except Exception:
-        if score >= 85:
-            return "또렷하게 잘 전달됐어요! 이 느낌을 기억하며 다음 단어도 도전해봐요."
-        if score >= 60:
-            return "대체로 잘 전달됐어요. 입모양을 조금 더 크고 또렷하게 하면 더 정확해질 거예요. 다시 한 번 해볼까요?"
-        return "천천히, 입모양을 크게 하며 한 소리씩 또박또박 말해봐요. 위 아바타의 입모양을 참고하면 도움이 돼요."
+        bits = []
+        if m.get("loudness", 100) < 40:
+            bits.append(f"목소리가 작았어요(크기 {round(m.get('loudness', 0))}/100). 배에 힘을 주고 더 크게 말해보세요.")
+        if m.get("pitch_range") is not None and m.get("pitch_range", 100) < 25:
+            bits.append("톤이 평평했어요. 문장 끝을 올리거나 내리며 억양을 넣어보세요.")
+        if confusions:
+            c = confusions[0]
+            bits.append(f"'{c.get('correct')}' 소리가 '{c.get('confused_as')}'로 들렸어요. 입모양을 더 또렷하게 해보세요.")
+        if not bits:
+            bits.append("또렷하게 잘 전달됐어요! 이 느낌을 기억하며 다음 단어도 도전해봐요.")
+        return " ".join(bits)
 
 
 # Situation-based context prompts

@@ -990,6 +990,9 @@ async def recommended_level(current_user=Depends(get_current_user), db: AsyncSes
 async def speak_assess(
     target: str = Form(...),
     audio: UploadFile = File(...),
+    loudness: float = Form(0.0),
+    pitch_range: float = Form(0.0),
+    duration: float = Form(0.0),
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -1027,14 +1030,16 @@ async def speak_assess(
     except Exception:
         pass
 
+    metrics = {"loudness": loudness, "pitch_range": pitch_range, "duration": duration}
     from llm_service import generate_speaking_coaching
-    coaching = await generate_speaking_coaching(target, transcript, sc.get("score", 0), confusions)
+    coaching = await generate_speaking_coaching(target, transcript, sc.get("score", 0), confusions, metrics)
 
     return {
         "transcript": transcript,
         "score": round(sc.get("score", 0), 1),
         "confusions": confusions[:6],
         "coaching": coaching,
+        "metrics": metrics,
     }
 
 
