@@ -43,11 +43,13 @@ export default function SpeakingPractice() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const stageNo = searchParams.get('stage') != null ? parseInt(searchParams.get('stage'), 10) : null
+  const reviewMode = searchParams.get('review') != null   // 발음 복습 모드
 
   const [words, setWords] = useState([])
   const [target, setTarget] = useState(null)
   const [frames, setFrames] = useState([])
   const [stageInfo, setStageInfo] = useState(null)   // 단계 콘텐츠(있으면 단계 모드)
+  const [reviewItems, setReviewItems] = useState(null)  // null=로딩, []=비어있음
   const [itemIdx, setItemIdx] = useState(0)
   const [progress, setProgress] = useState(null)     // 단계 진행률(마지막 채점 결과)
   const [recording, setRecording] = useState(false)
@@ -58,12 +60,14 @@ export default function SpeakingPractice() {
   const [assessing, setAssessing] = useState(false)
   const [assessment, setAssessment] = useState(null)
 
-  const items = stageInfo?.items || []
+  const items = reviewMode ? (reviewItems || []) : (stageInfo?.items || [])
   const curItem = items[itemIdx] || null
-  const mode = stageInfo?.mode || (stageNo != null ? '' : 'word')
-  const drill = curItem?.drill || null
-  const prompt = curItem?.prompt || null
+  const mode = reviewMode ? (curItem?.mode || 'word') : (stageInfo?.mode || (stageNo != null ? '' : 'word'))
+  const assessStage = reviewMode ? (curItem?.stage ?? null) : stageNo   // 채점에 보낼 단계
+  const drill = reviewMode ? null : (curItem?.drill || null)
+  const prompt = reviewMode ? null : (curItem?.prompt || null)
   const metricMode = mode === 'voicing' || mode === 'prosody'   // 지표 기반(전사 없음)
+  const reviewEmpty = reviewMode && Array.isArray(reviewItems) && reviewItems.length === 0
 
   const acRef = useRef(null)
   const analyserRef = useRef(null)
@@ -79,7 +83,11 @@ export default function SpeakingPractice() {
   const summaryRef = useRef(null)
 
   useEffect(() => {
-    if (stageNo != null) {
+    if (reviewMode) {
+      speakAPI.getReview()
+        .then((d) => { setReviewItems(d.items || []); if (d.items?.length) applyItem(d.items, 0) })
+        .catch(() => setErr('복습을 불러오지 못했어요.'))
+    } else if (stageNo != null) {
       speakAPI.getStage(stageNo)
         .then((d) => { setStageInfo(d); applyItem(d.items, 0) })
         .catch(() => setErr('단계를 불러오지 못했어요.'))
@@ -90,7 +98,7 @@ export default function SpeakingPractice() {
     }
     return () => teardown()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stageNo])
+  }, [stageNo, reviewMode])
 
   const loadFrames = async (t) => {
     setTarget(t); setFrames([]); setSummary(null); setAssessment(null)
@@ -110,9 +118,9 @@ export default function SpeakingPractice() {
     loadFrames(list[Math.floor(Math.random() * list.length)])
   }
 
-  // 다음 항목(단계) 또는 다음 단어(자유)
+  // 다음 항목(단계·복습) 또는 다음 단어(자유)
   const nextItem = () => {
-    if (stageNo != null && items.length) applyItem(items, (itemIdx + 1) % items.length)
+    if ((reviewMode || stageNo != null) && items.length) applyItem(items, (itemIdx + 1) % items.length)
     else pickWord()
   }
 
@@ -171,7 +179,7 @@ export default function SpeakingPractice() {
         loudness: s.loudness ?? 0, pitch_range: s.pitchRange ?? 0, duration: s.duration ?? 0,
         pitch_start: s.pitchStart ?? 0, pitch_end: s.pitchEnd ?? 0,
       }
-      const opts = stageNo != null ? { stage: stageNo, drill } : {}
+      const opts = assessStage != null ? { stage: assessStage, drill } : {}
       setAssessing(true)
       try {
         const res = await speakAPI.assess(target, blob, metrics, opts)
@@ -288,10 +296,10 @@ export default function SpeakingPractice() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {stageInfo ? `${stageInfo.icon} ${stageInfo.stage}단계 · ${stageInfo.title}` : '말하기 연습'}
+              {reviewMode ? '🔁 발음 복습' : stageInfo ? `${stageInfo.icon} ${stageInfo.stage}단계 · ${stageInfo.title}` : '말하기 연습'}
             </h1>
             <p className="text-sm text-gray-500">
-              {stageInfo?.guide || '귀 대신 눈으로 — 내 목소리를 보면서 발음을 다듬어요'}
+              {reviewMode ? '틀렸던 발음을 다시 또박또박 연습해요' : (stageInfo?.guide || '귀 대신 눈으로 — 내 목소리를 보면서 발음을 다듬어요')}
             </p>
           </div>
           <button onClick={() => { teardown(); navigate('/dashboard') }} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
@@ -299,6 +307,15 @@ export default function SpeakingPractice() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        {reviewEmpty ? (
+          <div className="card text-center py-16">
+            <div className="text-4xl mb-3">🎉</div>
+            <p className="text-lg font-bold text-gray-900 mb-1">복습할 발음이 없어요</p>
+            <p className="text-sm text-gray-500 mb-5">최근 발음이 다 좋았어요. 단계 연습을 이어가 볼까요?</p>
+            <button onClick={() => { teardown(); navigate('/dashboard') }} className="btn-primary px-6 py-2.5 text-sm">대시보드로</button>
+          </div>
+        ) : (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="card">
             <p className="text-sm text-gray-500 mb-1">{prompt ? '이렇게 해보세요' : '이렇게 말해보세요'}</p>
@@ -423,6 +440,8 @@ export default function SpeakingPractice() {
             </motion.div>
           )}
         </AnimatePresence>
+        </>
+        )}
       </main>
     </div>
   )

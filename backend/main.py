@@ -1213,6 +1213,32 @@ async def speak_analysis(current_user=Depends(get_current_user), db: AsyncSessio
             "stages": stages, "tips": tips}
 
 
+@app.get("/api/speak/review")
+async def speak_review(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """발음 복습 — 최근 발화에서 틀렸거나 저조했던 단어/문장을 다시 연습 큐로.
+    동적 계산: 각 target의 가장 최근 시도가 실패/저조(<70)면 복습 대상, 이후 잘하면 자동 제외.
+    (발음은 운동 기억이라 '틀린 항목 반복'이 핵심 — 독화 SRS의 발화판)"""
+    from database import SpeakAttempt
+    from sqlalchemy import select
+    rows = (await db.execute(
+        select(SpeakAttempt).where(SpeakAttempt.user_id == current_user.id)
+        .order_by(SpeakAttempt.created_at.desc()).limit(300))).scalars().all()
+    seen = {}
+    for r in rows:
+        if r.mode not in ("phoneme", "word", "sentence") or not r.target:
+            continue
+        if r.target in seen:
+            continue  # desc 정렬 → 각 target의 첫 등장이 최신 시도
+        seen[r.target] = r
+    items = []
+    for t, r in seen.items():
+        if (r.passed is False) or (r.score is not None and r.score < 70):
+            items.append({"target": t, "stage": r.stage, "mode": r.mode,
+                          "last_score": round(r.score or 0, 1)})
+    items.sort(key=lambda x: x["last_score"])
+    return {"items": items[:15], "count": len(items)}
+
+
 class ConversationRequest(BaseModel):
     situation: str
     level: int = 1
