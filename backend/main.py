@@ -140,6 +140,7 @@ class VisemeFrame(BaseModel):
     viseme: int
     duration_ms: int
     transition_ms: int = 50
+    text_index: int
 
 
 class ScenarioResponse(BaseModel):
