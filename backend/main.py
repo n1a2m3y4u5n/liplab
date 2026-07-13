@@ -985,7 +985,73 @@ async def recommended_level(current_user=Depends(get_current_user), db: AsyncSes
     return {"recommended_level": lvl, "recent_avg": round(avg, 1), "sample": len(rows), "reason": reason}
 
 
-# ── 발화(말하기) 채점 — Whisper 전사 + 기존 채점 재활용 + Claude 코칭 ──────────
+# ── 발화 커리큘럼(6단계) — 상태·게이팅·콘텐츠 ────────────────────────────────
+import speak_curriculum as _speakcur
+
+
+async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
+                               min_attempts: int, mastery_pct: float, db):
+    """발화 단계 진행률 rolling 갱신(읽기 _bump_stage_progress의 발화판). sp 반환."""
+    from database import SpeakStageProgress
+    from sqlalchemy import select
+    r = await db.execute(select(SpeakStageProgress).where(
+        SpeakStageProgress.user_id == user_id, SpeakStageProgress.stage == stage))
+    sp = r.scalar_one_or_none()
+    if sp is None:
+        sp = SpeakStageProgress(user_id=user_id, stage=stage, status="in_progress",
+                                attempts=0, correct=0, mastery_score=0.0)
+        db.add(sp)
+    sp.attempts += 1
+    if passed:
+        sp.correct += 1
+    sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
+    sp.status = "mastered" if (sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct) else "in_progress"
+    return sp
+
+
+@app.get("/api/speak/curriculum")
+async def speak_curriculum_stages(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """발화 6단계 + 사용자 상태. 게이팅: 0단계 항상 열림, N단계는 N-1 숙달 시 해금."""
+    from database import SpeakStageProgress
+    from sqlalchemy import select
+    r = await db.execute(select(SpeakStageProgress).where(SpeakStageProgress.user_id == current_user.id))
+    sp_map = {sp.stage: sp for sp in r.scalars().all()}
+    stages = []
+    for meta in _speakcur.stages_overview():
+        st = dict(meta)
+        n = meta["stage"]
+        sp = sp_map.get(n)
+        if n == 0:
+            base_open = True
+        else:
+            prev = sp_map.get(n - 1)
+            base_open = prev is not None and prev.status == "mastered"
+        if not base_open:
+            st["status"] = "locked"
+        elif sp is None:
+            st["status"] = "unlocked"
+        else:
+            st["status"] = sp.status
+            st["mastery_score"] = round(sp.mastery_score, 1)
+            st["attempts"] = sp.attempts
+        stages.append(st)
+    return {"stages": stages}
+
+
+@app.get("/api/speak/stage/{n}")
+async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
+    """단계 콘텐츠(항목·모드·가이드)."""
+    stg = _speakcur.get_stage(n)
+    if not stg:
+        raise HTTPException(status_code=404, detail="unknown stage")
+    return {
+        "stage": stg["stage"], "title": stg["title"], "mode": stg["mode"],
+        "desc": stg["desc"], "guide": stg["guide"], "icon": stg.get("icon", ""),
+        "items": stg["items"],
+    }
+
+
+# ── 발화(말하기) 채점 — 단계 모드별 채점 + 진행률 + 코칭 ──────────────────────
 @app.post("/api/speak/assess")
 async def speak_assess(
     target: str = Form(...),
@@ -993,53 +1059,88 @@ async def speak_assess(
     loudness: float = Form(0.0),
     pitch_range: float = Form(0.0),
     duration: float = Form(0.0),
+    pitch_start: float = Form(0.0),
+    pitch_end: float = Form(0.0),
+    stage: int = Form(None),
+    drill: str = Form(None),
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """녹음 → Whisper 전사 → 기존 음운 유사도 채점 → Claude 발음 코칭."""
+    """녹음 → (단계 모드에 따라) 지표/전사 채점 → 진행률 갱신 → 코칭.
+    발성·운율(0·1)은 지표만으로, 모음·자음·단어·문장(2~5)은 Whisper 전사+음운 유사도."""
     data = await audio.read()
     if not data:
         raise HTTPException(status_code=400, detail="empty audio")
 
-    from speak_service import transcribe, is_available
-    if not is_available():
-        raise HTTPException(status_code=503, detail="서버에 음성인식 모델(faster-whisper)이 없습니다.")
-    try:
-        transcript = await transcribe(data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"전사 실패: {str(e)}")
+    metrics = {"loudness": loudness, "pitch_range": pitch_range, "duration": duration,
+               "pitch_start": pitch_start, "pitch_end": pitch_end}
+    stg = _speakcur.get_stage(stage) if stage is not None else None
+    mode = stg["mode"] if stg else "word"
 
-    try:
-        sc = await calculate_score(correct=target, user_answer=transcript, db=db)
-    except Exception:
-        sc = {"score": 0.0}
-
-    # 음소 혼동(초/중성이 다른 위치) — analysis와 동일 방식
+    transcript = None
     confusions = []
-    try:
-        from scoring import extract_jamo_sequence
-        cj = extract_jamo_sequence(target.replace(" ", ""))
-        uj = extract_jamo_sequence((transcript or "").replace(" ", ""))
-        for i in range(min(len(cj), len(uj))):
-            ci, cm, _ = cj[i]
-            ui, um, _ = uj[i]
-            if ci and ui and ci != ui:
-                confusions.append({"correct": ci, "confused_as": ui})
-            if cm and um and cm != um:
-                confusions.append({"correct": cm, "confused_as": um})
-    except Exception:
-        pass
+    sim = None
+    need_asr = (mode in ("phoneme", "word", "sentence")) or (stage is None)
+    if need_asr:
+        from speak_service import transcribe, is_available
+        if not is_available():
+            raise HTTPException(status_code=503, detail="서버에 음성인식 모델(faster-whisper)이 없습니다.")
+        try:
+            transcript = await transcribe(data)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"전사 실패: {str(e)}")
+        try:
+            sc = await calculate_score(correct=target, user_answer=transcript, db=db)
+            sim = sc.get("score", 0)
+        except Exception:
+            sim = 0.0
+        try:
+            from scoring import extract_jamo_sequence
+            cj = extract_jamo_sequence(target.replace(" ", ""))
+            uj = extract_jamo_sequence((transcript or "").replace(" ", ""))
+            for i in range(min(len(cj), len(uj))):
+                ci, cm, _ = cj[i]
+                ui, um, _ = uj[i]
+                if ci and ui and ci != ui:
+                    confusions.append({"correct": ci, "confused_as": ui})
+                if cm and um and cm != um:
+                    confusions.append({"correct": cm, "confused_as": um})
+        except Exception:
+            pass
 
-    metrics = {"loudness": loudness, "pitch_range": pitch_range, "duration": duration}
-    from llm_service import generate_speaking_coaching
-    coaching = await generate_speaking_coaching(target, transcript, sc.get("score", 0), confusions, metrics)
+    note = ""
+    passed = None
+    progress = None
+    if stage is not None and stg is not None:
+        score, passed, note = _speakcur.score_attempt(stage, target, transcript, metrics, drill, sim)
+        sp = await _bump_speak_progress(current_user.id, stage, bool(passed),
+                                        stg["min_attempts"], stg["mastery"], db)
+        await db.commit()
+        progress = {"stage": stage, "attempts": sp.attempts,
+                    "mastery_score": round(sp.mastery_score, 1),
+                    "mastered": sp.status == "mastered"}
+    else:
+        score = round(sim or 0.0, 1)
+
+    # 발성·운율은 규칙 기반 note가 곧 구체 코칭, 모음~문장은 Claude 코칭(+억양 note)
+    if mode in ("voicing", "prosody"):
+        coaching = note
+    else:
+        from llm_service import generate_speaking_coaching
+        coaching = await generate_speaking_coaching(target, transcript, score, confusions, metrics)
+        if note:
+            coaching = f"{coaching} {note}"
 
     return {
         "transcript": transcript,
-        "score": round(sc.get("score", 0), 1),
+        "score": score,
+        "passed": passed,
+        "note": note,
         "confusions": confusions[:6],
         "coaching": coaching,
         "metrics": metrics,
+        "progress": progress,
+        "mode": mode,
     }
 
 
