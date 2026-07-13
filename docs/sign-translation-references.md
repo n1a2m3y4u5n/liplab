@@ -74,3 +74,8 @@
   - UI 출처표시 문구(수어 페이지 하단에 상시 노출):
     > 수어 영상 출처: 국립국어원 「한국수어사전」(sldict.korean.go.kr) — CC BY-NC-ND 2.0 KR.
     > 데이터 출처: 국립국어원 「한국수어사전 한국어대응표현정보」(공공데이터포털).
+- **지문자(지화) 손모양 이미지** — "Korean manual alphabet" © User:Kwamikagami / **Wikimedia
+  Commons**, **CC BY-SA 3.0**. 32자(기본 자음 14 + ㅆ, 기본 모음 14 + ㅚㅟㅢ). 사전에 없는
+  단어를 자모 손모양으로 보여주는 데 사용. 무변형·출처표시로 재배포(로컬 서빙).
+  → https://commons.wikimedia.org/wiki/Category:Korean_manual_alphabet
+  (된소리 ㄲㄸㅃㅉ·w복합모음 ㅘㅙㅝㅞ 등은 이미지 없음 → 글자 폴백)

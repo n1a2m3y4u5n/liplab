@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { learningAPI } from '../api'
 import LipSyncPlayer3D from './LipSyncPlayer3D'
+import { fingerspellImage } from '../lib/fingerspell'
 
 /**
  * 수어 결과 패널 — 문장(text)을 받아 번역하고, **실제 국립국어원 수어 영상을 메인으로**
@@ -118,14 +119,27 @@ export default function SignPanel({ text }) {
                 )}
               </div>
             ) : (
-              // 지문자(지화)
-              <div className="p-6 text-center">
-                <p className="text-xs text-slate-400 mb-3">지문자 (지화)</p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {token.jamo.map((g, gi) => (
-                    <span key={gi} className="px-3 py-2 rounded-lg bg-white text-slate-800 text-2xl tracking-widest font-semibold">
-                      {g.join('')}
-                    </span>
+              // 지문자(지화) — 자모별 손모양 이미지(없으면 글자 폴백)
+              <div className="p-4 text-center w-full">
+                <p className="text-xs text-slate-400 mb-3">지문자 (지화) — 한 글자씩 손모양으로</p>
+                <div className="flex flex-wrap gap-3 justify-center items-end">
+                  {token.jamo.map((group, gi) => (
+                    <div key={gi} className="flex gap-1 items-end p-1.5 rounded-lg bg-white/5">
+                      {group.map((jamo, ji) => {
+                        const img = fingerspellImage(jamo)
+                        return (
+                          <div key={ji} className="flex flex-col items-center">
+                            {img ? (
+                              <img src={img} alt={`지문자 ${jamo}`} loading="lazy"
+                                className="h-24 w-auto rounded bg-white object-contain" />
+                            ) : (
+                              <div className="h-24 w-14 rounded bg-white/90 flex items-center justify-center text-slate-800 text-2xl font-bold">{jamo}</div>
+                            )}
+                            <span className="mt-1 text-xs text-slate-200">{jamo}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -180,6 +194,7 @@ export default function SignPanel({ text }) {
       {/* 출처표시 */}
       <p className="mt-4 pt-3 border-t border-gray-100 text-[11px] text-gray-400 leading-relaxed">
         수어 영상·데이터 출처: 국립국어원 「한국수어사전」(sldict.korean.go.kr) — CC BY-NC-ND 2.0 KR.
+        지문자 손모양: “Korean manual alphabet” © Kwamikagami / Wikimedia Commons — CC BY-SA 3.0.
         학습·이해 보조(베타)용이며 공식 통역이 아닙니다.
       </p>
     </div>
