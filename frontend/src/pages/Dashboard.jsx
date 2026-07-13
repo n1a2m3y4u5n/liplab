@@ -16,6 +16,17 @@ const PRESET_SITUATIONS = [
   { id: '직접 입력', label: '직접 입력', icon: '✏️' },
 ]
 
+// 테스트 탭 문제 유형: 주관식 · 4지선다 · 서술형을 골고루 섞는다.
+const TEST_QTYPES = ['test', 'test-multiple', 'essay']
+function buildQTypes(n) {
+  const arr = Array.from({ length: n }, (_, i) => TEST_QTYPES[i % TEST_QTYPES.length])
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
 // ── GitHub 스타일 활동 캘린더 ─────────────────────────────────────────────────
 function ActivityCalendar({ data }) {
   const today = new Date()
@@ -103,8 +114,20 @@ function CurriculumPath() {
     try { await curriculumAPI.setTrack(track); await load() } finally { setSaving(false) }
   }
 
+  const resetTrack = async () => {
+    setSaving(true)
+    try { await curriculumAPI.resetTrack(); await load() } finally { setSaving(false) }
+  }
+
   const go = (s) => {
-    if (s.status === 'locked' || s.status === 'coming_soon' || !s.route) return
+    if (s.status === 'coming_soon') return   // 준비 중 — 안내할 이전 단계가 없음
+    if (s.status === 'locked') {
+      const prev = state?.stages?.find((x) => x.stage === s.stage - 1)
+      const prevName = prev ? `${prev.stage}단계(${prev.title})` : '이전 단계'
+      alert(`아직 잠긴 단계예요. ${prevName} 학습을 먼저 완료해주세요.`)
+      return
+    }
+    if (!s.route) return
     navigate(s.route)
   }
 
@@ -113,8 +136,15 @@ function CurriculumPath() {
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card mb-8">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-lg font-bold text-gray-900">학습 커리큘럼</h2>
-        <span className="text-xs text-gray-400">기초부터 단계별로</span>
+        <h2 className="text-lg font-bold text-gray-900">학습</h2>
+        {state.placed ? (
+          <button onClick={resetTrack} disabled={saving}
+            className="text-xs text-gray-400 hover:text-primary-600 transition-colors disabled:opacity-50">
+            ← 트랙 다시 선택
+          </button>
+        ) : (
+          <span className="text-xs text-gray-400">기초부터 단계별로</span>
+        )}
       </div>
 
       {!state.placed ? (
@@ -136,15 +166,17 @@ function CurriculumPath() {
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-3">
           {state.stages.map((s) => {
             const st = STAGE_STATUS[s.status] || STAGE_STATUS.locked
-            const clickable = s.status !== 'locked' && s.status !== 'coming_soon' && !!s.route
+            const isLocked = s.status === 'locked'
+            const openable = !isLocked && s.status !== 'coming_soon' && !!s.route
+            // 잠긴 단계는 흐리게(잠김) 보이되, 눌러서 '이전 단계 완료' 안내를 받을 수 있게 클릭은 허용
             return (
-              <button key={s.stage} onClick={() => go(s)} disabled={!clickable}
-                className={`text-left p-3 rounded-xl border-2 transition-all ${clickable ? 'border-gray-200 bg-white hover:border-primary-400 hover:bg-primary-50 cursor-pointer' : 'border-gray-100 bg-gray-50 cursor-default'}`}>
+              <button key={s.stage} onClick={() => go(s)} disabled={s.status === 'coming_soon'}
+                className={`text-left p-3 rounded-xl border-2 transition-all ${openable ? 'border-gray-200 bg-white hover:border-primary-400 hover:bg-primary-50 cursor-pointer' : isLocked ? 'border-gray-100 bg-gray-50 cursor-pointer hover:border-gray-200' : 'border-gray-100 bg-gray-50 cursor-default'}`}>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-400">{s.stage}단계</span>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
                 </div>
-                <div className={`text-sm font-bold mt-1 ${clickable ? 'text-gray-800' : 'text-gray-400'}`}>{s.title}</div>
+                <div className={`text-sm font-bold mt-1 ${openable ? 'text-gray-800' : 'text-gray-400'}`}>{s.title}</div>
                 <div className="text-[11px] text-gray-400 mt-0.5 leading-tight">{s.desc}</div>
                 {s.stage === 1 && s.mastery_score != null && (
                   <div className="mt-1.5 bg-gray-200 rounded-full h-1 overflow-hidden">
@@ -171,6 +203,99 @@ function CurriculumPath() {
   )
 }
 
+// ── 복습 탭 ──────────────────────────────────────────────────────────────────
+// 학습·테스트를 진행하며 틀린 문장과 북마크한 문장을 모아 다시 볼 수 있게 한다.
+function ReviewSection() {
+  const navigate = useNavigate()
+  const setScenario = useStore((state) => state.setScenario)
+  const [items, setItems] = useState(null)   // 합쳐진 복습 문장 목록
+  const [loading, setLoading] = useState(false)
+
+  const load = () => {
+    Promise.all([
+      learningAPI.getReviewSentences().catch(() => []),
+      learningAPI.getBookmarks().catch(() => []),
+    ]).then(([wrong, bookmarks]) => {
+      const map = new Map()
+      wrong.forEach((w) => map.set(w.sentence, {
+        sentence: w.sentence,
+        situation: w.situation || '복습',
+        level: w.difficulty_level || 1,
+        source: 'wrong',
+      }))
+      bookmarks.forEach((b) => {
+        if (!map.has(b.sentence)) {
+          map.set(b.sentence, { sentence: b.sentence, situation: b.situation || '복습', level: b.level || 1, source: 'bookmark' })
+        } else {
+          map.get(b.sentence).source = 'both'
+        }
+      })
+      setItems([...map.values()])
+    })
+  }
+  useEffect(load, [])
+
+  const start = () => {
+    if (!items || items.length === 0) return
+    setLoading(true)
+    const sentences = items.map((i) => i.sentence)
+    const scenario = {
+      situation: '복습',
+      level: 1,
+      sentences,
+      qTypes: buildQTypes(sentences.length),
+      scenario_id: `review_${Date.now()}`,
+    }
+    setScenario(scenario, 'test')
+    navigate('/practice')
+  }
+
+  const wrongCount = items ? items.filter((i) => i.source !== 'bookmark').length : 0
+  const bookmarkCount = items ? items.filter((i) => i.source !== 'wrong').length : 0
+  const total = items ? items.length : 0
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card mt-8">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-bold text-gray-900">복습</h2>
+        <span className="text-xs text-gray-400">틀린 문제 + 북마크 모아보기</span>
+      </div>
+      <p className="text-sm text-gray-500 mb-4">
+        학습·테스트에서 틀렸거나 북마크해 둔 문장을 모아서 다시 풀어봅니다.
+      </p>
+
+      {items === null ? (
+        <div className="py-6 text-center text-sm text-gray-400">불러오는 중...</div>
+      ) : total === 0 ? (
+        <div className="py-6 text-center text-sm text-gray-400">
+          아직 복습할 문장이 없어요. 테스트에서 틀리거나 문장을 북마크하면 여기에 모여요.
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="bg-gray-50 rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold text-gray-900">{total}</div>
+              <div className="text-xs text-gray-500">전체</div>
+            </div>
+            <div className="bg-red-50 rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold text-red-600">{wrongCount}</div>
+              <div className="text-xs text-gray-500">틀린 문제</div>
+            </div>
+            <div className="bg-yellow-50 rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold text-yellow-600">{bookmarkCount}</div>
+              <div className="text-xs text-gray-500">북마크</div>
+            </div>
+          </div>
+          <button onClick={start} disabled={loading}
+            className="btn-primary w-full py-3 text-base disabled:opacity-60">
+            {loading ? '불러오는 중...' : `복습 시작 (${total}문장)`}
+          </button>
+        </>
+      )}
+    </motion.div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -186,8 +311,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false)
   const [statsLoading, setStatsLoading] = useState(true)
   const [calendarData, setCalendarData] = useState({})
-  const [mode, setMode] = useState('test')
   const [recLevel, setRecLevel] = useState(null)
+  const [testLocked, setTestLocked] = useState(false)   // 3단계(문장 테스트) 잠김 여부
 
   useEffect(() => {
     loadStatistics()
@@ -195,6 +320,13 @@ export default function Dashboard() {
     // 적응형 난이도 — 최근 정확도로 추천 레벨을 받아 기본값으로
     curriculumAPI.getRecommendedLevel()
       .then((r) => { setRecLevel(r); setSelectedLevel(r.recommended_level) })
+      .catch(() => {})
+    // 테스트(3단계)는 2단계 숙달 전엔 잠긴다 → 시나리오 생성 전에 미리 막는다
+    curriculumAPI.getStages()
+      .then((data) => {
+        const s3 = (data?.stages || []).find((x) => x.stage === 3)
+        setTestLocked(!!s3 && (s3.status === 'locked' || s3.status === 'coming_soon'))
+      })
       .catch(() => {})
   }, [])
 
@@ -222,31 +354,10 @@ export default function Dashboard() {
     selectedSituation === '직접 입력' ? customSituation : selectedSituation
 
   const startPractice = async () => {
-    // 복습 모드: 틀린 문장 가져오기
-    if (mode === 'review') {
-      setLoading(true)
-      try {
-        const sentences = await learningAPI.getReviewSentences()
-        if (sentences.length === 0) {
-          alert('복습할 문장이 없어요! 먼저 테스트를 진행해보세요.')
-          return
-        }
-        const scenario = {
-          situation: '복습',
-          level: 1,
-          sentences: sentences.map(s => s.sentence),
-          scenario_id: `review_${Date.now()}`,
-        }
-        setScenario(scenario, 'test')
-        navigate('/practice')
-      } catch (e) {
-        alert('복습 문장을 불러오지 못했습니다.')
-      } finally {
-        setLoading(false)
-      }
+    if (testLocked) {
+      alert('아직 잠긴 단계예요. 학습에서 2단계(음절·단어)를 먼저 완료해주세요.')
       return
     }
-
     if (!effectiveSituation.trim()) {
       alert('상황을 입력해주세요.')
       return
@@ -254,12 +365,10 @@ export default function Dashboard() {
     setLoading(true)
     try {
       const scenario = await learningAPI.getScenario(effectiveSituation, selectedLevel)
-      setScenario(scenario, mode)
-      if (mode === 'conversation') {
-        navigate('/conversation')
-      } else {
-        navigate('/practice')
-      }
+      // 테스트는 문장마다 주관식·4지선다·서술형을 섞어서 출제한다.
+      scenario.qTypes = buildQTypes(scenario.sentences.length)
+      setScenario(scenario, 'test')
+      navigate('/practice')
     } catch (error) {
       alert('시나리오 생성에 실패했습니다. 다시 시도해주세요.')
       console.error(error)
@@ -268,24 +377,6 @@ export default function Dashboard() {
     }
   }
 
-  const MODES = [
-    { id: 'study',         label: '학습 모드',  desc: '문장 보며 입모양 익히기' },
-    { id: 'test',          label: '주관식',     desc: '직접 타이핑해서 맞추기' },
-    { id: 'test-multiple', label: '4지선다',    desc: '4개 보기 중 정답 선택' },
-    { id: 'review',        label: '복습',       desc: '틀린 문장만 다시 풀기' },
-    { id: 'conversation',  label: '대화 연습',  desc: 'AI와 실전 대화' },
-  ]
-
-  const startLabel = {
-    study: '학습 시작',
-    test: '테스트 시작',
-    'test-multiple': '4지선다 시작',
-    review: '복습 시작',
-    conversation: '대화 연습 시작',
-  }[mode]
-
-  const showSituationPicker = mode !== 'review' && mode !== 'conversation' || mode === 'conversation'
-  const hideSituationForReview = mode === 'review'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
@@ -350,9 +441,6 @@ export default function Dashboard() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* 단계형 커리큘럼 경로 (오늘의 학습) */}
-        <CurriculumPath />
 
         {/* Stats Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
@@ -438,63 +526,36 @@ export default function Dashboard() {
           <ActivityCalendar data={calendarData} />
         </motion.div>
 
+        {/* 단계형 커리큘럼 경로 (오늘의 학습) */}
+        <CurriculumPath />
+
         {/* Practice Setup */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="card max-w-3xl mx-auto"
+          className="card"
         >
-          {/* Mode toggle */}
-          <div className="flex gap-1 mb-6 p-1 bg-gray-100 rounded-xl overflow-x-auto">
-            {MODES.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setMode(m.id)}
-                className={`flex-1 min-w-0 py-2 px-1 rounded-lg text-xs font-medium transition-all leading-tight whitespace-nowrap ${
-                  mode === m.id
-                    ? 'bg-white text-primary-600 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <div>{m.label}</div>
-                <div className={`text-xs font-normal mt-0.5 hidden sm:block ${mode === m.id ? 'text-primary-400' : 'text-gray-400'}`}>
-                  {m.desc}
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <h2 className="text-xl font-bold mb-5 text-gray-900">
-            {startLabel}
+          <h2 className="text-xl font-bold mb-5 text-gray-900 flex items-center gap-2">
+            테스트
+            {testLocked && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">🔒 잠김</span>
+            )}
           </h2>
 
-          {/* Mode hints */}
-          {mode === 'study' && (
-            <div className="mb-5 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
-              문장을 보면서 입모양을 익힙니다. 채점 없이 반복 학습할 수 있어요.
+          {testLocked ? (
+            <div className="mb-5 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500">
+              학습에서 2단계(음절·단어)를 완료하면 테스트가 열려요.
             </div>
-          )}
-          {mode === 'test-multiple' && (
-            <div className="mb-5 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-700">
-              4개 보기 중 입모양에 맞는 문장을 선택하세요. 타이핑 없이 빠르게 연습할 수 있어요.
-            </div>
-          )}
-          {mode === 'review' && (
-            <div className="mb-5 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
-              이전 테스트에서 틀린 문장들만 모아서 다시 연습합니다.
-            </div>
-          )}
-          {mode === 'conversation' && (
+          ) : (
             <div className="mb-5 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-              AI와 자연스러운 대화를 나누며 독화를 연습합니다. AI의 말을 읽고 답변해보세요.
+              그동안 학습한 내용을 검증합니다. 주관식·4지선다·서술형 문제가 섞여서 출제돼요.
             </div>
           )}
 
           <div className="space-y-5">
-            {/* Situation Selection — 복습 모드는 숨김 */}
-            {!hideSituationForReview && (
-              <div>
+            {/* Situation Selection */}
+            <div>
                 <label className="label">상황 선택</label>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                   {PRESET_SITUATIONS.map((s) => (
@@ -534,12 +595,10 @@ export default function Dashboard() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
-            )}
+            </div>
 
-            {/* Level Selection — 복습 모드는 숨김 */}
-            {!hideSituationForReview && (
-              <div>
+            {/* Level Selection */}
+            <div>
                 <label className="label">난이도</label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((level) => (
@@ -560,27 +619,29 @@ export default function Dashboard() {
                   추천 레벨: {recLevel?.recommended_level ?? Math.min(user?.current_level || 1, 5)}
                   {recLevel?.reason ? ` · ${recLevel.reason}` : ''}
                 </p>
-              </div>
-            )}
+            </div>
 
             {/* Start Button */}
             <button
               onClick={startPractice}
               disabled={
                 loading ||
-                (mode !== 'review' && selectedSituation === '직접 입력' && !customSituation.trim())
+                testLocked ||
+                (selectedSituation === '직접 입력' && !customSituation.trim())
               }
               className="btn-primary w-full py-3.5 text-base disabled:opacity-60"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  {mode === 'review' ? '복습 문장 불러오는 중...' : 'AI가 시나리오를 만드는 중...'}
+                  AI가 시나리오를 만드는 중...
                 </span>
-              ) : startLabel}
+              ) : testLocked ? '🔒 2단계 완료 후 열려요' : '테스트 시작'}
             </button>
           </div>
         </motion.div>
+
+        <ReviewSection />
       </main>
     </div>
   )

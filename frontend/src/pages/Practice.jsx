@@ -142,7 +142,11 @@ export default function Practice() {
   const nextSentence = useStore((state) => state.nextSentence)
   const resetPractice = useStore((state) => state.resetPractice)
   const updateUser = useStore((state) => state.updateUser)
-  const practiceMode = useStore((state) => state.practiceMode) // 'study' | 'test' | 'test-multiple'
+  const practiceMode = useStore((state) => state.practiceMode) // 'study' | 'test'
+
+  // 테스트는 문장마다 유형이 다르다: 주관식(test) · 4지선다(test-multiple) · 서술형(essay)
+  const qType = currentScenario?.qTypes?.[currentSentenceIndex]
+  const effectiveMode = practiceMode === 'study' ? 'study' : (qType || 'test')
 
   const [visemes, setVisemes] = useState([])
   const [isPlaying, setIsPlaying] = useState(false)
@@ -225,6 +229,8 @@ export default function Practice() {
   const handleNext = () => {
     nextSentence()
     setResult(null)
+    setSelectedChoice(null)
+    setHintLevel(0)
   }
 
   const handleRetry = () => {
@@ -260,16 +266,20 @@ export default function Practice() {
               <p className="text-sm text-gray-600">
                 {currentScenario.situation} · 레벨 {currentScenario.level}
                 <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${
-                  practiceMode === 'study' ? 'bg-green-100 text-green-700'
-                  : practiceMode === 'test-multiple' ? 'bg-purple-100 text-purple-700'
+                  effectiveMode === 'study' ? 'bg-green-100 text-green-700'
+                  : effectiveMode === 'test-multiple' ? 'bg-purple-100 text-purple-700'
+                  : effectiveMode === 'essay' ? 'bg-indigo-100 text-indigo-700'
                   : 'bg-blue-100 text-blue-700'
                 }`}>
-                  {practiceMode === 'study' ? '학습' : practiceMode === 'test-multiple' ? '4지선다' : '테스트'}
+                  {effectiveMode === 'study' ? '학습'
+                    : effectiveMode === 'test-multiple' ? '4지선다'
+                    : effectiveMode === 'essay' ? '서술형'
+                    : '주관식'}
                 </span>
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {currentSentence && (practiceMode === 'test' || practiceMode === 'test-multiple') && (
+              {currentSentence && practiceMode !== 'study' && (
                 <BookmarkButton
                   sentence={currentSentence}
                   situation={currentScenario.situation}
@@ -306,7 +316,7 @@ export default function Practice() {
         </div>
 
         {currentSentence ? (
-          practiceMode === 'study' ? (
+          effectiveMode === 'study' ? (
             /* ── 학습 모드 ── */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card">
@@ -362,7 +372,7 @@ export default function Practice() {
                 </div>
               </motion.div>
             </div>
-          ) : practiceMode === 'test-multiple' ? (
+          ) : effectiveMode === 'test-multiple' ? (
             /* ── 4지선다 모드 ── */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card">
@@ -460,7 +470,7 @@ export default function Practice() {
               </motion.div>
             </div>
           ) : (
-            /* ── 주관식 테스트 모드 ── */
+            /* ── 주관식 / 서술형 테스트 모드 ── */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -489,7 +499,9 @@ export default function Practice() {
                 className="card"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">무슨 말인가요?</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {effectiveMode === 'essay' ? '문장 전체를 서술하세요' : '무슨 말인가요?'}
+                  </h3>
                   {!result && hintLevel < 3 && (
                     <button
                       onClick={showNextHint}
@@ -520,6 +532,12 @@ export default function Practice() {
                     loading={submitting}
                     result={result}
                     correctAnswer={currentSentence}
+                    label={effectiveMode === 'essay'
+                      ? '입모양을 보고 문장 전체를 서술해서 입력하세요'
+                      : '입모양을 보고 문장을 입력하세요'}
+                    placeholder={effectiveMode === 'essay'
+                      ? '읽은 내용을 문장으로 자세히 적어보세요...'
+                      : '여기에 읽은 문장을 입력하세요...'}
                   />
                 </div>
 

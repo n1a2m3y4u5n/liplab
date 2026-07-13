@@ -17,6 +17,8 @@ export default function QuizForm({
   loading = false,
   result = null,
   correctAnswer = '',
+  label = '입모양을 보고 문장을 입력하세요',
+  placeholder = '여기에 읽은 문장을 입력하세요...',
 }) {
   const [answer, setAnswer] = useState('')
 
@@ -37,7 +39,7 @@ export default function QuizForm({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="answer" className="label">
-            입모양을 보고 문장을 입력하세요
+            {label}
           </label>
           <textarea
             id="answer"
@@ -45,7 +47,7 @@ export default function QuizForm({
             onChange={(e) => setAnswer(e.target.value)}
             disabled={loading || result !== null}
             className="input-field resize-none h-24"
-            placeholder="여기에 읽은 문장을 입력하세요..."
+            placeholder={placeholder}
             required
           />
         </div>

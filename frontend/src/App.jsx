@@ -35,7 +35,7 @@ class ErrorBoundary extends Component {
   }
 }
 import useStore from './store/useStore'
-import { authAPI } from './api'
+import { authAPI, curriculumAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
 import Dashboard from './pages/Dashboard'
 import Analysis from './pages/Analysis'
@@ -91,6 +91,30 @@ function AuthGate({ children }) {
 }
 
 /**
+ * StageGate — 순차 해금 강제. 커리큘럼 카드뿐 아니라 직접 URL/버튼 진입도 막는다.
+ * 해당 단계가 잠김(locked/coming_soon)이면 대시보드로 돌려보낸다.
+ * 조회 실패 시엔 막지 않는다(네트워크 오류로 학습이 통째로 막히지 않도록 — 가용성 우선).
+ */
+function StageGate({ stage, children }) {
+  const [state, setState] = useState('loading')   // loading | allowed | denied
+  useEffect(() => {
+    let cancelled = false
+    curriculumAPI.getStages()
+      .then((data) => {
+        const s = (data?.stages || []).find((x) => x.stage === stage)
+        const locked = !s || s.status === 'locked' || s.status === 'coming_soon'
+        if (!cancelled) setState(locked ? 'denied' : 'allowed')
+      })
+      .catch(() => { if (!cancelled) setState('allowed') })
+    return () => { cancelled = true }
+  }, [stage])
+
+  if (state === 'loading') return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>불러오는 중…</div>
+  if (state === 'denied') return <Navigate to="/dashboard" replace />
+  return children
+}
+
+/**
  * Main App component with routing
  */
 function App() {
@@ -101,12 +125,12 @@ function App() {
       <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>불러오는 중…</div>}>
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/practice" element={<Practice />} />
-        <Route path="/conversation" element={<Conversation />} />
+        <Route path="/practice" element={<StageGate stage={3}><Practice /></StageGate>} />
+        <Route path="/conversation" element={<StageGate stage={4}><Conversation /></StageGate>} />
         <Route path="/analysis" element={<Analysis />} />
         <Route path="/sign" element={<Sign />} />
         <Route path="/learn/viseme" element={<VisemeLiteracy />} />
-        <Route path="/learn/word" element={<WordStage />} />
+        <Route path="/learn/word" element={<StageGate stage={2}><WordStage /></StageGate>} />
         <Route path="/review" element={<Review />} />
         <Route path="/learn/closure" element={<Closure />} />
         <Route path="/bookmarks" element={<Bookmarks />} />

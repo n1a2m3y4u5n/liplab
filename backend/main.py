@@ -305,6 +305,11 @@ async def submit_progress(
         new_level = int((current_user.total_xp / 100) ** 0.5) + 1
         current_user.current_level = max(current_user.current_level, new_level)
 
+        # 3단계(문장 연습) 숙달 갱신 — 점수 PASS 이상이면 성공 1회로 누적(4단계 해금 근거)
+        await _bump_stage_progress(
+            current_user.id, 3, scoring_result["score"] >= _STAGE3_PASS,
+            _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db)
+
         await db.commit()
 
         return ProgressResponse(
@@ -615,6 +620,35 @@ _STAGE1_MIN_ATTEMPTS = 15      # 숙달 판정 최소 시도
 _STAGE1_MASTERY = 80.0         # 숙달 판정 정확도(%)
 _STAGE2_MIN_ATTEMPTS = 12
 _STAGE2_MASTERY = 80.0
+# 3·4단계는 점수(0~100)를 내는 활동이라 'PASS 이상이면 성공 1회'로 환산해 누적한다.
+_STAGE3_MIN_ATTEMPTS = 10      # 문장 연습
+_STAGE3_MASTERY = 75.0
+_STAGE3_PASS = 70.0            # 문장 1건을 '성공'으로 볼 최소 점수
+_STAGE4_MIN_ATTEMPTS = 8       # 대화 실전
+_STAGE4_MASTERY = 70.0
+_STAGE4_PASS = 65.0            # 대화 1턴을 '성공'으로 볼 최소 이해도
+
+
+async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
+                               min_attempts: int, mastery_pct: float, db):
+    """단계별 진행률 rolling 갱신(1건 채점 → 시도·정답 누적, 숙달 판정). sp 반환.
+    커밋은 호출부에서 다른 갱신과 함께 처리한다."""
+    from database import StageProgress
+    from sqlalchemy import select
+    r = await db.execute(select(StageProgress).where(
+        StageProgress.user_id == user_id, StageProgress.stage == stage))
+    sp = r.scalar_one_or_none()
+    if sp is None:
+        # default=0은 flush 시점 적용 → 즉시 증감하려면 초기값 명시
+        sp = StageProgress(user_id=user_id, stage=stage, status="in_progress",
+                           attempts=0, correct=0, mastery_score=0.0)
+        db.add(sp)
+    sp.attempts += 1
+    if passed:
+        sp.correct += 1
+    sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
+    sp.status = "mastered" if (sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct) else "in_progress"
+    return sp
 
 from datetime import date as _sr_date, timedelta as _sr_delta
 
@@ -675,19 +709,17 @@ async def curriculum_stages(current_user=Depends(get_current_user), db: AsyncSes
                 st["status"] = sp.status
                 st["mastery_score"] = round(sp.mastery_score, 1)
                 st["attempts"] = sp.attempts
-        elif stage == 2:
-            s1 = sp_map.get(1)
-            sp = sp_map.get(2)
-            if not (s1 is not None and s1.status == "mastered"):
-                st["status"] = "locked"        # 1단계 숙달 후 열림
+        else:  # 2·3·4단계 — 직전 단계를 숙달해야 순차 해금
+            prev = sp_map.get(stage - 1)
+            sp = sp_map.get(stage)
+            if not (prev is not None and prev.status == "mastered"):
+                st["status"] = "locked"        # 전 단계 숙달 후 열림
             elif sp is None:
                 st["status"] = "unlocked"
             else:
                 st["status"] = sp.status
                 st["mastery_score"] = round(sp.mastery_score, 1)
                 st["attempts"] = sp.attempts
-        else:  # 3·4 기존 모드 — 항상 접근 가능
-            st["status"] = "available"
         stages.append(st)
 
     return {"track": prof.track, "placed": prof.placed,
@@ -707,6 +739,15 @@ async def curriculum_set_track(data: TrackSelect, current_user=Depends(get_curre
     prof.track = data.track
     prof.placed = True
     prof.current_stage = max(prof.current_stage or 0, 1)
+    await db.commit()
+    return {"track": prof.track, "placed": prof.placed, "current_stage": prof.current_stage}
+
+
+@app.post("/api/curriculum/track/reset")
+async def curriculum_reset_track(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """배치 취소: 트랙 선택 화면으로 되돌아가기(진행 데이터는 보존)."""
+    prof = await _get_or_create_profile(current_user.id, db)
+    prof.placed = False
     await db.commit()
     return {"track": prof.track, "placed": prof.placed, "current_stage": prof.current_stage}
 
@@ -904,11 +945,19 @@ class ScoreRequest(BaseModel):
 
 @app.post("/api/score")
 async def score_answer(data: ScoreRequest, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """임의 문장 채점(대화 이해도 등) — 기존 음운 유사도 엔진 재사용."""
+    """임의 문장 채점(대화 이해도 등) — 기존 음운 유사도 엔진 재사용.
+    대화 실전에서 호출되므로 4단계 숙달도 함께 갱신한다."""
     try:
         r = await calculate_score(correct=data.correct, user_answer=data.user_answer, db=db)
-        return {"score": round(r.get("score", 0), 1), "feedback": r.get("feedback", {}), "phoneme_accuracy": r.get("phoneme_accuracy", {})}
+        score = round(r.get("score", 0), 1)
+        # 4단계(대화 실전) 숙달 갱신 — 이해도 PASS 이상이면 성공 1회로 누적
+        await _bump_stage_progress(
+            current_user.id, 4, score >= _STAGE4_PASS,
+            _STAGE4_MIN_ATTEMPTS, _STAGE4_MASTERY, db)
+        await db.commit()
+        return {"score": score, "feedback": r.get("feedback", {}), "phoneme_accuracy": r.get("phoneme_accuracy", {})}
     except Exception as e:
+        await db.rollback()
         raise HTTPException(status_code=500, detail=f"score failed: {str(e)}")
 
 

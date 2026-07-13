@@ -157,6 +157,7 @@ export const learningAPI = {
 export const curriculumAPI = {
   getStages: async () => (await api.get('/curriculum/stages')).data,
   setTrack: async (track) => (await api.post('/curriculum/track', { track })).data,
+  resetTrack: async () => (await api.post('/curriculum/track/reset')).data,
   getVisemeLessons: async () => (await api.get('/curriculum/viseme-lessons')).data,
   submitRecognition: async (viseme_id, chosen_id) =>
     (await api.post('/curriculum/recognition', { viseme_id, chosen_id })).data,
