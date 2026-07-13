@@ -890,6 +890,52 @@ async def review_answer(data: ReviewAnswer, current_user=Depends(get_current_use
     return {"ok": True, "removed": False, "next_due": item.due_date, "interval_days": item.interval_days}
 
 
+# ── 3단계 문맥 추론(closure) + 대화 채점 + 적응형 난이도(Phase 3·4) ──────────
+@app.get("/api/curriculum/closure")
+async def curriculum_closure(current_user=Depends(get_current_user)):
+    """문맥 추론 항목(빈칸+비슷하게 보이는 보기). 눈으로 구별 안 되니 문맥으로 답을 고른다."""
+    return {"items": _curriculum.CLOSURE_ITEMS}
+
+
+class ScoreRequest(BaseModel):
+    correct: str
+    user_answer: str
+
+
+@app.post("/api/score")
+async def score_answer(data: ScoreRequest, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """임의 문장 채점(대화 이해도 등) — 기존 음운 유사도 엔진 재사용."""
+    try:
+        r = await calculate_score(correct=data.correct, user_answer=data.user_answer, db=db)
+        return {"score": round(r.get("score", 0), 1), "feedback": r.get("feedback", {}), "phoneme_accuracy": r.get("phoneme_accuracy", {})}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"score failed: {str(e)}")
+
+
+@app.get("/api/curriculum/recommended-level")
+async def recommended_level(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """최근 문장 연습 정확도로 다음 난이도를 추천(적응형)."""
+    from database import Progress
+    from sqlalchemy import select
+    r = await db.execute(
+        select(Progress.score, Progress.difficulty_level)
+        .where(Progress.user_id == current_user.id)
+        .order_by(Progress.created_at.desc()).limit(10))
+    rows = r.all()
+    if not rows:
+        base = min(max(current_user.current_level or 1, 1), 5)
+        return {"recommended_level": base, "recent_avg": None, "sample": 0, "reason": "아직 기록이 없어 기본값을 추천해요"}
+    avg = sum(x[0] for x in rows) / len(rows)
+    practiced = rows[0][1] or (current_user.current_level or 1)
+    if avg >= 82:
+        lvl, reason = min(practiced + 1, 5), "최근 정확도가 높아 한 단계 올렸어요"
+    elif avg <= 55:
+        lvl, reason = max(practiced - 1, 1), "최근 정확도가 낮아 한 단계 내렸어요"
+    else:
+        lvl, reason = min(max(practiced, 1), 5), "지금 난이도가 적당해요"
+    return {"recommended_level": lvl, "recent_avg": round(avg, 1), "sample": len(rows), "reason": reason}
+
+
 class ConversationRequest(BaseModel):
     situation: str
     level: int = 1

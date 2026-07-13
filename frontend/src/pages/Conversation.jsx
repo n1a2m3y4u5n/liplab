@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
-import { learningAPI } from '../api'
+import { learningAPI, scoreAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
 
 /**
@@ -26,6 +26,7 @@ export default function Conversation() {
   const [phase, setPhase] = useState('watching') // 'watching' | 'answering' | 'done'
   const [revealedText, setRevealedText] = useState(false)
   const [turnCount, setTurnCount] = useState(0)
+  const [scores, setScores] = useState([])
 
   const chatBottomRef = useRef(null)
 
@@ -104,8 +105,15 @@ export default function Conversation() {
     const answer = userInput.trim()
     setUserInput('')
 
-    // Add user message
-    setMessages((prev) => [...prev, { role: 'user', text: answer }])
+    // 이해도 채점 — 방금 본 AI 문장(currentAIText)과 비교 (음운 유사도 엔진 재사용)
+    let turnScore = null
+    try {
+      const r = await scoreAPI.score(currentAIText, answer)
+      turnScore = r.score
+    } catch { /* 채점 실패해도 대화는 진행 */ }
+
+    setMessages((prev) => [...prev, { role: 'user', text: answer, score: turnScore }])
+    if (turnScore != null) setScores((prev) => [...prev, turnScore])
 
     const newTurn = turnCount + 1
     setTurnCount(newTurn)
@@ -226,6 +234,9 @@ export default function Conversation() {
                       {msg.role === 'ai' && !msg.revealed
                         ? '(입모양을 보고 맞춰보세요)'
                         : msg.text}
+                      {msg.role === 'user' && msg.score != null && (
+                        <span className="block mt-0.5 text-[10px] opacity-80">이해도 {msg.score}점</span>
+                      )}
                     </div>
                   </motion.div>
                 ))}
@@ -278,6 +289,11 @@ export default function Conversation() {
               className="card text-center py-6"
             >
               <div className="text-4xl mb-2">대화 완료</div>
+              {scores.length > 0 && (
+                <p className="text-lg font-bold text-primary-600 mb-1">
+                  평균 이해도 {Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}점
+                </p>
+              )}
               <p className="text-gray-600 mb-4">
                 {MAX_TURNS}번의 대화를 완료했습니다!
               </p>

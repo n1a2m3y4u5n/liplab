@@ -96,6 +96,16 @@ const SYSTEM_INFO = [
   },
 ]
 
+// 독화라는 '기술' 자체의 요령 — 기능 사용법보다 먼저 알아야 할 핵심 전략.
+const STRATEGIES = [
+  { icon: '👀', title: '똑같이 보이는 소리가 있다 (동구형이음)', body: 'ㅂ·ㅁ·ㅍ는 입술이 닫혀 똑같이 보이고, ㄱ·ㄷ·ㅈ·ㅅ처럼 입 안쪽에서 나는 소리도 서로 구별이 거의 안 됩니다. "정확히 읽는다"가 아니라 "가능성을 좁힌다"고 생각하세요.' },
+  { icon: '🧩', title: '문맥으로 메꾼다', body: '입모양이 애매하면 앞뒤 말과 상황으로 판단합니다. "___ 마셔요"에서 입모양이 물/불로 보여도 마시는 건 물이죠. 독화의 절반은 추리입니다.' },
+  { icon: '⚓', title: '모음을 닻으로 삼는다', body: '자음보다 모음(ㅏ·ㅣ·ㅗ·ㅜ)이 훨씬 잘 보입니다. 문장의 모음 뼈대를 먼저 잡고 자음을 채워 넣으세요.' },
+  { icon: '🎯', title: '첫 소리에 집중', body: '단어의 첫 입모양(초성·첫 모음)이 가장 정보가 많습니다. 시작을 놓치면 뒤가 다 흔들려요.' },
+  { icon: '💡', title: '화자·환경을 고른다', body: '밝은 곳에서 얼굴이 정면으로 보이고 너무 빠르지 않게 말할 때 독화가 잘 됩니다. "천천히, 마주 보고" 요청하는 것도 실력입니다.' },
+  { icon: '🔁', title: '못 알아들으면 되묻기', body: '전부 완벽히 읽을 필요는 없습니다. 핵심 단어만 확인하거나 "○○ 말씀이세요?"로 좁혀가세요.' },
+]
+
 export default function Guide() {
   const navigate = useNavigate()
 
@@ -114,6 +124,25 @@ export default function Guide() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+
+        {/* 독화 전략 코칭 — 기술 자체의 요령 */}
+        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">독화, 이렇게 하세요 <span className="text-primary-500">(핵심 전략)</span></h2>
+          <p className="text-sm text-gray-500 mb-4">기능 사용법 이전에, 독화라는 '기술' 자체의 요령입니다.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {STRATEGIES.map((s, i) => (
+              <div key={i} className="card">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl shrink-0">{s.icon}</span>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">{s.title}</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">{s.body}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.section>
 
         {/* LIPLAB 시스템 소개 */}
         <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
