@@ -32,6 +32,24 @@ DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "ksl_dictionary.csv"
 # 사용하는 Claude 모델 (앱의 시나리오 생성과 동일 계열로 일관성 유지)
 _SIGN_MODEL = "claude-sonnet-4-6"
 
+# 별칭표(수기 검증): 사전에 없는 흔한 단어 → 사전에 있는 **근접 동의어**.
+# 각 항목을 사람이 확인했고, UI에는 치환을 **투명하게 표시**("밥 → 식사")한다.
+# 블라인드 절단(정규화)과 달리 명시적·감사 가능하며, 알고리즘 오탐 위험이 없다.
+# 값(동의어)은 실제 사전 표제어라야 한다(로드 시 검증).
+_ALIASES = {
+    '밥': '식사', '스마트폰': '휴대폰', '선생님': '교사', '자동차': '차',
+    '편의점': '가게', '사용하다': '이용', '고치다': '수리', '도와주다': '돕다',
+    '많이': '많다', '열심히': '열심', '천천히': '느리다',
+}
+
+# 아라비아 숫자 → 한국수어 숫자 수어. 고유어 수사(하나~아홉)는 표제어가 '숫자 수형'으로
+# 명확하고 동형어가 적어 안전(한자어 일·이·사 등은 동형어가 많아 오매칭 위험 → 미사용).
+# 0은 명확한 표제어가 없어 매핑에서 제외(텍스트 폴백). 자리별로 각 숫자 수어를 낸다.
+_DIGIT_TO_KO = {
+    '1': '하나', '2': '둘', '3': '셋', '4': '넷', '5': '다섯',
+    '6': '여섯', '7': '일곱', '8': '여덟', '9': '아홉',
+}
+
 # ---------------------------------------------------------------------------
 # 사전 인덱스: 정제된 한국어 표제어 → [ {origin_no, description, word, category} ]
 # ---------------------------------------------------------------------------
@@ -174,7 +192,8 @@ _KSL_SYSTEM_PROMPT = """당신은 한국어를 한국수어(KSL) 문법으로 �
 3) 부정(안/못/없다)·의문은 서술어 뒤에서 표현한다(negate 표시).
 4) 각 단어는 한국수어사전에서 찾을 수 있는 '기본형 한국어 표제어'로 낸다
    (동사는 '가다/먹다'처럼 기본형, 명사는 단독형).
-5) 사전에 없을 법한 고유명사·외래어·숫자는 그대로 두면 지문자로 처리된다.
+5) 사전에 없을 법한 고유명사·외래어는 그대로 두면 지문자로 처리된다.
+   아라비아 숫자는 **숫자 자체로 별도 토큰**으로 분리해 낸다(예: "3시" → "3","시").
 6) 얼굴표정·고개 등 비수지 표지가 문법상 중요하면 nonmanual에 적는다.
 
 반드시 아래 JSON만 출력한다(설명 금지):
@@ -242,24 +261,59 @@ async def translate_to_ksl(text: str) -> Dict:
         word = (item.get("word") or "").strip()
         if not word:
             continue
+
+        # 숫자: 아라비아 숫자를 자리별로 한국수어 숫자 수어(영상)로 표시. 원 숫자는 남기고
+        # signed_as에 한국어 수사를 넣어 투명 표시("3 → 셋"). 매핑 없는 자리(0)는 지문자.
+        if word.isdigit():
+            for d in word:
+                kw = _DIGIT_TO_KO.get(d)
+                s = lookup_sign(kw) if kw else None
+                try:
+                    dv = await text_to_visemes(kw or d)
+                except Exception:
+                    dv = []
+                if s:
+                    matched += 1
+                    tokens.append({
+                        "type": "sign", "word": d, "signed_as": kw,
+                        "origin_no": s["origin_no"], "description": s["description"],
+                        "dict_url": s["dict_url"], "alt_count": s["alt_count"],
+                        "negate": False, "visemes": dv,
+                    })
+                else:
+                    fingerspelled += 1
+                    tokens.append({"type": "fingerspell", "word": d, "jamo": [[d]], "visemes": dv})
+            continue
+
         sign = lookup_sign(word)
-        # 입모양(mouthing): 해당 한국어 단어의 viseme 시퀀스
+        # 완전일치 실패 시 별칭표로 근접 동의어를 시도(투명 치환)
+        signed_as = None
+        if not sign:
+            alias = _ALIASES.get(word)
+            if alias:
+                a_sign = lookup_sign(alias)
+                if a_sign:
+                    sign, signed_as = a_sign, alias
+        # 입모양(mouthing)은 사용자가 입력한 원어 기준(밥을 배우는 중이므로 '밥')
         try:
             visemes = await text_to_visemes(word)
         except Exception:
             visemes = []
         if sign:
             matched += 1
-            tokens.append({
+            token = {
                 "type": "sign",
-                "word": word,
+                "word": word,                 # 원어(사용자 입력)
                 "origin_no": sign["origin_no"],
                 "description": sign["description"],
                 "dict_url": sign["dict_url"],
                 "alt_count": sign["alt_count"],
                 "negate": bool(item.get("negate")),
                 "visemes": visemes,
-            })
+            }
+            if signed_as:
+                token["signed_as"] = signed_as   # 실제 표시된 수어 표제어(근접 동의어)
+            tokens.append(token)
         else:
             fingerspelled += 1
             tokens.append({
