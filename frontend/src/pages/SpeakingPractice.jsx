@@ -394,15 +394,32 @@ function PitchEnergyGraph({ trace, summary }) {
     else { if (cur.length > 1) segs.push(cur); cur = [] }
   }
   if (cur.length > 1) segs.push(cur)
-  const toPath = (pts) => pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')
 
-  // 크기: 에너지 포락선(면적)
+  // 점들을 부드럽게 통과하는 곡선(Catmull-Rom → 3차 베지어)
+  const smooth = (pts, t = 0.18) => {
+    if (pts.length < 2) return ''
+    if (pts.length === 2) return `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)} L${pts[1][0].toFixed(1)} ${pts[1][1].toFixed(1)}`
+    let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2
+      const c1x = p1[0] + (p2[0] - p0[0]) * t, c1y = p1[1] + (p2[1] - p0[1]) * t
+      const c2x = p2[0] - (p3[0] - p1[0]) * t, c2y = p2[1] - (p3[1] - p1[1]) * t
+      d += ` C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`
+    }
+    return d
+  }
+
+  // 크기: 에너지 포락선(면적) — 이동평균으로 지터 완화 후 부드러운 상단선
   const eMax = 0.14
   const EY = (rms) => eBot - Math.min(1, Math.max(0, rms) / eMax) * (eBot - eTop)
   const yTh = EY(0.062)   // ≈ 크기 40/100 (적정 기준선)
-  const areaPath = `M${X(trace[0].t).toFixed(1)} ${eBot} ` +
-    trace.map((s) => `L${X(s.t).toFixed(1)} ${EY(s.rms).toFixed(1)}`).join(' ') +
-    ` L${X(last.t).toFixed(1)} ${eBot} Z`
+  const rmsArr = trace.map((s) => s.rms)
+  const topPts = trace.map((s, i) => {
+    const a = rmsArr[i - 1] ?? rmsArr[i], b = rmsArr[i], c = rmsArr[i + 1] ?? rmsArr[i]
+    return [X(s.t), EY((a + b + c) / 3)]
+  })
+  const topLine = smooth(topPts)
+  const areaFill = topLine + ` L${X(last.t).toFixed(1)} ${eBot} L${X(trace[0].t).toFixed(1)} ${eBot} Z`
 
   const flat = summary?.toneOk === false
   const quiet = summary?.volOk === false && !summary?.micIssue
@@ -420,12 +437,13 @@ function PitchEnergyGraph({ trace, summary }) {
         <line x1={padL} y1={midY} x2={W - padR} y2={midY} stroke="#a5b4fc" strokeWidth="1" strokeDasharray="4 4" />
         {/* 억양 곡선 */}
         {segs.map((pts, i) => (
-          <path key={i} d={toPath(pts)} fill="none" stroke="#4f46e5" strokeWidth="2.5"
+          <path key={i} d={smooth(pts)} fill="none" stroke="#4f46e5" strokeWidth="2.5"
                 strokeLinejoin="round" strokeLinecap="round" />
         ))}
 
-        {/* 크기 포락선 + 적정 기준선 */}
-        <path d={areaPath} fill="#6366f1" fillOpacity="0.18" stroke="#6366f1" strokeWidth="1.5" strokeLinejoin="round" />
+        {/* 크기 포락선(면적 + 부드러운 상단선) + 적정 기준선 */}
+        <path d={areaFill} fill="#6366f1" fillOpacity="0.16" stroke="none" />
+        <path d={topLine} fill="none" stroke="#6366f1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         <line x1={padL} y1={yTh} x2={W - padR} y2={yTh} stroke="#f59e0b" strokeWidth="1" strokeDasharray="5 4" />
         <text x={W - padR} y={yTh - 3} textAnchor="end" fontSize="9" fill="#d97706">적정</text>
 
