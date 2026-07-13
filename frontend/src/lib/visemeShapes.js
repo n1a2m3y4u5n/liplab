@@ -22,7 +22,7 @@
  *    → '벌림'은 jawOpen, '입술 모양'은 ARKit 립 셰이프로 역할을 분담한다.
  *
  * 이전 매핑 대비 개선점
- *   · 양순음(1): mouthClose 를 추가해 두 입술을 확실히 붙임(ㅂ/ㅍ/ㅁ 폐쇄 강화).
+ *   · 양순음(1): mouthClose 를 추가해 두 입술을 확실히 붙임(ㅁ/ㅂ/ㅃ/ㅍ 폐쇄 강화).
  *   · 원순모음(4)·이중모음(9): mouthFunnel + mouthPucker 를 결합해 앞으로
  *     내민 둥근 'O' 형태를 정확히 표현(기존 pucker 단독 → 납작한 오므림 문제 해소).
  *   · 치경음(6): 조음상 혀끝이 잇몸 뒤에 있어 밖으로 나오지 않는데도 쓰였던
@@ -32,18 +32,11 @@
  * 가중치는 0~1. 모델에 없는 키는 렌더러가 자동으로 건너뛴다.
  */
 export const VISEME_BLENDSHAPES = {
-  // 1) 양순음 ㅂ/ㅃ/ㅍ/ㅁ — 두 입술을 붙여 확실히 막고 살짝 압착
+  // 1) 양순음 ㅁ/ㅂ/ㅃ/ㅍ — 두 입술을 붙여 확실히 막고 살짝 압착
   1: { mouthClose: 0.35, mouthPressLeft: 0.22, mouthPressRight: 0.22, mouthRollLower: 0.12, mouthRollUpper: 0.12 },
 
   // 2) 개방모음 ㅏ/ㅐ/ㅑ/ㅒ — 턱을 크게 내리고 윗입술도 살짝 올려 크게 벌림
   2: { jawOpen: 0.5, mouthLowerDownLeft: 0.12, mouthLowerDownRight: 0.12, mouthUpperUpLeft: 0.06, mouthUpperUpRight: 0.06 },
-  // 1) 양순음 ㅂ/ㅃ/ㅍ/ㅁ — 두 입술을 확실히 붙여 막고 살짝 압착
-  //    mouthClose를 넣어 앞이 열린 모음(아→마) 뒤에도 입술이 반드시 닫히게 한다.
-  1: { mouthClose: 0.18, mouthPressLeft: 0.22, mouthPressRight: 0.22, mouthRollLower: 0.1, mouthRollUpper: 0.1 },
-
-  // 2) 개방모음 ㅏ/ㅐ — 턱을 크게 내려 입을 벌림 (한국어에서 가장 개방적인 모음)
-  2: { jawOpen: 0.5, mouthLowerDownLeft: 0.1, mouthLowerDownRight: 0.1 },
-
   // 3) 전설모음 ㅣ/ㅔ/ㅖ — 입술을 좌우로 당겨 옆으로 벌리고 윗니가 살짝 보임
   3: { mouthSmileLeft: 0.45, mouthSmileRight: 0.45, mouthStretchLeft: 0.2, mouthStretchRight: 0.2, jawOpen: 0.1, mouthUpperUpLeft: 0.08, mouthUpperUpRight: 0.08 },
 
@@ -52,10 +45,6 @@ export const VISEME_BLENDSHAPES = {
   //  → jaw는 최소(치아 감춤), funnel로 앞으로 내민 protrusion을 강조하고
   //    pucker는 살짝 낮춰 중앙에 작은 둥근 개구부가 보이게 한다.
   4: { mouthFunnel: 0.62, mouthPucker: 0.48, jawOpen: 0.05 },
-  // 4) 원순모음 ㅗ/ㅛ/ㅜ/ㅠ — 입술을 둥글게 오므려 앞으로 내밈
-  //    순수 pucker 0.95는 과장된 뽀뽀 모양 → funnel을 섞어 자연스러운 원순을 만든다.
-  4: { mouthPucker: 0.55, mouthFunnel: 0.4, jawOpen: 0.06 },
-
   // 5) 중설모음 ㅓ/ㅕ/ㅡ — 중립에서 살짝 벌림
   5: { jawOpen: 0.22, mouthFunnel: 0.06 },
 
@@ -64,13 +53,6 @@ export const VISEME_BLENDSHAPES = {
 
   // 7) 연구개음 ㄱ/ㄲ/ㅋ/ㅇ — 입을 조금 벌림(조음은 안쪽이라 외형은 중립)
   7: { jawOpen: 0.18 },
-  // 6) 치경음 ㄷ/ㄸ/ㅌ/ㄴ/ㄹ/ㅅ/ㅆ — 혀끝이 보이도록 입을 조금 더 벌림
-  //    혀끝은 윗잇몸으로 올라가므로 tongueOut(밖으로 내밀기)은 쓰지 않는다.
-  6: { jawOpen: 0.22 },
-
-  // 7) 연구개음 ㄱ/ㄲ/ㅋ/ㅇ — 혀 뒤가 보이도록 입을 조금 더 벌림
-  7: { jawOpen: 0.22 },
-
   // 8) 성문음 ㅎ — 숨을 내쉬며 입을 열고 이완
   8: { jawOpen: 0.26 },
 
@@ -81,9 +63,6 @@ export const VISEME_BLENDSHAPES = {
 
   // 10) 경구개음 ㅈ/ㅉ/ㅊ — 입술을 살짝 내밀고 옆으로 조금 당김
   10: { jawOpen: 0.12, mouthFunnel: 0.14, mouthSmileLeft: 0.12, mouthSmileRight: 0.12 },
-  // 10) 경구개음 ㅈ/ㅉ/ㅊ — 혓날이 보이도록 살짝 더 벌리고 옆으로 조금 당김
-  10: { jawOpen: 0.18, mouthSmileLeft: 0.18, mouthSmileRight: 0.18 },
-
   // 11~13) 동시조음 전환 프레임 — 다음 조음으로 가는 약한 중간 상태
   11: { mouthClose: 0.18, mouthPressLeft: 0.1, mouthPressRight: 0.1 }, // → 양순
   12: { jawOpen: 0.08 },                                              // → 치경

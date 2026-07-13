@@ -1,8 +1,31 @@
 # LIPLAB 백엔드 시작 스크립트
 # PowerShell에서 실행: powershell -ExecutionPolicy Bypass -File scripts\start-backend.ps1
 
-$PYTHON = "C:\Users\korea\AppData\Local\Programs\Python\Python314\python.exe"
 $BACKEND_DIR = "$PSScriptRoot\..\backend"
+$FRONTEND_DIR = "$PSScriptRoot\..\frontend"
+$FRONTEND_INDEX = "$FRONTEND_DIR\dist\index.html"
+$VENV_PYTHON = "$PSScriptRoot\..\.venv\Scripts\python.exe"
+
+if (Test-Path $VENV_PYTHON) {
+    $PYTHON = $VENV_PYTHON
+} else {
+    $PYTHON = (Get-Command python -ErrorAction Stop).Source
+}
+
+# 8080 단독 실행에서도 React 앱을 제공할 수 있도록 빌드가 없을 때만 생성한다.
+if (-not (Test-Path $FRONTEND_INDEX)) {
+    $NPM = (Get-Command npm.cmd -ErrorAction Stop).Source
+    Write-Host "프론트엔드 빌드가 없어 먼저 생성합니다..." -ForegroundColor Cyan
+    Push-Location $FRONTEND_DIR
+    try {
+        & $NPM run build
+        if ($LASTEXITCODE -ne 0) {
+            throw "프론트엔드 빌드에 실패했습니다."
+        }
+    } finally {
+        Pop-Location
+    }
+}
 
 Write-Host "백엔드 시작중..." -ForegroundColor Green
 

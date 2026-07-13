@@ -120,7 +120,7 @@ function StageGate({ stage, children }) {
 function App() {
   return (
     <ErrorBoundary>
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthGate>
       <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>불러오는 중…</div>}>
       <Routes>

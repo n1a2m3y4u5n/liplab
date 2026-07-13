@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
 import { learningAPI, curriculumAPI, reviewAPI } from '../api'
+import { StageProgressBar } from '../components/StageStatus'
 
 const PRESET_SITUATIONS = [
   { id: '카페', label: '카페', icon: '☕' },
@@ -178,11 +179,7 @@ function CurriculumPath() {
                 </div>
                 <div className={`text-sm font-bold mt-1 ${openable ? 'text-gray-800' : 'text-gray-400'}`}>{s.title}</div>
                 <div className="text-[11px] text-gray-400 mt-0.5 leading-tight">{s.desc}</div>
-                {s.stage === 1 && s.mastery_score != null && (
-                  <div className="mt-1.5 bg-gray-200 rounded-full h-1 overflow-hidden">
-                    <div className="bg-primary-500 h-full" style={{ width: `${Math.min(s.mastery_score, 100)}%` }} />
-                  </div>
-                )}
+                <StageProgressBar stageInfo={s} compact />
               </button>
             )
           })}

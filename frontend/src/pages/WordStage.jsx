@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
+import { StageHeader, StageProgressBar, useStageStatus } from '../components/StageStatus'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
@@ -26,6 +27,7 @@ function partnersOf(word, pairs, bankSet) {
 
 export default function WordStage() {
   const navigate = useNavigate()
+  const { stageInfo, setStageInfo } = useStageStatus(2)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -38,30 +40,26 @@ export default function WordStage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">음절·단어</h1>
-            <p className="text-sm text-gray-500">입모양만 보고 어떤 단어인지 맞혀보세요</p>
-          </div>
-          <button onClick={() => navigate('/dashboard')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
-        </div>
-      </header>
+      <StageHeader
+        title="음절·단어"
+        subtitle="입모양만 보고 어떤 단어인지 맞혀보세요"
+        stageInfo={stageInfo}
+        onExit={() => navigate('/dashboard')}
+      />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <WordQuiz data={data} />
+        <WordQuiz data={data} stageInfo={stageInfo} onProgress={setStageInfo} />
       </main>
     </div>
   )
 }
 
-function WordQuiz({ data }) {
+function WordQuiz({ data, stageInfo, onProgress }) {
   const words = useMemo(() => data.words.map((w) => w.word), [data])
   const bankSet = useMemo(() => new Set(words), [words])
   const [q, setQ] = useState(null)
   const [frames, setFrames] = useState([])
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
   const [signOpen, setSignOpen] = useState(false)
 
   const newQ = useCallback(async () => {
@@ -83,7 +81,7 @@ function WordQuiz({ data }) {
     const correct = word === q.target
     try {
       const r = await curriculumAPI.submitWord(q.target, correct)
-      setStat({ attempts: r.attempts, mastery: r.mastery_score, mastered: r.mastered })
+      if (r.stage_progress) onProgress(r.stage_progress)
     } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
     setResult({ correct, chosen: word })
   }
@@ -93,14 +91,8 @@ function WordQuiz({ data }) {
   return (
     <div className="space-y-5">
       <div className="card">
-        <div className="flex justify-between text-sm mb-1.5">
-          <span className="text-gray-600">숙달도 (정확도)</span>
-          <span className="font-semibold text-primary-600">{stat.mastery}% · {stat.attempts}회</span>
-        </div>
-        <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
-          <div className="bg-primary-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(stat.mastery, 100)}%` }} />
-        </div>
-        {stat.mastered && <p className="mt-2 text-sm font-semibold text-green-600">🎉 2단계 숙달! 단어 독화에 익숙해졌어요.</p>}
+        <StageProgressBar stageInfo={stageInfo} />
+        {stageInfo?.mastered && <p className="mt-2 text-sm font-semibold text-green-600">🎉 2단계 숙달! 단어 독화에 익숙해졌어요.</p>}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

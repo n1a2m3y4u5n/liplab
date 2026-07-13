@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
 import { learningAPI, scoreAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
+import { StageHeader, useStageStatus } from '../components/StageStatus'
 
 /**
  * 대화형 독화 연습 모드
@@ -14,6 +15,7 @@ const MAX_TURNS = 6
 
 export default function Conversation() {
   const navigate = useNavigate()
+  const { stageInfo, setStageInfo } = useStageStatus(4)
   const currentScenario = useStore((state) => state.currentScenario)
   const user = useStore((state) => state.user)
 
@@ -110,6 +112,7 @@ export default function Conversation() {
     try {
       const r = await scoreAPI.score(currentAIText, answer)
       turnScore = r.score
+      if (r.stage_progress) setStageInfo(r.stage_progress)
     } catch { /* 채점 실패해도 대화는 진행 */ }
 
     setMessages((prev) => [...prev, { role: 'user', text: answer, score: turnScore }])
@@ -140,32 +143,23 @@ export default function Conversation() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 shrink-0">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">대화 연습</h1>
-            <p className="text-xs text-gray-500">{currentScenario.situation} · 레벨 {currentScenario.level}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-400">
-              {turnCount}/{MAX_TURNS} 대화
-            </span>
-            <div className="w-20 bg-gray-200 rounded-full h-1.5">
-              <div
-                className="bg-primary-500 h-full rounded-full transition-all"
-                style={{ width: `${(turnCount / MAX_TURNS) * 100}%` }}
-              />
-            </div>
-            <button
-              onClick={handleFinish}
-              className="text-gray-400 hover:text-gray-700 text-sm"
-            >
-              ✕
-            </button>
-          </div>
+      <StageHeader
+        title="대화 연습"
+        subtitle={`${currentScenario.situation} · 레벨 ${currentScenario.level}`}
+        stageInfo={stageInfo}
+        maxWidthClass="max-w-6xl"
+        onExit={handleFinish}
+      >
+        <span className="text-xs text-gray-400">{turnCount}/{MAX_TURNS} 대화</span>
+        <div className="w-20 bg-gray-200 rounded-full h-1.5 overflow-hidden" role="progressbar"
+          aria-label="현재 대화 진행률" aria-valuemin="0" aria-valuemax="100"
+          aria-valuenow={Math.round((turnCount / MAX_TURNS) * 100)}>
+          <div
+            className="bg-primary-500 h-full rounded-full transition-all"
+            style={{ width: `${(turnCount / MAX_TURNS) * 100}%` }}
+          />
         </div>
-      </header>
+      </StageHeader>
 
       <div className="flex flex-1 overflow-hidden max-w-6xl mx-auto w-full px-4 py-4 gap-4">
         {/* Left: Avatar player */}

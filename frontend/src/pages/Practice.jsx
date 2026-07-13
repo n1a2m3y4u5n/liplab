@@ -6,6 +6,7 @@ import { learningAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
 import QuizForm from '../components/QuizForm'
 import SignPanel from '../components/SignPanel'
+import { StageHeader, useStageStatus } from '../components/StageStatus'
 
 function BookmarkButton({ sentence, situation, level }) {
   const [bookmarkId, setBookmarkId] = useState(null)
@@ -136,6 +137,7 @@ function HintDisplay({ sentence, hintLevel }) {
 
 export default function Practice() {
   const navigate = useNavigate()
+  const { stageInfo, setStageInfo } = useStageStatus(3)
   const currentScenario = useStore((state) => state.currentScenario)
   const currentSentence = useStore((state) => state.currentSentence)
   const currentSentenceIndex = useStore((state) => state.currentSentenceIndex)
@@ -214,6 +216,7 @@ export default function Practice() {
 
       setResult(response)
       setIsPlaying(false)
+      if (response.stage_progress) setStageInfo(response.stage_progress)
 
       const updates = {}
       if (response.new_level) updates.current_level = response.new_level
@@ -257,47 +260,28 @@ export default function Practice() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">독화 연습</h1>
-              <p className="text-sm text-gray-600">
-                {currentScenario.situation} · 레벨 {currentScenario.level}
-                <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${
-                  effectiveMode === 'study' ? 'bg-green-100 text-green-700'
-                  : effectiveMode === 'test-multiple' ? 'bg-purple-100 text-purple-700'
-                  : effectiveMode === 'essay' ? 'bg-indigo-100 text-indigo-700'
-                  : 'bg-blue-100 text-blue-700'
-                }`}>
-                  {effectiveMode === 'study' ? '학습'
-                    : effectiveMode === 'test-multiple' ? '4지선다'
-                    : effectiveMode === 'essay' ? '서술형'
-                    : '주관식'}
-                </span>
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {currentSentence && practiceMode !== 'study' && (
-                <BookmarkButton
-                  sentence={currentSentence}
-                  situation={currentScenario.situation}
-                  level={currentScenario.level}
-                />
-              )}
-              <button
-                onClick={() => {
-                  if (confirm('연습을 종료하시겠습니까?')) handleFinish()
-                }}
-                className="text-gray-500 hover:text-gray-800 text-sm"
-              >
-                ✕ 종료
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <StageHeader
+        title="독화 연습"
+        subtitle={`${currentScenario.situation} · 레벨 ${currentScenario.level} · ${
+          effectiveMode === 'study' ? '학습'
+            : effectiveMode === 'test-multiple' ? '4지선다'
+            : effectiveMode === 'essay' ? '서술형'
+            : '주관식'
+        }`}
+        stageInfo={stageInfo}
+        maxWidthClass="max-w-7xl"
+        onExit={() => {
+          if (confirm('연습을 종료하시겠습니까?')) handleFinish()
+        }}
+      >
+        {currentSentence && practiceMode !== 'study' && (
+          <BookmarkButton
+            sentence={currentSentence}
+            situation={currentScenario.situation}
+            level={currentScenario.level}
+          />
+        )}
+      </StageHeader>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Progress */}

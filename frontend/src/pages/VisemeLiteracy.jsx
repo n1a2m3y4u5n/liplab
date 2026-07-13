@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI } from '../api'
 import AvatarVRM from '../components/AvatarVRM'
+import { StageHeader, StageProgressBar, useStageStatus } from '../components/StageStatus'
 
 /**
  * 1단계 · 입모양 인지 (Viseme Literacy)
@@ -53,6 +54,7 @@ function Splash({ text }) {
 
 export default function VisemeLiteracy() {
   const navigate = useNavigate()
+  const { stageInfo, setStageInfo } = useStageStatus(1)
   const [tab, setTab] = useState('learn')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -69,15 +71,12 @@ export default function VisemeLiteracy() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">입모양 인지</h1>
-            <p className="text-sm text-gray-500">10개 입모양 그룹을 익히고, 무엇이 보이고 무엇이 안 보이는지 배웁니다</p>
-          </div>
-          <button onClick={() => navigate('/dashboard')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
-        </div>
-      </header>
+      <StageHeader
+        title="입모양 인지"
+        subtitle="10개 입모양 그룹을 익히고, 무엇이 보이고 무엇이 안 보이는지 배웁니다"
+        stageInfo={stageInfo}
+        onExit={() => navigate('/dashboard')}
+      />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex gap-1 mb-6 p-1 bg-gray-100 rounded-xl max-w-sm">
@@ -89,7 +88,9 @@ export default function VisemeLiteracy() {
           ))}
         </div>
 
-        {tab === 'learn' ? <LearnPanel data={data} /> : <QuizPanel data={data} />}
+        {tab === 'learn'
+          ? <LearnPanel data={data} />
+          : <QuizPanel data={data} stageInfo={stageInfo} onProgress={setStageInfo} />}
       </main>
     </div>
   )
@@ -175,18 +176,20 @@ function LearnPanel({ data }) {
   )
 }
 
-function QuizPanel({ data }) {
+function QuizPanel({ data, stageInfo, onProgress }) {
   const { lessons } = data
   const quizzable = useMemo(() => lessons.filter((l) => l.quizzable), [lessons])
   const [q, setQ] = useState(null)
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
 
   const newQ = useCallback(() => {
     const target = quizzable[Math.floor(Math.random() * quizzable.length)]
     const others = shuffle(lessons.filter((l) => l.viseme_id !== target.viseme_id)).slice(0, 3)
-    const choices = shuffle([target, ...others]).map((l) => ({ viseme_id: l.viseme_id, name: l.name }))
+    const choices = shuffle([target, ...others]).map((l) => ({
+      viseme_id: l.viseme_id,
+      label: l.phonemes.join(''),
+    }))
     setQ({ target, choices })
     setResult(null)
   }, [lessons, quizzable])
@@ -199,7 +202,7 @@ function QuizPanel({ data }) {
     try {
       const r = await curriculumAPI.submitRecognition(q.target.viseme_id, chosenId)
       setResult({ ...r, chosenId })
-      setStat({ attempts: r.attempts, mastery: r.mastery_score, mastered: r.mastered })
+      if (r.stage_progress) onProgress(r.stage_progress)
     } catch {
       /* 네트워크 실패는 조용히 무시 — 다시 시도 가능 */
     } finally {
@@ -213,14 +216,8 @@ function QuizPanel({ data }) {
     <div className="space-y-5">
       {/* 숙달도 */}
       <div className="card">
-        <div className="flex justify-between text-sm mb-1.5">
-          <span className="text-gray-600">숙달도 (정확도)</span>
-          <span className="font-semibold text-primary-600">{stat.mastery}% · {stat.attempts}회</span>
-        </div>
-        <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
-          <div className="bg-primary-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(stat.mastery, 100)}%` }} />
-        </div>
-        {stat.mastered && <p className="mt-2 text-sm font-semibold text-green-600">🎉 1단계 숙달! 입모양 인지에 익숙해졌어요.</p>}
+        <StageProgressBar stageInfo={stageInfo} />
+        {stageInfo?.mastered && <p className="mt-2 text-sm font-semibold text-green-600">🎉 1단계 숙달! 입모양 인지에 익숙해졌어요.</p>}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -241,7 +238,7 @@ function QuizPanel({ data }) {
               else cls += 'border-gray-200 bg-gray-50 text-gray-400'
               return (
                 <button key={c.viseme_id} disabled={!!result || submitting} onClick={() => choose(c.viseme_id)} className={cls}>
-                  {c.name}
+                  {c.label}
                   {result && isTarget && <span className="float-right text-green-600">✓</span>}
                   {result && isChosen && !isTarget && <span className="float-right text-red-500">✗</span>}
                 </button>
