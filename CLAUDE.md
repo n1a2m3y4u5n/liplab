@@ -31,10 +31,7 @@ npm install
 npm run dev
 ```
 
-- 환경변수: `ANTHROPIC_API_KEY`, `JWT_SECRET`은 **`liplab/.env`(프로젝트 루트, `backend/`가 아님)**에 둔다.
-  `main.py`의 `load_dotenv()`가 `find_dotenv()`로 상위 트리를 탐색해 이 파일을 읽는다.
-  키가 없거나 잘못되면 Claude 호출이 `401 invalid x-api-key`로 실패하고 **LLM 기능은 폴백(미리 준비된 문장)으로 동작**한다
-  (백엔드 로그의 `LLM API Error: ... 401`로 진단). 키 수정 후엔 `--reload` 없이 뜬 uvicorn을 수동 재시작해야 반영.
+- 환경변수: `cp .env.example .env` 후 `ANTHROPIC_API_KEY`, `JWT_SECRET` 설정.
 - 프론트 프로덕션 빌드 검증: `cd frontend && npx vite build`.
 - 로그인은 **데모 계정 자동 입장**(`AuthGate` → `/api/auth/demo`)이라 별도 회원가입 불필요.
 
@@ -165,21 +162,18 @@ frontend/src/
 
 - 백엔드 `engine.py`: 한글 → viseme 프레임(`viseme`, `duration_ms`, `transition_ms`) + 동시조음 전환 프레임(11~13).
 - 프론트 `AvatarVRM.jsx`: 단일 GLB(`/models/realistic_face.glb`), ARKit 블렌드셰이프를
-  `useFrame`에서 시간추적 ease-in-out으로 보간(A·B). 카메라는 `view`(정면/측면)·`distance`(0~1)
-  프롭으로 `VIEW_PRESETS`를 보간해 `CameraRig`가 이동(F·H), 목 아래는 `NECK_CLIP_PLANE`로 클리핑(G).
+  `useFrame`에서 **고정 속도**(`delta*22`)로 lerp. 카메라는 입 클로즈업 정면 고정.
 - `LipSyncPlayer3D.jsx`: `setTimeout`으로 프레임 스테핑(속도·프레임 이동·리플레이 지원).
 
-### 트랙 1: 3D 모션 개선 (구현 순서 **A → B → F → D → G → H**)
+### 트랙 1: 3D 모션 개선 (구현 순서 **A → B → F → D**)
 
 | 코드 | 작업 | 핵심 | 상태 |
 |------|------|------|------|
 | **A** | `transition_ms` 실제 반영 | 프레임별 `transition_ms`(+재생 속도)로 보간 속도 결정. `LipSyncPlayer3D`→`AvatarVRM`→`RealisticFace`로 전달 | ✅ 완료 |
 | **B** | 이징 + 피크 도달 보장 | 시간추적 ease-in-out 보간, 전환은 프레임 길이의 60% 내 완료→목표 도달 후 유지(`durationMs` 전달) | ✅ 완료 |
-| **F** | 측면(프로필) 뷰 토글 | `AvatarVRM`에 `view`('front'/'side') + `CameraRig`. 측면은 옆 얼굴 전체가 보이는 프로필 프레이밍(카메라 타깃을 머리 중심이 아닌 **입술/얼굴 쪽**에 둬야 입이 잡힘). 플레이어 좌상단 정면/측면 버튼 | ✅ 완료 |
+| **F** | 측면(프로필) 뷰 토글 | `AvatarVRM`에 `view`('front'/'side') + `CameraRig`·`VIEW_CONFIG`. 플레이어 좌상단 정면/측면 버튼 | ✅ 완료 |
 | **D** | 아이들 모션 | `RealisticFace` useFrame에 눈 깜빡임(`eyeBlinkLeft/Right`)·미세 머리 흔들림·호흡. 입모양 모프와 독립 | ✅ 완료 |
-| **G** | 목 아래 클리핑 | 몸 전체가 하나의 스킨드 메시(`base`)라 손/팔만 못 숨김 → `NECK_CLIP_PLANE`(y≥1.45)로 어깨·팔·손 제거. 머리+목만 렌더 | ✅ 완료 |
-| **H** | 사용자 거리 슬라이더 | `AvatarVRM`에 `distance`(0~1) 프롭 → `VIEW_PRESETS`의 near(클로즈업 0.45m)↔far(대화 거리 ~1m)를 보간(위치·타깃·**fov** 동시). 플레이어 하단 '거리' 슬라이더로 실시간 조절(값은 m로 표시) | ✅ 완료 |
-| E | 선행 동시조음 | 원순음 등에서 다음 viseme을 미리 블렌딩(anticipatory) | 백로그 |
+| **E** | 선행 동시조음 | 원순음 등에서 다음 viseme을 미리 블렌딩(anticipatory) | 백로그 |
 
 > A~D 구현 지점: `frontend/src/components/AvatarVRM.jsx`(보간·뷰·아이들 모션),
 > `frontend/src/components/LipSyncPlayer3D.jsx`(프레임 데이터·뷰 토글 UI 전달).
