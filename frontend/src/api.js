@@ -176,4 +176,25 @@ export const reviewAPI = {
   answer: async (kind, ref, correct) => (await api.post('/review/answer', { kind, ref, correct })).data,
 }
 
+// 발화(말하기) — 커리큘럼 6단계 + 녹음 채점·코칭.
+export const speakAPI = {
+  getCurriculum: async () => (await api.get('/speak/curriculum')).data,
+  getStage: async (n) => (await api.get(`/speak/stage/${n}`)).data,
+  getAnalysis: async () => (await api.get('/speak/analysis', { timeout: 30000 })).data,
+  getReview: async () => (await api.get('/speak/review')).data,
+  assess: async (target, blob, metrics = {}, opts = {}) => {
+    const fd = new FormData()
+    fd.append('target', target)
+    fd.append('audio', blob, 'speech.webm')
+    for (const k of ['loudness', 'pitch_range', 'duration', 'pitch_start', 'pitch_end']) {
+      if (metrics[k] != null) fd.append(k, String(metrics[k]))
+    }
+    if (opts.stage != null) fd.append('stage', String(opts.stage))
+    if (opts.drill) fd.append('drill', opts.drill)
+    // FormData는 브라우저가 multipart 경계를 붙이도록 Content-Type을 비운다(인스턴스 기본 json 무효화).
+    const res = await api.post('/speak/assess', fd, { headers: { 'Content-Type': undefined }, timeout: 60000 })
+    return res.data
+  },
+}
+
 export default api

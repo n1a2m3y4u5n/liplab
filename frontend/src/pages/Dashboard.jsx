@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
-import { learningAPI, curriculumAPI, reviewAPI } from '../api'
+import { learningAPI, curriculumAPI, reviewAPI, speakAPI } from '../api'
 import { StageProgressBar } from '../components/StageStatus'
 
 const PRESET_SITUATIONS = [
@@ -200,6 +200,68 @@ function CurriculumPath() {
   )
 }
 
+// ── 발화(말하기) 커리큘럼 경로 — Ling 기반 6단계 사다리 ───────────────────────
+function SpeakCurriculumPath() {
+  const navigate = useNavigate()
+  const [stages, setStages] = useState(null)
+  const [reviewDue, setReviewDue] = useState(0)
+
+  useEffect(() => {
+    speakAPI.getCurriculum().then((d) => setStages(d.stages)).catch(() => setStages(null))
+    speakAPI.getReview().then((d) => setReviewDue(d.count || 0)).catch(() => {})
+  }, [])
+
+  const go = (s) => {
+    if (s.status === 'locked') {
+      alert(`아직 잠긴 단계예요. ${s.stage - 1}단계를 먼저 숙달해주세요.`)
+      return
+    }
+    navigate(`/speak?stage=${s.stage}`)
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="card mb-8">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-bold text-gray-900">말하기 연습</h2>
+        <span className="text-xs text-gray-400">읽기의 짝 · 발음을 눈으로 다듬기</span>
+      </div>
+      <p className="text-sm text-gray-500 mb-3">
+        소리 내기부터 문장 억양까지 — 단계별로 내 발음을 곡선으로 보고 AI 코칭을 받아요.
+      </p>
+      {!stages ? (
+        <div className="py-6 text-center text-sm text-gray-400">불러오는 중…</div>
+      ) : (
+        <>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          {stages.map((s) => {
+            const st = STAGE_STATUS[s.status] || STAGE_STATUS.locked
+            const openable = s.status !== 'locked'
+            return (
+              <button key={s.stage} onClick={() => go(s)}
+                className={`text-left p-3 rounded-xl border-2 transition-all ${openable ? 'border-gray-200 bg-white hover:border-rose-400 hover:bg-rose-50 cursor-pointer' : 'border-gray-100 bg-gray-50 cursor-pointer hover:border-gray-200'}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400">{s.stage}단계</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
+                </div>
+                <div className={`text-sm font-bold mt-1 flex items-center gap-1 ${openable ? 'text-gray-800' : 'text-gray-400'}`}>
+                  <span>{s.icon}</span><span className="truncate">{s.title}</span>
+                </div>
+                <div className="text-[11px] text-gray-400 mt-0.5 leading-tight">{s.desc}</div>
+                <StageProgressBar stageInfo={s} compact />
+              </button>
+            )
+          })}
+        </div>
+        <button onClick={() => reviewDue > 0 && navigate('/speak?review=1')} disabled={reviewDue === 0}
+          className={`mt-3 w-full py-2.5 rounded-xl text-sm font-semibold transition-all ${reviewDue > 0 ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' : 'bg-gray-100 text-gray-400 cursor-default'}`}>
+          🔁 발음 복습 {reviewDue > 0 ? `${reviewDue}개` : '(없음)'}
+        </button>
+        </>
+      )}
+    </motion.div>
+  )
+}
+
 // ── 복습 탭 ──────────────────────────────────────────────────────────────────
 // 학습·테스트를 진행하며 틀린 문장과 북마크한 문장을 모아 다시 볼 수 있게 한다.
 function ReviewSection() {
@@ -244,7 +306,8 @@ function ReviewSection() {
       scenario_id: `review_${Date.now()}`,
     }
     setScenario(scenario, 'test')
-    navigate('/practice')
+    // 복습은 단계 잠금과 무관하게 허용 — App.jsx StageGate가 이 state로 예외 처리.
+    navigate('/practice', { state: { review: true } })
   }
 
   const wrongCount = items ? items.filter((i) => i.source !== 'bookmark').length : 0
@@ -294,6 +357,17 @@ function ReviewSection() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+// 두 스킬 기둥(독화 / 말하기) 구분용 구역 헤더
+function ZoneHeader({ icon, title, sub, divider }) {
+  return (
+    <div className={`flex items-baseline gap-2 mb-4 ${divider ? 'mt-12 pt-8 border-t border-gray-200' : 'mt-2'}`}>
+      <span className="text-2xl">{icon}</span>
+      <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+      <span className="hidden sm:inline text-xs text-gray-400">{sub}</span>
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -496,7 +570,7 @@ export default function Dashboard() {
             transition={{ delay: 0.2 }}
             className="card"
           >
-            <h3 className="text-sm font-semibold text-gray-500 mb-3">취약 입모양</h3>
+            <h3 className="text-sm font-semibold text-gray-500 mb-3">취약 입모양 <span className="text-[10px] text-gray-400">(독화)</span></h3>
             {!statsLoading && statistics?.weak_visemes?.length > 0 ? (
               <ul className="space-y-1.5">
                 {statistics.weak_visemes.slice(0, 3).map((wv, idx) => (
@@ -522,6 +596,9 @@ export default function Dashboard() {
           <h3 className="text-sm font-semibold text-gray-500 mb-4">최근 90일 학습 현황</h3>
           <ActivityCalendar data={calendarData} />
         </motion.div>
+
+        {/* ── 독화(입 읽기) 기둥: 학습 · 테스트 · 복습 ── */}
+        <ZoneHeader icon="👂" title="독화 — 입 읽기" sub="남의 말을 입모양으로 읽는 훈련" />
 
         {/* 단계형 커리큘럼 경로 (오늘의 학습) */}
         <CurriculumPath />
@@ -639,6 +716,10 @@ export default function Dashboard() {
         </motion.div>
 
         <ReviewSection />
+
+        {/* ── 말하기(발음) 기둥: 발화 6단계 ── */}
+        <ZoneHeader icon="🎤" title="말하기 — 발음" sub="내 발음을 눈으로 보며 다듬는 훈련" divider />
+        <SpeakCurriculumPath />
       </main>
     </div>
   )

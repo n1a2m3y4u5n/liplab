@@ -12,8 +12,8 @@
 
 | 영역 | 스택 |
 |------|------|
-| Backend | Python 3.11+, FastAPI(async), SQLAlchemy(SQLite/PostgreSQL), PyJWT, Anthropic Claude API |
-| Frontend | React 18, Vite, Tailwind CSS, Zustand(상태), React Router, Framer Motion, Three.js(3D 아바타) |
+| Backend | Python 3.11+, FastAPI(async), SQLAlchemy(SQLite/PostgreSQL), PyJWT, Anthropic Claude API, faster-whisper |
+| Frontend | React 19, Vite, Tailwind CSS, Zustand(상태), React Router, Framer Motion, Three.js(3D 아바타) |
 | 배포 | Docker(멀티스테이지), Fly.io |
 
 ---
@@ -45,20 +45,24 @@ npm run dev
 backend/
   main.py          FastAPI 엔드포인트 전체 (인증·진행도·커리큘럼·채점·대화·SRS)
   curriculum.py    단계형 커리큘럼 콘텐츠(순수 데이터/함수): STAGES, VISEME_LESSONS, WORD_BANK, CLOSURE_ITEMS
-  database.py      SQLAlchemy 모델 (User, Profile, StageProgress, Progress, WeakViseme, ReviewItem …)
+  speak_curriculum.py  발화 6단계 콘텐츠와 단계별 채점 규칙
+  speak_service.py     faster-whisper 기반 한국어 음성 전사
+  database.py      SQLAlchemy 모델 (User, Profile, StageProgress, SpeakStageProgress, SpeakAttempt …)
   engine.py        한국어 → viseme 변환(VISEME_MAP), 동시조음 모델링
   scoring.py       음운론적 유사도 채점
   llm_service.py   Claude 기반 시나리오·대화 생성
   sign_service.py  한국수어(KSL) 학습 보조 변환
 frontend/src/
   App.jsx          라우팅 + AuthGate(데모 자동 로그인) + StageGate(단계 잠금 가드)
-  api.js           API 클라이언트 (authAPI, learningAPI, curriculumAPI, scoreAPI …)
+  api.js           API 클라이언트 (authAPI, learningAPI, curriculumAPI, speakAPI …)
   pages/
     Dashboard.jsx       학습 커리큘럼 카드 + 테스트 시작 + 복습 탭
     VisemeLiteracy.jsx  1단계 입모양 인지
     WordStage.jsx       2단계 음절·단어
     Practice.jsx        3단계 문장(상황별)
     Conversation.jsx    4단계 대화 실전
+    SpeakingPractice.jsx 발화 6단계·복습·실시간 음성 시각화
+    Analysis.jsx        독화/말하기 분리 분석
     Closure.jsx         문맥 추론 훈련
     Review.jsx          오늘의 복습(SRS)
 ```
@@ -124,6 +128,13 @@ frontend/src/
 `_bump_stage_progress(user_id, stage, passed, db)` 헬퍼가 시도·정답 누적과 숙달 판정을 공통 처리한다.
 오답은 SRS 복습 큐(`ReviewItem`)에 예약된다.
 
+### 말하기(발화) 커리큘럼
+
+독화 진행도와 섞이지 않도록 `SpeakStageProgress`·`SpeakAttempt`에 별도로 기록한다. 발성 → 운율 →
+모음 → 자음 → 음절·단어 → 문장·억양의 6단계이며, 직전 단계가 `mastered`일 때 다음 단계가 열린다.
+대시보드와 `/speak` 화면은 최소 시도수와 성공률을 함께 반영한 `progress_percent`를 표시하고,
+한 번 숙달한 단계는 추가 연습 결과로 다시 잠기지 않는다. 직접 URL 진입은 `SpeakStageGate`가 막는다.
+
 ---
 
 ## 주요 API 엔드포인트
@@ -141,6 +152,9 @@ frontend/src/
 | POST | `/api/score` | 임의 문장 채점(4단계 대화 이해도) |
 | GET/POST | `/api/review/*` | 간격 반복 복습(SRS) |
 | POST | `/api/conversation` | 4단계 대화 턴 생성 |
+| GET | `/api/speak/curriculum`, `/api/speak/stage/{n}` | 발화 단계 상태·콘텐츠 |
+| POST | `/api/speak/assess` | 녹음 전사·채점·발화 지표·AI 코칭 |
+| GET | `/api/speak/analysis`, `/api/speak/review` | 발화 분석·재연습 큐 |
 
 ---
 

@@ -91,8 +91,8 @@ const NECK_CLIP_PLANE = new THREE.Plane(
 /**
  * 한국어 Viseme → 3D 입모양 렌더링
  *
- * 표준 ARKit 블렌드셰이프(jawOpen, mouthPucker, mouthFunnel, mouthClose 등)를
- * 조합한 정밀 매핑(../lib/visemeShapes)으로 원순·개방·폐쇄 등 한국어 조음을
+ * 표준 ARKit 블렌드셰이프(jawOpen, mouthPucker, mouthFunnel, mouthClose 등) 정밀
+ * 매핑(../lib/visemeShapes)에 더해, 혀(tongue) 전용 모프까지 적용해 한국어 조음을
  * 정확히 표현한다. WebGL 미지원 / 모델 로드 실패 시 2D 입모양으로 폴백한다.
  */
 function RealisticFace({
@@ -174,6 +174,7 @@ function RealisticFace({
     const transitionProgress = Math.min(1, elapsedRef.current / effectiveTransitionMs)
     const easedProgress = easeInOutCubic(transitionProgress)
 
+    // 얼굴·턱 모프 — 모든 메시에 이름으로 일괄 적용 (jawOpen은 혀도 함께 따라감)
     for (const key of ACTIVE_MORPH_KEYS) {
       const from = fromWeightsRef.current[key] || 0
       const tgt = target[key] || 0

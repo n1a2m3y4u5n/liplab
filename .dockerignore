@@ -1,0 +1,16 @@
+# Python
+backend/.venv
+**/__pycache__
+**/*.pyc
+backend/*.db
+
+# Node
+frontend/node_modules
+frontend/dist
+
+# Git / VCS
+.git
+.gitignore
+
+# OS / editor
+.DS_Store
