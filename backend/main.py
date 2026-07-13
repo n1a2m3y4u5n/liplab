@@ -1115,12 +1115,23 @@ async def speak_assess(
         score, passed, note = _speakcur.score_attempt(stage, target, transcript, metrics, drill, sim)
         sp = await _bump_speak_progress(current_user.id, stage, bool(passed),
                                         stg["min_attempts"], stg["mastery"], db)
-        await db.commit()
+    else:
+        score = round(sim or 0.0, 1)
+        sp = None
+
+    # 개별 시도 영속화(말하기 분석용 — 독화가 Progress에 쌓는 것과 대칭)
+    from database import SpeakAttempt
+    db.add(SpeakAttempt(
+        user_id=current_user.id, stage=stage, mode=mode, target=target,
+        transcript=transcript, score=score, passed=passed,
+        loudness=loudness, pitch_range=pitch_range, duration=duration,
+        pitch_start=pitch_start, pitch_end=pitch_end, confusions=confusions[:6],
+    ))
+    await db.commit()
+    if sp is not None:
         progress = {"stage": stage, "attempts": sp.attempts,
                     "mastery_score": round(sp.mastery_score, 1),
                     "mastered": sp.status == "mastered"}
-    else:
-        score = round(sim or 0.0, 1)
 
     # 발성·운율은 규칙 기반 note가 곧 구체 코칭, 모음~문장은 Claude 코칭(+억양 note)
     if mode in ("voicing", "prosody"):
@@ -1142,6 +1153,64 @@ async def speak_assess(
         "progress": progress,
         "mode": mode,
     }
+
+
+@app.get("/api/speak/analysis")
+async def speak_analysis(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """말하기(발화) 분석 — 독화 분석과 분리. 자주 틀리는 소리·억양/크기 추세·단계 숙달."""
+    from database import SpeakAttempt, SpeakStageProgress
+    from sqlalchemy import select
+    from collections import Counter
+
+    rows = (await db.execute(
+        select(SpeakAttempt).where(SpeakAttempt.user_id == current_user.id)
+        .order_by(SpeakAttempt.created_at.desc()).limit(200))).scalars().all()
+    total = len(rows)
+    avg = round(sum(r.score for r in rows) / total, 1) if total else 0.0
+
+    # 자주 틀리는 소리 — 음소 혼동 집계
+    conf = Counter()
+    for r in rows:
+        for c in (r.confusions or []):
+            key = (c.get("correct"), c.get("confused_as"))
+            if key[0] and key[1]:
+                conf[key] += 1
+    weak_sounds = [{"correct": k[0], "confused_as": k[1], "count": v} for k, v in conf.most_common(6)]
+
+    # 억양·크기 — 발성이 있었던 시도 평균 + 최근 추세
+    voiced = [r for r in rows if r.loudness]
+    avg_loud = round(sum(r.loudness for r in voiced) / len(voiced), 1) if voiced else 0.0
+    avg_range = round(sum(r.pitch_range for r in voiced) / len(voiced), 1) if voiced else 0.0
+    recent = list(reversed(rows[:12]))
+    trend = [{"loudness": round(r.loudness, 1), "pitch_range": round(r.pitch_range, 1),
+              "score": round(r.score, 1)} for r in recent]
+
+    # 단계별 숙달
+    sp_rows = (await db.execute(select(SpeakStageProgress)
+               .where(SpeakStageProgress.user_id == current_user.id))).scalars().all()
+    sp_map = {sp.stage: sp for sp in sp_rows}
+    stages = []
+    for meta in _speakcur.stages_overview():
+        sp = sp_map.get(meta["stage"])
+        stages.append({"stage": meta["stage"], "title": meta["title"], "icon": meta.get("icon", ""),
+                       "mastery_score": round(sp.mastery_score, 1) if sp else 0.0,
+                       "attempts": sp.attempts if sp else 0,
+                       "status": sp.status if sp else ("unlocked" if meta["stage"] == 0 else "locked")})
+
+    tips = []
+    if weak_sounds:
+        w = weak_sounds[0]
+        tips.append(f"'{w['correct']}' 소리를 '{w['confused_as']}'로 내는 경우가 많아요. 그 입모양·조음을 다시 연습해보세요.")
+    if voiced and avg_loud < 40:
+        tips.append("전반적으로 목소리가 작은 편이에요(크기 %d/100). 배에 힘을 주고 크게 내보세요." % round(avg_loud))
+    if voiced and avg_range < 25:
+        tips.append("억양이 평평한 편이에요(폭 %dHz). 문장 끝을 올리고 내리며 억양을 넣어보세요." % round(avg_range))
+    if not tips:
+        tips.append("좋아요! 지금처럼 단계 연습을 꾸준히 이어가세요.")
+
+    return {"total": total, "avg_score": avg, "weak_sounds": weak_sounds,
+            "avg_loudness": avg_loud, "avg_pitch_range": avg_range, "trend": trend,
+            "stages": stages, "tips": tips}
 
 
 class ConversationRequest(BaseModel):

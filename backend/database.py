@@ -175,6 +175,28 @@ class SpeakStageProgress(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class SpeakAttempt(Base):
+    """발화 개별 시도 기록 — 말하기 '분석'용(자주 틀리는 소리·억양/크기 추세).
+    독화가 Progress에 시도마다 쌓듯, 말하기도 여기에 쌓아 분석을 분리한다."""
+    __tablename__ = "speak_attempts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    stage = Column(Integer, nullable=True)          # 0..5 (자유 연습이면 None)
+    mode = Column(String(20), nullable=True)        # voicing|prosody|phoneme|word|sentence
+    target = Column(String(200), nullable=False)
+    transcript = Column(String(200), nullable=True)
+    score = Column(Float, default=0.0)
+    passed = Column(Boolean, nullable=True)
+    loudness = Column(Float, default=0.0)
+    pitch_range = Column(Float, default=0.0)
+    duration = Column(Float, default=0.0)
+    pitch_start = Column(Float, default=0.0)
+    pitch_end = Column(Float, default=0.0)
+    confusions = Column(JSON, default=list)         # [{correct, confused_as}]
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class ReviewItem(Base):
     """간격 반복(SRS) 복습 큐 — 틀린 항목이 due_date에 다시 등장한다.
     kind: 'viseme'(입모양 그룹, ref=id 문자열) | 'word'(단어, ref=단어)."""
