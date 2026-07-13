@@ -332,6 +332,12 @@ export default function Practice() {
                       {currentSentence}
                     </p>
                   </div>
+                  <button
+                    onClick={() => navigate(`/sign?text=${encodeURIComponent(currentSentence)}`)}
+                    className="mt-2 w-full py-2 rounded-lg border border-primary-300 text-primary-600 text-sm font-medium hover:bg-primary-50 transition-colors"
+                  >
+                    🤟 이 문장 수어로 보기
+                  </button>
                 </div>
 
                 <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-600 space-y-1">

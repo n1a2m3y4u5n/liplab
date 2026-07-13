@@ -76,7 +76,15 @@ def load_index() -> Dict[str, List[Dict]]:
 
 
 def lookup_sign(word: str) -> Optional[Dict]:
-    """표제어 정확 일치로 수어 항목을 찾는다(없으면 None)."""
+    """표제어를 **완전일치**로만 찾는다(없으면 None).
+
+    규칙기반 조사 제거·용언 원형화는 시도하지 않는다. 이유(적대적 리뷰에서 확인):
+    자모 복원 없는 절단은 ㅅ/ㄷ 불규칙 활용형이나 명사를 '사전에 실재하는 다른 표제어'로
+    오매칭시킨다(지었다→지다, 물었다→물다=bite, 정의→정). 존재 여부만 보는 index-gate로는
+    막지 못하고, 학습자에게 '틀린 수어'를 확신 있게 보여주게 된다(미매칭보다 나쁨).
+    → 기본형 변환은 **LLM 경로(Claude가 기본형 표제어를 출력)**에 맡기고, 완전일치에
+    실패하면 정직하게 지문자로 폴백한다.
+    """
     index = load_index()
     entries = index.get(word)
     if not entries:
@@ -158,36 +166,16 @@ async def _gloss_via_llm(text: str) -> Optional[Dict]:
         return None
 
 
-# 규칙기반 폴백에서 어절 끝에서 떼어낼 대표 조사/보조사 (긴 것부터)
-_PARTICLES = [
-    "으로부터", "에서부터", "에게서", "한테서", "으로서", "으로써", "에서", "에게",
-    "한테", "께서", "이라고", "라고", "이나마", "나마", "까지", "부터", "마다",
-    "조차", "밖에", "처럼", "만큼", "보다", "이라", "으로", "은", "는", "이", "가",
-    "을", "를", "과", "와", "도", "만", "에", "의", "로", "께",
-]
-
-
-def _strip_particle(eojeol: str) -> str:
-    for p in _PARTICLES:
-        if len(eojeol) > len(p) and eojeol.endswith(p):
-            return eojeol[: -len(p)]
-    return eojeol
-
-
 def _gloss_via_rule(text: str) -> Dict:
-    """API 키가 없을 때의 규칙기반 근사(어순 재배열은 하지 않음, 조사만 제거)."""
+    """API 키가 없을 때의 규칙기반 근사(어순 재배열·정규화 없음).
+    각 어절을 그대로 조회하고, 완전일치에 실패하면 지문자로 폴백한다(정직).
+    조사 제거·용언 원형화는 오탐 위험이 커 하지 않는다 → 기본형 변환은 LLM 경로가 담당."""
     gloss = []
     for eojeol in text.split():
         token = re.sub(r"[.,!?~…\"'()]", "", eojeol).strip()
-        if not token:
-            continue
-        # 표제어 정확 일치 우선, 아니면 조사 제거 후 재시도
-        if lookup_sign(token):
+        if token:
             gloss.append({"word": token})
-        else:
-            base = _strip_particle(token)
-            gloss.append({"word": base or token})
-    return {"gloss": gloss, "nonmanual": [], "notes": "규칙기반 근사(조사 제거). LLM 미사용."}
+    return {"gloss": gloss, "nonmanual": [], "notes": "규칙기반 근사(원어절, LLM 미사용). 미등재 어절은 지문자."}
 
 
 # ---------------------------------------------------------------------------
