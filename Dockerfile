@@ -33,6 +33,11 @@ COPY backend/requirements.txt ./
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-download the Whisper model into the image so cold starts don't fetch it
+# at runtime (the machine auto-stops and its filesystem resets between wakes).
+ENV WHISPER_MODEL=base
+RUN python -c "from faster_whisper import WhisperModel; WhisperModel('base', device='cpu', compute_type='int8')"
+
 # Copy backend source
 COPY backend/ ./
 
