@@ -207,9 +207,11 @@ function CurriculumPath() {
 function SpeakCurriculumPath() {
   const navigate = useNavigate()
   const [stages, setStages] = useState(null)
+  const [reviewDue, setReviewDue] = useState(0)
 
   useEffect(() => {
     speakAPI.getCurriculum().then((d) => setStages(d.stages)).catch(() => setStages(null))
+    speakAPI.getReview().then((d) => setReviewDue(d.count || 0)).catch(() => {})
   }, [])
 
   const go = (s) => {
@@ -232,6 +234,7 @@ function SpeakCurriculumPath() {
       {!stages ? (
         <div className="py-6 text-center text-sm text-gray-400">불러오는 중…</div>
       ) : (
+        <>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {stages.map((s) => {
             const st = STAGE_STATUS[s.status] || STAGE_STATUS.locked
@@ -256,6 +259,11 @@ function SpeakCurriculumPath() {
             )
           })}
         </div>
+        <button onClick={() => reviewDue > 0 && navigate('/speak?review=1')} disabled={reviewDue === 0}
+          className={`mt-3 w-full py-2.5 rounded-xl text-sm font-semibold transition-all ${reviewDue > 0 ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' : 'bg-gray-100 text-gray-400 cursor-default'}`}>
+          🔁 발음 복습 {reviewDue > 0 ? `${reviewDue}개` : '(없음)'}
+        </button>
+        </>
       )}
     </motion.div>
   )
