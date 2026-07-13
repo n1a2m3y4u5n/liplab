@@ -42,7 +42,10 @@ export const VISEME_BLENDSHAPES = {
   3: { mouthSmileLeft: 0.45, mouthSmileRight: 0.45, mouthStretchLeft: 0.2, mouthStretchRight: 0.2, jawOpen: 0.1, mouthUpperUpLeft: 0.08, mouthUpperUpRight: 0.08 },
 
   // 4) 원순모음 ㅗ/ㅛ/ㅜ/ㅠ — 입술을 둥글게 오므려 앞으로 내민 'O'
-  4: { mouthFunnel: 0.55, mouthPucker: 0.6, jawOpen: 0.08 },
+  //  이 모델은 jawOpen이 조금만 커져도 윗니가 드러나 원순 특성을 해친다.
+  //  → jaw는 최소(치아 감춤), funnel로 앞으로 내민 protrusion을 강조하고
+  //    pucker는 살짝 낮춰 중앙에 작은 둥근 개구부가 보이게 한다.
+  4: { mouthFunnel: 0.62, mouthPucker: 0.48, jawOpen: 0.05 },
 
   // 5) 중설모음 ㅓ/ㅕ/ㅡ — 중립에서 살짝 벌림
   5: { jawOpen: 0.22, mouthFunnel: 0.06 },
@@ -57,7 +60,9 @@ export const VISEME_BLENDSHAPES = {
   8: { jawOpen: 0.26 },
 
   // 9) 이중모음 ㅘ/ㅙ/ㅚ/ㅝ/ㅞ/ㅟ/ㅢ — 원순+개방이 섞인 중간 형태
-  9: { jawOpen: 0.2, mouthFunnel: 0.28, mouthPucker: 0.22 },
+  //  v4(꽉 둥근)와 v2(활짝 개방)의 중간: funnel/pucker로 둥근 내밈을 유지하되
+  //  jaw는 절제해(치아 과다 노출 방지) '둥글게 살짝 벌린' 형태로.
+  9: { jawOpen: 0.16, mouthFunnel: 0.38, mouthPucker: 0.32 },
 
   // 10) 경구개음 ㅈ/ㅉ/ㅊ — 입술을 살짝 내밀고 옆으로 조금 당김
   10: { jawOpen: 0.12, mouthFunnel: 0.14, mouthSmileLeft: 0.12, mouthSmileRight: 0.12 },

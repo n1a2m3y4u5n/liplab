@@ -1,6 +1,6 @@
 import { Component, Suspense, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, PerspectiveCamera, useGLTF } from '@react-three/drei'
+import { OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { VISEME_BLENDSHAPES, ACTIVE_MORPH_KEYS } from '../lib/visemeShapes'
 import MouthFallback2D from './MouthFallback2D'
@@ -87,9 +87,14 @@ export default function AvatarVRM({ visemeId = 15 }) {
   return (
     <GLErrorBoundary fallback={<div className="w-full h-full">{fallback}</div>}>
       <div className="w-full h-full">
-        <Canvas>
-          {/* Close-up on mouth area for lip reading */}
-          <PerspectiveCamera makeDefault position={[0, 1.62, 0.45]} fov={16} />
+        {/*
+          카메라는 Canvas에 직접 지정한다. 예전처럼 <PerspectiveCamera makeDefault>를
+          자식으로 두면, OrbitControls가 카메라 위치(입 클로즈업)가 설정되기 전에
+          기본 위치 [0,0,5]를 읽어 얼굴 전체(눈)를 비추는 경쟁 조건이 생긴다
+          (StrictMode에서 특히 재현). Canvas camera는 렌더러 생성 시점에 확정되므로
+          OrbitControls가 항상 올바른 입 클로즈업 위치를 읽는다.
+        */}
+        <Canvas camera={{ position: [0, 1.62, 0.45], fov: 16 }}>
           <ambientLight intensity={1.2} />
           <directionalLight position={[1, 2, 2]} intensity={1.0} />
           <directionalLight position={[-1, 0, 1]} intensity={0.4} />
