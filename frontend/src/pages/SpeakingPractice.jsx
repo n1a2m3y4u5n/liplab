@@ -1,16 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { curriculumAPI, learningAPI } from '../api'
+import { curriculumAPI, learningAPI, speakAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 
 /**
- * 말하기 연습 (발화 피드백) — Increment 1: 실시간 시각 바이오피드백
+ * 말하기 연습 (발화 피드백)
  * ------------------------------------------------------------------
  * 청각장애인은 자기 발음을 못 들어 피드백 루프가 끊겨 있다. 이 화면은 그 끊긴
- * 청각 피드백을 '눈'으로 대체한다 — 말하는 동안 볼륨·톤(피치)·파형을 실시간으로
- * 보여준다. 전부 브라우저 Web Audio라 서버·외부 키가 필요 없다.
- * (곧 서버 음성인식으로 '어떤 소리가 다르게 났는지' 음소 피드백을 얹는다 — Increment 2)
+ * 청각 피드백을 '눈/AI'로 대체한다.
+ *  1) 말하는 동안 볼륨·톤(피치)·파형을 실시간으로 보여준다 (Web Audio, 서버 0).
+ *  2) 녹음을 서버로 보내 Whisper가 받아쓰고, 기존 음운 채점으로 '어떤 소리가
+ *     다르게 났는지' + Claude 발음 코칭을 돌려준다.
  */
 
 // 자기상관 기반 기본주파수(피치) 추정: 마이크 시간영역 버퍼 → Hz
@@ -51,12 +52,16 @@ export default function SpeakingPractice() {
   const [pitch, setPitch] = useState(null)
   const [err, setErr] = useState(null)
   const [summary, setSummary] = useState(null)
+  const [assessing, setAssessing] = useState(false)
+  const [assessment, setAssessment] = useState(null)   // {transcript, score, confusions, coaching} | {error}
 
   const acRef = useRef(null)
   const analyserRef = useRef(null)
   const rafRef = useRef(null)
   const streamRef = useRef(null)
   const canvasRef = useRef(null)
+  const recorderRef = useRef(null)
+  const chunksRef = useRef([])
   const volHist = useRef([])
   const pitchHist = useRef([])
 
@@ -72,20 +77,27 @@ export default function SpeakingPractice() {
     const list = ws && ws.length ? ws : words
     if (!list.length) return
     const t = list[Math.floor(Math.random() * list.length)]
-    setTarget(t); setFrames([]); setSummary(null)
+    setTarget(t); setFrames([]); setSummary(null); setAssessment(null)
     try { setFrames(await learningAPI.getVisemes(t)) } catch { /* ignore */ }
   }
 
-  const teardown = () => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    rafRef.current = null
+  const closeAudio = () => {
     if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null }
     if (acRef.current && acRef.current.state !== 'closed') { try { acRef.current.close() } catch { /* noop */ } }
     acRef.current = null; analyserRef.current = null
   }
 
+  const teardown = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    rafRef.current = null
+    const rec = recorderRef.current
+    if (rec) { rec.onstop = null; try { if (rec.state !== 'inactive') rec.stop() } catch { /* noop */ } recorderRef.current = null }
+    closeAudio()
+  }
+
   const start = async () => {
-    setErr(null); setSummary(null); volHist.current = []; pitchHist.current = []
+    setErr(null); setSummary(null); setAssessment(null)
+    volHist.current = []; pitchHist.current = []; chunksRef.current = []
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
@@ -94,6 +106,14 @@ export default function SpeakingPractice() {
       const src = ac.createMediaStreamSource(stream)
       const analyser = ac.createAnalyser(); analyser.fftSize = 2048
       src.connect(analyser); analyserRef.current = analyser
+      // 녹음(서버 전사용) — 미지원 브라우저면 시각화만 동작
+      try {
+        const rec = new MediaRecorder(stream)
+        rec.ondataavailable = (e) => { if (e.data && e.data.size) chunksRef.current.push(e.data) }
+        rec.onstop = onRecStop
+        rec.start()
+        recorderRef.current = rec
+      } catch { recorderRef.current = null }
       setRecording(true)
       loop()
     } catch {
@@ -101,21 +121,41 @@ export default function SpeakingPractice() {
     }
   }
 
+  const onRecStop = async () => {
+    const rec = recorderRef.current
+    const blob = new Blob(chunksRef.current, { type: (rec && rec.mimeType) || 'audio/webm' })
+    closeAudio()
+    if (blob.size > 500 && target) {
+      setAssessing(true)
+      try {
+        const r = await speakAPI.assess(target, blob)
+        setAssessment(r)
+      } catch (e) {
+        setAssessment({ error: e?.response?.data?.detail || '발음 분석에 실패했어요. 잠시 후 다시 시도해 주세요.' })
+      } finally {
+        setAssessing(false)
+      }
+    }
+  }
+
   const stop = () => {
-    teardown()
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    rafRef.current = null
     setRecording(false); setVol(0); setPitch(null)
     setSummary(computeSummary())
+    const rec = recorderRef.current
+    if (rec && rec.state !== 'inactive') rec.stop()   // → onRecStop (업로드) → closeAudio
+    else closeAudio()
   }
 
   const computeSummary = () => {
     const vs = volHist.current, ps = pitchHist.current
-    if (vs.length < 5) return null
+    if (vs.length < 5) return { volMsg: '소리가 거의 안 잡혔어요. 마이크에 가까이서 말해보세요.', volOk: false, toneMsg: '', toneOk: null }
     const avgVol = vs.reduce((a, b) => a + b, 0) / vs.length
     let volMsg, volOk
     if (avgVol < 0.12) { volMsg = '너무 작았어요. 배에 힘을 주고 더 크게 말해보세요.'; volOk = false }
     else if (avgVol > 0.8) { volMsg = '조금 컸어요. 편하게 낮춰도 괜찮아요.'; volOk = true }
     else { volMsg = '볼륨이 적당했어요. 좋아요!'; volOk = true }
-
     let toneMsg, toneOk
     if (ps.length < 4) { toneMsg = '소리를 조금 더 이어서 내보면 톤을 볼 수 있어요.'; toneOk = null }
     else {
@@ -141,7 +181,7 @@ export default function SpeakingPractice() {
       const v = Math.min(1, rms * 4)
       volHist.current.push(v)
       drawWave(buf, v)
-      if (frame % 4 === 0) {              // UI·피치 갱신은 ~15fps로 스로틀
+      if (frame % 4 === 0) {
         const p = autoCorrelate(buf, acRef.current.sampleRate)
         const hz = p > 70 && p < 500 ? Math.round(p) : null
         if (hz) pitchHist.current.push(hz)
@@ -187,7 +227,6 @@ export default function SpeakingPractice() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 목표 */}
           <div className="card">
             <p className="text-sm text-gray-500 mb-1">이렇게 말해보세요</p>
             <p className="text-3xl font-bold text-gray-900 text-center py-2">{target || '…'}</p>
@@ -195,7 +234,6 @@ export default function SpeakingPractice() {
             <p className="text-xs text-gray-400 mt-2 text-center">위 입모양을 참고해 또박또박 말해보세요</p>
           </div>
 
-          {/* 마이크 + 실시간 */}
           <div className="card flex flex-col">
             {err && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{err}</div>}
 
@@ -231,11 +269,45 @@ export default function SpeakingPractice() {
               <h3 className="font-bold text-gray-900 mb-3">이번 발화 피드백</h3>
               <div className="space-y-2">
                 <div className={`p-3 rounded-lg text-sm ${summary.volOk ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>🔊 {summary.volMsg}</div>
-                <div className={`p-3 rounded-lg text-sm ${summary.toneOk === false ? 'bg-amber-50 text-amber-700' : summary.toneOk ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-600'}`}>🎵 {summary.toneMsg}</div>
-                <div className="p-3 rounded-lg text-xs text-gray-500 bg-gray-50">'어떤 소리가 다르게 났는지' 정밀 피드백은 곧 추가됩니다 (서버 음성인식).</div>
+                {summary.toneMsg && (
+                  <div className={`p-3 rounded-lg text-sm ${summary.toneOk === false ? 'bg-amber-50 text-amber-700' : summary.toneOk ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-600'}`}>🎵 {summary.toneMsg}</div>
+                )}
+
+                {/* 서버 발음 분석 (Whisper 전사 + 채점 + Claude 코칭) */}
+                {assessing && (
+                  <div className="p-3 rounded-lg bg-primary-50 text-primary-600 text-sm flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
+                    발음을 분석하는 중…
+                  </div>
+                )}
+                {assessment && !assessment.error && (
+                  <>
+                    <div className="p-3 rounded-lg bg-white border border-gray-200 text-sm">
+                      <span className="text-gray-400 text-xs">이렇게 들렸어요</span>
+                      <p className="font-bold text-gray-900">"{assessment.transcript || '(잘 안 들렸어요)'}"</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-gray-500 shrink-0">발음 점수</span>
+                      <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div className="bg-primary-500 h-full rounded-full" style={{ width: `${Math.min(assessment.score, 100)}%` }} />
+                      </div>
+                      <span className="font-semibold text-primary-600 shrink-0">{assessment.score}점</span>
+                    </div>
+                    {assessment.confusions?.length > 0 && (
+                      <div className="p-2 rounded-lg bg-amber-50 text-amber-700 text-xs">
+                        다르게 들린 소리: {assessment.confusions.map((c) => `${c.correct}→${c.confused_as}`).join(', ')}
+                      </div>
+                    )}
+                    <div className="p-3 rounded-lg bg-primary-50 text-primary-800 text-sm">🗣️ {assessment.coaching}</div>
+                  </>
+                )}
+                {assessment?.error && (
+                  <div className="p-3 rounded-lg bg-gray-50 text-gray-500 text-sm">{assessment.error}</div>
+                )}
               </div>
+
               <div className="flex gap-2 mt-4">
-                <button onClick={() => setSummary(null)} className="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">다시 말하기</button>
+                <button onClick={() => { setSummary(null); setAssessment(null) }} className="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">다시 말하기</button>
                 <button onClick={() => pickWord()} className="flex-1 btn-primary py-2 text-sm">다음 단어 →</button>
               </div>
             </motion.div>
