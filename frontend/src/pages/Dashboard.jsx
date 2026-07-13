@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
-import { learningAPI, curriculumAPI, reviewAPI } from '../api'
+import { learningAPI, curriculumAPI, reviewAPI, speakAPI } from '../api'
 
 const PRESET_SITUATIONS = [
   { id: '카페', label: '카페', icon: '☕' },
@@ -198,6 +198,64 @@ function CurriculumPath() {
           </button>
         </div>
         </>
+      )}
+    </motion.div>
+  )
+}
+
+// ── 발화(말하기) 커리큘럼 경로 — Ling 기반 6단계 사다리 ───────────────────────
+function SpeakCurriculumPath() {
+  const navigate = useNavigate()
+  const [stages, setStages] = useState(null)
+
+  useEffect(() => {
+    speakAPI.getCurriculum().then((d) => setStages(d.stages)).catch(() => setStages(null))
+  }, [])
+
+  const go = (s) => {
+    if (s.status === 'locked') {
+      alert(`아직 잠긴 단계예요. ${s.stage - 1}단계를 먼저 숙달해주세요.`)
+      return
+    }
+    navigate(`/speak?stage=${s.stage}`)
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="card mb-8">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-bold text-gray-900">말하기 연습</h2>
+        <span className="text-xs text-gray-400">읽기의 짝 · 발음을 눈으로 다듬기</span>
+      </div>
+      <p className="text-sm text-gray-500 mb-3">
+        소리 내기부터 문장 억양까지 — 단계별로 내 발음을 곡선으로 보고 AI 코칭을 받아요.
+      </p>
+      {!stages ? (
+        <div className="py-6 text-center text-sm text-gray-400">불러오는 중…</div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          {stages.map((s) => {
+            const st = STAGE_STATUS[s.status] || STAGE_STATUS.locked
+            const openable = s.status !== 'locked'
+            return (
+              <button key={s.stage} onClick={() => go(s)}
+                className={`text-left p-3 rounded-xl border-2 transition-all ${openable ? 'border-gray-200 bg-white hover:border-rose-400 hover:bg-rose-50 cursor-pointer' : 'border-gray-100 bg-gray-50 cursor-pointer hover:border-gray-200'}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400">{s.stage}단계</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
+                </div>
+                <div className={`text-sm font-bold mt-1 flex items-center gap-1 ${openable ? 'text-gray-800' : 'text-gray-400'}`}>
+                  <span>{s.icon}</span><span className="truncate">{s.title}</span>
+                </div>
+                <div className="text-[11px] text-gray-400 mt-0.5 leading-tight">{s.desc}</div>
+                {s.mastery_score != null && (
+                  <div className="mt-1.5 bg-gray-200 rounded-full h-1 overflow-hidden">
+                    <div className="bg-rose-500 h-full" style={{ width: `${Math.min(s.mastery_score, 100)}%` }} />
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
       )}
     </motion.div>
   )
@@ -529,42 +587,8 @@ export default function Dashboard() {
         {/* 단계형 커리큘럼 경로 (오늘의 학습) */}
         <CurriculumPath />
 
-        {/* 말하기 연습 — 독화(읽기)의 짝: 내 발음을 눈으로 보고 다듬기 */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.28 }}
-          className="card mb-8"
-        >
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="text-lg font-bold text-gray-900">말하기 연습</h2>
-            <span className="text-xs text-gray-400">읽기의 짝 · 발음 다듬기</span>
-          </div>
-          <p className="text-sm text-gray-500 mb-4">
-            내 발음은 스스로 듣기 어렵죠. 목소리 크기·억양을 <b className="text-gray-700">곡선</b>으로 보고,
-            AI가 어떤 소리를 어떻게 고칠지 짚어줍니다.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="grid grid-cols-3 gap-2 flex-1">
-              {[
-                { icon: '🔊', label: '목소리 크기' },
-                { icon: '📈', label: '억양 곡선' },
-                { icon: '🗣️', label: 'AI 발음 코칭' },
-              ].map((f) => (
-                <div key={f.label} className="bg-rose-50 rounded-xl p-3 text-center">
-                  <div className="text-2xl mb-1">{f.icon}</div>
-                  <div className="text-xs font-medium text-gray-600 leading-tight">{f.label}</div>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={() => navigate('/speak')}
-              className="sm:w-44 py-3 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-600 transition-colors"
-            >
-              🎤 말하기 시작
-            </button>
-          </div>
-        </motion.div>
+        {/* 말하기 커리큘럼 — 독화(읽기)의 짝: 6단계 사다리 */}
+        <SpeakCurriculumPath />
 
         {/* Practice Setup */}
         <motion.div
