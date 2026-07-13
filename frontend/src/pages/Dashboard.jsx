@@ -73,7 +73,6 @@ function ActivityCalendar({ data }) {
 export default function Dashboard() {
   const navigate = useNavigate()
   const user = useStore((state) => state.user)
-  const logout = useStore((state) => state.logout)
   const setScenario = useStore((state) => state.setScenario)
   const statistics = useStore((state) => state.statistics)
   const setStatistics = useStore((state) => state.setStatistics)
@@ -161,11 +160,6 @@ export default function Dashboard() {
     }
   }
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
   const MODES = [
     { id: 'study',         label: '학습 모드',  desc: '문장 보며 입모양 익히기' },
     { id: 'test',          label: '주관식',     desc: '직접 타이핑해서 맞추기' },
@@ -221,12 +215,6 @@ export default function Dashboard() {
                 <p className="text-xs text-gray-500">안녕하세요,</p>
                 <p className="font-semibold text-gray-900 text-sm">{user?.username}님</p>
               </div>
-              <button
-                onClick={handleLogout}
-                className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors border border-gray-200 rounded-lg"
-              >
-                로그아웃
-              </button>
             </div>
           </div>
         </div>

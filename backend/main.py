@@ -96,6 +96,33 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
     return create_token_response(user)
 
 
+@app.post("/api/auth/demo", response_model=Token)
+async def demo_login(db: AsyncSession = Depends(get_db)):
+    """로그인 없이 데모 계정으로 즉시 입장(멱등). 심사·데모 편의를 위해 계정이 없으면
+    생성하고 토큰을 발급한다. 인증 체계 자체는 그대로라 진행도·북마크 등은 정상 동작한다."""
+    from sqlalchemy import select
+    from database import User
+    from auth import get_password_hash
+
+    email = "demo@liplab.app"
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    if user is None:
+        user = User(email=email, username="게스트", hashed_password=get_password_hash("liplab-demo-guest"))
+        db.add(user)
+        try:
+            await db.commit()
+            await db.refresh(user)
+        except Exception:
+            # 동시 첫 요청 경쟁 → 유니크 충돌 시 롤백 후 재조회
+            await db.rollback()
+            result = await db.execute(select(User).where(User.email == email))
+            user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=500, detail="Demo login failed")
+    return create_token_response(user)
+
+
 @app.get("/api/auth/me", response_model=UserResponse)
 async def get_me(current_user = Depends(get_current_user)):
     """Get current authenticated user information"""

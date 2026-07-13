@@ -28,14 +28,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
+    const url = error.config?.url || ''
+    // 토큰 만료/무효 시: 로그아웃 후 재부팅 → AuthGate가 데모 계정으로 자동 재로그인.
+    // (데모 로그인 요청 자체의 실패는 무한루프 방지를 위해 재부팅하지 않는다.)
+    if (error.response?.status === 401 && !url.includes('/auth/demo')) {
       useStore.getState().logout()
-
-      // Redirect to login if not already there
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
-      }
+      window.location.reload()
     }
     return Promise.reject(error)
   }
@@ -60,6 +58,12 @@ export const authAPI = {
       email,
       password,
     })
+    return response.data
+  },
+
+  // 로그인 없이 데모 계정으로 즉시 입장(멱등)
+  demoLogin: async () => {
+    const response = await api.post('/auth/demo')
     return response.data
   },
 

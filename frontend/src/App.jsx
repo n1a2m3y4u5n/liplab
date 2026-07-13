@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense } from 'react'
+import { Component, lazy, Suspense, useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 
 class ErrorBoundary extends Component {
@@ -35,7 +35,7 @@ class ErrorBoundary extends Component {
   }
 }
 import useStore from './store/useStore'
-import Login from './pages/Login'
+import { authAPI } from './api'
 import Dashboard from './pages/Dashboard'
 import Analysis from './pages/Analysis'
 import Bookmarks from './pages/Bookmarks'
@@ -51,16 +51,38 @@ const DevViseme = lazy(() => import('./pages/DevViseme'))
 const Sign = lazy(() => import('./pages/Sign'))
 
 /**
- * Protected Route wrapper
+ * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
+ * 부팅 시 미인증이면 /api/auth/demo로 자동 로그인하고, 완료까지 스플래시를 보인다.
+ * 인증 체계 자체는 유지되므로 진행도·북마크 등은 정상 동작한다.
  */
-function ProtectedRoute({ children }) {
-  const isAuthenticated = useStore((state) => state.isAuthenticated)
+function AuthGate({ children }) {
+  const isAuthenticated = useStore((s) => s.isAuthenticated)
+  const setAuth = useStore((s) => s.setAuth)
+  const [status, setStatus] = useState(isAuthenticated ? 'ready' : 'loading')
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
-  }
+  useEffect(() => {
+    if (isAuthenticated) { setStatus('ready'); return }
+    let cancelled = false
+    authAPI.demoLogin()
+      .then((data) => { if (!cancelled) { setAuth(data.user, data.access_token); setStatus('ready') } })
+      .catch(() => { if (!cancelled) setStatus('error') })
+    return () => { cancelled = true }
+  }, [isAuthenticated, setAuth])
 
-  return children
+  if (status === 'ready') return children
+  if (status === 'error') return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
+      <div>
+        <p style={{ fontSize: 40, margin: 0 }}>🔌</p>
+        <p style={{ color: '#64748b', margin: '8px 0 16px' }}>서버에 연결하지 못했어요.</p>
+        <button onClick={() => window.location.reload()}
+          style={{ padding: '10px 20px', borderRadius: 10, background: '#4f46e5', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
+          다시 시도
+        </button>
+      </div>
+    </div>
+  )
+  return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>불러오는 중…</div>
 }
 
 /**
@@ -70,42 +92,22 @@ function App() {
   return (
     <ErrorBoundary>
     <Router>
+      <AuthGate>
       <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>불러오는 중…</div>}>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/practice"
-          element={
-            <ProtectedRoute>
-              <Practice />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/conversation"
-          element={
-            <ProtectedRoute>
-              <Conversation />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/analysis" element={<ProtectedRoute><Analysis /></ProtectedRoute>} />
-        <Route path="/sign" element={<ProtectedRoute><Sign /></ProtectedRoute>} />
-        <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/practice" element={<Practice />} />
+        <Route path="/conversation" element={<Conversation />} />
+        <Route path="/analysis" element={<Analysis />} />
+        <Route path="/sign" element={<Sign />} />
+        <Route path="/bookmarks" element={<Bookmarks />} />
         <Route path="/guide" element={<Guide />} />
         <Route path="/dev-viseme" element={<DevViseme />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
       </Suspense>
+      </AuthGate>
     </Router>
     </ErrorBoundary>
   )
