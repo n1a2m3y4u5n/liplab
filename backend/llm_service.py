@@ -18,6 +18,36 @@ from engine import get_viseme_feature
 anthropic_client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 
+async def generate_speaking_coaching(target: str, transcript: str, score: float, confusions: list = None) -> str:
+    """발화(말하기) 채점 결과를 격려형 발음 코칭으로. 음성인식 텍스트 vs 목표 비교 기반.
+    Whisper 오인식 가능성을 감안해 단정하지 않고 부드럽게 코칭한다. 실패 시 규칙 폴백."""
+    conf_txt = ""
+    if confusions:
+        conf_txt = "다르게 들린 소리: " + ", ".join(f"{c.get('correct')}→{c.get('confused_as')}" for c in confusions[:4])
+    prompt = f"""당신은 청각장애인의 발음(구화) 연습을 돕는 따뜻한 코치입니다.
+사용자가 "{target}"라고 말했고, 음성인식은 "{transcript or '(잘 인식되지 않음)'}"로 들었습니다. 발음 유사도 점수: {round(score)}점.
+{conf_txt}
+
+주의: 음성인식은 완벽하지 않아 실제 발음과 다를 수 있으니 단정하지 말고 부드럽게 말하세요.
+아래를 한국어로, 200자 이내, 격려 위주로 자연스러운 3~4문장(번호·머리말 없이):
+1) 잘한 점 한 가지
+2) 다르게 들린 소리가 있으면 '어떻게' 고칠지 구체적으로(입술/혀 위치). 없으면 칭찬만.
+3) 짧은 격려 한마디"""
+    try:
+        resp = await anthropic_client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=400,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return resp.content[0].text.strip()
+    except Exception:
+        if score >= 85:
+            return "또렷하게 잘 전달됐어요! 이 느낌을 기억하며 다음 단어도 도전해봐요."
+        if score >= 60:
+            return "대체로 잘 전달됐어요. 입모양을 조금 더 크고 또렷하게 하면 더 정확해질 거예요. 다시 한 번 해볼까요?"
+        return "천천히, 입모양을 크게 하며 한 소리씩 또박또박 말해봐요. 위 아바타의 입모양을 참고하면 도움이 돼요."
+
+
 # Situation-based context prompts
 SITUATION_CONTEXTS = {
     "카페": {

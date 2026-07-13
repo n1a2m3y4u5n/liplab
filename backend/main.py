@@ -4,7 +4,7 @@ Serves API endpoints and React static files for production deployment
 """
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -983,6 +983,59 @@ async def recommended_level(current_user=Depends(get_current_user), db: AsyncSes
     else:
         lvl, reason = min(max(practiced, 1), 5), "지금 난이도가 적당해요"
     return {"recommended_level": lvl, "recent_avg": round(avg, 1), "sample": len(rows), "reason": reason}
+
+
+# ── 발화(말하기) 채점 — Whisper 전사 + 기존 채점 재활용 + Claude 코칭 ──────────
+@app.post("/api/speak/assess")
+async def speak_assess(
+    target: str = Form(...),
+    audio: UploadFile = File(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """녹음 → Whisper 전사 → 기존 음운 유사도 채점 → Claude 발음 코칭."""
+    data = await audio.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="empty audio")
+
+    from speak_service import transcribe, is_available
+    if not is_available():
+        raise HTTPException(status_code=503, detail="서버에 음성인식 모델(faster-whisper)이 없습니다.")
+    try:
+        transcript = await transcribe(data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"전사 실패: {str(e)}")
+
+    try:
+        sc = await calculate_score(correct=target, user_answer=transcript, db=db)
+    except Exception:
+        sc = {"score": 0.0}
+
+    # 음소 혼동(초/중성이 다른 위치) — analysis와 동일 방식
+    confusions = []
+    try:
+        from scoring import extract_jamo_sequence
+        cj = extract_jamo_sequence(target.replace(" ", ""))
+        uj = extract_jamo_sequence((transcript or "").replace(" ", ""))
+        for i in range(min(len(cj), len(uj))):
+            ci, cm, _ = cj[i]
+            ui, um, _ = uj[i]
+            if ci and ui and ci != ui:
+                confusions.append({"correct": ci, "confused_as": ui})
+            if cm and um and cm != um:
+                confusions.append({"correct": cm, "confused_as": um})
+    except Exception:
+        pass
+
+    from llm_service import generate_speaking_coaching
+    coaching = await generate_speaking_coaching(target, transcript, sc.get("score", 0), confusions)
+
+    return {
+        "transcript": transcript,
+        "score": round(sc.get("score", 0), 1),
+        "confusions": confusions[:6],
+        "coaching": coaching,
+    }
 
 
 class ConversationRequest(BaseModel):
