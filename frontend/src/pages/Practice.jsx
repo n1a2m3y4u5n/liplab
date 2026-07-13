@@ -5,6 +5,7 @@ import useStore from '../store/useStore'
 import { learningAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
 import QuizForm from '../components/QuizForm'
+import SignPanel from '../components/SignPanel'
 
 function BookmarkButton({ sentence, situation, level }) {
   const [bookmarkId, setBookmarkId] = useState(null)
@@ -141,7 +142,11 @@ export default function Practice() {
   const nextSentence = useStore((state) => state.nextSentence)
   const resetPractice = useStore((state) => state.resetPractice)
   const updateUser = useStore((state) => state.updateUser)
-  const practiceMode = useStore((state) => state.practiceMode) // 'study' | 'test' | 'test-multiple'
+  const practiceMode = useStore((state) => state.practiceMode) // 'study' | 'test'
+
+  // 테스트는 문장마다 유형이 다르다: 주관식(test) · 4지선다(test-multiple) · 서술형(essay)
+  const qType = currentScenario?.qTypes?.[currentSentenceIndex]
+  const effectiveMode = practiceMode === 'study' ? 'study' : (qType || 'test')
 
   const [visemes, setVisemes] = useState([])
   const [isPlaying, setIsPlaying] = useState(false)
@@ -151,6 +156,7 @@ export default function Practice() {
   const [startTime, setStartTime] = useState(null)
   const [hintLevel, setHintLevel] = useState(0)
   const [selectedChoice, setSelectedChoice] = useState(null) // 4지선다에서 선택한 보기
+  const [signOpen, setSignOpen] = useState(false)            // 수어 보기 모달
 
   // 4지선다 보기 생성 — 정답 1개 + 다른 문장 3개, 랜덤 순서
   const choices = useMemo(() => {
@@ -223,6 +229,8 @@ export default function Practice() {
   const handleNext = () => {
     nextSentence()
     setResult(null)
+    setSelectedChoice(null)
+    setHintLevel(0)
   }
 
   const handleRetry = () => {
@@ -258,16 +266,20 @@ export default function Practice() {
               <p className="text-sm text-gray-600">
                 {currentScenario.situation} · 레벨 {currentScenario.level}
                 <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${
-                  practiceMode === 'study' ? 'bg-green-100 text-green-700'
-                  : practiceMode === 'test-multiple' ? 'bg-purple-100 text-purple-700'
+                  effectiveMode === 'study' ? 'bg-green-100 text-green-700'
+                  : effectiveMode === 'test-multiple' ? 'bg-purple-100 text-purple-700'
+                  : effectiveMode === 'essay' ? 'bg-indigo-100 text-indigo-700'
                   : 'bg-blue-100 text-blue-700'
                 }`}>
-                  {practiceMode === 'study' ? '학습' : practiceMode === 'test-multiple' ? '4지선다' : '테스트'}
+                  {effectiveMode === 'study' ? '학습'
+                    : effectiveMode === 'test-multiple' ? '4지선다'
+                    : effectiveMode === 'essay' ? '서술형'
+                    : '주관식'}
                 </span>
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {currentSentence && (practiceMode === 'test' || practiceMode === 'test-multiple') && (
+              {currentSentence && practiceMode !== 'study' && (
                 <BookmarkButton
                   sentence={currentSentence}
                   situation={currentScenario.situation}
@@ -304,7 +316,7 @@ export default function Practice() {
         </div>
 
         {currentSentence ? (
-          practiceMode === 'study' ? (
+          effectiveMode === 'study' ? (
             /* ── 학습 모드 ── */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card">
@@ -332,6 +344,12 @@ export default function Practice() {
                       {currentSentence}
                     </p>
                   </div>
+                  <button
+                    onClick={() => setSignOpen(true)}
+                    className="mt-2 w-full py-2 rounded-lg border border-primary-300 text-primary-600 text-sm font-medium hover:bg-primary-50 transition-colors"
+                  >
+                    🤟 이 문장 수어로 보기
+                  </button>
                 </div>
 
                 <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-600 space-y-1">
@@ -354,7 +372,7 @@ export default function Practice() {
                 </div>
               </motion.div>
             </div>
-          ) : practiceMode === 'test-multiple' ? (
+          ) : effectiveMode === 'test-multiple' ? (
             /* ── 4지선다 모드 ── */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card">
@@ -452,7 +470,7 @@ export default function Practice() {
               </motion.div>
             </div>
           ) : (
-            /* ── 주관식 테스트 모드 ── */
+            /* ── 주관식 / 서술형 테스트 모드 ── */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -481,7 +499,9 @@ export default function Practice() {
                 className="card"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">무슨 말인가요?</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {effectiveMode === 'essay' ? '문장 전체를 서술하세요' : '무슨 말인가요?'}
+                  </h3>
                   {!result && hintLevel < 3 && (
                     <button
                       onClick={showNextHint}
@@ -512,6 +532,12 @@ export default function Practice() {
                     loading={submitting}
                     result={result}
                     correctAnswer={currentSentence}
+                    label={effectiveMode === 'essay'
+                      ? '입모양을 보고 문장 전체를 서술해서 입력하세요'
+                      : '입모양을 보고 문장을 입력하세요'}
+                    placeholder={effectiveMode === 'essay'
+                      ? '읽은 내용을 문장으로 자세히 적어보세요...'
+                      : '여기에 읽은 문장을 입력하세요...'}
                   />
                 </div>
 
@@ -556,6 +582,38 @@ export default function Practice() {
           </motion.div>
         )}
       </main>
+
+      {/* 수어 보기 — 학습 화면을 벗어나지 않는 슬라이드오버 모달 */}
+      <AnimatePresence>
+        {signOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 bg-black/40 flex justify-end"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setSignOpen(false)}
+          >
+            <motion.div
+              className="w-full max-w-2xl h-full bg-white shadow-2xl overflow-y-auto"
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.25 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400">이 문장을 수어로</p>
+                  <p className="font-bold text-gray-900">{currentSentence}</p>
+                </div>
+                <button onClick={() => setSignOpen(false)}
+                  className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-lg">
+                  닫기 ✕
+                </button>
+              </div>
+              <div className="p-5">
+                {signOpen && <SignPanel text={currentSentence} />}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

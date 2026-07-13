@@ -1,0 +1,19 @@
+한글 지문자(지화) 손모양 이미지 (a.jpg ~ yu.jpg, 32개)
+
+출처: "Korean manual alphabet", Wikimedia Commons
+      https://commons.wikimedia.org/wiki/Category:Korean_manual_alphabet
+저작자: User:Kwamikagami
+라이선스: Creative Commons Attribution-ShareAlike 3.0 (CC BY-SA 3.0)
+      https://creativecommons.org/licenses/by-sa/3.0/
+
+본 저작물은 원본 그대로(무변형) 학습·이해 보조 목적으로 사용하며, 앱 내
+'수어' 화면 하단에 출처를 표시한다. CC BY-SA 3.0에 따라 재배포한다.
+
+파일명은 자모의 로마자 표기(예: g=ㄱ, a=ㅏ, ss=ㅆ)를 따른다.
+매핑: frontend/src/lib/fingerspell.js
+
+---
+영문(라틴) 지문자 손모양 (latin/A.svg ~ Z.svg, 26개)
+출처: "Sign language A"~"Sign language Z", Wikimedia Commons
+라이선스: Public Domain (퍼블릭 도메인)
+국제(미국식) 지문자. 한국수어에 라틴 문자 지문자 표준이 없어 차용.

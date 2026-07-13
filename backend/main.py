@@ -96,6 +96,33 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
     return create_token_response(user)
 
 
+@app.post("/api/auth/demo", response_model=Token)
+async def demo_login(db: AsyncSession = Depends(get_db)):
+    """로그인 없이 데모 계정으로 즉시 입장(멱등). 심사·데모 편의를 위해 계정이 없으면
+    생성하고 토큰을 발급한다. 인증 체계 자체는 그대로라 진행도·북마크 등은 정상 동작한다."""
+    from sqlalchemy import select
+    from database import User
+    from auth import get_password_hash
+
+    email = "demo@liplab.app"
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    if user is None:
+        user = User(email=email, username="게스트", hashed_password=get_password_hash("liplab-demo-guest"))
+        db.add(user)
+        try:
+            await db.commit()
+            await db.refresh(user)
+        except Exception:
+            # 동시 첫 요청 경쟁 → 유니크 충돌 시 롤백 후 재조회
+            await db.rollback()
+            result = await db.execute(select(User).where(User.email == email))
+            user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=500, detail="Demo login failed")
+    return create_token_response(user)
+
+
 @app.get("/api/auth/me", response_model=UserResponse)
 async def get_me(current_user = Depends(get_current_user)):
     """Get current authenticated user information"""
@@ -277,6 +304,11 @@ async def submit_progress(
         # Level up formula: level = floor(sqrt(total_xp / 100)) + 1
         new_level = int((current_user.total_xp / 100) ** 0.5) + 1
         current_user.current_level = max(current_user.current_level, new_level)
+
+        # 3단계(문장 연습) 숙달 갱신 — 점수 PASS 이상이면 성공 1회로 누적(4단계 해금 근거)
+        await _bump_stage_progress(
+            current_user.id, 3, scoring_result["score"] >= _STAGE3_PASS,
+            _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db)
 
         await db.commit()
 
@@ -579,6 +611,380 @@ async def get_review_sentences(current_user=Depends(get_current_user), db: Async
     return unique
 
 
+# ============================================
+# Curriculum (단계형 커리큘럼) — 재설계 Phase 1
+# ============================================
+import curriculum as _curriculum
+
+_STAGE1_MIN_ATTEMPTS = 15      # 숙달 판정 최소 시도
+_STAGE1_MASTERY = 80.0         # 숙달 판정 정확도(%)
+_STAGE2_MIN_ATTEMPTS = 12
+_STAGE2_MASTERY = 80.0
+# 3·4단계는 점수(0~100)를 내는 활동이라 'PASS 이상이면 성공 1회'로 환산해 누적한다.
+_STAGE3_MIN_ATTEMPTS = 10      # 문장 연습
+_STAGE3_MASTERY = 75.0
+_STAGE3_PASS = 70.0            # 문장 1건을 '성공'으로 볼 최소 점수
+_STAGE4_MIN_ATTEMPTS = 8       # 대화 실전
+_STAGE4_MASTERY = 70.0
+_STAGE4_PASS = 65.0            # 대화 1턴을 '성공'으로 볼 최소 이해도
+
+
+async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
+                               min_attempts: int, mastery_pct: float, db):
+    """단계별 진행률 rolling 갱신(1건 채점 → 시도·정답 누적, 숙달 판정). sp 반환.
+    커밋은 호출부에서 다른 갱신과 함께 처리한다."""
+    from database import StageProgress
+    from sqlalchemy import select
+    r = await db.execute(select(StageProgress).where(
+        StageProgress.user_id == user_id, StageProgress.stage == stage))
+    sp = r.scalar_one_or_none()
+    if sp is None:
+        # default=0은 flush 시점 적용 → 즉시 증감하려면 초기값 명시
+        sp = StageProgress(user_id=user_id, stage=stage, status="in_progress",
+                           attempts=0, correct=0, mastery_score=0.0)
+        db.add(sp)
+    sp.attempts += 1
+    if passed:
+        sp.correct += 1
+    sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
+    sp.status = "mastered" if (sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct) else "in_progress"
+    return sp
+
+from datetime import date as _sr_date, timedelta as _sr_delta
+
+
+async def _srs_schedule_wrong(user_id: int, kind: str, ref, db: AsyncSession):
+    """오답 → 내일 복습 예약(SRS). 기존 항목이면 간격 리셋. commit은 호출부에서."""
+    from database import ReviewItem
+    from sqlalchemy import select
+    tomorrow = (_sr_date.today() + _sr_delta(days=1)).isoformat()
+    r = await db.execute(select(ReviewItem).where(
+        ReviewItem.user_id == user_id, ReviewItem.kind == kind, ReviewItem.ref == str(ref)))
+    item = r.scalar_one_or_none()
+    if item is None:
+        db.add(ReviewItem(user_id=user_id, kind=kind, ref=str(ref), due_date=tomorrow, interval_days=1))
+    else:
+        item.interval_days = 1
+        item.due_date = tomorrow
+
+
+async def _get_or_create_profile(user_id: int, db: AsyncSession):
+    from database import LearningProfile
+    from sqlalchemy import select
+    r = await db.execute(select(LearningProfile).where(LearningProfile.user_id == user_id))
+    prof = r.scalar_one_or_none()
+    if prof is None:
+        prof = LearningProfile(user_id=user_id)
+        db.add(prof)
+        await db.commit()
+        await db.refresh(prof)
+    return prof
+
+
+@app.get("/api/curriculum/stages")
+async def curriculum_stages(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """단계형 학습 경로 + 사용자별 상태(대시보드/오늘의 학습 구동)."""
+    from database import StageProgress
+    from sqlalchemy import select
+
+    prof = await _get_or_create_profile(current_user.id, db)
+    r = await db.execute(select(StageProgress).where(StageProgress.user_id == current_user.id))
+    sp_map = {sp.stage: sp for sp in r.scalars().all()}
+
+    stages = []
+    for s in _curriculum.STAGES:
+        st = dict(s)
+        stage = s["stage"]
+        if s.get("coming_soon"):
+            st["status"] = "coming_soon"
+        elif stage == 0:
+            st["status"] = "mastered" if prof.placed else "unlocked"
+        elif stage == 1:
+            sp = sp_map.get(1)
+            if not prof.placed:
+                st["status"] = "locked"
+            elif sp is None:
+                st["status"] = "unlocked"
+            else:
+                st["status"] = sp.status
+                st["mastery_score"] = round(sp.mastery_score, 1)
+                st["attempts"] = sp.attempts
+        else:  # 2·3·4단계 — 직전 단계를 숙달해야 순차 해금
+            prev = sp_map.get(stage - 1)
+            sp = sp_map.get(stage)
+            if not (prev is not None and prev.status == "mastered"):
+                st["status"] = "locked"        # 전 단계 숙달 후 열림
+            elif sp is None:
+                st["status"] = "unlocked"
+            else:
+                st["status"] = sp.status
+                st["mastery_score"] = round(sp.mastery_score, 1)
+                st["attempts"] = sp.attempts
+        stages.append(st)
+
+    return {"track": prof.track, "placed": prof.placed,
+            "current_stage": prof.current_stage, "stages": stages}
+
+
+class TrackSelect(BaseModel):
+    track: str  # 'perception' | 'language'
+
+
+@app.post("/api/curriculum/track")
+async def curriculum_set_track(data: TrackSelect, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """배치: 트랙 선택 → 1단계(입모양 인지) 잠금 해제."""
+    if data.track not in ("perception", "language"):
+        raise HTTPException(status_code=400, detail="track must be 'perception' or 'language'")
+    prof = await _get_or_create_profile(current_user.id, db)
+    prof.track = data.track
+    prof.placed = True
+    prof.current_stage = max(prof.current_stage or 0, 1)
+    await db.commit()
+    return {"track": prof.track, "placed": prof.placed, "current_stage": prof.current_stage}
+
+
+@app.post("/api/curriculum/track/reset")
+async def curriculum_reset_track(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """배치 취소: 트랙 선택 화면으로 되돌아가기(진행 데이터는 보존)."""
+    prof = await _get_or_create_profile(current_user.id, db)
+    prof.placed = False
+    await db.commit()
+    return {"track": prof.track, "placed": prof.placed, "current_stage": prof.current_stage}
+
+
+@app.get("/api/curriculum/viseme-lessons")
+async def curriculum_viseme_lessons(current_user=Depends(get_current_user)):
+    """1단계 콘텐츠: 입모양 10그룹 레슨 + 동구형이음 무리 + 최소대립쌍."""
+    lessons = []
+    for l in _curriculum.VISEME_LESSONS:
+        lessons.append({
+            **l,
+            "demo_syllable": _curriculum.DEMO_SYLLABLE.get(l["viseme_id"]),
+            "quizzable": l["visibility"] != "low",
+            "homophene_cluster": (_curriculum.homophene_cluster_of(l["viseme_id"]) or {}).get("id"),
+        })
+    return {
+        "lessons": lessons,
+        "homophene_clusters": _curriculum.HOMOPHENE_CLUSTERS,
+        "minimal_pairs": _curriculum.MINIMAL_PAIRS,
+        "anchors": _curriculum.VISIBLE_ANCHORS,
+    }
+
+
+class RecognitionSubmit(BaseModel):
+    viseme_id: int   # 제시된(정답) 그룹
+    chosen_id: int   # 사용자가 고른 그룹
+
+
+@app.post("/api/curriculum/recognition")
+async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """입모양 인지퀴즈 채점 + 1단계 숙달 갱신 + 취약 입모양(WeakViseme) 통합 반영."""
+    from database import StageProgress, WeakViseme
+    from sqlalchemy import select
+    from datetime import datetime as _dt
+
+    target = _curriculum.lesson_by_id(data.viseme_id)
+    if target is None:
+        raise HTTPException(status_code=400, detail="invalid viseme_id")
+    correct = (data.viseme_id == data.chosen_id)
+    # '같아 보이는 무리'로 틀렸는지 — 동구형이음 학습 취지의 피드백용
+    same_cluster = _curriculum.same_homophene_cluster(data.viseme_id, data.chosen_id)
+
+    try:
+        # 1단계 진행/숙달 갱신
+        r = await db.execute(select(StageProgress).where(
+            StageProgress.user_id == current_user.id, StageProgress.stage == 1))
+        sp = r.scalar_one_or_none()
+        if sp is None:
+            # default=0은 flush 시점에 적용되므로 즉시 증감하려면 초기값을 명시한다
+            sp = StageProgress(user_id=current_user.id, stage=1, status="in_progress",
+                               attempts=0, correct=0, mastery_score=0.0)
+            db.add(sp)
+        sp.attempts += 1
+        if correct:
+            sp.correct += 1
+        sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
+        sp.status = "mastered" if (sp.attempts >= _STAGE1_MIN_ATTEMPTS and sp.mastery_score >= _STAGE1_MASTERY) else "in_progress"
+
+        # 취약 입모양 반영 — 기존 분석·적응 로직과 통합
+        r2 = await db.execute(select(WeakViseme).where(
+            WeakViseme.user_id == current_user.id, WeakViseme.viseme_id == data.viseme_id))
+        wv = r2.scalar_one_or_none()
+        if wv is None:
+            wv = WeakViseme(user_id=current_user.id, viseme_id=data.viseme_id,
+                            error_count=0, total_attempts=0, phonological_feature=target["name"])
+            db.add(wv)
+        wv.total_attempts += 1
+        if not correct:
+            wv.error_count += 1
+            wv.last_error_at = _dt.utcnow()
+            await _srs_schedule_wrong(current_user.id, "viseme", str(data.viseme_id), db)
+
+        await db.commit()
+        await db.refresh(sp)
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"recognition submit failed: {str(e)}")
+
+    return {
+        "correct": correct,
+        "same_cluster": same_cluster,
+        "target": {"viseme_id": data.viseme_id, "name": target["name"], "teach": target["teach"]},
+        "mastery_score": round(sp.mastery_score, 1),
+        "attempts": sp.attempts,
+        "mastered": sp.status == "mastered",
+    }
+
+
+class WordAnswer(BaseModel):
+    word: str
+    correct: bool
+
+
+@app.get("/api/curriculum/words")
+async def curriculum_words(current_user=Depends(get_current_user)):
+    """2단계 콘텐츠: 큐레이션 단어 은행 + 최소대립쌍(프론트가 단어 퀴즈를 구성)."""
+    return {"words": _curriculum.WORD_BANK, "minimal_pairs": _curriculum.MINIMAL_PAIRS}
+
+
+@app.post("/api/curriculum/word-answer")
+async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """단어 인식 채점 → 2단계 숙달 갱신 + 오답 시 SRS 예약."""
+    if not _curriculum.is_word(data.word):
+        raise HTTPException(status_code=400, detail="unknown word")
+    from database import StageProgress
+    from sqlalchemy import select
+    try:
+        r = await db.execute(select(StageProgress).where(
+            StageProgress.user_id == current_user.id, StageProgress.stage == 2))
+        sp = r.scalar_one_or_none()
+        if sp is None:
+            sp = StageProgress(user_id=current_user.id, stage=2, status="in_progress",
+                               attempts=0, correct=0, mastery_score=0.0)
+            db.add(sp)
+        sp.attempts += 1
+        if data.correct:
+            sp.correct += 1
+        sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
+        sp.status = "mastered" if (sp.attempts >= _STAGE2_MIN_ATTEMPTS and sp.mastery_score >= _STAGE2_MASTERY) else "in_progress"
+        if not data.correct:
+            await _srs_schedule_wrong(current_user.id, "word", data.word, db)
+        await db.commit()
+        await db.refresh(sp)
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"word answer failed: {str(e)}")
+    return {"mastery_score": round(sp.mastery_score, 1), "attempts": sp.attempts, "mastered": sp.status == "mastered"}
+
+
+# ── 간격 반복 복습 (SRS) ──────────────────────────────────────────────────
+@app.get("/api/review/due")
+async def review_due(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """오늘까지 복습 예정인 항목(입모양/단어)."""
+    from database import ReviewItem
+    from sqlalchemy import select
+    today = _sr_date.today().isoformat()
+    r = await db.execute(select(ReviewItem).where(
+        ReviewItem.user_id == current_user.id, ReviewItem.due_date <= today).order_by(ReviewItem.due_date))
+    items = r.scalars().all()
+    out = []
+    for it in items:
+        entry = {"kind": it.kind, "ref": it.ref}
+        if it.kind == "viseme" and it.ref.isdigit():
+            les = _curriculum.lesson_by_id(int(it.ref))
+            if les:
+                entry["name"] = les["name"]
+        out.append(entry)
+    return {"count": len(out), "items": out}
+
+
+class ReviewAnswer(BaseModel):
+    kind: str
+    ref: str
+    correct: bool
+
+
+@app.post("/api/review/answer")
+async def review_answer(data: ReviewAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """복습 결과로 다음 등장일 재조정(정답=간격 2배, 오답=내일). 간격이 충분히 커지면 졸업(제거)."""
+    from database import ReviewItem
+    from sqlalchemy import select
+    r = await db.execute(select(ReviewItem).where(
+        ReviewItem.user_id == current_user.id, ReviewItem.kind == data.kind, ReviewItem.ref == data.ref))
+    item = r.scalar_one_or_none()
+    if item is None:
+        return {"ok": True, "removed": False}
+    if data.correct:
+        new_interval = min((item.interval_days or 1) * 2, 32)
+        if new_interval >= 32:
+            await db.delete(item)          # 졸업 — 큐에서 제거
+            await db.commit()
+            return {"ok": True, "removed": True}
+        item.interval_days = new_interval
+        item.due_date = (_sr_date.today() + _sr_delta(days=new_interval)).isoformat()
+    else:
+        item.interval_days = 1
+        item.due_date = (_sr_date.today() + _sr_delta(days=1)).isoformat()
+    await db.commit()
+    return {"ok": True, "removed": False, "next_due": item.due_date, "interval_days": item.interval_days}
+
+
+# ── 3단계 문맥 추론(closure) + 대화 채점 + 적응형 난이도(Phase 3·4) ──────────
+@app.get("/api/curriculum/closure")
+async def curriculum_closure(current_user=Depends(get_current_user)):
+    """문맥 추론 항목(빈칸+비슷하게 보이는 보기). 눈으로 구별 안 되니 문맥으로 답을 고른다."""
+    return {"items": _curriculum.CLOSURE_ITEMS}
+
+
+class ScoreRequest(BaseModel):
+    correct: str
+    user_answer: str
+
+
+@app.post("/api/score")
+async def score_answer(data: ScoreRequest, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """임의 문장 채점(대화 이해도 등) — 기존 음운 유사도 엔진 재사용.
+    대화 실전에서 호출되므로 4단계 숙달도 함께 갱신한다."""
+    try:
+        r = await calculate_score(correct=data.correct, user_answer=data.user_answer, db=db)
+        score = round(r.get("score", 0), 1)
+        # 4단계(대화 실전) 숙달 갱신 — 이해도 PASS 이상이면 성공 1회로 누적
+        await _bump_stage_progress(
+            current_user.id, 4, score >= _STAGE4_PASS,
+            _STAGE4_MIN_ATTEMPTS, _STAGE4_MASTERY, db)
+        await db.commit()
+        return {"score": score, "feedback": r.get("feedback", {}), "phoneme_accuracy": r.get("phoneme_accuracy", {})}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"score failed: {str(e)}")
+
+
+@app.get("/api/curriculum/recommended-level")
+async def recommended_level(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """최근 문장 연습 정확도로 다음 난이도를 추천(적응형)."""
+    from database import Progress
+    from sqlalchemy import select
+    r = await db.execute(
+        select(Progress.score, Progress.difficulty_level)
+        .where(Progress.user_id == current_user.id)
+        .order_by(Progress.created_at.desc()).limit(10))
+    rows = r.all()
+    if not rows:
+        base = min(max(current_user.current_level or 1, 1), 5)
+        return {"recommended_level": base, "recent_avg": None, "sample": 0, "reason": "아직 기록이 없어 기본값을 추천해요"}
+    avg = sum(x[0] for x in rows) / len(rows)
+    practiced = rows[0][1] or (current_user.current_level or 1)
+    if avg >= 82:
+        lvl, reason = min(practiced + 1, 5), "최근 정확도가 높아 한 단계 올렸어요"
+    elif avg <= 55:
+        lvl, reason = max(practiced - 1, 1), "최근 정확도가 낮아 한 단계 내렸어요"
+    else:
+        lvl, reason = min(max(practiced, 1), 5), "지금 난이도가 적당해요"
+    return {"recommended_level": lvl, "recent_avg": round(avg, 1), "sample": len(rows), "reason": reason}
+
+
 class ConversationRequest(BaseModel):
     situation: str
     level: int = 1
@@ -608,6 +1014,34 @@ async def conversation_turn(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Conversation generation failed: {str(e)}")
+
+
+class SignRequest(BaseModel):
+    text: str
+
+
+@app.post("/api/sign/translate")
+async def sign_translate(
+    request: SignRequest,
+    current_user = Depends(get_current_user)
+):
+    """
+    한국어 문장을 한국수어(KSL) 학습 보조 시퀀스로 변환.
+    Stage A(Claude gloss 번역) → Stage B(국립국어원 사전 조회 + 지문자 폴백) + 입모양.
+    학습·이해 보조용이며 통역 서비스가 아니다.
+    """
+    text = (request.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="text is required")
+    if len(text) > 200:
+        raise HTTPException(status_code=400, detail="text too long (max 200)")
+    try:
+        from sign_service import translate_to_ksl
+        return await translate_to_ksl(text)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sign translation failed: {str(e)}")
 
 
 # Health check endpoint

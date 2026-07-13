@@ -131,6 +131,50 @@ class ScenarioCache(Base):
     )
 
 
+class LearningProfile(Base):
+    """단계형 커리큘럼의 사용자별 상태(트랙·현재 단계).
+    기존 테이블 무변경 원칙에 따라 User에 컬럼을 더하지 않고 별도 테이블로 둔다
+    (신규 테이블 → create_all이 자동 생성, 마이그레이션 불필요)."""
+    __tablename__ = "learning_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    track = Column(String(20), nullable=True)      # 'perception'(중도·난청) | 'language'(선천성) | None(미배치)
+    current_stage = Column(Integer, default=0)     # 0 입문 ~ 4 대화
+    placed = Column(Boolean, default=False)        # 배치(트랙 선택) 완료 여부
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class StageProgress(Base):
+    """단계별 진행·숙달 상태. 인지퀴즈 등 활동 결과가 rolling으로 반영된다."""
+    __tablename__ = "stage_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    stage = Column(Integer, nullable=False)        # 0..4
+    status = Column(String(20), default="locked")  # locked | unlocked | in_progress | mastered
+    mastery_score = Column(Float, default=0.0)     # 0-100 (correct/attempts*100)
+    attempts = Column(Integer, default=0)
+    correct = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ReviewItem(Base):
+    """간격 반복(SRS) 복습 큐 — 틀린 항목이 due_date에 다시 등장한다.
+    kind: 'viseme'(입모양 그룹, ref=id 문자열) | 'word'(단어, ref=단어)."""
+    __tablename__ = "review_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    kind = Column(String(20), nullable=False)       # 'viseme' | 'word'
+    ref = Column(String(100), nullable=False)       # viseme_id(str) 또는 단어
+    due_date = Column(String(10), nullable=False)   # 'YYYY-MM-DD'
+    interval_days = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 # Dependency for getting DB session
 async def get_db():
     """Dependency for FastAPI routes to get database session"""

@@ -28,14 +28,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
+    const url = error.config?.url || ''
+    // 토큰 만료/무효 시: 로그아웃 후 재부팅 → AuthGate가 데모 계정으로 자동 재로그인.
+    // (데모 로그인 요청 자체의 실패는 무한루프 방지를 위해 재부팅하지 않는다.)
+    if (error.response?.status === 401 && !url.includes('/auth/demo')) {
       useStore.getState().logout()
-
-      // Redirect to login if not already there
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
-      }
+      window.location.reload()
     }
     return Promise.reject(error)
   }
@@ -60,6 +58,12 @@ export const authAPI = {
       email,
       password,
     })
+    return response.data
+  },
+
+  // 로그인 없이 데모 계정으로 즉시 입장(멱등)
+  demoLogin: async () => {
+    const response = await api.post('/auth/demo')
     return response.data
   },
 
@@ -138,6 +142,38 @@ export const learningAPI = {
     const response = await api.get('/review-sentences')
     return response.data
   },
+
+  // 한국어 → 한국수어(KSL) 학습 보조 번역
+  translateSign: async (text) => {
+    const response = await api.post('/sign/translate', { text }, { timeout: 60000 })
+    return response.data
+  },
+}
+
+// ============================================
+// Curriculum (단계형 커리큘럼) API
+// ============================================
+
+export const curriculumAPI = {
+  getStages: async () => (await api.get('/curriculum/stages')).data,
+  setTrack: async (track) => (await api.post('/curriculum/track', { track })).data,
+  resetTrack: async () => (await api.post('/curriculum/track/reset')).data,
+  getVisemeLessons: async () => (await api.get('/curriculum/viseme-lessons')).data,
+  submitRecognition: async (viseme_id, chosen_id) =>
+    (await api.post('/curriculum/recognition', { viseme_id, chosen_id })).data,
+  getWords: async () => (await api.get('/curriculum/words')).data,
+  submitWord: async (word, correct) => (await api.post('/curriculum/word-answer', { word, correct })).data,
+  getClosure: async () => (await api.get('/curriculum/closure')).data,
+  getRecommendedLevel: async () => (await api.get('/curriculum/recommended-level')).data,
+}
+
+export const scoreAPI = {
+  score: async (correct, user_answer) => (await api.post('/score', { correct, user_answer })).data,
+}
+
+export const reviewAPI = {
+  getDue: async () => (await api.get('/review/due')).data,
+  answer: async (kind, ref, correct) => (await api.post('/review/answer', { kind, ref, correct })).data,
 }
 
 export default api
