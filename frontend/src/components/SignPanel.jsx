@@ -194,7 +194,8 @@ export default function SignPanel({ text }) {
       {/* 출처표시 */}
       <p className="mt-4 pt-3 border-t border-gray-100 text-[11px] text-gray-400 leading-relaxed">
         수어 영상·데이터 출처: 국립국어원 「한국수어사전」(sldict.korean.go.kr) — CC BY-NC-ND 2.0 KR.
-        지문자 손모양: “Korean manual alphabet” © Kwamikagami / Wikimedia Commons — CC BY-SA 3.0.
+        지문자 손모양(한글): “Korean manual alphabet” © Kwamikagami / Wikimedia Commons — CC BY-SA 3.0.
+        영문 지문자(A–Z)는 국제(미국식) 지문자 — “Sign language A–Z”, Wikimedia Commons, Public Domain.
         학습·이해 보조(베타)용이며 공식 통역이 아닙니다.
       </p>
     </div>
