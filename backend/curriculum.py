@@ -222,3 +222,15 @@ def is_word(word: str) -> bool:
 def word_partners(word: str) -> List[str]:
     """해당 단어와 '비슷하게 보이는' 최소대립 파트너(단어은행에 있는 것만)."""
     return [p for p in _PAIR_PARTNER.get(word, ()) if p in _WORDS]
+
+
+# ── 3단계: 문맥 추론(closure) — 같아 보이는 단어를 문맥으로 판단 ──────────────
+# options는 입모양이 비슷해 눈으로는 구별이 어렵다 → 문장의 '문맥'으로 답을 골라야 한다.
+# display의 ___에 answer를 넣으면 전체 문장(아바타 애니메이션용).
+CLOSURE_ITEMS = [
+    {"id": "c1", "display": "___을 먹었어요", "answer": "밥", "options": ["밥", "맘", "발"], "hint": "'먹다'와 어울리는 건?"},
+    {"id": "c2", "display": "___을 마셔요", "answer": "물", "options": ["물", "불", "풀"], "hint": "'마시다'와 어울리는 건?"},
+    {"id": "c3", "display": "___이 밝아요", "answer": "달", "options": ["달", "탈", "살"], "hint": "'밝다'와 어울리는 건?"},
+    {"id": "c4", "display": "___를 마셔요", "answer": "차", "options": ["차", "자", "짜"], "hint": "마시는 것 중 하나."},
+    {"id": "c5", "display": "___을 던져요", "answer": "공", "options": ["공", "곰", "콩"], "hint": "'던지다'와 어울리는 둥근 것?"},
+]

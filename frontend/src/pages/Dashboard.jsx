@@ -155,10 +155,16 @@ function CurriculumPath() {
             )
           })}
         </div>
-        <button onClick={() => navigate('/review')}
-          className={`mt-3 w-full py-2.5 rounded-xl text-sm font-semibold transition-all ${due > 0 ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-gray-100 text-gray-400'}`}>
-          🔁 오늘의 복습 {due > 0 ? `${due}개` : '(없음)'}
-        </button>
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button onClick={() => navigate('/review')}
+            className={`py-2.5 rounded-xl text-sm font-semibold transition-all ${due > 0 ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-gray-100 text-gray-400'}`}>
+            🔁 오늘의 복습 {due > 0 ? `${due}개` : '(없음)'}
+          </button>
+          <button onClick={() => navigate('/learn/closure')}
+            className="py-2.5 rounded-xl text-sm font-semibold bg-primary-50 text-primary-700 hover:bg-primary-100 transition-all">
+            🧩 문맥 추론 훈련
+          </button>
+        </div>
         </>
       )}
     </motion.div>
@@ -181,10 +187,15 @@ export default function Dashboard() {
   const [statsLoading, setStatsLoading] = useState(true)
   const [calendarData, setCalendarData] = useState({})
   const [mode, setMode] = useState('test')
+  const [recLevel, setRecLevel] = useState(null)
 
   useEffect(() => {
     loadStatistics()
     loadCalendar()
+    // 적응형 난이도 — 최근 정확도로 추천 레벨을 받아 기본값으로
+    curriculumAPI.getRecommendedLevel()
+      .then((r) => { setRecLevel(r); setSelectedLevel(r.recommended_level) })
+      .catch(() => {})
   }, [])
 
   const loadStatistics = async () => {
@@ -545,7 +556,10 @@ export default function Dashboard() {
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-gray-400 mt-1.5">추천 레벨: {Math.min(user?.current_level || 1, 5)}</p>
+                <p className="text-xs text-gray-400 mt-1.5">
+                  추천 레벨: {recLevel?.recommended_level ?? Math.min(user?.current_level || 1, 5)}
+                  {recLevel?.reason ? ` · ${recLevel.reason}` : ''}
+                </p>
               </div>
             )}
 

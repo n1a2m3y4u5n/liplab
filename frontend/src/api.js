@@ -162,6 +162,12 @@ export const curriculumAPI = {
     (await api.post('/curriculum/recognition', { viseme_id, chosen_id })).data,
   getWords: async () => (await api.get('/curriculum/words')).data,
   submitWord: async (word, correct) => (await api.post('/curriculum/word-answer', { word, correct })).data,
+  getClosure: async () => (await api.get('/curriculum/closure')).data,
+  getRecommendedLevel: async () => (await api.get('/curriculum/recommended-level')).data,
+}
+
+export const scoreAPI = {
+  score: async (correct, user_answer) => (await api.post('/score', { correct, user_answer })).data,
 }
 
 export const reviewAPI = {

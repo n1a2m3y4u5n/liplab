@@ -1,8 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
+
+// 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
+const SignPanel = lazy(() => import('../components/SignPanel'))
 
 /**
  * 2단계 · 음절·단어 (Word Stage)
@@ -59,6 +62,7 @@ function WordQuiz({ data }) {
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
+  const [signOpen, setSignOpen] = useState(false)
 
   const newQ = useCallback(async () => {
     const target = words[Math.floor(Math.random() * words.length)]
@@ -125,12 +129,39 @@ function WordQuiz({ data }) {
                 <div className={`p-3 rounded-lg text-sm ${result.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                   {result.correct ? '정답! 🎉' : `오답 — 정답은 "${q.target}"`}
                 </div>
+                <button onClick={() => setSignOpen(true)}
+                  className="w-full py-2 rounded-lg border border-primary-300 text-primary-600 text-sm font-medium hover:bg-primary-50 transition-colors">
+                  🤟 "{q.target}" 수어로 뜻 보기
+                </button>
                 <button onClick={newQ} className="btn-primary w-full py-2 text-sm">다음 문제 →</button>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
+
+      <AnimatePresence>
+        {signOpen && (
+          <motion.div className="fixed inset-0 z-50 bg-black/40 flex justify-end"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setSignOpen(false)}>
+            <motion.div className="w-full max-w-2xl h-full bg-white shadow-2xl overflow-y-auto"
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.25 }}
+              onClick={(e) => e.stopPropagation()}>
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between">
+                <p className="font-bold text-gray-900">"{q.target}" 수어</p>
+                <button onClick={() => setSignOpen(false)} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-lg">닫기 ✕</button>
+              </div>
+              <div className="p-5">
+                <Suspense fallback={<div className="py-10 text-center text-gray-400 text-sm">불러오는 중…</div>}>
+                  <SignPanel text={q.target} />
+                </Suspense>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
