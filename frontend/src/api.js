@@ -180,6 +180,7 @@ export const reviewAPI = {
 export const speakAPI = {
   getCurriculum: async () => (await api.get('/speak/curriculum')).data,
   getStage: async (n) => (await api.get(`/speak/stage/${n}`)).data,
+  getAnalysis: async () => (await api.get('/speak/analysis', { timeout: 30000 })).data,
   assess: async (target, blob, metrics = {}, opts = {}) => {
     const fd = new FormData()
     fd.append('target', target)
