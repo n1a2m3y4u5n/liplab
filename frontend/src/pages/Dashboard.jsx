@@ -405,6 +405,12 @@ export default function Dashboard() {
                 분석
               </button>
               <button
+                onClick={() => navigate('/speak')}
+                className="px-3 py-1.5 text-sm text-white bg-rose-500 hover:bg-rose-600 transition-colors rounded-lg"
+              >
+                🎤 말하기
+              </button>
+              <button
                 onClick={() => navigate('/sign')}
                 className="px-3 py-1.5 text-sm text-white bg-primary-500 hover:bg-primary-600 transition-colors rounded-lg"
               >
