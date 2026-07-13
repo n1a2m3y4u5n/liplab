@@ -82,6 +82,32 @@ def test_exact_match_still_works():
     assert ss.lookup_sign("학교") is not None
 
 
+def test_alias_values_are_real_headwords():
+    # 별칭표의 동의어는 모두 실제 사전 표제어여야 한다(오매칭 방지).
+    idx = ss.load_index()
+    for original, syn in ss._ALIASES.items():
+        assert syn in idx, f"별칭 '{original}'→'{syn}' 의 동의어가 사전에 없음"
+
+
+def test_alias_substitution_transparent():
+    # '밥'(OOV) → 별칭 '식사' 수어로 표시하되, 원어는 '밥'으로 남기고 signed_as='식사'.
+    result = asyncio.run(ss.translate_to_ksl("밥"))
+    t = result["tokens"][0]
+    assert t["type"] == "sign"          # 지문자 아님 → 별칭 수어로 커버
+    assert t["word"] == "밥"             # 원어 유지(사용자 입력)
+    assert t.get("signed_as") == "식사"  # 실제 표시 수어는 근접 동의어(투명)
+
+
+def test_number_to_sign():
+    # 아라비아 숫자 → 한국수어 숫자 수어(투명 치환). '3'→셋, 자리별 처리.
+    r = asyncio.run(ss.translate_to_ksl("3"))
+    t = r["tokens"][0]
+    assert t["type"] == "sign" and t["word"] == "3" and t.get("signed_as") == "셋"
+    # 여러 자리: '25' → 둘, 다섯 (2자리 각각 수어)
+    r2 = asyncio.run(ss.translate_to_ksl("25"))
+    assert [tk.get("signed_as") for tk in r2["tokens"]] == ["둘", "다섯"]
+
+
 def test_fingerspell_fallback_token():
     result = asyncio.run(ss.translate_to_ksl("컴퓨터공학과우주정거장"))
     assert result["tokens"][0]["type"] == "fingerspell"

@@ -145,21 +145,30 @@ export default function SignPanel({ text }) {
               </div>
             )}
 
-            {/* 현재 단어 라벨 */}
+            {/* 현재 단어 라벨 (별칭 치환은 투명하게 "밥 → 식사"로) */}
             <div className="absolute top-3 left-3 bg-black/55 text-white px-3 py-1 rounded-lg text-sm font-semibold">
-              {token.word}{token.negate && <span className="ml-1 text-red-300 text-xs">(부정)</span>}
+              {token.word}
+              {token.signed_as && <span className="text-amber-300"> → {token.signed_as}</span>}
+              {token.negate && <span className="ml-1 text-red-300 text-xs">(부정)</span>}
               <span className="ml-2 text-white/60 text-xs">{current + 1}/{tokens.length}</span>
             </div>
           </div>
 
-          {/* 현재 토큰 부가정보(수형설명 · 출처) */}
+          {/* 현재 토큰 부가정보(별칭 안내 · 수형설명 · 출처) */}
           {token.type === 'sign' && (
-            <div className="mt-1.5 flex items-start justify-between gap-2">
-              <p className="text-xs text-gray-500 line-clamp-2 flex-1">{token.description}</p>
-              {token.dict_url && (
-                <a href={token.dict_url} target="_blank" rel="noopener noreferrer"
-                  className="text-[11px] text-gray-400 hover:text-primary-600 whitespace-nowrap">국립국어원 ↗</a>
+            <div className="mt-1.5">
+              {token.signed_as && (
+                <p className="text-[11px] text-amber-600 mb-0.5">
+                  ‘{token.word}’은 사전에 없어 근접 수어 ‘{token.signed_as}’로 표시합니다.
+                </p>
               )}
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs text-gray-500 line-clamp-2 flex-1">{token.description}</p>
+                {token.dict_url && (
+                  <a href={token.dict_url} target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] text-gray-400 hover:text-primary-600 whitespace-nowrap">국립국어원 ↗</a>
+                )}
+              </div>
             </div>
           )}
         </div>
