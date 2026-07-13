@@ -1,5 +1,11 @@
-<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" fill="rgb(59,130,246)"/>
-  <text x="50%" y="40%" font-size="180" fill="white" text-anchor="middle" dy=".3em" font-family="Arial, sans-serif" font-weight="bold">4</text>
-  <text x="50%" y="70%" font-size="60" fill="white" text-anchor="middle" dy=".3em" font-family="Arial, sans-serif">ㅗㅜ</text>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="none"/>
+  <ellipse cx="256" cy="256" rx="232" ry="232" fill="#f0c8a4"/>
+  <path d="M 256 176 L 238 262 Q 256 276 274 262 Z" fill="#e0b48c"/>
+  <path d="M 211 300 Q 256 200 301 300 Q 256 400 211 300 Z" fill="#5c2a34"/>
+  <path d="M 211 300 Q 256 200 301 300" fill="none" stroke="#d17d6e" stroke-width="16" stroke-linecap="round"/>
+  <path d="M 211 300 Q 256 400 301 300" fill="none" stroke="#d17d6e" stroke-width="18" stroke-linecap="round"/>
+  <ellipse cx="256" cy="300" rx="63" ry="116" fill="none" stroke="#b5604f" stroke-width="6" opacity="0.55"/>
+  <text x="256" y="470" font-size="52" fill="#7c4a2d" text-anchor="middle"
+        font-family="'Apple SD Gothic Neo','Malgun Gothic',sans-serif" font-weight="700">ㅗㅜ</text>
 </svg>

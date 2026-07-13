@@ -1,116 +1,104 @@
+#!/usr/bin/env python3
 """
-Generate placeholder viseme images (colored circles with numbers)
-Run this script to create 1.png through 15.png
+독화(입모양) 2D 폴백 이미지 생성기
+------------------------------------------------------------------
+3D(WebGL/GLB) 렌더가 불가능한 환경(저사양·구형 브라우저·GLB 로드 실패)에서
+학습이 끊기지 않도록, 15개 viseme 각각을 '실제 입모양'으로 그린 SVG를 만든다.
+
+기존 placeholder(숫자만 적힌 색깔 네모)는 독화 학습에 아무 의미가 없었다.
+여기서는 조음음성학적 특징(개방/원순/폐쇄/전설/치경 등)을 단순화한 벡터
+입모양으로 표현해, 폴백 상태에서도 입모양 자체를 보고 배울 수 있게 한다.
+
+실행: python3 generate_placeholders.py  →  1.svg ~ 15.svg 생성
 """
-try:
-    from PIL import Image, ImageDraw, ImageFont
-    HAS_PIL = True
-except ImportError:
-    HAS_PIL = False
-    print("PIL not available, creating simple colored placeholders")
 
-import os
+CX, CY = 256, 300            # 입 중심
+SKIN = "#f0c8a4"
+LIP = "#d17d6e"
+LIP_DARK = "#b5604f"
+INNER = "#5c2a34"            # 입안(어두움)
+TEETH = "#fdfbf5"
+TONGUE = "#e6867f"
 
-# Color scheme for each viseme
-COLORS = [
-    (239, 68, 68),    # Red - Bilabial
-    (245, 158, 11),   # Amber - Open vowels
-    (16, 185, 129),   # Green - Front vowels
-    (59, 130, 246),   # Blue - Rounded vowels
-    (139, 92, 246),   # Purple - Central vowels
-    (236, 72, 153),   # Pink - Alveolar
-    (20, 184, 166),   # Teal - Velar
-    (249, 115, 22),   # Orange - Glottal
-    (99, 102, 241),   # Indigo - Diphthongs
-    (132, 204, 22),   # Lime - Palatal
-    (6, 182, 212),    # Cyan - Transition bilabial
-    (168, 85, 247),   # Violet - Transition alveolar
-    (244, 63, 94),    # Rose - Transition velar
-    (100, 116, 139),  # Slate - Silence
-    (120, 113, 108),  # Stone - Neutral
-]
+# viseme_id: (반폭 w, 세로열림 h, 원순도 round(0~1), 치아, 혀, 완전폐쇄, 라벨)
+SHAPES = {
+    1:  (120, 0,   0.0, False, False, True,  "ㅂㅍㅁ"),   # 양순음: 폐쇄
+    2:  (150, 150, 0.1, True,  False, False, "ㅏㅐ"),      # 개방모음
+    3:  (195, 55,  0.0, True,  False, False, "ㅣㅔ"),      # 전설모음(좌우로 넓게)
+    4:  (78,  100, 0.95,False, False, False, "ㅗㅜ"),      # 원순모음(둥근 O)
+    5:  (140, 85,  0.2, False, False, False, "ㅓㅡ"),      # 중설모음
+    6:  (130, 46,  0.0, True,  True,  False, "ㄷㄴㄹㅅ"),  # 치경음(윗니+혀끝)
+    7:  (140, 82,  0.1, False, False, False, "ㄱㅋㅇ"),    # 연구개음
+    8:  (150, 112, 0.15,False, False, False, "ㅎ"),        # 성문음(이완 개방)
+    9:  (112, 92,  0.5, False, False, False, "ㅘㅝ"),      # 이중모음(원순+개방)
+    10: (128, 56,  0.2, True,  False, False, "ㅈㅊ"),      # 경구개음
+    11: (120, 20,  0.0, False, False, False, "→ㅂ"),       # 전환→양순
+    12: (130, 42,  0.0, True,  False, False, "→ㄷ"),       # 전환→치경
+    13: (135, 56,  0.05,False, False, False, "→ㄱ"),       # 전환→연구개
+    14: (110, 0,   0.0, False, False, True,  "휴지"),      # 휴지기
+    15: (118, 8,   0.0, False, False, False, "중립"),      # 중립
+}
 
-LABELS = [
-    "ㅂㅍㅁ",
-    "ㅏㅐ",
-    "ㅣㅔ",
-    "ㅗㅜ",
-    "ㅓㅡ",
-    "ㄷㅌㄴ",
-    "ㄱㅋㅇ",
-    "ㅎ",
-    "ㅘㅝ",
-    "ㅈㅊ",
-    "→ㅂ",
-    "→ㄷ",
-    "→ㄱ",
-    "휴지",
-    "중립"
-]
 
-def create_image_with_pil(number, color, label):
-    """Create viseme image using PIL"""
-    size = 512
-    img = Image.new('RGB', (size, size), color)
-    draw = ImageDraw.Draw(img)
+def mouth_paths(w, h, r, teeth, tongue, closed):
+    ew = w * (1 - 0.45 * r)          # 원순일수록 가로폭이 좁아짐
+    parts = []
+    if closed or h <= 2:
+        # 다문 입: 살짝 굴곡진 한 줄
+        parts.append(
+            f'<path d="M {CX-ew:.0f} {CY} Q {CX} {CY+8} {CX+ew:.0f} {CY}" '
+            f'fill="none" stroke="{LIP_DARK}" stroke-width="14" stroke-linecap="round"/>'
+        )
+        return "\n  ".join(parts)
 
-    # Try to use a nice font, fallback to default
-    try:
-        font_large = ImageFont.truetype("arial.ttf", 180)
-        font_small = ImageFont.truetype("malgun.ttf", 80)  # Korean font
-    except:
-        try:
-            font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 180)
-            font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 80)
-        except:
-            font_large = ImageFont.load_default()
-            font_small = ImageFont.load_default()
+    # 입안(어두운 영역) = 위/아래 입술 안쪽 곡선으로 닫힌 형태
+    parts.append(
+        f'<path d="M {CX-ew:.0f} {CY} Q {CX} {CY-h} {CX+ew:.0f} {CY} '
+        f'Q {CX} {CY+h} {CX-ew:.0f} {CY} Z" fill="{INNER}"/>'
+    )
+    if teeth:
+        tw = ew * 0.82
+        parts.append(
+            f'<rect x="{CX-tw:.0f}" y="{CY-h+6:.0f}" width="{2*tw:.0f}" '
+            f'height="{max(16, h*0.34):.0f}" rx="7" fill="{TEETH}"/>'
+        )
+    if tongue:
+        parts.append(
+            f'<ellipse cx="{CX}" cy="{CY+h*0.35:.0f}" rx="{ew*0.55:.0f}" '
+            f'ry="{h*0.5:.0f}" fill="{TONGUE}"/>'
+        )
+    # 입술 테두리(위/아래)
+    parts.append(
+        f'<path d="M {CX-ew:.0f} {CY} Q {CX} {CY-h} {CX+ew:.0f} {CY}" '
+        f'fill="none" stroke="{LIP}" stroke-width="16" stroke-linecap="round"/>'
+    )
+    parts.append(
+        f'<path d="M {CX-ew:.0f} {CY} Q {CX} {CY+h} {CX+ew:.0f} {CY}" '
+        f'fill="none" stroke="{LIP}" stroke-width="18" stroke-linecap="round"/>'
+    )
+    if r > 0.4:  # 원순: 앞으로 내민 입술 링을 덧그림
+        parts.append(
+            f'<ellipse cx="{CX}" cy="{CY}" rx="{ew+18:.0f}" ry="{h+16:.0f}" '
+            f'fill="none" stroke="{LIP_DARK}" stroke-width="6" opacity="0.55"/>'
+        )
+    return "\n  ".join(parts)
 
-    # Draw number
-    text = str(number)
-    bbox = draw.textbbox((0, 0), text, font=font_large)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    position = ((size - text_width) // 2, (size - text_height) // 2 - 50)
 
-    # White text with shadow
-    draw.text((position[0] + 4, position[1] + 4), text, fill=(0, 0, 0, 128), font=font_large)
-    draw.text(position, text, fill=(255, 255, 255), font=font_large)
+def svg(vid):
+    w, h, r, teeth, tongue, closed, label = SHAPES[vid]
+    body = mouth_paths(w, h, r, teeth, tongue, closed)
+    return f'''<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="none"/>
+  <ellipse cx="256" cy="256" rx="232" ry="232" fill="{SKIN}"/>
+  <path d="M 256 176 L 238 262 Q 256 276 274 262 Z" fill="#e0b48c"/>
+  {body}
+  <text x="256" y="470" font-size="52" fill="#7c4a2d" text-anchor="middle"
+        font-family="'Apple SD Gothic Neo','Malgun Gothic',sans-serif" font-weight="700">{label}</text>
+</svg>
+'''
 
-    # Draw label
-    label_bbox = draw.textbbox((0, 0), label, font=font_small)
-    label_width = label_bbox[2] - label_bbox[0]
-    label_position = ((size - label_width) // 2, position[1] + text_height + 30)
-    draw.text(label_position, label, fill=(255, 255, 255, 200), font=font_small)
 
-    return img
-
-def create_simple_placeholder(number, color):
-    """Create simple SVG placeholder"""
-    svg_content = f'''<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" fill="rgb({color[0]},{color[1]},{color[2]})"/>
-  <text x="50%" y="50%" font-size="180" fill="white" text-anchor="middle" dy=".3em" font-family="Arial, sans-serif" font-weight="bold">{number}</text>
-</svg>'''
-    return svg_content
-
-# Generate images
-script_dir = os.path.dirname(os.path.abspath(__file__))
-
-for i in range(1, 16):
-    color = COLORS[i - 1]
-    label = LABELS[i - 1]
-    filename = os.path.join(script_dir, f"{i}.png")
-
-    if HAS_PIL:
-        img = create_image_with_pil(i, color, label)
-        img.save(filename)
-        print(f"Created {filename}")
-    else:
-        # Save as SVG if PIL not available
-        svg_filename = os.path.join(script_dir, f"{i}.svg")
-        with open(svg_filename, 'w', encoding='utf-8') as f:
-            f.write(create_simple_placeholder(i, color))
-        print(f"Created {svg_filename} (install Pillow for PNG generation)")
-
-print("\n✅ Viseme placeholder generation complete!")
-print("For production, replace these with actual mouth shape images.")
+for vid in SHAPES:
+    with open(f"{vid}.svg", "w", encoding="utf-8") as f:
+        f.write(svg(vid))
+print("generated 1.svg ~ 15.svg")

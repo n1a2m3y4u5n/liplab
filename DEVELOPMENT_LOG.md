@@ -249,3 +249,148 @@ coarse 그룹이라 **비음화·경음화·격음화 등은 대개 같은 그�
 **남은 개선 여지(과설계 회피 위해 미실행).** base 메시의 미사용 모프타깃(66개 중
 실사용 ~12개) 제거, meshopt 지오메트리 압축 → 추가 축소 가능하나, 6.3MB로 이미
 충분하고 디코더 의존성·리스크가 붙어 현 단계에선 보류.
+
+## 1. 3D 모델 모프타깃 감사(audit) — 매핑의 근거 확보
+
+**배경/목표**
+기존 `visemeShapes.js`의 viseme→블렌드셰이프 매핑은 "모델에 이런 셰이프가 있을
+것"이라는 추정에 기대고 있었다. 정확도를 높이려면 먼저 `realistic_face.glb`가
+**실제로 어떤 모프타깃을 가졌는지** 확정해야 한다.
+
+**AI에게 내린 지시(프롬프트)**
+> "realistic_face.glb를 파싱해서 각 메시의 morph target 이름을 전부 뽑아줘.
+>  매핑에서 쓸 수 있는 ARKit / Oculus 블렌드셰이프가 뭐가 있는지 확인하자."
+
+**실행 내용**
+GLB(=glTF 바이너리)의 JSON 청크를 직접 파싱해 4개 메시의 targetNames를 추출.
+- `base`(66개): ARKit 표준 셰이프 다수 + Oculus viseme_* 다수
+- `teeth_base`(12개), `tongue01`(13개): jawOpen·viseme_* 공유
+- `high-poly`(8개): 눈 관련
+핵심 발견:
+1. `mouthFunnel`, `mouthClose` 가 모델에 **존재하는데도** 기존 매핑에서
+   전혀 쓰이지 않고 있었다(원순·양순 표현에 결정적인 셰이프).
+2. `jawOpen` 은 base·teeth·tongue 3개 메시에 공통 존재 → 턱을 열면 치아·혀가
+   함께 움직임. 반면 입술 셰이프(pucker/funnel/smile 등)는 base 전용.
+   → "벌림=jawOpen, 입술모양=ARKit 립셰이프"로 역할을 나누는 근거 확보.
+
+**검증**
+파싱 결과 base 메시 66개 타깃 이름 전량 출력 확인.
+
+**변경 파일**: (조사 단계, 코드 변경 없음)
+
+---
+
+## 2. viseme→블렌드셰이프 정밀 매핑 재작성
+
+**배경/목표**
+감사 결과를 바탕으로, 실제 존재가 확인된 ARKit 셰이프만 사용해 한국어 조음
+위치(원순/개방/폐쇄/전설/치경)를 더 정확히 표현하도록 매핑을 재보정한다.
+
+**AI에게 내린 지시(프롬프트)**
+> "확인된 모프 키만 써서 visemeShapes.js를 다시 짜자. 특히
+>  ① 양순음(ㅂㅍㅁ)은 mouthClose로 입술을 확실히 붙이고
+>  ② 원순모음(ㅗㅜ)·이중모음은 mouthFunnel+mouthPucker로 앞으로 내민 둥근 O를 만들고
+>  ③ 치경음(ㄷㄴㄹㅅ)에 잘못 들어가 있던 tongueOut(혀 내밀기)을 빼고 윗니가 보이게
+>  바꿔줘. 조음음성학 근거를 주석으로 남기고."
+
+**실행 내용 (before → after 요약)**
+
+| viseme | before | after | 근거 |
+|---|---|---|---|
+| 1 양순음 | press+roll만 | **mouthClose 0.35** 추가 | 두 입술 확실히 폐쇄 |
+| 4 원순모음 | pucker 0.95 단독 | **funnel 0.55 + pucker 0.6** + jaw 0.08 | 납작한 오므림 → 앞으로 내민 둥근 O |
+| 9 이중모음 | pucker 0.28 | **funnel 0.28 + pucker 0.22** + jaw 0.2 | 원순+개방 혼합 표현 |
+| 6 치경음 | jaw + **tongueOut 0.06** | jaw + **mouthUpperUp**(윗니 노출) | 조음상 혀끝은 잇몸 뒤 → 밖으로 안 나옴 |
+| 2 개방모음 | jaw 0.42 | jaw 0.5 + mouthUpperUp | 개방 강화 |
+| 3 전설모음 | smile+stretch | + **mouthUpperUp** | 좌우 확장 + 윗니 노출 |
+
+**검증**
+매핑이 사용하는 17개 키가 GLB `base` 메시에 **모두 존재**하는지 자동 대조:
+```
+keys used in mapping : 17
+all present in GLB?  : True
+missing (should be []): []
+```
+
+**변경 파일**: `frontend/src/lib/visemeShapes.js`
+
+---
+
+## 3. 죽은 코드·미사용 에셋 정리
+
+**배경/목표**
+기준선 진단(0.3)에서 지적된 죽은 코드/미사용 자산을 제거해 유지보수성과
+빌드 산출물을 정리한다.
+
+**AI에게 내린 지시(프롬프트)**
+> "어디서도 import 안 되는 컴포넌트랑, 참조 없는 3D 에셋을 찾아서 지워줘.
+>  단, 지우기 전에 정말 참조가 없는지 grep으로 확인하고."
+
+**실행 내용**
+참조 검색 후 제거:
+- `frontend/src/components/Avatar3D.jsx` — 구(舊) 기하도형 얼굴. 어디서도 import 안 됨.
+- `frontend/src/components/LipSyncPlayer.jsx` — 구 2D 플레이어. 현재 3D 플레이어로 대체됨.
+- `frontend/public/models/avatar.vrm` (1.3MB) — 코드에서 참조 없음(AvatarVRM은 GLB 하드코딩).
+추가로 `@pixiv/three-vrm` 의존성도 실제 import가 없어 제거 후보이나, 락파일
+재생성 리스크를 피해 이번엔 문서화만 하고 남겨둠(후속 정리 대상).
+
+**검증**
+`grep -rn` 로 세 대상 모두 자기 정의 라인 외 참조 0건 확인. 이후 프로덕션 빌드
+정상(아래 5절)으로 미사용 확정.
+
+**변경 파일**: (삭제) Avatar3D.jsx, LipSyncPlayer.jsx, avatar.vrm
+
+---
+
+## 4. 2D 폴백 입모양 생성 + 3D 실패 시 자동 전환
+
+**배경/목표**
+기준선(0.3-2)의 약점: 2D 폴백 SVG가 "숫자 적힌 색깔 네모"라 3D 로드 실패 시
+학습이 불가능했다. 실제 입모양 SVG로 교체하고, WebGL 미지원/GLB 로드 실패 시
+자동으로 2D로 폴백하도록 연결한다.
+
+**AI에게 내린 지시(프롬프트)**
+> "숫자 네모 placeholder를 실제 입모양(개방/원순/폐쇄/전설/치경)을 그린 SVG로
+>  바꾸는 생성 스크립트를 만들어 15장 뽑고, WebGL이 없거나 3D 모델 로드가 실패하면
+>  이 2D 입모양으로 자동 폴백되게 AvatarVRM에 ErrorBoundary를 붙여줘."
+
+**실행 내용**
+- `generate_placeholders.py` 를 재작성 → 조음 특징(반폭·세로열림·원순도·치아·혀·
+  폐쇄)을 파라미터로 하는 벡터 입모양 생성기. `1.svg~15.svg` 재생성.
+- `MouthFallback2D.jsx` 신설: 현재 viseme의 입모양 SVG를 뷰포트에 표시.
+- `AvatarVRM.jsx`: WebGL 지원 감지(`detectWebGL`) + `GLErrorBoundary` 추가.
+  3D 컨텍스트 생성 실패나 GLB 로드 오류 시 `MouthFallback2D`로 전환.
+  `<RealisticFace>`를 `<Suspense>`로 감싸 로드 오류가 경계로 전파되게 함.
+
+**검증**
+- 15개 SVG XML 파싱 정상.
+- 렌더 컨택트시트로 15개 입모양이 시각적으로 구분됨을 육안 확인
+  (폐쇄/개방/둥근 O/좌우확장/치아·혀 노출이 뚜렷).
+
+**변경 파일**: `frontend/public/visemes/*.svg`(15),
+`frontend/public/visemes/generate_placeholders.py`,
+`frontend/src/components/MouthFallback2D.jsx`(신규),
+`frontend/src/components/AvatarVRM.jsx`
+
+---
+
+## 5. 전체 검증(회귀 없음 확인)
+
+**배경/목표**
+변경 후 백엔드 발음 변환 로직과 프론트엔드 빌드가 깨지지 않았는지 확인.
+
+**실행 내용 / 검증 결과**
+- 백엔드 엔진 테스트: `python3 backend/test_engine.py` → **11 passed, 0 failed**
+  (연음·겹받침·ㅎ탈락·무음 초성 ㅇ 규칙 정상).
+- 프론트엔드 프로덕션 빌드: `npm run build` → **✓ built**, 1019 modules transformed,
+  삭제한 파일/에셋으로 인한 오류 없음.
+- 매핑 키 존재 대조: 17/17 GLB에 존재.
+
+**변경 파일**: (검증 단계, 코드 변경 없음)
+
+---
+
+> 요약: 이번 고도화는 (1) 모델 모프타깃을 **실측 감사**해 근거를 확보하고,
+> (2) 그 위에서 한국어 조음에 맞는 **정밀 입모양 매핑**으로 재보정했으며,
+> (3) 죽은 코드/에셋을 정리하고, (4) 3D 실패 상황에서도 학습이 끊기지 않도록
+> **의미 있는 2D 폴백**을 붙였다. 모든 변경은 엔진 테스트·프로덕션 빌드로 검증했다.
