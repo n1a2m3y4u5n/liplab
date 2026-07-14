@@ -67,40 +67,51 @@ export default function ReviewLanding({ mode = 'today' }) {
 
   if (mode === 'mistakes') {
     return (
-      <DomainPageShell
-        domain="review"
-        title="틀린 문장 다시 풀기"
-        description="독화 테스트에서 놓친 문장만 모아 다시 확인합니다."
-        actions={(
-          <button type="button" onClick={startMistakes} disabled={loading || !mistakes.length}
-            className="rounded-xl bg-rose-600 px-5 py-3 text-sm font-black text-white hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-500">
-            {mistakes.length ? `${mistakes.length}문장 복습 시작` : '복습할 문장 없음'}
-          </button>
-        )}
-      >
-        {loading ? (
-          <div className="rounded-2xl bg-white py-16 text-center text-sm text-slate-400">틀린 문장을 불러오는 중…</div>
-        ) : mistakes.length ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {mistakes.map((item, index) => (
-              <article key={`${item.sentence}-${index}`} className="rounded-[20px] border border-slate-200 bg-white p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-black text-rose-700">오답 {String(index + 1).padStart(2, '0')}</span>
-                  <span className="text-xs text-slate-400">{item.situation || '문장 독화'}</span>
-                </div>
-                <p className="mt-4 text-lg font-black leading-relaxed text-slate-900">{item.sentence}</p>
-                {item.user_answer && <p className="mt-2 text-sm text-slate-500">내 답: {item.user_answer}</p>}
-              </article>
-            ))}
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
+        <header className="bg-white shadow-sm border-b border-gray-200">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">틀린 문장 다시 풀기</h1>
+              <p className="text-sm text-gray-500">독화 테스트에서 놓친 문장만 모아 다시 확인합니다</p>
+            </div>
+            <button onClick={() => navigate('/pillar/reading')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
           </div>
-        ) : (
-          <div className="rounded-[24px] border border-slate-200 bg-white px-5 py-16 text-center">
-            <h2 className="text-xl font-black">다시 풀 문장이 없어요</h2>
-            <p className="mt-2 text-sm text-slate-500">새로운 문장 실전을 완료하면 오답이 이곳에 모입니다.</p>
-            <button type="button" onClick={() => navigate('/learn/scenario')} className="mt-5 rounded-xl bg-sky-600 px-5 py-3 text-sm font-black text-white">문장 실전으로</button>
-          </div>
-        )}
-      </DomainPageShell>
+        </header>
+
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-5">
+          {loading ? (
+            <div className="card py-16 text-center text-sm text-gray-400">틀린 문장을 불러오는 중…</div>
+          ) : mistakes.length ? (
+            <>
+              <div className="card flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-gray-600">틀린 문장 <b className="text-gray-900">{mistakes.length}개</b>를 모아 다시 연습해보세요.</p>
+                <button type="button" onClick={startMistakes} className="btn-primary py-2.5 text-sm">
+                  {mistakes.length}문장 복습 시작
+                </button>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {mistakes.map((item, index) => (
+                  <article key={`${item.sentence}-${index}`} className="card">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">오답 {String(index + 1).padStart(2, '0')}</span>
+                      <span className="text-xs text-gray-400">{item.situation || '문장 독화'}</span>
+                    </div>
+                    <p className="mt-4 text-lg font-bold leading-relaxed text-gray-900">{item.sentence}</p>
+                    {item.user_answer && <p className="mt-2 text-sm text-gray-500">내 답: {item.user_answer}</p>}
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="card text-center py-16">
+              <p className="text-4xl mb-3">🎉</p>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">다시 풀 문장이 없어요</h2>
+              <p className="text-gray-500 mb-5">새로운 문장 실전을 완료하면 오답이 이곳에 모입니다.</p>
+              <button type="button" onClick={() => navigate('/learn/scenario')} className="btn-primary">문장 실전으로</button>
+            </div>
+          )}
+        </main>
+      </div>
     )
   }
 

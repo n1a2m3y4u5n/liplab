@@ -52,7 +52,7 @@ export default function Review() {
             <h1 className="text-2xl font-bold text-gray-900">입모양·단어 복습</h1>
             <p className="text-sm text-gray-500">{state === 'active' ? `${idx + 1} / ${items.length}` : '복습 일정이 된 항목을 다시 만나요'}</p>
           </div>
-          <button onClick={() => navigate('/dashboard')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
+          <button onClick={() => navigate('/pillar/reading')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
@@ -61,7 +61,7 @@ export default function Review() {
             <p className="text-5xl mb-3">🎉</p>
             <h2 className="text-xl font-bold text-gray-900 mb-1">복습할 항목이 없어요</h2>
             <p className="text-gray-500 mb-5">틀린 항목은 다음날부터 여기서 다시 만나요.</p>
-            <button onClick={() => navigate('/dashboard')} className="btn-primary">대시보드로</button>
+            <button onClick={() => navigate('/pillar/reading')} className="btn-primary">나가기</button>
           </div>
         )}
         {state === 'done' && (
@@ -69,7 +69,7 @@ export default function Review() {
             <p className="text-5xl mb-3">✅</p>
             <h2 className="text-xl font-bold text-gray-900 mb-1">복습 완료!</h2>
             <p className="text-gray-500 mb-5">수고했어요. 맞힌 항목은 더 나중에 다시 나와요.</p>
-            <button onClick={() => navigate('/dashboard')} className="btn-primary">대시보드로</button>
+            <button onClick={() => navigate('/pillar/reading')} className="btn-primary">나가기</button>
           </div>
         )}
         {state === 'active' && items[idx] && (

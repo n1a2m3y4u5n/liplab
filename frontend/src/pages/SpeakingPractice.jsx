@@ -326,7 +326,7 @@ export default function SpeakingPractice() {
               {reviewMode ? '틀렸던 발음을 다시 또박또박 연습해요' : (stageInfo?.guide || '귀 대신 눈으로 — 내 목소리를 보면서 발음을 다듬어요')}
             </p>
           </div>
-          <button onClick={() => { teardown(); navigate('/dashboard') }} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
+          <button onClick={() => { teardown(); navigate('/pillar/speaking') }} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
         </div>
       </header>
 
@@ -336,7 +336,7 @@ export default function SpeakingPractice() {
             <div className="text-4xl mb-3">🎉</div>
             <p className="text-lg font-bold text-gray-900 mb-1">복습할 발음이 없어요</p>
             <p className="text-sm text-gray-500 mb-5">최근 발음이 다 좋았어요. 단계 연습을 이어가 볼까요?</p>
-            <button onClick={() => { teardown(); navigate('/dashboard') }} className="btn-primary px-6 py-2.5 text-sm">대시보드로</button>
+            <button onClick={() => { teardown(); navigate('/pillar/speaking') }} className="btn-primary px-6 py-2.5 text-sm">나가기</button>
           </div>
         ) : (
         <>
