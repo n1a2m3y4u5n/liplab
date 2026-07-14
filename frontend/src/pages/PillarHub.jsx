@@ -8,11 +8,11 @@ const PILLARS = {
   reading: {
     accent: 'sky',
     title: '독화 (입모양 읽기)',
-    description: '상대의 입모양을 보고 말을 이해하는 훈련이에요. 기초부터 문장·대화 실전까지 골라 학습하세요.',
+    description: '상대의 입모양을 보고 말을 이해하는 훈련이에요. 입모양 학습부터 문장 학습까지 골라 진행하세요.',
     items: [
-      { label: '입모양 기초', desc: '자음·모음의 입모양 익히기', to: '/learn/viseme', icon: '👄' },
-      { label: '음절·단어', desc: '비슷한 입모양 구별하기', to: '/learn/word', icon: '🔤' },
-      { label: '문장·대화 실전', desc: '상황별 독화 + AI 대화', to: '/learn/scenario', icon: '💬' },
+      { label: '입모양 학습', desc: '자음·모음의 입모양 학습', to: '/learn/viseme', icon: '👄' },
+      { label: '단어 학습', desc: '비슷한 입모양 구별 학습', to: '/learn/word', icon: '🔤' },
+      { label: '문장 학습', desc: '상황별 독화 + AI 대화 학습', to: '/learn/scenario', icon: '💬' },
       { label: '문맥 추론', desc: '앞뒤 맥락으로 뜻 찾기', to: '/learn/closure', icon: '🧩' },
       { label: '내 문장 발음 보기', desc: '아무 글이나 입모양 확인', to: '/pronounce', icon: '✍️' },
       { label: '독화 복습', desc: '틀린 문장·예정 다시 풀기', to: '/review/mistakes', icon: '🔁' },
@@ -23,7 +23,7 @@ const PILLARS = {
     title: '말하기 (발음)',
     description: '내 발음을 눈으로 보며 다듬는 훈련이에요. 마이크로 녹음하면 AI가 전사·채점하고 코칭해줘요.',
     items: [
-      { label: '말하기 연습', desc: '발성부터 문장 억양까지 6단계', to: '/learn/speaking', icon: '🎤' },
+      { label: '말하기 학습', desc: '발성부터 문장 억양까지 6단계', to: '/learn/speaking', icon: '🎤' },
       { label: '말하기 복습', desc: '저조했던 발음 다시 연습', to: '/review/speaking', icon: '🔁' },
     ],
   },

@@ -309,7 +309,7 @@ function SpeakCurriculumPath() {
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="card !p-4">
       <div className="flex items-center justify-between mb-0.5">
-        <h2 className="text-base font-bold text-gray-900">말하기 연습</h2>
+        <h2 className="text-base font-bold text-gray-900">말하기 학습</h2>
         <span className="text-xs text-gray-400">읽기의 짝 · 발음을 눈으로 다듬기</span>
       </div>
       <p className="mb-2 line-clamp-2 text-xs text-gray-500">
