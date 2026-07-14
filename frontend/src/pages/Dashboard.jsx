@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
@@ -30,65 +30,65 @@ const SEARCH_ITEMS = [
   { keywords: ['사용법', '가이드', '도움말'], to: '/guide' },
 ]
 
-const TOPIC_MENUS = [
+// 검색 아래 학습 카테고리 상단바 — 탭에 마우스를 올리면 아래로 펼쳐지며 하위 학습 섹션이 나온다.
+// 탭(독화·말하기·촉각) 글자 클릭 → 해당 기둥 허브(/pillar/*), 하위 섹션 글자 클릭 → 학습으로 바로 이동.
+// '기타'는 기둥이 없어(to: null) 클릭 시 펼침만 토글한다.
+const PILLAR_NAV = [
   {
-    id: 'learn',
-    label: '학습',
-    title: '새로운 내용을 익혀요',
-    description: '보고, 말하고, 느끼는 방식 중 나에게 맞는 학습을 선택하세요.',
-    theme: {
-      active: 'bg-sky-50 text-sky-700',
-      line: 'bg-sky-500',
-      badge: 'bg-sky-100 text-sky-700',
-      hover: 'hover:border-sky-200 hover:bg-sky-50/70',
-    },
+    id: 'reading',
+    label: '독화',
+    to: '/pillar/reading',
+    bg: 'from-[#fffede] via-[#fffbb6] to-[#fff58d]',
+    petGrad: 'from-sky-300 via-sky-400 to-sky-600',
+    intro: '입모양을 보고 말을 이해하는 독화예요. 무엇부터 배워볼까요? 👀',
+    theme: { text: 'text-sky-700', line: 'bg-sky-500', chip: 'bg-sky-50 text-sky-700', hover: 'hover:border-sky-200 hover:bg-sky-50/70' },
     items: [
-      { label: '입모양 기초', description: '자음·모음의 입모양 익히기', to: '/learn/viseme' },
-      { label: '음절·단어', description: '비슷한 입모양 구별하기', to: '/learn/word' },
-      { label: '문장·대화 실전', description: '상황별 독화 능력 확인하기', to: '/learn/scenario' },
-      { label: '말하기 연습', description: '내 발음과 억양 다듬기', to: '/learn/speaking' },
-      { label: '촉각 학습', description: '움직임과 진동을 손으로 익히기', to: '/learn/tactile' },
-      { label: '수어 학습', description: '문장을 수어로 함께 확인하기', to: '/learn/sign' },
+      { label: '입모양 기초', description: '자음·모음의 입모양 익히기', icon: '👄', to: '/learn/viseme' },
+      { label: '음절·단어', description: '비슷한 입모양 구별하기', icon: '🔤', to: '/learn/word' },
+      { label: '문장·대화 실전', description: '상황별 독화 + AI 대화', icon: '💬', to: '/learn/scenario' },
+      { label: '문맥 추론', description: '앞뒤 맥락으로 뜻 찾기', icon: '🧩', to: '/learn/closure' },
+      { label: '내 문장 발음 보기', description: '아무 글이나 입모양 확인', icon: '✍️', to: '/pronounce' },
+      { label: '독화 복습', description: '틀린 문장·예정 다시 풀기', icon: '🔁', to: '/review/mistakes' },
     ],
   },
   {
-    id: 'review',
-    label: '복습',
-    title: '기억이 오래가도록 반복해요',
-    description: '예정된 항목, 틀린 문제, 저장한 문장을 다시 확인하세요.',
-    theme: {
-      active: 'bg-amber-50 text-amber-800',
-      line: 'bg-amber-500',
-      badge: 'bg-amber-100 text-amber-800',
-      hover: 'hover:border-amber-200 hover:bg-amber-50/70',
-    },
+    id: 'speaking',
+    label: '말하기',
+    to: '/pillar/speaking',
+    bg: 'from-[#fff6f7] via-[#ffe7eb] to-[#ffd5dc]',
+    petGrad: 'from-rose-300 via-rose-400 to-pink-500',
+    intro: '내 발음을 눈으로 보며 또박또박 다듬어요! 🎤',
+    theme: { text: 'text-rose-700', line: 'bg-rose-500', chip: 'bg-rose-50 text-rose-700', hover: 'hover:border-rose-200 hover:bg-rose-50/70' },
     items: [
-      { label: '오늘의 복습', description: '지금 복습할 항목 한눈에 보기', to: '/review/today' },
-      { label: '입모양·단어 복습', description: '간격 반복 일정에 맞춰 복습하기', to: '/review/scheduled' },
-      { label: '틀린 문장 다시 풀기', description: '독화 오답을 문장으로 재연습하기', to: '/review/mistakes' },
-      { label: '말하기 복습', description: '부족했던 발음 다시 연습하기', to: '/review/speaking' },
-      { label: '촉각 복습', description: '촉각 단계의 취약 항목 확인하기', to: '/review/tactile' },
-      { label: '저장한 문장', description: '북마크한 문장 모아보기', to: '/review/saved' },
+      { label: '말하기 연습', description: '발성부터 문장 억양까지 6단계', icon: '🎤', to: '/learn/speaking' },
+      { label: '말하기 복습', description: '저조했던 발음 다시 연습', icon: '🔁', to: '/review/speaking' },
     ],
   },
   {
-    id: 'analysis',
-    label: '분석',
-    title: '학습 흐름과 취약점을 확인해요',
-    description: '최근 기록을 바탕으로 강점과 다음 학습 방향을 살펴보세요.',
-    theme: {
-      active: 'bg-violet-50 text-violet-700',
-      line: 'bg-violet-500',
-      badge: 'bg-violet-100 text-violet-700',
-      hover: 'hover:border-violet-200 hover:bg-violet-50/70',
-    },
+    id: 'tactile',
+    label: '촉각',
+    to: '/pillar/tactile',
+    bg: 'from-[#faf8ff] via-[#eee9ff] to-[#ddd6fe]',
+    petGrad: 'from-violet-300 via-violet-400 to-purple-600',
+    intro: '얼굴 모형을 손끝으로 느껴 말을 이해하는 촉각(타도마)이에요. ✋',
+    theme: { text: 'text-violet-700', line: 'bg-violet-500', chip: 'bg-violet-50 text-violet-700', hover: 'hover:border-violet-200 hover:bg-violet-50/70' },
     items: [
-      { label: '종합 학습 분석', description: '독화·말하기 결과 함께 보기', to: '/analysis/overview' },
-      { label: '학습 활동', description: '최근 90일 학습 흐름 확인하기', to: '/analysis/activity' },
-      { label: '취약 입모양', description: '자주 틀리는 발음 특징 찾아보기', to: '/analysis/visemes' },
-      { label: '평균 점수', description: '학습별 점수 변화 살펴보기', to: '/analysis/scores' },
-      { label: '학습 기록', description: '완료한 세션과 누적 성과 보기', to: '/analysis/history' },
-      { label: '학습 가이드', description: '분석 결과 활용 방법 알아보기', to: '/analysis/guide' },
+      { label: '촉각 학습', description: '5단계 커리큘럼 + 자유 체험', icon: '🖐️', to: '/learn/tactile' },
+      { label: '촉각 복습', description: '취약 항목 다시 풀기', icon: '🔁', to: '/review/tactile' },
+    ],
+  },
+  {
+    id: 'etc',
+    label: '기타',
+    to: null,
+    bg: 'from-[#f8fafc] via-[#eef2f7] to-[#dbe3ec]',
+    petGrad: 'from-slate-300 via-slate-400 to-slate-600',
+    intro: '수어·분석·사용법도 준비했어요. 골라보세요! ✨',
+    theme: { text: 'text-slate-800', line: 'bg-slate-500', chip: 'bg-slate-100 text-slate-700', hover: 'hover:border-slate-200 hover:bg-slate-50/70' },
+    items: [
+      { label: '수어 학습', description: '문장을 수어로 함께 확인', icon: '🤟', to: '/learn/sign' },
+      { label: '학습 분석', description: '강점과 취약점, 학습 흐름 보기', icon: '📊', to: '/analysis/overview' },
+      { label: '사용법', description: 'LIPLAB 활용 안내', icon: '❔', to: '/guide' },
     ],
   },
 ]
@@ -711,6 +711,47 @@ function LearnerProfileCard({ user, statistics, calendarData }) {
   )
 }
 
+// 학습 카테고리 메가메뉴 오른쪽에서 섹션을 설명해주는 마스코트 펫.
+// 탭을 열면 왼쪽에서 커지며 등장하고, 섹션에 호버하면 말풍선 문구가 바뀐다.
+function MegaMenuPet({ petGrad, speech }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.6, x: -60 }}
+      animate={{ opacity: 1, scale: 1, x: 0 }}
+      exit={{ opacity: 0, scale: 0.7, x: -30 }}
+      transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+      className="pointer-events-none flex select-none flex-col items-center gap-5"
+    >
+      <div className="relative min-h-[64px] w-[280px]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={speech}
+            initial={{ opacity: 0, y: 10, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.18 }}
+            className="relative rounded-[26px] bg-white px-6 py-4 text-center text-[15px] font-bold leading-relaxed text-slate-800 shadow-[0_16px_40px_rgba(15,23,42,0.16)]"
+          >
+            {speech}
+            <span className="absolute -bottom-2 left-1/2 h-5 w-5 -translate-x-1/2 rotate-45 rounded-sm bg-white" />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      <motion.div
+        animate={{ y: [0, -10, 0], rotate: [-2, 2, -2] }}
+        transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
+        className={`relative h-36 w-36 rounded-[48%_44%_50%_46%] bg-gradient-to-br ${petGrad} shadow-[0_28px_60px_rgba(15,23,42,0.28)]`}
+      >
+        <span className="absolute left-[42px] top-[56px] h-4 w-4 rounded-full bg-slate-900" />
+        <span className="absolute left-[78px] top-[56px] h-4 w-4 rounded-full bg-slate-900" />
+        <span className="absolute left-[46px] top-[80px] h-6 w-[44px] rounded-b-full border-b-[8px] border-white/90" />
+        <span className="absolute left-[26px] top-[64px] h-3 w-3 rounded-full bg-white/40" />
+        <span className="absolute right-[26px] top-[64px] h-3 w-3 rounded-full bg-white/40" />
+      </motion.div>
+    </motion.div>
+  )
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -721,6 +762,9 @@ export default function Dashboard() {
 
   const [searchTerm, setSearchTerm] = useState('')
   const [activeNavMenu, setActiveNavMenu] = useState(null)
+  const [navTop, setNavTop] = useState(0)          // 상단바 top 좌표(색이 퍼질 오버레이 높이 계산용)
+  const [hoveredItem, setHoveredItem] = useState(null)  // 메가메뉴에서 마우스 올린 섹션(펫 설명용)
+  const navRef = useRef(null)
   const [heroSlide, setHeroSlide] = useState(0)
   const [heroDirection, setHeroDirection] = useState(1)
   const [selectedSituation, setSelectedSituation] = useState('카페')
@@ -841,11 +885,35 @@ export default function Dashboard() {
     else alert('찾는 학습을 발견하지 못했어요. 학습 메뉴에서 전체 콘텐츠를 확인해주세요.')
   }
 
-  const activeTopic = TOPIC_MENUS.find((topic) => topic.id === activeNavMenu)
+  const activeTopic = PILLAR_NAV.find((topic) => topic.id === activeNavMenu)
+
+  // 메가메뉴 열기: 색이 퍼질 높이 계산을 위해 상단바의 화면상 위치(top)를 기록한다.
+  const openNav = (id) => {
+    if (navRef.current) setNavTop(navRef.current.getBoundingClientRect().top)
+    setHoveredItem(null)
+    setActiveNavMenu(id)
+  }
+
+  const closeNav = () => {
+    setActiveNavMenu(null)
+    setHoveredItem(null)
+  }
 
   const chooseTopicItem = (to) => {
-    setActiveNavMenu(null)
+    closeNav()
     navigate(to)
+  }
+
+  // 탭 글자 클릭: 기둥이 있으면(독화·말하기·촉각) 해당 허브로 이동, 없으면(기타) 펼침만 토글.
+  const chooseTab = (tab) => {
+    if (tab.to) {
+      closeNav()
+      navigate(tab.to)
+    } else if (activeNavMenu === tab.id) {
+      closeNav()
+    } else {
+      openNav(tab.id)
+    }
   }
 
   const moveHeroSlide = (step) => {
@@ -928,6 +996,80 @@ export default function Dashboard() {
             </div>
           </form>
         </div>
+
+        {/* 학습 카테고리 상단바 — 검색 아래. 탭에 호버하면 색이 물감처럼 퍼지며 화면 전체로 커진다 */}
+        <nav
+          ref={navRef}
+          aria-label="학습 카테고리"
+          onMouseLeave={closeNav}
+          className="relative border-t border-slate-100"
+        >
+          {/* 물감이 퍼지듯 상단바~화면 전체를 채우는 색 오버레이 (탭 아래 레이어, z-0) */}
+          <AnimatePresence>
+            {activeTopic && (
+              <motion.div
+                key={activeTopic.id}
+                initial={{ clipPath: 'circle(0% at 12% 0%)' }}
+                animate={{ clipPath: 'circle(150% at 12% 0%)' }}
+                exit={{ clipPath: 'circle(0% at 12% 0%)', transition: { duration: 0.28, ease: 'easeIn' } }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                style={{ height: `calc(100vh - ${navTop}px)` }}
+                className={`absolute inset-x-0 top-0 z-0 overflow-hidden bg-gradient-to-br ${activeTopic.bg}`}
+              >
+                <div className="mx-auto grid h-full max-w-[1440px] grid-cols-1 gap-6 px-5 pb-10 pt-[76px] sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                  {/* 왼쪽: 세로로 큼직하게 나열되는 학습 섹션 */}
+                  <div className="flex min-h-0 flex-col justify-center overflow-y-auto py-4">
+                    <p className={`mb-2 text-sm font-black uppercase tracking-[0.14em] ${activeTopic.theme.text}`}>{activeTopic.label}</p>
+                    {activeTopic.items.map((item) => (
+                      <button
+                        key={item.to}
+                        type="button"
+                        onMouseEnter={() => setHoveredItem(item)}
+                        onFocus={() => setHoveredItem(item)}
+                        onClick={() => chooseTopicItem(item.to)}
+                        className="group flex items-center gap-4 border-b border-slate-900/10 py-3.5 text-left transition hover:pl-2 sm:py-4"
+                      >
+                        <span aria-hidden="true" className="text-3xl transition group-hover:scale-110 sm:text-4xl">{item.icon}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-2xl font-black tracking-tight text-slate-900 sm:text-[28px]">{item.label}</span>
+                        </span>
+                        <span aria-hidden="true" className="text-2xl font-black text-slate-900/25 transition group-hover:translate-x-1 group-hover:text-slate-900/60">→</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 오른쪽 절반: 마스코트 펫 설명 + 탈출 영역(마우스가 오면 오버레이가 닫힘) */}
+                  <div onMouseEnter={closeNav} className="hidden items-center justify-center lg:flex">
+                    <MegaMenuPet petGrad={activeTopic.petGrad} speech={hoveredItem?.description || activeTopic.intro} />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* 탭 글자 줄 — 색 오버레이 위(z-10)에 떠 있어 항상 클릭·호버 가능 */}
+          <div className="relative z-10 mx-auto max-w-[1440px] px-2 sm:px-6">
+            <ul className="flex items-stretch">
+              {PILLAR_NAV.map((tab) => {
+                const active = activeNavMenu === tab.id
+                return (
+                  <li key={tab.id} onMouseEnter={() => openNav(tab.id)} className="shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => chooseTab(tab)}
+                      aria-expanded={active}
+                      className={`relative flex items-center gap-2 px-5 py-4 text-lg font-black tracking-tight transition sm:px-9 sm:text-xl ${active ? tab.theme.text : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'}`}
+                    >
+                      {tab.label}
+                      <span aria-hidden="true" className={`text-[11px] transition-transform ${active ? 'rotate-180' : ''}`}>▼</span>
+                      <span aria-hidden="true" className={`absolute inset-x-3 bottom-0 h-1 rounded-full transition ${active ? tab.theme.line : 'bg-transparent'}`} />
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        </nav>
       </header>
 
       <AnimatePresence>
