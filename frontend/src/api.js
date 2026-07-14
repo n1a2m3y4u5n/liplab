@@ -208,6 +208,7 @@ export const tactileAPI = {
   getCurriculum: async () => (await api.get('/tactile/curriculum')).data,
   getPool: async (level) => (await api.get('/tactile/pool', { params: { level } })).data,
   getReview: async () => (await api.get('/tactile/review')).data,
+  getAnalysis: async () => (await api.get('/tactile/analysis', { timeout: 30000 })).data,
   submitResult: async (stage, correct, target = '') => (await api.post('/tactile/result', { stage, correct, target })).data,
 }
 

@@ -1430,6 +1430,62 @@ async def speak_analysis(current_user=Depends(get_current_user), db: AsyncSessio
             "stages": stages, "tips": tips}
 
 
+@app.get("/api/tactile/analysis")
+async def tactile_analysis(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """촉각(타도마) 분석 — 자주 틀리는 항목·단계별 정확도·최근 추세. 말하기 분석의 촉각판."""
+    from database import TactileAttempt, TactileStageProgress
+    from sqlalchemy import select
+    from collections import Counter
+
+    rows = (await db.execute(
+        select(TactileAttempt).where(TactileAttempt.user_id == current_user.id)
+        .order_by(TactileAttempt.created_at.desc()).limit(300))).scalars().all()
+    total = len(rows)
+    correct = sum(1 for r in rows if r.correct)
+    acc = round(correct / total * 100, 1) if total else 0.0
+
+    # 자주 틀린 항목(촉각으로 놓친 단어·문장)
+    miss = Counter()
+    for r in rows:
+        if not r.correct and r.target:
+            miss[r.target] += 1
+    weak_items = [{"target": k, "count": v} for k, v in miss.most_common(8)]
+
+    # 단계별 정확도
+    per = {}
+    for r in rows:
+        d = per.setdefault(r.stage if r.stage is not None else -1, {"attempts": 0, "correct": 0})
+        d["attempts"] += 1
+        if r.correct:
+            d["correct"] += 1
+    tp_rows = (await db.execute(select(TactileStageProgress)
+               .where(TactileStageProgress.user_id == current_user.id))).scalars().all()
+    tp_map = {tp.stage: tp for tp in tp_rows}
+    stages = []
+    for meta in _TACTILE_STAGES:
+        n = meta["stage"]
+        d = per.get(n, {"attempts": 0, "correct": 0})
+        tp = tp_map.get(n)
+        stages.append({"stage": n, "title": meta["title"], "attempts": d["attempts"],
+                       "accuracy": round(d["correct"] / d["attempts"] * 100, 1) if d["attempts"] else 0.0,
+                       "mastery_score": round(tp.mastery_score, 1) if tp else 0.0,
+                       "status": tp.status if tp else ("unlocked" if n == 0 else "locked")})
+
+    recent = list(reversed(rows[:15]))
+    trend = [{"correct": 1 if r.correct else 0, "target": r.target} for r in recent]
+
+    tips = []
+    if weak_items:
+        tips.append(f"'{weak_items[0]['target']}'을(를) 촉각으로 자주 놓쳐요. 순수 촉각 모드에서 반복해보세요.")
+    if total and acc < 60:
+        tips.append("전반 정확도가 낮은 편이에요. 시뮬레이터로 진동·바람 차이를 먼저 익힌 뒤 가려보세요.")
+    if not tips:
+        tips.append("좋아요! 촉각 변별에 익숙해지고 있어요. 다음 단계로 넓혀보세요.")
+
+    return {"total": total, "accuracy": acc, "weak_items": weak_items,
+            "stages": stages, "trend": trend, "tips": tips}
+
+
 @app.get("/api/speak/review")
 async def speak_review(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """발음 복습 — 최근 발화에서 틀렸거나 저조했던 단어/문장을 다시 연습 큐로.
