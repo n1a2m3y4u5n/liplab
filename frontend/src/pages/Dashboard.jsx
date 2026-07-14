@@ -17,82 +17,6 @@ const PRESET_SITUATIONS = [
   { id: '직접 입력', label: '직접 입력', icon: '✏️' },
 ]
 
-const SEARCH_ITEMS = [
-  { keywords: ['입모양', '독화', '기초', '비지움'], to: '/learn/viseme' },
-  { keywords: ['단어', '음절'], to: '/learn/word' },
-  { keywords: ['문장', '테스트', '대화', '실전'], to: '/learn/scenario' },
-  { keywords: ['말하기', '발음', '억양'], to: '/learn/speaking' },
-  { keywords: ['촉각', '타도마', '하드웨어'], to: '/learn/tactile' },
-  { keywords: ['수어', '손말'], to: '/learn/sign' },
-  { keywords: ['복습', '오답'], to: '/review/today' },
-  { keywords: ['북마크', '저장'], to: '/review/saved' },
-  { keywords: ['분석', '기록', '통계'], to: '/analysis/overview' },
-  { keywords: ['사용법', '가이드', '도움말'], to: '/guide' },
-]
-
-const TOPIC_MENUS = [
-  {
-    id: 'learn',
-    label: '학습',
-    title: '새로운 내용을 익혀요',
-    description: '보고, 말하고, 느끼는 방식 중 나에게 맞는 학습을 선택하세요.',
-    theme: {
-      active: 'bg-sky-50 text-sky-700',
-      line: 'bg-sky-500',
-      badge: 'bg-sky-100 text-sky-700',
-      hover: 'hover:border-sky-200 hover:bg-sky-50/70',
-    },
-    items: [
-      { label: '입모양 기초', description: '자음·모음의 입모양 익히기', to: '/learn/viseme' },
-      { label: '음절·단어', description: '비슷한 입모양 구별하기', to: '/learn/word' },
-      { label: '문장·대화 실전', description: '상황별 독화 능력 확인하기', to: '/learn/scenario' },
-      { label: '말하기 연습', description: '내 발음과 억양 다듬기', to: '/learn/speaking' },
-      { label: '촉각 학습', description: '움직임과 진동을 손으로 익히기', to: '/learn/tactile' },
-      { label: '수어 학습', description: '문장을 수어로 함께 확인하기', to: '/learn/sign' },
-    ],
-  },
-  {
-    id: 'review',
-    label: '복습',
-    title: '기억이 오래가도록 반복해요',
-    description: '예정된 항목, 틀린 문제, 저장한 문장을 다시 확인하세요.',
-    theme: {
-      active: 'bg-amber-50 text-amber-800',
-      line: 'bg-amber-500',
-      badge: 'bg-amber-100 text-amber-800',
-      hover: 'hover:border-amber-200 hover:bg-amber-50/70',
-    },
-    items: [
-      { label: '오늘의 복습', description: '지금 복습할 항목 한눈에 보기', to: '/review/today' },
-      { label: '입모양·단어 복습', description: '간격 반복 일정에 맞춰 복습하기', to: '/review/scheduled' },
-      { label: '틀린 문장 다시 풀기', description: '독화 오답을 문장으로 재연습하기', to: '/review/mistakes' },
-      { label: '말하기 복습', description: '부족했던 발음 다시 연습하기', to: '/review/speaking' },
-      { label: '촉각 복습', description: '촉각 단계의 취약 항목 확인하기', to: '/review/tactile' },
-      { label: '저장한 문장', description: '북마크한 문장 모아보기', to: '/review/saved' },
-    ],
-  },
-  {
-    id: 'analysis',
-    label: '분석',
-    title: '학습 흐름과 취약점을 확인해요',
-    description: '최근 기록을 바탕으로 강점과 다음 학습 방향을 살펴보세요.',
-    theme: {
-      active: 'bg-violet-50 text-violet-700',
-      line: 'bg-violet-500',
-      badge: 'bg-violet-100 text-violet-700',
-      hover: 'hover:border-violet-200 hover:bg-violet-50/70',
-    },
-    items: [
-      { label: '종합 학습 분석', description: '독화·말하기 결과 함께 보기', to: '/analysis/overview' },
-      { label: '학습 활동', description: '최근 90일 학습 흐름 확인하기', to: '/analysis/activity' },
-      { label: '취약 입모양', description: '자주 틀리는 발음 특징 찾아보기', to: '/analysis/visemes' },
-      { label: '평균 점수', description: '학습별 점수 변화 살펴보기', to: '/analysis/scores' },
-      { label: '학습 기록', description: '완료한 세션과 누적 성과 보기', to: '/analysis/history' },
-      { label: '학습 가이드', description: '분석 결과 활용 방법 알아보기', to: '/analysis/guide' },
-    ],
-  },
-]
-
 const HERO_SLIDES = [
   {
     id: 'reading',
@@ -120,7 +44,7 @@ const HERO_SLIDES = [
   },
   {
     id: 'tactile',
-    tab: '촉각',
+    tab: '촉각(타도마)',
     eyebrow: '03',
     title: ['촉각 학습', '손끝으로 느껴요'],
     description: '입의 움직임과 진동을 촉각으로 익혀요.',
@@ -719,8 +643,6 @@ export default function Dashboard() {
   const statistics = useStore((state) => state.statistics)
   const setStatistics = useStore((state) => state.setStatistics)
 
-  const [searchTerm, setSearchTerm] = useState('')
-  const [activeNavMenu, setActiveNavMenu] = useState(null)
   const [heroSlide, setHeroSlide] = useState(0)
   const [heroDirection, setHeroDirection] = useState(1)
   const [selectedSituation, setSelectedSituation] = useState('카페')
@@ -829,25 +751,6 @@ export default function Dashboard() {
     if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const submitSearch = (event) => {
-    event.preventDefault()
-    const query = searchTerm.trim().toLowerCase().replace(/\s/g, '')
-    if (!query) return
-    const result = SEARCH_ITEMS.find((item) => item.keywords.some((keyword) => {
-      const normalized = keyword.toLowerCase().replace(/\s/g, '')
-      return normalized.includes(query) || query.includes(normalized)
-    }))
-    if (result) navigate(result.to)
-    else alert('찾는 학습을 발견하지 못했어요. 학습 메뉴에서 전체 콘텐츠를 확인해주세요.')
-  }
-
-  const activeTopic = TOPIC_MENUS.find((topic) => topic.id === activeNavMenu)
-
-  const chooseTopicItem = (to) => {
-    setActiveNavMenu(null)
-    navigate(to)
-  }
-
   const moveHeroSlide = (step) => {
     setHeroDirection(step > 0 ? 1 : -1)
     setHeroSlide((current) => (current + step + HERO_SLIDES.length) % HERO_SLIDES.length)
@@ -867,68 +770,7 @@ export default function Dashboard() {
   const currentHero = HERO_SLIDES[heroSlide]
 
   return (
-    <div className="min-h-screen bg-white lg:h-dvh lg:overflow-hidden">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-        <div className="border-b border-slate-100 bg-slate-50/90">
-          <div className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-2 text-[11px] text-slate-500 sm:px-6">
-            <button type="button" onClick={() => navigate('/dashboard')} className="inline-flex items-center gap-1.5 font-bold text-slate-700 hover:text-primary-700">
-              <span aria-hidden="true">⌂</span>
-              메인 바로가기
-            </button>
-            <p className="hidden sm:block"><b className="text-slate-700">{user?.username}님</b>, 오늘도 나에게 맞는 방식으로 학습해 보세요.</p>
-          </div>
-        </div>
-
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
-          <div className="flex min-h-[86px] items-center gap-4 py-4 sm:gap-7">
-            <button type="button" onClick={() => navigate('/dashboard')} className="flex shrink-0 items-center gap-2 text-left">
-              <span aria-hidden="true" className="relative grid h-10 w-10 place-items-center rounded-2xl bg-sky-50">
-                <span className="absolute h-4 w-7 rounded-full border-[3px] border-sky-400" />
-                <span className="absolute h-7 w-4 rounded-full border-[3px] border-sky-400" />
-              </span>
-              <span>
-                <span className="block text-2xl font-black tracking-[-0.05em] text-slate-950">LIPLAB</span>
-                <span className="hidden text-[10px] font-medium text-slate-400 sm:block">Visual Language Lab</span>
-              </span>
-            </button>
-
-            <form onSubmit={submitSearch} className="hidden max-w-2xl flex-1 md:block" role="search">
-              <label htmlFor="learning-search" className="sr-only">학습 콘텐츠 검색</label>
-              <div className="flex h-12 items-center overflow-hidden rounded-full border-2 border-sky-300 bg-white pl-5 pr-2 transition focus-within:border-sky-500 focus-within:ring-4 focus-within:ring-sky-100">
-                <input
-                  id="learning-search"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  className="min-w-0 flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
-                  placeholder="배우고 싶은 입모양, 단어, 학습을 검색해 보세요."
-                />
-                <button type="submit" aria-label="검색" className="grid h-9 w-9 place-items-center rounded-full text-xl text-slate-800 hover:bg-sky-50">⌕</button>
-              </div>
-            </form>
-
-            <div className="ml-auto hidden items-center gap-1 xl:flex">
-              {[
-                ['수어 번역', '/sign', '🤟'],
-                ['북마크', '/review/saved', '★'],
-                ['사용법', '/guide', '?'],
-              ].map(([label, to, icon]) => (
-                <button key={label} type="button" onClick={() => navigate(to)} className="group flex w-16 flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-bold text-slate-600 transition hover:bg-sky-50 hover:text-sky-700">
-                  <span aria-hidden="true" className="grid h-7 w-7 place-items-center text-lg">{icon}</span>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <form onSubmit={submitSearch} className="pb-4 md:hidden" role="search">
-            <label htmlFor="learning-search-mobile" className="sr-only">학습 콘텐츠 검색</label>
-            <div className="flex h-11 items-center rounded-full border-2 border-sky-300 px-4 focus-within:border-sky-500">
-              <input id="learning-search-mobile" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="학습 콘텐츠 검색" />
-              <button type="submit" aria-label="검색" className="text-lg">⌕</button>
-            </div>
-          </form>
-        </div>
-      </header>
+    <div className="min-h-0 bg-white lg:h-full lg:overflow-hidden">
 
       <AnimatePresence>
         {unlockNotice && (
@@ -950,9 +792,9 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      <main className="mx-auto max-w-[1440px] px-4 py-4 sm:px-6 sm:py-5">
+      <main className="mx-auto max-w-[1440px] px-4 py-4 sm:px-6 sm:py-5 lg:h-full">
 
-        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grid items-stretch gap-4 lg:h-[clamp(400px,calc(100dvh-225px),520px)] lg:grid-cols-[290px_minmax(0,1fr)]">
+        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grid items-stretch gap-4 lg:h-full lg:grid-cols-[290px_minmax(0,1fr)]">
           <LearnerProfileCard user={user} statistics={statistics} calendarData={calendarData} />
 
           <div
