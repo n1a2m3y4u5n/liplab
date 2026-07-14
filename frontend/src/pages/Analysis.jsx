@@ -345,7 +345,7 @@ export default function Analysis() {
                 {resetting ? '초기화 중...' : '독화 기록 초기화'}
               </button>
             )}
-            <button onClick={() => navigate('/dashboard')} className="text-gray-500 hover:text-gray-800 text-sm">← 대시보드</button>
+            <button onClick={() => navigate('/dashboard')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
           </div>
         </div>
       </header>
