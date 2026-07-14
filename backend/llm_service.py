@@ -4,6 +4,7 @@ Generates contextually relevant sentences based on user's weak visemes
 """
 import os
 import json
+import random
 from typing import List, Dict
 from datetime import datetime, timedelta
 from anthropic import AsyncAnthropic
@@ -223,13 +224,15 @@ async def generate_adaptive_scenario(
         print(f"[WARN] get_user_weak_visemes failed: {e}")
         target_viseme_ids = []
 
-    # Check cache first (safe - skip cache on error)
-    try:
-        cached_scenario = await check_scenario_cache(situation, level, target_viseme_ids, db)
-        if cached_scenario:
-            return cached_scenario
-    except Exception as e:
-        print(f"[WARN] check_scenario_cache failed: {e}")
+    # 캐시 재사용은 '매번 같은 문장'의 주범이라 의도적으로 끈다(변주 우선).
+    # (캐시 쓰기는 유지 — 통계/폴백용. 필요 시 LIPLAB_SCENARIO_CACHE=1로 재사용 활성화)
+    if os.getenv("LIPLAB_SCENARIO_CACHE", "0") == "1":
+        try:
+            cached_scenario = await check_scenario_cache(situation, level, target_viseme_ids, db)
+            if cached_scenario:
+                return cached_scenario
+        except Exception as e:
+            print(f"[WARN] check_scenario_cache failed: {e}")
 
     # Get situation context
     context = SITUATION_CONTEXTS.get(situation, {
@@ -259,6 +262,26 @@ async def generate_adaptive_scenario(
         phoneme_str = ", ".join(target_phonemes[:5])
         phoneme_instruction = f"\n특히 다음 음소들이 포함된 단어를 우선적으로 사용하세요: {phoneme_str}"
 
+    # ── 변주 축 — 매 호출마다 무작위로 골라 프롬프트에 주입 → 같은 상황이어도 결과가 겹치지 않게 ──
+    _sub_focus = random.choice([
+        "상대에게 무언가를 요청/부탁하는 말", "가격·시간·수량을 묻는 말", "감사·사과를 표현하는 말",
+        "길이나 위치를 묻고 답하는 말", "제안하거나 권유하는 말", "가벼운 잡담·안부",
+        "문제 상황을 설명하는 말", "선택·결정을 확인하는 말", "감정을 드러내는 말",
+    ])
+    _tone = random.choice(["정중한 존댓말", "친근한 반말 섞인 구어", "간결하고 담백한 어조", "다정하고 배려하는 어조"])
+    _persona = random.choice(["손님", "직원", "친구", "가족", "처음 만난 사람", "이웃"])
+    _twist = random.choice([
+        "이전에 흔히 나오는 뻔한 표현은 피하고 새로운 어휘를 쓰세요.",
+        "서로 다른 소재를 다뤄 5문장이 각기 다른 장면이 되게 하세요.",
+        "구체적인 사물·숫자·이름을 넣어 생생하게 만드세요.",
+        "너무 교과서적이지 않게, 실제 대화처럼 자연스럽게 변주하세요.",
+    ])
+    variety_instruction = (
+        f"\n**이번 회차 변주(매번 다르게)**:\n"
+        f"- 초점: {_sub_focus}\n- 어조: {_tone}\n- 화자 시점: {_persona}\n- 추가 지시: {_twist}\n"
+        f"- 변주 시드: {random.randint(1000, 9999)} (이 숫자가 다르면 반드시 다른 문장을 만드세요)"
+    )
+
     system_prompt = f"""당신은 청각장애인의 독화(Speechreading) 훈련을 위한 한국어 문장 생성 전문가입니다.
 
 **목표**: 주어진 상황과 난이도에 맞는 자연스러운 한국어 문장 5개를 생성하세요.
@@ -271,6 +294,7 @@ async def generate_adaptive_scenario(
 **난이도 기준**:
 {level_instructions[level]}
 {phoneme_instruction}
+{variety_instruction}
 
 **중요 규칙**:
 1. 모든 문장은 해당 상황에서 실제로 사용될 법한 자연스러운 표현이어야 합니다.
@@ -298,7 +322,7 @@ async def generate_adaptive_scenario(
         response = await anthropic_client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1024,
-            temperature=0.8,  # Add creativity for varied sentences
+            temperature=1.0,  # 변주 극대화 — 매번 다른 문장
             system=system_prompt,
             messages=[
                 {"role": "user", "content": user_prompt}

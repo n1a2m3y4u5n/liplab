@@ -19,8 +19,19 @@ try:
 except Exception:  # pragma: no cover
     _WORD_BANK = [{"word": w} for w in ["밥", "물", "우유", "사과", "가방", "바다", "나무", "그림"]]
 
-# 4단계 단어 — 짧은 것부터(1음절 → 다음절). 읽기 WORD_BANK 재활용.
-_STAGE4_WORDS = [w["word"] for w in _WORD_BANK if len(w["word"]) <= 2][:12] or [w["word"] for w in _WORD_BANK][:12]
+# 4단계 단어 — 짧은 것부터(1음절 → 다음절). 다양한 초·중·종성이 골고루 나오도록 큐레이션.
+# (읽기 WORD_BANK도 섞어 매번 같은 문제만 나오지 않게 풀을 넉넉히 확보)
+_STAGE4_BASE = [
+    # 1음절
+    "밥", "물", "손", "발", "눈", "코", "입", "귀", "산", "달", "별", "꽃", "집", "차",
+    # 2음절
+    "우유", "사과", "가방", "바다", "나무", "구름", "하늘", "노래", "다리", "머리",
+    "토끼", "기차", "친구", "학교", "사랑", "엄마", "아빠", "가을", "겨울", "여름",
+    # 3음절
+    "자동차", "강아지", "고양이", "바나나", "무지개", "선생님", "운동화", "책가방",
+]
+# 읽기 WORD_BANK에서 중복 없이 보강 → 풀을 더 크게
+_STAGE4_WORDS = list(dict.fromkeys(_STAGE4_BASE + [w["word"] for w in _WORD_BANK]))
 
 
 SPEAK_STAGES: List[Dict] = [
@@ -81,6 +92,17 @@ SPEAK_STAGES: List[Dict] = [
             {"target": "오늘 날씨가 좋아요.", "intonation": "fall"},
             {"target": "같이 갈래요?", "intonation": "rise"},
             {"target": "고맙습니다.", "intonation": "fall"},
+            {"target": "어디 가요?", "intonation": "rise"},
+            {"target": "물 좀 주세요.", "intonation": "fall"},
+            {"target": "이름이 뭐예요?", "intonation": "rise"},
+            {"target": "정말 재미있어요.", "intonation": "fall"},
+            {"target": "지금 몇 시예요?", "intonation": "rise"},
+            {"target": "내일 만나요.", "intonation": "fall"},
+            {"target": "괜찮으세요?", "intonation": "rise"},
+            {"target": "잘 지냈어요.", "intonation": "fall"},
+            {"target": "이거 얼마예요?", "intonation": "rise"},
+            {"target": "천천히 말해 주세요.", "intonation": "fall"},
+            {"target": "다시 한 번요?", "intonation": "rise"},
         ],
     },
 ]

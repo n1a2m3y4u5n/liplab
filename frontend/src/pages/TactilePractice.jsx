@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { tactileAPI } from '../api'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { tactileAPI, learningAPI } from '../api'
 import TactileFaceSim from '../components/TactileFaceSim'
 
 /**
@@ -14,10 +14,40 @@ import TactileFaceSim from '../components/TactileFaceSim'
 
 const AIRFLOW_CODE = { none: 0, plosive: 1, fricative: 2 }
 const PRESET = ['바다', '파도', '엄마', '아빠', '학교', '사과', '나무', '우유', '안녕하세요']
-const QUIZ_WORDS = ['바다', '파도', '엄마', '아빠', '학교', '사과', '나무', '우유', '다리', '토끼', '기차', '구름']
+// 촉각(타도마) 5단계 커리큘럼 — 감각 → 요소 → 변별 → 낱말 → 문장으로 위계적으로 확장.
+// (독화·발화 커리큘럼처럼 '쉬운 단서 → 통합'의 체계적 진행)
+const LEVELS = [
+  { title: '감각 (유·무성)', goal: '진동의 유무를 손끝으로 감지', desc: '진동이 있고 없음을 느껴 구별해요', groups: [['바', '파'], ['다', '타'], ['가', '카'], ['자', '차']] },
+  { title: '모음', goal: '턱 벌림·입술 모양으로 모음 변별', desc: '턱 벌림과 입술 모양의 차이를 느껴요', groups: [['아', '이', '우'], ['오', '으', '이'], ['애', '우', '으']] },
+  { title: '최소대립쌍', goal: '눈으론 같은 소리를 촉각으로 구별', desc: '눈으론 같아도 촉각으론 다른 소리 (핵심)', groups: [['바', '파', '마'], ['달', '탈'], ['불', '풀'], ['발', '팔'], ['방', '팡']] },
+  { title: '단어', goal: '촉각 단서를 종합해 낱말 인식', desc: '낱말을 알아맞혀요', pool: ['바다', '파도', '엄마', '아빠', '학교', '사과', '나무', '우유', '다리', '토끼', '기차', '구름', '하늘', '노래', '머리', '가방', '친구', '바나나', '강아지', '고양이', '자동차', '무지개', '선생님', '운동화', '바람', '구두', '포도', '단추'] },
+  { title: '문장', goal: '연속된 말의 흐름을 촉각으로 따라가기', desc: '짧은 문장을 이해해요', pool: ['밥 먹어요', '안녕하세요', '고마워요', '사랑해요', '잘 자요', '어디 가요', '물 좀 주세요', '이름이 뭐예요', '지금 몇 시예요', '천천히 말해요', '다시 한 번요', '괜찮아요', '같이 가요', '내일 만나요'] },
+]
+const _rand = (n) => Math.floor(Math.random() * n)
+const _shuffle = (a) => [...a].sort(() => Math.random() - 0.5)
+function makeQuestion(lv) {
+  // 변별 단계(감각·모음·최소대립쌍)는 성격상 '보기 중 고르기'가 맞다 → 객관식 고정.
+  if (lv.groups) {
+    const g = lv.groups[_rand(lv.groups.length)]
+    return { type: 'choice', answer: g[_rand(g.length)], options: _shuffle(g) }
+  }
+  const answer = lv.pool[_rand(lv.pool.length)]
+  // 낱말·문장 단계는 독화처럼 유형을 섞는다 — 객관식(4지선다) ↔ 주관식(직접 입력).
+  if (Math.random() < 0.5) return { type: 'input', answer, options: [] }
+  const opts = new Set([answer])
+  while (opts.size < Math.min(4, lv.pool.length)) opts.add(lv.pool[_rand(lv.pool.length)])
+  return { type: 'choice', answer, options: _shuffle([...opts]) }
+}
 
 export default function TactilePractice() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  // 대시보드 카드에서 특정 레벨/모드로 바로 진입(?level=N&mode=quiz)
+  const _lvParam = parseInt(searchParams.get('level'), 10)
+  const _initLevel = Number.isInteger(_lvParam) && _lvParam >= 0 && _lvParam < LEVELS.length ? _lvParam : 0
+  // 학습(퀴즈)을 기본으로 — 체계적 커리큘럼이 중심. 체험은 보조(명시적 요청 시에만).
+  const _initMode = searchParams.get('mode') === 'explore' ? 'explore' : 'quiz'
+  const reviewMode = searchParams.get('review') != null   // 복습 모드(예정·틀림·북마크 항목 다시)
   const supported = typeof navigator !== 'undefined' && 'serial' in navigator
 
   const [connected, setConnected] = useState(false)
@@ -26,11 +56,57 @@ export default function TactilePractice() {
   const [playing, setPlaying] = useState(false)
   const [sim, setSim] = useState(null)           // 시뮬레이터 현재 음소 상태
   const [simHidden, setSimHidden] = useState(false)  // 퀴즈에서 시뮬레이터 가리기(순수 촉각)
-  const [mode, setMode] = useState('explore')   // 'explore' | 'quiz'
+  const [mode, setMode] = useState(_initMode)   // 'explore' | 'quiz'
 
-  const [quiz, setQuiz] = useState(null)         // {answer, options}
+  const [level, setLevel] = useState(_initLevel)          // 촉각 커리큘럼 레벨(0~4)
+  const [quiz, setQuiz] = useState(null)         // {type:'choice'|'input', answer, options}
   const [quizResult, setQuizResult] = useState(null)
+  const [typed, setTyped] = useState('')          // 주관식 입력값
   const [score, setScore] = useState({ correct: 0, total: 0 })
+  const [aiPool, setAiPool] = useState(null)      // {level, items} — AI 생성 문제 풀(단어·문장)
+  const [reviewPool, setReviewPool] = useState(null)  // 복습 항목(target 배열)
+  const [marks, setMarks] = useState({})          // 북마크 상태 {target: bookmarkId}
+
+  // 복습 모드: 예정·틀림·북마크 항목을 받아 문제 풀로 사용
+  useEffect(() => {
+    if (!reviewMode) return
+    tactileAPI.getReview().then((d) => setReviewPool((d.items || []).map((i) => i.target))).catch(() => setReviewPool([]))
+  }, [reviewMode])
+
+  // 복습 풀이 준비되면 첫 문제 자동 출제
+  useEffect(() => {
+    if (reviewMode && reviewPool && reviewPool.length && !quiz) newQuiz()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewMode, reviewPool])
+
+  // 단어(3)·문장(4) 단계에 진입하면 AI로 새 문제 풀을 받아 변주를 준다(실패 시 내장 풀 폴백).
+  useEffect(() => {
+    if (reviewMode || !LEVELS[level].pool) { setAiPool(null); return }
+    let cancelled = false
+    tactileAPI.getPool(level)
+      .then((d) => { if (!cancelled && d.items?.length >= 4) setAiPool({ level, items: d.items }) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [level, reviewMode])
+
+  // 현재 레벨의 실효 데이터 — 복습 모드면 복습 풀, 아니면 AI 풀이 있으면 pool 교체
+  const effLevel = (lvIdx) => {
+    if (reviewMode && reviewPool && reviewPool.length) {
+      return { title: '복습', goal: '틀린·예정·북마크 항목 다시', desc: '복습 항목', pool: reviewPool }
+    }
+    const lv = LEVELS[lvIdx]
+    if (lv.pool && aiPool && aiPool.level === lvIdx && aiPool.items.length) return { ...lv, pool: aiPool.items }
+    return lv
+  }
+
+  // 북마크 토글 — 현재 문제(정답 텍스트)를 촉각 도메인 북마크
+  const toggleMark = async (t) => {
+    if (!t) return
+    try {
+      if (marks[t]) { await learningAPI.removeBookmark(marks[t]); setMarks((m) => { const n = { ...m }; delete n[t]; return n }) }
+      else { const r = await learningAPI.addBookmark(t, '촉각', 1, 'tactile'); setMarks((m) => ({ ...m, [t]: r.id })) }
+    } catch { /* 이미 북마크됨 등 — 무시 */ }
+  }
 
   const portRef = useRef(null)
   const writerRef = useRef(null)
@@ -79,23 +155,32 @@ export default function TactilePractice() {
     } catch { setStatus('음소 시퀀스를 불러오지 못했어요.') }
   }
 
-  const newQuiz = () => {
-    const answer = QUIZ_WORDS[Math.floor(Math.random() * QUIZ_WORDS.length)]
-    const opts = new Set([answer])
-    while (opts.size < 4) opts.add(QUIZ_WORDS[Math.floor(Math.random() * QUIZ_WORDS.length)])
-    setQuiz({ answer, options: [...opts].sort(() => Math.random() - 0.5) })
+  const newQuiz = (lvIdx = level) => {
+    setQuiz(makeQuestion(effLevel(lvIdx)))
     setQuizResult(null)
+    setTyped('')
   }
+  const pickLevel = (i) => { setLevel(i); setQuiz(null); setQuizResult(null); setTyped('') }
   const playQuiz = async () => {
     if (!quiz || playing) return
     const d = await tactileAPI.getSequence(quiz.answer)
     await playSequence(d.sequence)
   }
+  // 정답 처리 공통 — 객관식/주관식 모두 여기로
+  const grade = (picked, ok) => {
+    setQuizResult({ ok, picked })
+    setScore((s) => ({ correct: s.correct + (ok ? 1 : 0), total: s.total + 1 }))
+    // 대시보드 촉각 진행도 + 복습(SRS/틀림)에 결과 반영 — target을 함께 보냄
+    tactileAPI.submitResult(level, ok, quiz?.answer || '').catch(() => {})
+  }
   const answerQuiz = (opt) => {
     if (!quiz || quizResult) return
-    const ok = opt === quiz.answer
-    setQuizResult({ ok, picked: opt })
-    setScore((s) => ({ correct: s.correct + (ok ? 1 : 0), total: s.total + 1 }))
+    grade(opt, opt === quiz.answer)
+  }
+  const submitTyped = () => {
+    if (!quiz || quizResult || !typed.trim()) return
+    const norm = (s) => s.replace(/\s+/g, '')
+    grade(typed.trim(), norm(typed) === norm(quiz.answer))
   }
 
   return (
@@ -123,18 +208,74 @@ export default function TactilePractice() {
           </div>
         )}
 
-        {/* 시작 전 준비 — 펌웨어 다운로드 */}
+        {/* DIY — 오픈소스 하드웨어 (3D 파일·재료·조립·펌웨어) */}
         <div className="card">
-          <p className="font-semibold text-gray-900 mb-2">시작하기 전에</p>
-          <ol className="text-sm text-gray-600 space-y-1 mb-3 list-decimal list-inside">
-            <li>아래 펌웨어(.ino)를 내려받아 <b>아두이노 IDE</b>로 얼굴 모형(Uno)에 업로드하세요.</li>
-            <li>USB로 연결한 뒤, 아래 <b>얼굴 모형 연결</b> 버튼을 누르세요.</li>
-          </ol>
-          <a href="/liplab_face.ino" download="liplab_face.ino"
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-2xl">🛠️</span>
+            <h2 className="text-lg font-bold text-gray-900">직접 만들기 (오픈소스 하드웨어)</h2>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            이 얼굴 모형은 판매 제품이 아니라 <b>누구나 직접 만들 수 있는 오픈소스 하드웨어</b>입니다.
+            아래 3D 프린팅 파일과 재료 목록, 조립 방법, 펌웨어를 공개하니 3D 프린터와 기본 부품만 있으면 제작할 수 있어요.
+          </p>
+
+          {/* ① 3D 파일 */}
+          <p className="text-sm font-semibold text-gray-800 mb-2">① 3D 프린팅 파일 (STL)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+            {[
+              { f: 'JawV4.stl', label: '얼굴 본체', desc: '볼·코·입·턱' },
+              { f: 'JawHingeV3.stl', label: '힌지(경첩)', desc: '오른쪽 회전축' },
+              { f: 'JawSupportV1.stl', label: '지지대', desc: '좌우 지지 프레임' },
+            ].map((m) => (
+              <a key={m.f} href={`/hardware/${m.f}`} download
+                className="p-3 rounded-xl border border-gray-200 hover:border-primary-400 hover:bg-primary-50 transition-colors text-center">
+                <div className="text-2xl mb-1">🧩</div>
+                <div className="text-sm font-bold text-gray-800">{m.label}</div>
+                <div className="text-[11px] text-gray-400">{m.desc}</div>
+                <div className="text-[11px] text-primary-600 mt-1">⬇ {m.f}</div>
+              </a>
+            ))}
+          </div>
+
+          {/* ② 재료 */}
+          <details className="mb-1">
+            <summary className="cursor-pointer text-sm font-semibold text-gray-800 py-1">② 필요 재료 (BOM) <span className="text-xs text-amber-600 font-normal">· 예시(팀 확정 예정)</span></summary>
+            <ul className="mt-2 text-sm text-gray-600 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 list-disc list-inside">
+              <li>아두이노 Uno × 1</li>
+              <li>서보모터(SG90 등) × 2 — 턱·입술</li>
+              <li>진동 모터 × 1</li>
+              <li>소형 DC 팬(5V) × 1</li>
+              <li>트랜지스터 2N2222 × 2</li>
+              <li>저항 220Ω × 2</li>
+              <li>다이오드 1N4007 × 2</li>
+              <li>외부 5V 전원(어댑터/배터리) × 1</li>
+              <li>브레드보드 · 점퍼선</li>
+              <li>3D 프린팅 필라멘트(PLA 권장)</li>
+              <li>입술 패드 · 경첩 축 · 소형 나사 등</li>
+            </ul>
+          </details>
+
+          {/* ③ 조립 */}
+          <details className="mb-3">
+            <summary className="cursor-pointer text-sm font-semibold text-gray-800 py-1">③ 조립 방법 <span className="text-xs text-amber-600 font-normal">· 예시(팀 확정 예정)</span></summary>
+            <ol className="mt-2 text-sm text-gray-600 space-y-1 list-decimal list-inside">
+              <li>3D 파일(얼굴 본체·힌지·지지대)을 출력한다.</li>
+              <li>얼굴을 좌우로 지지 — <b>왼쪽</b>은 턱서보 혼(회전판)에 직결, <b>오른쪽</b>은 힌지에 걸쳐 회전만 되게 한다.</li>
+              <li>입술서보와 입술 패드를 입 부근에 부착한다(0°=평순, 40°=원순).</li>
+              <li>진동 모터를 턱 아래(목 위치)에 부착한다.</li>
+              <li>팬을 코 밑 방향으로 부착한다.</li>
+              <li>배선: D9=턱서보, D10=입술서보, D5→220Ω→2N2222(진동), D6→220Ω→2N2222(팬). <b>★ 외부전원 GND와 아두이노 GND를 반드시 공통 연결.</b></li>
+              <li>펌웨어를 업로드하고 USB로 연결한 뒤, 아래 <b>얼굴 모형 연결</b>을 누른다.</li>
+            </ol>
+            <p className="text-[11px] text-gray-400 mt-1">상세 배선·핀맵은 펌웨어(.ino) 상단 주석 참고.</p>
+          </details>
+
+          {/* ④ 펌웨어 */}
+          <p className="text-sm font-semibold text-gray-800 mb-2">④ 펌웨어</p>
+          <a href="/hardware/liplab_face.ino" download="liplab_face.ino"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm font-semibold hover:bg-gray-900">
             ⬇ 아두이노 펌웨어 다운로드 (liplab_face.ino)
           </a>
-          <p className="text-xs text-gray-400 mt-2">배선·핀 연결 방법은 파일 상단 주석에 정리되어 있어요.</p>
         </div>
 
         {/* 연결 */}
@@ -151,26 +292,43 @@ export default function TactilePractice() {
           )}
         </div>
 
-        {/* 모드 탭 */}
-        <div className="flex gap-2">
-          {[['explore', '🖐️ 체험'], ['quiz', '❓ 퀴즈']].map(([id, label]) => (
-            <button key={id} onClick={() => setMode(id)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${mode === id ? 'bg-primary-500 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>{label}</button>
-          ))}
-        </div>
-
-        {/* 얼굴 모형 시뮬레이터 — 재생과 동시에 동작(하드웨어 없어도 미리보기) */}
-        {!(mode === 'quiz' && simHidden) && (
-          <div className="card">
-            <p className="text-xs text-center text-gray-500 mb-1">
-              얼굴 모형 시뮬레이터 {connected ? '· 하드웨어와 동시 동작' : '· 하드웨어 없이도 동작을 볼 수 있어요'}
-            </p>
-            <TactileFaceSim sim={sim} showLabel={mode === 'explore'} />
+        {/* 복습 모드 배너 */}
+        {reviewMode && (
+          <div className="card flex items-center justify-between gap-2 border-l-4 border-purple-400 bg-purple-50">
+            <div>
+              <p className="font-bold text-purple-800">🔁 촉각 복습</p>
+              <p className="text-xs text-purple-600">
+                {reviewPool == null ? '불러오는 중…'
+                  : reviewPool.length ? `예정·틀림·북마크 ${reviewPool.length}개를 다시 풀어요.`
+                  : '복습할 항목이 없어요. 퀴즈에서 틀리거나 북마크하면 여기 모입니다.'}
+              </p>
+            </div>
+            <button onClick={() => navigate('/tactile')} className="text-xs text-purple-500 underline whitespace-nowrap">일반 학습으로</button>
           </div>
         )}
 
-        {mode === 'explore' ? (
+        {/* 모드 전환 — 학습(커리큘럼)이 기본, 체험은 보조 (복습 모드에선 숨김) */}
+        {!reviewMode && (
+        <div className="grid grid-cols-2 gap-2 p-1.5 bg-gray-100 rounded-2xl">
+          {[['quiz', '🎯', '단계 학습', '커리큘럼 퀴즈'], ['explore', '🖐️', '자유 체험', '아무 말이나 느껴보기']].map(([id, icon, label, desc]) => (
+            <button key={id} onClick={() => setMode(id)}
+              className={`py-3 rounded-xl text-center transition-all ${mode === id ? 'bg-white shadow text-purple-700' : 'text-gray-500 hover:text-gray-700'}`}>
+              <div className="text-xl leading-none mb-1">{icon}</div>
+              <div className="font-bold text-sm">{label}</div>
+              <div className="text-[11px] opacity-70">{desc}</div>
+            </button>
+          ))}
+        </div>
+        )}
+
+        {mode === 'explore' && !reviewMode ? (
           <div className="card space-y-4">
+            <div className="rounded-xl bg-gray-50 p-2">
+              <p className="text-xs text-center text-gray-500 mb-1">
+                얼굴 모형 시뮬레이터 {connected ? '· 하드웨어와 동시 동작' : '· 하드웨어 없이도 동작을 볼 수 있어요'}
+              </p>
+              <TactileFaceSim sim={sim} showLabel={true} />
+            </div>
             <div>
               <p className="text-sm text-gray-500 mb-2">낱말·문장을 골라 재생하면 얼굴 모형이 그대로 재현해요. 손을 대고 느껴보세요.</p>
               <div className="flex flex-wrap gap-2 mb-3">
@@ -189,49 +347,120 @@ export default function TactilePractice() {
             </div>
           </div>
         ) : (
+          <>
+          {/* ── 촉각 커리큘럼 5단계 (체계적 학습 경로) — 복습 모드에선 숨김 ── */}
+          {!reviewMode && (
+          <div className="card">
+            <div className="mb-1 flex items-center justify-between">
+              <h2 className="text-base font-bold text-gray-900">촉각 커리큘럼 · 5단계</h2>
+              <span className="text-xs text-gray-400">감각 → 변별 → 문장</span>
+            </div>
+            <p className="mb-3 text-xs text-gray-500">
+              쉬운 촉각 단서부터 시작해 단계적으로 실제 말 이해까지 확장하는 체계적 과정이에요. 단계를 골라 퀴즈로 익혀요.
+            </p>
+            <div className="space-y-1.5">
+              {LEVELS.map((lv, i) => {
+                const active = i === level
+                return (
+                  <button key={i} onClick={() => pickLevel(i)}
+                    className={`flex w-full items-center gap-3 rounded-xl border-2 p-2.5 text-left transition-all ${active ? 'border-purple-400 bg-purple-50' : 'border-gray-100 bg-white hover:border-gray-300'}`}>
+                    <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold ${active ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-500'}`}>{i + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className={`text-sm font-bold ${active ? 'text-purple-800' : 'text-gray-800'}`}>{lv.title}</div>
+                      <div className="truncate text-xs text-gray-500">{lv.goal}</div>
+                    </div>
+                    {active && <span className="shrink-0 text-xs font-semibold text-purple-600">학습 중 →</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          )}
+
+          {/* ── 선택한 단계 퀴즈 ── */}
           <div className="card space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500">모형이 단어를 '말해주면' 느끼거나 보고 무엇인지 맞혀보세요.</p>
-              <div className="flex items-center gap-3">
-                <button onClick={() => setSimHidden((v) => !v)} className="text-xs text-gray-400 underline whitespace-nowrap">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm text-gray-500">
+                {reviewMode
+                  ? <b className="text-purple-700">🔁 복습 문제</b>
+                  : <><b className="text-gray-700">{level + 1}단계 · {LEVELS[level].title}</b> — {LEVELS[level].desc}</>}
+              </p>
+              <div className="flex shrink-0 items-center gap-3">
+                {quiz && quizResult && (
+                  <button onClick={() => toggleMark(quiz.answer)} title="북마크(복습에 추가)"
+                    className={`whitespace-nowrap text-sm ${marks[quiz.answer] ? 'text-amber-500' : 'text-gray-300 hover:text-amber-400'}`}>
+                    {marks[quiz.answer] ? '★ 북마크됨' : '☆ 북마크'}
+                  </button>
+                )}
+                <button onClick={() => setSimHidden((v) => !v)} className="whitespace-nowrap text-xs text-gray-400 underline">
                   {simHidden ? '👁 시뮬레이터 보기' : '🙈 가리기(순수 촉각)'}
                 </button>
-                <span className="text-sm text-gray-500 whitespace-nowrap">점수 {score.correct}/{score.total}</span>
+                <span className="whitespace-nowrap text-sm text-gray-500">점수 {score.correct}/{score.total}</span>
               </div>
             </div>
+
+            {/* 시뮬레이터 — 선택지 바로 위에 두어 '느끼고 → 바로 답하기' 동선을 짧게 */}
+            {!simHidden && (
+              <div className="rounded-xl bg-gray-50 p-2">
+                <p className="mb-1 text-center text-xs text-gray-500">
+                  얼굴 모형 시뮬레이터 {connected ? '· 하드웨어와 동시 동작' : '· 하드웨어 없이도 동작을 볼 수 있어요'}
+                </p>
+                <TactileFaceSim sim={sim} showLabel={false} />
+              </div>
+            )}
+
             {!quiz ? (
-              <button onClick={newQuiz} className="btn-primary w-full py-3">퀴즈 시작</button>
+              reviewMode
+                ? <p className="py-4 text-center text-sm text-gray-400">{reviewPool == null ? '복습 항목 불러오는 중…' : '복습할 항목이 없어요.'}</p>
+                : <button onClick={() => newQuiz()} className="btn-primary w-full py-3">이 단계 퀴즈 풀기</button>
             ) : (
               <>
-                <div className="flex gap-2">
-                  <button onClick={playQuiz} disabled={playing}
-                    className="flex-1 py-3 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50">
-                    {playing ? '말하는 중…' : '🖐️ 다시 말해주기 (느끼기)'}
-                  </button>
+                <button onClick={playQuiz} disabled={playing}
+                  className="w-full rounded-xl bg-purple-600 py-3 font-semibold text-white transition-all hover:bg-purple-700 disabled:opacity-50">
+                  {playing ? '재생 중… 손으로 느껴보세요' : '🖐️ 느끼기 (재생)'}
+                </button>
+                <div className="flex justify-center">
+                  <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-medium text-purple-700">
+                    {quiz.type === 'input' ? '주관식 · 느낀 말을 직접 입력' : '객관식 · 보기에서 고르기'}
+                  </span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {quiz.options.map((opt) => {
-                    const picked = quizResult?.picked === opt
-                    const isAnswer = quizResult && opt === quiz.answer
-                    const cls = quizResult
-                      ? (isAnswer ? 'border-green-400 bg-green-50 text-green-700'
-                        : picked ? 'border-red-300 bg-red-50 text-red-600' : 'border-gray-200 text-gray-400')
-                      : 'border-gray-200 hover:border-primary-400 hover:bg-primary-50 text-gray-800'
-                    return (
-                      <button key={opt} onClick={() => answerQuiz(opt)} disabled={!!quizResult}
-                        className={`py-3 rounded-xl border-2 text-lg font-bold transition-all ${cls}`}>{opt}</button>
-                    )
-                  })}
-                </div>
+                {quiz.type === 'input' ? (
+                  <div className="space-y-2">
+                    <input value={typed} onChange={(e) => setTyped(e.target.value)} disabled={!!quizResult}
+                      onKeyDown={(e) => { if (e.key === 'Enter') submitTyped() }}
+                      className={`input-field text-center text-lg ${quizResult ? (quizResult.ok ? 'border-green-400 bg-green-50' : 'border-red-300 bg-red-50') : ''}`}
+                      placeholder="느낀 말을 입력하세요" />
+                    {!quizResult && (
+                      <button onClick={submitTyped} disabled={!typed.trim()}
+                        className="btn-primary w-full py-2.5 disabled:opacity-50">제출</button>
+                    )}
+                  </div>
+                ) : (
+                  <div className={`grid gap-2 ${quiz.options.length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                    {quiz.options.map((opt) => {
+                      const picked = quizResult?.picked === opt
+                      const isAnswer = quizResult && opt === quiz.answer
+                      const cls = quizResult
+                        ? (isAnswer ? 'border-green-400 bg-green-50 text-green-700'
+                          : picked ? 'border-red-300 bg-red-50 text-red-600' : 'border-gray-200 text-gray-300')
+                        : 'border-gray-200 hover:border-purple-400 hover:bg-purple-50 text-gray-800'
+                      return (
+                        <button key={opt} onClick={() => answerQuiz(opt)} disabled={!!quizResult}
+                          className={`rounded-xl border-2 py-4 text-xl font-bold transition-all ${cls}`}>{opt}</button>
+                      )
+                    })}
+                  </div>
+                )}
                 {quizResult && (
-                  <div className={`p-3 rounded-lg text-sm text-center ${quizResult.ok ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                  <div className={`rounded-lg p-3 text-center text-sm ${quizResult.ok ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
                     {quizResult.ok ? '정답! 🎉' : `정답은 "${quiz.answer}" 였어요.`}
-                    <button onClick={newQuiz} className="ml-3 underline font-semibold">다음 →</button>
+                    <button onClick={() => newQuiz()} className="ml-3 font-semibold underline">다음 →</button>
                   </div>
                 )}
               </>
             )}
           </div>
+          </>
         )}
 
         <p className="text-xs text-gray-400 text-center">

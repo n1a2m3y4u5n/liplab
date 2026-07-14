@@ -108,12 +108,12 @@ export const learningAPI = {
   },
 
   // Bookmarks
-  getBookmarks: async () => {
-    const response = await api.get('/bookmarks')
+  getBookmarks: async (domain) => {
+    const response = await api.get('/bookmarks', { params: domain ? { domain } : {} })
     return response.data
   },
-  addBookmark: async (sentence, situation, level) => {
-    const response = await api.post('/bookmarks', { sentence, situation, level })
+  addBookmark: async (sentence, situation, level, domain = 'read') => {
+    const response = await api.post('/bookmarks', { sentence, situation, level, domain })
     return response.data
   },
   removeBookmark: async (id) => {
@@ -197,9 +197,18 @@ export const speakAPI = {
   },
 }
 
-// 촉각(타도마) 하드웨어 — 한글 → 음소별 액추에이터 시퀀스
+// 데모용 더미 학습 기록 시드(계정이 비어 있을 때만)
+export const seedAPI = {
+  seedDemo: async () => (await api.post('/seed-demo')).data,
+}
+
+// 촉각(타도마) 하드웨어 — 한글 → 음소별 액추에이터 시퀀스 + 커리큘럼 진행도
 export const tactileAPI = {
   getSequence: async (text) => (await api.get('/tactile', { params: { text } })).data,
+  getCurriculum: async () => (await api.get('/tactile/curriculum')).data,
+  getPool: async (level) => (await api.get('/tactile/pool', { params: { level } })).data,
+  getReview: async () => (await api.get('/tactile/review')).data,
+  submitResult: async (stage, correct, target = '') => (await api.post('/tactile/result', { stage, correct, target })).data,
 }
 
 export default api

@@ -35,7 +35,7 @@ class ErrorBoundary extends Component {
   }
 }
 import useStore from './store/useStore'
-import { authAPI, curriculumAPI } from './api'
+import { authAPI, curriculumAPI, seedAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
 import GlobalLearningMenu from './components/GlobalLearningMenu'
 import Dashboard from './pages/Dashboard'
@@ -72,7 +72,12 @@ function AuthGate({ children }) {
     if (isAuthenticated) { setStatus('ready'); return }
     let cancelled = false
     authAPI.demoLogin()
-      .then((data) => { if (!cancelled) { setAuth(data.user, data.access_token); setStatus('ready') } })
+      .then(async (data) => {
+        if (cancelled) return
+        setAuth(data.user, data.access_token)
+        try { await seedAPI.seedDemo() } catch { /* 데모 시드 실패는 무시 */ }
+        if (!cancelled) setStatus('ready')
+      })
       .catch(() => { if (!cancelled) setStatus('error') })
     return () => { cancelled = true }
   }, [isAuthenticated, setAuth])

@@ -47,6 +47,7 @@ export default function SpeakingPractice() {
 
   const [words, setWords] = useState([])
   const [target, setTarget] = useState(null)
+  const [marks, setMarks] = useState({})          // 북마크 {target: id}
   const [frames, setFrames] = useState([])
   const [stageInfo, setStageInfo] = useState(null)   // 단계 콘텐츠(있으면 단계 모드)
   const [reviewItems, setReviewItems] = useState(null)  // null=로딩, []=비어있음
@@ -342,7 +343,22 @@ export default function SpeakingPractice() {
           <div className="card">
             <p className="text-sm text-gray-500 mb-1">{prompt ? '이렇게 해보세요' : '이렇게 말해보세요'}</p>
             {prompt && <p className="text-base font-semibold text-rose-600 text-center mb-1">{prompt}</p>}
-            <p className="text-3xl font-bold text-gray-900 text-center py-2">{target || '…'}</p>
+            <div className="flex items-center justify-center gap-2 py-2">
+              <p className="text-3xl font-bold text-gray-900">{target || '…'}</p>
+              {target && (
+                <button
+                  onClick={async () => {
+                    try {
+                      if (marks[target]) { await learningAPI.removeBookmark(marks[target]); setMarks((m) => { const n = { ...m }; delete n[target]; return n }) }
+                      else { const r = await learningAPI.addBookmark(target, '말하기', 1, 'speak'); setMarks((m) => ({ ...m, [target]: r.id })) }
+                    } catch { /* 이미 북마크됨 등 무시 */ }
+                  }}
+                  title="북마크(복습에 추가)"
+                  className={`text-xl ${marks[target] ? 'text-amber-500' : 'text-gray-300 hover:text-amber-400'}`}>
+                  {marks[target] ? '★' : '☆'}
+                </button>
+              )}
+            </div>
             <MouthAvatar frames={frames} height={230} />
             <p className="text-xs text-gray-400 mt-2 text-center">
               {metricMode ? '아래 그래프로 목소리 크기·억양을 확인해요' : '위 입모양을 참고해 또박또박 말해보세요'}
