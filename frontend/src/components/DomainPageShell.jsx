@@ -12,7 +12,7 @@ const ACCENTS = {
   analysis: { eyebrow: 'text-violet-700', panel: 'from-violet-50 to-white', mark: 'bg-violet-500' },
 }
 
-export default function DomainPageShell({ domain, title, description, children, actions, exitTo = '/dashboard' }) {
+export default function DomainPageShell({ domain, title, description, children, actions }) {
   const navigate = useNavigate()
   const accent = ACCENTS[domain] || ACCENTS.learn
 
@@ -20,17 +20,7 @@ export default function DomainPageShell({ domain, title, description, children, 
     <div className="min-h-screen bg-[#f7f8fa] text-slate-950">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-[1180px] px-4 py-4 sm:px-6">
-          <div className="flex items-center justify-between gap-4">
-            <button type="button" onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-left">
-              <span aria-hidden="true" className="relative grid h-9 w-9 place-items-center rounded-xl bg-sky-50">
-                <span className="absolute h-3.5 w-6 rounded-full border-[3px] border-sky-400" />
-                <span className="absolute h-6 w-3.5 rounded-full border-[3px] border-sky-400" />
-              </span>
-              <span className="text-lg font-black tracking-[-0.04em]">LIPLAB</span>
-            </button>
-            <button type="button" onClick={() => navigate(exitTo)} className="text-sm font-bold text-slate-500 hover:text-slate-900">✕ 나가기</button>
-          </div>
-          <nav className="mt-4 flex gap-1 rounded-2xl bg-slate-50 p-1" aria-label="콘텐츠 영역">
+          <nav className="flex gap-1 rounded-2xl bg-slate-50 p-1" aria-label="콘텐츠 영역">
             {DOMAINS.map((item) => (
               <button
                 key={item.id}
