@@ -6,6 +6,7 @@ import { learningAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
 import QuizForm from '../components/QuizForm'
 import SignPanel from '../components/SignPanel'
+import LearnHeader from '../components/LearnHeader'
 
 /**
  * 힌트 시스템: 단계별로 문장 정보를 공개
@@ -114,6 +115,8 @@ export default function Practice() {
   // 테스트는 문장마다 유형이 다르다: 주관식(test) · 4지선다(test-multiple) · 서술형(essay)
   const qType = currentScenario?.qTypes?.[currentSentenceIndex]
   const effectiveMode = practiceMode === 'study' ? 'study' : (qType || 'test')
+  // 독화 복습(틀린 문장 다시 풀기)에서 넘어온 세션인지 — ReviewLanding이 심어둔 scenario_id로 판별
+  const isReviewSession = !!currentScenario?.scenario_id?.startsWith('mistake_review_')
 
   const [visemes, setVisemes] = useState([])
   const [isPlaying, setIsPlaying] = useState(false)
@@ -256,40 +259,27 @@ export default function Practice() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">독화 연습</h1>
-              <p className="text-sm text-gray-600">
-                {currentScenario.situation} · 레벨 {currentScenario.level}
-                <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${
-                  effectiveMode === 'study' ? 'bg-green-100 text-green-700'
-                  : effectiveMode === 'test-multiple' ? 'bg-purple-100 text-purple-700'
-                  : effectiveMode === 'essay' ? 'bg-indigo-100 text-indigo-700'
-                  : 'bg-blue-100 text-blue-700'
-                }`}>
-                  {effectiveMode === 'study' ? '학습'
-                    : effectiveMode === 'test-multiple' ? '4지선다'
-                    : effectiveMode === 'essay' ? '서술형'
-                    : '주관식'}
-                </span>
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  if (confirm('연습을 종료하시겠습니까?')) handleFinish()
-                }}
-                className="text-gray-500 hover:text-gray-800 text-sm"
-              >
-                ✕ 나가기
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <LearnHeader
+        accent="reading"
+        title={isReviewSession ? '독화 복습' : '독화 연습'}
+        description={(
+          <>
+            {currentScenario.situation} · 레벨 {currentScenario.level}
+            <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${
+              effectiveMode === 'study' ? 'bg-green-100 text-green-700'
+              : effectiveMode === 'test-multiple' ? 'bg-purple-100 text-purple-700'
+              : effectiveMode === 'essay' ? 'bg-indigo-100 text-indigo-700'
+              : 'bg-blue-100 text-blue-700'
+            }`}>
+              {effectiveMode === 'study' ? '학습'
+                : effectiveMode === 'test-multiple' ? '4지선다'
+                : effectiveMode === 'essay' ? '서술형'
+                : '주관식'}
+            </span>
+          </>
+        )}
+        onExit={handleFinish}
+      />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Progress */}
@@ -572,7 +562,7 @@ export default function Practice() {
             className="card text-center py-12"
           >
             <div className="text-6xl mb-4">완료</div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">연습 완료!</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">{isReviewSession ? '복습 완료!' : '연습 완료!'}</h2>
             <p className="text-gray-600 mb-6">모든 문장을 완료했습니다. 수고하셨습니다!</p>
             <button onClick={handleFinish} className="btn-primary">
               나가기
