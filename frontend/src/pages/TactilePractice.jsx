@@ -122,6 +122,20 @@ export default function TactilePractice() {
           </div>
         )}
 
+        {/* 시작 전 준비 — 펌웨어 다운로드 */}
+        <div className="card">
+          <p className="font-semibold text-gray-900 mb-2">시작하기 전에</p>
+          <ol className="text-sm text-gray-600 space-y-1 mb-3 list-decimal list-inside">
+            <li>아래 펌웨어(.ino)를 내려받아 <b>아두이노 IDE</b>로 얼굴 모형(Uno)에 업로드하세요.</li>
+            <li>USB로 연결한 뒤, 아래 <b>얼굴 모형 연결</b> 버튼을 누르세요.</li>
+          </ol>
+          <a href="/liplab_face.ino" download="liplab_face.ino"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm font-semibold hover:bg-gray-900">
+            ⬇ 아두이노 펌웨어 다운로드 (liplab_face.ino)
+          </a>
+          <p className="text-xs text-gray-400 mt-2">배선·핀 연결 방법은 파일 상단 주석에 정리되어 있어요.</p>
+        </div>
+
         {/* 연결 */}
         <div className="card flex items-center justify-between">
           <div>
