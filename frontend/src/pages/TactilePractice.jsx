@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { tactileAPI } from '../api'
+import TactileFaceSim from '../components/TactileFaceSim'
 
 /**
  * 촉각(타도마) 학습 — 얼굴 모형(아두이노)을 손으로 느끼며 말을 이해하는 훈련.
@@ -23,7 +24,8 @@ export default function TactilePractice() {
   const [status, setStatus] = useState('')
   const [text, setText] = useState('바다')
   const [playing, setPlaying] = useState(false)
-  const [playingLabel, setPlayingLabel] = useState('')
+  const [sim, setSim] = useState(null)           // 시뮬레이터 현재 음소 상태
+  const [simHidden, setSimHidden] = useState(false)  // 퀴즈에서 시뮬레이터 가리기(순수 촉각)
   const [mode, setMode] = useState('explore')   // 'explore' | 'quiz'
 
   const [quiz, setQuiz] = useState(null)         // {answer, options}
@@ -56,24 +58,24 @@ export default function TactilePractice() {
     if (writerRef.current) await writerRef.current.write(enc.current.encode(line + '\n'))
   }
 
-  const playSequence = async (seq, showLabels = true) => {
+  const playSequence = async (seq) => {
     setPlaying(true)
+    let i = 0
     for (const p of seq) {
-      if (showLabels) setPlayingLabel(p.label)
+      setSim({ jaw: p.jaw, lip: p.lip, voicing: p.voicing, airflow: p.airflow, label: p.label, idx: i++ })
       const a = AIRFLOW_CODE[p.airflow] ?? 0
-      await sendLine(`${p.jaw},${p.lip},${p.voicing},${a},${p.duration_ms}`)
-      await sleep(p.duration_ms + 40)   // 하드웨어가 유지하는 동안 대기
+      await sendLine(`${p.jaw},${p.lip},${p.voicing},${a},${p.duration_ms}`)   // 하드웨어(연결 시)
+      await sleep(p.duration_ms + 40)   // 시뮬레이터/하드웨어가 유지하는 동안 대기
     }
     await sendLine('0,0,0,0,0')          // 정지(휴지)
-    setPlayingLabel(''); setPlaying(false)
+    setSim(null); setPlaying(false)
   }
 
   const playText = async (t) => {
-    if (!connected) { setStatus('먼저 얼굴 모형을 연결하세요.'); return }
-    if (playing) return
+    if (playing || !t.trim()) return
     try {
       const d = await tactileAPI.getSequence(t)
-      await playSequence(d.sequence, true)
+      await playSequence(d.sequence)   // 하드웨어 미연결이면 시뮬레이터만 동작
     } catch { setStatus('음소 시퀀스를 불러오지 못했어요.') }
   }
 
@@ -86,9 +88,8 @@ export default function TactilePractice() {
   }
   const playQuiz = async () => {
     if (!quiz || playing) return
-    if (!connected) { setStatus('먼저 얼굴 모형을 연결하세요.'); return }
     const d = await tactileAPI.getSequence(quiz.answer)
-    await playSequence(d.sequence, false)   // 라벨 숨김 — 손으로만 느끼게
+    await playSequence(d.sequence)
   }
   const answerQuiz = (opt) => {
     if (!quiz || quizResult) return
@@ -158,6 +159,16 @@ export default function TactilePractice() {
           ))}
         </div>
 
+        {/* 얼굴 모형 시뮬레이터 — 재생과 동시에 동작(하드웨어 없어도 미리보기) */}
+        {!(mode === 'quiz' && simHidden) && (
+          <div className="card">
+            <p className="text-xs text-center text-gray-500 mb-1">
+              얼굴 모형 시뮬레이터 {connected ? '· 하드웨어와 동시 동작' : '· 하드웨어 없이도 동작을 볼 수 있어요'}
+            </p>
+            <TactileFaceSim sim={sim} showLabel={mode === 'explore'} />
+          </div>
+        )}
+
         {mode === 'explore' ? (
           <div className="card space-y-4">
             <div>
@@ -172,23 +183,28 @@ export default function TactilePractice() {
                 className="input-field" placeholder="직접 입력 (한글 문장)" />
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={() => playText(text)} disabled={!connected || playing || !text.trim()}
+              <button onClick={() => playText(text)} disabled={playing || !text.trim()}
                 className="btn-primary px-6 py-3 disabled:opacity-50">{playing ? '재생 중…' : '▶ 재생 (느껴보기)'}</button>
-              {playingLabel && <span className="text-2xl font-bold text-primary-600 animate-pulse">{playingLabel}</span>}
+              {!connected && <span className="text-xs text-gray-400">하드웨어 미연결 — 시뮬레이터로 재생</span>}
             </div>
           </div>
         ) : (
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500">모형이 단어를 '말해주면' 손으로 느끼고 무엇인지 맞혀보세요.</p>
-              <span className="text-sm text-gray-500">점수 {score.correct}/{score.total}</span>
+              <p className="text-sm text-gray-500">모형이 단어를 '말해주면' 느끼거나 보고 무엇인지 맞혀보세요.</p>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setSimHidden((v) => !v)} className="text-xs text-gray-400 underline whitespace-nowrap">
+                  {simHidden ? '👁 시뮬레이터 보기' : '🙈 가리기(순수 촉각)'}
+                </button>
+                <span className="text-sm text-gray-500 whitespace-nowrap">점수 {score.correct}/{score.total}</span>
+              </div>
             </div>
             {!quiz ? (
               <button onClick={newQuiz} className="btn-primary w-full py-3">퀴즈 시작</button>
             ) : (
               <>
                 <div className="flex gap-2">
-                  <button onClick={playQuiz} disabled={!connected || playing}
+                  <button onClick={playQuiz} disabled={playing}
                     className="flex-1 py-3 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50">
                     {playing ? '말하는 중…' : '🖐️ 다시 말해주기 (느끼기)'}
                   </button>
