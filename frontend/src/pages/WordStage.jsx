@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
+import LearnHeader from '../components/LearnHeader'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
@@ -38,15 +39,12 @@ export default function WordStage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">음절·단어</h1>
-            <p className="text-sm text-gray-500">입모양만 보고 어떤 단어인지 맞혀보세요</p>
-          </div>
-          <button onClick={() => navigate('/pillar/reading')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
-        </div>
-      </header>
+      <LearnHeader
+        accent="reading"
+        title="음절·단어"
+        description="입모양만 보고 어떤 단어인지 맞혀보세요"
+        onExit={() => navigate('/pillar/reading')}
+      />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <WordQuiz data={data} />
       </main>

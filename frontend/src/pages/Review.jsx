@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, reviewAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
+import LearnHeader from '../components/LearnHeader'
 
 /**
  * 오늘의 복습 (간격 반복 SRS)
@@ -46,15 +47,13 @@ export default function Review() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">입모양·단어 복습</h1>
-            <p className="text-sm text-gray-500">{state === 'active' ? `${idx + 1} / ${items.length}` : '복습 일정이 된 항목을 다시 만나요'}</p>
-          </div>
-          <button onClick={() => navigate('/pillar/reading')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
-        </div>
-      </header>
+      <LearnHeader
+        accent="reading"
+        title="입모양·단어 복습"
+        description={state === 'active' ? `${idx + 1} / ${items.length}` : '복습 일정이 된 항목을 다시 만나요'}
+        maxWidth="max-w-3xl"
+        onExit={() => navigate('/pillar/reading')}
+      />
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         {state === 'empty' && (
           <div className="card text-center py-14">

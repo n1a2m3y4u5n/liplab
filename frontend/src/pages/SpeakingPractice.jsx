@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, learningAPI, speakAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
+import LearnHeader from '../components/LearnHeader'
 
 /**
  * 말하기 연습 (발화 피드백)
@@ -316,19 +317,12 @@ export default function SpeakingPractice() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {reviewMode ? '🔁 발음 복습' : stageInfo ? `${stageInfo.icon} ${stageInfo.stage}단계 · ${stageInfo.title}` : '말하기 연습'}
-            </h1>
-            <p className="text-sm text-gray-500">
-              {reviewMode ? '틀렸던 발음을 다시 또박또박 연습해요' : (stageInfo?.guide || '귀 대신 눈으로 — 내 목소리를 보면서 발음을 다듬어요')}
-            </p>
-          </div>
-          <button onClick={() => { teardown(); navigate('/pillar/speaking') }} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
-        </div>
-      </header>
+      <LearnHeader
+        accent="speaking"
+        title={reviewMode ? '🔁 발음 복습' : stageInfo ? `${stageInfo.icon} ${stageInfo.stage}단계 · ${stageInfo.title}` : '말하기 연습'}
+        description={reviewMode ? '틀렸던 발음을 다시 또박또박 연습해요' : (stageInfo?.guide || '귀 대신 눈으로 — 내 목소리를 보면서 발음을 다듬어요')}
+        onExit={() => { teardown(); navigate('/pillar/speaking') }}
+      />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {reviewEmpty ? (
