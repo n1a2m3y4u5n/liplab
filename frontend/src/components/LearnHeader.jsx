@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 
 // 학습 화면 상단 헤더 — 기둥(독화·말하기·촉각)별 단색 배경을 입히고,
 // '나가기'에 마우스를 올리면 그 글자 위치에서 붉은 물감이 퍼지듯 헤더를 덮는다.
@@ -18,20 +18,26 @@ export default function LearnHeader({ title, description, accent = 'reading', on
   const btnRef = useRef(null)
   const bgColor = HEADER_ACCENTS[accent] || HEADER_ACCENTS.reading
 
-  // 붉은 물감이 '나가기' 글자에서 퍼지도록, 버튼 중심을 헤더 기준 %좌표로 계산
-  const handleEnter = () => {
+  // 붉은 물감이 '나가기' 글자에서 퍼지도록, 버튼 중심을 헤더 기준 %좌표로 계산.
+  // 호버 순간이 아니라 마운트·리사이즈 때 미리 측정해 둔다 — 그래야 첫 호버에서도
+  // 중심점이 바뀌지 않고(=옆으로 미끄러지지 않고) 반경만 커진다.
+  const measure = () => {
     const h = headerRef.current
     const b = btnRef.current
-    if (h && b) {
-      const hr = h.getBoundingClientRect()
-      const br = b.getBoundingClientRect()
-      setOrigin({
-        x: ((br.left + br.width / 2 - hr.left) / hr.width) * 100,
-        y: ((br.top + br.height / 2 - hr.top) / hr.height) * 100,
-      })
-    }
-    setExitHover(true)
+    if (!h || !b) return
+    const hr = h.getBoundingClientRect()
+    const br = b.getBoundingClientRect()
+    setOrigin({
+      x: ((br.left + br.width / 2 - hr.left) / hr.width) * 100,
+      y: ((br.top + br.height / 2 - hr.top) / hr.height) * 100,
+    })
   }
+
+  useLayoutEffect(() => {
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
 
   return (
     <header ref={headerRef} className="relative overflow-hidden border-b border-slate-200" style={{ backgroundColor: bgColor }}>
@@ -53,7 +59,7 @@ export default function LearnHeader({ title, description, accent = 'reading', on
           ref={btnRef}
           type="button"
           onClick={onExit}
-          onMouseEnter={handleEnter}
+          onMouseEnter={() => setExitHover(true)}
           onMouseLeave={() => setExitHover(false)}
           className={`shrink-0 text-sm font-bold transition-colors ${exitHover ? 'text-red-900' : 'text-slate-600 hover:text-slate-900'}`}
         >
