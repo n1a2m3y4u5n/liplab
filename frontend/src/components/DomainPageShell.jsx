@@ -1,3 +1,11 @@
+import { useNavigate } from 'react-router-dom'
+
+const DOMAINS = [
+  { id: 'learn', label: '학습', to: '/dashboard', active: 'bg-sky-600 text-white', idle: 'text-sky-700 hover:bg-sky-50' },
+  { id: 'review', label: '복습', to: '/review/today', active: 'bg-amber-500 text-white', idle: 'text-amber-800 hover:bg-amber-50' },
+  { id: 'analysis', label: '분석', to: '/analysis/overview', active: 'bg-violet-600 text-white', idle: 'text-violet-700 hover:bg-violet-50' },
+]
+
 const ACCENTS = {
   learn: { eyebrow: 'text-sky-700', panel: 'from-sky-50 to-white', mark: 'bg-sky-500' },
   review: { eyebrow: 'text-amber-800', panel: 'from-amber-50 to-white', mark: 'bg-amber-500' },
