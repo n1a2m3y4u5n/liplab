@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import LearnHeader from '../components/LearnHeader'
 
 // LIPLAB의 세 학습 기둥 — 각 기둥의 사용법.
 const PILLARS = [
@@ -10,10 +12,10 @@ const PILLARS = [
     modes: [
       { name: '① 단계 학습 (0~2단계)', steps: [
         '처음이면 입문·배치로 나에게 맞는 트랙을 정해요.',
-        '입모양 인지 → 음절·단어를 3D 애니메이션으로 단계별로 익혀요.',
+        '입모양 학습 → 단어 학습을 3D 애니메이션으로 단계별로 진행해요.',
         '문맥 추론 훈련으로 안 보이는 소리를 추리하는 힘을 길러요.',
       ] },
-      { name: '② 문장·대화 실전 (3~4단계)', steps: [
+      { name: '② 문장 학습 (3~4단계)', steps: [
         '상황(카페·병원 등)과 난이도를 골라요.',
         'AI가 만든 문장을 입모양만 보고 맞혀요 (주관식·4지선다·서술형 혼합).',
         '대화 실전은 AI와 주고받으며 실제 대화 흐름을 연습해요.',
@@ -104,127 +106,181 @@ const STRATEGIES = [
   { icon: '🔁', title: '못 알아들으면 되묻기', body: '전부 완벽히 읽을 필요는 없습니다. 핵심 단어만 확인하거나 "○○ 말씀이세요?"로 좁혀가세요.' },
 ]
 
+// 한눈에 보는 학습 흐름 — '빠른 시작' 탭 상단.
+const FLOW = [
+  { n: '1', title: '기둥을 고른다', body: '독화·말하기·촉각 중 지금 훈련할 축을 선택해요.' },
+  { n: '2', title: '단계별로 학습한다', body: '기초부터 실전까지, 나에게 맞는 단계를 순서대로 밟아요.' },
+  { n: '3', title: '복습하고 분석한다', body: '틀린 문제·예정 항목을 다시 풀고, 분석에서 약점을 확인해요.' },
+]
+
+const TABS = [
+  { key: 'start', label: '빠른 시작' },
+  { key: 'features', label: '기능별 사용법' },
+  { key: 'strategy', label: '독화 전략' },
+  { key: 'system', label: '원리 · 시스템' },
+]
+
 export default function Guide() {
   const navigate = useNavigate()
+  const [tab, setTab] = useState('start')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">사용법 안내</h1>
-            <p className="text-sm text-gray-500">LIPLAB의 모든 기능과 학습 방법을 알아보세요</p>
-          </div>
-          <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-gray-800 text-sm">
-            ← 뒤로
-          </button>
+    <div className="min-h-screen bg-[#f7f8fa] text-slate-900">
+      <LearnHeader
+        title="사용법 안내"
+        description="LIPLAB의 기능과 학습 방법을 한곳에서 알아보세요."
+        accent="reading"
+        onExit={() => navigate('/dashboard')}
+      />
+
+      <main className="mx-auto max-w-4xl px-4 py-7 sm:py-9">
+        {/* 탭 바 */}
+        <div className="sticky top-2 z-10 mb-7 flex gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 shadow-sm backdrop-blur">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              aria-current={tab === t.key ? 'page' : undefined}
+              className={`flex-1 rounded-xl px-2 py-2.5 text-sm font-bold transition ${
+                tab === t.key ? 'bg-slate-900 text-white shadow' : 'text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
-      </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+        <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
 
-        {/* 독화 전략 코칭 — 기술 자체의 요령 */}
-        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-          <h2 className="text-xl font-bold text-gray-900 mb-1">독화, 이렇게 하세요 <span className="text-primary-500">(핵심 전략)</span></h2>
-          <p className="text-sm text-gray-500 mb-4">기능 사용법 이전에, 독화라는 '기술' 자체의 요령입니다.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {STRATEGIES.map((s, i) => (
-              <div key={i} className="card">
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl shrink-0">{s.icon}</span>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">{s.title}</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed">{s.body}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.section>
-
-        {/* LIPLAB 시스템 소개 */}
-        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">LIPLAB이란?</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {SYSTEM_INFO.map((info, i) => (
-              <div key={i} className="card">
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl">{info.icon}</span>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">{info.title}</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed">{info.content}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.section>
-
-        {/* 기둥별 사용 방법 (독화·말하기·촉각) */}
-        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <h2 className="text-xl font-bold text-gray-900 mb-1">기능별 사용 방법</h2>
-          <p className="text-sm text-gray-500 mb-4">세 학습 기둥을 어떻게 쓰는지 안내해요.</p>
-          <div className="space-y-4">
-            {PILLARS.map((p) => (
-              <div key={p.key} className={`card border-l-4 ${p.color}`}>
-                <div className="flex items-center gap-3 mb-1">
-                  <span className="text-2xl">{p.icon}</span>
-                  <h3 className="text-lg font-bold text-gray-900">{p.title}</h3>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.badge}`}>기둥</span>
-                </div>
-                <p className="text-sm text-gray-500 mb-3">{p.desc}</p>
-                <div className="space-y-3">
-                  {p.modes.map((m, mi) => (
-                    <div key={mi}>
-                      <p className="text-sm font-bold text-gray-800 mb-1">{m.name}</p>
-                      <ol className="space-y-1">
-                        {m.steps.map((step, si) => (
-                          <li key={si} className="flex gap-2 text-sm text-gray-700">
-                            <span className="text-gray-400 font-bold shrink-0">{si + 1}.</span>
-                            {step}
-                          </li>
-                        ))}
-                      </ol>
+          {/* ── 빠른 시작 ── */}
+          {tab === 'start' && (
+            <div className="space-y-8">
+              <section>
+                <h2 className="mb-1 text-lg font-black">학습은 이렇게 흘러가요</h2>
+                <p className="mb-4 text-sm text-slate-500">세 단계만 기억하면 돼요.</p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {FLOW.map((f) => (
+                    <div key={f.n} className="rounded-2xl border border-slate-200 bg-white p-5">
+                      <div className="mb-3 grid h-9 w-9 place-items-center rounded-full bg-slate-900 text-sm font-black text-white">{f.n}</div>
+                      <h3 className="font-bold text-slate-900">{f.title}</h3>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-600">{f.body}</p>
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 p-3 bg-white bg-opacity-60 rounded-lg">
-                  <p className="text-xs text-gray-500">
-                    <span className="font-semibold text-primary-600">TIP</span> {p.tip}
-                  </p>
+              </section>
+
+              <section>
+                <h2 className="mb-1 text-lg font-black">세 학습 기둥</h2>
+                <p className="mb-4 text-sm text-slate-500">필요에 맞는 축을 골라 시작하세요. 자세한 사용법은 '기능별 사용법' 탭에 있어요.</p>
+                <div className="space-y-3">
+                  {PILLARS.map((p) => (
+                    <div key={p.key} className={`flex items-start gap-4 rounded-2xl border-l-4 bg-white p-5 ${p.color}`}>
+                      <span className="text-3xl">{p.icon}</span>
+                      <div>
+                        <h3 className="font-bold text-slate-900">{p.title}</h3>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-600">{p.desc}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        </motion.section>
+              </section>
 
-        {/* 보조 도구 */}
-        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">보조 도구</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {TOOLS.map((t, i) => (
-              <div key={i} className="card">
-                <div className="text-2xl mb-1">{t.icon}</div>
-                <h3 className="font-semibold text-gray-900 mb-1">{t.title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{t.body}</p>
+              <div className="pt-2 text-center">
+                <button onClick={() => navigate('/dashboard')} className="rounded-xl bg-slate-900 px-8 py-3 text-sm font-bold text-white transition hover:bg-slate-700">
+                  대시보드로 가서 시작하기 →
+                </button>
               </div>
-            ))}
-          </div>
-        </motion.section>
+            </div>
+          )}
 
-        {/* 시작하기 버튼 */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-center pb-4"
-        >
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="btn-primary px-10 py-3.5 text-base"
-          >
-            학습 시작하기 →
-          </button>
+          {/* ── 기능별 사용법 ── */}
+          {tab === 'features' && (
+            <div className="space-y-8">
+              <section className="space-y-4">
+                {PILLARS.map((p) => (
+                  <div key={p.key} className={`rounded-2xl border-l-4 bg-white p-5 sm:p-6 ${p.color}`}>
+                    <div className="mb-2 flex items-center gap-3">
+                      <span className="text-2xl">{p.icon}</span>
+                      <h3 className="text-lg font-black text-slate-900">{p.title}</h3>
+                    </div>
+                    <p className="mb-4 text-sm text-slate-600">{p.desc}</p>
+                    <div className="space-y-4">
+                      {p.modes.map((m, mi) => (
+                        <div key={mi} className="rounded-xl bg-slate-50/70 p-4">
+                          <p className="mb-2 text-sm font-black text-slate-800">{m.name}</p>
+                          <ol className="space-y-1.5">
+                            {m.steps.map((step, si) => (
+                              <li key={si} className="flex gap-2.5 text-sm leading-relaxed text-slate-700">
+                                <span className="shrink-0 font-black text-slate-400">{si + 1}</span>
+                                <span>{step}</span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      ))}
+                    </div>
+                    <div className={`mt-4 rounded-lg px-3 py-2.5 text-xs leading-relaxed ${p.badge}`}>
+                      <span className="font-black">TIP · </span>{p.tip}
+                    </div>
+                  </div>
+                ))}
+              </section>
+
+              <section>
+                <h2 className="mb-1 text-lg font-black">보조 도구</h2>
+                <p className="mb-4 text-sm text-slate-500">기둥과 별개로 언제든 쓰는 기능이에요.</p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {TOOLS.map((t, i) => (
+                    <div key={i} className="rounded-2xl border border-slate-200 bg-white p-5">
+                      <div className="mb-2 text-2xl">{t.icon}</div>
+                      <h3 className="font-bold text-slate-900">{t.title}</h3>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-600">{t.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* ── 독화 전략 ── */}
+          {tab === 'strategy' && (
+            <section>
+              <h2 className="mb-1 text-lg font-black">독화, 이렇게 하세요</h2>
+              <p className="mb-4 text-sm text-slate-500">기능 사용법 이전에, 독화라는 '기술' 자체의 요령이에요.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {STRATEGIES.map((s, i) => (
+                  <div key={i} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-5">
+                    <span className="shrink-0 text-2xl">{s.icon}</span>
+                    <div>
+                      <h3 className="font-bold text-slate-900">{s.title}</h3>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-600">{s.body}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ── 원리 · 시스템 ── */}
+          {tab === 'system' && (
+            <section>
+              <h2 className="mb-1 text-lg font-black">LIPLAB은 어떻게 동작하나요</h2>
+              <p className="mb-4 text-sm text-slate-500">학습을 뒷받침하는 원리와 채점 방식이에요.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {SYSTEM_INFO.map((info, i) => (
+                  <div key={i} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-5">
+                    <span className="shrink-0 text-2xl">{info.icon}</span>
+                    <div>
+                      <h3 className="font-bold text-slate-900">{info.title}</h3>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-600">{info.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
         </motion.div>
       </main>
     </div>
