@@ -45,17 +45,17 @@ function makeQuestion(lv) {
 const FAN_PWM_PINS = [3, 5, 6, 11]
 const MIN_PIN = 2   // D0·D1은 USB 시리얼(RX/TX)이라 부품 연결 금지
 const PIN_FIELDS = [
-  { key: 'jaw', label: '턱 서보', token: 'PIN_JAW', def: 9, pwm: false },
-  { key: 'lip', label: '입술 서보', token: 'PIN_LIP', def: 10, pwm: false },
-  { key: 'vib', label: '진동 모터', token: 'PIN_VIB', def: 5, pwm: false },
-  { key: 'fan', label: '팬(기류)', token: 'PIN_FAN', def: 6, pwm: true },   // analogWrite → PWM 핀 필요
+  { key: 'jaw', label: '턱 서보', token: 'pinJaw', def: 9, pwm: false },
+  { key: 'lip', label: '입술 서보', token: 'pinLip', def: 10, pwm: false },
+  { key: 'vib', label: '진동 모터', token: 'pinVib', def: 5, pwm: false },
+  { key: 'fan', label: '팬(기류)', token: 'pinFan', def: 6, pwm: true },   // analogWrite → PWM 핀 필요
 ]
 
-// 템플릿 .ino의 핀 상수를 사용자 값으로 치환하고, 상단에 사용자 핀표 주석을 붙인다.
+// 템플릿 .ino의 기본 핀 변수를 사용자 값으로 치환하고, 상단에 사용자 핀표 주석을 붙인다.
 function buildCustomIno(template, pins) {
   let out = template
   for (const f of PIN_FIELDS) {
-    out = out.replace(new RegExp(`(const int ${f.token}\\s*=\\s*)\\d+`), `$1${pins[f.key]}`)
+    out = out.replace(new RegExp(`(int ${f.token}\\s*=\\s*)\\d+`), `$1${pins[f.key]}`)
   }
   const header = [
     '// ===== 사용자 지정 핀 배치 (LIPLAB 웹에서 생성) =====',
@@ -98,12 +98,19 @@ export default function TactilePractice() {
   const [pins, setPins] = useState({ jaw: 9, lip: 10, vib: 5, fan: 6 })  // 커스텀 펌웨어 핀
   const [pinMsg, setPinMsg] = useState('')
 
-  // 사용자 핀 배치를 반영한 .ino 생성·다운로드
-  const downloadCustomIno = async () => {
+  // 핀 입력 검증 — 문제 있으면 안내 문구, 없으면 null
+  const validatePins = () => {
     const vals = PIN_FIELDS.map((f) => pins[f.key])
-    if (vals.some((v) => !Number.isInteger(v) || v < MIN_PIN || v > 13)) { setPinMsg('핀은 2~13 사이 정수로 입력해 주세요. (D0·D1은 USB 통신용이라 쓸 수 없어요)'); return }
-    if (new Set(vals).size !== vals.length) { setPinMsg('부품마다 서로 다른 핀을 써야 해요(중복 불가).'); return }
-    if (!FAN_PWM_PINS.includes(pins.fan)) { setPinMsg(`팬은 ${FAN_PWM_PINS.join('·')}번 중 하나여야 바람 세기가 조절돼요. (서보와 겹치지 않는 PWM 핀)`); return }
+    if (vals.some((v) => !Number.isInteger(v) || v < MIN_PIN || v > 13)) return '핀은 2~13 사이 정수로 입력해 주세요. (D0·D1은 USB 통신용이라 쓸 수 없어요)'
+    if (new Set(vals).size !== vals.length) return '부품마다 서로 다른 핀을 써야 해요(중복 불가).'
+    if (!FAN_PWM_PINS.includes(pins.fan)) return `팬은 ${FAN_PWM_PINS.join('·')}번 중 하나여야 바람 세기가 조절돼요. (서보와 겹치지 않는 PWM 핀)`
+    return null
+  }
+
+  // 사용자 핀 배치를 반영한 .ino 생성·다운로드(오프라인 플래시용)
+  const downloadCustomIno = async () => {
+    const err = validatePins()
+    if (err) { setPinMsg(err); return }
     try {
       const tpl = await (await fetch('/hardware/liplab_face.ino')).text()
       const blob = new Blob([buildCustomIno(tpl, pins)], { type: 'text/plain;charset=utf-8' })
@@ -113,6 +120,18 @@ export default function TactilePractice() {
       URL.revokeObjectURL(url)
       setPinMsg('✓ 내 핀 배치가 반영된 liplab_face_custom.ino를 내려받았어요.')
     } catch { setPinMsg('펌웨어 템플릿을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.') }
+  }
+
+  // 연결된 아두이노에 런타임 핀 설정 전송(재업로드 불필요) — SET,jaw,lip,vib,fan
+  const sendPins = async () => {
+    const err = validatePins()
+    if (err) { setPinMsg(err); return }
+    if (!connected) { setPinMsg('먼저 아래 "얼굴 모형 연결"을 눌러 연결해 주세요.'); return }
+    if (playing) { setPinMsg('재생이 끝난 뒤에 핀을 적용해 주세요.'); return }
+    try {
+      await sendLine(`SET,${pins.jaw},${pins.lip},${pins.vib},${pins.fan}`)
+      setPinMsg('✓ 이 핀 배치를 아두이노에 적용했어요 (재업로드 없이 즉시 반영).')
+    } catch { setPinMsg('전송에 실패했어요. 연결 상태를 확인해 주세요.') }
   }
 
   // 복습 모드: 예정·틀림·북마크 항목을 받아 문제 풀로 사용
@@ -174,6 +193,8 @@ export default function TactilePractice() {
       portRef.current = port
       writerRef.current = port.writable.getWriter()
       setConnected(true); setStatus('얼굴 모형이 연결되었어요.')
+      // 연결되면 현재 핀 배치를 즉시 반영(런타임) — 유효할 때만
+      if (!validatePins()) { try { await sendLine(`SET,${pins.jaw},${pins.lip},${pins.vib},${pins.fan}`) } catch { /* noop */ } }
     } catch (e) { setStatus('연결이 취소되었거나 실패했어요. ' + (e?.message || '')) }
   }
 
@@ -327,9 +348,10 @@ export default function TactilePractice() {
 
           {/* 내 핀 배치로 커스텀 .ino 생성 */}
           <div className="mt-3 rounded-xl border border-purple-200 bg-purple-50/50 p-3">
-            <p className="text-sm font-semibold text-gray-800">🔧 내 핀 배치로 만들기</p>
+            <p className="text-sm font-semibold text-gray-800">🔧 내 핀 배치 설정</p>
             <p className="mt-0.5 text-[11px] text-gray-500">
-              각 부품을 연결한 아두이노 핀(D2~D13)을 입력하면, 그 배치가 반영된 펌웨어를 바로 받을 수 있어요.
+              각 부품을 연결한 아두이노 핀(D2~D13)을 입력하세요. 연결돼 있으면 <b>재업로드 없이 바로 적용</b>되고,
+              오프라인 플래시용 <b>맞춤 펌웨어</b>도 받을 수 있어요.
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {PIN_FIELDS.map((f) => (
@@ -346,10 +368,17 @@ export default function TactilePractice() {
               ))}
             </div>
             <p className="mt-1 text-[10px] text-gray-400">D0·D1은 USB 통신용이라 제외돼요. 팬은 세기 조절이 필요해 서보와 겹치지 않는 PWM 핀(3·5·6·11)에 연결하세요.</p>
-            <button onClick={downloadCustomIno}
-              className="mt-2 w-full rounded-lg bg-purple-600 py-2 text-sm font-semibold text-white hover:bg-purple-700">
-              ⬇ 내 핀 배치 펌웨어 다운로드
-            </button>
+            <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+              <button onClick={sendPins} disabled={!connected || playing}
+                className="rounded-lg bg-purple-600 py-2 text-sm font-semibold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400">
+                🔌 연결된 모형에 이 핀 적용
+              </button>
+              <button onClick={downloadCustomIno}
+                className="rounded-lg border-2 border-purple-300 py-2 text-sm font-semibold text-purple-700 transition hover:bg-purple-100">
+                ⬇ 맞춤 펌웨어(.ino) 받기
+              </button>
+            </div>
+            {!connected && <p className="mt-1 text-[10px] text-gray-400">‘즉시 적용’은 아래 <b>얼굴 모형 연결</b> 후에 쓸 수 있어요. (한 번은 펌웨어를 업로드해 둬야 함)</p>}
             {pinMsg && <p className="mt-1 text-[11px] text-gray-600">{pinMsg}</p>}
           </div>
         </div>
