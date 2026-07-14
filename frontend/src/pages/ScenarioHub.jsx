@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { curriculumAPI, learningAPI } from '../api'
 import useStore from '../store/useStore'
+import LearnHeader from '../components/LearnHeader'
 
 const SITUATIONS = ['카페', '병원', '식당', '은행', '쇼핑', '대중교통', '직장', '학교', '직접 입력']
 const QUESTION_TYPES = ['test', 'test-multiple', 'essay']
@@ -65,15 +66,12 @@ export default function ScenarioHub() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">문장·대화 실전</h1>
-            <p className="text-sm text-gray-500">연습할 상황과 난이도를 고르면 AI가 독화 문장과 대화를 준비합니다</p>
-          </div>
-          <button onClick={() => navigate('/pillar/reading')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
-        </div>
-      </header>
+      <LearnHeader
+        accent="reading"
+        title="문장·대화 실전"
+        description="연습할 상황과 난이도를 고르면 AI가 독화 문장과 대화를 준비합니다"
+        onExit={() => navigate('/pillar/reading')}
+      />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">

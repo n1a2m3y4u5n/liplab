@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { learningAPI, reviewAPI, speakAPI, tactileAPI } from '../api'
 import DomainPageShell from '../components/DomainPageShell'
 import useStore from '../store/useStore'
+import LearnHeader from '../components/LearnHeader'
 
 const QUESTION_TYPES = ['test', 'test-multiple', 'essay']
 const qTypes = (length) => Array.from({ length }, (_, index) => QUESTION_TYPES[index % QUESTION_TYPES.length]).sort(() => Math.random() - 0.5)
@@ -68,15 +69,12 @@ export default function ReviewLanding({ mode = 'today' }) {
   if (mode === 'mistakes') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-        <header className="bg-white shadow-sm border-b border-gray-200">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">틀린 문장 다시 풀기</h1>
-              <p className="text-sm text-gray-500">독화 테스트에서 놓친 문장만 모아 다시 확인합니다</p>
-            </div>
-            <button onClick={() => navigate('/pillar/reading')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
-          </div>
-        </header>
+        <LearnHeader
+          accent="reading"
+          title="틀린 문장 다시 풀기"
+          description="독화 테스트에서 놓친 문장만 모아 다시 확인합니다"
+          onExit={() => navigate('/pillar/reading')}
+        />
 
         <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-5">
           {loading ? (

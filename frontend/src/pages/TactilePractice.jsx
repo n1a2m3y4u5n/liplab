@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { tactileAPI, learningAPI } from '../api'
 import TactileFaceSim from '../components/TactileFaceSim'
+import LearnHeader from '../components/LearnHeader'
 
 /**
  * 촉각(타도마) 학습 — 얼굴 모형(아두이노)을 손으로 느끼며 말을 이해하는 훈련.
@@ -304,15 +305,13 @@ export default function TactilePractice() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">🖐️ 촉각 학습 (타도마)</h1>
-            <p className="text-sm text-gray-500">얼굴 모형의 턱·입술·진동·바람을 손으로 느끼며 말을 이해해요</p>
-          </div>
-          <button onClick={() => { disconnect(); navigate('/pillar/tactile') }} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
-        </div>
-      </header>
+      <LearnHeader
+        accent="tactile"
+        title="🖐️ 촉각 학습 (타도마)"
+        description="얼굴 모형의 턱·입술·진동·바람을 손으로 느끼며 말을 이해해요"
+        maxWidth="max-w-4xl"
+        onExit={() => { disconnect(); navigate('/pillar/tactile') }}
+      />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         {/* 브라우저 안내 */}

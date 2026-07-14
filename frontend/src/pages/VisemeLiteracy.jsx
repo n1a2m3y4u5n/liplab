@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI } from '../api'
+import LearnHeader from '../components/LearnHeader'
 import AvatarVRM from '../components/AvatarVRM'
 
 /**
@@ -69,15 +70,12 @@ export default function VisemeLiteracy() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">입모양 인지</h1>
-            <p className="text-sm text-gray-500">10개 입모양 그룹을 익히고, 무엇이 보이고 무엇이 안 보이는지 배웁니다</p>
-          </div>
-          <button onClick={() => navigate('/pillar/reading')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
-        </div>
-      </header>
+      <LearnHeader
+        accent="reading"
+        title="입모양 인지"
+        description="10개 입모양 그룹을 익히고, 무엇이 보이고 무엇이 안 보이는지 배웁니다"
+        onExit={() => navigate('/pillar/reading')}
+      />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex gap-1 mb-6 p-1 bg-gray-100 rounded-xl max-w-sm">
