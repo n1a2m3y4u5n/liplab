@@ -988,6 +988,17 @@ async def recommended_level(current_user=Depends(get_current_user), db: AsyncSes
 
 # ── 발화 커리큘럼(6단계) — 상태·게이팅·콘텐츠 ────────────────────────────────
 import speak_curriculum as _speakcur
+import tactile as _tactile
+
+
+@app.get("/api/tactile")
+async def get_tactile(text: str):
+    """한글 텍스트 → 얼굴 모형(아두이노)이 재현할 음소별 액추에이터 시퀀스.
+    (촉각/타도마 학습 — 턱 각도·입술·진동·기류·지속시간)"""
+    if not text or not text.strip():
+        raise HTTPException(status_code=400, detail="text required")
+    seq = _tactile.text_to_tactile(text.strip())
+    return {"text": text, "sequence": seq, "count": len(seq)}
 
 
 async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
