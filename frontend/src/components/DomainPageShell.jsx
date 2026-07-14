@@ -1,11 +1,3 @@
-import { useNavigate } from 'react-router-dom'
-
-const DOMAINS = [
-  { id: 'learn', label: '학습', to: '/dashboard', active: 'bg-sky-600 text-white', idle: 'text-sky-700 hover:bg-sky-50' },
-  { id: 'review', label: '복습', to: '/review/today', active: 'bg-amber-500 text-white', idle: 'text-amber-800 hover:bg-amber-50' },
-  { id: 'analysis', label: '분석', to: '/analysis/overview', active: 'bg-violet-600 text-white', idle: 'text-violet-700 hover:bg-violet-50' },
-]
-
 const ACCENTS = {
   learn: { eyebrow: 'text-sky-700', panel: 'from-sky-50 to-white', mark: 'bg-sky-500' },
   review: { eyebrow: 'text-amber-800', panel: 'from-amber-50 to-white', mark: 'bg-amber-500' },
@@ -13,35 +5,10 @@ const ACCENTS = {
 }
 
 export default function DomainPageShell({ domain, title, description, children, actions }) {
-  const navigate = useNavigate()
   const accent = ACCENTS[domain] || ACCENTS.learn
 
   return (
     <div className="min-h-screen bg-[#f7f8fa] text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-[1180px] px-4 py-4 sm:px-6">
-          <div className="flex items-center justify-between gap-4">
-            <button type="button" onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-left">
-              <span aria-hidden="true" className="grid h-9 w-9 place-items-center rounded-xl bg-sky-50 font-black text-sky-600">L</span>
-              <span className="text-lg font-black tracking-[-0.04em]">LIPLAB</span>
-            </button>
-            <button type="button" onClick={() => navigate('/dashboard')} className="text-sm font-bold text-slate-500 hover:text-slate-900">대시보드로</button>
-          </div>
-          <nav className="mt-4 flex gap-1 rounded-2xl bg-slate-50 p-1" aria-label="콘텐츠 영역">
-            {DOMAINS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => navigate(item.to)}
-                aria-current={domain === item.id ? 'page' : undefined}
-                className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-black transition ${domain === item.id ? item.active : item.idle}`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </header>
 
       <main className="mx-auto max-w-[1180px] px-4 py-7 sm:px-6 sm:py-10">
         <section className={`relative overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br ${accent.panel} px-5 py-7 sm:px-8 sm:py-9`}>
