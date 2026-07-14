@@ -7,15 +7,14 @@ const PILLAR_NAV = [
   {
     id: 'reading',
     label: '독화',
-    to: '/pillar/reading',
     bg: 'from-[#fffede] via-[#fffbb6] to-[#fff58d]',
     petGrad: 'from-sky-300 via-sky-400 to-sky-600',
     intro: '입모양을 보고 말을 이해하는 독화예요. 무엇부터 배워볼까요? 👀',
     theme: { text: 'text-sky-700', line: 'bg-sky-500' },
     items: [
-      { label: '입모양 익히기', description: '자음·모음의 입모양 익히기', icon: '👄', to: '/learn/viseme' },
-      { label: '단어 익히기', description: '비슷한 입모양 구별하기', icon: '🔤', to: '/learn/word' },
-      { label: '문장 익히기', description: '상황별 독화와 AI 대화', icon: '💬', to: '/learn/scenario' },
+      { label: '입모양 학습', description: '자음·모음의 입모양 학습', icon: '👄', to: '/learn/viseme' },
+      { label: '단어 학습', description: '비슷한 입모양 구별 학습', icon: '🔤', to: '/learn/word' },
+      { label: '문장 학습', description: '상황별 독화와 AI 대화 학습', icon: '💬', to: '/learn/scenario' },
       { label: '문맥 추론', description: '앞뒤 맥락으로 뜻 찾기', icon: '🧩', to: '/learn/closure' },
       { label: '내 문장 발음 보기', description: '원하는 문장의 입모양 확인하기', icon: '✍️', to: '/pronounce' },
       { label: '독화 복습', description: '틀린 문장과 예정 항목 다시 풀기', icon: '🔁', to: '/review/mistakes' },
@@ -24,20 +23,18 @@ const PILLAR_NAV = [
   {
     id: 'speaking',
     label: '말하기',
-    to: '/pillar/speaking',
     bg: 'from-[#fff6f7] via-[#ffe7eb] to-[#ffd5dc]',
     petGrad: 'from-rose-300 via-rose-400 to-pink-500',
     intro: '내 발음을 눈으로 보며 또박또박 다듬어요! 🎤',
     theme: { text: 'text-rose-700', line: 'bg-rose-500' },
     items: [
-      { label: '말하기 연습', description: '발성부터 문장 억양까지 연습하기', icon: '🎤', to: '/learn/speaking' },
+      { label: '말하기 학습', description: '발성부터 문장 억양까지 학습하기', icon: '🎤', to: '/learn/speaking' },
       { label: '말하기 복습', description: '부족했던 발음 다시 연습하기', icon: '🔁', to: '/review/speaking' },
     ],
   },
   {
     id: 'tactile',
     label: '촉각(타도마)',
-    to: '/pillar/tactile',
     bg: 'from-[#faf8ff] via-[#eee9ff] to-[#ddd6fe]',
     petGrad: 'from-violet-300 via-violet-400 to-purple-600',
     intro: '얼굴 모형을 손끝으로 느껴 말을 이해하는 촉각 학습이에요. ✋',
@@ -50,7 +47,6 @@ const PILLAR_NAV = [
   {
     id: 'etc',
     label: '기타',
-    to: null,
     bg: 'from-[#f8fafc] via-[#eef2f7] to-[#dbe3ec]',
     petGrad: 'from-slate-300 via-slate-400 to-slate-600',
     intro: '수어·분석·사용법도 준비했어요. 골라보세요! ✨',
@@ -134,8 +130,7 @@ export default function GlobalLearningMenu() {
   }
 
   const chooseTab = (tab) => {
-    if (tab.to) go(tab.to)
-    else if (activeNavMenu === tab.id) closeNav()
+    if (activeNavMenu === tab.id) closeNav()
     else openNav(tab.id)
   }
 
@@ -194,9 +189,9 @@ export default function GlobalLearningMenu() {
               style={{ height: `calc(100dvh - ${navTop}px)` }}
               className={`absolute inset-x-0 top-0 z-0 overflow-hidden bg-gradient-to-br ${activeTopic.bg}`}
             >
-              <div className="mx-auto grid h-full max-w-[1440px] grid-cols-1 gap-6 px-5 pb-10 pt-[76px] sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                <div className="flex min-h-0 flex-col justify-center overflow-y-auto py-4">
-                  <p className={`mb-2 text-sm font-black uppercase tracking-[0.14em] ${activeTopic.theme.text}`}>{activeTopic.label}</p>
+              <div className="mx-auto grid h-full max-w-[1440px] grid-cols-1 gap-4 px-5 pb-4 pt-[58px] sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                <div className="flex min-h-0 flex-col justify-center overflow-hidden py-2">
+                  <p className={`mb-1 text-xs font-black uppercase tracking-[0.14em] sm:text-sm ${activeTopic.theme.text}`}>{activeTopic.label}</p>
                   {activeTopic.items.map((item) => (
                     <button
                       key={item.to}
@@ -204,11 +199,11 @@ export default function GlobalLearningMenu() {
                       onMouseEnter={() => setHoveredItem(item)}
                       onFocus={() => setHoveredItem(item)}
                       onClick={() => go(item.to)}
-                      className="group flex items-center gap-4 border-b border-slate-900/10 py-3.5 text-left transition hover:pl-2 sm:py-4"
+                      className="group flex items-center gap-3 border-b border-slate-900/10 py-2.5 text-left transition hover:pl-2 sm:py-3"
                     >
-                      <span aria-hidden="true" className="text-3xl transition group-hover:scale-110 sm:text-4xl">{item.icon}</span>
-                      <span className="min-w-0 flex-1 text-2xl font-black tracking-tight text-slate-900 sm:text-[28px]">{item.label}</span>
-                      <span aria-hidden="true" className="text-2xl font-black text-slate-900/25 transition group-hover:translate-x-1 group-hover:text-slate-900/60">→</span>
+                      <span aria-hidden="true" className="text-2xl transition group-hover:scale-110 sm:text-3xl">{item.icon}</span>
+                      <span className="min-w-0 flex-1 text-xl font-black tracking-tight text-slate-900 sm:text-2xl">{item.label}</span>
+                      <span aria-hidden="true" className="text-xl font-black text-slate-900/25 transition group-hover:translate-x-1 group-hover:text-slate-900/60">→</span>
                     </button>
                   ))}
                 </div>

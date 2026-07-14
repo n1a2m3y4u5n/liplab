@@ -41,7 +41,7 @@ function SpeakAnalysis({ loading, d, onRefresh, refreshing }) {
   if (!d.total) {
     return (
       <div className="card text-center py-12 text-gray-400">
-        아직 말하기 기록이 없어요.<br />대시보드의 <b className="text-rose-500">말하기 연습</b>에서 단계를 진행하면 여기에 분석이 쌓여요.
+        아직 말하기 기록이 없어요.<br />대시보드의 <b className="text-rose-500">말하기 학습</b>에서 단계를 진행하면 여기에 분석이 쌓여요.
       </div>
     )
   }

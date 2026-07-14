@@ -49,7 +49,6 @@ export default function SpeakingPractice() {
 
   const [words, setWords] = useState([])
   const [target, setTarget] = useState(null)
-  const [marks, setMarks] = useState({})          // 북마크 {target: id}
   const [frames, setFrames] = useState([])
   const [stageInfo, setStageInfo] = useState(null)   // 단계 콘텐츠(있으면 단계 모드)
   const [reviewItems, setReviewItems] = useState(null)  // null=로딩, []=비어있음
@@ -319,7 +318,7 @@ export default function SpeakingPractice() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
       <LearnHeader
         accent="speaking"
-        title={reviewMode ? '🔁 발음 복습' : stageInfo ? `${stageInfo.icon} ${stageInfo.stage}단계 · ${stageInfo.title}` : '말하기 연습'}
+        title={reviewMode ? '말하기 복습' : stageInfo ? `${stageInfo.icon} ${stageInfo.stage}단계 · ${stageInfo.title}` : '말하기 학습'}
         description={reviewMode ? '틀렸던 발음을 다시 또박또박 연습해요' : (stageInfo?.guide || '귀 대신 눈으로 — 내 목소리를 보면서 발음을 다듬어요')}
         onExit={() => { teardown(); navigate('/pillar/speaking') }}
       />
@@ -340,19 +339,6 @@ export default function SpeakingPractice() {
             {prompt && <p className="text-base font-semibold text-rose-600 text-center mb-1">{prompt}</p>}
             <div className="flex items-center justify-center gap-2 py-2">
               <p className="text-3xl font-bold text-gray-900">{target || '…'}</p>
-              {target && (
-                <button
-                  onClick={async () => {
-                    try {
-                      if (marks[target]) { await learningAPI.removeBookmark(marks[target]); setMarks((m) => { const n = { ...m }; delete n[target]; return n }) }
-                      else { const r = await learningAPI.addBookmark(target, '말하기', 1, 'speak'); setMarks((m) => ({ ...m, [target]: r.id })) }
-                    } catch { /* 이미 북마크됨 등 무시 */ }
-                  }}
-                  title="북마크(복습에 추가)"
-                  className={`text-xl ${marks[target] ? 'text-amber-500' : 'text-gray-300 hover:text-amber-400'}`}>
-                  {marks[target] ? '★' : '☆'}
-                </button>
-              )}
             </div>
             <MouthAvatar frames={frames} height={230} />
             <p className="text-xs text-gray-400 mt-2 text-center">
