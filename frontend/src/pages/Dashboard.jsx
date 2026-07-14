@@ -623,13 +623,6 @@ function LearnerProfileCard({ user, statistics, calendarData }) {
             </li>
           ))}
         </ul>
-        <button
-          type="button"
-          onClick={() => navigate('/review/today')}
-          className="mt-2 w-full rounded-xl border border-lime-200 bg-white py-1.5 text-[10px] font-black text-lime-700 transition hover:border-lime-400 hover:bg-lime-50 focus:outline-none focus:ring-2 focus:ring-lime-400"
-        >
-          과제 더보기 →
-        </button>
       </div>
     </aside>
   )
