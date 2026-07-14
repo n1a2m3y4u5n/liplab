@@ -326,58 +326,33 @@ export default function TactilePractice() {
           </div>
         )}
 
-        {/* DIY — 오픈소스 하드웨어 (3D 파일·재료·조립·펌웨어) */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-2xl">🛠️</span>
-            <h2 className="text-lg font-bold text-gray-900">직접 만들기 (오픈소스 하드웨어)</h2>
+        {/* DIY — 오픈소스 하드웨어: 상세 설명서로 크게 유도 */}
+        <button
+          onClick={() => navigate('/hardware/build')}
+          className="group w-full overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 to-violet-500 p-5 text-left text-white shadow-lg shadow-purple-200 transition hover:shadow-xl hover:brightness-105 sm:p-6"
+        >
+          <div className="flex items-center gap-4">
+            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/20 text-3xl">🛠️</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-black tracking-wider text-purple-100">오픈소스 하드웨어 · 직접 만들기</p>
+              <h2 className="mt-0.5 text-lg font-black sm:text-xl">얼굴 모형 조립 설명서 보기</h2>
+              <p className="mt-1 text-sm text-purple-50">
+                3D 프린팅 파일 · 부품(BOM) · 조립 순서 · 배선도 · 펌웨어까지, 실제 제작 사진과 함께 이대로만 따라 하면 완성돼요.
+              </p>
+            </div>
+            <span className="ml-1 shrink-0 text-2xl transition group-hover:translate-x-1">→</span>
           </div>
-          <p className="text-sm text-gray-600 mb-4">
-            이 얼굴 모형은 판매 제품이 아니라 <b>누구나 직접 만들 수 있는 오픈소스 하드웨어</b>입니다.
-            아래 3D 프린팅 파일과 재료 목록, 조립 방법, 펌웨어를 공개하니 3D 프린터와 기본 부품만 있으면 제작할 수 있어요.
-          </p>
-
-          {/* ① 3D 파일 */}
-          <p className="text-sm font-semibold text-gray-800 mb-2">① 3D 프린팅 파일 (STL)</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
-            {[
-              { f: 'JawV4.stl', label: '얼굴 본체', desc: '볼·코·입·턱' },
-              { f: 'JawHingeV3.stl', label: '힌지(경첩)', desc: '오른쪽 회전축' },
-              { f: 'JawSupportV1.stl', label: '지지대', desc: '좌우 지지 프레임' },
-            ].map((m) => (
-              <a key={m.f} href={`/hardware/${m.f}`} download
-                className="p-3 rounded-xl border border-gray-200 hover:border-primary-400 hover:bg-primary-50 transition-colors text-center">
-                <div className="text-2xl mb-1">🧩</div>
-                <div className="text-sm font-bold text-gray-800">{m.label}</div>
-                <div className="text-[11px] text-gray-400">{m.desc}</div>
-                <div className="text-[11px] text-primary-600 mt-1">⬇ {m.f}</div>
-              </a>
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {['🧩 STL 파일', '📦 부품 목록', '🔧 조립·배선', '💾 펌웨어 다운로드'].map((t) => (
+              <span key={t} className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold">{t}</span>
             ))}
           </div>
+        </button>
 
-          {/* ②③ 재료·조립 — 사진 포함 상세 설명서로 이동 */}
-          <button
-            onClick={() => navigate('/hardware/build')}
-            className="mb-3 flex w-full items-center gap-3 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-left transition hover:border-purple-400 hover:bg-purple-100"
-          >
-            <span className="text-2xl">📖</span>
-            <span className="min-w-0">
-              <span className="block text-sm font-bold text-purple-900">② 재료 · 조립 상세 설명서 보기</span>
-              <span className="block text-xs text-purple-700">준비물(BOM)·용어·조립 순서·배선도·최종 점검까지 실제 제작 사진과 함께 단계별로 안내해요.</span>
-            </span>
-            <span className="ml-auto shrink-0 text-purple-500">→</span>
-          </button>
-
-          {/* ④ 펌웨어 */}
-          <p className="text-sm font-semibold text-gray-800 mb-2">④ 펌웨어</p>
-          <a href="/hardware/liplab_face.ino" download="liplab_face.ino"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm font-semibold hover:bg-gray-900">
-            ⬇ 기본 펌웨어 다운로드 (liplab_face.ino)
-          </a>
-
-          {/* 내 핀 배치로 커스텀 .ino 생성 */}
-          <div className="mt-3 rounded-xl border border-purple-200 bg-purple-50/50 p-3">
-            <p className="text-sm font-semibold text-gray-800">🔧 내 핀 배치 설정</p>
+        {/* 고급(선택): 내 핀 배치로 실시간 적용 / 맞춤 펌웨어 */}
+        <div className="card">
+          <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-3">
+            <p className="text-sm font-semibold text-gray-800">🔧 내 핀 배치 설정 <span className="text-xs font-normal text-gray-400">· 선택</span></p>
             <p className="mt-0.5 text-[11px] text-gray-500">
               각 부품을 연결한 아두이노 핀(D2~D13)을 입력하세요. 연결돼 있으면 <b>재업로드 없이 바로 적용</b>되고,
               오프라인 플래시용 <b>맞춤 펌웨어</b>도 받을 수 있어요.

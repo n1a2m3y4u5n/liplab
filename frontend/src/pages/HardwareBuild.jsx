@@ -9,6 +9,13 @@ import LearnHeader from '../components/LearnHeader'
 
 const PHOTO = (name) => `/hardware/photos/${name}.jpg`
 
+// 내려받을 3D 프린팅 파일 (public/hardware/)
+const STL_FILES = [
+  { f: 'liplab_face_shell.stl', label: '얼굴 본체', desc: '코~입~턱 셸' },
+  { f: 'liplab_support.stl', label: '연결대', desc: '좌우 연결부 한 쌍' },
+  { f: 'liplab_hinge.stl', label: '지지대(다리)', desc: '회전축 다리 한 쌍' },
+]
+
 // 3개 촉각 채널
 const CHANNELS = [
   { ch: '턱 개폐', how: '서보모터 + 힌지 회전 구조', info: '모음의 입 벌림 정도 (개방도)' },
@@ -18,9 +25,9 @@ const CHANNELS = [
 
 // 2.1 3D 프린팅 파츠
 const PARTS_3D = [
-  { name: 'JawV4.stl', src: 'InMoov 오픈소스', size: '9.6 × 9.6 × 5.8 cm', qty: '1', note: '얼굴 앞면 셸 (코~입~턱)' },
-  { name: 'JawSupportV1.stl', src: 'InMoov 오픈소스', size: '11.1 × 12.9 × 0.8 cm', qty: '1 (좌우 한 쌍 포함)', note: '얼굴-힌지 연결 지지대' },
-  { name: 'JawHingeV3.stl', src: 'InMoov 오픈소스', size: '9.0 × 4.3 × 1.7 cm', qty: '1 (좌우 한 쌍 포함)', note: '회전축, 핀 지름 0.78cm' },
+  { name: 'liplab_face_shell.stl', src: '자체 설계', size: '9.6 × 9.6 × 5.8 cm', qty: '1', note: '얼굴 앞면 셸 (코~입~턱)' },
+  { name: 'liplab_support.stl', src: '자체 설계', size: '11.1 × 12.9 × 0.8 cm', qty: '1 (좌우 한 쌍 포함)', note: '얼굴-힌지 연결대' },
+  { name: 'liplab_hinge.stl', src: '자체 설계', size: '9.0 × 4.3 × 1.7 cm', qty: '1 (좌우 한 쌍 포함)', note: '회전축, 핀 지름 0.78cm' },
   { name: '받침대 통합파일', src: '자체 설계', size: '9.5 × 6.0 × 7.0 cm', qty: '1', note: '받침대 + 목탭 포함' },
 ]
 
@@ -46,9 +53,9 @@ const TOOLS = [
 // 3. 용어 (부품 사진으로 익히기)
 const GLOSSARY = [
   { term: '받침대', desc: '밑판 + 기둥 + 윗판으로 된 흰색 거치대. 장치 전체를 책상 위에 세운다.', photo: 'base' },
-  { term: '지지대(다리) · JawHingeV3', desc: '받침대 윗판 옆에 좌우로 세우는 흰색 다리 2개. 여기에 JawSupportV1을 연결한다.', photo: 'support' },
-  { term: 'JawSupportV1', desc: '지지대와 얼굴조립체를 잇는 연결부. 한쪽은 서보와 함께 움직이고, 반대쪽은 지지대에 걸쳐 회전축이 된다.', photo: null },
-  { term: '얼굴조립체 · JawV4', desc: '반구형 돔 흰색 셸. 한쪽엔 톱니 모양 이빨 테두리, 반대쪽엔 마름모 구멍(원래 눈 자리, 미사용)이 있다.', photo: 'done-side' },
+  { term: '지지대(다리)', desc: '받침대 윗판 옆에 좌우로 세우는 흰색 다리 2개(liplab_hinge). 여기에 연결대를 연결한다.', photo: 'support' },
+  { term: '연결대', desc: '지지대와 얼굴조립체를 잇는 연결부(liplab_support). 한쪽은 서보와 함께 움직이고, 반대쪽은 지지대에 걸쳐 회전축이 된다.', photo: null },
+  { term: '얼굴조립체', desc: '반구형 돔 흰색 셸(liplab_face_shell). 한쪽엔 톱니 모양 이빨 테두리, 반대쪽엔 마름모 구멍(원래 눈 자리, 미사용)이 있다.', photo: 'done-side' },
   { term: '서보모터', desc: '파란색 소형 모터. 회전하며 얼굴조립체를 움직여 턱을 여닫는다.', photo: 'servofan' },
   { term: '팬', desc: '검정색 사각형 송풍팬. 코 부위로 바람을 보내 기류를 표현한다.', photo: 'servofan-top' },
   { term: '진동모터', desc: '은색 원판 모양의 작은 부품. 전기가 통하면 떨려서 후두 진동을 표현한다.', photo: 'vibmotor' },
@@ -60,9 +67,9 @@ const STEPS = [
   {
     n: 1, code: '4.1', title: '전체 구조 한눈에 보기', photos: ['overview'],
     body: [
-      '받침대 윗판 옆에 지지대(다리) 2개를 세우고, 각 지지대에 JawSupportV1을 연결한다.',
-      '좌우로 연결된 JawSupportV1에 얼굴조립체(JawV4)를 얹는다.',
-      '서보모터는 JawSupportV1에 붙어, 회전하며 얼굴조립체를 함께 움직인다. 반대쪽 JawSupportV1은 지지대에 걸쳐만 두어 회전축이 된다.',
+      '받침대 윗판 옆에 지지대(다리) 2개를 세우고, 각 지지대에 연결대를 연결한다.',
+      '좌우로 연결된 연결대에 얼굴조립체를 얹는다.',
+      '서보모터는 연결대에 붙어, 회전하며 얼굴조립체를 함께 움직인다. 반대쪽 연결대는 지지대에 걸쳐만 두어 회전축이 된다.',
       '팬은 서보 위 윗면 가운데쯤에, 진동모터는 얼굴조립체 아랫면에 붙인다.',
     ],
     tip: '문 경첩과 같은 원리다. 경첩 두 개 중 서보가 있는 한쪽만 힘을 줘도, 얼굴조립체 전체가 반대쪽 지지대를 축으로 함께 회전한다.',
@@ -77,23 +84,23 @@ const STEPS = [
   {
     n: 3, code: '4.3', title: '지지대(다리) 세우기', photos: ['support'],
     body: [
-      '지지대(JawHingeV3) 2개를 받침대 윗판 옆에 좌우로 나란히 세운다.',
+      '지지대(다리) 2개를 받침대 윗판 옆에 좌우로 나란히 세운다.',
       '두 지지대 사이 간격은 얼굴조립체 테두리 폭(약 9.6cm)에 맞춘다.',
       '각 지지대의 핀이 바깥쪽으로 나가도록 방향을 잡는다.',
       '글루건으로 지지대 옆면을 윗판 끝쪽에 고정한다.',
     ],
   },
   {
-    n: 4, code: '4.4', title: 'JawSupportV1 연결', photos: ['support'],
+    n: 4, code: '4.4', title: '연결대 연결', photos: ['support'],
     body: [
-      '좌우 지지대 각각에 JawSupportV1을 연결한다.',
-      '이 연결부가 이후 얼굴조립체의 회전축이 되므로, 양쪽 JawSupportV1이 수평으로 나란히 정렬되는지 확인한다.',
+      '좌우 지지대 각각에 연결대를 연결한다.',
+      '이 연결부가 이후 얼굴조립체의 회전축이 되므로, 양쪽 연결대가 수평으로 나란히 정렬되는지 확인한다.',
     ],
   },
   {
     n: 5, code: '4.5', title: '서보모터와 팬 장착', photos: ['servofan-top', 'servofan'],
     body: [
-      '서보모터를 두 지지대 사이, 한쪽 JawSupportV1에 가깝게 놓고 글루건으로 붙인다. 이 부위는 서보와 함께 움직이는 쪽이다.',
+      '서보모터를 두 지지대 사이, 한쪽 연결대에 가깝게 놓고 글루건으로 붙인다. 이 부위는 서보와 함께 움직이는 쪽이다.',
       '팬은 서보모터 위에 걸쳐 윗면 가운데쯤에 놓고 글루건으로 고정한다.',
       '팬의 바람 나오는 면이 얼굴조립체 안쪽(코가 올 방향)을 향하도록 각도를 맞춘다.',
     ],
@@ -101,7 +108,7 @@ const STEPS = [
   {
     n: 6, code: '4.6', title: '얼굴조립체 연결', photos: ['done-front'],
     body: [
-      '얼굴조립체(JawV4)를 좌우 JawSupportV1에 얹어 연결한다.',
+      '얼굴조립체를 좌우 연결대에 얹어 연결한다.',
       '이빨 테두리가 있는 쪽이 정면(사용자 쪽), 마름모 구멍이 있는 쪽이 뒤를 향하게 방향을 맞춘다.',
       '접착 전에 손으로 살짝 움직여, 앞뒤로 부드럽게 기울어지는지·어딘가에 걸리지 않는지 확인한다.',
     ],
@@ -198,6 +205,20 @@ function Table({ head, rows }) {
   )
 }
 
+function DownloadCard({ href, download, icon, label, sub }) {
+  return (
+    <a href={href} download={download}
+      className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-violet-400 hover:bg-violet-50">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-100 text-xl">{icon}</span>
+      <span className="min-w-0">
+        <span className="block text-sm font-bold text-slate-900">{label}</span>
+        <span className="block text-xs text-slate-500">{sub}</span>
+      </span>
+      <span className="ml-auto shrink-0 text-violet-500">⬇</span>
+    </a>
+  )
+}
+
 function SectionTitle({ eyebrow, children }) {
   return (
     <div className="mb-4">
@@ -243,8 +264,8 @@ export default function HardwareBuild() {
           </p>
           <Table head={['채널', '구현 방식', '표현 정보']} rows={CHANNELS.map((c) => [c.ch, c.how, c.info])} />
           <p className="mt-3 text-xs leading-relaxed text-slate-500">
-            ※ 입술 돌출(원순/평순) 채널은 최종 구현에서 제외했습니다. 얼굴 형태는 InMoov 오픈소스 로봇의
-            얼굴 파츠를 기반으로, 촉각 전달과 무관한 눈·귀·이마는 빼고 코~입~턱 범위만 구현했어요.
+            ※ 입술 돌출(원순/평순) 채널은 최종 구현에서 제외했습니다. 얼굴 형태는 촉각 전달과 무관한
+            눈·귀·이마는 빼고, 촉각으로 말을 읽는 데 필요한 코~입~턱 범위만 구현했어요.
           </p>
         </section>
 
@@ -256,9 +277,14 @@ export default function HardwareBuild() {
           <Table head={['파일명', '출처', '규격(가로×세로×높이)', '수량', '비고']}
             rows={PARTS_3D.map((p) => [p.name, p.src, p.size, p.qty, p.note])} />
           <p className="mt-2 text-xs leading-relaxed text-slate-500">
-            ※ JawSupportV1과 JawHingeV3는 좌우 두 조각이 한 STL 파일에 들어 있으니 각각 1회씩만 프린트하면 됩니다.
-            STL 파일은 촉각 학습 페이지의 "직접 만들기"에서 내려받을 수 있어요.
+            ※ liplab_support와 liplab_hinge는 좌우 두 조각이 한 STL 파일에 들어 있으니 각각 1회씩만 프린트하면 됩니다.
+            받침대 통합파일은 팀 자체 설계 파일이에요.
           </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {STL_FILES.map((s) => (
+              <DownloadCard key={s.f} href={`/hardware/${s.f}`} download={s.f} icon="🧩" label={s.label} sub={s.desc} />
+            ))}
+          </div>
 
           <h3 className="mb-2 mt-6 font-black text-slate-800">2.2 · 전자부품</h3>
           <Table head={['부품', '규격', '수량', '용도']} rows={BOM.map((b) => [b.part, b.spec, b.qty, b.use])} />
@@ -396,9 +422,19 @@ export default function HardwareBuild() {
         {/* 펌웨어 업로드 + IDE 닫기 (강조) */}
         <section>
           <SectionTitle eyebrow="7. 펌웨어 & 연결">코드 올리고 웹에 연결</SectionTitle>
+
+          <div className="mb-4">
+            <DownloadCard href="/hardware/liplab_face.ino" download="liplab_face.ino" icon="💾"
+              label="기본 펌웨어 내려받기 (liplab_face.ino)" sub="기본 핀 D9·D5·D6이 위 배선과 이미 일치해요" />
+            <p className="mt-2 text-xs leading-relaxed text-slate-500">
+              부품을 다른 핀에 연결했다면, 촉각 학습 페이지의 <b>"내 핀 배치 설정"</b>에서 맞춤 펌웨어(.ino)를 받거나
+              연결된 모형에 재업로드 없이 바로 적용할 수 있어요.
+            </p>
+          </div>
+
           <ol className="space-y-2">
             {[
-              '촉각 학습 페이지의 "직접 만들기"에서 펌웨어(liplab_face.ino)를 내려받습니다. (기본 핀 D9·D5·D6이 위 배선과 이미 일치합니다.)',
+              '위 버튼으로 펌웨어(liplab_face.ino)를 내려받습니다. (기본 핀 D9·D5·D6이 위 배선과 이미 일치합니다.)',
               '아두이노 IDE에서 이 파일을 열고, USB로 아두이노를 연결한 뒤 업로드합니다.',
               '업로드가 끝나고 정상 작동을 확인했다면, 다음 안내에 따라 IDE 창을 닫습니다.',
             ].map((c, i) => (
