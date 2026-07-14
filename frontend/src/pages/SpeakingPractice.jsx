@@ -59,6 +59,7 @@ export default function SpeakingPractice() {
   const [summary, setSummary] = useState(null)
   const [assessing, setAssessing] = useState(false)
   const [assessment, setAssessment] = useState(null)
+  const [mirrorOn, setMirrorOn] = useState(false)   // 웹캠 미러(따라 말하기)
 
   const items = reviewMode ? (reviewItems || []) : (stageInfo?.items || [])
   const curItem = items[itemIdx] || null
@@ -81,6 +82,26 @@ export default function SpeakingPractice() {
   const traceRef = useRef([])      // {t, rms, hz|null} 시계열 — 결과 그래프용
   const startRef = useRef(0)
   const summaryRef = useRef(null)
+  const videoRef = useRef(null)          // 웹캠 미러 <video>
+  const videoStreamRef = useRef(null)
+
+  const toggleMirror = async () => {
+    if (mirrorOn) {
+      if (videoStreamRef.current) { videoStreamRef.current.getTracks().forEach((t) => t.stop()); videoStreamRef.current = null }
+      if (videoRef.current) videoRef.current.srcObject = null
+      setMirrorOn(false)
+    } else {
+      try {
+        const vs = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+        videoStreamRef.current = vs
+        setMirrorOn(true)
+      } catch { setErr('웹캠을 쓸 수 없어요. 카메라 권한을 허용해 주세요.') }
+    }
+  }
+  // <video>가 마운트된 뒤 스트림 연결(조건부 렌더 타이밍 대응)
+  useEffect(() => {
+    if (mirrorOn && videoRef.current && videoStreamRef.current) videoRef.current.srcObject = videoStreamRef.current
+  }, [mirrorOn])
 
   useEffect(() => {
     if (reviewMode) {
@@ -135,6 +156,7 @@ export default function SpeakingPractice() {
     rafRef.current = null
     const rec = recorderRef.current
     if (rec) { rec.onstop = null; try { if (rec.state !== 'inactive') rec.stop() } catch { /* noop */ } recorderRef.current = null }
+    if (videoStreamRef.current) { videoStreamRef.current.getTracks().forEach((t) => t.stop()); videoStreamRef.current = null }
     closeAudio()
   }
 
@@ -325,6 +347,21 @@ export default function SpeakingPractice() {
             <p className="text-xs text-gray-400 mt-2 text-center">
               {metricMode ? '아래 그래프로 목소리 크기·억양을 확인해요' : '위 입모양을 참고해 또박또박 말해보세요'}
             </p>
+
+            {/* 웹캠 미러 — 내 입모양을 거울처럼 띄워 목표 아바타와 비교(따라 말하기) */}
+            <div className="mt-3">
+              <button onClick={toggleMirror}
+                className={`w-full py-2 rounded-lg text-sm font-medium transition-colors ${mirrorOn ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {mirrorOn ? '📷 웹캠 끄기' : '📷 웹캠 미러 — 내 입모양 보기'}
+              </button>
+              {mirrorOn && (
+                <div className="mt-2 rounded-xl overflow-hidden bg-slate-900">
+                  <video ref={videoRef} autoPlay muted playsInline
+                    className="w-full" style={{ transform: 'scaleX(-1)', maxHeight: 220, objectFit: 'cover' }} />
+                  <p className="text-[11px] text-center text-white/70 py-1">거울처럼 좌우 반전 · 위 아바타 입모양과 내 입을 나란히 비교해보세요</p>
+                </div>
+              )}
+            </div>
             {progress && (
               <div className="mt-3">
                 <div className="flex justify-between text-xs text-gray-500 mb-1">
