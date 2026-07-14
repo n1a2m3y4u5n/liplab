@@ -95,37 +95,25 @@ const TOPIC_MENUS = [
 
 const HERO_SLIDES = [
   {
-    id: 'viseme',
-    tab: '입모양 기초',
+    id: 'reading',
+    tab: '독화',
     eyebrow: '01',
-    title: ['입모양 기초', '천천히 시작해요'],
-    description: '자음과 모음의 핵심 모양을 익혀요.',
-    to: '/learn/viseme',
-    cta: '기초 학습 열기',
+    title: ['독화 · 입모양 읽기', '입모양부터 대화까지'],
+    description: '자음·모음 입모양부터 상황별 문장·대화까지 단계로 익혀요.',
+    to: '/pillar/reading',
+    cta: '독화 학습 보기',
     background: 'from-[#fffede] via-[#fffbb6] to-[#fff58d]',
     badge: 'bg-white/75 text-sky-700',
-    visual: { shape: 'from-sky-300 via-sky-400 to-sky-600', shadow: 'shadow-[0_30px_60px_rgba(2,132,199,0.28)]', first: '가', second: 'ㅁ', third: '입', chip: 'bg-sky-100 text-sky-700' },
-  },
-  {
-    id: 'scenario',
-    tab: '문장 실전',
-    eyebrow: '02',
-    title: ['상황별 문장', '실전처럼 익혀요'],
-    description: '익숙한 일상 장면으로 독화를 연습해요.',
-    to: '/learn/scenario',
-    cta: '문장 실전 열기',
-    background: 'from-[#effcff] via-[#dff7ff] to-[#ccefff]',
-    badge: 'bg-white/80 text-cyan-700',
-    visual: { shape: 'from-cyan-300 via-cyan-400 to-blue-500', shadow: 'shadow-[0_30px_60px_rgba(6,182,212,0.25)]', first: '카페', second: '병원', third: '대화', chip: 'bg-cyan-100 text-cyan-700' },
+    visual: { shape: 'from-sky-300 via-sky-400 to-sky-600', shadow: 'shadow-[0_30px_60px_rgba(2,132,199,0.28)]', first: '입', second: '문장', third: '독화', chip: 'bg-sky-100 text-sky-700' },
   },
   {
     id: 'speaking',
     tab: '말하기',
-    eyebrow: '03',
+    eyebrow: '02',
     title: ['말하기 연습', '발음을 다듬어요'],
     description: '소리와 억양을 보며 또박또박 말해요.',
-    to: '/learn/speaking',
-    cta: '말하기 열기',
+    to: '/pillar/speaking',
+    cta: '말하기 보기',
     background: 'from-[#fff6f7] via-[#ffe7eb] to-[#ffd5dc]',
     badge: 'bg-white/80 text-rose-700',
     visual: { shape: 'from-rose-300 via-rose-400 to-pink-500', shadow: 'shadow-[0_30px_60px_rgba(244,63,94,0.22)]', first: '소리', second: '억양', third: '발음', chip: 'bg-rose-100 text-rose-700' },
@@ -133,11 +121,11 @@ const HERO_SLIDES = [
   {
     id: 'tactile',
     tab: '촉각',
-    eyebrow: '04',
+    eyebrow: '03',
     title: ['촉각 학습', '손끝으로 느껴요'],
     description: '입의 움직임과 진동을 촉각으로 익혀요.',
-    to: '/learn/tactile',
-    cta: '촉각 학습 열기',
+    to: '/pillar/tactile',
+    cta: '촉각 학습 보기',
     background: 'from-[#faf8ff] via-[#eee9ff] to-[#ddd6fe]',
     badge: 'bg-white/80 text-violet-700',
     visual: { shape: 'from-violet-300 via-violet-400 to-purple-600', shadow: 'shadow-[0_30px_60px_rgba(124,58,237,0.22)]', first: '진동', second: '바람', third: '촉각', chip: 'bg-violet-100 text-violet-700' },
@@ -920,7 +908,7 @@ export default function Dashboard() {
 
             <div className="ml-auto hidden items-center gap-1 xl:flex">
               {[
-                ['복습', '/review/today', '↻'],
+                ['수어 번역', '/sign', '🤟'],
                 ['북마크', '/review/saved', '★'],
                 ['사용법', '/guide', '?'],
               ].map(([label, to, icon]) => (
@@ -940,101 +928,6 @@ export default function Dashboard() {
             </div>
           </form>
         </div>
-
-        <nav
-          className="relative border-t border-slate-100"
-          aria-label="학습 콘텐츠"
-          onMouseLeave={() => setActiveNavMenu(null)}
-          onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget)) setActiveNavMenu(null)
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              setActiveNavMenu(null)
-              event.currentTarget.querySelector(`[data-topic="${activeNavMenu}"]`)?.focus()
-            }
-          }}
-        >
-          <div className="mx-auto flex max-w-[1440px] items-center overflow-x-auto px-4 py-1 sm:px-6">
-            <div className="mr-3 inline-flex shrink-0 items-center gap-2 px-2 py-3 text-sm font-black text-sky-600 sm:mr-7">
-              <span aria-hidden="true" className="text-lg">☰</span>
-              학습 콘텐츠
-            </div>
-            <div className="flex items-stretch gap-1" role="menubar" aria-label="학습 콘텐츠 주제">
-              {TOPIC_MENUS.map((topic) => {
-                const active = activeNavMenu === topic.id
-                return (
-                  <button
-                    key={topic.id}
-                    type="button"
-                    role="menuitem"
-                    data-topic={topic.id}
-                    aria-haspopup="true"
-                    aria-expanded={active}
-                    aria-controls={`topic-menu-${topic.id}`}
-                    onMouseEnter={() => setActiveNavMenu(topic.id)}
-                    onFocus={() => setActiveNavMenu(topic.id)}
-                    onClick={() => setActiveNavMenu(active ? null : topic.id)}
-                    className={`group relative min-w-[84px] shrink-0 rounded-xl px-5 py-3 text-sm font-black transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-inset sm:min-w-[104px] sm:text-base ${
-                      active ? `${topic.theme.active} -translate-y-0.5 shadow-sm` : 'text-slate-800 hover:-translate-y-0.5 hover:bg-slate-50 hover:text-sky-700'
-                    }`}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      {topic.label}
-                      <span aria-hidden="true" className={`text-[10px] transition-transform duration-200 ${active ? 'rotate-180' : ''}`}>⌄</span>
-                    </span>
-                    <span aria-hidden="true" className={`absolute inset-x-5 bottom-0 h-0.5 origin-center rounded-full transition-transform duration-200 ${topic.theme.line} ${active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-75'}`} />
-                  </button>
-                )
-              })}
-            </div>
-            <p className="ml-auto hidden shrink-0 text-xs font-medium text-slate-400 lg:block">
-              주제를 선택하면 관련 메뉴를 한 번에 볼 수 있어요
-            </p>
-          </div>
-
-          <AnimatePresence initial={false}>
-            {activeTopic && (
-              <motion.div
-                id={`topic-menu-${activeTopic.id}`}
-                role="menu"
-                aria-label={`${activeTopic.label} 메뉴`}
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.16, ease: 'easeOut' }}
-                className="absolute inset-x-0 top-full z-50 max-h-[65vh] overflow-y-auto border-y border-slate-200 bg-white shadow-[0_24px_50px_rgba(15,23,42,0.14)]"
-              >
-                <div className="mx-auto grid max-w-[1440px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[250px_1fr] lg:gap-8 lg:py-7">
-                  <div className="border-b border-slate-100 pb-4 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-8">
-                    <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-black ${activeTopic.theme.badge}`}>{activeTopic.label}</span>
-                    <h2 className="mt-3 text-xl font-black tracking-tight text-slate-950">{activeTopic.title}</h2>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-500">{activeTopic.description}</p>
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                    {activeTopic.items.map((item, index) => (
-                      <button
-                        key={`${activeTopic.id}-${item.label}`}
-                        type="button"
-                        role="menuitem"
-                        onClick={() => chooseTopicItem(item.to)}
-                        className={`group flex items-start gap-3 rounded-2xl border border-transparent p-3.5 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${activeTopic.theme.hover}`}
-                      >
-                        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[11px] font-black ${activeTopic.theme.badge}`}>
-                          {String(index + 1).padStart(2, '0')}
-                        </span>
-                        <span className="min-w-0 pt-0.5">
-                          <span className="block text-sm font-black text-slate-900 transition group-hover:text-slate-950">{item.label}</span>
-                          <span className="mt-1 block text-xs leading-relaxed text-slate-500">{item.description}</span>
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </nav>
       </header>
 
       <AnimatePresence>

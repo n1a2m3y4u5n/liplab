@@ -59,6 +59,7 @@ const SpeakingPractice = lazy(() => import('./pages/SpeakingPractice'))
 const TactilePractice = lazy(() => import('./pages/TactilePractice'))
 const FreeSpeak = lazy(() => import('./pages/FreeSpeak'))
 const ScenarioHub = lazy(() => import('./pages/ScenarioHub'))
+const PillarHub = lazy(() => import('./pages/PillarHub'))
 const ReviewLanding = lazy(() => import('./pages/ReviewLanding'))
 const AnalysisDetail = lazy(() => import('./pages/AnalysisDetail'))
 
@@ -153,6 +154,7 @@ function App() {
         <Route path="/learn/viseme" element={<VisemeLiteracy />} />
         <Route path="/learn/word" element={<StageGate stage={2}><WordStage /></StageGate>} />
         <Route path="/learn/scenario" element={<ScenarioHub />} />
+        <Route path="/pillar/:id" element={<PillarHub />} />
         <Route path="/learn/speaking" element={<SpeakingPractice />} />
         <Route path="/learn/tactile" element={<TactilePractice />} />
         <Route path="/learn/sign" element={<Sign />} />
