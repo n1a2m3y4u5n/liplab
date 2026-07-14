@@ -261,7 +261,7 @@ export default function Practice() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
       <LearnHeader
         accent="reading"
-        title={isReviewSession ? '독화 복습' : '독화 연습'}
+        title={isReviewSession ? '독화 복습' : '문장 학습'}
         description={(
           <>
             {currentScenario.situation} · 레벨 {currentScenario.level}

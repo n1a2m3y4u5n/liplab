@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
 import { learningAPI, scoreAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
+import LearnHeader from '../components/LearnHeader'
 
 /**
  * 대화형 독화 연습 모드
@@ -144,35 +145,23 @@ export default function Conversation() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 shrink-0">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div>
-            <h1 className="flex items-center gap-2 text-lg font-bold text-gray-900">
-              <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-700">👁️ 독화</span>
-              대화 실전
-            </h1>
-            <p className="text-xs text-gray-500">AI 입모양을 읽고 답하기 · {currentScenario.situation} · 레벨 {currentScenario.level}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-400">
-              {turnCount}/{MAX_TURNS} 대화
-            </span>
-            <div className="w-20 bg-gray-200 rounded-full h-1.5">
-              <div
-                className="bg-primary-500 h-full rounded-full transition-all"
+      <LearnHeader
+        accent="reading"
+        title="문장 학습"
+        description={(
+          <span className="flex flex-wrap items-center gap-2">
+            AI 입모양을 읽고 답하기 · {currentScenario.situation} · 레벨 {currentScenario.level}
+            <span className="text-xs text-slate-500">{turnCount}/{MAX_TURNS} 대화</span>
+            <span className="h-1.5 w-20 overflow-hidden rounded-full bg-gray-200">
+              <span
+                className="block h-full rounded-full bg-primary-500 transition-all"
                 style={{ width: `${(turnCount / MAX_TURNS) * 100}%` }}
               />
-            </div>
-            <button
-              onClick={handleFinish}
-              className="text-gray-400 hover:text-gray-700 text-sm"
-            >
-              ✕ 나가기
-            </button>
-          </div>
-        </div>
-      </header>
+            </span>
+          </span>
+        )}
+        onExit={handleFinish}
+      />
 
       <div className="flex flex-1 overflow-hidden max-w-6xl mx-auto w-full px-4 py-4 gap-4">
         {/* Left: Avatar player */}
