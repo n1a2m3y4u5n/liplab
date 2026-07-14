@@ -62,6 +62,7 @@ const ScenarioHub = lazy(() => import('./pages/ScenarioHub'))
 const PillarHub = lazy(() => import('./pages/PillarHub'))
 const ReviewLanding = lazy(() => import('./pages/ReviewLanding'))
 const AnalysisDetail = lazy(() => import('./pages/AnalysisDetail'))
+const HardwareBuild = lazy(() => import('./pages/HardwareBuild'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
@@ -158,6 +159,7 @@ function App() {
         <Route path="/pillar/:id" element={<PillarHub />} />
         <Route path="/learn/speaking" element={<SpeakingPractice />} />
         <Route path="/learn/tactile" element={<TactilePractice />} />
+        <Route path="/hardware/build" element={<HardwareBuild />} />
         <Route path="/learn/sign" element={<Sign />} />
         <Route path="/review" element={<Review />} />
         <Route path="/review/today" element={<ReviewLanding mode="today" />} />
