@@ -96,11 +96,11 @@ const HERO_SLIDES = [
   {
     id: 'viseme',
     tab: '입모양 기초',
-    eyebrow: '맞춤 학습 01',
-    title: ['입모양 기초부터', '차근차근 시작해요.'],
-    description: '자음과 모음의 핵심 입모양을 보고 구별하는 첫 단계입니다.',
+    eyebrow: '01',
+    title: ['입모양 기초', '천천히 시작해요'],
+    description: '자음과 모음의 핵심 모양을 익혀요.',
     to: '/learn/viseme',
-    cta: '입모양 학습 시작',
+    cta: '기초 학습 열기',
     background: 'from-[#fffede] via-[#fffbb6] to-[#fff58d]',
     badge: 'bg-white/75 text-sky-700',
     visual: { shape: 'from-sky-300 via-sky-400 to-sky-600', shadow: 'shadow-[0_30px_60px_rgba(2,132,199,0.28)]', first: '가', second: 'ㅁ', third: '입', chip: 'bg-sky-100 text-sky-700' },
@@ -108,11 +108,11 @@ const HERO_SLIDES = [
   {
     id: 'scenario',
     tab: '문장 실전',
-    eyebrow: '맞춤 학습 02',
-    title: ['일상 속 문장을', '상황으로 익혀요.'],
-    description: '카페, 병원, 학교처럼 자주 마주치는 장면으로 독화를 연습합니다.',
+    eyebrow: '02',
+    title: ['상황별 문장', '실전처럼 익혀요'],
+    description: '익숙한 일상 장면으로 독화를 연습해요.',
     to: '/learn/scenario',
-    cta: '상황별 실전 열기',
+    cta: '문장 실전 열기',
     background: 'from-[#effcff] via-[#dff7ff] to-[#ccefff]',
     badge: 'bg-white/80 text-cyan-700',
     visual: { shape: 'from-cyan-300 via-cyan-400 to-blue-500', shadow: 'shadow-[0_30px_60px_rgba(6,182,212,0.25)]', first: '카페', second: '병원', third: '대화', chip: 'bg-cyan-100 text-cyan-700' },
@@ -120,11 +120,11 @@ const HERO_SLIDES = [
   {
     id: 'speaking',
     tab: '말하기',
-    eyebrow: '맞춤 학습 03',
-    title: ['내 목소리를 보며', '발음을 다듬어요.'],
-    description: '소리의 크기와 억양을 시각적으로 확인하며 또박또박 말해봅니다.',
+    eyebrow: '03',
+    title: ['말하기 연습', '발음을 다듬어요'],
+    description: '소리와 억양을 보며 또박또박 말해요.',
     to: '/learn/speaking',
-    cta: '말하기 연습 시작',
+    cta: '말하기 열기',
     background: 'from-[#fff6f7] via-[#ffe7eb] to-[#ffd5dc]',
     badge: 'bg-white/80 text-rose-700',
     visual: { shape: 'from-rose-300 via-rose-400 to-pink-500', shadow: 'shadow-[0_30px_60px_rgba(244,63,94,0.22)]', first: '소리', second: '억양', third: '발음', chip: 'bg-rose-100 text-rose-700' },
@@ -132,11 +132,11 @@ const HERO_SLIDES = [
   {
     id: 'tactile',
     tab: '촉각',
-    eyebrow: '맞춤 학습 04',
-    title: ['말의 움직임을', '손끝으로 느껴요.'],
-    description: '턱과 입술의 움직임, 진동과 바람을 촉각으로 익히는 학습입니다.',
+    eyebrow: '04',
+    title: ['촉각 학습', '손끝으로 느껴요'],
+    description: '입의 움직임과 진동을 촉각으로 익혀요.',
     to: '/learn/tactile',
-    cta: '촉각 학습 시작',
+    cta: '촉각 학습 열기',
     background: 'from-[#faf8ff] via-[#eee9ff] to-[#ddd6fe]',
     badge: 'bg-white/80 text-violet-700',
     visual: { shape: 'from-violet-300 via-violet-400 to-purple-600', shadow: 'shadow-[0_30px_60px_rgba(124,58,237,0.22)]', first: '진동', second: '바람', third: '촉각', chip: 'bg-violet-100 text-violet-700' },
@@ -566,6 +566,162 @@ function ReviewSection() {
   )
 }
 
+function LearnerProfileCard({ user, statistics, calendarData }) {
+  const navigate = useNavigate()
+  const [dueReviewCount, setDueReviewCount] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    reviewAPI.getDue()
+      .then((data) => {
+        if (active) setDueReviewCount((data?.items || []).length)
+      })
+      .catch(() => {
+        if (active) setDueReviewCount(null)
+      })
+    return () => { active = false }
+  }, [])
+
+  const level = Math.max(1, statistics?.current_level || user?.current_level || 1)
+  const totalXp = Math.max(0, statistics?.total_xp ?? user?.total_xp ?? 0)
+  const levelStartXp = 100 * ((level - 1) ** 2)
+  const nextLevelXp = 100 * (level ** 2)
+  const usesLevelBand = totalXp >= levelStartXp
+  const earnedThisLevel = usesLevelBand ? totalXp - levelStartXp : totalXp
+  const xpNeededThisLevel = usesLevelBand ? nextLevelXp - levelStartXp : nextLevelXp
+  const remainingXp = Math.max(0, xpNeededThisLevel - earnedThisLevel)
+  const xpPercent = Math.min(100, Math.max(0, (earnedThisLevel / Math.max(1, xpNeededThisLevel)) * 100))
+  const streak = Math.max(0, user?.streak_count || 0)
+  const today = new Date()
+  const todayKey = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, '0'),
+    String(today.getDate()).padStart(2, '0'),
+  ].join('-')
+  const todaySessions = Number(calendarData?.[todayKey] || 0)
+  const displayName = user?.username || 'LIPLAB 학습자'
+  const initial = displayName.trim().slice(0, 1).toUpperCase() || 'L'
+  const tasks = [
+    {
+      id: 'review',
+      label: '오늘의 복습 정리',
+      detail: dueReviewCount == null ? '복습 항목 확인하기' : dueReviewCount > 0 ? `${dueReviewCount}개가 기다리고 있어요` : '오늘 복습을 모두 정리했어요',
+      completed: dueReviewCount === 0,
+      to: '/review/today',
+    },
+    {
+      id: 'practice',
+      label: '독화 학습 1회',
+      detail: todaySessions >= 1 ? '첫 학습을 완료했어요' : '짧게 시작해도 좋아요',
+      completed: todaySessions >= 1,
+      to: '/learn/viseme',
+    },
+    {
+      id: 'challenge',
+      label: '오늘의 학습 2회 채우기',
+      detail: `${Math.min(todaySessions, 2)} / 2회 완료`,
+      completed: todaySessions >= 2,
+      to: '/learn/scenario',
+    },
+  ]
+
+  return (
+    <aside
+      className="flex h-full min-h-[460px] flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4 shadow-[0_16px_45px_rgba(15,23,42,0.08)] lg:min-h-0"
+      aria-labelledby="learner-profile-heading"
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className="relative grid h-[102px] w-[102px] shrink-0 place-items-center rounded-full p-[6px] shadow-[0_12px_28px_rgba(101,163,13,0.2)]"
+          style={{ background: `conic-gradient(#84cc16 0% ${xpPercent}%, #e2e8f0 ${xpPercent}% 100%)` }}
+          role="progressbar"
+          aria-label={`레벨 ${level} 경험치`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(xpPercent)}
+        >
+          <div className="grid h-full w-full place-items-center rounded-full bg-white p-1">
+            <div className="grid h-full w-full place-items-center rounded-full bg-gradient-to-br from-sky-100 via-cyan-50 to-lime-100 text-3xl font-black text-sky-700 ring-1 ring-sky-100">
+              {initial}
+            </div>
+          </div>
+          <span className="absolute -bottom-1 rounded-full bg-slate-950 px-2.5 py-0.5 text-[9px] font-black text-white shadow-lg">
+            {Math.round(xpPercent)}%
+          </span>
+        </div>
+
+        <div className="min-w-0 flex-1 text-left">
+          <p className="text-[9px] font-black tracking-[0.14em] text-lime-700">MY PROFILE</p>
+          <h2 id="learner-profile-heading" className="mt-1 truncate text-lg font-black tracking-tight text-slate-950">{displayName}</h2>
+          <span className="mt-0.5 block text-sm font-black text-sky-600">Lv {level}</span>
+          <p className="mt-1 text-[10px] font-bold leading-tight text-slate-500">다음 레벨까지<br /><b className="text-slate-800">{remainingXp.toLocaleString()} XP</b></p>
+          <div className="mt-2 flex items-center justify-between text-[8px] font-bold text-slate-400">
+            <span>{earnedThisLevel.toLocaleString()}</span>
+            <span>/ {xpNeededThisLevel.toLocaleString()} XP</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-2.5 py-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-orange-500 text-sm shadow-sm">🔥</span>
+            <div className="min-w-0 text-left">
+              <p className="truncate text-xs font-black text-amber-950">{streak}일 연속 학습</p>
+              <p className="text-[9px] font-medium text-amber-700">오늘도 기록을 이어가세요</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 gap-1" aria-label={`최근 연속 학습 ${streak}일`}>
+            {Array.from({ length: 7 }, (_, index) => (
+              <span
+                key={index}
+                className={`h-2 w-2 rounded-full ${index < Math.min(streak, 7) ? 'bg-orange-500' : 'bg-amber-200'}`}
+                aria-hidden="true"
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 flex min-h-0 flex-1 flex-col rounded-[18px] bg-slate-50 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-black text-slate-900">오늘의 과제</h3>
+          <span className="rounded-full bg-lime-100 px-2 py-1 text-[9px] font-black text-lime-700">
+            {tasks.filter((task) => task.completed).length}/{tasks.length} 완료
+          </span>
+        </div>
+        <ul className="mt-2 space-y-1">
+          {tasks.map((task) => (
+            <li key={task.id}>
+              <button
+                type="button"
+                onClick={() => navigate(task.to)}
+                className="group flex w-full items-center gap-2 rounded-xl bg-white px-2 py-1.5 text-left ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:ring-lime-300 focus:outline-none focus:ring-2 focus:ring-lime-400"
+              >
+                <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md text-[10px] font-black ${task.completed ? 'bg-lime-500 text-white' : 'border-2 border-slate-300 bg-white text-transparent'}`} aria-hidden="true">
+                  ✓
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate text-[11px] font-black ${task.completed ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{task.label}</span>
+                  <span className="block truncate text-[9px] font-medium text-slate-400">{task.detail}</span>
+                </span>
+                <span aria-hidden="true" className="text-xs font-black text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-lime-600">›</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          onClick={() => navigate('/review/today')}
+          className="mt-2 w-full rounded-xl border border-lime-200 bg-white py-1.5 text-[10px] font-black text-lime-700 transition hover:border-lime-400 hover:bg-lime-50 focus:outline-none focus:ring-2 focus:ring-lime-400"
+        >
+          과제 더보기 →
+        </button>
+      </div>
+    </aside>
+  )
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -582,7 +738,6 @@ export default function Dashboard() {
   const [customSituation, setCustomSituation] = useState('')
   const [selectedLevel, setSelectedLevel] = useState(Math.min(user?.current_level || 1, 5))
   const [loading, setLoading] = useState(false)
-  const [statsLoading, setStatsLoading] = useState(true)
   const [calendarData, setCalendarData] = useState({})
   const [recLevel, setRecLevel] = useState(null)
   const [testLocked, setTestLocked] = useState(false)   // 3단계(문장 테스트) 잠김 여부
@@ -630,8 +785,6 @@ export default function Dashboard() {
       setStatistics(stats)
     } catch (error) {
       console.error('Failed to load statistics:', error)
-    } finally {
-      setStatsLoading(false)
     }
   }
 
@@ -725,7 +878,7 @@ export default function Dashboard() {
   const currentHero = HERO_SLIDES[heroSlide]
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white lg:h-dvh lg:overflow-hidden">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="border-b border-slate-100 bg-slate-50/90">
           <div className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-2 text-[11px] text-slate-500 sm:px-6">
@@ -903,31 +1056,10 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 sm:py-7">
+      <main className="mx-auto max-w-[1440px] px-4 py-4 sm:px-6 sm:py-5">
 
-        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
-          <aside className="overflow-hidden rounded-[24px] bg-[#f6f7fb] p-4 sm:p-5" aria-labelledby="category-heading">
-            <div className="flex items-center justify-between lg:block">
-              <h2 id="category-heading" className="text-base font-black text-sky-600">전체 학습 보기</h2>
-              <span className="text-[11px] font-medium text-slate-400 lg:mt-1 lg:block">원하는 방식으로 바로 이동</span>
-            </div>
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-1.5 lg:overflow-visible">
-              {[
-                ['입모양 기초', '01', () => navigate('/learn/viseme')],
-                ['음절·단어', '02', () => navigate('/learn/word')],
-                ['문장·대화', '03', () => navigate('/learn/scenario')],
-                ['말하기 연습', '04', () => navigate('/learn/speaking')],
-                ['촉각 학습', '05', () => navigate('/learn/tactile')],
-                ['오늘의 복습', '06', () => navigate('/review/today')],
-                ['학습 분석', '07', () => navigate('/analysis/overview')],
-              ].map(([label, number, onClick]) => (
-                <button key={label} type="button" onClick={onClick} className="group flex shrink-0 items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-left text-sm font-bold text-slate-700 transition hover:bg-sky-50 hover:text-sky-700 lg:w-full lg:bg-transparent">
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white text-[10px] font-black text-sky-500 shadow-sm group-hover:bg-sky-100">{number}</span>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </aside>
+        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grid items-stretch gap-4 lg:h-[clamp(400px,calc(100dvh-225px),520px)] lg:grid-cols-[290px_minmax(0,1fr)]">
+          <LearnerProfileCard user={user} statistics={statistics} calendarData={calendarData} />
 
           <div
             role="region"
@@ -938,7 +1070,7 @@ export default function Dashboard() {
               if (event.key === 'ArrowLeft') { event.preventDefault(); moveHeroSlide(-1) }
               if (event.key === 'ArrowRight') { event.preventDefault(); moveHeroSlide(1) }
             }}
-            className="relative min-h-[560px] overflow-hidden rounded-[24px] outline-none ring-sky-400 transition focus-visible:ring-2 focus-visible:ring-offset-2 sm:min-h-[500px] lg:min-h-[420px]"
+            className="relative min-h-[500px] overflow-hidden rounded-[24px] outline-none ring-sky-400 transition focus-visible:ring-2 focus-visible:ring-offset-2 lg:h-full lg:min-h-0"
           >
             <AnimatePresence initial={false} mode="wait">
               <motion.article
@@ -954,48 +1086,25 @@ export default function Dashboard() {
                 onDragEnd={finishHeroDrag}
                 aria-live="polite"
                 aria-label={`${heroSlide + 1} / ${HERO_SLIDES.length}: ${currentHero.tab}`}
-                className={`absolute inset-0 cursor-grab overflow-hidden bg-gradient-to-r ${currentHero.background} px-7 pb-24 pt-8 active:cursor-grabbing sm:px-12 sm:pt-10 lg:px-14 lg:pt-11`}
+                className={`absolute inset-0 cursor-grab overflow-hidden bg-gradient-to-r ${currentHero.background} px-7 pb-20 pt-6 active:cursor-grabbing sm:px-10 lg:px-12`}
                 style={{ touchAction: 'pan-y' }}
               >
-                <div className="relative z-10 max-w-2xl md:pr-[230px] lg:pr-[310px]">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`inline-flex rounded-full px-3 py-1.5 text-xs font-black shadow-sm ${currentHero.badge}`}>LIPLAB {currentHero.eyebrow}</span>
-                    <span className="hidden text-[11px] font-bold text-slate-500 sm:inline">좌우로 드래그해 보세요</span>
-                  </div>
-                  <h1 className="mt-5 text-3xl font-black leading-[1.2] tracking-[-0.045em] text-slate-950 sm:text-4xl xl:text-[44px]">
-                    {currentHero.title[0]}<br />{currentHero.title[1]}
-                  </h1>
-                  <p className="mt-4 max-w-lg text-sm font-medium leading-relaxed text-slate-600 sm:text-base">{currentHero.description}</p>
-                  <div className="mt-6 flex flex-wrap gap-2">
+                <div className="relative z-10 flex h-full items-center">
+                  <div className="ml-9 max-w-xl pb-6 sm:ml-12 md:pr-[210px] lg:ml-16 lg:pr-[250px]">
+                    <span className={`inline-flex rounded-full px-3 py-1.5 text-[11px] font-black shadow-sm ${currentHero.badge}`}>LIPLAB · {currentHero.eyebrow}</span>
+                    <h1 className="mt-4 text-3xl font-black leading-[1.13] tracking-[-0.045em] text-slate-950 sm:text-4xl lg:text-[36px] xl:text-[40px]">
+                      {currentHero.title[0]}<br />{currentHero.title[1]}
+                    </h1>
+                    <p className="mt-3 max-w-md text-sm font-semibold leading-relaxed text-slate-600">{currentHero.description}</p>
                     <button
                       type="button"
                       onPointerDown={(event) => event.stopPropagation()}
                       onClick={() => navigate(currentHero.to)}
-                      className="rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+                      className="mt-5 rounded-full bg-slate-950 px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
                     >
                       {currentHero.cta}
                     </button>
-                    <button
-                      type="button"
-                      onPointerDown={(event) => event.stopPropagation()}
-                      onClick={() => navigate('/guide')}
-                      className="rounded-full border border-slate-900/15 bg-white/70 px-5 py-3 text-sm font-black text-slate-800 transition hover:bg-white"
-                    >
-                      사용법 보기
-                    </button>
                   </div>
-                  <dl className="mt-7 flex max-w-lg divide-x divide-slate-900/10 overflow-hidden rounded-2xl bg-white/65 backdrop-blur-sm">
-                    {[
-                      ['레벨', user?.current_level || 1],
-                      ['연속 학습', `${user?.streak_count || 0}일`],
-                      ['평균 점수', statsLoading ? '—' : `${statistics?.average_score || 0}점`],
-                    ].map(([label, value]) => (
-                      <div key={label} className="min-w-0 flex-1 px-3 py-3 text-center">
-                        <dt className="truncate text-[10px] font-bold text-slate-500">{label}</dt>
-                        <dd className="mt-0.5 text-sm font-black text-slate-900">{value}</dd>
-                      </div>
-                    ))}
-                  </dl>
                 </div>
 
                 <div aria-hidden="true" className="pointer-events-none absolute -bottom-10 -right-10 hidden h-[330px] w-[360px] md:block">
@@ -1048,213 +1157,6 @@ export default function Dashboard() {
             </div>
           </div>
         </motion.section>
-
-        <div className="mt-9 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-black tracking-[0.12em] text-sky-600">TODAY'S LEARNING</p>
-            <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">오늘의 추천 학습</h2>
-          </div>
-          <button type="button" onClick={() => navigate('/guide')} className="hidden text-sm font-bold text-slate-500 hover:text-sky-700 sm:block">학습 방법 알아보기 →</button>
-        </div>
-
-        {/* 독화 학습 — 단계 사다리 + 문장·대화 실전을 한 카드로 통합 */}
-        <section id="reading-learning" className="mt-4 scroll-mt-52">
-          <CurriculumPath>
-          <div id="reading-test" className="scroll-mt-52">
-          <h2 className="mb-1 flex flex-wrap items-center gap-2 text-base font-bold text-gray-900">
-            🎯 문장·대화 실전
-            <span className="text-[11px] font-medium text-gray-400">3·4단계</span>
-            {testLocked && (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">🔒 잠김</span>
-            )}
-            {conversationLocked && !testLocked && (
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full border border-amber-300 bg-amber-50 text-amber-700">🔒 대화 잠김</span>
-            )}
-          </h2>
-          <p className="mb-2 text-xs text-gray-500">
-            AI의 <b className="text-gray-700">입모양을 눈으로 읽고</b> 무슨 말인지 알아맞히는 연습이에요. (말하기·발음이 아닙니다)
-          </p>
-
-          {testLocked ? (
-            <div className="mb-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs text-gray-500">
-              학습에서 2단계(음절·단어)를 완료하면 테스트가 열려요.
-            </div>
-          ) : (
-            <div className="mb-2 rounded-lg border border-blue-200 bg-blue-50 p-2 text-xs text-blue-700">
-              그동안 학습한 <b>독화(입모양 읽기)</b> 실력을 검증합니다. 주관식·4지선다·서술형 문제가 섞여서 출제돼요.
-            </div>
-          )}
-
-          {conversationLocked && !testLocked && (
-            <button type="button" onClick={explainConversationUnlock}
-              className="mb-2 flex w-full items-center gap-2 rounded-lg border border-dashed border-amber-300 bg-amber-50 px-3 py-1.5 text-left text-xs text-amber-800 transition hover:border-amber-400 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-400">
-              <span aria-hidden="true">🔒</span>
-              <span><b>대화 실전 잠김</b> · {CONVERSATION_UNLOCK_HINT}</span>
-            </button>
-          )}
-
-          <div className="space-y-3">
-            {/* Situation Selection */}
-            <div>
-                <label className="label !mb-1 !text-xs">상황 선택</label>
-                <div className="grid grid-cols-3 gap-1 sm:grid-cols-5 lg:grid-cols-9">
-                  {PRESET_SITUATIONS.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => setSelectedSituation(s.id)}
-                      className={`rounded-lg border-2 p-1.5 text-center transition-all ${
-                        selectedSituation === s.id
-                          ? 'border-primary-500 bg-primary-50'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }`}
-                    >
-                      <div className="text-base">{s.icon}</div>
-                      <div className="text-[11px] font-medium leading-tight">{s.label}</div>
-                    </button>
-                  ))}
-                </div>
-
-                <AnimatePresence>
-                  {selectedSituation === '직접 입력' && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="mt-2"
-                    >
-                      <input
-                        type="text"
-                        value={customSituation}
-                        onChange={(e) => setCustomSituation(e.target.value)}
-                        className="input-field !px-3 !py-2 text-sm"
-                        placeholder="상황을 직접 입력하세요 (예: 헬스장에서 트레이너와 대화, 면접 준비...)"
-                      />
-                      <p className="mt-1 text-[11px] text-gray-500">
-                        어떤 상황이든 AI가 맞춤형 문제를 만들어줍니다
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-            </div>
-
-            {/* Level Selection */}
-            <div>
-                <label className="label !mb-1 !text-xs">난이도</label>
-                <div className="flex gap-1.5">
-                  {[1, 2, 3, 4, 5].map((level) => (
-                    <button
-                      key={level}
-                      onClick={() => setSelectedLevel(level)}
-                      className={`flex-1 rounded-lg border-2 py-2 text-xs font-medium transition-all ${
-                        selectedLevel === level
-                          ? 'border-primary-500 bg-primary-500 text-white'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                      }`}
-                    >
-                      {level}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-1 text-[11px] text-gray-400">
-                  추천 레벨: {recLevel?.recommended_level ?? Math.min(user?.current_level || 1, 5)}
-                  {recLevel?.reason ? ` · ${recLevel.reason}` : ''}
-                </p>
-            </div>
-
-            <div className="grid gap-1.5 sm:grid-cols-2">
-              <button
-                onClick={startPractice}
-                disabled={
-                  loading ||
-                  testLocked ||
-                  (selectedSituation === '직접 입력' && !customSituation.trim())
-                }
-                className="btn-primary w-full py-2.5 text-sm disabled:opacity-60"
-              >
-                {loading ? 'AI 시나리오 준비 중…' : testLocked ? '🔒 문장 테스트 잠김' : '💬 문장 테스트 시작'}
-              </button>
-              <div className="group relative">
-                <button
-                  onClick={startConversation}
-                  aria-describedby={conversationLocked ? 'conversation-unlock-tooltip' : undefined}
-                  disabled={
-                    loading ||
-                    (!conversationLocked && selectedSituation === '직접 입력' && !customSituation.trim())
-                  }
-                  className={`w-full rounded-lg px-5 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                    conversationLocked
-                      ? 'cursor-help border-2 border-dashed border-amber-300 bg-gray-100 text-gray-500 hover:border-amber-400 hover:bg-amber-50 focus:ring-amber-400'
-                      : 'bg-violet-600 text-white hover:bg-violet-700 focus:ring-violet-500'
-                  }`}
-                >
-                  {loading ? 'AI 시나리오 준비 중…' : conversationLocked ? '🔒 대화 실전 · 잠김' : '👁️ AI 대화 독화'}
-                </button>
-                {conversationLocked && (
-                  <div id="conversation-unlock-tooltip" role="tooltip"
-                    className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-20 w-64 -translate-x-1/2 rounded-xl bg-slate-900 px-3 py-2 text-center text-xs leading-relaxed text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                    <b className="text-amber-300">해금 방법</b><br />{CONVERSATION_UNLOCK_HINT}
-                    <span className="absolute left-1/2 top-full -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          </div>
-          </CurriculumPath>
-        </section>
-
-        {/* 말하기 · 촉각 학습 */}
-        <section className="mt-3 grid items-start gap-3 lg:grid-cols-2">
-          <div id="speaking-learning" className="scroll-mt-52">
-            <SpeakCurriculumPath />
-          </div>
-          <TactileCard />
-        </section>
-
-        <section className="mt-3">
-          <ReviewSection />
-        </section>
-
-        <details className="group mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <summary className="flex cursor-pointer list-none flex-col justify-between gap-2 px-4 py-3 marker:hidden sm:flex-row sm:items-center">
-            <div>
-              <h2 className="font-bold text-slate-900">학습 기록과 분석</h2>
-              <p className="text-xs text-slate-500">상세 기록은 필요할 때 펼쳐보세요.</p>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">총 {statistics?.total_sessions || 0}회</span>
-              <span className="rounded-full bg-primary-50 px-2.5 py-1 font-bold text-primary-700">평균 {statistics?.average_score || 0}점</span>
-              <span aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-full bg-slate-100 text-slate-500 transition group-open:rotate-180">⌄</span>
-            </div>
-          </summary>
-          <div className="grid gap-4 border-t border-slate-100 px-4 py-4 lg:grid-cols-2">
-            <section aria-labelledby="activity-title">
-              <h3 id="activity-title" className="mb-2 text-sm font-bold text-slate-700">최근 90일 학습 현황</h3>
-              <ActivityCalendar data={calendarData} />
-            </section>
-            <section aria-labelledby="weak-viseme-title">
-              <h3 id="weak-viseme-title" className="mb-3 text-sm font-bold text-slate-700">취약 입모양</h3>
-              {!statsLoading && statistics?.weak_visemes?.length > 0 ? (
-                <ul className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-1">
-                  {statistics.weak_visemes.slice(0, 3).map((wv, idx) => (
-                    <li key={idx} className="flex items-center justify-between rounded-xl bg-red-50 px-3 py-1.5 text-sm">
-                      <span className="capitalize text-slate-700">{wv.feature}</span>
-                      <span className="font-bold text-red-600">{wv.error_rate}% 오답</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="rounded-xl bg-slate-50 px-3 py-4 text-center text-sm text-slate-400">아직 분석할 데이터가 없습니다.</p>
-              )}
-            </section>
-          </div>
-          <div className="border-t border-slate-100 px-4 py-3">
-            <button onClick={() => navigate('/analysis/overview')}
-              className="text-sm font-semibold text-primary-600 hover:text-primary-700">
-              📊 독화·말하기 상세 분석 보기 →
-            </button>
-          </div>
-        </details>
       </main>
     </div>
   )
