@@ -39,6 +39,34 @@ function makeQuestion(lv) {
   return { type: 'choice', answer, options: _shuffle([...opts]) }
 }
 
+// ── 커스텀 펌웨어 생성 — 사용자가 입력한 핀 배치를 .ino에 반영 ──────────────
+// 팬은 analogWrite(PWM)로 세기를 조절한다. Uno의 PWM 핀은 3·5·6·9·10·11이지만,
+// Servo 라이브러리가 Timer1을 점유해 D9·D10의 PWM을 끄므로 팬 유효 핀은 3·5·6·11.
+const FAN_PWM_PINS = [3, 5, 6, 11]
+const MIN_PIN = 2   // D0·D1은 USB 시리얼(RX/TX)이라 부품 연결 금지
+const PIN_FIELDS = [
+  { key: 'jaw', label: '턱 서보', token: 'PIN_JAW', def: 9, pwm: false },
+  { key: 'lip', label: '입술 서보', token: 'PIN_LIP', def: 10, pwm: false },
+  { key: 'vib', label: '진동 모터', token: 'PIN_VIB', def: 5, pwm: false },
+  { key: 'fan', label: '팬(기류)', token: 'PIN_FAN', def: 6, pwm: true },   // analogWrite → PWM 핀 필요
+]
+
+// 템플릿 .ino의 핀 상수를 사용자 값으로 치환하고, 상단에 사용자 핀표 주석을 붙인다.
+function buildCustomIno(template, pins) {
+  let out = template
+  for (const f of PIN_FIELDS) {
+    out = out.replace(new RegExp(`(const int ${f.token}\\s*=\\s*)\\d+`), `$1${pins[f.key]}`)
+  }
+  const header = [
+    '// ===== 사용자 지정 핀 배치 (LIPLAB 웹에서 생성) =====',
+    ...PIN_FIELDS.map((f) => `//   ${f.label} → D${pins[f.key]}`),
+    '// ※ 아래 배선 설명의 핀 번호는 기본값 예시이며, 실제 연결은 위 표를 따르세요.',
+    '// ==================================================',
+    '',
+  ].join('\n')
+  return header + out
+}
+
 export default function TactilePractice() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -67,6 +95,25 @@ export default function TactilePractice() {
   const [aiPool, setAiPool] = useState(null)      // {level, items} — AI 생성 문제 풀(단어·문장)
   const [reviewPool, setReviewPool] = useState(null)  // 복습 항목(target 배열)
   const [marks, setMarks] = useState({})          // 북마크 상태 {target: bookmarkId}
+  const [pins, setPins] = useState({ jaw: 9, lip: 10, vib: 5, fan: 6 })  // 커스텀 펌웨어 핀
+  const [pinMsg, setPinMsg] = useState('')
+
+  // 사용자 핀 배치를 반영한 .ino 생성·다운로드
+  const downloadCustomIno = async () => {
+    const vals = PIN_FIELDS.map((f) => pins[f.key])
+    if (vals.some((v) => !Number.isInteger(v) || v < MIN_PIN || v > 13)) { setPinMsg('핀은 2~13 사이 정수로 입력해 주세요. (D0·D1은 USB 통신용이라 쓸 수 없어요)'); return }
+    if (new Set(vals).size !== vals.length) { setPinMsg('부품마다 서로 다른 핀을 써야 해요(중복 불가).'); return }
+    if (!FAN_PWM_PINS.includes(pins.fan)) { setPinMsg(`팬은 ${FAN_PWM_PINS.join('·')}번 중 하나여야 바람 세기가 조절돼요. (서보와 겹치지 않는 PWM 핀)`); return }
+    try {
+      const tpl = await (await fetch('/hardware/liplab_face.ino')).text()
+      const blob = new Blob([buildCustomIno(tpl, pins)], { type: 'text/plain;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = 'liplab_face_custom.ino'; a.click()
+      URL.revokeObjectURL(url)
+      setPinMsg('✓ 내 핀 배치가 반영된 liplab_face_custom.ino를 내려받았어요.')
+    } catch { setPinMsg('펌웨어 템플릿을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.') }
+  }
 
   // 복습 모드: 예정·틀림·북마크 항목을 받아 문제 풀로 사용
   useEffect(() => {
@@ -275,8 +322,36 @@ export default function TactilePractice() {
           <p className="text-sm font-semibold text-gray-800 mb-2">④ 펌웨어</p>
           <a href="/hardware/liplab_face.ino" download="liplab_face.ino"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm font-semibold hover:bg-gray-900">
-            ⬇ 아두이노 펌웨어 다운로드 (liplab_face.ino)
+            ⬇ 기본 펌웨어 다운로드 (liplab_face.ino)
           </a>
+
+          {/* 내 핀 배치로 커스텀 .ino 생성 */}
+          <div className="mt-3 rounded-xl border border-purple-200 bg-purple-50/50 p-3">
+            <p className="text-sm font-semibold text-gray-800">🔧 내 핀 배치로 만들기</p>
+            <p className="mt-0.5 text-[11px] text-gray-500">
+              각 부품을 연결한 아두이노 핀(D2~D13)을 입력하면, 그 배치가 반영된 펌웨어를 바로 받을 수 있어요.
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {PIN_FIELDS.map((f) => (
+                <label key={f.key} className="text-xs font-medium text-gray-600">
+                  {f.label}{f.pwm && <span className="text-purple-500"> · PWM</span>}
+                  <div className="mt-0.5 flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1">
+                    <span className="text-gray-400">D</span>
+                    <input type="number" min="2" max="13"
+                      value={Number.isFinite(pins[f.key]) ? pins[f.key] : ''}
+                      onChange={(e) => { const v = parseInt(e.target.value, 10); setPins((p) => ({ ...p, [f.key]: Number.isNaN(v) ? '' : v })) }}
+                      className="w-full text-sm outline-none" />
+                  </div>
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-[10px] text-gray-400">D0·D1은 USB 통신용이라 제외돼요. 팬은 세기 조절이 필요해 서보와 겹치지 않는 PWM 핀(3·5·6·11)에 연결하세요.</p>
+            <button onClick={downloadCustomIno}
+              className="mt-2 w-full rounded-lg bg-purple-600 py-2 text-sm font-semibold text-white hover:bg-purple-700">
+              ⬇ 내 핀 배치 펌웨어 다운로드
+            </button>
+            {pinMsg && <p className="mt-1 text-[11px] text-gray-600">{pinMsg}</p>}
+          </div>
         </div>
 
         {/* 연결 */}
