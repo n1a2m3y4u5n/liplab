@@ -15,6 +15,7 @@ const MENU_GROUPS = [
       { label: '문장 테스트', description: '상황별 독화 실력 확인', icon: '💬', to: '/dashboard#reading-test' },
       { label: '대화 실전', description: '상황을 고르고 AI와 대화', icon: '🗣️', to: '/dashboard#reading-test', unlockStage: 4 },
       { label: '문맥 추론', description: '앞뒤 맥락으로 뜻 찾기', icon: '🧩', to: '/learn/closure' },
+      { label: '내 문장 발음', description: '아무 글이나 입력해 입모양 보기', icon: '✍️', to: '/pronounce' },
     ],
   },
   {

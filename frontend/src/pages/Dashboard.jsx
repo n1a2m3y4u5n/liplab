@@ -226,10 +226,14 @@ function CurriculumPath({ children }) {
             )
           })}
         </div>
-        <div className="mt-2">
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
           <button onClick={() => navigate('/learn/closure')}
-            className="w-full py-2 rounded-xl text-xs font-semibold bg-primary-50 text-primary-700 hover:bg-primary-100 transition-all">
+            className="py-2 rounded-xl text-xs font-semibold bg-primary-50 text-primary-700 hover:bg-primary-100 transition-all">
             🧩 문맥 추론 훈련
+          </button>
+          <button onClick={() => navigate('/pronounce')}
+            className="py-2 rounded-xl text-xs font-semibold bg-primary-50 text-primary-700 hover:bg-primary-100 transition-all">
+            ✍️ 내 문장 발음 보기
           </button>
         </div>
         </>
