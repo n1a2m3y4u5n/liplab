@@ -71,7 +71,7 @@ export default function FreeSpeak() {
             <p className="text-sm text-gray-600">아무 글자나 문장을 입력하면 3D 얼굴이 그대로 발음해요.</p>
           </div>
           <button
-            onClick={() => navigate('/pillar/reading')}
+            onClick={() => navigate('/dashboard')}
             className="shrink-0 text-gray-500 hover:text-gray-800 text-sm"
           >
             ✕ 나가기

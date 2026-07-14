@@ -139,7 +139,7 @@ export default function Practice() {
 
   useEffect(() => {
     if (!currentScenario) {
-      navigate('/pillar/reading')
+      navigate('/dashboard')
       return
     }
     loadVisemes()
@@ -216,7 +216,7 @@ export default function Practice() {
 
   const handleFinish = () => {
     resetPractice()
-    navigate('/pillar/reading')
+    navigate('/dashboard')
   }
 
   const showNextHint = () => {

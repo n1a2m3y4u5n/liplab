@@ -70,7 +70,7 @@ export default function ScenarioHub() {
         accent="reading"
         title="문장 학습"
         description="연습할 상황과 난이도를 고르면 AI가 독화 문장과 대화를 준비합니다"
-        onExit={() => navigate('/pillar/reading')}
+        onExit={() => navigate('/dashboard')}
       />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
