@@ -46,7 +46,7 @@ export default function ScenarioHub() {
 
   const start = async (mode) => {
     if (locks[mode]) {
-      alert(mode === 'practice' ? '음절·단어 학습을 완료하면 문장 실전이 열려요.' : '문장 독화를 완료하면 대화 실전이 열려요.')
+      alert(mode === 'practice' ? '단어 학습을 완료하면 문장 학습이 열려요.' : '문장 학습을 완료하면 대화 실전이 열려요.')
       return
     }
     if (!effectiveSituation) return
@@ -68,7 +68,7 @@ export default function ScenarioHub() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
       <LearnHeader
         accent="reading"
-        title="문장·대화 실전"
+        title="문장 학습"
         description="연습할 상황과 난이도를 고르면 AI가 독화 문장과 대화를 준비합니다"
         onExit={() => navigate('/pillar/reading')}
       />

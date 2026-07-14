@@ -7,60 +7,6 @@ import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
 import QuizForm from '../components/QuizForm'
 import SignPanel from '../components/SignPanel'
 
-function BookmarkButton({ sentence, situation, level }) {
-  const [bookmarkId, setBookmarkId] = useState(null)
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    setBookmarkId(null)  // immediately clear stale state when sentence changes
-    let cancelled = false
-    learningAPI.getBookmarks().then((list) => {
-      if (!cancelled) {
-        const found = list.find((b) => b.sentence === sentence)
-        setBookmarkId(found?.id ?? null)
-      }
-    }).catch(() => {})
-    return () => { cancelled = true }
-  }, [sentence])
-
-  const toggle = async () => {
-    if (loading) return
-    setLoading(true)
-    try {
-      if (bookmarkId) {
-        await learningAPI.removeBookmark(bookmarkId)
-        setBookmarkId(null)
-      } else {
-        const created = await learningAPI.addBookmark(sentence, situation, level)
-        setBookmarkId(created.id)
-      }
-    } catch (e) {
-      // On error, re-fetch to sync UI with server state
-      learningAPI.getBookmarks().then((list) => {
-        const found = list.find((b) => b.sentence === sentence)
-        setBookmarkId(found?.id ?? null)
-      }).catch(() => {})
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <button
-      onClick={toggle}
-      disabled={loading}
-      title={bookmarkId ? '북마크 해제' : '북마크 추가'}
-      className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full border transition-colors ${
-        bookmarkId
-          ? 'bg-yellow-100 border-yellow-400 text-yellow-700'
-          : 'bg-white border-gray-200 text-gray-400 hover:border-yellow-300 hover:text-yellow-500'
-      }`}
-    >
-      {bookmarkId ? '★ 북마크됨' : '☆ 북마크'}
-    </button>
-  )
-}
-
 /**
  * 힌트 시스템: 단계별로 문장 정보를 공개
  * Level 0: 힌트 없음
@@ -332,13 +278,6 @@ export default function Practice() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {currentSentence && practiceMode !== 'study' && (
-                <BookmarkButton
-                  sentence={currentSentence}
-                  situation={currentScenario.situation}
-                  level={currentScenario.level}
-                />
-              )}
               <button
                 onClick={() => {
                   if (confirm('연습을 종료하시겠습니까?')) handleFinish()

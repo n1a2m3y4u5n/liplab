@@ -307,7 +307,7 @@ export default function TactilePractice() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
       <LearnHeader
         accent="tactile"
-        title="🖐️ 촉각 학습 (타도마)"
+        title={reviewMode ? '촉각 복습' : '촉각 학습'}
         description="얼굴 모형의 턱·입술·진동·바람을 손으로 느끼며 말을 이해해요"
         maxWidth="max-w-4xl"
         onExit={() => { disconnect(); navigate('/pillar/tactile') }}

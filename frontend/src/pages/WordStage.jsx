@@ -41,7 +41,7 @@ export default function WordStage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
       <LearnHeader
         accent="reading"
-        title="음절·단어"
+        title="단어 학습"
         description="입모양만 보고 어떤 단어인지 맞혀보세요"
         onExit={() => navigate('/pillar/reading')}
       />

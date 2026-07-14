@@ -4,7 +4,7 @@ import { learningAPI, speakAPI, tactileAPI } from '../api'
 import DomainPageShell from '../components/DomainPageShell'
 
 const PAGE_META = {
-  overview: { title: '종합 학습 분석', description: '독화·말하기·촉각 학습에서 쌓인 핵심 성과를 한눈에 확인합니다.' },
+  overview: { title: '학습 분석', description: '독화·말하기·촉각 학습에서 쌓인 핵심 성과를 한눈에 확인합니다.' },
   activity: { title: '학습 활동', description: '최근 90일 동안 언제, 얼마나 꾸준히 학습했는지 확인합니다.' },
   visemes: { title: '취약 입모양', description: '입모양 유형별 점수와 시도 횟수를 비교해 집중할 항목을 찾습니다.' },
   scores: { title: '평균 점수', description: '독화·말하기·촉각 영역의 현재 점수를 각각 비교합니다.' },

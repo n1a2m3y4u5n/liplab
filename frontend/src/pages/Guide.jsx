@@ -10,10 +10,10 @@ const PILLARS = [
     modes: [
       { name: '① 단계 학습 (0~2단계)', steps: [
         '처음이면 입문·배치로 나에게 맞는 트랙을 정해요.',
-        '입모양 인지 → 음절·단어를 3D 애니메이션으로 단계별로 익혀요.',
+        '입모양 학습 → 단어 학습을 3D 애니메이션으로 단계별로 진행해요.',
         '문맥 추론 훈련으로 안 보이는 소리를 추리하는 힘을 길러요.',
       ] },
-      { name: '② 문장·대화 실전 (3~4단계)', steps: [
+      { name: '② 문장 학습 (3~4단계)', steps: [
         '상황(카페·병원 등)과 난이도를 골라요.',
         'AI가 만든 문장을 입모양만 보고 맞혀요 (주관식·4지선다·서술형 혼합).',
         '대화 실전은 AI와 주고받으며 실제 대화 흐름을 연습해요.',
@@ -112,7 +112,7 @@ export default function Guide() {
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">사용법 안내</h1>
+            <h1 className="text-2xl font-bold text-gray-900">사용법</h1>
             <p className="text-sm text-gray-500">LIPLAB의 모든 기능과 학습 방법을 알아보세요</p>
           </div>
           <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-gray-800 text-sm">
