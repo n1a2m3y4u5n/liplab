@@ -98,7 +98,7 @@ const HERO_SLIDES = [
     id: 'reading',
     tab: '독화',
     eyebrow: '01',
-    title: ['독화 · 입모양 읽기', '입모양부터 대화까지'],
+    title: ['독화 연습', '입모양으로 들어요'],
     description: '자음·모음 입모양부터 상황별 문장·대화까지 단계로 익혀요.',
     to: '/pillar/reading',
     cta: '독화 학습 보기',
@@ -113,7 +113,7 @@ const HERO_SLIDES = [
     title: ['말하기 연습', '발음을 다듬어요'],
     description: '소리와 억양을 보며 또박또박 말해요.',
     to: '/pillar/speaking',
-    cta: '말하기 보기',
+    cta: '말하기 학습 보기',
     background: 'from-[#fff6f7] via-[#ffe7eb] to-[#ffd5dc]',
     badge: 'bg-white/80 text-rose-700',
     visual: { shape: 'from-rose-300 via-rose-400 to-pink-500', shadow: 'shadow-[0_30px_60px_rgba(244,63,94,0.22)]', first: '소리', second: '억양', third: '발음', chip: 'bg-rose-100 text-rose-700' },
@@ -1171,10 +1171,12 @@ export default function Dashboard() {
                 </div>
 
                 <div aria-hidden="true" className="pointer-events-none absolute -bottom-10 -right-10 hidden h-[330px] w-[360px] md:block">
-                  <div className={`absolute bottom-12 right-12 h-52 w-64 rotate-[-5deg] rounded-[48%_44%_50%_46%] bg-gradient-to-br ${currentHero.visual.shape} ${currentHero.visual.shadow}`}>
-                    <span className="absolute left-[72px] top-[64px] h-5 w-5 rounded-full bg-slate-800" />
-                    <span className="absolute left-[110px] top-[61px] h-5 w-5 rounded-full bg-slate-800" />
-                    <span className="absolute left-[68px] top-[100px] h-10 w-[92px] rounded-b-full rounded-t-[42%] border-b-[12px] border-white/90" />
+                  <div className={`absolute bottom-12 right-12 h-52 w-52 rotate-[-5deg] rounded-[48%_44%_50%_46%] bg-gradient-to-br ${currentHero.visual.shape} ${currentHero.visual.shadow}`}>
+                    <span className="absolute left-[75px] top-[64px] h-5 w-5 rounded-full bg-slate-800" />
+                    <span className="absolute left-[113px] top-[61px] h-5 w-5 rounded-full bg-slate-800" />
+                    <span className="absolute left-[58px] top-[100px] h-10 w-[92px] rounded-b-full rounded-t-[42%] border-b-[12px] border-white/90" />
+                    <span className="absolute left-[40px] top-[78px] h-4 w-4 rounded-full bg-white/40" />
+                    <span className="absolute right-[40px] top-[78px] h-4 w-4 rounded-full bg-white/40" />
                     <span className="absolute -right-7 top-20 h-20 w-14 rotate-12 rounded-[55%_45%_55%_45%] bg-slate-900/20" />
                   </div>
                   <div className="absolute right-20 top-2 grid h-16 min-w-16 rotate-12 place-items-center rounded-2xl bg-white px-2 text-sm font-black text-slate-800 shadow-xl">{currentHero.visual.first}</div>
