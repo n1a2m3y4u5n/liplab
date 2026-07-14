@@ -633,6 +633,22 @@ export default function Dashboard() {
           </div>
         </section>
 
+        {/* 촉각 학습(타도마) — 하드웨어/시뮬레이터 */}
+        <section className="mt-3">
+          <button onClick={() => navigate('/tactile')}
+            className="w-full card text-left border-2 border-transparent hover:border-purple-300 transition-colors flex items-center gap-4">
+            <span className="text-4xl">🖐️</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-gray-900">촉각 학습 (타도마)</h2>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">NEW · 하드웨어</span>
+              </div>
+              <p className="text-sm text-gray-500 mt-0.5">얼굴 모형의 턱·입술·진동·바람을 손으로 느끼며 말을 이해해요 · 하드웨어 없이 시뮬레이터로도 체험</p>
+            </div>
+            <span className="text-gray-300 text-xl">→</span>
+          </button>
+        </section>
+
         {/* Practice Setup */}
         <section className="mt-3 grid items-start gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.7fr)]">
         <motion.div
