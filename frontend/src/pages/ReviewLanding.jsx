@@ -73,7 +73,7 @@ export default function ReviewLanding({ mode = 'today' }) {
           accent="reading"
           title="독화 복습"
           description="독화 테스트에서 놓친 문장만 모아 다시 확인합니다"
-          onExit={() => navigate('/pillar/reading')}
+          onExit={() => navigate('/dashboard')}
         />
 
         <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-5">

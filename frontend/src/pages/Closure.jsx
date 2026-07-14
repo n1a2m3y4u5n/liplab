@@ -31,7 +31,7 @@ export default function Closure() {
         accent="reading"
         title="문맥 추론"
         description="입모양만으론 헷갈리는 단어, 문맥으로 골라보세요"
-        onExit={() => navigate('/pillar/reading')}
+        onExit={() => navigate('/dashboard')}
       />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <ClosureQuiz items={items} />

@@ -310,7 +310,7 @@ export default function TactilePractice() {
         title={reviewMode ? '촉각 복습' : '촉각 학습'}
         description="얼굴 모형의 턱·입술·진동·바람을 손으로 느끼며 말을 이해해요"
         maxWidth="max-w-4xl"
-        onExit={() => { disconnect(); navigate('/pillar/tactile') }}
+        onExit={() => { disconnect(); navigate('/dashboard') }}
       />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
