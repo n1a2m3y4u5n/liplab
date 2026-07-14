@@ -39,6 +39,17 @@
   }
 }
 
+/* 전역 학습 메뉴가 각 페이지의 우측 헤더 동작을 가리지 않도록 여백을 확보한다. */
+.app-shell header > div {
+  padding-right: 4.5rem;
+}
+
+@media (min-width: 640px) {
+  .app-shell header > div {
+    padding-right: 9rem;
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
