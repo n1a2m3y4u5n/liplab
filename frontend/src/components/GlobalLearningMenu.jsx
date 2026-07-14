@@ -142,11 +142,7 @@ export default function GlobalLearningMenu() {
   return (
     <header className="sticky top-0 z-50 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
       <div className="border-b border-slate-100 bg-slate-50/90">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-2 text-[11px] text-slate-500 sm:px-6">
-          <button type="button" onClick={() => go('/dashboard')} className="inline-flex items-center gap-1.5 font-bold text-slate-700 hover:text-sky-700">
-            <span aria-hidden="true">⌂</span>
-            메인 바로가기
-          </button>
+        <div className="mx-auto flex max-w-[1440px] items-center justify-end px-4 py-2 text-[11px] text-slate-500 sm:px-6">
           <p className="hidden sm:block"><b className="text-slate-700">{user?.username}님</b>, 오늘도 나에게 맞는 방식으로 학습해 보세요.</p>
         </div>
       </div>
