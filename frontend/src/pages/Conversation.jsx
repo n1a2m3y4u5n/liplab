@@ -29,13 +29,17 @@ export default function Conversation() {
   const [scores, setScores] = useState([])
 
   const chatBottomRef = useRef(null)
+  const startedRef = useRef(false)   // 최초 AI 말풍선 중복 생성 방지(StrictMode)
 
   useEffect(() => {
     if (!currentScenario) {
       navigate('/dashboard')
       return
     }
-    // Start with first AI message
+    // StrictMode(개발)에서 이 effect가 두 번 실행되면 첫 AI 말풍선이 2개 생긴다.
+    // ref 가드로 최초 1회만 대화를 시작한다.
+    if (startedRef.current) return
+    startedRef.current = true
     sendAIMessage([])
   }, [])
 
@@ -144,8 +148,11 @@ export default function Conversation() {
       <header className="bg-white shadow-sm border-b border-gray-200 shrink-0">
         <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
           <div>
-            <h1 className="text-lg font-bold text-gray-900">대화 연습</h1>
-            <p className="text-xs text-gray-500">{currentScenario.situation} · 레벨 {currentScenario.level}</p>
+            <h1 className="flex items-center gap-2 text-lg font-bold text-gray-900">
+              <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-700">👁️ 독화</span>
+              대화 실전
+            </h1>
+            <p className="text-xs text-gray-500">AI 입모양을 읽고 답하기 · {currentScenario.situation} · 레벨 {currentScenario.level}</p>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-400">

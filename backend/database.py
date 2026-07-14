@@ -108,6 +108,8 @@ class Bookmark(Base):
     sentence = Column(String(500), nullable=False)
     situation = Column(String(100), default="")
     level = Column(Integer, default=1)
+    # 어느 기둥의 북마크인지 — 독화(read)·말하기(speak)·촉각(tactile). 세 기둥 복습을 동일 구조로.
+    domain = Column(String(12), default="read", index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="bookmarks")
@@ -175,6 +177,34 @@ class SpeakStageProgress(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class TactileStageProgress(Base):
+    """촉각(타도마) 커리큘럼 단계별 진행·숙달. 독화·발화 진행도와 동급으로 별도 테이블.
+    stage: 0 감각 ~ 4 문장. 퀴즈 정답 여부가 rolling으로 반영된다."""
+    __tablename__ = "tactile_stage_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    stage = Column(Integer, nullable=False)        # 0..4
+    status = Column(String(20), default="locked")  # locked | unlocked | in_progress | mastered
+    mastery_score = Column(Float, default=0.0)     # 0-100 (correct/attempts*100)
+    attempts = Column(Integer, default=0)
+    correct = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class TactileAttempt(Base):
+    """촉각(타도마) 개별 문제 시도 기록 — 복습(틀린 항목 다시)·분석용.
+    말하기 SpeakAttempt의 촉각판. target=문제 정답 텍스트."""
+    __tablename__ = "tactile_attempts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    stage = Column(Integer, nullable=True)          # 0..4
+    target = Column(String(200), nullable=False)
+    correct = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class SpeakAttempt(Base):
     """발화 개별 시도 기록 — 말하기 '분석'용(자주 틀리는 소리·억양/크기 추세).
     독화가 Progress에 시도마다 쌓듯, 말하기도 여기에 쌓아 분석을 분리한다."""
@@ -226,6 +256,13 @@ async def init_db():
     """Initialize database tables"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # 경량 마이그레이션 — create_all은 기존 테이블에 컬럼을 추가하지 않으므로
+        # 나중에 생긴 bookmarks.domain 컬럼을 있으면 무시, 없으면 추가한다(SQLite).
+        try:
+            await conn.exec_driver_sql(
+                "ALTER TABLE bookmarks ADD COLUMN domain VARCHAR(12) DEFAULT 'read'")
+        except Exception:
+            pass  # 이미 존재
 
 
 async def close_db():

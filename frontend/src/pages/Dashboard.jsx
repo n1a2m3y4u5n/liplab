@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
-import { learningAPI, curriculumAPI, reviewAPI, speakAPI } from '../api'
+import { learningAPI, curriculumAPI, reviewAPI, speakAPI, tactileAPI } from '../api'
 
 const PRESET_SITUATIONS = [
   { id: '카페', label: '카페', icon: '☕' },
@@ -97,7 +97,46 @@ const STAGE_STATUS = {
   coming_soon: { label: '준비 중',  cls: 'bg-gray-100 text-gray-400' },
 }
 
-function CurriculumPath() {
+// 세 커리큘럼(독화·말하기·타도마)이 동일한 카드 구조를 쓰도록 하는 공통 단계 칩.
+// 기둥별 강조색만 theme으로 바꾼다. — 단계번호/상태뱃지/제목/설명/숙련도바/잠금오버레이 레이아웃 통일
+const LADDER_ACCENT = {
+  sky:    { hover: 'hover:border-primary-400 hover:bg-primary-50', bar: 'bg-primary-500' },
+  rose:   { hover: 'hover:border-rose-400 hover:bg-rose-50',       bar: 'bg-rose-500' },
+  purple: { hover: 'hover:border-purple-400 hover:bg-purple-50',   bar: 'bg-purple-500' },
+}
+
+function StageChip({ n, title, desc, status = 'unlocked', mastery = null, unlockHint, theme = 'sky', onClick, disabled }) {
+  const st = STAGE_STATUS[status] || STAGE_STATUS.locked
+  const accent = LADDER_ACCENT[theme] || LADDER_ACCENT.sky
+  const isLocked = status === 'locked'
+  const openable = !isLocked && status !== 'coming_soon'
+  return (
+    <button onClick={onClick} disabled={disabled}
+      aria-label={isLocked && unlockHint ? `${title}, 잠김. ${unlockHint}` : title}
+      title={isLocked && unlockHint ? unlockHint : undefined}
+      className={`group relative overflow-hidden text-left p-2 rounded-xl border-2 transition-all ${openable ? `border-gray-200 bg-white ${accent.hover} cursor-pointer` : isLocked ? 'border-dashed border-gray-300 bg-gray-100/80 cursor-help hover:border-amber-400' : 'border-gray-100 bg-gray-50 cursor-default'}`}>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] text-gray-400">{n}단계</span>
+        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
+      </div>
+      <div className={`text-[13px] font-bold mt-0.5 ${openable ? 'text-gray-800' : 'text-gray-400'}`}>{title}</div>
+      <div className="mt-0.5 truncate text-[10px] leading-tight text-gray-400">{desc}</div>
+      {mastery != null && (
+        <div className="mt-1 bg-gray-200 rounded-full h-1 overflow-hidden">
+          <div className={`${accent.bar} h-full`} style={{ width: `${Math.min(mastery, 100)}%` }} />
+        </div>
+      )}
+      {isLocked && unlockHint && (
+        <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center rounded-lg bg-slate-900/95 px-2 text-center opacity-0 transition-opacity group-hover:opacity-100 group-focus:opacity-100">
+          <span className="text-xs font-bold text-amber-300">🔒 해금 방법</span>
+          <span className="mt-1 text-[10px] leading-tight text-white">{unlockHint}</span>
+        </span>
+      )}
+    </button>
+  )
+}
+
+function CurriculumPath({ children }) {
   const navigate = useNavigate()
   const [state, setState] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -134,10 +173,12 @@ function CurriculumPath() {
     navigate(s.route)
   }
 
-  if (loading || !state) return null
-
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card !p-4">
+      {(loading || !state) ? (
+        <div className="py-6 text-center text-xs text-gray-400">불러오는 중…</div>
+      ) : (
+      <>
       <div className="flex items-center justify-between mb-0.5">
         <h2 className="text-base font-bold text-gray-900">독화 학습</h2>
         {state.placed ? (
@@ -149,6 +190,9 @@ function CurriculumPath() {
           <span className="text-xs text-gray-400">기초부터 단계별로</span>
         )}
       </div>
+      <p className="mb-2 line-clamp-2 text-xs text-gray-500">
+        입모양 읽기(독화)를 기초 입모양 → 단어 → 문장 → 대화까지 단계별로 익혀요.
+      </p>
 
       {!state.placed ? (
         <div>
@@ -166,39 +210,19 @@ function CurriculumPath() {
         </div>
       ) : (
         <>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 mt-2">
-          {state.stages.map((s) => {
-            const st = STAGE_STATUS[s.status] || STAGE_STATUS.locked
+        {/* 학습 단계(0~2)만 사다리로. 3·4단계(문장·대화)는 아래 '문장·대화 실전' 구역이 담당 — 역할 중복 제거 */}
+        <div className="grid grid-cols-3 gap-1.5 mt-2">
+          {state.stages.filter((s) => s.stage <= 2).map((s) => {
             const isLocked = s.status === 'locked'
-            const openable = !isLocked && s.status !== 'coming_soon' && !!s.route
             const prev = isLocked ? state.stages.find((item) => item.stage === s.stage - 1) : null
             const unlockHint = prev
               ? `${prev.stage}단계 ${prev.title} 학습을 완료하면 열려요.`
               : '이전 단계를 완료하면 열려요.'
-            // 잠긴 단계는 흐리게(잠김) 보이되, 눌러서 '이전 단계 완료' 안내를 받을 수 있게 클릭은 허용
             return (
-              <button key={s.stage} onClick={() => go(s)} disabled={s.status === 'coming_soon'}
-                aria-label={isLocked ? `${s.title}, 잠김. ${unlockHint}` : s.title}
-                title={isLocked ? unlockHint : undefined}
-                className={`group relative overflow-hidden text-left p-2 rounded-xl border-2 transition-all ${openable ? 'border-gray-200 bg-white hover:border-primary-400 hover:bg-primary-50 cursor-pointer' : isLocked ? 'border-dashed border-gray-300 bg-gray-100/80 cursor-help hover:border-amber-400' : 'border-gray-100 bg-gray-50 cursor-default'}`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-gray-400">{s.stage}단계</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
-                </div>
-                <div className={`text-[13px] font-bold mt-0.5 ${openable ? 'text-gray-800' : 'text-gray-400'}`}>{s.title}</div>
-                <div className="mt-0.5 truncate text-[10px] leading-tight text-gray-400">{s.desc}</div>
-                {s.stage === 1 && s.mastery_score != null && (
-                  <div className="mt-1 bg-gray-200 rounded-full h-1 overflow-hidden">
-                    <div className="bg-primary-500 h-full" style={{ width: `${Math.min(s.mastery_score, 100)}%` }} />
-                  </div>
-                )}
-                {isLocked && (
-                  <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center rounded-lg bg-slate-900/95 px-2 text-center opacity-0 transition-opacity group-hover:opacity-100 group-focus:opacity-100">
-                    <span className="text-xs font-bold text-amber-300">🔒 해금 방법</span>
-                    <span className="mt-1 text-[10px] leading-tight text-white">{unlockHint}</span>
-                  </span>
-                )}
-              </button>
+              <StageChip key={s.stage} n={s.stage} title={s.title} desc={s.desc}
+                status={s.status} mastery={s.mastery_score} theme="sky"
+                unlockHint={isLocked ? unlockHint : undefined}
+                disabled={s.status === 'coming_soon'} onClick={() => go(s)} />
             )
           })}
         </div>
@@ -210,6 +234,13 @@ function CurriculumPath() {
         </div>
         </>
       )}
+      </>
+      )}
+      {children && (
+        <div className="mt-4 border-t border-gray-100 pt-4">
+          {children}
+        </div>
+      )}
     </motion.div>
   )
 }
@@ -218,11 +249,9 @@ function CurriculumPath() {
 function SpeakCurriculumPath() {
   const navigate = useNavigate()
   const [stages, setStages] = useState(null)
-  const [reviewDue, setReviewDue] = useState(0)
 
   useEffect(() => {
     speakAPI.getCurriculum().then((d) => setStages(d.stages)).catch(() => setStages(null))
-    speakAPI.getReview().then((d) => setReviewDue(d.count || 0)).catch(() => {})
   }, [])
 
   const go = (s) => {
@@ -247,32 +276,74 @@ function SpeakCurriculumPath() {
       ) : (
         <>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-          {stages.map((s) => {
-            const st = STAGE_STATUS[s.status] || STAGE_STATUS.locked
-            const openable = s.status !== 'locked'
-            return (
-              <button key={s.stage} onClick={() => go(s)}
-                className={`text-left p-2 rounded-xl border-2 transition-all ${openable ? 'border-gray-200 bg-white hover:border-rose-400 hover:bg-rose-50 cursor-pointer' : 'border-gray-100 bg-gray-50 cursor-pointer hover:border-gray-200'}`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-gray-400">{s.stage}단계</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
-                </div>
-                <div className={`mt-0.5 truncate text-[13px] font-bold ${openable ? 'text-gray-800' : 'text-gray-400'}`}>
-                  {s.title}
-                </div>
-                <div className="mt-0.5 truncate text-[10px] leading-tight text-gray-400">{s.desc}</div>
-                {s.mastery_score != null && (
-                  <div className="mt-1 bg-gray-200 rounded-full h-1 overflow-hidden">
-                    <div className="bg-rose-500 h-full" style={{ width: `${Math.min(s.mastery_score, 100)}%` }} />
-                  </div>
-                )}
-              </button>
-            )
-          })}
+          {stages.map((s) => (
+            <StageChip key={s.stage} n={s.stage} title={s.title} desc={s.desc}
+              status={s.status} mastery={s.mastery_score} theme="rose" onClick={() => go(s)} />
+          ))}
         </div>
-        <button onClick={() => reviewDue > 0 && navigate('/speak?review=1')} disabled={reviewDue === 0}
-          className={`mt-2 w-full py-2 rounded-xl text-xs font-semibold transition-all ${reviewDue > 0 ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' : 'bg-gray-100 text-gray-400 cursor-default'}`}>
-          발음 복습 {reviewDue > 0 ? `${reviewDue}개` : '(없음)'}
+        </>
+      )}
+    </motion.div>
+  )
+}
+
+// ── 촉각 학습(타도마) — 독화·말하기 카드와 완전 동급(백엔드 진행도 + 동일 구조) ──
+function TactileCard() {
+  const navigate = useNavigate()
+  const [stages, setStages] = useState(null)
+
+  useEffect(() => {
+    tactileAPI.getCurriculum().then((d) => setStages(d.stages)).catch(() => setStages(null))
+  }, [])
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card !p-4">
+      <div className="flex items-center justify-between mb-0.5">
+        <div className="flex items-center gap-2">
+          <h2 className="text-base font-bold text-gray-900">촉각 학습 (타도마)</h2>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">하드웨어</span>
+        </div>
+        <span className="text-xs text-gray-400">손으로 느끼는 발화 이해</span>
+      </div>
+      <p className="mb-2 line-clamp-2 text-xs text-gray-500">
+        얼굴 모형의 턱·입술·진동·바람을 손으로 느끼며 말을 이해해요 — 하드웨어 없이 시뮬레이터로도 체험할 수 있어요.
+      </p>
+      {!stages ? (
+        <div className="py-4 text-center text-xs text-gray-400">불러오는 중…</div>
+      ) : (
+        <>
+        {(() => {
+          const total = stages.length
+          const started = stages.filter((s) => s.status === 'mastered' || s.status === 'in_progress').length
+          const lastMastered = [...stages].reverse().find((s) => s.status === 'mastered')
+          const inProgress = stages.find((s) => s.status === 'in_progress')
+          const note = lastMastered ? `${lastMastered.title} 완료`
+            : inProgress ? `${inProgress.title} 학습 중` : '아직 시작 전'
+          const pct = total ? Math.round(started / total * 100) : 0
+          return (
+            <div className="rounded-xl bg-gray-50 p-3">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-600">진행</span>
+                  <div className="flex gap-1">
+                    {stages.map((s) => (
+                      <span key={s.stage}
+                        title={`${s.stage + 1}. ${s.title} · ${STAGE_STATUS[s.status]?.label || ''}`}
+                        className={`h-2.5 w-2.5 rounded-full ${s.status === 'mastered' ? 'bg-purple-600' : s.status === 'in_progress' ? 'bg-purple-300' : 'bg-gray-200'}`} />
+                    ))}
+                  </div>
+                </div>
+                <span className="truncate text-xs text-gray-500">{started}/{total}단계 · {note}</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-gray-200">
+                <div className="h-full bg-purple-500 transition-all" style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          )
+        })()}
+        <button onClick={() => navigate('/tactile')}
+          className="mt-2 w-full py-2 rounded-xl text-xs font-semibold bg-purple-600 text-white hover:bg-purple-700 transition-all">
+          🖐️ 촉각 학습 열기 →
         </button>
         </>
       )}
@@ -280,164 +351,85 @@ function SpeakCurriculumPath() {
   )
 }
 
-// ── 오늘의 복습 ──────────────────────────────────────────────────────────────
-// 예정된 SRS 항목과 오답·북마크 문장을 한곳에서 확인하고 각 학습 흐름으로 진입한다.
+// ── 오늘의 복습 — 세 기둥(독화·말하기·타도마) 모두 예정(SRS)·틀림·북마크 3분할 ──────
 function ReviewSection() {
   const navigate = useNavigate()
-  const setScenario = useStore((state) => state.setScenario)
-  const [items, setItems] = useState(null)   // 합쳐진 복습 문장 목록
-  const [dueItems, setDueItems] = useState([])
-  const [showAll, setShowAll] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const setScenario = useStore((s) => s.setScenario)
+  const [data, setData] = useState(null)          // { read, speak, tactile } 각 {due, wrong, bookmark}
+  const [wrongSentences, setWrongSentences] = useState([])  // 독화 문장 복습(오답)용
 
-  const load = () => {
+  useEffect(() => {
     Promise.all([
-      learningAPI.getReviewSentences().catch(() => []),
-      learningAPI.getBookmarks().catch(() => []),
       reviewAPI.getDue().catch(() => ({ items: [] })),
-    ]).then(([wrong, bookmarks, due]) => {
-      const map = new Map()
-      wrong.forEach((w) => map.set(w.sentence, {
-        sentence: w.sentence,
-        situation: w.situation || '복습',
-        level: w.difficulty_level || 1,
-        source: 'wrong',
-      }))
-      bookmarks.forEach((b) => {
-        if (!map.has(b.sentence)) {
-          map.set(b.sentence, { sentence: b.sentence, situation: b.situation || '복습', level: b.level || 1, source: 'bookmark' })
-        } else {
-          map.get(b.sentence).source = 'both'
-        }
+      learningAPI.getReviewSentences().catch(() => []),
+      learningAPI.getBookmarks('read').catch(() => []),
+      speakAPI.getReview().catch(() => ({ buckets: { due: 0, wrong: 0, bookmark: 0 } })),
+      tactileAPI.getReview().catch(() => ({ buckets: { due: 0, wrong: 0, bookmark: 0 } })),
+    ]).then(([due, wrong, bm, speak, tactile]) => {
+      setWrongSentences(wrong || [])
+      setData({
+        read: { due: (due.items || []).length, wrong: (wrong || []).length, bookmark: (bm || []).length },
+        speak: speak.buckets || { due: 0, wrong: 0, bookmark: 0 },
+        tactile: tactile.buckets || { due: 0, wrong: 0, bookmark: 0 },
       })
-      setItems([...map.values()])
-      setDueItems(due.items || [])
     })
-  }
-  useEffect(load, [])
+  }, [])
 
-  const start = () => {
-    if (!items || items.length === 0) return
-    setLoading(true)
-    const sentences = items.map((i) => i.sentence)
-    const scenario = {
-      situation: '복습',
-      level: 1,
-      sentences,
-      qTypes: buildQTypes(sentences.length),
-      scenario_id: `review_${Date.now()}`,
-    }
-    setScenario(scenario, 'test')
-    // 복습은 단계 잠금과 무관하게 허용 — App.jsx StageGate가 이 state로 예외 처리(duadnwls)
+  // 독화 문장 복습(오답 문장) → /practice. 예정(SRS 입모양·단어)이 있으면 /review 우선.
+  const startReadReview = () => {
+    if (data?.read.due > 0) { navigate('/review'); return }
+    const sents = wrongSentences.map((w) => w.sentence)
+    if (!sents.length) { navigate('/review'); return }
+    setScenario({ situation: '복습', level: 1, sentences: sents, qTypes: buildQTypes(sents.length), scenario_id: `review_${Date.now()}` }, 'test')
     navigate('/practice', { state: { review: true } })
   }
 
-  const wrongCount = items ? items.filter((i) => i.source !== 'bookmark').length : 0
-  const bookmarkCount = items ? items.filter((i) => i.source !== 'wrong').length : 0
-  const total = items ? items.length : 0
-  const dueCount = dueItems.length
-  const visibleItems = showAll ? (items || []) : (items || []).slice(0, 3)
-  const sourceLabel = {
-    wrong: { label: '오답', cls: 'bg-red-100 text-red-700' },
-    bookmark: { label: '북마크', cls: 'bg-amber-100 text-amber-700' },
-    both: { label: '오답+북마크', cls: 'bg-violet-100 text-violet-700' },
-  }
+  const pillars = data ? [
+    { key: 'read', icon: '👁️', label: '독화', b: data.read, onStart: startReadReview,
+      theme: { bg: 'bg-sky-50/40', border: 'border-sky-100', badge: 'bg-sky-100 text-sky-700', btn: 'bg-sky-600 hover:bg-sky-700' } },
+    { key: 'speak', icon: '🗣️', label: '말하기', b: data.speak, onStart: () => navigate('/speak?review=1'),
+      theme: { bg: 'bg-rose-50/40', border: 'border-rose-100', badge: 'bg-rose-100 text-rose-700', btn: 'bg-rose-600 hover:bg-rose-700' } },
+    { key: 'tactile', icon: '🖐️', label: '타도마', b: data.tactile, onStart: () => navigate('/tactile?review=1'),
+      theme: { bg: 'bg-purple-50/40', border: 'border-purple-100', badge: 'bg-purple-100 text-purple-700', btn: 'bg-purple-600 hover:bg-purple-700' } },
+  ] : []
 
   return (
-    <motion.div
-      id="daily-review"
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="card !p-4 scroll-mt-20"
-    >
-      <div className="flex items-center justify-between gap-3 mb-0.5">
+    <motion.div id="daily-review" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card !p-4 scroll-mt-20">
+      <div className="mb-0.5 flex items-center justify-between gap-3">
         <h2 className="text-base font-bold text-gray-900">오늘의 복습</h2>
-        <span className="text-xs text-gray-400">예정 항목 + 모아둔 문장</span>
+        <span className="text-xs text-gray-400">세 기둥 · 예정·틀림·북마크</span>
       </div>
-      <p className="mb-2 text-xs text-gray-500">
-        오늘 다시 볼 입모양·단어와 오답·북마크 문장을 한곳에서 확인하세요.
+      <p className="mb-3 text-xs text-gray-500">
+        독화·말하기·타도마를 각각 <b>예정(간격반복)</b> · <b>틀린 문제</b> · <b>북마크</b>로 복습해요.
       </p>
 
-      {items === null ? (
+      {!data ? (
         <div className="py-4 text-center text-xs text-gray-400">불러오는 중...</div>
       ) : (
-        <>
-          <div className="grid grid-cols-3 gap-1.5 mb-3">
-            <div className="bg-sky-50 rounded-xl p-2 text-center">
-              <div className="text-xl font-bold text-sky-700">{dueCount}</div>
-              <div className="text-xs text-gray-500">오늘 예정</div>
-            </div>
-            <div className="bg-red-50 rounded-xl p-2 text-center">
-              <div className="text-xl font-bold text-red-600">{wrongCount}</div>
-              <div className="text-xs text-gray-500">틀린 문제</div>
-            </div>
-            <div className="bg-yellow-50 rounded-xl p-2 text-center">
-              <div className="text-xl font-bold text-yellow-600">{bookmarkCount}</div>
-              <div className="text-xs text-gray-500">북마크</div>
-            </div>
-          </div>
-
-          {dueCount > 0 && (
-            <div className="mb-3 rounded-xl border border-sky-100 bg-sky-50/70 p-2">
-              <p className="mb-2 text-xs font-bold text-sky-800">오늘 예정된 기초 복습</p>
-              <div className="flex flex-wrap gap-1.5">
-                {dueItems.slice(0, 4).map((item) => (
-                  <span key={`${item.kind}-${item.ref}`} className="rounded-full bg-white px-2.5 py-1 text-xs text-sky-700 shadow-sm">
-                    {item.kind === 'viseme' ? '입모양' : '단어'} · {item.name || item.ref}
-                  </span>
-                ))}
-                {dueCount > 4 && <span className="px-1 py-1 text-xs text-sky-600">외 {dueCount - 4}개</span>}
+        <div className="grid gap-3 lg:grid-cols-3">
+          {pillars.map((p) => {
+            const total = p.b.due + p.b.wrong + p.b.bookmark
+            return (
+              <div key={p.key} className={`rounded-2xl border p-3 ${p.theme.border} ${p.theme.bg}`}>
+                <div className="mb-2 flex items-center gap-1.5">
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${p.theme.badge}`}>{p.icon} {p.label}</span>
+                </div>
+                <div className="mb-2 grid grid-cols-3 gap-1.5">
+                  {[['오늘 예정', p.b.due], ['틀린 문제', p.b.wrong], ['북마크', p.b.bookmark]].map(([lbl, n]) => (
+                    <div key={lbl} className="rounded-xl bg-white p-2 text-center">
+                      <div className="text-lg font-bold text-gray-800">{n}</div>
+                      <div className="text-[11px] text-gray-500">{lbl}</div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={p.onStart} disabled={total === 0}
+                  className={`w-full rounded-lg px-3 py-2 text-xs font-bold text-white transition disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 ${p.theme.btn}`}>
+                  {total > 0 ? `복습 시작 (${total})` : '복습할 항목 없음'}
+                </button>
               </div>
-            </div>
-          )}
-
-          {total > 0 ? (
-            <div className="mb-3">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-bold text-gray-700">모아둔 문장 {total}개</p>
-                {total > 3 && (
-                  <button type="button" onClick={() => setShowAll((value) => !value)}
-                    className="text-xs font-medium text-primary-600 hover:text-primary-700">
-                    {showAll ? '접기' : '전체 보기'}
-                  </button>
-                )}
-              </div>
-              <ul className="max-h-52 space-y-1.5 overflow-y-auto pr-1">
-                {visibleItems.map((item) => {
-                  const source = sourceLabel[item.source]
-                  return (
-                    <li key={item.sentence} className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
-                      <div className="mb-1 flex items-center gap-1.5">
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${source.cls}`}>{source.label}</span>
-                        <span className="truncate text-[10px] text-gray-400">{item.situation}</span>
-                      </div>
-                      <p className="text-sm font-medium leading-snug text-gray-800">{item.sentence}</p>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          ) : dueCount === 0 ? (
-            <div className="mb-3 rounded-xl bg-gray-50 px-3 py-4 text-center text-xs text-gray-400">
-              오늘 복습할 항목이 없어요. 틀린 문장이나 북마크는 이곳에 자동으로 모입니다.
-            </div>
-          ) : (
-            <p className="mb-3 rounded-xl bg-gray-50 px-3 py-2 text-center text-xs text-gray-400">
-              모아둔 문장은 아직 없지만 오늘 예정된 기초 복습이 있어요.
-            </p>
-          )}
-
-          <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
-            <button type="button" onClick={() => navigate('/review')} disabled={dueCount === 0}
-              className="w-full rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400">
-              {dueCount > 0 ? `기초 복습 시작 (${dueCount})` : '오늘 예정된 기초 복습 없음'}
-            </button>
-            <button type="button" onClick={start} disabled={loading || total === 0}
-              className="btn-primary w-full px-4 py-2.5 text-sm disabled:opacity-60">
-              {loading ? '불러오는 중...' : total > 0 ? `모은 문장 복습 (${total})` : '모아둔 문장 없음'}
-            </button>
-          </div>
-        </>
+            )
+          })}
+        </div>
       )}
     </motion.div>
   )
@@ -624,42 +616,13 @@ export default function Dashboard() {
 
         </motion.section>
 
-        <section className="mt-3 grid items-start gap-3 lg:grid-cols-2">
-          <div id="reading-learning" className="scroll-mt-20">
-            <CurriculumPath />
-          </div>
-          <div id="speaking-learning" className="scroll-mt-20">
-            <SpeakCurriculumPath />
-          </div>
-        </section>
-
-        {/* 촉각 학습(타도마) — 하드웨어/시뮬레이터 */}
-        <section className="mt-3">
-          <button onClick={() => navigate('/tactile')}
-            className="w-full card text-left border-2 border-transparent hover:border-purple-300 transition-colors flex items-center gap-4">
-            <span className="text-4xl">🖐️</span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-gray-900">촉각 학습 (타도마)</h2>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">NEW · 하드웨어</span>
-              </div>
-              <p className="text-sm text-gray-500 mt-0.5">얼굴 모형의 턱·입술·진동·바람을 손으로 느끼며 말을 이해해요 · 하드웨어 없이 시뮬레이터로도 체험</p>
-            </div>
-            <span className="text-gray-300 text-xl">→</span>
-          </button>
-        </section>
-
-        {/* Practice Setup */}
-        <section className="mt-3 grid items-start gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.7fr)]">
-        <motion.div
-          id="reading-test"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.12 }}
-          className="card !p-4 scroll-mt-20"
-        >
-          <h2 className="mb-2 flex items-center gap-2 text-lg font-bold text-gray-900">
-            문장·대화 실전
+        {/* 독화 학습 — 단계 사다리 + 문장·대화 실전을 한 카드로 통합 */}
+        <section id="reading-learning" className="mt-3 scroll-mt-20">
+          <CurriculumPath>
+          <div id="reading-test" className="scroll-mt-20">
+          <h2 className="mb-1 flex flex-wrap items-center gap-2 text-base font-bold text-gray-900">
+            🎯 문장·대화 실전
+            <span className="text-[11px] font-medium text-gray-400">3·4단계</span>
             {testLocked && (
               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">🔒 잠김</span>
             )}
@@ -667,6 +630,9 @@ export default function Dashboard() {
               <span className="text-xs font-bold px-2 py-0.5 rounded-full border border-amber-300 bg-amber-50 text-amber-700">🔒 대화 잠김</span>
             )}
           </h2>
+          <p className="mb-2 text-xs text-gray-500">
+            AI의 <b className="text-gray-700">입모양을 눈으로 읽고</b> 무슨 말인지 알아맞히는 연습이에요. (말하기·발음이 아닙니다)
+          </p>
 
           {testLocked ? (
             <div className="mb-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs text-gray-500">
@@ -674,7 +640,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="mb-2 rounded-lg border border-blue-200 bg-blue-50 p-2 text-xs text-blue-700">
-              그동안 학습한 내용을 검증합니다. 주관식·4지선다·서술형 문제가 섞여서 출제돼요.
+              그동안 학습한 <b>독화(입모양 읽기)</b> 실력을 검증합니다. 주관식·4지선다·서술형 문제가 섞여서 출제돼요.
             </div>
           )}
 
@@ -780,7 +746,7 @@ export default function Dashboard() {
                       : 'bg-violet-600 text-white hover:bg-violet-700 focus:ring-violet-500'
                   }`}
                 >
-                  {loading ? 'AI 시나리오 준비 중…' : conversationLocked ? '🔒 대화 실전 · 잠김' : '🗣️ AI 대화 시작'}
+                  {loading ? 'AI 시나리오 준비 중…' : conversationLocked ? '🔒 대화 실전 · 잠김' : '👁️ AI 대화 독화'}
                 </button>
                 {conversationLocked && (
                   <div id="conversation-unlock-tooltip" role="tooltip"
@@ -792,9 +758,20 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-        </motion.div>
+          </div>
+          </CurriculumPath>
+        </section>
 
-        <ReviewSection />
+        {/* 말하기 · 촉각 학습 */}
+        <section className="mt-3 grid items-start gap-3 lg:grid-cols-2">
+          <div id="speaking-learning" className="scroll-mt-20">
+            <SpeakCurriculumPath />
+          </div>
+          <TactileCard />
+        </section>
+
+        <section className="mt-3">
+          <ReviewSection />
         </section>
 
         <details className="group mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -829,6 +806,12 @@ export default function Dashboard() {
                 <p className="rounded-xl bg-slate-50 px-3 py-4 text-center text-sm text-slate-400">아직 분석할 데이터가 없습니다.</p>
               )}
             </section>
+          </div>
+          <div className="border-t border-slate-100 px-4 py-3">
+            <button onClick={() => navigate('/analysis')}
+              className="text-sm font-semibold text-primary-600 hover:text-primary-700">
+              📊 독화·말하기 상세 분석 보기 →
+            </button>
           </div>
         </details>
       </main>

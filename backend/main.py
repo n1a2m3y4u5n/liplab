@@ -388,17 +388,20 @@ class BookmarkCreate(BaseModel):
     sentence: str
     situation: str = ""
     level: int = 1
+    domain: str = "read"   # read | speak | tactile — 세 기둥 공통 북마크
 
 
 @app.get("/api/bookmarks")
-async def list_bookmarks(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def list_bookmarks(domain: str = None, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     from database import Bookmark
     from sqlalchemy import select
-    result = await db.execute(
-        select(Bookmark).where(Bookmark.user_id == current_user.id).order_by(Bookmark.created_at.desc())
-    )
+    q = select(Bookmark).where(Bookmark.user_id == current_user.id)
+    if domain:
+        q = q.where(Bookmark.domain == domain)
+    result = await db.execute(q.order_by(Bookmark.created_at.desc()))
     items = result.scalars().all()
-    return [{"id": b.id, "sentence": b.sentence, "situation": b.situation, "level": b.level} for b in items]
+    return [{"id": b.id, "sentence": b.sentence, "situation": b.situation,
+             "level": b.level, "domain": getattr(b, "domain", "read") or "read"} for b in items]
 
 
 @app.post("/api/bookmarks", status_code=201)
@@ -406,15 +409,17 @@ async def add_bookmark(data: BookmarkCreate, current_user=Depends(get_current_us
     from database import Bookmark
     from sqlalchemy import select
     existing = await db.execute(
-        select(Bookmark).where(Bookmark.user_id == current_user.id, Bookmark.sentence == data.sentence)
+        select(Bookmark).where(Bookmark.user_id == current_user.id, Bookmark.sentence == data.sentence,
+                               Bookmark.domain == data.domain)
     )
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Already bookmarked")
-    bm = Bookmark(user_id=current_user.id, sentence=data.sentence, situation=data.situation, level=data.level)
+    bm = Bookmark(user_id=current_user.id, sentence=data.sentence, situation=data.situation,
+                  level=data.level, domain=data.domain)
     db.add(bm)
     await db.commit()
     await db.refresh(bm)
-    return {"id": bm.id, "sentence": bm.sentence, "situation": bm.situation, "level": bm.level}
+    return {"id": bm.id, "sentence": bm.sentence, "situation": bm.situation, "level": bm.level, "domain": bm.domain}
 
 
 @app.delete("/api/bookmarks/{bookmark_id}")
@@ -617,6 +622,10 @@ async def get_review_sentences(current_user=Depends(get_current_user), db: Async
 # ============================================
 import curriculum as _curriculum
 
+# 심사·데모 편의: 모든 단계 잠금 해제(순차 잠금 로직은 유지하되 표시만 unlocked로).
+# 실제 순차 학습을 강제하려면 환경변수 LIPLAB_UNLOCK_ALL=0.
+_UNLOCK_ALL = os.getenv("LIPLAB_UNLOCK_ALL", "1") == "1"
+
 _STAGE1_MIN_ATTEMPTS = 8       # 숙달 판정 최소 시도
 _STAGE1_MASTERY = 70.0         # 숙달 판정 정확도(%)
 _STAGE2_MIN_ATTEMPTS = 6
@@ -722,6 +731,11 @@ async def curriculum_stages(current_user=Depends(get_current_user), db: AsyncSes
                 st["mastery_score"] = round(sp.mastery_score, 1)
                 st["attempts"] = sp.attempts
         stages.append(st)
+
+    if _UNLOCK_ALL:
+        for st in stages:
+            if st.get("status") == "locked":
+                st["status"] = "unlocked"
 
     return {"track": prof.track, "placed": prof.placed,
             "current_stage": prof.current_stage, "stages": stages}
@@ -932,6 +946,54 @@ async def review_answer(data: ReviewAnswer, current_user=Depends(get_current_use
     return {"ok": True, "removed": False, "next_due": item.due_date, "interval_days": item.interval_days}
 
 
+# ── 공용 복습 유틸 — 세 기둥(독화·말하기·촉각)이 동일 구조(예정/틀림/북마크)를 쓰도록 ──
+async def _sr_touch(user_id: int, kind: str, ref: str, correct: bool, db):
+    """SRS 큐 유지(간격반복) — 틀리면 '오늘 예정'으로 등록/재설정, 맞으면 간격 2배(충분히 크면 졸업).
+    커밋은 호출부에서. review/answer와 동일한 규칙."""
+    if not ref:
+        return
+    from database import ReviewItem
+    from sqlalchemy import select
+    r = await db.execute(select(ReviewItem).where(
+        ReviewItem.user_id == user_id, ReviewItem.kind == kind, ReviewItem.ref == ref))
+    item = r.scalar_one_or_none()
+    today = _sr_date.today()
+    if not correct:
+        if item is None:
+            db.add(ReviewItem(user_id=user_id, kind=kind, ref=ref,
+                              due_date=today.isoformat(), interval_days=1))
+        else:
+            item.interval_days = 1
+            item.due_date = today.isoformat()
+    elif item is not None:
+        new_interval = min((item.interval_days or 1) * 2, 32)
+        if new_interval >= 32:
+            await db.delete(item)
+        else:
+            item.interval_days = new_interval
+            item.due_date = (today + _sr_delta(days=new_interval)).isoformat()
+
+
+async def _due_refs(user_id: int, kinds, db):
+    """오늘까지 예정인 ReviewItem ref 목록(kinds 중 하나)."""
+    from database import ReviewItem
+    from sqlalchemy import select
+    today = _sr_date.today().isoformat()
+    r = await db.execute(select(ReviewItem).where(
+        ReviewItem.user_id == user_id, ReviewItem.kind.in_(list(kinds)),
+        ReviewItem.due_date <= today).order_by(ReviewItem.due_date))
+    return [it.ref for it in r.scalars().all()]
+
+
+async def _bookmark_refs(user_id: int, domain: str, db):
+    """해당 기둥(domain) 북마크의 (id, text) 목록."""
+    from database import Bookmark
+    from sqlalchemy import select
+    r = await db.execute(select(Bookmark).where(
+        Bookmark.user_id == user_id, Bookmark.domain == domain).order_by(Bookmark.created_at.desc()))
+    return [{"id": b.id, "text": b.sentence} for b in r.scalars().all()]
+
+
 # ── 3단계 문맥 추론(closure) + 대화 채점 + 적응형 난이도(Phase 3·4) ──────────
 @app.get("/api/curriculum/closure")
 async def curriculum_closure(current_user=Depends(get_current_user)):
@@ -1001,6 +1063,123 @@ async def get_tactile(text: str):
     return {"text": text, "sequence": seq, "count": len(seq)}
 
 
+# 촉각(타도마) 커리큘럼 5단계 메타 — 독화·발화와 동급의 사다리. (프론트 LEVELS와 짝)
+_TACTILE_STAGES = [
+    {"stage": 0, "title": "감각 (유·무성)", "desc": "진동 유무로 구별"},
+    {"stage": 1, "title": "모음",          "desc": "턱·입술 차이"},
+    {"stage": 2, "title": "최소대립쌍",     "desc": "촉각으로만 구별"},
+    {"stage": 3, "title": "단어",          "desc": "낱말 알아맞히기"},
+    {"stage": 4, "title": "문장",          "desc": "짧은 문장 이해"},
+]
+_TACTILE_MIN_ATTEMPTS = 5      # 숙달 판정 최소 시도(퀴즈 문항 수)
+_TACTILE_MASTERY = 70.0        # 숙달 정답률(%)
+
+
+async def _bump_tactile_progress(user_id: int, stage: int, passed: bool, db):
+    """촉각 단계 진행률 rolling 갱신(_bump_speak_progress의 촉각판)."""
+    from database import TactileStageProgress
+    from sqlalchemy import select
+    r = await db.execute(select(TactileStageProgress).where(
+        TactileStageProgress.user_id == user_id, TactileStageProgress.stage == stage))
+    tp = r.scalar_one_or_none()
+    if tp is None:
+        tp = TactileStageProgress(user_id=user_id, stage=stage, status="in_progress",
+                                  attempts=0, correct=0, mastery_score=0.0)
+        db.add(tp)
+    tp.attempts += 1
+    if passed:
+        tp.correct += 1
+    tp.mastery_score = (tp.correct / tp.attempts * 100) if tp.attempts else 0.0
+    tp.status = "mastered" if (tp.attempts >= _TACTILE_MIN_ATTEMPTS and tp.mastery_score >= _TACTILE_MASTERY) else "in_progress"
+    return tp
+
+
+@app.get("/api/tactile/curriculum")
+async def tactile_curriculum(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """촉각 5단계 + 사용자 상태. 게이팅: 0단계 항상 열림, N단계는 N-1 숙달 시 해금
+    (독화·발화와 동일 규칙). _UNLOCK_ALL이면 잠긴 단계도 모두 해제."""
+    from database import TactileStageProgress
+    from sqlalchemy import select
+    r = await db.execute(select(TactileStageProgress).where(TactileStageProgress.user_id == current_user.id))
+    tp_map = {tp.stage: tp for tp in r.scalars().all()}
+    stages = []
+    for meta in _TACTILE_STAGES:
+        st = dict(meta)
+        n = meta["stage"]
+        tp = tp_map.get(n)
+        if n == 0:
+            base_open = True
+        else:
+            prev = tp_map.get(n - 1)
+            base_open = prev is not None and prev.status == "mastered"
+        if not base_open:
+            st["status"] = "locked"
+        elif tp is None:
+            st["status"] = "unlocked"
+        else:
+            st["status"] = tp.status
+            st["mastery_score"] = round(tp.mastery_score, 1)
+            st["attempts"] = tp.attempts
+        stages.append(st)
+    if _UNLOCK_ALL:
+        for st in stages:
+            if st.get("status") == "locked":
+                st["status"] = "unlocked"
+    return {"stages": stages}
+
+
+class TactileResult(BaseModel):
+    stage: int
+    correct: bool
+    target: str = ""
+
+
+@app.get("/api/tactile/pool")
+async def tactile_pool(level: int, current_user=Depends(get_current_user)):
+    """촉각 단어(3)·문장(4) 단계의 문제 풀을 AI로 생성해 변주를 준다.
+    실패하면 빈 목록 → 프론트가 내장 기본 풀로 폴백. (감각·모음·최소대립쌍은 고정 대립쌍이라 대상 아님)"""
+    if os.getenv("LIPLAB_AI_ITEMS", "1") != "1":
+        return {"items": []}
+    try:
+        import content_gen
+        if level == 3:
+            items = await content_gen.generate_words(n=14, max_syllable=3)
+        elif level == 4:
+            sents = await content_gen.generate_sentences(n=10, with_intonation=False)
+            items = [s["target"] for s in sents]
+        else:
+            items = []
+        return {"items": items}
+    except Exception as e:
+        print(f"[WARN] tactile pool gen failed (level {level}): {e}")
+        return {"items": []}
+
+
+@app.post("/api/tactile/result")
+async def tactile_result(data: TactileResult, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """촉각 퀴즈 1문항 결과 기록 → 단계 진행률 갱신 + 개별 시도 저장 + SRS 복습 큐 유지."""
+    if data.stage < 0 or data.stage >= len(_TACTILE_STAGES):
+        raise HTTPException(status_code=400, detail="invalid stage")
+    tp = await _bump_tactile_progress(current_user.id, data.stage, bool(data.correct), db)
+    # 개별 시도 저장(복습·분석용) + SRS — 말하기와 동일 구조
+    if data.target:
+        from database import TactileAttempt
+        db.add(TactileAttempt(user_id=current_user.id, stage=data.stage,
+                              target=data.target, correct=bool(data.correct)))
+        await _sr_touch(current_user.id, "tactile", data.target, bool(data.correct), db)
+    await db.commit()
+    return {"stage": tp.stage, "status": tp.status,
+            "mastery_score": round(tp.mastery_score, 1), "attempts": tp.attempts}
+
+
+@app.post("/api/seed-demo")
+async def seed_demo(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """데모 계정이 비어 있으면 더미 학습 기록을 채운다(멱등 — 기록 있으면 스킵)."""
+    import demo_seed
+    seeded = await demo_seed.run(current_user, db)
+    return {"seeded": seeded}
+
+
 async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
                                min_attempts: int, mastery_pct: float, db):
     """발화 단계 진행률 rolling 갱신(읽기 _bump_stage_progress의 발화판). sp 반환."""
@@ -1047,19 +1226,42 @@ async def speak_curriculum_stages(current_user=Depends(get_current_user), db: As
             st["mastery_score"] = round(sp.mastery_score, 1)
             st["attempts"] = sp.attempts
         stages.append(st)
+    if _UNLOCK_ALL:
+        for st in stages:
+            if st.get("status") == "locked":
+                st["status"] = "unlocked"
     return {"stages": stages}
 
 
 @app.get("/api/speak/stage/{n}")
 async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
-    """단계 콘텐츠(항목·모드·가이드)."""
+    """단계 콘텐츠(항목·모드·가이드).
+    단어(4)·문장(5) 단계는 매번 AI로 새 문항을 생성해 변주를 준다(실패 시 큐레이션 풀 폴백).
+    발성·모음·자음(0~3)은 정해진 음소 드릴이라 고정."""
     stg = _speakcur.get_stage(n)
     if not stg:
         raise HTTPException(status_code=404, detail="unknown stage")
+
+    items = stg["items"]
+    if os.getenv("LIPLAB_AI_ITEMS", "1") == "1" and stg["mode"] in ("word", "sentence"):
+        try:
+            import content_gen
+            base = [it.get("target") for it in stg["items"]]
+            if stg["mode"] == "word":
+                gen = await content_gen.generate_words(n=10, max_syllable=3, avoid=base)
+                ai_items = [{"target": w} for w in gen]
+            else:
+                ai_items = await content_gen.generate_sentences(n=8, avoid=base, with_intonation=True)
+            if len(ai_items) >= 4:
+                # AI 생성분을 앞에, 기존 풀을 뒤에 섞어 다양성 + 안정성 확보
+                items = ai_items + stg["items"]
+        except Exception as e:
+            print(f"[WARN] speak AI items gen failed (stage {n}): {e}")
+
     return {
         "stage": stg["stage"], "title": stg["title"], "mode": stg["mode"],
         "desc": stg["desc"], "guide": stg["guide"], "icon": stg.get("icon", ""),
-        "items": stg["items"],
+        "items": items,
     }
 
 
@@ -1139,6 +1341,9 @@ async def speak_assess(
         loudness=loudness, pitch_range=pitch_range, duration=duration,
         pitch_start=pitch_start, pitch_end=pitch_end, confusions=confusions[:6],
     ))
+    # SRS 복습 큐 유지 — 발음/단어/문장은 틀리면 예정 등록, 맞으면 간격 확장(세 기둥 공통)
+    if mode in ("phoneme", "word", "sentence") and passed is not None:
+        await _sr_touch(current_user.id, "speak", target, bool(passed), db)
     await db.commit()
     if sp is not None:
         progress = {"stage": stage, "attempts": sp.attempts,
@@ -1242,13 +1447,54 @@ async def speak_review(current_user=Depends(get_current_user), db: AsyncSession 
         if r.target in seen:
             continue  # desc 정렬 → 각 target의 첫 등장이 최신 시도
         seen[r.target] = r
-    items = []
+    wrong = []
     for t, r in seen.items():
         if (r.passed is False) or (r.score is not None and r.score < 70):
-            items.append({"target": t, "stage": r.stage, "mode": r.mode,
+            wrong.append({"target": t, "stage": r.stage, "mode": r.mode,
                           "last_score": round(r.score or 0, 1)})
-    items.sort(key=lambda x: x["last_score"])
-    return {"items": items[:15], "count": len(items)}
+    wrong.sort(key=lambda x: x["last_score"])
+
+    # 세 기둥 공통 구조: 예정(SRS) · 틀림 · 북마크
+    due = await _due_refs(current_user.id, ["speak"], db)
+    bookmarks = await _bookmark_refs(current_user.id, "speak", db)
+    # 복습 세션에서 순회할 통합 목록(중복 제거) — 예정 → 틀림 → 북마크
+    union, _seen = [], set()
+    for t in due + [w["target"] for w in wrong] + [b["text"] for b in bookmarks]:
+        if t and t not in _seen:
+            _seen.add(t); union.append({"target": t})
+    return {
+        "items": union[:30], "count": len(union),
+        "buckets": {"due": len(due), "wrong": len(wrong), "bookmark": len(bookmarks)},
+        "wrong": wrong[:15], "due": due[:15], "bookmarks": bookmarks[:15],
+    }
+
+
+@app.get("/api/tactile/review")
+async def tactile_review(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """촉각 복습 — 예정(SRS)·틀림·북마크 3분할. 말하기 복습과 동일 구조."""
+    from database import TactileAttempt
+    from sqlalchemy import select
+    rows = (await db.execute(
+        select(TactileAttempt).where(TactileAttempt.user_id == current_user.id)
+        .order_by(TactileAttempt.created_at.desc()).limit(300))).scalars().all()
+    seen = {}
+    for r in rows:
+        if not r.target or r.target in seen:
+            continue
+        seen[r.target] = r          # 각 target의 최신 시도
+    wrong = [{"target": t, "stage": r.stage} for t, r in seen.items() if not r.correct]
+
+    due = await _due_refs(current_user.id, ["tactile"], db)
+    bookmarks = await _bookmark_refs(current_user.id, "tactile", db)
+    union, _seen = [], set()
+    for t in due + [w["target"] for w in wrong] + [b["text"] for b in bookmarks]:
+        if t and t not in _seen:
+            _seen.add(t); union.append({"target": t})
+    return {
+        "items": union[:30], "count": len(union),
+        "buckets": {"due": len(due), "wrong": len(wrong), "bookmark": len(bookmarks)},
+        "wrong": wrong[:15], "due": due[:15], "bookmarks": bookmarks[:15],
+    }
 
 
 class ConversationRequest(BaseModel):
