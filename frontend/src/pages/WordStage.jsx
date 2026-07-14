@@ -43,7 +43,7 @@ export default function WordStage() {
         accent="reading"
         title="단어 학습"
         description="입모양만 보고 어떤 단어인지 맞혀보세요"
-        onExit={() => navigate('/pillar/reading')}
+        onExit={() => navigate('/dashboard')}
       />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <WordQuiz data={data} />

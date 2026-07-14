@@ -74,7 +74,7 @@ export default function VisemeLiteracy() {
         accent="reading"
         title="입모양 학습"
         description="10개 입모양 그룹을 익히고, 무엇이 보이고 무엇이 안 보이는지 배웁니다"
-        onExit={() => navigate('/pillar/reading')}
+        onExit={() => navigate('/dashboard')}
       />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">

@@ -33,7 +33,7 @@ export default function Conversation() {
 
   useEffect(() => {
     if (!currentScenario) {
-      navigate('/pillar/reading')
+      navigate('/dashboard')
       return
     }
     // StrictMode(개발)에서 이 effect가 두 번 실행되면 첫 AI 말풍선이 2개 생긴다.
@@ -137,7 +137,7 @@ export default function Conversation() {
   }
 
   const handleFinish = () => {
-    navigate('/pillar/reading')
+    navigate('/dashboard')
   }
 
   if (!currentScenario) return null
