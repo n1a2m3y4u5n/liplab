@@ -236,7 +236,14 @@ export default function TactilePractice() {
       setConnected(true); setStatus('얼굴 모형이 연결되었어요.')
       // 연결되면 현재 핀 배치를 즉시 반영(런타임) — 유효할 때만
       if (!validatePins()) { try { await sendLine(`SET,${pins.jaw},${pins.lip},${pins.vib},${pins.fan}`) } catch { /* noop */ } }
-    } catch (e) { setStatus('연결이 취소되었거나 실패했어요. ' + (e?.message || '')) }
+    } catch (e) {
+      const msg = e?.message || ''
+      let hint
+      if (/No port selected|cancel/i.test(msg)) hint = '포트 선택이 취소됐어요.'
+      else if (/open|access|busy|in use|failed to open/i.test(msg)) hint = '포트를 열 수 없어요 — 아두이노 IDE의 시리얼 모니터 등 다른 프로그램이 그 포트를 쓰고 있으면 닫고 다시 시도하세요.'
+      else hint = '연결에 실패했어요.'
+      setStatus(`${hint}${msg ? ` (${msg})` : ''}`)
+    }
   }
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -427,16 +434,23 @@ export default function TactilePractice() {
         </div>
 
         {/* 연결 */}
-        <div className="card flex items-center justify-between">
-          <div>
-            <p className="font-semibold text-gray-900">얼굴 모형 연결</p>
-            <p className="text-sm text-gray-500">{connected ? '🟢 연결됨' : '⚪ 연결 안 됨'}{status ? ` · ${status}` : ''}</p>
+        <div className="card">
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-semibold text-gray-900">얼굴 모형 연결 · {connected ? '🟢 연결됨' : '⚪ 연결 안 됨'}</p>
+            {connected ? (
+              <button onClick={disconnect} className="shrink-0 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">연결 해제</button>
+            ) : (
+              <button onClick={connect} disabled={!supported}
+                className="shrink-0 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-40">🔌 얼굴 모형 연결</button>
+            )}
           </div>
-          {connected ? (
-            <button onClick={disconnect} className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">연결 해제</button>
-          ) : (
-            <button onClick={connect} disabled={!supported}
-              className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-40">🔌 얼굴 모형 연결</button>
+          {status && (
+            <p className={`mt-1 text-xs leading-relaxed ${connected ? 'text-gray-500' : 'text-red-500'}`}>{status}</p>
+          )}
+          {!connected && (
+            <p className="mt-1 text-[11px] text-gray-400">
+              ※ <b>아두이노 IDE의 시리얼 모니터</b>가 열려 있으면 포트를 못 열어요(포트는 한 프로그램만 사용). 닫고 연결하세요. · 데스크톱 Chrome·Edge 전용.
+            </p>
           )}
         </div>
 
