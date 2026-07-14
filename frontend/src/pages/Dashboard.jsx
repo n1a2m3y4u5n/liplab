@@ -1089,6 +1089,30 @@ export default function Dashboard() {
                 className={`absolute inset-0 cursor-grab overflow-hidden bg-gradient-to-r ${currentHero.background} px-7 pb-20 pt-6 active:cursor-grabbing sm:px-10 lg:px-12`}
                 style={{ touchAction: 'pan-y' }}
               >
+                {/* 배경 깊이감 — 부드러운 오브(빛망울)로 밋밋한 단색 배경을 채운다 */}
+                <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+                  <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/40 blur-3xl" />
+                  <div className="absolute left-[46%] -top-16 h-64 w-64 rounded-full bg-white/30 blur-3xl" />
+                  <div className="absolute left-[36%] top-1/3 h-72 w-72 rounded-full bg-amber-200/30 blur-3xl animate-pulse-slow" />
+                  <div className="absolute -bottom-10 left-[30%] h-56 w-56 rounded-full bg-white/25 blur-2xl" />
+                </div>
+
+                {/* 중앙 빈 공간을 채우는 떠다니는 장식 — 프로스티드 카드·점·링·반짝임 (텍스트 뒤) */}
+                <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] hidden lg:block">
+                  <div className={`absolute left-[45%] top-[24%] grid h-16 w-16 -rotate-6 place-items-center rounded-2xl text-lg font-black shadow-lg backdrop-blur-sm ${currentHero.visual.chip}`}>{currentHero.visual.first}</div>
+                  <div className="absolute left-[63%] top-[15%] h-12 w-12 rotate-12 rounded-xl bg-white/60 shadow-md backdrop-blur-sm" />
+                  <div className="absolute left-[38%] top-[60%] h-10 w-10 rotate-6 rounded-xl bg-white/50 shadow-md backdrop-blur-sm" />
+                  <span className="absolute left-[57%] top-[58%] h-11 w-11 rounded-full border-2 border-white/60" />
+                  <span className="absolute left-[43%] top-[13%] h-8 w-8 rounded-full border-2 border-amber-300/60" />
+                  <span className="absolute left-[41%] top-[50%] h-3.5 w-3.5 rounded-full bg-white/75" />
+                  <span className="absolute left-[54%] top-[40%] h-2.5 w-2.5 rounded-full bg-amber-400/70" />
+                  <span className="absolute left-[69%] top-[50%] h-3 w-3 rounded-full bg-white/65" />
+                  <span className="absolute left-[50%] top-[70%] h-2 w-2 rounded-full bg-slate-900/10" />
+                  <span className="absolute left-[52%] top-[30%] text-2xl text-amber-400/80">✦</span>
+                  <span className="absolute left-[67%] top-[33%] text-base text-amber-500/70">✦</span>
+                  <span className="absolute left-[47%] top-[43%] text-sm text-white/90 animate-pulse">✦</span>
+                </div>
+
                 <div className="relative z-10 flex h-full items-center">
                   <div className="ml-9 max-w-xl pb-6 sm:ml-12 md:pr-[210px] lg:ml-16 lg:pr-[250px]">
                     <span className={`inline-flex rounded-full px-3 py-1.5 text-[11px] font-black shadow-sm ${currentHero.badge}`}>LIPLAB · {currentHero.eyebrow}</span>
