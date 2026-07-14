@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, learningAPI, speakAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
@@ -41,9 +41,10 @@ function autoCorrelate(buf, sampleRate) {
 
 export default function SpeakingPractice() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const stageNo = searchParams.get('stage') != null ? parseInt(searchParams.get('stage'), 10) : null
-  const reviewMode = searchParams.get('review') != null   // 발음 복습 모드
+  const reviewMode = searchParams.get('review') != null || location.pathname === '/review/speaking'   // 발음 복습 모드
 
   const [words, setWords] = useState([])
   const [target, setTarget] = useState(null)

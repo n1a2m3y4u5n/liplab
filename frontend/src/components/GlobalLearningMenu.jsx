@@ -12,8 +12,8 @@ const MENU_GROUPS = [
     items: [
       { label: '입모양 기초', description: '자음·모음 입모양 익히기', icon: '👄', to: '/learn/viseme' },
       { label: '음절·단어', description: '비슷한 입모양 구별하기', icon: '🔤', to: '/learn/word' },
-      { label: '문장 테스트', description: '상황별 독화 실력 확인', icon: '💬', to: '/dashboard#reading-test' },
-      { label: '대화 실전', description: '상황을 고르고 AI와 대화', icon: '🗣️', to: '/dashboard#reading-test', unlockStage: 4 },
+      { label: '문장 테스트', description: '상황별 독화 실력 확인', icon: '💬', to: '/learn/scenario' },
+      { label: '대화 실전', description: '상황을 고르고 AI와 대화', icon: '🗣️', to: '/learn/scenario', unlockStage: 4 },
       { label: '문맥 추론', description: '앞뒤 맥락으로 뜻 찾기', icon: '🧩', to: '/learn/closure' },
       { label: '내 문장 발음', description: '아무 글이나 입력해 입모양 보기', icon: '✍️', to: '/pronounce' },
     ],
@@ -22,18 +22,18 @@ const MENU_GROUPS = [
     title: '연습과 복습',
     tone: 'rose',
     items: [
-      { label: '말하기 연습', description: '내 발음을 눈으로 다듬기', icon: '🎤', to: '/speak' },
-      { label: '오늘의 복습', description: '예정 항목과 모은 문장', icon: '🔁', to: '/dashboard#daily-review' },
-      { label: '북마크', description: '저장한 문장 모아보기', icon: '★', to: '/bookmarks' },
+      { label: '말하기 연습', description: '내 발음을 눈으로 다듬기', icon: '🎤', to: '/learn/speaking' },
+      { label: '오늘의 복습', description: '예정 항목과 모은 문장', icon: '🔁', to: '/review/today' },
+      { label: '북마크', description: '저장한 문장 모아보기', icon: '★', to: '/review/saved' },
     ],
   },
   {
     title: '학습 도구',
     tone: 'violet',
     items: [
-      { label: '수어 학습', description: '문장을 수어로 확인', icon: '🤟', to: '/sign' },
-      { label: '촉각 학습', description: '얼굴 모형을 손으로 느껴 이해(타도마)', icon: '🖐️', to: '/tactile' },
-      { label: '학습 분석', description: '강점과 취약점 확인', icon: '📊', to: '/analysis' },
+      { label: '수어 학습', description: '문장을 수어로 확인', icon: '🤟', to: '/learn/sign' },
+      { label: '촉각 학습', description: '얼굴 모형을 손으로 느껴 이해(타도마)', icon: '🖐️', to: '/learn/tactile' },
+      { label: '학습 분석', description: '강점과 취약점 확인', icon: '📊', to: '/analysis/overview' },
       { label: '사용법', description: 'LIPLAB 활용 안내', icon: '?', to: '/guide' },
     ],
   },
@@ -51,6 +51,7 @@ export default function GlobalLearningMenu() {
   const [unlockMessage, setUnlockMessage] = useState(null)
   const location = useLocation()
   const navigate = useNavigate()
+  const onDashboard = location.pathname === '/dashboard'
   const triggerRef = useRef(null)
   const panelRef = useRef(null)
   const closeRef = useRef(null)
@@ -127,7 +128,7 @@ export default function GlobalLearningMenu() {
         aria-label="전체 학습 메뉴 열기"
         aria-expanded={open}
         aria-controls="global-learning-menu"
-        className="fixed right-3 top-3 z-[70] inline-flex h-11 items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 text-sm font-bold text-slate-800 shadow-lg shadow-slate-900/10 backdrop-blur transition hover:-translate-y-0.5 hover:border-primary-300 hover:text-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 sm:right-5 sm:px-4"
+        className={`fixed right-3 z-[70] inline-flex h-11 items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 text-sm font-bold text-slate-800 shadow-lg shadow-slate-900/10 backdrop-blur transition hover:-translate-y-0.5 hover:border-primary-300 hover:text-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 sm:right-5 sm:px-4 ${onDashboard ? 'top-[49px]' : 'top-3'}`}
       >
         <span aria-hidden="true" className="flex w-4 flex-col gap-1">
           <span className="h-0.5 w-4 rounded-full bg-current" />

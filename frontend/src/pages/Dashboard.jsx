@@ -16,6 +16,133 @@ const PRESET_SITUATIONS = [
   { id: '직접 입력', label: '직접 입력', icon: '✏️' },
 ]
 
+const SEARCH_ITEMS = [
+  { keywords: ['입모양', '독화', '기초', '비지움'], to: '/learn/viseme' },
+  { keywords: ['단어', '음절'], to: '/learn/word' },
+  { keywords: ['문장', '테스트', '대화', '실전'], to: '/learn/scenario' },
+  { keywords: ['말하기', '발음', '억양'], to: '/learn/speaking' },
+  { keywords: ['촉각', '타도마', '하드웨어'], to: '/learn/tactile' },
+  { keywords: ['수어', '손말'], to: '/learn/sign' },
+  { keywords: ['복습', '오답'], to: '/review/today' },
+  { keywords: ['북마크', '저장'], to: '/review/saved' },
+  { keywords: ['분석', '기록', '통계'], to: '/analysis/overview' },
+  { keywords: ['사용법', '가이드', '도움말'], to: '/guide' },
+]
+
+const TOPIC_MENUS = [
+  {
+    id: 'learn',
+    label: '학습',
+    title: '새로운 내용을 익혀요',
+    description: '보고, 말하고, 느끼는 방식 중 나에게 맞는 학습을 선택하세요.',
+    theme: {
+      active: 'bg-sky-50 text-sky-700',
+      line: 'bg-sky-500',
+      badge: 'bg-sky-100 text-sky-700',
+      hover: 'hover:border-sky-200 hover:bg-sky-50/70',
+    },
+    items: [
+      { label: '입모양 기초', description: '자음·모음의 입모양 익히기', to: '/learn/viseme' },
+      { label: '음절·단어', description: '비슷한 입모양 구별하기', to: '/learn/word' },
+      { label: '문장·대화 실전', description: '상황별 독화 능력 확인하기', to: '/learn/scenario' },
+      { label: '말하기 연습', description: '내 발음과 억양 다듬기', to: '/learn/speaking' },
+      { label: '촉각 학습', description: '움직임과 진동을 손으로 익히기', to: '/learn/tactile' },
+      { label: '수어 학습', description: '문장을 수어로 함께 확인하기', to: '/learn/sign' },
+    ],
+  },
+  {
+    id: 'review',
+    label: '복습',
+    title: '기억이 오래가도록 반복해요',
+    description: '예정된 항목, 틀린 문제, 저장한 문장을 다시 확인하세요.',
+    theme: {
+      active: 'bg-amber-50 text-amber-800',
+      line: 'bg-amber-500',
+      badge: 'bg-amber-100 text-amber-800',
+      hover: 'hover:border-amber-200 hover:bg-amber-50/70',
+    },
+    items: [
+      { label: '오늘의 복습', description: '지금 복습할 항목 한눈에 보기', to: '/review/today' },
+      { label: '입모양·단어 복습', description: '간격 반복 일정에 맞춰 복습하기', to: '/review/scheduled' },
+      { label: '틀린 문장 다시 풀기', description: '독화 오답을 문장으로 재연습하기', to: '/review/mistakes' },
+      { label: '말하기 복습', description: '부족했던 발음 다시 연습하기', to: '/review/speaking' },
+      { label: '촉각 복습', description: '촉각 단계의 취약 항목 확인하기', to: '/review/tactile' },
+      { label: '저장한 문장', description: '북마크한 문장 모아보기', to: '/review/saved' },
+    ],
+  },
+  {
+    id: 'analysis',
+    label: '분석',
+    title: '학습 흐름과 취약점을 확인해요',
+    description: '최근 기록을 바탕으로 강점과 다음 학습 방향을 살펴보세요.',
+    theme: {
+      active: 'bg-violet-50 text-violet-700',
+      line: 'bg-violet-500',
+      badge: 'bg-violet-100 text-violet-700',
+      hover: 'hover:border-violet-200 hover:bg-violet-50/70',
+    },
+    items: [
+      { label: '종합 학습 분석', description: '독화·말하기 결과 함께 보기', to: '/analysis/overview' },
+      { label: '학습 활동', description: '최근 90일 학습 흐름 확인하기', to: '/analysis/activity' },
+      { label: '취약 입모양', description: '자주 틀리는 발음 특징 찾아보기', to: '/analysis/visemes' },
+      { label: '평균 점수', description: '학습별 점수 변화 살펴보기', to: '/analysis/scores' },
+      { label: '학습 기록', description: '완료한 세션과 누적 성과 보기', to: '/analysis/history' },
+      { label: '학습 가이드', description: '분석 결과 활용 방법 알아보기', to: '/analysis/guide' },
+    ],
+  },
+]
+
+const HERO_SLIDES = [
+  {
+    id: 'viseme',
+    tab: '입모양 기초',
+    eyebrow: '맞춤 학습 01',
+    title: ['입모양 기초부터', '차근차근 시작해요.'],
+    description: '자음과 모음의 핵심 입모양을 보고 구별하는 첫 단계입니다.',
+    to: '/learn/viseme',
+    cta: '입모양 학습 시작',
+    background: 'from-[#fffede] via-[#fffbb6] to-[#fff58d]',
+    badge: 'bg-white/75 text-sky-700',
+    visual: { shape: 'from-sky-300 via-sky-400 to-sky-600', shadow: 'shadow-[0_30px_60px_rgba(2,132,199,0.28)]', first: '가', second: 'ㅁ', third: '입', chip: 'bg-sky-100 text-sky-700' },
+  },
+  {
+    id: 'scenario',
+    tab: '문장 실전',
+    eyebrow: '맞춤 학습 02',
+    title: ['일상 속 문장을', '상황으로 익혀요.'],
+    description: '카페, 병원, 학교처럼 자주 마주치는 장면으로 독화를 연습합니다.',
+    to: '/learn/scenario',
+    cta: '상황별 실전 열기',
+    background: 'from-[#effcff] via-[#dff7ff] to-[#ccefff]',
+    badge: 'bg-white/80 text-cyan-700',
+    visual: { shape: 'from-cyan-300 via-cyan-400 to-blue-500', shadow: 'shadow-[0_30px_60px_rgba(6,182,212,0.25)]', first: '카페', second: '병원', third: '대화', chip: 'bg-cyan-100 text-cyan-700' },
+  },
+  {
+    id: 'speaking',
+    tab: '말하기',
+    eyebrow: '맞춤 학습 03',
+    title: ['내 목소리를 보며', '발음을 다듬어요.'],
+    description: '소리의 크기와 억양을 시각적으로 확인하며 또박또박 말해봅니다.',
+    to: '/learn/speaking',
+    cta: '말하기 연습 시작',
+    background: 'from-[#fff6f7] via-[#ffe7eb] to-[#ffd5dc]',
+    badge: 'bg-white/80 text-rose-700',
+    visual: { shape: 'from-rose-300 via-rose-400 to-pink-500', shadow: 'shadow-[0_30px_60px_rgba(244,63,94,0.22)]', first: '소리', second: '억양', third: '발음', chip: 'bg-rose-100 text-rose-700' },
+  },
+  {
+    id: 'tactile',
+    tab: '촉각',
+    eyebrow: '맞춤 학습 04',
+    title: ['말의 움직임을', '손끝으로 느껴요.'],
+    description: '턱과 입술의 움직임, 진동과 바람을 촉각으로 익히는 학습입니다.',
+    to: '/learn/tactile',
+    cta: '촉각 학습 시작',
+    background: 'from-[#faf8ff] via-[#eee9ff] to-[#ddd6fe]',
+    badge: 'bg-white/80 text-violet-700',
+    visual: { shape: 'from-violet-300 via-violet-400 to-purple-600', shadow: 'shadow-[0_30px_60px_rgba(124,58,237,0.22)]', first: '진동', second: '바람', third: '촉각', chip: 'bg-violet-100 text-violet-700' },
+  },
+]
+
 // 테스트 탭 문제 유형: 주관식 · 4지선다 · 서술형을 골고루 섞는다.
 const TEST_QTYPES = ['test', 'test-multiple', 'essay']
 const CONVERSATION_UNLOCK_HINT = '3단계 문장 독화를 완료하면 대화 실전이 해금됩니다.'
@@ -167,7 +294,7 @@ function CurriculumPath({ children }) {
     }
     if (!s.route) return
     if (s.stage === 3 || s.stage === 4) {
-      navigate('/dashboard#reading-test')
+      navigate('/learn/scenario')
       return
     }
     navigate(s.route)
@@ -263,7 +390,7 @@ function SpeakCurriculumPath() {
       alert(`아직 잠긴 단계예요. ${s.stage - 1}단계를 먼저 숙달해주세요.`)
       return
     }
-    navigate(`/speak?stage=${s.stage}`)
+    navigate(`/learn/speaking?stage=${s.stage}`)
   }
 
   return (
@@ -345,7 +472,7 @@ function TactileCard() {
             </div>
           )
         })()}
-        <button onClick={() => navigate('/tactile')}
+        <button onClick={() => navigate('/learn/tactile')}
           className="mt-2 w-full py-2 rounded-xl text-xs font-semibold bg-purple-600 text-white hover:bg-purple-700 transition-all">
           🖐️ 촉각 학습 열기 →
         </button>
@@ -381,9 +508,9 @@ function ReviewSection() {
 
   // 독화 문장 복습(오답 문장) → /practice. 예정(SRS 입모양·단어)이 있으면 /review 우선.
   const startReadReview = () => {
-    if (data?.read.due > 0) { navigate('/review'); return }
+    if (data?.read.due > 0) { navigate('/review/scheduled'); return }
     const sents = wrongSentences.map((w) => w.sentence)
-    if (!sents.length) { navigate('/review'); return }
+    if (!sents.length) { navigate('/review/scheduled'); return }
     setScenario({ situation: '복습', level: 1, sentences: sents, qTypes: buildQTypes(sents.length), scenario_id: `review_${Date.now()}` }, 'test')
     navigate('/practice', { state: { review: true } })
   }
@@ -391,14 +518,14 @@ function ReviewSection() {
   const pillars = data ? [
     { key: 'read', icon: '👁️', label: '독화', b: data.read, onStart: startReadReview,
       theme: { bg: 'bg-sky-50/40', border: 'border-sky-100', badge: 'bg-sky-100 text-sky-700', btn: 'bg-sky-600 hover:bg-sky-700' } },
-    { key: 'speak', icon: '🗣️', label: '말하기', b: data.speak, onStart: () => navigate('/speak?review=1'),
+    { key: 'speak', icon: '🗣️', label: '말하기', b: data.speak, onStart: () => navigate('/review/speaking'),
       theme: { bg: 'bg-rose-50/40', border: 'border-rose-100', badge: 'bg-rose-100 text-rose-700', btn: 'bg-rose-600 hover:bg-rose-700' } },
-    { key: 'tactile', icon: '🖐️', label: '타도마', b: data.tactile, onStart: () => navigate('/tactile?review=1'),
+    { key: 'tactile', icon: '🖐️', label: '타도마', b: data.tactile, onStart: () => navigate('/review/tactile'),
       theme: { bg: 'bg-purple-50/40', border: 'border-purple-100', badge: 'bg-purple-100 text-purple-700', btn: 'bg-purple-600 hover:bg-purple-700' } },
   ] : []
 
   return (
-    <motion.div id="daily-review" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card !p-4 scroll-mt-20">
+    <motion.div id="daily-review" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card !p-4 scroll-mt-52">
       <div className="mb-0.5 flex items-center justify-between gap-3">
         <h2 className="text-base font-bold text-gray-900">오늘의 복습</h2>
         <span className="text-xs text-gray-400">세 기둥 · 예정·틀림·북마크</span>
@@ -447,6 +574,10 @@ export default function Dashboard() {
   const statistics = useStore((state) => state.statistics)
   const setStatistics = useStore((state) => state.setStatistics)
 
+  const [searchTerm, setSearchTerm] = useState('')
+  const [activeNavMenu, setActiveNavMenu] = useState(null)
+  const [heroSlide, setHeroSlide] = useState(0)
+  const [heroDirection, setHeroDirection] = useState(1)
   const [selectedSituation, setSelectedSituation] = useState('카페')
   const [customSituation, setCustomSituation] = useState('')
   const [selectedLevel, setSelectedLevel] = useState(Math.min(user?.current_level || 1, 5))
@@ -551,23 +682,205 @@ export default function Dashboard() {
   const startPractice = () => startScenario('practice')
   const startConversation = () => startScenario('conversation')
 
+  const goToSection = (id) => {
+    const element = document.getElementById(id)
+    if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const submitSearch = (event) => {
+    event.preventDefault()
+    const query = searchTerm.trim().toLowerCase().replace(/\s/g, '')
+    if (!query) return
+    const result = SEARCH_ITEMS.find((item) => item.keywords.some((keyword) => {
+      const normalized = keyword.toLowerCase().replace(/\s/g, '')
+      return normalized.includes(query) || query.includes(normalized)
+    }))
+    if (result) navigate(result.to)
+    else alert('찾는 학습을 발견하지 못했어요. 학습 메뉴에서 전체 콘텐츠를 확인해주세요.')
+  }
+
+  const activeTopic = TOPIC_MENUS.find((topic) => topic.id === activeNavMenu)
+
+  const chooseTopicItem = (to) => {
+    setActiveNavMenu(null)
+    navigate(to)
+  }
+
+  const moveHeroSlide = (step) => {
+    setHeroDirection(step > 0 ? 1 : -1)
+    setHeroSlide((current) => (current + step + HERO_SLIDES.length) % HERO_SLIDES.length)
+  }
+
+  const selectHeroSlide = (index) => {
+    if (index === heroSlide) return
+    setHeroDirection(index > heroSlide ? 1 : -1)
+    setHeroSlide(index)
+  }
+
+  const finishHeroDrag = (_, info) => {
+    if (info.offset.x < -55 || info.velocity.x < -500) moveHeroSlide(1)
+    else if (info.offset.x > 55 || info.velocity.x > 500) moveHeroSlide(-1)
+  }
+
+  const currentHero = HERO_SLIDES[heroSlide]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-xl">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
-          <div className="flex items-center justify-between py-2.5">
-            <button type="button" onClick={() => navigate('/dashboard')} className="text-left">
-              <span className="block text-xl font-black tracking-tight text-primary-600">LIPLAB</span>
-              <span className="hidden text-[11px] font-medium text-slate-500 sm:block">눈으로 듣고, 보며 말하는 학습</span>
+    <div className="min-h-screen bg-white">
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+        <div className="border-b border-slate-100 bg-slate-50/90">
+          <div className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-2 text-[11px] text-slate-500 sm:px-6">
+            <button type="button" onClick={() => navigate('/dashboard')} className="inline-flex items-center gap-1.5 font-bold text-slate-700 hover:text-primary-700">
+              <span aria-hidden="true">⌂</span>
+              메인 바로가기
             </button>
-            <div className="mr-1 hidden text-right sm:block">
-              <p className="text-[11px] text-slate-400">오늘도 반가워요</p>
-              <p className="text-sm font-bold text-slate-800">{user?.username}님</p>
+            <p className="hidden sm:block"><b className="text-slate-700">{user?.username}님</b>, 오늘도 나에게 맞는 방식으로 학습해 보세요.</p>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
+          <div className="flex min-h-[86px] items-center gap-4 py-4 sm:gap-7">
+            <button type="button" onClick={() => navigate('/dashboard')} className="flex shrink-0 items-center gap-2 text-left">
+              <span aria-hidden="true" className="relative grid h-10 w-10 place-items-center rounded-2xl bg-sky-50">
+                <span className="absolute h-4 w-7 rounded-full border-[3px] border-sky-400" />
+                <span className="absolute h-7 w-4 rounded-full border-[3px] border-sky-400" />
+              </span>
+              <span>
+                <span className="block text-2xl font-black tracking-[-0.05em] text-slate-950">LIPLAB</span>
+                <span className="hidden text-[10px] font-medium text-slate-400 sm:block">Visual Language Lab</span>
+              </span>
+            </button>
+
+            <form onSubmit={submitSearch} className="hidden max-w-2xl flex-1 md:block" role="search">
+              <label htmlFor="learning-search" className="sr-only">학습 콘텐츠 검색</label>
+              <div className="flex h-12 items-center overflow-hidden rounded-full border-2 border-sky-300 bg-white pl-5 pr-2 transition focus-within:border-sky-500 focus-within:ring-4 focus-within:ring-sky-100">
+                <input
+                  id="learning-search"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  className="min-w-0 flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+                  placeholder="배우고 싶은 입모양, 단어, 학습을 검색해 보세요."
+                />
+                <button type="submit" aria-label="검색" className="grid h-9 w-9 place-items-center rounded-full text-xl text-slate-800 hover:bg-sky-50">⌕</button>
+              </div>
+            </form>
+
+            <div className="ml-auto hidden items-center gap-1 xl:flex">
+              {[
+                ['복습', '/review/today', '↻'],
+                ['북마크', '/review/saved', '★'],
+                ['사용법', '/guide', '?'],
+              ].map(([label, to, icon]) => (
+                <button key={label} type="button" onClick={() => navigate(to)} className="group flex w-16 flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-bold text-slate-600 transition hover:bg-sky-50 hover:text-sky-700">
+                  <span aria-hidden="true" className="grid h-7 w-7 place-items-center text-lg">{icon}</span>
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
+          <form onSubmit={submitSearch} className="pb-4 md:hidden" role="search">
+            <label htmlFor="learning-search-mobile" className="sr-only">학습 콘텐츠 검색</label>
+            <div className="flex h-11 items-center rounded-full border-2 border-sky-300 px-4 focus-within:border-sky-500">
+              <input id="learning-search-mobile" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="학습 콘텐츠 검색" />
+              <button type="submit" aria-label="검색" className="text-lg">⌕</button>
+            </div>
+          </form>
         </div>
+
+        <nav
+          className="relative border-t border-slate-100"
+          aria-label="학습 콘텐츠"
+          onMouseLeave={() => setActiveNavMenu(null)}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setActiveNavMenu(null)
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setActiveNavMenu(null)
+              event.currentTarget.querySelector(`[data-topic="${activeNavMenu}"]`)?.focus()
+            }
+          }}
+        >
+          <div className="mx-auto flex max-w-[1440px] items-center overflow-x-auto px-4 py-1 sm:px-6">
+            <div className="mr-3 inline-flex shrink-0 items-center gap-2 px-2 py-3 text-sm font-black text-sky-600 sm:mr-7">
+              <span aria-hidden="true" className="text-lg">☰</span>
+              학습 콘텐츠
+            </div>
+            <div className="flex items-stretch gap-1" role="menubar" aria-label="학습 콘텐츠 주제">
+              {TOPIC_MENUS.map((topic) => {
+                const active = activeNavMenu === topic.id
+                return (
+                  <button
+                    key={topic.id}
+                    type="button"
+                    role="menuitem"
+                    data-topic={topic.id}
+                    aria-haspopup="true"
+                    aria-expanded={active}
+                    aria-controls={`topic-menu-${topic.id}`}
+                    onMouseEnter={() => setActiveNavMenu(topic.id)}
+                    onFocus={() => setActiveNavMenu(topic.id)}
+                    onClick={() => setActiveNavMenu(active ? null : topic.id)}
+                    className={`group relative min-w-[84px] shrink-0 rounded-xl px-5 py-3 text-sm font-black transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-inset sm:min-w-[104px] sm:text-base ${
+                      active ? `${topic.theme.active} -translate-y-0.5 shadow-sm` : 'text-slate-800 hover:-translate-y-0.5 hover:bg-slate-50 hover:text-sky-700'
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      {topic.label}
+                      <span aria-hidden="true" className={`text-[10px] transition-transform duration-200 ${active ? 'rotate-180' : ''}`}>⌄</span>
+                    </span>
+                    <span aria-hidden="true" className={`absolute inset-x-5 bottom-0 h-0.5 origin-center rounded-full transition-transform duration-200 ${topic.theme.line} ${active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-75'}`} />
+                  </button>
+                )
+              })}
+            </div>
+            <p className="ml-auto hidden shrink-0 text-xs font-medium text-slate-400 lg:block">
+              주제를 선택하면 관련 메뉴를 한 번에 볼 수 있어요
+            </p>
+          </div>
+
+          <AnimatePresence initial={false}>
+            {activeTopic && (
+              <motion.div
+                id={`topic-menu-${activeTopic.id}`}
+                role="menu"
+                aria-label={`${activeTopic.label} 메뉴`}
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.16, ease: 'easeOut' }}
+                className="absolute inset-x-0 top-full z-50 max-h-[65vh] overflow-y-auto border-y border-slate-200 bg-white shadow-[0_24px_50px_rgba(15,23,42,0.14)]"
+              >
+                <div className="mx-auto grid max-w-[1440px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[250px_1fr] lg:gap-8 lg:py-7">
+                  <div className="border-b border-slate-100 pb-4 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-8">
+                    <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-black ${activeTopic.theme.badge}`}>{activeTopic.label}</span>
+                    <h2 className="mt-3 text-xl font-black tracking-tight text-slate-950">{activeTopic.title}</h2>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-500">{activeTopic.description}</p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {activeTopic.items.map((item, index) => (
+                      <button
+                        key={`${activeTopic.id}-${item.label}`}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => chooseTopicItem(item.to)}
+                        className={`group flex items-start gap-3 rounded-2xl border border-transparent p-3.5 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${activeTopic.theme.hover}`}
+                      >
+                        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[11px] font-black ${activeTopic.theme.badge}`}>
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                        <span className="min-w-0 pt-0.5">
+                          <span className="block text-sm font-black text-slate-900 transition group-hover:text-slate-950">{item.label}</span>
+                          <span className="mt-1 block text-xs leading-relaxed text-slate-500">{item.description}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </nav>
       </header>
 
       <AnimatePresence>
@@ -577,7 +890,7 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: -12, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
-            className="fixed right-4 top-20 z-[60] flex max-w-sm items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 shadow-xl sm:right-6"
+            className="fixed right-4 top-44 z-[60] flex max-w-sm items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 shadow-xl sm:right-6"
           >
             <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-200 text-lg">🔒</span>
             <div className="min-w-0 flex-1">
@@ -590,40 +903,164 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      <main className="mx-auto max-w-[1440px] px-4 py-3 sm:px-6 sm:py-4">
+      <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 sm:py-7">
 
-        <motion.section
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-sky-950 to-sky-800 p-4 text-white shadow-xl shadow-sky-950/10 sm:p-5"
-        >
-          <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-300">Learning hub</p>
-              <h1 className="mt-0.5 text-xl font-black tracking-tight sm:text-2xl">오늘은 어떤 훈련을 할까요?</h1>
-              <p className="mt-0.5 text-xs text-sky-100/75">필요한 콘텐츠를 고르면 바로 학습을 시작할 수 있어요.</p>
+        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
+          <aside className="overflow-hidden rounded-[24px] bg-[#f6f7fb] p-4 sm:p-5" aria-labelledby="category-heading">
+            <div className="flex items-center justify-between lg:block">
+              <h2 id="category-heading" className="text-base font-black text-sky-600">전체 학습 보기</h2>
+              <span className="text-[11px] font-medium text-slate-400 lg:mt-1 lg:block">원하는 방식으로 바로 이동</span>
             </div>
-            <dl className="grid grid-cols-4 gap-1.5 text-center lg:min-w-[340px]">
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-1.5 lg:overflow-visible">
               {[
-                ['레벨', user?.current_level || 1],
-                ['연속 학습', `${user?.streak_count || 0}일`],
-                ['평균 점수', statsLoading ? '—' : `${statistics?.average_score || 0}점`],
-                ['누적 XP', user?.total_xp || 0],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-xl border border-white/10 bg-white/10 px-2 py-1.5 backdrop-blur-sm">
-                  <dt className="text-[10px] text-sky-100/65">{label}</dt>
-                  <dd className="mt-0.5 text-[13px] font-black text-white">{value}</dd>
-                </div>
+                ['입모양 기초', '01', () => navigate('/learn/viseme')],
+                ['음절·단어', '02', () => navigate('/learn/word')],
+                ['문장·대화', '03', () => navigate('/learn/scenario')],
+                ['말하기 연습', '04', () => navigate('/learn/speaking')],
+                ['촉각 학습', '05', () => navigate('/learn/tactile')],
+                ['오늘의 복습', '06', () => navigate('/review/today')],
+                ['학습 분석', '07', () => navigate('/analysis/overview')],
+              ].map(([label, number, onClick]) => (
+                <button key={label} type="button" onClick={onClick} className="group flex shrink-0 items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-left text-sm font-bold text-slate-700 transition hover:bg-sky-50 hover:text-sky-700 lg:w-full lg:bg-transparent">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white text-[10px] font-black text-sky-500 shadow-sm group-hover:bg-sky-100">{number}</span>
+                  {label}
+                </button>
               ))}
-            </dl>
-          </div>
+            </div>
+          </aside>
 
+          <div
+            role="region"
+            aria-roledescription="carousel"
+            aria-label="LIPLAB 맞춤 학습"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowLeft') { event.preventDefault(); moveHeroSlide(-1) }
+              if (event.key === 'ArrowRight') { event.preventDefault(); moveHeroSlide(1) }
+            }}
+            className="relative min-h-[560px] overflow-hidden rounded-[24px] outline-none ring-sky-400 transition focus-visible:ring-2 focus-visible:ring-offset-2 sm:min-h-[500px] lg:min-h-[420px]"
+          >
+            <AnimatePresence initial={false} mode="wait">
+              <motion.article
+                key={currentHero.id}
+                initial={{ opacity: 0, x: heroDirection > 0 ? 90 : -90 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: heroDirection > 0 ? -90 : 90 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.16}
+                dragMomentum={false}
+                onDragEnd={finishHeroDrag}
+                aria-live="polite"
+                aria-label={`${heroSlide + 1} / ${HERO_SLIDES.length}: ${currentHero.tab}`}
+                className={`absolute inset-0 cursor-grab overflow-hidden bg-gradient-to-r ${currentHero.background} px-7 pb-24 pt-8 active:cursor-grabbing sm:px-12 sm:pt-10 lg:px-14 lg:pt-11`}
+                style={{ touchAction: 'pan-y' }}
+              >
+                <div className="relative z-10 max-w-2xl md:pr-[230px] lg:pr-[310px]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex rounded-full px-3 py-1.5 text-xs font-black shadow-sm ${currentHero.badge}`}>LIPLAB {currentHero.eyebrow}</span>
+                    <span className="hidden text-[11px] font-bold text-slate-500 sm:inline">좌우로 드래그해 보세요</span>
+                  </div>
+                  <h1 className="mt-5 text-3xl font-black leading-[1.2] tracking-[-0.045em] text-slate-950 sm:text-4xl xl:text-[44px]">
+                    {currentHero.title[0]}<br />{currentHero.title[1]}
+                  </h1>
+                  <p className="mt-4 max-w-lg text-sm font-medium leading-relaxed text-slate-600 sm:text-base">{currentHero.description}</p>
+                  <div className="mt-6 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={() => navigate(currentHero.to)}
+                      className="rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+                    >
+                      {currentHero.cta}
+                    </button>
+                    <button
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={() => navigate('/guide')}
+                      className="rounded-full border border-slate-900/15 bg-white/70 px-5 py-3 text-sm font-black text-slate-800 transition hover:bg-white"
+                    >
+                      사용법 보기
+                    </button>
+                  </div>
+                  <dl className="mt-7 flex max-w-lg divide-x divide-slate-900/10 overflow-hidden rounded-2xl bg-white/65 backdrop-blur-sm">
+                    {[
+                      ['레벨', user?.current_level || 1],
+                      ['연속 학습', `${user?.streak_count || 0}일`],
+                      ['평균 점수', statsLoading ? '—' : `${statistics?.average_score || 0}점`],
+                    ].map(([label, value]) => (
+                      <div key={label} className="min-w-0 flex-1 px-3 py-3 text-center">
+                        <dt className="truncate text-[10px] font-bold text-slate-500">{label}</dt>
+                        <dd className="mt-0.5 text-sm font-black text-slate-900">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+
+                <div aria-hidden="true" className="pointer-events-none absolute -bottom-10 -right-10 hidden h-[330px] w-[360px] md:block">
+                  <div className={`absolute bottom-12 right-12 h-52 w-64 rotate-[-5deg] rounded-[48%_44%_50%_46%] bg-gradient-to-br ${currentHero.visual.shape} ${currentHero.visual.shadow}`}>
+                    <span className="absolute left-[72px] top-[64px] h-5 w-5 rounded-full bg-slate-800" />
+                    <span className="absolute left-[110px] top-[61px] h-5 w-5 rounded-full bg-slate-800" />
+                    <span className="absolute left-[68px] top-[100px] h-10 w-[92px] rounded-b-full rounded-t-[42%] border-b-[12px] border-white/90" />
+                    <span className="absolute -right-7 top-20 h-20 w-14 rotate-12 rounded-[55%_45%_55%_45%] bg-slate-900/20" />
+                  </div>
+                  <div className="absolute right-20 top-2 grid h-16 min-w-16 rotate-12 place-items-center rounded-2xl bg-white px-2 text-sm font-black text-slate-800 shadow-xl">{currentHero.visual.first}</div>
+                  <div className={`absolute right-3 top-24 grid h-14 min-w-14 -rotate-6 place-items-center rounded-2xl px-2 text-xs font-black shadow-xl ${currentHero.visual.chip}`}>{currentHero.visual.second}</div>
+                  <div className="absolute left-8 top-16 grid h-14 min-w-14 rotate-[-12deg] place-items-center rounded-full bg-white/90 px-2 text-xs font-black text-slate-700 shadow-xl">{currentHero.visual.third}</div>
+                  <span className="absolute left-8 top-2 text-3xl text-amber-400">✦</span>
+                  <span className="absolute right-8 top-3 text-xl text-amber-500">✦</span>
+                </div>
+              </motion.article>
+            </AnimatePresence>
+
+            <button
+              type="button"
+              onClick={() => moveHeroSlide(-1)}
+              aria-label="이전 맞춤 학습"
+              className="absolute left-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-slate-950/70 text-xl text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-white sm:left-4"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={() => moveHeroSlide(1)}
+              aria-label="다음 맞춤 학습"
+              className="absolute right-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-slate-950/70 text-xl text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-white sm:right-4"
+            >
+              ›
+            </button>
+
+            <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full bg-white/75 p-1.5 shadow-lg backdrop-blur-md" role="tablist" aria-label="맞춤 학습 슬라이드">
+              {HERO_SLIDES.map((slide, index) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={heroSlide === index}
+                  aria-label={`${slide.tab} 슬라이드`}
+                  onClick={() => selectHeroSlide(index)}
+                  className={`rounded-full px-3 py-2 text-[11px] font-black transition sm:px-4 ${heroSlide === index ? 'bg-slate-950 text-white shadow-sm' : 'text-slate-500 hover:bg-white hover:text-slate-900'}`}
+                >
+                  {slide.tab}
+                </button>
+              ))}
+            </div>
+          </div>
         </motion.section>
 
+        <div className="mt-9 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-black tracking-[0.12em] text-sky-600">TODAY'S LEARNING</p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">오늘의 추천 학습</h2>
+          </div>
+          <button type="button" onClick={() => navigate('/guide')} className="hidden text-sm font-bold text-slate-500 hover:text-sky-700 sm:block">학습 방법 알아보기 →</button>
+        </div>
+
         {/* 독화 학습 — 단계 사다리 + 문장·대화 실전을 한 카드로 통합 */}
-        <section id="reading-learning" className="mt-3 scroll-mt-20">
+        <section id="reading-learning" className="mt-4 scroll-mt-52">
           <CurriculumPath>
-          <div id="reading-test" className="scroll-mt-20">
+          <div id="reading-test" className="scroll-mt-52">
           <h2 className="mb-1 flex flex-wrap items-center gap-2 text-base font-bold text-gray-900">
             🎯 문장·대화 실전
             <span className="text-[11px] font-medium text-gray-400">3·4단계</span>
@@ -768,7 +1205,7 @@ export default function Dashboard() {
 
         {/* 말하기 · 촉각 학습 */}
         <section className="mt-3 grid items-start gap-3 lg:grid-cols-2">
-          <div id="speaking-learning" className="scroll-mt-20">
+          <div id="speaking-learning" className="scroll-mt-52">
             <SpeakCurriculumPath />
           </div>
           <TactileCard />
@@ -812,7 +1249,7 @@ export default function Dashboard() {
             </section>
           </div>
           <div className="border-t border-slate-100 px-4 py-3">
-            <button onClick={() => navigate('/analysis')}
+            <button onClick={() => navigate('/analysis/overview')}
               className="text-sm font-semibold text-primary-600 hover:text-primary-700">
               📊 독화·말하기 상세 분석 보기 →
             </button>

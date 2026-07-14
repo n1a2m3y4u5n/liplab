@@ -58,6 +58,9 @@ const Closure = lazy(() => import('./pages/Closure'))
 const SpeakingPractice = lazy(() => import('./pages/SpeakingPractice'))
 const TactilePractice = lazy(() => import('./pages/TactilePractice'))
 const FreeSpeak = lazy(() => import('./pages/FreeSpeak'))
+const ScenarioHub = lazy(() => import('./pages/ScenarioHub'))
+const ReviewLanding = lazy(() => import('./pages/ReviewLanding'))
+const AnalysisDetail = lazy(() => import('./pages/AnalysisDetail'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
@@ -149,7 +152,23 @@ function App() {
         <Route path="/tactile" element={<TactilePractice />} />
         <Route path="/learn/viseme" element={<VisemeLiteracy />} />
         <Route path="/learn/word" element={<StageGate stage={2}><WordStage /></StageGate>} />
+        <Route path="/learn/scenario" element={<ScenarioHub />} />
+        <Route path="/learn/speaking" element={<SpeakingPractice />} />
+        <Route path="/learn/tactile" element={<TactilePractice />} />
+        <Route path="/learn/sign" element={<Sign />} />
         <Route path="/review" element={<Review />} />
+        <Route path="/review/today" element={<ReviewLanding mode="today" />} />
+        <Route path="/review/scheduled" element={<Review />} />
+        <Route path="/review/mistakes" element={<ReviewLanding mode="mistakes" />} />
+        <Route path="/review/speaking" element={<SpeakingPractice />} />
+        <Route path="/review/tactile" element={<TactilePractice />} />
+        <Route path="/review/saved" element={<Bookmarks />} />
+        <Route path="/analysis/overview" element={<AnalysisDetail mode="overview" />} />
+        <Route path="/analysis/activity" element={<AnalysisDetail mode="activity" />} />
+        <Route path="/analysis/visemes" element={<AnalysisDetail mode="visemes" />} />
+        <Route path="/analysis/scores" element={<AnalysisDetail mode="scores" />} />
+        <Route path="/analysis/history" element={<AnalysisDetail mode="history" />} />
+        <Route path="/analysis/guide" element={<Guide />} />
         <Route path="/learn/closure" element={<Closure />} />
         <Route path="/pronounce" element={<FreeSpeak />} />
         <Route path="/speak" element={<SpeakingPractice />} />
