@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { learningAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
+import LearnHeader from '../components/LearnHeader'
 
 /**
  * 내 문장 발음 보기 (자유 입력 → 3D 입모양)
@@ -63,21 +64,12 @@ export default function FreeSpeak() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">내 문장 발음 보기</h1>
-            <p className="text-sm text-gray-600">아무 글자나 문장을 입력하면 3D 얼굴이 그대로 발음해요.</p>
-          </div>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="shrink-0 text-gray-500 hover:text-gray-800 text-sm"
-          >
-            ✕ 나가기
-          </button>
-        </div>
-      </header>
+      <LearnHeader
+        accent="reading"
+        title="내 문장 발음 보기"
+        description="아무 글자나 문장을 입력하면 3D 얼굴이 그대로 발음해요"
+        onExit={() => navigate('/dashboard')}
+      />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 입력 */}

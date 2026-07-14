@@ -6,6 +6,7 @@ const HEADER_ACCENTS = {
   reading: '#fef3c7',   // 독화 (연한 노랑)
   speaking: '#ffe4e6',  // 말하기 (연한 로즈)
   tactile: '#ede9fe',   // 촉각 (연한 바이올렛)
+  etc: '#e2e8f0',       // 기타(수어·분석 등, 연한 슬레이트)
 }
 
 // 나가기 호버 시 덮이는 붉은 물감 — 연한 단색 레드
