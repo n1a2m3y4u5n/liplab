@@ -31,6 +31,7 @@ const MENU_GROUPS = [
     tone: 'violet',
     items: [
       { label: '수어 학습', description: '문장을 수어로 확인', icon: '🤟', to: '/sign' },
+      { label: '촉각 학습', description: '얼굴 모형을 손으로 느껴 이해(타도마)', icon: '🖐️', to: '/tactile' },
       { label: '학습 분석', description: '강점과 취약점 확인', icon: '📊', to: '/analysis' },
       { label: '사용법', description: 'LIPLAB 활용 안내', icon: '?', to: '/guide' },
     ],
