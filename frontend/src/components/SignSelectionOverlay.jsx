@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 const SignPanel = lazy(() => import('./SignPanel'))
 
 const hasKorean = (s) => /[가-힣]/.test(s)
-const INTRO_KEY = 'liplab_sign_intro_seen'   // 첫 접속 사용법 팝업 1회 표시용
 
 /**
  * 전역 텍스트 선택 → 수어 번역.
@@ -15,16 +14,9 @@ const INTRO_KEY = 'liplab_sign_intro_seen'   // 첫 접속 사용법 팝업 1회
 export default function SignSelectionOverlay() {
   const [hint, setHint] = useState(null)     // {text, x, y} 플로팅 버튼
   const [modalText, setModalText] = useState(null)
-  const [showIntro, setShowIntro] = useState(false)   // 첫 접속 사용법 팝업
+  const [showIntro, setShowIntro] = useState(true)   // 데모용: 접속할 때마다 사용법 팝업 표시
 
-  useEffect(() => {
-    try { if (!localStorage.getItem(INTRO_KEY)) setShowIntro(true) } catch { /* noop */ }
-  }, [])
-
-  const dismissIntro = () => {
-    setShowIntro(false)
-    try { localStorage.setItem(INTRO_KEY, '1') } catch { /* noop */ }
-  }
+  const dismissIntro = () => setShowIntro(false)
 
   useEffect(() => {
     function onMouseUp(e) {
