@@ -186,7 +186,8 @@ function QuizPanel({ data }) {
   const newQ = useCallback(() => {
     const target = quizzable[Math.floor(Math.random() * quizzable.length)]
     const others = shuffle(lessons.filter((l) => l.viseme_id !== target.viseme_id)).slice(0, 3)
-    const choices = shuffle([target, ...others]).map((l) => ({ viseme_id: l.viseme_id, name: l.name }))
+    // 선지는 언어학 용어(양순음 등)가 아니라 실제 자모(ㅁㅂㅃㅍ)로 보여준다 — 학습자가 실제로 볼 글자와 바로 연결되도록.
+    const choices = shuffle([target, ...others]).map((l) => ({ viseme_id: l.viseme_id, phonemes: l.phonemes.join('') }))
     setQ({ target, choices })
     setResult(null)
   }, [lessons, quizzable])
@@ -241,7 +242,7 @@ function QuizPanel({ data }) {
               else cls += 'border-gray-200 bg-gray-50 text-gray-400'
               return (
                 <button key={c.viseme_id} disabled={!!result || submitting} onClick={() => choose(c.viseme_id)} className={cls}>
-                  {c.name}
+                  {c.phonemes}
                   {result && isTarget && <span className="float-right text-green-600">✓</span>}
                   {result && isChosen && !isTarget && <span className="float-right text-red-500">✗</span>}
                 </button>
@@ -253,7 +254,7 @@ function QuizPanel({ data }) {
             {result && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-2">
                 <div className={`p-3 rounded-lg text-sm ${result.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                  {result.correct ? '정답! 🎉' : `오답 — 정답은 "${q.target.name}"`}
+                  {result.correct ? '정답! 🎉' : `오답 — 정답은 "${q.target.phonemes.join('')}"`}
                   {!result.correct && result.same_cluster && (
                     <p className="mt-1 text-gray-600">헷갈릴 만해요! 이 둘은 <b>같아 보이는 무리</b>라 입모양만으론 구별이 어렵습니다. 실제로는 문맥으로 판단해요.</p>
                   )}

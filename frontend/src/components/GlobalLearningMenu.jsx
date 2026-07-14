@@ -3,47 +3,39 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { curriculumAPI } from '../api'
 
-const CONVERSATION_UNLOCK_HINT = '3단계 문장 독화를 완료하면 대화 실전이 해금됩니다.'
+const CONVERSATION_UNLOCK_HINT = '문장 독화(4단계)를 완료하면 대화 실전(5단계)이 해금돼요.'
 
+// 대시보드의 학습/복습/분석 세 탭과 같은 기준으로 묶는다.
 const MENU_GROUPS = [
   {
-    title: '독화 학습',
-    tone: 'sky',
+    title: '학습',
     items: [
-      { label: '입모양 기초', description: '자음·모음 입모양 익히기', icon: '👄', to: '/learn/viseme' },
-      { label: '음절·단어', description: '비슷한 입모양 구별하기', icon: '🔤', to: '/learn/word' },
-      { label: '문장 테스트', description: '상황별 독화 실력 확인', icon: '💬', to: '/dashboard#reading-test' },
-      { label: '대화 실전', description: '상황을 고르고 AI와 대화', icon: '🗣️', to: '/dashboard#reading-test', unlockStage: 4 },
-      { label: '문맥 추론', description: '앞뒤 맥락으로 뜻 찾기', icon: '🧩', to: '/learn/closure' },
-      { label: '내 문장 발음', description: '아무 글이나 입력해 입모양 보기', icon: '✍️', to: '/pronounce' },
+      { label: '입모양 기초', description: '자음·모음 입모양 익히기', to: '/learn/viseme' },
+      { label: '음절·단어', description: '비슷한 입모양 구별하기', to: '/learn/word' },
+      { label: '문장 테스트', description: '상황별 독화 실력 확인', to: '/dashboard#test-sentence' },
+      { label: '대화 실전', description: '상황을 고르고 AI와 대화', to: '/dashboard#test-conversation', unlockStage: 4 },
+      { label: '문맥 추론', description: '앞뒤 맥락으로 뜻 찾기', to: '/learn/closure' },
+      { label: '내 문장 발음', description: '아무 글이나 입력해 입모양 보기', to: '/pronounce' },
+      { label: '말하기 연습', description: '내 발음을 눈으로 다듬기', to: '/speak' },
+      { label: '촉각 학습', description: '얼굴 모형을 손으로 느껴 이해(타도마)', to: '/tactile' },
+      { label: '수어 학습', description: '문장을 수어로 확인', to: '/sign' },
     ],
   },
   {
-    title: '연습과 복습',
-    tone: 'rose',
+    title: '복습',
     items: [
-      { label: '말하기 연습', description: '내 발음을 눈으로 다듬기', icon: '🎤', to: '/speak' },
-      { label: '오늘의 복습', description: '예정 항목과 모은 문장', icon: '🔁', to: '/dashboard#daily-review' },
-      { label: '북마크', description: '저장한 문장 모아보기', icon: '★', to: '/bookmarks' },
+      { label: '오늘의 복습', description: '독화·말하기·촉각의 틀린 문제 모아보기', to: '/dashboard#daily-review' },
+      { label: '북마크', description: '저장한 문장 모아보기', to: '/bookmarks' },
     ],
   },
   {
-    title: '학습 도구',
-    tone: 'violet',
+    title: '분석',
     items: [
-      { label: '수어 학습', description: '문장을 수어로 확인', icon: '🤟', to: '/sign' },
-      { label: '촉각 학습', description: '얼굴 모형을 손으로 느껴 이해(타도마)', icon: '🖐️', to: '/tactile' },
-      { label: '학습 분석', description: '강점과 취약점 확인', icon: '📊', to: '/analysis' },
-      { label: '사용법', description: 'LIPLAB 활용 안내', icon: '?', to: '/guide' },
+      { label: '학습 분석', description: '강점과 취약점 확인', to: '/analysis' },
+      { label: '사용법', description: 'LIPLAB 활용 안내', to: '/guide' },
     ],
   },
 ]
-
-const TONES = {
-  sky: 'bg-sky-50 text-sky-700 group-hover:bg-sky-100',
-  rose: 'bg-rose-50 text-rose-700 group-hover:bg-rose-100',
-  violet: 'bg-violet-50 text-violet-700 group-hover:bg-violet-100',
-}
 
 export default function GlobalLearningMenu() {
   const [open, setOpen] = useState(false)
@@ -186,7 +178,6 @@ export default function GlobalLearningMenu() {
                       : 'border-slate-200 bg-white text-slate-700 hover:border-primary-200 hover:bg-primary-50/60'
                   }`}
                 >
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-xl shadow-sm">⌂</span>
                   <span>
                     <span className="block text-sm font-bold">메인 학습 허브</span>
                     <span className="block text-xs text-slate-500">전체 콘텐츠 한눈에 보기</span>
@@ -197,18 +188,15 @@ export default function GlobalLearningMenu() {
                   {unlockMessage && (
                     <motion.div role="alert" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
                       className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-900">
-                      <div className="flex items-start gap-2">
-                        <span aria-hidden="true">🔒</span>
-                        <span><b>대화 실전은 아직 잠겨 있어요.</b><br />{unlockMessage}</span>
-                      </div>
+                      <span><b>대화 실전은 아직 잠겨 있어요.</b><br />{unlockMessage}</span>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
                 <div className="space-y-5">
                   {MENU_GROUPS.map((group) => (
-                    <section key={group.title} aria-labelledby={`menu-${group.tone}`}>
-                      <h2 id={`menu-${group.tone}`} className="mb-2 px-1 text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
+                    <section key={group.title} aria-labelledby={`menu-${group.title}`}>
+                      <h2 id={`menu-${group.title}`} className="mb-2 px-1 text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
                         {group.title}
                       </h2>
                       <div className="space-y-1.5">
@@ -224,21 +212,16 @@ export default function GlobalLearningMenu() {
                               aria-current={current ? 'page' : undefined}
                               aria-label={locked ? `${item.label}, 잠김. ${CONVERSATION_UNLOCK_HINT}` : item.label}
                               title={locked ? CONVERSATION_UNLOCK_HINT : undefined}
-                              className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${
+                              className={`group flex w-full items-center justify-between gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${
                                 locked
                                   ? 'border border-dashed border-amber-300 bg-slate-50 hover:bg-amber-50'
                                   : current ? 'bg-slate-100' : 'hover:bg-slate-50'
                               }`}
                             >
-                              <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-lg transition ${
-                                locked ? 'bg-gray-200 text-gray-500 group-hover:bg-amber-100 group-hover:text-amber-700' : TONES[group.tone]
-                              }`}>
-                                {locked ? '🔒' : item.icon}
-                              </span>
                               <span className="min-w-0 flex-1">
                                 <span className={`block text-sm font-bold ${locked ? 'text-gray-500' : 'text-slate-800'}`}>{item.label}</span>
                                 <span className={`block truncate text-xs ${locked ? 'text-amber-700' : 'text-slate-500'}`}>
-                                  {locked ? '3단계 문장 독화 완료 후 해금' : item.description}
+                                  {locked ? '4단계 문장 독화 완료 후 해금' : item.description}
                                 </span>
                               </span>
                               <span aria-hidden="true" className={`text-xs font-bold ${locked ? 'text-amber-600' : 'text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-500'}`}>

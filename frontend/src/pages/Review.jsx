@@ -91,7 +91,8 @@ function ReviewCard({ item, lessons, words, onDone }) {
       const vid = parseInt(item.ref, 10)
       const t = lessons.find((l) => l.viseme_id === vid)
       const others = shuffle(lessons.filter((l) => l.viseme_id !== vid)).slice(0, 3)
-      const opts = shuffle([t, ...others].filter(Boolean)).map((l) => ({ key: String(l.viseme_id), label: l.name }))
+      // 선지는 언어학 용어(양순음 등) 대신 실제 자모(ㅁㅂㅃㅍ)로 보여준다 — 1단계 퀴즈와 동일한 방식.
+      const opts = shuffle([t, ...others].filter(Boolean)).map((l) => ({ key: String(l.viseme_id), label: l.phonemes.join('') }))
       return { targetKey: String(vid), choices: opts }
     }
     const others = shuffle(words.filter((w) => w !== item.ref)).slice(0, 3)

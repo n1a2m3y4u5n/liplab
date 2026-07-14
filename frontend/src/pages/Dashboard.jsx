@@ -5,20 +5,20 @@ import useStore from '../store/useStore'
 import { learningAPI, curriculumAPI, reviewAPI, speakAPI, tactileAPI } from '../api'
 
 const PRESET_SITUATIONS = [
-  { id: '카페', label: '카페', icon: '☕' },
-  { id: '병원', label: '병원', icon: '🏥' },
-  { id: '식당', label: '식당', icon: '🍽️' },
-  { id: '은행', label: '은행', icon: '🏦' },
-  { id: '쇼핑', label: '쇼핑', icon: '🛍️' },
-  { id: '대중교통', label: '대중교통', icon: '🚌' },
-  { id: '직장', label: '직장', icon: '💼' },
-  { id: '학교', label: '학교', icon: '📚' },
-  { id: '직접 입력', label: '직접 입력', icon: '✏️' },
+  { id: '카페', label: '카페' },
+  { id: '병원', label: '병원' },
+  { id: '식당', label: '식당' },
+  { id: '은행', label: '은행' },
+  { id: '쇼핑', label: '쇼핑' },
+  { id: '대중교통', label: '대중교통' },
+  { id: '직장', label: '직장' },
+  { id: '학교', label: '학교' },
+  { id: '직접 입력', label: '직접 입력' },
 ]
 
 // 테스트 탭 문제 유형: 주관식 · 4지선다 · 서술형을 골고루 섞는다.
 const TEST_QTYPES = ['test', 'test-multiple', 'essay']
-const CONVERSATION_UNLOCK_HINT = '3단계 문장 독화를 완료하면 대화 실전이 해금됩니다.'
+const CONVERSATION_UNLOCK_HINT = '문장 독화(4단계)를 완료하면 대화 실전(5단계)이 해금돼요.'
 function buildQTypes(n) {
   const arr = Array.from({ length: n }, (_, i) => TEST_QTYPES[i % TEST_QTYPES.length])
   for (let i = arr.length - 1; i > 0; i--) {
@@ -82,10 +82,10 @@ function ActivityCalendar({ data }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── 단계형 커리큘럼 경로 (재설계 Phase 1) ────────────────────────────────────
+// ── 단계형 커리큘럼 경로 ──────────────────────────────────────────────────────
 const TRACKS = [
-  { id: 'perception', title: '독화 지각 트랙', desc: '한국어를 이미 아는 분. 입모양 읽기 능력에 집중.', icon: '👂' },
-  { id: 'language', title: '언어+독화 트랙', desc: '수어가 더 편한 분. 뜻(수어)부터 익히고 입모양으로.', icon: '🤟' },
+  { id: 'perception', title: '독화 지각 트랙', desc: '한국어를 이미 아는 분. 입모양 읽기 능력에 집중.' },
+  { id: 'language', title: '언어+독화 트랙', desc: '수어가 더 편한 분. 뜻(수어)부터 익히고 입모양으로.' },
 ]
 
 const STAGE_STATUS = {
@@ -105,11 +105,14 @@ const LADDER_ACCENT = {
   purple: { hover: 'hover:border-purple-400 hover:bg-purple-50',   bar: 'bg-purple-500' },
 }
 
+// 단계 번호는 사용자에게 항상 1부터 보인다(내부 stage는 0부터). n은 호출부에서 stage+1로 넘긴다.
 function StageChip({ n, title, desc, status = 'unlocked', mastery = null, unlockHint, theme = 'sky', onClick, disabled }) {
   const st = STAGE_STATUS[status] || STAGE_STATUS.locked
   const accent = LADDER_ACCENT[theme] || LADDER_ACCENT.sky
   const isLocked = status === 'locked'
   const openable = !isLocked && status !== 'coming_soon'
+  // 진행 기록이 아직 없는 단계는 0%, '완료'인데 기록이 없는 단계(예: 입문·배치)는 100%로 본다.
+  const pct = mastery != null ? mastery : (status === 'mastered' ? 100 : 0)
   return (
     <button onClick={onClick} disabled={disabled}
       aria-label={isLocked && unlockHint ? `${title}, 잠김. ${unlockHint}` : title}
@@ -121,14 +124,17 @@ function StageChip({ n, title, desc, status = 'unlocked', mastery = null, unlock
       </div>
       <div className={`text-[13px] font-bold mt-0.5 ${openable ? 'text-gray-800' : 'text-gray-400'}`}>{title}</div>
       <div className="mt-0.5 truncate text-[10px] leading-tight text-gray-400">{desc}</div>
-      {mastery != null && (
-        <div className="mt-1 bg-gray-200 rounded-full h-1 overflow-hidden">
-          <div className={`${accent.bar} h-full`} style={{ width: `${Math.min(mastery, 100)}%` }} />
+      {openable && (
+        <div className="mt-1 flex items-center gap-1.5">
+          <div className="flex-1 bg-gray-200 rounded-full h-1 overflow-hidden">
+            <div className={`${accent.bar} h-full`} style={{ width: `${Math.min(pct, 100)}%` }} />
+          </div>
+          <span className="shrink-0 text-[9px] tabular-nums text-gray-400">{Math.round(pct)}%</span>
         </div>
       )}
       {isLocked && unlockHint && (
         <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center rounded-lg bg-slate-900/95 px-2 text-center opacity-0 transition-opacity group-hover:opacity-100 group-focus:opacity-100">
-          <span className="text-xs font-bold text-amber-300">🔒 해금 방법</span>
+          <span className="text-xs font-bold text-amber-300">해금 방법</span>
           <span className="mt-1 text-[10px] leading-tight text-white">{unlockHint}</span>
         </span>
       )}
@@ -136,7 +142,7 @@ function StageChip({ n, title, desc, status = 'unlocked', mastery = null, unlock
   )
 }
 
-function CurriculumPath({ children }) {
+function CurriculumPath({ onOpenTest, children }) {
   const navigate = useNavigate()
   const [state, setState] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -161,15 +167,16 @@ function CurriculumPath({ children }) {
     if (s.status === 'coming_soon') return   // 준비 중 — 안내할 이전 단계가 없음
     if (s.status === 'locked') {
       const prev = state?.stages?.find((x) => x.stage === s.stage - 1)
-      const prevName = prev ? `${prev.stage}단계(${prev.title})` : '이전 단계'
+      const prevName = prev ? `${prev.stage + 1}단계(${prev.title})` : '이전 단계'
       alert(`아직 잠긴 단계예요. ${prevName} 학습을 먼저 완료해주세요.`)
       return
     }
-    if (!s.route) return
+    // 4단계(문장)·5단계(대화)는 클릭하면 아래에 시작 설정 패널이 펼쳐진다.
     if (s.stage === 3 || s.stage === 4) {
-      navigate('/dashboard#reading-test')
+      onOpenTest?.(s.stage === 3 ? 'sentence' : 'conversation')
       return
     }
+    if (!s.route) return
     navigate(s.route)
   }
 
@@ -184,7 +191,7 @@ function CurriculumPath({ children }) {
         {state.placed ? (
           <button onClick={resetTrack} disabled={saving}
             className="text-xs text-gray-400 hover:text-primary-600 transition-colors disabled:opacity-50">
-            ← 트랙 다시 선택
+            트랙 다시 선택
           </button>
         ) : (
           <span className="text-xs text-gray-400">기초부터 단계별로</span>
@@ -201,7 +208,6 @@ function CurriculumPath({ children }) {
             {TRACKS.map((t) => (
               <button key={t.id} disabled={saving} onClick={() => pickTrack(t.id)}
                 className="text-left p-3 rounded-xl border-2 border-gray-200 hover:border-primary-400 hover:bg-primary-50 transition-all disabled:opacity-60">
-                <div className="text-xl mb-0.5">{t.icon}</div>
                 <div className="font-bold text-gray-800">{t.title}</div>
                 <div className="text-xs text-gray-500 mt-0.5">{t.desc}</div>
               </button>
@@ -210,16 +216,16 @@ function CurriculumPath({ children }) {
         </div>
       ) : (
         <>
-        {/* 학습 단계(0~2)만 사다리로. 3·4단계(문장·대화)는 아래 '문장·대화 실전' 구역이 담당 — 역할 중복 제거 */}
-        <div className="grid grid-cols-3 gap-1.5 mt-2">
-          {state.stages.filter((s) => s.stage <= 2).map((s) => {
+        {/* 5단계 전체를 한 줄에 나열 — 한눈에 보이도록 */}
+        <div className="grid grid-cols-5 gap-1 sm:gap-1.5 mt-2">
+          {state.stages.map((s) => {
             const isLocked = s.status === 'locked'
             const prev = isLocked ? state.stages.find((item) => item.stage === s.stage - 1) : null
             const unlockHint = prev
-              ? `${prev.stage}단계 ${prev.title} 학습을 완료하면 열려요.`
+              ? `${prev.stage + 1}단계 ${prev.title} 학습을 완료하면 열려요.`
               : '이전 단계를 완료하면 열려요.'
             return (
-              <StageChip key={s.stage} n={s.stage} title={s.title} desc={s.desc}
+              <StageChip key={s.stage} n={s.stage + 1} title={s.title} desc={s.desc}
                 status={s.status} mastery={s.mastery_score} theme="sky"
                 unlockHint={isLocked ? unlockHint : undefined}
                 disabled={s.status === 'coming_soon'} onClick={() => go(s)} />
@@ -229,11 +235,11 @@ function CurriculumPath({ children }) {
         <div className="mt-2 grid grid-cols-2 gap-1.5">
           <button onClick={() => navigate('/learn/closure')}
             className="py-2 rounded-xl text-xs font-semibold bg-primary-50 text-primary-700 hover:bg-primary-100 transition-all">
-            🧩 문맥 추론 훈련
+            문맥 추론 훈련
           </button>
           <button onClick={() => navigate('/pronounce')}
             className="py-2 rounded-xl text-xs font-semibold bg-primary-50 text-primary-700 hover:bg-primary-100 transition-all">
-            ✍️ 내 문장 발음 보기
+            내 문장 발음 보기
           </button>
         </div>
         </>
@@ -260,7 +266,7 @@ function SpeakCurriculumPath() {
 
   const go = (s) => {
     if (s.status === 'locked') {
-      alert(`아직 잠긴 단계예요. ${s.stage - 1}단계를 먼저 숙달해주세요.`)
+      alert(`아직 잠긴 단계예요. ${s.stage}단계를 먼저 숙달해주세요.`)
       return
     }
     navigate(`/speak?stage=${s.stage}`)
@@ -278,14 +284,12 @@ function SpeakCurriculumPath() {
       {!stages ? (
         <div className="py-4 text-center text-xs text-gray-400">불러오는 중…</div>
       ) : (
-        <>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-1.5">
           {stages.map((s) => (
-            <StageChip key={s.stage} n={s.stage} title={s.title} desc={s.desc}
+            <StageChip key={s.stage} n={s.stage + 1} title={s.title} desc={s.desc}
               status={s.status} mastery={s.mastery_score} theme="rose" onClick={() => go(s)} />
           ))}
         </div>
-        </>
       )}
     </motion.div>
   )
@@ -299,6 +303,14 @@ function TactileCard() {
   useEffect(() => {
     tactileAPI.getCurriculum().then((d) => setStages(d.stages)).catch(() => setStages(null))
   }, [])
+
+  const go = (s) => {
+    if (s.status === 'locked') {
+      alert(`아직 잠긴 단계예요. ${s.stage}단계를 먼저 숙달해주세요.`)
+      return
+    }
+    navigate(`/tactile?level=${s.stage}`)
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card !p-4">
@@ -315,129 +327,212 @@ function TactileCard() {
       {!stages ? (
         <div className="py-4 text-center text-xs text-gray-400">불러오는 중…</div>
       ) : (
-        <>
-        {(() => {
-          const total = stages.length
-          const started = stages.filter((s) => s.status === 'mastered' || s.status === 'in_progress').length
-          const lastMastered = [...stages].reverse().find((s) => s.status === 'mastered')
-          const inProgress = stages.find((s) => s.status === 'in_progress')
-          const note = lastMastered ? `${lastMastered.title} 완료`
-            : inProgress ? `${inProgress.title} 학습 중` : '아직 시작 전'
-          const pct = total ? Math.round(started / total * 100) : 0
-          return (
-            <div className="rounded-xl bg-gray-50 p-3">
-              <div className="mb-1.5 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-gray-600">진행</span>
-                  <div className="flex gap-1">
-                    {stages.map((s) => (
-                      <span key={s.stage}
-                        title={`${s.stage + 1}. ${s.title} · ${STAGE_STATUS[s.status]?.label || ''}`}
-                        className={`h-2.5 w-2.5 rounded-full ${s.status === 'mastered' ? 'bg-purple-600' : s.status === 'in_progress' ? 'bg-purple-300' : 'bg-gray-200'}`} />
-                    ))}
-                  </div>
-                </div>
-                <span className="truncate text-xs text-gray-500">{started}/{total}단계 · {note}</span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-gray-200">
-                <div className="h-full bg-purple-500 transition-all" style={{ width: `${pct}%` }} />
-              </div>
-            </div>
-          )
-        })()}
-        <button onClick={() => navigate('/tactile')}
-          className="mt-2 w-full py-2 rounded-xl text-xs font-semibold bg-purple-600 text-white hover:bg-purple-700 transition-all">
-          🖐️ 촉각 학습 열기 →
-        </button>
-        </>
+        <div className="grid grid-cols-5 gap-1 sm:gap-1.5">
+          {stages.map((s) => (
+            <StageChip key={s.stage} n={s.stage + 1} title={s.title} desc={s.desc}
+              status={s.status} mastery={s.mastery_score} theme="purple" onClick={() => go(s)} />
+          ))}
+        </div>
       )}
     </motion.div>
   )
 }
 
-// ── 오늘의 복습 — 세 기둥(독화·말하기·타도마) 모두 예정(SRS)·틀림·북마크 3분할 ──────
-function ReviewSection() {
+// ── 복습 탭 — 독화·말하기·촉각에서 틀린 모든 문제를 한곳에 모은다 ─────────────
+function ReviewTab() {
   const navigate = useNavigate()
   const setScenario = useStore((s) => s.setScenario)
-  const [data, setData] = useState(null)          // { read, speak, tactile } 각 {due, wrong, bookmark}
-  const [wrongSentences, setWrongSentences] = useState([])  // 독화 문장 복습(오답)용
+  const [loading, setLoading] = useState(true)
+  const [readDue, setReadDue] = useState([])
+  const [wrongSentences, setWrongSentences] = useState([])
+  const [readBookmarks, setReadBookmarks] = useState([])
+  const [speak, setSpeak] = useState(null)
+  const [tactile, setTactile] = useState(null)
 
   useEffect(() => {
     Promise.all([
       reviewAPI.getDue().catch(() => ({ items: [] })),
       learningAPI.getReviewSentences().catch(() => []),
       learningAPI.getBookmarks('read').catch(() => []),
-      speakAPI.getReview().catch(() => ({ buckets: { due: 0, wrong: 0, bookmark: 0 } })),
-      tactileAPI.getReview().catch(() => ({ buckets: { due: 0, wrong: 0, bookmark: 0 } })),
-    ]).then(([due, wrong, bm, speak, tactile]) => {
+      speakAPI.getReview().catch(() => null),
+      tactileAPI.getReview().catch(() => null),
+    ]).then(([due, wrong, bm, sp, tc]) => {
+      setReadDue(due.items || [])
       setWrongSentences(wrong || [])
-      setData({
-        read: { due: (due.items || []).length, wrong: (wrong || []).length, bookmark: (bm || []).length },
-        speak: speak.buckets || { due: 0, wrong: 0, bookmark: 0 },
-        tactile: tactile.buckets || { due: 0, wrong: 0, bookmark: 0 },
-      })
+      setReadBookmarks(bm || [])
+      setSpeak(sp)
+      setTactile(tc)
+      setLoading(false)
     })
   }, [])
 
-  // 독화 문장 복습(오답 문장) → /practice. 예정(SRS 입모양·단어)이 있으면 /review 우선.
   const startReadReview = () => {
-    if (data?.read.due > 0) { navigate('/review'); return }
+    if (!wrongSentences.length) { navigate('/review'); return }
     const sents = wrongSentences.map((w) => w.sentence)
-    if (!sents.length) { navigate('/review'); return }
     setScenario({ situation: '복습', level: 1, sentences: sents, qTypes: buildQTypes(sents.length), scenario_id: `review_${Date.now()}` }, 'test')
     navigate('/practice', { state: { review: true } })
   }
 
-  const pillars = data ? [
-    { key: 'read', icon: '👁️', label: '독화', b: data.read, onStart: startReadReview,
-      theme: { bg: 'bg-sky-50/40', border: 'border-sky-100', badge: 'bg-sky-100 text-sky-700', btn: 'bg-sky-600 hover:bg-sky-700' } },
-    { key: 'speak', icon: '🗣️', label: '말하기', b: data.speak, onStart: () => navigate('/speak?review=1'),
-      theme: { bg: 'bg-rose-50/40', border: 'border-rose-100', badge: 'bg-rose-100 text-rose-700', btn: 'bg-rose-600 hover:bg-rose-700' } },
-    { key: 'tactile', icon: '🖐️', label: '타도마', b: data.tactile, onStart: () => navigate('/tactile?review=1'),
-      theme: { bg: 'bg-purple-50/40', border: 'border-purple-100', badge: 'bg-purple-100 text-purple-700', btn: 'bg-purple-600 hover:bg-purple-700' } },
-  ] : []
+  const retrySentence = (s) => {
+    setScenario({ situation: '복습', level: s.difficulty_level || 1, sentences: [s.sentence], qTypes: buildQTypes(1), scenario_id: `review_${Date.now()}` }, 'test')
+    navigate('/practice', { state: { review: true } })
+  }
+
+  if (loading) {
+    return <div className="card !p-4 py-10 text-center text-xs text-gray-400">불러오는 중…</div>
+  }
+
+  const speakTotal = speak ? speak.buckets.due + speak.buckets.wrong : 0
+  const tactileTotal = tactile ? tactile.buckets.due + tactile.buckets.wrong : 0
 
   return (
-    <motion.div id="daily-review" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card !p-4 scroll-mt-20">
-      <div className="mb-0.5 flex items-center justify-between gap-3">
-        <h2 className="text-base font-bold text-gray-900">오늘의 복습</h2>
-        <span className="text-xs text-gray-400">세 기둥 · 예정·틀림·북마크</span>
-      </div>
-      <p className="mb-3 text-xs text-gray-500">
-        독화·말하기·타도마를 각각 <b>예정(간격반복)</b> · <b>틀린 문제</b> · <b>북마크</b>로 복습해요.
-      </p>
+    <div className="space-y-3">
+      {/* 독화 */}
+      <section className="card !p-4 border-l-4 border-sky-400">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-base font-bold text-gray-900">독화 복습</h2>
+          <span className="text-xs text-gray-400">틀린 문제 {readDue.length + wrongSentences.length}개</span>
+        </div>
 
-      {!data ? (
-        <div className="py-4 text-center text-xs text-gray-400">불러오는 중...</div>
-      ) : (
-        <div className="grid gap-3 lg:grid-cols-3">
-          {pillars.map((p) => {
-            const total = p.b.due + p.b.wrong + p.b.bookmark
-            return (
-              <div key={p.key} className={`rounded-2xl border p-3 ${p.theme.border} ${p.theme.bg}`}>
-                <div className="mb-2 flex items-center gap-1.5">
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${p.theme.badge}`}>{p.icon} {p.label}</span>
+        {readDue.length > 0 && (
+          <div className="mb-2 flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2">
+            <span className="text-xs text-gray-600">입모양·단어 복습 예정 {readDue.length}개</span>
+            <button onClick={() => navigate('/review')} className="text-xs font-semibold text-primary-600 hover:text-primary-700">
+              복습 퀴즈 풀기 →
+            </button>
+          </div>
+        )}
+
+        {wrongSentences.length > 0 ? (
+          <div className="space-y-1.5">
+            {wrongSentences.map((s, i) => (
+              <div key={i} className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm text-gray-800">{s.sentence}</p>
+                  <p className="text-[11px] text-gray-400">{s.situation} · {s.difficulty_level}단계 · {s.score}점</p>
                 </div>
-                <div className="mb-2 grid grid-cols-3 gap-1.5">
-                  {[['오늘 예정', p.b.due], ['틀린 문제', p.b.wrong], ['북마크', p.b.bookmark]].map(([lbl, n]) => (
-                    <div key={lbl} className="rounded-xl bg-white p-2 text-center">
-                      <div className="text-lg font-bold text-gray-800">{n}</div>
-                      <div className="text-[11px] text-gray-500">{lbl}</div>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={p.onStart} disabled={total === 0}
-                  className={`w-full rounded-lg px-3 py-2 text-xs font-bold text-white transition disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 ${p.theme.btn}`}>
-                  {total > 0 ? `복습 시작 (${total})` : '복습할 항목 없음'}
+                <button onClick={() => retrySentence(s)} className="shrink-0 text-xs font-semibold text-primary-600 hover:text-primary-700">
+                  다시 풀기
                 </button>
               </div>
-            )
-          })}
+            ))}
+          </div>
+        ) : readDue.length === 0 && (
+          <p className="py-4 text-center text-xs text-gray-400">틀린 문제가 없어요.</p>
+        )}
+
+        {wrongSentences.length > 0 && (
+          <button onClick={startReadReview}
+            className="mt-2 w-full rounded-lg bg-sky-600 py-2 text-xs font-bold text-white hover:bg-sky-700">
+            틀린 문장 전체 다시 풀기 ({wrongSentences.length})
+          </button>
+        )}
+        {readBookmarks.length > 0 && (
+          <button onClick={() => navigate('/bookmarks')}
+            className="mt-1.5 w-full rounded-lg border border-gray-200 py-1.5 text-xs text-gray-500 hover:bg-gray-50">
+            북마크 {readBookmarks.length}개 보기
+          </button>
+        )}
+      </section>
+
+      {/* 말하기 */}
+      <section className="card !p-4 border-l-4 border-rose-400">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-base font-bold text-gray-900">말하기 복습</h2>
+          <span className="text-xs text-gray-400">틀린 문제 {speak?.wrong?.length || 0}개</span>
         </div>
-      )}
-    </motion.div>
+        {speak?.wrong?.length > 0 ? (
+          <div className="space-y-1.5">
+            {speak.wrong.map((w, i) => (
+              <div key={i} className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2">
+                <span className="truncate text-sm text-gray-800">{w.target}</span>
+                <span className="shrink-0 text-[11px] text-gray-400">{w.last_score}점</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="py-4 text-center text-xs text-gray-400">틀린 문제가 없어요.</p>
+        )}
+        <button onClick={() => navigate('/speak?review=1')} disabled={speakTotal === 0}
+          className="mt-2 w-full rounded-lg bg-rose-600 py-2 text-xs font-bold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400">
+          말하기 복습 시작{speakTotal ? ` (${speakTotal})` : ''}
+        </button>
+      </section>
+
+      {/* 촉각 */}
+      <section className="card !p-4 border-l-4 border-purple-400">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-base font-bold text-gray-900">촉각 복습</h2>
+          <span className="text-xs text-gray-400">틀린 문제 {tactile?.wrong?.length || 0}개</span>
+        </div>
+        {tactile?.wrong?.length > 0 ? (
+          <div className="space-y-1.5">
+            {tactile.wrong.map((w, i) => (
+              <div key={i} className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2">
+                <span className="truncate text-sm text-gray-800">{w.target}</span>
+                <span className="shrink-0 text-[11px] text-gray-400">{w.stage + 1}단계</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="py-4 text-center text-xs text-gray-400">틀린 문제가 없어요.</p>
+        )}
+        <button onClick={() => navigate('/tactile?review=1')} disabled={tactileTotal === 0}
+          className="mt-2 w-full rounded-lg bg-purple-600 py-2 text-xs font-bold text-white hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400">
+          촉각 복습 시작{tactileTotal ? ` (${tactileTotal})` : ''}
+        </button>
+      </section>
+    </div>
   )
 }
+
+// ── 분석 탭 — 최근 활동 + 취약점 요약, 상세 분석은 /analysis로 연결 ────────────
+function AnalysisTab({ statistics, statsLoading, calendarData, navigate }) {
+  return (
+    <section className="card !p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-base font-bold text-gray-900">학습 기록과 분석</h2>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">총 {statistics?.total_sessions || 0}회</span>
+          <span className="rounded-full bg-primary-50 px-2.5 py-1 font-bold text-primary-700">평균 {statistics?.average_score || 0}점</span>
+        </div>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section aria-labelledby="activity-title">
+          <h3 id="activity-title" className="mb-2 text-sm font-bold text-slate-700">최근 90일 학습 현황</h3>
+          <ActivityCalendar data={calendarData} />
+        </section>
+        <section aria-labelledby="weak-viseme-title">
+          <h3 id="weak-viseme-title" className="mb-3 text-sm font-bold text-slate-700">취약 입모양</h3>
+          {!statsLoading && statistics?.weak_visemes?.length > 0 ? (
+            <ul className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-1">
+              {statistics.weak_visemes.slice(0, 3).map((wv, idx) => (
+                <li key={idx} className="flex items-center justify-between rounded-xl bg-red-50 px-3 py-1.5 text-sm">
+                  <span className="capitalize text-slate-700">{wv.feature}</span>
+                  <span className="font-bold text-red-600">{wv.error_rate}% 오답</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="rounded-xl bg-slate-50 px-3 py-4 text-center text-sm text-slate-400">아직 분석할 데이터가 없습니다.</p>
+          )}
+        </section>
+      </div>
+      <div className="mt-4 border-t border-slate-100 pt-3">
+        <button onClick={() => navigate('/analysis')}
+          className="text-sm font-semibold text-primary-600 hover:text-primary-700">
+          독화·말하기·촉각 상세 분석 보기 →
+        </button>
+      </div>
+    </section>
+  )
+}
+
+const TABS = [
+  { id: 'learn', label: '학습', desc: '독화·말하기·촉각 단계별 학습을 시작해요.' },
+  { id: 'review', label: '복습', desc: '틀렸던 문제를 모아서 다시 풀어요.' },
+  { id: 'analysis', label: '분석', desc: '학습 기록과 취약점을 확인해요.' },
+]
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -447,6 +542,9 @@ export default function Dashboard() {
   const statistics = useStore((state) => state.statistics)
   const setStatistics = useStore((state) => state.setStatistics)
 
+  const [activeTab, setActiveTab] = useState(null)   // 처음엔 아무 탭도 선택 안 된 상태 — 골라야 뜬다
+  const [testMode, setTestMode] = useState('sentence')   // 'sentence'(4단계) | 'conversation'(5단계)
+  const [showTestPanel, setShowTestPanel] = useState(false)  // 4·5단계 칩을 눌러야 패널이 펼쳐진다
   const [selectedSituation, setSelectedSituation] = useState('카페')
   const [customSituation, setCustomSituation] = useState('')
   const [selectedLevel, setSelectedLevel] = useState(Math.min(user?.current_level || 1, 5))
@@ -454,7 +552,7 @@ export default function Dashboard() {
   const [statsLoading, setStatsLoading] = useState(true)
   const [calendarData, setCalendarData] = useState({})
   const [recLevel, setRecLevel] = useState(null)
-  const [testLocked, setTestLocked] = useState(false)   // 3단계(문장 테스트) 잠김 여부
+  const [testLocked, setTestLocked] = useState(false)   // 4단계(문장 테스트) 잠김 여부
   const [conversationLocked, setConversationLocked] = useState(false)
   const [unlockNotice, setUnlockNotice] = useState(null)
 
@@ -465,7 +563,7 @@ export default function Dashboard() {
     curriculumAPI.getRecommendedLevel()
       .then((r) => { setRecLevel(r); setSelectedLevel(r.recommended_level) })
       .catch(() => {})
-    // 테스트(3단계)는 2단계 숙달 전엔 잠긴다 → 시나리오 생성 전에 미리 막는다
+    // 테스트(4단계)는 3단계 숙달 전엔 잠긴다 → 시나리오 생성 전에 미리 막는다
     curriculumAPI.getStages()
       .then((data) => {
         const s3 = (data?.stages || []).find((x) => x.stage === 3)
@@ -476,15 +574,11 @@ export default function Dashboard() {
       .catch(() => {})
   }, [])
 
+  // 학습 메뉴 바(전체 학습 메뉴)의 해시 링크로 들어오면 해당 탭·패널을 열어준다.
   useEffect(() => {
-    if (!location.hash) return undefined
-    const timer = window.setTimeout(() => {
-      document.getElementById(location.hash.slice(1))?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      })
-    }, 0)
-    return () => window.clearTimeout(timer)
+    if (location.hash === '#daily-review') setActiveTab('review')
+    else if (location.hash === '#test-sentence') { setActiveTab('learn'); openTestPanel('sentence') }
+    else if (location.hash === '#test-conversation') { setActiveTab('learn'); openTestPanel('conversation') }
   }, [location.hash])
 
   useEffect(() => {
@@ -492,6 +586,18 @@ export default function Dashboard() {
     const timer = window.setTimeout(() => setUnlockNotice(null), 5000)
     return () => window.clearTimeout(timer)
   }, [unlockNotice])
+
+  // 4·5단계 칩을 누르면 패널을 펼치고 그 위치로 스크롤한다.
+  const openTestPanel = (mode) => {
+    setTestMode(mode)
+    setShowTestPanel(true)
+  }
+
+  useEffect(() => {
+    if (showTestPanel) {
+      document.getElementById('reading-test-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [showTestPanel, testMode])
 
   const loadStatistics = async () => {
     try {
@@ -524,7 +630,7 @@ export default function Dashboard() {
     const isConversation = mode === 'conversation'
     if ((!isConversation && testLocked) || (isConversation && conversationLocked)) {
       if (isConversation) explainConversationUnlock()
-      else alert('아직 잠긴 단계예요. 학습에서 2단계(음절·단어)를 먼저 완료해주세요.')
+      else alert('아직 잠긴 단계예요. 학습에서 3단계(음절·단어)를 먼저 완료해주세요.')
       return
     }
     if (!effectiveSituation.trim()) {
@@ -551,7 +657,6 @@ export default function Dashboard() {
   const startPractice = () => startScenario('practice')
   const startConversation = () => startScenario('conversation')
 
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-xl">
@@ -566,7 +671,6 @@ export default function Dashboard() {
               <p className="text-sm font-bold text-slate-800">{user?.username}님</p>
             </div>
           </div>
-
         </div>
       </header>
 
@@ -579,7 +683,6 @@ export default function Dashboard() {
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             className="fixed right-4 top-20 z-[60] flex max-w-sm items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 shadow-xl sm:right-6"
           >
-            <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-200 text-lg">🔒</span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-black">대화 실전은 아직 잠겨 있어요</p>
               <p className="mt-0.5 text-xs leading-relaxed text-amber-800">{unlockNotice}</p>
@@ -617,207 +720,215 @@ export default function Dashboard() {
               ))}
             </dl>
           </div>
-
         </motion.section>
 
-        {/* 독화 학습 — 단계 사다리 + 문장·대화 실전을 한 카드로 통합 */}
-        <section id="reading-learning" className="mt-3 scroll-mt-20">
-          <CurriculumPath>
-          <div id="reading-test" className="scroll-mt-20">
-          <h2 className="mb-1 flex flex-wrap items-center gap-2 text-base font-bold text-gray-900">
-            🎯 문장·대화 실전
-            <span className="text-[11px] font-medium text-gray-400">3·4단계</span>
-            {testLocked && (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">🔒 잠김</span>
-            )}
-            {conversationLocked && !testLocked && (
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full border border-amber-300 bg-amber-50 text-amber-700">🔒 대화 잠김</span>
-            )}
-          </h2>
-          <p className="mb-2 text-xs text-gray-500">
-            AI의 <b className="text-gray-700">입모양을 눈으로 읽고</b> 무슨 말인지 알아맞히는 연습이에요. (말하기·발음이 아닙니다)
-          </p>
-
-          {testLocked ? (
-            <div className="mb-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs text-gray-500">
-              학습에서 2단계(음절·단어)를 완료하면 테스트가 열려요.
-            </div>
-          ) : (
-            <div className="mb-2 rounded-lg border border-blue-200 bg-blue-50 p-2 text-xs text-blue-700">
-              그동안 학습한 <b>독화(입모양 읽기)</b> 실력을 검증합니다. 주관식·4지선다·서술형 문제가 섞여서 출제돼요.
-            </div>
-          )}
-
-          {conversationLocked && !testLocked && (
-            <button type="button" onClick={explainConversationUnlock}
-              className="mb-2 flex w-full items-center gap-2 rounded-lg border border-dashed border-amber-300 bg-amber-50 px-3 py-1.5 text-left text-xs text-amber-800 transition hover:border-amber-400 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-400">
-              <span aria-hidden="true">🔒</span>
-              <span><b>대화 실전 잠김</b> · {CONVERSATION_UNLOCK_HINT}</span>
+        {/* 탭: 학습 / 복습 / 분석 — 고른 뒤에만 아래 전환용으로 노출 */}
+        {activeTab && (
+          <div className="mt-3 flex gap-1.5">
+            <button onClick={() => setActiveTab(null)}
+              className="rounded-2xl border border-gray-200 bg-white px-4 text-sm font-bold text-gray-500 transition-all hover:bg-gray-50">
+              처음으로
             </button>
-          )}
-
-          <div className="space-y-3">
-            {/* Situation Selection */}
-            <div>
-                <label className="label !mb-1 !text-xs">상황 선택</label>
-                <div className="grid grid-cols-3 gap-1 sm:grid-cols-5 lg:grid-cols-9">
-                  {PRESET_SITUATIONS.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => setSelectedSituation(s.id)}
-                      className={`rounded-lg border-2 p-1.5 text-center transition-all ${
-                        selectedSituation === s.id
-                          ? 'border-primary-500 bg-primary-50'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }`}
-                    >
-                      <div className="text-base">{s.icon}</div>
-                      <div className="text-[11px] font-medium leading-tight">{s.label}</div>
-                    </button>
-                  ))}
-                </div>
-
-                <AnimatePresence>
-                  {selectedSituation === '직접 입력' && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="mt-2"
-                    >
-                      <input
-                        type="text"
-                        value={customSituation}
-                        onChange={(e) => setCustomSituation(e.target.value)}
-                        className="input-field !px-3 !py-2 text-sm"
-                        placeholder="상황을 직접 입력하세요 (예: 헬스장에서 트레이너와 대화, 면접 준비...)"
-                      />
-                      <p className="mt-1 text-[11px] text-gray-500">
-                        어떤 상황이든 AI가 맞춤형 문제를 만들어줍니다
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-            </div>
-
-            {/* Level Selection */}
-            <div>
-                <label className="label !mb-1 !text-xs">난이도</label>
-                <div className="flex gap-1.5">
-                  {[1, 2, 3, 4, 5].map((level) => (
-                    <button
-                      key={level}
-                      onClick={() => setSelectedLevel(level)}
-                      className={`flex-1 rounded-lg border-2 py-2 text-xs font-medium transition-all ${
-                        selectedLevel === level
-                          ? 'border-primary-500 bg-primary-500 text-white'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                      }`}
-                    >
-                      {level}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-1 text-[11px] text-gray-400">
-                  추천 레벨: {recLevel?.recommended_level ?? Math.min(user?.current_level || 1, 5)}
-                  {recLevel?.reason ? ` · ${recLevel.reason}` : ''}
-                </p>
-            </div>
-
-            <div className="grid gap-1.5 sm:grid-cols-2">
-              <button
-                onClick={startPractice}
-                disabled={
-                  loading ||
-                  testLocked ||
-                  (selectedSituation === '직접 입력' && !customSituation.trim())
-                }
-                className="btn-primary w-full py-2.5 text-sm disabled:opacity-60"
-              >
-                {loading ? 'AI 시나리오 준비 중…' : testLocked ? '🔒 문장 테스트 잠김' : '💬 문장 테스트 시작'}
-              </button>
-              <div className="group relative">
-                <button
-                  onClick={startConversation}
-                  aria-describedby={conversationLocked ? 'conversation-unlock-tooltip' : undefined}
-                  disabled={
-                    loading ||
-                    (!conversationLocked && selectedSituation === '직접 입력' && !customSituation.trim())
-                  }
-                  className={`w-full rounded-lg px-5 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                    conversationLocked
-                      ? 'cursor-help border-2 border-dashed border-amber-300 bg-gray-100 text-gray-500 hover:border-amber-400 hover:bg-amber-50 focus:ring-amber-400'
-                      : 'bg-violet-600 text-white hover:bg-violet-700 focus:ring-violet-500'
-                  }`}
-                >
-                  {loading ? 'AI 시나리오 준비 중…' : conversationLocked ? '🔒 대화 실전 · 잠김' : '👁️ AI 대화 독화'}
+            <div className="flex flex-1 gap-1 rounded-2xl border border-gray-200 bg-white p-1">
+              {TABS.map((t) => (
+                <button key={t.id} onClick={() => setActiveTab(t.id)}
+                  className={`flex-1 rounded-xl py-2 text-sm font-bold transition-all ${
+                    activeTab === t.id ? 'bg-primary-600 text-white shadow' : 'text-gray-500 hover:bg-gray-50'
+                  }`}>
+                  {t.label}
                 </button>
-                {conversationLocked && (
-                  <div id="conversation-unlock-tooltip" role="tooltip"
-                    className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-20 w-64 -translate-x-1/2 rounded-xl bg-slate-900 px-3 py-2 text-center text-xs leading-relaxed text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                    <b className="text-amber-300">해금 방법</b><br />{CONVERSATION_UNLOCK_HINT}
-                    <span className="absolute left-1/2 top-full -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!activeTab && (
+          <section className="mt-3">
+            <div className="flex min-h-[65vh] flex-col gap-3 sm:flex-row">
+              {TABS.map((t) => (
+                <button key={t.id} onClick={() => setActiveTab(t.id)}
+                  className="flex flex-1 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-gray-200 bg-white p-6 text-center transition-all hover:border-primary-400 hover:bg-primary-50">
+                  <div className="text-2xl font-black text-gray-800">{t.label}</div>
+                  <div className="max-w-[220px] text-sm leading-relaxed text-gray-500">{t.desc}</div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'learn' && (
+          <>
+            {/* 독화 학습 — 단계 사다리 + 문장·대화 실전을 한 카드로 통합 */}
+            <section id="reading-learning" className="mt-3">
+              <CurriculumPath onOpenTest={openTestPanel}>
+              {showTestPanel && (
+              <div id="reading-test-panel">
+              <h2 className="mb-1 flex flex-wrap items-center gap-2 text-base font-bold text-gray-900">
+                {testMode === 'conversation' ? '대화 실전' : '문장 테스트'}
+                <span className="text-[11px] font-medium text-gray-400">{testMode === 'conversation' ? '5단계' : '4단계'}</span>
+                {testMode === 'sentence' && testLocked && (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">잠김</span>
+                )}
+                {testMode === 'conversation' && conversationLocked && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full border border-amber-300 bg-amber-50 text-amber-700">잠김</span>
+                )}
+              </h2>
+              <p className="mb-2 text-xs text-gray-500">
+                {testMode === 'conversation'
+                  ? 'AI와 대화하며 상대의 입모양을 눈으로 읽고 이해도를 확인해요.'
+                  : <>AI의 <b className="text-gray-700">입모양을 눈으로 읽고</b> 무슨 말인지 알아맞히는 연습이에요. (말하기·발음이 아닙니다)</>}
+              </p>
+
+              {testMode === 'sentence' && (
+                testLocked ? (
+                  <div className="mb-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs text-gray-500">
+                    학습에서 3단계(음절·단어)를 완료하면 테스트가 열려요.
                   </div>
+                ) : (
+                  <div className="mb-2 rounded-lg border border-blue-200 bg-blue-50 p-2 text-xs text-blue-700">
+                    그동안 학습한 <b>독화(입모양 읽기)</b> 실력을 검증합니다. 주관식·4지선다·서술형 문제가 섞여서 출제돼요.
+                  </div>
+                )
+              )}
+
+              {testMode === 'conversation' && conversationLocked && (
+                <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700">
+                  {CONVERSATION_UNLOCK_HINT}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {/* Situation Selection */}
+                <div>
+                    <label className="label !mb-1 !text-xs">상황 선택</label>
+                    <div className="grid grid-cols-3 gap-1 sm:grid-cols-5 lg:grid-cols-9">
+                      {PRESET_SITUATIONS.map((s) => (
+                        <button
+                          key={s.id}
+                          onClick={() => setSelectedSituation(s.id)}
+                          className={`rounded-lg border-2 px-1.5 py-2 text-center transition-all ${
+                            selectedSituation === s.id
+                              ? 'border-primary-500 bg-primary-50'
+                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                          }`}
+                        >
+                          <div className="text-[11px] font-medium leading-tight">{s.label}</div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <AnimatePresence>
+                      {selectedSituation === '직접 입력' && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-2"
+                        >
+                          <input
+                            type="text"
+                            value={customSituation}
+                            onChange={(e) => setCustomSituation(e.target.value)}
+                            className="input-field !px-3 !py-2 text-sm"
+                            placeholder="상황을 직접 입력하세요 (예: 헬스장에서 트레이너와 대화, 면접 준비...)"
+                          />
+                          <p className="mt-1 text-[11px] text-gray-500">
+                            어떤 상황이든 AI가 맞춤형 문제를 만들어줍니다
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                </div>
+
+                {/* Level Selection */}
+                <div>
+                    <label className="label !mb-1 !text-xs">난이도</label>
+                    <div className="flex gap-1.5">
+                      {[1, 2, 3, 4, 5].map((level) => (
+                        <button
+                          key={level}
+                          onClick={() => setSelectedLevel(level)}
+                          className={`flex-1 rounded-lg border-2 py-2 text-xs font-medium transition-all ${
+                            selectedLevel === level
+                              ? 'border-primary-500 bg-primary-500 text-white'
+                              : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                          }`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-1 text-[11px] text-gray-400">
+                      추천 레벨: {recLevel?.recommended_level ?? Math.min(user?.current_level || 1, 5)}
+                      {recLevel?.reason ? ` · ${recLevel.reason}` : ''}
+                    </p>
+                </div>
+
+                {testMode === 'conversation' ? (
+                  <div className="group relative">
+                    <button
+                      onClick={startConversation}
+                      aria-describedby={conversationLocked ? 'conversation-unlock-tooltip' : undefined}
+                      disabled={
+                        loading ||
+                        (!conversationLocked && selectedSituation === '직접 입력' && !customSituation.trim())
+                      }
+                      className={`w-full rounded-lg px-5 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                        conversationLocked
+                          ? 'cursor-help border-2 border-dashed border-amber-300 bg-gray-100 text-gray-500 hover:border-amber-400 hover:bg-amber-50 focus:ring-amber-400'
+                          : 'bg-violet-600 text-white hover:bg-violet-700 focus:ring-violet-500'
+                      }`}
+                    >
+                      {loading ? 'AI 시나리오 준비 중…' : conversationLocked ? '대화 실전 · 잠김' : 'AI 대화 독화 시작'}
+                    </button>
+                    {conversationLocked && (
+                      <div id="conversation-unlock-tooltip" role="tooltip"
+                        className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-20 w-64 -translate-x-1/2 rounded-xl bg-slate-900 px-3 py-2 text-center text-xs leading-relaxed text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                        <b className="text-amber-300">해금 방법</b><br />{CONVERSATION_UNLOCK_HINT}
+                        <span className="absolute left-1/2 top-full -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={startPractice}
+                    disabled={
+                      loading ||
+                      testLocked ||
+                      (selectedSituation === '직접 입력' && !customSituation.trim())
+                    }
+                    className="btn-primary w-full py-2.5 text-sm disabled:opacity-60"
+                  >
+                    {loading ? 'AI 시나리오 준비 중…' : testLocked ? '문장 테스트 잠김' : '문장 테스트 시작'}
+                  </button>
                 )}
               </div>
-            </div>
-          </div>
-          </div>
-          </CurriculumPath>
-        </section>
-
-        {/* 말하기 · 촉각 학습 */}
-        <section className="mt-3 grid items-start gap-3 lg:grid-cols-2">
-          <div id="speaking-learning" className="scroll-mt-20">
-            <SpeakCurriculumPath />
-          </div>
-          <TactileCard />
-        </section>
-
-        <section className="mt-3">
-          <ReviewSection />
-        </section>
-
-        <details className="group mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <summary className="flex cursor-pointer list-none flex-col justify-between gap-2 px-4 py-3 marker:hidden sm:flex-row sm:items-center">
-            <div>
-              <h2 className="font-bold text-slate-900">학습 기록과 분석</h2>
-              <p className="text-xs text-slate-500">상세 기록은 필요할 때 펼쳐보세요.</p>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">총 {statistics?.total_sessions || 0}회</span>
-              <span className="rounded-full bg-primary-50 px-2.5 py-1 font-bold text-primary-700">평균 {statistics?.average_score || 0}점</span>
-              <span aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-full bg-slate-100 text-slate-500 transition group-open:rotate-180">⌄</span>
-            </div>
-          </summary>
-          <div className="grid gap-4 border-t border-slate-100 px-4 py-4 lg:grid-cols-2">
-            <section aria-labelledby="activity-title">
-              <h3 id="activity-title" className="mb-2 text-sm font-bold text-slate-700">최근 90일 학습 현황</h3>
-              <ActivityCalendar data={calendarData} />
-            </section>
-            <section aria-labelledby="weak-viseme-title">
-              <h3 id="weak-viseme-title" className="mb-3 text-sm font-bold text-slate-700">취약 입모양</h3>
-              {!statsLoading && statistics?.weak_visemes?.length > 0 ? (
-                <ul className="grid gap-1.5 sm:grid-cols-3 lg:grid-cols-1">
-                  {statistics.weak_visemes.slice(0, 3).map((wv, idx) => (
-                    <li key={idx} className="flex items-center justify-between rounded-xl bg-red-50 px-3 py-1.5 text-sm">
-                      <span className="capitalize text-slate-700">{wv.feature}</span>
-                      <span className="font-bold text-red-600">{wv.error_rate}% 오답</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="rounded-xl bg-slate-50 px-3 py-4 text-center text-sm text-slate-400">아직 분석할 데이터가 없습니다.</p>
+              </div>
               )}
+              </CurriculumPath>
             </section>
-          </div>
-          <div className="border-t border-slate-100 px-4 py-3">
-            <button onClick={() => navigate('/analysis')}
-              className="text-sm font-semibold text-primary-600 hover:text-primary-700">
-              📊 독화·말하기 상세 분석 보기 →
-            </button>
-          </div>
-        </details>
+
+            {/* 말하기 · 촉각 학습 */}
+            <section className="mt-3 grid items-start gap-3 lg:grid-cols-2">
+              <div id="speaking-learning">
+                <SpeakCurriculumPath />
+              </div>
+              <TactileCard />
+            </section>
+          </>
+        )}
+
+        {activeTab === 'review' && (
+          <section className="mt-3">
+            <ReviewTab />
+          </section>
+        )}
+
+        {activeTab === 'analysis' && (
+          <section className="mt-3">
+            <AnalysisTab statistics={statistics} statsLoading={statsLoading} calendarData={calendarData} navigate={navigate} />
+          </section>
+        )}
       </main>
     </div>
   )
