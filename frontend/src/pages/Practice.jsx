@@ -156,6 +156,7 @@ function HintDisplay({ sentence, hintLevel, revealedTextIndex = -1 }) {
 
 export default function Practice() {
   const navigate = useNavigate()
+  const user = useStore((state) => state.user)
   const currentScenario = useStore((state) => state.currentScenario)
   const currentSentence = useStore((state) => state.currentSentence)
   const currentSentenceIndex = useStore((state) => state.currentSentenceIndex)
@@ -241,6 +242,7 @@ export default function Practice() {
       const updates = {}
       if (response.new_level) updates.current_level = response.new_level
       if (response.streak_count != null) updates.streak_count = response.streak_count
+      if (response.xp_gained != null) updates.total_xp = (user?.total_xp || 0) + response.xp_gained
       if (Object.keys(updates).length > 0) updateUser(updates)
     } catch (error) {
       console.error('Failed to submit answer:', error)
