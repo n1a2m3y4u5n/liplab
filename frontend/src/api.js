@@ -197,4 +197,9 @@ export const speakAPI = {
   },
 }
 
+// 촉각(타도마) 하드웨어 — 한글 → 음소별 액추에이터 시퀀스
+export const tactileAPI = {
+  getSequence: async (text) => (await api.get('/tactile', { params: { text } })).data,
+}
+
 export default api

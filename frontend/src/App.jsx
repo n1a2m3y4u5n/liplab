@@ -56,6 +56,7 @@ const WordStage = lazy(() => import('./pages/WordStage'))
 const Review = lazy(() => import('./pages/Review'))
 const Closure = lazy(() => import('./pages/Closure'))
 const SpeakingPractice = lazy(() => import('./pages/SpeakingPractice'))
+const TactilePractice = lazy(() => import('./pages/TactilePractice'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
@@ -139,6 +140,7 @@ function App() {
         <Route path="/conversation" element={<StageGate stage={4}><Conversation /></StageGate>} />
         <Route path="/analysis" element={<Analysis />} />
         <Route path="/sign" element={<Sign />} />
+        <Route path="/tactile" element={<TactilePractice />} />
         <Route path="/learn/viseme" element={<VisemeLiteracy />} />
         <Route path="/learn/word" element={<StageGate stage={2}><WordStage /></StageGate>} />
         <Route path="/review" element={<Review />} />
