@@ -1,75 +1,73 @@
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
-const MODES = [
+// LIPLAB의 세 학습 기둥 — 각 기둥의 사용법.
+const PILLARS = [
   {
-    icon: '📖',
-    title: '학습 모드',
-    color: 'border-green-400 bg-green-50',
-    badge: 'bg-green-100 text-green-700',
-    steps: [
-      '상황(카페, 병원 등)과 난이도를 선택하세요.',
-      '3D 입모양 애니메이션이 재생됩니다.',
-      '화면에 표시된 문장을 보면서 입모양을 익히세요.',
-      '충분히 익혔으면 "다음 문장"을 눌러 진행하세요.',
+    key: 'read', icon: '👁️', title: '독화 (입 읽기)',
+    color: 'border-sky-400 bg-sky-50', badge: 'bg-sky-100 text-sky-700',
+    desc: '상대의 입모양을 보고 말을 이해하는 입력 능력이에요.',
+    modes: [
+      { name: '① 단계 학습 (0~2단계)', steps: [
+        '처음이면 입문·배치로 나에게 맞는 트랙을 정해요.',
+        '입모양 인지 → 음절·단어를 3D 애니메이션으로 단계별로 익혀요.',
+        '문맥 추론 훈련으로 안 보이는 소리를 추리하는 힘을 길러요.',
+      ] },
+      { name: '② 문장·대화 실전 (3~4단계)', steps: [
+        '상황(카페·병원 등)과 난이도를 골라요.',
+        'AI가 만든 문장을 입모양만 보고 맞혀요 (주관식·4지선다·서술형 혼합).',
+        '대화 실전은 AI와 주고받으며 실제 대화 흐름을 연습해요.',
+      ] },
     ],
-    tip: '채점 없이 반복 재생되므로 처음 독화를 배우는 분에게 적합합니다.',
+    tip: '"정확히 읽기"가 아니라 "가능성 좁히기"예요. AI가 매번 새 문장을 내줘서 같은 문제만 반복하지 않아요.',
   },
   {
-    icon: '✏️',
-    title: '주관식 테스트',
-    color: 'border-blue-400 bg-blue-50',
-    badge: 'bg-blue-100 text-blue-700',
-    steps: [
-      '입모양 애니메이션을 보고 무슨 말인지 직접 타이핑합니다.',
-      '힌트 버튼을 누르면 글자 수 → 첫 글자 → 전체 순서로 힌트를 받을 수 있습니다.',
-      '제출 후 점수와 오답 분석을 확인하세요.',
-      '어려운 문장은 ☆ 북마크 버튼으로 저장해두세요.',
+    key: 'speak', icon: '🗣️', title: '말하기 (발음)',
+    color: 'border-rose-400 bg-rose-50', badge: 'bg-rose-100 text-rose-700',
+    desc: '내 발음을 눈으로 보며 다듬는 산출 능력이에요. 마이크로 녹음하면 AI가 채점해요.',
+    modes: [
+      { name: '6단계 커리큘럼', steps: [
+        '발성 → 운율 → 모음 → 자음 → 단어 → 문장·억양 순서로 올라가요.',
+        '마이크로 말하면 목소리 크기·억양이 실시간 곡선으로 보여요.',
+        'AI가 전사·채점하고 어디를 고치면 좋을지 코칭해줘요.',
+      ] },
     ],
-    tip: '정확히 타이핑하지 않아도 음운 유사도를 계산해 부분 점수를 줍니다.',
+    tip: '단어·문장 단계는 AI가 매번 새 문항을 생성해요. 웹캠 거울로 내 입모양도 같이 확인할 수 있어요.',
   },
   {
-    icon: '🔢',
-    title: '4지선다 테스트',
-    color: 'border-purple-400 bg-purple-50',
-    badge: 'bg-purple-100 text-purple-700',
-    steps: [
-      '입모양 애니메이션을 보고 4개 보기 중 하나를 선택합니다.',
-      '보기는 같은 시나리오의 문장들로 구성됩니다.',
-      '클릭 즉시 정답/오답을 확인할 수 있습니다.',
-      '타이핑 없이 빠르게 많은 문장을 연습할 수 있습니다.',
+    key: 'tactile', icon: '🖐️', title: '촉각 (타도마)',
+    color: 'border-purple-400 bg-purple-50', badge: 'bg-purple-100 text-purple-700',
+    desc: '얼굴 모형의 턱·입술·진동·바람을 손으로 느껴 말을 이해하는 방식이에요. 하드웨어 없이 시뮬레이터로도 체험돼요.',
+    modes: [
+      { name: '5단계 커리큘럼 퀴즈', steps: [
+        '감각(유·무성) → 모음 → 최소대립쌍 → 단어 → 문장 순으로 확장해요.',
+        '"느끼기(재생)"로 얼굴 모형/시뮬레이터를 동작시켜 손으로 느껴요.',
+        '보기에서 고르거나(객관식) 느낀 말을 직접 입력해요(주관식).',
+        '🙈 순수 촉각으로 시뮬레이터를 가리면 손 감각만으로 도전할 수 있어요.',
+      ] },
+      { name: '자유 체험 · 오픈소스 하드웨어', steps: [
+        '아무 낱말·문장이나 골라 재생하며 촉각을 자유롭게 익혀요.',
+        '얼굴 모형은 오픈소스 — 3D 파일·부품(BOM)·조립법·펌웨어가 페이지에 공개돼요.',
+      ] },
     ],
-    tip: '주관식보다 쉽지만 보기를 통해 비슷한 문장을 구분하는 연습이 됩니다.',
-  },
-  {
-    icon: '🔁',
-    title: '복습 모드',
-    color: 'border-amber-400 bg-amber-50',
-    badge: 'bg-amber-100 text-amber-700',
-    steps: [
-      '이전 테스트에서 60점 미만을 받은 문장들이 자동으로 모입니다.',
-      '별도 상황/난이도 선택 없이 바로 시작됩니다.',
-      '틀린 문장 위주로 집중 연습할 수 있습니다.',
-      '복습 후 분석 페이지에서 개선 여부를 확인하세요.',
-    ],
-    tip: '틀린 문장이 없으면 복습 모드가 활성화되지 않습니다. 먼저 테스트를 진행하세요.',
-  },
-  {
-    icon: '💬',
-    title: '대화 연습',
-    color: 'border-sky-400 bg-sky-50',
-    badge: 'bg-sky-100 text-sky-700',
-    steps: [
-      'AI가 선택한 상황에 맞는 대화 상대가 됩니다.',
-      'AI의 입모양 애니메이션을 보고 무슨 말인지 파악하세요.',
-      '텍스트로 답변하면 AI가 맥락에 맞는 다음 대화를 이어갑니다.',
-      '실제 대화 흐름에 맞춰 자연스러운 독화를 연습할 수 있습니다.',
-    ],
-    tip: 'Claude AI가 상황에 맞는 자연스러운 한국어 대화를 생성합니다.',
+    tip: 'Web Serial(데스크톱 Chrome·Edge)로 실제 아두이노 얼굴 모형에 연결할 수 있어요.',
   },
 ]
 
+// 보조 도구 — 기둥과 별개로 언제든 쓰는 기능.
+const TOOLS = [
+  { icon: '✍️', title: '내 문장 발음 보기', body: '아무 한국어 문장이나 입력하면 3D 입모양으로 어떻게 움직이는지 보여줘요. 궁금한 말의 입 모양을 바로 확인할 때 좋아요.' },
+  { icon: '🤟', title: '수어 번역', body: '앱 어디서나 문장을 선택하면 한국수어(KSL) 학습 영상으로 바꿔 보여줘요.' },
+  { icon: '🔁', title: '오늘의 복습', body: '독화·말하기·촉각 세 기둥을 각각 예정(간격반복)·틀린 문제·북마크로 나눠 다시 풀어요. 틀리거나 ☆로 저장한 항목이 자동으로 모여요.' },
+]
+
 const SYSTEM_INFO = [
+  {
+    title: 'LIPLAB의 세 기둥',
+    icon: '🏛️',
+    content:
+      'LIPLAB은 청각장애인의 의사소통을 독화(입 읽기·입력)·말하기(발음·산출)·촉각(타도마·손으로 이해)의 세 축으로 함께 훈련합니다. AI와 3D 시각화, 오픈소스 하드웨어로 각 축에 맞는 방법을 제공합니다.',
+  },
   {
     title: '독화(Speechreading)란?',
     icon: '👁️',
@@ -162,35 +160,53 @@ export default function Guide() {
           </div>
         </motion.section>
 
-        {/* 모드별 사용 방법 */}
+        {/* 기둥별 사용 방법 (독화·말하기·촉각) */}
         <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">모드별 사용 방법</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">기능별 사용 방법</h2>
+          <p className="text-sm text-gray-500 mb-4">세 학습 기둥을 어떻게 쓰는지 안내해요.</p>
           <div className="space-y-4">
-            {MODES.map((m, i) => (
-              <div
-                key={i}
-                className={`card border-l-4 ${m.color}`}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-2xl">{m.icon}</span>
-                  <h3 className="text-lg font-bold text-gray-900">{m.title}</h3>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${m.badge}`}>
-                    모드
-                  </span>
+            {PILLARS.map((p) => (
+              <div key={p.key} className={`card border-l-4 ${p.color}`}>
+                <div className="flex items-center gap-3 mb-1">
+                  <span className="text-2xl">{p.icon}</span>
+                  <h3 className="text-lg font-bold text-gray-900">{p.title}</h3>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.badge}`}>기둥</span>
                 </div>
-                <ol className="space-y-1.5 mb-3">
-                  {m.steps.map((step, si) => (
-                    <li key={si} className="flex gap-2 text-sm text-gray-700">
-                      <span className="text-primary-500 font-bold shrink-0">{si + 1}.</span>
-                      {step}
-                    </li>
+                <p className="text-sm text-gray-500 mb-3">{p.desc}</p>
+                <div className="space-y-3">
+                  {p.modes.map((m, mi) => (
+                    <div key={mi}>
+                      <p className="text-sm font-bold text-gray-800 mb-1">{m.name}</p>
+                      <ol className="space-y-1">
+                        {m.steps.map((step, si) => (
+                          <li key={si} className="flex gap-2 text-sm text-gray-700">
+                            <span className="text-gray-400 font-bold shrink-0">{si + 1}.</span>
+                            {step}
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
                   ))}
-                </ol>
-                <div className="p-3 bg-white bg-opacity-60 rounded-lg">
+                </div>
+                <div className="mt-3 p-3 bg-white bg-opacity-60 rounded-lg">
                   <p className="text-xs text-gray-500">
-                    <span className="font-semibold text-primary-600">TIP</span> {m.tip}
+                    <span className="font-semibold text-primary-600">TIP</span> {p.tip}
                   </p>
                 </div>
+              </div>
+            ))}
+          </div>
+        </motion.section>
+
+        {/* 보조 도구 */}
+        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">보조 도구</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {TOOLS.map((t, i) => (
+              <div key={i} className="card">
+                <div className="text-2xl mb-1">{t.icon}</div>
+                <h3 className="font-semibold text-gray-900 mb-1">{t.title}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{t.body}</p>
               </div>
             ))}
           </div>
