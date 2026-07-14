@@ -129,7 +129,7 @@ export default function Guide() {
       <LearnHeader
         title="사용법 안내"
         description="LIPLAB의 기능과 학습 방법을 한곳에서 알아보세요."
-        accent="reading"
+        accent="etc"
         onExit={() => navigate('/dashboard')}
       />
 
