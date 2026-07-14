@@ -53,19 +53,6 @@ export default function PillarHub() {
 
   return (
     <div className="min-h-screen bg-[#f7f8fa] text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <button type="button" onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-left">
-            <span aria-hidden="true" className="relative grid h-9 w-9 place-items-center rounded-xl bg-sky-50">
-              <span className="absolute h-3.5 w-6 rounded-full border-[3px] border-sky-400" />
-              <span className="absolute h-6 w-3.5 rounded-full border-[3px] border-sky-400" />
-            </span>
-            <span className="text-lg font-black tracking-[-0.04em]">LIPLAB</span>
-          </button>
-          <button type="button" onClick={() => navigate('/dashboard')} className="text-sm font-bold text-slate-500 hover:text-slate-900">✕ 나가기</button>
-        </div>
-      </header>
-
       <main className="mx-auto max-w-[1180px] px-4 py-7 sm:px-6 sm:py-10">
         <section className={`relative overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br ${a.panel} px-5 py-7 sm:px-8 sm:py-9`}>
           <span aria-hidden="true" className={`absolute left-0 top-0 h-full w-1.5 ${a.mark}`} />
