@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
 import { learningAPI, curriculumAPI, reviewAPI, speakAPI, tactileAPI } from '../api'
+import DashboardPet from '../components/DashboardPet'
 
 const PRESET_SITUATIONS = [
   { id: '카페', label: '카페', icon: '☕' },
@@ -1115,19 +1116,22 @@ export default function Dashboard() {
 
                 <div className="relative z-10 flex h-full items-center">
                   <div className="ml-9 max-w-xl pb-6 sm:ml-12 md:pr-[210px] lg:ml-16 lg:pr-[250px]">
-                    <span className={`inline-flex rounded-full px-3 py-1.5 text-[11px] font-black shadow-sm ${currentHero.badge}`}>LIPLAB · {currentHero.eyebrow}</span>
-                    <h1 className="mt-4 text-3xl font-black leading-[1.13] tracking-[-0.045em] text-slate-950 sm:text-4xl lg:text-[36px] xl:text-[40px]">
-                      {currentHero.title[0]}<br />{currentHero.title[1]}
-                    </h1>
-                    <p className="mt-3 max-w-md text-sm font-semibold leading-relaxed text-slate-600">{currentHero.description}</p>
-                    <button
-                      type="button"
-                      onPointerDown={(event) => event.stopPropagation()}
-                      onClick={() => navigate(currentHero.to)}
-                      className="mt-5 rounded-full bg-slate-950 px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
-                    >
-                      {currentHero.cta}
-                    </button>
+                    {/* data-hero-copy: 펫이 넘어오지 못하는 '학습 섹션' 장애물 영역 (실제 글자 폭에만 맞춤) */}
+                    <div data-hero-copy className="w-fit">
+                      <span className={`inline-flex rounded-full px-3 py-1.5 text-[11px] font-black shadow-sm ${currentHero.badge}`}>LIPLAB · {currentHero.eyebrow}</span>
+                      <h1 className="mt-4 text-3xl font-black leading-[1.13] tracking-[-0.045em] text-slate-950 sm:text-4xl lg:text-[36px] xl:text-[40px]">
+                        {currentHero.title[0]}<br />{currentHero.title[1]}
+                      </h1>
+                      <p className="mt-3 max-w-md text-sm font-semibold leading-relaxed text-slate-600">{currentHero.description}</p>
+                      <button
+                        type="button"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={() => navigate(currentHero.to)}
+                        className="mt-5 rounded-full bg-slate-950 px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+                      >
+                        {currentHero.cta}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1146,6 +1150,9 @@ export default function Dashboard() {
                 </div>
               </motion.article>
             </AnimatePresence>
+
+            {/* 대시보드 마스코트 펫 — 슬라이드 위에서 빈 공간을 돌아다닌다(슬라이드 전환에도 유지) */}
+            <DashboardPet slideId={currentHero.id} />
 
             <button
               type="button"
