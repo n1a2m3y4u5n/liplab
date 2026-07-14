@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { learningAPI, speakAPI } from '../api'
+import { learningAPI, speakAPI, tactileAPI } from '../api'
 
 function AccuracyBar({ name, accuracy, attempts }) {
   const color =
@@ -153,9 +153,107 @@ function SpeakAnalysis({ loading, d, onRefresh, refreshing }) {
   )
 }
 
+// ── 촉각(타도마) 분석 — 자주 놓치는 항목·단계별 정확도 ────────────────────────
+function TactileAnalysis({ loading, d, onRefresh, refreshing }) {
+  if (loading) return <Spinner label="촉각 분석 중..." />
+  if (!d) return <div className="card text-center py-12 text-gray-500">데이터를 불러오지 못했습니다.</div>
+  if (!d.total) {
+    return (
+      <div className="card text-center py-12 text-gray-400">
+        아직 촉각 기록이 없어요.<br />대시보드의 <b className="text-purple-500">촉각 학습(타도마)</b> 퀴즈를 풀면 여기에 분석이 쌓여요.
+      </div>
+    )
+  }
+  const maxMiss = d.weak_items?.[0]?.count || 1
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-4">
+        {[
+          { label: '총 문제', value: `${d.total}회` },
+          { label: '정확도', value: `${d.accuracy}%` },
+        ].map((s) => (
+          <div key={s.label} className="card text-center">
+            <p className="text-3xl font-bold text-purple-500">{s.value}</p>
+            <p className="text-sm text-gray-500 mt-1">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* 자주 놓치는 항목 */}
+      <div className="card">
+        <h2 className="text-lg font-bold text-gray-900 mb-2">자주 놓치는 항목</h2>
+        <p className="text-xs text-gray-400 mb-4">촉각으로 자주 헷갈린 단어·문장이에요. 순수 촉각 모드에서 반복해보세요.</p>
+        {d.weak_items?.length > 0 ? (
+          <div className="space-y-2">
+            {d.weak_items.map((w, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <span className="text-lg font-bold text-purple-600 flex-1">{w.target}</span>
+                <p className="text-xs text-gray-400">{w.count}회 놓침</p>
+                <div className="w-16 bg-gray-200 rounded-full h-2">
+                  <div className="bg-purple-400 h-full rounded-full" style={{ width: `${Math.min((w.count / maxMiss) * 100, 100)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 py-4 text-center">아직 뚜렷하게 놓치는 항목이 없어요. 좋아요!</p>
+        )}
+      </div>
+
+      {/* 최근 정오 추세 */}
+      {d.trend?.length > 1 && (
+        <div className="card">
+          <h2 className="text-lg font-bold text-gray-900 mb-2">최근 정오 추세</h2>
+          <div className="flex items-end gap-1 h-16">
+            {d.trend.map((t, i) => (
+              <div key={i} className={`flex-1 rounded-t ${t.correct ? 'bg-green-400/80' : 'bg-gray-300'}`}
+                style={{ height: t.correct ? '100%' : '30%' }} title={`${t.target} · ${t.correct ? '정답' : '오답'}`} />
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-1">초록=정답 · 회색=오답</p>
+        </div>
+      )}
+
+      {/* 단계별 정확도 */}
+      <div className="card">
+        <h2 className="text-lg font-bold text-gray-900 mb-3">단계별 정확도</h2>
+        <div className="space-y-3">
+          {d.stages?.map((s) => (
+            <div key={s.stage}>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-700 font-medium">{s.stage + 1}단계 · {s.title}</span>
+                <span className="text-gray-500">{s.accuracy}% <span className="text-xs text-gray-400">({s.attempts}회)</span>{s.status === 'mastered' && ' ✓'}</span>
+              </div>
+              <div className="bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                <div className={`h-full rounded-full ${s.status === 'mastered' ? 'bg-green-500' : 'bg-purple-400'}`} style={{ width: `${Math.min(s.accuracy, 100)}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 팁 */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold text-gray-900">맞춤 촉각 팁</h2>
+          <button onClick={onRefresh} disabled={refreshing}
+            className="text-xs px-3 py-1.5 rounded-full bg-purple-50 text-purple-500 hover:bg-purple-100 transition-colors disabled:opacity-50">
+            {refreshing ? '분석 중...' : '↻ 새로 분석'}
+          </button>
+        </div>
+        <ul className="space-y-2">
+          {d.tips?.map((t, i) => (
+            <li key={i} className="p-3 bg-purple-50 rounded-lg text-sm text-purple-900">🖐️ {t}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
+}
+
 export default function Analysis() {
   const navigate = useNavigate()
-  const [tab, setTab] = useState('read')      // 'read'(독화) | 'speak'(말하기)
+  const [tab, setTab] = useState('read')      // 'read'(독화) | 'speak'(말하기) | 'tactile'(촉각)
   const [data, setData] = useState(null)       // 독화
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -163,6 +261,9 @@ export default function Analysis() {
   const [speak, setSpeak] = useState(null)     // 말하기
   const [speakLoading, setSpeakLoading] = useState(true)
   const [speakRefreshing, setSpeakRefreshing] = useState(false)
+  const [tactile, setTactile] = useState(null)     // 촉각(타도마)
+  const [tactileLoading, setTactileLoading] = useState(true)
+  const [tactileRefreshing, setTactileRefreshing] = useState(false)
 
   const load = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
@@ -190,6 +291,19 @@ export default function Analysis() {
     }
   }
 
+  const loadTactile = async (isRefresh = false) => {
+    if (isRefresh) setTactileRefreshing(true)
+    else setTactileLoading(true)
+    try {
+      setTactile(await tactileAPI.getAnalysis())
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setTactileLoading(false)
+      setTactileRefreshing(false)
+    }
+  }
+
   const handleReset = async () => {
     if (!window.confirm('독화 연습 기록을 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return
     setResetting(true)
@@ -204,13 +318,14 @@ export default function Analysis() {
     }
   }
 
-  useEffect(() => { load(); loadSpeak() }, [])
+  useEffect(() => { load(); loadSpeak(); loadTactile() }, [])
 
   const hasVariance = data?.viseme_stats?.length > 0 && data.viseme_stats.some((v) => v.accuracy > 0)
 
+  const _activeCls = { read: 'bg-primary-500 text-white', speak: 'bg-rose-500 text-white', tactile: 'bg-purple-500 text-white' }
   const TabBtn = ({ id, children }) => (
     <button onClick={() => setTab(id)}
-      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === id ? (id === 'read' ? 'bg-primary-500 text-white' : 'bg-rose-500 text-white') : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
+      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === id ? _activeCls[id] : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
       {children}
     </button>
   )
@@ -221,7 +336,7 @@ export default function Analysis() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">학습 분석</h1>
-            <p className="text-sm text-gray-500">독화(입 읽기)와 말하기(발음)를 나눠서 봅니다</p>
+            <p className="text-sm text-gray-500">독화(입 읽기)·말하기(발음)·촉각(타도마)을 나눠서 봅니다</p>
           </div>
           <div className="flex items-center gap-2">
             {tab === 'read' && (
@@ -236,13 +351,16 @@ export default function Analysis() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        {/* 탭: 독화 | 말하기 */}
+        {/* 탭: 독화 | 말하기 | 촉각 */}
         <div className="flex gap-2">
-          <TabBtn id="read">👂 독화 분석</TabBtn>
-          <TabBtn id="speak">🎤 말하기 분석</TabBtn>
+          <TabBtn id="read">👁️ 독화 분석</TabBtn>
+          <TabBtn id="speak">🗣️ 말하기 분석</TabBtn>
+          <TabBtn id="tactile">🖐️ 촉각 분석</TabBtn>
         </div>
 
-        {tab === 'speak' ? (
+        {tab === 'tactile' ? (
+          <TactileAnalysis loading={tactileLoading} d={tactile} onRefresh={() => loadTactile(true)} refreshing={tactileRefreshing} />
+        ) : tab === 'speak' ? (
           <SpeakAnalysis loading={speakLoading} d={speak} onRefresh={() => loadSpeak(true)} refreshing={speakRefreshing} />
         ) : loading ? (
           <Spinner />
