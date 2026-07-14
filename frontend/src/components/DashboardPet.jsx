@@ -277,6 +277,8 @@ export default function DashboardPet({ slideId = 'viseme', obstacleSelector = '[
         <span className="absolute left-[19px] top-[25px] h-2.5 w-2.5 rounded-full bg-slate-900" />
         <span className="absolute left-[35px] top-[25px] h-2.5 w-2.5 rounded-full bg-slate-900" />
         <span className="absolute left-[21px] top-[35px] h-3.5 w-[22px] rounded-b-full border-b-[5px] border-white/90" />
+        <span className="absolute left-[7px] top-[30px] h-2 w-2 rounded-full bg-white/40" />
+        <span className="absolute right-[7px] top-[30px] h-2 w-2 rounded-full bg-white/40" />
       </div>
     </div>
   )
