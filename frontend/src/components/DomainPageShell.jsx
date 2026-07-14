@@ -12,29 +12,31 @@ const ACCENTS = {
   analysis: { eyebrow: 'text-violet-700', panel: 'from-violet-50 to-white', mark: 'bg-violet-500' },
 }
 
-export default function DomainPageShell({ domain, title, description, children, actions }) {
+export default function DomainPageShell({ domain, title, description, children, actions, showDomainNavigation = true }) {
   const navigate = useNavigate()
   const accent = ACCENTS[domain] || ACCENTS.learn
 
   return (
     <div className="min-h-screen bg-[#f7f8fa] text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-[1180px] px-4 py-4 sm:px-6">
-          <nav className="flex gap-1 rounded-2xl bg-slate-50 p-1" aria-label="콘텐츠 영역">
-            {DOMAINS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => navigate(item.to)}
-                aria-current={domain === item.id ? 'page' : undefined}
-                className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-black transition ${domain === item.id ? item.active : item.idle}`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </header>
+      {showDomainNavigation && (
+        <header className="border-b border-slate-200 bg-white">
+          <div className="mx-auto max-w-[1180px] px-4 py-4 sm:px-6">
+            <nav className="flex gap-1 rounded-2xl bg-slate-50 p-1" aria-label="콘텐츠 영역">
+              {DOMAINS.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => navigate(item.to)}
+                  aria-current={domain === item.id ? 'page' : undefined}
+                  className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-black transition ${domain === item.id ? item.active : item.idle}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+        </header>
+      )}
 
       <main className="mx-auto max-w-[1180px] px-4 py-7 sm:px-6 sm:py-10">
         <section className={`relative overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br ${accent.panel} px-5 py-7 sm:px-8 sm:py-9`}>

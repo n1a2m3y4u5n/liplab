@@ -71,7 +71,7 @@ export default function ReviewLanding({ mode = 'today' }) {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
         <LearnHeader
           accent="reading"
-          title="틀린 문장 다시 풀기"
+          title="독화 복습"
           description="독화 테스트에서 놓친 문장만 모아 다시 확인합니다"
           onExit={() => navigate('/pillar/reading')}
         />
@@ -104,8 +104,8 @@ export default function ReviewLanding({ mode = 'today' }) {
             <div className="card text-center py-16">
               <p className="text-4xl mb-3">🎉</p>
               <h2 className="text-xl font-bold text-gray-900 mb-1">다시 풀 문장이 없어요</h2>
-              <p className="text-gray-500 mb-5">새로운 문장 실전을 완료하면 오답이 이곳에 모입니다.</p>
-              <button type="button" onClick={() => navigate('/learn/scenario')} className="btn-primary">문장 실전으로</button>
+              <p className="text-gray-500 mb-5">새로운 문장 학습을 완료하면 오답이 이곳에 모입니다.</p>
+              <button type="button" onClick={() => navigate('/learn/scenario')} className="btn-primary">문장 학습으로</button>
             </div>
           )}
         </main>
@@ -124,7 +124,7 @@ export default function ReviewLanding({ mode = 'today' }) {
   const total = counts ? Object.values(counts).reduce((sum, value) => sum + value, 0) : 0
 
   return (
-    <DomainPageShell domain="review" title="오늘의 복습" description="학습 방식별로 복습할 내용을 나누어 확인하고 원하는 복습을 바로 시작하세요.">
+    <DomainPageShell domain="review" title="오늘의 복습" description="학습 방식별로 복습할 내용을 나누어 확인하고 원하는 복습을 바로 시작하세요." showDomainNavigation={false}>
       <section className="rounded-[24px] bg-slate-950 p-6 text-white sm:flex sm:items-center sm:justify-between sm:gap-5">
         <div>
           <p className="text-xs font-bold tracking-[0.12em] text-amber-300">TODAY</p>

@@ -72,7 +72,7 @@ export default function VisemeLiteracy() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
       <LearnHeader
         accent="reading"
-        title="입모양 인지"
+        title="입모양 학습"
         description="10개 입모양 그룹을 익히고, 무엇이 보이고 무엇이 안 보이는지 배웁니다"
         onExit={() => navigate('/pillar/reading')}
       />
@@ -218,7 +218,7 @@ function QuizPanel({ data }) {
         <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
           <div className="bg-primary-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(stat.mastery, 100)}%` }} />
         </div>
-        {stat.mastered && <p className="mt-2 text-sm font-semibold text-green-600">🎉 1단계 숙달! 입모양 인지에 익숙해졌어요.</p>}
+        {stat.mastered && <p className="mt-2 text-sm font-semibold text-green-600">🎉 1단계 숙달! 입모양 학습을 완료했어요.</p>}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
