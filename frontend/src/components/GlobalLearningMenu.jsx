@@ -107,6 +107,8 @@ export default function GlobalLearningMenu() {
   const navigate = useNavigate()
   const location = useLocation()
   const user = useStore((state) => state.user)
+  const navMenuRequest = useStore((state) => state.navMenuRequest)
+  const clearNavMenuRequest = useStore((state) => state.clearNavMenuRequest)
   const [activeNavMenu, setActiveNavMenu] = useState(null)
   const [navTop, setNavTop] = useState(0)
   const [hoveredItem, setHoveredItem] = useState(null)
@@ -128,6 +130,13 @@ export default function GlobalLearningMenu() {
     setActiveNavMenu(null)
     setHoveredItem(null)
   }
+
+  // 대시보드 히어로의 "◯◯ 학습 보기" 버튼 등 외부 요청으로 드롭다운을 연다
+  useEffect(() => {
+    if (!navMenuRequest) return
+    openNav(navMenuRequest)
+    clearNavMenuRequest()
+  }, [navMenuRequest])
 
   const go = (to) => {
     closeNav()

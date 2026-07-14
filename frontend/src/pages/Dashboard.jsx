@@ -25,6 +25,7 @@ const HERO_SLIDES = [
     title: ['독화 학습', '입모양으로 들어요'],
     description: '자음·모음 입모양부터 상황별 문장·대화까지 단계로 익혀요.',
     to: '/pillar/reading',
+    navMenuId: 'reading',
     cta: '독화 학습 보기',
     background: 'from-[#fffede] via-[#fffbb6] to-[#fff58d]',
     badge: 'bg-white/75 text-sky-700',
@@ -37,6 +38,7 @@ const HERO_SLIDES = [
     title: ['말하기 학습', '발음을 다듬어요'],
     description: '소리와 억양을 보며 또박또박 말해요.',
     to: '/pillar/speaking',
+    navMenuId: 'speaking',
     cta: '말하기 학습 보기',
     background: 'from-[#fff6f7] via-[#ffe7eb] to-[#ffd5dc]',
     badge: 'bg-white/80 text-rose-700',
@@ -49,6 +51,7 @@ const HERO_SLIDES = [
     title: ['촉각 학습', '손끝으로 느껴요'],
     description: '입의 움직임과 진동을 촉각으로 익혀요.',
     to: '/pillar/tactile',
+    navMenuId: 'tactile',
     cta: '촉각 학습 보기',
     background: 'from-[#faf8ff] via-[#eee9ff] to-[#ddd6fe]',
     badge: 'bg-white/80 text-violet-700',
@@ -635,6 +638,7 @@ export default function Dashboard() {
   const setScenario = useStore((state) => state.setScenario)
   const statistics = useStore((state) => state.statistics)
   const setStatistics = useStore((state) => state.setStatistics)
+  const requestNavMenu = useStore((state) => state.requestNavMenu)
 
   const [heroSlide, setHeroSlide] = useState(0)
   const [heroDirection, setHeroDirection] = useState(1)
@@ -854,7 +858,7 @@ export default function Dashboard() {
                       <button
                         type="button"
                         onPointerDown={(event) => event.stopPropagation()}
-                        onClick={() => navigate(currentHero.to)}
+                        onClick={() => requestNavMenu(currentHero.navMenuId)}
                         className="mt-5 rounded-full bg-slate-950 px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
                       >
                         {currentHero.cta}
