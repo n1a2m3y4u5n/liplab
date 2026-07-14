@@ -355,38 +355,18 @@ export default function TactilePractice() {
             ))}
           </div>
 
-          {/* ② 재료 */}
-          <details className="mb-1">
-            <summary className="cursor-pointer text-sm font-semibold text-gray-800 py-1">② 필요 재료 (BOM) <span className="text-xs text-amber-600 font-normal">· 예시(팀 확정 예정)</span></summary>
-            <ul className="mt-2 text-sm text-gray-600 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 list-disc list-inside">
-              <li>아두이노 Uno × 1</li>
-              <li>서보모터(SG90 등) × 2 — 턱·입술</li>
-              <li>진동 모터 × 1</li>
-              <li>소형 DC 팬(5V) × 1</li>
-              <li>트랜지스터 2N2222 × 2</li>
-              <li>저항 220Ω × 2</li>
-              <li>다이오드 1N4007 × 2</li>
-              <li>외부 5V 전원(어댑터/배터리) × 1</li>
-              <li>브레드보드 · 점퍼선</li>
-              <li>3D 프린팅 필라멘트(PLA 권장)</li>
-              <li>입술 패드 · 경첩 축 · 소형 나사 등</li>
-            </ul>
-          </details>
-
-          {/* ③ 조립 */}
-          <details className="mb-3">
-            <summary className="cursor-pointer text-sm font-semibold text-gray-800 py-1">③ 조립 방법 <span className="text-xs text-amber-600 font-normal">· 예시(팀 확정 예정)</span></summary>
-            <ol className="mt-2 text-sm text-gray-600 space-y-1 list-decimal list-inside">
-              <li>3D 파일(얼굴 본체·힌지·지지대)을 출력한다.</li>
-              <li>얼굴을 좌우로 지지 — <b>왼쪽</b>은 턱서보 혼(회전판)에 직결, <b>오른쪽</b>은 힌지에 걸쳐 회전만 되게 한다.</li>
-              <li>입술서보와 입술 패드를 입 부근에 부착한다(0°=평순, 40°=원순).</li>
-              <li>진동 모터를 턱 아래(목 위치)에 부착한다.</li>
-              <li>팬을 코 밑 방향으로 부착한다.</li>
-              <li>배선: D9=턱서보, D10=입술서보, D5→220Ω→2N2222(진동), D6→220Ω→2N2222(팬). <b>★ 외부전원 GND와 아두이노 GND를 반드시 공통 연결.</b></li>
-              <li>펌웨어를 업로드하고 USB로 연결한 뒤, 아래 <b>얼굴 모형 연결</b>을 누른다.</li>
-            </ol>
-            <p className="text-[11px] text-gray-400 mt-1">상세 배선·핀맵은 펌웨어(.ino) 상단 주석 참고.</p>
-          </details>
+          {/* ②③ 재료·조립 — 사진 포함 상세 설명서로 이동 */}
+          <button
+            onClick={() => navigate('/hardware/build')}
+            className="mb-3 flex w-full items-center gap-3 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-left transition hover:border-purple-400 hover:bg-purple-100"
+          >
+            <span className="text-2xl">📖</span>
+            <span className="min-w-0">
+              <span className="block text-sm font-bold text-purple-900">② 재료 · 조립 상세 설명서 보기</span>
+              <span className="block text-xs text-purple-700">준비물(BOM)·용어·조립 순서·배선도·최종 점검까지 실제 제작 사진과 함께 단계별로 안내해요.</span>
+            </span>
+            <span className="ml-auto shrink-0 text-purple-500">→</span>
+          </button>
 
           {/* ④ 펌웨어 */}
           <p className="text-sm font-semibold text-gray-800 mb-2">④ 펌웨어</p>
