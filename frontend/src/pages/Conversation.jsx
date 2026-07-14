@@ -33,7 +33,7 @@ export default function Conversation() {
 
   useEffect(() => {
     if (!currentScenario) {
-      navigate('/dashboard')
+      navigate('/pillar/reading')
       return
     }
     // StrictMode(개발)에서 이 effect가 두 번 실행되면 첫 AI 말풍선이 2개 생긴다.
@@ -137,7 +137,7 @@ export default function Conversation() {
   }
 
   const handleFinish = () => {
-    navigate('/dashboard')
+    navigate('/pillar/reading')
   }
 
   if (!currentScenario) return null
@@ -168,7 +168,7 @@ export default function Conversation() {
               onClick={handleFinish}
               className="text-gray-400 hover:text-gray-700 text-sm"
             >
-              ✕
+              ✕ 나가기
             </button>
           </div>
         </div>
@@ -305,7 +305,7 @@ export default function Conversation() {
                 {MAX_TURNS}번의 대화를 완료했습니다!
               </p>
               <button onClick={handleFinish} className="btn-primary">
-                대시보드로 돌아가기
+                나가기
               </button>
             </motion.div>
           )}

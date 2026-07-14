@@ -33,7 +33,7 @@ export default function Sign() {
             onClick={() => navigate('/dashboard')}
             className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg"
           >
-            ← 대시보드
+            ✕ 나가기
           </button>
         </div>
       </header>

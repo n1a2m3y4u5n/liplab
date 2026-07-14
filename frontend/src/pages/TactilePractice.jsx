@@ -310,7 +310,7 @@ export default function TactilePractice() {
             <h1 className="text-2xl font-bold text-gray-900">🖐️ 촉각 학습 (타도마)</h1>
             <p className="text-sm text-gray-500">얼굴 모형의 턱·입술·진동·바람을 손으로 느끼며 말을 이해해요</p>
           </div>
-          <button onClick={() => { disconnect(); navigate('/dashboard') }} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
+          <button onClick={() => { disconnect(); navigate('/pillar/tactile') }} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
         </div>
       </header>
 

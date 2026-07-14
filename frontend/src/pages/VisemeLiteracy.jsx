@@ -75,7 +75,7 @@ export default function VisemeLiteracy() {
             <h1 className="text-2xl font-bold text-gray-900">입모양 인지</h1>
             <p className="text-sm text-gray-500">10개 입모양 그룹을 익히고, 무엇이 보이고 무엇이 안 보이는지 배웁니다</p>
           </div>
-          <button onClick={() => navigate('/dashboard')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
+          <button onClick={() => navigate('/pillar/reading')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
         </div>
       </header>
 
