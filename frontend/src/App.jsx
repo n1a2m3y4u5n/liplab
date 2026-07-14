@@ -37,6 +37,7 @@ class ErrorBoundary extends Component {
 import useStore from './store/useStore'
 import { authAPI, curriculumAPI, seedAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
+import GlobalLearningMenu from './components/GlobalLearningMenu'
 import Dashboard from './pages/Dashboard'
 import Analysis from './pages/Analysis'
 import Bookmarks from './pages/Bookmarks'
@@ -140,6 +141,8 @@ function App() {
     <ErrorBoundary>
     <Router>
       <AuthGate>
+      <>
+      <GlobalLearningMenu />
       <div className="app-shell">
       <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>불러오는 중…</div>}>
       <Routes>
@@ -182,6 +185,7 @@ function App() {
       </div>
       {/* 앱 어디서나 문장 선택 → 수어 번역 (수어 탭 이동 불필요) */}
       <SignSelectionOverlay />
+      </>
       </AuthGate>
     </Router>
     </ErrorBoundary>
