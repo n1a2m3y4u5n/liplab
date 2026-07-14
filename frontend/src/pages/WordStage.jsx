@@ -44,7 +44,7 @@ export default function WordStage() {
             <h1 className="text-2xl font-bold text-gray-900">음절·단어</h1>
             <p className="text-sm text-gray-500">입모양만 보고 어떤 단어인지 맞혀보세요</p>
           </div>
-          <button onClick={() => navigate('/dashboard')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
+          <button onClick={() => navigate('/pillar/reading')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
         </div>
       </header>
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">

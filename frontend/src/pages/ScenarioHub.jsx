@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { curriculumAPI, learningAPI } from '../api'
-import DomainPageShell from '../components/DomainPageShell'
 import useStore from '../store/useStore'
 
 const SITUATIONS = ['카페', '병원', '식당', '은행', '쇼핑', '대중교통', '직장', '학교', '직접 입력']
@@ -65,59 +64,71 @@ export default function ScenarioHub() {
   }
 
   return (
-    <DomainPageShell domain="learn" title="문장·대화 실전" description="연습할 상황과 난이도를 고르면 AI가 독화 문장과 대화를 준비합니다.">
-      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
-        <section className="rounded-[24px] border border-slate-200 bg-white p-5 sm:p-7">
-          <h2 className="text-lg font-black">어디에서 대화하나요?</h2>
-          <p className="mt-1 text-sm text-slate-500">실제로 자주 마주치는 상황을 선택하세요.</p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {SITUATIONS.map((item) => (
-              <button key={item} type="button" onClick={() => setSituation(item)} aria-pressed={situation === item}
-                className={`rounded-full border px-4 py-2 text-sm font-bold transition ${situation === item ? 'border-sky-600 bg-sky-600 text-white' : 'border-slate-200 text-slate-600 hover:border-sky-300 hover:bg-sky-50'}`}>
-                {item}
-              </button>
-            ))}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">문장·대화 실전</h1>
+            <p className="text-sm text-gray-500">연습할 상황과 난이도를 고르면 AI가 독화 문장과 대화를 준비합니다</p>
           </div>
-          {situation === '직접 입력' && (
-            <label className="mt-4 block">
-              <span className="mb-2 block text-sm font-bold text-slate-700">직접 입력할 상황</span>
-              <input value={customSituation} onChange={(event) => setCustomSituation(event.target.value)} className="input-field" placeholder="예: 면접에서 질문에 답하기" />
-            </label>
-          )}
+          <button onClick={() => navigate('/pillar/reading')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
+        </div>
+      </header>
 
-          <div className="mt-7 border-t border-slate-100 pt-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-black">난이도</h2>
-              <span className="text-xs font-bold text-sky-700">추천 {recommended || level}단계</span>
-            </div>
-            <div className="mt-3 grid grid-cols-5 gap-2">
-              {[1, 2, 3, 4, 5].map((item) => (
-                <button key={item} type="button" onClick={() => setLevel(item)} aria-pressed={level === item}
-                  className={`rounded-xl border py-3 text-sm font-black transition ${level === item ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 text-slate-600 hover:border-slate-400'}`}>
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <section className="card">
+            <h2 className="text-lg font-bold text-gray-900">어디에서 대화하나요?</h2>
+            <p className="mt-1 text-sm text-gray-500">실제로 자주 마주치는 상황을 선택하세요.</p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {SITUATIONS.map((item) => (
+                <button key={item} type="button" onClick={() => setSituation(item)} aria-pressed={situation === item}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${situation === item ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-200 text-gray-600 hover:border-primary-300 hover:bg-primary-50'}`}>
                   {item}
                 </button>
               ))}
             </div>
-          </div>
-        </section>
+            {situation === '직접 입력' && (
+              <label className="mt-4 block">
+                <span className="label">직접 입력할 상황</span>
+                <input value={customSituation} onChange={(event) => setCustomSituation(event.target.value)} className="input-field" placeholder="예: 면접에서 질문에 답하기" />
+              </label>
+            )}
 
-        <aside className="space-y-3">
-          <button type="button" onClick={() => start('practice')} disabled={loadingMode || locks.practice || !effectiveSituation}
-            className="w-full rounded-[22px] bg-sky-600 p-5 text-left text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500">
-            <span className="text-xs font-bold text-sky-100">문장 테스트</span>
-            <span className="mt-2 block text-xl font-black">입모양을 읽고 답하기</span>
-            <span className="mt-2 block text-sm text-sky-100">주관식·선택형·서술형 문제</span>
-            <span className="mt-5 block text-sm font-black">{loadingMode === 'practice' ? '준비 중…' : locks.practice ? '잠김' : '시작하기 →'}</span>
-          </button>
-          <button type="button" onClick={() => start('conversation')} disabled={loadingMode || locks.conversation || !effectiveSituation}
-            className="w-full rounded-[22px] bg-violet-600 p-5 text-left text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500">
-            <span className="text-xs font-bold text-violet-100">AI 대화</span>
-            <span className="mt-2 block text-xl font-black">대화를 이어가며 독화하기</span>
-            <span className="mt-2 block text-sm text-violet-100">상황에 맞는 실시간 대화</span>
-            <span className="mt-5 block text-sm font-black">{loadingMode === 'conversation' ? '준비 중…' : locks.conversation ? '잠김' : '시작하기 →'}</span>
-          </button>
-        </aside>
-      </div>
-    </DomainPageShell>
+            <div className="mt-7 border-t border-gray-100 pt-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900">난이도</h2>
+                <span className="text-xs font-semibold text-primary-600">추천 {recommended || level}단계</span>
+              </div>
+              <div className="mt-3 grid grid-cols-5 gap-2">
+                {[1, 2, 3, 4, 5].map((item) => (
+                  <button key={item} type="button" onClick={() => setLevel(item)} aria-pressed={level === item}
+                    className={`rounded-xl border-2 py-3 text-sm font-bold transition-all ${level === item ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <aside className="space-y-3">
+            <button type="button" onClick={() => start('practice')} disabled={loadingMode || locks.practice || !effectiveSituation}
+              className="card w-full text-left transition-all hover:border-primary-300 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50">
+              <span className="text-xs font-semibold text-primary-600">문장 테스트</span>
+              <span className="mt-2 block text-xl font-bold text-gray-900">입모양을 읽고 답하기</span>
+              <span className="mt-2 block text-sm text-gray-500">주관식·선택형·서술형 문제</span>
+              <span className="mt-5 block text-sm font-bold text-primary-600">{loadingMode === 'practice' ? '준비 중…' : locks.practice ? '🔒 잠김' : '시작하기 →'}</span>
+            </button>
+            <button type="button" onClick={() => start('conversation')} disabled={loadingMode || locks.conversation || !effectiveSituation}
+              className="card w-full text-left transition-all hover:border-purple-300 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50">
+              <span className="text-xs font-semibold text-purple-600">AI 대화</span>
+              <span className="mt-2 block text-xl font-bold text-gray-900">대화를 이어가며 독화하기</span>
+              <span className="mt-2 block text-sm text-gray-500">상황에 맞는 실시간 대화</span>
+              <span className="mt-5 block text-sm font-bold text-purple-600">{loadingMode === 'conversation' ? '준비 중…' : locks.conversation ? '🔒 잠김' : '시작하기 →'}</span>
+            </button>
+          </aside>
+        </div>
+      </main>
+    </div>
   )
 }

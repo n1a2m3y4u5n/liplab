@@ -48,7 +48,7 @@ export default function Bookmarks() {
             <p className="text-sm text-gray-500">어려웠던 문장들을 다시 연습해보세요</p>
           </div>
           <button onClick={() => navigate('/dashboard')} className="text-gray-500 hover:text-gray-800 text-sm">
-            ← 대시보드
+            ✕ 나가기
           </button>
         </div>
       </header>

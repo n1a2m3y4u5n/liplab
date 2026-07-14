@@ -193,7 +193,7 @@ export default function Practice() {
 
   useEffect(() => {
     if (!currentScenario) {
-      navigate('/dashboard')
+      navigate('/pillar/reading')
       return
     }
     loadVisemes()
@@ -270,7 +270,7 @@ export default function Practice() {
 
   const handleFinish = () => {
     resetPractice()
-    navigate('/dashboard')
+    navigate('/pillar/reading')
   }
 
   const showNextHint = () => {
@@ -345,7 +345,7 @@ export default function Practice() {
                 }}
                 className="text-gray-500 hover:text-gray-800 text-sm"
               >
-                ✕ 종료
+                ✕ 나가기
               </button>
             </div>
           </div>
@@ -415,7 +415,7 @@ export default function Practice() {
                 <div className="mt-auto space-y-2">
                   {isLastSentence ? (
                     <button onClick={handleFinish} className="btn-primary w-full">
-                      학습 완료, 대시보드로
+                      학습 완료
                     </button>
                   ) : (
                     <button onClick={handleNext} className="btn-primary w-full">
@@ -614,7 +614,7 @@ export default function Practice() {
                     )}
                     {isLastSentence ? (
                       <button onClick={handleFinish} className="btn-primary w-full">
-                        완료하고 대시보드로
+                        완료
                       </button>
                     ) : (
                       <button onClick={handleNext} className="btn-primary w-full">
@@ -636,7 +636,7 @@ export default function Practice() {
             <h2 className="text-3xl font-bold text-gray-900 mb-2">연습 완료!</h2>
             <p className="text-gray-600 mb-6">모든 문장을 완료했습니다. 수고하셨습니다!</p>
             <button onClick={handleFinish} className="btn-primary">
-              대시보드로 돌아가기
+              나가기
             </button>
           </motion.div>
         )}
