@@ -51,6 +51,19 @@ const PIN_FIELDS = [
   { key: 'fan', label: '팬(기류)', token: 'pinFan', def: 6, pwm: true },   // analogWrite → PWM 핀 필요
 ]
 
+// 전송한 시리얼 라인을 사람이 읽는 상태로 디코드 (신호 모니터용)
+function decodeSentLine(line) {
+  if (!line) return '—'
+  if (line.startsWith('SET')) {
+    const p = line.split(',').slice(1)
+    return `핀 설정 → 턱 D${p[0]} · 입술 D${p[1]} · 진동 D${p[2]} · 팬 D${p[3]}`
+  }
+  const [j, l, v, a, d] = line.split(',').map(Number)
+  if ([j, l, v, a, d].every((x) => x === 0)) return '정지(휴지)'
+  const air = a === 1 ? '파열(강)' : a === 2 ? '마찰(약)' : '없음'
+  return `턱 ${j}° · 입술 ${l ? '원순' : '평순'} · 진동 ${v ? 'ON' : 'off'} · 기류 ${air} · ${d}ms`
+}
+
 // 템플릿 .ino의 기본 핀 변수를 사용자 값으로 치환하고, 상단에 사용자 핀표 주석을 붙인다.
 function buildCustomIno(template, pins) {
   let out = template
@@ -97,6 +110,11 @@ export default function TactilePractice() {
   const [marks, setMarks] = useState({})          // 북마크 상태 {target: bookmarkId}
   const [pins, setPins] = useState({ jaw: 9, lip: 10, vib: 5, fan: 6 })  // 커스텀 펌웨어 핀
   const [pinMsg, setPinMsg] = useState('')
+  // 신호 모니터 — 웹이 실제로 보내는지 / 보드가 받는지 확인용
+  const [lastSent, setLastSent] = useState('')
+  const [sentCount, setSentCount] = useState(0)
+  const [boardReply, setBoardReply] = useState('')
+  const [replyCount, setReplyCount] = useState(0)
 
   // 핀 입력 검증 — 문제 있으면 안내 문구, 없으면 null
   const validatePins = () => {
@@ -177,14 +195,36 @@ export default function TactilePractice() {
 
   const portRef = useRef(null)
   const writerRef = useRef(null)
+  const readerRef = useRef(null)
   const enc = useRef(new TextEncoder())
 
   const disconnect = async () => {
+    try { await readerRef.current?.cancel() } catch { /* noop */ }
+    readerRef.current = null
     try { writerRef.current?.releaseLock() } catch { /* noop */ }
     try { await portRef.current?.close() } catch { /* noop */ }
     writerRef.current = null; portRef.current = null; setConnected(false)
   }
   useEffect(() => () => { disconnect() }, [])
+
+  // 보드가 돌려주는 응답(ok / pins set)을 읽어 신호가 실제로 도달·처리되는지 확인
+  const startReader = async (port) => {
+    try {
+      const reader = port.readable.pipeThrough(new TextDecoderStream()).getReader()
+      readerRef.current = reader
+      let buf = ''
+      for (;;) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buf += value
+        let nl
+        while ((nl = buf.indexOf('\n')) >= 0) {
+          const ln = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1)
+          if (ln) { setBoardReply(ln); setReplyCount((c) => c + 1) }
+        }
+      }
+    } catch { /* 연결 해제 시 정상 종료 */ }
+  }
 
   const connect = async () => {
     try {
@@ -192,6 +232,7 @@ export default function TactilePractice() {
       await port.open({ baudRate: 9600 })
       portRef.current = port
       writerRef.current = port.writable.getWriter()
+      startReader(port)   // 보드 응답 수신 시작(신호 확인)
       setConnected(true); setStatus('얼굴 모형이 연결되었어요.')
       // 연결되면 현재 핀 배치를 즉시 반영(런타임) — 유효할 때만
       if (!validatePins()) { try { await sendLine(`SET,${pins.jaw},${pins.lip},${pins.vib},${pins.fan}`) } catch { /* noop */ } }
@@ -200,7 +241,9 @@ export default function TactilePractice() {
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
   const sendLine = async (line) => {
-    if (writerRef.current) await writerRef.current.write(enc.current.encode(line + '\n'))
+    if (!writerRef.current) return
+    await writerRef.current.write(enc.current.encode(line + '\n'))
+    setLastSent(line); setSentCount((c) => c + 1)   // 신호 모니터
   }
 
   const playSequence = async (seq) => {
@@ -395,6 +438,34 @@ export default function TactilePractice() {
             <button onClick={connect} disabled={!supported}
               className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-40">🔌 얼굴 모형 연결</button>
           )}
+        </div>
+
+        {/* 제어 신호 모니터 — 웹→보드 신호가 실제로 오가는지 확인 */}
+        <div className="card">
+          <p className="mb-1 text-sm font-bold text-gray-900">📟 제어 신호 모니터</p>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-lg bg-gray-50 p-2">
+              <div className="text-gray-400">웹 → 보드 (전송) · <b className="text-gray-700">{sentCount}건</b></div>
+              <div className="mt-0.5 break-all font-mono text-[11px] text-purple-700">{lastSent || '—'}</div>
+              <div className="text-[11px] text-gray-500">{decodeSentLine(lastSent)}</div>
+            </div>
+            <div className="rounded-lg bg-gray-50 p-2">
+              <div className="text-gray-400">보드 → 웹 (응답) · <b className="text-gray-700">{replyCount}건</b></div>
+              <div className="mt-0.5 break-all font-mono text-[11px] text-green-700">{boardReply || '—'}</div>
+              <div className="text-[11px] text-gray-500">{replyCount > 0 ? '보드가 명령을 받고 있어요' : '아직 응답 없음'}</div>
+            </div>
+          </div>
+          {connected && sentCount > 0 && replyCount === 0 && (
+            <p className="mt-2 rounded-lg bg-amber-50 p-2 text-[11px] leading-relaxed text-amber-700">
+              신호는 나가는데 <b>보드 응답이 없어요.</b> ① 펌웨어가 실제로 업로드됐는지 ② 올바른 포트를 골랐는지 ③ 9600 baud인지 확인하세요.
+            </p>
+          )}
+          {connected && replyCount > 0 && (
+            <p className="mt-2 rounded-lg bg-green-50 p-2 text-[11px] leading-relaxed text-green-700">
+              보드가 응답 중이라 <b>신호는 정상 도달·처리</b>돼요. 그래도 안 움직이면 <b>서보·모터의 외부 5V 전원, 공통 GND, 핀 번호·배선</b>을 확인하세요. (서보 각도 범위가 작아 움직임이 미세할 수도)
+            </p>
+          )}
+          {!connected && <p className="mt-1 text-[11px] text-gray-400">연결하면 전송/응답 신호가 실시간으로 표시돼요. 데스크톱 Chrome·Edge에서만 동작합니다.</p>}
         </div>
 
         {/* 복습 모드 배너 */}
