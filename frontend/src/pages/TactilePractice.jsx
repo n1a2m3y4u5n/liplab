@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { tactileAPI, learningAPI } from '../api'
 import TactileFaceSim from '../components/TactileFaceSim'
 
@@ -41,13 +41,14 @@ function makeQuestion(lv) {
 
 export default function TactilePractice() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   // 대시보드 카드에서 특정 레벨/모드로 바로 진입(?level=N&mode=quiz)
   const _lvParam = parseInt(searchParams.get('level'), 10)
   const _initLevel = Number.isInteger(_lvParam) && _lvParam >= 0 && _lvParam < LEVELS.length ? _lvParam : 0
   // 학습(퀴즈)을 기본으로 — 체계적 커리큘럼이 중심. 체험은 보조(명시적 요청 시에만).
   const _initMode = searchParams.get('mode') === 'explore' ? 'explore' : 'quiz'
-  const reviewMode = searchParams.get('review') != null   // 복습 모드(예정·틀림·북마크 항목 다시)
+  const reviewMode = searchParams.get('review') != null || location.pathname === '/review/tactile'   // 복습 모드(예정·틀림·북마크 항목 다시)
   const supported = typeof navigator !== 'undefined' && 'serial' in navigator
 
   const [connected, setConnected] = useState(false)

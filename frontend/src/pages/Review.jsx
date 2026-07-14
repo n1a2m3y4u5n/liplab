@@ -49,8 +49,8 @@ export default function Review() {
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">오늘의 복습</h1>
-            <p className="text-sm text-gray-500">{state === 'active' ? `${idx + 1} / ${items.length}` : '틀렸던 항목을 다시 만나요'}</p>
+            <h1 className="text-2xl font-bold text-gray-900">입모양·단어 복습</h1>
+            <p className="text-sm text-gray-500">{state === 'active' ? `${idx + 1} / ${items.length}` : '복습 일정이 된 항목을 다시 만나요'}</p>
           </div>
           <button onClick={() => navigate('/dashboard')} className="text-gray-500 hover:text-gray-800 text-sm">✕ 나가기</button>
         </div>
