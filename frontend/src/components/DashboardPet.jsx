@@ -76,6 +76,9 @@ export default function DashboardPet({ slideId = 'viseme', obstacleSelector = '[
   const rafRef = useRef(0)
   const cheerTimeout = useRef(null)
   const [cheer, setCheer] = useState(null)
+  // 펫이 위쪽에 있어 말풍선(펫 위)이 잘릴 때만 말풍선을 아래로 뒤집는다.
+  const [bubbleBelow, setBubbleBelow] = useState(false)
+  const bubbleBelowRef = useRef(false)
 
   const metrics = () => {
     const el = petRef.current
@@ -168,6 +171,14 @@ export default function DashboardPet({ slideId = 'viseme', obstacleSelector = '[
         pos.current.y = Math.max(minY, Math.min(maxY, pos.current.y))
         el.style.transform = `translate(${pos.current.x}px, ${pos.current.y}px)`
         if (bodyRef.current) bodyRef.current.style.transform = `rotate(${angle.current}deg)`
+
+        // 말풍선(펫 위 약 46px)이 컨테이너 위로 잘릴 위치면 아래로 뒤집는다.
+        // 임계값을 넘나들 때만 setState → 매 프레임 리렌더 방지.
+        const shouldBelow = pos.current.y < 46
+        if (shouldBelow !== bubbleBelowRef.current) {
+          bubbleBelowRef.current = shouldBelow
+          setBubbleBelow(shouldBelow)
+        }
       }
     }
     rafRef.current = requestAnimationFrame(step)
@@ -268,9 +279,9 @@ export default function DashboardPet({ slideId = 'viseme', obstacleSelector = '[
       style={{ willChange: 'transform' }}
     >
       {cheer && (
-        <div className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-2xl bg-white px-3 py-1.5 text-[11px] font-black text-slate-800 shadow-lg">
+        <div className={`pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-2xl bg-white px-3 py-1.5 text-[11px] font-black text-slate-800 shadow-lg ${bubbleBelow ? 'top-[72px]' : '-top-10'}`}>
           {cheer}
-          <span className="absolute -bottom-1 left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 bg-white" />
+          <span className={`absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 bg-white ${bubbleBelow ? '-top-1' : '-bottom-1'}`} />
         </div>
       )}
       <div ref={bodyRef} style={{ willChange: 'transform' }} className={`relative h-16 w-16 rounded-[48%_44%_50%_46%] bg-gradient-to-br ${theme.grad} shadow-xl`}>
