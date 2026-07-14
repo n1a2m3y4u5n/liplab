@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SignPanel from '../components/SignPanel'
+import LearnHeader from '../components/LearnHeader'
 
 /**
  * 한국어 → 한국수어(KSL) 학습 보조 페이지
@@ -25,18 +26,13 @@ export default function Sign() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-primary-600">수어 학습</h1>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg"
-          >
-            ✕ 나가기
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
+      <LearnHeader
+        accent="etc"
+        title="수어 학습"
+        description="문장을 입력하면 한국수어(KSL) 영상으로 함께 확인해요"
+        onExit={() => navigate('/dashboard')}
+      />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-4 text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">

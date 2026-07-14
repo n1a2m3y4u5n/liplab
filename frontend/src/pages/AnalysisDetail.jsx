@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { learningAPI, speakAPI, tactileAPI } from '../api'
-import DomainPageShell from '../components/DomainPageShell'
+import LearnHeader from '../components/LearnHeader'
 
 const PAGE_META = {
   overview: { title: '학습 분석', description: '독화·말하기·촉각 학습에서 쌓인 핵심 성과를 한눈에 확인합니다.' },
@@ -192,8 +192,17 @@ export default function AnalysisDetail({ mode = 'overview' }) {
   }
 
   return (
-    <DomainPageShell domain="analysis" title={meta.title} description={meta.description}>
-      {loading ? <Loading /> : content()}
-    </DomainPageShell>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
+      <LearnHeader
+        accent="etc"
+        title={meta.title}
+        description={meta.description}
+        maxWidth="max-w-6xl"
+        onExit={() => navigate('/dashboard')}
+      />
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        {loading ? <Loading /> : content()}
+      </main>
+    </div>
   )
 }
