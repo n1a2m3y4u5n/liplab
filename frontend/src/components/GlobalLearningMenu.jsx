@@ -38,6 +38,7 @@ const PILLAR_NAV = [
     intro: '얼굴 모형을 손끝으로 느껴 말을 이해하는 촉각 학습이에요. ✋',
     theme: { text: 'text-violet-700', line: 'bg-violet-500' },
     items: [
+      { label: '얼굴 모형 (하드웨어)', description: '조립 설명서 · 연결 · 핀 설정', icon: '🛠️', to: '/learn/tactile/hardware' },
       { label: '촉각 학습', description: '5단계 커리큘럼과 자유 체험', icon: '🖐️', to: '/learn/tactile' },
       { label: '촉각 복습', description: '취약 항목 다시 풀기', icon: '🔁', to: '/review/tactile' },
     ],

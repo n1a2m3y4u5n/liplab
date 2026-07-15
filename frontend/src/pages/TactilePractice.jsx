@@ -91,6 +91,7 @@ export default function TactilePractice() {
   // 학습(퀴즈)을 기본으로 — 체계적 커리큘럼이 중심. 체험은 보조(명시적 요청 시에만).
   const _initMode = searchParams.get('mode') === 'explore' ? 'explore' : 'quiz'
   const reviewMode = searchParams.get('review') != null || location.pathname === '/review/tactile'   // 복습 모드(예정·틀림·북마크 항목 다시)
+  const hardwareView = location.pathname === '/learn/tactile/hardware'   // 하드웨어 전용 탭(조립 설명서·핀 설정·신호 모니터)
   const supported = typeof navigator !== 'undefined' && 'serial' in navigator
 
   const [connected, setConnected] = useState(false)
@@ -307,8 +308,8 @@ export default function TactilePractice() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
       <LearnHeader
         accent="tactile"
-        title={reviewMode ? '촉각 복습' : '촉각 학습'}
-        description="얼굴 모형의 턱·입술·진동·바람을 손으로 느끼며 말을 이해해요"
+        title={hardwareView ? '얼굴 모형 · 하드웨어' : reviewMode ? '촉각 복습' : '촉각 학습'}
+        description={hardwareView ? '실제 얼굴 모형을 만들고, 연결·핀 설정·신호 확인까지 여기서 해요' : '얼굴 모형의 턱·입술·진동·바람을 손으로 느끼며 말을 이해해요'}
         maxWidth="max-w-4xl"
         onExit={() => { disconnect(); navigate('/dashboard') }}
       />
@@ -326,7 +327,8 @@ export default function TactilePractice() {
           </div>
         )}
 
-        {/* DIY — 오픈소스 하드웨어: 상세 설명서로 크게 유도 */}
+        {/* DIY — 오픈소스 하드웨어: 상세 설명서로 크게 유도 (하드웨어 탭 전용) */}
+        {hardwareView && (
         <button
           onClick={() => navigate('/hardware/build')}
           className="group w-full overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 to-violet-500 p-5 text-left text-white shadow-lg shadow-purple-200 transition hover:shadow-xl hover:brightness-105 sm:p-6"
@@ -348,8 +350,10 @@ export default function TactilePractice() {
             ))}
           </div>
         </button>
+        )}
 
-        {/* 고급(선택): 내 핀 배치로 실시간 적용 / 맞춤 펌웨어 */}
+        {/* 고급(선택): 내 핀 배치로 실시간 적용 / 맞춤 펌웨어 (하드웨어 탭 전용) */}
+        {hardwareView && (
         <div className="card">
           <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-3">
             <p className="text-sm font-semibold text-gray-800">🔧 내 핀 배치 설정 <span className="text-xs font-normal text-gray-400">· 선택</span></p>
@@ -386,8 +390,9 @@ export default function TactilePractice() {
             {pinMsg && <p className="mt-1 text-[11px] text-gray-600">{pinMsg}</p>}
           </div>
         </div>
+        )}
 
-        {/* 연결 */}
+        {/* 연결 (학습·복습·하드웨어 모두 — 실제 모형으로 느끼려면 필요) */}
         <div className="card">
           <div className="flex items-center justify-between gap-2">
             <p className="font-semibold text-gray-900">얼굴 모형 연결 · {connected ? '🟢 연결됨' : '⚪ 연결 안 됨'}</p>
@@ -408,7 +413,8 @@ export default function TactilePractice() {
           )}
         </div>
 
-        {/* 제어 신호 모니터 — 웹→보드 신호가 실제로 오가는지 확인 */}
+        {/* 제어 신호 모니터 (하드웨어 탭 전용) */}
+        {hardwareView && (
         <div className="card">
           <p className="mb-1 text-sm font-bold text-gray-900">📟 제어 신호 모니터</p>
           <div className="grid grid-cols-2 gap-2 text-xs">
@@ -435,6 +441,10 @@ export default function TactilePractice() {
           )}
           {!connected && <p className="mt-1 text-[11px] text-gray-400">연결하면 전송/응답 신호가 실시간으로 표시돼요. 데스크톱 Chrome·Edge에서만 동작합니다.</p>}
         </div>
+        )}
+
+        {/* ── 학습·복습 콘텐츠 (하드웨어 탭에선 숨김) ── */}
+        {!hardwareView && (<>
 
         {/* 복습 모드 배너 */}
         {reviewMode && (
@@ -610,6 +620,7 @@ export default function TactilePractice() {
         <p className="text-xs text-gray-400 text-center">
           ‘바다’와 ‘파도’처럼 입모양이 비슷한 말도, 진동(성대)과 바람(기류)의 차이로 촉각으로는 구별됩니다.
         </p>
+        </>)}
       </main>
     </div>
   )

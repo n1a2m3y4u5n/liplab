@@ -172,6 +172,7 @@ function App() {
         <Route path="/pillar/:id" element={<PillarHub />} />
         <Route path="/learn/speaking" element={<SpeakingPractice />} />
         <Route path="/learn/tactile" element={<TactilePractice />} />
+        <Route path="/learn/tactile/hardware" element={<TactilePractice />} />
         <Route path="/hardware/build" element={<HardwareBuild />} />
         <Route path="/learn/sign" element={<Sign />} />
         <Route path="/review" element={<Review />} />
