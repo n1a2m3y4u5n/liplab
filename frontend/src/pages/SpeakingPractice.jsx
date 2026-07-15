@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, learningAPI, speakAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import LearnHeader from '../components/LearnHeader'
+import { getSpeakingStageMenuItem } from '../config/speakingNavigation'
 
 /**
  * 말하기 연습 (발화 피드백)
@@ -45,7 +46,8 @@ export default function SpeakingPractice() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const stageNo = searchParams.get('stage') != null ? parseInt(searchParams.get('stage'), 10) : null
-  const reviewMode = searchParams.get('review') != null || location.pathname === '/review/speaking'   // 발음 복습 모드
+  const reviewMode = searchParams.get('review') != null || location.pathname === '/review/speaking/session'   // 발음 복습 모드
+  const selectedStageMenuItem = getSpeakingStageMenuItem(stageNo)
 
   const [words, setWords] = useState([])
   const [target, setTarget] = useState(null)
@@ -84,6 +86,7 @@ export default function SpeakingPractice() {
   const traceRef = useRef([])      // {t, rms, hz|null} 시계열 — 결과 그래프용
   const startRef = useRef(0)
   const summaryRef = useRef(null)
+  const framesRequestRef = useRef(0)
   const videoRef = useRef(null)          // 웹캠 미러 <video>
   const videoStreamRef = useRef(null)
 
@@ -106,26 +109,59 @@ export default function SpeakingPractice() {
   }, [mirrorOn])
 
   useEffect(() => {
+    let cancelled = false
+    framesRequestRef.current += 1
+    setErr(null)
+    setStageInfo(null)
+    setReviewItems(null)
+    setItemIdx(0)
+    setTarget(null)
+    setFrames([])
+    setSummary(null)
+    setAssessment(null)
+    setProgress(null)
+
     if (reviewMode) {
       speakAPI.getReview()
-        .then((d) => { setReviewItems(d.items || []); if (d.items?.length) applyItem(d.items, 0) })
-        .catch(() => setErr('복습을 불러오지 못했어요.'))
+        .then((d) => {
+          if (cancelled) return
+          setReviewItems(d.items || [])
+          if (d.items?.length) applyItem(d.items, 0)
+        })
+        .catch(() => { if (!cancelled) setErr('복습을 불러오지 못했어요.') })
     } else if (stageNo != null) {
       speakAPI.getStage(stageNo)
-        .then((d) => { setStageInfo(d); applyItem(d.items, 0) })
-        .catch(() => setErr('단계를 불러오지 못했어요.'))
+        .then((d) => {
+          if (cancelled) return
+          setStageInfo(d)
+          applyItem(d.items, 0)
+        })
+        .catch(() => { if (!cancelled) setErr('단계를 불러오지 못했어요.') })
     } else {
       curriculumAPI.getWords()
-        .then((d) => { const ws = d.words.map((w) => w.word); setWords(ws); pickWord(ws) })
-        .catch(() => setErr('콘텐츠를 불러오지 못했어요.'))
+        .then((d) => {
+          if (cancelled) return
+          const ws = d.words.map((w) => w.word)
+          setWords(ws)
+          pickWord(ws)
+        })
+        .catch(() => { if (!cancelled) setErr('콘텐츠를 불러오지 못했어요.') })
     }
-    return () => teardown()
+    return () => {
+      cancelled = true
+      framesRequestRef.current += 1
+      teardown()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stageNo, reviewMode])
 
   const loadFrames = async (t) => {
+    const requestId = ++framesRequestRef.current
     setTarget(t); setFrames([]); setSummary(null); setAssessment(null)
-    try { setFrames(await learningAPI.getVisemes(t)) } catch { /* ignore */ }
+    try {
+      const nextFrames = await learningAPI.getVisemes(t)
+      if (requestId === framesRequestRef.current) setFrames(nextFrames)
+    } catch { /* ignore */ }
   }
 
   const applyItem = (its, idx) => {
@@ -318,9 +354,9 @@ export default function SpeakingPractice() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
       <LearnHeader
         accent="speaking"
-        title={reviewMode ? '말하기 복습' : stageInfo ? `${stageInfo.icon} ${stageInfo.stage}단계 · ${stageInfo.title}` : '말하기 학습'}
+        title={reviewMode ? '말하기 복습' : selectedStageMenuItem?.label || stageInfo?.title || '말하기 학습'}
         description={reviewMode ? '틀렸던 발음을 다시 또박또박 연습해요' : (stageInfo?.guide || '귀 대신 눈으로 — 내 목소리를 보면서 발음을 다듬어요')}
-        onExit={() => { teardown(); navigate('/dashboard') }}
+        onExit={() => { teardown(); navigate(reviewMode ? '/review/speaking' : '/dashboard') }}
       />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
@@ -329,7 +365,7 @@ export default function SpeakingPractice() {
             <div className="text-4xl mb-3">🎉</div>
             <p className="text-lg font-bold text-gray-900 mb-1">복습할 발음이 없어요</p>
             <p className="text-sm text-gray-500 mb-5">최근 발음이 다 좋았어요. 단계 연습을 이어가 볼까요?</p>
-            <button onClick={() => { teardown(); navigate('/dashboard') }} className="btn-primary px-6 py-2.5 text-sm">나가기</button>
+            <button onClick={() => { teardown(); navigate('/review/speaking') }} className="btn-primary px-6 py-2.5 text-sm">목록으로</button>
           </div>
         ) : (
         <>
@@ -469,7 +505,7 @@ export default function SpeakingPractice() {
 
               <div className="flex gap-2 mt-4">
                 <button onClick={() => { setSummary(null); setAssessment(null) }} className="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">다시 말하기</button>
-                <button onClick={nextItem} className="flex-1 btn-primary py-2 text-sm">{stageNo != null ? '다음 →' : '다음 단어 →'}</button>
+                <button onClick={nextItem} className="flex-1 btn-primary py-2 text-sm">{reviewMode || stageNo != null ? '다음 →' : '다음 단어 →'}</button>
               </div>
             </motion.div>
           )}

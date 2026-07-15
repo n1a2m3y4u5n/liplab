@@ -22,6 +22,11 @@ const VIS_BADGE = {
   low:    { label: '거의 안 보임', cls: 'bg-gray-200 text-gray-500 border-gray-300' },
 }
 
+const lessonLabel = (lesson) => {
+  const phonemes = lesson?.phonemes?.join(', ')
+  return phonemes ? `${lesson.name}(${phonemes})` : lesson?.name || ''
+}
+
 // neutral(15) ↔ target 반복 → 입모양이 '만들어지는' 움직임을 보여준다.
 // 정적보다 인지가 쉽고, 정답 숫자를 노출하지 않는다.
 function VisemeAvatar({ visemeId, height = 300 }) {
@@ -108,7 +113,7 @@ function LearnPanel({ data }) {
           return (
             <button key={l.viseme_id} onClick={() => setSel(l)}
               className={`p-3 rounded-xl border-2 text-center transition-all ${active ? 'border-primary-500 bg-primary-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-              <div className="text-sm font-bold text-gray-800">{l.name}</div>
+              <div className="text-xs font-bold leading-snug text-gray-800 sm:text-sm">{lessonLabel(l)}</div>
               <div className={`mt-1 inline-block text-[10px] px-1.5 py-0.5 rounded-full border ${b.cls}`}>{b.label}</div>
             </button>
           )
@@ -184,7 +189,7 @@ function QuizPanel({ data }) {
   const newQ = useCallback(() => {
     const target = quizzable[Math.floor(Math.random() * quizzable.length)]
     const others = shuffle(lessons.filter((l) => l.viseme_id !== target.viseme_id)).slice(0, 3)
-    const choices = shuffle([target, ...others]).map((l) => ({ viseme_id: l.viseme_id, name: l.name }))
+    const choices = shuffle([target, ...others]).map((l) => ({ viseme_id: l.viseme_id, name: lessonLabel(l) }))
     setQ({ target, choices })
     setResult(null)
   }, [lessons, quizzable])
@@ -251,7 +256,7 @@ function QuizPanel({ data }) {
             {result && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-2">
                 <div className={`p-3 rounded-lg text-sm ${result.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                  {result.correct ? '정답! 🎉' : `오답 — 정답은 "${q.target.name}"`}
+                  {result.correct ? '정답! 🎉' : `오답 — 정답은 "${lessonLabel(q.target)}"`}
                   {!result.correct && result.same_cluster && (
                     <p className="mt-1 text-gray-600">헷갈릴 만해요! 이 둘은 <b>같아 보이는 무리</b>라 입모양만으론 구별이 어렵습니다. 실제로는 문맥으로 판단해요.</p>
                   )}
