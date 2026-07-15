@@ -53,7 +53,7 @@ export default function SpeakingReviewLanding() {
         accent="speaking"
         title="말하기 복습"
         description="다시 연습할 발음과 문장을 확인한 뒤 복습을 시작하세요"
-        onExit={() => navigate('/review/today')}
+        onExit={() => navigate('/dashboard')}
       />
 
       <main className="mx-auto max-w-5xl space-y-5 px-4 py-8 sm:px-6">
