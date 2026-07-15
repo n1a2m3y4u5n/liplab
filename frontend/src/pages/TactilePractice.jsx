@@ -448,16 +448,8 @@ export default function TactilePractice() {
 
         {/* 복습 모드 배너 */}
         {reviewMode && (
-          <div className="card flex items-center justify-between gap-2 border-l-4 border-purple-400 bg-purple-50">
-            <div>
-              <p className="font-bold text-purple-800">🔁 촉각 복습</p>
-              <p className="text-xs text-purple-600">
-                {reviewPool == null ? '불러오는 중…'
-                  : reviewPool.length ? `예정·틀림·북마크 ${reviewPool.length}개를 다시 풀어요.`
-                  : '복습할 항목이 없어요. 퀴즈에서 틀리거나 북마크하면 여기 모입니다.'}
-              </p>
-            </div>
-            <button onClick={() => navigate('/tactile')} className="text-xs text-purple-500 underline whitespace-nowrap">일반 학습으로</button>
+          <div className="card border-l-4 border-purple-400 bg-purple-50">
+            <p className="font-bold text-purple-800">🔁 촉각 복습</p>
           </div>
         )}
 
