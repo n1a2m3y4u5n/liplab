@@ -30,6 +30,7 @@ const PILLARS = {
     title: '촉각 (타도마)',
     description: '얼굴 모형의 턱·입술·진동·바람을 손으로 느껴 말을 이해하는 훈련이에요. 하드웨어 없이 시뮬레이터로도 체험할 수 있어요.',
     items: [
+      { label: '얼굴 모형 (하드웨어)', desc: '조립 설명서 · 연결 · 핀 설정', to: '/learn/tactile/hardware', icon: '🛠️' },
       { label: '촉각 학습', desc: '5단계 커리큘럼 + 자유 체험', to: '/learn/tactile', icon: '🖐️' },
       { label: '촉각 복습', desc: '취약 항목 다시 풀기', to: '/review/tactile', icon: '🔁' },
     ],
