@@ -219,7 +219,7 @@ export default function Practice() {
 
   const handleFinish = () => {
     resetPractice()
-    navigate('/dashboard')
+    navigate(isReviewSession ? '/review/mistakes' : '/dashboard')
   }
 
   const showNextHint = () => {
