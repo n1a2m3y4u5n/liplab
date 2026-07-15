@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useLocation, useNavigate } from 'react-router-dom'
 import useStore from '../store/useStore'
+import { SPEAKING_MENU_ITEMS } from '../config/speakingNavigation'
 
 const PILLAR_NAV = [
   {
@@ -27,15 +28,7 @@ const PILLAR_NAV = [
     petGrad: 'from-rose-300 via-rose-400 to-pink-500',
     intro: '내 발음을 눈으로 보며 또박또박 다듬어요! 🎤',
     theme: { text: 'text-rose-700', line: 'bg-rose-500' },
-    items: [
-      { label: '발성', description: '원할 때 목소리 내기 · 길게 유지', icon: '🗣️', to: '/learn/speaking?stage=0' },
-      { label: '운율 조절', description: '크기 · 길이 · 높낮이 바꾸기', icon: '🎚️', to: '/learn/speaking?stage=1' },
-      { label: '모음', description: '기본 모음 8개 — 가장 잘 보이는 소리', icon: '👄', to: '/learn/speaking?stage=2' },
-      { label: '자음', description: '입술소리부터 · 최소대립쌍', icon: '🅿️', to: '/learn/speaking?stage=3' },
-      { label: '음절·단어', description: '짧은 단어부터 여러 음절까지', icon: '🔤', to: '/learn/speaking?stage=4' },
-      { label: '문장·억양', description: '평서문은 내림, 의문문은 올림', icon: '💬', to: '/learn/speaking?stage=5' },
-      { label: '말하기 복습', description: '부족했던 발음 다시 연습하기', icon: '🔁', to: '/review/speaking' },
-    ],
+    items: SPEAKING_MENU_ITEMS,
   },
   {
     id: 'tactile',
@@ -114,11 +107,16 @@ export default function GlobalLearningMenu() {
   const [hoveredItem, setHoveredItem] = useState(null)
   const navRef = useRef(null)
   const activeTopic = PILLAR_NAV.find((topic) => topic.id === activeNavMenu)
+  const currentRoute = `${location.pathname}${location.search}`
+  const currentTopicId = PILLAR_NAV.find((topic) => topic.items.some((item) => (
+    item.to === currentRoute
+      || (item.to === '/review/speaking' && location.pathname.startsWith('/review/speaking/'))
+  )))?.id
 
   useEffect(() => {
     setActiveNavMenu(null)
     setHoveredItem(null)
-  }, [location.pathname])
+  }, [location.pathname, location.search])
 
   const openNav = (id) => {
     if (navRef.current) setNavTop(navRef.current.getBoundingClientRect().top)
@@ -206,20 +204,25 @@ export default function GlobalLearningMenu() {
               <div className="mx-auto grid h-full max-w-[1440px] grid-cols-1 gap-4 px-5 pb-4 pt-[58px] sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 <div className="flex min-h-0 flex-col justify-center overflow-hidden py-2">
                   <p className={`mb-1 text-xs font-black uppercase tracking-[0.14em] sm:text-sm ${activeTopic.theme.text}`}>{activeTopic.label}</p>
-                  {activeTopic.items.map((item) => (
-                    <button
-                      key={item.to}
-                      type="button"
-                      onMouseEnter={() => setHoveredItem(item)}
-                      onFocus={() => setHoveredItem(item)}
-                      onClick={() => go(item.to)}
-                      className="group flex items-center gap-3 border-b border-slate-900/10 py-2.5 text-left transition hover:pl-2 sm:py-3"
-                    >
-                      <span aria-hidden="true" className="text-2xl transition group-hover:scale-110 sm:text-3xl">{item.icon}</span>
-                      <span className="min-w-0 flex-1 text-xl font-black tracking-tight text-slate-900 sm:text-2xl">{item.label}</span>
-                      <span aria-hidden="true" className="text-xl font-black text-slate-900/25 transition group-hover:translate-x-1 group-hover:text-slate-900/60">→</span>
-                    </button>
-                  ))}
+                  {activeTopic.items.map((item) => {
+                    const current = item.to === currentRoute
+                      || (item.to === '/review/speaking' && location.pathname.startsWith('/review/speaking/'))
+                    return (
+                      <button
+                        key={item.to}
+                        type="button"
+                        aria-current={current ? 'page' : undefined}
+                        onMouseEnter={() => setHoveredItem(item)}
+                        onFocus={() => setHoveredItem(item)}
+                        onClick={() => go(item.to)}
+                        className={`group flex items-center gap-3 border-b border-slate-900/10 py-2.5 text-left transition hover:pl-2 sm:py-3 ${current ? 'bg-white/55 pl-2' : ''}`}
+                      >
+                        <span aria-hidden="true" className="text-2xl transition group-hover:scale-110 sm:text-3xl">{item.icon}</span>
+                        <span className="min-w-0 flex-1 text-xl font-black tracking-tight text-slate-900 sm:text-2xl">{item.label}</span>
+                        <span aria-hidden="true" className="text-xl font-black text-slate-900/25 transition group-hover:translate-x-1 group-hover:text-slate-900/60">→</span>
+                      </button>
+                    )
+                  })}
                 </div>
 
                 <div onMouseEnter={closeNav} className="hidden items-center justify-center lg:flex">
@@ -234,6 +237,7 @@ export default function GlobalLearningMenu() {
           <ul className="flex items-stretch overflow-x-auto">
             {PILLAR_NAV.map((tab) => {
               const active = activeNavMenu === tab.id
+              const current = currentTopicId === tab.id
               return (
                 <li key={tab.id} onMouseEnter={() => openNav(tab.id)} className="shrink-0">
                   <button
@@ -242,11 +246,12 @@ export default function GlobalLearningMenu() {
                     onClick={() => chooseTab(tab)}
                     aria-haspopup="menu"
                     aria-expanded={active}
-                    className={`relative flex items-center gap-2 px-4 py-3 text-base font-black tracking-tight transition sm:px-8 sm:text-lg ${active ? tab.theme.text : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'}`}
+                    aria-current={current ? 'page' : undefined}
+                    className={`relative flex items-center gap-2 px-4 py-3 text-base font-black tracking-tight transition sm:px-8 sm:text-lg ${active || current ? tab.theme.text : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'}`}
                   >
                     {tab.label}
                     <span aria-hidden="true" className={`text-[10px] transition-transform ${active ? 'rotate-180' : ''}`}>▼</span>
-                    <span aria-hidden="true" className={`absolute inset-x-3 bottom-0 h-1 rounded-full transition ${active ? tab.theme.line : 'bg-transparent'}`} />
+                    <span aria-hidden="true" className={`absolute inset-x-3 bottom-0 h-1 rounded-full transition ${active || current ? tab.theme.line : 'bg-transparent'}`} />
                   </button>
                 </li>
               )

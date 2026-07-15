@@ -1,4 +1,5 @@
 import { useParams, useNavigate, Navigate } from 'react-router-dom'
+import { SPEAKING_MENU_ITEMS } from '../config/speakingNavigation'
 
 // 기둥(독화·말하기·촉각)별 하위 학습·테스트·복습 메뉴 모음.
 // 대시보드 캐러셀에서 기둥을 누르면 바로 활동으로 가지 않고 이 허브로 온다.
@@ -22,15 +23,7 @@ const PILLARS = {
     accent: 'rose',
     title: '말하기 (발음)',
     description: '내 발음을 눈으로 보며 다듬는 훈련이에요. 마이크로 녹음하면 AI가 전사·채점하고 코칭해줘요.',
-    items: [
-      { label: '발성', desc: '원할 때 목소리 내기 · 길게 유지', to: '/learn/speaking?stage=0', icon: '🗣️' },
-      { label: '운율 조절', desc: '크기 · 길이 · 높낮이 바꾸기', to: '/learn/speaking?stage=1', icon: '🎚️' },
-      { label: '모음', desc: '기본 모음 8개 — 가장 잘 보이는 소리', to: '/learn/speaking?stage=2', icon: '👄' },
-      { label: '자음', desc: '입술소리부터 · 최소대립쌍', to: '/learn/speaking?stage=3', icon: '🅿️' },
-      { label: '음절·단어', desc: '짧은 단어부터 여러 음절까지', to: '/learn/speaking?stage=4', icon: '🔤' },
-      { label: '문장·억양', desc: '평서문은 내림, 의문문은 올림', to: '/learn/speaking?stage=5', icon: '💬' },
-      { label: '말하기 복습', desc: '저조했던 발음 다시 연습', to: '/review/speaking', icon: '🔁' },
-    ],
+    items: SPEAKING_MENU_ITEMS.map((item) => ({ ...item, desc: item.description })),
   },
   tactile: {
     accent: 'violet',

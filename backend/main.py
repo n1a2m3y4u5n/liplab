@@ -1515,9 +1515,11 @@ async def speak_review(current_user=Depends(get_current_user), db: AsyncSession 
     bookmarks = await _bookmark_refs(current_user.id, "speak", db)
     # 복습 세션에서 순회할 통합 목록(중복 제거) — 예정 → 틀림 → 북마크
     union, _seen = [], set()
+    wrong_by_target = {item["target"]: item for item in wrong}
     for t in due + [w["target"] for w in wrong] + [b["text"] for b in bookmarks]:
         if t and t not in _seen:
-            _seen.add(t); union.append({"target": t})
+            _seen.add(t)
+            union.append({"target": t, **wrong_by_target.get(t, {})})
     return {
         "items": union[:30], "count": len(union),
         "buckets": {"due": len(due), "wrong": len(wrong), "bookmark": len(bookmarks)},

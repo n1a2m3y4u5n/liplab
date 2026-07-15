@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useState, useEffect } from 'react'
+import { Component, lazy, Suspense, useState, useEffect, useLayoutEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 
 class ErrorBoundary extends Component {
@@ -43,6 +43,17 @@ import Analysis from './pages/Analysis'
 import Bookmarks from './pages/Bookmarks'
 import Guide from './pages/Guide'
 
+// 탭·학습 단계 등 라우트가 바뀌면 이전 페이지의 스크롤 위치를 이어받지 않는다.
+function ScrollToTop() {
+  const location = useLocation()
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [location.key])
+
+  return null
+}
+
 // 3D(Three.js) 아바타를 쓰는 페이지는 지연로딩한다. 이 페이지들만 three-vendor
 // 청크(~320KB gzip)를 끌어오므로, 동적 import 경계를 두면 로그인/대시보드 초기
 // 진입에서 three가 빠져 첫 로딩이 가벼워진다(저사양·불안정 통신망 타겟 배려).
@@ -61,6 +72,7 @@ const FreeSpeak = lazy(() => import('./pages/FreeSpeak'))
 const ScenarioHub = lazy(() => import('./pages/ScenarioHub'))
 const PillarHub = lazy(() => import('./pages/PillarHub'))
 const ReviewLanding = lazy(() => import('./pages/ReviewLanding'))
+const SpeakingReviewLanding = lazy(() => import('./pages/SpeakingReviewLanding'))
 const AnalysisDetail = lazy(() => import('./pages/AnalysisDetail'))
 const HardwareBuild = lazy(() => import('./pages/HardwareBuild'))
 
@@ -141,6 +153,7 @@ function App() {
   return (
     <ErrorBoundary>
     <Router>
+      <ScrollToTop />
       <AuthGate>
       <>
       <GlobalLearningMenu />
@@ -165,7 +178,8 @@ function App() {
         <Route path="/review/today" element={<ReviewLanding mode="today" />} />
         <Route path="/review/scheduled" element={<Review />} />
         <Route path="/review/mistakes" element={<ReviewLanding mode="mistakes" />} />
-        <Route path="/review/speaking" element={<SpeakingPractice />} />
+        <Route path="/review/speaking" element={<SpeakingReviewLanding />} />
+        <Route path="/review/speaking/session" element={<SpeakingPractice />} />
         <Route path="/review/tactile" element={<TactilePractice />} />
         <Route path="/review/saved" element={<Bookmarks />} />
         <Route path="/analysis/overview" element={<AnalysisDetail mode="overview" />} />
