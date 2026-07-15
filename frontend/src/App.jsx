@@ -39,7 +39,6 @@ import { authAPI, curriculumAPI, seedAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
 import GlobalLearningMenu from './components/GlobalLearningMenu'
 import Dashboard from './pages/Dashboard'
-import Analysis from './pages/Analysis'
 import Bookmarks from './pages/Bookmarks'
 import Guide from './pages/Guide'
 
@@ -163,7 +162,6 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/practice" element={<StageGate stage={3}><Practice /></StageGate>} />
         <Route path="/conversation" element={<StageGate stage={4}><Conversation /></StageGate>} />
-        <Route path="/analysis" element={<Analysis />} />
         <Route path="/sign" element={<Sign />} />
         <Route path="/tactile" element={<TactilePractice />} />
         <Route path="/learn/viseme" element={<VisemeLiteracy />} />
@@ -175,7 +173,6 @@ function App() {
         <Route path="/learn/tactile/hardware" element={<TactilePractice />} />
         <Route path="/hardware/build" element={<HardwareBuild />} />
         <Route path="/learn/sign" element={<Sign />} />
-        <Route path="/review" element={<Review />} />
         <Route path="/review/today" element={<ReviewLanding mode="today" />} />
         <Route path="/review/scheduled" element={<Review />} />
         <Route path="/review/mistakes" element={<ReviewLanding mode="mistakes" />} />
@@ -188,11 +185,8 @@ function App() {
         <Route path="/analysis/visemes" element={<AnalysisDetail mode="visemes" />} />
         <Route path="/analysis/scores" element={<AnalysisDetail mode="scores" />} />
         <Route path="/analysis/history" element={<AnalysisDetail mode="history" />} />
-        <Route path="/analysis/guide" element={<Guide />} />
         <Route path="/learn/closure" element={<Closure />} />
         <Route path="/pronounce" element={<FreeSpeak />} />
-        <Route path="/speak" element={<SpeakingPractice />} />
-        <Route path="/bookmarks" element={<Bookmarks />} />
         <Route path="/guide" element={<Guide />} />
         <Route path="/dev-viseme" element={<DevViseme />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
