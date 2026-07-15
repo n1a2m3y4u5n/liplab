@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { learningAPI, speakAPI, tactileAPI } from '../api'
-import DomainPageShell from '../components/DomainPageShell'
 import useStore from '../store/useStore'
 import LearnHeader from '../components/LearnHeader'
 
@@ -121,27 +120,36 @@ export default function ReviewLanding({ mode = 'today' }) {
   const total = counts ? Object.values(counts).reduce((sum, value) => sum + value, 0) : 0
 
   return (
-    <DomainPageShell domain="review" title="오늘의 복습" description="독화·말하기·촉각별 복습 내용을 확인하고 원하는 영역으로 이동하세요." showDomainNavigation={false}>
-      <section className="rounded-[24px] bg-slate-950 p-6 text-white">
-        <div>
-          <p className="text-xs font-bold tracking-[0.12em] text-amber-300">TODAY</p>
-          <h2 className="mt-2 text-2xl font-black">{loading ? '복습 항목을 확인하고 있어요' : `${total}개 항목이 기다리고 있어요`}</h2>
-          <p className="mt-2 text-sm text-slate-400">독화·말하기·촉각 중 필요한 복습을 골라서 진행하세요.</p>
-        </div>
-      </section>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
+      <LearnHeader
+        accent="etc"
+        title="오늘의 복습"
+        description="독화·말하기·촉각별 복습 내용을 확인하고 원하는 영역으로 이동하세요"
+        onExit={() => navigate('/dashboard')}
+      />
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {REVIEW_LINKS.map((item) => (
-          <button key={item.to} type="button" onClick={() => navigate(item.to)} className="group rounded-[22px] border border-slate-200 bg-white p-5 text-left transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-lg">
-            <div className="flex items-center justify-between gap-3">
-              <span className={`rounded-full px-3 py-1 text-[11px] font-black ${item.tone}`}>{item.label}</span>
-              <span className="text-2xl font-black text-slate-900">{countFor(item.to)}</span>
-            </div>
-            <p className="mt-4 text-sm leading-relaxed text-slate-500">{item.description}</p>
-            <span className="mt-5 block text-sm font-black text-slate-800 transition group-hover:text-amber-700">페이지 열기 →</span>
-          </button>
-        ))}
-      </div>
-    </DomainPageShell>
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-5">
+        <section className="rounded-[24px] bg-slate-950 p-6 text-white">
+          <div>
+            <p className="text-xs font-bold tracking-[0.12em] text-amber-300">TODAY</p>
+            <h2 className="mt-2 text-2xl font-black">{loading ? '복습 항목을 확인하고 있어요' : `${total}개 항목이 기다리고 있어요`}</h2>
+            <p className="mt-2 text-sm text-slate-400">독화·말하기·촉각 중 필요한 복습을 골라서 진행하세요.</p>
+          </div>
+        </section>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {REVIEW_LINKS.map((item) => (
+            <button key={item.to} type="button" onClick={() => navigate(item.to)} className="group rounded-[22px] border border-slate-200 bg-white p-5 text-left transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-lg">
+              <div className="flex items-center justify-between gap-3">
+                <span className={`rounded-full px-3 py-1 text-[11px] font-black ${item.tone}`}>{item.label}</span>
+                <span className="text-2xl font-black text-slate-900">{countFor(item.to)}</span>
+              </div>
+              <p className="mt-4 text-sm leading-relaxed text-slate-500">{item.description}</p>
+              <span className="mt-5 block text-sm font-black text-slate-800 transition group-hover:text-amber-700">페이지 열기 →</span>
+            </button>
+          ))}
+        </div>
+      </main>
+    </div>
   )
 }
