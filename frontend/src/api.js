@@ -191,6 +191,7 @@ export const speakAPI = {
     }
     if (opts.stage != null) fd.append('stage', String(opts.stage))
     if (opts.drill) fd.append('drill', opts.drill)
+    if (opts.review) fd.append('review', '1')
     // FormData는 브라우저가 multipart 경계를 붙이도록 Content-Type을 비운다(인스턴스 기본 json 무효화).
     const res = await api.post('/speak/assess', fd, { headers: { 'Content-Type': undefined }, timeout: 60000 })
     return res.data
@@ -209,7 +210,7 @@ export const tactileAPI = {
   getPool: async (level) => (await api.get('/tactile/pool', { params: { level } })).data,
   getReview: async () => (await api.get('/tactile/review')).data,
   getAnalysis: async () => (await api.get('/tactile/analysis', { timeout: 30000 })).data,
-  submitResult: async (stage, correct, target = '') => (await api.post('/tactile/result', { stage, correct, target })).data,
+  submitResult: async (stage, correct, target = '', review = false) => (await api.post('/tactile/result', { stage, correct, target, review })).data,
 }
 
 export default api

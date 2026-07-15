@@ -18,7 +18,7 @@ const PILLAR_NAV = [
       { label: '문장 학습', description: '상황별 독화와 AI 대화 학습', icon: '💬', to: '/learn/scenario' },
       { label: '문맥 추론', description: '앞뒤 맥락으로 뜻 찾기', icon: '🧩', to: '/learn/closure' },
       { label: '내 문장 발음 보기', description: '원하는 문장의 입모양 확인하기', icon: '✍️', to: '/pronounce' },
-      { label: '독화 복습', description: '틀린 문장과 예정 항목 다시 풀기', icon: '🔁', to: '/review/mistakes' },
+      { label: '독화 복습', description: '틀렸던 문장 다시 풀기', icon: '🔁', to: '/review/mistakes' },
     ],
   },
   {

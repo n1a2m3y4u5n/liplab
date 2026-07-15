@@ -232,9 +232,13 @@ function ReviewSection() {
   const startReadReview = () => {
     if (data?.read.due > 0) { navigate('/review/scheduled'); return }
     const sents = wrongSentences.map((w) => w.sentence)
-    if (!sents.length) { navigate('/review/scheduled'); return }
-    setScenario({ situation: '복습', level: 1, sentences: sents, qTypes: buildQTypes(sents.length), scenario_id: `review_${Date.now()}` }, 'test')
-    navigate('/practice', { state: { review: true } })
+    if (sents.length) {
+      setScenario({ situation: '복습', level: 1, sentences: sents, qTypes: buildQTypes(sents.length), scenario_id: `review_${Date.now()}` }, 'test')
+      navigate('/practice', { state: { review: true } })
+      return
+    }
+    if (data?.read.bookmark > 0) { navigate('/review/saved'); return }   // 북마크만 있으면 저장한 문장으로
+    navigate('/review/scheduled')   // 전부 비어도 안전 랜딩(빈 상태 안내)
   }
 
   const pillars = data ? [
@@ -314,12 +318,8 @@ function LearnerProfileCard({ user, statistics, calendarData }) {
   const remainingXp = Math.max(0, xpNeededThisLevel - earnedThisLevel)
   const xpPercent = Math.min(100, Math.max(0, (earnedThisLevel / Math.max(1, xpNeededThisLevel)) * 100))
   const streak = Math.max(0, user?.streak_count || 0)
-  const today = new Date()
-  const todayKey = [
-    today.getFullYear(),
-    String(today.getMonth() + 1).padStart(2, '0'),
-    String(today.getDate()).padStart(2, '0'),
-  ].join('-')
+  // 활동 캘린더·백엔드가 UTC 날짜 키를 쓰므로 '오늘' 판정도 UTC로 통일(시간대 경계 불일치 방지)
+  const todayKey = new Date().toISOString().slice(0, 10)
   const todaySessions = Number(calendarData?.[todayKey] || 0)
   const displayName = user?.username || 'LIPLAB 학습자'
   const initial = displayName.trim().slice(0, 1).toUpperCase() || 'L'
@@ -336,7 +336,7 @@ function LearnerProfileCard({ user, statistics, calendarData }) {
       label: '독화 학습 1회',
       detail: todaySessions >= 1 ? '첫 학습을 완료했어요' : '짧게 시작해도 좋아요',
       completed: todaySessions >= 1,
-      to: '/learn/viseme',
+      to: '/learn/scenario',   // 완료 판정(문장 Progress)과 링크를 일치시킴
     },
     {
       id: 'challenge',

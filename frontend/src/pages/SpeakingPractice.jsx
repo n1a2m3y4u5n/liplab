@@ -60,6 +60,7 @@ export default function SpeakingPractice() {
   const [vol, setVol] = useState(0)
   const [pitch, setPitch] = useState(null)
   const [err, setErr] = useState(null)
+  const [retry, setRetry] = useState(0)   // 로드 실패 시 '다시 불러오기'로 effect 재실행
   const [summary, setSummary] = useState(null)
   const [assessing, setAssessing] = useState(false)
   const [assessment, setAssessment] = useState(null)
@@ -153,7 +154,7 @@ export default function SpeakingPractice() {
       teardown()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stageNo, reviewMode])
+  }, [stageNo, reviewMode, retry])
 
   const loadFrames = async (t) => {
     const requestId = ++framesRequestRef.current
@@ -239,7 +240,8 @@ export default function SpeakingPractice() {
         loudness: s.loudness ?? 0, pitch_range: s.pitchRange ?? 0, duration: s.duration ?? 0,
         pitch_start: s.pitchStart ?? 0, pitch_end: s.pitchEnd ?? 0,
       }
-      const opts = assessStage != null ? { stage: assessStage, drill } : {}
+      // 복습 세션이면 review=true → 백엔드가 채점/코칭만 하고 단계 숙달·해금은 건드리지 않음
+      const opts = assessStage != null ? { stage: assessStage, drill, review: reviewMode } : {}
       setAssessing(true)
       try {
         const res = await speakAPI.assess(target, blob, metrics, opts)
@@ -360,7 +362,17 @@ export default function SpeakingPractice() {
       />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        {reviewEmpty ? (
+        {err && !stageInfo && !reviewMode && stageNo != null && !target ? (
+          <div className="card text-center py-16">
+            <div className="text-4xl mb-3">😵</div>
+            <p className="text-lg font-bold text-gray-900 mb-1">단계를 불러오지 못했어요</p>
+            <p className="text-sm text-gray-500 mb-5">{err} 네트워크를 확인하고 다시 시도해 주세요.</p>
+            <div className="flex justify-center gap-2">
+              <button onClick={() => setRetry((n) => n + 1)} className="btn-primary px-6 py-2.5 text-sm">다시 불러오기</button>
+              <button onClick={() => { teardown(); navigate('/dashboard') }} className="px-6 py-2.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">대시보드로</button>
+            </div>
+          </div>
+        ) : reviewEmpty ? (
           <div className="card text-center py-16">
             <div className="text-4xl mb-3">🎉</div>
             <p className="text-lg font-bold text-gray-900 mb-1">복습할 발음이 없어요</p>
