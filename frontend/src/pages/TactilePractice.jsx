@@ -284,15 +284,18 @@ export default function TactilePractice() {
   const pickLevel = (i) => { setLevel(i); setQuiz(null); setQuizResult(null); setTyped('') }
   const playQuiz = async () => {
     if (!quiz || playing) return
-    const d = await tactileAPI.getSequence(quiz.answer)
-    await playSequence(d.sequence)
+    try {
+      const d = await tactileAPI.getSequence(quiz.answer)
+      await playSequence(d.sequence)
+    } catch { setStatus('음소 시퀀스를 불러오지 못했어요.') }
   }
   // 정답 처리 공통 — 객관식/주관식 모두 여기로
   const grade = (picked, ok) => {
     setQuizResult({ ok, picked })
     setScore((s) => ({ correct: s.correct + (ok ? 1 : 0), total: s.total + 1 }))
-    // 대시보드 촉각 진행도 + 복습(SRS/틀림)에 결과 반영 — target을 함께 보냄
-    tactileAPI.submitResult(level, ok, quiz?.answer || '').catch(() => {})
+    // 대시보드 촉각 진행도 + 복습(SRS/틀림)에 결과 반영 — target을 함께 보냄.
+    // 복습 세션이면 review=true → 백엔드가 단계 진행도/시도기록을 건드리지 않고 SRS만 갱신(0단계 오염 방지)
+    tactileAPI.submitResult(level, ok, quiz?.answer || '', reviewMode).catch(() => {})
   }
   const answerQuiz = (opt) => {
     if (!quiz || quizResult) return

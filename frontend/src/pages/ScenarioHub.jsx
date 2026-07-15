@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { curriculumAPI, learningAPI } from '../api'
 import useStore from '../store/useStore'
@@ -23,11 +23,13 @@ export default function ScenarioHub() {
   const [locks, setLocks] = useState({ practice: false, conversation: false })
   const [loadingMode, setLoadingMode] = useState(null)
 
+  const levelTouched = useRef(false)   // 유저가 난이도를 직접 고르면 추천값이 덮어쓰지 않게
+
   useEffect(() => {
     curriculumAPI.getRecommendedLevel()
       .then((result) => {
         setRecommended(result.recommended_level)
-        setLevel(result.recommended_level)
+        if (!levelTouched.current) setLevel(result.recommended_level)   // 수동 선택 전에만 적용
       })
       .catch(() => {})
     curriculumAPI.getStages()
@@ -100,7 +102,7 @@ export default function ScenarioHub() {
               </div>
               <div className="mt-3 grid grid-cols-5 gap-2">
                 {[1, 2, 3, 4, 5].map((item) => (
-                  <button key={item} type="button" onClick={() => setLevel(item)} aria-pressed={level === item}
+                  <button key={item} type="button" onClick={() => { levelTouched.current = true; setLevel(item) }} aria-pressed={level === item}
                     className={`rounded-xl border-2 py-3 text-sm font-bold transition-all ${level === item ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
                     {item}
                   </button>

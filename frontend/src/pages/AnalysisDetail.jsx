@@ -129,22 +129,26 @@ export default function AnalysisDetail({ mode = 'overview' }) {
   )
 
   const renderVisemes = () => {
-    const items = [...(analysis?.viseme_stats || [])].sort((a, b) => a.accuracy - b.accuracy)
-    if (!items.length) return <Empty>문장 테스트를 완료하면 입모양별 분석이 이곳에 표시됩니다.</Empty>
+    // 개요탭('지금 집중할 항목')과 동일 소스(weak_visemes 실제 오답률)로 통일 — 순위 불일치 방지
+    const items = [...(statistics?.weak_visemes || [])].sort((a, b) => (b.error_rate || 0) - (a.error_rate || 0))
+    if (!items.length) return <Empty>연습을 더 하면 입모양 유형별 취약도가 이곳에 표시됩니다.</Empty>
     return (
       <div className="space-y-3">
-        {items.map((item, index) => (
-          <article key={item.viseme_id} className="rounded-[20px] border border-slate-200 bg-white p-5">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <span className="text-[11px] font-black text-rose-600">집중 순위 {index + 1}</span>
-                <h2 className="mt-1 text-lg font-black">{item.name}</h2>
+        {items.map((item, index) => {
+          const acc = Math.max(0, Math.round(100 - (item.error_rate || 0)))
+          return (
+            <article key={item.viseme_id} className="rounded-[20px] border border-slate-200 bg-white p-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <span className="text-[11px] font-black text-rose-600">집중 순위 {index + 1}</span>
+                  <h2 className="mt-1 text-lg font-black">{item.feature}</h2>
+                </div>
+                <div className="text-right"><strong className="text-2xl font-black text-rose-600">오답률 {item.error_rate}%</strong><p className="text-xs text-slate-400">정확도 {acc}%</p></div>
               </div>
-              <div className="text-right"><strong className="text-2xl font-black text-slate-950">{item.accuracy}점</strong><p className="text-xs text-slate-400">{item.attempts}회 시도</p></div>
-            </div>
-            <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${item.accuracy >= 80 ? 'bg-emerald-500' : item.accuracy >= 60 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(item.accuracy, 100)}%` }} /></div>
-          </article>
-        ))}
+              <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-rose-500" style={{ width: `${Math.min(item.error_rate || 0, 100)}%` }} /></div>
+            </article>
+          )
+        })}
       </div>
     )
   }

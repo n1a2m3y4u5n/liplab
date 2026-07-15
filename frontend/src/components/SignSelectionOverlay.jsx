@@ -19,22 +19,41 @@ export default function SignSelectionOverlay() {
   const dismissIntro = () => setShowIntro(false)
 
   useEffect(() => {
-    function onMouseUp(e) {
+    // 선택된 한국어 텍스트를 감지해 '수어로 보기' 버튼을 띄운다.
+    // 데스크톱(mouseup)뿐 아니라 모바일 롱프레스 선택도 지원 — touchend + selectionchange(디바운스).
+    let debTimer = null
+    function detect() {
       if (modalText) return                   // 모달 열려있으면 무시
-      if (e.target?.closest?.('[data-sign-trigger]')) return  // 버튼 클릭은 제외
       const selection = window.getSelection()
       const text = selection ? selection.toString().trim() : ''
       if (text && text.length >= 2 && text.length <= 200 && hasKorean(text)) {
         try {
           const rect = selection.getRangeAt(0).getBoundingClientRect()
-          setHint({ text, x: rect.left + rect.width / 2, y: rect.top })
-          return
+          if (rect && (rect.width || rect.height)) {
+            setHint({ text, x: rect.left + rect.width / 2, y: Math.max(8, rect.top) })
+            return
+          }
         } catch { /* fallthrough */ }
       }
       setHint(null)
     }
-    document.addEventListener('mouseup', onMouseUp)
-    return () => document.removeEventListener('mouseup', onMouseUp)
+    function onPointerUp(e) {
+      if (e.target?.closest?.('[data-sign-trigger]')) return  // 버튼 자체 조작은 제외
+      detect()
+    }
+    function onSelectionChange() {   // 터치 롱프레스 선택 확정 시점 포착(디바운스)
+      clearTimeout(debTimer)
+      debTimer = setTimeout(detect, 250)
+    }
+    document.addEventListener('mouseup', onPointerUp)
+    document.addEventListener('touchend', onPointerUp)
+    document.addEventListener('selectionchange', onSelectionChange)
+    return () => {
+      clearTimeout(debTimer)
+      document.removeEventListener('mouseup', onPointerUp)
+      document.removeEventListener('touchend', onPointerUp)
+      document.removeEventListener('selectionchange', onSelectionChange)
+    }
   }, [modalText])
 
   const openModal = useCallback(() => {

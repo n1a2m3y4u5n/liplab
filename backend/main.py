@@ -163,6 +163,7 @@ class ProgressResponse(BaseModel):
     status: str
     score: float
     new_level: int
+    old_level: int = 1
     xp_gained: int
     streak_count: int = 0
     streak_multiplier: float = 1.0
@@ -300,6 +301,7 @@ async def submit_progress(
         streak_multiplier = min(1.0 + current_user.streak_count * 0.1, 3.0)
         xp_gained = int(base_xp * streak_multiplier) + time_bonus
 
+        old_level = current_user.current_level   # 상승 판정용(레벨업 배너는 실제 오를 때만)
         current_user.total_xp += xp_gained
 
         # Level up formula: level = floor(sqrt(total_xp / 100)) + 1
@@ -317,6 +319,7 @@ async def submit_progress(
             status="success",
             score=scoring_result["score"],
             new_level=current_user.current_level,
+            old_level=old_level,
             xp_gained=xp_gained,
             streak_count=current_user.streak_count,
             streak_multiplier=round(streak_multiplier, 2),
@@ -897,12 +900,13 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
 # ── 간격 반복 복습 (SRS) ──────────────────────────────────────────────────
 @app.get("/api/review/due")
 async def review_due(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """오늘까지 복습 예정인 항목(입모양/단어)."""
+    """오늘까지 복습 예정인 독화 항목(입모양/단어)만. 말하기·촉각 예정은 각 /api/speak|tactile/review가 별도 반환."""
     from database import ReviewItem
     from sqlalchemy import select
     today = _sr_date.today().isoformat()
     r = await db.execute(select(ReviewItem).where(
-        ReviewItem.user_id == current_user.id, ReviewItem.due_date <= today).order_by(ReviewItem.due_date))
+        ReviewItem.user_id == current_user.id, ReviewItem.due_date <= today,
+        ReviewItem.kind.in_(["viseme", "word"])).order_by(ReviewItem.due_date))
     items = r.scalars().all()
     out = []
     for it in items:
@@ -1132,6 +1136,7 @@ class TactileResult(BaseModel):
     stage: int
     correct: bool
     target: str = ""
+    review: bool = False   # 복습 세션이면 단계 진행도·시도기록을 건드리지 않고 SRS만 갱신
 
 
 @app.get("/api/tactile/pool")
@@ -1160,8 +1165,14 @@ async def tactile_result(data: TactileResult, current_user=Depends(get_current_u
     """촉각 퀴즈 1문항 결과 기록 → 단계 진행률 갱신 + 개별 시도 저장 + SRS 복습 큐 유지."""
     if data.stage < 0 or data.stage >= len(_TACTILE_STAGES):
         raise HTTPException(status_code=400, detail="invalid stage")
+    # 복습 세션: 단계 진행도·시도기록(분석)을 건드리지 않고 SRS만 재조정
+    if data.review:
+        if data.target:
+            await _sr_touch(current_user.id, "tactile", data.target, bool(data.correct), db)
+        await db.commit()
+        return {"review": True}
     tp = await _bump_tactile_progress(current_user.id, data.stage, bool(data.correct), db)
-    # 개별 시도 저장(복습·분석용) + SRS — 말하기와 동일 구조
+    # 개별 시도 저장(분석용) + SRS — 말하기와 동일 구조
     if data.target:
         from database import TactileAttempt
         db.add(TactileAttempt(user_id=current_user.id, stage=data.stage,
@@ -1277,6 +1288,7 @@ async def speak_assess(
     pitch_end: float = Form(0.0),
     stage: int = Form(None),
     drill: str = Form(None),
+    review: int = Form(0),
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -1327,8 +1339,12 @@ async def speak_assess(
     progress = None
     if stage is not None and stg is not None:
         score, passed, note = _speakcur.score_attempt(stage, target, transcript, metrics, drill, sim)
-        sp = await _bump_speak_progress(current_user.id, stage, bool(passed),
-                                        stg["min_attempts"], stg["mastery"], db)
+        # 복습 세션은 채점·코칭만 하고 단계 진행도(숙달/해금)는 건드리지 않는다
+        if review:
+            sp = None
+        else:
+            sp = await _bump_speak_progress(current_user.id, stage, bool(passed),
+                                            stg["min_attempts"], stg["mastery"], db)
     else:
         score = round(sim or 0.0, 1)
         sp = None

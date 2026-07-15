@@ -108,6 +108,7 @@ export default function SignPanel({ text }) {
                 autoPlay muted playsInline
                 loop={!playingAll}
                 onEnded={playingAll ? advance : undefined}
+                onError={() => { if (playingAll) advance() }}   // 로드 실패 시에도 전체재생이 멈추지 않게 다음으로
                 className="w-full h-auto max-h-[440px] bg-white"
               />
             ) : token.type === 'sign' ? (
@@ -160,9 +161,15 @@ export default function SignPanel({ text }) {
           {token.type === 'sign' && (
             <div className="mt-1.5">
               {token.signed_as && (
-                <p className="text-[11px] text-amber-600 mb-0.5">
-                  ‘{token.word}’은 사전에 없어 근접 수어 ‘{token.signed_as}’로 표시합니다.
-                </p>
+                /^\d+$/.test(String(token.word)) ? (
+                  <p className="text-[11px] text-slate-500 mb-0.5">
+                    숫자 ‘{token.word}’ → 수어 ‘{token.signed_as}’
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-amber-600 mb-0.5">
+                    ‘{token.word}’은 사전에 없어 근접 수어 ‘{token.signed_as}’로 표시합니다.
+                  </p>
+                )
               )}
               <div className="flex items-start justify-between gap-2">
                 <p className="text-xs text-gray-500 line-clamp-2 flex-1">{token.description}</p>

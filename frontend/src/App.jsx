@@ -83,10 +83,16 @@ const HardwareBuild = lazy(() => import('./pages/HardwareBuild'))
 function AuthGate({ children }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated)
   const setAuth = useStore((s) => s.setAuth)
+  const updateUser = useStore((s) => s.updateUser)
   const [status, setStatus] = useState(isAuthenticated ? 'ready' : 'loading')
 
   useEffect(() => {
-    if (isAuthenticated) { setStatus('ready'); return }
+    if (isAuthenticated) {
+      setStatus('ready')
+      // 재방문(캐시된 인증)에도 서버 최신값으로 user 동기화 — 스트릭 등 stale 방지
+      authAPI.getMe().then((u) => { if (u) updateUser(u) }).catch(() => {})
+      return
+    }
     let cancelled = false
     authAPI.demoLogin()
       .then(async (data) => {
