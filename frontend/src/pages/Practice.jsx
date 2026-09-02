@@ -7,6 +7,7 @@ import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
 import QuizForm from '../components/QuizForm'
 import SignPanel from '../components/SignPanel'
 import LearnHeader from '../components/LearnHeader'
+import CueBadges, { CueLegend } from '../components/CueBadges'
 
 /**
  * 힌트 시스템: 단계별로 문장 정보를 공개
@@ -432,6 +433,10 @@ export default function Practice() {
                       {result.streak_count > 1 && (
                         <span className="ml-2 text-orange-500">🔥 {result.streak_count}일 스트릭!</span>
                       )}
+                    </div>
+                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-2.5 overflow-x-auto">
+                      <CueBadges text={currentSentence} />
+                      <div className="mt-1.5"><CueLegend /></div>
                     </div>
                     <div className="flex gap-2">
                       <button onClick={handleRetry} className="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">

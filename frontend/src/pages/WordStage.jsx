@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import LearnHeader from '../components/LearnHeader'
+import CueBadges, { CueLegend } from '../components/CueBadges'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
@@ -54,6 +55,7 @@ export default function WordStage() {
 
 function WordQuiz({ data }) {
   const words = useMemo(() => data.words.map((w) => w.word), [data])
+  const tierOf = useMemo(() => Object.fromEntries(data.words.map((w) => [w.word, w.tier || 1])), [data])
   const bankSet = useMemo(() => new Set(words), [words])
   const [q, setQ] = useState(null)
   const [frames, setFrames] = useState([])
@@ -126,6 +128,13 @@ function WordQuiz({ data }) {
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-2">
                 <div className={`p-3 rounded-lg text-sm ${result.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                   {result.correct ? '정답! 🎉' : `오답 — 정답은 "${q.target}"`}
+                </div>
+                <div className="rounded-lg border border-gray-100 bg-gray-50 p-2.5">
+                  <div className="flex items-center gap-2">
+                    <CueBadges text={q.target} />
+                    <span className="text-[11px] text-gray-400">난이도 {tierOf[q.target] || 1}</span>
+                  </div>
+                  <div className="mt-1.5"><CueLegend /></div>
                 </div>
                 <button onClick={() => setSignOpen(true)}
                   className="w-full py-2 rounded-lg border border-primary-300 text-primary-600 text-sm font-medium hover:bg-primary-50 transition-colors">
