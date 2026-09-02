@@ -936,3 +936,15 @@ MediaPipe Face Landmarker가 브라우저에서 뽑는 얼굴 blendshape(ARKit �
 
 > **Phase 0 완료.** G(콘텐츠 대량화) · J(시각 증강) · D(웹캠 채점)로 데이터·인프라 의존이 낮은
 > 로컬 착수 축들을 모두 구현했다. 다음 단계는 Phase 1(B 전사 비의존 D-GOP · C 지각공간)이다.
+
+### Phase 0 통합 — 축 간 연결 (통합 학습 루프)
+각 축이 따로 돌지 않도록 서로 이어, '연습 → 기록 → 약점 파악 → 개인화·기호 소거'의 루프를 닫았다.
+- **D → 지식추적(G)**: 웹캠 채점 결과를 `POST /api/curriculum/mouth-attempt`로 WeakViseme에 누적.
+  '익힘 기록' 버튼으로 최고점을 남기면, 지식추적이 그 기록을 읽어 개인화·시각 증강 페이딩의 근거로 쓴다.
+- **J → 학습 화면**: 시각 증강 오버레이(CueBadges)를 단어 학습(`WordStage` 정답)·문장 연습
+  (`Practice` 정답)에 연동. 정답 공개 시 그 단어·문장의 '안 보이는 자질'이 기호로 드러난다.
+- **G tier → 프론트**: `WordStage` 정답에 난이도 tier 배지를 노출.
+
+**변경 파일(통합).** `backend/main.py`(mouth-attempt), `frontend/src/api.js`(recordMouth),
+`frontend/src/components/WebcamMouthCheck.jsx`(기록 버튼), `frontend/src/pages/WordStage.jsx`(J·G),
+`frontend/src/pages/Practice.jsx`(J). 백엔드 문법·프론트 빌드 검증 통과.
