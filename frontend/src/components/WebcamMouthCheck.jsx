@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { toBlendshapeMap, scorePercent, coachHint } from '../lib/mouthScore'
+import { curriculumAPI } from '../api'
 
 /**
  * 웹캠 입모양 실시간 채점 (고도화 축 D).
@@ -26,6 +27,11 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
   const [score, setScore] = useState(null)
   const [hint, setHint] = useState('')
   const [errMsg, setErrMsg] = useState('')
+  const [recorded, setRecorded] = useState(false)
+  const bestRef = useRef(0)
+
+  // 목표 viseme이 바뀌면 최고점·기록 상태 초기화
+  useEffect(() => { bestRef.current = 0; setRecorded(false) }, [visemeId])
 
   // 모델 로드(1회)
   useEffect(() => {
@@ -61,7 +67,9 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       const res = fl.detectForVideo(video, performance.now())
       const bs = toBlendshapeMap(res.faceBlendshapes?.[0])
       if (Object.keys(bs).length) {
-        setScore(scorePercent(bs, visemeId))
+        const s = scorePercent(bs, visemeId)
+        setScore(s)
+        if (s > bestRef.current) bestRef.current = s
         setHint(coachHint(bs, visemeId))
       } else {
         setScore(null)
@@ -82,6 +90,13 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
     setScore(null)
     setHint('')
   }, [])
+
+  const record = useCallback(async () => {
+    try {
+      await curriculumAPI.recordMouth(visemeId, bestRef.current)
+      setRecorded(true)
+    } catch { /* 기록 실패는 조용히 무시 */ }
+  }, [visemeId])
 
   const start = useCallback(async () => {
     if (!landmarkerRef.current) return
@@ -130,7 +145,13 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       )}
       <div className="mt-2 flex justify-center">
         {status === 'running' ? (
-          <button type="button" onClick={stop} className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm font-bold text-gray-700 hover:bg-gray-50">멈추기</button>
+          <div className="flex gap-2">
+            <button type="button" onClick={record} disabled={recorded}
+              className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
+              {recorded ? '기록됨 ✓' : '익힘 기록'}
+            </button>
+            <button type="button" onClick={stop} className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm font-bold text-gray-700 hover:bg-gray-50">멈추기</button>
+          </div>
         ) : (
           <button type="button" onClick={start} disabled={status === 'loading' || status === 'error'}
             className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-bold text-white hover:bg-slate-700 disabled:opacity-40">

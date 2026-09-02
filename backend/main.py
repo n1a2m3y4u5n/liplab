@@ -1087,6 +1087,43 @@ async def curriculum_next(current_user=Depends(get_current_user), db: AsyncSessi
     }
 
 
+class MouthAttempt(BaseModel):
+    viseme_id: int
+    score: float  # 0~100 (웹캠 입모양 코사인 채점)
+
+
+@app.post("/api/curriculum/mouth-attempt")
+async def curriculum_mouth_attempt(data: MouthAttempt, current_user=Depends(get_current_user),
+                                  db: AsyncSession = Depends(get_db)):
+    """웹캠 입모양 채점 결과를 학습 기록에 반영(축 D → 지식추적 연결).
+
+    점수가 임계 미만이면 해당 viseme의 오답으로 누적한다. 이 기록이 WeakViseme에 쌓여
+    지식추적(개인화)과 시각 증강 페이딩의 근거가 된다.
+    """
+    from database import WeakViseme
+    from sqlalchemy import select
+    from engine import get_viseme_feature
+    from datetime import datetime
+
+    passed = data.score >= 60
+    r = await db.execute(select(WeakViseme).where(
+        WeakViseme.user_id == current_user.id, WeakViseme.viseme_id == data.viseme_id))
+    wv = r.scalar_one_or_none()
+    if wv:
+        wv.total_attempts += 1
+        if not passed:
+            wv.error_count += 1
+            wv.last_error_at = datetime.utcnow()
+    else:
+        wv = WeakViseme(user_id=current_user.id, viseme_id=data.viseme_id,
+                        total_attempts=1, error_count=0 if passed else 1,
+                        last_error_at=datetime.utcnow(),
+                        phonological_feature=get_viseme_feature(data.viseme_id))
+        db.add(wv)
+    await db.commit()
+    return {"ok": True, "passed": passed, "viseme_id": data.viseme_id, "score": round(data.score, 1)}
+
+
 @app.get("/api/cues")
 async def get_cues(text: str, personalize: bool = True,
                   current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
