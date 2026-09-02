@@ -70,9 +70,9 @@ export function averageBlendshapes(frames) {
   return avg
 }
 
-/** 목표 viseme 대비 코사인 유사도(0~1). profiles로 개인 캘리브레이션을 넘길 수 있다. */
-export function cosineScore(blendshapeMap, visemeId, profiles = VISEME_PROFILES) {
-  const prof = profiles[visemeId] || VISEME_PROFILES[visemeId]
+/** 목표 viseme 대비 코사인 유사도(0~1). profiles로 개인 캘리브레이션을 넘길 수 있다(null 허용). */
+export function cosineScore(blendshapeMap, visemeId, profiles) {
+  const prof = (profiles && profiles[visemeId]) || VISEME_PROFILES[visemeId]
   if (!prof) return 0
   let dot = 0, na = 0, nb = 0
   for (const k of MOUTH_KEYS) {
@@ -86,14 +86,14 @@ export function cosineScore(blendshapeMap, visemeId, profiles = VISEME_PROFILES)
   return dot / (Math.sqrt(na) * Math.sqrt(nb))
 }
 
-/** 0~100 점수. profiles로 개인 캘리브레이션을 넘길 수 있다. */
-export function scorePercent(blendshapeMap, visemeId, profiles = VISEME_PROFILES) {
+/** 0~100 점수. profiles로 개인 캘리브레이션을 넘길 수 있다(null 허용). */
+export function scorePercent(blendshapeMap, visemeId, profiles) {
   return Math.round(cosineScore(blendshapeMap, visemeId, profiles) * 100)
 }
 
 /** 목표 대비 가장 부족/과한 차원을 한 줄 코칭으로. */
-export function coachHint(blendshapeMap, visemeId, profiles = VISEME_PROFILES) {
-  const prof = profiles[visemeId] || VISEME_PROFILES[visemeId]
+export function coachHint(blendshapeMap, visemeId, profiles) {
+  const prof = (profiles && profiles[visemeId]) || VISEME_PROFILES[visemeId]
   if (!prof) return ''
   const labels = {
     jawOpen: '입을 더 벌려', mouthClose: '입술을 더 붙여', mouthPucker: '입술을 더 오므려',
