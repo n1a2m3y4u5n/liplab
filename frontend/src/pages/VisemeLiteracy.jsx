@@ -1,10 +1,13 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI } from '../api'
 import LearnHeader from '../components/LearnHeader'
 import AvatarVRM from '../components/AvatarVRM'
 import CueBadges, { CueLegend } from '../components/CueBadges'
+
+// MediaPipe 번들이 커서 펼칠 때만 로드(초기 번들 보호)
+const WebcamMouthCheck = lazy(() => import('../components/WebcamMouthCheck'))
 
 /**
  * 1단계 · 입모양 인지 (Viseme Literacy)
@@ -102,6 +105,7 @@ export default function VisemeLiteracy() {
 function LearnPanel({ data }) {
   const { lessons, homophene_clusters, minimal_pairs } = data
   const [sel, setSel] = useState(lessons[0])
+  const [showCam, setShowCam] = useState(false)
   const badge = VIS_BADGE[sel.visibility] || VIS_BADGE.medium
 
   return (
@@ -148,6 +152,18 @@ function LearnPanel({ data }) {
           </div>
         </div>
       </div>
+
+      {/* 웹캠으로 따라하기 (축 D) — 펼칠 때만 MediaPipe 로드 */}
+      {showCam ? (
+        <Suspense fallback={<div className="card text-sm text-gray-500">카메라 모듈 불러오는 중…</div>}>
+          <WebcamMouthCheck visemeId={sel.viseme_id} visemeName={sel.name} />
+        </Suspense>
+      ) : (
+        <button type="button" onClick={() => setShowCam(true)}
+          className="w-full rounded-xl border-2 border-dashed border-gray-300 py-3 text-sm font-bold text-gray-600 transition hover:border-gray-400 hover:bg-gray-50">
+          📷 웹캠으로 내 입모양 확인하기
+        </button>
+      )}
 
       {/* 동구형이음 교육 */}
       <div className="card">
