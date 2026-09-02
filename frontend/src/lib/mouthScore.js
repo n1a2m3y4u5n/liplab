@@ -70,6 +70,26 @@ export function averageBlendshapes(frames) {
   return avg
 }
 
+/** 입 '활성도'(중립 대비 움직임 총량). 발음 정점을 찾는 데 쓴다. */
+function mouthActivity(f) {
+  let a = 0
+  for (const k of MOUTH_KEYS) a += Math.abs(f[k] || 0)
+  return a
+}
+
+/**
+ * 발음하는 동안 모은 프레임에서 '정점(peak)'을 뽑는다. 마지막 정지 모습이 아니라
+ * 입이 가장 크게 벌어진/닫힌 순간(활성도 상위 30%)을 평균내 노이즈를 줄인다.
+ * 발음은 움직임이라, 정점이 그 음소의 대표 입모양이다.
+ */
+export function pickPeakFrame(frames) {
+  if (!frames || !frames.length) return {}
+  const scored = frames.map((f) => ({ f, act: mouthActivity(f) }))
+  scored.sort((a, b) => b.act - a.act)
+  const topN = Math.max(1, Math.ceil(scored.length * 0.3))
+  return averageBlendshapes(scored.slice(0, topN).map((x) => x.f))
+}
+
 /** 목표 viseme 대비 코사인 유사도(0~1). profiles로 개인 캘리브레이션을 넘길 수 있다(null 허용). */
 export function cosineScore(blendshapeMap, visemeId, profiles) {
   const prof = (profiles && profiles[visemeId]) || VISEME_PROFILES[visemeId]
