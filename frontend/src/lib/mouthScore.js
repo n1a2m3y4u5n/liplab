@@ -42,9 +42,37 @@ export function toBlendshapeMap(categories) {
   return map
 }
 
-/** 목표 viseme 대비 코사인 유사도(0~1). 얼굴 미검출 등으로 값이 없으면 0. */
-export function cosineScore(blendshapeMap, visemeId) {
-  const prof = VISEME_PROFILES[visemeId]
+// ── 개인 캘리브레이션 ───────────────────────────────────────────────────────
+// 사람마다 얼굴이 달라 규칙 기준값과 오차가 있다. 사용자가 각 입모양을 직접 '본뜨면'
+// 그 실측 blendshape 평균을 개인 기준으로 저장한다. localStorage에만 두어 기기 밖으로
+// 나가지 않는다(프라이버시). 저장이 없으면 규칙 기준값(VISEME_PROFILES)으로 폴백한다.
+const CALIB_KEY = 'liplab_mouth_calibration_v1'
+
+export function loadCalibration() {
+  try { return JSON.parse(localStorage.getItem(CALIB_KEY)) || null } catch { return null }
+}
+export function saveCalibration(profiles) {
+  try { localStorage.setItem(CALIB_KEY, JSON.stringify(profiles)); return true } catch { return false }
+}
+export function clearCalibration() {
+  try { localStorage.removeItem(CALIB_KEY) } catch { /* noop */ }
+}
+
+/** 여러 프레임의 입 관련 blendshape를 평균내 한 viseme의 기준 프로파일로. */
+export function averageBlendshapes(frames) {
+  const n = frames.length
+  const avg = {}
+  for (const k of MOUTH_KEYS) {
+    let s = 0
+    for (const f of frames) s += f[k] || 0
+    avg[k] = n ? Number((s / n).toFixed(3) ) : 0
+  }
+  return avg
+}
+
+/** 목표 viseme 대비 코사인 유사도(0~1). profiles로 개인 캘리브레이션을 넘길 수 있다. */
+export function cosineScore(blendshapeMap, visemeId, profiles = VISEME_PROFILES) {
+  const prof = profiles[visemeId] || VISEME_PROFILES[visemeId]
   if (!prof) return 0
   let dot = 0, na = 0, nb = 0
   for (const k of MOUTH_KEYS) {
@@ -58,14 +86,14 @@ export function cosineScore(blendshapeMap, visemeId) {
   return dot / (Math.sqrt(na) * Math.sqrt(nb))
 }
 
-/** 0~100 점수. */
-export function scorePercent(blendshapeMap, visemeId) {
-  return Math.round(cosineScore(blendshapeMap, visemeId) * 100)
+/** 0~100 점수. profiles로 개인 캘리브레이션을 넘길 수 있다. */
+export function scorePercent(blendshapeMap, visemeId, profiles = VISEME_PROFILES) {
+  return Math.round(cosineScore(blendshapeMap, visemeId, profiles) * 100)
 }
 
 /** 목표 대비 가장 부족/과한 차원을 한 줄 코칭으로. */
-export function coachHint(blendshapeMap, visemeId) {
-  const prof = VISEME_PROFILES[visemeId]
+export function coachHint(blendshapeMap, visemeId, profiles = VISEME_PROFILES) {
+  const prof = profiles[visemeId] || VISEME_PROFILES[visemeId]
   if (!prof) return ''
   const labels = {
     jawOpen: '입을 더 벌려', mouthClose: '입술을 더 붙여', mouthPucker: '입술을 더 오므려',
