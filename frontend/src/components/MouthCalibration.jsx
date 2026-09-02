@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
-import { toBlendshapeMap, averageBlendshapes, saveCalibration } from '../lib/mouthScore'
+import { toBlendshapeMap, pickPeakFrame, saveCalibration } from '../lib/mouthScore'
 
 /**
  * 입모양 본뜨기(개인 캘리브레이션, 축 D 보정).
@@ -87,7 +87,8 @@ export default function MouthCalibration({ onDone, onCancel }) {
       setCollecting(false)
       const step = STEPS[stepIdx]
       if (frames.length >= 5) {
-        capturedRef.current[step.id] = averageBlendshapes(frames)
+        // 발음하는 동안의 궤적에서 정점(peak)을 대표 입모양으로 삼는다
+        capturedRef.current[step.id] = pickPeakFrame(frames)
       }
       if (stepIdx + 1 < STEPS.length) {
         setStepIdx(stepIdx + 1)

@@ -33,9 +33,10 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
   const [profiles, setProfiles] = useState(() => loadCalibration())
   const [showCalib, setShowCalib] = useState(false)
   const calibrated = !!profiles
+  const winRef = useRef([]) // 최근 점수 창(발음 정점 포착용)
 
-  // 목표 viseme이 바뀌면 최고점·기록 상태 초기화
-  useEffect(() => { bestRef.current = 0; setRecorded(false) }, [visemeId])
+  // 목표 viseme이 바뀌면 최고점·기록·점수창 초기화
+  useEffect(() => { bestRef.current = 0; winRef.current = []; setRecorded(false) }, [visemeId])
 
   // 모델 로드(1회)
   useEffect(() => {
@@ -71,7 +72,11 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       const res = fl.detectForVideo(video, performance.now())
       const bs = toBlendshapeMap(res.faceBlendshapes?.[0])
       if (Object.keys(bs).length) {
-        const s = scorePercent(bs, visemeId, profiles)
+        const inst = scorePercent(bs, visemeId, profiles)
+        const win = winRef.current
+        win.push(inst)
+        if (win.length > 25) win.shift() // 약 1초 창
+        const s = Math.max(...win) // 최근 창의 최고점(발음 정점을 잡아 안정적으로 표시)
         setScore(s)
         if (s > bestRef.current) bestRef.current = s
         setHint(coachHint(bs, visemeId, profiles))
@@ -142,9 +147,15 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       <div className="relative overflow-hidden rounded-lg bg-gray-900" style={{ aspectRatio: '4/3' }}>
         <video ref={videoRef} muted playsInline className="h-full w-full -scale-x-100 object-cover" />
         {status === 'running' && score !== null && (
-          <div className="absolute left-2 top-2 rounded-lg bg-black/55 px-2.5 py-1 backdrop-blur-sm">
-            <span className={`text-lg font-black ${scoreColor(score)}`}>{score}</span>
-            <span className="ml-1 text-xs text-white/80">점</span>
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-2 pt-8">
+            <div className="flex items-baseline gap-1">
+              <span className={`text-4xl font-black leading-none ${scoreColor(score)}`}>{score}</span>
+              <span className="text-sm text-white/70">점</span>
+            </div>
+            <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-white/25">
+              <div className={`h-full rounded-full transition-all duration-150 ${score >= 75 ? 'bg-emerald-400' : score >= 45 ? 'bg-amber-400' : 'bg-rose-400'}`}
+                style={{ width: `${score}%` }} />
+            </div>
           </div>
         )}
         {status !== 'running' && (
