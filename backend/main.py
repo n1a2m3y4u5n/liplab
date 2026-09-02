@@ -1087,6 +1087,30 @@ async def curriculum_next(current_user=Depends(get_current_user), db: AsyncSessi
     }
 
 
+@app.get("/api/cues")
+async def get_cues(text: str, personalize: bool = True,
+                  current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """시각 증강(축 J) — 문장에서 '안 드러나는 자질'(격음·경음·비음)에 기호를 얹을 지점을 반환.
+
+    동구형이음은 입모양이 같아 눈으로 못 가르므로, 그 순간의 조음 자질에 대응하는 최소
+    기호를 프론트가 SVG로 겹쳐 준다. 로그인 유저는 숙달도(지식추적)로 이미 익숙한 음소의
+    기호를 소거(페이딩)한다.
+    """
+    import cue_overlay as _cue
+    mastery = None
+    if personalize:
+        import knowledge_tracing as _kt
+        from database import WeakViseme
+        from sqlalchemy import select
+        r = await db.execute(select(WeakViseme).where(WeakViseme.user_id == current_user.id))
+        records = [{"viseme_id": w.viseme_id, "error_count": w.error_count,
+                    "total_attempts": w.total_attempts, "last_error_at": w.last_error_at}
+                   for w in r.scalars().all()]
+        mastery = _kt.estimate_mastery(records)
+    cues = _cue.generate_cues(text or "", mastery=mastery)
+    return {"text": text, "cues": cues, "legend": _cue.CUE_FEATURES}
+
+
 # ── 발화 커리큘럼(6단계) — 상태·게이팅·콘텐츠 ────────────────────────────────
 import speak_curriculum as _speakcur
 import tactile as _tactile

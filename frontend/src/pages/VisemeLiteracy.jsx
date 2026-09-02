@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI } from '../api'
 import LearnHeader from '../components/LearnHeader'
 import AvatarVRM from '../components/AvatarVRM'
+import CueBadges, { CueLegend } from '../components/CueBadges'
 
 /**
  * 1단계 · 입모양 인지 (Viseme Literacy)
@@ -137,12 +138,13 @@ function LearnPanel({ data }) {
           <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700"><b>입모양</b> — {sel.look}</div>
           <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg text-sm text-amber-800"><b>독화 포인트</b> — {sel.teach}</div>
           <div>
-            <p className="text-xs text-gray-400 mb-1">예시 단어</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="text-xs text-gray-400 mb-1">예시 단어 · 안 보이는 소리를 기호로</p>
+            <div className="flex flex-wrap items-end gap-2">
               {sel.example_words.map((w) => (
-                <span key={w} className="px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-sm font-medium text-gray-700">{w}</span>
+                <CueBadges key={w} text={w} />
               ))}
             </div>
+            <div className="mt-2"><CueLegend /></div>
           </div>
         </div>
       </div>

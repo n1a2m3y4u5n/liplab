@@ -166,6 +166,7 @@ export const curriculumAPI = {
   getClosure: async () => (await api.get('/curriculum/closure')).data,
   getRecommendedLevel: async () => (await api.get('/curriculum/recommended-level')).data,
   getNext: async () => (await api.get('/curriculum/next')).data,
+  getCues: async (text) => (await api.get('/cues', { params: { text } })).data,
 }
 
 export const scoreAPI = {
