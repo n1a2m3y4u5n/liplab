@@ -234,3 +234,60 @@ CLOSURE_ITEMS = [
     {"id": "c4", "display": "___를 마셔요", "answer": "차", "options": ["차", "자", "짜"], "hint": "마시는 것 중 하나."},
     {"id": "c5", "display": "___을 던져요", "answer": "공", "options": ["공", "곰", "콩"], "hint": "'던지다'와 어울리는 둥근 것?"},
 ]
+
+
+# ── 고도화 축 G: 승인된 생성 콘텐츠 병합 ─────────────────────────────────────
+# LLM 대량 생성 → 규칙 게이트 → 사람 검수를 거쳐 승인된 콘텐츠(approved.json)를
+# 위 큐레이션 상수에 얹는다. 파일이 없으면(초기 상태) 아무 것도 하지 않으므로
+# 기존 앱 동작이 그대로 유지된다(비파괴). 생성 파이프라인은 content_pipeline.py.
+import json as _json
+import os as _os
+
+_APPROVED_PATH = _os.path.join(_os.path.dirname(__file__), "data", "curriculum", "approved.json")
+
+
+def _merge_approved_content() -> Dict[str, int]:
+    """approved.json을 읽어 단어·쌍·문항을 중복 없이 병합. 추가 건수 반환."""
+    try:
+        with open(_APPROVED_PATH, encoding="utf-8") as f:
+            data = _json.load(f)
+    except (FileNotFoundError, _json.JSONDecodeError):
+        return {"words": 0, "pairs": 0, "closures": 0}
+
+    added = {"words": 0, "pairs": 0, "closures": 0}
+    seen_words = {w["word"] for w in WORD_BANK}
+    for w in data.get("words", []):
+        word = (w or {}).get("word")
+        if word and word not in seen_words:
+            WORD_BANK.append({"word": word, "tier": w.get("tier", 1)})
+            seen_words.add(word)
+            added["words"] += 1
+
+    seen_pairs = {frozenset((m["a"], m["b"])) for m in MINIMAL_PAIRS}
+    for p in data.get("pairs", []):
+        a, b = (p or {}).get("a"), (p or {}).get("b")
+        if a and b and frozenset((a, b)) not in seen_pairs:
+            MINIMAL_PAIRS.append(p)
+            seen_pairs.add(frozenset((a, b)))
+            added["pairs"] += 1
+
+    seen_cl = {c["id"] for c in CLOSURE_ITEMS}
+    for c in data.get("closures", []):
+        cid = (c or {}).get("id")
+        if cid and cid not in seen_cl and c.get("answer"):
+            CLOSURE_ITEMS.append(c)
+            seen_cl.add(cid)
+            added["closures"] += 1
+
+    return added
+
+
+CONTENT_MERGE_STATS = _merge_approved_content()
+
+# 파생 인덱스는 병합 뒤에 (재)계산해야 확장분이 반영된다.
+# (앞에서 계산한 _WORDS·_PAIR_PARTNER를 최종값으로 덮어쓴다.)
+_WORDS = {w["word"] for w in WORD_BANK}
+_PAIR_PARTNER = {}
+for _m in MINIMAL_PAIRS:
+    _PAIR_PARTNER.setdefault(_m["a"], set()).add(_m["b"])
+    _PAIR_PARTNER.setdefault(_m["b"], set()).add(_m["a"])
