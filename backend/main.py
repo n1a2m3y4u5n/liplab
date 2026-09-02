@@ -1052,6 +1052,41 @@ async def recommended_level(current_user=Depends(get_current_user), db: AsyncSes
     return {"recommended_level": lvl, "recent_avg": round(avg, 1), "sample": len(rows), "reason": reason}
 
 
+@app.get("/api/curriculum/next")
+async def curriculum_next(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """지식추적 개인화 — 취약 음소를 표적으로 다음에 연습할 콘텐츠를 추천한다.
+
+    WeakViseme 기록에서 viseme별 숙달도를 추정(BKT 경량판)해 가장 약한 음소를 표적으로
+    삼고, 대량화된 단어·최소대립쌍·문맥 문항 중 그 음소를 포함하고 난이도가 맞는 것을 앞세운다.
+    """
+    import knowledge_tracing as _kt
+    import content_rules as _crules
+    from database import WeakViseme
+    from sqlalchemy import select
+
+    r = await db.execute(select(WeakViseme).where(WeakViseme.user_id == current_user.id))
+    rows = r.scalars().all()
+    records = [{"viseme_id": w.viseme_id, "error_count": w.error_count,
+                "total_attempts": w.total_attempts, "last_error_at": w.last_error_at} for w in rows]
+    rec = _kt.recommend(records, k=2)
+    sel = _crules.select_personalized(
+        _curriculum.WORD_BANK, _curriculum.MINIMAL_PAIRS, _curriculum.CLOSURE_ITEMS,
+        rec["target_visemes"], rec["level"])
+
+    targets = []
+    for v in rec["target_visemes"]:
+        les = _curriculum.lesson_by_id(v)
+        if les:
+            targets.append({"viseme_id": v, "name": les["name"], "teach": les["teach"],
+                            "demo_syllable": _curriculum.DEMO_SYLLABLE.get(v),
+                            "mastery": rec["mastery"].get(v)})
+    return {
+        "mastery": rec["mastery"], "level": rec["level"], "coverage": rec["coverage"],
+        "target_visemes": rec["target_visemes"], "targets": targets,
+        "words": sel["words"], "minimal_pairs": sel["pairs"], "closures": sel["closures"],
+    }
+
+
 # ── 발화 커리큘럼(6단계) — 상태·게이팅·콘텐츠 ────────────────────────────────
 import speak_curriculum as _speakcur
 import tactile as _tactile
