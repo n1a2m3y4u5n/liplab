@@ -1,0 +1,8 @@
+# 콘텐츠 생성(scripts/gen_content.py) 전용 의존성.
+# 앱 런타임(FastAPI 백엔드)에는 불필요하므로 requirements.txt와 분리한다.
+# content_rules.py는 wordfreq를 optional import 하며, 없으면 빈도 게이트를 건너뛴다.
+#
+# 설치: pip install -r backend/requirements-gen.txt
+# 참고: 한국어 빈도는 get_frequency_dict('ko')로 토큰 사전을 직접 조회하므로
+#       MeCab(형태소 분석기) 없이 동작한다.
+wordfreq>=3.0.0

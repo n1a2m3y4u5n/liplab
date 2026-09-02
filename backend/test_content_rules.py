@@ -65,6 +65,18 @@ def test_closure_gate():
     _ok(not R.check_closure("___를 먹어요", "밥", ["밥", "우유"])[0], "혼동 안 되는 보기만이면 탈락")
 
 
+def test_frequency_tier():
+    if not R.HAS_FREQUENCY:
+        print("  (wordfreq 미설치 → 빈도 테스트 스킵)")
+        return
+    _ok(R.is_common_word("사과", 3.0) is True, "흔한 단어는 빈도 게이트 통과")
+    _ok(R.is_common_word("무름", 2.5) is False, "미등재 비단어는 컷")
+    _ok(R.tier_of("사과") == 1, "매우 흔한 단어는 tier 1")
+    _ok(R.tier_of("토기") >= 2, "저빈도 단어는 tier 상승")
+    ok, item, _ = R.check_word("사과")
+    _ok(ok and item["tier"] == 1, "check_word가 빈도 기반 tier를 매긴다")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
