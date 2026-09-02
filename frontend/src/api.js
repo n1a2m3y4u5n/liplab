@@ -165,6 +165,7 @@ export const curriculumAPI = {
   submitWord: async (word, correct) => (await api.post('/curriculum/word-answer', { word, correct })).data,
   getClosure: async () => (await api.get('/curriculum/closure')).data,
   getRecommendedLevel: async () => (await api.get('/curriculum/recommended-level')).data,
+  getNext: async () => (await api.get('/curriculum/next')).data,
 }
 
 export const scoreAPI = {

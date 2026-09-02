@@ -359,6 +359,36 @@ def discover_pairs(words: List[str]) -> List[Dict]:
     return pairs
 
 
+def select_personalized(words: List[Dict], pairs: List[Dict], closures: List[Dict],
+                        target_visemes: List[int], level: int = 5,
+                        n_words: int = 10, n_pairs: int = 8, n_closures: int = 5) -> Dict:
+    """
+    지식추적이 고른 표적 음소(target_visemes)와 난이도(level)에 맞춰 콘텐츠를 개인화 선별.
+    표적 viseme를 많이 포함하고 tier가 난이도 이하인 것을 앞세운다(정렬만, 필터 아님 →
+    콘텐츠가 적어도 항상 무언가는 돌려준다).
+    """
+    tv = set(target_visemes or [])
+
+    def w_key(w: Dict):
+        hits = len(set(word_visemes(w["word"])) & tv)
+        over = 1 if w.get("tier", 1) > level else 0  # 난이도 초과는 뒤로
+        return (-hits, over, w.get("tier", 1), w["word"])
+
+    def p_key(p: Dict):
+        hits = len(set(p.get("visemes", [])) & tv)
+        return (-hits, 0 if p.get("same_looking") else 1)  # 표적 많고 '헷갈리는' 쌍 우선
+
+    def c_key(c: Dict):
+        hits = len(set(word_visemes(c.get("answer", ""))) & tv)
+        return (-hits, c.get("id", ""))
+
+    return {
+        "words": sorted(words, key=w_key)[:n_words],
+        "pairs": sorted(pairs, key=p_key)[:n_pairs],
+        "closures": sorted(closures, key=c_key)[:n_closures],
+    }
+
+
 def check_closure(display: str, answer: str, options: List[str]
                   ) -> Tuple[bool, Optional[Dict], str]:
     """

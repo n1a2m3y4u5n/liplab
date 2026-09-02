@@ -827,3 +827,40 @@ LLM 판정만 한다 → **앱 런타임(배포)에는 영향이 없다.**
 
 **변경 파일(G.6).** `backend/content_rules.py`(빈도·tier), `backend/content_pipeline.py`(빈도 게이트·품사 필터),
 `backend/test_content_rules.py`(빈도·tier 테스트), `backend/requirements-gen.txt`(신규).
+
+### G.7 지식추적 개인화 · 사람 검수 도구 · 프론트 연동 (G 완주)
+계획서 §3.7 후반부("학습 기록으로 음소별 숙달을 추정하는 지식추적으로 다음 문항을 개인화")와
+'규칙 검사 + 사람 검수' 이중 게이트의 나머지 절반을 구현해 축 G를 완주했다.
+
+**① 지식추적(`backend/knowledge_tracing.py` 신규).** 기존 `WeakViseme`(viseme별 오답·시도)를
+토대로, 정통 BKT(Bayesian Knowledge Tracing)의 경량판으로 음소별 숙달도를 추정한다.
+- 숙달도 = 베타-이항 사후평균 `(성공+1)/(시도+2)` — 시도가 적으면 0.5 근처의 불확실 값으로 수렴.
+- 최근 오답 감쇠(반감기 7일) — 최근에 틀린 음소일수록 낮게 본다.
+- `weakest_visemes`로 표적 음소, `overall_level`로 난이도(1~5)를 정한다. 순수 함수(now 주입)라 결정론적.
+
+**② 개인화 선별(`content_rules.select_personalized`).** 표적 음소를 많이 포함하고 tier가 난이도
+이하인 단어·최소대립쌍·문맥 문항을 앞세운다(필터가 아니라 정렬 → 콘텐츠가 적어도 항상 응답).
+
+**③ API(`GET /api/curriculum/next`).** WeakViseme 로드 → 지식추적 → 개인화 콘텐츠 + 표적 음소
+레슨(이름·설명·대표음절·숙달도)을 반환. 기존 `recommended-level`(문장 난이도만)을 대체하지 않고 보완한다.
+
+**④ 사람 검수 도구(`scripts/review_content.py` 신규).** candidates를 훑어 승인분만 approved.json으로
+승격한다. 대화형(항목별 y/N/q)과 tier 기반 일괄 승인(`--accept-tier N`)을 지원한다. 이로써
+`--auto-approve`(개발용)와 별개로 계획서가 요구한 **사람 검수 경로**가 생겼다.
+
+**⑤ 프론트 연동.** `api.js`에 `curriculumAPI.getNext`, `Dashboard.jsx`에 `NextUpCard`(대시보드 최상단
+개인화 카드: 약점 음소 칩 + 숙달도 % + 추천 단어 + 연습 이동 버튼). 무채색 기반에 약점만 rose로
+강조하는 위계형 레이아웃.
+
+**검증.** 지식추적 테스트 4개 통과(숙달도 순서·최근성 감쇠·표적·미학습 유저). 개인화 selector가 표적
+음소(양순음·치경음) 포함 단어를 앞세움을 확인. 검수 CLI 실측: 후보 134단어 중 tier≤1인 40개만
+승인되고 로더가 병합(WORD_BANK 24→60). 백엔드 문법·라우트 정상. 회귀 테스트(규칙 6·엔진 11) 유지.
+프론트 빌드 검증은 로컬에서 수행(iCloud 경로는 node_modules eviction으로 빌드 불가).
+
+**변경 파일(G.7).** `backend/knowledge_tracing.py`(신규), `backend/test_knowledge_tracing.py`(신규),
+`backend/content_rules.py`(select_personalized), `backend/main.py`(`/api/curriculum/next`),
+`scripts/review_content.py`(신규), `frontend/src/api.js`, `frontend/src/pages/Dashboard.jsx`.
+
+> **G 완주 요약.** 대량화 엔진(생성·규칙 게이트·저장·로더) → 품질(빈도·품사·tier) →
+> 개인화(지식추적) → 사람 검수 도구 → 프론트 연동까지, 계획서 §3.7 G의 전 범위를 구현했다.
+> 실제 배포 콘텐츠는 검수를 거쳐 approved.json에 반영한다.
