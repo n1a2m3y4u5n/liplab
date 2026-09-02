@@ -899,3 +899,40 @@ LLM 판정만 한다 → **앱 런타임(배포)에는 영향이 없다.**
 **변경 파일(J).** `backend/cue_overlay.py`(신규), `backend/test_cue_overlay.py`(신규),
 `backend/main.py`(`/api/cues`), `frontend/src/api.js`, `frontend/src/components/CueBadges.jsx`(신규),
 `frontend/src/pages/VisemeLiteracy.jsx`.
+
+## D. 웹캠 입모양 실시간 채점 (Webcam Mouth Check)
+
+### D.0 배경/목표
+계획서 §3.4: 현행은 아바타로 올바른 입모양을 보여줄 뿐, 학습자가 실제로 맞게 만드는지는
+확인하지 못한다. 즉 '보고 따라 하고 교정하는' 학습 루프가 닫히지 않았다. 웹캠으로 학습자의
+입모양을 실시간 채점해 이 루프를 닫는다. **영상은 서버로 보내지 않고 기기 안에서만 처리**한다.
+
+### D.1 채점 로직(`frontend/src/lib/mouthScore.js` 신규, 순수 함수)
+MediaPipe Face Landmarker가 브라우저에서 뽑는 얼굴 blendshape(ARKit 계열 52계수) 중 입 관련
+차원만 골라, 목표 비심의 기준 프로파일과 **코사인 유사도**로 채점한다.
+- `VISEME_PROFILES`: viseme(1~10)별 목표 blendshape(조음 음성학 근거의 규칙값). 예: 양순(1)=
+  mouthClose↑·jawOpen↓, 개방모음(2)=jawOpen↑, 원순(4)=mouthPucker·mouthFunnel↑, 전설(3)=mouthStretch↑.
+- `scorePercent`(0~100)와 `coachHint`(가장 부족한 차원을 "입을 더 벌려" 식으로 안내).
+- **검증(node)**: 목표를 그대로 넣으면 자기 매칭 100, 교차는 낮음(viseme1↔2 = 6점 등). 코칭도
+  정확(입 다문 채 개방모음 → "입을 더 벌려", 입술 벌린 채 양순 → "입술을 더 붙여").
+
+### D.2 웹캠 컴포넌트(`frontend/src/components/WebcamMouthCheck.jsx` 신규)
+`@mediapipe/tasks-vision`의 FaceLandmarker(GPU delegate, VIDEO 모드, blendshape 출력)를 로드해
+`getUserMedia` 웹캠 프레임을 `requestAnimationFrame`으로 실시간 채점한다. 점수·코칭·프라이버시
+문구("영상은 기기 안에서만 처리·저장/전송 안 함")를 표시하고, 언마운트 시 스트림·모델을 정리한다.
+- **경량화**: MediaPipe 번들이 커서 `React.lazy` + '펼치기' 토글로 **펼칠 때만 로드**한다.
+  빌드에서 `WebcamMouthCheck` 청크(149KB gzip 46KB)가 초기 번들과 분리됨을 확인.
+- `VisemeLiteracy`(입모양 학습)의 아바타·설명 아래에 붙여 "아바타로 배우고 → 웹캠으로 따라하기"
+  흐름을 만든다. 목표 viseme은 현재 학습 중인 그룹으로 넘긴다.
+
+### D.3 검증·한계
+채점 로직 node 검증 통과, 프론트 빌드 통과(청크 분리 확인), `package.json`에 의존성 반영.
+**정직한 한계**: (1) 기준 프로파일은 규칙 근사값으로, 실제 정합은 웹캠 실측 보정을 전제한 초기값이다.
+(2) 계획서의 '자체 립리딩 모델'(단어 단위 인식)은 데이터·학습이 필요해 이번 범위 밖으로 두고
+웹캠 채점만 구현했다. (3) 실제 카메라 동작 확인은 dev 환경(카메라 권한)에서 수행한다.
+
+**변경 파일(D).** `frontend/src/lib/mouthScore.js`(신규), `frontend/src/components/WebcamMouthCheck.jsx`(신규),
+`frontend/src/pages/VisemeLiteracy.jsx`, `frontend/package.json`(@mediapipe/tasks-vision).
+
+> **Phase 0 완료.** G(콘텐츠 대량화) · J(시각 증강) · D(웹캠 채점)로 데이터·인프라 의존이 낮은
+> 로컬 착수 축들을 모두 구현했다. 다음 단계는 Phase 1(B 전사 비의존 D-GOP · C 지각공간)이다.
