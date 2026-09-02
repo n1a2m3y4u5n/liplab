@@ -15,11 +15,61 @@ LIPLAB 콘텐츠 규칙 검사 게이트 — LLM 대량 생성물의 '자동 1�
   · 최소대립쌍: 자모 한 자리만 다른 두 단어. 그 자리의 두 음소가 같은 입모양
     무리면 same_looking(구별 불가), 다르면 구별 가능.
 """
+import math
 from collections import defaultdict
 from itertools import combinations
 from typing import Dict, List, Optional, Tuple
 
 from engine import VISEME_MAP, decompose_hangul, to_pronounced_syllables
+
+# 단어 빈도 사전(wordfreq) — 콘텐츠 생성 시 희귀어·비단어를 결정론적으로 거르는 용도.
+# 형태소 분석(MeCab) 없이 토큰 빈도 사전만 직접 조회한다. 설치돼 있지 않으면
+# HAS_FREQUENCY=False로 두고 빈도 게이트를 건너뛴다(앱 런타임에는 불필요한 선택 의존).
+try:
+    from wordfreq import get_frequency_dict as _get_freq_dict
+
+    _KO_FREQ: Optional[dict] = None
+
+    def _ko_freq() -> dict:
+        global _KO_FREQ
+        if _KO_FREQ is None:
+            _KO_FREQ = _get_freq_dict("ko")
+        return _KO_FREQ
+
+    HAS_FREQUENCY = True
+except Exception:  # wordfreq 미설치 등
+    HAS_FREQUENCY = False
+
+    def _ko_freq() -> dict:
+        return {}
+
+
+def word_zipf(word: str) -> Optional[float]:
+    """단어의 Zipf 빈도(약 1~7, 클수록 흔함). 사전 없으면 None, 미등재면 0.0."""
+    if not HAS_FREQUENCY:
+        return None
+    f = _ko_freq().get(word, 0)
+    return round(math.log10(f * 1e9), 2) if f > 0 else 0.0
+
+
+def is_common_word(word: str, min_zipf: float = 2.5) -> Optional[bool]:
+    """단어가 빈도 사전상 일정 이상 흔한지. 사전이 없으면 None(판정 불가 → 통과 취급)."""
+    z = word_zipf(word)
+    return None if z is None else z >= min_zipf
+
+
+def tier_of(word: str) -> int:
+    """단어 빈도로 학습 난이도 tier를 매긴다(1 쉬움 ~ 3 어려움).
+    빈도 사전이 없으면 tier 1로 둔다. 어려운 단어가 섞여도 이 태깅으로 초급자에게
+    노출되지 않게 계층화된다(난이도 개인화의 토대)."""
+    z = word_zipf(word)
+    if z is None:
+        return 1
+    if z >= 4.5:
+        return 1
+    if z >= 3.5:
+        return 2
+    return 3
 
 # 입 안쪽에서 조음되어 서로 거의 구별되지 않는 viseme 무리(동구형이음).
 # curriculum.HOMOPHENE_CLUSTERS와 같은 근거지만, 순환 import를 피하려 여기 상수로 둔다.
@@ -161,9 +211,8 @@ def check_word(word: str, min_syllable: int = 1, max_syllable: int = 3) -> Tuple
     vis = word_visemes(word)
     if not vis:
         return False, None, "보이는 입모양이 없음(전부 무음/휴지)"
-    # tier는 생성 단계에서 최소대립 파트너 존재 여부로 확정하지만,
-    # 기본값은 1(시각적으로 뚜렷). 파트너가 붙으면 파이프라인이 2로 승격한다.
-    return True, {"word": word, "tier": 1}, "ok"
+    # tier는 단어 빈도로 자동 산정한다(1 쉬움 ~ 3 어려움). 빈도 사전이 없으면 1.
+    return True, {"word": word, "tier": tier_of(word)}, "ok"
 
 
 def check_lookalike_pair(a: str, b: str, claimed_same_looking: Optional[bool] = None

@@ -43,17 +43,27 @@ async def build_word_bank(target: int = 60, max_syllable: int = 3,
                 continue  # LLM/파싱 실패는 스킵(호출부 폴백 철학)
             for w in cands:
                 ok, item, _ = R.check_word(w, max_syllable=max_syllable)
-                if ok and item["word"] not in out:
-                    out[item["word"]] = item
+                if not ok or item["word"] in out:
+                    continue
+                # 생성 단어는 기초 어휘여야 하므로 빈도 게이트를 엄격히(zipf 3.0) 적용
+                if R.HAS_FREQUENCY and R.is_common_word(item["word"], 3.0) is False:
+                    continue
+                out[item["word"]] = item
     return list(out.values())[:target]
 
 
 async def _filter_real_batch(cands: List[str]) -> List[str]:
-    """후보 한 배치에서 실제 표준 한국어 단어만 남긴다(자모 치환 후보의 실재성 판정)."""
+    """후보 한 배치에서 실제 표준 한국어 '일반 명사'만 남긴다(자모 치환 후보의 실재성 판정)."""
     listing = ", ".join(cands)
     system = (
-        "너는 한국어 어휘 판정기다. 아래 후보 중 **실제로 존재하는 표준 한국어 단어**만 고른다.\n"
-        "- 일반 명사·기본 어휘 위주. 사전에 없는 조합, 비표준어, 고유명사, 비속어는 버린다.\n"
+        "너는 엄격한 한국어 어휘 판정기다. 아래 후보 중 **표준국어대사전에 등재된 일상적 '일반 명사'**만 고른다.\n"
+        "판정 기준(하나라도 걸리면 제외):\n"
+        "- 동사·형용사의 어간이나 활용형(예: '솟'=솟다, '쏜'=쏘다, '착'=착하다) → 제외\n"
+        "- 조사·어미·수사·관형사·부사·의존명사(예: '마다','둘','론','첫') → 제외\n"
+        "- 고유명사=지명·인명·상표(예: '서울','마도') → 제외\n"
+        "- 외래어·외국어(예: '룬','팜','롤') → 제외\n"
+        "- 방언·옛말·전문용어·줄임말·사전에 없는 조합 → 제외\n"
+        "- 남는 것: 초등학생도 뜻을 아는 구체적인 사물·대상 명사. 애매하면 버린다.\n"
         "- 후보에 있는 글자 그대로만 채택하고 변형하지 않는다. 하나도 없으면 빈 배열.\n"
         f"후보: {listing}\n"
         '반드시 JSON만 출력: {"items": ["실제단어", ...]}'
@@ -74,9 +84,16 @@ async def _filter_real_batch(cands: List[str]) -> List[str]:
         return []
 
 
-async def filter_real_words(cands: List[str], batch: int = 40, concurrency: int = 6) -> List[str]:
-    """자모 치환 후보들을 배치·병렬로 LLM에 물어 실재 단어만 반환한다."""
+async def filter_real_words(cands: List[str], batch: int = 40, concurrency: int = 6,
+                            min_zipf: float = 2.5) -> List[str]:
+    """자모 치환 후보를 실재 단어로 좁힌다.
+
+    2단계 게이트. (1) 빈도 사전으로 명백한 비단어(미등재·희귀)를 결정론적으로 컷하고,
+    (2) 남은 것만 LLM에 배치·병렬로 물어 일반 명사 여부를 정밀 판정한다. 빈도 사전이
+    없으면(HAS_FREQUENCY=False) 1단계를 건너뛰고 LLM 판정만 한다."""
     cands = [c for c in dict.fromkeys(cands) if c]
+    if R.HAS_FREQUENCY:
+        cands = [c for c in cands if R.is_common_word(c, min_zipf)]
     batches = [cands[i:i + batch] for i in range(0, len(cands), batch)]
     sem = asyncio.Semaphore(concurrency)
 
@@ -171,12 +188,11 @@ async def generate_all(word_target: int = 60, closure_max: int = 30,
     pool = list(dict.fromkeys(seeds + partners))
     pairs = R.discover_pairs(pool)
 
-    # 저장할 단어 목록: 생성 단어 + 신규 파트너(seed에 없던 것). 파트너는 대립상대가
-    # 있으므로 tier 2(시각적으로 헷갈리는 단어)로 표시한다.
+    # 저장할 단어 목록: 생성 단어 + 신규 파트너(seed에 없던 것). tier는 빈도로 자동 산정.
     known = {w["word"] for w in words}
     for p in partners:
         if p not in known and p not in (seed_words or []):
-            words.append({"word": p, "tier": 2})
+            words.append({"word": p, "tier": R.tier_of(p)})
             known.add(p)
 
     closures = await build_closures(pairs, max_items=closure_max)
