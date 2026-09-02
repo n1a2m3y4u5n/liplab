@@ -85,3 +85,6 @@ Thumbs.db
 *.log
 .idea/
 .vscode/
+
+# === 축 G 생성 콘텐츠 후보(검수 전) — 승인본 approved.json만 별도 관리 ===
+backend/data/curriculum/candidates_*.json
