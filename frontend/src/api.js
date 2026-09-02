@@ -167,6 +167,7 @@ export const curriculumAPI = {
   getRecommendedLevel: async () => (await api.get('/curriculum/recommended-level')).data,
   getNext: async () => (await api.get('/curriculum/next')).data,
   getCues: async (text) => (await api.get('/cues', { params: { text } })).data,
+  recordMouth: async (viseme_id, score) => (await api.post('/curriculum/mouth-attempt', { viseme_id, score })).data,
 }
 
 export const scoreAPI = {
