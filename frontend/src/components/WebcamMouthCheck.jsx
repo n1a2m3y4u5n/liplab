@@ -1,7 +1,8 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
-import { toBlendshapeMap, scorePercent, coachHint } from '../lib/mouthScore'
+import { toBlendshapeMap, scorePercent, coachHint, loadCalibration } from '../lib/mouthScore'
 import { curriculumAPI } from '../api'
+import MouthCalibration from './MouthCalibration'
 
 /**
  * 웹캠 입모양 실시간 채점 (고도화 축 D).
@@ -29,6 +30,9 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
   const [errMsg, setErrMsg] = useState('')
   const [recorded, setRecorded] = useState(false)
   const bestRef = useRef(0)
+  const [profiles, setProfiles] = useState(() => loadCalibration())
+  const [showCalib, setShowCalib] = useState(false)
+  const calibrated = !!profiles
 
   // 목표 viseme이 바뀌면 최고점·기록 상태 초기화
   useEffect(() => { bestRef.current = 0; setRecorded(false) }, [visemeId])
@@ -67,17 +71,17 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       const res = fl.detectForVideo(video, performance.now())
       const bs = toBlendshapeMap(res.faceBlendshapes?.[0])
       if (Object.keys(bs).length) {
-        const s = scorePercent(bs, visemeId)
+        const s = scorePercent(bs, visemeId, profiles)
         setScore(s)
         if (s > bestRef.current) bestRef.current = s
-        setHint(coachHint(bs, visemeId))
+        setHint(coachHint(bs, visemeId, profiles))
       } else {
         setScore(null)
         setHint('얼굴이 화면에 잘 보이게 해주세요')
       }
     } catch { /* 프레임 스킵 */ }
     rafRef.current = requestAnimationFrame(loop)
-  }, [visemeId])
+  }, [visemeId, profiles])
 
   const stop = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
@@ -120,6 +124,15 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
     landmarkerRef.current?.close?.()
   }, [])
 
+  if (showCalib) {
+    return (
+      <MouthCalibration
+        onDone={() => { setProfiles(loadCalibration()); setShowCalib(false) }}
+        onCancel={() => setShowCalib(false)}
+      />
+    )
+  }
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-3">
       <div className="mb-2 flex items-center justify-between">
@@ -143,7 +156,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       {status === 'running' && hint && (
         <p className="mt-2 text-center text-sm font-medium text-gray-700">{hint}</p>
       )}
-      <div className="mt-2 flex justify-center">
+      <div className="mt-2 flex flex-col items-center gap-1.5">
         {status === 'running' ? (
           <div className="flex gap-2">
             <button type="button" onClick={record} disabled={recorded}
@@ -158,6 +171,10 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
             카메라 켜기
           </button>
         )}
+        <button type="button" onClick={() => setShowCalib(true)}
+          className="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-800">
+          {calibrated ? '✓ 내 얼굴 맞춤 적용됨 · 다시 본뜨기' : '정확도 높이기 — 내 입모양 본뜨기'}
+        </button>
       </div>
     </div>
   )

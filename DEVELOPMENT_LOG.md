@@ -948,3 +948,19 @@ MediaPipe Face Landmarker가 브라우저에서 뽑는 얼굴 blendshape(ARKit �
 **변경 파일(통합).** `backend/main.py`(mouth-attempt), `frontend/src/api.js`(recordMouth),
 `frontend/src/components/WebcamMouthCheck.jsx`(기록 버튼), `frontend/src/pages/WordStage.jsx`(J·G),
 `frontend/src/pages/Practice.jsx`(J). 백엔드 문법·프론트 빌드 검증 통과.
+
+### D.4 개인 캘리브레이션(기준 프로파일 실측 보정) · 립리딩 데이터 조사
+**개인 캘리브레이션.** 규칙 근사값의 오차를 줄이려 '본뜨기'를 추가했다. 사용자가 각 viseme(대표
+음절 마·아·이·우…)를 직접 지으면 그 순간 blendshape를 1.5초 모아 평균내 **개인 기준 프로파일**로
+localStorage에 저장하고, 이후 채점은 개인 실측값을 쓴다(없으면 규칙값 폴백). 영상·계수는 기기 밖으로
+나가지 않는다. `MouthCalibration.jsx`(신규, 10단계 본뜨기 UI), `mouthScore.js`(profiles 파라미터·
+`averageBlendshapes`·localStorage 저장/로드), `WebcamMouthCheck.jsx`(본뜨기 진입·개인 프로파일 채점). 빌드 통과.
+
+**자체 립리딩 모델 — 데이터 조사.** 데이터·GPU가 필요한 립리딩 모델은 이번엔 착수 대신 사전 조사만
+수행해 `docs/lipreading-data-research.md`에 정리했다. 요지: **OLKAVS(= AI Hub 「립리딩 음성인식 데이터」,
+문장 단위·무료·영상 수 TB)가 유일한 대규모 한국어 코퍼스**이고, word-level 코퍼스는 없어 목표를
+**closed-set 단어 분류로 축소**하는 것이 현실적이다. 사전학습은 한국어로 학습된 OLKAVS V-model을
+초기가중치로 우선, AV-HuBERT는 비상업 라이선스·진입장벽으로 후순위. 이 축은 Phase 2 백본(A)과 함께 추진한다.
+
+**변경 파일(D.4).** `frontend/src/lib/mouthScore.js`, `frontend/src/components/MouthCalibration.jsx`(신규),
+`frontend/src/components/WebcamMouthCheck.jsx`, `docs/lipreading-data-research.md`(신규).
