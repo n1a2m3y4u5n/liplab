@@ -57,9 +57,16 @@ def get_phoneme_similarity(p1: str, p2: str) -> float:
         return 1.0
 
     # Check both directions in similarity matrix
-    similarity = PHONEME_SIMILARITY.get((p1, p2), PHONEME_SIMILARITY.get((p2, p1), 0.0))
+    similarity = PHONEME_SIMILARITY.get((p1, p2), PHONEME_SIMILARITY.get((p2, p1)))
+    if similarity is not None:
+        return similarity
 
-    return similarity
+    # 폴백 — 표에 없는 쌍도 '입모양(viseme)'이 같으면 시각적으로 혼동되므로 부분점수를 준다.
+    # 손으로 정한 표의 공백을 비심 규칙으로 메워, 채점 근거를 시각 지각과 일관되게 한다.
+    v1, v2 = VISEME_MAP.get(p1), VISEME_MAP.get(p2)
+    if v1 is not None and v1 == v2:
+        return 0.5
+    return 0.0
 
 
 def calculate_jamo_score(correct: List[Tuple], user: List[Tuple]) -> Dict:
