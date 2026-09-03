@@ -39,6 +39,39 @@ def test_jamo_length_diff():
     _ok(0.0 <= r["score"] <= 100.0, "음절 수가 달라도 DP 정렬로 채점(범위 내)")
 
 
+def test_phoneme_accuracy_alignment():
+    # 첫 음절 누락(삽입/삭제) 시 이후 음절이 밀려도 정렬로 올바르게 채점돼야 함.
+    # (버그: 위치기반 zip이면 전 음절이 어긋나 phoneme_accuracy가 전부 0%가 됨)
+    r = S.calculate_jamo_score(S.to_pronounced_jamos("안녕하세요"),
+                               S.to_pronounced_jamos("녕하세요"))
+    _ok(r["score"] == 80.0, "5음절 중 1음절 누락 = 80점")
+    pa = r["phoneme_accuracy"]
+    _ok(pa["initial"] > 50, "나머지 4음절 초성은 맞았으므로 초성 정확도가 0이 아님")
+    _ok(pa["medial"] > 50, "중성 정확도도 0이 아님")
+
+
+def test_pronounced_scoring():
+    # 아바타가 '구지'로 보여주는 '굳이' — 읽은 대로 '구지'라 적어도 100점(발음형 정규화).
+    both = S.calculate_jamo_score(S.to_pronounced_jamos("굳이"),
+                                  S.to_pronounced_jamos("구지"))["score"]
+    _ok(both == 100.0, "굳이(정답)와 구지(입력)는 발음이 같으므로 100점")
+    same = S.calculate_jamo_score(S.to_pronounced_jamos("같이"),
+                                  S.to_pronounced_jamos("가치"))["score"]
+    _ok(same == 100.0, "같이/가치도 동일 발음 → 100점")
+
+
+def test_error_visemes_alignment():
+    # 정답을 발음대로 맞히면 오류 비심이 없어야 하고, 무음 초성 ㅇ이 가짜 오류를 만들지 않아야 함.
+    r = S.calculate_jamo_score(S.to_pronounced_jamos("굳이"), S.to_pronounced_jamos("구지"))
+    ev = S.error_visemes_from_alignment(r["alignment"])
+    _ok(ev == [], "발음이 일치하면 오류 비심 없음(허위 오류 0)")
+    # 결정론적 순서
+    r2 = S.calculate_jamo_score(_syl("밥"), _syl("국"))
+    a = S.error_visemes_from_alignment(r2["alignment"])
+    b = S.error_visemes_from_alignment(r2["alignment"])
+    _ok(a == b, "오류 비심 순서는 호출마다 동일(결정론)")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
