@@ -389,6 +389,23 @@ def select_personalized(words: List[Dict], pairs: List[Dict], closures: List[Dic
     }
 
 
+def _visually_confusable(answer: str, other: str) -> bool:
+    """두 단어가 '눈으로 구별되지 않을' 만큼 시각적으로 혼동되는가.
+
+    같은 입모양 순열(동구형이음)이거나, 한 음소만 다른 최소대립쌍이되 그 차이 나는 두 음소가
+    같은 입모양이거나 둘 다 '입 안쪽 무리{6,7,8,10}'라 눈으로 못 가르는 경우만 True.
+    (밥/발처럼 차이 음소가 양순1↔치경6로 눈에 뻔히 보이면 False — 문맥 문항 오답으로 부적합.)
+    """
+    if looks_identical(answer, other):
+        return True
+    mp = minimal_pair_diff(answer, other)
+    if mp is None:
+        return False
+    _, _, vis = mp                      # (음소1, 음소2, [viseme1, viseme2])
+    v1, v2 = vis[0], vis[1]
+    return v1 == v2 or (v1 in _INSIDE_CLUSTER and v2 in _INSIDE_CLUSTER)
+
+
 def check_closure(display: str, answer: str, options: List[str]
                   ) -> Tuple[bool, Optional[Dict], str]:
     """
@@ -403,18 +420,15 @@ def check_closure(display: str, answer: str, options: List[str]
         return False, None, "정답이 한글 단어가 아님"
     if answer not in options:
         return False, None, "정답이 보기 목록에 없음"
-    if len(options) < 2:
-        return False, None, "보기가 2개 미만"
+    if len(options) < 3:
+        return False, None, "보기가 3개 미만(2지선다는 추측 확률 50%로 문맥 훈련이 약함)"
     distractors = [o for o in options if o != answer and is_hangul_word(o)]
     if not distractors:
         return False, None, "유효한 오답 보기가 없음"
-    # 오답 중 최소 하나는 정답과 시각적으로 혼동되어야 한다
-    #   (동구형이음이거나 최소대립쌍)
-    confusable = [
-        o for o in distractors
-        if looks_identical(answer, o) or minimal_pair_diff(answer, o) is not None
-    ]
-    if not confusable:
-        return False, None, "정답과 시각적으로 혼동되는 오답이 없음(문맥 문항으로 부적합)"
+    # 오답 중 최소 둘은 정답과 '눈으로 구별 안 되게' 혼동되어야 한다. 하나만 헷갈리면
+    # 나머지를 소거해 사실상 2지선다가 되므로 2개 이상을 요구한다.
+    confusable = [o for o in distractors if _visually_confusable(answer, o)]
+    if len(confusable) < 2:
+        return False, None, "정답과 시각적으로 혼동되는 오답이 2개 미만(문맥 문항으로 약함)"
     item = {"display": display.strip(), "answer": answer, "options": options}
     return True, item, "ok"
