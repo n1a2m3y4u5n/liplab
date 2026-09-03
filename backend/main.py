@@ -1148,6 +1148,27 @@ async def get_cues(text: str, personalize: bool = True,
     return {"text": text, "cues": cues, "legend": _cue.CUE_FEATURES}
 
 
+class PlacementScoreReq(BaseModel):
+    items: list
+    responses: dict
+
+
+@app.get("/api/assessment/placement")
+async def assessment_placement(n: int = 8, current_user=Depends(get_current_user)):
+    """디지털 독화 배치검사 문항(축 I) — 지각 난이도로 통제한 입모양 단어 4지선다.
+    오답 보기는 정답과 시각적으로 혼동되는(동구형이음·최소대립) 단어를 우선 배치한다."""
+    import assessment as _asmt
+    items = _asmt.build_placement_items([w["word"] for w in _curriculum.WORD_BANK], n=n)
+    return {"items": items}
+
+
+@app.post("/api/assessment/score")
+async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_current_user)):
+    """배치검사 채점 → 추정 수준·음소별 오류 프로파일·시작 단계 추천."""
+    import assessment as _asmt
+    return _asmt.score_placement(data.items, data.responses)
+
+
 # ── 발화 커리큘럼(6단계) — 상태·게이팅·콘텐츠 ────────────────────────────────
 import speak_curriculum as _speakcur
 import tactile as _tactile
