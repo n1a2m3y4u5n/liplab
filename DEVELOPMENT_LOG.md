@@ -1043,3 +1043,12 @@ AI Hub 립리딩 샘플(OLKAVS)의 라벨 JSON(문장별 타임스탬프 + 프�
 **정직한 한계**: 미세 신호는 조명·개인차에 민감하므로 판정이 아니라 보조 단서로만 쓴다(계획서 명시).
 J 기호 뒷받침·B 융합 입력 후보(음향·영상 백본과 함께 Phase 2에서 정교화).
 **변경 파일(K).** `frontend/src/lib/faceCues.js`(신규), `frontend/src/components/WebcamMouthCheck.jsx`.
+
+## H. 다자 대화 시나리오 독화 (Multi-speaker)
+계획서 §3.8. 실제 대화는 화자가 여럿·순서가 가변이라 '지금 누가 말하는지'부터 가려야 한다.
+현행은 한 화자 한 문장뿐. 여러 화자가 번갈아 말하는 짧은 대화를 생성해 화자 식별 + 입모양 읽기를 함께 훈련한다.
+- `conversation_scenario.py`(신규): Claude로 2~3인 일상 대화 생성(장면·화자·발화 시퀀스). 콘텐츠 대량화(G) 재사용.
+- API `GET /api/conversation/multi`. 프론트 `MultiConversation.jsx`(화자별 색·이름, 발화 순서대로
+  MouthAvatar 입모양 재생 + CueBadges 자질기호, 현재 화자 강조) + `/learn/conversation-multi` 라우트(lazy).
+검증: 백엔드 2화자 6턴 자연 대화 생성, 프론트 화면(병원 대기실·화자 A 강조·입모양 재생) 정상, 빌드 통과.
+**변경 파일(H).** `backend/conversation_scenario.py`(신규)·`main.py`, `frontend/src/api.js`·`pages/MultiConversation.jsx`(신규)·`App.jsx`.

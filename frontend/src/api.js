@@ -168,6 +168,7 @@ export const curriculumAPI = {
   getNext: async () => (await api.get('/curriculum/next')).data,
   getCues: async (text) => (await api.get('/cues', { params: { text } })).data,
   recordMouth: async (viseme_id, score) => (await api.post('/curriculum/mouth-attempt', { viseme_id, score })).data,
+  getMultiConversation: async (speakers = 2, turns = 6) => (await api.get('/conversation/multi', { params: { speakers, turns } })).data,
 }
 
 export const scoreAPI = {
