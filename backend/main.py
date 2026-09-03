@@ -213,6 +213,72 @@ async def get_scenario(
         raise HTTPException(status_code=500, detail=f"Scenario generation failed: {str(e)}")
 
 
+# ── 공용 학습 보상 — 모든 활동(문장·인지·단어·문맥·복습·대화)이 XP·스트릭·취약 입모양을
+#    동일하게 갱신하도록 한 곳에 모은다. 예전엔 문장 연습만 XP/스트릭을 줘서, 인지·단어·복습만
+#    한 날은 스트릭이 끊기고 다른 활동이 개인화(WeakViseme) 데이터에 전혀 기여하지 못했다.
+def _award_xp_and_streak(user, base_xp: int, bonus: int = 0) -> dict:
+    """스트릭(하루 1회 갱신·idempotent) + XP + 레벨업을 계산해 user에 반영. 커밋은 호출부.
+    base_xp는 활동별 기본 XP(스트릭 배수 적용 전), bonus는 배수 미적용 가산점(예: 시간 보너스)."""
+    from datetime import date, timedelta
+    today_str = date.today().isoformat()
+    yesterday_str = (date.today() - timedelta(days=1)).isoformat()
+    last_date = user.last_practice_date
+    if last_date is None or last_date < yesterday_str:
+        user.streak_count = 1            # 첫 학습 또는 스트릭 끊김
+    elif last_date == yesterday_str:
+        user.streak_count += 1           # 연속 학습
+    # last_date == today_str: 오늘 이미 학습함 → streak 유지
+    user.last_practice_date = today_str
+
+    streak_multiplier = min(1.0 + user.streak_count * 0.1, 3.0)
+    xp_gained = int(base_xp * streak_multiplier) + bonus
+    old_level = user.current_level
+    user.total_xp += xp_gained
+    new_level = int((user.total_xp / 100) ** 0.5) + 1        # level = floor(sqrt(xp/100))+1
+    user.current_level = max(user.current_level, new_level)
+    return {
+        "xp_gained": xp_gained,
+        "streak_count": user.streak_count,
+        "streak_multiplier": round(streak_multiplier, 2),
+        "old_level": old_level,
+        "new_level": user.current_level,
+    }
+
+
+async def _bump_weak_visemes(user_id: int, viseme_ids, error_ids, features: dict, db, when=None):
+    """주어진 viseme들의 시도/오류를 WeakViseme에 누적(1~10 유명 그룹만). 커밋은 호출부.
+    문장·단어·문맥 어떤 활동이든 취약 입모양 통계에 기여하게 하는 공용 경로."""
+    from database import WeakViseme
+    from sqlalchemy import select
+    from datetime import datetime as _dt2
+    when = when or _dt2.utcnow()
+    error_ids = set(error_ids or [])
+    for vid in viseme_ids:
+        if not (1 <= vid <= 10):
+            continue
+        r = await db.execute(select(WeakViseme).where(
+            WeakViseme.user_id == user_id, WeakViseme.viseme_id == vid))
+        wv = r.scalar_one_or_none()
+        if wv is None:
+            wv = WeakViseme(user_id=user_id, viseme_id=vid, error_count=0,
+                            total_attempts=0,
+                            phonological_feature=(features or {}).get(str(vid), "unknown"))
+            db.add(wv)
+        wv.total_attempts += 1
+        if vid in error_ids:
+            wv.error_count += 1
+            wv.last_error_at = when
+
+
+async def _weak_visemes_for_text(text: str):
+    """텍스트의 유명 viseme id 목록과 특징맵 — 단어/문맥 활동의 취약 입모양 반영용."""
+    from engine import get_viseme_feature
+    frames = await text_to_visemes(text)
+    vids = sorted({f["viseme"] for f in frames if 1 <= f["viseme"] <= 10})
+    features = {str(v): get_viseme_feature(v) for v in vids}
+    return vids, features
+
+
 @app.post("/api/progress", response_model=ProgressResponse)
 async def submit_progress(
     submission: ProgressSubmission,
@@ -249,64 +315,21 @@ async def submit_progress(
         )
         db.add(progress)
 
-        # Update weak visemes
-        # Step 1: increment total_attempts for ALL visemes in the sentence
+        # 취약 입모양 갱신 — 문장의 모든 유명 viseme에 시도 1회, 오류난 것만 오류 1회 (공용 경로)
         all_viseme_frames = await text_to_visemes(submission.sentence)
-        all_viseme_ids = list({
+        all_viseme_ids = sorted({
             f["viseme"] for f in all_viseme_frames
             if 1 <= f["viseme"] <= 10  # only named groups
         })
         error_ids = set(scoring_result.get("viseme_errors", []))
+        await _bump_weak_visemes(
+            current_user.id, all_viseme_ids, error_ids,
+            scoring_result.get("features", {}), db, when=progress.created_at)
 
-        for viseme_id in all_viseme_ids:
-            result = await db.execute(
-                select(WeakViseme).where(
-                    WeakViseme.user_id == current_user.id,
-                    WeakViseme.viseme_id == viseme_id
-                )
-            )
-            weak_viseme = result.scalar_one_or_none()
-
-            if weak_viseme:
-                weak_viseme.total_attempts += 1
-                if viseme_id in error_ids:
-                    weak_viseme.error_count += 1
-                    weak_viseme.last_error_at = progress.created_at
-            else:
-                weak_viseme = WeakViseme(
-                    user_id=current_user.id,
-                    viseme_id=viseme_id,
-                    error_count=1 if viseme_id in error_ids else 0,
-                    total_attempts=1,
-                    phonological_feature=scoring_result.get("features", {}).get(str(viseme_id), "unknown")
-                )
-                db.add(weak_viseme)
-
-        # Streak calculation
-        from datetime import date, timedelta
-        today_str = date.today().isoformat()
-        yesterday_str = (date.today() - timedelta(days=1)).isoformat()
-        last_date = current_user.last_practice_date
-
-        if last_date is None or last_date < yesterday_str:
-            current_user.streak_count = 1       # 첫 연습 or 스트릭 끊김
-        elif last_date == yesterday_str:
-            current_user.streak_count += 1      # 연속 학습!
-        # last_date == today_str: 오늘 이미 연습 → streak_count 유지
-        current_user.last_practice_date = today_str
-
-        # Calculate XP and level up logic
+        # XP·스트릭·레벨 — 공용 보상 (문장 연습은 시간 보너스를 가산)
         base_xp = int(scoring_result["score"] * submission.difficulty_level * 2)
         time_bonus = max(0, 50 - submission.time_spent_seconds // 2)
-        streak_multiplier = min(1.0 + current_user.streak_count * 0.1, 3.0)
-        xp_gained = int(base_xp * streak_multiplier) + time_bonus
-
-        old_level = current_user.current_level   # 상승 판정용(레벨업 배너는 실제 오를 때만)
-        current_user.total_xp += xp_gained
-
-        # Level up formula: level = floor(sqrt(total_xp / 100)) + 1
-        new_level = int((current_user.total_xp / 100) ** 0.5) + 1
-        current_user.current_level = max(current_user.current_level, new_level)
+        award = _award_xp_and_streak(current_user, base_xp, bonus=time_bonus)
 
         # 3단계(문장 연습) 숙달 갱신 — 점수 PASS 이상이면 성공 1회로 누적(4단계 해금 근거)
         await _bump_stage_progress(
@@ -318,11 +341,11 @@ async def submit_progress(
         return ProgressResponse(
             status="success",
             score=scoring_result["score"],
-            new_level=current_user.current_level,
-            old_level=old_level,
-            xp_gained=xp_gained,
-            streak_count=current_user.streak_count,
-            streak_multiplier=round(streak_multiplier, 2),
+            new_level=award["new_level"],
+            old_level=award["old_level"],
+            xp_gained=award["xp_gained"],
+            streak_count=award["streak_count"],
+            streak_multiplier=award["streak_multiplier"],
             feedback=scoring_result.get("feedback", {}),
             phoneme_accuracy=scoring_result.get("phoneme_accuracy", {})
         )
@@ -839,6 +862,9 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
             wv.last_error_at = _dt.utcnow()
             await _srs_schedule_wrong(current_user.id, "viseme", str(data.viseme_id), db)
 
+        # 공용 보상 — 인지퀴즈도 XP·스트릭에 기여(예전엔 문장 연습만 XP를 줬음)
+        award = _award_xp_and_streak(current_user, 15 if correct else 3)
+
         await db.commit()
         await db.refresh(sp)
     except Exception as e:
@@ -852,6 +878,8 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
         "mastery_score": round(sp.mastery_score, 1),
         "attempts": sp.attempts,
         "mastered": sp.status == "mastered",
+        "xp_gained": award["xp_gained"],
+        "streak_count": award["streak_count"],
     }
 
 
@@ -886,8 +914,14 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
             sp.correct += 1
         sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
         sp.status = "mastered" if (sp.attempts >= _STAGE2_MIN_ATTEMPTS and sp.mastery_score >= _STAGE2_MASTERY) else "in_progress"
+        # 취약 입모양 반영 — 오답이면 단어의 모든 유명 viseme을 오류로 누적(단어 인식 실패 신호).
+        # 예전엔 단어 학습이 개인화(WeakViseme)에 전혀 기여하지 못했다.
+        vids, features = await _weak_visemes_for_text(data.word)
+        await _bump_weak_visemes(current_user.id, vids,
+                                 vids if not data.correct else [], features, db)
         if not data.correct:
             await _srs_schedule_wrong(current_user.id, "word", data.word, db)
+        award = _award_xp_and_streak(current_user, 15 if data.correct else 3)
         await db.commit()
         await db.refresh(sp)
     except HTTPException:
@@ -895,7 +929,9 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"word answer failed: {str(e)}")
-    return {"mastery_score": round(sp.mastery_score, 1), "attempts": sp.attempts, "mastered": sp.status == "mastered"}
+    return {"mastery_score": round(sp.mastery_score, 1), "attempts": sp.attempts,
+            "mastered": sp.status == "mastered",
+            "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
 
 
 # ── 간격 반복 복습 (SRS) ──────────────────────────────────────────────────
@@ -936,19 +972,23 @@ async def review_answer(data: ReviewAnswer, current_user=Depends(get_current_use
     item = r.scalar_one_or_none()
     if item is None:
         return {"ok": True, "removed": False}
+    # 공용 보상 — 복습도 XP·스트릭에 기여(복습만 한 날 스트릭이 끊기던 문제 해결)
+    award = _award_xp_and_streak(current_user, 10 if data.correct else 3)
+    reward = {"xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
     if data.correct:
         new_interval = min((item.interval_days or 1) * 2, 32)
         if new_interval >= 32:
             await db.delete(item)          # 졸업 — 큐에서 제거
             await db.commit()
-            return {"ok": True, "removed": True}
+            return {"ok": True, "removed": True, **reward}
         item.interval_days = new_interval
         item.due_date = (_sr_date.today() + _sr_delta(days=new_interval)).isoformat()
     else:
         item.interval_days = 1
         item.due_date = (_sr_date.today() + _sr_delta(days=1)).isoformat()
     await db.commit()
-    return {"ok": True, "removed": False, "next_due": item.due_date, "interval_days": item.interval_days}
+    return {"ok": True, "removed": False, "next_due": item.due_date,
+            "interval_days": item.interval_days, **reward}
 
 
 # ── 공용 복습 유틸 — 세 기둥(독화·말하기·촉각)이 동일 구조(예정/틀림/북마크)를 쓰도록 ──
@@ -1006,6 +1046,38 @@ async def curriculum_closure(current_user=Depends(get_current_user)):
     return {"items": _curriculum.CLOSURE_ITEMS}
 
 
+class ClosureAnswer(BaseModel):
+    word: str          # 빈칸에 들어갈 정답 단어
+    correct: bool
+
+
+@app.post("/api/curriculum/closure-answer")
+async def curriculum_closure_answer(data: ClosureAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """문맥 추론(3단계) 결과 저장 — 예전엔 프론트에서 채점만 하고 아무것도 남기지 않았다.
+    XP·스트릭·취약 입모양·SRS·3단계 숙달에 모두 반영해 다른 활동과 학습 신호를 잇는다."""
+    word = (data.word or "").strip()
+    if not word:
+        raise HTTPException(status_code=400, detail="word required")
+    try:
+        # 3단계(문맥 추론) 숙달 — 문장 연습과 같은 트랙에 성공/시도 누적
+        await _bump_stage_progress(
+            current_user.id, 3, data.correct, _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db)
+        # 취약 입모양 — 오답이면 단어의 유명 viseme들을 오류로 누적(문맥으로도 못 가른 입모양)
+        vids, features = await _weak_visemes_for_text(word)
+        await _bump_weak_visemes(current_user.id, vids,
+                                 vids if not data.correct else [], features, db)
+        if not data.correct:
+            await _srs_schedule_wrong(current_user.id, "word", word, db)
+        award = _award_xp_and_streak(current_user, 15 if data.correct else 3)
+        await db.commit()
+        return {"ok": True, "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"closure answer failed: {str(e)}")
+
+
 class ScoreRequest(BaseModel):
     correct: str
     user_answer: str
@@ -1022,8 +1094,14 @@ async def score_answer(data: ScoreRequest, current_user=Depends(get_current_user
         await _bump_stage_progress(
             current_user.id, 4, score >= _STAGE4_PASS,
             _STAGE4_MIN_ATTEMPTS, _STAGE4_MASTERY, db)
+        # 취약 입모양 — 정답 문장의 오류 비심 반영(대화도 개인화에 기여)
+        vids, features = await _weak_visemes_for_text(data.correct)
+        await _bump_weak_visemes(current_user.id, vids, r.get("viseme_errors", []), features, db)
+        award = _award_xp_and_streak(current_user, int(score * 1.5))
         await db.commit()
-        return {"score": score, "feedback": r.get("feedback", {}), "phoneme_accuracy": r.get("phoneme_accuracy", {})}
+        return {"score": score, "feedback": r.get("feedback", {}),
+                "phoneme_accuracy": r.get("phoneme_accuracy", {}),
+                "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"score failed: {str(e)}")
