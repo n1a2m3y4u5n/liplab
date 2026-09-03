@@ -14,9 +14,15 @@ const hasKorean = (s) => /[가-힣]/.test(s)
 export default function SignSelectionOverlay() {
   const [hint, setHint] = useState(null)     // {text, x, y} 플로팅 버튼
   const [modalText, setModalText] = useState(null)
-  const [showIntro, setShowIntro] = useState(true)   // 데모용: 접속할 때마다 사용법 팝업 표시
+  // 수어 사용법 안내는 처음 한 번만 보여준다(localStorage). 닫으면 다시 뜨지 않는다.
+  const [showIntro, setShowIntro] = useState(() => {
+    try { return !localStorage.getItem('liplab_sign_intro_seen') } catch { return true }
+  })
 
-  const dismissIntro = () => setShowIntro(false)
+  const dismissIntro = () => {
+    setShowIntro(false)
+    try { localStorage.setItem('liplab_sign_intro_seen', '1') } catch { /* noop */ }
+  }
 
   useEffect(() => {
     // 선택된 한국어 텍스트를 감지해 '수어로 보기' 버튼을 띄운다.
