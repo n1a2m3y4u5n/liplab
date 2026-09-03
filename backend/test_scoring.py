@@ -17,9 +17,22 @@ def _syl(w):
 
 def test_similarity():
     _ok(S.get_phoneme_similarity("ㅂ", "ㅂ") == 1.0, "동일 음소 1.0")
-    _ok(S.get_phoneme_similarity("ㅂ", "ㅍ") == 0.7, "표에 있는 양순음 쌍")
-    _ok(S.get_phoneme_similarity("ㄹ", "ㅅ") == 0.5, "표에 없어도 같은 입모양이면 폴백 0.5")
-    _ok(S.get_phoneme_similarity("ㅂ", "ㄱ") == 0.0, "다른 입모양은 0")
+    _ok(S.get_phoneme_similarity("ㅂ", "ㅍ") == 0.7, "표에 있는 양순음 쌍(큐레이션 우선)")
+    # 표에 없는 자음 쌍 — 같은 입모양(치경)이면 부분점수
+    _ok(0.4 <= S.get_phoneme_similarity("ㄹ", "ㅅ") <= 0.65, "같은 입모양 자음은 부분점수")
+    # 명백히 다른 입모양(양순 vs 연구개)은 0에 가깝다
+    _ok(S.get_phoneme_similarity("ㅂ", "ㄱ") < 0.1, "양순 vs 연구개는 거의 0")
+
+
+def test_similarity_perceptual_grading():
+    # 지각공간(MDS) 폴백이 활성일 때: 시각적으로 닮은 정도가 등급화되어야 한다.
+    if not S._CONS_SIM:
+        return  # numpy/perceptual_space 없으면 스킵(기존 비심 폴백만 동작)
+    same = S.get_phoneme_similarity("ㄹ", "ㅅ")     # 같은 입모양(치경)
+    near = S.get_phoneme_similarity("ㄷ", "ㅈ")     # 치경↔경구개(어느 정도 닮음)
+    far = S.get_phoneme_similarity("ㅂ", "ㄱ")      # 양순↔연구개(안 닮음)
+    _ok(same > near > far, "같은 입모양 > 어느정도 닮음 > 안 닮음 (등급화)")
+    _ok(near > 0, "표엔 없지만 시각적으로 닮은 쌍은 0보다 큰 부분점수")
 
 
 def test_jamo_identical():

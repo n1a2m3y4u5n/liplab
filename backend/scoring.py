@@ -48,6 +48,47 @@ PHONEME_SIMILARITY = {
 }
 
 
+# ── 자음 시각 유사도(지각공간에서 도출) ──────────────────────────────────
+# 손으로 짠 PHONEME_SIMILARITY 표에 없는 자음 쌍의 부분점수를, 앱의 지각공간 모델
+# (perceptual_space의 고전 MDS 2D 좌표)에서 도출한다. 표의 공백을 원리적으로 메우고,
+# 채점 근거를 앱 전체의 '시각 혼동' 정의와 한 출처로 맞춘다. 같은 입모양 자음은 서로
+# 가깝고(높은 부분점수), 눈으로도 어느 정도 닮은 다른 위치(예: 치경 ㄷ ↔ 경구개 ㅈ)는
+# 중간값, 명백히 다른 입모양(양순 ㅂ ↔ 연구개 ㄱ)은 0에 가깝게 나온다.
+# numpy·perceptual_space를 못 불러오면 조용히 비활성화하고 기존 비심 폴백을 쓴다.
+_CONS_FALLBACK_CAP = 0.6   # 폴백 부분점수 상한(표의 near-identical 값과 정합; 큐레이션 표 ≥ 자동 폴백)
+
+
+def _build_consonant_similarity() -> Dict[Tuple[str, str], float]:
+    try:
+        import numpy as np
+        import perceptual_space as ps
+        cons, coords = ps.classical_mds()
+        n = len(cons)
+        dmax = 0.0
+        dist = [[0.0] * n for _ in range(n)]
+        for i in range(n):
+            for j in range(n):
+                d = float(np.linalg.norm(coords[i] - coords[j]))
+                dist[i][j] = d
+                if d > dmax:
+                    dmax = d
+        if dmax <= 0:
+            return {}
+        out: Dict[Tuple[str, str], float] = {}
+        for i in range(n):
+            for j in range(n):
+                if i == j:
+                    continue
+                sim = 1.0 - dist[i][j] / dmax          # 지각공간 내 거리 → [0,1] 유사도
+                out[(cons[i], cons[j])] = round(sim * _CONS_FALLBACK_CAP, 3)
+        return out
+    except Exception:
+        return {}
+
+
+_CONS_SIM: Dict[Tuple[str, str], float] = _build_consonant_similarity()
+
+
 def get_phoneme_similarity(p1: str, p2: str) -> float:
     """
     Calculate similarity score between two phonemes
@@ -56,13 +97,17 @@ def get_phoneme_similarity(p1: str, p2: str) -> float:
     if p1 == p2:
         return 1.0
 
-    # Check both directions in similarity matrix
+    # Check both directions in similarity matrix (큐레이션 표가 우선)
     similarity = PHONEME_SIMILARITY.get((p1, p2), PHONEME_SIMILARITY.get((p2, p1)))
     if similarity is not None:
         return similarity
 
-    # 폴백 — 표에 없는 쌍도 '입모양(viseme)'이 같으면 시각적으로 혼동되므로 부분점수를 준다.
-    # 손으로 정한 표의 공백을 비심 규칙으로 메워, 채점 근거를 시각 지각과 일관되게 한다.
+    # 표에 없는 자음 쌍은 지각공간(MDS)에서 도출한 시각 유사도로 채운다
+    mds = _CONS_SIM.get((p1, p2))
+    if mds is not None:
+        return mds
+
+    # 그 밖(모음 등) — 같은 입모양(viseme)이면 시각적으로 혼동되므로 부분점수를 준다
     v1, v2 = VISEME_MAP.get(p1), VISEME_MAP.get(p2)
     if v1 is not None and v1 == v2:
         return 0.5
