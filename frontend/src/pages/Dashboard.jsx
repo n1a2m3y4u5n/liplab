@@ -573,11 +573,11 @@ export default function Dashboard() {
     const isConversation = mode === 'conversation'
     if ((!isConversation && testLocked) || (isConversation && conversationLocked)) {
       if (isConversation) explainConversationUnlock()
-      else alert('아직 잠긴 단계예요. 학습에서 2단계(음절·단어)를 먼저 완료해주세요.')
+      else setUnlockNotice('아직 잠긴 단계예요. 학습에서 2단계(음절·단어)를 먼저 완료해주세요.')
       return
     }
     if (!effectiveSituation.trim()) {
-      alert('상황을 입력해주세요.')
+      setUnlockNotice('상황을 입력해주세요.')
       return
     }
     setLoading(true)
@@ -590,7 +590,7 @@ export default function Dashboard() {
       setScenario(scenario, 'test')
       navigate(isConversation ? '/conversation' : '/practice')
     } catch (error) {
-      alert('시나리오 생성에 실패했습니다. 다시 시도해주세요.')
+      setUnlockNotice('시나리오 생성에 실패했습니다. 다시 시도해주세요.')
       console.error(error)
     } finally {
       setLoading(false)

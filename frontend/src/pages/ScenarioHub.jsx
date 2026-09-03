@@ -22,8 +22,15 @@ export default function ScenarioHub() {
   const [recommended, setRecommended] = useState(null)
   const [locks, setLocks] = useState({ practice: false, conversation: false })
   const [loadingMode, setLoadingMode] = useState(null)
+  const [notice, setNotice] = useState('')   // 브라우저 alert 대신 쓰는 인앱 안내(맥락 유지)
 
   const levelTouched = useRef(false)   // 유저가 난이도를 직접 고르면 추천값이 덮어쓰지 않게
+
+  useEffect(() => {
+    if (!notice) return undefined
+    const t = window.setTimeout(() => setNotice(''), 5000)
+    return () => window.clearTimeout(t)
+  }, [notice])
 
   useEffect(() => {
     curriculumAPI.getRecommendedLevel()
@@ -48,7 +55,7 @@ export default function ScenarioHub() {
 
   const start = async (mode) => {
     if (locks[mode]) {
-      alert(mode === 'practice' ? '단어 학습을 완료하면 문장 학습이 열려요.' : '문장 학습을 완료하면 대화 실전이 열려요.')
+      setNotice(mode === 'practice' ? '단어 학습을 완료하면 문장 학습이 열려요.' : '문장 학습을 완료하면 대화 실전이 열려요.')
       return
     }
     if (!effectiveSituation) return
@@ -60,7 +67,7 @@ export default function ScenarioHub() {
       navigate(mode === 'practice' ? '/practice' : '/conversation')
     } catch (error) {
       console.error(error)
-      alert('실전 문장을 준비하지 못했어요. 다시 시도해주세요.')
+      setNotice('실전 문장을 준비하지 못했어요. 다시 시도해주세요.')
     } finally {
       setLoadingMode(null)
     }
@@ -68,6 +75,13 @@ export default function ScenarioHub() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
+      {notice && (
+        <div role="status" aria-live="polite"
+          className="fixed left-1/2 top-4 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl bg-amber-100 px-4 py-2 text-sm font-medium text-amber-900 shadow-lg">
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice('')} aria-label="안내 닫기" className="text-amber-500 hover:text-amber-700">✕</button>
+        </div>
+      )}
       <LearnHeader
         accent="reading"
         title="문장 학습"
