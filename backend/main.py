@@ -1169,6 +1169,17 @@ async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_cur
     return _asmt.score_placement(data.items, data.responses)
 
 
+@app.get("/api/conversation/multi")
+async def conversation_multi(speakers: int = 2, turns: int = 6,
+                             current_user=Depends(get_current_user)):
+    """다자 대화 시나리오(축 H) — 여러 화자가 번갈아 말하는 짧은 대화(화자 식별 + 입모양 읽기)."""
+    import conversation_scenario as _conv
+    try:
+        return await _conv.generate_multi_conversation(speakers=speakers, turns=turns)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"conversation gen failed: {str(e)}")
+
+
 # ── 발화 커리큘럼(6단계) — 상태·게이팅·콘텐츠 ────────────────────────────────
 import speak_curriculum as _speakcur
 import tactile as _tactile
