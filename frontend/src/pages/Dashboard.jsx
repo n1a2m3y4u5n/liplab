@@ -332,7 +332,7 @@ function NextUpCard() {
           )}
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={() => navigate('/learn/word')} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-slate-700">단어 연습</button>
-            <button type="button" onClick={() => navigate('/learn/viseme')} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50">입모양 보기</button>
+            <button type="button" onClick={() => navigate(`/learn/viseme${data.target_visemes?.[0] ? `?v=${data.target_visemes[0]}` : ''}`)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50">약점 입모양 보기</button>
           </div>
         </div>
       ) : (

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI } from '../api'
 import LearnHeader from '../components/LearnHeader'
@@ -104,7 +104,9 @@ export default function VisemeLiteracy() {
 
 function LearnPanel({ data }) {
   const { lessons, homophene_clusters, minimal_pairs } = data
-  const [sel, setSel] = useState(lessons[0])
+  const [params] = useSearchParams()
+  const _tv = parseInt(params.get('v'), 10)
+  const [sel, setSel] = useState(lessons.find((l) => l.viseme_id === _tv) || lessons[0])
   const [showCam, setShowCam] = useState(false)
   const badge = VIS_BADGE[sel.visibility] || VIS_BADGE.medium
 

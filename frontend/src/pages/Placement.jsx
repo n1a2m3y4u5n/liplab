@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import LearnHeader from '../components/LearnHeader'
@@ -12,7 +13,10 @@ const VIS_NAME = {
   6: '치경음', 7: '연구개음', 8: '성문음', 9: '이중모음', 10: '경구개음',
 }
 
+const STAGE_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/practice' }
+
 export default function Placement() {
+  const navigate = useNavigate()
   const [items, setItems] = useState(null)
   const [idx, setIdx] = useState(0)
   const [responses, setResponses] = useState({})
@@ -73,7 +77,13 @@ export default function Placement() {
               </div>
             </div>
           )}
-          <button onClick={start} className="w-full rounded-lg bg-slate-900 py-2.5 text-sm font-bold text-white hover:bg-slate-700">다시 검사하기</button>
+          <div className="flex gap-2">
+            <button onClick={() => navigate(STAGE_ROUTE[result.recommended_start?.key] || '/learn/viseme')}
+              className="flex-1 rounded-lg bg-slate-900 py-2.5 text-sm font-bold text-white hover:bg-slate-700">
+              {result.recommended_start?.title || '입모양 인지'}부터 시작 →
+            </button>
+            <button onClick={start} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50">다시 검사</button>
+          </div>
         </div>
       </div>
     )
