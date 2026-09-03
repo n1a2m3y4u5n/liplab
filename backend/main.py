@@ -1417,6 +1417,7 @@ async def speak_assess(
     stage: int = Form(None),
     drill: str = Form(None),
     review: int = Form(0),
+    mouth_confidence: float = Form(None),
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -1477,6 +1478,15 @@ async def speak_assess(
         score = round(sim or 0.0, 1)
         sp = None
 
+    # 축 B 오디오·비주얼 융합 — 웹캠 입모양(D) 신뢰도가 오면, 음향 점수가 낮을(불확실할)수록
+    # 입모양에 더 가중해 최종 점수를 낸다(농인은 음성이 불안정하나 입모양은 상대적으로 안정적).
+    av_fusion = None
+    if mouth_confidence is not None and mouth_confidence >= 0:
+        import dgop
+        vis = mouth_confidence * 100 if mouth_confidence <= 1 else mouth_confidence
+        av_fusion = dgop.fuse_audio_visual(score, max(0.0, 1 - score / 100.0), vis)
+        score = av_fusion["score"]
+
     # 개별 시도 영속화(말하기 분석용 — 독화가 Progress에 쌓는 것과 대칭)
     from database import SpeakAttempt
     db.add(SpeakAttempt(
@@ -1511,6 +1521,7 @@ async def speak_assess(
         "confusions": confusions[:6],
         "coaching": coaching,
         "metrics": metrics,
+        "av_fusion": av_fusion,
         "progress": progress,
         "mode": mode,
     }
