@@ -1063,3 +1063,11 @@ J 기호 뒷받침·B 융합 입력 후보(음향·영상 백본과 함께 Phase
 적용했다. 음향 점수가 낮을(불확실할)수록 입모양에 더 가중해 최종 점수를 낸다. 융합 로직은 test_dgop로
 검증됨(faster-whisper 미설치라 라우트 전체 실행은 Phase 2). 프론트 웹캠+발화 동시 UI도 Phase 2 음향과 함께.
 **변경 파일(B.3).** `backend/main.py`(speak_assess AV 융합).
+
+### C.2 자음 시각 지각공간 (예비 실증 그림3)
+계획서 §2.5 그림3 재현. `perceptual_space.py`(신규): 자음을 시각 자질(조음 위치=입모양)만으로
+벡터화 → 시각 유사도 행렬 → 고전 MDS 2D 좌표. 유성·기식·긴장은 입 밖으로 안 드러나 벡터에 거의
+기여하지 않으므로, 같은 입모양 자음이 한 군으로 뭉친다(양순 ㅂ-ㅁ 유사도 0.99, MDS 좌표 동일;
+양순·치경·연구개·경구개·성문 시각 군 분리). numpy만 사용(torch 불필요, 생성 전용).
+공개 자원(`docs/perceptual-resources.json`)에 `consonant_visual_space` 추가. 테스트 5개로 확대.
+**변경 파일(C.2).** `backend/perceptual_space.py`(신규)·`perceptual.py`·`test_perceptual.py`·`requirements-gen.txt`·`docs/perceptual-resources.json`.

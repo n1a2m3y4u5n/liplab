@@ -6,3 +6,4 @@
 # 참고: 한국어 빈도는 get_frequency_dict('ko')로 토큰 사전을 직접 조회하므로
 #       MeCab(형태소 분석기) 없이 동작한다.
 wordfreq>=3.0.0
+numpy>=1.24.0

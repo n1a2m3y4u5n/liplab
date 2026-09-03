@@ -100,10 +100,16 @@ def build_standard_resources(words: List[str]) -> Dict:
     entries = [word_difficulty(w, sig_count) for w in valid]
     entries = [e for e in entries if e]
     entries.sort(key=lambda e: e["difficulty"])
+    try:
+        import perceptual_space as _ps
+        cons_space = _ps.perceptual_space()
+    except Exception:
+        cons_space = None  # numpy 미설치 등 → 지각공간은 생략(나머지는 그대로)
     return {
         "meta": {"kind": "korean-speechreading-perceptual-resources", "version": 1,
                  "rules_based": True, "word_count": len(entries)},
         "homophene_dictionary": homophene_dictionary(),
+        "consonant_visual_space": cons_space,
         "difficulty_index": entries,
         "lookalike_pairs": discover_pairs(valid),
     }

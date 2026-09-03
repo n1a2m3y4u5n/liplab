@@ -3,7 +3,7 @@
     "kind": "korean-speechreading-perceptual-resources",
     "version": 1,
     "rules_based": true,
-    "word_count": 24
+    "word_count": 195
   },
   "homophene_dictionary": {
     "viseme_groups": {
@@ -131,6 +131,528 @@
     ],
     "note": "같은 viseme 그룹 또는 같은 혼동 무리의 음소는 입모양이 같아 문맥으로 구별한다."
   },
+  "consonant_visual_space": {
+    "consonants": [
+      "ㅂ",
+      "ㅃ",
+      "ㅍ",
+      "ㅁ",
+      "ㄷ",
+      "ㄸ",
+      "ㅌ",
+      "ㄴ",
+      "ㄹ",
+      "ㅅ",
+      "ㅆ",
+      "ㄱ",
+      "ㄲ",
+      "ㅋ",
+      "ㅇ",
+      "ㅈ",
+      "ㅉ",
+      "ㅊ",
+      "ㅎ"
+    ],
+    "similarity": [
+      [
+        1.0,
+        1.0,
+        0.997,
+        0.989,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        1.0,
+        0.997,
+        0.989,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.997,
+        0.997,
+        1.0,
+        0.998,
+        0.0,
+        0.0,
+        0.006,
+        0.012,
+        0.008,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.006,
+        0.012,
+        0.0,
+        0.0,
+        0.006,
+        0.006
+      ],
+      [
+        0.989,
+        0.989,
+        0.998,
+        1.0,
+        0.0,
+        0.0,
+        0.012,
+        0.022,
+        0.015,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.012,
+        0.022,
+        0.0,
+        0.0,
+        0.012,
+        0.012
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.997,
+        0.989,
+        0.995,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.997,
+        0.989,
+        0.995,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.006,
+        0.012,
+        0.997,
+        0.997,
+        1.0,
+        0.998,
+        1.0,
+        0.997,
+        0.997,
+        0.0,
+        0.0,
+        0.006,
+        0.012,
+        0.0,
+        0.0,
+        0.006,
+        0.006
+      ],
+      [
+        0.0,
+        0.0,
+        0.012,
+        0.022,
+        0.989,
+        0.989,
+        0.998,
+        1.0,
+        0.999,
+        0.989,
+        0.989,
+        0.0,
+        0.0,
+        0.012,
+        0.022,
+        0.0,
+        0.0,
+        0.012,
+        0.012
+      ],
+      [
+        0.0,
+        0.0,
+        0.008,
+        0.015,
+        0.995,
+        0.995,
+        1.0,
+        0.999,
+        1.0,
+        0.995,
+        0.995,
+        0.0,
+        0.0,
+        0.008,
+        0.015,
+        0.0,
+        0.0,
+        0.008,
+        0.008
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.997,
+        0.989,
+        0.995,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.997,
+        0.989,
+        0.995,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.997,
+        0.989,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.997,
+        0.989,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.006,
+        0.012,
+        0.0,
+        0.0,
+        0.006,
+        0.012,
+        0.008,
+        0.0,
+        0.0,
+        0.997,
+        0.997,
+        1.0,
+        0.998,
+        0.0,
+        0.0,
+        0.006,
+        0.006
+      ],
+      [
+        0.0,
+        0.0,
+        0.012,
+        0.022,
+        0.0,
+        0.0,
+        0.012,
+        0.022,
+        0.015,
+        0.0,
+        0.0,
+        0.989,
+        0.989,
+        0.998,
+        1.0,
+        0.0,
+        0.0,
+        0.012,
+        0.012
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.997,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.997,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.006,
+        0.012,
+        0.0,
+        0.0,
+        0.006,
+        0.012,
+        0.008,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.006,
+        0.012,
+        0.997,
+        0.997,
+        1.0,
+        0.006
+      ],
+      [
+        0.0,
+        0.0,
+        0.006,
+        0.012,
+        0.0,
+        0.0,
+        0.006,
+        0.012,
+        0.008,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.006,
+        0.012,
+        0.0,
+        0.0,
+        0.006,
+        1.0
+      ]
+    ],
+    "mds_2d": [
+      {
+        "phoneme": "ㅂ",
+        "x": -0.343,
+        "y": 0.5
+      },
+      {
+        "phoneme": "ㅃ",
+        "x": -0.343,
+        "y": 0.5
+      },
+      {
+        "phoneme": "ㅍ",
+        "x": -0.342,
+        "y": 0.498
+      },
+      {
+        "phoneme": "ㅁ",
+        "x": -0.341,
+        "y": 0.494
+      },
+      {
+        "phoneme": "ㄷ",
+        "x": 0.506,
+        "y": -0.0
+      },
+      {
+        "phoneme": "ㄸ",
+        "x": 0.506,
+        "y": 0.0
+      },
+      {
+        "phoneme": "ㅌ",
+        "x": 0.504,
+        "y": -0.0
+      },
+      {
+        "phoneme": "ㄴ",
+        "x": 0.498,
+        "y": -0.0
+      },
+      {
+        "phoneme": "ㄹ",
+        "x": 0.502,
+        "y": -0.0
+      },
+      {
+        "phoneme": "ㅅ",
+        "x": 0.506,
+        "y": 0.0
+      },
+      {
+        "phoneme": "ㅆ",
+        "x": 0.506,
+        "y": 0.0
+      },
+      {
+        "phoneme": "ㄱ",
+        "x": -0.343,
+        "y": -0.5
+      },
+      {
+        "phoneme": "ㄲ",
+        "x": -0.343,
+        "y": -0.5
+      },
+      {
+        "phoneme": "ㅋ",
+        "x": -0.342,
+        "y": -0.498
+      },
+      {
+        "phoneme": "ㅇ",
+        "x": -0.341,
+        "y": -0.494
+      },
+      {
+        "phoneme": "ㅈ",
+        "x": -0.221,
+        "y": 0.0
+      },
+      {
+        "phoneme": "ㅉ",
+        "x": -0.221,
+        "y": -0.0
+      },
+      {
+        "phoneme": "ㅊ",
+        "x": -0.221,
+        "y": -0.0
+      },
+      {
+        "phoneme": "ㅎ",
+        "x": -0.128,
+        "y": -0.0
+      }
+    ],
+    "note": "시각 자질(조음 위치=입모양)만으로 벡터화. 같은 입모양 자음이 한 군으로 뭉친다(동구형이음)."
+  },
   "difficulty_index": [
     {
       "word": "이",
@@ -165,27 +687,141 @@
       ]
     },
     {
-      "word": "밥",
-      "difficulty": 0.08,
+      "word": "아빠",
+      "difficulty": 0.0,
       "invisibility": 0.0,
-      "neighbor_density": 0.2,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        2,
+        1,
+        2
+      ]
+    },
+    {
+      "word": "오빠",
+      "difficulty": 0.0,
+      "invisibility": 0.0,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        4,
+        1,
+        2
+      ]
+    },
+    {
+      "word": "무",
+      "difficulty": 0.0,
+      "invisibility": 0.0,
+      "neighbor_density": 0.0,
       "syllables": 1,
       "visemes": [
+        1,
+        4
+      ]
+    },
+    {
+      "word": "비빔밥",
+      "difficulty": 0.0,
+      "invisibility": 0.0,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        1,
+        3,
+        1,
+        3,
+        1,
         1,
         2,
         1
       ]
     },
     {
-      "word": "맘",
+      "word": "잎",
+      "difficulty": 0.0,
+      "invisibility": 0.0,
+      "neighbor_density": 0.0,
+      "syllables": 1,
+      "visemes": [
+        3,
+        1
+      ]
+    },
+    {
+      "word": "엄마",
+      "difficulty": 0.075,
+      "invisibility": 0.125,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        5,
+        1,
+        1,
+        2
+      ]
+    },
+    {
+      "word": "비",
       "difficulty": 0.08,
       "invisibility": 0.0,
       "neighbor_density": 0.2,
       "syllables": 1,
       "visemes": [
         1,
+        3
+      ]
+    },
+    {
+      "word": "피",
+      "difficulty": 0.08,
+      "invisibility": 0.0,
+      "neighbor_density": 0.2,
+      "syllables": 1,
+      "visemes": [
+        1,
+        3
+      ]
+    },
+    {
+      "word": "어부",
+      "difficulty": 0.1,
+      "invisibility": 0.167,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        5,
+        1,
+        4
+      ]
+    },
+    {
+      "word": "바람",
+      "difficulty": 0.12,
+      "invisibility": 0.2,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        1,
+        2,
+        6,
         2,
         1
+      ]
+    },
+    {
+      "word": "냄비",
+      "difficulty": 0.12,
+      "invisibility": 0.2,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        2,
+        1,
+        1,
+        3
       ]
     },
     {
@@ -228,6 +864,405 @@
       ]
     },
     {
+      "word": "배추",
+      "difficulty": 0.15,
+      "invisibility": 0.25,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        1,
+        2,
+        10,
+        4
+      ]
+    },
+    {
+      "word": "포도",
+      "difficulty": 0.15,
+      "invisibility": 0.25,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        1,
+        4,
+        6,
+        4
+      ]
+    },
+    {
+      "word": "두부",
+      "difficulty": 0.15,
+      "invisibility": 0.25,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        1,
+        4
+      ]
+    },
+    {
+      "word": "베개",
+      "difficulty": 0.15,
+      "invisibility": 0.25,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        1,
+        3,
+        7,
+        2
+      ]
+    },
+    {
+      "word": "우박",
+      "difficulty": 0.15,
+      "invisibility": 0.25,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        4,
+        1,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "바지",
+      "difficulty": 0.15,
+      "invisibility": 0.25,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        1,
+        2,
+        10,
+        3
+      ]
+    },
+    {
+      "word": "치마",
+      "difficulty": 0.15,
+      "invisibility": 0.25,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        10,
+        3,
+        1,
+        2
+      ]
+    },
+    {
+      "word": "양파",
+      "difficulty": 0.15,
+      "invisibility": 0.25,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        2,
+        7,
+        1,
+        2
+      ]
+    },
+    {
+      "word": "이불",
+      "difficulty": 0.15,
+      "invisibility": 0.25,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        3,
+        1,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "밥",
+      "difficulty": 0.16,
+      "invisibility": 0.0,
+      "neighbor_density": 0.4,
+      "syllables": 1,
+      "visemes": [
+        1,
+        2,
+        1
+      ]
+    },
+    {
+      "word": "맘",
+      "difficulty": 0.16,
+      "invisibility": 0.0,
+      "neighbor_density": 0.4,
+      "syllables": 1,
+      "visemes": [
+        1,
+        2,
+        1
+      ]
+    },
+    {
+      "word": "배",
+      "difficulty": 0.16,
+      "invisibility": 0.0,
+      "neighbor_density": 0.4,
+      "syllables": 1,
+      "visemes": [
+        1,
+        2
+      ]
+    },
+    {
+      "word": "매",
+      "difficulty": 0.16,
+      "invisibility": 0.0,
+      "neighbor_density": 0.4,
+      "syllables": 1,
+      "visemes": [
+        1,
+        2
+      ]
+    },
+    {
+      "word": "밤",
+      "difficulty": 0.16,
+      "invisibility": 0.0,
+      "neighbor_density": 0.4,
+      "syllables": 1,
+      "visemes": [
+        1,
+        2,
+        1
+      ]
+    },
+    {
+      "word": "패",
+      "difficulty": 0.16,
+      "invisibility": 0.0,
+      "neighbor_density": 0.4,
+      "syllables": 1,
+      "visemes": [
+        1,
+        2
+      ]
+    },
+    {
+      "word": "나뭇잎",
+      "difficulty": 0.172,
+      "invisibility": 0.286,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        6,
+        2,
+        1,
+        4,
+        6,
+        3,
+        1
+      ]
+    },
+    {
+      "word": "무릎",
+      "difficulty": 0.18,
+      "invisibility": 0.3,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        1,
+        4,
+        6,
+        5,
+        1
+      ]
+    },
+    {
+      "word": "아버지",
+      "difficulty": 0.18,
+      "invisibility": 0.3,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        2,
+        1,
+        5,
+        10,
+        3
+      ]
+    },
+    {
+      "word": "기쁨",
+      "difficulty": 0.18,
+      "invisibility": 0.3,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        3,
+        1,
+        5,
+        1
+      ]
+    },
+    {
+      "word": "아기",
+      "difficulty": 0.2,
+      "invisibility": 0.333,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        2,
+        7,
+        3
+      ]
+    },
+    {
+      "word": "발목",
+      "difficulty": 0.2,
+      "invisibility": 0.333,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        1,
+        2,
+        6,
+        1,
+        4,
+        7
+      ]
+    },
+    {
+      "word": "소나무",
+      "difficulty": 0.2,
+      "invisibility": 0.333,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        6,
+        4,
+        6,
+        2,
+        1,
+        4
+      ]
+    },
+    {
+      "word": "국밥",
+      "difficulty": 0.2,
+      "invisibility": 0.333,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        4,
+        7,
+        1,
+        2,
+        1
+      ]
+    },
+    {
+      "word": "빗",
+      "difficulty": 0.2,
+      "invisibility": 0.333,
+      "neighbor_density": 0.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        3,
+        6
+      ]
+    },
+    {
+      "word": "토마토",
+      "difficulty": 0.2,
+      "invisibility": 0.333,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        6,
+        4,
+        1,
+        2,
+        6,
+        4
+      ]
+    },
+    {
+      "word": "바나나",
+      "difficulty": 0.2,
+      "invisibility": 0.333,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        1,
+        2,
+        6,
+        2,
+        6,
+        2
+      ]
+    },
+    {
+      "word": "발바닥",
+      "difficulty": 0.225,
+      "invisibility": 0.375,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        1,
+        2,
+        6,
+        1,
+        2,
+        6,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "참외",
+      "difficulty": 0.225,
+      "invisibility": 0.375,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        10,
+        2,
+        1,
+        9
+      ]
+    },
+    {
+      "word": "보트",
+      "difficulty": 0.225,
+      "invisibility": 0.375,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        1,
+        4,
+        6,
+        5
+      ]
+    },
+    {
+      "word": "부엌",
+      "difficulty": 0.225,
+      "invisibility": 0.375,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        1,
+        4,
+        5,
+        7
+      ]
+    },
+    {
       "word": "가방",
       "difficulty": 0.24,
       "invisibility": 0.4,
@@ -242,51 +1277,278 @@
       ]
     },
     {
-      "word": "물",
-      "difficulty": 0.28,
-      "invisibility": 0.333,
-      "neighbor_density": 0.2,
-      "syllables": 1,
+      "word": "어머니",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 3,
       "visemes": [
+        5,
+        1,
+        5,
+        6,
+        3
+      ]
+    },
+    {
+      "word": "고양이",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        7,
+        4,
+        2,
+        7,
+        3
+      ]
+    },
+    {
+      "word": "김치",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        3,
+        1,
+        10,
+        3
+      ]
+    },
+    {
+      "word": "수박",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        1,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "지우개",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        10,
+        3,
+        4,
+        7,
+        2
+      ]
+    },
+    {
+      "word": "나물",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        2,
         1,
         4,
         6
       ]
     },
     {
-      "word": "불",
-      "difficulty": 0.28,
-      "invisibility": 0.333,
-      "neighbor_density": 0.2,
-      "syllables": 1,
+      "word": "지붕",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 2,
       "visemes": [
+        10,
+        3,
         1,
+        4,
+        7
+      ]
+    },
+    {
+      "word": "입술",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        3,
+        1,
+        6,
         4,
         6
       ]
     },
     {
-      "word": "말",
-      "difficulty": 0.28,
-      "invisibility": 0.333,
-      "neighbor_density": 0.2,
-      "syllables": 1,
+      "word": "감자",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 2,
       "visemes": [
-        1,
+        7,
         2,
-        6
+        1,
+        10,
+        2
       ]
     },
     {
-      "word": "발",
-      "difficulty": 0.28,
-      "invisibility": 0.333,
-      "neighbor_density": 0.2,
-      "syllables": 1,
+      "word": "호박",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        8,
+        4,
+        1,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "요리사",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        4,
+        6,
+        3,
+        6,
+        2
+      ]
+    },
+    {
+      "word": "농부",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        7,
+        1,
+        4
+      ]
+    },
+    {
+      "word": "망치",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 2,
       "visemes": [
         1,
         2,
-        6
+        7,
+        10,
+        3
+      ]
+    },
+    {
+      "word": "침대",
+      "difficulty": 0.24,
+      "invisibility": 0.4,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        10,
+        3,
+        1,
+        6,
+        2
+      ]
+    },
+    {
+      "word": "두려움",
+      "difficulty": 0.25,
+      "invisibility": 0.417,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        6,
+        4,
+        6,
+        5,
+        4,
+        1
+      ]
+    },
+    {
+      "word": "빗자루",
+      "difficulty": 0.257,
+      "invisibility": 0.429,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        1,
+        3,
+        6,
+        10,
+        2,
+        6,
+        4
+      ]
+    },
+    {
+      "word": "복숭아",
+      "difficulty": 0.257,
+      "invisibility": 0.429,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        1,
+        4,
+        7,
+        6,
+        4,
+        7,
+        2
+      ]
+    },
+    {
+      "word": "비행기",
+      "difficulty": 0.257,
+      "invisibility": 0.429,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        1,
+        3,
+        8,
+        2,
+        7,
+        7,
+        3
+      ]
+    },
+    {
+      "word": "보라색",
+      "difficulty": 0.257,
+      "invisibility": 0.429,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        1,
+        4,
+        6,
+        2,
+        6,
+        2,
+        7
       ]
     },
     {
@@ -301,17 +1563,593 @@
       ]
     },
     {
-      "word": "그림",
+      "word": "강아지",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        7,
+        2,
+        7,
+        2,
+        10,
+        3
+      ]
+    },
+    {
+      "word": "손목",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        6,
+        1,
+        4,
+        7
+      ]
+    },
+    {
+      "word": "할머니",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        8,
+        2,
+        6,
+        1,
+        5,
+        6,
+        3
+      ]
+    },
+    {
+      "word": "버스",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        1,
+        5,
+        6,
+        5
+      ]
+    },
+    {
+      "word": "어깨",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        5,
+        7,
+        2
+      ]
+    },
+    {
+      "word": "연필",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        5,
+        6,
+        1,
+        3,
+        6
+      ]
+    },
+    {
+      "word": "구름",
       "difficulty": 0.3,
       "invisibility": 0.5,
       "neighbor_density": 0.0,
       "syllables": 2,
       "visemes": [
         7,
+        4,
+        6,
         5,
+        1
+      ]
+    },
+    {
+      "word": "소나기",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        6,
+        4,
+        6,
+        2,
+        7,
+        3
+      ]
+    },
+    {
+      "word": "장갑",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        10,
+        2,
+        7,
+        7,
+        2,
+        1
+      ]
+    },
+    {
+      "word": "안개",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        2,
+        6,
+        7,
+        2
+      ]
+    },
+    {
+      "word": "슬픔",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        5,
+        6,
+        1,
+        5,
+        1
+      ]
+    },
+    {
+      "word": "가슴",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        2,
+        6,
+        5,
+        1
+      ]
+    },
+    {
+      "word": "번개",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        1,
+        5,
+        6,
+        7,
+        2
+      ]
+    },
+    {
+      "word": "누나",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        6,
+        2
+      ]
+    },
+    {
+      "word": "의자",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        9,
+        10,
+        2
+      ]
+    },
+    {
+      "word": "서랍",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        5,
+        6,
+        2,
+        1
+      ]
+    },
+    {
+      "word": "연못",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        5,
+        6,
+        1,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "칠판",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        10,
+        3,
+        6,
+        1,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "가위",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        2,
+        9
+      ]
+    },
+    {
+      "word": "창문",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        10,
+        2,
+        7,
+        1,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "파란색",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        1,
+        2,
+        6,
+        2,
+        6,
+        6,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "시금치",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        6,
+        3,
+        7,
+        5,
+        1,
+        10,
+        3
+      ]
+    },
+    {
+      "word": "삼겹살",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        6,
+        2,
+        1,
+        7,
+        5,
+        1,
+        6,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "가지",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        2,
+        10,
+        3
+      ]
+    },
+    {
+      "word": "의사",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        9,
+        6,
+        2
+      ]
+    },
+    {
+      "word": "떡볶이",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        6,
+        5,
+        7,
+        1,
+        4,
+        7,
+        3
+      ]
+    },
+    {
+      "word": "소",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 1,
+      "visemes": [
+        6,
+        4
+      ]
+    },
+    {
+      "word": "교사",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        4,
+        6,
+        2
+      ]
+    },
+    {
+      "word": "깁스",
+      "difficulty": 0.3,
+      "invisibility": 0.5,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        3,
+        1,
+        6,
+        5
+      ]
+    },
+    {
+      "word": "도마",
+      "difficulty": 0.31,
+      "invisibility": 0.25,
+      "neighbor_density": 0.4,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        1,
+        2
+      ]
+    },
+    {
+      "word": "소파",
+      "difficulty": 0.31,
+      "invisibility": 0.25,
+      "neighbor_density": 0.4,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        1,
+        2
+      ]
+    },
+    {
+      "word": "노파",
+      "difficulty": 0.31,
+      "invisibility": 0.25,
+      "neighbor_density": 0.4,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        1,
+        2
+      ]
+    },
+    {
+      "word": "양말",
+      "difficulty": 0.32,
+      "invisibility": 0.4,
+      "neighbor_density": 0.2,
+      "syllables": 2,
+      "visemes": [
+        2,
+        7,
+        1,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "양팔",
+      "difficulty": 0.32,
+      "invisibility": 0.4,
+      "neighbor_density": 0.2,
+      "syllables": 2,
+      "visemes": [
+        2,
+        7,
+        1,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "빨간색",
+      "difficulty": 0.334,
+      "invisibility": 0.556,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        1,
+        2,
+        6,
+        7,
+        2,
+        6,
+        6,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "남동생",
+      "difficulty": 0.334,
+      "invisibility": 0.556,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        6,
+        2,
+        1,
+        6,
+        4,
+        7,
+        6,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "색연필",
+      "difficulty": 0.337,
+      "invisibility": 0.562,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        6,
+        2,
+        7,
+        5,
+        6,
+        1,
+        3,
+        6
+      ]
+    },
+    {
+      "word": "눈썹",
+      "difficulty": 0.35,
+      "invisibility": 0.583,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        6,
+        6,
+        5,
+        1
+      ]
+    },
+    {
+      "word": "저고리",
+      "difficulty": 0.35,
+      "invisibility": 0.583,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        10,
+        5,
+        7,
+        4,
+        6,
+        3
+      ]
+    },
+    {
+      "word": "설렘",
+      "difficulty": 0.35,
+      "invisibility": 0.583,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        5,
+        6,
         6,
         3,
         1
+      ]
+    },
+    {
+      "word": "선반",
+      "difficulty": 0.35,
+      "invisibility": 0.583,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        5,
+        6,
+        1,
+        2,
+        6
       ]
     },
     {
@@ -329,16 +2167,227 @@
       ]
     },
     {
-      "word": "사과",
+      "word": "국수",
+      "difficulty": 0.36,
+      "invisibility": 0.6,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        4,
+        7,
+        6,
+        4
+      ]
+    },
+    {
+      "word": "딸기",
+      "difficulty": 0.36,
+      "invisibility": 0.6,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        2,
+        6,
+        7,
+        3
+      ]
+    },
+    {
+      "word": "교실",
+      "difficulty": 0.36,
+      "invisibility": 0.6,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        4,
+        6,
+        3,
+        6
+      ]
+    },
+    {
+      "word": "숙제",
+      "difficulty": 0.36,
+      "invisibility": 0.6,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        7,
+        10,
+        3
+      ]
+    },
+    {
+      "word": "국자",
+      "difficulty": 0.36,
+      "invisibility": 0.6,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        4,
+        7,
+        10,
+        2
+      ]
+    },
+    {
+      "word": "병원",
+      "difficulty": 0.36,
+      "invisibility": 0.6,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        1,
+        5,
+        7,
+        9,
+        6
+      ]
+    },
+    {
+      "word": "시장",
+      "difficulty": 0.36,
+      "invisibility": 0.6,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        3,
+        10,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "학교",
+      "difficulty": 0.36,
+      "invisibility": 0.6,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        8,
+        2,
+        7,
+        7,
+        4
+      ]
+    },
+    {
+      "word": "노란색",
+      "difficulty": 0.375,
+      "invisibility": 0.625,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        6,
+        4,
+        6,
+        2,
+        6,
+        6,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "언니",
+      "difficulty": 0.375,
+      "invisibility": 0.625,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        5,
+        6,
+        6,
+        3
+      ]
+    },
+    {
+      "word": "돼지",
       "difficulty": 0.375,
       "invisibility": 0.625,
       "neighbor_density": 0.0,
       "syllables": 2,
       "visemes": [
         6,
-        2,
+        9,
+        10,
+        3
+      ]
+    },
+    {
+      "word": "초록색",
+      "difficulty": 0.375,
+      "invisibility": 0.625,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        10,
+        4,
+        6,
+        4,
         7,
-        9
+        6,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "허리",
+      "difficulty": 0.375,
+      "invisibility": 0.625,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        8,
+        5,
+        6,
+        3
+      ]
+    },
+    {
+      "word": "서리",
+      "difficulty": 0.375,
+      "invisibility": 0.625,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        5,
+        6,
+        3
+      ]
+    },
+    {
+      "word": "화가",
+      "difficulty": 0.375,
+      "invisibility": 0.625,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        8,
+        9,
+        7,
+        2
+      ]
+    },
+    {
+      "word": "거울",
+      "difficulty": 0.375,
+      "invisibility": 0.625,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        5,
+        4,
+        6
       ]
     },
     {
@@ -364,6 +2413,200 @@
       ]
     },
     {
+      "word": "그림",
+      "difficulty": 0.38,
+      "invisibility": 0.5,
+      "neighbor_density": 0.2,
+      "syllables": 2,
+      "visemes": [
+        7,
+        5,
+        6,
+        3,
+        1
+      ]
+    },
+    {
+      "word": "기차",
+      "difficulty": 0.38,
+      "invisibility": 0.5,
+      "neighbor_density": 0.2,
+      "syllables": 2,
+      "visemes": [
+        7,
+        3,
+        10,
+        2
+      ]
+    },
+    {
+      "word": "컵",
+      "difficulty": 0.38,
+      "invisibility": 0.5,
+      "neighbor_density": 0.2,
+      "syllables": 1,
+      "visemes": [
+        7,
+        5,
+        1
+      ]
+    },
+    {
+      "word": "마늘",
+      "difficulty": 0.38,
+      "invisibility": 0.5,
+      "neighbor_density": 0.2,
+      "syllables": 2,
+      "visemes": [
+        1,
+        2,
+        6,
+        5,
+        6
+      ]
+    },
+    {
+      "word": "겁",
+      "difficulty": 0.38,
+      "invisibility": 0.5,
+      "neighbor_density": 0.2,
+      "syllables": 1,
+      "visemes": [
+        7,
+        5,
+        1
+      ]
+    },
+    {
+      "word": "기자",
+      "difficulty": 0.38,
+      "invisibility": 0.5,
+      "neighbor_density": 0.2,
+      "syllables": 2,
+      "visemes": [
+        7,
+        3,
+        10,
+        2
+      ]
+    },
+    {
+      "word": "바늘",
+      "difficulty": 0.38,
+      "invisibility": 0.5,
+      "neighbor_density": 0.2,
+      "syllables": 2,
+      "visemes": [
+        1,
+        2,
+        6,
+        5,
+        6
+      ]
+    },
+    {
+      "word": "크림",
+      "difficulty": 0.38,
+      "invisibility": 0.5,
+      "neighbor_density": 0.2,
+      "syllables": 2,
+      "visemes": [
+        7,
+        5,
+        6,
+        3,
+        1
+      ]
+    },
+    {
+      "word": "지하철",
+      "difficulty": 0.386,
+      "invisibility": 0.643,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        10,
+        3,
+        8,
+        2,
+        10,
+        5,
+        6
+      ]
+    },
+    {
+      "word": "공책",
+      "difficulty": 0.4,
+      "invisibility": 0.667,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        4,
+        7,
+        10,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "동생",
+      "difficulty": 0.4,
+      "invisibility": 0.667,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        7,
+        6,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "책상",
+      "difficulty": 0.4,
+      "invisibility": 0.667,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        10,
+        2,
+        7,
+        6,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "햇살",
+      "difficulty": 0.4,
+      "invisibility": 0.667,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        8,
+        2,
+        6,
+        6,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "닭",
+      "difficulty": 0.4,
+      "invisibility": 0.667,
+      "neighbor_density": 0.0,
+      "syllables": 1,
+      "visemes": [
+        6,
+        2,
+        7
+      ]
+    },
+    {
       "word": "하늘",
       "difficulty": 0.42,
       "invisibility": 0.7,
@@ -378,10 +2621,532 @@
       ]
     },
     {
-      "word": "달",
-      "difficulty": 0.64,
+      "word": "수건",
+      "difficulty": 0.42,
+      "invisibility": 0.7,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        7,
+        5,
+        6
+      ]
+    },
+    {
+      "word": "자전거",
+      "difficulty": 0.428,
+      "invisibility": 0.714,
+      "neighbor_density": 0.0,
+      "syllables": 3,
+      "visemes": [
+        10,
+        2,
+        10,
+        5,
+        6,
+        7,
+        5
+      ]
+    },
+    {
+      "word": "귀",
+      "difficulty": 0.45,
+      "invisibility": 0.75,
+      "neighbor_density": 0.0,
+      "syllables": 1,
+      "visemes": [
+        7,
+        9
+      ]
+    },
+    {
+      "word": "당근",
+      "difficulty": 0.45,
+      "invisibility": 0.75,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        2,
+        7,
+        7,
+        5,
+        6
+      ]
+    },
+    {
+      "word": "손등",
+      "difficulty": 0.45,
+      "invisibility": 0.75,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        6,
+        6,
+        5,
+        7
+      ]
+    },
+    {
+      "word": "천둥",
+      "difficulty": 0.45,
+      "invisibility": 0.75,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        10,
+        5,
+        6,
+        6,
+        4,
+        7
+      ]
+    },
+    {
+      "word": "흰색",
+      "difficulty": 0.45,
+      "invisibility": 0.75,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        8,
+        9,
+        6,
+        6,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "된장",
+      "difficulty": 0.45,
+      "invisibility": 0.75,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        9,
+        6,
+        10,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "셔츠",
+      "difficulty": 0.45,
+      "invisibility": 0.75,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        5,
+        10,
+        5
+      ]
+    },
+    {
+      "word": "혀",
+      "difficulty": 0.45,
+      "invisibility": 0.75,
+      "neighbor_density": 0.0,
+      "syllables": 1,
+      "visemes": [
+        8,
+        5
+      ]
+    },
+    {
+      "word": "떡국",
+      "difficulty": 0.45,
+      "invisibility": 0.75,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        6,
+        5,
+        7,
+        7,
+        4,
+        7
+      ]
+    },
+    {
+      "word": "사과",
+      "difficulty": 0.455,
+      "invisibility": 0.625,
+      "neighbor_density": 0.2,
+      "syllables": 2,
+      "visemes": [
+        6,
+        2,
+        7,
+        9
+      ]
+    },
+    {
+      "word": "손가락",
+      "difficulty": 0.455,
+      "invisibility": 0.625,
+      "neighbor_density": 0.2,
+      "syllables": 3,
+      "visemes": [
+        6,
+        4,
+        6,
+        7,
+        2,
+        6,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "이슬",
+      "difficulty": 0.455,
+      "invisibility": 0.625,
+      "neighbor_density": 0.2,
+      "syllables": 2,
+      "visemes": [
+        3,
+        6,
+        5,
+        6
+      ]
+    },
+    {
+      "word": "숟가락",
+      "difficulty": 0.455,
+      "invisibility": 0.625,
+      "neighbor_density": 0.2,
+      "syllables": 3,
+      "visemes": [
+        6,
+        4,
+        6,
+        7,
+        2,
+        6,
+        2,
+        7
+      ]
+    },
+    {
+      "word": "다과",
+      "difficulty": 0.455,
+      "invisibility": 0.625,
+      "neighbor_density": 0.2,
+      "syllables": 2,
+      "visemes": [
+        6,
+        2,
+        7,
+        9
+      ]
+    },
+    {
+      "word": "이틀",
+      "difficulty": 0.455,
+      "invisibility": 0.625,
+      "neighbor_density": 0.2,
+      "syllables": 2,
+      "visemes": [
+        3,
+        6,
+        5,
+        6
+      ]
+    },
+    {
+      "word": "토끼",
+      "difficulty": 0.46,
+      "invisibility": 0.5,
+      "neighbor_density": 0.4,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        7,
+        3
+      ]
+    },
+    {
+      "word": "도끼",
+      "difficulty": 0.46,
+      "invisibility": 0.5,
+      "neighbor_density": 0.4,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        7,
+        3
+      ]
+    },
+    {
+      "word": "토기",
+      "difficulty": 0.46,
+      "invisibility": 0.5,
+      "neighbor_density": 0.4,
+      "syllables": 2,
+      "visemes": [
+        6,
+        4,
+        7,
+        3
+      ]
+    },
+    {
+      "word": "콩",
+      "difficulty": 0.48,
       "invisibility": 0.667,
-      "neighbor_density": 0.6,
+      "neighbor_density": 0.2,
+      "syllables": 1,
+      "visemes": [
+        7,
+        4,
+        7
+      ]
+    },
+    {
+      "word": "국",
+      "difficulty": 0.48,
+      "invisibility": 0.667,
+      "neighbor_density": 0.2,
+      "syllables": 1,
+      "visemes": [
+        7,
+        4,
+        7
+      ]
+    },
+    {
+      "word": "그릇",
+      "difficulty": 0.48,
+      "invisibility": 0.8,
+      "neighbor_density": 0.0,
+      "syllables": 2,
+      "visemes": [
+        7,
+        5,
+        6,
+        5,
+        6
+      ]
+    },
+    {
+      "word": "형",
+      "difficulty": 0.5,
+      "invisibility": 0.833,
+      "neighbor_density": 0.0,
+      "syllables": 1,
+      "visemes": [
+        8,
+        5,
+        7
+      ]
+    },
+    {
+      "word": "물",
+      "difficulty": 0.6,
+      "invisibility": 0.333,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "불",
+      "difficulty": 0.6,
+      "invisibility": 0.333,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "말",
+      "difficulty": 0.6,
+      "invisibility": 0.333,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "발",
+      "difficulty": 0.6,
+      "invisibility": 0.333,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "팔",
+      "difficulty": 0.6,
+      "invisibility": 0.333,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "맛",
+      "difficulty": 0.6,
+      "invisibility": 0.333,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "문",
+      "difficulty": 0.6,
+      "invisibility": 0.333,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "반",
+      "difficulty": 0.6,
+      "invisibility": 0.333,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "분",
+      "difficulty": 0.6,
+      "invisibility": 0.333,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "뿔",
+      "difficulty": 0.6,
+      "invisibility": 0.333,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "판",
+      "difficulty": 0.6,
+      "invisibility": 0.333,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "팥",
+      "difficulty": 0.6,
+      "invisibility": 0.333,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "풀",
+      "difficulty": 0.6,
+      "invisibility": 0.333,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        1,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "떡",
+      "difficulty": 0.66,
+      "invisibility": 0.833,
+      "neighbor_density": 0.4,
+      "syllables": 1,
+      "visemes": [
+        6,
+        5,
+        7
+      ]
+    },
+    {
+      "word": "턱",
+      "difficulty": 0.66,
+      "invisibility": 0.833,
+      "neighbor_density": 0.4,
+      "syllables": 1,
+      "visemes": [
+        6,
+        5,
+        7
+      ]
+    },
+    {
+      "word": "등",
+      "difficulty": 0.66,
+      "invisibility": 0.833,
+      "neighbor_density": 0.4,
+      "syllables": 1,
+      "visemes": [
+        6,
+        5,
+        7
+      ]
+    },
+    {
+      "word": "달",
+      "difficulty": 0.8,
+      "invisibility": 0.667,
+      "neighbor_density": 1.0,
       "syllables": 1,
       "visemes": [
         6,
@@ -391,9 +3156,9 @@
     },
     {
       "word": "탈",
-      "difficulty": 0.64,
+      "difficulty": 0.8,
       "invisibility": 0.667,
-      "neighbor_density": 0.6,
+      "neighbor_density": 1.0,
       "syllables": 1,
       "visemes": [
         6,
@@ -403,9 +3168,9 @@
     },
     {
       "word": "살",
-      "difficulty": 0.64,
+      "difficulty": 0.8,
       "invisibility": 0.667,
-      "neighbor_density": 0.6,
+      "neighbor_density": 1.0,
       "syllables": 1,
       "visemes": [
         6,
@@ -415,13 +3180,109 @@
     },
     {
       "word": "쌀",
-      "difficulty": 0.64,
+      "difficulty": 0.8,
       "invisibility": 0.667,
-      "neighbor_density": 0.6,
+      "neighbor_density": 1.0,
       "syllables": 1,
       "visemes": [
         6,
         2,
+        6
+      ]
+    },
+    {
+      "word": "눈",
+      "difficulty": 0.8,
+      "invisibility": 0.667,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        6,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "솥",
+      "difficulty": 0.8,
+      "invisibility": 0.667,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        6,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "논",
+      "difficulty": 0.8,
+      "invisibility": 0.667,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        6,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "돈",
+      "difficulty": 0.8,
+      "invisibility": 0.667,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        6,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "딸",
+      "difficulty": 0.8,
+      "invisibility": 0.667,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        6,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "산",
+      "difficulty": 0.8,
+      "invisibility": 0.667,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        6,
+        2,
+        6
+      ]
+    },
+    {
+      "word": "솔",
+      "difficulty": 0.8,
+      "invisibility": 0.667,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        6,
+        4,
+        6
+      ]
+    },
+    {
+      "word": "순",
+      "difficulty": 0.8,
+      "invisibility": 0.667,
+      "neighbor_density": 1.0,
+      "syllables": 1,
+      "visemes": [
+        6,
+        4,
         6
       ]
     }
@@ -439,12 +3300,215 @@
       "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
     },
     {
+      "a": "밥",
+      "b": "밤",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맘",
+      "b": "밤",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
       "a": "물",
       "b": "불",
       "visemes": [
         1,
         4,
         6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "문",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "분",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "뿔",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "불",
+      "b": "문",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "불",
+      "b": "분",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "불",
+      "b": "뿔",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "불",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "문",
+      "b": "분",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "문",
+      "b": "뿔",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "문",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "분",
+      "b": "뿔",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "분",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뿔",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "사과",
+      "b": "다과",
+      "visemes": [
+        2,
+        6,
+        7,
+        9
       ],
       "same_looking": true,
       "relation": "homophene",
@@ -495,6 +3559,28 @@
       "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
     },
     {
+      "a": "달",
+      "b": "딸",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "산",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
       "a": "탈",
       "b": "살",
       "visemes": [
@@ -517,8 +3603,85 @@
       "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
     },
     {
+      "a": "탈",
+      "b": "딸",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탈",
+      "b": "산",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
       "a": "살",
       "b": "쌀",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "살",
+      "b": "딸",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "살",
+      "b": "산",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌀",
+      "b": "딸",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌀",
+      "b": "산",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "딸",
+      "b": "산",
       "visemes": [
         2,
         6
@@ -538,6 +3701,703 @@
       "same_looking": true,
       "relation": "homophene",
       "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "말",
+      "b": "팔",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "말",
+      "b": "맛",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "말",
+      "b": "반",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "말",
+      "b": "판",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "말",
+      "b": "팥",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "팔",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "맛",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "반",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "판",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "팥",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "팔",
+      "b": "맛",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "팔",
+      "b": "반",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "팔",
+      "b": "판",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "팔",
+      "b": "팥",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맛",
+      "b": "반",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맛",
+      "b": "판",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맛",
+      "b": "팥",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "반",
+      "b": "판",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "반",
+      "b": "팥",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "판",
+      "b": "팥",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "그림",
+      "b": "크림",
+      "visemes": [
+        1,
+        3,
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "토끼",
+      "b": "도끼",
+      "visemes": [
+        3,
+        4,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "토끼",
+      "b": "토기",
+      "visemes": [
+        3,
+        4,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "도끼",
+      "b": "토기",
+      "visemes": [
+        3,
+        4,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "기차",
+      "b": "기자",
+      "visemes": [
+        2,
+        3,
+        7,
+        10
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "손가락",
+      "b": "숟가락",
+      "visemes": [
+        2,
+        4,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "배",
+      "b": "매",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "배",
+      "b": "패",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "매",
+      "b": "패",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "떡",
+      "b": "턱",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "떡",
+      "b": "등",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "턱",
+      "b": "등",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "비",
+      "b": "피",
+      "visemes": [
+        1,
+        3
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "솥",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "논",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "돈",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "솔",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솥",
+      "b": "논",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솥",
+      "b": "돈",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솥",
+      "b": "솔",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솥",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "논",
+      "b": "돈",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "논",
+      "b": "솔",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "논",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "돈",
+      "b": "솔",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "돈",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솔",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "이슬",
+      "b": "이틀",
+      "visemes": [
+        3,
+        5,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "양말",
+      "b": "양팔",
+      "visemes": [
+        1,
+        2,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "도마",
+      "b": "소파",
+      "visemes": [
+        1,
+        2,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "도마",
+      "b": "노파",
+      "visemes": [
+        1,
+        2,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "소파",
+      "b": "노파",
+      "visemes": [
+        1,
+        2,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "콩",
+      "b": "국",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "컵",
+      "b": "겁",
+      "visemes": [
+        1,
+        5,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "마늘",
+      "b": "바늘",
+      "visemes": [
+        1,
+        2,
+        5,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "반",
+      "b": "밤",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "반",
+      "b": "밥",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "발",
+      "b": "밤",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㅁ 입모양 다름(구별 가능)"
     },
     {
       "a": "발",
@@ -562,6 +4422,61 @@
       "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
     },
     {
+      "a": "비",
+      "b": "이",
+      "visemes": [
+        1,
+        7
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅂ↔ㅇ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "이",
+      "b": "피",
+      "visemes": [
+        1,
+        7
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅇ↔ㅍ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "마늘",
+      "b": "하늘",
+      "visemes": [
+        1,
+        8
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅎ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "바늘",
+      "b": "하늘",
+      "visemes": [
+        1,
+        8
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅂ↔ㅎ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "소",
+      "b": "코",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㅅ↔ㅋ 입모양 동일(구별 불가)"
+    },
+    {
       "a": "말",
       "b": "맘",
       "visemes": [
@@ -573,6 +4488,17 @@
       "note": "ㄹ↔ㅁ 입모양 다름(구별 가능)"
     },
     {
+      "a": "맘",
+      "b": "맛",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
       "a": "발",
       "b": "불",
       "visemes": [
@@ -582,6 +4508,17 @@
       "same_looking": false,
       "relation": "minimal_pair",
       "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "파도",
+      "b": "포도",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅗ 입모양 다름(구별 가능)"
     },
     {
       "a": "달",
@@ -604,6 +4541,50 @@
       "same_looking": false,
       "relation": "minimal_pair",
       "note": "ㄷ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "달",
+      "b": "팔",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄷ↔ㅍ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "딸",
+      "b": "말",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄸ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "딸",
+      "b": "발",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄸ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "딸",
+      "b": "팔",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄸ↔ㅍ 입모양 다름(구별 가능)"
     },
     {
       "a": "말",
@@ -670,6 +4651,247 @@
       "same_looking": false,
       "relation": "minimal_pair",
       "note": "ㅂ↔ㅌ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "살",
+      "b": "팔",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅅ↔ㅍ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "쌀",
+      "b": "팔",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅆ↔ㅍ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "탈",
+      "b": "팔",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅌ↔ㅍ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "달",
+      "b": "닭",
+      "visemes": [
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㄺ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "살",
+      "b": "솔",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅗ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "아빠",
+      "b": "오빠",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅗ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "배",
+      "b": "비",
+      "visemes": [
+        2,
+        3
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅐ↔ㅣ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "수박",
+      "b": "우박",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㅅ↔ㅇ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "서리",
+      "b": "허리",
+      "visemes": [
+        6,
+        8
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㅅ↔ㅎ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "눈",
+      "b": "문",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "눈",
+      "b": "분",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "문",
+      "b": "순",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "분",
+      "b": "순",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅂ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "의사",
+      "b": "의자",
+      "visemes": [
+        6,
+        10
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㅅ↔ㅈ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "가지",
+      "b": "바지",
+      "visemes": [
+        1,
+        7
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄱ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "매",
+      "b": "무",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅐ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "팔",
+      "b": "풀",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "반",
+      "b": "산",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅂ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "산",
+      "b": "판",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅅ↔ㅍ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "반",
+      "b": "분",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "산",
+      "b": "순",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "패",
+      "b": "피",
+      "visemes": [
+        2,
+        3
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅐ↔ㅣ 입모양 다름(구별 가능)"
     }
   ]
 }
