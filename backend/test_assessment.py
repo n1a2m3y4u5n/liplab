@@ -46,6 +46,25 @@ def test_empty_response():
     _ok(r["level"] == 1 and r["recommended_start"]["key"] == "viseme", "무응답 기본 수준")
 
 
+def test_improvement_delta():
+    base = {"accuracy": 0.4, "ability": 0.25, "level": 2, "error_visemes": [6, 7, 10]}
+    late = {"accuracy": 0.8, "ability": 0.75, "level": 4, "error_visemes": [10]}
+    d = A.improvement_delta(base, late)
+    _ok(abs(d["accuracy"] - 0.4) < 1e-9, "정답률 향상 +0.4")
+    _ok(abs(d["ability"] - 0.5) < 1e-9, "능력 향상 +0.5")
+    _ok(d["level"] == 2, "수준 +2")
+    _ok(d["resolved_visemes"] == [6, 7], "극복한 취약 입모양")
+    _ok(d["new_error_visemes"] == [], "새로 약해진 것 없음")
+
+
+def test_improvement_delta_regression():
+    # 나빠진 경우도 음수로 정확히 표현
+    d = A.improvement_delta({"accuracy": 0.6, "ability": 0.5, "level": 3, "error_visemes": []},
+                            {"accuracy": 0.5, "ability": 0.5, "level": 3, "error_visemes": [1]})
+    _ok(d["accuracy"] < 0, "정답률 하락은 음수")
+    _ok(d["new_error_visemes"] == [1], "새로 약해진 입모양 표시")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:

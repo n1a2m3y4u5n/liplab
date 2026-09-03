@@ -100,3 +100,19 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
         "error_visemes": [v for v, _ in err.most_common(3)],
         "recommended_start": _recommended_stage(level),
     }
+
+
+def improvement_delta(baseline: Dict, latest: Dict) -> Dict:
+    """첫 검사(baseline)와 최근 검사(latest)의 향상도 — 각 지표의 증감과 극복/신규 취약 입모양.
+    훈련 전/후를 같은 척도로 비교해 '실제로 나아졌는지'를 객관 수치로 준다. 순수 함수."""
+    def g(d, k, dflt=0.0):
+        return (d or {}).get(k, dflt)
+    base_err = set(g(baseline, "error_visemes", []) or [])
+    late_err = set(g(latest, "error_visemes", []) or [])
+    return {
+        "accuracy": round(g(latest, "accuracy") - g(baseline, "accuracy"), 3),
+        "ability": round(g(latest, "ability") - g(baseline, "ability"), 3),
+        "level": int(g(latest, "level", 1)) - int(g(baseline, "level", 1)),
+        "resolved_visemes": sorted(base_err - late_err),   # 예전엔 틀렸는데 이제 안 틀림
+        "new_error_visemes": sorted(late_err - base_err),  # 새로 약해진 입모양
+    }

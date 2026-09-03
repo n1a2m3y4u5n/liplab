@@ -22,6 +22,7 @@ export default function Placement() {
   const [responses, setResponses] = useState({})
   const [frames, setFrames] = useState([])
   const [result, setResult] = useState(null)
+  const [delta, setDelta] = useState(null) // 지난 검사(baseline) 대비 향상도
   const [loading, setLoading] = useState(true)
 
   const start = useCallback(async () => {
@@ -49,6 +50,8 @@ export default function Placement() {
     } else {
       const r = await curriculumAPI.scorePlacement(items, next)
       setResult(r)
+      // 방금 결과가 저장됐으니, 첫 검사 대비 향상도(2회차부터)를 가져와 함께 보여준다
+      curriculumAPI.getAssessmentHistory().then((h) => setDelta(h?.delta || null)).catch(() => {})
     }
   }
 
@@ -75,6 +78,24 @@ export default function Placement() {
                   <span key={v} className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">{VIS_NAME[v] || v}</span>
                 ))}
               </div>
+            </div>
+          )}
+          {delta && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-bold text-slate-600">지난 첫 검사 대비 향상도</p>
+              <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                <span className={`font-black ${delta.accuracy >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+                  정확도 {delta.accuracy >= 0 ? '+' : ''}{Math.round(delta.accuracy * 100)}%p
+                </span>
+                <span className={`font-black ${delta.level >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+                  수준 {delta.level >= 0 ? '+' : ''}{delta.level}
+                </span>
+              </div>
+              {delta.resolved_visemes?.length > 0 && (
+                <p className="mt-1.5 text-xs text-emerald-700">
+                  이제 안 틀리는 입모양: {delta.resolved_visemes.map((v) => VIS_NAME[v] || v).join(', ')}
+                </p>
+              )}
             </div>
           )}
           <div className="flex gap-2">
