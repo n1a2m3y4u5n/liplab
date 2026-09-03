@@ -1237,10 +1237,43 @@ async def assessment_placement(n: int = 8, current_user=Depends(get_current_user
 
 
 @app.post("/api/assessment/score")
-async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_current_user)):
-    """배치검사 채점 → 추정 수준·음소별 오류 프로파일·시작 단계 추천."""
+async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_current_user),
+                           db: AsyncSession = Depends(get_db)):
+    """배치검사 채점 → 추정 수준·음소별 오류 프로파일·시작 단계 추천.
+    결과를 이력으로 남겨 첫 검사(baseline) 대비 향상도를 나중에 비교할 수 있게 한다."""
     import assessment as _asmt
-    return _asmt.score_placement(data.items, data.responses)
+    res = _asmt.score_placement(data.items, data.responses)
+    try:
+        from database import AssessmentResult
+        db.add(AssessmentResult(
+            user_id=current_user.id, accuracy=res["accuracy"], ability=res["ability"],
+            level=res["level"], error_visemes=res["error_visemes"]))
+        await db.commit()
+    except Exception:
+        await db.rollback()  # 채점 결과 반환은 저장 실패와 무관하게 보장
+    return res
+
+
+@app.get("/api/assessment/history")
+async def assessment_history(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """배치·향상도 검사 이력 — 첫 검사(baseline)와 최근 검사, 그리고 향상도(delta)를 반환.
+    검사가 2회 이상이면 정답률·능력·수준의 증감과 극복한 취약 입모양을 함께 준다."""
+    import assessment as _asmt
+    from database import AssessmentResult
+    from sqlalchemy import select
+    r = await db.execute(select(AssessmentResult).where(
+        AssessmentResult.user_id == current_user.id).order_by(AssessmentResult.created_at))
+    rows = r.scalars().all()
+
+    def _row(x):
+        return {"accuracy": x.accuracy, "ability": x.ability, "level": x.level,
+                "error_visemes": x.error_visemes or [],
+                "at": x.created_at.isoformat() if x.created_at else None}
+    if not rows:
+        return {"count": 0, "baseline": None, "latest": None, "delta": None}
+    baseline, latest = _row(rows[0]), _row(rows[-1])
+    delta = _asmt.improvement_delta(baseline, latest) if len(rows) >= 2 else None
+    return {"count": len(rows), "baseline": baseline, "latest": latest, "delta": delta}
 
 
 @app.get("/api/conversation/multi")

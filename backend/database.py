@@ -245,6 +245,20 @@ class ReviewItem(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class AssessmentResult(Base):
+    """배치·향상도 검사 결과 이력(축 I). 매 검사 결과를 남겨, 첫 검사(baseline)와 최근 검사를
+    비교해 실제로 나아졌는지(향상도)를 객관 수치로 보여준다. 훈련 전/후 효과 서사의 근거."""
+    __tablename__ = "assessment_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    accuracy = Column(Float, default=0.0)            # 0~1 정답률
+    ability = Column(Float, default=0.0)             # 통과한 최고 난이도(0~1)
+    level = Column(Integer, default=1)               # 추정 수준 1~5
+    error_visemes = Column(JSON, default=list)       # 자주 틀린 입모양 id 목록
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 # Dependency for getting DB session
 async def get_db():
     """Dependency for FastAPI routes to get database session"""

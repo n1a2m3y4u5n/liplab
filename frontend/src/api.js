@@ -172,6 +172,7 @@ export const curriculumAPI = {
   getMultiConversation: async (speakers = 2, turns = 6) => (await api.get('/conversation/multi', { params: { speakers, turns } })).data,
   getPlacement: async (n = 8) => (await api.get('/assessment/placement', { params: { n } })).data,
   scorePlacement: async (items, responses) => (await api.post('/assessment/score', { items, responses })).data,
+  getAssessmentHistory: async () => (await api.get('/assessment/history')).data,
 }
 
 export const scoreAPI = {
