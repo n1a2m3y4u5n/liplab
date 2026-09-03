@@ -41,6 +41,20 @@ def test_build_and_neighbors():
     _ok(bap["neighbor_density"] > 0, "밥은 같은 입모양(맘) 이웃이 있어 밀도 > 0")
 
 
+def test_consonant_visual_space():
+    try:
+        import perceptual_space as PS
+    except Exception:
+        print("  (numpy 미설치 → 지각공간 테스트 스킵)")
+        return
+    cons, S = PS.similarity_matrix()
+    i = {c: k for k, c in enumerate(cons)}
+    _ok(S[i["ㅂ"]][i["ㅁ"]] > 0.9, "양순음 ㅂ-ㅁ은 시각적으로 거의 동일")
+    _ok(S[i["ㅂ"]][i["ㄱ"]] < 0.3, "양순 vs 연구개는 시각적으로 다름")
+    sp = PS.perceptual_space()
+    _ok(len(sp["mds_2d"]) == len(cons), "MDS 좌표가 자음마다 하나씩")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
