@@ -1015,3 +1015,10 @@ D-GOP 경로로 교체하는 것은 torch 설치 후 2차로 진행한다. 계�
 
 **변경 파일(C.1).** `backend/perceptual.py`(신규), `backend/test_perceptual.py`(신규),
 `scripts/export_perceptual.py`(신규), `docs/perceptual-resources.json`(신규, 공개 자원).
+
+### D.5 OLKAVS 전처리 파이프라인 검증
+AI Hub 립리딩 샘플(OLKAVS)의 라벨 JSON(문장별 타임스탬프 + 프레임별 입술 바운딩박스)로
+원본 mp4를 문장 단위 입술 ROI 클립(96x96) + 텍스트 라벨(labels.jsonl)로 잘라내는 전처리를
+구현했다. torch 없이 ffmpeg만으로 동작(계획서 우선순위 1: 전처리 파이프라인 검증). 샘플에서
+6개 클립 생성 확인. 실제 립리딩 학습(closed-set 단어 분류)은 Phase 2(GPU)에서 이 클립을 입력으로.
+**변경 파일(D.5).** `scripts/preprocess_olkavs.py`(신규).
