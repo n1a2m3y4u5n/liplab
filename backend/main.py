@@ -690,19 +690,48 @@ async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
 from datetime import date as _sr_date, timedelta as _sr_delta
 
 
-async def _srs_schedule_wrong(user_id: int, kind: str, ref, db: AsyncSession):
-    """오답 → 내일 복습 예약(SRS). 기존 항목이면 간격 리셋. commit은 호출부에서."""
+async def _srs_apply(user_id: int, kind: str, ref, quality: int, db, create: bool = True) -> dict:
+    """SM-2 경량 스케줄러(srs.schedule)를 한 복습 항목에 적용. 항목의 ease/간격/반복/누수를
+    갱신하고 due_date를 다시 잡는다. 간격이 충분히 커지면(졸업) 큐에서 제거한다.
+    항목이 없을 때 quality<3(실패)이고 create면 새로 등록한다. commit은 호출부.
+    반환: {removed, due_date, interval_days}."""
+    import srs
     from database import ReviewItem
     from sqlalchemy import select
-    tomorrow = (_sr_date.today() + _sr_delta(days=1)).isoformat()
+    ref = str(ref)
+    if not ref:
+        return {"removed": False, "due_date": None, "interval_days": None}
     r = await db.execute(select(ReviewItem).where(
-        ReviewItem.user_id == user_id, ReviewItem.kind == kind, ReviewItem.ref == str(ref)))
+        ReviewItem.user_id == user_id, ReviewItem.kind == kind, ReviewItem.ref == ref))
     item = r.scalar_one_or_none()
+
     if item is None:
-        db.add(ReviewItem(user_id=user_id, kind=kind, ref=str(ref), due_date=tomorrow, interval_days=1))
-    else:
-        item.interval_days = 1
-        item.due_date = tomorrow
+        if not create or quality >= 3:
+            return {"removed": False, "due_date": None, "interval_days": None}
+        s = srs.schedule(quality)  # 첫 실패 → 내일 재등장
+        due = (_sr_date.today() + _sr_delta(days=s["interval_days"])).isoformat()
+        db.add(ReviewItem(user_id=user_id, kind=kind, ref=ref, due_date=due,
+                          interval_days=s["interval_days"], ease_factor=s["ease_factor"],
+                          repetitions=s["repetitions"], lapses=s["lapses"]))
+        return {"removed": False, "due_date": due, "interval_days": s["interval_days"]}
+
+    s = srs.schedule(quality, ease_factor=item.ease_factor, interval_days=item.interval_days,
+                     repetitions=item.repetitions, lapses=item.lapses)
+    if s["graduated"] and quality >= 3:
+        await db.delete(item)   # 졸업 — 큐에서 제거
+        return {"removed": True, "due_date": None, "interval_days": s["interval_days"]}
+    item.interval_days = s["interval_days"]
+    item.ease_factor = s["ease_factor"]
+    item.repetitions = s["repetitions"]
+    item.lapses = s["lapses"]
+    item.due_date = (_sr_date.today() + _sr_delta(days=s["interval_days"])).isoformat()
+    return {"removed": False, "due_date": item.due_date, "interval_days": item.interval_days}
+
+
+async def _srs_schedule_wrong(user_id: int, kind: str, ref, db: AsyncSession):
+    """오답 → SM-2로 복습 재예약(신규면 등록). commit은 호출부에서."""
+    import srs
+    await _srs_apply(user_id, kind, ref, srs.quality_from_correct(False), db, create=True)
 
 
 async def _get_or_create_profile(user_id: int, db: AsyncSession):
@@ -964,59 +993,26 @@ class ReviewAnswer(BaseModel):
 
 @app.post("/api/review/answer")
 async def review_answer(data: ReviewAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """복습 결과로 다음 등장일 재조정(정답=간격 2배, 오답=내일). 간격이 충분히 커지면 졸업(제거)."""
-    from database import ReviewItem
-    from sqlalchemy import select
-    r = await db.execute(select(ReviewItem).where(
-        ReviewItem.user_id == current_user.id, ReviewItem.kind == data.kind, ReviewItem.ref == data.ref))
-    item = r.scalar_one_or_none()
-    if item is None:
-        return {"ok": True, "removed": False}
+    """복습 결과로 다음 등장일 재조정(SM-2). ease·반복에 따라 간격이 늘고, 충분히 커지면 졸업(제거)."""
+    import srs
     # 공용 보상 — 복습도 XP·스트릭에 기여(복습만 한 날 스트릭이 끊기던 문제 해결)
     award = _award_xp_and_streak(current_user, 10 if data.correct else 3)
     reward = {"xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
-    if data.correct:
-        new_interval = min((item.interval_days or 1) * 2, 32)
-        if new_interval >= 32:
-            await db.delete(item)          # 졸업 — 큐에서 제거
-            await db.commit()
-            return {"ok": True, "removed": True, **reward}
-        item.interval_days = new_interval
-        item.due_date = (_sr_date.today() + _sr_delta(days=new_interval)).isoformat()
-    else:
-        item.interval_days = 1
-        item.due_date = (_sr_date.today() + _sr_delta(days=1)).isoformat()
+    res = await _srs_apply(current_user.id, data.kind, data.ref,
+                           srs.quality_from_correct(data.correct), db, create=False)
     await db.commit()
-    return {"ok": True, "removed": False, "next_due": item.due_date,
-            "interval_days": item.interval_days, **reward}
+    return {"ok": True, "removed": res["removed"], "next_due": res["due_date"],
+            "interval_days": res["interval_days"], **reward}
 
 
 # ── 공용 복습 유틸 — 세 기둥(독화·말하기·촉각)이 동일 구조(예정/틀림/북마크)를 쓰도록 ──
-async def _sr_touch(user_id: int, kind: str, ref: str, correct: bool, db):
-    """SRS 큐 유지(간격반복) — 틀리면 '오늘 예정'으로 등록/재설정, 맞으면 간격 2배(충분히 크면 졸업).
+async def _sr_touch(user_id: int, kind: str, ref: str, correct: bool, db, score: float = None):
+    """SRS 큐 유지(SM-2) — 틀리면 내일 재등장(신규면 등록), 맞으면 ease·반복에 따라 간격을 늘려
+    충분히 커지면 졸업. 점수(score 0~100)가 오면 이진 대신 등급(quality)으로 반영한다.
     커밋은 호출부에서. review/answer와 동일한 규칙."""
-    if not ref:
-        return
-    from database import ReviewItem
-    from sqlalchemy import select
-    r = await db.execute(select(ReviewItem).where(
-        ReviewItem.user_id == user_id, ReviewItem.kind == kind, ReviewItem.ref == ref))
-    item = r.scalar_one_or_none()
-    today = _sr_date.today()
-    if not correct:
-        if item is None:
-            db.add(ReviewItem(user_id=user_id, kind=kind, ref=ref,
-                              due_date=today.isoformat(), interval_days=1))
-        else:
-            item.interval_days = 1
-            item.due_date = today.isoformat()
-    elif item is not None:
-        new_interval = min((item.interval_days or 1) * 2, 32)
-        if new_interval >= 32:
-            await db.delete(item)
-        else:
-            item.interval_days = new_interval
-            item.due_date = (today + _sr_delta(days=new_interval)).isoformat()
+    import srs
+    quality = srs.quality_from_score(score) if score is not None else srs.quality_from_correct(correct)
+    await _srs_apply(user_id, kind, ref, quality, db, create=True)
 
 
 async def _due_refs(user_id: int, kinds, db):
@@ -1574,9 +1570,10 @@ async def speak_assess(
         loudness=loudness, pitch_range=pitch_range, duration=duration,
         pitch_start=pitch_start, pitch_end=pitch_end, confusions=confusions[:6],
     ))
-    # SRS 복습 큐 유지 — 발음/단어/문장은 틀리면 예정 등록, 맞으면 간격 확장(세 기둥 공통)
+    # SRS 복습 큐 유지 — 발음/단어/문장은 틀리면 예정 등록, 맞으면 간격 확장(세 기둥 공통).
+    # 말하기는 0~100 점수가 있으므로 이진 대신 점수 등급으로 복습 간격을 조절한다(SM-2).
     if mode in ("phoneme", "word", "sentence") and passed is not None:
-        await _sr_touch(current_user.id, "speak", target, bool(passed), db)
+        await _sr_touch(current_user.id, "speak", target, bool(passed), db, score=score)
     await db.commit()
     if sp is not None:
         progress = {"stage": stage, "attempts": sp.attempts,
