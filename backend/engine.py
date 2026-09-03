@@ -28,6 +28,13 @@ DOUBLE_FINAL_LINK = {
     'ㄿ': ('ㄹ', 'ㅍ'), 'ㅀ': ('ㄹ', 'ㅎ'), 'ㅄ': ('ㅂ', 'ㅅ'),
 }
 
+# 격음화(축약) — 평음이 ㅎ과 만나 거센소리로. 입모양(viseme 그룹)이 실제로 바뀌는 방향만 반영:
+#   · 코다 ㅎ + 평음 초성 → 초성이 거센소리 (좋다→조타). 성문음 ㅎ(viseme 8) 프레임이 사라진다.
+#   · 코다 평음 + 초성 ㅎ → 코다가 다음 초성으로 거세게 (입학→이팍, 국화→구콰). ㅎ(8)→ㅂ계(1)·ㄱ계(7)로 바뀜.
+ASPIRATE = {'ㄱ': 'ㅋ', 'ㄷ': 'ㅌ', 'ㅂ': 'ㅍ', 'ㅈ': 'ㅊ'}
+# 코다 ㅎ을 품은 겹받침(격음화 후 앞 자음이 코다로 남음)
+H_CODA = {'ㅎ': '', 'ㄶ': 'ㄴ', 'ㅀ': 'ㄹ'}
+
 
 def to_pronounced_syllables(text: str):
     """
@@ -43,14 +50,34 @@ def to_pronounced_syllables(text: str):
         else:
             tokens.append(ch)
 
-    # 인접 음절 간 규칙 적용 (연음 / ㅎ탈락)
+    # 인접 음절 간 규칙 적용 (격음화 / 연음 / ㅎ탈락)
     for i in range(len(tokens) - 1):
         cur, nxt = tokens[i], tokens[i + 1]
         if not isinstance(cur, list) or not isinstance(nxt, list):
             continue
         fin = cur[2]
-        if not fin or nxt[0] != 'ㅇ':
-            continue  # 받침이 없거나 다음 초성이 무음 ㅇ이 아니면 연음 대상 아님
+        if not fin:
+            continue
+        nini = nxt[0]
+
+        # ── 격음화(축약): 다음 초성이 '실제 자음'일 때(무음 ㅇ 이전) 먼저 처리 ──
+        # (a) 코다 ㅎ(계열) + 평음 초성 → 초성 거센소리, ㅎ 코다 탈락 (좋다→조타, 많다→만타)
+        if fin in H_CODA and nini in ASPIRATE:
+            nxt[0] = ASPIRATE[nini]
+            cur[2] = H_CODA[fin]
+            continue
+        # (b) 코다 평음 + 초성 ㅎ → 코다가 다음 초성으로 거세게, 코다 탈락 (입학→이팍, 국화→구콰)
+        if nini == 'ㅎ' and fin in ASPIRATE:
+            asp = ASPIRATE[fin]
+            # ㅎ 매개 구개음화 — ㄷ+히 → 치 (닫히다→다치다, 굳히다→구치다). ㅣ에 한정해 과적용 방지.
+            if asp == 'ㅌ' and nxt[1] == 'ㅣ':
+                asp = 'ㅊ'
+            nxt[0] = asp
+            cur[2] = ''
+            continue
+
+        if nini != 'ㅇ':
+            continue  # (격음화 외에는) 다음 초성이 무음 ㅇ이 아니면 연음 대상 아님
         if fin == 'ㅇ':
             continue  # 종성 ㅇ[ŋ]은 넘어가지 않음 (강아지→강아지)
         elif fin == 'ㅎ':
@@ -194,13 +221,18 @@ def get_phoneme_type(phoneme: str, position: str) -> str:
 
 
 def get_transition_viseme(current_final: str, next_initial: str) -> tuple:
-    """동시조음 전환 프레임 계산"""
+    """동시조음 전환 프레임 계산.
+
+    코다에서 '다음 음절 초성의 조음위치'로 입이 옮겨가는 사이 프레임을 낸다.
+    다음 초성의 조음위치별로 11(양순)·12(치경)·13(연구개) 세 전환을 대칭으로 부여한다.
+    (기존에는 11 분기가 다음 '모음'을 검사해 초성 슬롯과 맞지 않아 한 번도 방출되지 않았다.)
+    """
     if not current_final:
         return (None, 0)
 
-    if current_final in ['ㅁ', 'ㅂ', 'ㅍ']:
-        if next_initial in ['ㅏ', 'ㅐ', 'ㅓ', 'ㅔ']:
-            return (11, 40)
+    # 다음 초성이 양순음 → 입술이 닫히는 전환 (국물→[…ㄱ]→(양순전환)→[ㅁ…])
+    if next_initial in ['ㅂ', 'ㅃ', 'ㅍ', 'ㅁ']:
+        return (11, 35)
 
     if next_initial in ['ㄷ', 'ㄸ', 'ㅌ', 'ㄴ', 'ㄹ', 'ㅅ', 'ㅆ']:
         return (12, 35)
