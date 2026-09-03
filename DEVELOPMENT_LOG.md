@@ -1033,3 +1033,13 @@ AI Hub 립리딩 샘플(OLKAVS)의 라벨 JSON(문장별 타임스탬프 + 프�
 검증(테스트 4): 난이도 오름 문항, 혼동보기(도마↔소파·노파, 컵↔팥·겁), 채점·수준·시작단계 추천.
 프론트 검사 페이지는 후속. 지각공간 임베딩 준비되면 난이도 통제 정교화(Phase 2).
 **변경 파일(I).** `backend/assessment.py`(신규), `backend/test_assessment.py`(신규), `backend/main.py`.
+
+## K. 입술 너머 확장 조음 단서 (Face Cues)
+계획서 §3.11. 웹캠 채점(D)은 입술 중심이지만, 말은 얼굴 전체에 조음 흔적을 남긴다(턱·볼·코).
+이 신호를 뽑아 입 밖으로 잘 안 드러나는 자질(비음·압력)의 상관 신호를 보조적으로 추정한다.
+- `frontend/src/lib/faceCues.js`(신규, 순수): MediaPipe 입술 외 blendshape(jawOpen·cheekPuff·
+  noseSneer·mouthPress)에서 jaw_open·nasal·cheek_pressure 신호 추정. node 검증(턱0.7·코울림0.6·볼압력0.75).
+- `WebcamMouthCheck`에 '입술 너머 신호(보조·실험)' 미니 바 3개 표시.
+**정직한 한계**: 미세 신호는 조명·개인차에 민감하므로 판정이 아니라 보조 단서로만 쓴다(계획서 명시).
+J 기호 뒷받침·B 융합 입력 후보(음향·영상 백본과 함께 Phase 2에서 정교화).
+**변경 파일(K).** `frontend/src/lib/faceCues.js`(신규), `frontend/src/components/WebcamMouthCheck.jsx`.

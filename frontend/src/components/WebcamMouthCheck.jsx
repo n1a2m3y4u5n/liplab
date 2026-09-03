@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { toBlendshapeMap, scorePercent, coachHint, loadCalibration } from '../lib/mouthScore'
+import { faceSignals, FACE_SIGNAL_LABELS } from '../lib/faceCues'
 import { curriculumAPI } from '../api'
 import MouthCalibration from './MouthCalibration'
 
@@ -29,6 +30,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
   const [hint, setHint] = useState('')
   const [errMsg, setErrMsg] = useState('')
   const [recorded, setRecorded] = useState(false)
+  const [faceSig, setFaceSig] = useState(null) // 입술 너머 얼굴 신호(축 K, 보조)
   const bestRef = useRef(0)
   const [profiles, setProfiles] = useState(() => loadCalibration())
   const [showCalib, setShowCalib] = useState(false)
@@ -80,9 +82,11 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
         setScore(s)
         if (s > bestRef.current) bestRef.current = s
         setHint(coachHint(bs, visemeId, profiles))
+        setFaceSig(faceSignals(bs)) // 입술 너머 신호(K)
       } else {
         setScore(null)
         setHint('얼굴이 화면에 잘 보이게 해주세요')
+        setFaceSig(null)
       }
     } catch { /* 프레임 스킵 */ }
     rafRef.current = requestAnimationFrame(loop)
@@ -166,6 +170,21 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       </div>
       {status === 'running' && hint && (
         <p className="mt-2 text-center text-sm font-medium text-gray-700">{hint}</p>
+      )}
+      {status === 'running' && faceSig && (
+        <div className="mt-2">
+          <p className="mb-1 text-center text-[10px] text-gray-400">입술 너머 신호 (보조·실험)</p>
+          <div className="grid grid-cols-3 gap-2">
+            {Object.entries(FACE_SIGNAL_LABELS).map(([k, label]) => (
+              <div key={k} className="text-center">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                  <div className="h-full rounded-full bg-slate-400 transition-all" style={{ width: `${Math.round((faceSig[k] || 0) * 100)}%` }} />
+                </div>
+                <span className="mt-0.5 block text-[10px] text-gray-500">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
       <div className="mt-2 flex flex-col items-center gap-1.5">
         {status === 'running' ? (
