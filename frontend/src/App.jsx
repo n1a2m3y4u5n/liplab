@@ -1,5 +1,6 @@
 import { Component, lazy, Suspense, useState, useEffect, useLayoutEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { MotionConfig } from 'framer-motion'
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null } }
@@ -159,6 +160,8 @@ function StageGate({ stage, children }) {
 function App() {
   return (
     <ErrorBoundary>
+    {/* 동작 최소화 설정 시 framer-motion 애니메이션을 OS 설정에 맞춰 자동 축소(접근성) */}
+    <MotionConfig reducedMotion="user">
     <Router>
       <ScrollToTop />
       <AuthGate>
@@ -209,6 +212,7 @@ function App() {
       </>
       </AuthGate>
     </Router>
+    </MotionConfig>
     </ErrorBoundary>
   )
 }

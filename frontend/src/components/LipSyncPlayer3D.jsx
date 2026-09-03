@@ -209,8 +209,9 @@ export default function LipSyncPlayer3D({
           disabled={currentIndex === 0}
           className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-gray-700"
           title="이전 프레임"
+          aria-label="이전 프레임"
         >
-          ◀◀
+          <span aria-hidden="true">◀◀</span>
         </button>
 
         {/* Play/Pause */}
@@ -227,8 +228,9 @@ export default function LipSyncPlayer3D({
           disabled={currentIndex >= visemes.length - 1}
           className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-gray-700"
           title="다음 프레임"
+          aria-label="다음 프레임"
         >
-          ▶▶
+          <span aria-hidden="true">▶▶</span>
         </button>
 
         {/* Replay */}
@@ -236,8 +238,9 @@ export default function LipSyncPlayer3D({
           onClick={replay}
           className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors text-gray-700"
           title="처음부터 재생"
+          aria-label="처음부터 재생"
         >
-          ↺
+          <span aria-hidden="true">↺</span>
         </button>
       </div>
 

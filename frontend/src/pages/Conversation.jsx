@@ -163,9 +163,9 @@ export default function Conversation() {
         onExit={handleFinish}
       />
 
-      <div className="flex flex-1 overflow-hidden max-w-6xl mx-auto w-full px-4 py-4 gap-4">
-        {/* Left: Avatar player */}
-        <div className="w-80 shrink-0 flex flex-col gap-3">
+      <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden max-w-6xl mx-auto w-full px-4 py-4 gap-4">
+        {/* Left: Avatar player — 모바일에선 위로 쌓이고, lg 이상에서만 좌측 고정폭 */}
+        <div className="w-full lg:w-80 shrink-0 flex flex-col gap-3">
           <div className="card flex-1">
             <p className="text-xs font-semibold text-gray-500 mb-2">입모양 읽기</p>
             {isLoading ? (

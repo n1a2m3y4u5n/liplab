@@ -85,3 +85,22 @@ body,
 .spinner {
   animation: spin 1s linear infinite;
 }
+
+/* 접근성 — '동작 최소화'를 켠 사용자에겐 장식성 모션을 억제한다.
+   청각장애와 전정기능 이상이 함께 나타나는 경우가 있어(WCAG 2.3.3), 무한 펄스·자동
+   슬라이드·확산 전환 등을 줄인다. 로딩 스피너의 회전만 진행 표시로 남긴다.
+   (framer-motion 컴포넌트는 App의 <MotionConfig reducedMotion="user">가 함께 처리) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .spinner {
+    animation-duration: 0.9s !important;
+    animation-iteration-count: infinite !important;
+  }
+}
