@@ -134,7 +134,7 @@ async def get_me(current_user = Depends(get_current_user)):
 # ============================================
 
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 
 class VisemeFrame(BaseModel):
     viseme: int
@@ -298,8 +298,7 @@ async def submit_progress(
         )
 
         # Save progress to database
-        from database import Progress, WeakViseme
-        from sqlalchemy import select, update
+        from database import Progress
 
         progress = Progress(
             user_id=current_user.id,
