@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { toBlendshapeMap, scorePercent, coachHint, loadCalibration } from '../lib/mouthScore'
 import { faceSignals, FACE_SIGNAL_LABELS } from '../lib/faceCues'
+import { lipGeometry, LIP_GEOMETRY_LABELS } from '../lib/lipGeometry'
 import { curriculumAPI } from '../api'
 import MouthCalibration from './MouthCalibration'
 
@@ -31,6 +32,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
   const [errMsg, setErrMsg] = useState('')
   const [recorded, setRecorded] = useState(false)
   const [faceSig, setFaceSig] = useState(null) // 입술 너머 얼굴 신호(축 K, 보조)
+  const [geo, setGeo] = useState(null)         // 입술 기하 지표(그림8, 결정론적 보조)
   const bestRef = useRef(0)
   const [profiles, setProfiles] = useState(() => loadCalibration())
   const [showCalib, setShowCalib] = useState(false)
@@ -83,10 +85,12 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
         if (s > bestRef.current) bestRef.current = s
         setHint(coachHint(bs, visemeId, profiles))
         setFaceSig(faceSignals(bs)) // 입술 너머 신호(K)
+        setGeo(lipGeometry(res.faceLandmarks?.[0])) // 입술 기하 지표(그림8) — 좌표 기반 결정론적 보조
       } else {
         setScore(null)
         setHint('얼굴이 화면에 잘 보이게 해주세요')
         setFaceSig(null)
+        setGeo(null)
       }
     } catch { /* 프레임 스킵 */ }
     rafRef.current = requestAnimationFrame(loop)
@@ -181,6 +185,19 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
                   <div className="h-full rounded-full bg-slate-400 transition-all" style={{ width: `${Math.round((faceSig[k] || 0) * 100)}%` }} />
                 </div>
                 <span className="mt-0.5 block text-[10px] text-gray-500">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {status === 'running' && geo && (
+        <div className="mt-2">
+          <p className="mb-1 text-center text-[10px] text-gray-400">입술 기하 지표 (좌표 기반·양안거리 정규화)</p>
+          <div className="grid grid-cols-5 gap-1.5">
+            {Object.entries(LIP_GEOMETRY_LABELS).map(([k, label]) => (
+              <div key={k} className="rounded-md bg-slate-50 py-1 text-center">
+                <span className="block text-[11px] font-bold tabular-nums text-slate-700">{geo[k]}</span>
+                <span className="mt-0.5 block text-[9px] text-slate-400">{label}</span>
               </div>
             ))}
           </div>
