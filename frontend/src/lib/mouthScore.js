@@ -106,9 +106,34 @@ export function cosineScore(blendshapeMap, visemeId, profiles) {
   return dot / (Math.sqrt(na) * Math.sqrt(nb))
 }
 
-/** 0~100 점수. profiles로 개인 캘리브레이션을 넘길 수 있다(null 허용). */
+/**
+ * 목표 대비 '크기(활성도) 정합' 0~1. 코사인은 방향만 보고 크기(얼마나 벌렸는지)를 무시하므로,
+ * 목표 벡터와 실측 벡터의 L2 크기 차이를 벌점화한다. 이게 없으면 jawOpen만 살짝 켜도 개방모음이
+ * 100점이 되고, 단일 축(jawOpen) 프로파일들(개방·중설·연구개·성문)이 서로 구별되지 않는다.
+ */
+export function magnitudeMatch(blendshapeMap, visemeId, profiles) {
+  const prof = (profiles && profiles[visemeId]) || VISEME_PROFILES[visemeId]
+  if (!prof) return 0
+  let na = 0, nb = 0
+  for (const k of MOUTH_KEYS) {
+    const a = prof[k] || 0
+    const b = blendshapeMap[k] || 0
+    na += a * a
+    nb += b * b
+  }
+  const magA = Math.sqrt(na)
+  const magB = Math.sqrt(nb)
+  if (magA === 0 && magB === 0) return 1
+  const denom = Math.max(magA, magB)
+  if (denom === 0) return 0
+  return Math.max(0, 1 - Math.abs(magA - magB) / denom)
+}
+
+/** 0~100 점수 — 방향(코사인) × 크기 정합. profiles로 개인 캘리브레이션을 넘길 수 있다(null 허용). */
 export function scorePercent(blendshapeMap, visemeId, profiles) {
-  return Math.round(cosineScore(blendshapeMap, visemeId, profiles) * 100)
+  const cos = cosineScore(blendshapeMap, visemeId, profiles)
+  const mag = magnitudeMatch(blendshapeMap, visemeId, profiles)
+  return Math.round(cos * mag * 100)
 }
 
 /** 목표 대비 가장 부족/과한 차원을 한 줄 코칭으로. */
