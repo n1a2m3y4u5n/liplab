@@ -964,3 +964,32 @@ localStorage에 저장하고, 이후 채점은 개인 실측값을 쓴다(없으
 
 **변경 파일(D.4).** `frontend/src/lib/mouthScore.js`, `frontend/src/components/MouthCalibration.jsx`(신규),
 `frontend/src/components/WebcamMouthCheck.jsx`, `docs/lipreading-data-research.md`(신규).
+
+---
+
+# 제2기 고도화 — Phase 1
+
+## B. 전사 비의존 발음정확도(D-GOP)
+
+### B.1 핵심 로직 (`backend/dgop.py` 신규, 순수 함수)
+계획서 §3.2: 전사 없이 목표 음소가 놓일 구간의 음향이 그 음소에 얼마나 부합하는지를 사후확률로
+점수화한다(GOP). 목표 문장을 이미 알기 때문에 전사가 필요 없다. 다만 표준 GOP는 정상 발화를
+전제해 **뭉갠 농인 발화에서 오히려 과신**(점수 붕괴적 상승)한다. D-GOP는 예측 분포의 불확실성
+(엔트로피·상위 확률 여유)으로 naive 점수를 보정하고, 음향이 불확실한 구간일수록 영상(입모양)에
+가중해 후기 융합한다.
+- `normalized_entropy`·`top_margin`·`phone_confidence`: 예측 분포의 불확실성 정량화.
+- `dgop_phone`: naive(목표 사후확률)를 그 구간 신뢰도로 보정 → 분포가 평평할수록 과신을 막는다.
+- `fuse_audio_visual`: 음향 불확실할수록 영상(웹캠 D축) 가중치↑ 후기 융합(농인은 음성이 불안정한
+  반면 입모양은 상대적으로 안정적).
+- 음향 모델 비의존(사후확률 분포를 입력받는 순수 함수)이라 결정론적으로 테스트된다.
+
+**검증(테스트 4개).** 과신 붕괴 보정 실증: 명료 발음 naive 0.85 → D-GOP 0.38, 뭉갠 발음
+naive 0.40(과신) → **D-GOP 0.002**(불확실성 0.995로 강하게 할인). AV 융합: 음향 불확실 시
+visual_weight 0.3 → 0.65로 자동 상승.
+
+### B.2 다음 (음향 백본 — torch 필요)
+실제 사후확률을 공급하는 음향 추론(wav2vec2/WavLM 강제정렬)은 `torch`·`transformers`가 필요한데
+현재 로컬 venv에 미설치다. 음향 백본 어댑터 + 기존 전사 방식 폴백으로 `/api/speak/assess`를
+D-GOP 경로로 교체하는 것은 torch 설치 후 2차로 진행한다. 계획서도 "전사 방식을 폴백으로 남긴다".
+
+**변경 파일(B.1).** `backend/dgop.py`(신규), `backend/test_dgop.py`(신규).
