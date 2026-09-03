@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import LearnHeader from '../components/LearnHeader'
+import useFocusTrap from '../hooks/useFocusTrap'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
@@ -63,6 +64,8 @@ function WordQuiz({ data }) {
   const [submitting, setSubmitting] = useState(false)
   const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
   const [signOpen, setSignOpen] = useState(false)
+  const closeSign = useCallback(() => setSignOpen(false), [])
+  const signRef = useFocusTrap(signOpen, closeSign)          // 수어 모달 포커스 트랩·Esc
 
   const newQ = useCallback(async () => {
     const target = words[Math.floor(Math.random() * words.length)]
@@ -126,7 +129,8 @@ function WordQuiz({ data }) {
           <AnimatePresence>
             {result && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-2">
-                <div className={`p-3 rounded-lg text-sm ${result.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                <div role="status" aria-live="polite"
+                  className={`p-3 rounded-lg text-sm ${result.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                   {result.correct ? '정답! 🎉' : `오답 — 정답은 "${q.target}"`}
                 </div>
                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-2.5">
@@ -152,7 +156,9 @@ function WordQuiz({ data }) {
           <motion.div className="fixed inset-0 z-50 bg-black/40 flex justify-end"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setSignOpen(false)}>
-            <motion.div className="w-full max-w-2xl h-full bg-white shadow-2xl overflow-y-auto"
+            <motion.div ref={signRef} role="dialog" aria-modal="true"
+              aria-label={`${q?.target || ''} 수어 번역`} tabIndex={-1}
+              className="w-full max-w-2xl h-full bg-white shadow-2xl overflow-y-auto outline-none"
               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
               transition={{ type: 'tween', duration: 0.25 }}
               onClick={(e) => e.stopPropagation()}>

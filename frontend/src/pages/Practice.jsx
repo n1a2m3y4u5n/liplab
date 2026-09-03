@@ -8,6 +8,7 @@ import QuizForm from '../components/QuizForm'
 import SignPanel from '../components/SignPanel'
 import LearnHeader from '../components/LearnHeader'
 import CueBadges, { CueLegend } from '../components/CueBadges'
+import useFocusTrap from '../hooks/useFocusTrap'
 
 /**
  * 힌트 시스템: 단계별로 문장 정보를 공개
@@ -131,6 +132,8 @@ export default function Practice() {
   const [selectedChoice, setSelectedChoice] = useState(null) // 4지선다에서 선택한 보기
   const [signOpen, setSignOpen] = useState(false)            // 수어 보기 모달
   const [bookmarks, setBookmarks] = useState({})             // 문장 텍스트 → 북마크 id (☆ 저장)
+  const closeSign = useCallback(() => setSignOpen(false), [])
+  const signRef = useFocusTrap(signOpen, closeSign)          // 수어 모달 포커스 트랩·Esc
 
   // 4지선다 보기 생성 — 정답 1개 + 다른 문장 3개, 랜덤 순서
   const choices = useMemo(() => {
@@ -614,7 +617,12 @@ export default function Practice() {
             onClick={() => setSignOpen(false)}
           >
             <motion.div
-              className="w-full max-w-2xl h-full bg-white shadow-2xl overflow-y-auto"
+              ref={signRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`${currentSentence} 수어 번역`}
+              tabIndex={-1}
+              className="w-full max-w-2xl h-full bg-white shadow-2xl overflow-y-auto outline-none"
               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
               transition={{ type: 'tween', duration: 0.25 }}
               onClick={(e) => e.stopPropagation()}

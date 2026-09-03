@@ -110,7 +110,8 @@ function ClosureQuiz({ items }) {
           <AnimatePresence>
             {result && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-2">
-                <div className={`p-3 rounded-lg text-sm ${result.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                <div role="status" aria-live="polite"
+                  className={`p-3 rounded-lg text-sm ${result.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                   {result.correct
                     ? '정답! 🎉 문맥으로 잘 골랐어요.'
                     : `아쉬워요 — 정답은 "${item.answer}". 보기들은 입모양이 거의 같아서 문맥이 열쇠예요.`}

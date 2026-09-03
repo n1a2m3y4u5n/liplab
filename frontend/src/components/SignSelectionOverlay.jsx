@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
+import useFocusTrap from '../hooks/useFocusTrap'
 
 // SignPanel(→수어 영상, 무거움)은 모달을 열 때만 로드 → 초기 번들에 안 실림.
 const SignPanel = lazy(() => import('./SignPanel'))
@@ -19,10 +20,15 @@ export default function SignSelectionOverlay() {
     try { return !localStorage.getItem('liplab_sign_intro_seen') } catch { return true }
   })
 
-  const dismissIntro = () => {
+  const dismissIntro = useCallback(() => {
     setShowIntro(false)
     try { localStorage.setItem('liplab_sign_intro_seen', '1') } catch { /* noop */ }
-  }
+  }, [])
+  const closeModal = useCallback(() => setModalText(null), [])
+
+  // 모달 접근성 — 포커스 가두기 + Esc 닫기 + 포커스 복원
+  const modalRef = useFocusTrap(!!modalText, closeModal)
+  const introRef = useFocusTrap(showIntro, dismissIntro)
 
   useEffect(() => {
     // 선택된 한국어 텍스트를 감지해 '수어로 보기' 버튼을 띄운다.
@@ -83,7 +89,12 @@ export default function SignSelectionOverlay() {
       {modalText && (
         <div className="fixed inset-0 z-50 bg-black/40 flex justify-end" onClick={() => setModalText(null)}>
           <div
-            className="w-full max-w-2xl h-full bg-white shadow-2xl overflow-y-auto animate-[slideIn_.2s_ease]"
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${modalText} 수어 번역`}
+            tabIndex={-1}
+            className="w-full max-w-2xl h-full bg-white shadow-2xl overflow-y-auto outline-none animate-[slideIn_.2s_ease]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between">
@@ -110,7 +121,8 @@ export default function SignSelectionOverlay() {
       {/* 첫 접속 — 수어 번역 사용법 안내(드래그 제스처가 숨어 있어 처음엔 모름) */}
       {showIntro && (
         <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4" onClick={dismissIntro}>
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
+          <div ref={introRef} role="dialog" aria-modal="true" aria-label="수어 번역 사용법 안내" tabIndex={-1}
+            className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 outline-none" onClick={(e) => e.stopPropagation()}>
             <div className="text-center mb-4">
               <div className="text-4xl mb-2">🤟</div>
               <h3 className="text-lg font-bold text-gray-900">수어 번역, 이렇게 써요</h3>

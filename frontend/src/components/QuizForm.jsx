@@ -81,6 +81,8 @@ export default function QuizForm({
           >
             {/* Score Display */}
             <div
+              role="status"
+              aria-live="polite"
               className={`card ${
                 result.score >= 80
                   ? 'bg-green-50 border-green-200'
