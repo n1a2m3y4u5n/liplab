@@ -40,8 +40,8 @@ import { authAPI, curriculumAPI, seedAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
 import GlobalLearningMenu from './components/GlobalLearningMenu'
 import Dashboard from './pages/Dashboard'
-import Bookmarks from './pages/Bookmarks'
-import Guide from './pages/Guide'
+// Bookmarks·Guide는 /review/saved·/guide에서만 쓰이므로 지연로딩 —
+// 랜딩(로그인/대시보드) 진입 청크에서 빼 첫 로딩을 가볍게 한다(저사양·불안정 통신망 배려).
 
 // 탭·학습 단계 등 라우트가 바뀌면 이전 페이지의 스크롤 위치를 이어받지 않는다.
 function ScrollToTop() {
@@ -62,6 +62,8 @@ const Practice = lazy(() => import('./pages/Practice'))
 const Conversation = lazy(() => import('./pages/Conversation'))
 const MultiConversation = lazy(() => import('./pages/MultiConversation'))
 const Placement = lazy(() => import('./pages/Placement'))
+const Bookmarks = lazy(() => import('./pages/Bookmarks'))
+const Guide = lazy(() => import('./pages/Guide'))
 const DevViseme = lazy(() => import('./pages/DevViseme'))
 const Sign = lazy(() => import('./pages/Sign'))
 const VisemeLiteracy = lazy(() => import('./pages/VisemeLiteracy'))
