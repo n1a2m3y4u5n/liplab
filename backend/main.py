@@ -510,23 +510,24 @@ async def get_analysis(current_user=Depends(get_current_user), db: AsyncSession 
         strengths = [s for s in viseme_stats if s["accuracy"] >= 70][-3:]
         weaknesses = [s for s in viseme_stats if s["accuracy"] < 70][:3]
 
-        # Phoneme confusion analysis
-        from scoring import extract_jamo_sequence
+        # Phoneme confusion analysis — 발음형으로 정규화 + 채점과 같은 DP 정렬 사용
+        # (철자 기준이면 굳이/구지처럼 '정답 발음을 맞힌' 경우가 혼동으로 잘못 집계됨)
+        from scoring import to_pronounced_jamos, align_jamos
         confusion_map: dict = {}
         for prog in all_progress:
             try:
                 if prog.score >= 80 or not prog.sentence:
                     continue
-                c_jamos = extract_jamo_sequence(prog.sentence.replace(" ", ""))
-                u_jamos = extract_jamo_sequence((prog.user_answer or "").replace(" ", ""))
-                for i in range(min(len(c_jamos), len(u_jamos))):
-                    c_i, c_m, _ = c_jamos[i]
-                    u_i, u_m, _ = u_jamos[i]
-                    if c_i and u_i and c_i != u_i:
-                        key = (c_i, u_i)
+                c_jamos = to_pronounced_jamos(prog.sentence.replace(" ", ""))
+                u_jamos = to_pronounced_jamos((prog.user_answer or "").replace(" ", ""))
+                for cs, us in align_jamos(c_jamos, u_jamos):
+                    if cs is None or us is None:
+                        continue
+                    if cs[0] and us[0] and cs[0] != us[0]:
+                        key = (cs[0], us[0])
                         confusion_map[key] = confusion_map.get(key, 0) + 1
-                    if c_m and u_m and c_m != u_m:
-                        key = (c_m, u_m)
+                    if cs[1] and us[1] and cs[1] != us[1]:
+                        key = (cs[1], us[1])
                         confusion_map[key] = confusion_map.get(key, 0) + 1
             except Exception as e:
                 print(f"[WARN] confusion analysis failed: {e}")
@@ -1450,16 +1451,16 @@ async def speak_assess(
         except Exception:
             sim = 0.0
         try:
-            from scoring import extract_jamo_sequence
-            cj = extract_jamo_sequence(target.replace(" ", ""))
-            uj = extract_jamo_sequence((transcript or "").replace(" ", ""))
-            for i in range(min(len(cj), len(uj))):
-                ci, cm, _ = cj[i]
-                ui, um, _ = uj[i]
-                if ci and ui and ci != ui:
-                    confusions.append({"correct": ci, "confused_as": ui})
-                if cm and um and cm != um:
-                    confusions.append({"correct": cm, "confused_as": um})
+            from scoring import to_pronounced_jamos, align_jamos
+            cj = to_pronounced_jamos(target.replace(" ", ""))
+            uj = to_pronounced_jamos((transcript or "").replace(" ", ""))
+            for cs, us in align_jamos(cj, uj):
+                if cs is None or us is None:
+                    continue
+                if cs[0] and us[0] and cs[0] != us[0]:
+                    confusions.append({"correct": cs[0], "confused_as": us[0]})
+                if cs[1] and us[1] and cs[1] != us[1]:
+                    confusions.append({"correct": cs[1], "confused_as": us[1]})
         except Exception:
             pass
 
