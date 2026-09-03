@@ -19,6 +19,8 @@ const PILLAR_NAV = [
       { label: '문맥 추론', description: '앞뒤 맥락으로 뜻 찾기', icon: '🧩', to: '/learn/closure' },
       { label: '내 문장 발음 보기', description: '원하는 문장의 입모양 확인하기', icon: '✍️', to: '/pronounce' },
       { label: '독화 복습', description: '틀렸던 문장 다시 풀기', icon: '🔁', to: '/review/mistakes' },
+      { label: '다자 대화', description: '여러 사람 대화에서 화자와 입모양 읽기', icon: '👥', to: '/learn/conversation-multi' },
+      { label: '배치검사', description: '내 독화 수준 진단하기', icon: '📋', to: '/learn/placement' },
     ],
   },
   {

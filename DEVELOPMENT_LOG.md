@@ -1052,3 +1052,8 @@ J 기호 뒷받침·B 융합 입력 후보(음향·영상 백본과 함께 Phase
   MouthAvatar 입모양 재생 + CueBadges 자질기호, 현재 화자 강조) + `/learn/conversation-multi` 라우트(lazy).
 검증: 백엔드 2화자 6턴 자연 대화 생성, 프론트 화면(병원 대기실·화자 A 강조·입모양 재생) 정상, 빌드 통과.
 **변경 파일(H).** `backend/conversation_scenario.py`(신규)·`main.py`, `frontend/src/api.js`·`pages/MultiConversation.jsx`(신규)·`App.jsx`.
+
+### I.2 프론트 배치검사 화면 + 진입점
+`Placement.jsx`(입모양→단어 4지선다, 끝에 수준·약한 음소·추천 시작단계 리포트) + `/learn/placement`.
+다자 대화(H)·배치검사(I)를 학습 메뉴(`GlobalLearningMenu`)의 '독화' 카테고리에 연결. 빌드 통과.
+**변경 파일(I.2).** `frontend/src/pages/Placement.jsx`(신규)·`App.jsx`·`api.js`·`components/GlobalLearningMenu.jsx`.

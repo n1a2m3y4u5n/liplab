@@ -60,6 +60,7 @@ function ScrollToTop() {
 const Practice = lazy(() => import('./pages/Practice'))
 const Conversation = lazy(() => import('./pages/Conversation'))
 const MultiConversation = lazy(() => import('./pages/MultiConversation'))
+const Placement = lazy(() => import('./pages/Placement'))
 const DevViseme = lazy(() => import('./pages/DevViseme'))
 const Sign = lazy(() => import('./pages/Sign'))
 const VisemeLiteracy = lazy(() => import('./pages/VisemeLiteracy'))
@@ -174,6 +175,7 @@ function App() {
         <Route path="/learn/viseme" element={<VisemeLiteracy />} />
         <Route path="/learn/word" element={<StageGate stage={2}><WordStage /></StageGate>} />
         <Route path="/learn/conversation-multi" element={<MultiConversation />} />
+        <Route path="/learn/placement" element={<Placement />} />
         <Route path="/learn/scenario" element={<ScenarioHub />} />
         <Route path="/pillar/:id" element={<PillarHub />} />
         <Route path="/learn/speaking" element={<SpeakingPractice />} />
