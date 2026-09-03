@@ -164,6 +164,7 @@ export const curriculumAPI = {
   getWords: async () => (await api.get('/curriculum/words')).data,
   submitWord: async (word, correct) => (await api.post('/curriculum/word-answer', { word, correct })).data,
   getClosure: async () => (await api.get('/curriculum/closure')).data,
+  submitClosure: async (word, correct) => (await api.post('/curriculum/closure-answer', { word, correct })).data,
   getRecommendedLevel: async () => (await api.get('/curriculum/recommended-level')).data,
   getNext: async () => (await api.get('/curriculum/next')).data,
   getCues: async (text) => (await api.get('/cues', { params: { text } })).data,
