@@ -59,6 +59,11 @@ def to_pronounced_syllables(text: str):
             keep, move = DOUBLE_FINAL_LINK[fin]
             cur[2] = keep
             nxt[0] = move  # 뒤 자음만 다음 초성으로 (닭이→달기)
+        elif fin in ('ㄷ', 'ㅌ') and nxt[1] in ('ㅣ', 'ㅑ', 'ㅕ', 'ㅛ', 'ㅠ', 'ㅒ', 'ㅖ'):
+            # 구개음화 — 종성 ㄷ·ㅌ이 뒤 ㅣ/반모음을 만나 ㅈ·ㅊ으로(굳이→구지, 같이→가치, 붙여→부쳐).
+            # 입모양이 치경(viseme 6)에서 경구개(viseme 10)로 실제로 바뀌므로 비심 엔진이 반영한다.
+            nxt[0] = 'ㅈ' if fin == 'ㄷ' else 'ㅊ'
+            cur[2] = ''
         else:
             nxt[0] = fin   # 받침이 통째로 다음 초성으로 (밥을→바블)
             cur[2] = ''
