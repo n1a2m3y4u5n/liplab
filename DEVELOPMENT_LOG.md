@@ -1022,3 +1022,14 @@ AI Hub 립리딩 샘플(OLKAVS)의 라벨 JSON(문장별 타임스탬프 + 프�
 구현했다. torch 없이 ffmpeg만으로 동작(계획서 우선순위 1: 전처리 파이프라인 검증). 샘플에서
 6개 클립 생성 확인. 실제 립리딩 학습(closed-set 단어 분류)은 Phase 2(GPU)에서 이 클립을 입력으로.
 **변경 파일(D.5).** `scripts/preprocess_olkavs.py`(신규).
+
+## I. 디지털 독화 표준검사 (Placement Test)
+계획서 §3.9. 독화 실력을 재는 표준 검사가 없어 수준·향상도 판단 근거가 없다. 지각 난이도
+지수(perceptual, 축 C)로 난이도를 통제한 '입모양→단어' 4지선다 배치검사를 구성한다. 오답
+보기는 정답과 시각적으로 혼동되는(동구형이음·최소대립) 단어를 우선 배치해 독화 변별력을 잰다.
+- `assessment.py`(신규): `build_placement_items`(난이도 스펙트럼 균등표집), `score_placement`
+  (능력=통과 최고난이도, 음소별 오류 프로파일, 시작단계 추천). perceptual·content_rules 재사용.
+- API: `GET /api/assessment/placement`, `POST /api/assessment/score`.
+검증(테스트 4): 난이도 오름 문항, 혼동보기(도마↔소파·노파, 컵↔팥·겁), 채점·수준·시작단계 추천.
+프론트 검사 페이지는 후속. 지각공간 임베딩 준비되면 난이도 통제 정교화(Phase 2).
+**변경 파일(I).** `backend/assessment.py`(신규), `backend/test_assessment.py`(신규), `backend/main.py`.
