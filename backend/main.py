@@ -620,23 +620,29 @@ async def get_calendar(current_user=Depends(get_current_user), db: AsyncSession 
 
 @app.get("/api/review-sentences")
 async def get_review_sentences(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """Return up to 10 distinct sentences the user got wrong (score < 60)."""
+    """최근에도 틀린(가장 최근 시도 점수 < 60) 서로 다른 문장을 최대 10개 반환.
+
+    예전엔 '이력 어디선가 score<60'이면 넣어, 나중에 그 문장을 마스터해도 과거 오답 때문에
+    영원히 복습 목록에 남았다. 각 문장의 '가장 최근' 시도만 보고, 최근에도 60 미만일 때만
+    복습 대상에 넣어 마스터하면 자연히 졸업하게 한다.
+    """
     from database import Progress
     from sqlalchemy import select
 
     result = await db.execute(
         select(Progress)
         .where(Progress.user_id == current_user.id)
-        .where(Progress.score < 60)
-        .order_by(Progress.score.asc(), Progress.created_at.desc())
-        .limit(30)
+        .order_by(Progress.created_at.desc())   # 최신순 — 각 문장의 첫 등장이 가장 최근 시도
+        .limit(200)
     )
     records = result.scalars().all()
     seen: set = set()
     unique = []
     for p in records:
-        if p.sentence not in seen:
-            seen.add(p.sentence)
+        if p.sentence in seen:
+            continue
+        seen.add(p.sentence)                     # 이 문장의 '가장 최근' 시도만 판단
+        if p.score < 60:                         # 최근에도 틀렸을 때만 복습 대상
             unique.append({
                 "sentence": p.sentence,
                 "situation": p.situation,
