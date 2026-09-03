@@ -1057,3 +1057,9 @@ J 기호 뒷받침·B 융합 입력 후보(음향·영상 백본과 함께 Phase
 `Placement.jsx`(입모양→단어 4지선다, 끝에 수준·약한 음소·추천 시작단계 리포트) + `/learn/placement`.
 다자 대화(H)·배치검사(I)를 학습 메뉴(`GlobalLearningMenu`)의 '독화' 카테고리에 연결. 빌드 통과.
 **변경 파일(I.2).** `frontend/src/pages/Placement.jsx`(신규)·`App.jsx`·`api.js`·`components/GlobalLearningMenu.jsx`.
+
+### B.3 발화 채점에 오디오·비주얼 융합 연결
+`/api/speak/assess`에 `mouth_confidence`(웹캠 입모양 신뢰도, D) Form을 추가하고 `dgop.fuse_audio_visual`을
+적용했다. 음향 점수가 낮을(불확실할)수록 입모양에 더 가중해 최종 점수를 낸다. 융합 로직은 test_dgop로
+검증됨(faster-whisper 미설치라 라우트 전체 실행은 Phase 2). 프론트 웹캠+발화 동시 UI도 Phase 2 음향과 함께.
+**변경 파일(B.3).** `backend/main.py`(speak_assess AV 융합).
