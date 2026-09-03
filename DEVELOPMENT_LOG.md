@@ -993,3 +993,25 @@ visual_weight 0.3 → 0.65로 자동 상승.
 D-GOP 경로로 교체하는 것은 torch 설치 후 2차로 진행한다. 계획서도 "전사 방식을 폴백으로 남긴다".
 
 **변경 파일(B.1).** `backend/dgop.py`(신규), `backend/test_dgop.py`(신규).
+
+## C. 지각 자원 — 규칙 기반 (동구형이음 사전 · 독화 난이도 지수)
+
+### C.1 규칙 기반 공개 자원 (`backend/perceptual.py` 신규)
+계획서 §3.3: 지각공간 임베딩(대조학습)은 데이터·연산이 필요하지만, 그 산출물의 상당 부분
+(동구형이음 사전·독화 난이도 지수·표준 평가셋)은 **비심 규칙만으로 결정론적으로 도출**된다.
+한국어 독화에는 이런 표준 자원이 거의 없으므로, 데이터 없이 먼저 만들어 앱 밖 연구·교육에도
+쓸 수 있게 공개한다.
+- `homophene_dictionary`: 음소를 입모양(viseme)으로 묶은 동구형이음 사전 + 가시성.
+- `invisibility`: 단어의 '안 보이는 정도'(저가시성 음소 비중).
+- `word_difficulty`/`sentence_difficulty`: 난이도 지수 = 안 보이는 정도(0.6) + 혼동 이웃 밀도(0.4).
+  (계획서 정의: 구성 음소의 이웃 밀도와 동구형이음 비율)
+- `scripts/export_perceptual.py`: `docs/perceptual-resources.json`으로 공개 export.
+
+**검증(테스트 4개).** 난이도가 의미대로 갈림: 모음 단어(이·우유·오이) 0.0(잘 보임),
+치경음 단어(달·탈·살·쌀) 0.64(안 보임 + 서로 동구형 이웃 많음). 동구형이음 사전에 양순음
+ㅂ·ㅃ·ㅍ·ㅁ, 치경음 저가시성 정확. 자원 24단어·22쌍 생성.
+
+지각공간 임베딩(데이터 기반)이 준비되면 이 규칙값을 보정한다(음향·영상 백본과 함께 Phase 2).
+
+**변경 파일(C.1).** `backend/perceptual.py`(신규), `backend/test_perceptual.py`(신규),
+`scripts/export_perceptual.py`(신규), `docs/perceptual-resources.json`(신규, 공개 자원).
