@@ -35,6 +35,16 @@ def test_similarity_perceptual_grading():
     _ok(near > 0, "표엔 없지만 시각적으로 닮은 쌍은 0보다 큰 부분점수")
 
 
+def test_vowel_perceptual_grading():
+    # 모음도 지각공간(MDS)에서 도출한 시각 유사도로 등급화된다(예전엔 같은 군이면 일괄 0.5).
+    if not S._VOWEL_SIM:
+        return  # numpy/perceptual_space 없으면 스킵
+    same = S.get_phoneme_similarity("ㅐ", "ㅑ")   # 같은 입모양(개방), 표엔 없음
+    far = S.get_phoneme_similarity("ㅏ", "ㅜ")    # 개방 vs 원순폐구, 표엔 없음
+    _ok(same > far, "같은 입모양 모음이 다른 입모양 모음보다 시각적으로 가깝다")
+    _ok(far < 0.2, "개방↔원순폐구는 시각적으로 거의 안 닮음")
+
+
 def test_jamo_identical():
     _ok(S.calculate_jamo_score(_syl("밥"), _syl("밥"))["score"] == 100.0, "정답과 같으면 100")
 
