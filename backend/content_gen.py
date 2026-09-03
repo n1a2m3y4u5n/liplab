@@ -5,8 +5,8 @@
 호출마다 무작위 '변주 축'(범주·주제·기능)과 시드, 그리고 '제외 목록'을 주입해
 결과가 겹치지 않게 한다. 실패 시 호출부가 큐레이션 풀로 폴백한다(내부 except 없음 — 호출부 책임).
 """
-import json
 import random
+import llm_json
 from typing import List
 
 from llm_service import anthropic_client
@@ -32,12 +32,7 @@ async def _call(system: str, expect_key: str = "items") -> List[str]:
         system=system,
         messages=[{"role": "user", "content": f"변주 시드 {random.randint(1000, 9999)} — 새롭게 생성"}],
     )
-    content = resp.content[0].text.strip()
-    if "```json" in content:
-        content = content.split("```json")[1].split("```")[0].strip()
-    elif "```" in content:
-        content = content.split("```")[1].split("```")[0].strip()
-    data = json.loads(content)
+    data = llm_json.extract_json(resp)
     items = data.get(expect_key, [])
     items = [str(x).strip() for x in items if str(x).strip()]
     return items
@@ -81,12 +76,7 @@ async def generate_sentences(n: int = 8, avoid: List[str] = None, with_intonatio
             model=_MODEL, max_tokens=512, temperature=1.0, system=system,
             messages=[{"role": "user", "content": f"변주 시드 {random.randint(1000, 9999)} — 새롭게 생성"}],
         )
-        content = resp.content[0].text.strip()
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
-        data = json.loads(content)
+        data = llm_json.extract_json(resp)
         out = []
         for it in data.get("items", []):
             t = str(it.get("target", "")).strip()

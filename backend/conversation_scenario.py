@@ -6,8 +6,8 @@
 이 모듈은 여러 화자가 번갈아 말하는 짧은 일상 대화를 생성해, 화자 식별 + 입모양 읽기를 함께
 훈련하는 실전 독화의 콘텐츠를 만든다(콘텐츠 대량화 G의 문장을 다화자 상황으로 재조합).
 """
-import json
 import random
+import llm_json
 from typing import Dict, List, Optional
 
 from llm_service import anthropic_client
@@ -33,12 +33,7 @@ async def generate_multi_conversation(speakers: int = 2, turns: int = 6,
         model=_MODEL, max_tokens=600, temperature=1.0, system=system,
         messages=[{"role": "user", "content": f"변주 시드 {random.randint(1000, 9999)}"}],
     )
-    content = resp.content[0].text.strip()
-    if "```json" in content:
-        content = content.split("```json")[1].split("```")[0].strip()
-    elif "```" in content:
-        content = content.split("```")[1].split("```")[0].strip()
-    data = json.loads(content)
+    data = llm_json.extract_json(resp)
     out_turns: List[Dict] = []
     for t in data.get("turns", []):
         text = str(t.get("text", "")).strip()

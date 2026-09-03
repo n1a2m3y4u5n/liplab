@@ -3,8 +3,8 @@ Adaptive Scenario Generation using Claude API
 Generates contextually relevant sentences based on user's weak visemes
 """
 import os
-import json
 import random
+import llm_json
 from typing import List, Dict
 from datetime import datetime, timedelta
 from anthropic import AsyncAnthropic
@@ -329,16 +329,8 @@ async def generate_adaptive_scenario(
             ]
         )
 
-        # Parse response
-        content = response.content[0].text.strip()
-
-        # Extract JSON from potential markdown code blocks
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
-
-        result = json.loads(content)
+        # Parse response — 코드펜스 제거 + 빈 응답 방어(공용 유틸)
+        result = llm_json.extract_json(response)
         sentences = result.get("sentences", [])
 
         if not sentences or len(sentences) < 3:
@@ -532,13 +524,7 @@ async def generate_conversation_turn(
             messages=messages_for_api
         )
 
-        content = response.content[0].text.strip()
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
-
-        result = json.loads(content)
+        result = llm_json.extract_json(response)
         text = result.get("text", "").strip()
 
         if not text:
