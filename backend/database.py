@@ -238,6 +238,10 @@ class ReviewItem(Base):
     ref = Column(String(100), nullable=False)       # viseme_id(str) 또는 단어
     due_date = Column(String(10), nullable=False)   # 'YYYY-MM-DD'
     interval_days = Column(Integer, default=1)
+    # SM-2 경량 스케줄링 — 항목별 난이도(ease)와 반복/누수를 기록해 복습 간격을 개인화한다.
+    ease_factor = Column(Float, default=2.5)         # 클수록 간격이 빨리 늘어남(잘 맞히는 항목)
+    repetitions = Column(Integer, default=0)         # 연속 성공 횟수(실패 시 0으로 리셋)
+    lapses = Column(Integer, default=0)              # 누적 실패 횟수(누수·leech 판별용)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -263,6 +267,16 @@ async def init_db():
                 "ALTER TABLE bookmarks ADD COLUMN domain VARCHAR(12) DEFAULT 'read'")
         except Exception:
             pass  # 이미 존재
+        # SM-2 경량 스케줄링 컬럼 — 기존 review_items에 없으면 추가
+        for ddl in (
+            "ALTER TABLE review_items ADD COLUMN ease_factor FLOAT DEFAULT 2.5",
+            "ALTER TABLE review_items ADD COLUMN repetitions INTEGER DEFAULT 0",
+            "ALTER TABLE review_items ADD COLUMN lapses INTEGER DEFAULT 0",
+        ):
+            try:
+                await conn.exec_driver_sql(ddl)
+            except Exception:
+                pass  # 이미 존재
 
 
 async def close_db():
