@@ -30,10 +30,15 @@ function partnersOf(word, pairs, bankSet) {
 export default function WordStage() {
   const navigate = useNavigate()
   const [data, setData] = useState(null)
+  const [targetPool, setTargetPool] = useState(null) // 지식추적 개인화 표적 단어(취약 입모양)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     curriculumAPI.getWords().then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+    // 개인화 추천 — 취약 입모양을 포함하고 난이도가 맞는 단어를 표적 풀로 (실패해도 전체 은행으로 폴백)
+    curriculumAPI.getNext()
+      .then((n) => setTargetPool((n?.words || []).map((w) => w.word)))
+      .catch(() => {})
   }, [])
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">불러오는 중…</div>
@@ -48,13 +53,13 @@ export default function WordStage() {
         onExit={() => navigate('/dashboard')}
       />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <WordQuiz data={data} />
+        <WordQuiz data={data} targetPool={targetPool} />
       </main>
     </div>
   )
 }
 
-function WordQuiz({ data }) {
+function WordQuiz({ data, targetPool }) {
   const words = useMemo(() => data.words.map((w) => w.word), [data])
   const tierOf = useMemo(() => Object.fromEntries(data.words.map((w) => [w.word, w.tier || 1])), [data])
   const bankSet = useMemo(() => new Set(words), [words])
@@ -68,7 +73,10 @@ function WordQuiz({ data }) {
   const signRef = useFocusTrap(signOpen, closeSign)          // 수어 모달 포커스 트랩·Esc
 
   const newQ = useCallback(async () => {
-    const target = words[Math.floor(Math.random() * words.length)]
+    // 표적은 개인화 풀(취약 입모양·난이도 반영)에서, 오답 보기는 전체 은행에서(혼동쌍 우선).
+    // 예전엔 195개에서 균등 랜덤이라 초급자가 희귀·고난도어를 동일 확률로 만났다.
+    const pool = (targetPool && targetPool.length) ? targetPool : words
+    const target = pool[Math.floor(Math.random() * pool.length)]
     const partners = partnersOf(target, data.minimal_pairs, bankSet)
     const rest = shuffle(words.filter((w) => w !== target && !partners.includes(w)))
     const distractors = shuffle([...partners, ...rest]).slice(0, 3)
@@ -76,7 +84,7 @@ function WordQuiz({ data }) {
     setQ({ target, choices: shuffle([target, ...distractors]) })
     setFrames([])
     try { setFrames(await learningAPI.getVisemes(target)) } catch { /* ignore */ }
-  }, [data, words, bankSet])
+  }, [data, words, bankSet, targetPool])
 
   useEffect(() => { newQ() }, [newQ])
 
