@@ -67,3 +67,85 @@ def perceptual_space() -> dict:
                    for i, c in enumerate(cons)],
         "note": "시각 자질(조음 위치=입모양)만으로 벡터화. 같은 입모양 자음이 한 군으로 뭉친다(동구형이음).",
     }
+
+
+# ── 모음 시각 지각공간 ────────────────────────────────────────────────────
+# 자음이 조음 위치로 뭉치듯, 모음은 '눈에 보이는' 자질(개구도·원순성)이 주 신호다.
+# viseme 그룹(개방/전설/원순/중설/이중모음)을 주 차원으로, 개구도·원순성을 보조 차원으로 둔다.
+VOWELS = ["ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ",
+          "ㅙ", "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ"]
+_VVIS = {2: 0, 3: 1, 4: 2, 5: 3, 9: 4}   # 개방/전설/원순/중설/이중모음 → 위치 차원
+# 개구도(턱 벌림, 0=거의 닫힘 ~ 1=크게 벌림) — 입모양으로 뚜렷이 드러난다.
+_OPEN = {
+    "ㅏ": 1.0, "ㅑ": 1.0, "ㅐ": 0.75, "ㅒ": 0.75, "ㅓ": 0.6, "ㅕ": 0.6, "ㅔ": 0.55, "ㅖ": 0.55,
+    "ㅗ": 0.45, "ㅛ": 0.45, "ㅜ": 0.25, "ㅠ": 0.25, "ㅡ": 0.25, "ㅣ": 0.2,
+    "ㅘ": 0.7, "ㅙ": 0.6, "ㅚ": 0.45, "ㅝ": 0.55, "ㅞ": 0.5, "ㅟ": 0.3, "ㅢ": 0.25,
+}
+# 원순성(입술 둥긂, 0~1) — 역시 눈에 보인다.
+_ROUND = {
+    "ㅗ": 1.0, "ㅛ": 1.0, "ㅜ": 1.0, "ㅠ": 1.0, "ㅚ": 1.0, "ㅟ": 1.0,
+    "ㅘ": 0.7, "ㅙ": 0.7, "ㅝ": 0.7, "ㅞ": 0.7,
+}
+
+
+def vowel_visual_feature(ph: str) -> np.ndarray:
+    """모음의 '시각적으로 드러나는 자질' 벡터. viseme 위치(주) + 개구도·원순성(보조)."""
+    vec = np.zeros(7)
+    v = VISEME_MAP.get(ph)
+    if v in _VVIS:
+        vec[_VVIS[v]] = 1.0                 # 입모양 군 — 가장 뚜렷
+    vec[5] = 0.4 * _OPEN.get(ph, 0.4)       # 개구도(잘 보임)
+    vec[6] = 0.4 * _ROUND.get(ph, 0.0)      # 원순성(잘 보임)
+    return vec
+
+
+def vowel_similarity_matrix(vows=None):
+    """모음 쌍 시각 유사도(코사인) 행렬."""
+    vows = vows or VOWELS
+    F = np.array([vowel_visual_feature(v) for v in vows])
+    norm = np.linalg.norm(F, axis=1, keepdims=True)
+    norm[norm == 0] = 1.0
+    Fn = F / norm
+    return vows, Fn @ Fn.T
+
+
+def vowel_classical_mds(vows=None, dim: int = 2):
+    """모음 코사인 거리에 고전 MDS를 적용해 모음 지각공간 2D 좌표를 얻는다."""
+    vows, S = vowel_similarity_matrix(vows)
+    D2 = 1.0 - S
+    n = len(vows)
+    J = np.eye(n) - np.ones((n, n)) / n
+    B = -0.5 * J @ D2 @ J
+    w, V = np.linalg.eigh(B)
+    idx = np.argsort(w)[::-1][:dim]
+    coords = V[:, idx] * np.sqrt(np.maximum(w[idx], 0.0))
+    return vows, coords
+
+
+def _confusion_block(symbols, coords):
+    """MDS 좌표 → '지각공간 내 거리로 도출한' 음소 쌍 혼동도(1=구별 불가). 대각=1.0."""
+    n = len(symbols)
+    dmax = max((float(np.linalg.norm(coords[i] - coords[j]))
+                for i in range(n) for j in range(n)), default=0.0) or 1.0
+    rows = {}
+    for i, a in enumerate(symbols):
+        rows[a] = {b: round(1.0 - float(np.linalg.norm(coords[i] - coords[j])) / dmax, 3)
+                   for j, b in enumerate(symbols)}
+    return rows
+
+
+def phoneme_confusion_matrix() -> dict:
+    """한국어 음소 혼동 행렬 — 자음·모음 각각의 지각공간(고전 MDS) 거리에서 도출.
+
+    LIPLAB의 채점은 원래 '사람이 손으로 0~1로 매긴' 유사도 표에 의존했다. 이 함수는 그 표를,
+    조음 자질에서 만든 지각공간의 기하 거리로 대체한 '규칙판 혼동 행렬'을 준다. 데이터로 학습한
+    임베딩 거리(대조학습)로 나아가기 전의 결정론적 baseline이다.
+    """
+    cons, ccoords = classical_mds()
+    vows, vcoords = vowel_classical_mds()
+    return {
+        "consonants": {"symbols": cons, "confusion": _confusion_block(cons, ccoords)},
+        "vowels": {"symbols": vows, "confusion": _confusion_block(vows, vcoords)},
+        "note": ("조음 자질로 만든 시각 지각공간(고전 MDS)의 거리에서 도출한 규칙판 음소 혼동 행렬. "
+                 "손으로 매긴 유사도 표를 대체하는 결정론적 baseline이며, 학습된 임베딩 거리로 보정될 자리."),
+    }

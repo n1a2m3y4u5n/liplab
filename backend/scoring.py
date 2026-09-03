@@ -58,35 +58,40 @@ PHONEME_SIMILARITY = {
 _CONS_FALLBACK_CAP = 0.6   # 폴백 부분점수 상한(표의 near-identical 값과 정합; 큐레이션 표 ≥ 자동 폴백)
 
 
-def _build_consonant_similarity() -> Dict[Tuple[str, str], float]:
+def _sim_from_coords(symbols, coords) -> Dict[Tuple[str, str], float]:
+    """지각공간 좌표 → 쌍별 (거리 기반) 시각 유사도. 상한 _CONS_FALLBACK_CAP로 스케일."""
+    import numpy as np
+    n = len(symbols)
+    dmax = max((float(np.linalg.norm(coords[i] - coords[j]))
+                for i in range(n) for j in range(n)), default=0.0)
+    if dmax <= 0:
+        return {}
+    out: Dict[Tuple[str, str], float] = {}
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                continue
+            sim = 1.0 - float(np.linalg.norm(coords[i] - coords[j])) / dmax
+            out[(symbols[i], symbols[j])] = round(sim * _CONS_FALLBACK_CAP, 3)
+    return out
+
+
+def _build_perceptual_similarity(kind: str) -> Dict[Tuple[str, str], float]:
+    """자음/모음 시각 유사도를 지각공간(고전 MDS)에서 도출. numpy 없으면 {} 반환."""
     try:
-        import numpy as np
         import perceptual_space as ps
-        cons, coords = ps.classical_mds()
-        n = len(cons)
-        dmax = 0.0
-        dist = [[0.0] * n for _ in range(n)]
-        for i in range(n):
-            for j in range(n):
-                d = float(np.linalg.norm(coords[i] - coords[j]))
-                dist[i][j] = d
-                if d > dmax:
-                    dmax = d
-        if dmax <= 0:
-            return {}
-        out: Dict[Tuple[str, str], float] = {}
-        for i in range(n):
-            for j in range(n):
-                if i == j:
-                    continue
-                sim = 1.0 - dist[i][j] / dmax          # 지각공간 내 거리 → [0,1] 유사도
-                out[(cons[i], cons[j])] = round(sim * _CONS_FALLBACK_CAP, 3)
-        return out
+        if kind == "consonant":
+            syms, coords = ps.classical_mds()
+        else:
+            syms, coords = ps.vowel_classical_mds()
+        return _sim_from_coords(syms, coords)
     except Exception:
         return {}
 
 
-_CONS_SIM: Dict[Tuple[str, str], float] = _build_consonant_similarity()
+# 자음·모음 각각의 지각공간에서 도출한 시각 유사도(손으로 매긴 표를 기하 거리로 대체)
+_CONS_SIM: Dict[Tuple[str, str], float] = _build_perceptual_similarity("consonant")
+_VOWEL_SIM: Dict[Tuple[str, str], float] = _build_perceptual_similarity("vowel")
 
 
 def get_phoneme_similarity(p1: str, p2: str) -> float:
@@ -102,12 +107,13 @@ def get_phoneme_similarity(p1: str, p2: str) -> float:
     if similarity is not None:
         return similarity
 
-    # 표에 없는 자음 쌍은 지각공간(MDS)에서 도출한 시각 유사도로 채운다
-    mds = _CONS_SIM.get((p1, p2))
-    if mds is not None:
-        return mds
+    # 표에 없는 자음·모음 쌍은 지각공간(MDS)에서 도출한 시각 유사도로 채운다
+    if (p1, p2) in _CONS_SIM:
+        return _CONS_SIM[(p1, p2)]
+    if (p1, p2) in _VOWEL_SIM:
+        return _VOWEL_SIM[(p1, p2)]
 
-    # 그 밖(모음 등) — 같은 입모양(viseme)이면 시각적으로 혼동되므로 부분점수를 준다
+    # 최후 폴백(지각공간 비활성 등) — 같은 입모양(viseme)이면 부분점수를 준다
     v1, v2 = VISEME_MAP.get(p1), VISEME_MAP.get(p2)
     if v1 is not None and v1 == v2:
         return 0.5
