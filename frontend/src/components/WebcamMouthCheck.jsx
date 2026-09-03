@@ -38,6 +38,11 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
   const [showCalib, setShowCalib] = useState(false)
   const calibrated = !!profiles
   const winRef = useRef([]) // 최근 점수 창(발음 정점 포착용)
+  // RAF 루프가 항상 '현재' 목표·보정값을 보게 하는 ref (레슨 전환 후 옛 값으로 채점되던 버그 방지)
+  const visemeIdRef = useRef(visemeId)
+  const profilesRef = useRef(profiles)
+  useEffect(() => { visemeIdRef.current = visemeId }, [visemeId])
+  useEffect(() => { profilesRef.current = profiles }, [profiles])
 
   // 목표 viseme이 바뀌면 최고점·기록·점수창 초기화
   useEffect(() => { bestRef.current = 0; winRef.current = []; setRecorded(false) }, [visemeId])
@@ -76,14 +81,16 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       const res = fl.detectForVideo(video, performance.now())
       const bs = toBlendshapeMap(res.faceBlendshapes?.[0])
       if (Object.keys(bs).length) {
-        const inst = scorePercent(bs, visemeId, profiles)
+        const curViseme = visemeIdRef.current   // 항상 현재 목표로 채점(옛 클로저 방지)
+        const curProfiles = profilesRef.current
+        const inst = scorePercent(bs, curViseme, curProfiles)
         const win = winRef.current
         win.push(inst)
         if (win.length > 25) win.shift() // 약 1초 창
         const s = Math.max(...win) // 최근 창의 최고점(발음 정점을 잡아 안정적으로 표시)
         setScore(s)
         if (s > bestRef.current) bestRef.current = s
-        setHint(coachHint(bs, visemeId, profiles))
+        setHint(coachHint(bs, curViseme, curProfiles))
         setFaceSig(faceSignals(bs)) // 입술 너머 신호(K)
         setGeo(lipGeometry(res.faceLandmarks?.[0])) // 입술 기하 지표(그림8) — 좌표 기반 결정론적 보조
       } else {
@@ -94,7 +101,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       }
     } catch { /* 프레임 스킵 */ }
     rafRef.current = requestAnimationFrame(loop)
-  }, [visemeId, profiles])
+  }, [])  // 값은 ref로 읽으므로 루프 정체성을 고정(재구성/체인 단절 방지)
 
   const stop = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)

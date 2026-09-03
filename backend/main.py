@@ -502,13 +502,18 @@ async def get_analysis(current_user=Depends(get_current_user), db: AsyncSession 
         all_progress = progress_q.scalars().all()
 
         # viseme_id -> list of session scores
+        # 같은 문장이 여러 번 반복되므로 문장→비심 변환을 요청 내에서 캐시(최대 100건 재계산 방지)
         viseme_score_map: dict = {}
+        _vis_cache: dict = {}
         for prog in all_progress:
             try:
                 if not prog.sentence:
                     continue
-                frames = await text_to_visemes(prog.sentence)
-                sentence_visemes = {f["viseme"] for f in frames if 1 <= f["viseme"] <= 10}
+                sentence_visemes = _vis_cache.get(prog.sentence)
+                if sentence_visemes is None:
+                    frames = await text_to_visemes(prog.sentence)
+                    sentence_visemes = {f["viseme"] for f in frames if 1 <= f["viseme"] <= 10}
+                    _vis_cache[prog.sentence] = sentence_visemes
                 for v in sentence_visemes:
                     viseme_score_map.setdefault(v, []).append(prog.score)
             except Exception as e:
