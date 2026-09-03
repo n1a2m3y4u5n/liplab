@@ -11,6 +11,16 @@ const PAGE_META = {
   history: { title: '학습 기록', description: '날짜별 학습량과 누적 성과를 시간순으로 확인합니다.' },
 }
 
+// 다섯 분석 뷰 탭 — 예전엔 개요·취약입모양만 링크가 있어 활동·점수·기록 뷰가 URL 직접 입력
+// 외에는 도달 불가능했다. 탭바로 완성된 세 뷰를 노출한다.
+const ANALYSIS_TABS = [
+  { mode: 'overview', label: '개요' },
+  { mode: 'activity', label: '활동' },
+  { mode: 'visemes', label: '취약 입모양' },
+  { mode: 'scores', label: '점수' },
+  { mode: 'history', label: '기록' },
+]
+
 function Loading() {
   return <div className="rounded-[24px] border border-slate-200 bg-white py-20 text-center text-sm text-slate-400">분석 데이터를 불러오는 중…</div>
 }
@@ -205,6 +215,24 @@ export default function AnalysisDetail({ mode = 'overview' }) {
         onExit={() => navigate('/dashboard')}
       />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        <nav aria-label="분석 보기 전환" className="mb-5 flex flex-wrap gap-2">
+          {ANALYSIS_TABS.map((tab) => {
+            const active = tab.mode === mode
+            return (
+              <button
+                key={tab.mode}
+                type="button"
+                aria-current={active ? 'page' : undefined}
+                onClick={() => navigate(`/analysis/${tab.mode}`)}
+                className={`rounded-full px-4 py-1.5 text-sm font-black transition ${
+                  active ? 'bg-violet-700 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:text-violet-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
+        </nav>
         {loading ? <Loading /> : content()}
       </main>
     </div>

@@ -63,6 +63,8 @@ function ClosureQuiz({ items }) {
     const correct = opt === item.answer
     setResult({ correct, chosen: opt })
     setStat((s) => ({ n: s.n + 1, correct: s.correct + (correct ? 1 : 0) }))
+    // 결과를 서버에 기록 — 3단계 숙달·SRS·취약 입모양·XP에 반영(예전엔 저장 안 됨)
+    curriculumAPI.submitClosure(item.answer, correct).catch(() => {})
   }
 
   return (

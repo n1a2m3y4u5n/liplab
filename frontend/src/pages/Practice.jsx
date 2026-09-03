@@ -130,6 +130,7 @@ export default function Practice() {
   const [subtitleRestartKey, setSubtitleRestartKey] = useState(0)
   const [selectedChoice, setSelectedChoice] = useState(null) // 4지선다에서 선택한 보기
   const [signOpen, setSignOpen] = useState(false)            // 수어 보기 모달
+  const [bookmarks, setBookmarks] = useState({})             // 문장 텍스트 → 북마크 id (☆ 저장)
 
   // 4지선다 보기 생성 — 정답 1개 + 다른 문장 3개, 랜덤 순서
   const choices = useMemo(() => {
@@ -258,6 +259,22 @@ export default function Practice() {
 
   if (!currentScenario) return null
 
+  // ☆ 북마크 토글 — 독화 문장에도 저장 버튼을 달아 Bookmarks 페이지·복습 큐가 실제로 채워지게 함
+  // (예전엔 촉각에만 저장 버튼이 있어, 독화 사용자는 안내만 있고 누를 버튼이 없었다)
+  const isBookmarked = !!bookmarks[currentSentence]
+  const toggleBookmark = async () => {
+    if (!currentSentence) return
+    try {
+      if (bookmarks[currentSentence]) {
+        await learningAPI.removeBookmark(bookmarks[currentSentence])
+        setBookmarks((m) => { const n = { ...m }; delete n[currentSentence]; return n })
+      } else {
+        const r = await learningAPI.addBookmark(currentSentence, currentScenario.situation, currentScenario.level, 'read')
+        setBookmarks((m) => ({ ...m, [currentSentence]: r.id }))
+      }
+    } catch { /* 저장 실패는 조용히 무시 */ }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
       <LearnHeader
@@ -285,9 +302,21 @@ export default function Practice() {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Progress */}
         <div className="mb-6">
-          <div className="flex justify-between text-sm text-gray-600 mb-2">
+          <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
             <span>문장 {currentSentenceIndex + 1} / {currentScenario.sentences.length}</span>
-            <span>{Math.round(((currentSentenceIndex + 1) / currentScenario.sentences.length) * 100)}% 완료</span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleBookmark}
+                aria-pressed={isBookmarked}
+                aria-label={isBookmarked ? '이 문장 북마크 해제' : '이 문장 북마크 저장'}
+                title={isBookmarked ? '북마크됨 — 눌러서 해제' : '어려운 문장으로 저장'}
+                className={`text-base leading-none transition-colors ${isBookmarked ? 'text-amber-500' : 'text-gray-300 hover:text-amber-400'}`}
+              >
+                {isBookmarked ? '★' : '☆'}
+              </button>
+              <span>{Math.round(((currentSentenceIndex + 1) / currentScenario.sentences.length) * 100)}% 완료</span>
+            </div>
           </div>
           <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
             <motion.div
