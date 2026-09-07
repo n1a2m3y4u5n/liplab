@@ -1553,33 +1553,57 @@ async def speak_assess(
     transcript = None
     confusions = []
     sim = None
+    dgop_result = None
+    assessment_method = None
     need_asr = (mode in ("phoneme", "word", "sentence")) or (stage is None)
     if need_asr:
-        from speak_service import transcribe, is_available
-        if not is_available():
-            raise HTTPException(status_code=503, detail="서버에 음성인식 모델(faster-whisper)이 없습니다.")
-        try:
-            transcript = await transcribe(data)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"전사 실패: {str(e)}")
-        try:
-            sc = await calculate_score(correct=target, user_answer=transcript, db=db)
-            sim = sc.get("score", 0)
-        except Exception:
-            sim = 0.0
-        try:
-            from scoring import to_pronounced_jamos, align_jamos
-            cj = to_pronounced_jamos(target.replace(" ", ""))
-            uj = to_pronounced_jamos((transcript or "").replace(" ", ""))
-            for cs, us in align_jamos(cj, uj):
-                if cs is None or us is None:
-                    continue
-                if cs[0] and us[0] and cs[0] != us[0]:
-                    confusions.append({"correct": cs[0], "confused_as": us[0]})
-                if cs[1] and us[1] and cs[1] != us[1]:
-                    confusions.append({"correct": cs[1], "confused_as": us[1]})
-        except Exception:
-            pass
+        # 축 B — 전사 비의존 D-GOP 경로. DGOP_MODEL_ID가 설정된 경우에만 시도하고,
+        # 실패(모델 미설치·정렬 실패 등)하면 조용히 전사 경로로 폴백한다.
+        # dgop_acoustic.DEFAULT_MODEL_ID가 공개 한국어 체크포인트로 가리키고 있지만
+        # (정상 발화로 학습됨 — 농인 발화 미세조정은 축 A 완료 후), 실제 발화 정확도
+        # 검증 전까지는 배포 기본값을 켜지 않는다. 검증 후 DGOP_MODEL_ID를 배포
+        # 환경변수로 설정하면 이 경로가 전면 활성화된다.
+        dgop_model_id = os.getenv("DGOP_MODEL_ID")
+        if dgop_model_id:
+            try:
+                import dgop_acoustic
+                if not dgop_acoustic.HAS_ACOUSTIC:
+                    raise RuntimeError("torch/torchaudio/transformers 미설치")
+                result = dgop_acoustic.assess_text(data, target, model_id=dgop_model_id)
+                if result.get("score") is not None:
+                    dgop_result = result
+                    sim = dgop_result["score"]
+                    assessment_method = "dgop"
+            except Exception:
+                dgop_result = None  # 폴백으로 계속 진행
+
+        if assessment_method != "dgop":
+            from speak_service import transcribe, is_available
+            if not is_available():
+                raise HTTPException(status_code=503, detail="서버에 음성인식 모델(faster-whisper)이 없습니다.")
+            try:
+                transcript = await transcribe(data)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"전사 실패: {str(e)}")
+            try:
+                sc = await calculate_score(correct=target, user_answer=transcript, db=db)
+                sim = sc.get("score", 0)
+            except Exception:
+                sim = 0.0
+            try:
+                from scoring import to_pronounced_jamos, align_jamos
+                cj = to_pronounced_jamos(target.replace(" ", ""))
+                uj = to_pronounced_jamos((transcript or "").replace(" ", ""))
+                for cs, us in align_jamos(cj, uj):
+                    if cs is None or us is None:
+                        continue
+                    if cs[0] and us[0] and cs[0] != us[0]:
+                        confusions.append({"correct": cs[0], "confused_as": us[0]})
+                    if cs[1] and us[1] and cs[1] != us[1]:
+                        confusions.append({"correct": cs[1], "confused_as": us[1]})
+            except Exception:
+                pass
+            assessment_method = "asr_transcript"
 
     note = ""
     passed = None
@@ -1602,7 +1626,9 @@ async def speak_assess(
     if mouth_confidence is not None and mouth_confidence >= 0:
         import dgop
         vis = mouth_confidence * 100 if mouth_confidence <= 1 else mouth_confidence
-        av_fusion = dgop.fuse_audio_visual(score, max(0.0, 1 - score / 100.0), vis)
+        # D-GOP 경로면 실측 불확실성을, 전사 경로면 기존 점수 기반 근사치를 쓴다.
+        audio_uncertainty = dgop_result["uncertainty"] if dgop_result else max(0.0, 1 - score / 100.0)
+        av_fusion = dgop.fuse_audio_visual(score, audio_uncertainty, vis)
         score = av_fusion["score"]
 
     # 개별 시도 영속화(말하기 분석용 — 독화가 Progress에 쌓는 것과 대칭)
@@ -1639,6 +1665,8 @@ async def speak_assess(
         "note": note,
         "confusions": confusions[:6],
         "coaching": coaching,
+        "assessment_method": assessment_method,  # "dgop" | "asr_transcript" — 축 B 전환 투명성
+        "dgop": dgop_result,
         "metrics": metrics,
         "av_fusion": av_fusion,
         "progress": progress,

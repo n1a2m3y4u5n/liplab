@@ -1,0 +1,16 @@
+# 고도화 축 A(공유 백본·발화합성)·B(D-GOP 음향 추론)·D(자체 립리딩)·E(조음 역추정·시뮬레이터) 전용 의존성.
+# 앱 런타임(배포)에는 불필요 — requirements.txt와 분리해 배포 이미지를 가볍게 유지한다.
+# (backend/requirements-gen.txt의 콘텐츠 생성 전용 분리와 같은 원칙.)
+#
+# 로컬(이 머신)은 GPU가 없어 CPU 전용으로 동작 확인·소규모 스캐폴딩까지만 수행한다.
+# 실제 미세조정·학습은 RunPod H100에서 수행한다(계획서 4.2).
+
+torch>=2.9.0
+torchaudio>=2.9.0
+transformers>=4.46.0
+soundfile>=0.12.1
+librosa>=0.10.2
+
+# 조음 시뮬레이터(축 E) — VocalTractLab(TU Dresden, 오픈소스 물리 기반 성도 시뮬레이터)의
+# Cython 바인딩. 학습되는 모델이 아니라 결정론적 시뮬레이터라 데이터 없이 바로 동작한다.
+vocaltractlab-cython>=0.0.17
