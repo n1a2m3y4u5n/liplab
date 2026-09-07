@@ -21,6 +21,20 @@
  *    움직인다. 반면 입술 셰이프(pucker/funnel/smile 등)는 base 메시 전용이다.
  *    → '벌림'은 jawOpen, '입술 모양'은 ARKit 립 셰이프로 역할을 분담한다.
  *
+ * ⚠️ 병합 이력 — 중복 키 정리(2026-09-07)
+ *   이 객체에 viseme 1·2·4·6·7·10이 **각각 두 번 정의**되어 있었다. JS 객체 리터럴은
+ *   뒤엣것이 앞엣것을 덮으므로, 앞의 정의(= 개발일지 2·6절의 ARKit 감사 + 브라우저 육안
+ *   검증으로 확정한 값)가 코드에 남은 채 **실행되지 않고** 있었다. 예: 원순모음(4)의
+ *   검증본 `funnel .62/pucker .48/jaw .05`가 이전 값 `pucker .55/funnel .4/jaw .06`으로
+ *   덮여, 문서화된 튜닝이 화면에 반영되지 않았다.
+ *
+ *   두 정의는 서로 다른 축을 손대고 있어 실제로 병합 가능했다:
+ *     · 앞 정의 = **입술 형태** (ARKit 감사·육안 검증 — mouthClose·mouthUpperUp·funnel 등)
+ *     · 뒤 정의 = **턱 열림** (혀 렌더링[YMJ] 작업이 혀를 보이게 하려 jawOpen을 올림.
+ *       올린 대상 6·7·10이 VISEME_TONGUE 보유 viseme과 정확히 일치하는 것이 근거)
+ *   → 입술은 앞, 턱은 뒤를 취해 단일 정의로 합쳤다. 중복 재발은
+ *     `visemeShapes.test.mjs`의 중복 키 검사가 막는다.
+ *
  * 이전 매핑 대비 개선점
  *   · 양순음(1): mouthClose 를 추가해 두 입술을 확실히 붙임(ㅂ/ㅍ/ㅁ 폐쇄 강화).
  *   · 원순모음(4)·이중모음(9): mouthFunnel + mouthPucker 를 결합해 앞으로
@@ -32,17 +46,13 @@
  * 가중치는 0~1. 모델에 없는 키는 렌더러가 자동으로 건너뛴다.
  */
 export const VISEME_BLENDSHAPES = {
-  // 1) 양순음 ㅂ/ㅃ/ㅍ/ㅁ — 두 입술을 붙여 확실히 막고 살짝 압착
+  // 1) 양순음 ㅂ/ㅃ/ㅍ/ㅁ — 두 입술을 붙여 확실히 막고 살짝 압착.
+  //    mouthClose로 앞이 열린 모음(아→마) 뒤에도 입술이 반드시 닫히게 한다.
   1: { mouthClose: 0.35, mouthPressLeft: 0.22, mouthPressRight: 0.22, mouthRollLower: 0.12, mouthRollUpper: 0.12 },
 
   // 2) 개방모음 ㅏ/ㅐ/ㅑ/ㅒ — 턱을 크게 내리고 윗입술도 살짝 올려 크게 벌림
+  //    (한국어에서 가장 개방적인 모음)
   2: { jawOpen: 0.5, mouthLowerDownLeft: 0.12, mouthLowerDownRight: 0.12, mouthUpperUpLeft: 0.06, mouthUpperUpRight: 0.06 },
-  // 1) 양순음 ㅂ/ㅃ/ㅍ/ㅁ — 두 입술을 확실히 붙여 막고 살짝 압착
-  //    mouthClose를 넣어 앞이 열린 모음(아→마) 뒤에도 입술이 반드시 닫히게 한다.
-  1: { mouthClose: 0.18, mouthPressLeft: 0.22, mouthPressRight: 0.22, mouthRollLower: 0.1, mouthRollUpper: 0.1 },
-
-  // 2) 개방모음 ㅏ/ㅐ — 턱을 크게 내려 입을 벌림 (한국어에서 가장 개방적인 모음)
-  2: { jawOpen: 0.5, mouthLowerDownLeft: 0.1, mouthLowerDownRight: 0.1 },
 
   // 3) 전설모음 ㅣ/ㅔ/ㅖ — 입술을 좌우로 당겨 옆으로 벌리고 윗니가 살짝 보임
   3: { mouthSmileLeft: 0.45, mouthSmileRight: 0.45, mouthStretchLeft: 0.2, mouthStretchRight: 0.2, jawOpen: 0.1, mouthUpperUpLeft: 0.08, mouthUpperUpRight: 0.08 },
@@ -51,24 +61,18 @@ export const VISEME_BLENDSHAPES = {
   //  이 모델은 jawOpen이 조금만 커져도 윗니가 드러나 원순 특성을 해친다.
   //  → jaw는 최소(치아 감춤), funnel로 앞으로 내민 protrusion을 강조하고
   //    pucker는 살짝 낮춰 중앙에 작은 둥근 개구부가 보이게 한다.
+  //  (순수 pucker 0.95는 과장된 뽀뽀 모양이라 funnel을 섞어 자연스러운 원순으로.)
   4: { mouthFunnel: 0.62, mouthPucker: 0.48, jawOpen: 0.05 },
-  // 4) 원순모음 ㅗ/ㅛ/ㅜ/ㅠ — 입술을 둥글게 오므려 앞으로 내밈
-  //    순수 pucker 0.95는 과장된 뽀뽀 모양 → funnel을 섞어 자연스러운 원순을 만든다.
-  4: { mouthPucker: 0.55, mouthFunnel: 0.4, jawOpen: 0.06 },
 
   // 5) 중설모음 ㅓ/ㅕ/ㅡ — 중립에서 살짝 벌림
   5: { jawOpen: 0.22, mouthFunnel: 0.06 },
 
-  // 6) 치경음 ㄷ/ㄸ/ㅌ/ㄴ/ㄹ/ㅅ/ㅆ — 이가 가깝게 살짝 벌리고 윗니가 보임
-  6: { jawOpen: 0.12, mouthUpperUpLeft: 0.1, mouthUpperUpRight: 0.1, mouthShrugUpper: 0.05 },
+  // 6) 치경음 ㄷ/ㄸ/ㅌ/ㄴ/ㄹ/ㅅ/ㅆ — 윗니가 보이게 하고, 혀끝(VISEME_TONGUE)이
+  //    드러나도록 턱을 조금 더 연다. 혀끝은 윗잇몸으로 올라가므로 tongueOut은 쓰지 않는다.
+  6: { jawOpen: 0.22, mouthUpperUpLeft: 0.1, mouthUpperUpRight: 0.1, mouthShrugUpper: 0.05 },
 
-  // 7) 연구개음 ㄱ/ㄲ/ㅋ/ㅇ — 입을 조금 벌림(조음은 안쪽이라 외형은 중립)
-  7: { jawOpen: 0.18 },
-  // 6) 치경음 ㄷ/ㄸ/ㅌ/ㄴ/ㄹ/ㅅ/ㅆ — 혀끝이 보이도록 입을 조금 더 벌림
-  //    혀끝은 윗잇몸으로 올라가므로 tongueOut(밖으로 내밀기)은 쓰지 않는다.
-  6: { jawOpen: 0.22 },
-
-  // 7) 연구개음 ㄱ/ㄲ/ㅋ/ㅇ — 혀 뒤가 보이도록 입을 조금 더 벌림
+  // 7) 연구개음 ㄱ/ㄲ/ㅋ/ㅇ — 조음이 입 안쪽이라 외형은 중립에 가깝지만,
+  //    혀 뒤(VISEME_TONGUE)가 보이도록 조금 더 벌린다.
   7: { jawOpen: 0.22 },
 
   // 8) 성문음 ㅎ — 숨을 내쉬며 입을 열고 이완
@@ -79,10 +83,9 @@ export const VISEME_BLENDSHAPES = {
   //  jaw는 절제해(치아 과다 노출 방지) '둥글게 살짝 벌린' 형태로.
   9: { jawOpen: 0.16, mouthFunnel: 0.38, mouthPucker: 0.32 },
 
-  // 10) 경구개음 ㅈ/ㅉ/ㅊ — 입술을 살짝 내밀고 옆으로 조금 당김
-  10: { jawOpen: 0.12, mouthFunnel: 0.14, mouthSmileLeft: 0.12, mouthSmileRight: 0.12 },
-  // 10) 경구개음 ㅈ/ㅉ/ㅊ — 혓날이 보이도록 살짝 더 벌리고 옆으로 조금 당김
-  10: { jawOpen: 0.18, mouthSmileLeft: 0.18, mouthSmileRight: 0.18 },
+  // 10) 경구개음 ㅈ/ㅉ/ㅊ — 입술을 살짝 내밀고 옆으로 조금 당기며,
+  //     혓날(VISEME_TONGUE)이 보이도록 조금 더 벌린다.
+  10: { jawOpen: 0.18, mouthFunnel: 0.14, mouthSmileLeft: 0.12, mouthSmileRight: 0.12 },
 
   // 11~13) 동시조음 전환 프레임 — 다음 조음으로 가는 약한 중간 상태
   11: { mouthClose: 0.18, mouthPressLeft: 0.1, mouthPressRight: 0.1 }, // → 양순
