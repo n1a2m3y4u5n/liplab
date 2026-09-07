@@ -3,7 +3,10 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { VISEME_BLENDSHAPES, ACTIVE_MORPH_KEYS, VISEME_TONGUE, ACTIVE_TONGUE_KEYS } from '../lib/visemeShapes'
+import { MIRROR_KEYS } from '../lib/mouthMirror'
 import MouthFallback2D from './MouthFallback2D'
+
+const EMPTY = {}
 
 /**
  * 한국어 Viseme → 3D 입모양 렌더링
@@ -12,10 +15,14 @@ import MouthFallback2D from './MouthFallback2D'
  * 매핑(../lib/visemeShapes)에 더해, 혀(tongue) 전용 모프까지 적용해 한국어 조음을
  * 정확히 표현한다. WebGL 미지원 / 모델 로드 실패 시 2D 입모양으로 폴백한다.
  *
+ * mirrorRef(축 F)가 주어지면 웹캠에서 읽은 사용자 입모양 계수로 아바타를 구동한다
+ * (거울 모드). ref로 받는 이유는 웹캠이 초당 30프레임으로 값을 갱신하기 때문 —
+ * 상태로 올리면 매 프레임 리렌더가 발생한다.
+ *
  * (병합 메모: 혀 렌더링[YMJ]과 WebGL 폴백·카메라 경쟁조건 수정[feat/curriculum]이
  *  깨진 머지로 파일에 두 벌 복제돼 빌드가 깨져 있었다 → 두 기능을 모두 살려 단일화.)
  */
-function RealisticFace({ visemeId = 15 }) {
+function RealisticFace({ visemeId = 15, mirrorRef = null }) {
   const { scene } = useGLTF('/models/realistic_face.glb')
   const meshesRef = useRef([])
   const tongueMeshRef = useRef(null)
@@ -40,11 +47,23 @@ function RealisticFace({ visemeId = 15 }) {
   useFrame((_, delta) => {
     if (meshesRef.current.length === 0) return
 
-    const target = VISEME_BLENDSHAPES[visemeId] || {}
+    // 거울 모드(축 F): 웹캠 계수가 있으면 그것이 목표, 없으면 viseme 매핑이 목표.
+    const mirror = mirrorRef?.current || null
+    const target = mirror || VISEME_BLENDSHAPES[visemeId] || EMPTY
     const LERP = Math.min(1, delta * 22) // ~45ms transition (자음 프레임 내 충분히 도달)
 
+    /*
+      보간할 키 집합. mirrorRef를 받은 인스턴스는 **항상** MIRROR_KEYS(=ACTIVE_MORPH_KEYS의
+      상위집합)를 돈다. 목표 맵에 없는 키는 0으로 읽히므로, 거울 모드를 끄면 거울에서만
+      쓰던 모프(jawForward·cheekPuff 등)가 자동으로 0으로 복귀한다.
+      — 개발일지 3절의 함정: 매 프레임 '사용 키 목록'만 보간하면, 목록에서 빠진 키는
+        아무도 0으로 되돌리지 않아 직전 값이 얼굴에 남는다.
+      mirrorRef가 없는 기존 호출부는 종전과 동일하게 ACTIVE_MORPH_KEYS만 돈다(동작 불변).
+    */
+    const morphKeys = mirrorRef ? MIRROR_KEYS : ACTIVE_MORPH_KEYS
+
     // 얼굴·턱 모프 — 모든 메시에 이름으로 일괄 적용 (jawOpen은 혀도 함께 따라감)
-    for (const key of ACTIVE_MORPH_KEYS) {
+    for (const key of morphKeys) {
       const tgt = target[key] || 0
       const cur = currentWeightsRef.current[key] || 0
       const next = THREE.MathUtils.lerp(cur, tgt, LERP)
@@ -63,7 +82,9 @@ function RealisticFace({ visemeId = 15 }) {
     const TONGUE_LERP = Math.min(1, delta * 15)
     const tongue = tongueMeshRef.current
     if (tongue) {
-      const tTarget = VISEME_TONGUE[visemeId] || {}
+      // 거울 모드에선 혀를 중립으로 — 웹캠은 혀를 추적하지 못하므로(입 안이 안 보임)
+      // 직전 viseme의 혀 위치를 그대로 두면 사용자 입모양과 어긋난 조음이 표시된다.
+      const tTarget = mirror ? EMPTY : (VISEME_TONGUE[visemeId] || EMPTY)
       for (const key of ACTIVE_TONGUE_KEYS) {
         const tgt = tTarget[key] || 0
         const cur = tongueWeightsRef.current[key] || 0
@@ -109,7 +130,7 @@ class GLErrorBoundary extends Component {
   }
 }
 
-export default function AvatarVRM({ visemeId = 15 }) {
+export default function AvatarVRM({ visemeId = 15, mirrorRef = null }) {
   const [webglOK] = useState(detectWebGL)
   const fallback = <MouthFallback2D visemeId={visemeId} />
 
@@ -131,7 +152,7 @@ export default function AvatarVRM({ visemeId = 15 }) {
           <directionalLight position={[-1, 0, 1]} intensity={0.4} />
 
           <Suspense fallback={null}>
-            <RealisticFace visemeId={visemeId} />
+            <RealisticFace visemeId={visemeId} mirrorRef={mirrorRef} />
           </Suspense>
 
           <OrbitControls
