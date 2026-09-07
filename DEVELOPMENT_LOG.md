@@ -1071,3 +1071,304 @@ J 기호 뒷받침·B 융합 입력 후보(음향·영상 백본과 함께 Phase
 양순·치경·연구개·경구개·성문 시각 군 분리). numpy만 사용(torch 불필요, 생성 전용).
 공개 자원(`docs/perceptual-resources.json`)에 `consonant_visual_space` 추가. 테스트 5개로 확대.
 **변경 파일(C.2).** `backend/perceptual_space.py`(신규)·`perceptual.py`·`test_perceptual.py`·`requirements-gen.txt`·`docs/perceptual-resources.json`.
+
+---
+
+# 제2기 고도화 — Phase 2 착수 준비
+
+> 2026-08-25 계획서를 바탕으로 축 A~K 실행 로드맵을 날짜·자원·기간·예산 단위로 재정리했다
+> (2026-09-07). 이 절부터는 그 로드맵의 1주차(예산 집행)와 병행 가능한, 데이터·구매 자산
+> 없이도 착수 가능한 부분부터 실행한 기록이다.
+
+### ML 환경 구축 — `requirements-ml.txt`
+**배경/목표.** B.2에서 남겨둔 과제("음향 백본 — torch 필요")를 풀기 위해 torch·torchaudio·
+transformers 스택을 준비한다. 앱 런타임에는 불필요하므로 `requirements-gen.txt`(콘텐츠 생성
+전용)와 같은 원칙으로 분리한다.
+
+**실행.** `backend/requirements-ml.txt` 신규(torch·torchaudio·transformers·soundfile·librosa).
+로컬 venv(GPU 없음)에 설치 후 `scripts/check_ml_env.py`(신규)로 공개 CTC 모델
+(`facebook/wav2vec2-base-960h`)을 실제로 다운로드해 forward pass까지 실행, 다운로드→전처리→
+추론 파이프라인이 끝까지 맞물리는지 확인했다.
+
+**발견.** 개발일지·계획서가 언급한 한국어 체크포인트 `kresnik/wav2vec2-xlsr-korean`이 현재
+Hugging Face Hub API에서 **401 Unauthorized**를 반환한다(같은 방식으로 조회한 공개 모델
+`facebook/wav2vec2-base-960h`는 200 정상). 게이트되었거나 비공개로 바뀌었을 가능성이 있어,
+축 A 착수 시 가장 먼저 재확인하거나 대체 한국어 체크포인트를 선정해야 한다.
+
+**검증.** `torch.cuda.is_available() == False`(로컬은 CPU만 — 실제 학습은 RunPod H100에서
+확인 필요), 모델 로드·forward pass 정상(logits shape `(1, 49, 32)`, 프레임당 확률 합 1.0000).
+
+**변경 파일.** `backend/requirements-ml.txt`(신규), `scripts/check_ml_env.py`(신규).
+
+### B.4 D-GOP 음향 백본 — CTC 강제정렬 구현 (`backend/dgop_acoustic.py` 신규)
+**배경/목표.** `dgop.py`는 '음소 사후확률 분포'를 입력받는 순수 함수만 가지고 있고, 그
+분포를 실제로 공급하는 부분은 B.2에서 다음 단계로 미뤄 두었다. `torchaudio.functional.
+forced_align`(CTC 강제정렬)이 설치된 torchaudio에 내장되어 있음을 확인해, 이 부분을 직접
+구현했다.
+
+**실행.** `ctc_log_probs`(오디오→CTC 모델→프레임별 로그확률, 모델 다운로드 필요)·
+`align_targets`(로그확률+vocab+목표 음소열→`forced_align`으로 프레임 구간 정렬, 모델
+비의존 순수 함수)·`span_distribution`(구간 평균 확률분포)·`phone_confidences`(위 셋을
+묶어 기존 `dgop.dgop_phone`에 실제 신호를 공급하는 통합 지점)로 구성했다. 정렬·집계
+로직은 CTC vocab에만 의존해 한국어 체크포인트가 정해지면 `DEFAULT_MODEL_ID`만 바꾸면
+그대로 쓸 수 있다.
+
+**검증(결정론적, 모델 없이).** vocab 4개(blank·A·B·C)로 "blank A A B C blank" 프레임 배열을
+직접 구성해 `forced_align`을 실측 — 프레임별 정렬 결과가 구성한 순서와 정확히 일치함을
+먼저 스크립트로 확인한 뒤 테스트로 고정했다. `align_targets`가 구간 경계를 정확히 복원(A는
+프레임 1~2, B는 3, C는 4), `span_distribution`이 확신 구간에서 목표 토큰 확률 0.99+, 존재하지
+않는 토큰은 `KeyError`. 회귀: 기존 `test_dgop.py` 4개 그대로 통과. 신규 테스트 4개 통과.
+`main.py`·`speak_service.py`에서 아직 참조하지 않아(opt-in 모듈) 배포 런타임에는 영향 없음.
+
+**변경 파일.** `backend/dgop_acoustic.py`(신규), `backend/test_dgop_acoustic.py`(신규).
+
+## A. 공유 백본 · 농인 발화 합성
+
+### A.1 농인 발화 합성 프로토타입 (`backend/deaf_speech_synthesis.py` 신규)
+**배경/목표.** 계획서 3.1: 정상 발화(OLKAVS 등)에 조음 교란(포먼트 이동·말속도 신축·명료도
+저하)을 적용해 농인 발화 분포를 근사한다. OLKAVS 원본 데이터 확보 전이라도, 교란 자체는
+임의의 파형에 적용되는 순수 신호처리라 먼저 구현·검증할 수 있다.
+
+**실행.** `time_stretch`(librosa phase vocoder)·`formant_shift`(리샘플+시간복원 근사 —
+정직한 한계로 문서화: 피치와 포먼트가 함께 움직이는 값싼 근사이며 정밀 조작은 LPC 기반
+성도 워핑이 필요해 범위 밖)·`lowpass`(버터워스 zero-phase)·`add_noise`(목표 SNR 맞춤
+백색잡음)를 각각 순수 함수로 구현하고, 계획서 예비 실증(그림7·8)의 다섯 단계 저하
+강도와 같은 구조로 `SEVERITY_LEVELS`(0=명료~4=심함)를 두어 `simulate_deaf_speech`로
+조합했다.
+
+**검증(합성 신호로 결정론적).** 저역통과가 고역 에너지만 99% 이상 제거하고 저역은 80% 이상
+보존, 잡음 추가가 목표 SNR(10dB)에 0.5dB 이내로 도달, 같은 시드면 같은 잡음(결정론적),
+강도가 오를수록 컷오프·SNR이 단조 저하, `simulate_deaf_speech(severity=4)`가
+`severity=1`보다 고주파 성분을 실측으로 더 많이 잃음, 포먼트 이동 후에도 길이가 원본과
+같게 복원됨. 7개 테스트 통과. **정직한 한계**: 실제 사람이 듣기에 자연스러운지는 검증하지
+못했다(청취 평가는 당사자 파일럿·전문가 판정에서 확인할 영역).
+
+**전체 회귀.** 백엔드 테스트 15개 파일 전부 재실행, 기존 테스트 회귀 없음.
+
+**변경 파일.** `backend/deaf_speech_synthesis.py`(신규), `backend/test_deaf_speech_synthesis.py`(신규).
+
+### B.5 D-GOP를 `/api/speak/assess`에 실제 연결 (축 B 완성)
+**배경/목표.** B.4에서 만든 강제정렬 메커니즘을 실제 발화 평가 엔드포인트에 연결한다.
+계획서 4.1: "발화 평가 엔드포인트는 전사 방식에서 D-GOP 방식으로 교체하되 전사 경로를
+폴백으로 남긴다." 아직 한국어 체크포인트가 없으므로(B.4에서 발견한 401 이슈 미해결),
+**기본값은 기존 동작 그대로 유지**하고 환경변수로 켜고 끌 수 있게 만들었다.
+
+**실행.**
+- `dgop_acoustic.py`에 `tokens_for_text(text, model_id)` 추가 — 목표 텍스트를 그 체크포인트
+  **자신의** 토크나이저로 vocab 토큰열로 변환한다(직접 자모 매핑을 만들지 않음 → 한국어
+  체크포인트로 바뀌어도 이 함수는 그대로 재사용됨). `assess_text(audio_bytes, target_text,
+  model_id)`로 디코딩(faster-whisper의 `decode_audio` 재사용)→토큰화→강제정렬→
+  `dgop.sentence_dgop` 집계를 하나로 묶었다.
+- `main.py`의 `/api/speak/assess`: `DGOP_MODEL_ID` 환경변수가 설정된 경우에만 D-GOP 경로를
+  시도하고, 정렬 실패·미설치 등 예외 시 조용히 기존 전사(Whisper) 경로로 폴백한다. 오디오·
+  비주얼 융합(B.3)도 D-GOP 경로일 때는 근사치(`1-score/100`) 대신 **실측 불확실성**을 쓰도록
+  개선했다. 응답에 `assessment_method`("dgop"|"asr_transcript")를 노출해 어느 경로로 채점됐는지
+  투명하게 드러낸다.
+
+**검증(실제 HTTP 왕복).** 개발 서버에 데모 로그인 → 합성 WAV로 `/api/speak/assess` 호출.
+- `DGOP_MODEL_ID` 미설정(기본): `assessment_method: "asr_transcript"` — **기존 동작과 동일**함을
+  실측 확인(회귀 없음).
+- `DGOP_MODEL_ID=facebook/wav2vec2-base-960h`(파이프라인 검증용 공개 영어 체크포인트) 설정: 
+  `assessment_method: "dgop"`, 강제정렬·구간 점수·문장 집계가 실제 HTTP 요청을 통해 끝까지
+  동작함을 확인(점수는 사인파 입력이라 낮게 나옴 — 예상된 결과, 파이프라인 배선 검증이 목적).
+- 백엔드 테스트 16개 파일 전부 회귀 없음.
+
+**변경 파일(B.5).** `backend/dgop_acoustic.py`(`tokens_for_text`·`assess_text` 추가),
+`backend/main.py`(`/api/speak/assess` D-GOP 폴백 배선).
+
+### C.3 데이터 기반 채점 — 대조학습 메커니즘 (`backend/perceptual_contrastive.py` 신규)
+**배경/목표.** C.1~C.2(규칙 기반)는 이미 완료했다. 계획서 3.3의 남은 절반은 실제 시청각
+데이터로 학습한 지각공간이 규칙값을 대체하는 것이다. OLKAVS 등 실 데이터 확보 전이지만,
+인코더·대조손실 자체는 "입력 특징 → 임베딩"이라는 일반 형태라 먼저 구현·검증할 수 있다.
+
+**실행.** `VisemeEncoder`(작은 MLP, L2정규화 임베딩 출력)와 `supervised_contrastive_loss`
+(SupCon, Khosla et al. 2020 — 같은 라벨은 가깝게 다른 라벨은 멀게)를 구현했다. 실제 통합
+시 입력은 축 A 백본이 뽑은 프레임 특징의 요약이 되고, 라벨은 비심 그룹(1~10)이 된다.
+
+**검증(합성 클러스터, 결정론적).** 비심 그룹처럼 라벨별로 뚜렷이 다른 중심을 가진 합성
+특징(4그룹×15개, 8차원)으로 학습 — 손실이 단조 감소, 학습 후 같은 라벨 임베딩의 평균
+코사인 유사도(intra)가 다른 라벨(inter)보다 뚜렷이 높음(intra>0.7, intra-inter>0.3),
+학습 전(무작위 초기화) 대비 라벨 분리도가 커짐을 확인. 3개 테스트 통과.
+
+**정직한 한계·의도적 미배선.** 이 모듈은 `perceptual.py`의 채점 계수에 아직 연결하지
+않았다 — 합성 데이터로 학습한 모델을 실제 채점에 쓰면 안 되기 때문이다. 또한 이 테스트는
+학습 메커니즘이 작동하는지(라벨을 분리해내는지)를 검증할 뿐, 실제 지각공간의 내용(양순음이
+서로 가깝고 연구개음과는 먼가 등)은 검증하지 않는다 — 그건 실제 OLKAVS 데이터로 학습한
+뒤 C.1의 규칙 기반 결과와 대조해 확인할 일이다.
+
+**변경 파일(C.3).** `backend/perceptual_contrastive.py`(신규), `backend/test_perceptual_contrastive.py`(신규).
+
+### B.6 한국어 CTC 체크포인트 확정 — `DEFAULT_MODEL_ID` 실전환
+**배경/목표.** B.4~B.5는 파이프라인 검증용 공개 영어 체크포인트로 배선했다. 한국어
+체크포인트를 실제로 찾아 기본값으로 바꾼다.
+
+**실행(조사).** HF Hub API로 직접 검색·접근성 확인:
+- `kresnik/wav2vec2-xlsr-korean`(개발일지가 원래 지목한 것) — 여전히 401, 접근 불가 확정.
+- `kresnik/wav2vec2-large-xlsr-korean`(같은 저자) — **공개, 월 100만+ 다운로드** 확인 →
+  `dgop_acoustic.DEFAULT_MODEL_ID`로 채택.
+- 대안 후보 `w11wo/wav2vec2-xls-r-300m-korean`도 공개 확인(더 가벼움, 미채택 보류).
+- 축 A 초기 백본 후보 `microsoft/wavlm-base`·`microsoft/wavlm-large` 공개 확인.
+- AV-HuBERT 원본(Meta fbaipublicfiles.com)은 403(죽음)이나 HF Hub에 공개 미러 다수 확인.
+
+**발견(중요, 설계에 영향).** 채택한 체크포인트의 vocab.json을 직접 열어 확인한 결과
+**1,205개 토큰이 전부 한글 음절 단위**(예: '녕','벍')이지 자모(초성/중성/종성) 단위가
+아니다. `tokens_for_text('안녕하세요')` 실측 결과도 `['안','녕','하','세','요']`로 음절
+그대로 나뉜다. 즉 이 체크포인트로 얻는 D-GOP는 **음절 단위 신뢰도**이고, `dgop.py`가
+그리는 자모별(초성/중성/종성) 채점을 얻으려면 음절 신뢰도를 자모로 재분해하는 단계가
+축 B 후속 작업으로 더 필요하다. 또한 이 체크포인트는 정상 발화로 학습되어, 축 A가 농인
+발화로 미세조정하기 전까지는 D-GOP의 불확실성 보정에 더 의존한다(계획서가 지적한 문제
+그 자체 — 우회가 아니라 설계상 이미 대응돼 있음).
+
+**검증(실제 체크포인트로 재실행).** `scripts/check_ml_env.py`를 이 체크포인트로 교체해
+재실행 — 로드·forward pass 정상(logits shape `(1, 49, 1205)`). `dgop_acoustic.assess_text`를
+실제 한국어 텍스트("안녕")로 end-to-end 재실행 — 디코딩→음절 토큰화→강제정렬→문장 집계
+전부 정상 동작(점수는 합성 사인파 입력이라 낮게 나옴 — 예상된 결과). 배포 기본 동작은
+그대로 유지: `main.py`는 여전히 `DGOP_MODEL_ID` 환경변수가 설정된 경우에만 이 경로를
+타므로, 실제 발화 정확도 검증 전까지 프로덕션에는 영향 없음. 백엔드 테스트 16개 파일
+전부 회귀 없음.
+
+**변경 파일(B.6).** `backend/dgop_acoustic.py`(`DEFAULT_MODEL_ID`), `backend/main.py`(주석
+갱신), `scripts/check_ml_env.py`(검증 대상 체크포인트 교체).
+
+## E. 조음 원인 진단과 조음 시뮬레이터
+
+### E.1 조음 시뮬레이터 — VocalTractLab 연동 (`backend/vocal_tract_simulator.py` 신규)
+
+**배경/목표.** 축 E는 두 절반으로 나뉜다: 조음 역추정(음향/영상→조음 파라미터, MNGU0·
+USC-TIMIT 데이터 필요)과 조음 시뮬레이터(파라미터→성도 형상·소리, 물리 기반 결정론적
+시뮬레이터라 데이터·학습 불필요). "데이터 없이 지금 뭘 할 수 있냐"는 질문에 답하며 후자가
+**데이터·구매 자산 없이 지금 바로 완성 가능**함을 확인해 착수했다.
+
+**실행(조사).** VocalTractLab(TU Dresden, 오픈소스)의 Python 바인딩 `vocaltractlab-cython`이
+PyPI에 manylinux wheel로 배포되어 있어 `pip install`만으로 설치·동작 확인(별도 .so 다운로드·
+ctypes 배선 불필요). 기본 제공 성우 파일(JD3)의 조음 위치별 프리셋(`ll-labial-closure`,
+`tt-alveolar-closure`, `tb-velar-closure`, `tt-postalveolar-closure` 등, 모음 문맥 a/i/u
+변이 포함)을 확인해 손으로 파라미터를 지어내지 않고 실제 존재하는 프리셋만 쓰는 원칙을
+지켰다(프론트 `visemeShapes.js`가 ARKit 블렌드셰이프로 했던 것과 같은 방식).
+
+**구현.** `engine.py`의 한국어 viseme 그룹(1~10)을 조음 위치가 가장 가까운 VTL 프리셋에
+매핑(`VISEME_TO_SHAPE`) — 양순(1)→`ll-labial-closure`, 개방(2)→`a`, 전설(3)→`i`, 원순(4)→`u`,
+중설(5)→`@`, 치경(6)→`tt-alveolar-closure`, 연구개(7)→`tb-velar-closure`, 성문(8)→`@`로 근사,
+경구개(10)→`tt-postalveolar-closure`. 이중모음(9)은 별도로 개방(2)·원순(4) 파라미터의 정확한
+평균으로 보간. `synthesize_viseme_sequence`가 viseme 시퀀스(균일 또는 프레임별 길이)를 VTL
+내부 프레임레이트(약 400.9Hz)로 선형보간해 실제 오디오를 합성하고, `outline_svg`가 성도
+단면을 SVG로 내보낸다(투명 두상 자산으로 축 F와 공유 예정).
+
+**검증.** 실제 라이브러리로 직접 검증(합성 데이터 아님 — 결정론적 시뮬레이터라 그 자체가
+근거): 서로 다른 모음(ㅏ·ㅣ·ㅜ)이 스펙트럼 무게중심에서 실측 가능한 차이를 보임, 이중모음
+보간이 정확히 산술평균과 일치, 잘못된 viseme·빈 시퀀스는 오류 처리, SVG 파일이 실제로
+생성됨. 6개 테스트 통과. **end-to-end 실증**: `engine.text_to_visemes("안녕하세요")`가
+만든 실제 프레임 시퀀스(viseme 10개 + 각 프레임 실제 duration_ms)를 그대로
+`synthesize_viseme_sequence`에 흘려보내 1.45초 오디오를 합성 — 조음 엔진(engine.py)과
+조음 시뮬레이터(축 E)가 처음으로 실제 연결됨. 백엔드 테스트 17개 파일 전부 회귀 없음.
+
+**정직한 한계.** 프리셋은 독일어 화자 기준 조음 위치의 물리적 유사성에 근거한 근사이고,
+자음 프리셋은 모음 문맥 'a'만 기본으로 쓴다(실제로는 인접 모음에 따라 조음이 달라짐 —
+동시조음). 실제 한국어 조음 데이터로 정밀화하는 것은 이 축의 나머지 절반(조음 역추정)과
+함께 진행할 후속 과제.
+
+**변경 파일(E.1).** `backend/vocal_tract_simulator.py`(신규), `backend/test_vocal_tract_simulator.py`(신규),
+`backend/requirements-ml.txt`(`vocaltractlab-cython` 추가).
+
+## F. 실사·투명 아바타 시연
+
+### F.1 아바타 거울 모드 — 웹캠 입모양을 아바타에 미러링
+
+**배경/목표.** 축 F는 구매 자산(Character Creator 5·Headshot 3·3D 성도 모델)이 필요한
+부분(실사 아바타 생성·투명 두상)과, **기존 `realistic_face.glb`만으로 가능한 부분**(웹캠
+미러링)으로 나뉜다. 후자를 먼저 구현했다. 계획서 3.6의 논지: 독화가 막히는 이유 중 하나는
+"같은 말이라도 화자마다 입모양이 달라 낯선 얼굴은 좀처럼 읽히지 않는다"는 점이고,
+"아바타가 표준 얼굴 계수 규격을 따르므로 웹캠에서 읽은 사용자의 입모양을 아바타에 그대로
+비추는 거울 기능이 자연스럽게 구현된다."
+
+**실행(근거 확보).** GLB의 `targetNames`를 직접 파싱해 `base` 메시 66개 모프를 확인한 결과,
+MediaPipe FaceLandmarker 출력(ARKit 52계수)과 **이름이 그대로 일치**함을 실측했다
+(`jawOpen`·`mouthPucker`·`mouthFunnel`·`mouthClose`·`mouthSmileLeft` …). 즉 이 기능은
+'변환 매핑'이 아니라 **이름 일치 + 신호 정리** 문제다 — 계획서의 예측이 실제로 맞았다.
+
+**구현.**
+- `lib/mouthMirror.js`(신규, 순수 함수): 미러링할 키 목록 `MIRROR_KEYS`(GLB에 존재 확인된
+  입·턱·볼·코 영역만 — 눈·눈썹은 독화와 무관하고 카메라가 입 클로즈업이라 제외),
+  `mirrorWeights`(데드존 → 증폭 → 클램프 → 지수이동평균). **데드존을 증폭보다 먼저** 적용해
+  무표정일 때의 미세 잡음이 증폭되지 않게 했다(테스트로 순서 고정).
+- `hooks/useFaceLandmarker.js`(신규): MediaPipe 로딩이 축 D 채점과 축 F 거울에 중복될 참이라
+  공용 훅으로 뽑았다. 부수 효과로 빌드에서 MediaPipe가 **공유 async 청크**(147KB, gzip 45KB)로
+  분리돼 두 기능을 다 열어도 한 번만 받는다.
+- `components/AvatarVRM.jsx`: `mirrorRef` prop 추가(opt-in). 웹캠이 초당 30프레임으로 값을
+  갱신하므로 **상태가 아니라 ref로** 넘겨 매 프레임 리렌더를 피한다. `mirrorRef`를 받은
+  인스턴스는 항상 `MIRROR_KEYS`를 보간하고, 안 받은 기존 호출부(4곳)는 종전대로
+  `ACTIVE_MORPH_KEYS`만 돌아 **동작이 완전히 불변**이다.
+- `components/MouthMirror.jsx`(신규): 웹캠(좌·좌우반전으로 실제 거울처럼)과 아바타(우)를
+  나란히 배치. `VisemeLiteracy`에 lazy 토글로 연결.
+
+**설계 판단 — 개발일지 3절의 함정 회피.** 3절에 기록된 "매핑에서 빠진 키는 아무도 0으로
+되돌리지 않아 직전 값이 얼굴에 남는다"가 여기서 재현될 수 있었다(거울 전용 모프
+`jawForward`·`cheekPuff` 등이 거울을 끈 뒤 얼굴에 얼어붙음). `MIRROR_KEYS`를
+`ACTIVE_MORPH_KEYS`의 **상위집합**으로 두고 거울 인스턴스는 항상 상위집합을 돌게 해
+해결했고, 이 상위집합 관계를 **교차 모듈 테스트로 고정**했다(나중에 viseme 매핑에 새 모프가
+추가되면 테스트가 먼저 깨진다). 혀는 거울 모드에서 중립으로 보낸다 — 웹캠은 입 안을 못 보므로
+직전 viseme의 혀 위치가 남으면 사용자 입모양과 어긋난 조음이 표시된다.
+
+**검증.** 신규 테스트 13개 통과(미러 키가 GLB에 실제 존재 / 상위집합 불변식 / 데드존이 증폭보다
+선행 / 증폭 클램프 / 첫 프레임 지연 없음 / 평활 보간 / 얼굴 놓쳤을 때 중립화 등), 프론트 전체
+**28개 통과**(신규 13 + 기존 15, 회귀 없음). 프로덕션 빌드 성공. **첫 페인트 정적 그래프에
+three 부재를 스크립트로 재검증**(8.1의 최적화 유지 — 거울이 AvatarVRM을 끌어오지만 lazy라
+엔트리에 실리지 않음). dev 서버에서 신규 모듈 4종이 모두 200으로 변환·서빙됨을 확인.
+
+**정직한 한계.** 이 환경에 카메라가 없어 **실제 웹캠 영상으로 아바타가 따라 움직이는 것은
+육안 검증하지 못했다**. 개발일지 6절이 "정적 키 검증과 실제 렌더 검증은 다르다"고 남긴 교훈이
+그대로 적용되는 지점이라, 카메라가 있는 환경에서 육안 확인이 필요하다(특히 `gain` 1.15가
+적절한지는 실제 얼굴로만 판단 가능). 또한 투명 두상·실사 아바타는 구매 자산 대기 중이라
+이번 범위 밖이다.
+
+**변경 파일(F.1).** `frontend/src/lib/mouthMirror.js`(신규), `frontend/src/lib/mouthMirror.test.mjs`(신규),
+`frontend/src/hooks/useFaceLandmarker.js`(신규), `frontend/src/components/MouthMirror.jsx`(신규),
+`frontend/src/components/AvatarVRM.jsx`(mirrorRef), `frontend/src/components/WebcamMouthCheck.jsx`(훅으로 중복 제거),
+`frontend/src/pages/VisemeLiteracy.jsx`(거울 토글).
+
+### F.2 `visemeShapes.js` 중복 키 정리 — 죽어 있던 육안 검증값 복구
+
+**발견.** F.1 작업 중 미러 키를 맞추려 `visemeShapes.js`를 읽다가, `VISEME_BLENDSHAPES`에
+**viseme 1·2·4·6·7·10이 각각 두 번 정의**된 것을 발견했다. JS 객체 리터럴은 뒤엣것이 앞엣것을
+덮으므로 앞의 정의는 코드에 남은 채 **실행되지 않는다**. 실제로 import해 확인한 결과, 덮여
+죽은 쪽이 하필 **개발일지 2·6절이 "ARKit 감사 + 브라우저 육안 검증으로 확정"으로 기록한 값**이었다.
+
+| viseme | 죽어 있던 값(문서에 기록된 검증본) | 실제 렌더링되던 값 |
+|---|---|---|
+| 4 원순 | `funnel .62 / pucker .48 / jaw .05` | `pucker .55 / funnel .4 / jaw .06` |
+| 6 치경 | `jaw .12 + mouthUpperUp + shrugUpper` | `jaw .22` (윗니 노출 소실) |
+| 1 양순 | `mouthClose .35` | `mouthClose .18` |
+| 2 개방 | `+ mouthUpperUp` | (소실) |
+| 10 경구개 | `+ mouthFunnel .14` | (소실) |
+
+즉 **6절이 스크린샷으로 잡아낸 "jaw↑는 치아 노출로 개방모음처럼 보인다"는 교정이 화면에
+반영된 적이 없었다.** 파일 헤더는 이 파일이 깨진 머지를 겪었고 "두 기능을 모두 살려
+단일화"했다고 적고 있으나, `VISEME_BLENDSHAPES`에서는 그 단일화가 이뤄지지 않았다.
+
+**해결 — 병합 가능함을 근거로 확인.** 어느 한쪽을 고르는 문제로 보였으나, 두 정의가 **서로
+다른 축**을 손대고 있음을 실측으로 확인했다:
+- 앞 정의 = **입술 형태**(감사·육안 검증: mouthClose·mouthUpperUp·funnel/pucker 비율)
+- 뒤 정의 = **턱 열림**(jawOpen을 올린 대상이 6·7·10인데, 이는 `VISEME_TONGUE` 보유
+  viseme과 **정확히 일치**한다 → 혀 렌더링[YMJ] 작업이 혀를 보이게 하려 턱을 연 것)
+
+우연이 아님이 확인되어, **입술은 앞 정의·턱은 뒤 정의**를 취해 단일 정의로 합쳤다. 헤더가
+말한 "두 기능을 모두 살려 단일화"를 실제로 수행한 셈이다.
+
+**재발 방지.** 런타임 객체로는 중복을 볼 수 없으므로(JS가 이미 덮어버림) **소스를 파싱하는**
+회귀 테스트를 추가했다(`visemeShapes.test.mjs`): 최상위 viseme 키 중복 검사, 개발일지
+2·6절 검증값이 실제로 적용되는지 확인, 혀 모프 보유 viseme의 턱이 혀가 보일 만큼 열려
+있는지 확인. **테스트가 실제로 작동하는지도 검증**했다 — 일부러 중복 키를 주입해 2건이
+정확히 실패하고, 원복 시 전부 통과함을 확인.
+
+**부수 효과(의도됨).** 치경음(6)의 입술 디테일이 살아나며 `mouthShrugUpper`가 복귀해
+`ACTIVE_MORPH_KEYS`가 16→17개가 되었다. F.1이 세운 "MIRROR_KEYS ⊇ ACTIVE_MORPH_KEYS"
+불변식 테스트가 이 변화를 자동으로 검사해 통과했다(거울이 새 키도 덮음).
+
+**검증.** 프론트 **35개 테스트 통과**(신규 7 + 기존 28), 빌드 성공.
+**정직한 한계**: 이 환경에 브라우저가 없어 `/dev-viseme`로 **육안 재검증은 하지 못했다.**
+값 자체는 6절이 이미 스크린샷으로 검증한 것을 되살린 것이라 근거가 있지만, 병합으로 새로
+생긴 조합(치경음 `jaw .22` + `mouthUpperUp`, 경구개음 `jaw .18` + `funnel .14`)은 실제 렌더에서
+확인한 적이 없다 — 카메라·브라우저가 있는 환경에서 `/dev-viseme`로 확인이 필요하다.
+
+**변경 파일(F.2).** `frontend/src/lib/visemeShapes.js`(중복 정리·헤더에 이력 기록),
+`frontend/src/lib/visemeShapes.test.mjs`(신규 회귀 테스트).
