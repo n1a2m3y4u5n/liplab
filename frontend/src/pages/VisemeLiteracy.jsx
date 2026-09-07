@@ -8,6 +8,7 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
 
 // MediaPipe 번들이 커서 펼칠 때만 로드(초기 번들 보호)
 const WebcamMouthCheck = lazy(() => import('../components/WebcamMouthCheck'))
+const MouthMirror = lazy(() => import('../components/MouthMirror'))
 
 /**
  * 1단계 · 입모양 인지 (Viseme Literacy)
@@ -108,6 +109,7 @@ function LearnPanel({ data }) {
   const _tv = parseInt(params.get('v'), 10)
   const [sel, setSel] = useState(lessons.find((l) => l.viseme_id === _tv) || lessons[0])
   const [showCam, setShowCam] = useState(false)
+  const [showMirror, setShowMirror] = useState(false)
   const badge = VIS_BADGE[sel.visibility] || VIS_BADGE.medium
 
   return (
@@ -164,6 +166,18 @@ function LearnPanel({ data }) {
         <button type="button" onClick={() => setShowCam(true)}
           className="w-full rounded-xl border-2 border-dashed border-gray-300 py-3 text-sm font-bold text-gray-600 transition hover:border-gray-400 hover:bg-gray-50">
           📷 웹캠으로 내 입모양 확인하기
+        </button>
+      )}
+
+      {/* 아바타 거울 (축 F) — 내 입모양을 학습하던 그 아바타 얼굴로 비춰 본다 */}
+      {showMirror ? (
+        <Suspense fallback={<div className="card text-sm text-gray-500">거울 모듈 불러오는 중…</div>}>
+          <MouthMirror compareVisemeId={sel.viseme_id} compareLabel={sel.name} />
+        </Suspense>
+      ) : (
+        <button type="button" onClick={() => setShowMirror(true)}
+          className="w-full rounded-xl border-2 border-dashed border-gray-300 py-3 text-sm font-bold text-gray-600 transition hover:border-gray-400 hover:bg-gray-50">
+          🪞 아바타 거울 — 내 입모양을 아바타로 보기
         </button>
       )}
 

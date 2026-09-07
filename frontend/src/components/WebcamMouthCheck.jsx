@@ -1,20 +1,18 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { toBlendshapeMap, scorePercent, coachHint, loadCalibration } from '../lib/mouthScore'
 import { faceSignals, FACE_SIGNAL_LABELS } from '../lib/faceCues'
 import { lipGeometry, LIP_GEOMETRY_LABELS } from '../lib/lipGeometry'
 import { curriculumAPI } from '../api'
+import useFaceLandmarker from '../hooks/useFaceLandmarker'
 import MouthCalibration from './MouthCalibration'
 
 /**
  * 웹캠 입모양 실시간 채점 (고도화 축 D).
  * MediaPipe Face Landmarker로 얼굴 blendshape를 브라우저에서 추출해 목표 비심과 비교한다.
  * 영상·계수는 기기 밖으로 나가지 않는다(서버 전송 없음).
+ *
+ * 모델 로딩은 useFaceLandmarker 훅이 담당한다(축 F 거울 모드와 공용).
  */
-const MP_VERSION = '1.0.1'
-const WASM_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/wasm`
-const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
-
 function scoreColor(s) {
   if (s >= 75) return 'text-emerald-600'
   if (s >= 45) return 'text-amber-600'
@@ -23,13 +21,13 @@ function scoreColor(s) {
 
 export default function WebcamMouthCheck({ visemeId, visemeName }) {
   const videoRef = useRef(null)
-  const landmarkerRef = useRef(null)
   const rafRef = useRef(null)
   const streamRef = useRef(null)
-  const [status, setStatus] = useState('idle') // idle | loading | running | error
+  const { landmarkerRef, status: modelStatus, errMsg: modelErr } = useFaceLandmarker()
+  const [camStatus, setCamStatus] = useState('idle') // idle | running | error
+  const [camErr, setCamErr] = useState('')
   const [score, setScore] = useState(null)
   const [hint, setHint] = useState('')
-  const [errMsg, setErrMsg] = useState('')
   const [recorded, setRecorded] = useState(false)
   const [faceSig, setFaceSig] = useState(null) // 입술 너머 얼굴 신호(축 K, 보조)
   const [geo, setGeo] = useState(null)         // 입술 기하 지표(그림8, 결정론적 보조)
@@ -47,28 +45,13 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
   // 목표 viseme이 바뀌면 최고점·기록·점수창 초기화
   useEffect(() => { bestRef.current = 0; winRef.current = []; setRecorded(false) }, [visemeId])
 
-  // 모델 로드(1회)
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        setStatus('loading')
-        const vision = await FilesetResolver.forVisionTasks(WASM_URL)
-        const fl = await FaceLandmarker.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
-          outputFaceBlendshapes: true,
-          runningMode: 'VIDEO',
-          numFaces: 1,
-        })
-        if (cancelled) { fl.close?.(); return }
-        landmarkerRef.current = fl
-        setStatus('idle')
-      } catch (e) {
-        if (!cancelled) { setStatus('error'); setErrMsg('모델을 불러오지 못했어요. 네트워크를 확인해 주세요.') }
-      }
-    })()
-    return () => { cancelled = true }
-  }, [])
+  // 화면 표시용 통합 상태 — 카메라가 우선, 그다음 모델 로딩/오류.
+  const status = camStatus === 'running' ? 'running'
+    : camStatus === 'error' ? 'error'
+      : modelStatus === 'loading' ? 'loading'
+        : modelStatus === 'error' ? 'error'
+          : 'idle'
+  const errMsg = camStatus === 'error' ? camErr : modelErr
 
   const loop = useCallback(() => {
     const fl = landmarkerRef.current
@@ -101,7 +84,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       }
     } catch { /* 프레임 스킵 */ }
     rafRef.current = requestAnimationFrame(loop)
-  }, [])  // 값은 ref로 읽으므로 루프 정체성을 고정(재구성/체인 단절 방지)
+  }, [landmarkerRef])  // 값은 ref로 읽으므로 루프 정체성을 고정(재구성/체인 단절 방지)
 
   const stop = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
@@ -110,7 +93,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       streamRef.current.getTracks().forEach((t) => t.stop())
       streamRef.current = null
     }
-    setStatus('idle')
+    setCamStatus('idle')
     setScore(null)
     setHint('')
   }, [])
@@ -129,19 +112,18 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       streamRef.current = stream
       videoRef.current.srcObject = stream
       await videoRef.current.play()
-      setStatus('running')
+      setCamStatus('running')
       rafRef.current = requestAnimationFrame(loop)
     } catch {
-      setStatus('error')
-      setErrMsg('카메라를 사용할 수 없어요. 권한을 허용해 주세요.')
+      setCamStatus('error')
+      setCamErr('카메라를 사용할 수 없어요. 권한을 허용해 주세요.')
     }
-  }, [loop])
+  }, [loop, landmarkerRef])
 
-  // 언마운트 정리
+  // 언마운트 정리 (landmarker 자체는 useFaceLandmarker가 정리한다)
   useEffect(() => () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
-    landmarkerRef.current?.close?.()
   }, [])
 
   if (showCalib) {
