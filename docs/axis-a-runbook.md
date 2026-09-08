@@ -47,9 +47,17 @@ cd /workspace && git clone https://github.com/n1a2m3y4u5n/liplab.git && cd lipla
 git checkout feat/content-scale     # 축 A 작업 브랜치
 # (저장소가 공개라 Pod에서 인증 없이 그대로 받아진다)
 
-python -m venv venv && . venv/bin/activate
+# ⚠️ venv를 만들지 않는다. RunPod PyTorch 템플릿에는 이 GPU에 맞게 빌드된 CUDA torch가
+#    이미 깔려 있는데, 깨끗한 venv를 만들면 그게 가려지고 pip가 PyPI에서 torch를 다시
+#    받는다(2.5GB, 느리고 CUDA 빌드가 어긋날 수 있다). Pod은 어차피 일회용이므로
+#    시스템 파이썬에 그대로 설치한다.
+
+# 1) 먼저 템플릿의 torch를 확인한다
+python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
+
+# 2) torch를 건드리지 않고 나머지만 설치 (--no-deps로 torch 재설치를 막는다)
 pip install -r backend/requirements.txt
-pip install -r backend/requirements-ml.txt      # torch·transformers>=5.16·datasets·accelerate
+pip install "transformers>=5.16.0" "datasets>=3.0.0" accelerate jiwer soundfile librosa
 
 # HF 캐시도 볼륨에 둔다 — Pod 재생성 때 2.88GB를 다시 받지 않는다
 export HF_HOME=/workspace/hf
@@ -57,6 +65,9 @@ echo 'export HF_HOME=/workspace/hf' >> ~/.bashrc
 
 python scripts/check_ml_env.py    # ← "CUDA 사용 가능: True" 확인
 ```
+
+> 1)에서 torch가 2.9 미만이거나 `cuda`가 `None`이면 템플릿을 잘못 고른 것이다.
+> Pod을 지우고 PyTorch 2.x + CUDA 12.x 템플릿으로 다시 만드는 편이 빠르다.
 
 `CUDA 사용 가능: False`면 여기서 멈춘다 — 그대로 학습하면 CPU로 돌아 수십 배 느려진다.
 
