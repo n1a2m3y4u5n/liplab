@@ -29,6 +29,7 @@ from typing import Dict, List, Union
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
+import hf_audio  # noqa: E402
 import jamo_vocab as V  # noqa: E402
 
 BASE_MODEL = "kresnik/wav2vec2-large-xlsr-korean"
@@ -122,12 +123,11 @@ def prepare_dataset(processor, split: str, limit: int = 0):
     ds = ds.cast_column("audio", ds_lib.Audio(sampling_rate=16000))
 
     def _map(batch):
-        audio = batch["audio"]
-        batch["input_values"] = processor(
-            audio["array"], sampling_rate=16000
-        ).input_values[0]
+        # datasets 5.x는 AudioDecoder를, 그 이전은 dict를 준다 — hf_audio가 둘 다 흡수한다.
+        wave = hf_audio.to_waveform(batch["audio"])
+        batch["input_values"] = processor(wave, sampling_rate=16000).input_values[0]
         batch["labels"] = V.text_to_ids(batch["text"])
-        batch["n_frames"] = len(audio["array"]) // 320  # wav2vec2 총 stride
+        batch["n_frames"] = len(wave) // 320  # wav2vec2 총 stride
         return batch
 
     ds = ds.map(_map, remove_columns=ds.column_names, num_proc=os.cpu_count())

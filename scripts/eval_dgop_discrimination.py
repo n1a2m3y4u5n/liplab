@@ -31,6 +31,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 import dgop as D                     # noqa: E402
 import dgop_acoustic as DA           # noqa: E402
 import deaf_speech_synthesis as DSS  # noqa: E402
+import hf_audio                     # noqa: E402
 
 DATASET = "kresnik/zeroth_korean"
 SAMPLE_RATE = 16000
@@ -114,7 +115,7 @@ def main() -> int:
 
     print(f"정렬기 {args.aligner}\n채점기 {args.scorer or args.aligner}\n발화 {len(ds)}건 × severity {SEVERITIES}\n")
     for i, row in enumerate(ds):
-        clean = np.asarray(row["audio"]["array"], dtype=np.float32)
+        clean = hf_audio.to_waveform(row["audio"])
         text = row["text"]
         sevs, ds_scores, nv_scores = [], [], []
         for sev in SEVERITIES:
