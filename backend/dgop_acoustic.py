@@ -22,6 +22,7 @@ torch·torchaudio·transformers는 requirements-ml.txt 전용 의존성이다(�
 제공한다. 또한 이 체크포인트는 **정상 발화로 학습**되었으므로, 축 A가 농인 발화로 미세조정한
 버전이 나오기 전까지는 D-GOP의 불확실성 보정에 더 의존하게 된다(계획서가 정확히 지적한 문제).
 """
+import os
 from typing import Dict, List, Sequence
 
 import dgop as _dgop
@@ -41,15 +42,32 @@ DEFAULT_MODEL_ID = "kresnik/wav2vec2-large-xlsr-korean"
 _model_cache: Dict[str, tuple] = {}
 
 
-def _load(model_id: str = DEFAULT_MODEL_ID):
+def resolve_device() -> str:
+    """
+    추론 장치. GPU가 있으면 쓴다 — wav2vec2-large 순전파는 CPU에서 수십 배 느려,
+    A-3 변별력 평가(발화 40건 × severity 5 × 모델 2 = 400회 순전파)가 CPU로는
+    현실적이지 않다. DGOP_DEVICE로 강제할 수 있다(예: 배포 서버에서 "cpu").
+    """
+    forced = os.getenv("DGOP_DEVICE")
+    if forced:
+        return forced
+    if HAS_ACOUSTIC and torch.cuda.is_available():
+        return "cuda"
+    return "cpu"
+
+
+def _load(model_id: str = DEFAULT_MODEL_ID, device: str = None):
     if not HAS_ACOUSTIC:
         raise RuntimeError("torch/torchaudio/transformers 미설치 — backend/requirements-ml.txt 설치 필요")
-    if model_id not in _model_cache:
+    device = device or resolve_device()
+    key = f"{model_id}@{device}"
+    if key not in _model_cache:
         processor = AutoProcessor.from_pretrained(model_id)
         model = AutoModelForCTC.from_pretrained(model_id)
         model.eval()
-        _model_cache[model_id] = (processor, model)
-    return _model_cache[model_id]
+        model.to(device)
+        _model_cache[key] = (processor, model)
+    return _model_cache[key]
 
 
 def ctc_log_probs(waveform, sample_rate: int, model_id: str = DEFAULT_MODEL_ID):
@@ -58,11 +76,14 @@ def ctc_log_probs(waveform, sample_rate: int, model_id: str = DEFAULT_MODEL_ID):
     실제 모델 다운로드·추론이 필요해 유닛테스트 대상이 아니다(scripts/check_ml_env.py로 점검).
     반환: (log_probs: Tensor[T, C], vocab: Dict[token, id])
     """
-    processor, model = _load(model_id)
+    device = resolve_device()
+    processor, model = _load(model_id, device=device)
     inputs = processor(waveform, sampling_rate=sample_rate, return_tensors="pt")
     with torch.no_grad():
-        logits = model(inputs.input_values).logits[0]  # (T, C)
-    log_probs = torch.log_softmax(logits, dim=-1)
+        logits = model(inputs.input_values.to(device)).logits[0]  # (T, C)
+    # 순전파만 GPU에서 하고 결과는 CPU로 되돌린다 — 이후 강제정렬·구간 집계는
+    # 순수 함수라 장치에 얽매이지 않아야 테스트(합성 텐서)와 배포가 함께 단순해진다.
+    log_probs = torch.log_softmax(logits, dim=-1).cpu()
     return log_probs, processor.tokenizer.get_vocab()
 
 
