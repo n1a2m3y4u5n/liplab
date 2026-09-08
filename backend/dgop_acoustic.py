@@ -106,46 +106,105 @@ def span_distribution(log_probs, start, end) -> List[float]:
 
 
 def phone_confidences(waveform, sample_rate: int, target_tokens: Sequence[str],
-                       model_id: str = DEFAULT_MODEL_ID) -> List[Dict]:
+                       aligner_id: str = DEFAULT_MODEL_ID,
+                       scorer_id: str = None) -> List[Dict]:
     """
     오디오 + 목표 음소(토큰)열 → 강제정렬 → 구간별 D-GOP.
-    dgop.py 순수 함수에 실제 음향 신호를 공급하는 통합 지점. 모델 다운로드가 필요해
-    유닛테스트 대상이 아니다(scripts/check_ml_env.py 및 향후 축 A 통합 시 수동 검증).
+    dgop.py 순수 함수에 실제 음향 신호를 공급하는 통합 지점.
+
+    ── 왜 모델이 둘인가 (축 A의 핵심 설계) ────────────────────────────────
+    D-GOP 점수는 naive × confidence이고, 뭉갠 발화에서 분포가 평평해져 confidence가
+    떨어지는 것 자체가 '발음이 부정확하다'는 신호다. 그래서 **채점기(scorer)는 정상 발화
+    기준(canonical) 모델이어야 한다** — 저하 발화로 강인하게 만들면 뭉개도 점수가 높아져
+    변별력이 사라진다.
+
+    반면 **정렬기(aligner)는 저하 발화에 강인해야** 한다. 구간을 못 찾으면 채점 자체가
+    불가능하기 때문이다. 두 요구가 정반대라 모델을 나눈다:
+      · aligner → forced_align으로 '어디에 놓였나'만 찾는다
+      · scorer  → 그 구간의 사후확률로 '정상 발화에서 얼마나 벗어났나'를 잰다
+    (docs/axis-a-training-plan.md §0·§1)
+
+    scorer_id를 생략하면 aligner_id와 같은 모델을 써 기존 단일 모델 동작으로 되돌아간다.
+    두 모델은 같은 wav2vec2 conv 설정(stride 320)을 공유해야 프레임 구간이 그대로 옮겨진다 —
+    aligner는 scorer에서 이어받아 미세조정하므로 자연히 만족되지만, 어긋나면 즉시 예외를 낸다.
+
+    모델 다운로드가 필요해 유닛테스트 대상이 아니다(scripts/eval_dgop_discrimination.py로 검증).
     """
-    log_probs, vocab = ctc_log_probs(waveform, sample_rate, model_id)
+    scorer_id = scorer_id or aligner_id
+    log_probs, vocab = ctc_log_probs(waveform, sample_rate, aligner_id)
     spans = align_targets(log_probs, vocab, target_tokens)
+
+    if scorer_id == aligner_id:
+        score_lp, score_vocab = log_probs, vocab
+    else:
+        score_lp, score_vocab = ctc_log_probs(waveform, sample_rate, scorer_id)
+        if score_lp.shape[0] != log_probs.shape[0]:
+            raise ValueError(
+                f"정렬기·채점기의 프레임 수가 다릅니다({log_probs.shape[0]} vs {score_lp.shape[0]}) — "
+                "구간을 옮길 수 없습니다. 두 모델의 conv stride 설정이 같아야 합니다."
+            )
 
     results = []
     for span in spans:
-        dist = span_distribution(log_probs, span["start"], span["end"])
-        if not dist:
-            results.append({"token": span["token"], "aligned": False})
+        token = span["token"]
+        # 어절 경계 같은 특수토큰은 정렬은 제약하되 발음 채점 대상은 아니다.
+        scorable = _is_scorable(token)
+        dist = span_distribution(score_lp, span["start"], span["end"])
+        if not dist or token not in score_vocab:
+            results.append({"token": token, "aligned": False, "scorable": scorable})
             continue
-        target_prob = dist[vocab[span["token"]]]
-        results.append({"token": span["token"], "aligned": True, **_dgop.dgop_phone(target_prob, dist)})
+        target_prob = dist[score_vocab[token]]
+        results.append({"token": token, "aligned": True, "scorable": scorable,
+                        **_dgop.dgop_phone(target_prob, dist)})
     return results
+
+
+def _is_jamo_vocab(vocab: Dict[str, int]) -> bool:
+    """축 A가 학습한 자모 vocab인가(backend/jamo_vocab.py의 위치 접두 토큰으로 판별)."""
+    return "o:\u3131" in vocab and "n:\u314f" in vocab
+
+
+def _is_scorable(token: str) -> bool:
+    """D-GOP 집계 대상 토큰인가. 자모 vocab이면 jamo_vocab의 판정을 따른다."""
+    try:
+        import jamo_vocab
+        return jamo_vocab.is_scorable(token)
+    except Exception:
+        return True
 
 
 def tokens_for_text(text: str, model_id: str = DEFAULT_MODEL_ID) -> List[str]:
     """
-    목표 텍스트를 이 체크포인트 자신의 CTC vocab 토큰열로 변환한다. 모델의 토크나이저를
-    그대로 쓰므로, 한국어 체크포인트로 교체돼도(글자든 자모든 그 vocab 그대로) 이 함수는
-    수정 없이 동작한다 — 지금의 영어 체크포인트로는 한국어 텍스트가 대부분 <unk>로 빠져
-    실제 채점에는 못 쓰지만, 배관(파이프라인) 자체는 그대로 재사용된다.
+    목표 텍스트를 이 체크포인트 자신의 CTC vocab 토큰열로 변환한다.
+
+    축 A가 학습한 자모 vocab(49토큰)이면 jamo_vocab.text_to_tokens를 쓴다 — 토큰이
+    'o:ㄱ' 같은 위치 접두 문자열이라 HF 토크나이저가 원문에서 유도할 수 없고, 무엇보다
+    **평파열음화·비음화 등 발음 규칙을 거쳐야** 라벨과 일치하기 때문이다.
+
+    그 외(음절 vocab 등)에는 모델의 토크나이저를 그대로 쓴다 — 체크포인트를 바꿔도
+    배관이 그대로 재사용된다.
     """
     processor, _ = _load(model_id)
     tokenizer = processor.tokenizer
+    vocab = tokenizer.get_vocab()
+    if _is_jamo_vocab(vocab):
+        import jamo_vocab
+        return jamo_vocab.text_to_tokens(text)
     ids = tokenizer(text).input_ids
-    id2tok = {v: k for k, v in tokenizer.get_vocab().items()}
+    id2tok = {v: k for k, v in vocab.items()}
     return [id2tok[i] for i in ids if i in id2tok]
 
 
-def assess_text(audio_bytes: bytes, target_text: str, model_id: str = DEFAULT_MODEL_ID,
+def assess_text(audio_bytes: bytes, target_text: str,
+                 aligner_id: str = DEFAULT_MODEL_ID, scorer_id: str = None,
                  sample_rate: int = 16000) -> Dict:
     """
     녹음 바이트 + 목표 텍스트 → D-GOP 문장 점수. `/api/speak/assess`가 호출하는 통합
     지점(축 B 완성). 오디오 디코딩은 faster-whisper의 decode_audio를 재사용해(이미
     프로덕션에서 검증된 경로) 별도 오디오 컨테이너 의존성을 늘리지 않는다.
+
+    aligner_id로 구간을 찾고 scorer_id로 채점한다(생략 시 동일 모델 — 기존 동작).
+    두 모델을 나누는 이유는 phone_confidences의 docstring 참고.
 
     정렬 가능한 음소가 하나도 없으면(체크포인트-언어 불일치 등) score=None을 돌려주고,
     호출부가 전사 방식으로 폴백하도록 신호한다.
@@ -154,9 +213,11 @@ def assess_text(audio_bytes: bytes, target_text: str, model_id: str = DEFAULT_MO
     import io as _io
 
     waveform = decode_audio(_io.BytesIO(audio_bytes), sampling_rate=sample_rate)
-    tokens = tokens_for_text(target_text, model_id=model_id)
-    phones = phone_confidences(waveform, sample_rate, tokens, model_id=model_id)
-    aligned = [p for p in phones if p.get("aligned")]
-    if not aligned:
+    tokens = tokens_for_text(target_text, model_id=aligner_id)
+    phones = phone_confidences(waveform, sample_rate, tokens,
+                               aligner_id=aligner_id, scorer_id=scorer_id)
+    # 정렬에 성공했고 채점 대상인 음소만 문장 점수에 넣는다(어절 경계 제외).
+    scored = [p for p in phones if p.get("aligned") and p.get("scorable")]
+    if not scored:
         return {"score": None, "uncertainty": 1.0, "phones": phones}
-    return _dgop.sentence_dgop(aligned)
+    return {**_dgop.sentence_dgop(scored), "phones": phones}

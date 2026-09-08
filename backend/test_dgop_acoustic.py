@@ -78,6 +78,63 @@ def test_phone_confidences_end_to_end_on_synthetic_distribution():
         _ok(result["dgop"] > 0.9, f"확신 정렬 구간({span['token']})의 D-GOP는 높아야 함")
 
 
+def _patched_ctc(mapping):
+    """model_id → log_probs를 돌려주는 가짜 ctc_log_probs. 실제 모델 다운로드를 피한다."""
+    def _fake(waveform, sample_rate, model_id=DA.DEFAULT_MODEL_ID):
+        return mapping[model_id], _VOCAB
+    return _fake
+
+
+def _flat_log_probs():
+    """모든 프레임이 균등분포 — 채점기가 '전혀 확신 못 하는' 상태."""
+    import torch
+    return torch.log_softmax(torch.zeros((len(_SEQ), len(_VOCAB))), dim=-1)
+
+
+def test_scorer_distribution_wins_over_aligner():
+    """구간은 정렬기가 찾고 점수는 채점기가 낸다 — 축 A 2모델 분리의 핵심 계약."""
+    if not DA.HAS_ACOUSTIC:
+        print("  (torch/torchaudio 미설치 → 스킵)")
+        return
+    orig = DA.ctc_log_probs
+    try:
+        DA.ctc_log_probs = _patched_ctc({"aligner": _synthetic_log_probs(),
+                                         "scorer": _flat_log_probs()})
+        res = DA.phone_confidences(None, 16000, ["A", "B", "C"],
+                                   aligner_id="aligner", scorer_id="scorer")
+        _ok(all(r["aligned"] for r in res), "정렬기가 확신 분포라 구간은 모두 잡힘")
+        # 점수는 평평한 채점기 분포에서 나와야 한다 — 정렬기 분포를 썼다면 confidence가 1에 가깝다.
+        _ok(all(r["confidence"] < 0.05 for r in res),
+            f"채점기(균등분포)의 낮은 신뢰도가 반영돼야 함: {[r['confidence'] for r in res]}")
+
+        # 같은 모델을 쓰면 기존 단일 모델 동작 그대로
+        DA.ctc_log_probs = _patched_ctc({"solo": _synthetic_log_probs()})
+        solo = DA.phone_confidences(None, 16000, ["A", "B", "C"], aligner_id="solo")
+        _ok(all(r["confidence"] > 0.9 for r in solo), "단일 모델이면 확신 분포가 그대로 반영")
+    finally:
+        DA.ctc_log_probs = orig
+
+
+def test_frame_mismatch_raises():
+    """정렬기·채점기의 프레임 수가 다르면 구간을 옮길 수 없다 — 조용히 틀리지 말고 즉시 실패."""
+    if not DA.HAS_ACOUSTIC:
+        print("  (torch/torchaudio 미설치 → 스킵)")
+        return
+    import torch
+    orig = DA.ctc_log_probs
+    try:
+        short = torch.log_softmax(torch.zeros((3, len(_VOCAB))), dim=-1)  # 6프레임이 아닌 3프레임
+        DA.ctc_log_probs = _patched_ctc({"aligner": _synthetic_log_probs(), "scorer": short})
+        try:
+            DA.phone_confidences(None, 16000, ["A", "B", "C"],
+                                 aligner_id="aligner", scorer_id="scorer")
+            _ok(False, "프레임 수 불일치는 예외를 내야 함")
+        except ValueError as e:
+            _ok("프레임 수" in str(e), f"명확한 오류 메시지여야 함: {e}")
+    finally:
+        DA.ctc_log_probs = orig
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:

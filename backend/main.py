@@ -1557,19 +1557,28 @@ async def speak_assess(
     assessment_method = None
     need_asr = (mode in ("phoneme", "word", "sentence")) or (stage is None)
     if need_asr:
-        # 축 B — 전사 비의존 D-GOP 경로. DGOP_MODEL_ID가 설정된 경우에만 시도하고,
+        # 축 B — 전사 비의존 D-GOP 경로. 아래 환경변수가 설정된 경우에만 시도하고,
         # 실패(모델 미설치·정렬 실패 등)하면 조용히 전사 경로로 폴백한다.
-        # dgop_acoustic.DEFAULT_MODEL_ID가 공개 한국어 체크포인트로 가리키고 있지만
-        # (정상 발화로 학습됨 — 농인 발화 미세조정은 축 A 완료 후), 실제 발화 정확도
-        # 검증 전까지는 배포 기본값을 켜지 않는다. 검증 후 DGOP_MODEL_ID를 배포
-        # 환경변수로 설정하면 이 경로가 전면 활성화된다.
-        dgop_model_id = os.getenv("DGOP_MODEL_ID")
-        if dgop_model_id:
+        #
+        # 모델이 둘인 이유(축 A): 정렬기는 뭉갠 발화에 강인해야 하고, 채점기는 정상 발화
+        # 기준이어야 한다 — 채점기까지 강인해지면 뭉개도 점수가 높아져 변별력이 사라진다.
+        # 근거는 docs/axis-a-training-plan.md §0, 구현은 dgop_acoustic.phone_confidences.
+        #
+        #   DGOP_ALIGNER_ID — 강제정렬용(축 A A-2 산출물)
+        #   DGOP_SCORER_ID  — 채점용(축 A A-1 산출물). 생략 시 정렬기와 동일 모델.
+        #   DGOP_MODEL_ID   — 구 변수명. 하위호환으로 정렬기 겸 채점기로 취급한다.
+        #
+        # 실제 발화 정확도 검증 전까지는 배포 기본값을 켜지 않는다(미설정 = 전사 경로).
+        dgop_aligner_id = os.getenv("DGOP_ALIGNER_ID") or os.getenv("DGOP_MODEL_ID")
+        dgop_scorer_id = os.getenv("DGOP_SCORER_ID") or dgop_aligner_id
+        if dgop_aligner_id:
             try:
                 import dgop_acoustic
                 if not dgop_acoustic.HAS_ACOUSTIC:
                     raise RuntimeError("torch/torchaudio/transformers 미설치")
-                result = dgop_acoustic.assess_text(data, target, model_id=dgop_model_id)
+                result = dgop_acoustic.assess_text(
+                    data, target, aligner_id=dgop_aligner_id, scorer_id=dgop_scorer_id
+                )
                 if result.get("score") is not None:
                     dgop_result = result
                     sim = dgop_result["score"]
