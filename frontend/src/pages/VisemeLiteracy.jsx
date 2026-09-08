@@ -27,6 +27,17 @@ const VIS_BADGE = {
   low:    { label: '거의 안 보임', cls: 'bg-gray-200 text-gray-500 border-gray-300' },
 }
 
+// 최소대립쌍은 승인 콘텐츠 병합으로 100쌍 넘게 불어난다. 학습 화면에서는 전부 나열하는 대신
+// '같아 보임(●) 3 + 다르게 보임(○) 2'로 맛보기만 보여준다 — 개념 체감이 목적이고,
+// 실제 드릴은 2단계(단어)에서 전량을 쓴다.
+const PAIR_PREVIEW_SAME = 3
+const PAIR_PREVIEW_DIFF = 2
+
+const pickPairPreview = (pairs = []) => [
+  ...pairs.filter((m) => m.same_looking).slice(0, PAIR_PREVIEW_SAME),
+  ...pairs.filter((m) => !m.same_looking).slice(0, PAIR_PREVIEW_DIFF),
+]
+
 const lessonLabel = (lesson) => {
   const phonemes = lesson?.phonemes?.join(', ')
   return phonemes ? `${lesson.name}(${phonemes})` : lesson?.name || ''
@@ -108,6 +119,7 @@ function LearnPanel({ data }) {
   const [params] = useSearchParams()
   const _tv = parseInt(params.get('v'), 10)
   const [sel, setSel] = useState(lessons.find((l) => l.viseme_id === _tv) || lessons[0])
+  const pairPreview = useMemo(() => pickPairPreview(minimal_pairs), [minimal_pairs])
   const [showCam, setShowCam] = useState(false)
   const [showMirror, setShowMirror] = useState(false)
   const badge = VIS_BADGE[sel.visibility] || VIS_BADGE.medium
@@ -197,9 +209,9 @@ function LearnPanel({ data }) {
           ))}
         </div>
         <div className="mt-4">
-          <p className="text-xs text-gray-400 mb-1.5">최소대립쌍 — 같아 보이는(●) / 다르게 보이는(○) 쌍</p>
+          <p className="text-xs text-gray-400 mb-1.5">최소대립쌍 예시 — 같아 보이는(●) / 다르게 보이는(○) 쌍</p>
           <div className="flex flex-wrap gap-2">
-            {minimal_pairs.map((m, i) => (
+            {pairPreview.map((m, i) => (
               <span key={i} title={m.note}
                 className={`px-2.5 py-1 rounded-lg text-sm border ${m.same_looking ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'}`}>
                 {m.same_looking ? '●' : '○'} {m.a} / {m.b}
