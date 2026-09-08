@@ -7,10 +7,17 @@
 
 torch>=2.9.0
 torchaudio>=2.9.0
-transformers>=4.46.0
+transformers>=5.16.0   # 5.x에서 TrainingArguments 인자가 바뀜(warmup_ratio·group_by_length 제거)
 soundfile>=0.12.1
 librosa>=0.10.2
 
 # 조음 시뮬레이터(축 E) — VocalTractLab(TU Dresden, 오픈소스 물리 기반 성도 시뮬레이터)의
 # Cython 바인딩. 학습되는 모델이 아니라 결정론적 시뮬레이터라 데이터 없이 바로 동작한다.
 vocaltractlab-cython>=0.0.17
+
+# 축 A 학습(A-1 Scorer / A-2 Aligner) — Zeroth-Korean 로딩과 CER 평가.
+datasets>=3.0.0
+jiwer>=3.0.0
+
+# Trainer가 요구하는 런타임(transformers[torch]).
+accelerate>=1.1.0
