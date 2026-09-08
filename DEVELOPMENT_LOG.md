@@ -1411,3 +1411,227 @@ three 부재를 스크립트로 재검증**(8.1의 최적화 유지 — 거울�
 
 **변경 파일(D.6).** `scripts/preprocess_olkavs.py`(인덱싱·병렬화·오디오 모드·재개),
 `scripts/test_preprocess_olkavs.py`(신규).
+
+---
+
+# 제2기 고도화 — Phase 2 실행: 축 A 학습 (2026-09-08)
+
+> Phase 2 착수 준비(2026-09-07)가 "데이터·GPU 없이 가능한 것"까지 끝내 두었다. 이 절은
+> 그 다음, **실제로 GPU를 빌려 모델을 학습시킨** 기록이다. RunPod H100 SXM 1장,
+> 부트스트랩 데이터는 Zeroth-Korean(51.6시간, CC BY 4.0).
+> 계획·근거는 `docs/axis-a-training-plan.md`, 실행 절차는 `docs/axis-a-runbook.md`.
+
+### 1단계 UI — 최소대립쌍 예시 축소
+
+**배경.** 입모양 학습(`/learn/viseme`)의 동구형이음 카드가 `MINIMAL_PAIRS`를 **161쌍 전부**
+나열하고 있었다(기본 10 + G축 승인 콘텐츠 병합분 151). 개념을 체감시키는 자리인데 뱃지 벽이
+되어 오히려 안 읽힌다.
+
+**해결.** 표시만 5개로 줄였다. 앞에서 5개를 자르면 전부 ●(같아 보임)만 나와 범례의 ○가 죽으므로
+**● 3 + ○ 2**로 두 종류를 모두 보여준다(`PAIR_PREVIEW_SAME`/`DIFF` 상수로 조정).
+백엔드 `MINIMAL_PAIRS`는 건드리지 않는다 — 2단계 단어 드릴과 짝 인덱스(`_PAIR_PARTNER`)가
+전량을 쓰므로 데이터를 줄이면 학습 콘텐츠 자체가 깎인다.
+
+**변경 파일.** `frontend/src/pages/VisemeLiteracy.jsx`.
+
+---
+
+## A. 축 A 학습 — 설계 재정의
+
+### A.2 계획서 원안을 바꾼 이유 — D-GOP 변별력의 함정
+
+**배경.** 계획서 3.1과 `deaf_speech_synthesis.py` docstring은 축 A를 *"정상 발화에 조음 교란을
+적용한 합성 코퍼스로 한국어 체크포인트를 미세조정"* 으로 적어 두었다. 그대로 하면 **D-GOP의
+변별력이 사라진다**는 것을 착수 전에 발견했다.
+
+`dgop.py`의 점수는 `naive × confidence`이고, 뭉갠 발화에서 분포가 평평해져 confidence가
+떨어지는 것 **자체가 '발음이 부정확하다'는 신호**다. 실측:
+
+| 발화 상태 | naive(표준 GOP) | confidence | D-GOP |
+|---|---|---|---|
+| 또렷한 발화 | 0.85 | 0.461 | 0.392 |
+| 약간 뭉갬 | 0.55 | 0.055 | 0.030 |
+| 심하게 뭉갬 | 0.30 | 0.0002 | 0.0001 |
+
+모델을 "농인 발화에 강인하게" 만들면 뭉갠 발화에도 분포가 뾰족해지고 confidence가 올라가
+**점수가 높아진다.** 발음 교정 앱인데 뭉개도 만점이 나온다. GOP 계열은 원래 canonical(정상
+발화) 모델로 재야 의미가 있는 지표다.
+
+**해결.** 요구가 정반대인 둘로 나눈다.
+
+| | Scorer (채점기) | Aligner (정렬기) |
+|---|---|---|
+| 학습 데이터 | Zeroth 정상 발화만 | Scorer에서 이어받아 합성 저하 증강 |
+| 역할 | 구간별 사후확률 → D-GOP | `forced_align`으로 음소 구간 탐색 |
+| 뭉갠 발화에 | **일부러 약해야 함**(그게 점수 신호) | 강인해야 함 |
+
+**변경 파일(A.2).** `docs/axis-a-training-plan.md`(신규).
+
+### A.3 발음 규칙 `phonetic` 모드 — CTC 라벨의 선결 과제
+
+**배경.** CTC 라벨은 **실제로 소리 난 것**과 일치해야 한다. 어긋나면 학습이 통째로 오염된다.
+`engine.to_pronounced_syllables()`를 실측하니 규칙 **네 계열이 통째로 빠져** 있었다 —
+옷→옷, 국물→국물, 신라→신라, 학교→학교.
+
+**다만 원래의 '규칙 생략'은 viseme 경로에서는 옳은 판단이었다.** 비음화 ㄱ→ㅇ은 둘 다 viseme 7,
+경음화도 전부 같은 그룹이라 입모양이 안 바뀐다(파일 헤더가 그렇게 적어두고 있었다).
+
+**해결.** 기본 경로는 손대지 않고 `phonetic=True` 플래그로만 새 규칙을 켠다.
+적용 순서가 중요하다 — 비음화는 대표음을 전제하므로 평파열음화가 먼저여야 하고(밭만→받만→반만),
+ㄹ비음화는 자음비음화보다 앞서야 연쇄가 맞는다(백리→백니→뱅니):
+
+> 평파열음화 → 유음화 → ㄹ비음화 → 자음비음화 → 경음화
+
+**검증.** 14/14 통과(궁물·단는·밤물·옫·꼳·압·머걷따·실라·설랄·학꾜·읻따·종노·뱅니·반만).
+`test_default_path_unchanged`가 기본 경로 불변을 지킨다 — 앱 회귀 방지.
+
+**변경 파일(A.3).** `backend/engine.py`·`scoring.py`, `backend/test_phonetic_rules.py`(신규).
+
+### A.4 자모 CTC vocab — B.6 한계를 함께 푼다
+
+**배경.** B.6이 남긴 한계: 기존 체크포인트 vocab이 **한글 음절 1,205토큰**이라 `dgop.py`가
+설계한 음소별 D-GOP가 나오지 않는다. 어차피 미세조정할 거면 encoder는 두고 `lm_head`만
+자모로 갈아끼우면 이 한계가 함께 풀린다.
+
+**해결.** 처음 69토큰으로 잡았으나 **실측 후 49로 줄었다** — 라벨이 `phonetic=True`를 거치면서
+평파열음화로 **종성이 표준발음법 7종성(ㄱㄴㄷㄹㅁㅂㅇ)으로 수렴**하기 때문이다.
+
+| 구성 | 개수 |
+|---|---|
+| 특수 | 3 (`<pad>`=CTC blank id 0 · `<unk>` · `\|` 어절 경계) |
+| 초성 | 18 (무음 ㅇ 제외 — 토큰을 만들지 않는다) |
+| 중성 | 21 |
+| 종성 | 7 |
+| **합계** | **49** |
+
+**위치 구분**을 쓴다 — 초성 ㄱ(파열)과 종성 ㄱ(미파열 [k̚])은 다른 소리라 `o:ㄱ`/`c:ㄱ`로 나눈다.
+종성 발음만 따로 채점할 수 있어 발성 교육에 직결된다. 부수 효과로 1,205 → 49가 되면 D-GOP
+엔트로피 신호 자체가 안정된다(롱테일이 `normalized_entropy`를 지배하던 문제).
+
+**검증.** 6/6 통과. 커리큘럼 전체 + **실제 Zeroth 전사 500문장에서 OOV 0건**.
+
+**변경 파일(A.4).** `backend/jamo_vocab.py`·`test_jamo_vocab.py`(신규).
+
+### A.5 D-GOP를 2모델로 분리 (`dgop_acoustic.py`·`main.py`)
+
+**해결.** `phone_confidences`/`assess_text`가 `aligner_id`·`scorer_id`를 받는다(scorer 생략 시
+기존 단일 모델 동작). 두 모델의 프레임 수가 다르면 구간을 옮길 수 없으므로 **즉시 `ValueError`**
+— 조용히 틀린 점수를 내지 않는다. 어절 경계 토큰은 정렬은 제약하되 점수 집계에서 제외한다.
+
+`tokens_for_text`는 자모 vocab을 인식해 `jamo_vocab.text_to_tokens`로 분기한다. 토큰이 `o:ㄱ`
+같은 위치 접두 문자열이라 HF 토크나이저가 원문에서 유도할 수 없고, 무엇보다 발음 규칙을 거쳐야
+라벨과 일치하기 때문이다.
+
+엔드포인트는 `DGOP_ALIGNER_ID`/`DGOP_SCORER_ID`로 분리(구 `DGOP_MODEL_ID`는 하위호환).
+미설정이면 기존 전사 경로 그대로 — 안전한 기본값을 유지한다.
+
+**검증.** 합성 분포로 **"구간은 정렬기, 점수는 채점기"** 계약을 못박았다 — 정렬기에 확신 분포,
+채점기에 균등 분포를 주면 confidence가 0.05 미만이어야 한다. 프레임 불일치 예외도 함께.
+
+**변경 파일(A.5).** `backend/dgop_acoustic.py`·`main.py`·`test_dgop_acoustic.py`.
+
+### A.6 학습·평가 스크립트 3종
+
+- **`scripts/prepare_zeroth_labels.py`** — OOV·비한글·CTC 길이 타당성 사전점검. 데이터는
+  `kresnik/zeroth_korean`(HF parquet 2.88GB)을 쓴다. 원본 OpenSLR tar(9.6GB)는 레이아웃이
+  문서화돼 있지 않은데, 이 parquet은 **우리가 미세조정할 베이스 체크포인트와 같은 저자**의
+  정리본이라 `load_dataset` 한 줄로 끝난다.
+- **`scripts/train_jamo_ctc.py`** — A-1 Scorer. encoder는 두고 `lm_head`만 49토큰으로 교체.
+  2스테이지로 나눈다: 랜덤 초기화된 head가 처음부터 full backprop을 타면 사전학습 encoder를
+  망가뜨리므로, head만 데운 뒤(1e-3) 낮은 LR로 전체를 푼다(3e-5). CNN feature extractor는 전 구간 동결.
+- **`scripts/train_aligner.py`** — A-2 Aligner. A-1에서 이어받아 severity 0~4를 매 스텝 무작위 적용.
+  **severity 0(원본)을 반드시 섞는다** — 저하 발화만 보면 정상 발화 정렬 능력을 잃는다.
+- **`scripts/eval_dgop_discrimination.py`** — A-3. 축 A의 성패는 WER이 아니라 **점수의 변별력**이다.
+
+`--smoke`는 데이터셋을 받지 않고 합성 파형으로 형상만 검증한다(dgop 테스트가 합성 log_probs를
+쓰는 것과 같은 원칙). 정렬기 스모크는 증강 경로도 실제로 태운다 — 학습 루프만 돌면
+`degrading_transform`이 한 번도 실행되지 않는다.
+
+**실측으로 잡은 문제 둘.** ① `dataloader_num_workers` 기본값이 0이다. `simulate_deaf_speech`가
+발화당 **20.5ms**(RTF 407x)라 워커 없이는 A-2 증강이 **7.6분/epoch**로 GPU 연산(2~4분)보다 느려
+병목이 된다 → `--workers` 추가(8개면 0.95분). ② Community Cloud는 Pod이 끊길 수 있는데
+체크포인트 하나가 3.8GB다 → `--resume` 추가.
+
+**변경 파일(A.6).** `scripts/train_jamo_ctc.py`·`train_aligner.py`·`eval_dgop_discrimination.py`·
+`prepare_zeroth_labels.py`·`test_eval_dgop_discrimination.py`(전부 신규), `backend/requirements-ml.txt`.
+
+---
+
+## A-실행. RunPod H100에서의 실제 학습
+
+### 비용·시간 추정을 먼저 정정했다
+
+계획서에 적었던 **"A-1 13시간 / 총 $50"은 과대 추정**이었다. RTF를 60배로 가정했는데 그건
+CPU급 수치다. FLOPs 기반으로 재계산하면 wav2vec2-large 302M·batch 16·발화 평균 8.34초에서
+micro-batch당 8.9 TFLOP, 패딩 낭비 40%를 반영해도 **2.3~3.9분/epoch** —
+A-1은 13시간이 아니라 **35~90분**이고 총 비용도 **$15~20**이다. (실제로는 $7~8에 끝났다.)
+
+### 실행 중 잡은 문제 8건
+
+전부 **로컬 검증만으로는 드러나지 않은** 것들이다. 이 절이 이번 세션의 실질적 수확이다.
+
+| # | 문제 | 조치 |
+|---|---|---|
+| 1 | `torchaudio>=2.9.0` 요구 — **`forced_align`이 2.9에서 제거 예정** | `<2.9.0` 상한. 그대로 뒀으면 D-GOP 경로가 통째로 죽는다 |
+| 2 | `torchcodec` 누락 — datasets 5.x가 오디오 디코딩을 이쪽으로 옮김 | 추가. 단 최신판은 CUDA 13(`libnvrtc.so.13`)을 요구해 CUDA 12.8에서 import 실패 → `0.6.x` 고정 |
+| 3 | datasets 5.x가 `AudioDecoder` 반환 — `row["audio"]["array"]` 불통 | `backend/hf_audio.py` 신설, 스크립트 4개의 변환을 한곳에 모음 |
+| 4 | PEP 668로 시스템 pip 설치 차단 | `venv --system-site-packages`로 템플릿의 CUDA torch 상속 |
+| 5 | `num_proc=os.cpu_count()` — Pod은 vCPU 224개 | 상한 32 |
+| 6 | A-2가 `set_transform`인데 Trainer가 원본 컬럼 제거 | `remove_unused_columns=False` |
+| 7 | eval_loss 최적점이 중간 epoch일 수 있는데 마지막 2개만 보관 | `load_best_model_at_end` |
+| 8 | `ctc_log_probs`가 항상 CPU — A-3가 10분에 10건도 못 감(GPU 0%) | `resolve_device()`로 GPU 자동 사용, `DGOP_DEVICE`로 강제 가능 |
+
+1번이 가장 위험했다. 계획서대로 `torchaudio>=2.9.0`을 설치했다면 `dgop_acoustic.align_targets`가
+의존하는 API가 아예 사라져 축 B 전체가 작동 불능이 된다. Pod에서 deprecation 경고를 보고서야
+알았다. **2.9 이상으로 올리려면 CTC 강제정렬(Viterbi)을 자체 구현해야 한다 — 축 B 후속 과제.**
+
+### 학습 실적 (H100 SXM 80GB, batch 16 / bf16 / workers 24)
+
+| 단계 | 설정 | 시간 | 결과 |
+|---|---|---|---|
+| A-0 라벨 전수점검 | 22,263 + 457발화 | ~15분 | **OOV 0건 / 비한글 0건 / CTC 길이 위반 0건** |
+| A-1 stage1 (head만) | 3 epoch, lr 1e-3, 0.1M 파라미터 | 5.8분 | eval_loss 0.348 → **0.322** |
+| A-1 stage2 (전체) | 12 epoch, lr 3e-5, 311.3M 파라미터 | **59분** | eval_loss → **0.2087** |
+| A-2 Aligner | 4 epoch, severity 0~4 증강 | **20.8분** | eval_loss 1.299 → **1.147** |
+
+GPU 사용률 87~99%, 45GB/80GB. A-1 총 65분으로 추정(35~90분) 안에 들어왔다.
+
+### A-3 변별력 판정 — **축 A 합격**
+
+| 지표 | 베이스라인 | 축 A | 목표 | |
+|---|---|---|---|---|
+| 단조성 −ρ(sev, score) | 0.840 | **0.979** | 0.90 | ✅ |
+| 분리도 AUC(0 vs 3+) | 0.998 | **0.999** | 0.85 | ✅ |
+| 정렬 견고성(sev 4) | 1.000 | **1.000** | 0.95 | ✅ |
+
+severity별 D-GOP 평균:
+
+| severity | 0 | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|---|
+| 베이스라인 | 6.65 | 3.58 | 2.07 | 1.15 | **1.25 ↑** |
+| 축 A | 9.51 | 2.74 | 1.49 | 0.61 | **0.30** |
+
+**베이스라인은 severity 3→4에서 점수가 되레 올라가** 심한 저하를 구별하지 못한다.
+축 A 모델은 끝까지 단조 감소한다 — A.2에서 세운 가설의 실증이다.
+
+### 정직한 한계 두 가지
+
+**① naive(표준 GOP)도 이 실험에서는 단조로웠다.** 단조성이 naive 0.995 > D-GOP 0.979로 오히려
+근소하게 높다. A.2의 *"표준 GOP는 뭉갠 발화에서 과신한다"* 는 전제가 **합성 저하에 대해서는
+성립하지 않았다** — `deaf_speech_synthesis`의 교란(저역통과·잡음·포먼트 이동)은 분포를 실제로
+평평하게 만들어 naive 점수도 함께 떨어뜨린다. 과신 문제는 **실제 농인 발화**에서 검증해야 하며,
+그 데이터가 아직 없다. **D-GOP의 불확실성 보정이 값을 하는지는 미결로 남는다.**
+
+**② 점수 스케일이 사용 불가 수준으로 압축돼 있다.** 깨끗한 발화(severity 0)의 D-GOP가
+**9.51/100**이다. 학습자에게 그대로 보여줄 수 없다. 구간 평균 분포에 CTC blank가 지배적인
+프레임이 섞여 `target_prob`이 낮게 나오는 것으로 보인다. **점수 보정(calibration)이 앱 연결 전
+반드시 필요하다** — 예컨대 정상 발화 분포 기준 백분위 매핑. GPU 없이 로컬에서 가능하다.
+
+### 비용
+
+GPU 약 2.5시간 × $2.99/hr = **$7~8**. 추정($15~20)의 절반. 체크포인트 2개(각 1.26GB)는
+Network Volume에 보존, Pod 정지 확인(SSH 포트 `Connection refused`).
+
+**변경 파일(A-실행).** `backend/hf_audio.py`·`test_hf_audio.py`(신규), `backend/dgop_acoustic.py`
+(GPU 지원), `backend/requirements-ml.txt`(torchaudio 상한·torchcodec), `scripts/*`(6·7번 수정),
+`docs/axis-a-runbook.md`(신규)·`axis-a-training-plan.md`(결과 기록).
