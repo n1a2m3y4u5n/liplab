@@ -88,3 +88,6 @@ Thumbs.db
 
 # === 축 G 생성 콘텐츠 후보(검수 전) — 승인본 approved.json만 별도 관리 ===
 backend/data/curriculum/candidates_*.json
+
+# 축 A 학습 산출물(체크포인트·vocab) — 용량이 커서 저장소에 넣지 않는다.
+ckpt/
