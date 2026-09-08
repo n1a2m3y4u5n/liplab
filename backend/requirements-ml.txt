@@ -23,5 +23,11 @@ vocaltractlab-cython>=0.0.17
 datasets>=3.0.0
 jiwer>=3.0.0
 
+# datasets 5.x는 Audio 컬럼 디코딩을 soundfile → torchcodec으로 옮겼다. 없으면
+# "To support decoding audio data, please install 'torchcodec'" 로 학습이 시작조차 안 된다.
+# ⚠️ torchcodec은 torch와 버전이 묶여 있다(0.6.x ↔ torch 2.8). 최신판을 깔면 CUDA 13
+#    런타임(libnvrtc.so.13)을 요구해 CUDA 12 환경에서 import부터 실패한다.
+torchcodec>=0.6.0,<0.7.0
+
 # Trainer가 요구하는 런타임(transformers[torch]).
 accelerate>=1.1.0

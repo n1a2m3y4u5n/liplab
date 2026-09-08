@@ -26,6 +26,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 sys.path.insert(0, os.path.dirname(__file__))
 
+import hf_audio                     # noqa: E402
 import jamo_vocab as V              # noqa: E402
 import deaf_speech_synthesis as DSS  # noqa: E402
 from train_jamo_ctc import DATASET, JamoCTCCollator, synthetic_dataset  # noqa: E402
@@ -48,7 +49,7 @@ def degrading_transform(processor, seed: int = 0):
     def _tf(batch):
         values, labels = [], []
         for audio, text in zip(batch["audio"], batch["text"]):
-            wave = np.asarray(audio["array"], dtype=np.float32)
+            wave = hf_audio.to_waveform(audio)
             sev = int(rng.choice(SEVERITIES))
             if sev:
                 try:

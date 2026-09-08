@@ -23,6 +23,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
+import hf_audio  # noqa: E402
 import jamo_vocab as V  # noqa: E402
 
 DATASET = "kresnik/zeroth_korean"
@@ -68,7 +69,7 @@ def main() -> int:
         nonhangul.update(ch for ch in text if not ("가" <= ch <= "힣") and ch != " ")
 
         if args.check_duration:
-            n_frames = frames_for(len(row["audio"]["array"]))
+            n_frames = frames_for(len(hf_audio.to_waveform(row["audio"])))
             if n_frames < len(toks):
                 too_long.append((row["id"], n_frames, len(toks)))
 
