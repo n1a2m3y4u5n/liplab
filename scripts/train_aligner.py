@@ -143,6 +143,9 @@ def main() -> int:
         eval_strategy="no" if args.smoke else "epoch",
         save_strategy="no" if args.smoke else "epoch",
         save_total_limit=2,
+        # set_transform으로 input_values·labels를 지연 생성하므로, Trainer가 선언된 원본
+        # 컬럼(audio·text 등)을 미리 지우면 변환할 것이 남지 않는다. 제거를 끈다.
+        remove_unused_columns=False,
         # eval_loss가 중간 epoch에서 최적을 찍고 정체·반등하는 경우가 있다(A-1 실측:
         # stage2 epoch1 0.237 → 0.258 → 0.269 → 0.238). save_total_limit만으로는 마지막
         # 2개만 남아 최적점을 잃으므로, 최적 체크포인트를 명시적으로 보존·복원한다.
