@@ -5,8 +5,12 @@
 # 로컬(이 머신)은 GPU가 없어 CPU 전용으로 동작 확인·소규모 스캐폴딩까지만 수행한다.
 # 실제 미세조정·학습은 RunPod H100에서 수행한다(계획서 4.2).
 
-torch>=2.9.0
-torchaudio>=2.9.0
+# ⚠️ torchaudio 2.9에서 functional.forced_align이 제거된다(deprecation 공지 확인, 2026-09-08).
+#    dgop_acoustic.align_targets가 이 API에 의존하므로 상한을 건다. 2.9+로 올리려면
+#    CTC 강제정렬을 자체 구현하거나 대체 라이브러리로 옮겨야 한다(축 B 후속 과제).
+#    forced_align은 torchaudio 2.1에 도입됐다.
+torch>=2.4.0,<2.9.0
+torchaudio>=2.1.0,<2.9.0
 transformers>=5.16.0   # 5.x에서 TrainingArguments 인자가 바뀜(warmup_ratio·group_by_length 제거)
 soundfile>=0.12.1
 librosa>=0.10.2

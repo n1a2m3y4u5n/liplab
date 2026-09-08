@@ -190,3 +190,10 @@ RunPod을 켜기 전에 여기까지 끝내야 GPU 시간을 태우지 않는다
 **환경 메모**: transformers 5.x에서 `TrainingArguments`의 `warmup_ratio`·`group_by_length`가
 제거됐다. RunPod에서도 로컬과 같은 버전을 쓰도록 `requirements-ml.txt`에 `>=5.16.0`으로
 고정하고 `accelerate`를 추가했다(Trainer 필수 런타임).
+
+⚠️ **torchaudio 상한(중요)**: `torchaudio.functional.forced_align`이 **2.9에서 제거**된다
+(2026-09-08 실기 확인 — RunPod H100/torchaudio 2.8.0에서 deprecation 경고 확인).
+`dgop_acoustic.align_targets`가 이 API에 전적으로 의존하므로 `<2.9.0` 상한을 걸었다.
+2.9 이상으로 올리려면 **CTC 강제정렬(Viterbi)을 자체 구현**하거나 대체 라이브러리로
+옮겨야 한다 — 축 B 후속 과제로 남긴다. 알고리즘 자체는 단순해서 자체 구현이 현실적이고,
+그러면 무거운 torchaudio 의존도 함께 덜어낼 수 있다.
