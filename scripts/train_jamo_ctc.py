@@ -191,6 +191,12 @@ def main() -> int:
             eval_strategy="epoch" if not args.smoke else "no",
             save_strategy="epoch" if not args.smoke else "no",
             save_total_limit=2,
+            # eval_loss가 중간 epoch에서 최적을 찍고 정체·반등하는 경우가 있다(A-1 실측:
+            # stage2 epoch1 0.237 → 0.258 → 0.269 → 0.238). save_total_limit만으로는 마지막
+            # 2개만 남아 최적점을 잃으므로, 최적 체크포인트를 명시적으로 보존·복원한다.
+            load_best_model_at_end=not args.smoke,
+            metric_for_best_model="eval_loss",
+            greater_is_better=False,
             logging_steps=25,
             max_steps=1 if args.smoke else -1,
             # 기본값 0이면 전처리가 메인 프로세스에서 직렬로 돌아 GPU를 놀린다.
