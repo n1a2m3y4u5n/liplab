@@ -243,7 +243,7 @@ def extract_jamo_sequence(text: str) -> List[Tuple]:
     return jamo_sequence
 
 
-def to_pronounced_jamos(text: str) -> List[Tuple]:
+def to_pronounced_jamos(text: str, phonetic: bool = False) -> List[Tuple]:
     """
     텍스트를 '소리 나는 대로'(연음·구개음화·격음화·겹받침·ㅎ탈락) 변환한 뒤
     [초, 중, 종] 튜플 열로 반환한다. 무음 초성 ㅇ은 ''로 남는다.
@@ -251,9 +251,12 @@ def to_pronounced_jamos(text: str) -> List[Tuple]:
     독화 앱은 철자가 아니라 '실제 발화 입모양'을 채점해야 한다. 아바타가 '굳이'를
     '구지'로 보여주므로, 입모양을 완벽히 읽어 '구지'라 적어도 '굳이'로 적어도 정답이어야
     한다. 정답·사용자 답 양쪽을 이 함수로 정규화해 두 표기가 같은 점수를 받게 한다.
+
+    phonetic=True면 평파열음화·비음화·유음화·경음화까지 적용해 '입모양'이 아니라
+    '실제 소리'에 맞춘다 — 축 A의 CTC 학습 라벨 전용이다(독화 채점은 기본값 그대로).
     """
     out: List[Tuple] = []
-    for syl in to_pronounced_syllables(text):
+    for syl in to_pronounced_syllables(text, phonetic=phonetic):
         if isinstance(syl, (list, tuple)) and len(syl) == 3:
             out.append(tuple(syl))
     return out

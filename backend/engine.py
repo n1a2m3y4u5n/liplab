@@ -12,8 +12,13 @@ from typing import List, Dict
 # 구현할 필요는 없고 **입모양(viseme 그룹)을 실제로 바꾸는 규칙만** 구현한다:
 #   ① 겹받침 단순화(음절 말 자음군)  ② 연음(받침 이동)
 #   ③ ㅎ 탈락  ④ 초성 ㅇ 무음화
-# (비음화·경음화·격음화 등은 대개 같은 viseme 그룹 안에서 바뀌어 입모양이
-#  변하지 않으므로, 과설계를 피하기 위해 생략한다.)
+# (비음화·경음화 등은 대개 같은 viseme 그룹 안에서 바뀌어 입모양이
+#  변하지 않으므로, 과설계를 피하기 위해 기본 경로에서는 생략한다.)
+#
+# 다만 축 A(음향 모델 CTC 학습)의 라벨은 '입모양'이 아니라 '실제 소리'와 일치해야 한다.
+# 학습 라벨이 발음과 어긋나면 모델이 통째로 오염되므로, 생략했던 규칙까지 전부 적용하는
+# phonetic 모드를 함께 둔다 — to_pronounced_syllables(text, phonetic=True).
+# 기본값(False)은 기존 viseme 경로와 완전히 동일하게 동작한다.
 
 # 겹받침 → 음절 말 대표 발음(단독/자음 앞에서 하나로 줄어듦)
 DOUBLE_FINAL = {
@@ -36,11 +41,78 @@ ASPIRATE = {'ㄱ': 'ㅋ', 'ㄷ': 'ㅌ', 'ㅂ': 'ㅍ', 'ㅈ': 'ㅊ'}
 H_CODA = {'ㅎ': '', 'ㄶ': 'ㄴ', 'ㅀ': 'ㄹ'}
 
 
-def to_pronounced_syllables(text: str):
+# ── 이하 phonetic 모드 전용 상수 (표준발음법) ──────────────────────────────
+# 평파열음화(음절 끝소리 규칙, 8항) — 종성은 7개 대표음으로만 발음된다. 옷→옫, 꽃→꼳, 앞→압.
+CODA_NEUTRALIZE = {
+    'ㅅ': 'ㄷ', 'ㅆ': 'ㄷ', 'ㅈ': 'ㄷ', 'ㅊ': 'ㄷ', 'ㅌ': 'ㄷ', 'ㅎ': 'ㄷ',
+    'ㅋ': 'ㄱ', 'ㄲ': 'ㄱ', 'ㅍ': 'ㅂ',
+}
+# 비음화(18항) — 대표음 ㄱ·ㄷ·ㅂ이 비음 ㄴ·ㅁ 앞에서 같은 조음위치 비음으로. 국물→궁물.
+CODA_NASALIZE = {'ㄱ': 'ㅇ', 'ㄷ': 'ㄴ', 'ㅂ': 'ㅁ'}
+# ㄹ의 비음화(19항) — ㄹ이 ㅁ·ㅇ·ㄱ·ㅂ 뒤에서 ㄴ으로. 종로→종노, 백리→뱅니(이후 비음화 연쇄).
+L_NASALIZE_AFTER = {'ㅁ', 'ㅇ', 'ㄱ', 'ㅂ'}
+# 경음화(23항) — 대표음 ㄱ·ㄷ·ㅂ 뒤 평음이 된소리로. 학교→학꾜, 있다→읻따.
+TENSIFY = {'ㄱ': 'ㄲ', 'ㄷ': 'ㄸ', 'ㅂ': 'ㅃ', 'ㅅ': 'ㅆ', 'ㅈ': 'ㅉ'}
+PLAIN_CODA = {'ㄱ', 'ㄷ', 'ㅂ'}
+
+
+def _apply_phonetic_rules(tokens):
+    """
+    연음·격음화가 끝난 음절 열에 표준발음법 후속 규칙을 순서대로 적용한다(제자리 수정).
+
+    순서가 중요하다 — 비음화는 대표음(ㄱ·ㄷ·ㅂ)을 전제하므로 평파열음화가 먼저 돌아야 하고
+    (밭만→받만→반만), ㄹ 비음화는 자음 비음화보다 앞서야 연쇄가 맞는다(백리→백니→뱅니).
+
+      평파열음화 → 유음화 → ㄹ 비음화 → 자음 비음화 → 경음화
+
+    형태론이 필요한 경음화(관형사형 -ㄹ, 사잇소리 등)는 범위 밖이다 — 순수 음운 조건만 다룬다.
+    """
+    def pairs():
+        for i in range(len(tokens) - 1):
+            cur, nxt = tokens[i], tokens[i + 1]
+            if isinstance(cur, list) and isinstance(nxt, list):
+                yield cur, nxt
+
+    # 1) 평파열음화 — 뒤 음절과 무관하게 남아 있는 모든 종성에 적용
+    for tok in tokens:
+        if isinstance(tok, list) and tok[2] in CODA_NEUTRALIZE:
+            tok[2] = CODA_NEUTRALIZE[tok[2]]
+
+    # 2) 유음화 — ㄴ+ㄹ / ㄹ+ㄴ 이 양쪽 다 ㄹ로 (신라→실라, 설날→설랄)
+    for cur, nxt in pairs():
+        if cur[2] == 'ㄴ' and nxt[0] == 'ㄹ':
+            cur[2] = 'ㄹ'
+        elif cur[2] == 'ㄹ' and nxt[0] == 'ㄴ':
+            nxt[0] = 'ㄹ'
+
+    # 3) ㄹ의 비음화 — 종로→종노. (4)의 입력이 되므로 먼저 돈다.
+    for cur, nxt in pairs():
+        if nxt[0] == 'ㄹ' and cur[2] in L_NASALIZE_AFTER:
+            nxt[0] = 'ㄴ'
+
+    # 4) 자음 비음화 — 국물→궁물, 닫는→단는, 밥물→밤물
+    for cur, nxt in pairs():
+        if cur[2] in CODA_NASALIZE and nxt[0] in ('ㄴ', 'ㅁ'):
+            cur[2] = CODA_NASALIZE[cur[2]]
+
+    # 5) 경음화 — 학교→학꾜, 읻다→읻따
+    for cur, nxt in pairs():
+        if cur[2] in PLAIN_CODA and nxt[0] in TENSIFY:
+            nxt[0] = TENSIFY[nxt[0]]
+
+    return tokens
+
+
+def to_pronounced_syllables(text: str, phonetic: bool = False):
     """
     한국어 텍스트를 '소리 나는 대로'의 음절 리스트로 변환.
     한글 음절은 [초성, 중성, 종성] 리스트로(초성 ''는 무음 ㅇ),
     그 외 문자는 원래 문자열 그대로 담아 반환한다.
+
+    phonetic=False (기본, viseme 경로) — 입모양을 바꾸는 규칙만: 연음·격음화·구개음화·
+      겹받침 단순화·ㅎ탈락·초성 ㅇ 무음화.
+    phonetic=True (축 A 학습 라벨용) — 위에 더해 평파열음화·유음화·비음화·경음화까지
+      적용해 '실제 소리'와 일치시킨다. _apply_phonetic_rules 참고.
     """
     tokens = []  # 한글: ['초','중','종'], 그 외: 원문자
     for ch in text:
@@ -104,6 +176,10 @@ def to_pronounced_syllables(text: str):
         # 무음 초성 ㅇ → '' (입모양 프레임 없음). 종성 ㅇ[ŋ]은 그대로 둔다.
         if tok[0] == 'ㅇ':
             tok[0] = ''
+
+    # 겹받침이 대표음으로 줄어든 뒤라야 평파열음화·비음화가 올바로 걸린다.
+    if phonetic:
+        _apply_phonetic_rules(tokens)
 
     return tokens
 
