@@ -130,7 +130,10 @@ def prepare_dataset(processor, split: str, limit: int = 0):
         batch["n_frames"] = len(wave) // 320  # wav2vec2 총 stride
         return batch
 
-    ds = ds.map(_map, remove_columns=ds.column_names, num_proc=os.cpu_count())
+    # num_proc을 코어 수 그대로 두면(RunPod은 224코어) 프로세스 생성·arrow 쓰기 경합이
+    # 오히려 커진다. 22k 표본 규모에서는 32면 충분하다.
+    ds = ds.map(_map, remove_columns=ds.column_names,
+                num_proc=min(32, os.cpu_count() or 4))
     # CTC는 출력 프레임 수 ≥ 라벨 길이여야 한다. 어기면 손실이 inf가 되어 학습이 망가진다.
     before = len(ds)
     ds = ds.filter(lambda x: x["n_frames"] >= len(x["labels"]))
