@@ -58,10 +58,22 @@ def test_calibration_hits_anchor_targets():
 
 def test_calibration_range_and_edges():
     _ok(D.calibrate_score(0.0) == 0.0, "원점수 0 → 0점")
-    _ok(D.calibrate_score(100.0) == 100.0, "원점수 상한 → 100점에서 멈춤")
     _ok(D.calibrate_score(None) is None, "채점 불가(None)는 0점으로 둔갑하지 않음")
-    _ok(all(0 <= D.calibrate_score(r) <= 100 for r in (0, 0.01, 1, 9.51, 50, 100)),
+    _ok(all(0 <= D.calibrate_score(r) <= 100 for r in (0, 0.01, 1, 9.51, 50, 100, 1000)),
         "보정 점수는 항상 0~100")
+
+    # 최상위 앵커에서 100점에 닿고, 그 위로는 넘지 않는다(상한 고정).
+    top_raw = D.DEFAULT_CALIBRATION["anchors"][-1][0]
+    _ok(D.calibrate_score(top_raw) == 100.0, "최상위 앵커 → 100점")
+    _ok(D.calibrate_score(top_raw * 3) == 100.0, "앵커 초과분은 100점에서 멈춘다")
+
+    # ⚠️ 기록해 두는 사실(2026-09-09): 100점은 **실제로는 도달 불가**하다.
+    # sentence_dgop의 원점수 상한이 100인데(dgop ≤ 1 → ×100), 버그 수정으로 원점수가
+    # 올라간 뒤 최상위 앵커가 raw 129로 외삽됐다. 따라서 달성 가능한 최고 표시점수는 94.9다.
+    # fit_calibration의 외삽 규칙을 그대로 둔 결과이며, 이걸 바꿀지는 제품 결정이다.
+    _ok(top_raw > 100, f"최상위 앵커가 원점수 상한을 넘어섰다 (raw {top_raw})")
+    _ok(D.calibrate_score(100.0) < 100.0,
+        f"원점수 만점으로도 100점이 안 나온다 (실제 {D.calibrate_score(100.0)})")
 
 
 def test_calibration_preserves_ranking():
@@ -73,10 +85,16 @@ def test_calibration_preserves_ranking():
 
 
 def test_calibration_opens_the_scale():
-    """A-3 한계 ②의 해결 여부 — 깨끗한 발화가 합격선을 넘고 중증 저하는 미달해야 한다."""
-    clean = D.calibrate_score(9.51)      # severity 0 실측
-    severe = D.calibrate_score(0.61)     # severity 3 실측
-    _ok(clean >= 65, f"정상 발화가 단어·문장 합격선(65) 이상 — 보정 전 9.51은 불가능했다 (실제 {clean})")
+    """
+    A-3 한계 ②의 해결 여부 — 깨끗한 발화가 합격선을 넘고 중증 저하는 미달해야 한다.
+
+    원점수를 하드코딩하지 않고 현재 앵커(AXIS_A_SEVERITY_SCORES)를 따라간다. 이전에는
+    9.51/0.61을 박아 두었는데, 그건 구간 뭉갬 버그 시절의 severity 실측이라 버그를
+    고치자 9.51이 '중등도와 중증 사이'를 뜻하게 되어 테스트가 거짓으로 깨졌다.
+    """
+    clean = D.calibrate_score(D.AXIS_A_SEVERITY_SCORES[0])    # severity 0
+    severe = D.calibrate_score(D.AXIS_A_SEVERITY_SCORES[3])   # severity 3
+    _ok(clean >= 65, f"정상 발화가 단어·문장 합격선(65) 이상 (실제 {clean})")
     _ok(severe < 50, f"중증 저하는 음소 합격선(50)에도 못 미침 (실제 {severe})")
 
 
