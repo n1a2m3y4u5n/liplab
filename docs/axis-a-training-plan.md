@@ -472,8 +472,9 @@ severity 0 목표(90)를 낮춰 외삽 여지 만들기. 둘 다 눈금을 다�
 엔트로피·마진 기반 GOP가 베이스라인보다 나쁘고(τ −0.264 / −0.443 vs −0.524) MaxLogit만
 이긴다(−0.544)고 이미 보고했다.
 
-별개 구현 결함: `span_distribution`이 CTC blank 프레임을 구간 평균에 포함한다. 문헌 표준은
-비blank만 집계한다(Cao et al., Interspeech 2024).
+(초판에 *"span_distribution이 blank 프레임을 구간 평균에 포함한다"*고 적었으나 **오진이었다.**
+`ctc_align.token_spans`가 비blank run만 구간으로 잡아 blank가 원리적으로 들어가지 않는다 —
+A-5의 구간 수정으로 이미 해결돼 있었다. 불변 검사로 고정했다.)
 
 ### 한계 ①은 오히려 더 뚜렷해졌다
 

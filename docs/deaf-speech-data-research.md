@@ -60,17 +60,23 @@ softmax 정규화가 그 정보를 지운다. 우리 세 항은 전부 같은 so
 
 개선폭도 정직하게 봐야 한다: 한국어 상대 **3.91%**. 극적인 것이 아니다.
 
-### 구현 결함 하나 더 — CTC blank
+### ~~구현 결함 하나 더 — CTC blank~~ → **이미 해결돼 있었다** (2026-09-09 정정)
 
 Cao, Fan, Svendsen, Salvi (Interspeech 2024)의 CTC 음소 평가 프레임워크는 *"only non-blank
 tokens contribute to the estimation, while the blank tokens are skipped"*라고 명시한다
 ([PDF](https://www.isca-archive.org/interspeech_2024/cao24b_interspeech.pdf)).
 
-`dgop_acoustic.span_distribution()`은 구간 내 **모든 프레임을 평균**한다. CTC는 peaky해서
-구간 대부분이 blank 스파이크다. 즉 지금 엔트로피·마진이 재는 것은 "음소 정체성이 얼마나
-불확실한가"가 아니라 **"이 구간에 blank가 몇 프레임인가"**일 수 있다.
+이 문서 초판은 *"A-5에서 정렬은 고쳤지만 집계는 아직 안 고쳤다"*고 적었는데 **틀렸다.**
+구현을 실측하니 `ctc_align.token_spans`는 **같은 비blank 라벨이 이어지는 run만** 구간으로
+잡으므로 구간 안에 blank가 **원리적으로 0개**다. blank는 구간 *사이*에만 있다.
 
-A-5에서 정렬(align_targets)은 고쳤지만 **집계(span_distribution)는 아직 안 고쳤다.**
+지적 자체는 유효했지만 그 대상은 **A-5 이전 구현**이었다 — 그때는 정렬 경로를 토큰 id로
+필터링해 `min~max` 구간을 잡았고 거기에 blank가 잔뜩 들어갔다. **구간 뭉갬 버그를 고치면서
+이 문제도 함께 사라졌다.**
+
+정렬 방식이 바뀌어 blank가 섞이기 시작하면 `dump_gop_features.span_aggregates`의 불변
+검사(`nb_frames != frames`)와 `test_dump_gop_features.test_spans_contain_no_blank_frames`가
+알려준다.
 
 ---
 
@@ -239,7 +245,7 @@ Steiger's Z 폐형식 + 몬테카를로 4,000회 교차검증 (📄보고):
 | # | 문제 | 위치 |
 |---|---|---|
 | 1 | **채점식이 구조적으로 결함** — §0. naive와 confidence가 중복(ρ=0.980)이고 보정 방향이 반대 | `dgop.dgop_phone` |
-| 2 | **blank 프레임이 구간 평균에 포함** — 문헌 표준(Cao et al. 2024)에 어긋남 | `dgop_acoustic.span_distribution` |
+| 2 | ~~blank 프레임이 구간 평균에 포함~~ — **오진이었다**(2026-09-09). A-5 구간 수정으로 이미 해결돼 있었고, 불변 검사로 고정했다 | — |
 | 3 | **유의성 검정·신뢰구간 없음** — "naive 0.914 > D-GOP 0.813"에 검정이 안 붙어 있어 우연인지 모른다. 스크립트가 이미 발화별 `rhos_dgop`/`rhos_naive` 쌍을 들고 있으므로 대응표본 검정을 붙이면 된다 | `scripts/eval_dgop_discrimination.py` |
 | 4 | **AUC가 발화 단위 pooling** — 한 화자의 발화 20개는 독립 표본 20개가 아니다. 화자 단위 집계 또는 클러스터 부트스트랩 필요 | 같은 파일 |
 | 5 | **합격선 0.90이 감쇠 때문에 도달 불가일 수 있음** — 관측 ρ = ρ_true × √(R_점수 × R_중증도). 참값 0.95라도 신뢰도 0.90/0.90이면 관측 0.855. **재정의가 데이터보다 먼저** | `eval_dgop_discrimination.TARGET_*` |
