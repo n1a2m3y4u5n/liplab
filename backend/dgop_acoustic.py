@@ -103,11 +103,14 @@ def _load(model_id: str = DEFAULT_MODEL_ID, device: str = None):
     return _model_cache[key]
 
 
-def ctc_log_probs(waveform, sample_rate: int, model_id: str = DEFAULT_MODEL_ID):
+def ctc_outputs(waveform, sample_rate: int, model_id: str = DEFAULT_MODEL_ID):
     """
-    파형(1D 배열, 16kHz 권장)을 CTC 모델에 통과시켜 프레임별 로그확률과 vocab을 얻는다.
-    실제 모델 다운로드·추론이 필요해 유닛테스트 대상이 아니다(scripts/check_ml_env.py로 점검).
-    반환: (log_probs: Tensor[T, C], vocab: Dict[token, id])
+    파형 → (log_probs, logits, vocab). 전부 CPU 텐서.
+
+    **raw logit을 함께 돌려주는 이유**: softmax는 로짓의 절대 크기를 정규화로 지운다.
+    OOD 입력(병리 발화)에서는 '모든 로짓이 낮다'는 그 정보가 과신을 드러내는 신호이고,
+    Yeo et al. (Interspeech 2023)에서 베이스라인을 이긴 유일한 변형(MaxLogit)이 바로 그
+    정보를 쓴다. 로짓을 버리면 그 계열을 아예 비교할 수 없다(gop_variants 참고).
     """
     device = resolve_device()
     processor, model = _load(model_id, device=device)
@@ -116,8 +119,20 @@ def ctc_log_probs(waveform, sample_rate: int, model_id: str = DEFAULT_MODEL_ID):
         logits = model(inputs.input_values.to(device)).logits[0]  # (T, C)
     # 순전파만 GPU에서 하고 결과는 CPU로 되돌린다 — 이후 강제정렬·구간 집계는
     # 순수 함수라 장치에 얽매이지 않아야 테스트(합성 텐서)와 배포가 함께 단순해진다.
-    log_probs = torch.log_softmax(logits, dim=-1).cpu()
-    return log_probs, processor.tokenizer.get_vocab()
+    logits = logits.cpu()
+    return torch.log_softmax(logits, dim=-1), logits, processor.tokenizer.get_vocab()
+
+
+def ctc_log_probs(waveform, sample_rate: int, model_id: str = DEFAULT_MODEL_ID):
+    """
+    파형(1D 배열, 16kHz 권장)을 CTC 모델에 통과시켜 프레임별 로그확률과 vocab을 얻는다.
+    실제 모델 다운로드·추론이 필요해 유닛테스트 대상이 아니다(scripts/check_ml_env.py로 점검).
+    반환: (log_probs: Tensor[T, C], vocab: Dict[token, id])
+
+    로짓까지 필요하면 ctc_outputs를 쓴다.
+    """
+    log_probs, _logits, vocab = ctc_outputs(waveform, sample_rate, model_id)
+    return log_probs, vocab
 
 
 def align_targets(log_probs, vocab: Dict[str, int], target_tokens: Sequence[str],
