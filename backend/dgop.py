@@ -8,6 +8,12 @@
 여유)으로 naive 점수를 보정하고, 음향이 불확실한 구간일수록 영상(입모양) 신호에 더 가중해 후기
 융합한다.
 
+⚠️ **이 모듈의 채점식(dgop_phone)은 재설계 대상이다**(2026-09-09). 과신이라는 문제 인식은
+문헌이 지지하지만(Yeo et al., Interspeech 2023), naive×confidence라는 곱셈 형태는 그 문제를
+잡지 못한다 — 두 항이 중복이고 보정 방향이 반대다. 같은 논문이 한국어 구음장애 발화에서
+엔트로피·마진 기반 GOP가 베이스라인보다 **나쁘고**(τ −0.264 / −0.443 vs −0.524) softmax를
+탈출하는 MaxLogit만 이긴다(−0.544)고 보고한다. 상세는 docs/deaf-speech-data-research.md §0.
+
 이 모듈은 음향 모델이 준 '음소 사후확률 분포'를 입력으로 받는 순수 함수다(모델 비의존 → 결정론적
 테스트 가능). 실제 음향 추론(wav2vec2/WavLM 강제정렬)은 dgop_acoustic이 이 함수들에 분포를 공급한다.
 """
@@ -53,8 +59,14 @@ def naive_gop(target_prob: float) -> float:
 def dgop_phone(target_prob: float, probs: Sequence[float]) -> Dict:
     """
     한 음소 구간의 D-GOP. naive(목표 사후확률)를 그 구간 예측의 신뢰도로 보정한다.
-    분포가 평평할수록(발음이 뭉갤수록) 신뢰도가 낮아 점수가 과신되지 않는다.
     반환: {naive, confidence, uncertainty, dgop} (모두 0~1).
+
+    ⚠️ 2026-09-09 — 이 식은 의도한 일을 하지 못한다. 원래 주석은 "분포가 평평할수록 신뢰도가
+    낮아 점수가 과신되지 않는다"였는데 **방향이 틀렸다**. 과신이란 분포가 *뾰족한데* 틀린
+    것이고, confidence가 재는 것이 바로 그 뾰족함이라 과신 구간을 그대로 통과시킨다. 실제로
+    걷히는 것은 과소확신(평평한 분포)이다. 게다가 naive와 confidence는 둘 다 첨도의 단조
+    함수라 순위상관이 0.98이어서, 곱셈이 순위 정보를 더하지 못하고 잡음만 더한다.
+    재현: scripts/analyze_dgop_redundancy.py · 근거·대안: docs/deaf-speech-data-research.md §0
     """
     conf = phone_confidence(probs)
     naive = naive_gop(target_prob)
