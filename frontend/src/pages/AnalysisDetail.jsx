@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { learningAPI, speakAPI, tactileAPI } from '../api'
+import { learningAPI, speakAPI } from '../api'
 import LearnHeader from '../components/LearnHeader'
 
 const PAGE_META = {
-  overview: { title: '학습 분석', description: '독화·말하기·촉각 학습에서 쌓인 핵심 성과를 한눈에 확인합니다.' },
+  overview: { title: '학습 분석', description: '독화·말하기 학습에서 쌓인 핵심 성과를 한눈에 확인합니다.' },
   activity: { title: '학습 활동', description: '최근 90일 동안 언제, 얼마나 꾸준히 학습했는지 확인합니다.' },
   visemes: { title: '취약 입모양', description: '입모양 유형별 점수와 시도 횟수를 비교해 집중할 항목을 찾습니다.' },
-  scores: { title: '평균 점수', description: '독화·말하기·촉각 영역의 현재 점수를 각각 비교합니다.' },
+  scores: { title: '평균 점수', description: '독화·말하기 영역의 현재 점수를 각각 비교합니다.' },
   history: { title: '학습 기록', description: '날짜별 학습량과 누적 성과를 시간순으로 확인합니다.' },
 }
 
@@ -46,7 +46,6 @@ export default function AnalysisDetail({ mode = 'overview' }) {
   const [analysis, setAnalysis] = useState(null)
   const [calendar, setCalendar] = useState({})
   const [speaking, setSpeaking] = useState(null)
-  const [tactile, setTactile] = useState(null)
   const meta = PAGE_META[mode] || PAGE_META.overview
 
   useEffect(() => {
@@ -58,13 +57,11 @@ export default function AnalysisDetail({ mode = 'overview' }) {
       needsAnalysis ? learningAPI.getAnalysis().catch(() => null) : Promise.resolve(null),
       needsCalendar ? learningAPI.getCalendar().catch(() => ({})) : Promise.resolve({}),
       mode === 'scores' ? speakAPI.getAnalysis().catch(() => null) : Promise.resolve(null),
-      mode === 'scores' ? tactileAPI.getAnalysis().catch(() => null) : Promise.resolve(null),
-    ]).then(([stats, readAnalysis, activity, speakAnalysis, tactileAnalysis]) => {
+    ]).then(([stats, readAnalysis, activity, speakAnalysis]) => {
       setStatistics(stats)
       setAnalysis(readAnalysis)
       setCalendar(activity || {})
       setSpeaking(speakAnalysis)
-      setTactile(tactileAnalysis)
     }).finally(() => setLoading(false))
   }, [mode])
 
@@ -167,10 +164,9 @@ export default function AnalysisDetail({ mode = 'overview' }) {
     const scores = [
       { label: '독화', value: Number(analysis?.average_score || 0), description: `${analysis?.total_sessions || 0}회 학습`, tone: 'bg-sky-500' },
       { label: '말하기', value: Number(speaking?.avg_score || 0), description: `${speaking?.total || 0}회 발화`, tone: 'bg-rose-500' },
-      { label: '촉각', value: Number(tactile?.accuracy || 0), description: `${tactile?.total || 0}회 문제`, tone: 'bg-violet-500' },
     ]
     return (
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-2">
         {scores.map((score) => (
           <article key={score.label} className="rounded-[24px] border border-slate-200 bg-white p-6">
             <p className="text-sm font-black text-slate-500">{score.label}</p>

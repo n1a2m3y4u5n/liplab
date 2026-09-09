@@ -1,11 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 
-// 학습 화면 상단 헤더 — 기둥(독화·말하기·촉각)별 단색 배경을 입히고,
+// 학습 화면 상단 헤더 — 기둥(독화·말하기)별 단색 배경을 입히고,
 // '나가기'에 마우스를 올리면 그 글자 위치에서 붉은 물감이 퍼지듯 헤더를 덮는다.
 const HEADER_ACCENTS = {
   reading: '#fef3c7',   // 독화 (연한 노랑)
   speaking: '#ffe4e6',  // 말하기 (연한 로즈)
-  tactile: '#ede9fe',   // 촉각 (연한 바이올렛)
   etc: '#e2e8f0',       // 기타(수어·분석 등, 연한 슬레이트)
 }
 

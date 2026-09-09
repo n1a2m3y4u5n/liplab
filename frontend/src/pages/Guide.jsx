@@ -47,26 +47,11 @@ const SPEAKING_HOW = [
   '단어·문장 단계는 AI가 매번 새 문항을 생성해 같은 문제만 반복하지 않아요.',
 ]
 
-// ── 촉각 5단계 ────────────────────────────────────────
-const TACTILE_LEVELS = [
-  { icon: '〰️', name: '감각 (유·무성)', body: '진동이 있고 없음을 손끝으로 구별' },
-  { icon: '👄', name: '모음', body: '턱 벌림·입술 모양의 차이를 느끼기' },
-  { icon: '⚖️', name: '최소대립쌍', body: '눈으론 같아도 촉각으론 다른 소리 (핵심)' },
-  { icon: '🔤', name: '단어', body: '촉각 단서를 종합해 낱말 인식' },
-  { icon: '💬', name: '문장', body: '연속된 말의 흐름을 촉각으로 따라가기' },
-]
-const TACTILE_HOW = [
-  '"느끼기(재생)"로 얼굴 모형/시뮬레이터를 동작시켜 손으로 느껴요.',
-  '보기에서 고르거나(객관식) 느낀 말을 직접 입력해요(주관식).',
-  '🙈 순수 촉각 모드로 시뮬레이터를 가리면 손 감각만으로 도전할 수 있어요.',
-  '자유 체험 모드로 아무 낱말·문장이나 골라 재생하며 촉각을 익혀요.',
-]
-
 // ── 도구 · 원리 ───────────────────────────────────────
 const TOOLS = [
   { icon: '🤟', title: '수어 번역', body: '앱 어디서나 한국어 문장을 드래그하면 "수어로 보기" 버튼이 떠요. 누르면 그 자리에서 한국수어(KSL) 영상으로 바꿔 보여줘요.' },
   { icon: '✍️', title: '내 문장 발음 보기', body: '궁금한 문장을 입력하면 3D 입모양이 어떻게 움직이는지 바로 확인해요.' },
-  { icon: '🔁', title: '오늘의 복습', body: '독화·말하기·촉각을 각각 예정(간격반복)·틀린 문제·북마크로 나눠 다시 풀어요.' },
+  { icon: '🔁', title: '오늘의 복습', body: '독화·말하기를 각각 예정(간격반복)·틀린 문제·북마크로 나눠 다시 풀어요.' },
   { icon: '📊', title: '학습 분석', body: '평균 점수·취약 입모양·학습 흐름을 보고, AI가 다음에 무엇을 연습하면 좋을지 제안해요.' },
 ]
 const SYSTEM_INFO = [
@@ -79,7 +64,6 @@ const TABS = [
   { key: 'start', label: '시작하기' },
   { key: 'reading', label: '독화' },
   { key: 'speaking', label: '말하기' },
-  { key: 'tactile', label: '촉각' },
   { key: 'more', label: '도구 · 원리' },
 ]
 
@@ -163,7 +147,7 @@ export default function Guide() {
                 <SectionTitle eyebrow="한눈에">학습은 이렇게 흘러가요</SectionTitle>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {[
-                    { n: '1', title: '기둥을 고른다', body: '독화·말하기·촉각 중 지금 훈련할 축을 선택해요.' },
+                    { n: '1', title: '기둥을 고른다', body: '독화·말하기 중 지금 훈련할 축을 선택해요.' },
                     { n: '2', title: '단계별로 학습한다', body: '기초부터 실전까지, 나에게 맞는 활동·단계를 밟아요.' },
                     { n: '3', title: '복습하고 분석한다', body: '틀린 문제·예정 항목을 다시 풀고, 분석에서 약점을 확인해요.' },
                   ].map((f) => (
@@ -179,19 +163,18 @@ export default function Guide() {
               <section>
                 <SectionTitle eyebrow="메뉴 사용법" sub="원하는 활동으로 바로 갈 수 있어요.">어디서 시작하나요</SectionTitle>
                 <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-5 text-sm leading-relaxed text-slate-700">
-                  <p>· <b>위쪽 메뉴바</b>(독화▾ · 말하기▾ · 촉각▾ · 기타▾)에서 세부 활동을 바로 골라요.</p>
+                  <p>· <b>위쪽 메뉴바</b>(독화▾ · 말하기▾ · 기타▾)에서 세부 활동을 바로 골라요.</p>
                   <p>· <b>오른쪽 위</b>의 복습·사용법, 그리고 문장을 드래그하면 뜨는 <b>🤟 수어 번역</b>도 어디서나 쓸 수 있어요.</p>
-                  <p>· 대시보드 가운데 <b>캐러셀</b>에서 세 기둥을 넘겨 보며 시작해도 돼요.</p>
+                  <p>· 대시보드 가운데 <b>캐러셀</b>에서 두 기둥을 넘겨 보며 시작해도 돼요.</p>
                 </div>
               </section>
 
               <section>
-                <SectionTitle eyebrow="세 기둥">무엇을 훈련하나요</SectionTitle>
+                <SectionTitle eyebrow="두 기둥">무엇을 훈련하나요</SectionTitle>
                 <div className="space-y-3">
                   {[
                     { key: 'reading', icon: '👁️', title: '독화 (입 읽기)', accent: 'sky', desc: '상대의 입모양을 보고 말을 이해하는 입력 능력이에요.' },
                     { key: 'speaking', icon: '🗣️', title: '말하기 (발음)', accent: 'rose', desc: '내 발음을 눈으로 보며 다듬는 산출 능력이에요.' },
-                    { key: 'tactile', icon: '🖐️', title: '촉각 (타도마)', accent: 'violet', desc: '얼굴 모형의 턱·입술·진동·바람을 손으로 느껴 말을 이해해요.' },
                   ].map((p) => (
                     <button key={p.key} type="button" onClick={() => setTab(p.key)}
                       className={`flex w-full items-start gap-4 rounded-2xl border-l-4 bg-white p-5 text-left transition hover:shadow-md ${ACCENT[p.accent].bar}`}>
@@ -270,61 +253,11 @@ export default function Guide() {
             </div>
           )}
 
-          {/* ── 촉각 ── */}
-          {tab === 'tactile' && (
-            <div className="space-y-8">
-              <section>
-                <SectionTitle eyebrow="촉각 · 타도마" accent="violet"
-                  sub="얼굴 모형의 턱·입술·진동·바람을 손으로 느껴 말을 이해해요. 하드웨어 없이 시뮬레이터로도 체험돼요.">어떻게 하나요</SectionTitle>
-                <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                  <ol className="space-y-2">
-                    {TACTILE_HOW.map((s, i) => (
-                      <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-slate-700">
-                        <span className="shrink-0 font-black text-slate-300">{i + 1}</span><span>{s}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              </section>
-
-              <section>
-                <SectionTitle eyebrow="5단계 커리큘럼" accent="violet"
-                  sub="감각에서 문장까지 위계적으로 확장해요.">무엇을 익히나요</SectionTitle>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {TACTILE_LEVELS.map((lv, i) => (
-                    <div key={lv.name} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-violet-50 text-xl">{lv.icon}</span>
-                      <div className="pt-0.5">
-                        <p className="font-black text-slate-900">{i + 1}. {lv.name}</p>
-                        <p className="mt-1 text-sm leading-relaxed text-slate-600">{lv.body}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section>
-                <SectionTitle eyebrow="직접 만들기" accent="violet"
-                  sub="얼굴 모형은 오픈소스예요.">하드웨어 조립 설명서</SectionTitle>
-                <button type="button" onClick={() => go('/hardware/build')}
-                  className="group flex w-full items-center gap-4 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-500 p-5 text-left text-white shadow-lg shadow-violet-200 transition hover:brightness-105">
-                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/20 text-2xl">🛠️</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-black">얼굴 모형 조립 설명서 보기</span>
-                    <span className="mt-0.5 block text-sm text-violet-50">3D 프린팅 파일 · 부품(BOM) · 조립 순서 · 배선도 · 펌웨어까지 실제 제작 사진과 함께 안내해요.</span>
-                  </span>
-                  <span className="text-2xl transition group-hover:translate-x-1">→</span>
-                </button>
-                <Tip accent="violet">실제 얼굴 모형 연결(Web Serial)은 <b>데스크톱 Chrome·Edge</b>에서만 동작해요. 아두이노 IDE 창은 닫아야 웹이 포트에 연결할 수 있어요.</Tip>
-              </section>
-            </div>
-          )}
-
           {/* ── 도구 · 원리 ── */}
           {tab === 'more' && (
             <div className="space-y-8">
               <section>
-                <SectionTitle eyebrow="보조 도구" sub="세 기둥과 별개로 언제든 쓰는 기능이에요.">이런 것도 있어요</SectionTitle>
+                <SectionTitle eyebrow="보조 도구" sub="두 기둥과 별개로 언제든 쓰는 기능이에요.">이런 것도 있어요</SectionTitle>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {TOOLS.map((t) => (
                     <div key={t.title} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-5">

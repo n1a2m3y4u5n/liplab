@@ -1,5 +1,5 @@
 """
-말하기·촉각(타도마) 연습용 '단어/문장' AI 생성기.
+말하기 연습용 '단어/문장' AI 생성기.
 
 핵심 목표: 매번 다른 문제. 같은 프롬프트를 반복하면 LLM도 비슷한 답을 내므로,
 호출마다 무작위 '변주 축'(범주·주제·기능)과 시드, 그리고 '제외 목록'을 주입해
@@ -39,11 +39,11 @@ async def _call(system: str, expect_key: str = "items") -> List[str]:
 
 
 async def generate_words(n: int = 10, max_syllable: int = 3, avoid: List[str] = None) -> List[str]:
-    """발음/촉각 연습용 한국어 단어 n개. 매번 다른 범주·어휘."""
+    """발음 연습용 한국어 단어 n개. 매번 다른 범주·어휘."""
     avoid = avoid or []
     cats = random.sample(_WORD_CATEGORIES, k=min(4, len(_WORD_CATEGORIES)))
     system = (
-        "너는 청각장애인의 발음·촉각 훈련용 한국어 '단어' 출제기다.\n"
+        "너는 청각장애인의 발음 훈련용 한국어 '단어' 출제기다.\n"
         f"- 아래 범주에서 골고루 뽑아 다양하게: {', '.join(cats)}\n"
         f"- 1~{max_syllable}음절의 실제 자주 쓰는 일반 명사만. 외래어·고유명사·비속어·추상어 금지.\n"
         "- 발음이 또렷한 기본 어휘 위주(아이도 아는 수준).\n"
@@ -64,7 +64,7 @@ async def generate_sentences(n: int = 8, avoid: List[str] = None, with_intonatio
         if with_intonation else '"문장"'
     )
     system = (
-        "너는 청각장애인의 발화·촉각 훈련용 한국어 '짧은 문장' 출제기다.\n"
+        "너는 청각장애인의 발화 훈련용 한국어 '짧은 문장' 출제기다.\n"
         f"- 장면: {scene} / 의사소통 기능을 섞어 다양하게: {', '.join(funcs)}\n"
         "- 6~12자 내외의 일상 구어체 한 문장. 너무 길거나 복잡하지 않게.\n"
         "- 매 회차 새롭고 겹치지 않게. 아래 '제외' 문장은 쓰지 말 것.\n"

@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Navigate } from 'react-router-dom'
 import { SPEAKING_MENU_ITEMS } from '../config/speakingNavigation'
 
-// 기둥(독화·말하기·촉각)별 하위 학습·테스트·복습 메뉴 모음.
+// 기둥(독화·말하기)별 하위 학습·테스트·복습 메뉴 모음.
 // 대시보드 캐러셀에서 기둥을 누르면 바로 활동으로 가지 않고 이 허브로 온다.
 // ※ 공용 DomainPageShell(학습/복습/분석 전역 탭)은 쓰지 않는다 — 그 탭들이
 //    기둥 맥락을 잃고 엉뚱한 곳(독화 입모양)으로 튀는 혼란을 막기 위함.
@@ -25,22 +25,11 @@ const PILLARS = {
     description: '내 발음을 눈으로 보며 다듬는 훈련이에요. 마이크로 녹음하면 AI가 전사·채점하고 코칭해줘요.',
     items: SPEAKING_MENU_ITEMS.map((item) => ({ ...item, desc: item.description })),
   },
-  tactile: {
-    accent: 'violet',
-    title: '촉각 (타도마)',
-    description: '얼굴 모형의 턱·입술·진동·바람을 손으로 느껴 말을 이해하는 훈련이에요. 하드웨어 없이 시뮬레이터로도 체험할 수 있어요.',
-    items: [
-      { label: '얼굴 모형 (하드웨어)', desc: '조립 설명서 · 연결 · 핀 설정', to: '/learn/tactile/hardware', icon: '🛠️' },
-      { label: '촉각 학습', desc: '5단계 커리큘럼 + 자유 체험', to: '/learn/tactile', icon: '🖐️' },
-      { label: '촉각 복습', desc: '취약 항목 다시 풀기', to: '/review/tactile', icon: '🔁' },
-    ],
-  },
 }
 
 const ACCENTS = {
   sky: { eyebrow: 'text-sky-700', panel: 'from-sky-50 to-white', mark: 'bg-sky-500', hover: 'hover:border-sky-300', chip: 'bg-sky-50' },
   rose: { eyebrow: 'text-rose-700', panel: 'from-rose-50 to-white', mark: 'bg-rose-500', hover: 'hover:border-rose-300', chip: 'bg-rose-50' },
-  violet: { eyebrow: 'text-violet-700', panel: 'from-violet-50 to-white', mark: 'bg-violet-500', hover: 'hover:border-violet-300', chip: 'bg-violet-50' },
 }
 
 export default function PillarHub() {
