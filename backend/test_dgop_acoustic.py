@@ -47,6 +47,46 @@ def test_align_targets_recovers_spans():
     _ok(by_token["C"]["start"] == 4 and by_token["C"]["end"] == 4, "C는 프레임 4에 정렬")
 
 
+def test_align_targets_separates_repeated_tokens():
+    """
+    같은 토큰이 문장에 여러 번 나오면 **출현별로** 구간이 잡혀야 한다.
+
+    2026-09-09 회귀 방지. 이전 구현은 정렬 경로를 토큰 id로 필터링해 min/max를 취했고,
+    그 결과 중복 토큰의 모든 출현이 '첫 출현 시작 ~ 마지막 출현 끝'이라는 하나의 거대한
+    구간으로 뭉개졌다. 자모 vocab(49토큰)에 라벨 중앙값이 103토큰이라 실제 문장에서는
+    거의 항상 밟는 경로이고, 뭉개진 구간의 평균 분포는 평평해져 D-GOP가 통째로 깎인다.
+    """
+    if not DA.HAS_ACOUSTIC:
+        print("  (torch 미설치 → 스킵)")
+        return
+    import torch
+    # "A blank B blank A" — A가 두 번 나온다.
+    seq = [1, 0, 2, 0, 1]
+    logits = torch.full((len(seq), len(_VOCAB)), -10.0)
+    for i, tid in enumerate(seq):
+        logits[i, tid] = 10.0
+    log_probs = torch.log_softmax(logits, dim=-1)
+
+    spans = DA.align_targets(log_probs, _VOCAB, ["A", "B", "A"])
+    _ok([s["token"] for s in spans] == ["A", "B", "A"], "목표 순서가 유지돼야 함")
+    _ok((spans[0]["start"], spans[0]["end"]) == (0, 0),
+        f"첫 A는 프레임 0 — 받음 {spans[0]}")
+    _ok((spans[1]["start"], spans[1]["end"]) == (2, 2),
+        f"B는 프레임 2 — 받음 {spans[1]}")
+    _ok((spans[2]["start"], spans[2]["end"]) == (4, 4),
+        f"둘째 A는 프레임 4 — 받음 {spans[2]}")
+    # 옛 방식(id 필터 min/max)이었다면 두 A가 모두 (0, 4)로 뭉개져 B 구간까지 삼킨다.
+    _ok(spans[0]["end"] < spans[1]["start"], "첫 A가 B 구간을 삼키면 안 됨")
+
+    # 뭉개진 구간이 실제로 점수를 깎는다는 것까지 확인한다.
+    smeared = DA.span_distribution(log_probs, 0, 4)      # 옛 방식이 잡던 구간
+    exact = DA.span_distribution(log_probs, 0, 0)        # 자체 구현이 잡는 구간
+    a_id = _VOCAB["A"]
+    _ok(D.dgop_phone(exact[a_id], exact)["dgop"] > 0.9, "정확한 구간이면 D-GOP가 높다")
+    _ok(D.dgop_phone(smeared[a_id], smeared)["dgop"] < 0.1,
+        "뭉갠 구간은 분포가 평평해져 D-GOP가 무너진다(옛 구현의 실제 손해)")
+
+
 def test_align_targets_missing_token_raises():
     if not DA.HAS_ACOUSTIC:
         print("  (torch/torchaudio 미설치 → 스킵)")

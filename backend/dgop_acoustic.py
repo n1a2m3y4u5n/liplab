@@ -3,10 +3,10 @@ D-GOP 음향 백본 — 고도화 축 B.
 
 dgop.py는 '음소 사후확률 분포'를 입력받는 순수 함수만 담고 있다(모델 비의존, 결정론적
 테스트 가능). 이 모듈이 그 분포를 실제로 공급한다: CTC 음향모델로 프레임별 로그확률을
-얻고, torchaudio의 CTC 강제정렬(forced_align)로 목표 음소열을 프레임 구간에 정렬한 뒤,
+얻고, CTC 강제정렬(ctc_align — 자체 Viterbi 구현)로 목표 음소열을 프레임 구간에 정렬한 뒤,
 구간별 확률분포를 dgop.dgop_phone에 넘긴다.
 
-torch·torchaudio·transformers는 requirements-ml.txt 전용 의존성이다(앱 런타임/배포에는
+torch·transformers는 requirements-ml.txt 전용 의존성이다(앱 런타임/배포에는
 불필요 — content_rules.py의 wordfreq 분리와 같은 원칙). 미설치 환경에서는 HAS_ACOUSTIC=False로
 두고 이 모듈의 실행 함수를 호출하지 않는다.
 
@@ -30,10 +30,9 @@ import dgop as _dgop
 
 try:
     import torch
-    import torchaudio
     from transformers import AutoModelForCTC, AutoProcessor
     HAS_ACOUSTIC = True
-except Exception:  # torch/torchaudio/transformers 미설치
+except Exception:  # torch/transformers 미설치
     HAS_ACOUSTIC = False
 
 # 공개 확인된 한국어 CTC 체크포인트(음절 단위 vocab). 축 A가 농인 발화로 미세조정한
@@ -92,7 +91,7 @@ def load_calibration(path: Optional[str] = None) -> Dict:
 
 def _load(model_id: str = DEFAULT_MODEL_ID, device: str = None):
     if not HAS_ACOUSTIC:
-        raise RuntimeError("torch/torchaudio/transformers 미설치 — backend/requirements-ml.txt 설치 필요")
+        raise RuntimeError("torch/transformers 미설치 — backend/requirements-ml.txt 설치 필요")
     device = device or resolve_device()
     key = f"{model_id}@{device}"
     if key not in _model_cache:
@@ -124,32 +123,35 @@ def ctc_log_probs(waveform, sample_rate: int, model_id: str = DEFAULT_MODEL_ID):
 def align_targets(log_probs, vocab: Dict[str, int], target_tokens: Sequence[str],
                    blank_token: str = "<pad>") -> List[Dict]:
     """
-    CTC 강제정렬로 target_tokens 각각이 놓인 프레임 구간(시작·끝, 포함)을 찾는다.
+    CTC 강제정렬로 target_tokens **각 출현**이 놓인 프레임 구간(시작·끝, 포함)을 찾는다.
     log_probs·vocab에만 의존하는 순수 함수 — 합성 log_probs로 모델 없이 테스트 가능.
-    target_tokens 중 vocab에 없는 토큰은 정렬에서 제외되고 start=end=None으로 반환된다.
+    vocab에 없는 토큰이 있으면 KeyError를 낸다.
+
+    정렬은 ctc_align(자체 Viterbi 구현)이 한다. torchaudio.functional.forced_align과
+    프레임 단위로 같은 답을 내는 것을 test_ctc_align이 무작위 입력으로 검증한다.
+
+    ⚠️ 2026-09-09 수정 — 이전 구현은 정렬 경로를 **토큰 id로 필터링**해서
+    `start=min(해당 id 프레임), end=max(...)`로 구간을 잡았다. 같은 토큰이 문장에 여러 번
+    나오면 모든 출현이 '첫 출현 시작 ~ 마지막 출현 끝'이라는 하나의 거대한 구간으로 뭉개진다.
+    자모 vocab은 49토큰인데 Zeroth 라벨은 중앙값 103토큰이라 **중복은 예외가 아니라 기본**이다
+    (실측: 짧은 문장에서도 토큰의 20~57%가 중복 출현). 뭉개진 구간의 평균 분포는 평평해져
+    confidence가 0에 수렴하고, 그 음소의 D-GOP가 통째로 깎인다 —
+    A-3이 "원인 미상"으로 남긴 한계 ②(깨끗한 발화 9.51/100)의 실제 원인이다.
     """
     if not HAS_ACOUSTIC:
-        raise RuntimeError("torch/torchaudio 미설치")
+        raise RuntimeError("torch 미설치")
+    import ctc_align
+
     blank_id = vocab.get(blank_token, 0)
-    target_ids = [vocab[t] for t in target_tokens if t in vocab]
-    if len(target_ids) != len(target_tokens):
-        missing = [t for t in target_tokens if t not in vocab]
+    missing = [t for t in target_tokens if t not in vocab]
+    if missing:
         raise KeyError(f"vocab에 없는 토큰: {missing}")
+    target_ids = [vocab[t] for t in target_tokens]
 
-    lp = log_probs.unsqueeze(0)
-    targets = torch.tensor([target_ids], dtype=torch.int64)
-    path, _scores = torchaudio.functional.forced_align(lp, targets, blank=blank_id)
-    path = path[0].tolist()
-
-    spans = []
-    for tok, tid in zip(target_tokens, target_ids):
-        frames = [i for i, p in enumerate(path) if p == tid]
-        spans.append({
-            "token": tok,
-            "start": min(frames) if frames else None,
-            "end": max(frames) if frames else None,
-        })
-    return spans
+    labels, _scores = ctc_align.forced_align(log_probs, target_ids, blank=blank_id)
+    spans = ctc_align.token_spans(labels, target_ids, blank=blank_id)
+    return [{"token": tok, "start": sp["start"], "end": sp["end"]}
+            for tok, sp in zip(target_tokens, spans)]
 
 
 def span_distribution(log_probs, start, end) -> List[float]:
