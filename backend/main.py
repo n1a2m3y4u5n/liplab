@@ -1567,6 +1567,8 @@ async def speak_assess(
         #   DGOP_ALIGNER_ID — 강제정렬용(축 A A-2 산출물)
         #   DGOP_SCORER_ID  — 채점용(축 A A-1 산출물). 생략 시 정렬기와 동일 모델.
         #   DGOP_MODEL_ID   — 구 변수명. 하위호환으로 정렬기 겸 채점기로 취급한다.
+        #   DGOP_CALIBRATION — 표시용 점수 보정 앵커 JSON 경로. 생략 시
+        #                      backend/data/dgop_calibration.json, 그것도 없으면 축 A 실측 내장값.
         #
         # 실제 발화 정확도 검증 전까지는 배포 기본값을 켜지 않는다(미설정 = 전사 경로).
         dgop_aligner_id = os.getenv("DGOP_ALIGNER_ID") or os.getenv("DGOP_MODEL_ID")
@@ -1581,6 +1583,9 @@ async def speak_assess(
                 )
                 if result.get("score") is not None:
                     dgop_result = result
+                    # 표시용 보정 점수를 쓴다 — 원점수는 깨끗한 발화도 10점 안쪽이라
+                    # 합격선(50·65)과 비교조차 되지 않는다. 보정 전 값은 응답의
+                    # dgop.raw_score로 함께 나간다(축 A 한계 ② 대응).
                     sim = dgop_result["score"]
                     assessment_method = "dgop"
             except Exception:

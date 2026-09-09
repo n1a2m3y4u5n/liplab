@@ -22,8 +22,9 @@ torch·torchaudio·transformers는 requirements-ml.txt 전용 의존성이다(�
 제공한다. 또한 이 체크포인트는 **정상 발화로 학습**되었으므로, 축 A가 농인 발화로 미세조정한
 버전이 나오기 전까지는 D-GOP의 불확실성 보정에 더 의존하게 된다(계획서가 정확히 지적한 문제).
 """
+import json
 import os
-from typing import Dict, List, Sequence
+from typing import Dict, List, Optional, Sequence
 
 import dgop as _dgop
 
@@ -54,6 +55,39 @@ def resolve_device() -> str:
     if HAS_ACOUSTIC and torch.cuda.is_available():
         return "cuda"
     return "cpu"
+
+
+# 표시용 점수 보정 앵커 파일. 없으면 dgop.DEFAULT_CALIBRATION(축 A A-3 실측)을 쓴다.
+DEFAULT_CALIBRATION_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                        "data", "dgop_calibration.json")
+_calibration_cache: Dict[str, Dict] = {}
+
+
+def load_calibration(path: Optional[str] = None) -> Dict:
+    """
+    표시용 점수 보정 앵커를 읽는다. 우선순위: 인자 path > DGOP_CALIBRATION 환경변수 >
+    backend/data/dgop_calibration.json > dgop.DEFAULT_CALIBRATION(내장 기본값).
+
+    체크포인트를 바꾸면 원점수 스케일이 함께 바뀌므로 그 모델로 다시 맞춘 앵커가 필요하다
+    (scripts/fit_dgop_calibration.py). 파일이 깨졌거나 앵커가 없으면 조용히 내장 기본값으로
+    떨어진다 — 보정 파일 하나 때문에 채점 자체가 죽지 않게 한다.
+    """
+    src = path or os.getenv("DGOP_CALIBRATION") or DEFAULT_CALIBRATION_PATH
+    if src in _calibration_cache:
+        return _calibration_cache[src]
+    cal = _dgop.DEFAULT_CALIBRATION
+    if os.path.exists(src):
+        try:
+            with open(src, encoding="utf-8") as f:
+                loaded = json.load(f)
+            if loaded.get("anchors"):
+                cal = loaded
+            else:
+                print(f"[WARN] 보정 파일에 anchors가 없습니다: {src} — 내장 기본값 사용")
+        except Exception as e:
+            print(f"[WARN] 보정 파일을 읽지 못했습니다({src}): {e} — 내장 기본값 사용")
+    _calibration_cache[src] = cal
+    return cal
 
 
 def _load(model_id: str = DEFAULT_MODEL_ID, device: str = None):
@@ -218,7 +252,7 @@ def tokens_for_text(text: str, model_id: str = DEFAULT_MODEL_ID) -> List[str]:
 
 def assess_text(audio_bytes: bytes, target_text: str,
                  aligner_id: str = DEFAULT_MODEL_ID, scorer_id: str = None,
-                 sample_rate: int = 16000) -> Dict:
+                 sample_rate: int = 16000, calibrate: bool = True) -> Dict:
     """
     녹음 바이트 + 목표 텍스트 → D-GOP 문장 점수. `/api/speak/assess`가 호출하는 통합
     지점(축 B 완성). 오디오 디코딩은 faster-whisper의 decode_audio를 재사용해(이미
@@ -226,6 +260,11 @@ def assess_text(audio_bytes: bytes, target_text: str,
 
     aligner_id로 구간을 찾고 scorer_id로 채점한다(생략 시 동일 모델 — 기존 동작).
     두 모델을 나누는 이유는 phone_confidences의 docstring 참고.
+
+    score는 **표시용 보정 점수**, raw_score는 보정 전 원점수다(A-3 한계 ② 대응 —
+    원점수는 깨끗한 발화가 9.51/100이라 학습자에게 그대로 보여줄 수 없다). 보정은 단조
+    변환이라 순위는 그대로다. calibrate=False면 원점수를 그대로 score로 돌려준다 —
+    변별력 평가처럼 보정 이전 값을 봐야 하는 쪽을 위한 문이다.
 
     정렬 가능한 음소가 하나도 없으면(체크포인트-언어 불일치 등) score=None을 돌려주고,
     호출부가 전사 방식으로 폴백하도록 신호한다.
@@ -240,5 +279,11 @@ def assess_text(audio_bytes: bytes, target_text: str,
     # 정렬에 성공했고 채점 대상인 음소만 문장 점수에 넣는다(어절 경계 제외).
     scored = [p for p in phones if p.get("aligned") and p.get("scorable")]
     if not scored:
-        return {"score": None, "uncertainty": 1.0, "phones": phones}
-    return {**_dgop.sentence_dgop(scored), "phones": phones}
+        return {"score": None, "raw_score": None, "uncertainty": 1.0, "phones": phones}
+    result = {**_dgop.sentence_dgop(scored), "phones": phones}
+    result["raw_score"] = result["score"]
+    if calibrate:
+        cal = load_calibration()
+        result["score"] = _dgop.calibrate_score(result["raw_score"], cal)
+        result["calibration"] = cal.get("source") or "내장 기본값"
+    return result

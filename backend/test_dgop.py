@@ -49,6 +49,57 @@ def test_sentence_and_fuse():
     _ok(D.fuse_audio_visual(80, 0.5, None)["score"] == 80, "영상 없으면 오디오 점수 그대로")
 
 
+def test_calibration_hits_anchor_targets():
+    """앵커로 삼은 severity 대표 원점수는 정확히 목표 점수로 나와야 한다."""
+    for raw, target in zip(D.AXIS_A_SEVERITY_SCORES, D.DISPLAY_TARGETS_BY_SEVERITY):
+        got = D.calibrate_score(raw)
+        _ok(abs(got - target) < 0.05, f"원점수 {raw} → {target}점 (실제 {got})")
+
+
+def test_calibration_range_and_edges():
+    _ok(D.calibrate_score(0.0) == 0.0, "원점수 0 → 0점")
+    _ok(D.calibrate_score(100.0) == 100.0, "원점수 상한 → 100점에서 멈춤")
+    _ok(D.calibrate_score(None) is None, "채점 불가(None)는 0점으로 둔갑하지 않음")
+    _ok(all(0 <= D.calibrate_score(r) <= 100 for r in (0, 0.01, 1, 9.51, 50, 100)),
+        "보정 점수는 항상 0~100")
+
+
+def test_calibration_preserves_ranking():
+    """보정은 단조 변환이다 — 순위가 바뀌면 변별력을 사후에 조작하는 셈이 된다."""
+    raws = [0.0, 0.05, 0.1, 0.3, 0.61, 1.0, 1.49, 2.74, 5.0, 9.51, 14.0]
+    scores = [D.calibrate_score(r) for r in raws]
+    _ok(all(a <= b for a, b in zip(scores, scores[1:])), "원점수가 오르면 보정 점수도 오른다")
+    _ok(scores[0] < scores[-1], "양끝이 실제로 벌어져 있다(상수 함수가 아님)")
+
+
+def test_calibration_opens_the_scale():
+    """A-3 한계 ②의 해결 여부 — 깨끗한 발화가 합격선을 넘고 중증 저하는 미달해야 한다."""
+    clean = D.calibrate_score(9.51)      # severity 0 실측
+    severe = D.calibrate_score(0.61)     # severity 3 실측
+    _ok(clean >= 65, f"정상 발화가 단어·문장 합격선(65) 이상 — 보정 전 9.51은 불가능했다 (실제 {clean})")
+    _ok(severe < 50, f"중증 저하는 음소 합격선(50)에도 못 미침 (실제 {severe})")
+
+
+def test_fit_drops_non_monotone_severity():
+    """A-3 베이스라인처럼 severity 3→4가 역전되면 그 앵커는 버려야 한다."""
+    cal = D.fit_calibration([6.65, 3.58, 2.07, 1.15, 1.25])   # 베이스라인 실측
+    _ok(cal["dropped_severities"] == [4], f"역전된 severity 4가 버려짐 (실제 {cal['dropped_severities']})")
+    raws = [a[0] for a in cal["anchors"]]
+    disp = [a[1] for a in cal["anchors"]]
+    _ok(all(a < b for a, b in zip(raws, raws[1:])), "앵커 원점수가 엄격히 증가")
+    _ok(all(a < b for a, b in zip(disp, disp[1:])), "앵커 표시점수가 엄격히 증가")
+    _ok(disp[-1] == 100.0 and disp[0] == 0.0, "양끝이 0점·100점")
+
+
+def test_fit_rejects_unusable_input():
+    for bad, why in (([9.51], "대표값이 하나뿐"), ([5.0, 5.0, 5.0], "전부 동점이라 단조가 없음")):
+        try:
+            D.fit_calibration(bad)
+            _ok(False, f"{why}면 예외를 내야 한다")
+        except ValueError:
+            pass
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:

@@ -171,6 +171,29 @@ python scripts/eval_dgop_discrimination.py \
 
 ---
 
+## 6.5 A-4 점수 보정 (~20분)
+
+A-3이 PASS해도 원점수는 그대로 못 쓴다 — 깨끗한 발화가 9.51/100이라 합격선(50·65)과 비교조차
+되지 않는다. **모델을 앱에 연결하기 전에 반드시 여기를 돌린다.**
+
+```bash
+python scripts/fit_dgop_calibration.py   --aligner /workspace/ckpt/aligner --scorer /workspace/ckpt/scorer --limit 50   --out /workspace/liplab/backend/data/dgop_calibration.json 2>&1 | tee /workspace/logs/a4-cal.log
+```
+
+severity별 원점수 중앙값을 재서 앵커를 만들고 JSON으로 남긴다(방법·근거는
+`docs/axis-a-training-plan.md` §A-4). 확인할 것:
+
+| 확인 | 기대 |
+|---|---|
+| 보정 점수 열 | severity 0→4가 90 / 72 / 58 / 40 / 20 근처 |
+| `⚠️ 제외했습니다` 경고 | 없어야 한다. 뜨면 그 severity를 모델이 구별하지 못한다는 뜻 |
+| 중앙값 vs A-3 평균 | 크게 벌어지면 소수 발화가 평균을 끌고 있다는 신호 |
+
+보정은 단조 변환이라 A-3 판정은 다시 돌리지 않아도 그대로 유효하다.
+**이 JSON은 체크포인트 전용이다** — 모델을 바꾸면 이 단계부터 다시 한다.
+
+---
+
 ## 7. 산출물 회수
 
 ```bash
@@ -189,6 +212,10 @@ hf upload <계정>/liplab-dgop-aligner /workspace/ckpt/aligner
 DGOP_ALIGNER_ID=<계정>/liplab-dgop-aligner
 DGOP_SCORER_ID=<계정>/liplab-dgop-scorer
 ```
+
+§6.5에서 만든 `backend/data/dgop_calibration.json`도 저장소에 함께 커밋한다(기본 경로라
+환경변수 없이 읽힌다). 다른 경로에 둘 거면 `DGOP_CALIBRATION=<경로>`로 알려준다 — 없으면
+축 A 실측 내장 앵커로 떨어진다.
 
 ---
 

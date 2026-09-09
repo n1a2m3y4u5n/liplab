@@ -10,6 +10,11 @@ torch/torchaudio 미설치 환경(HAS_ACOUSTIC=False)에서는 스킵한다.
 
 실행: python3 test_dgop_acoustic.py
 """
+import json
+import os
+import tempfile
+
+import dgop as D
 import dgop_acoustic as DA
 
 
@@ -133,6 +138,43 @@ def test_frame_mismatch_raises():
             _ok("프레임 수" in str(e), f"명확한 오류 메시지여야 함: {e}")
     finally:
         DA.ctc_log_probs = orig
+
+
+def _load_calibration_fresh(path):
+    """캐시를 비우고 읽는다 — 테스트끼리 앵커가 새어나가지 않도록."""
+    DA._calibration_cache.clear()
+    try:
+        return DA.load_calibration(path)
+    finally:
+        DA._calibration_cache.clear()
+
+
+def test_calibration_file_overrides_default():
+    """체크포인트를 바꾸면 앵커도 바뀐다 — 파일이 내장 기본값을 이겨야 한다."""
+    cal = D.fit_calibration([20.0, 8.0, 4.0, 2.0, 1.0], source="테스트")
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
+        json.dump(cal, f)
+        path = f.name
+    try:
+        loaded = _load_calibration_fresh(path)
+        _ok(loaded["source"] == "테스트", "파일의 앵커를 읽어야 함")
+        _ok(abs(D.calibrate_score(20.0, loaded) - 90.0) < 0.05, "파일 앵커로 보정됨")
+    finally:
+        os.unlink(path)
+
+
+def test_calibration_falls_back_when_unusable():
+    """보정 파일 하나 때문에 채점이 죽으면 안 된다 — 조용히 내장 기본값으로."""
+    missing = _load_calibration_fresh("/nonexistent/dgop_calibration.json")
+    _ok(missing is D.DEFAULT_CALIBRATION, "없는 파일 → 내장 기본값")
+
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
+        f.write("{ 깨진 JSON")
+        path = f.name
+    try:
+        _ok(_load_calibration_fresh(path) is D.DEFAULT_CALIBRATION, "깨진 파일 → 내장 기본값")
+    finally:
+        os.unlink(path)
 
 
 if __name__ == "__main__":
