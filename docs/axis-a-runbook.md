@@ -47,15 +47,19 @@ cd /workspace && git clone https://github.com/n1a2m3y4u5n/liplab.git && cd lipla
 git checkout feat/content-scale     # 축 A 작업 브랜치
 # (저장소가 공개라 Pod에서 인증 없이 그대로 받아진다)
 
-# ⚠️ venv를 만들지 않는다. RunPod PyTorch 템플릿에는 이 GPU에 맞게 빌드된 CUDA torch가
-#    이미 깔려 있는데, 깨끗한 venv를 만들면 그게 가려지고 pip가 PyPI에서 torch를 다시
-#    받는다(2.5GB, 느리고 CUDA 빌드가 어긋날 수 있다). Pod은 어차피 일회용이므로
-#    시스템 파이썬에 그대로 설치한다.
+# ⚠️ 순수 venv를 만들지 않는다. RunPod PyTorch 템플릿에는 이 GPU에 맞게 빌드된 CUDA torch가
+#    이미 깔려 있는데, 깨끗한 venv는 그걸 가려서 pip가 PyPI에서 torch를 다시 받는다
+#    (2.5GB, 느리고 CUDA 빌드가 어긋날 수 있다).
+#    그렇다고 시스템 파이썬에 바로 설치할 수도 없다 — PEP 668로 pip가 차단된다
+#    (2026-09-08 실기 확인). 답은 **시스템 패키지를 상속하는 venv**다.
+python -m venv --system-site-packages /workspace/venv
+source /workspace/venv/bin/activate
+echo 'source /workspace/venv/bin/activate' >> ~/.bashrc
 
-# 1) 먼저 템플릿의 torch를 확인한다
+# 1) 먼저 템플릿의 torch가 그대로 보이는지 확인한다
 python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
 
-# 2) torch를 건드리지 않고 나머지만 설치 (--no-deps로 torch 재설치를 막는다)
+# 2) torch를 건드리지 않고 나머지만 설치
 pip install -r backend/requirements.txt
 pip install "transformers>=5.16.0" "datasets>=3.0.0" accelerate jiwer soundfile librosa
 
@@ -66,10 +70,24 @@ echo 'export HF_HOME=/workspace/hf' >> ~/.bashrc
 python scripts/check_ml_env.py    # ← "CUDA 사용 가능: True" 확인
 ```
 
-> 1)에서 torch가 2.9 미만이거나 `cuda`가 `None`이면 템플릿을 잘못 고른 것이다.
+> 1)에서 `cuda`가 `None`이거나 torch가 2.4 미만이면 템플릿을 잘못 고른 것이다.
 > Pod을 지우고 PyTorch 2.x + CUDA 12.x 템플릿으로 다시 만드는 편이 빠르다.
+> (torch **상한**은 `<2.9.0`이다 — `requirements-ml.txt` 참고. 2.9 이상이면 그쪽을 먼저 본다.)
 
 `CUDA 사용 가능: False`면 여기서 멈춘다 — 그대로 학습하면 CPU로 돌아 수십 배 느려진다.
+
+### 2.1 두 번째 세션부터 (Pod을 다시 Start한 경우)
+
+Network Volume에 저장소·HF 캐시·체크포인트가 그대로 있으므로 §2 전체를 다시 하지 않는다.
+**Pod을 Start하면 IP·포트가 바뀐다** — 콘솔 Connect 탭에서 새로 확인한다.
+
+```bash
+source /workspace/venv/bin/activate
+cd /workspace/liplab && git pull origin feat/content-scale   # ← 로컬 수정분을 먼저 push해 둘 것
+export HF_HOME=/workspace/hf
+ls /workspace/ckpt/scorer /workspace/ckpt/aligner            # 체크포인트 생존 확인
+python scripts/check_ml_env.py
+```
 
 ---
 
@@ -150,6 +168,9 @@ python scripts/train_aligner.py \
 
 ## 6. A-3 변별력 평가 (~20분)
 
+> ⚠️ 2026-09-09 구간 뭉갬 버그 수정 이후 **이 절의 2026-09-08 결과는 무효다**(A-5 참고).
+> 같은 체크포인트로 다시 돌려 판정을 새로 받는다.
+
 ```bash
 # 미세조정 전 베이스라인 — 비교 기준
 python scripts/eval_dgop_discrimination.py --limit 50 2>&1 | tee /workspace/logs/a3-base.log
@@ -173,12 +194,27 @@ python scripts/eval_dgop_discrimination.py \
 
 ## 6.5 A-4 점수 보정 (~20분)
 
-A-3이 PASS해도 원점수는 그대로 못 쓴다 — 깨끗한 발화가 9.51/100이라 합격선(50·65)과 비교조차
-되지 않는다. **모델을 앱에 연결하기 전에 반드시 여기를 돌린다.**
+A-3이 PASS해도 원점수는 그대로 못 쓴다 — 합격선(50·65)과 비교조차 되지 않는 눈금이다.
+**모델을 앱에 연결하기 전에 반드시 여기를 돌린다.**
+
+> ⚠️ **2026-09-09 — 이번 Pod 세션은 §6부터 다시 돌려야 한다.** `align_targets`에 구간 뭉갬
+> 버그가 있었고(A-5 참고) 고쳤다. 2026-09-08에 잰 A-3 지표와 A-4 앵커는 **버그가 낀 원점수**로
+> 나온 값이라 둘 다 무효다. 체크포인트는 영향이 없으므로 **재학습은 필요 없고**, §6 → §6.5만
+> 다시 돌리면 된다(합쳐 ~40분, ~$2).
+
+**먼저 GPU 없이 배관부터 확인한다** — 인자 오타나 배관 오류를 Pod에서 처음 만나면 20분·$1을
+그대로 버린다. 합성 발화·합성 채점기로 측정 루프부터 JSON 저장까지 그대로 탄다:
+
+```bash
+python scripts/fit_dgop_calibration.py --smoke
+```
 
 ```bash
 python scripts/fit_dgop_calibration.py   --aligner /workspace/ckpt/aligner --scorer /workspace/ckpt/scorer --limit 50   --out /workspace/liplab/backend/data/dgop_calibration.json 2>&1 | tee /workspace/logs/a4-cal.log
 ```
+
+앵커 적합이 실패해도(원점수가 severity를 거스르면 실패한다) severity별 중앙값은
+`<out>.medians.json`에 남는다 — 측정을 다시 할 필요는 없다.
 
 severity별 원점수 중앙값을 재서 앵커를 만들고 JSON으로 남긴다(방법·근거는
 `docs/axis-a-training-plan.md` §A-4). 확인할 것:
@@ -189,7 +225,10 @@ severity별 원점수 중앙값을 재서 앵커를 만들고 JSON으로 남긴�
 | `⚠️ 제외했습니다` 경고 | 없어야 한다. 뜨면 그 severity를 모델이 구별하지 못한다는 뜻 |
 | 중앙값 vs A-3 평균 | 크게 벌어지면 소수 발화가 평균을 끌고 있다는 신호 |
 
-보정은 단조 변환이라 A-3 판정은 다시 돌리지 않아도 그대로 유효하다.
+보정 자체는 단조 변환이라 **보정을 새로 맞췄다는 이유로** A-3을 다시 돌릴 필요는 없다
+(순위를 바꾸지 않으므로). 이번 세션에 §6을 다시 도는 것은 별개 이유 — 구간 뭉갬 버그 수정으로
+**원점수 자체가 바뀌었기** 때문이다.
+
 **이 JSON은 체크포인트 전용이다** — 모델을 바꾸면 이 단계부터 다시 한다.
 
 ---
