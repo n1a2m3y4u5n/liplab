@@ -101,3 +101,109 @@ def fuse_audio_visual(audio_score: float, audio_uncertainty: float,
         "audio_score": round(audio_score, 1),
         "visual_score": round(float(visual_score), 1),
     }
+
+
+# ── 표시용 점수 보정(calibration) ────────────────────────────────────────────
+# A-3 실행(2026-09-08)이 남긴 한계 ②: D-GOP 원점수는 변별력은 충분하지만 스케일이 압축돼
+# 있다. 깨끗한 발화가 9.51/100이라 학습자에게 그대로 보여줄 수 없다(구간 평균 분포에 CTC
+# blank가 지배적인 프레임이 섞여 target_prob이 구조적으로 낮게 나온다).
+#
+# 원점수는 손대지 않고 **표시용 점수**를 따로 만든다. 기준 발화 집합의 severity별 대표
+# 원점수를 앵커로 잡고 그 사이를 단조 보간한다. 보간은 log 공간에서 한다 — 원점수가
+# severity에 따라 대략 기하급수로 줄기 때문이다(9.51 → 2.74 → 1.49 → 0.61 → 0.30).
+#
+# 보정은 **단조 증가 변환**이라 A-3 변별력 지표(순위상관·AUC)는 보정 전후가 같다.
+# 바뀌는 것은 사람이 읽는 숫자뿐이다 — 변별력을 사후에 만들어내지 않는다.
+#
+# 체크포인트를 바꾸면 원점수 스케일도 바뀐다. scripts/fit_dgop_calibration.py로 다시
+# 맞춰 JSON을 갈아끼운다(dgop_acoustic.load_calibration).
+
+CALIBRATION_FLOOR = 0.05
+"""log 변환의 유사계수. 원점수 0(정렬은 됐으나 전부 빗나감)도 다룰 수 있게 한다."""
+
+DISPLAY_TARGETS_BY_SEVERITY = [90.0, 72.0, 58.0, 40.0, 20.0]
+"""
+severity 0~4의 대표 원점수를 각각 몇 점으로 보이게 할지 — 제품 결정이다.
+기준은 speak_curriculum의 합격선(음소 50, 단어·문장 65): 정상 발화(0)는 넉넉히 통과(90),
+경도 저하(1)는 통과선 바로 위(72), 중등도(2)는 단어·문장 합격선 아래지만 음소는 통과(58),
+중증(3·4)은 확실히 미달(40·20). 만점(100)은 앵커에서 외삽한다 — 정상 발화 대표값보다
+뚜렷하게 좋아야 100이 나오게 하기 위함이다.
+"""
+
+
+def fit_calibration(raw_by_severity: Sequence[float],
+                    targets: Optional[Sequence[float]] = None,
+                    source: str = "") -> Dict:
+    """
+    severity별 대표 원점수(중앙값 권장) → 보정 앵커. 순수 함수라 결정론적으로 테스트된다.
+
+    앵커는 raw 오름차순으로 **엄격히 단조**여야 보간이 성립한다. 원점수가 severity를
+    거스르는 구간(예: A-3 베이스라인의 severity 3→4 역전)은 앵커에서 버리고 dropped에
+    남긴다 — 역전을 그대로 앵커로 삼으면 보정이 뒤집혀 더 나쁜 발음에 더 높은 점수가 간다.
+
+    양끝: 원점수 0은 0점, 최상위 앵커의 기울기를 그대로 연장한 지점을 100점으로 둔다.
+    """
+    tg = list(targets if targets is not None else DISPLAY_TARGETS_BY_SEVERITY)
+    raws = [float(r) for r in raw_by_severity]
+    if len(raws) < 2:
+        raise ValueError("앵커를 만들려면 severity 대표값이 최소 2개 필요합니다")
+    if len(tg) < len(raws):
+        raise ValueError(f"표시 목표({len(tg)}개)가 severity({len(raws)}개)보다 적습니다")
+
+    pairs = sorted(zip(raws, tg[:len(raws)], range(len(raws))))  # raw 오름차순
+    anchors: List[List[float]] = [[0.0, 0.0]]
+    dropped: List[int] = []
+    for raw, display, sev in pairs:
+        if raw > anchors[-1][0] and display > anchors[-1][1]:
+            anchors.append([round(raw, 4), float(display)])
+        else:
+            dropped.append(sev)          # 단조를 깨는 severity
+    if len(anchors) < 3:                 # (0,0) 외에 앵커가 둘은 있어야 기울기가 나온다
+        raise ValueError(f"단조인 앵커가 부족합니다(버려진 severity: {dropped})")
+
+    # 최상위 구간의 기울기(점/decade)를 연장해 100점 지점을 잡는다.
+    (r1, d1), (r2, d2) = anchors[-2], anchors[-1]
+    x1, x2 = _cal_x(r1, CALIBRATION_FLOOR), _cal_x(r2, CALIBRATION_FLOOR)
+    slope = (d2 - d1) / (x2 - x1)
+    if d2 < 100.0 and slope > 0:
+        top = 10 ** (x2 + (100.0 - d2) / slope) - CALIBRATION_FLOOR
+        anchors.append([round(top, 4), 100.0])
+
+    return {"source": source, "floor": CALIBRATION_FLOOR,
+            "anchors": anchors, "dropped_severities": dropped}
+
+
+def _cal_x(raw: float, floor: float) -> float:
+    """보간 좌표. 원점수를 log 공간으로 옮긴다(floor는 0을 다루기 위한 유사계수)."""
+    return math.log10(max(float(raw), 0.0) + floor)
+
+
+# 축 A A-3 실측(2026-09-08, zeroth_korean test 50발화 × severity 0~4)의 severity별 평균.
+# 앱이 별도 보정 파일 없이도 사람이 읽을 수 있는 점수를 내도록 이 값을 기본 앵커로 쓴다.
+AXIS_A_SEVERITY_SCORES = [9.51, 2.74, 1.49, 0.61, 0.30]
+
+DEFAULT_CALIBRATION = fit_calibration(
+    AXIS_A_SEVERITY_SCORES,
+    source="axis-a/2026-09-08 zeroth_korean test 50발화 severity 평균")
+
+
+def calibrate_score(raw_score: Optional[float], calibration: Optional[Dict] = None) -> Optional[float]:
+    """
+    원점수(0~100) → 표시용 점수(0~100). 앵커 사이를 log 공간에서 선형 보간하고 양끝은 고정한다.
+    raw_score가 None이면 None을 그대로 돌려준다(채점 불가를 점수 0으로 둔갑시키지 않는다).
+    """
+    if raw_score is None:
+        return None
+    cal = calibration or DEFAULT_CALIBRATION
+    anchors = cal["anchors"]
+    floor = float(cal.get("floor", CALIBRATION_FLOOR))
+    x = _cal_x(raw_score, floor)
+
+    if x <= _cal_x(anchors[0][0], floor):
+        return round(float(anchors[0][1]), 1)
+    for (r1, d1), (r2, d2) in zip(anchors, anchors[1:]):
+        x1, x2 = _cal_x(r1, floor), _cal_x(r2, floor)
+        if x <= x2:
+            t = (x - x1) / (x2 - x1) if x2 > x1 else 1.0
+            return round(max(0.0, min(100.0, d1 + t * (d2 - d1))), 1)
+    return round(float(anchors[-1][1]), 1)   # 최상위 앵커 초과 — 만점에서 멈춘다
