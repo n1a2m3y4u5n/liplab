@@ -96,7 +96,7 @@ def main() -> int:
     args = ap.parse_args()
 
     if not DA.HAS_ACOUSTIC or not DSS.HAS_SYNTHESIS:
-        print("torch/torchaudio/librosa 미설치 — backend/requirements-ml.txt 설치 필요",
+        print("torch/transformers/librosa 미설치 — backend/requirements-ml.txt 설치 필요",
               file=sys.stderr)
         return 2
 
