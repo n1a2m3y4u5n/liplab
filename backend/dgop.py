@@ -178,20 +178,21 @@ def _cal_x(raw: float, floor: float) -> float:
     return math.log10(max(float(raw), 0.0) + floor)
 
 
-# 축 A A-3 실측(2026-09-08, zeroth_korean test 50발화 × severity 0~4)의 severity별 평균.
+# 축 A A-4 실측(2026-09-09, zeroth_korean test 50발화 × severity 0~4)의 severity별 **중앙값**.
 # 앱이 별도 보정 파일 없이도 사람이 읽을 수 있는 점수를 내도록 이 값을 기본 앵커로 쓴다.
+# backend/data/dgop_calibration.json과 같은 값이라, 파일이 없어도 동작이 달라지지 않는다.
 #
-# ⚠️ 이 값은 **낡았다**(2026-09-09). 측정 당시 dgop_acoustic.align_targets에 구간 뭉갬
-# 버그가 있었다 — 중복 출현 토큰의 구간을 '첫 출현~마지막 출현'으로 잡아 원점수가 구조적으로
-# 낮게 나왔다(합성 실험: 46.5 → 95.2). 버그를 고쳤으므로 같은 체크포인트라도 원점수 스케일이
-# 달라진다. scripts/fit_dgop_calibration.py를 축 A 체크포인트로 다시 돌려
-# backend/data/dgop_calibration.json을 만들기 전까지, 이 내장값은 '보정 경로가 죽지 않게 하는
-# 폴백'일 뿐 정확한 눈금이 아니다(런북 §6.5).
-AXIS_A_SEVERITY_SCORES = [9.51, 2.74, 1.49, 0.61, 0.30]
+# 2026-09-08에 잰 [9.51, 2.74, 1.49, 0.61, 0.30]을 대체한 값이다. 그때는 align_targets에
+# 구간 뭉갬 버그가 있어 원점수가 구조적으로 낮게 나왔다(중복 출현 토큰의 구간을 '첫 출현~
+# 마지막 출현'으로 잡아 발화 대부분을 삼켰다). 버그 수정 후 같은 체크포인트에서 깨끗한
+# 발화가 9.51 → 78.15로 올랐다 — 한계 ②(스케일 압축)의 실제 원인이 이 버그였다.
+#
+# ⚠️ 체크포인트를 바꾸면 이 값도 무효다 — scripts/fit_dgop_calibration.py로 재적합한다(런북 §6.5).
+AXIS_A_SEVERITY_SCORES = [78.15, 31.65, 15.2, 2.9, 0.85]
 
 DEFAULT_CALIBRATION = fit_calibration(
     AXIS_A_SEVERITY_SCORES,
-    source="axis-a/2026-09-08 zeroth_korean test 50발화 severity 평균")
+    source="axis-a/2026-09-09 zeroth_korean test 50발화 severity 중앙값")
 
 
 def calibrate_score(raw_score: Optional[float], calibration: Optional[Dict] = None) -> Optional[float]:
