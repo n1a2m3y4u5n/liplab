@@ -81,6 +81,21 @@ python scripts/check_ml_env.py    # ← "CUDA 사용 가능: True" 확인
 Network Volume에 저장소·HF 캐시·체크포인트가 그대로 있으므로 §2 전체를 다시 하지 않는다.
 **Pod을 Start하면 IP·포트가 바뀐다** — 콘솔 Connect 탭에서 새로 확인한다.
 
+⚠️ **SSH가 `Permission denied`로 막힐 수 있다**(2026-09-09 실기). Start 시 컨테이너의
+`PUBLIC_KEY` 환경변수가 비어 있으면 계정에 등록된 공개키가 `authorized_keys`에 주입되지
+않는다. 계정 키 등록 여부와 무관하다(프록시 `ssh.runpod.io`도 함께 막힌다). 해결:
+
+```bash
+# Pod env에 공개키를 넣고 재시작한다(JUPYTER_PASSWORD 같은 기존 env를 함께 보내야 덮이지 않는다)
+curl -X PATCH https://rest.runpod.io/v1/pods/<podId> \
+  -H "Authorization: Bearer $RUNPOD_API_KEY" -H "Content-Type: application/json" \
+  -d "{\"env\":{\"PUBLIC_KEY\":\"$(cat ~/.ssh/id_ed25519.pub)\",\"JUPYTER_PASSWORD\":\"<기존값>\"}}"
+```
+
+PATCH가 컨테이너를 재시작시키므로 **포트 매핑이 또 바뀐다** —
+`GET /v1/pods/<podId>`의 `portMappings["22"]`로 다시 확인한다(`runtime`이 `null`이어도
+`portMappings`는 채워진다).
+
 ```bash
 source /workspace/venv/bin/activate
 cd /workspace/liplab && git pull origin feat/content-scale   # ← 로컬 수정분을 먼저 push해 둘 것
@@ -168,8 +183,9 @@ python scripts/train_aligner.py \
 
 ## 6. A-3 변별력 평가 (~20분)
 
-> ⚠️ 2026-09-09 구간 뭉갬 버그 수정 이후 **이 절의 2026-09-08 결과는 무효다**(A-5 참고).
-> 같은 체크포인트로 다시 돌려 판정을 새로 받는다.
+> ✅ 2026-09-09 재측정 완료(A-5 참고). 구간 뭉갬 버그 수정 후 같은 체크포인트로 다시 돌려
+> **단조성 0.998 / AUC 1.000 / 정렬 1.000 — 축 A 합격**을 받았다. 베이스라인도 다시 쟀고
+> 3→4 역전(1.97 → 2.00)이 재현돼 버그 탓이 아님이 확인됐다. 체크포인트를 바꿀 때만 다시 돈다.
 
 ```bash
 # 미세조정 전 베이스라인 — 비교 기준
@@ -197,10 +213,12 @@ python scripts/eval_dgop_discrimination.py \
 A-3이 PASS해도 원점수는 그대로 못 쓴다 — 합격선(50·65)과 비교조차 되지 않는 눈금이다.
 **모델을 앱에 연결하기 전에 반드시 여기를 돌린다.**
 
-> ⚠️ **2026-09-09 — 이번 Pod 세션은 §6부터 다시 돌려야 한다.** `align_targets`에 구간 뭉갬
-> 버그가 있었고(A-5 참고) 고쳤다. 2026-09-08에 잰 A-3 지표와 A-4 앵커는 **버그가 낀 원점수**로
-> 나온 값이라 둘 다 무효다. 체크포인트는 영향이 없으므로 **재학습은 필요 없고**, §6 → §6.5만
-> 다시 돌리면 된다(합쳐 ~40분, ~$2).
+> ✅ **2026-09-09 재적합 완료.** severity 중앙값 78.15 / 31.65 / 15.20 / 2.90 / 0.85로
+> 앵커 5개 전부 채택됐고 `backend/data/dgop_calibration.json`으로 커밋됐다. 다음 재적합은
+> **체크포인트를 바꿀 때**다.
+>
+> 실제 소요(H100, 50발화): A-3 축 A 약 12분 + 베이스라인 약 9분 + A-4 약 11분.
+> Pod 단가는 런북 §8의 $2.99가 아니라 **$3.49/hr**이었다(2026-09-09 실측).
 
 **먼저 GPU 없이 배관부터 확인한다** — 인자 오타나 배관 오류를 Pod에서 처음 만나면 20분·$1을
 그대로 버린다. 합성 발화·합성 채점기로 측정 루프부터 JSON 저장까지 그대로 탄다:
