@@ -175,8 +175,6 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/practice" element={<StageGate stage={3}><Practice /></StageGate>} />
         <Route path="/conversation" element={<StageGate stage={4}><Conversation /></StageGate>} />
-        <Route path="/sign" element={<Sign />} />
-        <Route path="/tactile" element={<TactilePractice />} />
         <Route path="/learn/viseme" element={<VisemeLiteracy />} />
         <Route path="/learn/word" element={<StageGate stage={2}><WordStage /></StageGate>} />
         <Route path="/learn/conversation-multi" element={<MultiConversation />} />
