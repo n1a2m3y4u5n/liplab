@@ -1,6 +1,6 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
-> 최종 갱신 2026-09-09 (`ee8951f`). 브랜치 `feat/content-scale`, origin과 동기화됨.
+> 최종 갱신 2026-09-09 (`12b91ba` 이후). 브랜치 `feat/content-scale`, origin과 동기화됨.
 > 이 파일은 **한 화면짜리 현황판**이다. 근거·수치는 각 항목의 링크를 따라간다.
 > 전체 이력은 `DEVELOPMENT_SUMMARY.md`.
 
@@ -32,6 +32,8 @@
 명령어 전문·판정 기준 → **`docs/axis-b-scorer-redesign.md`** (§3 실행, §4 판정)
 
 - 필요한 것: **RunPod API 키**, **HF write 토큰**
+  - ⚠️ 2026-09-09 세션에서 쓴 키·토큰은 **대화 기록에 남아 있으니 폐기(rotate) 권장.**
+    저장소·커밋에 흔적이 없음은 확인했다. 다시 필요하면 새로 발급하면 된다
 - 비용: ~$2 (Pod $3.49/hr)
 - 잔액: 2026-09-09 기준 약 **$14** + 볼륨 월 $4.20(하루 $0.14) 계속 과금 중
 
@@ -72,8 +74,9 @@ python scripts/sweep_gop_scorers.py --features data_out/perturb.npz
 | **100점 도달 불가** | 표시 상한 94.9 | **그대로 두기로 결정** — 발음 교정 앱에서 만점을 주지 않는 편이 낫다 |
 | **농인 발화 데이터 조사** | 7개 축 병렬 조사 | `docs/deaf-speech-data-research.md` |
 | **채점식 재설계 배관** | E1/E2 실험 도구 일체 | `docs/axis-b-scorer-redesign.md`. **GPU만 남음** |
+| **촉각(타도마) 제거** | 세 기둥 → **두 기둥(독화·말하기)** | 파일 22개·백엔드 엔드포인트 6개 삭제. 대시보드·메뉴·분석·안내 전부 두 기둥 기준으로 재정렬 (`b730c0d`) |
 
-테스트: **backend 22 + scripts 3, 전부 통과.**
+테스트: **backend 22 + scripts 3 + frontend 35, 전부 통과.**
 
 ### ⚠️ 발견됐지만 아직 안 고친 것
 
@@ -96,6 +99,13 @@ python scripts/sweep_gop_scorers.py --features data_out/perturb.npz
 | **E1·E2 실행** | 같은 GPU 병목 | 배관·테스트 완료 |
 | **실제 농인 발화** | AI Hub 71434는 IRB+소속증빙 필요(안심존). 608은 본인인증만 | 경로는 조사 완료 |
 
+### 🔸 결정이 필요한 것
+
+- **촉각 DB 테이블을 지울 것인가.** 프론트·백엔드에서 촉각을 걷어낼 때 `database.py`의
+  `TactileStageProgress`·`TactileAttempt`와 `Bookmark.domain`의 `'tactile'` 값은 **일부러 남겼다.**
+  조회하는 코드가 없어 무해하지만, 지우면 기존 행이 사라지므로 별도 판단이 필요하다.
+- **`torchaudio<2.9.0` 상한 해제** — 아래 함정 4번 참고.
+
 ---
 
 ## 알아둘 함정 (반복해서 밟은 것들)
@@ -104,7 +114,15 @@ python scripts/sweep_gop_scorers.py --features data_out/perturb.npz
 2. **Pod Start 후 `PUBLIC_KEY` env가 비어 SSH가 막힌다** — env PATCH + 재시작. 그러면 포트가 또 바뀐다 (런북 §2.1)
 3. **`--mode perturb`는 자모 vocab 전용** — 음절 vocab으로 돌리면 첫 발화에서 즉시 실패하도록 막아 뒀다
 4. `torchaudio<2.9.0` 상한은 **기술적 근거가 사라졌지만 그대로 둔 상태**(학습 재현성 때문). 푸는 건 별도 판단
-5. 편집 시 줄바꿈: `main.py`만 CRLF, 나머지 LF
+5. **줄바꿈이 파일마다 다르다 — `main.py`만이 아니다.** 실측 결과 소스 18개가 CRLF다:
+   `backend/{main,database,engine,scoring,llm_service,auth,check_db}.py`,
+   `frontend/src/api.js`, `frontend/src/pages/{Practice,Conversation,Bookmarks}.jsx`,
+   `frontend/src/components/{LipSyncPlayer3D,QuizForm}.jsx`, `frontend/src/{main.jsx,store/useStore.js}`,
+   `frontend/{vite,tailwind,postcss}.config.js`. 나머지는 LF.
+   섞으면 diff가 파일 전체로 뒤집힌다. **편집 전에 확인한다:**
+   ```bash
+   grep -c $'\r' <파일>     # 0이면 LF, 줄 수와 같으면 CRLF
+   ```
 6. 테스트는 pytest가 아니라 자체 러너 — `PYTHONPATH=. python test_x.py`
 
 ---
