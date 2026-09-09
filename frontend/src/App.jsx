@@ -71,14 +71,12 @@ const WordStage = lazy(() => import('./pages/WordStage'))
 const Review = lazy(() => import('./pages/Review'))
 const Closure = lazy(() => import('./pages/Closure'))
 const SpeakingPractice = lazy(() => import('./pages/SpeakingPractice'))
-const TactilePractice = lazy(() => import('./pages/TactilePractice'))
 const FreeSpeak = lazy(() => import('./pages/FreeSpeak'))
 const ScenarioHub = lazy(() => import('./pages/ScenarioHub'))
 const PillarHub = lazy(() => import('./pages/PillarHub'))
 const ReviewLanding = lazy(() => import('./pages/ReviewLanding'))
 const SpeakingReviewLanding = lazy(() => import('./pages/SpeakingReviewLanding'))
 const AnalysisDetail = lazy(() => import('./pages/AnalysisDetail'))
-const HardwareBuild = lazy(() => import('./pages/HardwareBuild'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
@@ -182,16 +180,12 @@ function App() {
         <Route path="/learn/scenario" element={<ScenarioHub />} />
         <Route path="/pillar/:id" element={<PillarHub />} />
         <Route path="/learn/speaking" element={<SpeakingPractice />} />
-        <Route path="/learn/tactile" element={<TactilePractice />} />
-        <Route path="/learn/tactile/hardware" element={<TactilePractice />} />
-        <Route path="/hardware/build" element={<HardwareBuild />} />
         <Route path="/learn/sign" element={<Sign />} />
         <Route path="/review/today" element={<ReviewLanding mode="today" />} />
         <Route path="/review/scheduled" element={<Review />} />
         <Route path="/review/mistakes" element={<ReviewLanding mode="mistakes" />} />
         <Route path="/review/speaking" element={<SpeakingReviewLanding />} />
         <Route path="/review/speaking/session" element={<SpeakingPractice />} />
-        <Route path="/review/tactile" element={<TactilePractice />} />
         <Route path="/review/saved" element={<Bookmarks />} />
         <Route path="/analysis/overview" element={<AnalysisDetail mode="overview" />} />
         <Route path="/analysis/activity" element={<AnalysisDetail mode="activity" />} />

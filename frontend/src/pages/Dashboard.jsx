@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
-import { learningAPI, curriculumAPI, reviewAPI, speakAPI, tactileAPI } from '../api'
+import { learningAPI, curriculumAPI, reviewAPI, speakAPI } from '../api'
 import DashboardPet from '../components/DashboardPet'
 
 const PRESET_SITUATIONS = [
@@ -43,19 +43,6 @@ const HERO_SLIDES = [
     background: 'from-[#fff6f7] via-[#ffe7eb] to-[#ffd5dc]',
     badge: 'bg-white/80 text-rose-700',
     visual: { shape: 'from-rose-300 via-rose-400 to-pink-500', shadow: 'shadow-[0_30px_60px_rgba(244,63,94,0.22)]', first: '소리', second: '억양', third: '발음', chip: 'bg-rose-100 text-rose-700' },
-  },
-  {
-    id: 'tactile',
-    tab: '촉각(타도마)',
-    eyebrow: '03',
-    title: ['촉각 학습', '손끝으로 느껴요'],
-    description: '입의 움직임과 진동을 촉각으로 익혀요.',
-    to: '/pillar/tactile',
-    navMenuId: 'tactile',
-    cta: '촉각 학습 보기',
-    background: 'from-[#faf8ff] via-[#eee9ff] to-[#ddd6fe]',
-    badge: 'bg-white/80 text-violet-700',
-    visual: { shape: 'from-violet-300 via-violet-400 to-purple-600', shadow: 'shadow-[0_30px_60px_rgba(124,58,237,0.22)]', first: '진동', second: '바람', third: '촉각', chip: 'bg-violet-100 text-violet-700' },
   },
 ]
 
@@ -140,75 +127,11 @@ const STAGE_STATUS = {
   coming_soon: { label: '준비 중',  cls: 'bg-gray-100 text-gray-400' },
 }
 
-// ── 촉각 학습(타도마) — 독화·말하기 카드와 완전 동급(백엔드 진행도 + 동일 구조) ──
-function TactileCard() {
-  const navigate = useNavigate()
-  const [stages, setStages] = useState(null)
-
-  useEffect(() => {
-    tactileAPI.getCurriculum().then((d) => setStages(d.stages)).catch(() => setStages(null))
-  }, [])
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card !p-4">
-      <div className="flex items-center justify-between mb-0.5">
-        <div className="flex items-center gap-2">
-          <h2 className="text-base font-bold text-gray-900">촉각 학습 (타도마)</h2>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">하드웨어</span>
-        </div>
-        <span className="text-xs text-gray-400">손으로 느끼는 발화 이해</span>
-      </div>
-      <p className="mb-2 line-clamp-2 text-xs text-gray-500">
-        얼굴 모형의 턱·입술·진동·바람을 손으로 느끼며 말을 이해해요 — 하드웨어 없이 시뮬레이터로도 체험할 수 있어요.
-      </p>
-      {!stages ? (
-        <div className="py-4 text-center text-xs text-gray-400">불러오는 중…</div>
-      ) : (
-        <>
-        {(() => {
-          const total = stages.length
-          const started = stages.filter((s) => s.status === 'mastered' || s.status === 'in_progress').length
-          const lastMastered = [...stages].reverse().find((s) => s.status === 'mastered')
-          const inProgress = stages.find((s) => s.status === 'in_progress')
-          const note = lastMastered ? `${lastMastered.title} 완료`
-            : inProgress ? `${inProgress.title} 학습 중` : '아직 시작 전'
-          const pct = total ? Math.round(started / total * 100) : 0
-          return (
-            <div className="rounded-xl bg-gray-50 p-3">
-              <div className="mb-1.5 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-gray-600">진행</span>
-                  <div className="flex gap-1">
-                    {stages.map((s) => (
-                      <span key={s.stage}
-                        title={`${s.stage + 1}. ${s.title} · ${STAGE_STATUS[s.status]?.label || ''}`}
-                        className={`h-2.5 w-2.5 rounded-full ${s.status === 'mastered' ? 'bg-purple-600' : s.status === 'in_progress' ? 'bg-purple-300' : 'bg-gray-200'}`} />
-                    ))}
-                  </div>
-                </div>
-                <span className="truncate text-xs text-gray-500">{started}/{total}단계 · {note}</span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-gray-200">
-                <div className="h-full bg-purple-500 transition-all" style={{ width: `${pct}%` }} />
-              </div>
-            </div>
-          )
-        })()}
-        <button onClick={() => navigate('/learn/tactile')}
-          className="mt-2 w-full py-2 rounded-xl text-xs font-semibold bg-purple-600 text-white hover:bg-purple-700 transition-all">
-          🖐️ 촉각 학습 열기 →
-        </button>
-        </>
-      )}
-    </motion.div>
-  )
-}
-
-// ── 오늘의 복습 — 세 기둥(독화·말하기·타도마) 모두 예정(SRS)·틀림·북마크 3분할 ──────
+// ── 오늘의 복습 — 두 기둥(독화·말하기) 모두 예정(SRS)·틀림·북마크 3분할 ──────
 function ReviewSection() {
   const navigate = useNavigate()
   const setScenario = useStore((s) => s.setScenario)
-  const [data, setData] = useState(null)          // { read, speak, tactile } 각 {due, wrong, bookmark}
+  const [data, setData] = useState(null)          // { read, speak } 각 {due, wrong, bookmark}
   const [wrongSentences, setWrongSentences] = useState([])  // 독화 문장 복습(오답)용
 
   useEffect(() => {
@@ -217,13 +140,11 @@ function ReviewSection() {
       learningAPI.getReviewSentences().catch(() => []),
       learningAPI.getBookmarks('read').catch(() => []),
       speakAPI.getReview().catch(() => ({ buckets: { due: 0, wrong: 0, bookmark: 0 } })),
-      tactileAPI.getReview().catch(() => ({ buckets: { due: 0, wrong: 0, bookmark: 0 } })),
-    ]).then(([due, wrong, bm, speak, tactile]) => {
+    ]).then(([due, wrong, bm, speak]) => {
       setWrongSentences(wrong || [])
       setData({
         read: { due: (due.items || []).length, wrong: (wrong || []).length, bookmark: (bm || []).length },
         speak: speak.buckets || { due: 0, wrong: 0, bookmark: 0 },
-        tactile: tactile.buckets || { due: 0, wrong: 0, bookmark: 0 },
       })
     })
   }, [])
@@ -246,24 +167,22 @@ function ReviewSection() {
       theme: { bg: 'bg-sky-50/40', border: 'border-sky-100', badge: 'bg-sky-100 text-sky-700', btn: 'bg-sky-600 hover:bg-sky-700' } },
     { key: 'speak', icon: '🗣️', label: '말하기', b: data.speak, onStart: () => navigate('/review/speaking'),
       theme: { bg: 'bg-rose-50/40', border: 'border-rose-100', badge: 'bg-rose-100 text-rose-700', btn: 'bg-rose-600 hover:bg-rose-700' } },
-    { key: 'tactile', icon: '🖐️', label: '타도마', b: data.tactile, onStart: () => navigate('/review/tactile'),
-      theme: { bg: 'bg-purple-50/40', border: 'border-purple-100', badge: 'bg-purple-100 text-purple-700', btn: 'bg-purple-600 hover:bg-purple-700' } },
   ] : []
 
   return (
     <motion.div id="daily-review" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card !p-4 scroll-mt-52">
       <div className="mb-0.5 flex items-center justify-between gap-3">
         <h2 className="text-base font-bold text-gray-900">오늘의 복습</h2>
-        <span className="text-xs text-gray-400">세 기둥 · 예정·틀림·북마크</span>
+        <span className="text-xs text-gray-400">두 기둥 · 예정·틀림·북마크</span>
       </div>
       <p className="mb-3 text-xs text-gray-500">
-        독화·말하기·타도마를 각각 <b>예정(간격반복)</b> · <b>틀린 문제</b> · <b>북마크</b>로 복습해요.
+        독화·말하기를 각각 <b>예정(간격반복)</b> · <b>틀린 문제</b> · <b>북마크</b>로 복습해요.
       </p>
 
       {!data ? (
         <div className="py-4 text-center text-xs text-gray-400">불러오는 중...</div>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-2">
           {pillars.map((p) => {
             const total = p.b.due + p.b.wrong + p.b.bookmark
             return (

@@ -211,14 +211,5 @@ export const seedAPI = {
   seedDemo: async () => (await api.post('/seed-demo')).data,
 }
 
-// 촉각(타도마) 하드웨어 — 한글 → 음소별 액추에이터 시퀀스 + 커리큘럼 진행도
-export const tactileAPI = {
-  getSequence: async (text) => (await api.get('/tactile', { params: { text } })).data,
-  getCurriculum: async () => (await api.get('/tactile/curriculum')).data,
-  getPool: async (level) => (await api.get('/tactile/pool', { params: { level } })).data,
-  getReview: async () => (await api.get('/tactile/review')).data,
-  getAnalysis: async () => (await api.get('/tactile/analysis', { timeout: 30000 })).data,
-  submitResult: async (stage, correct, target = '', review = false) => (await api.post('/tactile/result', { stage, correct, target, review })).data,
-}
 
 export default api

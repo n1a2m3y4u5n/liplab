@@ -1,6 +1,6 @@
 """데모용 더미 학습 기록 시드.
 데모 계정을 '수개월간 꾸준히 써 온 활성 유저'처럼 보이게 채운다.
-대시보드 통계·활동 캘린더·독화 분석(취약 입모양/음소 혼동)·말하기/촉각 분석·단계 진행·복습을 모두 채운다.
+대시보드 통계·활동 캘린더·독화 분석(취약 입모양/음소 혼동)·말하기 분석·단계 진행·복습을 모두 채운다.
 
 재시드 정책(SEED_VERSION):
   - 시드 버전 마커(Progress.scenario_id == SEED_MARKER)가 있으면 최신 → 스킵.
@@ -56,7 +56,7 @@ async def run(user, db):
     """데모 계정에 더미 기록을 넣는다. 최신 버전이 이미 있으면 False(스킵)."""
     from database import (Progress, WeakViseme, StageProgress,
                           SpeakStageProgress, SpeakAttempt, LearningProfile,
-                          TactileStageProgress, TactileAttempt, ReviewItem, Bookmark)
+                          ReviewItem, Bookmark)
     from sqlalchemy import select, delete
 
     # 이미 최신 버전으로 시드됐는지 — 마커 확인
@@ -70,7 +70,7 @@ async def run(user, db):
     has_any = await db.execute(select(Progress.id).where(Progress.user_id == user.id).limit(1))
     if has_any.scalar_one_or_none() is not None:
         for M in (Progress, WeakViseme, StageProgress, SpeakStageProgress, SpeakAttempt,
-                  TactileStageProgress, TactileAttempt, ReviewItem, Bookmark):
+                  ReviewItem, Bookmark):
             await db.execute(delete(M).where(M.user_id == user.id))
         await db.commit()
 
@@ -119,11 +119,6 @@ async def run(user, db):
     db.add(SpeakStageProgress(user_id=user.id, stage=3, status="mastered", mastery_score=79.0, attempts=28, correct=21))
     db.add(SpeakStageProgress(user_id=user.id, stage=4, status="in_progress", mastery_score=61.0, attempts=19, correct=11))
 
-    # ── 촉각 단계 진행 (5단계 중 2단계 숙달) ──
-    db.add(TactileStageProgress(user_id=user.id, stage=0, status="mastered", mastery_score=92.0, attempts=16, correct=15))
-    db.add(TactileStageProgress(user_id=user.id, stage=1, status="mastered", mastery_score=86.0, attempts=18, correct=15))
-    db.add(TactileStageProgress(user_id=user.id, stage=2, status="in_progress", mastery_score=63.0, attempts=13, correct=8))
-
     # ── 발화 시도(SpeakAttempt) — 말하기 분석 (최근 70일에 분산) ──
     for t, tr, sc, ld, pr, conf in SPEAK_ITEMS * 4:
         db.add(SpeakAttempt(
@@ -134,12 +129,6 @@ async def run(user, db):
             pitch_start=float(random.randint(110, 140)), pitch_end=float(random.randint(110, 160)),
             confusions=conf, created_at=now - timedelta(days=random.randint(0, 70), hours=random.randint(0, 20)),
         ))
-
-    # ── 촉각 시도(TactileAttempt) — 타도마 복습 '틀림' 채우기 ──
-    for tgt, ok in [("바다", True), ("파도", False), ("포도", False), ("사과", True),
-                    ("구두", False), ("바나나", True), ("단추", False), ("포도", True)]:
-        db.add(TactileAttempt(user_id=user.id, stage=random.choice([2, 3]), target=tgt, correct=ok,
-                              created_at=now - timedelta(days=random.randint(0, 30))))
 
     # ── 독화 오답 문장(<60) — 독화 '틀린 문제' 채우기 ──
     for s, ua, sc in [("커피 주세요", "커피 두세요", 52), ("파도가 쳐요", "바도가 쳐요", 47),
@@ -156,16 +145,15 @@ async def run(user, db):
     for kind, ref in [("viseme", "1"), ("viseme", "5"), ("viseme", "9"),
                       ("word", "사과"), ("word", "포도"),
                       ("speak", "학교"), ("speak", "다리"), ("speak", "토끼"),
-                      ("tactile", "파도"), ("tactile", "구두"), ("tactile", "단추")]:
+                      ("speak", "포도")]:
         db.add(ReviewItem(user_id=user.id, kind=kind, ref=ref, due_date=_today, interval_days=random.choice([1, 2, 4])))
 
-    # ── 북마크(도메인별) — 세 기둥 '북마크' 채우기 ──
+    # ── 북마크(도메인별) — 두 기둥 '북마크' 채우기 ──
     for sent, sit, lv, dom in [
         ("여기 앉아도 될까요?", "독화", 2, "read"),
         ("천천히 말씀해 주세요", "독화", 3, "read"),
         ("고맙습니다.", "말하기", 1, "speak"),
         ("다시 만나요", "말하기", 2, "speak"),
-        ("안녕하세요", "촉각", 1, "tactile"),
     ]:
         db.add(Bookmark(user_id=user.id, sentence=sent, situation=sit, level=lv, domain=dom))
 

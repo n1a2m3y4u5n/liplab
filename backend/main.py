@@ -413,7 +413,7 @@ class BookmarkCreate(BaseModel):
     sentence: str
     situation: str = ""
     level: int = 1
-    domain: str = "read"   # read | speak | tactile — 세 기둥 공통 북마크
+    domain: str = "read"   # read | speak — 두 기둥 공통 북마크
 
 
 @app.get("/api/bookmarks")
@@ -976,7 +976,7 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
 # ── 간격 반복 복습 (SRS) ──────────────────────────────────────────────────
 @app.get("/api/review/due")
 async def review_due(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """오늘까지 복습 예정인 독화 항목(입모양/단어)만. 말하기·촉각 예정은 각 /api/speak|tactile/review가 별도 반환."""
+    """오늘까지 복습 예정인 독화 항목(입모양/단어)만. 말하기 예정은 /api/speak/review가 별도 반환."""
     from database import ReviewItem
     from sqlalchemy import select
     today = _sr_date.today().isoformat()
@@ -1015,7 +1015,7 @@ async def review_answer(data: ReviewAnswer, current_user=Depends(get_current_use
             "interval_days": res["interval_days"], **reward}
 
 
-# ── 공용 복습 유틸 — 세 기둥(독화·말하기·촉각)이 동일 구조(예정/틀림/북마크)를 쓰도록 ──
+# ── 공용 복습 유틸 — 두 기둥(독화·말하기)이 동일 구조(예정/틀림/북마크)를 쓰도록 ──
 async def _sr_touch(user_id: int, kind: str, ref: str, correct: bool, db, score: float = None):
     """SRS 큐 유지(SM-2) — 틀리면 내일 재등장(신규면 등록), 맞으면 ease·반복에 따라 간격을 늘려
     충분히 커지면 졸업. 점수(score 0~100)가 오면 이진 대신 등급(quality)으로 반영한다.
@@ -1300,133 +1300,6 @@ async def conversation_multi(speakers: int = 2, turns: int = 6,
 
 # ── 발화 커리큘럼(6단계) — 상태·게이팅·콘텐츠 ────────────────────────────────
 import speak_curriculum as _speakcur
-import tactile as _tactile
-
-
-@app.get("/api/tactile")
-async def get_tactile(text: str):
-    """한글 텍스트 → 얼굴 모형(아두이노)이 재현할 음소별 액추에이터 시퀀스.
-    (촉각/타도마 학습 — 턱 각도·입술·진동·기류·지속시간)"""
-    if not text or not text.strip():
-        raise HTTPException(status_code=400, detail="text required")
-    seq = _tactile.text_to_tactile(text.strip())
-    return {"text": text, "sequence": seq, "count": len(seq)}
-
-
-# 촉각(타도마) 커리큘럼 5단계 메타 — 독화·발화와 동급의 사다리. (프론트 LEVELS와 짝)
-_TACTILE_STAGES = [
-    {"stage": 0, "title": "감각 (유·무성)", "desc": "진동 유무로 구별"},
-    {"stage": 1, "title": "모음",          "desc": "턱·입술 차이"},
-    {"stage": 2, "title": "최소대립쌍",     "desc": "촉각으로만 구별"},
-    {"stage": 3, "title": "단어",          "desc": "낱말 알아맞히기"},
-    {"stage": 4, "title": "문장",          "desc": "짧은 문장 이해"},
-]
-_TACTILE_MIN_ATTEMPTS = 5      # 숙달 판정 최소 시도(퀴즈 문항 수)
-_TACTILE_MASTERY = 70.0        # 숙달 정답률(%)
-
-
-async def _bump_tactile_progress(user_id: int, stage: int, passed: bool, db):
-    """촉각 단계 진행률 rolling 갱신(_bump_speak_progress의 촉각판)."""
-    from database import TactileStageProgress
-    from sqlalchemy import select
-    r = await db.execute(select(TactileStageProgress).where(
-        TactileStageProgress.user_id == user_id, TactileStageProgress.stage == stage))
-    tp = r.scalar_one_or_none()
-    if tp is None:
-        tp = TactileStageProgress(user_id=user_id, stage=stage, status="in_progress",
-                                  attempts=0, correct=0, mastery_score=0.0)
-        db.add(tp)
-    tp.attempts += 1
-    if passed:
-        tp.correct += 1
-    tp.mastery_score = (tp.correct / tp.attempts * 100) if tp.attempts else 0.0
-    tp.status = "mastered" if (tp.attempts >= _TACTILE_MIN_ATTEMPTS and tp.mastery_score >= _TACTILE_MASTERY) else "in_progress"
-    return tp
-
-
-@app.get("/api/tactile/curriculum")
-async def tactile_curriculum(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """촉각 5단계 + 사용자 상태. 게이팅: 0단계 항상 열림, N단계는 N-1 숙달 시 해금
-    (독화·발화와 동일 규칙). _UNLOCK_ALL이면 잠긴 단계도 모두 해제."""
-    from database import TactileStageProgress
-    from sqlalchemy import select
-    r = await db.execute(select(TactileStageProgress).where(TactileStageProgress.user_id == current_user.id))
-    tp_map = {tp.stage: tp for tp in r.scalars().all()}
-    stages = []
-    for meta in _TACTILE_STAGES:
-        st = dict(meta)
-        n = meta["stage"]
-        tp = tp_map.get(n)
-        if n == 0:
-            base_open = True
-        else:
-            prev = tp_map.get(n - 1)
-            base_open = prev is not None and prev.status == "mastered"
-        if not base_open:
-            st["status"] = "locked"
-        elif tp is None:
-            st["status"] = "unlocked"
-        else:
-            st["status"] = tp.status
-            st["mastery_score"] = round(tp.mastery_score, 1)
-            st["attempts"] = tp.attempts
-        stages.append(st)
-    if _UNLOCK_ALL:
-        for st in stages:
-            if st.get("status") == "locked":
-                st["status"] = "unlocked"
-    return {"stages": stages}
-
-
-class TactileResult(BaseModel):
-    stage: int
-    correct: bool
-    target: str = ""
-    review: bool = False   # 복습 세션이면 단계 진행도·시도기록을 건드리지 않고 SRS만 갱신
-
-
-@app.get("/api/tactile/pool")
-async def tactile_pool(level: int, current_user=Depends(get_current_user)):
-    """촉각 단어(3)·문장(4) 단계의 문제 풀을 AI로 생성해 변주를 준다.
-    실패하면 빈 목록 → 프론트가 내장 기본 풀로 폴백. (감각·모음·최소대립쌍은 고정 대립쌍이라 대상 아님)"""
-    if os.getenv("LIPLAB_AI_ITEMS", "1") != "1":
-        return {"items": []}
-    try:
-        import content_gen
-        if level == 3:
-            items = await content_gen.generate_words(n=14, max_syllable=3)
-        elif level == 4:
-            sents = await content_gen.generate_sentences(n=10, with_intonation=False)
-            items = [s["target"] for s in sents]
-        else:
-            items = []
-        return {"items": items}
-    except Exception as e:
-        print(f"[WARN] tactile pool gen failed (level {level}): {e}")
-        return {"items": []}
-
-
-@app.post("/api/tactile/result")
-async def tactile_result(data: TactileResult, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """촉각 퀴즈 1문항 결과 기록 → 단계 진행률 갱신 + 개별 시도 저장 + SRS 복습 큐 유지."""
-    if data.stage < 0 or data.stage >= len(_TACTILE_STAGES):
-        raise HTTPException(status_code=400, detail="invalid stage")
-    # 복습 세션: 단계 진행도·시도기록(분석)을 건드리지 않고 SRS만 재조정
-    if data.review:
-        if data.target:
-            await _sr_touch(current_user.id, "tactile", data.target, bool(data.correct), db)
-        await db.commit()
-        return {"review": True}
-    tp = await _bump_tactile_progress(current_user.id, data.stage, bool(data.correct), db)
-    # 개별 시도 저장(분석용) + SRS — 말하기와 동일 구조
-    if data.target:
-        from database import TactileAttempt
-        db.add(TactileAttempt(user_id=current_user.id, stage=data.stage,
-                              target=data.target, correct=bool(data.correct)))
-        await _sr_touch(current_user.id, "tactile", data.target, bool(data.correct), db)
-    await db.commit()
-    return {"stage": tp.stage, "status": tp.status,
-            "mastery_score": round(tp.mastery_score, 1), "attempts": tp.attempts}
 
 
 @app.post("/api/seed-demo")
@@ -1746,62 +1619,6 @@ async def speak_analysis(current_user=Depends(get_current_user), db: AsyncSessio
             "stages": stages, "tips": tips}
 
 
-@app.get("/api/tactile/analysis")
-async def tactile_analysis(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """촉각(타도마) 분석 — 자주 틀리는 항목·단계별 정확도·최근 추세. 말하기 분석의 촉각판."""
-    from database import TactileAttempt, TactileStageProgress
-    from sqlalchemy import select
-    from collections import Counter
-
-    rows = (await db.execute(
-        select(TactileAttempt).where(TactileAttempt.user_id == current_user.id)
-        .order_by(TactileAttempt.created_at.desc()).limit(300))).scalars().all()
-    total = len(rows)
-    correct = sum(1 for r in rows if r.correct)
-    acc = round(correct / total * 100, 1) if total else 0.0
-
-    # 자주 틀린 항목(촉각으로 놓친 단어·문장)
-    miss = Counter()
-    for r in rows:
-        if not r.correct and r.target:
-            miss[r.target] += 1
-    weak_items = [{"target": k, "count": v} for k, v in miss.most_common(8)]
-
-    # 단계별 정확도
-    per = {}
-    for r in rows:
-        d = per.setdefault(r.stage if r.stage is not None else -1, {"attempts": 0, "correct": 0})
-        d["attempts"] += 1
-        if r.correct:
-            d["correct"] += 1
-    tp_rows = (await db.execute(select(TactileStageProgress)
-               .where(TactileStageProgress.user_id == current_user.id))).scalars().all()
-    tp_map = {tp.stage: tp for tp in tp_rows}
-    stages = []
-    for meta in _TACTILE_STAGES:
-        n = meta["stage"]
-        d = per.get(n, {"attempts": 0, "correct": 0})
-        tp = tp_map.get(n)
-        stages.append({"stage": n, "title": meta["title"], "attempts": d["attempts"],
-                       "accuracy": round(d["correct"] / d["attempts"] * 100, 1) if d["attempts"] else 0.0,
-                       "mastery_score": round(tp.mastery_score, 1) if tp else 0.0,
-                       "status": tp.status if tp else ("unlocked" if n == 0 else "locked")})
-
-    recent = list(reversed(rows[:15]))
-    trend = [{"correct": 1 if r.correct else 0, "target": r.target} for r in recent]
-
-    tips = []
-    if weak_items:
-        tips.append(f"'{weak_items[0]['target']}'을(를) 촉각으로 자주 놓쳐요. 순수 촉각 모드에서 반복해보세요.")
-    if total and acc < 60:
-        tips.append("전반 정확도가 낮은 편이에요. 시뮬레이터로 진동·바람 차이를 먼저 익힌 뒤 가려보세요.")
-    if not tips:
-        tips.append("좋아요! 촉각 변별에 익숙해지고 있어요. 다음 단계로 넓혀보세요.")
-
-    return {"total": total, "accuracy": acc, "weak_items": weak_items,
-            "stages": stages, "trend": trend, "tips": tips}
-
-
 @app.get("/api/speak/review")
 async def speak_review(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """발음 복습 — 최근 발화에서 틀렸거나 저조했던 단어/문장을 다시 연습 큐로.
@@ -1836,34 +1653,6 @@ async def speak_review(current_user=Depends(get_current_user), db: AsyncSession 
         if t and t not in _seen:
             _seen.add(t)
             union.append({"target": t, **wrong_by_target.get(t, {})})
-    return {
-        "items": union[:30], "count": len(union),
-        "buckets": {"due": len(due), "wrong": len(wrong), "bookmark": len(bookmarks)},
-        "wrong": wrong[:15], "due": due[:15], "bookmarks": bookmarks[:15],
-    }
-
-
-@app.get("/api/tactile/review")
-async def tactile_review(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """촉각 복습 — 예정(SRS)·틀림·북마크 3분할. 말하기 복습과 동일 구조."""
-    from database import TactileAttempt
-    from sqlalchemy import select
-    rows = (await db.execute(
-        select(TactileAttempt).where(TactileAttempt.user_id == current_user.id)
-        .order_by(TactileAttempt.created_at.desc()).limit(300))).scalars().all()
-    seen = {}
-    for r in rows:
-        if not r.target or r.target in seen:
-            continue
-        seen[r.target] = r          # 각 target의 최신 시도
-    wrong = [{"target": t, "stage": r.stage} for t, r in seen.items() if not r.correct]
-
-    due = await _due_refs(current_user.id, ["tactile"], db)
-    bookmarks = await _bookmark_refs(current_user.id, "tactile", db)
-    union, _seen = [], set()
-    for t in due + [w["target"] for w in wrong] + [b["text"] for b in bookmarks]:
-        if t and t not in _seen:
-            _seen.add(t); union.append({"target": t})
     return {
         "items": union[:30], "count": len(union),
         "buckets": {"due": len(due), "wrong": len(wrong), "bookmark": len(bookmarks)},

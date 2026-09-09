@@ -263,7 +263,6 @@ export default function Practice() {
   if (!currentScenario) return null
 
   // ☆ 북마크 토글 — 독화 문장에도 저장 버튼을 달아 Bookmarks 페이지·복습 큐가 실제로 채워지게 함
-  // (예전엔 촉각에만 저장 버튼이 있어, 독화 사용자는 안내만 있고 누를 버튼이 없었다)
   const isBookmarked = !!bookmarks[currentSentence]
   const toggleBookmark = async () => {
     if (!currentSentence) return
