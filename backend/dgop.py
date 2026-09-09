@@ -180,6 +180,13 @@ def _cal_x(raw: float, floor: float) -> float:
 
 # 축 A A-3 실측(2026-09-08, zeroth_korean test 50발화 × severity 0~4)의 severity별 평균.
 # 앱이 별도 보정 파일 없이도 사람이 읽을 수 있는 점수를 내도록 이 값을 기본 앵커로 쓴다.
+#
+# ⚠️ 이 값은 **낡았다**(2026-09-09). 측정 당시 dgop_acoustic.align_targets에 구간 뭉갬
+# 버그가 있었다 — 중복 출현 토큰의 구간을 '첫 출현~마지막 출현'으로 잡아 원점수가 구조적으로
+# 낮게 나왔다(합성 실험: 46.5 → 95.2). 버그를 고쳤으므로 같은 체크포인트라도 원점수 스케일이
+# 달라진다. scripts/fit_dgop_calibration.py를 축 A 체크포인트로 다시 돌려
+# backend/data/dgop_calibration.json을 만들기 전까지, 이 내장값은 '보정 경로가 죽지 않게 하는
+# 폴백'일 뿐 정확한 눈금이 아니다(런북 §6.5).
 AXIS_A_SEVERITY_SCORES = [9.51, 2.74, 1.49, 0.61, 0.30]
 
 DEFAULT_CALIBRATION = fit_calibration(
