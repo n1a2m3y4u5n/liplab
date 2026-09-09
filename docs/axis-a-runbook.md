@@ -253,15 +253,41 @@ severity별 원점수 중앙값을 재서 앵커를 만들고 JSON으로 남긴�
 
 ## 7. 산출물 회수
 
+**현황(2026-09-09)**: 저장소 2개와 모델 카드는 **이미 만들어 뒀다**(private).
+가중치만 비어 있다 — 아래 §7.1 참고.
+
+- `duadnwls/liplab-dgop-scorer`
+- `duadnwls/liplab-dgop-aligner`
+
 ```bash
-# 볼륨 사고 대비 — HF private repo로 올려둔다.
-# ⚠️ huggingface-cli는 지원 중단됐다(huggingface_hub 1.x). hf 를 쓴다.
-hf auth login                       # 토큰 입력 (write 권한 필요)
-hf repo create liplab-dgop-scorer  --repo-type model --private
-hf repo create liplab-dgop-aligner --repo-type model --private
-hf upload <계정>/liplab-dgop-scorer  /workspace/ckpt/scorer
-hf upload <계정>/liplab-dgop-aligner /workspace/ckpt/aligner
+# Pod 안에서. 최종 모델만 올린다(Trainer 옵티마이저 상태 제외 → 19GB가 아니라 2.5GB)
+HF_TOKEN=hf_... python scripts/upload_ckpt_hf.py /workspace/ckpt/scorer  duadnwls/liplab-dgop-scorer
+HF_TOKEN=hf_... python scripts/upload_ckpt_hf.py /workspace/ckpt/aligner duadnwls/liplab-dgop-aligner
 ```
+
+스크립트가 업로드 후 원격 파일 목록·크기를 로컬과 대조해 검증하고, 최상위에 가중치가
+없으면 아예 중단한다. `stage*`·`checkpoint-*`는 학습 재개용이라 올리지 않는다.
+
+> ⚠️ **`allow_patterns`에 와일드카드를 쓰지 말 것.** `huggingface_hub`의 fnmatch는 `/`도
+> `*`로 먹어서 `"*.json"`이 `stage1_head/config.json`·`checkpoint-4176/config.json`까지
+> 잡는다(실측 확인). 스크립트는 최상위 파일명을 실행 시점에 나열하는 방식을 쓴다.
+
+### 7.1 백업이 막힌 이유 — AP-IN-2 용량 (2026-09-09)
+
+Pod을 **정지하면 GPU 예약이 풀린다.** A-3·A-4를 마치고 과금을 줄이려 정지했더니 그 사이
+호스트의 H100을 다른 사용자가 가져갔고, 이후 `start`가 계속 실패했다:
+
+```
+start pod: There are not enough free GPUs on the host machine to start this pod.
+```
+
+우회로가 없다 — 네트워크 볼륨은 데이터센터에 묶이는데 **AP-IN-2에는 H100 한 종류만**
+존재하고(`gpuAvailability`로 확인) 당시 `available=False`였다. 값싼 GPU($0.19~)로 볼륨만
+붙이려 해도 그 DC에 없고, CPU 전용 Pod도 `no instances currently available`이었다.
+90초 간격 24회 재시도 전부 실패.
+
+**교훈**: 볼륨에서 뭔가 꺼내야 한다면 **Pod을 끄기 전에 꺼낸다.** 정지는 과금을 줄이지만
+재시작을 보장하지 않는다.
 
 앱에 연결할 때는 환경변수 둘만 설정한다(미설정이면 기존 전사 경로 그대로 — 안전한 기본값):
 
