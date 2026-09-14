@@ -78,6 +78,8 @@ python scripts/sweep_gop_scorers.py --features data_out/perturb.npz
 
 테스트: **backend 22 + scripts 3 + frontend 35, 전부 통과.** 2026-09-14 재실행으로 확인했다 —
 반드시 `backend/venv`의 파이썬으로 돌린다(시스템 파이썬엔 numpy·Levenshtein·torch가 없어 실패한다).
+축 B §3-2의 스모크·스윕 배관도 로컬에서 끝까지 돌려 확인했다(31초, 구간 240개, blank 0개) —
+**Pod에서 그 절은 건너뛰어도 된다.**
 
 ### ⚠️ 발견됐지만 아직 안 고친 것
 
