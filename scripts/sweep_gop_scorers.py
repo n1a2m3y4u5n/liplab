@@ -38,9 +38,17 @@ import eval_dgop_discrimination as E  # noqa: E402
 
 
 def load_features(path):
+    """
+    npz → **메모리에 올린 dict.**
+
+    ⚠️ `np.load`가 주는 `NpzFile`을 그대로 쓰면 안 된다. `d[key]`가 접근할 때마다 압축을
+    다시 풀기 때문에, 구간마다 채점식마다 (N, C) 배열 **전체**를 재해제한다. 구간 240개
+    (스모크)에서는 눈에 안 보이지만 22,000개에서는 몇 시간이 된다 — 2026-09-14에 실측으로
+    확인했다(E1·E2 첫 스윕이 9분 넘게 0% 진척). 한 번만 풀어서 dict로 들고 있는다.
+    """
     import numpy as np
-    d = np.load(path, allow_pickle=True)
-    return d
+    with np.load(path, allow_pickle=True) as d:
+        return {k: d[k] for k in d.files}
 
 
 def span_view(d, i):
@@ -169,8 +177,13 @@ def main() -> int:
     # 불변 검사 — 구간에 blank가 섞이면 집계 해석이 달라진다(정상이면 항상 0건).
     bad = int((d["nb_frames"] != d["frames"]).sum())
     if bad:
-        print(f"[WARN] 구간 {bad}개에 blank 프레임이 섞여 있습니다 — 정렬 방식이 바뀌었는지 "
-              f"확인하세요(Cao et al. 2024의 blank 제외 논점이 그때부터 유효해집니다).\n")
+        pct = bad / len(d["target_id"]) * 100
+        print(f"[정보] 구간 {bad:,}개({pct:.0f}%)에 **모델 argmax가 blank인** 프레임이 있습니다.")
+        print("       정렬이 깨진 게 아니다 — 강제정렬은 모델이 blank를 선호하는 프레임에도 목표")
+        print("       토큰을 배정하므로 실제 데이터에서는 정상이다(2026-09-14 실측: E1 47%).")
+        print("       다만 구간 평균이 그 프레임을 포함하므로 **Cao et al. 2024의 blank 제외")
+        print("       논점은 유효하다.** 그 변형을 재려면 dump를 다시 떠야 한다 —")
+        print("       span_aggregates가 비blank 집계를 저장하지 않는다.\n")
 
     results = {}
     for name in G.SCORERS:

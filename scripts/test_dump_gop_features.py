@@ -89,16 +89,23 @@ def test_perturb_rejects_non_jamo_vocab():
         _ok("자모" in str(e), f"원인을 알려줘야 함 — 받음 {e}")
 
 
-def test_spans_contain_no_blank_frames():
+def test_nb_frames_counts_non_blank_argmax_frames():
     """
-    불변: 구간 안에 blank 프레임이 없다(ctc_align.token_spans가 run만 잡으므로).
-    이게 깨지면 Cao et al. 2024의 blank 제외 논점이 그때부터 유효해진다.
+    nb_frames는 '구간 안에서 **모델 argmax가 blank가 아닌** 프레임 수'다. [0, frames]에
+    들어가기만 하면 된다.
+
+    ⚠️ 2026-09-14 — 이 테스트는 전에 `nb_frames == frames`를 **불변으로 단언**했다. 그 등호는
+    합성 파형 + 가짜 정렬에서만 성립한다. 실제 체크포인트로 뜬 A-6 덤프에서는 E1 구간의 47%가
+    `nb_frames < frames`였다 — 강제정렬이 모델이 blank를 선호하는 프레임에도 목표 토큰을
+    배정하므로 **정상이다.** 등호를 불변으로 걸어 두면 Cao et al. 2024의 blank 제외 논점이
+    유효한데도 "이미 해결됐다"고 오독하게 된다(실제로 그렇게 오독했다).
     """
     _patched(lambda text, model_id=None: list(_TOKENS))
     rows = D._smoke_rows(n=2)
     recs, _ = D.collect(rows, "fake", "fake", "severity", [], 1.0, 0, verbose=False)
-    bad = [r for r in recs if r["nb_frames"] != r["frames"]]
-    _ok(not bad, f"구간 {len(bad)}개에 blank가 섞였다 — 정렬 방식이 바뀌었는지 확인")
+    _ok(recs, "구간이 하나도 수집되지 않았다")
+    bad = [r for r in recs if not (0 <= r["nb_frames"] <= r["frames"])]
+    _ok(not bad, f"nb_frames가 [0, frames] 범위를 벗어난 구간 {len(bad)}개")
 
 
 def test_npz_roundtrip_keeps_what_sweep_needs():
