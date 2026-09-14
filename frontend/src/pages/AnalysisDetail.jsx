@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { learningAPI, speakAPI, tactileAPI } from '../api'
+import { learningAPI, speakAPI, tactileAPI, curriculumAPI } from '../api'
 import LearnHeader from '../components/LearnHeader'
 
 const PAGE_META = {
@@ -37,6 +37,7 @@ export default function AnalysisDetail({ mode = 'overview' }) {
   const [calendar, setCalendar] = useState({})
   const [speaking, setSpeaking] = useState(null)
   const [tactile, setTactile] = useState(null)
+  const [confusion, setConfusion] = useState(null)
   const meta = PAGE_META[mode] || PAGE_META.overview
 
   useEffect(() => {
@@ -49,12 +50,14 @@ export default function AnalysisDetail({ mode = 'overview' }) {
       needsCalendar ? learningAPI.getCalendar().catch(() => ({})) : Promise.resolve({}),
       mode === 'scores' ? speakAPI.getAnalysis().catch(() => null) : Promise.resolve(null),
       mode === 'scores' ? tactileAPI.getAnalysis().catch(() => null) : Promise.resolve(null),
-    ]).then(([stats, readAnalysis, activity, speakAnalysis, tactileAnalysis]) => {
+      mode === 'visemes' ? curriculumAPI.confusionMatrix().catch(() => null) : Promise.resolve(null),
+    ]).then(([stats, readAnalysis, activity, speakAnalysis, tactileAnalysis, confusionMatrix]) => {
       setStatistics(stats)
       setAnalysis(readAnalysis)
       setCalendar(activity || {})
       setSpeaking(speakAnalysis)
       setTactile(tactileAnalysis)
+      setConfusion(confusionMatrix)
     }).finally(() => setLoading(false))
   }, [mode])
 
@@ -131,9 +134,31 @@ export default function AnalysisDetail({ mode = 'overview' }) {
   const renderVisemes = () => {
     // 개요탭('지금 집중할 항목')과 동일 소스(weak_visemes 실제 오답률)로 통일 — 순위 불일치 방지
     const items = [...(statistics?.weak_visemes || [])].sort((a, b) => (b.error_rate || 0) - (a.error_rate || 0))
-    if (!items.length) return <Empty>연습을 더 하면 입모양 유형별 취약도가 이곳에 표시됩니다.</Empty>
+    const cf = confusion?.jamo_confusions || []
+    const confusionCard = cf.length > 0 ? (
+      <section className="rounded-[24px] border border-slate-200 bg-white p-5 sm:p-7">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-black">헷갈린 입모양 (혼동 지도)</h2>
+            <p className="mt-1 text-sm text-slate-500">무엇을 무엇으로 읽었는지 · 입모양이 같아 구별 불가한 비율 {Math.round((confusion.same_viseme_ratio || 0) * 100)}%</p>
+          </div>
+          <span className="text-xs text-slate-400">{confusion.trials || 0}시행</span>
+        </div>
+        <div className="mt-4 space-y-2">
+          {cf.slice(0, 8).map((c, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
+              <span className="text-lg font-black text-slate-900">‘{c.target}’ → ‘{c.read}’</span>
+              {c.same_viseme > 0 && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">입모양 동일</span>}
+              <span className="ml-auto text-sm font-bold text-rose-600">{c.count}회</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    ) : null
+    if (!items.length && !confusionCard) return <Empty>연습을 더 하면 입모양 유형별 취약도가 이곳에 표시됩니다.</Empty>
     return (
       <div className="space-y-3">
+        {confusionCard}
         {items.map((item, index) => {
           const acc = Math.max(0, Math.round(100 - (item.error_rate || 0)))
           return (
