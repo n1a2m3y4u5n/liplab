@@ -107,7 +107,8 @@ class Bookmark(Base):
     sentence = Column(String(500), nullable=False)
     situation = Column(String(100), default="")
     level = Column(Integer, default=1)
-    # 어느 기둥의 북마크인지 — 독화(read)·말하기(speak)·촉각(tactile). 세 기둥 복습을 동일 구조로.
+    # 어느 기둥의 북마크인지 — 독화(read)·말하기(speak). 두 기둥 복습을 동일 구조로 다룬다.
+    # 'tactile'은 2026-09-14 기준 쓰이지 않지만, 과거 행이 남아 있을 수 있어 값은 허용한다.
     domain = Column(String(12), default="read", index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -179,6 +180,9 @@ class SpeakStageProgress(Base):
 class TactileStageProgress(Base):
     """촉각(타도마) 커리큘럼 단계별 진행·숙달. 독화·발화 진행도와 동급으로 별도 테이블.
     stage: 0 감각 ~ 4 문장. 퀴즈 정답 여부가 rolling으로 반영된다."""
+    # ⚠️ 2026-09-14 — 촉각(타도마) 파트는 b730c0d에서 제거됐고(세 기둥 → 두 기둥),
+    # 이 테이블을 읽고 쓰는 코드는 남아 있지 않다. 기존 행을 잃지 않기 위해 **일부러 남긴**
+    # 스키마다. 지우려면 별도 마이그레이션이 필요하다(STATUS.md의 결정 항목 참고).
     __tablename__ = "tactile_stage_progress"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -194,6 +198,9 @@ class TactileStageProgress(Base):
 class TactileAttempt(Base):
     """촉각(타도마) 개별 문제 시도 기록 — 복습(틀린 항목 다시)·분석용.
     말하기 SpeakAttempt의 촉각판. target=문제 정답 텍스트."""
+    # ⚠️ 2026-09-14 — 촉각(타도마) 파트는 b730c0d에서 제거됐고(세 기둥 → 두 기둥),
+    # 이 테이블을 읽고 쓰는 코드는 남아 있지 않다. 기존 행을 잃지 않기 위해 **일부러 남긴**
+    # 스키마다. 지우려면 별도 마이그레이션이 필요하다(STATUS.md의 결정 항목 참고).
     __tablename__ = "tactile_attempts"
 
     id = Column(Integer, primary_key=True, index=True)
