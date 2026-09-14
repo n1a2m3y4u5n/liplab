@@ -53,8 +53,12 @@ SAMPLE_RATE = E.SAMPLE_RATE
 
 def span_aggregates(log_probs, logits, start, end, blank_id):
     """
-    구간 [start, end]의 집계 통계를 전체/비blank 두 방식으로 계산한다.
-    비blank 프레임이 하나도 없으면 그쪽은 None(스윕에서 그 변형만 빠진다).
+    구간 [start, end]의 집계 통계를 계산한다.
+
+    ⚠️ 2026-09-14 정정 — 이 docstring은 "전체/비blank 두 방식으로 계산한다"고 적어 뒀었지만
+    실제로 저장되는 것은 **전체 구간 평균뿐**이다(비blank는 개수만 센다). 그래서 조사 문서
+    §6-1이 후보로 꼽은 'blank 제외 변형'을 A-6에서 평가할 수 없었다. 재려면 여기서 비blank
+    프레임만 모은 집계도 함께 내고 dump를 다시 떠야 한다.
     """
     import torch
 
@@ -67,11 +71,14 @@ def span_aggregates(log_probs, logits, start, end, blank_id):
         "mean_logprob": lp.mean(dim=0),
         "mean_logit": lg.mean(dim=0),
     }
-    # 불변 검사: 구간 안에 blank 프레임이 있으면 안 된다.
-    # ctc_align.token_spans는 '같은 비blank 라벨이 이어지는 run'만 구간으로 잡으므로
-    # blank는 구간 **사이**에만 존재한다(실측 확인). 따라서 Cao et al. 2024가 지적한
-    # 'blank 프레임이 집계를 오염시키는' 문제는 이 구현에 해당하지 않는다.
-    # 정렬 방식이 바뀌어 blank가 섞이기 시작하면 nb_frames != frames로 드러난다.
+    # nb_frames: 구간 안에서 **모델 argmax가 blank가 아닌** 프레임 수.
+    #
+    # ⚠️ 2026-09-14 정정. 이 자리에는 "구간에 blank가 원리적으로 0개라 nb_frames == frames다"라고
+    # 적혀 있었는데 틀렸다. token_spans가 run으로 잡는 것은 **정렬 경로의 라벨**이고, 그 라벨에
+    # blank가 없다는 것과 '모델 자신이 그 프레임에서 blank를 argmax로 고르지 않는다'는 것은 다른
+    # 얘기다. 강제정렬은 모델이 blank를 선호하는 프레임에도 목표 토큰을 배정하므로 실제 데이터에서
+    # nb_frames < frames가 정상이다(A-6 실측: E1 구간의 47%). 합성 난수 오디오에서만 0이 나왔다.
+    # 따라서 Cao et al. 2024의 'blank가 집계를 오염시킨다'는 지적은 이 구현에도 유효하다.
     out["nb_frames"] = int((lp.argmax(dim=-1) != blank_id).sum())
     out["frames"] = int(lp.shape[0])
     return out
