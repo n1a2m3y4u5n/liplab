@@ -227,6 +227,24 @@ class SpeakAttempt(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class TrialAttempt(Base):
+    """독화 개별 시행 기록 — 선다형 시행(1단계 입모양 인지·2단계 단어·문맥추론 MWIS)을
+    '시행 단위'로 저장한다. 비심 혼동행렬·시행별 학습곡선·사전/사후 평가의 원천 데이터.
+    (문장 채점은 Progress에 쌓이므로 여기엔 선다형만.)"""
+    __tablename__ = "trial_attempts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    stage = Column(Integer, nullable=True)          # 1..3
+    item_type = Column(String(12), nullable=False)  # 'viseme' | 'word' | 'closure'
+    target = Column(String(200), nullable=False)
+    chosen = Column(String(200), nullable=True)
+    correct = Column(Boolean, default=False)
+    phase = Column(String(10), default="practice")  # 'pre' | 'post' | 'practice'
+    confusions = Column(JSON, default=list)         # [{position,target,read,viseme,same_viseme}]
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class ReviewItem(Base):
     """간격 반복(SRS) 복습 큐 — 틀린 항목이 due_date에 다시 등장한다.
     kind: 'viseme'(입모양 그룹, ref=id 문자열) | 'word'(단어, ref=단어)."""

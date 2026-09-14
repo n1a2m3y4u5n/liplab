@@ -857,6 +857,7 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
 class WordAnswer(BaseModel):
     word: str
     correct: bool
+    chosen: Optional[str] = None   # 사용자가 실제로 고른 단어(오답 시 자모 혼동 분석용)
 
 
 @app.get("/api/curriculum/words")
@@ -885,6 +886,14 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
             sp.correct += 1
         sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
         sp.status = "mastered" if (sp.attempts >= _STAGE2_MIN_ATTEMPTS and sp.mastery_score >= _STAGE2_MASTERY) else "in_progress"
+        # 오답이면 '무엇을 무엇으로 읽었는지'를 자모·입모양 단위로 분석(근거 기반 피드백 + 혼동행렬 데이터)
+        confusions = []
+        if not data.correct and data.chosen and data.chosen != data.word:
+            from scoring import viseme_confusions
+            confusions = viseme_confusions(data.word, data.chosen)
+        from database import TrialAttempt
+        db.add(TrialAttempt(user_id=current_user.id, stage=2, item_type="word",
+                            target=data.word, chosen=data.chosen, correct=data.correct, confusions=confusions))
         if not data.correct:
             await _srs_schedule_wrong(current_user.id, "word", data.word, db)
         await db.commit()
@@ -894,7 +903,8 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"word answer failed: {str(e)}")
-    return {"mastery_score": round(sp.mastery_score, 1), "attempts": sp.attempts, "mastered": sp.status == "mastered"}
+    return {"mastery_score": round(sp.mastery_score, 1), "attempts": sp.attempts,
+            "mastered": sp.status == "mastered", "confusions": confusions}
 
 
 # ── 간격 반복 복습 (SRS) ──────────────────────────────────────────────────
@@ -1003,6 +1013,61 @@ async def _bookmark_refs(user_id: int, domain: str, db):
 async def curriculum_closure(current_user=Depends(get_current_user)):
     """문맥 추론 항목(빈칸+비슷하게 보이는 보기). 눈으로 구별 안 되니 문맥으로 답을 고른다."""
     return {"items": _curriculum.CLOSURE_ITEMS}
+
+
+class ClosureAnswer(BaseModel):
+    item_id: str
+    chosen: str
+
+
+@app.post("/api/curriculum/closure-answer")
+async def curriculum_closure_answer(data: ClosureAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """문맥 추론(MWIS) 시행 채점 → 시행 기록(TrialAttempt) + 오답 SRS 예약 + 자모 혼동 피드백."""
+    item = next((it for it in _curriculum.CLOSURE_ITEMS if it["id"] == data.item_id), None)
+    if item is None:
+        raise HTTPException(status_code=400, detail="unknown closure item")
+    answer = item["answer"]
+    correct = data.chosen == answer
+    from scoring import viseme_confusions
+    from database import TrialAttempt
+    confusions = [] if correct else viseme_confusions(answer, data.chosen)
+    try:
+        db.add(TrialAttempt(user_id=current_user.id, stage=3, item_type="closure",
+                            target=answer, chosen=data.chosen, correct=correct, confusions=confusions))
+        if not correct:
+            await _srs_schedule_wrong(current_user.id, "word", answer, db)
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"closure answer failed: {str(e)}")
+    return {"correct": correct, "answer": answer, "confusions": confusions}
+
+
+@app.get("/api/curriculum/confusion-matrix")
+async def curriculum_confusion_matrix(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """시행 기록(TrialAttempt)에서 자모 혼동행렬을 집계 — 개인별 헷갈림 리포트·평가자료용.
+    '무엇을 무엇으로 읽었나(target→read)'를 빈도순으로, 입모양이 같아 헷갈린 비율도 함께 낸다."""
+    from database import TrialAttempt
+    from sqlalchemy import select
+    r = await db.execute(select(TrialAttempt).where(TrialAttempt.user_id == current_user.id))
+    rows = r.scalars().all()
+    jamo = {}          # (target, read) -> {count, same}
+    same_cnt = tot_cf = 0
+    n_wrong = sum(1 for a in rows if not a.correct)
+    for a in rows:
+        for cf in (a.confusions or []):
+            key = (cf.get("target"), cf.get("read"))
+            e = jamo.setdefault(key, {"count": 0, "same_viseme": 0})
+            e["count"] += 1
+            tot_cf += 1
+            if cf.get("same_viseme"):
+                e["same_viseme"] += 1; same_cnt += 1
+    jamo_list = sorted(
+        [{"target": t, "read": rd, "count": v["count"], "same_viseme": v["same_viseme"]}
+         for (t, rd), v in jamo.items()], key=lambda x: -x["count"])[:30]
+    return {"trials": len(rows), "wrong": n_wrong, "confusion_count": tot_cf,
+            "same_viseme_ratio": round(same_cnt / tot_cf, 3) if tot_cf else 0.0,
+            "jamo_confusions": jamo_list}
 
 
 class ScoreRequest(BaseModel):
