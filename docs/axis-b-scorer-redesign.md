@@ -84,9 +84,15 @@ python scripts/dump_gop_features.py --smoke
 
 ### 3-3. 체크포인트 백업 (먼저!)
 
+스크립트는 `<로컬 체크포인트 경로> <HF repo_id>` **두 인자를 받는다** — 모델마다 한 줄씩, 두 번 돌린다.
+
 ```bash
-python scripts/upload_ckpt_hf.py     # HF 토큰 필요
+HF_TOKEN=hf_... python scripts/upload_ckpt_hf.py /workspace/ckpt/scorer  duadnwls/liplab-dgop-scorer
+HF_TOKEN=hf_... python scripts/upload_ckpt_hf.py /workspace/ckpt/aligner duadnwls/liplab-dgop-aligner
 ```
+
+> 2026-09-14 정정: 여기 적혀 있던 `python scripts/upload_ckpt_hf.py`(인자 없음)는 `sys.argv[1]`에서
+> 즉시 `IndexError`로 끝난다. 업로드 검증 동작·제외 규칙은 런북 §7에 있다.
 
 ### 3-4. E1 — 채점식 스윕용 덤프
 
@@ -123,7 +129,7 @@ python scripts/sweep_gop_scorers.py --features data_out/severity.npz
 python scripts/sweep_gop_scorers.py --features data_out/perturb.npz
 ```
 
-### E1 판정 기준 — 세 결과가 배타적이라 어느 쪽이든 답이 된다
+### E1 판정 기준 — 어느 결과가 나와도 답이 된다
 
 | 결과 | 해석 | 다음 행동 |
 |---|---|---|
@@ -134,6 +140,18 @@ python scripts/sweep_gop_scorers.py --features data_out/perturb.npz
 유의성은 **발화 단위 대응표본 부트스트랩**(10,000회)으로 판정한다. A-5까지의 "naive 0.914 >
 D-GOP 0.813"에는 검정이 붙어 있지 않아 우연인지 알 수 없었다 — 이번엔 CI가 함께 나온다.
 
+**사전 등록 규칙 (2026-09-14 추가 — 결과를 보기 전에 정해 둔다).** 위 세 줄은 **배타적이지 않다.**
+'`dgop`이 나쁨'은 앞의 두 결과와 동시에 성립할 수 있고(그때는 행동이 둘 다 '교체'라 충돌하지
+않는다), 표에 아예 없는 경우도 있다 — **`prior_maxlogit`이 아닌 다른 변형만 이기는 경우**다.
+
+1. **채택 규칙** — naive를 유의하게 이긴 변형이 하나 이상이면 그중 **단조성이 가장 높은 것**을
+   채택한다. CI가 겹쳐 구분되지 않으면 **문헌 표준을 우선**한다
+   (`prior_maxlogit` → `dnn_gop` → `nn_gop` → `gmm_gop` 순). 이긴 변형이 없으면 `naive`로 간다.
+2. **`dgop` 처리** — `dgop`이 naive보다 유의하게 나쁘면 1번 결과가 무엇이든 **앱 연결 전에
+   교체한다.** 교체 대상은 1번이 고른 식이다.
+3. **AUC는 판정 근거가 아니다** — 스윕이 검정을 붙이는 것은 단조성뿐이다(AUC에는 CI가 없다).
+   AUC 차이는 참고로만 적는다.
+
 ### E2 판정 기준 — 과신이 실재하는가
 
 오디오는 동일하고 **목표 자모열만** 오염돼 있다. 따라서:
@@ -143,6 +161,16 @@ D-GOP 0.813"에는 검정이 붙어 있지 않아 우연인지 알 수 없었다
 | **오염 목표에서 `naive`가 높게 남는다** | **과신이 실재한다.** UQ 보정이 값을 할 조건이 성립 — 다만 현행 곱셈 형태로는 못 잡는다(§0) |
 | **오염 목표에서 `naive`가 붕괴한다** | 이 모델은 애초에 과신하지 않는다 → 축 A의 §0 전제가 이 체크포인트에 대해 거짓 |
 | 규칙별 AUC가 크게 다름 | 어떤 조음 오류에 민감/둔감한지가 드러난다(종성 탈락 vs 모음 중앙화 등) |
+
+**사전 등록 임계값 (2026-09-14 추가).** '높게 남는다 / 붕괴한다'를 숫자로 고정한다. 관습적으로
+고른 값이므로 **바꾸려면 결과를 보기 전에 바꾼다.** 잔존율 = 오염 조건 평균 ÷ 정답 조건 평균이며,
+`naive`를 기준으로 판정하고 나머지 변형은 같은 표에 비교용으로만 적는다.
+
+| 잔존율 | clean vs 오염 AUC | 판정 |
+|---|---|---|
+| **≥ 0.50** | < 0.70 | **과신 실재** — 음향이 그대로인데 틀린 목표에도 점수를 준다 |
+| **≤ 0.20** | ≥ 0.90 | **과신 없음** — 이 체크포인트는 목표 오염을 잡아낸다 |
+| 그 사이 | — | **판정 보류** — 규칙별로 나눠 본다(종성 탈락 vs 모음 중앙화 등) |
 
 ---
 

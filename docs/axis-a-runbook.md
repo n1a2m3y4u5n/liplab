@@ -289,6 +289,29 @@ start pod: There are not enough free GPUs on the host machine to start this pod.
 **교훈**: 볼륨에서 뭔가 꺼내야 한다면 **Pod을 끄기 전에 꺼낸다.** 정지는 과금을 줄이지만
 재시작을 보장하지 않는다.
 
+### 7.2 우회로를 공식 문서로 재조사한 결과 (2026-09-14)
+
+§7.1의 "우회로가 없다"는 **2026-09-09 시점** 판단이다. RunPod 공식 문서로 다시 훑은 결과는 이렇다.
+
+| 경로 | 결론 | 근거 |
+|---|---|---|
+| **S3 호환 API** — Pod 없이 볼륨 파일을 꺼낸다 | ❌ 지원 데이터센터 15곳(EU·US)에 **AP-IN-2가 없다** | [S3-compatible API](https://docs.runpod.io/storage/s3-api) |
+| **볼륨을 다른 DC로 이전** | ❌ 공식 방법이 **양쪽에 Pod을 띄워** `runpodctl`/`rsync`로 복사하는 것이다 — 원본 쪽 Pod이 떠야 해서 같은 병목 | [Network volumes](https://docs.runpod.io/storage/network-volumes) |
+| **(A) GPU 0개로 시작** | 🔸 공식 기능이다 — *"Runpod gives you the option to start the Pod with zero GPUs"*. 데이터 회수용이고 CPU가 적어 연산에는 못 쓴다. **§7 업로드는 CPU로 충분**하므로 이게 되면 백업만은 끝낼 수 있다. 단 문서 설명이 **로컬 볼륨 Pod 기준**이라 네트워크 볼륨 Pod에도 적용되는지는 미확인이고, 버튼·API 이름과 과금도 문서에 없다 | [Zero GPU Pods](https://docs.runpod.io/pods/troubleshooting/zero-gpus) |
+| **(B) `start` 재시도 대신 새 Pod 배포** | 🔸 정지된 Pod은 **원래 물리 머신에 묶인다** — 그 머신의 H100이 비어야 `start`가 성공한다. 같은 볼륨을 붙인 **새 Pod은 AP-IN-2의 다른 머신**에도 배정될 수 있다. 다음 재시도는 `start` 반복이 아니라 DC 여유(`gpuAvailability`) 확인 + 새 Pod 배포로 간다 | 위 Zero GPU 문서, [Manage Pods](https://docs.runpod.io/pods/manage-pods) |
+| **Pod 마이그레이션(베타)** | ❓ 재시작 때 GPU가 없으면 새 머신으로 옮겨 주는 기능. 같은 DC 한정인지, 네트워크 볼륨 Pod에도 되는지는 문서에 없다 | [Pod migration](https://docs.runpod.io/pods/troubleshooting/pod-migration) |
+
+- 네트워크 볼륨의 `/workspace`는 **stop이든 terminate든 보존된다**고 문서에 명시돼 있다
+  ([Manage Pods](https://docs.runpod.io/pods/manage-pods)). (B)에서 기존 Pod을 종료해도 체크포인트는 안전하다.
+- **§7 백업만 끝나면 이후 실험은 AP-IN-2에 묶이지 않는다** — HF에서 체크포인트를 받아 아무 DC·아무
+  GPU에서 재현할 수 있다(`docs/axis-b-scorer-redesign.md` §2). 그래서 (A)는 백업 하나만 풀어도
+  E1·E2까지 같이 풀리는 경로다.
+- `POST /v1/pods/{podId}/start`에는 **요청 본문 스키마가 문서에 없다**
+  ([start 엔드포인트](https://docs.runpod.io/api-reference/pods/POST/pods/podId/start)) — GPU 개수를
+  지정해 켜는 방법이 API 문서로 확인되지 않는다. 0 GPU 시작은 **콘솔에서 확인하는 편이 빠르다.**
+- ⚠️ **REST API v1은 2026-11-15에 폐지된다**([API overview](https://docs.runpod.io/api-reference/overview)).
+  §2.1의 `rest.runpod.io/v1` PATCH도 그때까지만 유효하니, 그 전에 v2로 옮긴다.
+
 앱에 연결할 때는 환경변수 둘만 설정한다(미설정이면 기존 전사 경로 그대로 — 안전한 기본값):
 
 ```bash
