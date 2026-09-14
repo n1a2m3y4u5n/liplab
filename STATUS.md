@@ -1,6 +1,6 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
-> 최종 갱신 2026-09-09 (`12b91ba` 이후). 브랜치 `feat/content-scale`, origin과 동기화됨.
+> 최종 갱신 2026-09-14 (`1c87bc7` 이후 · 이 정정분은 아직 커밋 전). 브랜치 `feat/content-scale`, origin과 동기화됨.
 > 이 파일은 **한 화면짜리 현황판**이다. 근거·수치는 각 항목의 링크를 따라간다.
 > 전체 이력은 `DEVELOPMENT_SUMMARY.md`.
 
@@ -76,7 +76,8 @@ python scripts/sweep_gop_scorers.py --features data_out/perturb.npz
 | **채점식 재설계 배관** | E1/E2 실험 도구 일체 | `docs/axis-b-scorer-redesign.md`. **GPU만 남음** |
 | **촉각(타도마) 제거** | 세 기둥 → **두 기둥(독화·말하기)** | 파일 22개·백엔드 엔드포인트 6개 삭제. 대시보드·메뉴·분석·안내 전부 두 기둥 기준으로 재정렬 (`b730c0d`) |
 
-테스트: **backend 22 + scripts 3 + frontend 35, 전부 통과.**
+테스트: **backend 22 + scripts 3 + frontend 35, 전부 통과.** 2026-09-14 재실행으로 확인했다 —
+반드시 `backend/venv`의 파이썬으로 돌린다(시스템 파이썬엔 numpy·Levenshtein·torch가 없어 실패한다).
 
 ### ⚠️ 발견됐지만 아직 안 고친 것
 
@@ -91,6 +92,16 @@ python scripts/sweep_gop_scorers.py --features data_out/perturb.npz
 선행 연구(Yeo et al., Interspeech 2023, 서울대, 코드 MIT)가 한국어 구음장애 발화에서 같은 실험을
 이미 했고, **우리가 곱한 두 신호(margin·엔트로피)가 그 논문 표에서 가장 나쁜 둘**이었다.
 
+**통계 인프라 3건 — 조사 문서 §5의 지적이 코드에 그대로 있다** (2026-09-14 확인):
+
+- **유의성 검정이 없다** — `scripts/eval_dgop_discrimination.py`는 조사 문서보다 먼저 마지막으로
+  수정된 상태다. 새 스윕(`sweep_gop_scorers.py`)에는 대응표본 부트스트랩이 붙었지만 **단조성
+  비교에만** 있고 AUC에는 없다.
+- **화자 단위 집계가 없다** — 스윕은 구간을 발화 단위로 접어 한 단계 개선했으나, 부트스트랩이
+  뽑는 단위도 발화다. 한 화자의 발화 여러 개를 독립 표본으로 센다(조사 문서 §5-4).
+- **합격선 0.90이 그대로다** — 감쇠 때문에 도달 불가일 수 있다는 지적(§5-5)에도
+  `eval_dgop_discrimination.TARGET_MONOTONICITY = 0.90`이 유지돼 있다.
+
 ### 🚫 막힌 것
 
 | 항목 | 막힌 이유 | 상태 |
@@ -99,12 +110,26 @@ python scripts/sweep_gop_scorers.py --features data_out/perturb.npz
 | **E1·E2 실행** | 같은 GPU 병목 | 배관·테스트 완료 |
 | **실제 농인 발화** | AI Hub 71434는 IRB+소속증빙 필요(안심존). 608은 본인인증만 | 경로는 조사 완료 |
 
-### 🔸 결정이 필요한 것
+> **2026-09-14 우회로 재조사** — RunPod 공식 문서로 다시 훑어 런북 **§7.2**에 표로 정리했다.
+> S3 호환 API는 **AP-IN-2 미지원**이고, DC 간 볼륨 이전도 원본 쪽 Pod이 필요해 같은 병목이다.
+> 남은 후보는 **(A) GPU 0개로 시작**(공식 기능·데이터 회수용. 업로드는 CPU로 충분하지만
+> 네트워크 볼륨 Pod에 적용되는지는 문서에 없다)과 **(B) `start` 재시도 대신 같은 볼륨으로 새 Pod
+> 배포**(정지된 Pod은 원래 물리 머신에 묶인다)다. **①만 끝나면 E1·E2는 AP-IN-2에 묶이지 않는다.**
 
-- **촉각 DB 테이블을 지울 것인가.** 프론트·백엔드에서 촉각을 걷어낼 때 `database.py`의
-  `TactileStageProgress`·`TactileAttempt`와 `Bookmark.domain`의 `'tactile'` 값은 **일부러 남겼다.**
-  조회하는 코드가 없어 무해하지만, 지우면 기존 행이 사라지므로 별도 판단이 필요하다.
-- **`torchaudio<2.9.0` 상한 해제** — 아래 함정 4번 참고.
+### 🔸 결정된 것 (2026-09-14)
+
+- **촉각 DB 테이블은 그대로 둔다.** `database.py`의 `TactileStageProgress`·`TactileAttempt`와
+  `Bookmark.domain`의 `'tactile'` 값은 조회하는 코드가 없어 무해하다. 기존 행을 잃지 않기 위해
+  남기고, **"미사용 · 지우려면 별도 마이그레이션 필요"** 주석만 붙였다.
+- **`torch`·`torchaudio` `<2.9.0` 상한은 풀었다.** 근거: 로컬 `backend/venv`가 이미
+  **torch 2.14 / torchaudio 2.11**이고 그 조합으로 backend 22파일·scripts 3파일이 전부 통과하며,
+  상한의 근거였던 `forced_align`도 2.11에 그대로 살아 있다.
+  ⚠️ **실질적 상한은 이제 `torchcodec<0.7.0`**(torch 2.8 계열에 묶여 있다)이다. 학습을 돌릴 때는
+  (torch, torchaudio, torchcodec)을 **한 세트로** 맞춘다 — 위 로컬 검증에 torchcodec은 빠져 있어
+  **데이터셋 오디오 디코딩 경로는 확인되지 않았다.** 상세는 `requirements-ml.txt` 머리 메모.
+- **E1·E2 판정 규칙의 빈칸을 메꿨다.** "세 결과가 배타적"이 아니라는 점, `prior_maxlogit`이 아닌
+  변형이 이길 때의 채택 순서, E2의 잔존율·AUC 임계값을 `docs/axis-b-scorer-redesign.md` §4에
+  **사전 등록**으로 적었다(결과를 보기 전에 정한 값이다).
 
 ---
 
@@ -113,15 +138,22 @@ python scripts/sweep_gop_scorers.py --features data_out/perturb.npz
 1. **Pod을 정지하면 GPU 예약이 풀린다.** 볼륨에서 꺼낼 게 있으면 **끄기 전에** 꺼낸다
 2. **Pod Start 후 `PUBLIC_KEY` env가 비어 SSH가 막힌다** — env PATCH + 재시작. 그러면 포트가 또 바뀐다 (런북 §2.1)
 3. **`--mode perturb`는 자모 vocab 전용** — 음절 vocab으로 돌리면 첫 발화에서 즉시 실패하도록 막아 뒀다
-4. `torchaudio<2.9.0` 상한은 **기술적 근거가 사라졌지만 그대로 둔 상태**(학습 재현성 때문). 푸는 건 별도 판단
+4. ~~`torchaudio<2.9.0` 상한~~ → **2026-09-14 해제됨.** 이제 실제로 막는 것은 `torchcodec<0.7.0`이다
+   (torch 2.8 계열에 묶여 있다) — 학습 환경에서는 torch·torchaudio·torchcodec을 한 세트로 맞춘다
 5. **줄바꿈이 파일마다 다르다 — `main.py`만이 아니다.** 실측 결과 소스 18개가 CRLF다:
    `backend/{main,database,engine,scoring,llm_service,auth,check_db}.py`,
    `frontend/src/api.js`, `frontend/src/pages/{Practice,Conversation,Bookmarks}.jsx`,
    `frontend/src/components/{LipSyncPlayer3D,QuizForm}.jsx`, `frontend/src/{main.jsx,store/useStore.js}`,
-   `frontend/{vite,tailwind,postcss}.config.js`. 나머지는 LF.
+   `frontend/{vite,tailwind,postcss}.config.js`.
+   **"나머지는 LF"는 틀렸다 (2026-09-14 정정).** 추적 파일 **36개**가 CRLF거나 섞여 있다 — 위 18개 외에
+   `backend/requirements.txt`, `frontend/{index.html,package.json,package-lock.json}`,
+   `frontend/src/index.css`, `Dockerfile`, `docker-compose.yml`, `fly.toml`, `.env.example`,
+   `scripts/{setup.sh,setup.ps1,start-backend.ps1}`, `DEPLOY.md`, `QUICKSTART.md`, `PROJECT_SUMMARY.md`가
+   CRLF이고, `README.md`·`.gitignore`·`backend/data/ksl_dictionary.csv`는 **이미 두 방식이 섞여 있다.**
    섞으면 diff가 파일 전체로 뒤집힌다. **편집 전에 확인한다:**
    ```bash
-   grep -c $'\r' <파일>     # 0이면 LF, 줄 수와 같으면 CRLF
+   grep -c $'\r' <파일>                   # 0이면 LF, 줄 수와 같으면 CRLF
+   git ls-files --eol | grep -v 'w/lf'    # 저장소 전체를 한 번에 본다
    ```
 6. 테스트는 pytest가 아니라 자체 러너 — `PYTHONPATH=. python test_x.py`
 

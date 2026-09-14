@@ -14,7 +14,7 @@ stage1_head/·stage2_full/·checkpoint-*/ 는 Trainer 옵티마이저 상태(학
 제외 패턴을 쓰지 않고 **최상위 일반 파일만 명시적으로 나열**한다 — fnmatch는 '/'도
 '*'로 먹어서 "*.json" 같은 패턴이 하위 디렉터리 파일까지 잡을 수 있다.
 
-실행: python upload_ckpt.py <로컬경로> <repo_id>
+실행: python scripts/upload_ckpt_hf.py <로컬경로> <repo_id>   (인자 2개 필수)
 """
 import os
 import sys
