@@ -104,6 +104,27 @@ ls /workspace/ckpt/scorer /workspace/ckpt/aligner            # 체크포인트 �
 python scripts/check_ml_env.py
 ```
 
+> ⚠️ **2026-09-14 실기에서 밟은 함정 둘 — 둘 다 시간을 태웠다.**
+>
+> 1. **포트는 재시작마다 바뀐다.** Start 직후 SSH가 붙었는데도 컨테이너가 한 번 더 재시작되면
+>    포트가 또 옮겨간다(실측 13471 → 19145). SSH가 `Connection refused`면 Pod이 죽은 게 아니라
+>    **포트가 바뀐 것**이다. 대기·재시도 루프는 **매 회차에 `portMappings["22"]`를 다시 읽는다.**
+>    고정 포트로 10분을 두드려 $0.6을 버렸다. 컨테이너 생존 여부는
+>    `https://<podId>-8888.proxy.runpod.net`이 302를 주는지로 따로 확인된다.
+> 2. **볼륨의 저장소가 9/8 상태로 멈춰 있었다.** `git pull`이 9/9에 Pod에서 생성된 untracked
+>    `backend/data/dgop_calibration.json`과 충돌해 거부되고, 그러면
+>    `scripts/{upload_ckpt_hf,dump_gop_features}.py`가 **없는 상태로 남는다.** 실제로 업로드와 E1이
+>    `No such file or directory`로 즉사했다. 순서를 이렇게 한다:
+>
+> ```bash
+> mv -f backend/data/dgop_calibration.json /workspace/logs/dgop_calibration.pod-backup.json
+> git pull origin feat/content-scale && git rev-parse --short HEAD   # HEAD를 눈으로 확인한다
+> ls scripts/upload_ckpt_hf.py scripts/dump_gop_features.py          # 둘 다 있어야 한다
+> ```
+>
+> 백그라운드로 던질 때는 **`python -u`**를 쓴다. 버퍼링 때문에 로그가 비어 보이면 진행 중인지
+> 죽은 것인지 구별할 수 없다.
+
 ---
 
 ## 3. A-0 스모크 (~30분, 대부분 다운로드)
