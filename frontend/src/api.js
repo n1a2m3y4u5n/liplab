@@ -162,8 +162,10 @@ export const curriculumAPI = {
   submitRecognition: async (viseme_id, chosen_id) =>
     (await api.post('/curriculum/recognition', { viseme_id, chosen_id })).data,
   getWords: async () => (await api.get('/curriculum/words')).data,
-  submitWord: async (word, correct) => (await api.post('/curriculum/word-answer', { word, correct })).data,
+  submitWord: async (word, correct, chosen) => (await api.post('/curriculum/word-answer', { word, correct, chosen })).data,
   getClosure: async () => (await api.get('/curriculum/closure')).data,
+  submitClosure: async (item_id, chosen) => (await api.post('/curriculum/closure-answer', { item_id, chosen })).data,
+  confusionMatrix: async () => (await api.get('/curriculum/confusion-matrix')).data,
   getRecommendedLevel: async () => (await api.get('/curriculum/recommended-level')).data,
   getNext: async () => (await api.get('/curriculum/next')).data,
   getCues: async (text) => (await api.get('/cues', { params: { text } })).data,

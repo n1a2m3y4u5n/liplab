@@ -58,10 +58,13 @@ function ClosureQuiz({ items }) {
     learningAPI.getVisemes(full).then(setFrames).catch(() => {})
   }, [i])
 
-  const choose = (opt) => {
+  const choose = async (opt) => {
     if (result) return
     const correct = opt === item.answer
-    setResult({ correct, chosen: opt })
+    let confusions = []
+    try { const r = await curriculumAPI.submitClosure(item.id, opt); confusions = r.confusions || [] }
+    catch { /* 기록 실패해도 진행 */ }
+    setResult({ correct, chosen: opt, confusions })
     setStat((s) => ({ n: s.n + 1, correct: s.correct + (correct ? 1 : 0) }))
   }
 
@@ -113,6 +116,19 @@ function ClosureQuiz({ items }) {
                     ? '정답! 🎉 문맥으로 잘 골랐어요.'
                     : `아쉬워요 — 정답은 "${item.answer}". 보기들은 입모양이 거의 같아서 문맥이 열쇠예요.`}
                 </div>
+                {!result.correct && result.confusions?.length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-1.5">
+                    <p className="text-xs font-semibold text-amber-800">왜 헷갈렸나요?</p>
+                    {result.confusions.map((cf, k) => (
+                      <p key={k} className="text-[13px] text-amber-900 leading-snug">
+                        {cf.position} <b>‘{cf.target}’</b>↔<b>‘{cf.read}’</b> —{' '}
+                        {cf.same_viseme
+                          ? <>둘 다 <b>{cf.viseme_name_ko}</b>이라 입모양만으론 구별 불가. 그래서 <b>문맥</b>이 열쇠예요.</>
+                          : <>정답은 <b>{cf.viseme_name_ko}</b> 입모양입니다.</>}
+                      </p>
+                    ))}
+                  </div>
+                )}
                 <button onClick={() => setI(i + 1)} className="btn-primary w-full py-2 text-sm">다음 문제 →</button>
               </motion.div>
             )}
