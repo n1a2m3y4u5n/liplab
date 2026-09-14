@@ -179,6 +179,10 @@ export const scoreAPI = {
   score: async (correct, user_answer) => (await api.post('/score', { correct, user_answer })).data,
 }
 
+export const evalAPI = {
+  summary: async () => (await api.get('/eval/summary')).data,
+}
+
 export const reviewAPI = {
   getDue: async () => (await api.get('/review/due')).data,
   answer: async (kind, ref, correct) => (await api.post('/review/answer', { kind, ref, correct })).data,

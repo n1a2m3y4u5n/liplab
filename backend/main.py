@@ -1070,6 +1070,116 @@ async def curriculum_confusion_matrix(current_user=Depends(get_current_user), db
             "jamo_confusions": jamo_list}
 
 
+@app.get("/api/eval/summary")
+async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """학습 효과 리포트 — 개인별 시행 기록으로 학습곡선·단계별 도달 시행수·초기 대비 최근
+    향상도를 집계한다. 공모전 평가/효과성 근거용. 데이터가 적으면 각 지표를 null·빈 배열로
+    돌려 프론트가 '데이터가 쌓이면 표시' 상태를 그릴 수 있게 한다.
+
+    지표
+    - learning_curve: 선다형 시행(TrialAttempt)을 시간순 8구간으로 나눈 정확도 추이.
+    - baseline_vs_recent: 첫 1/3 vs 마지막 1/3 정확도(통제된 사전/사후는 아니며 '관찰된 향상').
+    - by_item_type: 입모양·단어·문맥추론별 정확도.
+    - trials_to_criterion: 단계별 숙달까지 걸린(또는 현재까지의) 시도수.
+    - same_viseme_ratio: 오답 중 '입모양이 같아' 헷갈린 비율(시각 혼동성 근거).
+    - sentence_trend: 문장 채점(Progress) 점수의 시간순 추이.
+    """
+    from database import TrialAttempt, Progress, StageProgress
+    from sqlalchemy import select
+
+    def bucketize(items, key, n_bins=8):
+        """시간순 items를 최대 n_bins개 연속 구간으로 나눠 각 구간의 평균(key)·개수를 낸다."""
+        if not items:
+            return []
+        n = len(items)
+        bins = min(n_bins, n)
+        out = []
+        for b in range(bins):
+            lo = (n * b) // bins
+            hi = (n * (b + 1)) // bins
+            seg = items[lo:hi]
+            if not seg:
+                continue
+            out.append({"bin": b + 1, "n": len(seg),
+                        "value": round(sum(key(x) for x in seg) / len(seg), 3)})
+        return out
+
+    # ── 선다형 시행 ──────────────────────────────────────────────
+    tr = (await db.execute(
+        select(TrialAttempt).where(TrialAttempt.user_id == current_user.id)
+        .order_by(TrialAttempt.created_at.asc()))).scalars().all()
+    n_tr = len(tr)
+    n_correct = sum(1 for a in tr if a.correct)
+
+    learning_curve = bucketize(tr, lambda a: 1.0 if a.correct else 0.0)
+
+    baseline_vs_recent = None
+    if n_tr >= 9:                       # 1/3씩 나누려면 최소 9시행
+        k = n_tr // 3
+        early = tr[:k]; late = tr[-k:]
+        eb = sum(1 for a in early if a.correct) / len(early)
+        lb = sum(1 for a in late if a.correct) / len(late)
+        baseline_vs_recent = {
+            "baseline_acc": round(eb * 100, 1), "recent_acc": round(lb * 100, 1),
+            "delta_pp": round((lb - eb) * 100, 1), "n_each": k,
+            "note": "통제된 사전/사후가 아니라 시행 순서 기준 초기 1/3 vs 최근 1/3 정확도"}
+
+    by_item_type = []
+    for it, label in (("viseme", "입모양 인지"), ("word", "단어"), ("closure", "문맥 추론")):
+        seg = [a for a in tr if a.item_type == it]
+        if seg:
+            by_item_type.append({"item_type": it, "label": label, "n": len(seg),
+                                 "accuracy": round(sum(1 for a in seg if a.correct) / len(seg) * 100, 1)})
+
+    # 오답 중 같은 입모양 혼동 비율
+    same_cnt = tot_cf = 0
+    for a in tr:
+        for cf in (a.confusions or []):
+            tot_cf += 1
+            if cf.get("same_viseme"):
+                same_cnt += 1
+    same_viseme_ratio = round(same_cnt / tot_cf, 3) if tot_cf else None
+
+    # ── 단계별 도달 시행수 ───────────────────────────────────────
+    sps = (await db.execute(
+        select(StageProgress).where(StageProgress.user_id == current_user.id)
+        .order_by(StageProgress.stage.asc()))).scalars().all()
+    _STAGE_MIN = {1: _STAGE1_MIN_ATTEMPTS, 2: _STAGE2_MIN_ATTEMPTS, 3: _STAGE3_MIN_ATTEMPTS, 4: _STAGE4_MIN_ATTEMPTS}
+    _STAGE_NAME = {1: "입모양 인지", 2: "단어", 3: "문장", 4: "대화"}
+    trials_to_criterion = []
+    for sp in sps:
+        if sp.stage not in _STAGE_NAME:
+            continue
+        trials_to_criterion.append({
+            "stage": sp.stage, "name": _STAGE_NAME[sp.stage], "status": sp.status,
+            "attempts": sp.attempts or 0, "correct": sp.correct or 0,
+            "mastery_score": round(sp.mastery_score or 0.0, 1),
+            "criterion_attempts": _STAGE_MIN.get(sp.stage),
+            "mastered": sp.status == "mastered"})
+
+    # ── 문장 채점 추이 ───────────────────────────────────────────
+    prog = (await db.execute(
+        select(Progress).where(Progress.user_id == current_user.id)
+        .order_by(Progress.created_at.asc()))).scalars().all()
+    sentence_trend = bucketize(prog, lambda p: p.score or 0.0)
+    sentence_avg = round(sum(p.score or 0 for p in prog) / len(prog), 1) if prog else None
+
+    return {
+        "overview": {
+            "total_trials": n_tr,
+            "trial_accuracy": round(n_correct / n_tr * 100, 1) if n_tr else None,
+            "total_sentences": len(prog),
+            "sentence_avg_score": sentence_avg,
+        },
+        "learning_curve": learning_curve,
+        "baseline_vs_recent": baseline_vs_recent,
+        "by_item_type": by_item_type,
+        "same_viseme_ratio": same_viseme_ratio,
+        "trials_to_criterion": trials_to_criterion,
+        "sentence_trend": sentence_trend,
+    }
+
+
 class ScoreRequest(BaseModel):
     correct: str
     user_answer: str
