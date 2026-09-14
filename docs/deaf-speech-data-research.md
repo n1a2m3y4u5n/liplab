@@ -78,6 +78,21 @@ tokens contribute to the estimation, while the blank tokens are skipped"*라고 
 검사(`nb_frames != frames`)와 `test_dump_gop_features.test_spans_contain_no_blank_frames`가
 알려준다.
 
+> ### ⚠️ 2026-09-14 재정정 — 위 두 단락의 결론을 철회한다
+>
+> A-6 실측에서 **E1 구간의 47%(10,785개)**가 `nb_frames != frames`로 걸렸다. 원인을 따져 보니
+> 위 논증이 두 가지를 섞었다.
+>
+> - `token_spans`가 run으로 잡는 것은 **정렬 경로의 라벨**이다. 그 라벨에 blank가 없다는 것은 맞다.
+> - 그런데 불변 검사가 세는 것은 **모델 자신의 argmax가 blank인 프레임**이다. 강제정렬은 모델이
+>   blank를 선호하는 프레임에도 목표 토큰을 배정하므로, 실제 데이터에서 이 둘이 갈라지는 것은
+>   **정상이다.** 합성 난수 오디오(스모크)에서만 등호가 성립해 테스트가 통과했다.
+>
+> 결론: **Cao et al. 2024의 blank 지적은 이 구현에도 유효하다.** 구간 평균이 blank 우세 프레임을
+> 포함하고, 그 프레임의 P(목표)가 낮아 평균을 끌어내린다. 다만 `blank 제외` 변형을 실제로 재려면
+> **재덤프가 필요하다** — `span_aggregates`가 비blank 집계를 저장하지 않는다(§6-1의 후보 중
+> 이 하나만 A-6에서 평가되지 못했다). 상세는 `docs/axis-a-training-plan.md` A-6.
+
 ---
 
 ## 1. 지금 당장 받을 수 있는 것

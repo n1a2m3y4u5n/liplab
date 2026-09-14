@@ -18,9 +18,10 @@
 # ✅ 2026-09-14 — 상한을 **풀었다.** 근거와 "검증되지 않은 범위"를 함께 남긴다.
 #   - 로컬 venv(torch 2.14.0 / torchaudio 2.11.0)로 backend 22파일·scripts 3파일이 전부 통과했고,
 #     test_ctc_align의 torchaudio 대조 테스트도 건너뛰지 않고 실제로 돌았다.
-#   - 학습 당시 환경(A-1·A-2, 2026-09-08 RunPod H100): **torchaudio 2.8.0 / torchcodec 0.6.x
-#     (= torch 2.8 계열) / CUDA 12.** 체크포인트를 다시 쓰거나 재학습을 재현할 때는 이 조합을
-#     기준으로 삼는다(torch의 정확한 패치 버전은 당시 기록이 없다).
+#   - 학습 당시 환경(A-1·A-2, 2026-09-08 RunPod H100) — 2026-09-14에 Pod 이미지 태그로 확정했다:
+#     **`runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404` = torch 2.8.0 / CUDA 12.8.1 /
+#     Ubuntu 24.04**, torchaudio 2.8.0, torchcodec 0.6.x. 체크포인트를 다시 쓰거나 재학습을
+#     재현할 때는 이 조합을 기준으로 삼는다.
 #   - ⚠️ **실질적인 상한은 이제 torchcodec이다.** 아래 `torchcodec<0.7.0`이 torch 2.8 계열에
 #     묶여 있어, torch를 2.9+로 올리려면 torchcodec도 같이 올려야 한다(그러면 CUDA 13 런타임을
 #     요구할 수 있다 — 아래 메모). **학습을 돌리는 환경에서는 (torch, torchaudio, torchcodec)을
