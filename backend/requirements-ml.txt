@@ -14,10 +14,21 @@
 #      (자체 구현이 torchaudio와 프레임 단위로 일치함을 test_ctc_align이 무작위 입력으로 검증)
 #   2) forced_align은 실제로는 2.11.0에도 그대로 살아 있다(로컬 실측) — "2.9에서 제거"는
 #      공지보다 이르게 잡은 추정이었다.
-# 상한을 푸는 것은 학습 재현성에 영향이 있어(torch 버전이 바뀌면 체크포인트 로딩·수치가
-# 흔들릴 수 있다) 별도 판단으로 남긴다. 풀 때는 torchaudio 줄을 지우면 된다.
-torch>=2.4.0,<2.9.0
-torchaudio>=2.1.0,<2.9.0   # 기능적으로는 미사용 — 위 메모 참고
+#
+# ✅ 2026-09-14 — 상한을 **풀었다.** 근거와 "검증되지 않은 범위"를 함께 남긴다.
+#   - 로컬 venv(torch 2.14.0 / torchaudio 2.11.0)로 backend 22파일·scripts 3파일이 전부 통과했고,
+#     test_ctc_align의 torchaudio 대조 테스트도 건너뛰지 않고 실제로 돌았다.
+#   - 학습 당시 환경(A-1·A-2, 2026-09-08 RunPod H100): **torchaudio 2.8.0 / torchcodec 0.6.x
+#     (= torch 2.8 계열) / CUDA 12.** 체크포인트를 다시 쓰거나 재학습을 재현할 때는 이 조합을
+#     기준으로 삼는다(torch의 정확한 패치 버전은 당시 기록이 없다).
+#   - ⚠️ **실질적인 상한은 이제 torchcodec이다.** 아래 `torchcodec<0.7.0`이 torch 2.8 계열에
+#     묶여 있어, torch를 2.9+로 올리려면 torchcodec도 같이 올려야 한다(그러면 CUDA 13 런타임을
+#     요구할 수 있다 — 아래 메모). **학습을 돌리는 환경에서는 (torch, torchaudio, torchcodec)을
+#     한 세트로 맞춘다.**
+#   - 위 로컬 검증에 **torchcodec은 포함되지 않았다**(로컬 미설치). 즉 추론·정렬·채점 경로는
+#     torch 2.14에서 확인됐고, **데이터셋 오디오 디코딩 경로는 확인되지 않았다.**
+torch>=2.4.0
+torchaudio>=2.1.0   # 기능적으로는 미사용 — 위 메모 참고
 transformers>=5.16.0   # 5.x에서 TrainingArguments 인자가 바뀜(warmup_ratio·group_by_length 제거)
 soundfile>=0.12.1
 librosa>=0.10.2
