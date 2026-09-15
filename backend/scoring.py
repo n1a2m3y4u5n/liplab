@@ -2,7 +2,6 @@
 Advanced Scoring Algorithm with Phonological Similarity Weighting
 Evaluates user responses using articulatory feature-based partial credit
 """
-import Levenshtein
 from typing import Dict, List, Tuple
 from engine import decompose_hangul, VISEME_MAP, get_viseme_feature
 
@@ -63,6 +62,8 @@ def get_phoneme_similarity(p1: str, p2: str) -> float:
 
     # 폴백 — 표에 없는 쌍도 '입모양(viseme)'이 같으면 시각적으로 혼동되므로 부분점수를 준다.
     # 손으로 정한 표의 공백을 비심 규칙으로 메워, 채점 근거를 시각 지각과 일관되게 한다.
+    # (참고: 데이터 유래 자모 시각유사도는 backend/data/phoneme-visual-space.json에 별도 산출·공개.
+    #  현재 소량·합성 기반 예비판이라 손코딩 표와 상관이 낮아 라이브 채점엔 아직 반영하지 않는다.)
     v1, v2 = VISEME_MAP.get(p1), VISEME_MAP.get(p2)
     if v1 is not None and v1 == v2:
         return 0.5
@@ -301,6 +302,7 @@ async def calculate_score(correct: str, user_answer: str, db=None) -> Dict:
     error_visemes = identify_error_visemes(correct_jamos, user_jamos)
 
     # Calculate basic Levenshtein distance for additional context
+    import Levenshtein  # 지연 임포트 — 미설치 환경에서도 모듈 로드는 되도록
     levenshtein_distance = Levenshtein.distance(correct_clean, user_clean)
     levenshtein_ratio = (1 - levenshtein_distance / max(len(correct_clean), len(user_clean))) * 100
 
