@@ -43,6 +43,9 @@ def is_available() -> bool:
 
 
 def _find_ckpt() -> Optional[str]:
+    env = os.environ.get("LIPLAB_A4_CKPT")
+    if env and os.path.exists(env):
+        return env
     for p in _CKPT_CANDIDATES:
         if p and os.path.exists(p):
             return p
@@ -90,10 +93,26 @@ def _load():
 
 
 def _to_mono16k(audio_bytes: bytes):
-    """오디오 바이트 → 16k mono float32 numpy."""
+    """오디오 바이트 → 16k mono float32 numpy.
+    브라우저 녹음은 webm/opus라 soundfile로는 못 읽는 경우가 많아, 실패 시 ffmpeg로 폴백한다."""
     import numpy as np
-    import librosa
-    y, _ = librosa.load(io.BytesIO(audio_bytes), sr=SR, mono=True)
+    y = None
+    try:
+        import librosa
+        y, _ = librosa.load(io.BytesIO(audio_bytes), sr=SR, mono=True)
+    except Exception:
+        y = None
+    if y is None or getattr(y, "size", 0) == 0:
+        # ffmpeg 폴백 — stdin(webm/opus 등) → 16k mono f32le stdout
+        import subprocess
+        try:
+            proc = subprocess.run(
+                ["ffmpeg", "-v", "error", "-i", "pipe:0", "-ac", "1",
+                 "-ar", str(SR), "-f", "f32le", "pipe:1"],
+                input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            y = np.frombuffer(proc.stdout, dtype=np.float32).copy()
+        except Exception:
+            return np.zeros(0, dtype=np.float32)
     if y.size == 0:
         return y
     return (y - y.mean()) / (y.std() + 1e-6)
