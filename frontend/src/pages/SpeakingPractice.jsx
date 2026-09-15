@@ -505,6 +505,33 @@ export default function SpeakingPractice() {
                         다르게 들린 소리: {assessment.confusions.map((c) => `${c.correct}→${c.confused_as}`).join(', ')}
                       </div>
                     )}
+                    {assessment.acoustic_dgop?.phones?.length > 0 && (
+                      <div className="p-3 rounded-lg bg-white border border-gray-200">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-medium text-gray-600">음소별 발음 정확도</span>
+                          <span className="text-[10px] text-gray-400">전사 없이 음향 분석 · 축 B</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {assessment.acoustic_dgop.phones.map((p, i) => {
+                            const v = Math.round((p.dgop ?? 0) * 100)
+                            const tone = v >= 70 ? 'bg-green-100 text-green-700 border-green-200'
+                              : v >= 45 ? 'bg-amber-100 text-amber-700 border-amber-200'
+                              : 'bg-red-100 text-red-700 border-red-200'
+                            return (
+                              <div key={i} className={`px-1.5 py-1 rounded-md border text-center ${tone}`} title={`정확도 ${v} · 신뢰도 ${Math.round((p.confidence ?? 0) * 100)}`}>
+                                <div className="text-sm font-bold leading-none">{p.label || '·'}</div>
+                                <div className="text-[10px] leading-tight mt-0.5">{v}</div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        {assessment.acoustic_dgop.uncertainty != null && (
+                          <p className="text-[10px] text-gray-400 mt-1.5">
+                            불확실성 {Math.round(assessment.acoustic_dgop.uncertainty * 100)}% — 뭉갠 발음일수록 높아요
+                          </p>
+                        )}
+                      </div>
+                    )}
                     {assessment.coaching && (
                       <div className="p-3 rounded-lg bg-primary-50 text-primary-800 text-sm leading-relaxed">🗣️ {assessment.coaching}</div>
                     )}
