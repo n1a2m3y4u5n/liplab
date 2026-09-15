@@ -57,10 +57,12 @@ def generate_cues(text: str, target_visemes: Optional[List[int]] = None,
     """
     텍스트를 '소리 나는 대로' 변환한 음절 타임라인에서 기호를 얹을 지점을 찾는다.
 
-    반환: [{"syllable_index", "position"("initial"|"final"), "phoneme", "viseme", "cue"}]
+    반환: [{"syllable_index", "position"("initial"|"final"), "phoneme", "viseme", "cue", "strength"}]
     개인화(소거):
       · target_visemes를 주면 그 표적 음소만 기호를 남긴다(집중 학습).
-      · mastery를 주면 숙달도가 fade_threshold 이상인 음소의 기호는 소거한다(페이딩).
+      · mastery를 주면 숙달도에 따라 기호의 strength(0.2~1.0)를 점진적으로 낮추고,
+        fade_threshold 이상이면 완전히 소거한다(이진 컷오프가 아닌 점진 페이딩).
+        프론트는 strength를 기호의 opacity로 반영한다.
     """
     tv = set(target_visemes) if target_visemes else None
     cues: List[Dict] = []
@@ -77,8 +79,14 @@ def generate_cues(text: str, target_visemes: Optional[List[int]] = None,
             vid = VISEME_MAP.get(ph)
             if tv is not None and vid not in tv:
                 continue  # 표적 음소만 남김
-            if mastery is not None and mastery.get(vid, 0.0) >= fade_threshold:
-                continue  # 충분히 숙달 → 기호 소거(페이딩)
+            strength = 1.0
+            if mastery is not None:
+                m = mastery.get(vid, 0.0)
+                if m >= fade_threshold:
+                    continue  # 충분히 숙달 → 기호 완전 소거
+                # 숙달도가 오를수록 점진적으로 흐리게(하한 0.2로 완전투명 방지)
+                strength = round(max(0.2, 1.0 - m / fade_threshold), 3)
             cues.append({"syllable_index": i, "position": pos,
-                         "phoneme": ph, "viseme": vid, "cue": cue})
+                         "phoneme": ph, "viseme": vid, "cue": cue,
+                         "strength": strength})
     return cues

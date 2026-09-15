@@ -3,21 +3,53 @@ import { curriculumAPI } from '../api'
 
 /**
  * 시각 증강 오버레이(고도화 축 J) — 입모양이 같은 동구형이음을, 입술 밖으로 드러나지
- * 않는 조음 자질에 대응하는 최소 기호로 구분해 준다. 기호는 임의가 아니라 자질에 대응한다.
- *   기식(격음) ≈ 바람 / 긴장(경음) ◆ 힘 / 울림(비음) ∿ 코울림. 평음은 기준이라 기호 없음.
+ * 않는 조음 자질에 대응하는 최소 SVG 기호로 구분해 준다. 기호는 임의가 아니라 자질에 대응한다.
+ *   기식(격음) 바람 / 긴장(경음) 채운마름모 / 울림(비음) 물결. 평음은 기준이라 기호 없음.
+ * 숙달도가 오르면 백엔드가 strength를 낮춰 기호가 점진적으로 흐려진다(페이딩).
  */
-const CUE_STYLE = {
-  aspirated: { sym: '≈', label: '기식(바람)', cls: 'bg-sky-100 text-sky-700 border-sky-200' },
-  tense: { sym: '◆', label: '긴장(힘)', cls: 'bg-amber-100 text-amber-700 border-amber-200' },
-  nasal: { sym: '∿', label: '울림(코)', cls: 'bg-violet-100 text-violet-700 border-violet-200' },
+const CUE_META = {
+  aspirated: { label: '기식(바람)', color: '#0284c7', bg: 'bg-sky-50 border-sky-200' },
+  tense: { label: '긴장(힘)', color: '#b45309', bg: 'bg-amber-50 border-amber-200' },
+  nasal: { label: '울림(코)', color: '#7c3aed', bg: 'bg-violet-50 border-violet-200' },
+}
+
+/** 자질별 SVG 글리프(16x16). 색은 currentColor. */
+export function CueGlyph({ cue, size = 14 }) {
+  const color = CUE_META[cue]?.color || '#666'
+  const common = { width: size, height: size, viewBox: '0 0 16 16', fill: 'none', stroke: color }
+  if (cue === 'aspirated') {
+    // 바람(기식) — 새어 나가는 공기 흐름
+    return (
+      <svg {...common} strokeWidth="1.6" strokeLinecap="round">
+        <path d="M2 5 h7 a2 2 0 1 0 -2 -2" />
+        <path d="M2 8.5 h9 a2 2 0 1 1 -2 2" />
+        <path d="M2 12 h5" />
+      </svg>
+    )
+  }
+  if (cue === 'nasal') {
+    // 울림(비음) — 코울림 물결
+    return (
+      <svg {...common} strokeWidth="1.7" strokeLinecap="round">
+        <path d="M1.5 8 q 2 -4 3.5 0 t 3.5 0 t 3.5 0" />
+        <path d="M1.5 11.5 q 2 -4 3.5 0 t 3.5 0 t 3.5 0" opacity="0.55" />
+      </svg>
+    )
+  }
+  // 긴장(경음) — 힘을 준 채운 마름모
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill={color} stroke="none">
+      <polygon points="8,1.5 14.5,8 8,14.5 1.5,8" />
+    </svg>
+  )
 }
 
 export function CueLegend() {
   return (
     <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-      {Object.entries(CUE_STYLE).map(([k, s]) => (
+      {Object.entries(CUE_META).map(([k, s]) => (
         <span key={k} className="inline-flex items-center gap-1">
-          <span className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] font-bold ${s.cls}`}>{s.sym}</span>
+          <span className={`inline-flex h-5 w-5 items-center justify-center rounded border ${s.bg}`}><CueGlyph cue={k} /></span>
           {s.label}
         </span>
       ))}
@@ -47,14 +79,15 @@ export default function CueBadges({ text }) {
     <span className="inline-flex items-end gap-0.5 rounded-lg border border-gray-200 bg-white px-2 py-1">
       {[...text].map((ch, i) => (
         <span key={i} className="inline-flex flex-col items-center">
-          <span className="flex h-4 items-center gap-0.5">
+          <span className="flex h-5 items-center gap-0.5">
             {(bySyl[i] || []).map((c, j) => (
               <span
                 key={j}
-                title={CUE_STYLE[c.cue]?.label}
-                className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] font-bold ${CUE_STYLE[c.cue]?.cls || ''}`}
+                title={`${CUE_META[c.cue]?.label}${c.strength != null && c.strength < 1 ? ' · 익어가는 중' : ''}`}
+                style={{ opacity: c.strength ?? 1 }}
+                className={`inline-flex h-5 w-5 items-center justify-center rounded border ${CUE_META[c.cue]?.bg || ''}`}
               >
-                {CUE_STYLE[c.cue]?.sym}
+                <CueGlyph cue={c.cue} />
               </span>
             ))}
           </span>
