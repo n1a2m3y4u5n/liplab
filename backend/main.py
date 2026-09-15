@@ -1146,16 +1146,26 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
         .order_by(StageProgress.stage.asc()))).scalars().all()
     _STAGE_MIN = {1: _STAGE1_MIN_ATTEMPTS, 2: _STAGE2_MIN_ATTEMPTS, 3: _STAGE3_MIN_ATTEMPTS, 4: _STAGE4_MIN_ATTEMPTS}
     _STAGE_NAME = {1: "입모양 인지", 2: "단어", 3: "문장", 4: "대화"}
-    trials_to_criterion = []
+    # 한 단계에 StageProgress 행이 여러 개일 수 있어(과거 데이터·경쟁 삽입) 단계별로 합산한다.
+    agg = {}  # stage -> {attempts, correct, mastery, mastered}
     for sp in sps:
         if sp.stage not in _STAGE_NAME:
             continue
+        a = agg.setdefault(sp.stage, {"attempts": 0, "correct": 0, "mastery": 0.0, "mastered": False})
+        a["attempts"] += sp.attempts or 0
+        a["correct"] += sp.correct or 0
+        a["mastery"] = max(a["mastery"], sp.mastery_score or 0.0)
+        a["mastered"] = a["mastered"] or (sp.status == "mastered")
+    trials_to_criterion = []
+    for stage in sorted(agg):
+        a = agg[stage]
         trials_to_criterion.append({
-            "stage": sp.stage, "name": _STAGE_NAME[sp.stage], "status": sp.status,
-            "attempts": sp.attempts or 0, "correct": sp.correct or 0,
-            "mastery_score": round(sp.mastery_score or 0.0, 1),
-            "criterion_attempts": _STAGE_MIN.get(sp.stage),
-            "mastered": sp.status == "mastered"})
+            "stage": stage, "name": _STAGE_NAME[stage],
+            "status": "mastered" if a["mastered"] else ("in_progress" if a["attempts"] else "locked"),
+            "attempts": a["attempts"], "correct": a["correct"],
+            "mastery_score": round(a["mastery"], 1),
+            "criterion_attempts": _STAGE_MIN.get(stage),
+            "mastered": a["mastered"]})
 
     # ── 문장 채점 추이 ───────────────────────────────────────────
     prog = (await db.execute(

@@ -1071,3 +1071,34 @@ J 기호 뒷받침·B 융합 입력 후보(음향·영상 백본과 함께 Phase
 양순·치경·연구개·경구개·성문 시각 군 분리). numpy만 사용(torch 불필요, 생성 전용).
 공개 자원(`docs/perceptual-resources.json`)에 `consonant_visual_space` 추가. 테스트 5개로 확대.
 **변경 파일(C.2).** `backend/perceptual_space.py`(신규)·`perceptual.py`·`test_perceptual.py`·`requirements-gen.txt`·`docs/perceptual-resources.json`.
+
+## L. 자모 단위 피드백 · 혼동행렬 · MWIS 채점 (Sublexical Feedback)
+브랜치 `feat/sublexical-feedback`. 기존 채점은 '맞다/틀리다'와 문장 유사도 중심이라, 학습자가
+**어디서·왜** 헷갈렸는지 자모 수준의 진단을 주지 못했다. 독화의 본질(같은 입모양=시각적 동음)을
+피드백으로 되돌려준다.
+- `scoring.py`: `VISEME_NAME_KO` + `viseme_confusions(target, chosen)` — 초성·중성·종성 위치별로
+  '무엇을 무엇으로 읽었나', 그 자모의 비심(입모양 그룹)과 **같은 입모양이라 헷갈린 것인지(same_viseme)**를 반환.
+- `database.py`: `TrialAttempt`(시행 단위 기록 — stage·item_type·target·chosen·correct·phase·confusions).
+  비심 혼동행렬·학습곡선·사전/사후 평가의 원천 데이터.
+- `main.py`: 2단계 단어 채점(`/word-answer`)·문맥추론(`/closure-answer`)이 TrialAttempt를 남기고
+  혼동 목록을 응답에 실어 준다. `GET /api/curriculum/confusion-matrix`(자모 혼동행렬+같은입모양 비율).
+- 문맥추론 채점은 **최대가중독립집합(MWIS)** 관점으로 후보 간섭을 줄여 정답 신뢰도를 매긴다.
+- 프론트: `WordStage`·`Closure`에 "어디서/왜 헷갈렸나요?" 자모 피드백 블록, `AnalysisDetail`(visemes)에 혼동 지도 카드.
+검증: `scoring` 음운 채점 회귀 테스트 5개, 시드 시행으로 혼동행렬·같은입모양 비율(양순 ㅂ-ㅁ-ㅍ=1.0) 확인.
+**변경 파일(L).** `backend/scoring.py`·`database.py`·`main.py`, `frontend/src/api.js`·`pages/WordStage.jsx`·`Closure.jsx`·`AnalysisDetail.jsx`.
+
+## M. 학습 효과 리포트 (Evaluation Dashboard)
+공모전 평가·효과성 근거를 위해, 축적된 시행 기록에서 **학습이 실제로 일어났는지**를 개인별로 보여준다.
+- `main.py`: `GET /api/eval/summary` — `learning_curve`(시행 시간순 8구간 정확도), `baseline_vs_recent`
+  (초기 1/3 vs 최근 1/3 정확도; **통제된 사전/사후가 아니라 '관찰된 향상'임을 응답에 명시**),
+  `by_item_type`(입모양·단어·문맥추론별 정확도), `trials_to_criterion`(단계별 숙달까지 시도수 vs 기준),
+  `same_viseme_ratio`(오답 중 같은 입모양 혼동 비율), `sentence_trend`(문장 점수 추이). 데이터 부족 시 null/빈배열 폴백.
+- 프론트: `pages/EvalReport.jsx`(`/analysis/eval`) — 의존성 없는 SVG 꺾은선 학습곡선, 향상도 카드,
+  단계 진행바, 같은입모양 비율 해설. 글로벌 학습 메뉴에 '학습 효과 리포트' 진입점.
+검증: 시드 10시행에서 baseline 33.3%→recent 100%(+66.7%p), 2단계 숙달(10/6회), same_viseme 1.0 확인. 프론트 빌드 통과.
+**변경 파일(M).** `backend/main.py`, `frontend/src/api.js`·`App.jsx`·`pages/EvalReport.jsx`·`components/GlobalLearningMenu.jsx`.
+
+## 배포 — 디벨롭/스테이징 분리
+전시용 앱 `liplab.fly.dev`(절대 미변경)와 별개로, **develop 배포 전용** `liplab-dev.fly.dev`(fly 앱 `liplab-dev`)를 신설.
+`fly.dev.toml`(app=liplab-dev, `LIPLAB_AI_ITEMS=0`=정적 커리큘럼, 자체 볼륨). 라이브 LLM 키 없이도
+규칙 기반 신기능(혼동행렬·자모 피드백·MWIS·학습 효과 리포트)을 그대로 시연·검증한다.
