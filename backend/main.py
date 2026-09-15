@@ -1297,9 +1297,10 @@ async def curriculum_next(current_user=Depends(get_current_user), db: AsyncSessi
     records = [{"viseme_id": w.viseme_id, "error_count": w.error_count,
                 "total_attempts": w.total_attempts, "last_error_at": w.last_error_at} for w in rows]
     rec = _kt.recommend(records, k=2)
+    # strict=True: 표적 음소 적중 콘텐츠가 충분하면 무적중을 걸러 개인화를 강화(부족하면 자동 정렬 폴백)
     sel = _crules.select_personalized(
         _curriculum.WORD_BANK, _curriculum.MINIMAL_PAIRS, _curriculum.CLOSURE_ITEMS,
-        rec["target_visemes"], rec["level"])
+        rec["target_visemes"], rec["level"], strict=True)
 
     targets = []
     for v in rec["target_visemes"]:
