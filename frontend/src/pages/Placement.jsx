@@ -15,6 +15,8 @@ const VIS_NAME = {
 
 const STAGE_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/practice' }
 
+const MODE_LABEL = { placement: '배치검사', A: '사전검사', B: '사후검사' }
+
 export default function Placement() {
   const navigate = useNavigate()
   const [items, setItems] = useState(null)
@@ -23,16 +25,17 @@ export default function Placement() {
   const [frames, setFrames] = useState([])
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [mode, setMode] = useState('placement')  // placement | A(사전) | B(사후) — 향상도검사(축 I)
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (m = mode) => {
     setLoading(true); setResult(null); setResponses({}); setIdx(0)
     try {
-      const d = await curriculumAPI.getPlacement(8)
+      const d = await curriculumAPI.getPlacement(8, m === 'placement' ? null : m)
       setItems(d.items)
     } catch { /* ignore */ } finally { setLoading(false) }
-  }, [])
+  }, [mode])
 
-  useEffect(() => { start() }, [start])
+  useEffect(() => { start('placement') }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!items || !items[idx]) return
@@ -47,10 +50,12 @@ export default function Placement() {
     if (idx < items.length - 1) {
       setIdx(idx + 1)
     } else {
-      const r = await curriculumAPI.scorePlacement(items, next)
+      const r = await curriculumAPI.scorePlacement(items, next, mode)
       setResult(r)
     }
   }
+
+  const switchMode = (m) => { setMode(m); start(m) }
 
   if (loading || !items) return <div className="p-8 text-center text-gray-400">검사를 준비하는 중…</div>
 
@@ -77,12 +82,27 @@ export default function Placement() {
               </div>
             </div>
           )}
+          {result.error_phonemes?.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500">자주 놓친 소리(음소)</p>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {result.error_phonemes.map((e) => (
+                  <span key={e.phoneme} className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">{e.phoneme} ×{e.count}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {mode !== 'placement' && (
+            <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              {MODE_LABEL[mode]} 결과를 저장했어요. 사전(A)·사후(B)를 모두 마치면 <b>학습 분석 → 통제 향상도</b>에서 변화가 보여요.
+            </p>
+          )}
           <div className="flex gap-2">
             <button onClick={() => navigate(STAGE_ROUTE[result.recommended_start?.key] || '/learn/viseme')}
               className="flex-1 rounded-lg bg-slate-900 py-2.5 text-sm font-bold text-white hover:bg-slate-700">
               {result.recommended_start?.title || '입모양 인지'}부터 시작 →
             </button>
-            <button onClick={start} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50">다시 검사</button>
+            <button onClick={() => start(mode)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50">다시 검사</button>
           </div>
         </div>
       </div>
@@ -93,6 +113,15 @@ export default function Placement() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-4">
       <LearnHeader title="독화 배치검사" />
+      <div className="mb-3 flex gap-1.5">
+        {['placement', 'A', 'B'].map((m) => (
+          <button key={m} onClick={() => switchMode(m)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${mode === m ? 'bg-slate-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            {MODE_LABEL[m]}
+          </button>
+        ))}
+        <span className="ml-auto self-center text-[11px] text-gray-400">사전(A)·사후(B)로 향상도 측정</span>
+      </div>
       <div className="mb-3">
         <div className="flex justify-between text-xs text-gray-500"><span>진행</span><span>{idx + 1} / {items.length}</span></div>
         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-200">

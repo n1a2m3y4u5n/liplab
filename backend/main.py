@@ -1379,22 +1379,79 @@ async def get_cues(text: str, personalize: bool = True,
 class PlacementScoreReq(BaseModel):
     items: list
     responses: dict
+    form: str = "placement"   # placement | A(사전) | B(사후)
 
 
 @app.get("/api/assessment/placement")
-async def assessment_placement(n: int = 8, current_user=Depends(get_current_user)):
+async def assessment_placement(n: int = 8, form: str = None,
+                               current_user=Depends(get_current_user)):
     """디지털 독화 배치검사 문항(축 I) — 지각 난이도로 통제한 입모양 단어 4지선다.
-    오답 보기는 정답과 시각적으로 혼동되는(동구형이음·최소대립) 단어를 우선 배치한다."""
+    오답 보기는 정답과 시각적으로 혼동되는(동구형이음·최소대립) 단어를 우선 배치한다.
+    form='A'/'B'를 주면 향상도검사용 동형(난이도 매칭) 사전/사후 폼을 반환한다."""
     import assessment as _asmt
-    items = _asmt.build_placement_items([w["word"] for w in _curriculum.WORD_BANK], n=n)
-    return {"items": items}
+    words = [w["word"] for w in _curriculum.WORD_BANK]
+    if form in ("A", "B"):
+        forms = _asmt.build_progression_forms(words, n=n)
+        return {"items": forms.get(form, []), "form": form}
+    items = _asmt.build_placement_items(words, n=n)
+    return {"items": items, "form": "placement"}
 
 
 @app.post("/api/assessment/score")
-async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_current_user)):
-    """배치검사 채점 → 추정 수준·음소별 오류 프로파일·시작 단계 추천."""
+async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_current_user),
+                           db: AsyncSession = Depends(get_db)):
+    """배치검사/향상도검사 채점 → 추정 수준·음소별 오류 프로파일·시작 단계 추천.
+    결과를 PlacementResult로 저장해 사전(A)·사후(B) 통제 비교(향상도)를 가능케 한다."""
     import assessment as _asmt
-    return _asmt.score_placement(data.items, data.responses)
+    result = _asmt.score_placement(data.items, data.responses)
+    try:
+        from database import PlacementResult
+        db.add(PlacementResult(
+            user_id=current_user.id, form=(data.form or "placement"),
+            total=result["total"], correct=result["correct"], accuracy=result["accuracy"],
+            ability=result["ability"], level=result["level"],
+            error_visemes=result.get("error_visemes", []),
+            error_phonemes=result.get("error_phonemes", []),
+        ))
+        await db.commit()
+    except Exception as e:
+        print(f"[WARN] placement result save failed: {e}")
+    return result
+
+
+@app.get("/api/assessment/progression")
+async def assessment_progression(current_user=Depends(get_current_user),
+                                 db: AsyncSession = Depends(get_db)):
+    """통제된 향상도(축 I) — 동형 폼 사전(A)·사후(B) 결과를 비교해 델타·음소별 오류 감소를 반환.
+    A/B가 아직 없으면 가장 이른/최근 검사 회차로 대체 비교한다."""
+    from database import PlacementResult
+    from sqlalchemy import select
+    rows = (await db.execute(
+        select(PlacementResult).where(PlacementResult.user_id == current_user.id)
+        .order_by(PlacementResult.created_at.asc())
+    )).scalars().all()
+    if len(rows) < 2:
+        return {"available": False, "n": len(rows),
+                "note": "사전·사후 검사가 2회 이상이면 향상도가 나옵니다."}
+    a = next((r for r in rows if r.form == "A"), rows[0])          # 사전
+    b = next((r for r in reversed(rows) if r.form == "B"), rows[-1])  # 사후
+    if a.id == b.id:
+        a, b = rows[0], rows[-1]
+    err_a = {e["phoneme"]: e["count"] for e in (a.error_phonemes or []) if isinstance(e, dict)}
+    err_b = {e["phoneme"]: e["count"] for e in (b.error_phonemes or []) if isinstance(e, dict)}
+    phonemes = sorted(set(err_a) | set(err_b))
+    per_phoneme = [{"phoneme": p, "before": err_a.get(p, 0), "after": err_b.get(p, 0),
+                    "delta": err_b.get(p, 0) - err_a.get(p, 0)} for p in phonemes]
+    return {
+        "available": True,
+        "pre": {"form": a.form, "accuracy": a.accuracy, "level": a.level, "ability": a.ability},
+        "post": {"form": b.form, "accuracy": b.accuracy, "level": b.level, "ability": b.ability},
+        "accuracy_delta": round(b.accuracy - a.accuracy, 3),
+        "level_delta": b.level - a.level,
+        "ability_delta": round(b.ability - a.ability, 3),
+        "error_phoneme_change": per_phoneme,
+        "homogeneous": (a.form == "A" and b.form == "B"),
+    }
 
 
 @app.get("/api/conversation/multi")
