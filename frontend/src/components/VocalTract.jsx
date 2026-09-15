@@ -4,6 +4,10 @@ import { useEffect, useRef } from 'react'
  * 성도(측면 단면) 도식 — 계획서 E '성도 시뮬레이터' lite.
  * viseme(1~15)를 조음 파라미터(혀끝·혀뒤·원순·개구·폐쇄)로 바꿔, 겉으로 안 보이는
  * 혀·입술·턱의 움직임을 측면 단면으로 실시간 표시한다(독화 교육). GPU 불필요, 순수 SVG.
+ *
+ * articulationRef를 주면(웹캠 축 D·E) 관찰 가능한 차원(개구 jaw·원순 round·폐쇄 close)을
+ * 사용자의 실제 얼굴에서 역추정한 값으로 매 프레임 덮어써, 목표가 아닌 '내 실제 조음'을 보여준다.
+ * 혀(tip·back)는 웹캠으로 관찰되지 않아 viseme 규칙값을 유지한다(계획서 E의 부분 역추정).
  */
 // viseme → 조음 파라미터 {tip: 혀끝 들림, back: 혀뒤 들림, round: 원순, jaw: 개구, close: 양순폐쇄}
 const VIS_ART = {
@@ -19,7 +23,7 @@ const VIS_ART = {
 const KO = { 1: '양순 폐쇄', 11: '양순 폐쇄', 4: '원순', 9: '원순', 6: '혀끝(치경)', 12: '혀끝(치경)', 7: '혀뒤(연구개)', 13: '혀뒤(연구개)', 10: '경구개', 2: '개방', 5: '중설', 8: '성문', 3: '전설' }
 const clamp = (v) => (v < 0 ? 0 : v > 1 ? 1 : v)
 
-export default function VocalTract({ visemeId = 15 }) {
+export default function VocalTract({ visemeId = 15, articulationRef = null }) {
   const tongueRef = useRef(null)
   const jawRef = useRef(null)
   const lipLRef = useRef(null)
@@ -39,6 +43,13 @@ export default function VocalTract({ visemeId = 15 }) {
     let raf
     const tick = () => {
       const c = curRef.current, t = targetRef.current
+      // 웹캠 역추정(축 E): 관찰 가능한 차원만 실제 값으로 덮어씀. 혀(tip·back)는 규칙값 유지.
+      const live = articulationRef?.current
+      if (live) {
+        if (live.jaw != null) t.jaw = clamp(live.jaw)
+        if (live.round != null) t.round = clamp(live.round)
+        if (live.close != null) t.close = clamp(live.close)
+      }
       for (const k in c) c[k] += (t[k] - c[k]) * 0.25
       const tipX = 62, tipY = 120 - clamp(c.tip) * 34
       const dorX = 120, dorY = 116 - clamp(c.back) * 36
