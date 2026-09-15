@@ -206,15 +206,26 @@ python scripts/train_aligner.py \
 
 > ✅ 2026-09-09 재측정 완료(A-5 참고). 구간 뭉갬 버그 수정 후 같은 체크포인트로 다시 돌려
 > **단조성 0.998 / AUC 1.000 / 정렬 1.000 — 축 A 합격**을 받았다. 베이스라인도 다시 쟀고
-> 3→4 역전(1.97 → 2.00)이 재현돼 버그 탓이 아님이 확인됐다. 체크포인트를 바꿀 때만 다시 돈다.
+> 3→4 역전(1.97 → 2.00)이 재현돼 버그 탓이 아님이 확인됐다.
+>
+> 🔴 **2026-09-15 — 다시 돌려야 한다.** 재측정 사유는 체크포인트가 아니라 **채점식 교체**다.
+> `dgop.dgop_phone`이 naive로 바뀌어(A-6) **원점수 눈금 자체가 달라졌다.** "체크포인트를 바꿀
+> 때만 다시 돈다"는 위 문장만 보고 건너뛰지 말 것 — 채점식이 바뀌어도 다시 돌아야 한다.
+> 이어서 **§6.5 재적합까지 같은 세션에서** 끝낸다(원점수가 바뀌면 앵커도 무효다).
+
+체크포인트는 이제 HF에 있다(§7). 볼륨 없이 아무 DC·아무 GPU에서 돌릴 수 있고,
+**비공개 저장소라 `HF_TOKEN`(읽기 권한)이 필요**하다 — `huggingface_hub`가 환경변수를
+자동으로 읽으므로 export만 해 두면 코드 수정은 없다(2026-09-15 확인).
 
 ```bash
-# 미세조정 전 베이스라인 — 비교 기준
+export HF_TOKEN=hf_...          # 읽기 권한. 비공개 저장소 접근에 필수
+
+# 미세조정 전 베이스라인 — 비교 기준(공개 체크포인트라 토큰 없이도 된다)
 python scripts/eval_dgop_discrimination.py --limit 50 2>&1 | tee /workspace/logs/a3-base.log
 
-# 축 A 산출물
+# 축 A 산출물 — HF 저장소 id로 직접 받는다(볼륨 경로가 있으면 그 경로를 써도 된다)
 python scripts/eval_dgop_discrimination.py \
-  --aligner /workspace/ckpt/aligner --scorer /workspace/ckpt/scorer --limit 50 \
+  --aligner duadnwls/liplab-dgop-aligner --scorer duadnwls/liplab-dgop-scorer --limit 50 \
   2>&1 | tee /workspace/logs/a3-after.log
 ```
 
@@ -235,8 +246,11 @@ A-3이 PASS해도 원점수는 그대로 못 쓴다 — 합격선(50·65)과 비
 **모델을 앱에 연결하기 전에 반드시 여기를 돌린다.**
 
 > ✅ **2026-09-09 재적합 완료.** severity 중앙값 78.15 / 31.65 / 15.20 / 2.90 / 0.85로
-> 앵커 5개 전부 채택됐고 `backend/data/dgop_calibration.json`으로 커밋됐다. 다음 재적합은
-> **체크포인트를 바꿀 때**다.
+> 앵커 5개 전부 채택됐고 `backend/data/dgop_calibration.json`으로 커밋됐다.
+>
+> 🔴 **2026-09-15 — 그 앵커는 무효다.** 채점식이 naive로 바뀌어 원점수 눈금이 달라졌다
+> (A-6). 재적합 사유는 체크포인트 교체만이 아니라 **채점식 교체도 포함**이다.
+> 재적합 전까지 앱의 D-GOP 경로(`DGOP_ALIGNER_ID`)를 켜지 않는다.
 >
 > 실제 소요(H100, 50발화): A-3 축 A 약 12분 + 베이스라인 약 9분 + A-4 약 11분.
 > Pod 단가는 런북 §8의 $2.99가 아니라 **$3.49/hr**이었다(2026-09-09 실측).
@@ -249,7 +263,9 @@ python scripts/fit_dgop_calibration.py --smoke
 ```
 
 ```bash
-python scripts/fit_dgop_calibration.py   --aligner /workspace/ckpt/aligner --scorer /workspace/ckpt/scorer --limit 50   --out /workspace/liplab/backend/data/dgop_calibration.json 2>&1 | tee /workspace/logs/a4-cal.log
+python scripts/fit_dgop_calibration.py \
+  --aligner duadnwls/liplab-dgop-aligner --scorer duadnwls/liplab-dgop-scorer --limit 50 \
+  --out /workspace/liplab/backend/data/dgop_calibration.json 2>&1 | tee /workspace/logs/a4-cal.log
 ```
 
 앵커 적합이 실패해도(원점수가 severity를 거스르면 실패한다) severity별 중앙값은
@@ -336,9 +352,13 @@ start pod: There are not enough free GPUs on the host machine to start this pod.
 앱에 연결할 때는 환경변수 둘만 설정한다(미설정이면 기존 전사 경로 그대로 — 안전한 기본값):
 
 ```bash
-DGOP_ALIGNER_ID=<계정>/liplab-dgop-aligner
-DGOP_SCORER_ID=<계정>/liplab-dgop-scorer
+DGOP_ALIGNER_ID=duadnwls/liplab-dgop-aligner
+DGOP_SCORER_ID=duadnwls/liplab-dgop-scorer
+HF_TOKEN=hf_...        # ⚠️ 두 저장소가 비공개다 — 없으면 로드 실패 후 전사 경로로 폴백한다
 ```
+
+폴백은 조용하지 않다 — 실패하면 서버 로그에 `[WARN] D-GOP 경로 실패`가 찍힌다(2026-09-15 추가).
+켰는데 점수가 예전 같다면 그 줄부터 찾는다. 응답의 `assessment_method`도 `"dgop"`인지 확인한다.
 
 §6.5에서 만든 `backend/data/dgop_calibration.json`도 저장소에 함께 커밋한다(기본 경로라
 환경변수 없이 읽힌다). 다른 경로에 둘 거면 `DGOP_CALIBRATION=<경로>`로 알려준다 — 없으면

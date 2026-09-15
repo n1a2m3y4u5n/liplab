@@ -42,14 +42,29 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
 | ~~1~~ | ~~`dgop.dgop_phone`을 naive로 교체~~ | — | ✅ **2026-09-15 완료.** 단언도 '해결 확인'으로 뒤집었다 |
 | 2 | A-3 재측정 | **필요**(~12분) | 원점수 눈금이 바뀐다 |
 | 3 | A-4 앵커 재적합 → `backend/data/dgop_calibration.json` | **필요**(~11분) | 표시 점수 상한 94.9도 재확인 |
-| 4 | 앱 연결 — `DGOP_ALIGNER_ID`/`DGOP_SCORER_ID` | 불필요 | HF에 가중치가 있어 볼륨 없이 된다 |
+| 4 | 앱 연결 — `DGOP_ALIGNER_ID`/`DGOP_SCORER_ID` | 불필요 | **설정·문서는 2026-09-15에 준비 완료.** 켜는 것만 2·3 이후 |
 
 2·3은 GPU가 필요하니 **한 세션에 묶어서** 돈다. 이제 아무 DC·아무 GPU에서 HF 체크포인트를 받아
 돌리면 된다(비공개 저장소라 HF 읽기 토큰 필요).
 
+**GPU를 태우기 전 사전 검증은 2026-09-15에 로컬에서 끝냈다** — 런북 §6·§6.5의 "Pod에서 처음
+만나면 20분·$1을 버린다"는 그 절차다. 확인한 것:
+
+- `fit_dgop_calibration.py --smoke` 통과 — 측정 루프부터 앵커 적합·표 출력까지 배관 정상
+- `huggingface_hub` 1.23.0이 **`HF_TOKEN` 환경변수를 자동으로 읽는다** — 비공개 저장소용
+  코드 수정이 필요 없다. Pod에서 `export HF_TOKEN=hf_...` 한 줄이면 된다
+- 데이터셋(`kresnik/zeroth_korean`)과 공개 체크포인트는 로컬 HF 캐시에 이미 있다
+
+명령어는 런북 **§6**(A-3)·**§6.5**(A-4)에 HF 저장소 id 기준으로 갱신해 뒀다 — 예전 `/workspace/ckpt/*`
+볼륨 경로는 더 이상 필요 없다.
+
 > **🚨 2·3이 끝나기 전에 앱의 D-GOP 경로를 켜지 않는다.** 채점식이 바뀌어 원점수 눈금이 달라졌는데
 > `backend/data/dgop_calibration.json`과 `dgop.AXIS_A_SEVERITY_SCORES`는 아직 **구 식으로 잰 앵커**다.
 > 지금 켜면 표시 점수가 틀린다. `DGOP_ALIGNER_ID` 미설정이 기본값이라 **현재는 꺼져 있다**(전사 경로).
+>
+> 켤 때 필요한 것은 `.env.example`의 'D-GOP 음향 채점' 절에 다 적어 뒀다 — **`HF_TOKEN`이 함께
+> 있어야 한다**(저장소가 비공개다). 빠뜨리면 모델 로드가 실패하고 전사 경로로 폴백하는데,
+> 이제 그 폴백이 조용하지 않다 — 서버 로그에 `[WARN] D-GOP 경로 실패`가 찍힌다.
 
 ### 2. 그다음
 
@@ -79,6 +94,7 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
 | **체크포인트 HF 백업** | scorer·aligner 최종 모델 | `duadnwls/liplab-dgop-{scorer,aligner}`에 각 **1.26GB**. 업로드 크기 대조 + HF API 재확인 (2026-09-14) |
 | **A-6 E1·E2 실행** | 채점식 9종 스윕 + 과신 측정 | **naive 채택 확정.** 구간 22,905 / 22,106개. 결과·한계는 `docs/axis-a-training-plan.md` A-6 |
 | **채점식 교체 (1단계)** | `dgop_phone`을 naive로 (2026-09-15) | 곱셈 항 제거. 구 식은 `gop_variants.dgop`·`analyze_dgop_redundancy`에 **비교 기준으로 보존** — A-6 표와 ρ=0.980을 계속 재현한다 |
+| **4단계 준비 (앱 연결)** | 설정·문서·실패 가시성 (2026-09-15) | `.env.example`에 DGOP·**HF_TOKEN** 절 신설, 런북 §7.2 보완, D-GOP 로드 실패를 `[WARN]` 로그로. 켜는 것은 2·3 이후 |
 | **촉각(타도마) 제거** | 세 기둥 → **두 기둥(독화·말하기)** | 파일 22개·백엔드 엔드포인트 6개 삭제. 대시보드·메뉴·분석·안내 전부 두 기둥 기준으로 재정렬 (`b730c0d`) |
 | **앱 트랙 병합** | `feat/sublexical-feedback` 6커밋 통합 (2026-09-15) | **촉각 제거 유지.** 충돌 6파일 해소, 기능 충돌 3건은 합집합 (`c82fb9f`) |
 | **근거 기반 독화 피드백** | 오답을 자모·비심 단위로 분석 + 개인별 혼동행렬 | `scoring.viseme_confusions`, `TrialAttempt` 모델, `GET /api/curriculum/confusion-matrix` |

@@ -1634,8 +1634,13 @@ async def speak_assess(
                     # dgop.raw_score로 함께 나간다(축 A 한계 ② 대응).
                     sim = dgop_result["score"]
                     assessment_method = "dgop"
-            except Exception:
-                dgop_result = None  # 폴백으로 계속 진행
+            except Exception as e:
+                # 폴백으로 계속 진행하되 **조용히 넘어가지 않는다.** 비공개 HF 저장소
+                # (duadnwls/liplab-dgop-*)는 HF_TOKEN 없이는 로드에 실패하는데, 그때
+                # 전사 경로로 소리 없이 떨어지면 D-GOP가 꺼진 줄도 모르고 배포된다.
+                print(f"[WARN] D-GOP 경로 실패 — 전사 경로로 폴백합니다 "
+                      f"(aligner={dgop_aligner_id}): {type(e).__name__}: {e}")
+                dgop_result = None
 
         if assessment_method != "dgop":
             from speak_service import transcribe, is_available
