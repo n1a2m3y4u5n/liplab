@@ -3,6 +3,7 @@ LIPLAB FastAPI Main Application
 Serves API endpoints and React static files for production deployment
 """
 import os
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -1629,33 +1630,50 @@ async def speak_assess(
     transcript = None
     confusions = []
     sim = None
+    acoustic_dgop = None  # 전사 비의존 음향 발음채점(축 B) — 모델 있을 때만
     need_asr = (mode in ("phoneme", "word", "sentence")) or (stage is None)
     if need_asr:
         from speak_service import transcribe, is_available
-        if not is_available():
-            raise HTTPException(status_code=503, detail="서버에 음성인식 모델(faster-whisper)이 없습니다.")
+
+        # 축 B: 전사에 의존하지 않는 음향 D-GOP(강제정렬 wav2vec2). 있으면 항상 계산해
+        # 음소별 발음정확도를 제공하고, 전사(whisper)가 없을 땐 이 점수로 폴백한다.
         try:
-            transcript = await transcribe(data)
+            import dgop_acoustic
+            if dgop_acoustic.is_available():
+                acoustic_dgop = await asyncio.to_thread(
+                    dgop_acoustic.dgop_from_audio, data, target, None)
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"전사 실패: {str(e)}")
-        try:
-            sc = await calculate_score(correct=target, user_answer=transcript, db=db)
-            sim = sc.get("score", 0)
-        except Exception:
-            sim = 0.0
-        try:
-            from scoring import extract_jamo_sequence
-            cj = extract_jamo_sequence(target.replace(" ", ""))
-            uj = extract_jamo_sequence((transcript or "").replace(" ", ""))
-            for i in range(min(len(cj), len(uj))):
-                ci, cm, _ = cj[i]
-                ui, um, _ = uj[i]
-                if ci and ui and ci != ui:
-                    confusions.append({"correct": ci, "confused_as": ui})
-                if cm and um and cm != um:
-                    confusions.append({"correct": cm, "confused_as": um})
-        except Exception:
-            pass
+            print(f"[WARN] acoustic D-GOP failed: {e}")
+            acoustic_dgop = None
+
+        if is_available():
+            try:
+                transcript = await transcribe(data)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"전사 실패: {str(e)}")
+            try:
+                sc = await calculate_score(correct=target, user_answer=transcript, db=db)
+                sim = sc.get("score", 0)
+            except Exception:
+                sim = 0.0
+            try:
+                from scoring import extract_jamo_sequence
+                cj = extract_jamo_sequence(target.replace(" ", ""))
+                uj = extract_jamo_sequence((transcript or "").replace(" ", ""))
+                for i in range(min(len(cj), len(uj))):
+                    ci, cm, _ = cj[i]
+                    ui, um, _ = uj[i]
+                    if ci and ui and ci != ui:
+                        confusions.append({"correct": ci, "confused_as": ui})
+                    if cm and um and cm != um:
+                        confusions.append({"correct": cm, "confused_as": um})
+            except Exception:
+                pass
+        elif acoustic_dgop is not None:
+            # whisper 미탑재 → 전사 비의존 음향 점수로 채점(농인 발화는 ASR이 불안정하므로 유효한 폴백)
+            sim = acoustic_dgop.get("score", 0.0)
+        else:
+            raise HTTPException(status_code=503, detail="서버에 음성인식 모델(faster-whisper/음향 D-GOP)이 없습니다.")
 
     note = ""
     passed = None
@@ -1678,7 +1696,14 @@ async def speak_assess(
     if mouth_confidence is not None and mouth_confidence >= 0:
         import dgop
         vis = mouth_confidence * 100 if mouth_confidence <= 1 else mouth_confidence
-        av_fusion = dgop.fuse_audio_visual(score, max(0.0, 1 - score / 100.0), vis)
+        # 음향 D-GOP가 있으면 그 실제 불확실성으로 가중(뭉갠 발음일수록 영상 의존↑).
+        # 없으면 점수 기반 근사(1 - score/100)로 폴백.
+        if acoustic_dgop is not None:
+            a_score = acoustic_dgop.get("score", score)
+            a_unc = acoustic_dgop.get("uncertainty", max(0.0, 1 - score / 100.0))
+            av_fusion = dgop.fuse_audio_visual(a_score, a_unc, vis)
+        else:
+            av_fusion = dgop.fuse_audio_visual(score, max(0.0, 1 - score / 100.0), vis)
         score = av_fusion["score"]
 
     # 개별 시도 영속화(말하기 분석용 — 독화가 Progress에 쌓는 것과 대칭)
@@ -1716,6 +1741,7 @@ async def speak_assess(
         "coaching": coaching,
         "metrics": metrics,
         "av_fusion": av_fusion,
+        "acoustic_dgop": acoustic_dgop,
         "progress": progress,
         "mode": mode,
     }
