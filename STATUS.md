@@ -1,6 +1,8 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
-> 최종 갱신 2026-09-14 — **A-6(E1·E2) 실행 완료, 체크포인트 HF 백업 완료.** 브랜치 `feat/content-scale`.
+> 최종 갱신 2026-09-15 — **앱 트랙(`feat/sublexical-feedback`) 병합 완료 — 촉각 제거를 유지한 채.**
+> 그 전 세션: A-6(E1·E2) 실행 완료, 체크포인트 HF 백업 완료.
+> 브랜치 `feat/content-scale` — origin보다 **7커밋 앞서 있고 아직 푸시하지 않았다.**
 > 이 파일은 **한 화면짜리 현황판**이다. 근거·수치는 각 항목의 링크를 따라간다.
 > 전체 이력은 `DEVELOPMENT_SUMMARY.md`.
 
@@ -13,10 +15,18 @@
 **곱셈 항을 버리고 `naive`(표준 GOP)로 간다.** 불확실성 보정은 값을 하지 않았다.
 지금 1순위는 **교체와 그에 따른 A-3 재측정·A-4 재적합**이다. 체크포인트는 HF에 백업됐다.
 
+그와 **별개로 앱 트랙이 따로 굴러가고 있었다.** 2026-09-15에 `feat/sublexical-feedback`(자모 단위
+피드백·비심 혼동행렬·학습 효과 리포트)을 합쳤다. 분기점이 촉각 제거 이전이라 충돌이 많았지만
+**두 기둥(독화·말하기) 체제를 기준으로 삼아** 해소했다.
+
 ---
 
 ## 바로 할 일 (우선순위)
 
+> **2026-09-15 — 앱 트랙을 병합했다**(`c82fb9f`). `feat/sublexical-feedback` 6커밋을 촉각 제거를
+> 유지한 채 합쳤고 테스트·빌드까지 확인했다. **아직 푸시하지 않았다.** 되돌리려면
+> `git reset --hard backup/pre-merge-content-scale`(병합 직전 상태로 걸어 둔 태그).
+>
 > **2026-09-14 세션에서 ① HF 백업 · ② E1 · ③ E2 · ④ 회수 · 스윕까지 전부 끝냈다.**
 > 결과·판정·한계는 `docs/axis-a-training-plan.md` **A-6**. Pod은 정지했다(26분, 약 $1.5).
 > 체크포인트는 이제 HF에도 있다 — **더 이상 AP-IN-2 볼륨에 묶이지 않는다.**
@@ -42,6 +52,9 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
 - **AI Hub 608 샘플 확인** — IRB 불필요, 본인인증만. 확인할 것 3가지는 `docs/deaf-speech-data-research.md` §2
 - **정민화 연구실 접촉**(서울대 언어학과) — 이제 E1·E2 실측을 들고 갈 수 있다. 우리 가설을 한국어로 이미 검증했고 코드가 MIT로 공개돼 있다. QoLT·CI 아동 데이터 경로이기도 하다
 - **`blank 제외` 변형 재덤프**(GPU ~12분) — A-6 "남은 일" 2번. 지금 npz로는 평가할 수 없다
+- **병합분 푸시 여부 결정** — 로컬에만 있다. 푸시하면 `feat/sublexical-feedback`은 역할이 끝난다
+- **CLAUDE.md 로드맵 정리** — 트랙 2 백로그의 **혼동 매트릭스 분석**은 이번 병합으로 구현됐다.
+  목록에서 내리고, 새로 들어온 학습 효과 리포트를 구조 설명에 반영한다
 
 ---
 
@@ -62,8 +75,12 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
 | **체크포인트 HF 백업** | scorer·aligner 최종 모델 | `duadnwls/liplab-dgop-{scorer,aligner}`에 각 **1.26GB**. 업로드 크기 대조 + HF API 재확인 (2026-09-14) |
 | **A-6 E1·E2 실행** | 채점식 9종 스윕 + 과신 측정 | **naive 채택 확정.** 구간 22,905 / 22,106개. 결과·한계는 `docs/axis-a-training-plan.md` A-6 |
 | **촉각(타도마) 제거** | 세 기둥 → **두 기둥(독화·말하기)** | 파일 22개·백엔드 엔드포인트 6개 삭제. 대시보드·메뉴·분석·안내 전부 두 기둥 기준으로 재정렬 (`b730c0d`) |
+| **앱 트랙 병합** | `feat/sublexical-feedback` 6커밋 통합 (2026-09-15) | **촉각 제거 유지.** 충돌 6파일 해소, 기능 충돌 3건은 합집합 (`c82fb9f`) |
+| **근거 기반 독화 피드백** | 오답을 자모·비심 단위로 분석 + 개인별 혼동행렬 | `scoring.viseme_confusions`, `TrialAttempt` 모델, `GET /api/curriculum/confusion-matrix` |
+| **학습 효과 리포트** | 학습곡선·향상도·단계 도달 시행수 | `GET /api/eval/summary` + `/analysis/eval`(`EvalReport.jsx`) |
 
-테스트: **backend 22 + scripts 3 + frontend 35, 전부 통과.** 2026-09-14 재실행으로 확인했다 —
+테스트: **backend 22 + scripts 3 + frontend 35, 전부 통과.** 2026-09-15 병합 후 재실행으로 확인했다
+(`npx vite build` 성공, `main.py` 임포트 시 라우트 50개 등록·촉각 라우트 0개도 함께 확인) —
 반드시 `backend/venv`의 파이썬으로 돌린다(시스템 파이썬엔 numpy·Levenshtein·torch가 없어 실패한다).
 축 B §3-2의 스모크·스윕 배관도 로컬에서 끝까지 돌려 확인했다(31초, 구간 240개, blank 0개) —
 **Pod에서 그 절은 건너뛰어도 된다.**
@@ -116,7 +133,20 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
 > 우회로 조사(S3 API는 AP-IN-2 미지원, 0 GPU 시작, 새 Pod 배포)는 런북 **§7.2**에, 실기에서 밟은
 > 함정(**포트 재매핑**, **Pod 저장소가 9/8에 멈춰 있어 `git pull`이 거부됨**)은 **§2.1**에 적어 뒀다.
 
-### 🔸 결정된 것 (2026-09-14)
+### 🔸 결정된 것
+
+**2026-09-15 (병합에서).**
+
+- **`closure-answer`는 두 구현의 합집합이다.** 양쪽 브랜치가 각자 같은 엔드포인트를 만들었다.
+  상대의 **서버 채점**(`item_id`/`chosen`을 받아 `CLOSURE_ITEMS`에서 정답을 찾는다) 위에
+  우리의 3단계 숙달·취약 입모양·SRS·XP를 얹었다. 한쪽만 고르면 기능이 사라진다.
+- **정오답은 서버가 재계산한다 — XP까지.** 클라이언트가 보낸 `data.correct`를 믿으면 숙달·해금·
+  평가를 조작할 수 있다. 상대의 감사 수정이 2단계 채점을 고쳤고, 병합하며 **같은 결함이 남아
+  있던 XP 보상 1곳**도 서버 재계산값으로 맞췄다.
+- **`HardwareBuild` 페이지는 되살리지 않는다.** 촉각 장치용이라 `b730c0d`가 지웠다. 상대 브랜치의
+  lazy import를 그대로 받으면 `vite build`가 깨진다 — `EvalReport`만 받았다.
+
+**2026-09-14.**
 
 - **촉각 DB 테이블은 그대로 둔다.** `database.py`의 `TactileStageProgress`·`TactileAttempt`와
   `Bookmark.domain`의 `'tactile'` 값은 조회하는 코드가 없어 무해하다. 기존 행을 잃지 않기 위해
@@ -149,13 +179,20 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
    `backend/requirements.txt`, `frontend/{index.html,package.json,package-lock.json}`,
    `frontend/src/index.css`, `Dockerfile`, `docker-compose.yml`, `fly.toml`, `.env.example`,
    `scripts/{setup.sh,setup.ps1,start-backend.ps1}`, `DEPLOY.md`, `QUICKSTART.md`, `PROJECT_SUMMARY.md`가
-   CRLF이고, `README.md`·`.gitignore`·`backend/data/ksl_dictionary.csv`는 **이미 두 방식이 섞여 있다.**
+   CRLF이고, `.gitignore`·`backend/data/ksl_dictionary.csv` **2개만 두 방식이 섞여 있다.**
+   (**2026-09-15 정정** — `README.md`는 혼합이었으나 상대 브랜치가 고치며 CRLF로 정규화했다.
+   합계 36개는 그대로이고 CRLF 34 · 혼합 2로 내역만 바뀌었다. 병합으로 들어온 `fly.dev.toml`·
+   `EvalReport.jsx`는 LF다.)
    섞으면 diff가 파일 전체로 뒤집힌다. **편집 전에 확인한다:**
    ```bash
    grep -c $'\r' <파일>                   # 0이면 LF, 줄 수와 같으면 CRLF
    git ls-files --eol | grep -v 'w/lf'    # 저장소 전체를 한 번에 본다
    ```
 6. 테스트는 pytest가 아니라 자체 러너 — `PYTHONPATH=. python test_x.py`
+7. **오래된 분기점에서 갈라진 브랜치를 합칠 때, 자동 병합이 조용히 옛 코드를 남긴다.**
+   `feat/sublexical-feedback` 병합에서 `Closure.jsx`가 그랬다 — 양쪽 호출이 나란히 살아남아
+   같은 엔드포인트를 두 번 부르고, 두 번째는 바뀐 시그니처와 안 맞아 매번 400이 났다.
+   **충돌이 안 난 파일이 오히려 위험하다.** 시그니처를 바꿨다면 호출부를 전부 훑는다.
 
 ---
 
@@ -163,9 +200,9 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
 
 | 문서 | 언제 보나 |
 |---|---|
-| **`docs/axis-b-scorer-redesign.md`** | **다음 작업(E1·E2)을 할 때 — 명령어·판정 기준 전문** |
+| **`docs/axis-b-scorer-redesign.md`** | 채점식 후보 9종과 **사전 등록한 판정 규칙**(§4). E1·E2는 끝났고 결과는 A-6에 |
 | `docs/axis-a-runbook.md` | RunPod 실행 절차, 시간·비용, 함정 |
-| `docs/axis-a-training-plan.md` | 축 A 설계 근거와 실측 이력(A-1~A-5) |
+| `docs/axis-a-training-plan.md` | 축 A 설계 근거와 실측 이력(A-1~**A-6**) — **1순위 작업의 근거가 A-6에 있다** |
 | `docs/deaf-speech-data-research.md` | 데이터 확보 경로 7개 축 + 채점식 결함의 근거 |
 | `DEVELOPMENT_SUMMARY.md` | 전체 개발 이력 요약 |
 | `CLAUDE.md` | 프로젝트 오리엔테이션(커리큘럼·잠금 규칙·컨벤션) |
