@@ -42,6 +42,7 @@ const PILLAR_NAV = [
     items: [
       { label: '수어 학습', description: '문장을 수어로 함께 확인하기', icon: '🤟', to: '/learn/sign' },
       { label: '학습 분석', description: '강점과 취약점, 학습 흐름 보기', icon: '📊', to: '/analysis/overview' },
+      { label: '학습 효과 리포트', description: '학습곡선·향상도·도달 시행수', icon: '📈', to: '/analysis/eval' },
       { label: '사용법', description: 'LIPLAB 활용 안내', icon: '❔', to: '/guide' },
     ],
   },

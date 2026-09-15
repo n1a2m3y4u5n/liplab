@@ -332,6 +332,46 @@ def error_visemes_from_alignment(alignment: List[Tuple]) -> List[int]:
     return seen
 
 
+# 입모양(viseme) 특징명 — 한국어 UI 메시지용
+VISEME_NAME_KO = {
+    1: "양순음(입술 닫음)", 2: "개방 모음(턱 크게)", 3: "전설 모음(입술 좌우)",
+    4: "원순 모음(입술 둥글게)", 5: "중설 모음(중립)", 6: "치경음(혀끝-잇몸)",
+    7: "연구개음(입 살짝 벌림)", 8: "성문음(숨)", 9: "이중모음", 10: "경구개음",
+    14: "휴지", 15: "중립",
+}
+
+
+def viseme_confusions(target: str, chosen: str) -> List[Dict]:
+    """
+    목표 단어 vs 사용자가 고른 오답 단어를 음절·자모 단위로 비교한다.
+    '무엇을 무엇으로 읽었는지'와, 두 자모의 입모양(viseme)이 같은지를 돌려준다.
+    same_viseme=True 면 입모양이 동일해 시각적으로 구분 불가(독화의 핵심 난점) →
+    '입모양만으로는 같아 보인다'는 근거 기반 피드백을 줄 수 있다.
+    """
+    out: List[Dict] = []
+    pos_ko = ["초성", "중성", "종성"]
+    for i in range(min(len(target), len(chosen))):
+        t = decompose_hangul(target[i])
+        c = decompose_hangul(chosen[i])
+        if t[0] is None:  # 한글 음절이 아님
+            continue
+        for j in range(3):
+            tj, cj = t[j], c[j]
+            if tj and tj != cj:
+                vt = VISEME_MAP.get(tj, 15)
+                vc = VISEME_MAP.get(cj, 15) if cj else None
+                out.append({
+                    "position": pos_ko[j],
+                    "target": tj,
+                    "read": cj or "∅",
+                    "viseme": vt,
+                    "viseme_name": get_viseme_feature(vt),
+                    "viseme_name_ko": VISEME_NAME_KO.get(vt, "중립"),
+                    "same_viseme": (vc is not None and vt == vc),
+                })
+    return out
+
+
 async def calculate_score(correct: str, user_answer: str, db=None) -> Dict:
     """
     Main scoring function with phonological similarity weighting
