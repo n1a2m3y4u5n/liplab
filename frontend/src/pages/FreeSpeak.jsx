@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { learningAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
+import Audio2FaceAvatar from '../components/Audio2FaceAvatar'
 import LearnHeader from '../components/LearnHeader'
 
 /**
@@ -150,6 +151,15 @@ export default function FreeSpeak() {
               <p className="text-xl font-bold text-primary-900 tracking-wide">{playedText}</p>
             </div>
           )}
+        </motion.div>
+
+        {/* 음성구동 아바타(A4) — 서버에 모델이 있을 때만 표시(없으면 컴포넌트가 스스로 숨김) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="lg:col-span-2"
+        >
+          <Audio2FaceAvatar />
         </motion.div>
       </main>
     </div>
