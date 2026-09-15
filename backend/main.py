@@ -188,6 +188,39 @@ async def get_visemes(text: str):
         raise HTTPException(status_code=500, detail=f"Viseme conversion failed: {str(e)}")
 
 
+@app.get("/api/avatar/audio2face/status")
+async def audio2face_status():
+    """음성구동 아바타(A4) 사용 가능 여부 — 프론트가 UI 노출 판단에 사용."""
+    try:
+        import audio2face
+        return {"available": audio2face.is_available()}
+    except Exception:
+        return {"available": False}
+
+
+@app.post("/api/avatar/audio2face")
+async def avatar_audio2face(audio: UploadFile = File(...)):
+    """
+    음성 → 얼굴 블렌드셰이프 시퀀스(축 A4). 실제 음성으로 아바타가 립싱크한다.
+    화자 불변 wav2vec2 특징 → BiGRU → 52 ARKit 블렌드셰이프(미학습화자 jawOpen r≈0.66).
+    모델/라이브러리가 없으면 503(프론트는 텍스트→비심 경로로 폴백).
+    """
+    try:
+        import audio2face
+    except Exception:
+        raise HTTPException(status_code=503, detail="audio2face 모듈 로드 실패")
+    if not audio2face.is_available():
+        raise HTTPException(status_code=503, detail="서버에 음성구동 아바타 모델(A4)이 없습니다.")
+    data = await audio.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="empty audio")
+    try:
+        result = await asyncio.to_thread(audio2face.blendshapes_from_audio, data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"audio2face 추론 실패: {str(e)}")
+    return result
+
+
 @app.get("/api/scenario", response_model=ScenarioResponse)
 async def get_scenario(
     situation: str,

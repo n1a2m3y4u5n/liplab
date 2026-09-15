@@ -20,7 +20,7 @@ import MouthFallback2D from './MouthFallback2D'
  * (병합 메모: 혀 렌더링[YMJ]과 WebGL 폴백·카메라 경쟁조건 수정[feat/curriculum]이
  *  깨진 머지로 파일에 두 벌 복제돼 빌드가 깨져 있었다 → 두 기능을 모두 살려 단일화.)
  */
-function RealisticFace({ visemeId = 15, xray = false }) {
+function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null }) {
   const { scene } = useGLTF(MODEL_URL, false, false, withMeshopt)
   const meshesRef = useRef([])
   const tongueMeshRef = useRef(null)
@@ -63,11 +63,15 @@ function RealisticFace({ visemeId = 15, xray = false }) {
     }
     if (meshesRef.current.length === 0) return
 
-    const target = VISEME_BLENDSHAPES[visemeId] || {}
-    const LERP = Math.min(1, delta * 22) // ~45ms transition (자음 프레임 내 충분히 도달)
+    // 음성구동(A4) 프레임이 오면 원본 52 블렌드셰이프를 직접 적용, 없으면 텍스트→비심 경로.
+    const rawFrame = bsFrameRef?.current || null
+    const target = rawFrame || VISEME_BLENDSHAPES[visemeId] || {}
+    // A4 프레임은 이미 30fps 시퀀스라 빠르게 따라가고, 비심은 부드럽게 전환.
+    const LERP = Math.min(1, delta * (rawFrame ? 34 : 22))
 
-    // 얼굴·턱 모프 — 모든 메시에 이름으로 일괄 적용 (jawOpen은 혀도 함께 따라감)
-    for (const key of ACTIVE_MORPH_KEYS) {
+    // 적용할 키 집합 — 음성구동이면 프레임의 모든 키, 아니면 비심 활성 키.
+    const keys = rawFrame ? Object.keys(rawFrame) : ACTIVE_MORPH_KEYS
+    for (const key of keys) {
       const tgt = target[key] || 0
       const cur = currentWeightsRef.current[key] || 0
       const next = THREE.MathUtils.lerp(cur, tgt, LERP)
@@ -85,7 +89,7 @@ function RealisticFace({ visemeId = 15, xray = false }) {
     // 혀는 얼굴보다 살짝 느리게 보간해 '이동'이 눈에 띄도록 한다 (~65ms).
     const TONGUE_LERP = Math.min(1, delta * 15)
     const tongue = tongueMeshRef.current
-    if (tongue) {
+    if (tongue && !rawFrame) {
       const tTarget = VISEME_TONGUE[visemeId] || {}
       for (const key of ACTIVE_TONGUE_KEYS) {
         const tgt = tTarget[key] || 0
@@ -132,7 +136,7 @@ class GLErrorBoundary extends Component {
   }
 }
 
-export default function AvatarVRM({ visemeId = 15, xray = false }) {
+export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = null }) {
   const [webglOK] = useState(detectWebGL)
   const fallback = <MouthFallback2D visemeId={visemeId} />
 
@@ -154,7 +158,7 @@ export default function AvatarVRM({ visemeId = 15, xray = false }) {
           <directionalLight position={[-1, 0, 1]} intensity={0.4} />
 
           <Suspense fallback={null}>
-            <RealisticFace visemeId={visemeId} xray={xray} />
+            <RealisticFace visemeId={visemeId} xray={xray} bsFrameRef={bsFrameRef} />
           </Suspense>
 
           <OrbitControls

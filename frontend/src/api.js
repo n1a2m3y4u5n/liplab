@@ -210,6 +210,19 @@ export const speakAPI = {
   },
 }
 
+// 음성구동 아바타(A4) — 실제 음성 → 52 블렌드셰이프 립싱크
+export const avatarAPI = {
+  audio2faceStatus: async () => (await api.get('/avatar/audio2face/status')).data,
+  audio2face: async (blob) => {
+    const fd = new FormData()
+    fd.append('audio', blob, 'speech.webm')
+    const res = await api.post('/avatar/audio2face', fd, {
+      headers: { 'Content-Type': undefined }, timeout: 120000,
+    })
+    return res.data
+  },
+}
+
 // 데모용 더미 학습 기록 시드(계정이 비어 있을 때만)
 export const seedAPI = {
   seedDemo: async () => (await api.post('/seed-demo')).data,

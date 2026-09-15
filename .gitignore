@@ -88,3 +88,6 @@ Thumbs.db
 
 # === 축 G 생성 콘텐츠 후보(검수 전) — 승인본 approved.json만 별도 관리 ===
 backend/data/curriculum/candidates_*.json
+
+# A4/audio2face 모델 가중치(대용량·torch 전용, 로컬/파드에서만 로드)
+backend/models/*.pt
