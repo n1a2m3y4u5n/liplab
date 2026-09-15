@@ -40,7 +40,7 @@ import { authAPI, curriculumAPI, seedAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
 import GlobalLearningMenu from './components/GlobalLearningMenu'
 import AppLayout from './layouts/AppLayout'
-import Dashboard from './pages/Dashboard'
+import Dashboard from './features/dashboard/Dashboard'
 // Bookmarks·Guide는 /review/saved·/account/guide에서만 쓰이므로 지연로딩 —
 // 랜딩(로그인/대시보드) 진입 청크에서 빼 첫 로딩을 가볍게 한다(저사양·불안정 통신망 배려).
 
