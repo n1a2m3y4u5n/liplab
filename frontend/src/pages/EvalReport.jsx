@@ -79,9 +79,11 @@ export default function EvalReport() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
+  const [prog, setProg] = useState(null)   // 통제 향상도(축 I, 사전 A vs 사후 B)
 
   useEffect(() => {
     evalAPI.summary().then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+    evalAPI.progression().then(setProg).catch(() => setProg(null))
   }, [])
 
   const ov = data?.overview
@@ -118,6 +120,45 @@ export default function EvalReport() {
             <Card title="학습곡선 (선다형 정확도)" hint="시행을 시간순 구간으로 나눈 정확도">
               <LineChart series={data.learning_curve} max={1} />
             </Card>
+
+            {/* 통제 향상도(축 I) — 동형 폼 사전(A)·사후(B) 비교. 배치검사에서 A/B를 모두 마치면 표시 */}
+            {prog?.available && (
+              <Card title="통제 향상도 (표준검사 사전·사후)"
+                hint={prog.homogeneous ? '동형 폼 A(사전)·B(사후) 비교' : '가장 이른·최근 검사 비교'}>
+                <div className="flex flex-wrap items-end gap-6">
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-400">사전 정확도</p>
+                    <p className="text-2xl font-black text-slate-500">{Math.round(prog.pre.accuracy * 100)}%</p>
+                  </div>
+                  <div className="pb-1 text-slate-300">→</div>
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-400">사후 정확도</p>
+                    <p className="text-2xl font-black text-violet-700">{Math.round(prog.post.accuracy * 100)}%</p>
+                  </div>
+                  <div className="pb-1">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${prog.accuracy_delta >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                      {prog.accuracy_delta >= 0 ? '+' : ''}{Math.round(prog.accuracy_delta * 100)}%p
+                    </span>
+                  </div>
+                  <div className="pb-1 text-xs text-slate-500">
+                    수준 Lv.{prog.pre.level} → Lv.{prog.post.level}
+                  </div>
+                </div>
+                {prog.error_phoneme_change?.some((e) => e.before || e.after) && (
+                  <div className="mt-3">
+                    <p className="mb-1 text-[11px] font-bold text-slate-400">음소별 오류 변화 (사전→사후)</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {prog.error_phoneme_change.filter((e) => e.before || e.after).slice(0, 8).map((e) => (
+                        <span key={e.phoneme}
+                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${e.delta < 0 ? 'bg-emerald-50 text-emerald-700' : e.delta > 0 ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-500'}`}>
+                          {e.phoneme} {e.before}→{e.after}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            )}
 
             <div className="grid gap-5 md:grid-cols-2">
               <Card title="초기 대비 최근 향상도" hint={bvr ? `각 ${bvr.n_each}시행` : '최소 9시행 필요'}>

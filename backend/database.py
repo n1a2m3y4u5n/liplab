@@ -227,6 +227,25 @@ class SpeakAttempt(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class PlacementResult(Base):
+    """디지털 독화 표준검사 결과(축 I) — 배치검사·향상도검사의 회차 기록.
+    동형 폼(A=사전, B=사후)으로 사전·사후를 비교해 통제된 향상도를 산출한다.
+    form: 'placement'(수준 진단) | 'A'(사전) | 'B'(사후)."""
+    __tablename__ = "placement_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    form = Column(String(16), default="placement")   # placement | A | B
+    total = Column(Integer, default=0)
+    correct = Column(Integer, default=0)
+    accuracy = Column(Float, default=0.0)
+    ability = Column(Float, default=0.0)             # 통과 최고 난이도(0~1)
+    level = Column(Integer, default=1)               # 추정 수준 1~5
+    error_visemes = Column(JSON, default=list)       # [viseme_id...]
+    error_phonemes = Column(JSON, default=list)      # [{phoneme, count}...] 음소 단위
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class TrialAttempt(Base):
     """독화 개별 시행 기록 — 선다형 시행(1단계 입모양 인지·2단계 단어·문맥추론 MWIS)을
     '시행 단위'로 저장한다. 비심 혼동행렬·시행별 학습곡선·사전/사후 평가의 원천 데이터.
