@@ -5,6 +5,7 @@ import { faceSignals, FACE_SIGNAL_LABELS } from '../lib/faceCues'
 import { curriculumAPI } from '../api'
 import MouthCalibration from './MouthCalibration'
 import AvatarVRM from './AvatarVRM'
+import VocalTract from './VocalTract'
 
 /**
  * 웹캠 입모양 실시간 채점 (고도화 축 D).
@@ -38,6 +39,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
   const calibrated = !!profiles
   const winRef = useRef([]) // 최근 점수 창(발음 정점 포착용)
   const liveBsRef = useRef(null) // 웹캠 실시간 blendshape → 아바타 미러링(축 F)
+  const artRef = useRef({ jaw: 0, round: 0, close: 0 }) // 웹캠 역추정 조음(축 E, 관찰 차원)
   const [showMirror, setShowMirror] = useState(false)
 
   // 목표 viseme이 바뀌면 최고점·기록·점수창 초기화
@@ -78,6 +80,12 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       const bs = toBlendshapeMap(res.faceBlendshapes?.[0])
       if (Object.keys(bs).length) {
         liveBsRef.current = bs // 아바타 미러링용(같은 ARKit 이름 → morph target 직접 구동)
+        // 축 E: 관찰 가능한 조음 차원 역추정(개구·원순·폐쇄). 혀는 웹캠 미관측이라 성도 도식이 규칙값 유지.
+        artRef.current = {
+          jaw: bs.jawOpen || 0,
+          round: Math.max(bs.mouthPucker || 0, bs.mouthFunnel || 0),
+          close: bs.mouthClose || 0,
+        }
         const inst = scorePercent(bs, visemeId, profiles)
         const win = winRef.current
         win.push(inst)
@@ -183,6 +191,19 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
           </div>
         )}
       </div>
+      {/* 성도 역추정(축 E) — 웹캠에서 읽은 개구·원순·폐쇄로 내 조음 단면을 그린다(혀는 목표 규칙값) */}
+      {showMirror && (
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="rounded-lg border border-gray-200 bg-slate-900/95 p-1">
+            <p className="px-1 pb-0.5 text-[10px] text-slate-300">내 조음(성도 추정)</p>
+            <div className="h-24"><VocalTract visemeId={visemeId} articulationRef={artRef} /></div>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-slate-900/95 p-1">
+            <p className="px-1 pb-0.5 text-[10px] text-slate-300">목표 조음</p>
+            <div className="h-24"><VocalTract visemeId={visemeId} /></div>
+          </div>
+        </div>
+      )}
       {status === 'running' && hint && (
         <p className="mt-2 text-center text-sm font-medium text-gray-700">{hint}</p>
       )}
