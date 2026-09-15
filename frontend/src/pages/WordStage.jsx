@@ -68,7 +68,9 @@ function WordQuiz({ data }) {
     const target = words[Math.floor(Math.random() * words.length)]
     const partners = partnersOf(target, data.minimal_pairs, bankSet)
     const rest = shuffle(words.filter((w) => w !== target && !partners.includes(w)))
-    const distractors = shuffle([...partners, ...rest]).slice(0, 3)
+    // 같은 입모양 최소대립쌍(partners)을 오답 보기로 우선 배치 — 2단계 변별훈련의 핵심.
+    // (rest는 이미 셔플됨; 최종 보기 위치는 아래 shuffle에서 다시 섞임)
+    const distractors = [...shuffle(partners), ...rest].slice(0, 3)
     setResult(null)
     setQ({ target, choices: shuffle([target, ...distractors]) })
     setFrames([])
