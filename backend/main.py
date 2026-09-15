@@ -903,6 +903,11 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
 
         # 공용 보상 — 인지퀴즈도 XP·스트릭에 기여(예전엔 문장 연습만 XP를 줬음)
         award = _award_xp_and_streak(current_user, 15 if correct else 3)
+        # 시행 기록 — 학습곡선·유형별 정확도(eval/summary)가 1단계 입모양 인지도 포함하도록.
+        # (그룹 선다라 자모 혼동은 없음 → confusions=[])
+        from database import TrialAttempt
+        db.add(TrialAttempt(user_id=current_user.id, stage=1, item_type="viseme",
+                            target=str(data.viseme_id), chosen=str(data.chosen_id), correct=correct, confusions=[]))
 
         await db.commit()
         await db.refresh(sp)
@@ -925,6 +930,7 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
 class WordAnswer(BaseModel):
     word: str
     correct: bool
+    chosen: Optional[str] = None   # 사용자가 실제로 고른 단어(오답 시 자모 혼동 분석용)
 
 
 @app.get("/api/curriculum/words")
@@ -948,8 +954,11 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
             sp = StageProgress(user_id=current_user.id, stage=2, status="in_progress",
                                attempts=0, correct=0, mastery_score=0.0)
             db.add(sp)
+        # 정답 여부는 서버가 재계산(클라이언트 data.correct를 신뢰하지 않음 — 숙달·해금·평가 조작 방지).
+        # chosen이 없는 구버전 호출만 data.correct로 폴백.
+        correct = (data.chosen == data.word) if data.chosen is not None else bool(data.correct)
         sp.attempts += 1
-        if data.correct:
+        if correct:
             sp.correct += 1
         sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
         sp.status = "mastered" if (sp.attempts >= _STAGE2_MIN_ATTEMPTS and sp.mastery_score >= _STAGE2_MASTERY) else "in_progress"
@@ -957,10 +966,18 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
         # 예전엔 단어 학습이 개인화(WeakViseme)에 전혀 기여하지 못했다.
         vids, features = await _weak_visemes_for_text(data.word)
         await _bump_weak_visemes(current_user.id, vids,
-                                 vids if not data.correct else [], features, db)
-        if not data.correct:
+                                 vids if not correct else [], features, db)
+        # 오답이면 '무엇을 무엇으로 읽었는지'를 자모·입모양 단위로 분석(근거 기반 피드백 + 혼동행렬 데이터)
+        confusions = []
+        if not correct and data.chosen and data.chosen != data.word:
+            from scoring import viseme_confusions
+            confusions = viseme_confusions(data.word, data.chosen)
+        from database import TrialAttempt
+        db.add(TrialAttempt(user_id=current_user.id, stage=2, item_type="word",
+                            target=data.word, chosen=data.chosen, correct=correct, confusions=confusions))
+        if not correct:
             await _srs_schedule_wrong(current_user.id, "word", data.word, db)
-        award = _award_xp_and_streak(current_user, 15 if data.correct else 3)
+        award = _award_xp_and_streak(current_user, 15 if correct else 3)
         await db.commit()
         await db.refresh(sp)
     except HTTPException:
@@ -970,7 +987,8 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
         raise HTTPException(status_code=500, detail=f"word answer failed: {str(e)}")
     return {"mastery_score": round(sp.mastery_score, 1), "attempts": sp.attempts,
             "mastered": sp.status == "mastered",
-            "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
+            "xp_gained": award["xp_gained"], "streak_count": award["streak_count"],
+            "confusions": confusions}
 
 
 # ── 간격 반복 복습 (SRS) ──────────────────────────────────────────────────
@@ -1053,35 +1071,190 @@ async def curriculum_closure(current_user=Depends(get_current_user)):
 
 
 class ClosureAnswer(BaseModel):
-    word: str          # 빈칸에 들어갈 정답 단어
-    correct: bool
+    item_id: str       # 문맥 추론 항목 id(정답은 서버가 CLOSURE_ITEMS에서 찾는다)
+    chosen: str        # 사용자가 고른 보기
 
 
 @app.post("/api/curriculum/closure-answer")
 async def curriculum_closure_answer(data: ClosureAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """문맥 추론(3단계) 결과 저장 — 예전엔 프론트에서 채점만 하고 아무것도 남기지 않았다.
-    XP·스트릭·취약 입모양·SRS·3단계 숙달에 모두 반영해 다른 활동과 학습 신호를 잇는다."""
-    word = (data.word or "").strip()
-    if not word:
-        raise HTTPException(status_code=400, detail="word required")
+    """문맥 추론(MWIS) 시행 채점 — 정답은 서버가 재계산한다(클라이언트 정오답을 신뢰하지 않음).
+    시행 기록(TrialAttempt)·자모 혼동 피드백에 더해 3단계 숙달·취약 입모양·SRS·XP까지 잇는다."""
+    item = next((it for it in _curriculum.CLOSURE_ITEMS if it["id"] == data.item_id), None)
+    if item is None:
+        raise HTTPException(status_code=400, detail="unknown closure item")
+    answer = item["answer"]
+    correct = data.chosen == answer
+    from scoring import viseme_confusions
+    from database import TrialAttempt
+    confusions = [] if correct else viseme_confusions(answer, data.chosen)
     try:
+        db.add(TrialAttempt(user_id=current_user.id, stage=3, item_type="closure",
+                            target=answer, chosen=data.chosen, correct=correct, confusions=confusions))
         # 3단계(문맥 추론) 숙달 — 문장 연습과 같은 트랙에 성공/시도 누적
         await _bump_stage_progress(
-            current_user.id, 3, data.correct, _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db)
-        # 취약 입모양 — 오답이면 단어의 유명 viseme들을 오류로 누적(문맥으로도 못 가른 입모양)
-        vids, features = await _weak_visemes_for_text(word)
+            current_user.id, 3, correct, _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db)
+        # 취약 입모양 — 오답이면 정답 단어의 유명 viseme들을 오류로 누적(문맥으로도 못 가른 입모양)
+        vids, features = await _weak_visemes_for_text(answer)
         await _bump_weak_visemes(current_user.id, vids,
-                                 vids if not data.correct else [], features, db)
-        if not data.correct:
-            await _srs_schedule_wrong(current_user.id, "word", word, db)
-        award = _award_xp_and_streak(current_user, 15 if data.correct else 3)
+                                 vids if not correct else [], features, db)
+        if not correct:
+            await _srs_schedule_wrong(current_user.id, "word", answer, db)
+        award = _award_xp_and_streak(current_user, 15 if correct else 3)
         await db.commit()
-        return {"ok": True, "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
     except HTTPException:
         raise
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"closure answer failed: {str(e)}")
+    return {"correct": correct, "answer": answer, "confusions": confusions,
+            "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
+
+
+@app.get("/api/curriculum/confusion-matrix")
+async def curriculum_confusion_matrix(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """시행 기록(TrialAttempt)에서 자모 혼동행렬을 집계 — 개인별 헷갈림 리포트·평가자료용.
+    '무엇을 무엇으로 읽었나(target→read)'를 빈도순으로, 입모양이 같아 헷갈린 비율도 함께 낸다."""
+    from database import TrialAttempt
+    from sqlalchemy import select
+    r = await db.execute(select(TrialAttempt).where(TrialAttempt.user_id == current_user.id))
+    rows = r.scalars().all()
+    jamo = {}          # (target, read) -> {count, same}
+    same_cnt = tot_cf = 0
+    n_wrong = sum(1 for a in rows if not a.correct)
+    for a in rows:
+        for cf in (a.confusions or []):
+            key = (cf.get("target"), cf.get("read"))
+            e = jamo.setdefault(key, {"count": 0, "same_viseme": 0})
+            e["count"] += 1
+            tot_cf += 1
+            if cf.get("same_viseme"):
+                e["same_viseme"] += 1; same_cnt += 1
+    jamo_list = sorted(
+        [{"target": t, "read": rd, "count": v["count"], "same_viseme": v["same_viseme"]}
+         for (t, rd), v in jamo.items()], key=lambda x: -x["count"])[:30]
+    return {"trials": len(rows), "wrong": n_wrong, "confusion_count": tot_cf,
+            "same_viseme_ratio": round(same_cnt / tot_cf, 3) if tot_cf else 0.0,
+            "jamo_confusions": jamo_list}
+
+
+@app.get("/api/eval/summary")
+async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """학습 효과 리포트 — 개인별 시행 기록으로 학습곡선·단계별 도달 시행수·초기 대비 최근
+    향상도를 집계한다. 공모전 평가/효과성 근거용. 데이터가 적으면 각 지표를 null·빈 배열로
+    돌려 프론트가 '데이터가 쌓이면 표시' 상태를 그릴 수 있게 한다.
+
+    지표
+    - learning_curve: 선다형 시행(TrialAttempt)을 시간순 8구간으로 나눈 정확도 추이.
+    - baseline_vs_recent: 첫 1/3 vs 마지막 1/3 정확도(통제된 사전/사후는 아니며 '관찰된 향상').
+    - by_item_type: 입모양·단어·문맥추론별 정확도.
+    - trials_to_criterion: 단계별 숙달까지 걸린(또는 현재까지의) 시도수.
+    - same_viseme_ratio: 오답 중 '입모양이 같아' 헷갈린 비율(시각 혼동성 근거).
+    - sentence_trend: 문장 채점(Progress) 점수의 시간순 추이.
+    """
+    from database import TrialAttempt, Progress, StageProgress
+    from sqlalchemy import select
+
+    def bucketize(items, key, n_bins=8):
+        """시간순 items를 최대 n_bins개 연속 구간으로 나눠 각 구간의 평균(key)·개수를 낸다."""
+        if not items:
+            return []
+        n = len(items)
+        bins = min(n_bins, n)
+        out = []
+        for b in range(bins):
+            lo = (n * b) // bins
+            hi = (n * (b + 1)) // bins
+            seg = items[lo:hi]
+            if not seg:
+                continue
+            out.append({"bin": b + 1, "n": len(seg),
+                        "value": round(sum(key(x) for x in seg) / len(seg), 3)})
+        return out
+
+    # ── 선다형 시행 ──────────────────────────────────────────────
+    tr = (await db.execute(
+        select(TrialAttempt).where(TrialAttempt.user_id == current_user.id)
+        .order_by(TrialAttempt.created_at.asc()))).scalars().all()
+    n_tr = len(tr)
+    n_correct = sum(1 for a in tr if a.correct)
+
+    learning_curve = bucketize(tr, lambda a: 1.0 if a.correct else 0.0)
+
+    baseline_vs_recent = None
+    if n_tr >= 9:                       # 1/3씩 나누려면 최소 9시행
+        k = n_tr // 3
+        early = tr[:k]; late = tr[-k:]
+        eb = sum(1 for a in early if a.correct) / len(early)
+        lb = sum(1 for a in late if a.correct) / len(late)
+        baseline_vs_recent = {
+            "baseline_acc": round(eb * 100, 1), "recent_acc": round(lb * 100, 1),
+            "delta_pp": round((lb - eb) * 100, 1), "n_each": k,
+            "note": "통제된 사전/사후가 아니라 시행 순서 기준 초기 1/3 vs 최근 1/3 정확도"}
+
+    by_item_type = []
+    for it, label in (("viseme", "입모양 인지"), ("word", "단어"), ("closure", "문맥 추론")):
+        seg = [a for a in tr if a.item_type == it]
+        if seg:
+            by_item_type.append({"item_type": it, "label": label, "n": len(seg),
+                                 "accuracy": round(sum(1 for a in seg if a.correct) / len(seg) * 100, 1)})
+
+    # 오답 중 같은 입모양 혼동 비율
+    same_cnt = tot_cf = 0
+    for a in tr:
+        for cf in (a.confusions or []):
+            tot_cf += 1
+            if cf.get("same_viseme"):
+                same_cnt += 1
+    same_viseme_ratio = round(same_cnt / tot_cf, 3) if tot_cf else None
+
+    # ── 단계별 도달 시행수 ───────────────────────────────────────
+    sps = (await db.execute(
+        select(StageProgress).where(StageProgress.user_id == current_user.id)
+        .order_by(StageProgress.stage.asc()))).scalars().all()
+    _STAGE_MIN = {1: _STAGE1_MIN_ATTEMPTS, 2: _STAGE2_MIN_ATTEMPTS, 3: _STAGE3_MIN_ATTEMPTS, 4: _STAGE4_MIN_ATTEMPTS}
+    _STAGE_NAME = {1: "입모양 인지", 2: "단어", 3: "문장", 4: "대화"}
+    # 한 단계에 StageProgress 행이 여러 개일 수 있어(과거 데이터·경쟁 삽입) 단계별로 합산한다.
+    agg = {}  # stage -> {attempts, correct, mastery, mastered}
+    for sp in sps:
+        if sp.stage not in _STAGE_NAME:
+            continue
+        a = agg.setdefault(sp.stage, {"attempts": 0, "correct": 0, "mastery": 0.0, "mastered": False})
+        a["attempts"] += sp.attempts or 0
+        a["correct"] += sp.correct or 0
+        a["mastery"] = max(a["mastery"], sp.mastery_score or 0.0)
+        a["mastered"] = a["mastered"] or (sp.status == "mastered")
+    trials_to_criterion = []
+    for stage in sorted(agg):
+        a = agg[stage]
+        trials_to_criterion.append({
+            "stage": stage, "name": _STAGE_NAME[stage],
+            "status": "mastered" if a["mastered"] else ("in_progress" if a["attempts"] else "locked"),
+            "attempts": a["attempts"], "correct": a["correct"],
+            "mastery_score": round(a["mastery"], 1),
+            "criterion_attempts": _STAGE_MIN.get(stage),
+            "mastered": a["mastered"]})
+
+    # ── 문장 채점 추이 ───────────────────────────────────────────
+    prog = (await db.execute(
+        select(Progress).where(Progress.user_id == current_user.id)
+        .order_by(Progress.created_at.asc()))).scalars().all()
+    sentence_trend = bucketize(prog, lambda p: p.score or 0.0)
+    sentence_avg = round(sum(p.score or 0 for p in prog) / len(prog), 1) if prog else None
+
+    return {
+        "overview": {
+            "total_trials": n_tr,
+            "trial_accuracy": round(n_correct / n_tr * 100, 1) if n_tr else None,
+            "total_sentences": len(prog),
+            "sentence_avg_score": sentence_avg,
+        },
+        "learning_curve": learning_curve,
+        "baseline_vs_recent": baseline_vs_recent,
+        "by_item_type": by_item_type,
+        "same_viseme_ratio": same_viseme_ratio,
+        "trials_to_criterion": trials_to_criterion,
+        "sentence_trend": sentence_trend,
+    }
 
 
 class ScoreRequest(BaseModel):

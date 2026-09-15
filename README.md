@@ -8,6 +8,8 @@
 - **동시조음(Co-articulation) 모델링**: 자연스러운 입모양 전환 애니메이션
 - **적응형 학습**: 사용자의 취약점을 분석하여 맞춤형 시나리오 생성
 - **음운론적 유사도 채점**: 시각적으로 유사한 음소에 대한 부분 점수 제공
+- **자모 단위 피드백·혼동행렬**: '무엇을 무엇으로 읽었나'를 초성·중성·종성 위치별로 진단하고, 같은 입모양이라 헷갈린 비율을 함께 제시
+- **학습 효과 리포트**: 학습곡선·초기 대비 최근 향상도·단계별 숙달 도달 시행수를 개인별로 시각화(`/analysis/eval`)
 - **JWT 인증 및 학습 데이터 추적**: 개인별 진도 및 통계 관리
 
 ## 기술 스택
@@ -146,6 +148,24 @@ fly deploy
 ```bash
 fly open
 ```
+
+### 디벨롭/스테이징 배포 (전시앱과 분리)
+
+전시용 프로덕션 앱(`liplab`)과 develop 검증용 앱을 분리해 운영한다. develop 배포는
+`fly.dev.toml`(app=`liplab-dev`, `LIPLAB_AI_ITEMS=0`으로 정적 커리큘럼)을 사용하며 전시앱을 건드리지 않는다.
+
+```bash
+# 최초 1회
+fly apps create liplab-dev
+fly volumes create liplab_data -a liplab-dev -r nrt -n 1 -s 1
+fly secrets set -a liplab-dev JWT_SECRET=<random> ANTHROPIC_API_KEY=<key-or-placeholder>
+
+# 배포
+fly deploy -c fly.dev.toml -a liplab-dev --remote-only
+```
+
+라이브 LLM 키 없이도 규칙 기반 신기능(혼동행렬·자모 피드백·학습 효과 리포트)은 그대로 동작한다.
+AI 문항 생성까지 켜려면 `ANTHROPIC_API_KEY`를 실제 키로 두고 `LIPLAB_AI_ITEMS=1`로 배포한다.
 
 ### 배포 후 관리
 

@@ -79,7 +79,9 @@ function WordQuiz({ data, targetPool }) {
     const target = pool[Math.floor(Math.random() * pool.length)]
     const partners = partnersOf(target, data.minimal_pairs, bankSet)
     const rest = shuffle(words.filter((w) => w !== target && !partners.includes(w)))
-    const distractors = shuffle([...partners, ...rest]).slice(0, 3)
+    // 같은 입모양 최소대립쌍(partners)을 오답 보기로 우선 배치 — 2단계 변별훈련의 핵심.
+    // (rest는 이미 셔플됨; 최종 보기 위치는 아래 shuffle에서 다시 섞임)
+    const distractors = [...shuffle(partners), ...rest].slice(0, 3)
     setResult(null)
     setQ({ target, choices: shuffle([target, ...distractors]) })
     setFrames([])
@@ -92,11 +94,13 @@ function WordQuiz({ data, targetPool }) {
     if (result || submitting) return
     setSubmitting(true)
     const correct = word === q.target
+    let confusions = []
     try {
-      const r = await curriculumAPI.submitWord(q.target, correct)
+      const r = await curriculumAPI.submitWord(q.target, correct, word)
       setStat({ attempts: r.attempts, mastery: r.mastery_score, mastered: r.mastered })
+      confusions = r.confusions || []
     } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
-    setResult({ correct, chosen: word })
+    setResult({ correct, chosen: word, confusions })
   }
 
   if (!q) return null
@@ -141,6 +145,19 @@ function WordQuiz({ data, targetPool }) {
                   className={`p-3 rounded-lg text-sm ${result.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                   {result.correct ? '정답! 🎉' : `오답 — 정답은 "${q.target}"`}
                 </div>
+                {!result.correct && result.confusions?.length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-1.5">
+                    <p className="text-xs font-semibold text-amber-800">어디서 헷갈렸나요?</p>
+                    {result.confusions.map((cf, i) => (
+                      <p key={i} className="text-[13px] text-amber-900 leading-snug">
+                        {cf.position} <b>‘{cf.target}’</b>을(를) <b>‘{cf.read}’</b>로 읽으셨어요 —{' '}
+                        {cf.same_viseme
+                          ? <>둘 다 <b>{cf.viseme_name_ko}</b>이라 입모양만으론 똑같이 보여요. 문맥·자막으로 구분하는 연습이 필요합니다.</>
+                          : <>정답은 <b>{cf.viseme_name_ko}</b> 입모양입니다. 그 차이를 눈에 익혀보세요.</>}
+                      </p>
+                    ))}
+                  </div>
+                )}
                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-2.5">
                   <div className="flex items-center gap-2">
                     <CueBadges text={q.target} />
