@@ -56,7 +56,8 @@ def test_scorers_reward_correct_pronunciation():
     prior = [1.0 / C] * C
     for name in G.SCORERS:
         # confidence: 진단용이라 목표를 보지 않는다.
-        # dgop: 이 순서를 **지키지 못한다** — test_dgop_inverts_ranking이 그 결함을 따로 고정한다.
+        # dgop: **구 식**이라 이 순서를 지키지 못한다(그래서 제품에서 내렸다).
+        #       test_production_scorer_no_longer_inverts_ranking이 그 성질을 따로 고정한다.
         if name in ("confidence", "dgop"):
             continue
         g = G.score_span(name, good, prior=prior)
@@ -66,27 +67,38 @@ def test_scorers_reward_correct_pronunciation():
         _ok(v > w, f"{name}: 애매({v:.3f}) > 오답확신({w:.3f}) 여야 함")
 
 
-def test_dgop_inverts_ranking_confidently_wrong_beats_hesitantly_correct():
+def test_production_scorer_no_longer_inverts_ranking():
     """
-    현행 D-GOP의 결함을 **회귀 테스트로 고정**한다(2026-09-09 발견).
+    2026-09-09에 발견한 순위 역전이 **해결됐음을 확인**한다(2026-09-15 교체).
 
-    '또렷하게 다른 음소를 발음함'이 '머뭇거리지만 목표가 1등'보다 **높은 점수**를 받는다.
-    confidence가 분포의 뾰족함만 보고 그 봉우리가 목표 위에 있는지는 보지 않기 때문이다.
-    naive는 같은 두 경우의 순서를 올바르게 매긴다.
+    문제는 이랬다 — '또렷하게 다른 음소를 발음함'이 '머뭇거리지만 목표가 1등'보다 **높은
+    점수**를 받았다. confidence가 분포의 뾰족함만 보고 그 봉우리가 목표 위에 있는지는 보지
+    않기 때문이다. 발음 교정 앱에서 이는 치명적이다 — 확신에 차서 틀릴수록 점수가 오른다.
 
-    발음 교정 앱에서 이는 치명적이다 — 확신에 차서 틀리게 발음할수록 점수가 올라간다.
-    채점식을 교체하면 이 테스트는 '결함 기록'에서 '해결 확인'으로 바뀌어야 한다.
+    제품 채점식(`dgop.dgop_phone`)은 이제 naive라 순서를 맞게 매긴다. 아래에서 그것을 확인하고,
+    **구 식이 여전히 뒤집는다는 것도 함께 고정**한다 — 그게 교체의 근거였고, A-6 스윕의 비교
+    기준이라 앞으로도 그 모습 그대로 남아 있어야 한다.
     """
+    import dgop as D
+
     vague = _span(target_id=1, peak_idx=1, mass=0.30)   # 목표가 1등이지만 약함
     wrong = _span(target_id=1, peak_idx=2, mass=0.90)   # 다른 음소에 확신
 
     nv_v, nv_w = G.score_span("naive", vague), G.score_span("naive", wrong)
-    dg_v, dg_w = G.score_span("dgop", vague), G.score_span("dgop", wrong)
-
     _ok(nv_v > nv_w, f"naive는 순서를 맞게 매긴다 ({nv_v:.3f} > {nv_w:.3f})")
-    _ok(dg_v < dg_w,
-        f"D-GOP는 뒤집는다 — 결함 기록 ({dg_v:.4f} < {dg_w:.4f}). "
-        "채점식을 고쳤다면 이 단언을 뒤집어라")
+
+    # 해결 확인 — 제품이 실제로 부르는 함수로 잰다.
+    pr_v = D.dgop_phone(vague["mean_prob"][1], vague["mean_prob"])["dgop"]
+    pr_w = D.dgop_phone(wrong["mean_prob"][1], wrong["mean_prob"])["dgop"]
+    _ok(pr_v > pr_w,
+        f"제품 채점식은 더 이상 뒤집지 않는다 — 해결 확인 ({pr_v:.4f} > {pr_w:.4f})")
+    # dgop_phone은 4자리로 반올림해 돌려주므로 정확히 같지는 않다(0.02 vs 0.020000000000000004).
+    _ok(abs(pr_v - nv_v) < 1e-4 and abs(pr_w - nv_w) < 1e-4,
+        f"제품 채점식은 naive와 같은 값을 낸다 (반올림 오차까지: {pr_v:.4f}/{nv_v:.4f}, {pr_w:.4f}/{nv_w:.4f})")
+
+    # 교체의 근거 — 구 식은 여전히 뒤집는다(스윕 비교 기준이라 그대로 둔다).
+    lg_v, lg_w = G.score_span("dgop", vague), G.score_span("dgop", wrong)
+    _ok(lg_v < lg_w, f"구 식은 여전히 뒤집는다 — 교체 근거 ({lg_v:.4f} < {lg_w:.4f})")
 
 
 def test_confidence_ignores_the_target():
@@ -115,7 +127,7 @@ def test_maxlogit_survives_uniform_scaling_softmax_does_not():
     _ok(G.score_span("naive", confident) == G.score_span("naive", ood),
         "softmax 기반(naive)은 로짓 크기 차이를 못 본다")
     _ok(G.score_span("dgop", confident) == G.score_span("dgop", ood),
-        "D-GOP도 못 본다 — 세 항이 전부 softmax 안에 있다")
+        "구 D-GOP도 못 본다 — 세 항이 전부 softmax 안에 있다")
     _ok(G.score_span("maxlogit", confident) != G.score_span("maxlogit", ood),
         "MaxLogit은 로짓 크기 차이를 본다(이 변형을 넣는 이유)")
 

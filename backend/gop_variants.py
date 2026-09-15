@@ -46,8 +46,15 @@ def naive(mean_prob: Sequence[float], target_id: int, **_) -> float:
 
 
 def dgop(mean_prob: Sequence[float], target_id: int, **_) -> float:
-    """현행 D-GOP — naive × confidence. 결함이 밝혀졌으나 비교 기준으로 남긴다."""
-    return float(_dgop.dgop_phone(mean_prob[target_id], mean_prob)["dgop"])
+    """
+    **구** D-GOP — naive × confidence. 2026-09-15에 제품 채점식에서 내려왔다.
+
+    여기 남는 이유는 하나다: A-6 스윕 표(9종 비교)를 언제든 재현하려면 이 식이 **그때 모습
+    그대로** 있어야 한다. 그래서 `dgop.dgop_phone`에 위임하지 않고 직접 계산한다 — 위임하면
+    제품 채점식이 바뀔 때마다 비교 기준까지 따라 움직여 과거 실측을 재현할 수 없게 된다.
+    """
+    p = _dgop.naive_gop(mean_prob[target_id])
+    return float(p * _dgop.phone_confidence(mean_prob))
 
 
 def gmm_gop(mean_logprob: Sequence[float], target_id: int, **_) -> float:

@@ -39,13 +39,17 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
 
 | 순서 | 작업 | GPU | 비고 |
 |---|---|---|---|
-| 1 | `dgop.dgop_phone`을 naive로 교체 | 불필요 | `test_gop_variants`의 '결함 기록' 단언을 '해결 확인'으로 뒤집는다(축 B §5-3) |
+| ~~1~~ | ~~`dgop.dgop_phone`을 naive로 교체~~ | — | ✅ **2026-09-15 완료.** 단언도 '해결 확인'으로 뒤집었다 |
 | 2 | A-3 재측정 | **필요**(~12분) | 원점수 눈금이 바뀐다 |
 | 3 | A-4 앵커 재적합 → `backend/data/dgop_calibration.json` | **필요**(~11분) | 표시 점수 상한 94.9도 재확인 |
 | 4 | 앱 연결 — `DGOP_ALIGNER_ID`/`DGOP_SCORER_ID` | 불필요 | HF에 가중치가 있어 볼륨 없이 된다 |
 
 2·3은 GPU가 필요하니 **한 세션에 묶어서** 돈다. 이제 아무 DC·아무 GPU에서 HF 체크포인트를 받아
 돌리면 된다(비공개 저장소라 HF 읽기 토큰 필요).
+
+> **🚨 2·3이 끝나기 전에 앱의 D-GOP 경로를 켜지 않는다.** 채점식이 바뀌어 원점수 눈금이 달라졌는데
+> `backend/data/dgop_calibration.json`과 `dgop.AXIS_A_SEVERITY_SCORES`는 아직 **구 식으로 잰 앵커**다.
+> 지금 켜면 표시 점수가 틀린다. `DGOP_ALIGNER_ID` 미설정이 기본값이라 **현재는 꺼져 있다**(전사 경로).
 
 ### 2. 그다음
 
@@ -74,6 +78,7 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
 | **채점식 재설계 배관** | E1/E2 실험 도구 일체 | `docs/axis-b-scorer-redesign.md` |
 | **체크포인트 HF 백업** | scorer·aligner 최종 모델 | `duadnwls/liplab-dgop-{scorer,aligner}`에 각 **1.26GB**. 업로드 크기 대조 + HF API 재확인 (2026-09-14) |
 | **A-6 E1·E2 실행** | 채점식 9종 스윕 + 과신 측정 | **naive 채택 확정.** 구간 22,905 / 22,106개. 결과·한계는 `docs/axis-a-training-plan.md` A-6 |
+| **채점식 교체 (1단계)** | `dgop_phone`을 naive로 (2026-09-15) | 곱셈 항 제거. 구 식은 `gop_variants.dgop`·`analyze_dgop_redundancy`에 **비교 기준으로 보존** — A-6 표와 ρ=0.980을 계속 재현한다 |
 | **촉각(타도마) 제거** | 세 기둥 → **두 기둥(독화·말하기)** | 파일 22개·백엔드 엔드포인트 6개 삭제. 대시보드·메뉴·분석·안내 전부 두 기둥 기준으로 재정렬 (`b730c0d`) |
 | **앱 트랙 병합** | `feat/sublexical-feedback` 6커밋 통합 (2026-09-15) | **촉각 제거 유지.** 충돌 6파일 해소, 기능 충돌 3건은 합집합 (`c82fb9f`) |
 | **근거 기반 독화 피드백** | 오답을 자모·비심 단위로 분석 + 개인별 혼동행렬 | `scoring.viseme_confusions`, `TrialAttempt` 모델, `GET /api/curriculum/confusion-matrix` |

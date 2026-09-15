@@ -28,13 +28,16 @@ def test_confidence():
         "확신 분포 신뢰도가 평평 분포보다 크게 높음")
 
 
-def test_dgop_vs_naive_overconfidence():
+def test_score_is_naive_and_confidence_is_no_longer_multiplied():
+    """2026-09-15 교체 확인 — 점수는 naive 그대로이고 confidence를 곱하지 않는다(A-6)."""
     # 뭉갠 발화: 목표 확률이 낮지 않은데(0.4) 분포가 평평 → 실은 불확실
     blurry = D.dgop_phone(0.4, [0.4, 0.35, 0.15, 0.1])
     # 명료 발화: 목표 확률 높고 분포 뾰족
     clear = D.dgop_phone(0.85, [0.85, 0.1, 0.03, 0.02])
-    _ok(clear["dgop"] > blurry["dgop"], "명료 발음 D-GOP > 뭉갠 발음")
-    _ok(blurry["naive"] > blurry["dgop"], "뭉갠 발화는 naive보다 D-GOP가 낮음(과신 보정)")
+    _ok(clear["dgop"] > blurry["dgop"], "명료 발음 > 뭉갠 발음")
+    _ok(blurry["dgop"] == blurry["naive"] and clear["dgop"] == clear["naive"],
+        "점수는 naive 그대로 — 곱셈 항을 버렸다")
+    # confidence·uncertainty는 남아 있다. 점수엔 안 쓰이고 fuse_audio_visual의 영상 가중에만 쓰인다.
     _ok(blurry["uncertainty"] > clear["uncertainty"], "뭉갠 발화의 불확실성이 더 큼")
 
 

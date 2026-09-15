@@ -4,15 +4,21 @@
 표준 GOP(Goodness of Pronunciation)는 목표 음소가 놓일 구간의 음향이 그 음소에 얼마나
 부합하는지를 사후확률로 점수화한다. 목표 문장을 시스템이 이미 알기 때문에 전사가 필요 없다.
 그러나 표준 GOP는 정상 발화를 전제해, 발음이 뭉개진 농인 발화에서 오히려 과신(점수가 붕괴적으로
-높아짐)하는 문제가 있다(예비 실증에서 확인). D-GOP는 예측 분포의 불확실성(엔트로피·상위 확률
-여유)으로 naive 점수를 보정하고, 음향이 불확실한 구간일수록 영상(입모양) 신호에 더 가중해 후기
-융합한다.
+높아짐)하는 문제가 있다(예비 실증에서 확인). 원래 설계는 예측 분포의 불확실성(엔트로피·상위
+확률 여유)으로 naive 점수를 **보정**하는 것이었으나, 그 보정은 아래 사유로 걷어냈다.
+지금 남아 있는 축 B 고유 장치는 **후기 융합** 하나다 — 음향이 불확실한 구간일수록 영상(입모양)
+신호에 더 가중한다.
 
-⚠️ **이 모듈의 채점식(dgop_phone)은 재설계 대상이다**(2026-09-09). 과신이라는 문제 인식은
-문헌이 지지하지만(Yeo et al., Interspeech 2023), naive×confidence라는 곱셈 형태는 그 문제를
-잡지 못한다 — 두 항이 중복이고 보정 방향이 반대다. 같은 논문이 한국어 구음장애 발화에서
-엔트로피·마진 기반 GOP가 베이스라인보다 **나쁘고**(τ −0.264 / −0.443 vs −0.524) softmax를
-탈출하는 MaxLogit만 이긴다(−0.544)고 보고한다. 상세는 docs/deaf-speech-data-research.md §0.
+**채점식은 2026-09-15에 naive(표준 GOP)로 교체됐다.** 곱셈 항 naive×confidence는 두 항의
+순위상관이 0.980이라 정보를 더하지 못했고 보정 방향도 반대였다(과신을 통과시키고 과소확신을
+벌했다). A-6 스윕에서 naive를 유의하게 이긴 변형이 하나도 없었고(축 B §4의 사전 등록 규칙),
+confidence 단독은 목표 오염 네 규칙 전부에서 우연 수준(AUC 0.46~0.62)이었다.
+근거: docs/axis-a-training-plan.md A-6 · docs/axis-b-scorer-redesign.md §4.
+
+이 결론에는 한계가 있다 — A-6의 표본은 **건청 발화 + 합성 저하**이고 상위 후보들이 모두
+단조성 1.000으로 천장에 닿아 서로를 구별할 검정력이 없었다. 정확한 서술은 "불확실성 보정이
+쓸모없다"가 아니라 **"합성 저하로는 그 질문을 물을 수 없다"**다. 실제 병리 발화를 얻으면
+다시 물어야 한다(MaxLogit 계열은 gop_variants에 그대로 남아 있다).
 
 이 모듈은 음향 모델이 준 '음소 사후확률 분포'를 입력으로 받는 순수 함수다(모델 비의존 → 결정론적
 테스트 가능). 실제 음향 추론(wav2vec2/WavLM 강제정렬)은 dgop_acoustic이 이 함수들에 분포를 공급한다.
@@ -58,15 +64,16 @@ def naive_gop(target_prob: float) -> float:
 
 def dgop_phone(target_prob: float, probs: Sequence[float]) -> Dict:
     """
-    한 음소 구간의 D-GOP. naive(목표 사후확률)를 그 구간 예측의 신뢰도로 보정한다.
-    반환: {naive, confidence, uncertainty, dgop} (모두 0~1).
+    한 음소 구간의 점수 — **표준 GOP(naive), 즉 목표 음소의 사후확률 그대로**다.
+    반환: {naive, confidence, uncertainty, dgop} (모두 0~1). `dgop`은 `naive`와 같은 값이다.
 
-    ⚠️ 2026-09-09 — 이 식은 의도한 일을 하지 못한다. 원래 주석은 "분포가 평평할수록 신뢰도가
-    낮아 점수가 과신되지 않는다"였는데 **방향이 틀렸다**. 과신이란 분포가 *뾰족한데* 틀린
-    것이고, confidence가 재는 것이 바로 그 뾰족함이라 과신 구간을 그대로 통과시킨다. 실제로
-    걷히는 것은 과소확신(평평한 분포)이다. 게다가 naive와 confidence는 둘 다 첨도의 단조
-    함수라 순위상관이 0.98이어서, 곱셈이 순위 정보를 더하지 못하고 잡음만 더한다.
-    재현: scripts/analyze_dgop_redundancy.py · 근거·대안: docs/deaf-speech-data-research.md §0
+    2026-09-15에 `naive × confidence`를 버렸다(모듈 머리말 참고). 키 이름 `dgop`은 호출부
+    호환을 위해 남겼다 — 값의 의미는 이제 naive다.
+
+    `confidence`·`uncertainty`는 **점수에 쓰이지 않지만** 계속 계산한다. fuse_audio_visual이
+    '음향이 얼마나 못 미더운가'를 영상 가중치로 옮길 때 쓰기 때문이다. 다만 A-6이 잰 것은
+    "confidence가 *목표가 틀렸는지*를 아는가"(모른다)이지 "음향 채널이 못 미더운지를 아는가"가
+    아니다. **융합 쪽 쓸모는 아직 검증되지 않았다** — 별도 실험이 필요하다.
     """
     conf = phone_confidence(probs)
     naive = naive_gop(target_prob)
@@ -74,7 +81,7 @@ def dgop_phone(target_prob: float, probs: Sequence[float]) -> Dict:
         "naive": round(naive, 4),
         "confidence": round(conf, 4),
         "uncertainty": round(1.0 - conf, 4),
-        "dgop": round(naive * conf, 4),
+        "dgop": round(naive, 4),
     }
 
 
@@ -204,6 +211,11 @@ def _cal_x(raw: float, floor: float) -> float:
 # 발화가 9.51 → 78.15로 올랐다 — 한계 ②(스케일 압축)의 실제 원인이 이 버그였다.
 #
 # ⚠️ 체크포인트를 바꾸면 이 값도 무효다 — scripts/fit_dgop_calibration.py로 재적합한다(런북 §6.5).
+#
+# 🚨 **2026-09-15 현재 이 앵커는 낡았다.** 아래 값은 `naive × confidence`로 잰 원점수인데
+# 채점식이 naive로 바뀌어 원점수 눈금 자체가 달라졌다. 다시 적합하기 전까지 표시 점수를
+# 믿으면 안 된다 — A-3 재측정 → A-4 재적합(각 GPU ~12분)이 끝나야 유효해진다(STATUS.md 1순위).
+# 그때까지 앱의 D-GOP 경로(DGOP_ALIGNER_ID)를 켜지 않는다. 미설정이 기본값이라 지금은 꺼져 있다.
 AXIS_A_SEVERITY_SCORES = [78.15, 31.65, 15.2, 2.9, 0.85]
 
 DEFAULT_CALIBRATION = fit_calibration(
