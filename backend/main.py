@@ -838,6 +838,12 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
             wv.last_error_at = _dt.utcnow()
             await _srs_schedule_wrong(current_user.id, "viseme", str(data.viseme_id), db)
 
+        # 시행 기록 — 학습곡선·유형별 정확도(eval/summary)가 1단계 입모양 인지도 포함하도록.
+        # (그룹 선다라 자모 혼동은 없음 → confusions=[])
+        from database import TrialAttempt
+        db.add(TrialAttempt(user_id=current_user.id, stage=1, item_type="viseme",
+                            target=str(data.viseme_id), chosen=str(data.chosen_id), correct=correct, confusions=[]))
+
         await db.commit()
         await db.refresh(sp)
     except Exception as e:
@@ -881,20 +887,23 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
             sp = StageProgress(user_id=current_user.id, stage=2, status="in_progress",
                                attempts=0, correct=0, mastery_score=0.0)
             db.add(sp)
+        # 정답 여부는 서버가 재계산(클라이언트 data.correct를 신뢰하지 않음 — 숙달·해금·평가 조작 방지).
+        # chosen이 없는 구버전 호출만 data.correct로 폴백.
+        correct = (data.chosen == data.word) if data.chosen is not None else bool(data.correct)
         sp.attempts += 1
-        if data.correct:
+        if correct:
             sp.correct += 1
         sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
         sp.status = "mastered" if (sp.attempts >= _STAGE2_MIN_ATTEMPTS and sp.mastery_score >= _STAGE2_MASTERY) else "in_progress"
         # 오답이면 '무엇을 무엇으로 읽었는지'를 자모·입모양 단위로 분석(근거 기반 피드백 + 혼동행렬 데이터)
         confusions = []
-        if not data.correct and data.chosen and data.chosen != data.word:
+        if not correct and data.chosen and data.chosen != data.word:
             from scoring import viseme_confusions
             confusions = viseme_confusions(data.word, data.chosen)
         from database import TrialAttempt
         db.add(TrialAttempt(user_id=current_user.id, stage=2, item_type="word",
-                            target=data.word, chosen=data.chosen, correct=data.correct, confusions=confusions))
-        if not data.correct:
+                            target=data.word, chosen=data.chosen, correct=correct, confusions=confusions))
+        if not correct:
             await _srs_schedule_wrong(current_user.id, "word", data.word, db)
         await db.commit()
         await db.refresh(sp)

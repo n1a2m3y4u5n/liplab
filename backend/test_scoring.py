@@ -39,6 +39,25 @@ def test_jamo_length_diff():
     _ok(0.0 <= r["score"] <= 100.0, "음절 수가 달라도 DP 정렬로 채점(범위 내)")
 
 
+def test_viseme_confusions_same_viseme():
+    # 밥 vs 맘: 초성 ㅂ→ㅁ, 종성 ㅂ→ㅁ 모두 양순(같은 입모양) → same_viseme=True
+    cf = S.viseme_confusions("밥", "맘")
+    _ok(len(cf) >= 1, "밥→맘은 자모 혼동이 잡힌다")
+    _ok(all(c["same_viseme"] for c in cf), "ㅂ/ㅁ은 같은 입모양이라 same_viseme=True")
+    _ok({c["position"] for c in cf} <= {"초성", "중성", "종성"}, "위치 라벨은 초/중/종성")
+
+
+def test_viseme_confusions_diff_viseme():
+    # 밥 vs 각: 초성 ㅂ(양순)→ㄱ(연구개)은 다른 입모양 → same_viseme=False
+    cf = S.viseme_confusions("밥", "각")
+    init = [c for c in cf if c["position"] == "초성"]
+    _ok(init and init[0]["same_viseme"] is False, "ㅂ→ㄱ은 입모양이 달라 same_viseme=False")
+
+
+def test_viseme_confusions_identical():
+    _ok(S.viseme_confusions("사과", "사과") == [], "정답과 같으면 혼동 없음")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
