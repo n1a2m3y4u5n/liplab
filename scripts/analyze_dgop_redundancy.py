@@ -2,9 +2,14 @@
 """
 D-GOP 채점식의 구조적 결함 재현 — 축 B 진단.
 
-`dgop.dgop_phone`의 점수는 `naive × confidence`다. 설계 의도는 "표준 GOP(naive)가 뭉갠
-발화에서 과신하므로 불확실성으로 보정한다"였다. 이 스크립트는 그 의도가 **식의 형태 때문에
+**구** 채점식 `naive × confidence`를 잰다. 설계 의도는 "표준 GOP(naive)가 뭉갠 발화에서
+과신하므로 불확실성으로 보정한다"였다. 이 스크립트는 그 의도가 **식의 형태 때문에
 달성되지 않음**을 데이터·GPU 없이 결정론적으로 보인다.
+
+⚠️ 2026-09-15에 제품 채점식은 naive로 교체됐다(`dgop.dgop_phone`). 이 스크립트는 **교체의
+근거를 재현하는 진단 도구**라 계속 구 식을 잰다 — 그래서 `dgop_phone`을 부르지 않고 아래
+`_legacy_dgop_phone`으로 직접 계산한다. 제품을 따라가게 두면 naive를 naive와 비교하게 돼
+결론이 무의미해진다.
 
 두 가지를 잰다.
 
@@ -81,8 +86,21 @@ def sample_distributions(n: int, classes: int, seed: int = 0):
         t = max(range(classes), key=lambda i: p[i])   # 목표 = argmax
         naive.append(p[t])
         conf.append(D.phone_confidence(p))
-        dgop.append(D.dgop_phone(p[t], p)["dgop"])
+        dgop.append(_legacy_dgop_phone(p[t], p)["dgop"])
     return naive, conf, dgop
+
+
+def _legacy_dgop_phone(target_prob, probs):
+    """
+    2026-09-15 이전의 `dgop.dgop_phone` — `naive × confidence`.
+
+    제품 채점식이 바뀌어도 이 진단이 같은 결과를 내도록 여기에 고정해 둔다.
+    반환 키는 그때와 같다(naive·confidence·uncertainty·dgop).
+    """
+    conf = D.phone_confidence(probs)
+    naive = D.naive_gop(target_prob)
+    return {"naive": round(naive, 4), "confidence": round(conf, 4),
+            "uncertainty": round(1.0 - conf, 4), "dgop": round(naive * conf, 4)}
 
 
 def _peaked(classes: int, peak_idx: int, mass: float):
@@ -96,14 +114,14 @@ def report_direction(classes: int):
     """보정이 실제로 무엇을 벌하는가 — 세 시나리오 대조."""
     rows = []
     p = _peaked(classes, 0, 0.95)
-    rows.append(("A 목표에 포화 (= 과신)", D.dgop_phone(p[0], p)))
+    rows.append(("A 목표에 포화 (= 과신)", _legacy_dgop_phone(p[0], p)))
     p = _peaked(classes, 1, 0.95)
-    rows.append(("B 다른 음소에 확신 (체계적 치환)", D.dgop_phone(p[0], p)))
+    rows.append(("B 다른 음소에 확신 (체계적 치환)", _legacy_dgop_phone(p[0], p)))
     p = [1.0 / classes] * classes
     p[0] = 1.2 / classes
     s = sum(p)
     p = [v / s for v in p]
-    rows.append(("C 평평, 목표가 간신히 1등 (과소확신)", D.dgop_phone(p[0], p)))
+    rows.append(("C 평평, 목표가 간신히 1등 (과소확신)", _legacy_dgop_phone(p[0], p)))
     return rows
 
 

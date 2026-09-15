@@ -82,9 +82,15 @@ def test_align_targets_separates_repeated_tokens():
     smeared = DA.span_distribution(log_probs, 0, 4)      # 옛 방식이 잡던 구간
     exact = DA.span_distribution(log_probs, 0, 0)        # 자체 구현이 잡는 구간
     a_id = _VOCAB["A"]
-    _ok(D.dgop_phone(exact[a_id], exact)["dgop"] > 0.9, "정확한 구간이면 D-GOP가 높다")
-    _ok(D.dgop_phone(smeared[a_id], smeared)["dgop"] < 0.1,
-        "뭉갠 구간은 분포가 평평해져 D-GOP가 무너진다(옛 구현의 실제 손해)")
+    exact_score = D.dgop_phone(exact[a_id], exact)["dgop"]
+    smeared_score = D.dgop_phone(smeared[a_id], smeared)["dgop"]
+    _ok(exact_score > 0.9, f"정확한 구간이면 점수가 높다 (받음 {exact_score:.4f})")
+    # 2026-09-15 — 채점식이 naive로 바뀌며 낙폭이 달라졌다. 구 식은 confidence가 0으로 무너져
+    # 점수도 0이 됐지만, naive는 '평평해진 평균 분포의 목표 확률'(여기선 0.4)로 내려앉는다.
+    # 붕괴가 아니라 절반 이하로 깎이는 손해다 — 뭉갬이 점수를 깎는다는 사실 자체는 그대로다.
+    _ok(smeared_score < exact_score / 2,
+        f"뭉갠 구간은 평균 분포가 평평해져 점수가 절반 이하로 깎인다 "
+        f"({exact_score:.4f} → {smeared_score:.4f}, 옛 구현의 실제 손해)")
 
 
 def test_align_targets_missing_token_raises():
