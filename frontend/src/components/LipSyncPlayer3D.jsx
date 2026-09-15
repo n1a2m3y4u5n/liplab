@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import AvatarVRM from './AvatarVRM'
+import VocalTract from './VocalTract'
 
 /**
  * 3D LipSync Player - VRM-based avatar with full playback controls
@@ -20,6 +21,8 @@ export default function LipSyncPlayer3D({
   const [currentIndex, setCurrentIndex] = useState(0)
   const [speed, setSpeed] = useState(1.0)
   const [isPaused, setIsPaused] = useState(false)
+  const [xray, setXray] = useState(false)       // 투명 두상(피부 반투명 → 혀·치아 노출)
+  const [showTract, setShowTract] = useState(false)  // 성도 단면(측면) 도식
 
   // Refs to avoid stale closure issues
   const timeoutRef = useRef(null)
@@ -169,7 +172,15 @@ export default function LipSyncPlayer3D({
       >
         <AvatarVRM
           visemeId={currentViseme?.viseme ?? 15}
+          xray={xray}
         />
+
+        {/* 성도 단면 오버레이(계획서 E) — 혀·입술·턱 조음을 측면 도식으로 */}
+        {showTract && (
+          <div className="absolute bottom-2 right-2 w-28 sm:w-32 bg-slate-900/85 border border-slate-700 rounded-xl p-1 backdrop-blur-sm">
+            <VocalTract visemeId={currentViseme?.viseme ?? 15} />
+          </div>
+        )}
 
         {/* Status badge */}
         {isRunning && (
@@ -259,6 +270,24 @@ export default function LipSyncPlayer3D({
             </button>
           ))}
         </div>
+      </div>
+
+      {/* 조음 시각화 토글 — 투명 두상 + 성도 단면(계획서 F·E) */}
+      <div className="mt-2 flex gap-2">
+        <button
+          onClick={() => setXray((v) => !v)}
+          className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${xray ? 'bg-violet-600 text-white font-semibold' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          title="피부를 반투명하게 해 안 보이는 혀·치아를 드러냄"
+        >
+          🫥 투명 두상
+        </button>
+        <button
+          onClick={() => setShowTract((v) => !v)}
+          className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${showTract ? 'bg-violet-600 text-white font-semibold' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          title="측면 성도 단면으로 혀·입술·턱 조음 보기"
+        >
+          🗣️ 성도 단면
+        </button>
       </div>
     </div>
   )

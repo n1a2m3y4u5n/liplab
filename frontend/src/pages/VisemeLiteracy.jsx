@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI } from '../api'
 import LearnHeader from '../components/LearnHeader'
 import AvatarVRM from '../components/AvatarVRM'
+import VocalTract from '../components/VocalTract'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 
 // MediaPipe 번들이 커서 펼칠 때만 로드(초기 번들 보호)
@@ -35,6 +36,8 @@ const lessonLabel = (lesson) => {
 // 정적보다 인지가 쉽고, 정답 숫자를 노출하지 않는다.
 function VisemeAvatar({ visemeId, height = 300 }) {
   const [vid, setVid] = useState(15)
+  const [xray, setXray] = useState(false)        // 투명 두상: 피부 반투명 → 혀·치아 노출(계획서 F)
+  const [showTract, setShowTract] = useState(false)  // 성도 단면(측면) 도식(계획서 E)
   useEffect(() => {
     let on = true
     let t
@@ -48,9 +51,25 @@ function VisemeAvatar({ visemeId, height = 300 }) {
     return () => { on = false; clearTimeout(t) }
   }, [visemeId])
   return (
-    <div className="w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-slate-800 to-slate-900"
-         style={{ height }}>
-      <AvatarVRM visemeId={vid} />
+    <div>
+      <div className="relative w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-slate-800 to-slate-900"
+           style={{ height }}>
+        <AvatarVRM visemeId={vid} xray={xray} />
+        {showTract && (
+          <div className="absolute bottom-2 right-2 w-28 bg-slate-900/85 border border-slate-700 rounded-xl p-1 backdrop-blur-sm">
+            <VocalTract visemeId={vid} />
+          </div>
+        )}
+      </div>
+      {/* 안 보이는 조음(혀·치아) 시각화 토글 — 독화 교육 핵심 */}
+      <div className="mt-2 flex gap-2">
+        <button onClick={() => setXray((v) => !v)}
+          className={`flex-1 py-1.5 text-xs rounded-lg font-medium transition-colors ${xray ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          title="피부를 반투명하게 해 안 보이는 혀·치아를 드러냄">🫥 투명 두상</button>
+        <button onClick={() => setShowTract((v) => !v)}
+          className={`flex-1 py-1.5 text-xs rounded-lg font-medium transition-colors ${showTract ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          title="측면 성도 단면으로 혀·입술·턱 조음 보기">🗣️ 성도 단면</button>
+      </div>
     </div>
   )
 }

@@ -2,6 +2,11 @@ import { Component, Suspense, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+
+const MODEL_URL = '/models/realistic_face.glb'
+// 새 아바타(CC 모델)는 EXT_meshopt_compression 압축이라 meshopt 디코더를 붙여야 로드됨.
+const withMeshopt = (loader) => loader.setMeshoptDecoder(MeshoptDecoder)
 import { VISEME_BLENDSHAPES, ACTIVE_MORPH_KEYS, VISEME_TONGUE, ACTIVE_TONGUE_KEYS } from '../lib/visemeShapes'
 import MouthFallback2D from './MouthFallback2D'
 
@@ -15,17 +20,26 @@ import MouthFallback2D from './MouthFallback2D'
  * (병합 메모: 혀 렌더링[YMJ]과 WebGL 폴백·카메라 경쟁조건 수정[feat/curriculum]이
  *  깨진 머지로 파일에 두 벌 복제돼 빌드가 깨져 있었다 → 두 기능을 모두 살려 단일화.)
  */
-function RealisticFace({ visemeId = 15 }) {
-  const { scene } = useGLTF('/models/realistic_face.glb')
+function RealisticFace({ visemeId = 15, xray = false }) {
+  const { scene } = useGLTF(MODEL_URL, false, false, withMeshopt)
   const meshesRef = useRef([])
   const tongueMeshRef = useRef(null)
   const currentWeightsRef = useRef({})
   const tongueWeightsRef = useRef({})
+  const skinMatsRef = useRef([])   // 투명(X-ray) 모드에서 반투명화할 피부 재질
+  const xrayAppliedRef = useRef(null)
 
   // Find all meshes with morph targets on first render
   if (meshesRef.current.length === 0) {
     scene.traverse((obj) => {
-      if (obj.isMesh && obj.morphTargetDictionary && obj.morphTargetInfluences) {
+      if (!obj.isMesh) return
+      // 피부 재질 수집(투명 두상용): 겉면(body/high-poly)만, 혀·치아·눈은 제외.
+      const mats = Array.isArray(obj.material) ? obj.material : (obj.material ? [obj.material] : [])
+      const mn = ((obj.name || '') + ' ' + (mats[0]?.name || '')).toLowerCase()
+      if (/(^|[.\s_])(body|high-poly|skin)/.test(mn) && !/teeth|tongue|eye|cornea/.test(mn)) {
+        for (const m of mats) skinMatsRef.current.push({ m, op0: m.opacity, tr0: m.transparent, dw0: m.depthWrite })
+      }
+      if (obj.morphTargetDictionary && obj.morphTargetInfluences) {
         meshesRef.current.push(obj)
         // 혀 메시 식별: tongueOut은 있고 mouthSmileLeft(얼굴 전용)는 없는 메시.
         // (얼굴=둘 다 있음, 치아=둘 다 없음, 혀=tongueOut만 있음 → 유일하게 구분됨)
@@ -38,6 +52,15 @@ function RealisticFace({ visemeId = 15 }) {
   }
 
   useFrame((_, delta) => {
+    // 투명 두상 토글 — 피부만 반투명화해 안쪽 혀·치아를 드러냄(계획서 F). 상태 바뀔 때만 적용.
+    if (xrayAppliedRef.current !== xray) {
+      xrayAppliedRef.current = xray
+      for (const s of skinMatsRef.current) {
+        if (xray) { s.m.transparent = true; s.m.opacity = 0.26; s.m.depthWrite = false }
+        else { s.m.transparent = s.tr0; s.m.opacity = s.op0; s.m.depthWrite = s.dw0 }
+        s.m.needsUpdate = true
+      }
+    }
     if (meshesRef.current.length === 0) return
 
     const target = VISEME_BLENDSHAPES[visemeId] || {}
@@ -109,7 +132,7 @@ class GLErrorBoundary extends Component {
   }
 }
 
-export default function AvatarVRM({ visemeId = 15 }) {
+export default function AvatarVRM({ visemeId = 15, xray = false }) {
   const [webglOK] = useState(detectWebGL)
   const fallback = <MouthFallback2D visemeId={visemeId} />
 
@@ -131,7 +154,7 @@ export default function AvatarVRM({ visemeId = 15 }) {
           <directionalLight position={[-1, 0, 1]} intensity={0.4} />
 
           <Suspense fallback={null}>
-            <RealisticFace visemeId={visemeId} />
+            <RealisticFace visemeId={visemeId} xray={xray} />
           </Suspense>
 
           <OrbitControls
@@ -149,4 +172,4 @@ export default function AvatarVRM({ visemeId = 15 }) {
   )
 }
 
-useGLTF.preload('/models/realistic_face.glb')
+useGLTF.preload(MODEL_URL, false, false, withMeshopt)
