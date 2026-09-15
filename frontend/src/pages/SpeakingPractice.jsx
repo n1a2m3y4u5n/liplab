@@ -5,6 +5,7 @@ import { curriculumAPI, learningAPI, speakAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import LearnHeader from '../components/LearnHeader'
 import { getSpeakingStageMenuItem } from '../config/speakingNavigation'
+import { toBlendshapeMap, cosineScore } from '../lib/mouthScore'
 
 /**
  * 말하기 연습 (발화 피드백)
@@ -90,6 +91,22 @@ export default function SpeakingPractice() {
   const framesRequestRef = useRef(0)
   const videoRef = useRef(null)          // 웹캠 미러 <video>
   const videoStreamRef = useRef(null)
+  const landmarkerRef = useRef(null)     // MediaPipe FaceLandmarker(축 B AV융합용, 지연 로드)
+  const mouthFramesRef = useRef([])      // 녹음 중 사용자 입모양 blendshape 버퍼
+
+  // 미러가 켜지면 FaceLandmarker를 지연 로드(발음채점 시 입모양 신뢰도 산출 → AV 후기융합)
+  const ensureLandmarker = async () => {
+    if (landmarkerRef.current) return landmarkerRef.current
+    try {
+      const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision')
+      const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm')
+      landmarkerRef.current = await FaceLandmarker.createFromOptions(vision, {
+        baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', delegate: 'GPU' },
+        outputFaceBlendshapes: true, runningMode: 'VIDEO', numFaces: 1,
+      })
+    } catch { landmarkerRef.current = null }
+    return landmarkerRef.current
+  }
 
   const toggleMirror = async () => {
     if (mirrorOn) {
@@ -101,6 +118,7 @@ export default function SpeakingPractice() {
         const vs = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
         videoStreamRef.current = vs
         setMirrorOn(true)
+        ensureLandmarker()   // 미러 켜는 순간 모델 준비(비동기)
       } catch { setErr('웹캠을 쓸 수 없어요. 카메라 권한을 허용해 주세요.') }
     }
   }
@@ -108,6 +126,22 @@ export default function SpeakingPractice() {
   useEffect(() => {
     if (mirrorOn && videoRef.current && videoStreamRef.current) videoRef.current.srcObject = videoStreamRef.current
   }, [mirrorOn])
+
+  // 녹음 중 버퍼된 입모양 vs 목표 비심열 → mouth_confidence(0~1). 각 목표 비심에 대해
+  // 버퍼 최고 코사인을 구해 평균(정렬 없이 '그 입모양이 한 번은 만들어졌나'를 잰다).
+  const computeMouthConfidence = () => {
+    const buf = mouthFramesRef.current
+    if (!buf.length || !frames.length) return null
+    const targetVis = [...new Set(frames.map((f) => f.viseme).filter((v) => v && v <= 10))]
+    if (!targetVis.length) return null
+    let sum = 0
+    for (const vid of targetVis) {
+      let best = 0
+      for (const bs of buf) { const c = cosineScore(bs, vid, null); if (c > best) best = c }
+      sum += best
+    }
+    return Math.max(0, Math.min(1, sum / targetVis.length))
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -196,12 +230,13 @@ export default function SpeakingPractice() {
     const rec = recorderRef.current
     if (rec) { rec.onstop = null; try { if (rec.state !== 'inactive') rec.stop() } catch { /* noop */ } recorderRef.current = null }
     if (videoStreamRef.current) { videoStreamRef.current.getTracks().forEach((t) => t.stop()); videoStreamRef.current = null }
+    if (landmarkerRef.current) { try { landmarkerRef.current.close?.() } catch { /* noop */ } landmarkerRef.current = null }
     closeAudio()
   }
 
   const start = async () => {
     setErr(null); setSummary(null); setAssessment(null)
-    volHist.current = []; pitchHist.current = []; traceRef.current = []; chunksRef.current = []
+    volHist.current = []; pitchHist.current = []; traceRef.current = []; chunksRef.current = []; mouthFramesRef.current = []
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -242,6 +277,9 @@ export default function SpeakingPractice() {
       }
       // 복습 세션이면 review=true → 백엔드가 채점/코칭만 하고 단계 숙달·해금은 건드리지 않음
       const opts = assessStage != null ? { stage: assessStage, drill, review: reviewMode } : {}
+      // 축 B: 웹캠 미러로 버퍼된 입모양이 있으면 신뢰도를 실어 보내 AV 후기융합(백엔드 fuse_audio_visual)
+      const mc = computeMouthConfidence()
+      if (mc != null) opts.mouth_confidence = mc
       setAssessing(true)
       try {
         const res = await speakAPI.assess(target, blob, metrics, opts)
@@ -325,6 +363,14 @@ export default function SpeakingPractice() {
         if (hz) pitchHist.current.push(hz)
         traceRef.current.push({ t: (performance.now() - startRef.current) / 1000, rms, hz })
         setVol(disp); setPitch(hz)
+      }
+      // 축 B: 미러가 켜져 있으면 입모양 blendshape를 버퍼링(발화 중 입 형태 → AV융합 신뢰도)
+      if (frame % 3 === 0 && landmarkerRef.current && videoRef.current && videoRef.current.readyState >= 2) {
+        try {
+          const r = landmarkerRef.current.detectForVideo(videoRef.current, performance.now())
+          const bs = toBlendshapeMap(r.faceBlendshapes?.[0])
+          if (Object.keys(bs).length) mouthFramesRef.current.push(bs)
+        } catch { /* 프레임 스킵 */ }
       }
       frame++
       rafRef.current = requestAnimationFrame(tick)
@@ -503,6 +549,22 @@ export default function SpeakingPractice() {
                     {assessment.confusions?.length > 0 && (
                       <div className="p-2 rounded-lg bg-amber-50 text-amber-700 text-xs">
                         다르게 들린 소리: {assessment.confusions.map((c) => `${c.correct}→${c.confused_as}`).join(', ')}
+                      </div>
+                    )}
+                    {assessment.av_fusion && assessment.av_fusion.visual_score != null && (
+                      <div className="p-3 rounded-lg bg-white border border-gray-200">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-gray-600">소리 + 입모양 융합 점수</span>
+                          <span className="text-[10px] text-gray-400">AV 후기융합 · 축 B</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm">
+                          <span className="text-gray-500">소리 {Math.round(assessment.av_fusion.audio_score)}</span>
+                          <span className="text-gray-300">+</span>
+                          <span className="text-gray-500">입모양 {Math.round(assessment.av_fusion.visual_score)}</span>
+                          <span className="text-gray-300">→</span>
+                          <span className="font-bold text-violet-700">{Math.round(assessment.av_fusion.score)}</span>
+                          <span className="text-[10px] text-gray-400">(입모양 가중 {Math.round((assessment.av_fusion.visual_weight || 0) * 100)}%)</span>
+                        </div>
                       </div>
                     )}
                     {assessment.acoustic_dgop?.phones?.length > 0 && (
