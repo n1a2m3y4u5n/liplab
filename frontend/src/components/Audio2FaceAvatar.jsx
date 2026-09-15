@@ -16,6 +16,8 @@ export default function Audio2FaceAvatar() {
   const [state, setState] = useState('idle')       // idle | recording | processing | playing | error
   const [err, setErr] = useState(null)
   const [nFrames, setNFrames] = useState(0)
+  const [examples, setExamples] = useState([])     // 프리컴퓨트 예시(torch 없는 배포에서도 시연)
+  const [exLabel, setExLabel] = useState('')
 
   const bsFrameRef = useRef(null)     // 현재 프레임 {name:value} — AvatarVRM이 매 프레임 읽음
   const framesRef = useRef([])        // 미리 만든 프레임 객체 배열
@@ -32,6 +34,11 @@ export default function Audio2FaceAvatar() {
     avatarAPI.audio2faceStatus()
       .then((s) => { if (alive) setAvailable(!!s.available) })
       .catch(() => { if (alive) setAvailable(false) })
+    // 프리컴퓨트 예시 로드(라이브 모델 없어도 A4 예측을 시연) — 실패해도 조용히 무시
+    fetch('/a2f-examples/examples.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (alive && j) setExamples(Object.keys(j).sort().map((k) => ({ id: k, ...j[k] }))) })
+      .catch(() => {})
     return () => {
       alive = false
       stopPlayback()
@@ -138,7 +145,22 @@ export default function Audio2FaceAvatar() {
     e.target.value = ''
   }, [process])
 
-  if (available === false) return null // 미지원 환경에서는 조용히 숨김
+  // 프리컴퓨트 예시 재생(라이브 모델 없이 A4 예측 시연) — 오디오 + 미리 계산한 블렌드셰이프 동기
+  const playExample = useCallback((ex) => {
+    const names = ex.names || []
+    framesRef.current = (ex.frames || []).map((row) => {
+      const o = {}; for (let i = 0; i < names.length; i++) o[names[i]] = row[i]; return o
+    })
+    fpsRef.current = ex.fps || 30
+    setNFrames(framesRef.current.length); setExLabel(ex.text || ''); setErr(null)
+    if (!audioElRef.current) audioElRef.current = new Audio()
+    audioElRef.current.src = `/a2f-examples/clip_${ex.id}.wav`
+    audioElRef.current.onloadeddata = () => playSynced()
+    audioElRef.current.load()
+  }, [playSynced])
+
+  // 라이브 모델도 없고 예시도 없으면 조용히 숨김(전시 안전)
+  if (available === false && examples.length === 0) return null
 
   return (
     <div className="card w-full">
@@ -147,7 +169,9 @@ export default function Audio2FaceAvatar() {
         <span className="text-[11px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">AI 음성구동 · A4</span>
       </div>
       <p className="text-sm text-gray-500 mb-3">
-        직접 말하거나 음성 파일을 올리면, 그 소리에서 입·턱·표정 움직임을 예측해 아바타가 따라 합니다.
+        {available === true
+          ? '직접 말하거나 음성 파일을 올리면, 그 소리에서 입·턱·표정 움직임을 예측해 아바타가 따라 합니다.'
+          : '아래 예시 음성을 누르면, A4 모델이 그 소리에서 예측한 입모양으로 아바타가 립싱크합니다.'}
       </p>
       <div className="relative w-full rounded-2xl overflow-hidden shadow-lg bg-gradient-to-b from-slate-800 to-slate-900"
         style={{ height: '320px' }}>
@@ -162,38 +186,53 @@ export default function Audio2FaceAvatar() {
         )}
       </div>
 
-      <div className="mt-3 flex items-center gap-2">
-        {state === 'recording' ? (
-          <button onClick={stopRec} className="flex-1 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium">
-            ⏹ 녹음 종료 → 립싱크
-          </button>
-        ) : (
-          <button
-            onClick={startRec}
-            disabled={state === 'processing'}
-            className="flex-1 py-2.5 rounded-lg bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white font-medium"
-          >
-            {state === 'processing' ? '분석 중…' : '🎙 말하고 아바타로 보기'}
-          </button>
-        )}
-        <label className="py-2.5 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm cursor-pointer">
-          파일
-          <input type="file" accept="audio/*" onChange={onFile} className="hidden" />
-        </label>
-        {framesRef.current.length > 0 && state !== 'playing' && state !== 'recording' && (
-          <button onClick={playSynced} className="py-2.5 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm" title="다시 재생">↺</button>
-        )}
-      </div>
+      {/* 라이브 녹음/업로드 — 서버에 A4 모델(torch)이 있을 때만 */}
+      {available === true && (
+        <div className="mt-3 flex items-center gap-2">
+          {state === 'recording' ? (
+            <button onClick={stopRec} className="flex-1 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium">
+              ⏹ 녹음 종료 → 립싱크
+            </button>
+          ) : (
+            <button
+              onClick={startRec}
+              disabled={state === 'processing'}
+              className="flex-1 py-2.5 rounded-lg bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white font-medium"
+            >
+              {state === 'processing' ? '분석 중…' : '🎙 말하고 아바타로 보기'}
+            </button>
+          )}
+          <label className="py-2.5 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm cursor-pointer">
+            파일
+            <input type="file" accept="audio/*" onChange={onFile} className="hidden" />
+          </label>
+        </div>
+      )}
+
+      {/* 예시 음성(프리컴퓨트) — 어디서나 A4 예측 시연 */}
+      {examples.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs text-gray-500 mb-1.5">예시 음성으로 보기 {available === true ? '(또는 위에서 직접 말하기)' : ''}</p>
+          <div className="flex flex-wrap gap-2">
+            {examples.map((ex) => (
+              <button key={ex.id} onClick={() => playExample(ex)} disabled={state === 'playing'}
+                className="px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-sm hover:bg-violet-100 disabled:opacity-50">
+                ▶ {ex.text}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {available === null && <p className="mt-2 text-xs text-gray-400">모델 확인 중…</p>}
       {err && <p className="mt-2 text-xs text-amber-600">{err}</p>}
       {nFrames > 0 && !err && (
         <p className="mt-2 text-xs text-gray-400">
-          실제 음성에서 {nFrames}프레임({(nFrames / fpsRef.current).toFixed(1)}초)의 얼굴 움직임을 예측했어요.
+          {exLabel ? `"${exLabel}" — ` : '실제 음성에서 '}{nFrames}프레임({(nFrames / fpsRef.current).toFixed(1)}초)의 얼굴 움직임을 A4가 예측했어요.
         </p>
       )}
       <p className="mt-1 text-[11px] text-gray-400 leading-relaxed">
-        화자 불변 음성특징(wav2vec2)으로 학습해 처음 듣는 목소리도 입모양을 예측합니다(미학습 화자 jawOpen 상관 r≈0.66).
+        화자 불변 음성특징(wav2vec2)으로 학습해 처음 듣는 목소리도 입모양을 예측합니다(미학습 화자 jawOpen 상관 r≈0.68, 8화자).
       </p>
     </div>
   )
