@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import AvatarVRM from './AvatarVRM'
 import VocalTract from './VocalTract'
+import { CueGlyph } from './CueBadges'
+import { curriculumAPI } from '../api'
 
 /**
  * 3D LipSync Player - VRM-based avatar with full playback controls
@@ -17,12 +19,14 @@ export default function LipSyncPlayer3D({
   onFrameChange = () => {},
   loop = false,
   restartKey = 0,
+  cueText = null,   // 주면 재생 중 현재 음절의 시각증강 기호(축 J)를 입 근처에 겹쳐 표시
 }) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [speed, setSpeed] = useState(1.0)
   const [isPaused, setIsPaused] = useState(false)
   const [xray, setXray] = useState(false)       // 투명 두상(피부 반투명 → 혀·치아 노출)
   const [showTract, setShowTract] = useState(false)  // 성도 단면(측면) 도식
+  const [cues, setCues] = useState([])          // 축 J: 안 보이는 자질 기호(음절별)
 
   // Refs to avoid stale closure issues
   const timeoutRef = useRef(null)
@@ -44,6 +48,16 @@ export default function LipSyncPlayer3D({
   useEffect(() => {
     speedRef.current = speed
   }, [speed])
+
+  // 축 J: 재생할 텍스트의 시각증강 기호를 미리 받아 둔다(현재 음절에 맞춰 입 근처 표시).
+  useEffect(() => {
+    let on = true
+    if (!cueText) { setCues([]); return undefined }
+    curriculumAPI.getCues(cueText)
+      .then((d) => { if (on) setCues(d.cues || []) })
+      .catch(() => { if (on) setCues([]) })
+    return () => { on = false }
+  }, [cueText])
 
   const clearTimer = useCallback(() => {
     if (timeoutRef.current) {
@@ -164,6 +178,10 @@ export default function LipSyncPlayer3D({
   const progress = visemes.length > 0 ? ((currentIndex + 1) / visemes.length) * 100 : 0
   const isRunning = isPlayingRef.current && !isPaused
 
+  // 현재 프레임의 음절(text_index)에 해당하는 시각증강 기호 — cue.syllable_index와 동일 인덱스 공간(engine)
+  const curSyl = Number.isInteger(currentViseme?.text_index) ? currentViseme.text_index : null
+  const activeCues = curSyl != null ? cues.filter((c) => c.syllable_index === curSyl) : []
+
   return (
     <div className="relative w-full">
       {/* VRM Avatar Viewport */}
@@ -174,6 +192,22 @@ export default function LipSyncPlayer3D({
           visemeId={currentViseme?.viseme ?? 15}
           xray={xray}
         />
+
+        {/* 시각증강 기호(축 J) — 현재 음절의 안 보이는 자질(기식·긴장·비음)을 입 근처에 겹쳐 표시 */}
+        {activeCues.length > 0 && (
+          <div className="absolute left-1/2 top-[30%] -translate-x-1/2 flex gap-1">
+            {activeCues.map((c, j) => (
+              <span
+                key={j}
+                title={c.cue}
+                style={{ opacity: c.strength ?? 1 }}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/90 shadow-md ring-1 ring-black/5"
+              >
+                <CueGlyph cue={c.cue} size={16} />
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* 성도 단면 오버레이(계획서 E) — 혀·입술·턱 조음을 측면 도식으로 */}
         {showTract && (

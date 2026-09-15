@@ -144,6 +144,7 @@ export default function FreeSpeak() {
             isPlaying={isPlaying}
             onComplete={() => setIsPlaying(false)}
             loop={loop}
+            cueText={playedText}
           />
           {playedText && (
             <div className="mt-4 p-3 bg-primary-50 border border-primary-100 rounded-xl text-center">
