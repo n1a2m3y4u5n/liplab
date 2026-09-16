@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import LearnHeader from '../components/LearnHeader'
@@ -21,32 +21,61 @@ export default function MultiConversation() {
   const [guess, setGuess] = useState(null)   // 사용자가 고른 화자(누가 말했나 과제)
   const [seen, setSeen] = useState({})        // idx→화자(지나간 발화만 타임라인에 색 표시)
   const [spkScore, setSpkScore] = useState({ correct: 0, total: 0 })
+  const [readGuess, setReadGuess] = useState(null)  // 사용자가 고른 발화 내용(립리딩 이해 과제)
+  const [readScore, setReadScore] = useState({ correct: 0, total: 0 })
+  const [readSeen, setReadSeen] = useState({})       // idx→채점됨(재방문 시 이중집계 방지)
+  const [numSpeakers, setNumSpeakers] = useState(2)  // 화자 수(2~3) — 난이도 조절
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const c = await curriculumAPI.getMultiConversation(2, 6)
+      const c = await curriculumAPI.getMultiConversation(numSpeakers, 6)
       setConv(c); setIdx(0); setReveal(false); setGuess(null); setSeen({}); setSpkScore({ correct: 0, total: 0 })
+      setReadGuess(null); setReadScore({ correct: 0, total: 0 }); setReadSeen({})
     } catch { /* ignore */ } finally { setLoading(false) }
-  }, [])
+  }, [numSpeakers])
 
   useEffect(() => { load() }, [load])
 
   useEffect(() => {
     if (!conv) return
     const t = conv.turns[idx]
-    setReveal(false); setGuess(null)
+    setReveal(false); setGuess(null); setReadGuess(null)
     setFrames([])
     if (t) learningAPI.getVisemes(t.text).then(setFrames).catch(() => {})
+  }, [conv, idx])
+
+  // 립리딩 이해 과제 보기 — 정답(현재 발화) + 대화 내 다른 발화(오답보기), 발화마다 새로 섞음.
+  const readOptions = useMemo(() => {
+    if (!conv) return []
+    const ans = conv.turns[idx]?.text
+    if (!ans) return []
+    const others = [...new Set(conv.turns.map((t) => t.text).filter((t) => t && t !== ans))]
+    const picked = others.sort(() => Math.random() - 0.5).slice(0, 3)
+    return [ans, ...picked].sort(() => Math.random() - 0.5)
   }, [conv, idx])
 
   // 화자 식별 과제 — 입모양만 보고 누가 말했는지 고른다(정답은 고른 뒤 공개)
   const chooseSpeaker = (i) => {
     if (guess != null) return
     setGuess(i)
-    const ok = i === conv.turns[idx].speaker
-    setSpkScore((s) => ({ correct: s.correct + (ok ? 1 : 0), total: s.total + 1 }))
+    const firstTime = seen[idx] == null   // 재방문 재채점 방지: 이 발화를 처음 맞힐 때만 점수 누적
     setSeen((m) => ({ ...m, [idx]: conv.turns[idx].speaker }))
+    if (firstTime) {
+      const ok = i === conv.turns[idx].speaker
+      setSpkScore((s) => ({ correct: s.correct + (ok ? 1 : 0), total: s.total + 1 }))
+    }
+  }
+
+  // 립리딩 이해 과제 — 입모양을 읽고 무슨 말이었는지 고른다(D 립리딩 + G 문맥추론 재조합).
+  const chooseRead = (text) => {
+    if (readGuess != null) return
+    setReadGuess(text)
+    setReveal(true)
+    if (readSeen[idx] == null) {   // 재방문 재채점 방지: 처음 고를 때만 점수 누적
+      setReadSeen((m) => ({ ...m, [idx]: 1 }))
+      setReadScore((s) => ({ correct: s.correct + (text === conv.turns[idx].text ? 1 : 0), total: s.total + 1 }))
+    }
   }
 
   if (loading || !conv) {
@@ -59,7 +88,18 @@ export default function MultiConversation() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-4">
       <LearnHeader title="다자 대화 독화" />
-      <p className="mb-3 text-sm text-gray-500">장면: <b className="text-gray-700">{conv.scene}</b> · 화자 {conv.speakers}명 — 입모양만 보고 <b>누가 말했는지</b> 맞힌 뒤, 무슨 말인지 읽어보세요.</p>
+      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <p className="text-sm text-gray-500">장면: <b className="text-gray-700">{conv.scene}</b> · 입모양만 보고 <b>누가 말했는지</b> 맞힌 뒤, 무슨 말인지 읽어보세요.</p>
+        <div className="flex items-center gap-1 text-xs">
+          <span className="text-gray-400">화자</span>
+          {[2, 3].map((n) => (
+            <button key={n} onClick={() => setNumSpeakers(n)}
+              className={`rounded-full px-2.5 py-0.5 font-bold transition ${numSpeakers === n ? 'bg-slate-900 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+              {n}명
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* 발화 순서 타임라인 — 지나간 발화는 화자색, 현재는 링, 이후는 회색(정답 미리보기 방지) */}
       <div className="mb-3 flex items-center gap-1.5 overflow-x-auto pb-1">
@@ -69,7 +109,7 @@ export default function MultiConversation() {
           const color = spk != null ? SPK_COLOR[spk] : (i < idx ? 'bg-gray-300' : 'bg-gray-200')
           return <span key={i} className={`h-3 w-6 shrink-0 rounded-full ${color} ${cls}`} title={`${i + 1}번째 발화`} />
         })}
-        <span className="ml-2 shrink-0 text-xs text-gray-400">화자 맞힘 {spkScore.correct}/{spkScore.total}</span>
+        <span className="ml-2 shrink-0 text-xs text-gray-400">화자 {spkScore.correct}/{spkScore.total} · 독해 {readScore.correct}/{readScore.total}</span>
       </div>
 
       {/* 화자 식별 과제 — 답하기 전엔 현재 발화자를 숨긴다 */}
@@ -106,20 +146,33 @@ export default function MultiConversation() {
         </div>
         <div className="card flex flex-col justify-between">
           <div>
-            <p className="text-xs text-gray-400">입모양을 먼저 읽어본 뒤 확인하세요</p>
-            {reveal ? (
-              <div className="mt-2 space-y-2">
+            {!answered ? (
+              <p className="mt-2 rounded-lg border-2 border-dashed border-gray-200 py-6 text-center text-sm font-bold text-gray-400">
+                먼저 화자를 맞혀 주세요
+              </p>
+            ) : readGuess == null ? (
+              <div>
+                <p className="mb-1.5 text-xs font-semibold text-gray-500">무슨 말이었나요? (입모양을 읽고 고르세요)</p>
+                <div className="space-y-1.5">
+                  {readOptions.map((opt) => (
+                    <button key={opt} onClick={() => chooseRead(opt)}
+                      className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-left text-sm font-medium text-gray-700 transition hover:border-slate-400 hover:bg-slate-50">
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-1 space-y-2">
+                <p className={`text-sm font-bold ${readGuess === turn.text ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {readGuess === turn.text ? '정답! 잘 읽었어요' : '아쉬워요 — 실제로는'}
+                </p>
                 <p className="text-lg font-bold text-gray-900">“{turn.text}”</p>
                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-2.5 overflow-x-auto">
                   <CueBadges text={turn.text} />
                   <div className="mt-1.5"><CueLegend /></div>
                 </div>
               </div>
-            ) : (
-              <button onClick={() => setReveal(true)} disabled={!answered}
-                className="mt-3 w-full rounded-lg border-2 border-dashed border-gray-300 py-3 text-sm font-bold text-gray-600 hover:border-gray-400 disabled:opacity-40 disabled:cursor-not-allowed">
-                {answered ? '무슨 말인지 확인하기' : '먼저 화자를 맞혀 주세요'}
-              </button>
             )}
           </div>
           <div className="mt-4 flex items-center justify-between">

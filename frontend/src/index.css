@@ -85,3 +85,52 @@ body,
 .spinner {
   animation: spin 1s linear infinite;
 }
+
+/* 접근성 — 건너뛰기 링크: 평소 숨김, 키보드 포커스 시 표시 */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 100;
+  background: #0f172a;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  transition: top 0.15s;
+}
+.skip-link:focus {
+  top: 8px;
+}
+
+/* 접근성 — 모션 최소화 선호 시 전환·애니메이션을 사실상 끈다(멀미·전정 배려) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 접근성 설정(opt-in) — 사용자가 켤 때만 적용 */
+html.a11y-large { font-size: 118%; }
+
+html.a11y-reduce-motion *,
+html.a11y-reduce-motion *::before,
+html.a11y-reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* 고대비 — 밝은 배경 위 흐린 회색 본문·보조문구를 진하게. 어두운 오버레이(bg-slate-800/900,
+   from-slate-800, bg-black) 안의 밝은 muted 텍스트는 제외해야 '검정 위 검정'이 되지 않는다.
+   그 문맥은 slate/white 계열을 쓰므로 여기서는 gray-400/500만 대상으로 좁힌다. */
+html.a11y-contrast .text-gray-400,
+html.a11y-contrast .text-gray-500 { color: #1f2937 !important; }
+html.a11y-contrast .border-gray-100,
+html.a11y-contrast .border-gray-200 { border-color: #6b7280 !important; }

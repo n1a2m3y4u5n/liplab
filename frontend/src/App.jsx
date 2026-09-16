@@ -38,6 +38,7 @@ import useStore from './store/useStore'
 import { authAPI, curriculumAPI, seedAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
 import GlobalLearningMenu from './components/GlobalLearningMenu'
+import A11ySettings from './components/A11ySettings'
 import Dashboard from './pages/Dashboard'
 import Bookmarks from './pages/Bookmarks'
 import Guide from './pages/Guide'
@@ -164,8 +165,9 @@ function App() {
       <ScrollToTop />
       <AuthGate>
       <>
+      <a href="#main-content" className="skip-link">본문으로 건너뛰기</a>
       <GlobalLearningMenu />
-      <div className="app-shell">
+      <main id="main-content" className="app-shell">
       <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>불러오는 중…</div>}>
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
@@ -205,9 +207,10 @@ function App() {
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
       </Suspense>
-      </div>
+      </main>
       {/* 앱 어디서나 문장 선택 → 수어 번역 (수어 탭 이동 불필요) */}
       <SignSelectionOverlay />
+      <A11ySettings />
       </>
       </AuthGate>
     </Router>

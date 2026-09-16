@@ -156,7 +156,7 @@ export const learningAPI = {
 
 export const curriculumAPI = {
   getStages: async () => (await api.get('/curriculum/stages')).data,
-  setTrack: async (track) => (await api.post('/curriculum/track', { track })).data,
+  setTrack: async (track, start_stage) => (await api.post('/curriculum/track', { track, start_stage })).data,
   resetTrack: async () => (await api.post('/curriculum/track/reset')).data,
   getVisemeLessons: async () => (await api.get('/curriculum/viseme-lessons')).data,
   submitRecognition: async (viseme_id, chosen_id) =>
@@ -187,6 +187,18 @@ export const evalAPI = {
 export const reviewAPI = {
   getDue: async () => (await api.get('/review/due')).data,
   answer: async (kind, ref, correct) => (await api.post('/review/answer', { kind, ref, correct })).data,
+}
+
+// 축 E 조음 — 보이지 않는 조음(혀·조음위치) 가이드와 관찰 차원 교정
+export const articulationAPI = {
+  guide: async (text) => (await api.get('/articulation/guide', { params: { text } })).data,
+  feedback: async (viseme, observed) => (await api.post('/articulation/feedback', { viseme, observed })).data,
+}
+
+// 개인정보 열람·삭제권(§4.9)
+export const accountAPI = {
+  exportData: async () => (await api.get('/account/data')).data,
+  deleteAccount: async () => (await api.delete('/account', { params: { confirm: true } })).data,
 }
 
 // 발화(말하기) — 커리큘럼 6단계 + 녹음 채점·코칭.
