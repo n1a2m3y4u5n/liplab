@@ -7,7 +7,7 @@ import { avatarAPI } from '../api'
  *
  * 텍스트→비심(engine.py) 경로와 달리, 사용자가 녹음/업로드한 '진짜 음성'을 화자 불변
  * wav2vec2 특징으로 받아 BiGRU 헤드가 얼굴 블렌드셰이프를 직접 회귀한다(미학습 화자
- * jawOpen 상관 r≈0.66). 프레임(30fps)을 오디오 재생과 동기화해 bsFrameRef로 아바타에 흘린다.
+ * jawOpen 상관 r≈0.68, 8화자 교차검증). 프레임(30fps)을 오디오 재생과 동기화해 bsFrameRef로 아바타에 흘린다.
  *
  * 서버에 A4 모델/토치가 없으면 status=false → 기능을 숨기고 텍스트 경로만 노출(전시 빌드 안전).
  */
@@ -184,6 +184,15 @@ export default function Audio2FaceAvatar() {
             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" /> 립싱크 중
           </div>
         )}
+        {/* 자막(축 접근성) — 청각장애 대상이라 지금 립싱크하는 문장을 화면에 함께 보여준다. */}
+        {exLabel && (
+          <div role="status" aria-live="polite"
+            className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-3 pt-10 text-center">
+            <span className="text-white text-base font-semibold">
+              {state === 'playing' && <span className="mr-1">🔊</span>}“{exLabel}”
+            </span>
+          </div>
+        )}
       </div>
 
       {/* 라이브 녹음/업로드 — 서버에 A4 모델(torch)이 있을 때만 */}
@@ -225,7 +234,10 @@ export default function Audio2FaceAvatar() {
       )}
 
       {available === null && <p className="mt-2 text-xs text-gray-400">모델 확인 중…</p>}
-      {err && <p className="mt-2 text-xs text-amber-600">{err}</p>}
+      {/* 상태·오류 안내(접근성) — 스크린리더가 처리/오류 변화를 소리로 읽어 준다 */}
+      <p role="status" aria-live="assertive" className={err ? 'mt-2 text-xs text-amber-600' : 'sr-only'}>
+        {err || (state === 'processing' ? '음성 분석 중입니다' : state === 'playing' ? '아바타 립싱크 재생 중' : '')}
+      </p>
       {nFrames > 0 && !err && (
         <p className="mt-2 text-xs text-gray-400">
           {exLabel ? `"${exLabel}" — ` : '실제 음성에서 '}{nFrames}프레임({(nFrames / fpsRef.current).toFixed(1)}초)의 얼굴 움직임을 A4가 예측했어요.

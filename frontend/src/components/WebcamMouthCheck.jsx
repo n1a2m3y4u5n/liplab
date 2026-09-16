@@ -23,7 +23,7 @@ function scoreColor(s) {
   return 'text-rose-600'
 }
 
-export default function WebcamMouthCheck({ visemeId, visemeName }) {
+export default function WebcamMouthCheck({ visemeId, visemeName, articulationGuide = null }) {
   const videoRef = useRef(null)
   const landmarkerRef = useRef(null)
   const rafRef = useRef(null)
@@ -223,6 +223,11 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       {status === 'running' && hint && (
         <p className="mt-2 text-center text-sm font-medium text-gray-700">{hint}</p>
       )}
+      {articulationGuide && (
+        <p className="mt-1 text-center text-xs text-sky-700">
+          🔎 <b>안 보이는 조음</b> — {articulationGuide}
+        </p>
+      )}
       {status === 'running' && faceSig && (
         <div className="mt-2">
           <p className="mb-1 text-center text-[10px] text-gray-400">입술 너머 신호 (보조·실험)</p>
@@ -241,17 +246,14 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       {/* 학습된 K 분류기 — 얼굴 표면신호로 '안 보이는' 유성/비음 추정(계획서 K). 실험적. */}
       {status === 'running' && kPred && (
         <div className="mt-2 rounded-lg border border-violet-200 bg-violet-50/60 p-2">
-          <p className="mb-1 text-center text-[10px] text-violet-600">입술 너머 자질 추정 · 학습모델(실험) — 비음이 더 잘 잡힘</p>
-          <div className="grid grid-cols-2 gap-3">
-            {[['nasal', '비음(코울림)', kPred.nasal], ['voiced', '유성(성대울림)', kPred.voiced]].map(([k, label, v]) => (
-              <div key={k} className="text-center">
-                <div className="h-2 w-full overflow-hidden rounded-full bg-violet-100">
-                  <div className={`h-full rounded-full transition-all ${k === 'nasal' ? 'bg-violet-500' : 'bg-slate-400'}`} style={{ width: `${Math.round(v * 100)}%` }} />
-                </div>
-                <span className="mt-0.5 block text-[11px] font-medium text-violet-700">{label} {Math.round(v * 100)}</span>
-              </div>
-            ))}
+          <p className="mb-1 text-center text-[10px] text-violet-600">입술 너머 자질 추정 · 학습모델(실험)</p>
+          <div className="mx-auto max-w-[220px] text-center">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-violet-100">
+              <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${Math.round(kPred.nasal * 100)}%` }} />
+            </div>
+            <span className="mt-0.5 block text-[11px] font-medium text-violet-700">비음(코울림) {Math.round(kPred.nasal * 100)}</span>
           </div>
+          {/* 유성(성대울림)은 현재 모델 신뢰도가 우연 수준(AUC≈0.55)이라 표시하지 않는다(오해 방지). */}
         </div>
       )}
       <div className="mt-2 flex flex-col items-center gap-1.5">

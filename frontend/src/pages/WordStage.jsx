@@ -65,7 +65,13 @@ function WordQuiz({ data }) {
   const [signOpen, setSignOpen] = useState(false)
 
   const newQ = useCallback(async () => {
-    const target = words[Math.floor(Math.random() * words.length)]
+    // 개인화 가중 표집 — priority(쉬운 tier·약점 비심 포함일수록 높음)로 target을 뽑는다.
+    // priority가 없으면(구버전) 균등 랜덤과 동일하게 동작.
+    const pool = data.words
+    const total = pool.reduce((s, w) => s + (w.priority || 1), 0)
+    let r = Math.random() * total
+    let target = pool[pool.length - 1].word
+    for (const w of pool) { r -= (w.priority || 1); if (r <= 0) { target = w.word; break } }
     const partners = partnersOf(target, data.minimal_pairs, bankSet)
     const rest = shuffle(words.filter((w) => w !== target && !partners.includes(w)))
     // 같은 입모양 최소대립쌍(partners)을 오답 보기로 우선 배치 — 2단계 변별훈련의 핵심.

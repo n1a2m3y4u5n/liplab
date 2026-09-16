@@ -3,7 +3,7 @@ Audio2Face 백본 — 고도화 축 A4(음성 → 얼굴 블렌드셰이프).
 
 한국어 wav2vec2(동결) hidden states → BiGRU 헤드 → 52 ARKit 블렌드셰이프 회귀.
 로그멜(화자 종속) 대신 wav2vec2 특징을 써서 '화자 불변' 매핑을 학습했고, 미학습 화자
-교차검증 jawOpen 상관 r≈0.66을 얻은 모델(kr_a4_w2v)의 추론부. 실제 음성으로 아바타가
+교차검증 jawOpen 상관 r≈0.68(8화자)을 얻은 모델(kr_a4_w2v)의 추론부. 실제 음성으로 아바타가
 립싱크하게 하는 계획서 축 A4의 제품 편입.
 
 **추론만 하므로 GPU 없이 CPU에서 동작**(느릴 뿐). torch·torchaudio·transformers·librosa가

@@ -25,6 +25,7 @@ export default function Placement() {
   const [frames, setFrames] = useState([])
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
   const [mode, setMode] = useState('placement')  // placement | A(사전) | B(사후) — 향상도검사(축 I)
 
   const start = useCallback(async (m = mode) => {
@@ -44,14 +45,20 @@ export default function Placement() {
   }, [items, idx])
 
   const choose = async (word) => {
+    if (submitting || result) return   // 마지막 문항 중복 클릭 시 이중 채점·저장 방지
     const it = items[idx]
     const next = { ...responses, [it.id]: word }
     setResponses(next)
     if (idx < items.length - 1) {
       setIdx(idx + 1)
     } else {
-      const r = await curriculumAPI.scorePlacement(items, next, mode)
-      setResult(r)
+      setSubmitting(true)
+      try {
+        const r = await curriculumAPI.scorePlacement(items, next, mode)
+        setResult(r)
+      } finally {
+        setSubmitting(false)
+      }
     }
   }
 
@@ -98,7 +105,13 @@ export default function Placement() {
             </p>
           )}
           <div className="flex gap-2">
-            <button onClick={() => navigate(STAGE_ROUTE[result.recommended_start?.key] || '/learn/viseme')}
+            <button onClick={async () => {
+                // 표준검사(축 I) 진단 결과로 자동 배치: 추천 단계까지 열어 준 뒤 이동한다.
+                if (mode === 'placement') {
+                  try { await curriculumAPI.setTrack('perception', result.recommended_start?.stage) } catch { /* 배치 실패해도 이동은 함 */ }
+                }
+                navigate(STAGE_ROUTE[result.recommended_start?.key] || '/learn/viseme')
+              }}
               className="flex-1 rounded-lg bg-slate-900 py-2.5 text-sm font-bold text-white hover:bg-slate-700">
               {result.recommended_start?.title || '입모양 인지'}부터 시작 →
             </button>
