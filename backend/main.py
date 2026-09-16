@@ -1420,6 +1420,15 @@ async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_cur
     return result
 
 
+@app.get("/api/assessment/benchmark")
+async def assessment_benchmark(current_user=Depends(get_current_user)):
+    """한국어 독화 표준 평가셋(축 C 공개 리소스). 난이도 3구간 층화·seed 고정(재현 가능).
+    앱 내 표준 평가와 앱 밖 연구·교육이 동일 문항을 쓰도록 고정 벤치마크를 제공한다."""
+    import perceptual as _perc
+    bm = _perc.build_benchmark([w["word"] for w in _curriculum.WORD_BANK])
+    return bm
+
+
 @app.get("/api/assessment/progression")
 async def assessment_progression(current_user=Depends(get_current_user),
                                  db: AsyncSession = Depends(get_db)):
