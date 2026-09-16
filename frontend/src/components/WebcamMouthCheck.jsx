@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { toBlendshapeMap, scorePercent, coachHint, loadCalibration } from '../lib/mouthScore'
 import { faceSignals, FACE_SIGNAL_LABELS } from '../lib/faceCues'
+import { predictK, K_FACE_KEYS, K_WIN } from '../lib/kModel'
 import { curriculumAPI } from '../api'
 import MouthCalibration from './MouthCalibration'
 import AvatarVRM from './AvatarVRM'
@@ -32,7 +33,10 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
   const [hint, setHint] = useState('')
   const [errMsg, setErrMsg] = useState('')
   const [recorded, setRecorded] = useState(false)
-  const [faceSig, setFaceSig] = useState(null) // 입술 너머 얼굴 신호(축 K, 보조)
+  const [faceSig, setFaceSig] = useState(null) // 입술 너머 얼굴 신호(축 K, 규칙 보조)
+  const [kPred, setKPred] = useState(null)     // 학습된 K 분류기 예측(유성/비음)
+  const kWinRef = useRef([])                    // 최근 K_WIN 프레임의 얼굴 8차원 버퍼
+  const kBusyRef = useRef(false)
   const bestRef = useRef(0)
   const [profiles, setProfiles] = useState(() => loadCalibration())
   const [showCalib, setShowCalib] = useState(false)
@@ -94,7 +98,17 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
         setScore(s)
         if (s > bestRef.current) bestRef.current = s
         setHint(coachHint(bs, visemeId, profiles))
-        setFaceSig(faceSignals(bs)) // 입술 너머 신호(K)
+        setFaceSig(faceSignals(bs)) // 입술 너머 규칙 신호(K 입력)
+        // 학습된 K 분류기: 최근 30프레임 창을 모아 유성/비음 확률 추론(과부하 방지 위해 순차)
+        const w = kWinRef.current
+        w.push(K_FACE_KEYS.map((k) => bs[k] || 0))
+        if (w.length > K_WIN) w.shift()
+        if (w.length === K_WIN && !kBusyRef.current) {
+          kBusyRef.current = true
+          const flat = new Float32Array(K_WIN * K_FACE_KEYS.length)
+          for (let i = 0; i < K_WIN; i++) for (let j = 0; j < K_FACE_KEYS.length; j++) flat[i * K_FACE_KEYS.length + j] = w[i][j]
+          predictK(flat).then((r) => { if (r) setKPred(r) }).finally(() => { kBusyRef.current = false })
+        }
       } else {
         liveBsRef.current = null
         setScore(null)
@@ -113,9 +127,11 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
       streamRef.current = null
     }
     liveBsRef.current = null
+    kWinRef.current = []
     setStatus('idle')
     setScore(null)
     setHint('')
+    setKPred(null)
   }, [])
 
   const record = useCallback(async () => {
@@ -217,6 +233,22 @@ export default function WebcamMouthCheck({ visemeId, visemeName }) {
                   <div className="h-full rounded-full bg-slate-400 transition-all" style={{ width: `${Math.round((faceSig[k] || 0) * 100)}%` }} />
                 </div>
                 <span className="mt-0.5 block text-[10px] text-gray-500">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* 학습된 K 분류기 — 얼굴 표면신호로 '안 보이는' 유성/비음 추정(계획서 K). 실험적. */}
+      {status === 'running' && kPred && (
+        <div className="mt-2 rounded-lg border border-violet-200 bg-violet-50/60 p-2">
+          <p className="mb-1 text-center text-[10px] text-violet-600">입술 너머 자질 추정 · 학습모델(실험) — 비음이 더 잘 잡힘</p>
+          <div className="grid grid-cols-2 gap-3">
+            {[['nasal', '비음(코울림)', kPred.nasal], ['voiced', '유성(성대울림)', kPred.voiced]].map(([k, label, v]) => (
+              <div key={k} className="text-center">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-violet-100">
+                  <div className={`h-full rounded-full transition-all ${k === 'nasal' ? 'bg-violet-500' : 'bg-slate-400'}`} style={{ width: `${Math.round(v * 100)}%` }} />
+                </div>
+                <span className="mt-0.5 block text-[11px] font-medium text-violet-700">{label} {Math.round(v * 100)}</span>
               </div>
             ))}
           </div>
