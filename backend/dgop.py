@@ -66,14 +66,28 @@ def dgop_phone(target_prob: float, probs: Sequence[float]) -> Dict:
     }
 
 
+def calibrate_score(raw01: float) -> float:
+    """원 D-GOP(naive×confidence)는 실발화에서 0.02~0.10 대역에 눌려(confidence가 보수적) 사용자
+    점수로 쓰기 어렵다. 단조 증가 보정으로 사용 가능한 0~100 대역으로 편다.
+    관측 기준점(정상발화 raw≈0.045→~78, 오발화 raw≈0.008→~28)을 지나는 로지스틱.
+    (규칙 보정 — 정직: 대규모 캘리브레이션 셋이 생기면 이 곡선을 데이터로 적합해야 한다.)"""
+    import math
+    x = max(0.0, min(1.0, float(raw01)))
+    # center=0.026, slope=90 → raw 0.045≈0.86, 0.008≈0.16; ×100 후 완만 스케일
+    s = 1.0 / (1.0 + math.exp(-90.0 * (x - 0.026)))
+    return round(100.0 * (0.08 + 0.9 * s), 1)
+
+
 def sentence_dgop(per_phone: List[Dict]) -> Dict:
-    """음소별 D-GOP를 문장 점수로 집계. 평균 D-GOP와 평균 불확실성(융합 가중에 사용)."""
+    """음소별 D-GOP를 문장 점수로 집계. 평균 D-GOP와 평균 불확실성(융합 가중에 사용).
+    score_calibrated: 보정된 사용자용 0~100 점수(calibrate_score). score(raw×100)는 호환 유지."""
     if not per_phone:
-        return {"score": 0.0, "uncertainty": 1.0, "phones": []}
+        return {"score": 0.0, "score_calibrated": 0.0, "uncertainty": 1.0, "phones": []}
     mean_dgop = sum(p["dgop"] for p in per_phone) / len(per_phone)
     mean_unc = sum(p["uncertainty"] for p in per_phone) / len(per_phone)
     return {
-        "score": round(mean_dgop * 100, 1),      # 0~100
+        "score": round(mean_dgop * 100, 1),               # raw×100 (호환)
+        "score_calibrated": calibrate_score(mean_dgop),   # 보정된 사용자 점수
         "uncertainty": round(mean_unc, 4),
         "phones": per_phone,
     }
