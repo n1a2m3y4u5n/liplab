@@ -11,12 +11,13 @@
 음향·영상 데이터 없이 동작하며, 앱 밖 연구·교육에서도 쓸 수 있게 공개 자원으로 내보낸다
 (scripts/export_perceptual.py). 지각공간 임베딩이 준비되면 이 규칙값을 데이터로 보정한다.
 """
+import os
 from collections import Counter
 from typing import Dict, List, Optional
 
 import curriculum as _cur
 from content_rules import (VISEME_MAP, discover_pairs, viseme_signature,
-                           word_visemes, is_hangul_word)
+                           word_visemes, is_hangul_word, minimal_pair_diff)
 
 # viseme(1~10) 가시성 — 커리큘럼 레슨에서 가져온다(high 잘 보임 ~ low 거의 안 보임).
 _VISIBILITY = {l["viseme_id"]: l["visibility"] for l in _cur.VISEME_LESSONS}
@@ -93,8 +94,59 @@ def sentence_difficulty(text: str, corpus_signatures: Optional[Counter] = None) 
     }
 
 
+def build_benchmark(words: List[str], n_per_tier: int = 12, seed: int = 20260916) -> Dict:
+    """한국어 독화 능력 **표준 평가셋**(계획서 C). 난이도 3구간(쉬움·보통·어려움)으로 층화해
+    각 구간에서 균등 표집한 고정 문항. 문항마다 정답·시각혼동 오답보기·난이도·표적 비심을 담아,
+    앱 밖 연구·교육에서도 재현 가능한 벤치마크로 쓴다(결정론적: seed 고정)."""
+    import random
+    rng = random.Random(seed)
+    valid = [w for w in dict.fromkeys(words) if is_hangul_word(w)]
+    sig_count = Counter(viseme_signature(w) for w in valid)
+    entries = [e for e in (word_difficulty(w, sig_count) for w in valid) if e]
+    if not entries:
+        return {"tiers": [], "items": []}
+    entries.sort(key=lambda e: e["difficulty"])
+    N = len(entries)
+    tiers = [("easy", 0, N // 3), ("medium", N // 3, 2 * N // 3), ("hard", 2 * N // 3, N)]
+    items = []
+    for tier, lo, hi in tiers:
+        pool = entries[lo:hi] or entries
+        k = min(n_per_tier, len(pool))
+        step = max(1, len(pool) // k)
+        picked = [pool[i * step] for i in range(k)]
+        for e in picked:
+            ans = e["word"]
+            sig = viseme_signature(ans)
+            same = [w for w in valid if w != ans and viseme_signature(w) == sig]
+            mp = [w for w in valid if w != ans and minimal_pair_diff(ans, w) is not None]
+            cand = list(dict.fromkeys(same + mp))
+            rng.shuffle(cand)
+            opts = cand[:3]
+            if len(opts) < 3:
+                rest = [w for w in valid if w != ans and w not in opts]; rng.shuffle(rest)
+                opts += rest[:3 - len(opts)]
+            options = opts + [ans]; rng.shuffle(options)
+            items.append({"id": f"bm_{tier}_{len(items)}", "answer": ans, "options": options,
+                          "tier": tier, "difficulty": e["difficulty"], "visemes": e["visemes"],
+                          "n_homophenes": len(same)})
+    return {"n_items": len(items), "tiers": [t[0] for t in tiers], "seed": seed, "items": items}
+
+
+def load_data_similarity() -> Optional[Dict]:
+    """C 실화자 데이터로 산출한 자모 시각유사도(있으면). 규칙판과 별개로 공개 리소스에 포함."""
+    import json
+    for p in ("data/c_jamo_similarity.json",
+              os.path.expanduser("~/Downloads/liplab-lab/data/c_out/c_jamo_similarity.json")):
+        if os.path.exists(p):
+            try:
+                return json.load(open(p, encoding="utf-8"))
+            except Exception:
+                pass
+    return None
+
+
 def build_standard_resources(words: List[str]) -> Dict:
-    """동구형이음 사전 + 단어별 난이도 지수 + 최소대립/동구형 쌍을 한 자원으로 조립."""
+    """동구형이음 사전 + 단어별 난이도 지수 + 최소대립/동구형 쌍 + 표준 평가셋을 한 자원으로 조립."""
     valid = [w for w in dict.fromkeys(words) if is_hangul_word(w)]
     sig_count = Counter(viseme_signature(w) for w in valid)
     entries = [word_difficulty(w, sig_count) for w in valid]
@@ -105,11 +157,16 @@ def build_standard_resources(words: List[str]) -> Dict:
         cons_space = _ps.perceptual_space()
     except Exception:
         cons_space = None  # numpy 미설치 등 → 지각공간은 생략(나머지는 그대로)
+    data_sim = load_data_similarity()
     return {
-        "meta": {"kind": "korean-speechreading-perceptual-resources", "version": 1,
-                 "rules_based": True, "word_count": len(entries)},
+        "meta": {"kind": "korean-speechreading-perceptual-resources", "version": 2,
+                 "rules_based": True, "word_count": len(entries),
+                 "note": "난이도지수·동구형이음사전·시각공간·평가셋은 규칙기반. jamo_visual_similarity_data는 "
+                         "실화자 데이터 유래(별도 검증)."},
         "homophene_dictionary": homophene_dictionary(),
         "consonant_visual_space": cons_space,
         "difficulty_index": entries,
         "lookalike_pairs": discover_pairs(valid),
+        "standard_benchmark": build_benchmark(valid),
+        "jamo_visual_similarity_data": data_sim,
     }
