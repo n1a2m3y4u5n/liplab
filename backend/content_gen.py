@@ -87,12 +87,15 @@ async def generate_sentences(n: int = 8, avoid: List[str] = None, with_intonatio
         elif "```" in content:
             content = content.split("```")[1].split("```")[0].strip()
         data = json.loads(content)
+        from content_rules import check_sentence  # 규칙 게이트(축 G) + LLM 출력 검증(§4.9)
         out = []
         for it in data.get("items", []):
             t = str(it.get("target", "")).strip()
-            if not t:
+            ok, _info, _reason = check_sentence(t)
+            if not ok:
                 continue
             into = it.get("intonation") or ("rise" if t.rstrip().endswith("?") else "fall")
             out.append({"target": t, "intonation": "rise" if into == "rise" else "fall"})
         return out
-    return [{"target": t} for t in await _call(system)]
+    from content_rules import check_sentence
+    return [{"target": t} for t in await _call(system) if check_sentence(t)[0]]

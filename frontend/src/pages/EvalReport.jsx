@@ -80,6 +80,22 @@ export default function EvalReport() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
   const [prog, setProg] = useState(null)   // 통제 향상도(축 I, 사전 A vs 사후 B)
+  const [dl, setDl] = useState(false)      // 공개 자원 내려받기 상태(축 C)
+
+  // 축 C 공개 표준 자원(동구형이음 사전·난이도지수·지각공간·평가셋)을 판본과 함께 JSON으로 내려받는다.
+  const downloadResources = async () => {
+    setDl(true)
+    try {
+      const res = await evalAPI.resources()
+      const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `liplab-perceptual-resources-${res?.meta?.semver || 'latest'}.json`
+      document.body.appendChild(a); a.click(); a.remove()
+      URL.revokeObjectURL(url)
+    } catch { /* 내려받기 실패는 조용히 무시 */ } finally { setDl(false) }
+  }
 
   useEffect(() => {
     evalAPI.summary().then(setData).catch(() => setData(null)).finally(() => setLoading(false))
@@ -236,6 +252,20 @@ export default function EvalReport() {
               </Card>
             </div>
           </>
+        )}
+
+        {/* 축 C — 공개 표준 독화 자원 내려받기(연구·교육 활용). 개인 학습 기록과 무관하게 항상 제공 */}
+        {!loading && (
+          <Card title="공개 표준 독화 자원 (축 C)" hint="연구·교육 활용 · CC BY 4.0">
+            <p className="mb-3 text-[11px] leading-relaxed text-slate-500">
+              한국어 독화에는 표준 자원이 거의 없습니다. LIPLAB은 동구형이음 사전·독화 난이도 지수·자음
+              시각 지각공간·표준 평가셋을 판본과 함께 공개합니다. 앱 밖 연구·교육에서도 활용할 수 있어요.
+            </p>
+            <button type="button" onClick={downloadResources} disabled={dl}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-700 disabled:opacity-50">
+              {dl ? '내려받는 중…' : '자원 JSON 내려받기'}
+            </button>
+          </Card>
         )}
       </main>
     </div>
