@@ -39,6 +39,7 @@ import useStore from './store/useStore'
 import { authAPI, curriculumAPI, seedAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
 import GlobalLearningMenu from './components/GlobalLearningMenu'
+import A11ySettings from './components/A11ySettings'
 import AppLayout from './layouts/AppLayout'
 import Dashboard from './features/dashboard/Dashboard'
 // Bookmarks·Guide는 /review/saved·/account/guide에서만 쓰이므로 지연로딩 —
@@ -212,7 +213,10 @@ function App() {
       <ScrollToTop />
       <AuthGate>
       <>
+      <a href="#main-content" className="skip-link">본문으로 건너뛰기</a>
       <GlobalLearningMenu />
+      {/* 건너뛰기 링크의 도착점(#main-content)은 AppLayout 안, TopBar·NavShell 바로 뒤에 있다.
+          페이지들이 각자 <main>을 갖고 있어 여기서 <main>으로 감싸면 랜드마크가 중첩된다. */}
       <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>불러오는 중…</div>}>
       <Routes>
         {/* 새 정보구조(리디자인 스펙 4.1) — 모든 화면을 AppLayout(TopBar + NavShell)이 감싼다.
@@ -284,6 +288,7 @@ function App() {
       </Suspense>
       {/* 앱 어디서나 문장 선택 → 수어 번역 (수어 탭 이동 불필요) */}
       <SignSelectionOverlay />
+      <A11ySettings />
       </>
       </AuthGate>
     </Router>

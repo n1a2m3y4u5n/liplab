@@ -3,6 +3,9 @@ LIPLAB FastAPI Main Application
 Serves API endpoints and React static files for production deployment
 """
 import os
+import asyncio
+import logging
+import ratelimit
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -61,27 +64,128 @@ app = FastAPI(
 )
 
 # CORS configuration
+# 와일드카드(*)+credentials 조합은 임의 사이트가 자격증명 요청을 보낼 수 있어 금지한다.
+# ALLOWED_ORIGINS(쉼표구분)로 화이트리스트를 주면 그 출처만 허용, 미설정 시 개발용 localhost만.
+_origins_env = os.getenv("ALLOWED_ORIGINS", "").strip()
+if _origins_env:
+    _allow_origins = [o.strip() for o in _origins_env.split(",") if o.strip()]
+    _allow_credentials = True
+else:
+    _allow_origins = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8080"]
+    _allow_credentials = False  # 앱은 Bearer 토큰(헤더) 인증이라 쿠키 credentials 불필요
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify exact origins
-    allow_credentials=True,
+    allow_origins=_allow_origins,
+    allow_credentials=_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+from fastapi.responses import JSONResponse as _JSONResponse
+
+@app.exception_handler(Exception)
+async def _unhandled_exception(request, exc):
+    logging.getLogger("liplab").exception("unhandled: %s %s", request.method, request.url.path)
+    return _JSONResponse(status_code=500, content={"detail": "서버 오류가 발생했습니다."})
+
+
+# 보안 응답 헤더(§4.9) — 다운그레이드·MIME 스니핑·클릭재킹·레퍼러 유출 방어.
+# CSP는 이 앱이 SPA(index.html·/assets·MediaPipe CDN·모델)를 함께 서빙하므로 잘못 좁히면
+# 앱이 깨진다 → 별도 정책 수립·검증 전까지는 넣지 않는다(안전 헤더만 우선 적용).
+@app.middleware("http")
+async def _security_headers(request, call_next):
+    resp = await call_next(request)
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    # HSTS는 HTTPS에서만 의미(브라우저가 http에선 무시). fly는 force_https라 실서비스에서 적용됨.
+    resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return resp
+
+
+# 업로드 상한(§4.9) — audio.read()로 전체를 메모리에 적재하므로 상한이 없으면 DoS 소지.
+_MAX_AUDIO_BYTES = 10 * 1024 * 1024  # 10MB
+
+
+async def _read_audio_limited(audio: UploadFile, max_bytes: int = _MAX_AUDIO_BYTES) -> bytes:
+    """오디오 업로드를 상한까지만 읽고, 초과·빈 파일·비오디오 타입을 거부한다."""
+    ctype = (audio.content_type or "").lower()
+    if ctype and not (ctype.startswith("audio/") or ctype in ("application/octet-stream", "video/webm")):
+        raise HTTPException(status_code=415, detail="오디오 파일만 업로드할 수 있습니다.")
+    data = await audio.read(max_bytes + 1)
+    if not data:
+        raise HTTPException(status_code=400, detail="empty audio")
+    if len(data) > max_bytes:
+        raise HTTPException(status_code=413, detail=f"오디오가 너무 큽니다(최대 {max_bytes // (1024 * 1024)}MB).")
+    return data
+
+
+def _server_error(exc: Exception, where: str) -> HTTPException:
+    """500 오류를 서버 로그로만 남기고 클라이언트엔 고정 문구를 준다(§4.9 내부정보 노출 차단)."""
+    logging.getLogger("liplab").exception("server error @ %s", where)
+    return HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다.")
+
+
+def _sanitize_text(s, maxlen: int) -> str:
+    """LLM 프롬프트에 들어가는 자유 입력을 정규화 — 제어문자 제거 + 길이 상한(프롬프트 조작·남용 방지)."""
+    s = (s or "").strip()
+    s = "".join(ch for ch in s if ch in ("\n", "\t") or ord(ch) >= 32)
+    return s[:maxlen]
+
+
+def _sanitize_history(history, max_items: int = 20, max_len: int = 400) -> list:
+    """대화 이력을 최근 max_items개로 제한하고 각 항목의 텍스트를 정규화한다."""
+    out = []
+    for h in (history or [])[-max_items:]:
+        if not isinstance(h, dict):
+            continue
+        item = dict(h)
+        for k in ("text", "content", "message"):
+            if k in item and isinstance(item[k], str):
+                item[k] = _sanitize_text(item[k], max_len)
+        out.append(item)
+    return out
+
+
+_DEMO_EMAIL = "demo@liplab.app"
+
+
+def _user_data_models():
+    """user_id를 가진 모든 사용자 데이터 모델(개인정보 열람·삭제 대상)."""
+    import inspect as _inspect
+    import database as _db
+    out = []
+    for name in dir(_db):
+        o = getattr(_db, name)
+        if _inspect.isclass(o) and hasattr(o, "__tablename__"):
+            if "user_id" in [c.name for c in o.__table__.columns]:
+                out.append(o)
+    return out
+
+
+def _row_to_dict(row) -> dict:
+    d = {}
+    for c in row.__table__.columns:
+        v = getattr(row, c.name)
+        d[c.name] = v.isoformat() if hasattr(v, "isoformat") else v
+    return d
 
 
 # ============================================
 # Authentication Endpoints
 # ============================================
 
-@app.post("/api/auth/register", response_model=Token, status_code=status.HTTP_201_CREATED)
+@app.post("/api/auth/register", response_model=Token, status_code=status.HTTP_201_CREATED,
+          dependencies=[Depends(ratelimit.rate_limit(10, 60, "auth"))])
 async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
     """Register a new user account"""
     user = await register_user(user_data, db)
     return create_token_response(user)
 
 
-@app.post("/api/auth/login", response_model=Token)
+@app.post("/api/auth/login", response_model=Token,
+          dependencies=[Depends(ratelimit.rate_limit(10, 60, "auth"))])
 async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
     """Authenticate user and return JWT token"""
     user = await authenticate_user(credentials.email, credentials.password, db)
@@ -96,7 +200,8 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
     return create_token_response(user)
 
 
-@app.post("/api/auth/demo", response_model=Token)
+@app.post("/api/auth/demo", response_model=Token,
+          dependencies=[Depends(ratelimit.rate_limit(30, 60, "auth"))])
 async def demo_login(db: AsyncSession = Depends(get_db)):
     """로그인 없이 데모 계정으로 즉시 입장(멱등). 심사·데모 편의를 위해 계정이 없으면
     생성하고 토큰을 발급한다. 인증 체계 자체는 그대로라 진행도·북마크 등은 정상 동작한다."""
@@ -129,12 +234,97 @@ async def get_me(current_user = Depends(get_current_user)):
     return current_user
 
 
+@app.get("/api/account/data", dependencies=[Depends(ratelimit.rate_limit(10, 60, "account"))])
+async def account_export(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """개인정보 열람권(§4.9) — 내 계정·학습 데이터 전체를 JSON으로 내보낸다(데이터 이동성).
+    민감 정보(비밀번호 해시)는 제외한다."""
+    from sqlalchemy import select as _select
+    from datetime import datetime as _dt
+    user = {c.name: (getattr(current_user, c.name).isoformat()
+                     if hasattr(getattr(current_user, c.name), "isoformat") else getattr(current_user, c.name))
+            for c in current_user.__table__.columns if c.name != "hashed_password"}
+    data = {}
+    for M in _user_data_models():
+        r = await db.execute(_select(M).where(M.user_id == current_user.id))
+        data[M.__tablename__] = [_row_to_dict(x) for x in r.scalars().all()]
+    return {"exported_at": _dt.utcnow().isoformat(), "user": user, "data": data,
+            "note": "웹캠 영상·원음성은 기기 안에서만 처리되어 서버에 저장되지 않으므로 이 내보내기에 포함되지 않습니다."}
+
+
+@app.delete("/api/account", dependencies=[Depends(ratelimit.rate_limit(5, 60, "account"))])
+async def account_delete(confirm: bool = False,
+                         current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """개인정보 삭제권(§4.9) — 내 계정과 모든 학습 데이터를 영구 삭제한다.
+    실수 방지를 위해 confirm=true가 필요하며, 공용 데모 계정은 삭제할 수 없다."""
+    if not confirm:
+        raise HTTPException(status_code=400, detail="삭제를 확인하려면 confirm=true가 필요합니다.")
+    if (current_user.email or "").lower() == _DEMO_EMAIL:
+        raise HTTPException(status_code=403, detail="공용 데모 계정은 삭제할 수 없습니다.")
+    from sqlalchemy import delete as _delete
+    from database import User as _User
+    counts = {}
+    for M in _user_data_models():
+        res = await db.execute(_delete(M).where(M.user_id == current_user.id))
+        counts[M.__tablename__] = res.rowcount if res.rowcount is not None else 0
+    await db.execute(_delete(_User).where(_User.id == current_user.id))
+    await db.commit()
+    return {"deleted": True, "removed": counts}
+
+
 # ============================================
 # Core API Endpoints
 # ============================================
 
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
+
+
+class ProfileUpdateReq(BaseModel):
+    username: Optional[str] = None
+
+
+class PasswordChangeReq(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@app.patch("/api/account/profile", dependencies=[Depends(ratelimit.rate_limit(10, 60, "account"))])
+async def account_update_profile(req: ProfileUpdateReq,
+                                 current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """개인정보 정정권(§4.9) — 표시 이름(username)을 수정한다. 공용 데모 계정은 수정 불가."""
+    if (current_user.email or "").lower() == _DEMO_EMAIL:
+        raise HTTPException(status_code=403, detail="공용 데모 계정은 수정할 수 없습니다.")
+    if req.username is not None:
+        name = _sanitize_text(req.username, 100).strip()
+        if not (1 <= len(name) <= 100):
+            raise HTTPException(status_code=400, detail="이름은 1~100자여야 합니다.")
+        from sqlalchemy import select as _select
+        from database import User as _User
+        dup = (await db.execute(_select(_User).where(_User.username == name,
+                                                     _User.id != current_user.id))).scalar_one_or_none()
+        if dup:
+            raise HTTPException(status_code=409, detail="이미 사용 중인 이름입니다.")
+        current_user.username = name
+    await db.commit()
+    await db.refresh(current_user)
+    return {"ok": True, "username": current_user.username}
+
+
+@app.post("/api/account/password", dependencies=[Depends(ratelimit.rate_limit(5, 60, "account"))])
+async def account_change_password(req: PasswordChangeReq,
+                                  current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """비밀번호 변경(§4.9 정정권 + 민감동작 재인증) — 현재 비밀번호를 확인한 뒤에만 변경한다."""
+    from auth import verify_password, get_password_hash
+    if (current_user.email or "").lower() == _DEMO_EMAIL:
+        raise HTTPException(status_code=403, detail="공용 데모 계정은 비밀번호를 변경할 수 없습니다.")
+    if not verify_password(req.current_password or "", current_user.hashed_password):
+        raise HTTPException(status_code=403, detail="현재 비밀번호가 일치하지 않습니다.")
+    if len(req.new_password or "") < 8:
+        raise HTTPException(status_code=400, detail="새 비밀번호는 8자 이상이어야 합니다.")
+    current_user.hashed_password = get_password_hash(req.new_password)
+    await db.commit()
+    return {"ok": True}
+
 
 class VisemeFrame(BaseModel):
     viseme: int
@@ -184,10 +374,43 @@ async def get_visemes(text: str):
         visemes = await text_to_visemes(text)
         return visemes
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Viseme conversion failed: {str(e)}")
+        raise _server_error(e, "Viseme conversion failed")
 
 
-@app.get("/api/scenario", response_model=ScenarioResponse)
+@app.get("/api/avatar/audio2face/status")
+async def audio2face_status():
+    """음성구동 아바타(A4) 사용 가능 여부 — 프론트가 UI 노출 판단에 사용."""
+    try:
+        import audio2face
+        return {"available": audio2face.is_available()}
+    except Exception:
+        return {"available": False}
+
+
+@app.post("/api/avatar/audio2face", dependencies=[Depends(ratelimit.rate_limit(20, 60, "audio"))])
+async def avatar_audio2face(audio: UploadFile = File(...), current_user=Depends(get_current_user)):
+    """
+    음성 → 얼굴 블렌드셰이프 시퀀스(축 A4). 실제 음성으로 아바타가 립싱크한다.
+    화자 불변 wav2vec2 특징 → BiGRU → 52 ARKit 블렌드셰이프(미학습화자 jawOpen r≈0.68, 8화자 교차검증).
+    모델/라이브러리가 없으면 503(프론트는 텍스트→비심 경로로 폴백).
+    """
+    try:
+        import audio2face
+    except Exception:
+        raise HTTPException(status_code=503, detail="audio2face 모듈 로드 실패")
+    if not audio2face.is_available():
+        raise HTTPException(status_code=503, detail="서버에 음성구동 아바타 모델(A4)이 없습니다.")
+    data = await _read_audio_limited(audio)
+    try:
+        result = await asyncio.to_thread(audio2face.blendshapes_from_audio, data)
+    except Exception as e:
+        logging.getLogger("liplab").exception("audio2face 추론 실패")
+        raise HTTPException(status_code=500, detail="음성구동 처리에 실패했습니다.")
+    return result
+
+
+@app.get("/api/scenario", response_model=ScenarioResponse,
+         dependencies=[Depends(ratelimit.rate_limit(40, 60, "llm"))])
 async def get_scenario(
     situation: str,
     level: int,
@@ -200,6 +423,7 @@ async def get_scenario(
     """
     if level < 1 or level > 5:
         raise HTTPException(status_code=400, detail="Level must be between 1 and 5")
+    situation = _sanitize_text(situation, 80)
 
     try:
         scenario = await generate_adaptive_scenario(
@@ -210,7 +434,7 @@ async def get_scenario(
         )
         return scenario
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Scenario generation failed: {str(e)}")
+        raise _server_error(e, "Scenario generation failed")
 
 
 # ── 공용 학습 보상 — 모든 활동(문장·인지·단어·문맥·복습·대화)이 XP·스트릭·취약 입모양을
@@ -351,7 +575,7 @@ async def submit_progress(
 
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Progress submission failed: {str(e)}")
+        raise _server_error(e, "Progress submission failed")
 
 
 @app.get("/api/statistics")
@@ -584,7 +808,7 @@ async def get_analysis(current_user=Depends(get_current_user), db: AsyncSession 
     except Exception as e:
         print(f"[ERROR] get_analysis failed: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"분석 데이터 로드 실패: {str(e)}")
+        raise _server_error(e, "분석 데이터 로드 실패")
 
 
 @app.delete("/api/analysis/reset")
@@ -809,17 +1033,19 @@ async def curriculum_stages(current_user=Depends(get_current_user), db: AsyncSes
 
 class TrackSelect(BaseModel):
     track: str  # 'perception' | 'language'
+    start_stage: Optional[int] = None  # 표준검사(축 I) 진단 결과의 추천 시작 단계(자동 배치)
 
 
 @app.post("/api/curriculum/track")
 async def curriculum_set_track(data: TrackSelect, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """배치: 트랙 선택 → 1단계(입모양 인지) 잠금 해제."""
+    """배치: 트랙 선택 → 잠금 해제. start_stage가 오면(표준검사 진단) 그 단계로 자동 배치한다."""
     if data.track not in ("perception", "language"):
         raise HTTPException(status_code=400, detail="track must be 'perception' or 'language'")
     prof = await _get_or_create_profile(current_user.id, db)
     prof.track = data.track
     prof.placed = True
-    prof.current_stage = max(prof.current_stage or 0, 1)
+    start = data.start_stage if (data.start_stage and 1 <= data.start_stage <= 4) else 1
+    prof.current_stage = max(prof.current_stage or 0, start)
     await db.commit()
     return {"track": prof.track, "placed": prof.placed, "current_stage": prof.current_stage}
 
@@ -836,13 +1062,18 @@ async def curriculum_reset_track(current_user=Depends(get_current_user), db: Asy
 @app.get("/api/curriculum/viseme-lessons")
 async def curriculum_viseme_lessons(current_user=Depends(get_current_user)):
     """1단계 콘텐츠: 입모양 10그룹 레슨 + 동구형이음 무리 + 최소대립쌍."""
+    import articulation as _art
     lessons = []
     for l in _curriculum.VISEME_LESSONS:
+        tgt = _art.articulation_target(l["viseme_id"])
         lessons.append({
             **l,
             "demo_syllable": _curriculum.DEMO_SYLLABLE.get(l["viseme_id"]),
             "quizzable": l["visibility"] != "low",
             "homophene_cluster": (_curriculum.homophene_cluster_of(l["viseme_id"]) or {}).get("id"),
+            # 축 E: 밖에서 안 보이는 내부 조음(혀·조음 위치·방식). look(보이는 입모양)의 짝.
+            "articulation": {"place": tgt["place"], "manner": tgt["manner"],
+                             "guide": tgt["hidden_guide"], "nasal": tgt["nasal"]},
         })
     return {
         "lessons": lessons,
@@ -913,7 +1144,7 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
         await db.refresh(sp)
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"recognition submit failed: {str(e)}")
+        raise _server_error(e, "recognition submit failed")
 
     return {
         "correct": correct,
@@ -934,9 +1165,34 @@ class WordAnswer(BaseModel):
 
 
 @app.get("/api/curriculum/words")
-async def curriculum_words(current_user=Depends(get_current_user)):
-    """2단계 콘텐츠: 큐레이션 단어 은행 + 최소대립쌍(프론트가 단어 퀴즈를 구성)."""
-    return {"words": _curriculum.WORD_BANK, "minimal_pairs": _curriculum.MINIMAL_PAIRS}
+async def curriculum_words(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """2단계 콘텐츠: 큐레이션 단어 은행 + 최소대립쌍(프론트가 단어 퀴즈를 구성).
+    각 단어에 개인화 priority를 실어 준다(tier가 낮을수록·약점 비심을 포함할수록 높음).
+    프론트가 이 값으로 가중 표집하면 쉬운 것부터·약점 위주로 자연스레 출제된다."""
+    import knowledge_tracing as _kt
+    from content_rules import word_visemes as _wv
+    from database import WeakViseme as _WV
+    from sqlalchemy import select as _select
+    try:
+        r = await db.execute(_select(_WV).where(_WV.user_id == current_user.id))
+        records = [{"viseme_id": w.viseme_id, "error_count": w.error_count,
+                    "total_attempts": w.total_attempts, "last_error_at": w.last_error_at}
+                   for w in r.scalars().all()]
+        mastery = _kt.estimate_mastery(records)
+    except Exception:
+        mastery = {}
+    weak = {vid for vid, m in mastery.items() if m < 0.7}
+    words = []
+    for w in _curriculum.WORD_BANK:
+        pri = max(1, 4 - int(w.get("tier", 1)))       # tier1→3, tier2→2, tier3→1
+        if weak:
+            try:
+                if any(v in weak for v in _wv(w["word"])):
+                    pri += 2                            # 약점 비심 포함 단어를 더 자주
+            except Exception:
+                pass
+        words.append({**w, "priority": pri})
+    return {"words": words, "minimal_pairs": _curriculum.MINIMAL_PAIRS}
 
 
 @app.post("/api/curriculum/word-answer")
@@ -984,7 +1240,7 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
         raise
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"word answer failed: {str(e)}")
+        raise _server_error(e, "word answer failed")
     return {"mastery_score": round(sp.mastery_score, 1), "attempts": sp.attempts,
             "mastered": sp.status == "mastered",
             "xp_gained": award["xp_gained"], "streak_count": award["streak_count"],
@@ -1105,7 +1361,7 @@ async def curriculum_closure_answer(data: ClosureAnswer, current_user=Depends(ge
         raise
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"closure answer failed: {str(e)}")
+        raise _server_error(e, "closure answer failed")
     return {"correct": correct, "answer": answer, "confusions": confusions,
             "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
 
@@ -1262,7 +1518,7 @@ class ScoreRequest(BaseModel):
     user_answer: str
 
 
-@app.post("/api/score")
+@app.post("/api/score", dependencies=[Depends(ratelimit.rate_limit(60, 60, "llm"))])
 async def score_answer(data: ScoreRequest, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """임의 문장 채점(대화 이해도 등) — 기존 음운 유사도 엔진 재사용.
     대화 실전에서 호출되므로 4단계 숙달도 함께 갱신한다."""
@@ -1283,7 +1539,7 @@ async def score_answer(data: ScoreRequest, current_user=Depends(get_current_user
                 "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"score failed: {str(e)}")
+        raise _server_error(e, "score failed")
 
 
 @app.get("/api/curriculum/recommended-level")
@@ -1327,9 +1583,10 @@ async def curriculum_next(current_user=Depends(get_current_user), db: AsyncSessi
     records = [{"viseme_id": w.viseme_id, "error_count": w.error_count,
                 "total_attempts": w.total_attempts, "last_error_at": w.last_error_at} for w in rows]
     rec = _kt.recommend(records, k=2)
+    # strict=True: 표적 음소 적중 콘텐츠가 충분하면 무적중을 걸러 개인화를 강화(부족하면 자동 정렬 폴백)
     sel = _crules.select_personalized(
         _curriculum.WORD_BANK, _curriculum.MINIMAL_PAIRS, _curriculum.CLOSURE_ITEMS,
-        rec["target_visemes"], rec["level"])
+        rec["target_visemes"], rec["level"], strict=True)
 
     targets = []
     for v in rec["target_visemes"]:
@@ -1383,7 +1640,7 @@ async def curriculum_mouth_attempt(data: MouthAttempt, current_user=Depends(get_
 
 
 @app.get("/api/cues")
-async def get_cues(text: str, personalize: bool = True,
+async def get_cues(text: str, personalize: bool = True, max_cues: int | None = None,
                   current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """시각 증강(축 J) — 문장에서 '안 드러나는 자질'(격음·경음·비음)에 기호를 얹을 지점을 반환.
 
@@ -1402,39 +1659,84 @@ async def get_cues(text: str, personalize: bool = True,
                     "total_attempts": w.total_attempts, "last_error_at": w.last_error_at}
                    for w in r.scalars().all()]
         mastery = _kt.estimate_mastery(records)
-    cues = _cue.generate_cues(text or "", mastery=mastery)
+    cues = _cue.generate_cues(text or "", mastery=mastery,
+                              max_cues=max_cues if (max_cues and max_cues > 0) else None)
     return {"text": text, "cues": cues, "legend": _cue.CUE_FEATURES}
+
+
+@app.get("/api/articulation/guide")
+async def get_articulation_guide(text: str, current_user=Depends(get_current_user)):
+    """조음 가이드(축 E) — 문장을 음절·자모로 풀어 음소별 '보이지 않는 조음'을 가르친다.
+
+    독화·웹캠은 개구·원순·양순 폐쇄 같은 겉조음만 잡는다. 소리를 가르는 결정적 조음(혀 위치,
+    조음 위치·방식)은 입 안에 있어 안 보이므로, 목표 음소마다 혀·조음 위치·방식을 글로 가르친다.
+    """
+    import articulation as _art
+    return _art.articulation_guide(text or "")
+
+
+class ArticulationFeedbackReq(BaseModel):
+    viseme: int
+    observed: dict  # 웹캠 역추정 관찰 조음 {jaw, round, close} (0~1)
+
+
+@app.post("/api/articulation/feedback")
+async def post_articulation_feedback(req: ArticulationFeedbackReq,
+                                     current_user=Depends(get_current_user)):
+    """조음 교정(축 E) — 웹캠 역추정 관찰 조음(jaw/round/close)을 목표 비심과 비교해 교정 방향을
+    낸다("입을 더 벌리세요"). 관찰로는 안 잡히는 혀·조음 위치는 목표 조음 교육문을 함께 준다."""
+    import articulation as _art
+    return _art.articulation_correction(req.viseme, req.observed or {})
 
 
 class PlacementScoreReq(BaseModel):
     items: list
     responses: dict
+    form: str = "placement"   # placement | A(사전) | B(사후)
 
 
 @app.get("/api/assessment/placement")
-async def assessment_placement(n: int = 8, current_user=Depends(get_current_user)):
+async def assessment_placement(n: int = 8, form: str = None,
+                               current_user=Depends(get_current_user)):
     """디지털 독화 배치검사 문항(축 I) — 지각 난이도로 통제한 입모양 단어 4지선다.
-    오답 보기는 정답과 시각적으로 혼동되는(동구형이음·최소대립) 단어를 우선 배치한다."""
+    오답 보기는 정답과 시각적으로 혼동되는(동구형이음·최소대립) 단어를 우선 배치한다.
+    form='A'/'B'를 주면 향상도검사용 동형(난이도 매칭) 사전/사후 폼을 반환한다."""
     import assessment as _asmt
-    items = _asmt.build_placement_items([w["word"] for w in _curriculum.WORD_BANK], n=n)
-    return {"items": items}
+    words = [w["word"] for w in _curriculum.WORD_BANK]
+    if form in ("A", "B"):
+        forms = _asmt.build_progression_forms(words, n=n)
+        return {"items": forms.get(form, []), "form": form}
+    items = _asmt.build_placement_items(words, n=n)
+    return {"items": items, "form": "placement"}
 
 
 @app.post("/api/assessment/score")
 async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_current_user),
                            db: AsyncSession = Depends(get_db)):
-    """배치검사 채점 → 추정 수준·음소별 오류 프로파일·시작 단계 추천.
-    결과를 이력으로 남겨 첫 검사(baseline) 대비 향상도를 나중에 비교할 수 있게 한다."""
+    """배치검사/향상도검사 채점 → 추정 수준·음소별 오류 프로파일·시작 단계 추천.
+    배치검사 결과는 이력(AssessmentResult)으로 남겨 첫 검사(baseline) 대비 향상도를 나중에 비교할 수 있게 하고,
+    모든 폼은 PlacementResult로도 저장해 사전(A)·사후(B) 통제 비교(향상도)를 가능케 한다.
+    A/B 폼은 AssessmentResult에 넣지 않는다 — /api/assessment/history의 첫 검사↔최근 검사 비교가
+    서로 다른 폼을 섞지 않도록(A↔B 비교는 /api/assessment/progression이 맡는다)."""
     import assessment as _asmt
     res = _asmt.score_placement(data.items, data.responses)
     try:
-        from database import AssessmentResult
-        db.add(AssessmentResult(
-            user_id=current_user.id, accuracy=res["accuracy"], ability=res["ability"],
-            level=res["level"], error_visemes=res["error_visemes"]))
+        from database import AssessmentResult, PlacementResult
+        if (data.form or "placement") == "placement":
+            db.add(AssessmentResult(
+                user_id=current_user.id, accuracy=res["accuracy"], ability=res["ability"],
+                level=res["level"], error_visemes=res["error_visemes"]))
+        db.add(PlacementResult(
+            user_id=current_user.id, form=(data.form or "placement"),
+            total=res["total"], correct=res["correct"], accuracy=res["accuracy"],
+            ability=res["ability"], level=res["level"],
+            error_visemes=res.get("error_visemes", []),
+            error_phonemes=res.get("error_phonemes", []),
+        ))
         await db.commit()
-    except Exception:
+    except Exception as e:
         await db.rollback()  # 채점 결과 반환은 저장 실패와 무관하게 보장
+        print(f"[WARN] placement result save failed: {e}")
     return res
 
 
@@ -1460,6 +1762,59 @@ async def assessment_history(current_user=Depends(get_current_user), db: AsyncSe
     return {"count": len(rows), "baseline": baseline, "latest": latest, "delta": delta}
 
 
+@app.get("/api/assessment/benchmark")
+async def assessment_benchmark(current_user=Depends(get_current_user)):
+    """한국어 독화 표준 평가셋(축 C 공개 리소스). 난이도 3구간 층화·seed 고정(재현 가능).
+    앱 내 표준 평가와 앱 밖 연구·교육이 동일 문항을 쓰도록 고정 벤치마크를 제공한다."""
+    import perceptual as _perc
+    bm = _perc.build_benchmark([w["word"] for w in _curriculum.WORD_BANK])
+    return bm
+
+
+@app.get("/api/assessment/resources")
+async def assessment_resources(current_user=Depends(get_current_user)):
+    """한국어 독화 공개 표준 리소스(축 C) — 동구형이음 사전·독화 난이도지수·최소대립쌍·
+    표준 평가셋·(있으면)데이터 유래 자모 시각유사도를 한 자원으로 제공한다. 한국어 독화에는
+    이런 표준 자원이 거의 없어, 앱 밖 연구·교육에서도 쓸 수 있게 노출한다."""
+    import perceptual as _perc
+    return _perc.build_standard_resources([w["word"] for w in _curriculum.WORD_BANK])
+
+
+@app.get("/api/assessment/progression")
+async def assessment_progression(current_user=Depends(get_current_user),
+                                 db: AsyncSession = Depends(get_db)):
+    """통제된 향상도(축 I) — 동형 폼 사전(A)·사후(B) 결과를 비교해 델타·음소별 오류 감소를 반환.
+    A/B가 아직 없으면 가장 이른/최근 검사 회차로 대체 비교한다."""
+    from database import PlacementResult
+    from sqlalchemy import select
+    rows = (await db.execute(
+        select(PlacementResult).where(PlacementResult.user_id == current_user.id)
+        .order_by(PlacementResult.created_at.asc())
+    )).scalars().all()
+    if len(rows) < 2:
+        return {"available": False, "n": len(rows),
+                "note": "사전·사후 검사가 2회 이상이면 향상도가 나옵니다."}
+    a = next((r for r in rows if r.form == "A"), rows[0])          # 사전
+    b = next((r for r in reversed(rows) if r.form == "B"), rows[-1])  # 사후
+    if a.id == b.id:
+        a, b = rows[0], rows[-1]
+    err_a = {e["phoneme"]: e["count"] for e in (a.error_phonemes or []) if isinstance(e, dict)}
+    err_b = {e["phoneme"]: e["count"] for e in (b.error_phonemes or []) if isinstance(e, dict)}
+    phonemes = sorted(set(err_a) | set(err_b))
+    per_phoneme = [{"phoneme": p, "before": err_a.get(p, 0), "after": err_b.get(p, 0),
+                    "delta": err_b.get(p, 0) - err_a.get(p, 0)} for p in phonemes]
+    return {
+        "available": True,
+        "pre": {"form": a.form, "accuracy": a.accuracy, "level": a.level, "ability": a.ability},
+        "post": {"form": b.form, "accuracy": b.accuracy, "level": b.level, "ability": b.ability},
+        "accuracy_delta": round(b.accuracy - a.accuracy, 3),
+        "level_delta": b.level - a.level,
+        "ability_delta": round(b.ability - a.ability, 3),
+        "error_phoneme_change": per_phoneme,
+        "homogeneous": (a.form == "A" and b.form == "B"),
+    }
+
+
 @app.get("/api/conversation/multi")
 async def conversation_multi(speakers: int = 2, turns: int = 6,
                              current_user=Depends(get_current_user)):
@@ -1468,7 +1823,63 @@ async def conversation_multi(speakers: int = 2, turns: int = 6,
     try:
         return await _conv.generate_multi_conversation(speakers=speakers, turns=turns)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"conversation gen failed: {str(e)}")
+        raise _server_error(e, "conversation gen failed")
+
+
+class MultiConvResultReq(BaseModel):
+    speaker_correct: int = 0
+    speaker_total: int = 0
+    read_correct: int = 0
+    read_total: int = 0
+    read_hits: List[str] = []    # 립리딩(문맥추론) 정답 발화 텍스트
+    read_misses: List[str] = []  # 오독 발화 텍스트
+
+
+@app.post("/api/conversation/multi/result", dependencies=[Depends(ratelimit.rate_limit(30, 60, "llm"))])
+async def conversation_multi_result(req: MultiConvResultReq,
+                                    current_user=Depends(get_current_user),
+                                    db: AsyncSession = Depends(get_db)):
+    """다자대화(축 H) 세션 결과 기록·채점. 화자 식별 정확도와 립리딩(문맥추론) 정확도를 결합해
+    종합 점수를 내고, 오독한 발화의 비심을 지식추적(WeakViseme)에 반영해 개인화(축 G)로 잇는다.
+    (커리큘럼 단계 잠금·숙달 판정은 건드리지 않는다 — H는 실전 변형이라 보조 기록.)"""
+    from database import WeakViseme
+    from sqlalchemy import select as _select
+    from engine import get_viseme_feature
+    from content_rules import word_visemes
+    from datetime import datetime as _dt
+
+    spk_acc = (req.speaker_correct / req.speaker_total) if req.speaker_total else 0.0
+    read_acc = (req.read_correct / req.read_total) if req.read_total else 0.0
+    combined = round(100 * (0.5 * spk_acc + 0.5 * read_acc), 1)
+
+    def _vis(texts):
+        s = set()
+        for t in texts or []:
+            for v in word_visemes(t or ""):
+                if 1 <= v <= 10:
+                    s.add(v)
+        return s
+    missed = _vis(req.read_misses)
+    hit = _vis(req.read_hits) - missed   # 같은 비심이 오독에도 있으면 오독을 우선한다
+    for vid in (missed | hit):
+        is_err = vid in missed
+        r = await db.execute(_select(WeakViseme).where(
+            WeakViseme.user_id == current_user.id, WeakViseme.viseme_id == vid))
+        wv = r.scalar_one_or_none()
+        if wv:
+            wv.total_attempts += 1
+            if is_err:
+                wv.error_count += 1
+                wv.last_error_at = _dt.utcnow()
+        else:
+            wv = WeakViseme(user_id=current_user.id, viseme_id=vid,
+                            total_attempts=1, error_count=1 if is_err else 0,
+                            last_error_at=_dt.utcnow() if is_err else None,
+                            phonological_feature=get_viseme_feature(vid))
+            db.add(wv)
+    await db.commit()
+    return {"combined": combined, "speaker_accuracy": round(spk_acc, 3),
+            "read_accuracy": round(read_acc, 3), "recorded_visemes": sorted(missed | hit)}
 
 
 # ── 발화 커리큘럼(6단계) — 상태·게이팅·콘텐츠 ────────────────────────────────
@@ -1569,7 +1980,7 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
 
 
 # ── 발화(말하기) 채점 — 단계 모드별 채점 + 진행률 + 코칭 ──────────────────────
-@app.post("/api/speak/assess")
+@app.post("/api/speak/assess", dependencies=[Depends(ratelimit.rate_limit(40, 60, "audio"))])
 async def speak_assess(
     target: str = Form(...),
     audio: UploadFile = File(...),
@@ -1587,9 +1998,7 @@ async def speak_assess(
 ):
     """녹음 → (단계 모드에 따라) 지표/전사 채점 → 진행률 갱신 → 코칭.
     발성·운율(0·1)은 지표만으로, 모음·자음·단어·문장(2~5)은 Whisper 전사+음운 유사도."""
-    data = await audio.read()
-    if not data:
-        raise HTTPException(status_code=400, detail="empty audio")
+    data = await _read_audio_limited(audio)
 
     metrics = {"loudness": loudness, "pitch_range": pitch_range, "duration": duration,
                "pitch_start": pitch_start, "pitch_end": pitch_end}
@@ -1601,6 +2010,7 @@ async def speak_assess(
     sim = None
     dgop_result = None
     assessment_method = None
+    acoustic_dgop = None  # 프론트 표시용 음소별 D-GOP(축 B) — dgop_result에서 파생(같은 엔진, 별도 계산 없음)
     need_asr = (mode in ("phoneme", "word", "sentence")) or (stage is None)
     if need_asr:
         # 축 B — 전사 비의존 D-GOP 경로. 아래 환경변수가 설정된 경우에만 시도하고,
@@ -1624,11 +2034,23 @@ async def speak_assess(
                 import dgop_acoustic
                 if not dgop_acoustic.HAS_ACOUSTIC:
                     raise RuntimeError("torch/torchaudio/transformers 미설치")
-                result = dgop_acoustic.assess_text(
+                # 동기·CPU 집약 모델 호출 — 이벤트 루프를 막지 않도록 스레드로 넘긴다.
+                result = await asyncio.to_thread(
+                    dgop_acoustic.assess_text,
                     data, target, aligner_id=dgop_aligner_id, scorer_id=dgop_scorer_id
                 )
                 if result.get("score") is not None:
                     dgop_result = result
+                    # 프론트(SpeakingPractice)가 읽는 음소별 타일용 — 정렬·채점된 음소만 남긴다.
+                    # (미정렬 항목은 dgop 키가 없고, 단어경계는 채점 대상이 아니다.)
+                    # 타일 값도 문장 점수와 같은 앵커로 보정한 score(0~100)를 실어 보낸다 —
+                    # 없으면 프론트가 보정 전 dgop×100으로 그려 문장 점수와 눈금이 어긋난다.
+                    import dgop
+                    _cal = dgop_acoustic.load_calibration()
+                    acoustic_dgop = {**dgop_result, "phones": [
+                        {**p, "score": dgop.calibrate_score(p["dgop"] * 100.0, _cal)}
+                        for p in (dgop_result.get("phones") or [])
+                        if p.get("aligned") and p.get("scorable")]}
                     # 표시용 보정 점수를 쓴다 — 원점수는 깨끗한 발화도 10점 안쪽이라
                     # 합격선(50·65)과 비교조차 되지 않는다. 보정 전 값은 응답의
                     # dgop.raw_score로 함께 나간다(축 A 한계 ② 대응).
@@ -1641,6 +2063,7 @@ async def speak_assess(
                 print(f"[WARN] D-GOP 경로 실패 — 전사 경로로 폴백합니다 "
                       f"(aligner={dgop_aligner_id}): {type(e).__name__}: {e}")
                 dgop_result = None
+                acoustic_dgop = None
 
         if assessment_method != "dgop":
             from speak_service import transcribe, is_available
@@ -1649,7 +2072,7 @@ async def speak_assess(
             try:
                 transcript = await transcribe(data)
             except Exception as e:
-                raise HTTPException(status_code=500, detail=f"전사 실패: {str(e)}")
+                raise _server_error(e, "전사 실패")
             try:
                 sc = await calculate_score(correct=target, user_answer=transcript, db=db)
                 sim = sc.get("score", 0)
@@ -1691,9 +2114,19 @@ async def speak_assess(
     if mouth_confidence is not None and mouth_confidence >= 0:
         import dgop
         vis = mouth_confidence * 100 if mouth_confidence <= 1 else mouth_confidence
-        # D-GOP 경로면 실측 불확실성을, 전사 경로면 기존 점수 기반 근사치를 쓴다.
-        audio_uncertainty = dgop_result["uncertainty"] if dgop_result else max(0.0, 1 - score / 100.0)
-        av_fusion = dgop.fuse_audio_visual(score, audio_uncertainty, vis)
+        # D-GOP 경로면 실측 불확실성으로 가중한다(뭉갠 발음일수록 영상 의존↑). 음소별(phones)
+        # 정보가 있으면 구간별 융합으로 세밀하게, 없으면 문장 단위 융합. 음소별 오디오 점수는
+        # 문장 점수와 같은 앵커(load_calibration)로 보정해 0~100 스케일을 영상과 맞춘다.
+        # 전사 경로면 기존 점수 기반 근사 불확실성을 쓴다.
+        if dgop_result:
+            import dgop_acoustic
+            per = dgop.fuse_audio_visual_per_phone(
+                dgop_result.get("phones") or [], vis,
+                calibration=dgop_acoustic.load_calibration())
+            av_fusion = per if per is not None else dgop.fuse_audio_visual(
+                score, dgop_result["uncertainty"], vis)
+        else:
+            av_fusion = dgop.fuse_audio_visual(score, max(0.0, 1 - score / 100.0), vis)
         score = av_fusion["score"]
 
     # 개별 시도 영속화(말하기 분석용 — 독화가 Progress에 쌓는 것과 대칭)
@@ -1704,7 +2137,7 @@ async def speak_assess(
         loudness=loudness, pitch_range=pitch_range, duration=duration,
         pitch_start=pitch_start, pitch_end=pitch_end, confusions=confusions[:6],
     ))
-    # SRS 복습 큐 유지 — 발음/단어/문장은 틀리면 예정 등록, 맞으면 간격 확장(세 기둥 공통).
+    # SRS 복습 큐 유지 — 발음/단어/문장은 틀리면 예정 등록, 맞으면 간격 확장(두 기둥 공통).
     # 말하기는 0~100 점수가 있으므로 이진 대신 점수 등급으로 복습 간격을 조절한다(SM-2).
     if mode in ("phoneme", "word", "sentence") and passed is not None:
         await _sr_touch(current_user.id, "speak", target, bool(passed), db, score=score)
@@ -1734,6 +2167,7 @@ async def speak_assess(
         "dgop": dgop_result,
         "metrics": metrics,
         "av_fusion": av_fusion,
+        "acoustic_dgop": acoustic_dgop,
         "progress": progress,
         "mode": mode,
     }
@@ -1821,7 +2255,7 @@ async def speak_review(current_user=Depends(get_current_user), db: AsyncSession 
                           "last_score": round(r.score or 0, 1)})
     wrong.sort(key=lambda x: x["last_score"])
 
-    # 세 기둥 공통 구조: 예정(SRS) · 틀림 · 북마크
+    # 두 기둥 공통 구조: 예정(SRS) · 틀림 · 북마크
     due = await _due_refs(current_user.id, ["speak"], db)
     bookmarks = await _bookmark_refs(current_user.id, "speak", db)
     # 복습 세션에서 순회할 통합 목록(중복 제거) — 예정 → 틀림 → 북마크
@@ -1848,7 +2282,8 @@ class ConversationResponse(BaseModel):
     text: str
 
 
-@app.post("/api/conversation", response_model=ConversationResponse)
+@app.post("/api/conversation", response_model=ConversationResponse,
+          dependencies=[Depends(ratelimit.rate_limit(40, 60, "llm"))])
 async def conversation_turn(
     request: ConversationRequest,
     current_user = Depends(get_current_user)
@@ -1860,20 +2295,20 @@ async def conversation_turn(
         raise HTTPException(status_code=400, detail="Level must be 1-5")
     try:
         result = await generate_conversation_turn(
-            situation=request.situation,
+            situation=_sanitize_text(request.situation, 80),
             level=request.level,
-            history=request.history
+            history=_sanitize_history(request.history)
         )
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Conversation generation failed: {str(e)}")
+        raise _server_error(e, "Conversation generation failed")
 
 
 class SignRequest(BaseModel):
     text: str
 
 
-@app.post("/api/sign/translate")
+@app.post("/api/sign/translate", dependencies=[Depends(ratelimit.rate_limit(40, 60, "llm"))])
 async def sign_translate(
     request: SignRequest,
     current_user = Depends(get_current_user)
@@ -1888,13 +2323,14 @@ async def sign_translate(
         raise HTTPException(status_code=400, detail="text is required")
     if len(text) > 200:
         raise HTTPException(status_code=400, detail="text too long (max 200)")
+    text = _sanitize_text(text, 200)  # 제어문자 제거 — 타 LLM 경로와 동일한 입력 정규화(§4.9 주입 방어)
     try:
         from sign_service import translate_to_ksl
         return await translate_to_ksl(text)
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Sign translation failed: {str(e)}")
+        raise _server_error(e, "Sign translation failed")
 
 
 # Health check endpoint
@@ -1925,9 +2361,12 @@ if os.path.exists(frontend_dist):
         if full_path.startswith("api/"):
             raise HTTPException(status_code=404, detail="API endpoint not found")
 
-        # Check if requesting a specific file
-        file_path = os.path.join(frontend_dist, full_path)
-        if os.path.isfile(file_path):
+        # Check if requesting a specific file — full_path는 사용자 제어이므로 dist 밖으로
+        # 벗어나는 경로(../ 등)는 차단한다(dist 밖 .env·DB 노출 방지).
+        _dist_real = os.path.realpath(frontend_dist)
+        file_path = os.path.realpath(os.path.join(frontend_dist, full_path))
+        _contained = os.path.commonpath([file_path, _dist_real]) == _dist_real
+        if _contained and os.path.isfile(file_path):
             return FileResponse(file_path)
 
         # Default to index.html for SPA routing

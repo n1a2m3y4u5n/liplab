@@ -35,6 +35,12 @@
 `feat/content-scaleUI`는 2026-09-15에 content-scale로 fast-forward해 뒀고, 그 뒤 JuHana 님이
 그 위에 쌓았다. **`frontend/src/App.jsx`는 세 갈래가 전부 건드린다** — 손대기 전에 순서를 합의한다.
 
+> **2026-09-17 — 위 네 브랜치를 전부 `dev`에 통합했다.** `feat/content-scaleUI`(`eceda09`) →
+> `feat/content-scale`(`7273aa3`) → `feat/sublexical-feedback`(`b159caf`, 위 표보다 5커밋 더 나간 시점) 순.
+> 위 표의 "앞섬" 수치는 통합 전 기준이다. `dev`의 예전 고유 커밋(연습 인사이트·세션 요약)도 새 IA 위로 옮겼다.
+> 아래 **'2. 축 B 병합 충돌 정리'는 `dev`에서 해소됐다** — 결과는 그 절 맨 위 메모를 본다.
+> 각 feature 브랜치 자체는 그대로다(거기엔 충돌이 남아 있다). 이어서 작업할 땐 `dev`에서 가지를 친다.
+
 ---
 
 ## 바로 할 일 (우선순위)
@@ -100,6 +106,20 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
 > 이제 그 폴백이 조용하지 않다 — 서버 로그에 `[WARN] D-GOP 경로 실패`가 찍힌다.
 
 ### 2. 축 B 병합 충돌 정리 ⭐
+
+> **✅ 2026-09-17 `dev` 통합에서 해소됐다.** 아래 권고대로 **택일**했다.
+> - **남긴 것(우리 쪽 엔진):** `dgop_acoustic.assess_text`(ctc_align·naive·정렬기/채점기 분리),
+>   `dgop.calibrate_score(raw 0~100, 앵커)` **하나만**, `DGOP_ALIGNER_ID` 게이팅(**미설정 = 꺼짐, 기본값 그대로**).
+> - **버린 것(sublexical 쪽):** 로지스틱 `calibrate_score(raw01)`, `dgop_from_audio`, `is_available()` 기본 켜짐,
+>   하드코딩 음절 vocab 모델, `sentence_dgop`의 `score_calibrated`.
+> - **옮겨 심은 것:** `fuse_audio_visual_per_phone`(음소별 후기융합 — 우리 `phones` 형태·0~100 단위로 맞춤,
+>   정렬·채점된 음소만), 응답의 `acoustic_dgop`(같은 `dgop_result`에서 파생, 음소별 보정 `score`·`label` 포함).
+> - **회귀 방지:** `test_dgop.py`에 단위 테스트 2개(깨끗한 음소 → ≈90점, 19.5·98 아님 / `calibrate_score` 정의 1개),
+>   `test_dgop_acoustic.py`에 `dgop_from_audio`·`is_available` 부재 단언.
+> - **아직 못 한 것:** 아래 '병합 후 실측 확인'(실제 발화 1개 채점)은 torch·체크포인트가 없는 환경이라 **돌리지 못했다.**
+>   A-3 재측정·A-4 재적합 전까지 D-GOP 경로를 켜지 않는다는 원칙은 그대로다.
+>
+> 아래 본문은 **통합 전 시점의 분석 기록**으로 남겨 둔다.
 
 `feat/sublexical-feedback`이 19커밋(57파일, +10,912/−2,245) 앞서 있고, **축 B에서 양쪽이 같은 걸
 따로 만들었다.** 시험 병합(`git merge-tree`) 결과 **git이 잡는 충돌 14개 + 조용히 깨지는 곳 1개**.

@@ -16,7 +16,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import User, get_db
 
 # Security configuration
-SECRET_KEY = os.getenv("JWT_SECRET", "liplab-super-secret-key-change-in-production-2024")
+# JWT 서명키. 공개 기본값으로 서명되면 임의 user_id 토큰을 위조해 전 계정을 사칭할 수 있다.
+# 따라서 미설정/기본값이면: 프로덕션은 기동 실패(fail-fast), 개발은 임시 무작위 키(재시작 시 토큰 무효)로 경고.
+_DEFAULT_INSECURE = "liplab-super-secret-key-change-in-production-2024"
+SECRET_KEY = os.getenv("JWT_SECRET")
+if not SECRET_KEY or SECRET_KEY == _DEFAULT_INSECURE:
+    # 배포 환경 감지: Fly.io는 FLY_APP_NAME을 자동 주입한다. ENVIRONMENT=production도 인정.
+    # 배포에서 JWT_SECRET 누락 시 임시키로 조용히 기동하면 재시작마다 전 사용자 토큰이 무효화되므로 기동 실패시킨다.
+    _deployed = bool(os.getenv("FLY_APP_NAME")) or os.getenv("ENVIRONMENT", "").lower() == "production"
+    if _deployed:
+        raise RuntimeError(
+            "JWT_SECRET 환경변수를 설정하세요. 기본값·미설정은 배포 환경에서 금지됩니다 "
+            "(예: `openssl rand -hex 32`로 생성해 `fly secrets set JWT_SECRET=...`로 등록)."
+        )
+    import secrets as _secrets
+    import logging as _logging
+    SECRET_KEY = _secrets.token_hex(32)
+    _logging.getLogger("uvicorn.error").warning(
+        "JWT_SECRET 미설정 → 개발용 임시 시크릿 생성(서버 재시작 시 발급 토큰 무효). 배포에선 반드시 설정."
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 

@@ -9,6 +9,8 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
+// 축 D 자체 립리딩(MediaPipe+onnx로 무거움) — 정답 후에만 로드.
+const LipReadCheck = lazy(() => import('../components/LipReadCheck'))
 
 /**
  * 2단계 · 음절·단어 (Word Stage)
@@ -75,8 +77,15 @@ function WordQuiz({ data, targetPool }) {
   const newQ = useCallback(async () => {
     // 표적은 개인화 풀(취약 입모양·난이도 반영)에서, 오답 보기는 전체 은행에서(혼동쌍 우선).
     // 예전엔 195개에서 균등 랜덤이라 초급자가 희귀·고난도어를 동일 확률로 만났다.
-    const pool = (targetPool && targetPool.length) ? targetPool : words
-    const target = pool[Math.floor(Math.random() * pool.length)]
+    const targetSet = (targetPool && targetPool.length) ? new Set(targetPool) : null
+    const inPool = targetSet ? data.words.filter((w) => targetSet.has(w.word)) : []
+    const pool = inPool.length ? inPool : data.words
+    // 풀 안에서는 개인화 가중 표집 — priority(쉬운 tier·약점 비심 포함일수록 높음)로 target을 뽑는다.
+    // priority가 없으면(구버전) 균등 랜덤과 동일하게 동작.
+    const total = pool.reduce((s, w) => s + (w.priority || 1), 0)
+    let r = Math.random() * total
+    let target = pool[pool.length - 1].word
+    for (const w of pool) { r -= (w.priority || 1); if (r <= 0) { target = w.word; break } }
     const partners = partnersOf(target, data.minimal_pairs, bankSet)
     const rest = shuffle(words.filter((w) => w !== target && !partners.includes(w)))
     // 같은 입모양 최소대립쌍(partners)을 오답 보기로 우선 배치 — 2단계 변별훈련의 핵심.
@@ -169,6 +178,10 @@ function WordQuiz({ data, targetPool }) {
                   className="w-full py-2 rounded-lg border border-primary-300 text-primary-600 text-sm font-medium hover:bg-primary-50 transition-colors">
                   🤟 "{q.target}" 수어로 뜻 보기
                 </button>
+                {/* 축 D — 기계가 내 입모양을 읽어 목표 단어를 맞히나(폐집합: 이번 문제 보기). 실험적. */}
+                <Suspense fallback={null}>
+                  <LipReadCheck target={q.target} candidates={q.choices} />
+                </Suspense>
                 <button onClick={newQ} className="btn-primary w-full py-2 text-sm">다음 문제 →</button>
               </motion.div>
             )}

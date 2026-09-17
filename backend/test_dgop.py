@@ -123,6 +123,67 @@ def test_fit_rejects_unusable_input():
             pass
 
 
+def test_fuse_per_phone():
+    # 확신 구간 + 뭉갠 구간. 뭉갠 구간이 영상(90)에 더 끌려가야(구간별 가중) 한다.
+    clear = D.dgop_phone(0.9, [0.9, 0.05, 0.05])
+    blurry = D.dgop_phone(0.4, [0.4, 0.33, 0.27])
+    res = D.fuse_audio_visual_per_phone([clear, blurry], 90.0)
+    _ok(res is not None and 0 <= res["score"] <= 100, "구간별 융합 점수 범위")
+    _ok(res["per_phone"] is True and res["n_phones"] == 2, "구간별 융합 메타")
+    _ok(D.fuse_audio_visual_per_phone([], 90.0) is None, "음소 없으면 None")
+    _ok(D.fuse_audio_visual_per_phone([clear], None) is None, "영상 없으면 None(스칼라 경로로)")
+    # 전부 확신(불확실 낮음)일 때보다 전부 뭉갤 때 영상 평균 가중이 커야 한다
+    all_clear = D.fuse_audio_visual_per_phone([clear, clear], 90.0)
+    all_blur = D.fuse_audio_visual_per_phone([blurry, blurry], 90.0)
+    _ok(all_blur["visual_weight"] > all_clear["visual_weight"], "뭉갠 구간일수록 영상 가중↑(구간별)")
+
+
+def test_fuse_per_phone_units_and_assess_text_shape():
+    """
+    병합 함정 고정(STATUS.md '축 B 병합 충돌 정리') — 구간별 융합은 음소 dgop(0~1)를 ×100 해서
+    앵커 보정(calibrate_score, 0~100 입력)에 넣는다. 0~1을 그대로 넣으면 깨끗한 발화가 19.5점이
+    되고 예외도 없다. 로지스틱 보정이 살아 있으면 severity 0·1·2가 98.0으로 포화한다.
+    """
+    clean_raw = D.AXIS_A_SEVERITY_SCORES[0]                     # 깨끗한 발화 원점수(0~100)
+    clean = {**D.dgop_phone(clean_raw / 100.0, [0.97, 0.02, 0.01]), "uncertainty": 0.0}
+    res = D.fuse_audio_visual_per_phone([clean], 90.0)
+    _ok(abs(res["audio_score"] - D.DISPLAY_TARGETS_BY_SEVERITY[0]) < 0.5,
+        f"깨끗한 음소의 오디오 점수는 앵커 목표(90) 근처 — 19.5나 98이면 단위/보정이 틀렸다 (실제 {res['audio_score']})")
+    mild = {**D.dgop_phone(D.AXIS_A_SEVERITY_SCORES[1] / 100.0, [0.5, 0.3, 0.2]), "uncertainty": 0.0}
+    res_mild = D.fuse_audio_visual_per_phone([mild], 90.0)
+    _ok(res_mild["audio_score"] < res["audio_score"] - 10, "severity 0과 1이 포화 없이 구별된다")
+    # 문장 단위 융합과 같은 키를 돌려준다(프론트가 audio_score·visual_score를 그대로 읽는다).
+    _ok({"score", "visual_weight", "audio_score", "visual_score"} <= set(res), "fuse_audio_visual과 같은 키")
+
+    # dgop_acoustic.assess_text의 phones 모양을 그대로 받는다 — 정렬 실패·어절 경계는 융합에서 빠진다.
+    phones = [
+        {"token": "o:ㄱ", "label": "ㄱ", "aligned": True, "scorable": True, **D.dgop_phone(0.8, [0.8, 0.1, 0.1])},
+        {"token": "|", "label": "", "aligned": True, "scorable": False, **D.dgop_phone(0.1, [0.4, 0.3, 0.3])},
+        {"token": "n:ㅏ", "label": "ㅏ", "aligned": False, "scorable": True},
+    ]
+    got = D.fuse_audio_visual_per_phone(phones, 60.0)
+    _ok(got["n_phones"] == 1, f"채점 대상이면서 정렬된 음소만 융합 (실제 {got['n_phones']})")
+    _ok(D.fuse_audio_visual_per_phone(phones[1:], 60.0) is None, "융합할 음소가 없으면 None(문장 단위 경로로)")
+
+    # 보정 앵커를 넘기면 그 앵커로 보정한다(앱은 load_calibration()을 넘긴다).
+    cal = D.fit_calibration([20.0, 8.0, 4.0, 2.0, 1.0])
+    p = {**D.dgop_phone(0.20, [0.5, 0.3, 0.2]), "uncertainty": 0.0}
+    _ok(abs(D.fuse_audio_visual_per_phone([p], 50.0, calibration=cal)["audio_score"] - 90.0) < 0.05,
+        "calibration 인자가 반영된다")
+
+
+def test_single_calibrate_score_and_raw_sentence_score():
+    """calibrate_score 정의는 하나(앵커+log, 0~100 입력)이고 sentence_dgop은 원점수만 낸다."""
+    import inspect
+    src = inspect.getsource(D)
+    _ok(src.count("def calibrate_score(") == 1, "calibrate_score가 중복 정의되지 않았다")
+    _ok(list(inspect.signature(D.calibrate_score).parameters) == ["raw_score", "calibration"],
+        "살아남은 정의는 앵커 보정(raw_score 0~100, calibration)")
+    s = D.sentence_dgop([D.dgop_phone(0.8, [0.8, 0.1, 0.1])])
+    _ok(s["score"] == 80.0 and "score_calibrated" not in s,
+        "sentence_dgop.score는 원점수(0~100) — 보정은 assess_text가 calibrate_score로 한다")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
