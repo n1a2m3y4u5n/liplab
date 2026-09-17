@@ -3,7 +3,8 @@ Adaptive Scenario Generation using Claude API
 Generates contextually relevant sentences based on user's weak visemes
 """
 import os
-import json
+import random
+import llm_json
 from typing import List, Dict
 from datetime import datetime, timedelta
 from anthropic import AsyncAnthropic
@@ -16,6 +17,57 @@ from engine import get_viseme_feature
 
 # Initialize Anthropic client
 anthropic_client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+
+async def generate_speaking_coaching(target: str, transcript: str, score: float,
+                                     confusions: list = None, metrics: dict = None) -> str:
+    """발화 채점 + 측정값(크기·억양·길이)을 근거로 '수치 기반·구체적' 발음 코칭.
+    Whisper 오인식 가능성을 감안해 발음 부분은 단정하지 않고 부드럽게. 실패 시 규칙 폴백."""
+    conf_txt = ""
+    if confusions:
+        conf_txt = "다르게 들린 소리: " + ", ".join(f"{c.get('correct')}→{c.get('confused_as')}" for c in confusions[:4]) + "\n"
+    met_txt = ""
+    m = metrics or {}
+    parts = []
+    if m.get("loudness") is not None:
+        parts.append(f"목소리 크기 {round(m['loudness'])}/100")
+    if m.get("pitch_range"):
+        parts.append(f"억양 변화 {round(m['pitch_range'])}Hz")
+    if m.get("duration"):
+        parts.append(f"발화 길이 {float(m['duration']):.1f}초")
+    if parts:
+        met_txt = "측정값 — " + ", ".join(parts) + "\n"
+
+    prompt = f"""당신은 청각장애인의 발음(구화) 연습을 돕는 따뜻하고 구체적인 코치입니다.
+목표: "{target}" / 음성인식 결과: "{transcript or '(잘 인식되지 않음)'}" / 발음 유사도 {round(score)}점
+{conf_txt}{met_txt}
+아래 지침으로 한국어 3~5문장(250자 이내, 번호·머리말 없이 자연스럽게):
+1) 잘한 점을 측정값 근거로 구체적으로(발음 점수·크기·억양 중 좋았던 것을 수치와 함께).
+2) 개선점을 '수치 + 방법'으로 구체적으로:
+   - 목소리 크기 40/100 미만이면 더 크게 말하라고 강조.
+   - 억양 변화 25Hz 미만이면 톤이 평평하다고 알리고 끝을 올리거나 내리라고.
+   - 다르게 들린 소리가 있으면 그 소리를 입술/혀를 '어떻게' 하는지 구체적으로.
+3) 짧은 격려.
+주의: 음성인식은 완벽하지 않으니 발음 부분은 단정하지 말고 "~로 들렸어요" 식으로 부드럽게."""
+    try:
+        resp = await anthropic_client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=500,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return resp.content[0].text.strip()
+    except Exception:
+        bits = []
+        if m.get("loudness", 100) < 40:
+            bits.append(f"목소리가 작았어요(크기 {round(m.get('loudness', 0))}/100). 배에 힘을 주고 더 크게 말해보세요.")
+        if m.get("pitch_range") is not None and m.get("pitch_range", 100) < 25:
+            bits.append("톤이 평평했어요. 문장 끝을 올리거나 내리며 억양을 넣어보세요.")
+        if confusions:
+            c = confusions[0]
+            bits.append(f"'{c.get('correct')}' 소리가 '{c.get('confused_as')}'로 들렸어요. 입모양을 더 또렷하게 해보세요.")
+        if not bits:
+            bits.append("또렷하게 잘 전달됐어요! 이 느낌을 기억하며 다음 단어도 도전해봐요.")
+        return " ".join(bits)
 
 
 # Situation-based context prompts
@@ -172,13 +224,15 @@ async def generate_adaptive_scenario(
         print(f"[WARN] get_user_weak_visemes failed: {e}")
         target_viseme_ids = []
 
-    # Check cache first (safe - skip cache on error)
-    try:
-        cached_scenario = await check_scenario_cache(situation, level, target_viseme_ids, db)
-        if cached_scenario:
-            return cached_scenario
-    except Exception as e:
-        print(f"[WARN] check_scenario_cache failed: {e}")
+    # 캐시 재사용은 '매번 같은 문장'의 주범이라 의도적으로 끈다(변주 우선).
+    # (캐시 쓰기는 유지 — 통계/폴백용. 필요 시 LIPLAB_SCENARIO_CACHE=1로 재사용 활성화)
+    if os.getenv("LIPLAB_SCENARIO_CACHE", "0") == "1":
+        try:
+            cached_scenario = await check_scenario_cache(situation, level, target_viseme_ids, db)
+            if cached_scenario:
+                return cached_scenario
+        except Exception as e:
+            print(f"[WARN] check_scenario_cache failed: {e}")
 
     # Get situation context
     context = SITUATION_CONTEXTS.get(situation, {
@@ -208,6 +262,26 @@ async def generate_adaptive_scenario(
         phoneme_str = ", ".join(target_phonemes[:5])
         phoneme_instruction = f"\n특히 다음 음소들이 포함된 단어를 우선적으로 사용하세요: {phoneme_str}"
 
+    # ── 변주 축 — 매 호출마다 무작위로 골라 프롬프트에 주입 → 같은 상황이어도 결과가 겹치지 않게 ──
+    _sub_focus = random.choice([
+        "상대에게 무언가를 요청/부탁하는 말", "가격·시간·수량을 묻는 말", "감사·사과를 표현하는 말",
+        "길이나 위치를 묻고 답하는 말", "제안하거나 권유하는 말", "가벼운 잡담·안부",
+        "문제 상황을 설명하는 말", "선택·결정을 확인하는 말", "감정을 드러내는 말",
+    ])
+    _tone = random.choice(["정중한 존댓말", "친근한 반말 섞인 구어", "간결하고 담백한 어조", "다정하고 배려하는 어조"])
+    _persona = random.choice(["손님", "직원", "친구", "가족", "처음 만난 사람", "이웃"])
+    _twist = random.choice([
+        "이전에 흔히 나오는 뻔한 표현은 피하고 새로운 어휘를 쓰세요.",
+        "서로 다른 소재를 다뤄 5문장이 각기 다른 장면이 되게 하세요.",
+        "구체적인 사물·숫자·이름을 넣어 생생하게 만드세요.",
+        "너무 교과서적이지 않게, 실제 대화처럼 자연스럽게 변주하세요.",
+    ])
+    variety_instruction = (
+        f"\n**이번 회차 변주(매번 다르게)**:\n"
+        f"- 초점: {_sub_focus}\n- 어조: {_tone}\n- 화자 시점: {_persona}\n- 추가 지시: {_twist}\n"
+        f"- 변주 시드: {random.randint(1000, 9999)} (이 숫자가 다르면 반드시 다른 문장을 만드세요)"
+    )
+
     system_prompt = f"""당신은 청각장애인의 독화(Speechreading) 훈련을 위한 한국어 문장 생성 전문가입니다.
 
 **목표**: 주어진 상황과 난이도에 맞는 자연스러운 한국어 문장 5개를 생성하세요.
@@ -220,6 +294,7 @@ async def generate_adaptive_scenario(
 **난이도 기준**:
 {level_instructions[level]}
 {phoneme_instruction}
+{variety_instruction}
 
 **중요 규칙**:
 1. 모든 문장은 해당 상황에서 실제로 사용될 법한 자연스러운 표현이어야 합니다.
@@ -247,23 +322,15 @@ async def generate_adaptive_scenario(
         response = await anthropic_client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1024,
-            temperature=0.8,  # Add creativity for varied sentences
+            temperature=1.0,  # 변주 극대화 — 매번 다른 문장
             system=system_prompt,
             messages=[
                 {"role": "user", "content": user_prompt}
             ]
         )
 
-        # Parse response
-        content = response.content[0].text.strip()
-
-        # Extract JSON from potential markdown code blocks
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
-
-        result = json.loads(content)
+        # Parse response — 코드펜스 제거 + 빈 응답 방어(공용 유틸)
+        result = llm_json.extract_json(response)
         sentences = result.get("sentences", [])
 
         if not sentences or len(sentences) < 3:
@@ -457,13 +524,7 @@ async def generate_conversation_turn(
             messages=messages_for_api
         )
 
-        content = response.content[0].text.strip()
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
-
-        result = json.loads(content)
+        result = llm_json.extract_json(response)
         text = result.get("text", "").strip()
 
         if not text:

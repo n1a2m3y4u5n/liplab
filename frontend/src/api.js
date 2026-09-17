@@ -28,14 +28,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
+    const url = error.config?.url || ''
+    // 토큰 만료/무효 시: 로그아웃 후 재부팅 → AuthGate가 데모 계정으로 자동 재로그인.
+    // (데모 로그인 요청 자체의 실패는 무한루프 방지를 위해 재부팅하지 않는다.)
+    if (error.response?.status === 401 && !url.includes('/auth/demo')) {
       useStore.getState().logout()
-
-      // Redirect to login if not already there
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
-      }
+      window.location.reload()
     }
     return Promise.reject(error)
   }
@@ -60,6 +58,12 @@ export const authAPI = {
       email,
       password,
     })
+    return response.data
+  },
+
+  // 로그인 없이 데모 계정으로 즉시 입장(멱등)
+  demoLogin: async () => {
+    const response = await api.post('/auth/demo')
     return response.data
   },
 
@@ -104,12 +108,12 @@ export const learningAPI = {
   },
 
   // Bookmarks
-  getBookmarks: async () => {
-    const response = await api.get('/bookmarks')
+  getBookmarks: async (domain) => {
+    const response = await api.get('/bookmarks', { params: domain ? { domain } : {} })
     return response.data
   },
-  addBookmark: async (sentence, situation, level) => {
-    const response = await api.post('/bookmarks', { sentence, situation, level })
+  addBookmark: async (sentence, situation, level, domain = 'read') => {
+    const response = await api.post('/bookmarks', { sentence, situation, level, domain })
     return response.data
   },
   removeBookmark: async (id) => {
@@ -138,6 +142,79 @@ export const learningAPI = {
     const response = await api.get('/review-sentences')
     return response.data
   },
+
+  // 한국어 → 한국수어(KSL) 학습 보조 번역
+  translateSign: async (text) => {
+    const response = await api.post('/sign/translate', { text }, { timeout: 60000 })
+    return response.data
+  },
 }
+
+// ============================================
+// Curriculum (단계형 커리큘럼) API
+// ============================================
+
+export const curriculumAPI = {
+  getStages: async () => (await api.get('/curriculum/stages')).data,
+  setTrack: async (track) => (await api.post('/curriculum/track', { track })).data,
+  resetTrack: async () => (await api.post('/curriculum/track/reset')).data,
+  getVisemeLessons: async () => (await api.get('/curriculum/viseme-lessons')).data,
+  submitRecognition: async (viseme_id, chosen_id) =>
+    (await api.post('/curriculum/recognition', { viseme_id, chosen_id })).data,
+  getWords: async () => (await api.get('/curriculum/words')).data,
+  submitWord: async (word, correct, chosen) => (await api.post('/curriculum/word-answer', { word, correct, chosen })).data,
+  getClosure: async () => (await api.get('/curriculum/closure')).data,
+  submitClosure: async (item_id, chosen) => (await api.post('/curriculum/closure-answer', { item_id, chosen })).data,
+  confusionMatrix: async () => (await api.get('/curriculum/confusion-matrix')).data,
+  getRecommendedLevel: async () => (await api.get('/curriculum/recommended-level')).data,
+  getNext: async () => (await api.get('/curriculum/next')).data,
+  getCues: async (text) => (await api.get('/cues', { params: { text } })).data,
+  recordMouth: async (viseme_id, score) => (await api.post('/curriculum/mouth-attempt', { viseme_id, score })).data,
+  getMultiConversation: async (speakers = 2, turns = 6) => (await api.get('/conversation/multi', { params: { speakers, turns } })).data,
+  getPlacement: async (n = 8) => (await api.get('/assessment/placement', { params: { n } })).data,
+  scorePlacement: async (items, responses) => (await api.post('/assessment/score', { items, responses })).data,
+  getAssessmentHistory: async () => (await api.get('/assessment/history')).data,
+}
+
+export const scoreAPI = {
+  score: async (correct, user_answer) => (await api.post('/score', { correct, user_answer })).data,
+}
+
+export const evalAPI = {
+  summary: async () => (await api.get('/eval/summary')).data,
+}
+
+export const reviewAPI = {
+  getDue: async () => (await api.get('/review/due')).data,
+  answer: async (kind, ref, correct) => (await api.post('/review/answer', { kind, ref, correct })).data,
+}
+
+// 발화(말하기) — 커리큘럼 6단계 + 녹음 채점·코칭.
+export const speakAPI = {
+  getCurriculum: async () => (await api.get('/speak/curriculum')).data,
+  getStage: async (n) => (await api.get(`/speak/stage/${n}`)).data,
+  getAnalysis: async () => (await api.get('/speak/analysis', { timeout: 30000 })).data,
+  getReview: async () => (await api.get('/speak/review')).data,
+  assess: async (target, blob, metrics = {}, opts = {}) => {
+    const fd = new FormData()
+    fd.append('target', target)
+    fd.append('audio', blob, 'speech.webm')
+    for (const k of ['loudness', 'pitch_range', 'duration', 'pitch_start', 'pitch_end']) {
+      if (metrics[k] != null) fd.append(k, String(metrics[k]))
+    }
+    if (opts.stage != null) fd.append('stage', String(opts.stage))
+    if (opts.drill) fd.append('drill', opts.drill)
+    if (opts.review) fd.append('review', '1')
+    // FormData는 브라우저가 multipart 경계를 붙이도록 Content-Type을 비운다(인스턴스 기본 json 무효화).
+    const res = await api.post('/speak/assess', fd, { headers: { 'Content-Type': undefined }, timeout: 60000 })
+    return res.data
+  },
+}
+
+// 데모용 더미 학습 기록 시드(계정이 비어 있을 때만)
+export const seedAPI = {
+  seedDemo: async () => (await api.post('/seed-demo')).data,
+}
+
 
 export default api

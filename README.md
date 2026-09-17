@@ -8,6 +8,8 @@
 - **동시조음(Co-articulation) 모델링**: 자연스러운 입모양 전환 애니메이션
 - **적응형 학습**: 사용자의 취약점을 분석하여 맞춤형 시나리오 생성
 - **음운론적 유사도 채점**: 시각적으로 유사한 음소에 대한 부분 점수 제공
+- **자모 단위 피드백·혼동행렬**: '무엇을 무엇으로 읽었나'를 초성·중성·종성 위치별로 진단하고, 같은 입모양이라 헷갈린 비율을 함께 제시
+- **학습 효과 리포트**: 학습곡선·초기 대비 최근 향상도·단계별 숙달 도달 시행수를 개인별로 시각화(`/analysis/eval`)
 - **JWT 인증 및 학습 데이터 추적**: 개인별 진도 및 통계 관리
 
 ## 기술 스택
@@ -147,6 +149,24 @@ fly deploy
 fly open
 ```
 
+### 디벨롭/스테이징 배포 (전시앱과 분리)
+
+전시용 프로덕션 앱(`liplab`)과 develop 검증용 앱을 분리해 운영한다. develop 배포는
+`fly.dev.toml`(app=`liplab-dev`, `LIPLAB_AI_ITEMS=0`으로 정적 커리큘럼)을 사용하며 전시앱을 건드리지 않는다.
+
+```bash
+# 최초 1회
+fly apps create liplab-dev
+fly volumes create liplab_data -a liplab-dev -r nrt -n 1 -s 1
+fly secrets set -a liplab-dev JWT_SECRET=<random> ANTHROPIC_API_KEY=<key-or-placeholder>
+
+# 배포
+fly deploy -c fly.dev.toml -a liplab-dev --remote-only
+```
+
+라이브 LLM 키 없이도 규칙 기반 신기능(혼동행렬·자모 피드백·학습 효과 리포트)은 그대로 동작한다.
+AI 문항 생성까지 켜려면 `ANTHROPIC_API_KEY`를 실제 키로 두고 `LIPLAB_AI_ITEMS=1`로 배포한다.
+
 ### 배포 후 관리
 
 ```bash
@@ -252,3 +272,22 @@ MIT License
 ---
 
 **LIPLAB** - 모두를 위한 독화 교육
+
+## 2기 고도화 (K-AI 콘텐츠 공모전)
+
+계획서 「멀티모달 발음·독화 평가를 중심으로 한 LIPLAB 고도화」의 축 A~K 중, 데이터·GPU 없이
+로컬에서 가능한 부분을 구현했다. 상세 개발 과정은 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md).
+
+**완료 (로컬)**
+- **G** 콘텐츠 대량화·개인화 — LLM 생성 + 비심 규칙 게이트 + 지식추적 개인화 + 사람 검수
+- **J** 시각 증강 — 안 보이는 자질(기식·긴장·비음)을 시각 기호로 오버레이(큐드 스피치 재해석)
+- **D** 웹캠 입모양 채점 — MediaPipe blendshape 코사인 채점, 개인 캘리브레이션, 영상 서버 전송 없음
+- **B** 전사 비의존 D-GOP(로직) — 불확실성 보정으로 과신 방지 + 오디오·비주얼 후기 융합
+- **C** 지각 자원(규칙) — 동구형이음 사전·독화 난이도 지수 공개(`docs/perceptual-resources.json`)
+- **I** 디지털 독화 표준검사 — 난이도 통제 배치검사 + 음소별 오류 프로파일
+- **K** 입술 너머 확장 단서 — 얼굴 전체(턱·볼·코) 보조 신호
+- **H** 다자 대화 시나리오 독화 — 여러 화자 번갈아 말하기, 화자 식별 + 입모양 읽기
+- 부가: OLKAVS 립리딩 데이터 전처리 파이프라인(`scripts/preprocess_olkavs.py`)
+
+**Phase 2 (torch·GPU·데이터 필요)**: A 공유 백본+농인 발화 합성 · B 음향 추론(wav2vec2) ·
+C 지각공간 임베딩 · D 자체 립리딩 모델 · E 조음 진단+성도 시뮬레이터 · F 실사·투명 아바타

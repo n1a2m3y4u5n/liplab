@@ -1,0 +1,54 @@
+{
+  "source": "scorer/2026-09-09 kresnik/zeroth_korean test 50발화 severity 중앙값",
+  "floor": 0.05,
+  "anchors": [
+    [
+      0.0,
+      0.0
+    ],
+    [
+      0.85,
+      20.0
+    ],
+    [
+      2.9,
+      40.0
+    ],
+    [
+      15.2,
+      58.0
+    ],
+    [
+      31.65,
+      72.0
+    ],
+    [
+      78.15,
+      90.0
+    ],
+    [
+      129.0917,
+      100.0
+    ]
+  ],
+  "dropped_severities": [],
+  "fitted_at": "2026-09-09T09:45:16",
+  "aligner": "/workspace/ckpt/aligner",
+  "scorer": "/workspace/ckpt/scorer",
+  "dataset": "kresnik/zeroth_korean",
+  "utterances": 50,
+  "severity_medians": [
+    78.15,
+    31.65,
+    15.2,
+    2.9,
+    0.85
+  ],
+  "display_targets": [
+    90.0,
+    72.0,
+    58.0,
+    40.0,
+    20.0
+  ]
+}

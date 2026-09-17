@@ -69,7 +69,8 @@ export function buildDashboardRecommendation({ statistics, calendarData, user })
   const averageScore = statistics?.average_score || 0
   const weakViseme = statistics?.weak_visemes?.[0] || null
   const weekly = getWeeklySnapshot(calendarData)
-  const xp = getXpToNextLevel(user?.total_xp || 0)
+  // 서버 통계(total_xp)가 있으면 우선 — 스토어의 user는 오래된 값일 수 있다(LearnerProfileCard와 동일 기준).
+  const xp = getXpToNextLevel(statistics?.total_xp ?? user?.total_xp ?? 0)
 
   if (totalSessions === 0) {
     return {

@@ -5,71 +5,21 @@ import useStore from '../store/useStore'
 import { learningAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
 import QuizForm from '../components/QuizForm'
+import SignPanel from '../components/SignPanel'
+import LearnHeader from '../components/LearnHeader'
+import CueBadges, { CueLegend } from '../components/CueBadges'
 import SessionSummary from '../components/SessionSummary'
+import useFocusTrap from '../hooks/useFocusTrap'
 import { buildSessionSummary } from '../utils/practiceInsights'
-
-function BookmarkButton({ sentence, situation, level }) {
-  const [bookmarkId, setBookmarkId] = useState(null)
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    setBookmarkId(null)  // immediately clear stale state when sentence changes
-    let cancelled = false
-    learningAPI.getBookmarks().then((list) => {
-      if (!cancelled) {
-        const found = list.find((b) => b.sentence === sentence)
-        setBookmarkId(found?.id ?? null)
-      }
-    }).catch(() => {})
-    return () => { cancelled = true }
-  }, [sentence])
-
-  const toggle = async () => {
-    if (loading) return
-    setLoading(true)
-    try {
-      if (bookmarkId) {
-        await learningAPI.removeBookmark(bookmarkId)
-        setBookmarkId(null)
-      } else {
-        const created = await learningAPI.addBookmark(sentence, situation, level)
-        setBookmarkId(created.id)
-      }
-    } catch (e) {
-      // On error, re-fetch to sync UI with server state
-      learningAPI.getBookmarks().then((list) => {
-        const found = list.find((b) => b.sentence === sentence)
-        setBookmarkId(found?.id ?? null)
-      }).catch(() => {})
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <button
-      onClick={toggle}
-      disabled={loading}
-      title={bookmarkId ? '북마크 해제' : '북마크 추가'}
-      className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full border transition-colors ${
-        bookmarkId
-          ? 'bg-yellow-100 border-yellow-400 text-yellow-700'
-          : 'bg-white border-gray-200 text-gray-400 hover:border-yellow-300 hover:text-yellow-500'
-      }`}
-    >
-      {bookmarkId ? '★ 북마크됨' : '☆ 북마크'}
-    </button>
-  )
-}
 
 /**
  * 힌트 시스템: 단계별로 문장 정보를 공개
  * Level 0: 힌트 없음
  * Level 1: 음절 수 (● ● ● ●)
  * Level 2: 첫 글자 공개 (안● ● ●)
- * Level 3: 전체 공개
+ * Level 3: 발음 타이밍에 맞춰 전체 공개
  */
-function HintDisplay({ sentence, hintLevel }) {
+function HintDisplay({ sentence, hintLevel, revealedTextIndex = -1 }) {
   if (!sentence) return null
 
   const chars = sentence.replace(/ /g, '')
@@ -123,11 +73,31 @@ function HintDisplay({ sentence, hintLevel }) {
   }
 
   if (hintLevel >= 3) {
-    // 전체 공개
+    // 입모양 프레임의 원문 위치에 맞춰 음절별로 공개
+    const sentenceChars = Array.from(sentence)
+
     return (
       <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-        <p className="text-xs text-green-600 font-medium mb-1">힌트 3 — 전체 공개</p>
-        <p className="text-lg font-bold text-green-800 tracking-wide">{sentence}</p>
+        <p className="text-xs text-green-600 font-medium mb-1">힌트 3 — 발음 자막</p>
+        <p className="sr-only">{sentence}</p>
+        <p aria-hidden="true" className="text-lg font-bold text-green-800 tracking-wide">
+          {sentenceChars.map((char, index) => (
+            <motion.span
+              key={`${index}-${char}`}
+              className="inline-block whitespace-pre"
+              initial={false}
+              animate={index <= revealedTextIndex
+                ? { opacity: 1, y: 0, filter: 'blur(0px)' }
+                : { opacity: 0, y: 4, filter: 'blur(3px)' }}
+              transition={{ duration: 0.28, ease: 'easeOut' }}
+            >
+              {char}
+            </motion.span>
+          ))}
+        </p>
+        <p className="text-xs text-green-600/80 mt-1.5">
+          입모양 재생에 맞춰 자막이 나타납니다.
+        </p>
       </div>
     )
   }
@@ -137,6 +107,7 @@ function HintDisplay({ sentence, hintLevel }) {
 
 export default function Practice() {
   const navigate = useNavigate()
+  const user = useStore((state) => state.user)
   const currentScenario = useStore((state) => state.currentScenario)
   const currentSentence = useStore((state) => state.currentSentence)
   const currentSentenceIndex = useStore((state) => state.currentSentenceIndex)
@@ -144,7 +115,15 @@ export default function Practice() {
   const setScenario = useStore((state) => state.setScenario)
   const resetPractice = useStore((state) => state.resetPractice)
   const updateUser = useStore((state) => state.updateUser)
-  const practiceMode = useStore((state) => state.practiceMode) // 'study' | 'test' | 'test-multiple'
+  const practiceMode = useStore((state) => state.practiceMode) // 'study' | 'test'
+
+  // 테스트는 문장마다 유형이 다르다: 주관식(test) · 4지선다(test-multiple) · 서술형(essay)
+  const qType = currentScenario?.qTypes?.[currentSentenceIndex]
+  const effectiveMode = practiceMode === 'study' ? 'study' : (qType || 'test')
+  // 독화 복습(틀린 문장 다시 풀기)에서 넘어온 세션인지 — ReviewLanding이 심어둔 scenario_id로 판별
+  const isReviewSession = !!currentScenario?.scenario_id?.startsWith('mistake_review_')
+  // 세션 요약의 '오답만 다시 풀기'로 만든 세션인지 — handleRetryIncorrect가 심어둔 scenario_id로 판별
+  const isRetrySession = !!currentScenario?.scenario_id?.startsWith('retry_')
 
   const [visemes, setVisemes] = useState([])
   const [isPlaying, setIsPlaying] = useState(false)
@@ -153,9 +132,15 @@ export default function Practice() {
   const [result, setResult] = useState(null)
   const [startTime, setStartTime] = useState(null)
   const [hintLevel, setHintLevel] = useState(0)
-  const [sessionResults, setSessionResults] = useState([])
-  const [showSessionSummary, setShowSessionSummary] = useState(false)
+  const [revealedTextIndex, setRevealedTextIndex] = useState(-1)
+  const [subtitleRestartKey, setSubtitleRestartKey] = useState(0)
+  const [sessionResults, setSessionResults] = useState([])             // 이번 세션에서 채점된 답안 기록(세션 요약용)
+  const [showSessionSummary, setShowSessionSummary] = useState(false)  // 마지막 문장 뒤 세션 요약 화면
   const [selectedChoice, setSelectedChoice] = useState(null) // 4지선다에서 선택한 보기
+  const [signOpen, setSignOpen] = useState(false)            // 수어 보기 모달
+  const [bookmarks, setBookmarks] = useState({})             // 문장 텍스트 → 북마크 id (☆ 저장)
+  const closeSign = useCallback(() => setSignOpen(false), [])
+  const signRef = useFocusTrap(signOpen, closeSign)          // 수어 모달 포커스 트랩·Esc
 
   // 4지선다 보기 생성 — 정답 1개 + 다른 문장 3개, 랜덤 순서
   const choices = useMemo(() => {
@@ -177,11 +162,18 @@ export default function Practice() {
     loadVisemes()
   }, [currentSentence])
 
+  // 시나리오가 바뀌면(세션 요약의 '다시 시작'·'오답만 다시 풀기' 포함) 세션 기록을 비운다.
+  // 새 시나리오의 첫 문장이 직전 문장과 같으면 위 [currentSentence] effect가 다시 돌지 않으므로
+  // 힌트·자막·타이머·재생 같은 문장 단위 상태도 여기서 함께 초기화한다.
   useEffect(() => {
     setSessionResults([])
     setShowSessionSummary(false)
     setResult(null)
     setSelectedChoice(null)
+    setHintLevel(0)
+    setRevealedTextIndex(-1)
+    setStartTime(Date.now())
+    setIsPlaying(true)
   }, [currentScenario?.scenario_id])
 
   const loadVisemes = async () => {
@@ -193,6 +185,7 @@ export default function Practice() {
     setLoading(true)
     setResult(null)
     setHintLevel(0)
+    setRevealedTextIndex(-1)
     setStartTime(Date.now())
 
     try {
@@ -222,6 +215,7 @@ export default function Practice() {
 
       setResult(response)
       setIsPlaying(false)
+      // 세션 요약용 기록 — 채점된 답안마다 점수·XP·음운 정확도·소요 시간을 쌓는다
       setSessionResults((prev) => [
         ...prev,
         {
@@ -237,6 +231,7 @@ export default function Practice() {
       const updates = {}
       if (response.new_level) updates.current_level = response.new_level
       if (response.streak_count != null) updates.streak_count = response.streak_count
+      if (response.xp_gained != null) updates.total_xp = (user?.total_xp || 0) + response.xp_gained
       if (Object.keys(updates).length > 0) updateUser(updates)
     } catch (error) {
       console.error('Failed to submit answer:', error)
@@ -248,11 +243,15 @@ export default function Practice() {
   const handleNext = () => {
     nextSentence()
     setResult(null)
+    setSelectedChoice(null)
+    setHintLevel(0)
+    setRevealedTextIndex(-1)
   }
 
   const handleRetry = () => {
     setResult(null)
     setHintLevel(0)
+    setRevealedTextIndex(-1)
     setSelectedChoice(null)
     setIsPlaying(true)
     setStartTime(Date.now())
@@ -260,26 +259,35 @@ export default function Practice() {
 
   const handleFinish = () => {
     resetPractice()
-    navigate('/dashboard')
+    navigate(isReviewSession ? '/review/mistakes' : '/dashboard')
   }
 
+  // 마지막 문장을 마치면 바로 나가지 않고 세션 요약을 먼저 보여준다
   const openSessionSummary = () => {
     setShowSessionSummary(true)
   }
 
+  // 같은 시나리오를 처음부터 다시 — scenario_id를 바꿔 세션 초기화 effect를 트리거한다.
+  // qTypes 등 나머지 필드는 그대로 유지. 반복 재시작에도 id가 계속 길어지지 않게 이전 접미사는 떼어낸다
+  // (백엔드 Progress.scenario_id는 String(100)).
   const handleRestartScenario = () => {
     if (!currentScenario) return
 
+    const baseId = String(currentScenario.scenario_id || 'scenario').replace(/_restart_\d+$/, '')
     setScenario(
       {
         ...currentScenario,
         sentences: [...currentScenario.sentences],
-        scenario_id: `${currentScenario.scenario_id}_restart_${Date.now()}`,
+        scenario_id: `${baseId}_restart_${Date.now()}`,
       },
       practiceMode
     )
   }
 
+  // 이번 세션에서 80점 미만이었던 문장만 모아 다시 푼다.
+  // 문장 수가 줄어 4지선다 보기를 채울 수 없으므로 qTypes는 넘기지 않는다(전부 주관식).
+  // 상황명은 그대로 둬서 학습 기록(Progress.situation)이 오염되지 않게 하고,
+  // 복습 세션이면 'mistake_review_' 접두사를 유지해 나가기 동선(/review/mistakes)을 지킨다.
   const handleRetryIncorrect = () => {
     const incorrectSentences = [...new Set(sessionSummary.incorrectItems.map((item) => item.sentence))]
 
@@ -287,70 +295,107 @@ export default function Practice() {
 
     setScenario(
       {
-        situation: `${currentScenario?.situation || 'Review'} focus`,
+        situation: currentScenario?.situation || '복습',
         level: currentScenario?.level || 1,
         sentences: incorrectSentences,
-        scenario_id: `retry_${Date.now()}`,
+        scenario_id: `${isReviewSession ? 'mistake_review_' : ''}retry_${Date.now()}`,
       },
       practiceMode === 'study' ? 'test' : practiceMode
     )
   }
 
   const showNextHint = () => {
-    setHintLevel((prev) => Math.min(prev + 1, 3))
+    if (hintLevel >= 3) return
+
+    const nextHintLevel = hintLevel + 1
+    setHintLevel(nextHintLevel)
+
+    if (nextHintLevel === 3) {
+      setRevealedTextIndex(-1)
+      setSubtitleRestartKey((key) => key + 1)
+      setIsPlaying(true)
+    }
   }
+
+  const handleSubtitleFrame = useCallback(({ textIndex, progress, completed, cycleComplete }) => {
+    if (hintLevel < 3 || result) return
+
+    if (cycleComplete) {
+      setRevealedTextIndex(-1)
+      return
+    }
+
+    const sentenceLength = Array.from(currentSentence || '').length
+    const fallbackIndex = Math.max(0, Math.ceil(progress * sentenceLength) - 1)
+    setRevealedTextIndex(
+      completed
+        ? sentenceLength - 1
+        : Number.isInteger(textIndex) ? textIndex : fallbackIndex
+    )
+  }, [currentSentence, hintLevel, result])
 
   const isLastSentence =
     currentSentenceIndex >= (currentScenario?.sentences?.length || 0) - 1
 
   if (!currentScenario) return null
 
+  // ☆ 북마크 토글 — 독화 문장에도 저장 버튼을 달아 Bookmarks 페이지·복습 큐가 실제로 채워지게 함
+  const isBookmarked = !!bookmarks[currentSentence]
+  const toggleBookmark = async () => {
+    if (!currentSentence) return
+    try {
+      if (bookmarks[currentSentence]) {
+        await learningAPI.removeBookmark(bookmarks[currentSentence])
+        setBookmarks((m) => { const n = { ...m }; delete n[currentSentence]; return n })
+      } else {
+        const r = await learningAPI.addBookmark(currentSentence, currentScenario.situation, currentScenario.level, 'read')
+        setBookmarks((m) => ({ ...m, [currentSentence]: r.id }))
+      }
+    } catch { /* 저장 실패는 조용히 무시 */ }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">독화 연습</h1>
-              <p className="text-sm text-gray-600">
-                {currentScenario.situation} · 레벨 {currentScenario.level}
-                <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${
-                  practiceMode === 'study' ? 'bg-green-100 text-green-700'
-                  : practiceMode === 'test-multiple' ? 'bg-purple-100 text-purple-700'
-                  : 'bg-blue-100 text-blue-700'
-                }`}>
-                  {practiceMode === 'study' ? '학습' : practiceMode === 'test-multiple' ? '4지선다' : '테스트'}
-                </span>
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {currentSentence && (practiceMode === 'test' || practiceMode === 'test-multiple') && (
-                <BookmarkButton
-                  sentence={currentSentence}
-                  situation={currentScenario.situation}
-                  level={currentScenario.level}
-                />
-              )}
-              <button
-                onClick={() => {
-                  if (confirm('연습을 종료하시겠습니까?')) handleFinish()
-                }}
-                className="text-gray-500 hover:text-gray-800 text-sm"
-              >
-                ✕ 종료
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <LearnHeader
+        accent="reading"
+        title={isReviewSession ? '독화 복습' : isRetrySession ? '오답 다시 풀기' : '문장 학습'}
+        description={(
+          <>
+            {currentScenario.situation} · 레벨 {currentScenario.level}
+            <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${
+              effectiveMode === 'study' ? 'bg-green-100 text-green-700'
+              : effectiveMode === 'test-multiple' ? 'bg-purple-100 text-purple-700'
+              : effectiveMode === 'essay' ? 'bg-indigo-100 text-indigo-700'
+              : 'bg-blue-100 text-blue-700'
+            }`}>
+              {effectiveMode === 'study' ? '학습'
+                : effectiveMode === 'test-multiple' ? '4지선다'
+                : effectiveMode === 'essay' ? '서술형'
+                : '주관식'}
+            </span>
+          </>
+        )}
+        onExit={handleFinish}
+      />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Progress */}
         <div className="mb-6">
-          <div className="flex justify-between text-sm text-gray-600 mb-2">
+          <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
             <span>문장 {currentSentenceIndex + 1} / {currentScenario.sentences.length}</span>
-            <span>{Math.round(((currentSentenceIndex + 1) / currentScenario.sentences.length) * 100)}% 완료</span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleBookmark}
+                aria-pressed={isBookmarked}
+                aria-label={isBookmarked ? '이 문장 북마크 해제' : '이 문장 북마크 저장'}
+                title={isBookmarked ? '북마크됨 — 눌러서 해제' : '어려운 문장으로 저장'}
+                className={`text-base leading-none transition-colors ${isBookmarked ? 'text-amber-500' : 'text-gray-300 hover:text-amber-400'}`}
+              >
+                {isBookmarked ? '★' : '☆'}
+              </button>
+              <span>{Math.round(((currentSentenceIndex + 1) / currentScenario.sentences.length) * 100)}% 완료</span>
+            </div>
           </div>
           <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
             <motion.div
@@ -362,6 +407,7 @@ export default function Practice() {
         </div>
 
         {showSessionSummary ? (
+          /* ── 세션 요약 — 마지막 문장 뒤, 이번 세션의 점수·XP·음운 정확도·오답을 정리 ── */
           <SessionSummary
             practiceMode={practiceMode}
             scenario={currentScenario}
@@ -372,7 +418,7 @@ export default function Practice() {
             onExit={handleFinish}
           />
         ) : currentSentence ? (
-          practiceMode === 'study' ? (
+          effectiveMode === 'study' ? (
             /* ── 학습 모드 ── */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card">
@@ -400,6 +446,12 @@ export default function Practice() {
                       {currentSentence}
                     </p>
                   </div>
+                  <button
+                    onClick={() => setSignOpen(true)}
+                    className="mt-2 w-full py-2 rounded-lg border border-primary-300 text-primary-600 text-sm font-medium hover:bg-primary-50 transition-colors"
+                  >
+                    🤟 이 문장 수어로 보기
+                  </button>
                 </div>
 
                 <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-600 space-y-1">
@@ -422,7 +474,7 @@ export default function Practice() {
                 </div>
               </motion.div>
             </div>
-          ) : practiceMode === 'test-multiple' ? (
+          ) : effectiveMode === 'test-multiple' ? (
             /* ── 4지선다 모드 ── */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card">
@@ -501,6 +553,10 @@ export default function Practice() {
                         <span className="ml-2 text-orange-500">🔥 {result.streak_count}일 스트릭!</span>
                       )}
                     </div>
+                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-2.5 overflow-x-auto">
+                      <CueBadges text={currentSentence} />
+                      <div className="mt-1.5"><CueLegend /></div>
+                    </div>
                     <div className="flex gap-2">
                       <button onClick={handleRetry} className="flex-1 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">
                         ↩ 다시 도전
@@ -520,7 +576,7 @@ export default function Practice() {
               </motion.div>
             </div>
           ) : (
-            /* ── 주관식 테스트 모드 ── */
+            /* ── 주관식 / 서술형 테스트 모드 ── */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -538,7 +594,9 @@ export default function Practice() {
                     visemes={visemes}
                     isPlaying={isPlaying}
                     onComplete={() => setIsPlaying(false)}
+                    onFrameChange={handleSubtitleFrame}
                     loop={!result}
+                    restartKey={subtitleRestartKey}
                   />
                 )}
               </motion.div>
@@ -549,7 +607,9 @@ export default function Practice() {
                 className="card"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">무슨 말인가요?</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {effectiveMode === 'essay' ? '문장 전체를 서술하세요' : '무슨 말인가요?'}
+                  </h3>
                   {!result && hintLevel < 3 && (
                     <button
                       onClick={showNextHint}
@@ -568,7 +628,11 @@ export default function Practice() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
                     >
-                      <HintDisplay sentence={currentSentence} hintLevel={hintLevel} />
+                      <HintDisplay
+                        sentence={currentSentence}
+                        hintLevel={hintLevel}
+                        revealedTextIndex={revealedTextIndex}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -580,6 +644,12 @@ export default function Practice() {
                     loading={submitting}
                     result={result}
                     correctAnswer={currentSentence}
+                    label={effectiveMode === 'essay'
+                      ? '입모양을 보고 문장 전체를 서술해서 입력하세요'
+                      : '입모양을 보고 문장을 입력하세요'}
+                    placeholder={effectiveMode === 'essay'
+                      ? '읽은 내용을 문장으로 자세히 적어보세요...'
+                      : '여기에 읽은 문장을 입력하세요...'}
                   />
                 </div>
 
@@ -616,7 +686,7 @@ export default function Practice() {
             className="card text-center py-12"
           >
             <div className="text-6xl mb-4">완료</div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">연습 완료!</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">{isReviewSession ? '복습 완료!' : '연습 완료!'}</h2>
             <p className="text-gray-600 mb-6">모든 문장을 완료했습니다. 수고하셨습니다!</p>
             <button onClick={openSessionSummary} className="btn-primary">
               세션 요약 보기
@@ -624,6 +694,43 @@ export default function Practice() {
           </motion.div>
         )}
       </main>
+
+      {/* 수어 보기 — 학습 화면을 벗어나지 않는 슬라이드오버 모달 */}
+      <AnimatePresence>
+        {signOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 bg-black/40 flex justify-end"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setSignOpen(false)}
+          >
+            <motion.div
+              ref={signRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`${currentSentence} 수어 번역`}
+              tabIndex={-1}
+              className="w-full max-w-2xl h-full bg-white shadow-2xl overflow-y-auto outline-none"
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.25 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400">이 문장을 수어로</p>
+                  <p className="font-bold text-gray-900">{currentSentence}</p>
+                </div>
+                <button onClick={() => setSignOpen(false)}
+                  className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-lg">
+                  닫기 ✕
+                </button>
+              </div>
+              <div className="p-5">
+                {signOpen && <SignPanel text={currentSentence} />}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -23,9 +23,15 @@ export default function SessionSummary({
   onRestart,
   onOpenAnalysis,
   onExit,
+  exitLabel,
 }) {
   const hasScores = summary.totalItems > 0
   const hasIncorrect = summary.incorrectItems.length > 0
+  // 독화 복습 세션(ReviewLanding이 심은 scenario_id 접두사 — Practice의 isReviewSession과 같은 기준)은
+  // 나가기가 대시보드가 아니라 /review/mistakes로 돌아가므로 버튼 문구도 거기에 맞춘다.
+  const isReviewSession = !!scenario?.scenario_id?.startsWith('mistake_review_')
+  const resolvedExitLabel =
+    exitLabel || (isReviewSession ? '독화 복습으로 돌아가기' : '대시보드로 돌아가기')
 
   return (
     <motion.div
@@ -161,7 +167,7 @@ export default function SessionSummary({
             onClick={onExit}
             className="rounded-lg border border-gray-200 px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50 md:flex-1"
           >
-            대시보드로 돌아가기
+            {resolvedExitLabel}
           </button>
         </div>
       </div>
