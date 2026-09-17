@@ -2,9 +2,14 @@ import { Component, Suspense, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { VISEME_BLENDSHAPES, ACTIVE_MORPH_KEYS, VISEME_TONGUE, ACTIVE_TONGUE_KEYS } from '../lib/visemeShapes'
 import { MIRROR_KEYS } from '../lib/mouthMirror'
 import MouthFallback2D from './MouthFallback2D'
+
+const MODEL_URL = '/models/realistic_face.glb'
+// 새 아바타(CC 모델)는 EXT_meshopt_compression 압축이라 meshopt 디코더를 붙여야 로드됨.
+const withMeshopt = (loader) => loader.setMeshoptDecoder(MeshoptDecoder)
 
 const EMPTY = {}
 
@@ -19,20 +24,34 @@ const EMPTY = {}
  * (거울 모드). ref로 받는 이유는 웹캠이 초당 30프레임으로 값을 갱신하기 때문 —
  * 상태로 올리면 매 프레임 리렌더가 발생한다.
  *
+ * xray(투명 두상)는 피부만 반투명화해 혀·치아를 드러내고, bsFrameRef(축 A4 음성구동)는
+ * 52 블렌드셰이프 프레임을 같은 이유로 ref로 받아 직접 적용한다(우선순위: A4 > 거울 > 비심).
+ *
  * (병합 메모: 혀 렌더링[YMJ]과 WebGL 폴백·카메라 경쟁조건 수정[feat/curriculum]이
  *  깨진 머지로 파일에 두 벌 복제돼 빌드가 깨져 있었다 → 두 기능을 모두 살려 단일화.)
  */
-function RealisticFace({ visemeId = 15, mirrorRef = null }) {
-  const { scene } = useGLTF('/models/realistic_face.glb')
+function RealisticFace({ visemeId = 15, mirrorRef = null, xray = false, bsFrameRef = null }) {
+  const { scene } = useGLTF(MODEL_URL, false, false, withMeshopt)
   const meshesRef = useRef([])
   const tongueMeshRef = useRef(null)
   const currentWeightsRef = useRef({})
   const tongueWeightsRef = useRef({})
+  const skinMatsRef = useRef([])   // 투명(X-ray) 모드에서 반투명화할 피부 재질
+  const xrayAppliedRef = useRef(null)
+  const rawKeysRef = useRef(null)  // 음성구동(A4) 프레임을 받은 뒤 보간할 키 집합(기본 키 ∪ 프레임 키)
 
   // Find all meshes with morph targets on first render
   if (meshesRef.current.length === 0) {
     scene.traverse((obj) => {
-      if (obj.isMesh && obj.morphTargetDictionary && obj.morphTargetInfluences) {
+      if (!obj.isMesh) return
+      // 피부 재질 수집(투명 두상용): 겉면(body/skin)만. 혀·치아·눈(안구=high-poly 메시)은 제외.
+      // 이 GLB에서 high-poly 메시는 eyeLook 모프 8개만 가진 안구라, 포함하면 xray 시 눈이 투명해진다.
+      const mats = Array.isArray(obj.material) ? obj.material : (obj.material ? [obj.material] : [])
+      const mn = ((obj.name || '') + ' ' + (mats[0]?.name || '')).toLowerCase()
+      if (/(^|[.\s_])(body|skin)/.test(mn) && !/teeth|tongue|eye|cornea|high-poly/.test(mn)) {
+        for (const m of mats) skinMatsRef.current.push({ m, op0: m.opacity, tr0: m.transparent, dw0: m.depthWrite })
+      }
+      if (obj.morphTargetDictionary && obj.morphTargetInfluences) {
         meshesRef.current.push(obj)
         // 혀 메시 식별: tongueOut은 있고 mouthSmileLeft(얼굴 전용)는 없는 메시.
         // (얼굴=둘 다 있음, 치아=둘 다 없음, 혀=tongueOut만 있음 → 유일하게 구분됨)
@@ -45,12 +64,24 @@ function RealisticFace({ visemeId = 15, mirrorRef = null }) {
   }
 
   useFrame((_, delta) => {
+    // 투명 두상 토글 — 피부만 반투명화해 안쪽 혀·치아를 드러냄(계획서 F). 상태 바뀔 때만 적용.
+    if (xrayAppliedRef.current !== xray) {
+      xrayAppliedRef.current = xray
+      for (const s of skinMatsRef.current) {
+        if (xray) { s.m.transparent = true; s.m.opacity = 0.26; s.m.depthWrite = false }
+        else { s.m.transparent = s.tr0; s.m.opacity = s.op0; s.m.depthWrite = s.dw0 }
+        s.m.needsUpdate = true
+      }
+    }
     if (meshesRef.current.length === 0) return
 
-    // 거울 모드(축 F): 웹캠 계수가 있으면 그것이 목표, 없으면 viseme 매핑이 목표.
-    const mirror = mirrorRef?.current || null
-    const target = mirror || VISEME_BLENDSHAPES[visemeId] || EMPTY
-    const LERP = Math.min(1, delta * 22) // ~45ms transition (자음 프레임 내 충분히 도달)
+    // 목표 우선순위: 음성구동(A4) 프레임 > 거울 모드(축 F) 웹캠 계수 > 텍스트→비심 매핑.
+    // 음성구동 프레임이 오면 원본 52 블렌드셰이프를 직접 적용한다.
+    const rawFrame = bsFrameRef?.current || null
+    const mirror = rawFrame ? null : (mirrorRef?.current || null)
+    const target = rawFrame || mirror || VISEME_BLENDSHAPES[visemeId] || EMPTY
+    // A4 프레임은 이미 30fps 시퀀스라 빠르게 따라가고, 비심·거울은 부드럽게 전환(~45ms).
+    const LERP = Math.min(1, delta * (rawFrame ? 34 : 22))
 
     /*
       보간할 키 집합. mirrorRef를 받은 인스턴스는 **항상** MIRROR_KEYS(=ACTIVE_MORPH_KEYS의
@@ -59,8 +90,14 @@ function RealisticFace({ visemeId = 15, mirrorRef = null }) {
       — 개발일지 3절의 함정: 매 프레임 '사용 키 목록'만 보간하면, 목록에서 빠진 키는
         아무도 0으로 되돌리지 않아 직전 값이 얼굴에 남는다.
       mirrorRef가 없는 기존 호출부는 종전과 동일하게 ACTIVE_MORPH_KEYS만 돈다(동작 불변).
+      음성구동(A4)도 같은 함정을 피하려고, 프레임이 한 번이라도 온 인스턴스는 그 프레임의
+      키(52개)까지 합친 집합을 계속 돈다 → 재생이 끝나면 눈·볼 등도 0으로 복귀한다.
     */
-    const morphKeys = mirrorRef ? MIRROR_KEYS : ACTIVE_MORPH_KEYS
+    const baseKeys = mirrorRef ? MIRROR_KEYS : ACTIVE_MORPH_KEYS
+    if (rawFrame && !rawKeysRef.current) {
+      rawKeysRef.current = Array.from(new Set([...baseKeys, ...Object.keys(rawFrame)]))
+    }
+    const morphKeys = rawKeysRef.current || baseKeys
 
     // 얼굴·턱 모프 — 모든 메시에 이름으로 일괄 적용 (jawOpen은 혀도 함께 따라감)
     for (const key of morphKeys) {
@@ -81,7 +118,8 @@ function RealisticFace({ visemeId = 15, mirrorRef = null }) {
     // 혀는 얼굴보다 살짝 느리게 보간해 '이동'이 눈에 띄도록 한다 (~65ms).
     const TONGUE_LERP = Math.min(1, delta * 15)
     const tongue = tongueMeshRef.current
-    if (tongue) {
+    // 음성구동(A4) 중에는 혀 전용 보간을 건너뛴다 — 원본 프레임 값이 그대로 적용되도록.
+    if (tongue && !rawFrame) {
       // 거울 모드에선 혀를 중립으로 — 웹캠은 혀를 추적하지 못하므로(입 안이 안 보임)
       // 직전 viseme의 혀 위치를 그대로 두면 사용자 입모양과 어긋난 조음이 표시된다.
       const tTarget = mirror ? EMPTY : (VISEME_TONGUE[visemeId] || EMPTY)
@@ -130,7 +168,7 @@ class GLErrorBoundary extends Component {
   }
 }
 
-export default function AvatarVRM({ visemeId = 15, mirrorRef = null }) {
+export default function AvatarVRM({ visemeId = 15, mirrorRef = null, xray = false, bsFrameRef = null }) {
   const [webglOK] = useState(detectWebGL)
   const fallback = <MouthFallback2D visemeId={visemeId} />
 
@@ -152,7 +190,7 @@ export default function AvatarVRM({ visemeId = 15, mirrorRef = null }) {
           <directionalLight position={[-1, 0, 1]} intensity={0.4} />
 
           <Suspense fallback={null}>
-            <RealisticFace visemeId={visemeId} mirrorRef={mirrorRef} />
+            <RealisticFace visemeId={visemeId} mirrorRef={mirrorRef} xray={xray} bsFrameRef={bsFrameRef} />
           </Suspense>
 
           <OrbitControls
@@ -170,4 +208,4 @@ export default function AvatarVRM({ visemeId = 15, mirrorRef = null }) {
   )
 }
 
-useGLTF.preload('/models/realistic_face.glb')
+useGLTF.preload(MODEL_URL, false, false, withMeshopt)

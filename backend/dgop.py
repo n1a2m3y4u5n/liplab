@@ -243,3 +243,51 @@ def calibrate_score(raw_score: Optional[float], calibration: Optional[Dict] = No
             t = (x - x1) / (x2 - x1) if x2 > x1 else 1.0
             return round(max(0.0, min(100.0, d1 + t * (d2 - d1))), 1)
     return round(float(anchors[-1][1]), 1)   # 최상위 앵커 초과 — 만점에서 멈춘다
+
+
+def fuse_audio_visual_per_phone(per_phone: List[Dict], visual_score: Optional[float],
+                                base_visual_weight: float = 0.25,
+                                uncertainty_gain: float = 0.5,
+                                calibration: Optional[Dict] = None) -> Optional[Dict]:
+    """구간별(음소별) 후기 융합 — 문장 평균 가중이 아니라 각 음소를 그 음소의 불확실성으로
+    가중해 영상과 융합한 뒤 평균한다. 음향이 뭉갠 '그 구간'일수록 영상 가중이 국소적으로 커져
+    문장 평균 융합보다 세밀하다(계획서 B: '음향이 불확실한 구간일수록 영상 가중↑').
+
+    per_phone은 dgop_acoustic.assess_text가 돌려주는 `phones` 리스트를 그대로 받는다 —
+    각 항목은 {token, label, aligned, scorable, naive, confidence, uncertainty, dgop}이고, 정렬에
+    실패한 항목(aligned=False)에는 dgop·uncertainty 키가 없다. **정렬됐고 채점 대상인 음소만**
+    융합에 넣는다(문장 점수 집계와 같은 기준 — 어절 경계 '|'와 정렬 실패 구간 제외).
+    dgop_phone이 만든 맨 dict(aligned·scorable 키 없음)도 그대로 받는다.
+
+    단위: 음소의 dgop는 0~1이라 ×100 해서 원점수(0~100)로 만든 뒤 calibrate_score(앵커+log
+    보간)로 표시 눈금에 올려 영상 점수(0~100)와 맞춘다. calibration을 생략하면
+    DEFAULT_CALIBRATION — 앱은 dgop_acoustic.load_calibration()을 넘겨 문장 점수와 같은 앵커를 쓴다.
+    (앵커는 **문장 평균 원점수**로 적합한 것이라 음소 단위 적용은 근사다 — 검증 전이다.)
+
+    visual_score가 없거나 융합할 음소가 하나도 없으면 None — 호출부는 문장 단위
+    fuse_audio_visual로 내려간다. 반환 키는 fuse_audio_visual과 같고(score·visual_weight·
+    audio_score·visual_score) per_phone=True·n_phones가 더해진다."""
+    if not per_phone or visual_score is None:
+        return None
+    vis = float(visual_score)
+    fused_vals, weights, audio_vals = [], [], []
+    for p in per_phone:
+        if not p.get("aligned", True) or not p.get("scorable", True) or p.get("dgop") is None:
+            continue
+        unc = max(0.0, min(1.0, float(p.get("uncertainty", 0.0))))
+        w_v = max(0.0, min(0.9, base_visual_weight + uncertainty_gain * unc))
+        a = calibrate_score(float(p["dgop"]) * 100.0, calibration)  # 이 음소의 오디오 점수(0~100)
+        fused_vals.append((1.0 - w_v) * a + w_v * vis)
+        weights.append(w_v)
+        audio_vals.append(a)
+    if not fused_vals:
+        return None
+    score = sum(fused_vals) / len(fused_vals)
+    return {
+        "score": round(score, 1),
+        "visual_weight": round(sum(weights) / len(weights), 3),  # 평균 영상 가중(표시용)
+        "audio_score": round(sum(audio_vals) / len(audio_vals), 1),  # 음소별 보정 점수의 평균
+        "visual_score": round(vis, 1),
+        "per_phone": True,
+        "n_phones": len(fused_vals),
+    }

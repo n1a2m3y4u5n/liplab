@@ -222,13 +222,27 @@ def phone_confidences(waveform, sample_rate: int, target_tokens: Sequence[str],
         # 어절 경계 같은 특수토큰은 정렬은 제약하되 발음 채점 대상은 아니다.
         scorable = _is_scorable(token)
         dist = span_distribution(score_lp, span["start"], span["end"])
+        label = token_label(token)
         if not dist or token not in score_vocab:
-            results.append({"token": token, "aligned": False, "scorable": scorable})
+            results.append({"token": token, "label": label, "aligned": False, "scorable": scorable})
             continue
         target_prob = dist[score_vocab[token]]
-        results.append({"token": token, "aligned": True, "scorable": scorable,
+        results.append({"token": token, "label": label, "aligned": True, "scorable": scorable,
                         **_dgop.dgop_phone(target_prob, dist)})
     return results
+
+
+def token_label(token: str) -> str:
+    """
+    CTC 토큰 → 사람이 읽는 라벨(프론트 '음소별 발음 정확도' 타일용). 순수 함수.
+    자모 vocab의 위치 접두('o:ㄱ'·'n:ㅏ'·'c:ㄴ')는 떼고, 특수토큰(blank·unk·어절 경계)은
+    빈 문자열로 둔다. 음절 vocab 토큰은 그대로 나간다.
+    """
+    if token in ("|", "<pad>", "<s>", "</s>", "<unk>"):
+        return ""
+    if len(token) > 2 and token[:2] in ("o:", "n:", "c:"):
+        return token[2:]
+    return token.replace("|", " ")
 
 
 def _is_jamo_vocab(vocab: Dict[str, int]) -> bool:

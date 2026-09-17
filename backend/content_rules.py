@@ -215,6 +215,33 @@ def check_word(word: str, min_syllable: int = 1, max_syllable: int = 3) -> Tuple
     return True, {"word": word, "tier": tier_of(word)}, "ok"
 
 
+def check_sentence(text: str, min_chars: int = 2, max_chars: int = 40) -> Tuple[bool, Optional[Dict], str]:
+    """연습 문장 후보 1건 검사 — 축 G 규칙 게이트 + LLM 출력 검증(§4.9).
+
+    한글 위주의 짧은 구어체 한 문장인지 규칙으로 확인한다. LLM이 지시를 이탈해 코드·외국어·
+    과도한 기호·제어문자를 내보내면 여기서 탈락시켜 그대로 클라이언트에 나가지 않게 한다.
+    """
+    text = (text or "").strip()
+    if not text:
+        return False, None, "빈 문자열"
+    if not (min_chars <= len(text) <= max_chars):
+        return False, None, f"길이 {len(text)} 범위 밖({min_chars}~{max_chars})"
+    if any(ord(c) < 32 and c != "\t" for c in text):
+        return False, None, "제어문자 포함"
+    # 한글 음절 비율이 낮으면(외국어·코드·기호 위주) 탈락 — 지시 이탈·주입 방어
+    hangul = sum(1 for c in text if "가" <= c <= "힣")
+    non_space = len(text.replace(" ", "")) or 1
+    if hangul < 2 or hangul / non_space < 0.6:
+        return False, None, "한글 음절 비율 낮음"
+    # 보이는 입모양이 하나도 없으면(전부 무음/기호) 독화 훈련에 부적합
+    vis: List[int] = []
+    for w in text.split():
+        vis += word_visemes(w)
+    if not vis:
+        return False, None, "보이는 입모양 없음"
+    return True, {"text": text, "visible_visemes": len(vis)}, "ok"
+
+
 def check_lookalike_pair(a: str, b: str, claimed_same_looking: Optional[bool] = None
                          ) -> Tuple[bool, Optional[Dict], str]:
     """
@@ -361,31 +388,42 @@ def discover_pairs(words: List[str]) -> List[Dict]:
 
 def select_personalized(words: List[Dict], pairs: List[Dict], closures: List[Dict],
                         target_visemes: List[int], level: int = 5,
-                        n_words: int = 10, n_pairs: int = 8, n_closures: int = 5) -> Dict:
+                        n_words: int = 10, n_pairs: int = 8, n_closures: int = 5,
+                        strict: bool = False) -> Dict:
     """
     지식추적이 고른 표적 음소(target_visemes)와 난이도(level)에 맞춰 콘텐츠를 개인화 선별.
-    표적 viseme를 많이 포함하고 tier가 난이도 이하인 것을 앞세운다(정렬만, 필터 아님 →
-    콘텐츠가 적어도 항상 무언가는 돌려준다).
+    표적 viseme를 많이 포함하고 tier가 난이도 이하인 것을 앞세운다.
+    strict=True면 표적 적중(hits>0) 항목이 요청 수 이상 있을 때 무적중 항목을 '필터'로 제거해
+    개인화를 강화한다(콘텐츠가 부족하면 자동으로 정렬만 하는 폴백 — 항상 무언가는 돌려준다).
     """
     tv = set(target_visemes or [])
 
+    def w_hits(w): return len(set(word_visemes(w["word"])) & tv)
+    def p_hits(p): return len(set(p.get("visemes", [])) & tv)
+    def c_hits(c): return len(set(word_visemes(c.get("answer", ""))) & tv)
+
     def w_key(w: Dict):
-        hits = len(set(word_visemes(w["word"])) & tv)
         over = 1 if w.get("tier", 1) > level else 0  # 난이도 초과는 뒤로
-        return (-hits, over, w.get("tier", 1), w["word"])
+        return (-w_hits(w), over, w.get("tier", 1), w["word"])
 
     def p_key(p: Dict):
-        hits = len(set(p.get("visemes", [])) & tv)
-        return (-hits, 0 if p.get("same_looking") else 1)  # 표적 많고 '헷갈리는' 쌍 우선
+        return (-p_hits(p), 0 if p.get("same_looking") else 1)  # 표적 많고 '헷갈리는' 쌍 우선
 
     def c_key(c: Dict):
-        hits = len(set(word_visemes(c.get("answer", ""))) & tv)
-        return (-hits, c.get("id", ""))
+        return (-c_hits(c), c.get("id", ""))
+
+    def pick(items, keyf, hitf, n):
+        ranked = sorted(items, key=keyf)
+        if strict and tv:
+            hit = [x for x in ranked if hitf(x) > 0]
+            if len(hit) >= n:   # 표적 적중이 충분할 때만 무적중 제거(부족하면 정렬 폴백)
+                return hit[:n]
+        return ranked[:n]
 
     return {
-        "words": sorted(words, key=w_key)[:n_words],
-        "pairs": sorted(pairs, key=p_key)[:n_pairs],
-        "closures": sorted(closures, key=c_key)[:n_closures],
+        "words": pick(words, w_key, w_hits, n_words),
+        "pairs": pick(pairs, p_key, p_hits, n_pairs),
+        "closures": pick(closures, c_key, c_hits, n_closures),
     }
 
 

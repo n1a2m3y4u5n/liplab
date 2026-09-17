@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="LIPLAB">
+  <rect width="512" height="512" rx="112" fill="#0f172a"/>
+  <path d="M132 270 Q256 196 380 270 Q256 360 132 270 Z" fill="#38bdf8"/>
+  <path d="M150 270 Q256 240 362 270" fill="none" stroke="#0f172a" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="256" cy="150" r="17" fill="#818cf8"/>
+  <circle cx="320" cy="152" r="12" fill="#818cf8" opacity="0.7"/>
+  <circle cx="192" cy="152" r="12" fill="#818cf8" opacity="0.7"/>
+</svg>

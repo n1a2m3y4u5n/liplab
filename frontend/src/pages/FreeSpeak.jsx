@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { learningAPI } from '../api'
+import { learningAPI, articulationAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
+import Audio2FaceAvatar from '../components/Audio2FaceAvatar'
 import LearnHeader from '../components/LearnHeader'
 
 /**
@@ -23,6 +24,7 @@ export default function FreeSpeak() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [loop, setLoop] = useState(true)
+  const [guide, setGuide] = useState(null)  // 축 E: 음소별 '보이지 않는 조음' 가이드
 
   const speak = async (raw) => {
     const value = (raw ?? text).trim()
@@ -44,6 +46,8 @@ export default function FreeSpeak() {
       setVisemes(data)
       setPlayedText(value)
       setIsPlaying(true)
+      // 축 E: 음소별 '보이지 않는 조음'(혀·조음 위치) 가이드도 함께 — 실패해도 립싱크는 진행
+      articulationAPI.guide(value).then(setGuide).catch(() => setGuide(null))
     } catch (e) {
       console.error('Failed to load visemes:', e)
       setError('입모양 생성에 실패했어요. 잠시 후 다시 시도해주세요.')
@@ -143,6 +147,7 @@ export default function FreeSpeak() {
             isPlaying={isPlaying}
             onComplete={() => setIsPlaying(false)}
             loop={loop}
+            cueText={playedText}
           />
           {playedText && (
             <div className="mt-4 p-3 bg-primary-50 border border-primary-100 rounded-xl text-center">
@@ -150,6 +155,42 @@ export default function FreeSpeak() {
               <p className="text-xl font-bold text-primary-900 tracking-wide">{playedText}</p>
             </div>
           )}
+        </motion.div>
+
+        {/* 축 E: 음소별 '보이지 않는 조음' 가이드 — 자유 입력 문장을 음절·자모로 풀어 혀·조음 위치를 가르친다 */}
+        {guide && guide.syllables?.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-2 card">
+            <h3 className="text-lg font-semibold mb-1 text-gray-900">소리 내는 법 <span className="text-sm font-normal text-gray-500">— 밖에서 안 보이는 혀·조음</span></h3>
+            <p className="text-xs text-gray-500 mb-3">독화·웹캠은 입모양만 보여줘요. 소리를 가르는 혀 위치·조음 방식은 입 안에 있어 보이지 않으니, 음절마다 함께 익혀요.</p>
+            <div className="flex flex-wrap gap-2">
+              {guide.syllables.map((s, si) => (
+                <div key={si} className="rounded-xl border border-sky-100 bg-sky-50/50 p-2.5 min-w-[150px] flex-1">
+                  <div className="text-lg font-bold text-gray-900 mb-1">{s.syllable}</div>
+                  <div className="space-y-1">
+                    {s.jamo.map((j, ji) => (
+                      <div key={ji} className="text-xs">
+                        <span className="inline-flex items-center gap-1">
+                          <b className="text-sky-800">{j.jamo}</b>
+                          <span className="px-1 rounded bg-sky-100 text-sky-600 text-[10px]">{j.place}</span>
+                          {j.nasal && <span className="px-1 rounded bg-indigo-100 text-indigo-600 text-[10px]">비음</span>}
+                        </span>
+                        <span className="text-gray-600"> {j.guide}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* 음성구동 아바타(A4) — 서버에 모델이 있을 때만 표시(없으면 컴포넌트가 스스로 숨김) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="lg:col-span-2"
+        >
+          <Audio2FaceAvatar />
         </motion.div>
       </main>
     </div>

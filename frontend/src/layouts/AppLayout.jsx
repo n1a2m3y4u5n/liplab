@@ -8,11 +8,15 @@ import NavShell from './NavShell'
 // - 기존 GlobalLearningMenu·SignSelectionOverlay는 App.jsx에서 이 레이아웃 바깥(원래 자리)에 그대로 둔다.
 // - 본문을 <main>으로 감싸지 않는다 — 기존 페이지들이 각자 <main>을 갖고 있어 중첩되기 때문.
 // - 레이아웃 안에도 지연로딩 경계를 둬, 페이지 청크를 받는 동안 TopBar·NavShell이 사라지지 않게 한다.
+// - 건너뛰기 링크(App.jsx의 .skip-link)의 도착점 #main-content는 높이 0짜리 앵커로 둔다.
+//   본문을 감싸는 래퍼를 새로 만들면 <main> 중첩이 생기거나 대시보드의 lg:h-full 높이 계산이 깨지므로,
+//   TopBar·NavShell 바로 뒤에 앵커만 놓아 다음 Tab이 페이지 본문의 첫 요소로 가게 한다.
 export default function AppLayout() {
   return (
     <div className="app-shell">
       <TopBar />
       <NavShell />
+      <div id="main-content" tabIndex={-1} />
       <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>불러오는 중…</div>}>
         <Outlet />
       </Suspense>

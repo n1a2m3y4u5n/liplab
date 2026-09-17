@@ -79,9 +79,27 @@ export default function EvalReport() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
+  const [prog, setProg] = useState(null)   // 통제 향상도(축 I, 사전 A vs 사후 B)
+  const [dl, setDl] = useState(false)      // 공개 자원 내려받기 상태(축 C)
+
+  // 축 C 공개 표준 자원(동구형이음 사전·난이도지수·지각공간·평가셋)을 판본과 함께 JSON으로 내려받는다.
+  const downloadResources = async () => {
+    setDl(true)
+    try {
+      const res = await evalAPI.resources()
+      const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `liplab-perceptual-resources-${res?.meta?.semver || 'latest'}.json`
+      document.body.appendChild(a); a.click(); a.remove()
+      URL.revokeObjectURL(url)
+    } catch { /* 내려받기 실패는 조용히 무시 */ } finally { setDl(false) }
+  }
 
   useEffect(() => {
     evalAPI.summary().then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+    evalAPI.progression().then(setProg).catch(() => setProg(null))
   }, [])
 
   const ov = data?.overview
@@ -118,6 +136,45 @@ export default function EvalReport() {
             <Card title="학습곡선 (선다형 정확도)" hint="시행을 시간순 구간으로 나눈 정확도">
               <LineChart series={data.learning_curve} max={1} />
             </Card>
+
+            {/* 통제 향상도(축 I) — 동형 폼 사전(A)·사후(B) 비교. 배치검사에서 A/B를 모두 마치면 표시 */}
+            {prog?.available && (
+              <Card title="통제 향상도 (표준검사 사전·사후)"
+                hint={prog.homogeneous ? '동형 폼 A(사전)·B(사후) 비교' : '가장 이른·최근 검사 비교'}>
+                <div className="flex flex-wrap items-end gap-6">
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-400">사전 정확도</p>
+                    <p className="text-2xl font-black text-slate-500">{Math.round(prog.pre.accuracy * 100)}%</p>
+                  </div>
+                  <div className="pb-1 text-slate-300">→</div>
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-400">사후 정확도</p>
+                    <p className="text-2xl font-black text-violet-700">{Math.round(prog.post.accuracy * 100)}%</p>
+                  </div>
+                  <div className="pb-1">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${prog.accuracy_delta >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                      {prog.accuracy_delta >= 0 ? '+' : ''}{Math.round(prog.accuracy_delta * 100)}%p
+                    </span>
+                  </div>
+                  <div className="pb-1 text-xs text-slate-500">
+                    수준 Lv.{prog.pre.level} → Lv.{prog.post.level}
+                  </div>
+                </div>
+                {prog.error_phoneme_change?.some((e) => e.before || e.after) && (
+                  <div className="mt-3">
+                    <p className="mb-1 text-[11px] font-bold text-slate-400">음소별 오류 변화 (사전→사후)</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {prog.error_phoneme_change.filter((e) => e.before || e.after).slice(0, 8).map((e) => (
+                        <span key={e.phoneme}
+                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${e.delta < 0 ? 'bg-emerald-50 text-emerald-700' : e.delta > 0 ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-500'}`}>
+                          {e.phoneme} {e.before}→{e.after}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            )}
 
             <div className="grid gap-5 md:grid-cols-2">
               <Card title="초기 대비 최근 향상도" hint={bvr ? `각 ${bvr.n_each}시행` : '최소 9시행 필요'}>
@@ -195,6 +252,20 @@ export default function EvalReport() {
               </Card>
             </div>
           </>
+        )}
+
+        {/* 축 C — 공개 표준 독화 자원 내려받기(연구·교육 활용). 개인 학습 기록과 무관하게 항상 제공 */}
+        {!loading && (
+          <Card title="공개 표준 독화 자원 (축 C)" hint="연구·교육 활용 · CC BY 4.0">
+            <p className="mb-3 text-[11px] leading-relaxed text-slate-500">
+              한국어 독화에는 표준 자원이 거의 없습니다. LIPLAB은 동구형이음 사전·독화 난이도 지수·자음
+              시각 지각공간·표준 평가셋을 판본과 함께 공개합니다. 앱 밖 연구·교육에서도 활용할 수 있어요.
+            </p>
+            <button type="button" onClick={downloadResources} disabled={dl}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-700 disabled:opacity-50">
+              {dl ? '내려받는 중…' : '자원 JSON 내려받기'}
+            </button>
+          </Card>
         )}
       </main>
     </div>

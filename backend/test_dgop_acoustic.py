@@ -186,6 +186,20 @@ def test_frame_mismatch_raises():
         DA.ctc_log_probs = orig
 
 
+def test_token_label_and_single_engine():
+    """프론트 음소 타일용 라벨(순수 함수) + 병합 후 음향 엔진이 하나뿐임을 고정한다."""
+    _ok(DA.token_label("o:ㄱ") == "ㄱ" and DA.token_label("n:ㅏ") == "ㅏ" and DA.token_label("c:ㄴ") == "ㄴ",
+        "자모 vocab의 위치 접두는 뗀다")
+    _ok(DA.token_label("|") == "" and DA.token_label("<pad>") == "" and DA.token_label("<unk>") == "",
+        "특수토큰은 빈 라벨")
+    _ok(DA.token_label("가") == "가", "음절 vocab 토큰은 그대로")
+    # feat/sublexical-feedback의 엔진(정렬 없음·곱셈식·기본 ON 게이팅)은 병합에서 버렸다.
+    # 진입점은 assess_text 하나이고, 켜고 끄는 것은 main.py의 DGOP_ALIGNER_ID 환경변수다.
+    _ok(hasattr(DA, "assess_text"), "진입점은 assess_text")
+    _ok(not hasattr(DA, "dgop_from_audio") and not hasattr(DA, "is_available"),
+        "버린 엔진·기본 ON 게이팅이 되살아나지 않았다")
+
+
 def _load_calibration_fresh(path):
     """캐시를 비우고 읽는다 — 테스트끼리 앵커가 새어나가지 않도록."""
     DA._calibration_cache.clear()

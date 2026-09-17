@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI } from '../api'
 import LearnHeader from '../components/LearnHeader'
 import AvatarVRM from '../components/AvatarVRM'
+import VocalTract from '../components/VocalTract'
+import VocalTractSimulator from '../components/VocalTractSimulator'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 
 // MediaPipe 번들이 커서 펼칠 때만 로드(초기 번들 보호)
@@ -47,6 +49,8 @@ const lessonLabel = (lesson) => {
 // 정적보다 인지가 쉽고, 정답 숫자를 노출하지 않는다.
 function VisemeAvatar({ visemeId, height = 300 }) {
   const [vid, setVid] = useState(15)
+  const [xray, setXray] = useState(false)        // 투명 두상: 피부 반투명 → 혀·치아 노출(계획서 F)
+  const [showTract, setShowTract] = useState(false)  // 성도 단면(측면) 도식(계획서 E)
   useEffect(() => {
     let on = true
     let t
@@ -60,9 +64,25 @@ function VisemeAvatar({ visemeId, height = 300 }) {
     return () => { on = false; clearTimeout(t) }
   }, [visemeId])
   return (
-    <div className="w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-slate-800 to-slate-900"
-         style={{ height }}>
-      <AvatarVRM visemeId={vid} />
+    <div>
+      <div className="relative w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-slate-800 to-slate-900"
+           style={{ height }}>
+        <AvatarVRM visemeId={vid} xray={xray} />
+        {showTract && (
+          <div className="absolute bottom-2 right-2 w-28 bg-slate-900/85 border border-slate-700 rounded-xl p-1 backdrop-blur-sm">
+            <VocalTract visemeId={vid} />
+          </div>
+        )}
+      </div>
+      {/* 안 보이는 조음(혀·치아) 시각화 토글 — 독화 교육 핵심 */}
+      <div className="mt-2 flex gap-2">
+        <button onClick={() => setXray((v) => !v)}
+          className={`flex-1 py-1.5 text-xs rounded-lg font-medium transition-colors ${xray ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          title="피부를 반투명하게 해 안 보이는 혀·치아를 드러냄">🫥 투명 두상</button>
+        <button onClick={() => setShowTract((v) => !v)}
+          className={`flex-1 py-1.5 text-xs rounded-lg font-medium transition-colors ${showTract ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          title="측면 성도 단면으로 혀·입술·턱 조음 보기">🗣️ 성도 단면</button>
+      </div>
     </div>
   )
 }
@@ -157,6 +177,17 @@ function LearnPanel({ data }) {
           <p className="text-sm text-gray-500">{sel.phonemes.join('  ·  ')}</p>
           <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700"><b>입모양</b> — {sel.look}</div>
           <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg text-sm text-amber-800"><b>독화 포인트</b> — {sel.teach}</div>
+          {sel.articulation && (
+            <div className="p-3 bg-sky-50 border border-sky-100 rounded-lg text-sm text-sky-900">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <b>소리 내는 법</b>
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700">{sel.articulation.place}</span>
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700">{sel.articulation.manner}</span>
+                {sel.articulation.nasal && <span className="text-[11px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700">비음</span>}
+              </div>
+              <span className="text-sky-800">밖에서 안 보이는 혀·조음 — {sel.articulation.guide}</span>
+            </div>
+          )}
           <div>
             <p className="text-xs text-gray-400 mb-1">예시 단어 · 안 보이는 소리를 기호로</p>
             <div className="flex flex-wrap items-end gap-2">
@@ -172,7 +203,7 @@ function LearnPanel({ data }) {
       {/* 웹캠으로 따라하기 (축 D) — 펼칠 때만 MediaPipe 로드 */}
       {showCam ? (
         <Suspense fallback={<div className="card text-sm text-gray-500">카메라 모듈 불러오는 중…</div>}>
-          <WebcamMouthCheck visemeId={sel.viseme_id} visemeName={sel.name} />
+          <WebcamMouthCheck visemeId={sel.viseme_id} visemeName={sel.name} articulationGuide={sel.articulation?.guide} />
         </Suspense>
       ) : (
         <button type="button" onClick={() => setShowCam(true)}
@@ -192,6 +223,13 @@ function LearnPanel({ data }) {
           🪞 아바타 거울 — 내 입모양을 아바타로 보기
         </button>
       )}
+
+      {/* 성도 실험실 (축 E) — 혀 위치↔소리를 귀로 잇는 인터랙티브 조음 교구 */}
+      <div className="card">
+        <h3 className="text-base font-bold text-gray-900 mb-1">🔊 성도 실험실 — 조음과 소리 잇기</h3>
+        <p className="text-sm text-gray-500 mb-3">밖에서 안 보이는 <b>혀 위치</b>를 직접 움직이면 소리가 어떻게 바뀌는지 들어봅니다. 모음마다 혀가 어디에 있어야 하는지 귀로 익힙니다.</p>
+        <VocalTractSimulator />
+      </div>
 
       {/* 동구형이음 교육 */}
       <div className="card">
