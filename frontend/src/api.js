@@ -193,6 +193,12 @@ export const reviewAPI = {
   answer: async (kind, ref, correct) => (await api.post('/review/answer', { kind, ref, correct })).data,
 }
 
+// 축 G 콘텐츠 사람검수(운영자용) — 생성 후보 승인/반려. 서버가 LIPLAB_REVIEW=1일 때만 열림.
+export const contentReviewAPI = {
+  candidates: async () => (await api.get('/admin/content/candidates')).data,
+  review: async (kind, item, decision) => (await api.post('/admin/content/review', { kind, item, decision })).data,
+}
+
 // 축 E 조음 — 보이지 않는 조음(혀·조음위치) 가이드와 관찰 차원 교정
 export const articulationAPI = {
   guide: async (text) => (await api.get('/articulation/guide', { params: { text } })).data,

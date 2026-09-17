@@ -1605,6 +1605,39 @@ async def get_cues(text: str, personalize: bool = True, max_cues: int | None = N
     return {"text": text, "cues": cues, "legend": _cue.CUE_FEATURES}
 
 
+# ── 콘텐츠 사람검수(축 G '이중 게이트'의 사람 단계) — 인앱 운영자용 ──────────────
+# 운영자 전용이라 기본 비활성(LIPLAB_REVIEW=1일 때만). 콘텐츠 승인은 커리큘럼에 영향을 주므로
+# 아무나 못 하게 게이트한다(§4.9 최소권한). 활성 시 인증된 사용자가 후보를 승인/반려한다.
+def _review_gate():
+    if os.getenv("LIPLAB_REVIEW") != "1":
+        raise HTTPException(status_code=403, detail="콘텐츠 검수 기능이 비활성화되어 있습니다(운영자 전용).")
+
+
+@app.get("/api/admin/content/candidates")
+async def content_candidates(current_user=Depends(get_current_user)):
+    """검수 대기 후보(승인·반려 안 된 것) + 종류별 건수. 축 G 사람검수 게이트."""
+    _review_gate()
+    import content_review as _cr
+    return _cr.pending()
+
+
+class ContentReviewReq(BaseModel):
+    kind: str          # words | pairs | closures
+    item: dict
+    decision: str      # approve | reject
+
+
+@app.post("/api/admin/content/review", dependencies=[Depends(ratelimit.rate_limit(60, 60, "account"))])
+async def content_review_action(req: ContentReviewReq, current_user=Depends(get_current_user)):
+    """후보 1건 승인/반려 → approved.json / rejected.json 반영(중복 없이)."""
+    _review_gate()
+    import content_review as _cr
+    try:
+        return _cr.review(req.kind, req.item or {}, req.decision)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.get("/api/articulation/guide")
 async def get_articulation_guide(text: str, current_user=Depends(get_current_user)):
     """조음 가이드(축 E) — 문장을 음절·자모로 풀어 음소별 '보이지 않는 조음'을 가르친다.

@@ -78,6 +78,7 @@ const SpeakingReviewLanding = lazy(() => import('./pages/SpeakingReviewLanding')
 const AnalysisDetail = lazy(() => import('./pages/AnalysisDetail'))
 const EvalReport = lazy(() => import('./pages/EvalReport'))
 const HardwareBuild = lazy(() => import('./pages/HardwareBuild'))
+const ContentReview = lazy(() => import('./pages/ContentReview'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
@@ -199,6 +200,7 @@ function App() {
         <Route path="/analysis/scores" element={<AnalysisDetail mode="scores" />} />
         <Route path="/analysis/history" element={<AnalysisDetail mode="history" />} />
         <Route path="/analysis/eval" element={<EvalReport />} />
+        <Route path="/admin/content-review" element={<ContentReview />} />
         <Route path="/learn/closure" element={<Closure />} />
         <Route path="/pronounce" element={<FreeSpeak />} />
         <Route path="/guide" element={<Guide />} />
