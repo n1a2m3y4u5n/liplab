@@ -134,7 +134,7 @@ async def get_me(current_user = Depends(get_current_user)):
 # ============================================
 
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 class VisemeFrame(BaseModel):
     viseme: int
