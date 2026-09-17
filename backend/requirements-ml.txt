@@ -1,0 +1,69 @@
+# 고도화 축 A(공유 백본·발화합성)·B(D-GOP 음향 추론)·D(자체 립리딩)·E(조음 역추정·시뮬레이터) 전용 의존성.
+# 앱 런타임(배포)에는 불필요 — requirements.txt와 분리해 배포 이미지를 가볍게 유지한다.
+# (backend/requirements-gen.txt의 콘텐츠 생성 전용 분리와 같은 원칙.)
+#
+# 로컬(이 머신)은 GPU가 없어 CPU 전용으로 동작 확인·소규모 스캐폴딩까지만 수행한다.
+# 실제 미세조정·학습은 RunPod H100에서 수행한다(계획서 4.2).
+
+# torchaudio 상한의 유래: functional.forced_align이 2.9에서 제거된다는 deprecation 공지를
+# 2026-09-08 RunPod(torchaudio 2.8.0)에서 확인해 걸어 둔 것이다.
+#
+# ⚠️ 2026-09-09 — 이 상한은 이제 **기술적 근거가 없다**. 두 가지가 확인됐다:
+#   1) CTC 강제정렬을 자체 구현했다(backend/ctc_align.py). dgop_acoustic은 더 이상
+#      torchaudio를 부르지 않으며, 프로젝트 전체에 torchaudio의 기능적 사용처가 없다.
+#      (자체 구현이 torchaudio와 프레임 단위로 일치함을 test_ctc_align이 무작위 입력으로 검증)
+#   2) forced_align은 실제로는 2.11.0에도 그대로 살아 있다(로컬 실측) — "2.9에서 제거"는
+#      공지보다 이르게 잡은 추정이었다.
+#
+# ✅ 2026-09-14 — 상한을 **풀었다.** 근거와 "검증되지 않은 범위"를 함께 남긴다.
+#   - 로컬 venv(torch 2.14.0 / torchaudio 2.11.0)로 backend 22파일·scripts 3파일이 전부 통과했고,
+#     test_ctc_align의 torchaudio 대조 테스트도 건너뛰지 않고 실제로 돌았다.
+#   - 학습 당시 환경(A-1·A-2, 2026-09-08 RunPod H100) — 2026-09-14에 Pod 이미지 태그로 확정했다:
+#     **`runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404` = torch 2.8.0 / CUDA 12.8.1 /
+#     Ubuntu 24.04**, torchaudio 2.8.0, torchcodec 0.6.x. 체크포인트를 다시 쓰거나 재학습을
+#     재현할 때는 이 조합을 기준으로 삼는다.
+#   - ⚠️ **실질적인 상한은 이제 torchcodec이다.** 아래 `torchcodec<0.7.0`이 torch 2.8 계열에
+#     묶여 있어, torch를 2.9+로 올리려면 torchcodec도 같이 올려야 한다(그러면 CUDA 13 런타임을
+#     요구할 수 있다 — 아래 메모). **학습을 돌리는 환경에서는 (torch, torchaudio, torchcodec)을
+#     한 세트로 맞춘다.**
+#   - 위 로컬 검증에 **torchcodec은 포함되지 않았다**(로컬 미설치). 즉 추론·정렬·채점 경로는
+#     torch 2.14에서 확인됐고, **데이터셋 오디오 디코딩 경로는 확인되지 않았다.**
+torch>=2.4.0
+torchaudio>=2.1.0   # 기능적으로는 미사용 — 위 메모 참고
+transformers>=5.16.0   # 5.x에서 TrainingArguments 인자가 바뀜(warmup_ratio·group_by_length 제거)
+soundfile>=0.12.1
+librosa>=0.10.2
+
+# 조음 시뮬레이터(축 E) — VocalTractLab(TU Dresden, 오픈소스 물리 기반 성도 시뮬레이터)의
+# Cython 바인딩. 학습되는 모델이 아니라 결정론적 시뮬레이터라 데이터 없이 바로 동작한다.
+vocaltractlab-cython>=0.0.17
+
+# 축 A 학습(A-1 Scorer / A-2 Aligner) — Zeroth-Korean 로딩과 CER 평가.
+datasets>=3.0.0
+jiwer>=3.0.0
+
+# datasets 5.x는 Audio 컬럼 디코딩을 soundfile → torchcodec으로 옮겼다. 없으면
+# "To support decoding audio data, please install 'torchcodec'" 로 학습이 시작조차 안 된다.
+# ⚠️ torchcodec은 torch와 버전이 묶여 있다(0.6.x ↔ torch 2.8). 최신판을 깔면 CUDA 13
+#    런타임(libnvrtc.so.13)을 요구해 CUDA 12 환경에서 import부터 실패한다.
+#
+# 🔴 2026-09-15 실측 — **이 핀은 Pod 이미지 전용이다. 로컬(Python 3.14)에서는 설치되지 않는다.**
+#    `pip install "torchcodec>=0.6.0,<0.7.0"` →
+#      ERROR: Could not find a version ... (from versions: 0.0.0.dev0, 0.9.0, ... 0.16.0)
+#    0.6.x에 cp314 휠이 없기 때문이다. 즉 이 파일 전체가 **로컬 Python 3.14에서는
+#    설치 불가**다. 학습·평가는 어차피 Pod에서 도니 실무상 문제는 아니지만, 로컬에
+#    깔리겠거니 생각하고 시도하면 여기서 막힌다.
+#
+#    로컬에서 굳이 맞추려면 (torch 2.14 ↔ torchcodec 0.12.x)가 짝이고 추가 설치만으로
+#    끝나지만(torch는 안 건드린다), **torchcodec은 FFmpeg 공유 라이브러리를 요구한다** —
+#    libavcodec/libavformat이 없으면 import 단계에서 OSError로 죽는다(WSL2 기본 상태가
+#    그렇다). 시스템에 FFmpeg를 깔아야 하므로 로컬 검증 비용이 작지 않다.
+#
+#    ⇒ **데이터셋 오디오 디코딩이 필요한 스크립트(eval_dgop_discrimination,
+#      fit_dgop_calibration의 비-smoke 경로)는 로컬에서 사전 검증할 수 없다.**
+#      Pod 이미지(torch 2.8 / torchcodec 0.6.x)에서 돌린다 — 2026-09-09 A-3·A-4가
+#      실제로 그 조합에서 성공했다.
+torchcodec>=0.6.0,<0.7.0
+
+# Trainer가 요구하는 런타임(transformers[torch]).
+accelerate>=1.1.0

@@ -1,5 +1,12 @@
 # LIPLAB 배포 가이드
 
+> ⚠️ **전시앱 보호 — 반드시 읽을 것.** `fly deploy`(무옵션)와 `fly deploy --app liplab`는 **라이브 전시앱(`liplab.fly.dev`)을 덮어씁니다.**
+> 이 문서의 예시 중 `--app liplab`은 전시앱 대상입니다. **기능 검증·개발 배포는 절대 전시앱에 하지 말고**, 반드시 dev 앱으로:
+> ```bash
+> fly deploy -c fly.dev.toml -a liplab-dev --remote-only   # develop/staging (liplab-dev.fly.dev)
+> ```
+> dev 앱 최초 준비는 README.md의 "디벨롭/스테이징 배포" 절 참고. 전시앱 배포는 명시적 승인 후에만.
+
 ## 빠른 시작 체크리스트
 
 ### ✅ 배포 전 준비사항

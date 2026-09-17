@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
-import { learningAPI } from '../api'
+import { learningAPI, scoreAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
+import LearnHeader from '../components/LearnHeader'
 
 /**
  * 대화형 독화 연습 모드
@@ -26,15 +27,20 @@ export default function Conversation() {
   const [phase, setPhase] = useState('watching') // 'watching' | 'answering' | 'done'
   const [revealedText, setRevealedText] = useState(false)
   const [turnCount, setTurnCount] = useState(0)
+  const [scores, setScores] = useState([])
 
   const chatBottomRef = useRef(null)
+  const startedRef = useRef(false)   // 최초 AI 말풍선 중복 생성 방지(StrictMode)
 
   useEffect(() => {
     if (!currentScenario) {
       navigate('/dashboard')
       return
     }
-    // Start with first AI message
+    // StrictMode(개발)에서 이 effect가 두 번 실행되면 첫 AI 말풍선이 2개 생긴다.
+    // ref 가드로 최초 1회만 대화를 시작한다.
+    if (startedRef.current) return
+    startedRef.current = true
     sendAIMessage([])
   }, [])
 
@@ -104,8 +110,15 @@ export default function Conversation() {
     const answer = userInput.trim()
     setUserInput('')
 
-    // Add user message
-    setMessages((prev) => [...prev, { role: 'user', text: answer }])
+    // 이해도 채점 — 방금 본 AI 문장(currentAIText)과 비교 (음운 유사도 엔진 재사용)
+    let turnScore = null
+    try {
+      const r = await scoreAPI.score(currentAIText, answer)
+      turnScore = r.score
+    } catch { /* 채점 실패해도 대화는 진행 */ }
+
+    setMessages((prev) => [...prev, { role: 'user', text: answer, score: turnScore }])
+    if (turnScore != null) setScores((prev) => [...prev, turnScore])
 
     const newTurn = turnCount + 1
     setTurnCount(newTurn)
@@ -132,36 +145,27 @@ export default function Conversation() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 shrink-0">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">대화 연습</h1>
-            <p className="text-xs text-gray-500">{currentScenario.situation} · 레벨 {currentScenario.level}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-400">
-              {turnCount}/{MAX_TURNS} 대화
-            </span>
-            <div className="w-20 bg-gray-200 rounded-full h-1.5">
-              <div
-                className="bg-primary-500 h-full rounded-full transition-all"
+      <LearnHeader
+        accent="reading"
+        title="문장 학습"
+        description={(
+          <span className="flex flex-wrap items-center gap-2">
+            AI 입모양을 읽고 답하기 · {currentScenario.situation} · 레벨 {currentScenario.level}
+            <span className="text-xs text-slate-500">{turnCount}/{MAX_TURNS} 대화</span>
+            <span className="h-1.5 w-20 overflow-hidden rounded-full bg-gray-200">
+              <span
+                className="block h-full rounded-full bg-primary-500 transition-all"
                 style={{ width: `${(turnCount / MAX_TURNS) * 100}%` }}
               />
-            </div>
-            <button
-              onClick={handleFinish}
-              className="text-gray-400 hover:text-gray-700 text-sm"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      </header>
+            </span>
+          </span>
+        )}
+        onExit={handleFinish}
+      />
 
-      <div className="flex flex-1 overflow-hidden max-w-6xl mx-auto w-full px-4 py-4 gap-4">
-        {/* Left: Avatar player */}
-        <div className="w-80 shrink-0 flex flex-col gap-3">
+      <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden max-w-6xl mx-auto w-full px-4 py-4 gap-4">
+        {/* Left: Avatar player — 모바일에선 위로 쌓이고, lg 이상에서만 좌측 고정폭 */}
+        <div className="w-full lg:w-80 shrink-0 flex flex-col gap-3">
           <div className="card flex-1">
             <p className="text-xs font-semibold text-gray-500 mb-2">입모양 읽기</p>
             {isLoading ? (
@@ -226,6 +230,9 @@ export default function Conversation() {
                       {msg.role === 'ai' && !msg.revealed
                         ? '(입모양을 보고 맞춰보세요)'
                         : msg.text}
+                      {msg.role === 'user' && msg.score != null && (
+                        <span className="block mt-0.5 text-[10px] opacity-80">이해도 {msg.score}점</span>
+                      )}
                     </div>
                   </motion.div>
                 ))}
@@ -278,11 +285,16 @@ export default function Conversation() {
               className="card text-center py-6"
             >
               <div className="text-4xl mb-2">대화 완료</div>
+              {scores.length > 0 && (
+                <p className="text-lg font-bold text-primary-600 mb-1">
+                  평균 이해도 {Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}점
+                </p>
+              )}
               <p className="text-gray-600 mb-4">
                 {MAX_TURNS}번의 대화를 완료했습니다!
               </p>
               <button onClick={handleFinish} className="btn-primary">
-                대시보드로 돌아가기
+                나가기
               </button>
             </motion.div>
           )}

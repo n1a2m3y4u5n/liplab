@@ -75,6 +75,11 @@ const useStore = create(
       isLoading: false,
       setLoading: (loading) => set({ isLoading: loading }),
 
+      // 대시보드 히어로 CTA 등 외부에서 상단 학습 메뉴 드롭다운을 열어달라는 요청
+      navMenuRequest: null,
+      requestNavMenu: (id) => set({ navMenuRequest: id }),
+      clearNavMenuRequest: () => set({ navMenuRequest: null }),
+
       // Statistics cache
       statistics: null,
       setStatistics: (stats) => set({ statistics: stats }),

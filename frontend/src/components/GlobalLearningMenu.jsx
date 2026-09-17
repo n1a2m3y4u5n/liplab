@@ -1,0 +1,255 @@
+import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { useLocation, useNavigate } from 'react-router-dom'
+import useStore from '../store/useStore'
+import { SPEAKING_MENU_ITEMS } from '../config/speakingNavigation'
+
+const PILLAR_NAV = [
+  {
+    id: 'reading',
+    label: '독화',
+    bg: 'from-[#fffede] via-[#fffbb6] to-[#fff58d]',
+    petGrad: 'from-sky-300 via-sky-400 to-sky-600',
+    intro: '입모양을 보고 말을 이해하는 독화예요. 무엇부터 배워볼까요? 👀',
+    theme: { text: 'text-sky-700', line: 'bg-sky-500' },
+    items: [
+      { label: '입모양 학습', description: '자음·모음의 입모양 학습', icon: '👄', to: '/learn/viseme' },
+      { label: '단어 학습', description: '비슷한 입모양 구별 학습', icon: '🔤', to: '/learn/word' },
+      { label: '문장 학습', description: '상황별 독화와 AI 대화 학습', icon: '💬', to: '/learn/scenario' },
+      { label: '문맥 추론', description: '앞뒤 맥락으로 뜻 찾기', icon: '🧩', to: '/learn/closure' },
+      { label: '내 문장 발음 보기', description: '원하는 문장의 입모양 확인하기', icon: '✍️', to: '/pronounce' },
+      { label: '독화 복습', description: '틀렸던 문장 다시 풀기', icon: '🔁', to: '/review/mistakes' },
+      { label: '다자 대화', description: '여러 사람 대화에서 화자와 입모양 읽기', icon: '👥', to: '/learn/conversation-multi' },
+      { label: '배치검사', description: '내 독화 수준 진단하기', icon: '📋', to: '/learn/placement' },
+    ],
+  },
+  {
+    id: 'speaking',
+    label: '말하기',
+    bg: 'from-[#fff6f7] via-[#ffe7eb] to-[#ffd5dc]',
+    petGrad: 'from-rose-300 via-rose-400 to-pink-500',
+    intro: '내 발음을 눈으로 보며 또박또박 다듬어요! 🎤',
+    theme: { text: 'text-rose-700', line: 'bg-rose-500' },
+    items: SPEAKING_MENU_ITEMS,
+  },
+  {
+    id: 'etc',
+    label: '기타',
+    bg: 'from-[#f8fafc] via-[#eef2f7] to-[#dbe3ec]',
+    petGrad: 'from-slate-300 via-slate-400 to-slate-600',
+    intro: '수어·분석·사용법도 준비했어요. 골라보세요! ✨',
+    theme: { text: 'text-slate-800', line: 'bg-slate-500' },
+    items: [
+      { label: '수어 학습', description: '문장을 수어로 함께 확인하기', icon: '🤟', to: '/learn/sign' },
+      { label: '학습 분석', description: '강점과 취약점, 학습 흐름 보기', icon: '📊', to: '/analysis/overview' },
+      { label: '학습 효과 리포트', description: '학습곡선·향상도·도달 시행수', icon: '📈', to: '/analysis/eval' },
+      { label: '사용법', description: 'LIPLAB 활용 안내', icon: '❔', to: '/guide' },
+    ],
+  },
+]
+
+function MegaMenuPet({ petGrad, speech }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.6, x: -60 }}
+      animate={{ opacity: 1, scale: 1, x: 0 }}
+      exit={{ opacity: 0, scale: 0.7, x: -30 }}
+      transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+      className="pointer-events-none flex select-none flex-col items-center gap-5"
+    >
+      <div className="relative min-h-[64px] w-[280px]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={speech}
+            initial={{ opacity: 0, y: 10, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.18 }}
+            className="relative rounded-[26px] bg-white px-6 py-4 text-center text-[15px] font-bold leading-relaxed text-slate-800 shadow-[0_16px_40px_rgba(15,23,42,0.16)]"
+          >
+            {speech}
+            <span className="absolute -bottom-2 left-1/2 h-5 w-5 -translate-x-1/2 rotate-45 rounded-sm bg-white" />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      <motion.div
+        animate={{ y: [0, -10, 0], rotate: [-2, 2, -2] }}
+        transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
+        className={`relative h-36 w-36 rounded-[48%_44%_50%_46%] bg-gradient-to-br ${petGrad} shadow-[0_28px_60px_rgba(15,23,42,0.28)]`}
+      >
+        <span className="absolute left-[42px] top-[56px] h-4 w-4 rounded-full bg-slate-900" />
+        <span className="absolute left-[78px] top-[56px] h-4 w-4 rounded-full bg-slate-900" />
+        <span className="absolute left-[46px] top-[80px] h-6 w-[44px] rounded-b-full border-b-[8px] border-white/90" />
+        <span className="absolute left-[26px] top-[64px] h-3 w-3 rounded-full bg-white/40" />
+        <span className="absolute right-[26px] top-[64px] h-3 w-3 rounded-full bg-white/40" />
+      </motion.div>
+    </motion.div>
+  )
+}
+
+export default function GlobalLearningMenu() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const user = useStore((state) => state.user)
+  const navMenuRequest = useStore((state) => state.navMenuRequest)
+  const clearNavMenuRequest = useStore((state) => state.clearNavMenuRequest)
+  const [activeNavMenu, setActiveNavMenu] = useState(null)
+  const [navTop, setNavTop] = useState(0)
+  const [hoveredItem, setHoveredItem] = useState(null)
+  const navRef = useRef(null)
+  const activeTopic = PILLAR_NAV.find((topic) => topic.id === activeNavMenu)
+  const currentRoute = `${location.pathname}${location.search}`
+  const currentTopicId = PILLAR_NAV.find((topic) => topic.items.some((item) => (
+    item.to === currentRoute
+      || (item.to === '/review/speaking' && location.pathname.startsWith('/review/speaking/'))
+  )))?.id
+
+  useEffect(() => {
+    setActiveNavMenu(null)
+    setHoveredItem(null)
+  }, [location.pathname, location.search])
+
+  const openNav = (id) => {
+    if (navRef.current) setNavTop(navRef.current.getBoundingClientRect().top)
+    setHoveredItem(null)
+    setActiveNavMenu(id)
+  }
+
+  const closeNav = () => {
+    setActiveNavMenu(null)
+    setHoveredItem(null)
+  }
+
+  // 대시보드 히어로의 "◯◯ 학습 보기" 버튼 등 외부 요청으로 드롭다운을 연다
+  useEffect(() => {
+    if (!navMenuRequest) return
+    openNav(navMenuRequest)
+    clearNavMenuRequest()
+  }, [navMenuRequest])
+
+  const go = (to) => {
+    closeNav()
+    navigate(to)
+  }
+
+  const chooseTab = (tab) => {
+    if (activeNavMenu === tab.id) closeNav()
+    else openNav(tab.id)
+  }
+
+  return (
+    <header className="sticky top-0 z-50 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+      <div className="border-b border-slate-100 bg-slate-50/90">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-end px-4 py-2 text-[11px] text-slate-500 sm:px-6">
+          <p className="hidden sm:block"><b className="text-slate-700">{user?.username}님</b>, 오늘도 나에게 맞는 방식으로 학습해 보세요.</p>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
+        <div className="flex min-h-[74px] items-center gap-4 py-3">
+          <button type="button" onClick={() => go('/dashboard')} className="flex shrink-0 items-center gap-2 text-left">
+            <span aria-hidden="true" className="relative grid h-10 w-10 place-items-center rounded-2xl bg-sky-50">
+              <span className="absolute h-4 w-7 rounded-full border-[3px] border-sky-400" />
+              <span className="absolute h-7 w-4 rounded-full border-[3px] border-sky-400" />
+            </span>
+            <span>
+              <span className="block text-2xl font-black tracking-[-0.05em] text-slate-950">LIPLAB</span>
+              <span className="hidden text-[10px] font-medium text-slate-400 sm:block">Visual Language Lab</span>
+            </span>
+          </button>
+
+          <div className="ml-auto flex items-center gap-1">
+            {[
+              ['복습', '/review/today', '↻'],
+              ['사용법', '/guide', '?'],
+            ].map(([label, to, icon]) => (
+              <button key={label} type="button" onClick={() => go(to)} className="flex w-16 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-bold text-slate-600 transition hover:bg-sky-50 hover:text-sky-700">
+                <span aria-hidden="true" className="grid h-6 w-7 place-items-center text-lg">{icon}</span>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <nav
+        ref={navRef}
+        aria-label="학습 카테고리"
+        onMouseLeave={closeNav}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') closeNav()
+        }}
+        className="relative border-t border-slate-100"
+      >
+        <AnimatePresence>
+          {activeTopic && (
+            <motion.div
+              key={activeTopic.id}
+              initial={{ clipPath: 'circle(0% at 12% 0%)' }}
+              animate={{ clipPath: 'circle(150% at 12% 0%)' }}
+              exit={{ clipPath: 'circle(0% at 12% 0%)', transition: { duration: 0.28, ease: 'easeIn' } }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              style={{ height: `calc(100dvh - ${navTop}px)` }}
+              className={`absolute inset-x-0 top-0 z-0 overflow-hidden bg-gradient-to-br ${activeTopic.bg}`}
+            >
+              <div className="mx-auto grid h-full max-w-[1440px] grid-cols-1 gap-4 px-5 pb-4 pt-[58px] sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                <div className="flex min-h-0 flex-col justify-center overflow-hidden py-2">
+                  <p className={`mb-1 text-xs font-black uppercase tracking-[0.14em] sm:text-sm ${activeTopic.theme.text}`}>{activeTopic.label}</p>
+                  {activeTopic.items.map((item) => {
+                    const current = item.to === currentRoute
+                      || (item.to === '/review/speaking' && location.pathname.startsWith('/review/speaking/'))
+                    return (
+                      <button
+                        key={item.to}
+                        type="button"
+                        aria-current={current ? 'page' : undefined}
+                        onMouseEnter={() => setHoveredItem(item)}
+                        onFocus={() => setHoveredItem(item)}
+                        onClick={() => go(item.to)}
+                        className={`group flex items-center gap-3 border-b border-slate-900/10 py-2.5 text-left transition hover:pl-2 sm:py-3 ${current ? 'bg-white/55 pl-2' : ''}`}
+                      >
+                        <span aria-hidden="true" className="text-2xl transition group-hover:scale-110 sm:text-3xl">{item.icon}</span>
+                        <span className="min-w-0 flex-1 text-xl font-black tracking-tight text-slate-900 sm:text-2xl">{item.label}</span>
+                        <span aria-hidden="true" className="text-xl font-black text-slate-900/25 transition group-hover:translate-x-1 group-hover:text-slate-900/60">→</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div onMouseEnter={closeNav} className="hidden items-center justify-center lg:flex">
+                  <MegaMenuPet petGrad={activeTopic.petGrad} speech={hoveredItem?.description || activeTopic.intro} />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="relative z-10 mx-auto max-w-[1440px] px-2 sm:px-6">
+          <ul className="flex items-stretch overflow-x-auto">
+            {PILLAR_NAV.map((tab) => {
+              const active = activeNavMenu === tab.id
+              const current = currentTopicId === tab.id
+              return (
+                <li key={tab.id} onMouseEnter={() => openNav(tab.id)} className="shrink-0">
+                  <button
+                    type="button"
+                    onFocus={() => openNav(tab.id)}
+                    onClick={() => chooseTab(tab)}
+                    aria-haspopup="menu"
+                    aria-expanded={active}
+                    aria-current={current ? 'page' : undefined}
+                    className={`relative flex items-center gap-2 px-4 py-3 text-base font-black tracking-tight transition sm:px-8 sm:text-lg ${active || current ? tab.theme.text : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'}`}
+                  >
+                    {tab.label}
+                    <span aria-hidden="true" className={`text-[10px] transition-transform ${active ? 'rotate-180' : ''}`}>▼</span>
+                    <span aria-hidden="true" className={`absolute inset-x-3 bottom-0 h-1 rounded-full transition ${active || current ? tab.theme.line : 'bg-transparent'}`} />
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      </nav>
+    </header>
+  )
+}
