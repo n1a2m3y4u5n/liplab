@@ -8,6 +8,8 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
+// 축 D 자체 립리딩(MediaPipe+onnx로 무거움) — 정답 후에만 로드.
+const LipReadCheck = lazy(() => import('../components/LipReadCheck'))
 
 /**
  * 2단계 · 음절·단어 (Word Stage)
@@ -163,6 +165,10 @@ function WordQuiz({ data }) {
                   className="w-full py-2 rounded-lg border border-primary-300 text-primary-600 text-sm font-medium hover:bg-primary-50 transition-colors">
                   🤟 "{q.target}" 수어로 뜻 보기
                 </button>
+                {/* 축 D — 기계가 내 입모양을 읽어 목표 단어를 맞히나(폐집합: 이번 문제 보기). 실험적. */}
+                <Suspense fallback={null}>
+                  <LipReadCheck target={q.target} candidates={q.choices} />
+                </Suspense>
                 <button onClick={newQ} className="btn-primary w-full py-2 text-sm">다음 문제 →</button>
               </motion.div>
             )}
