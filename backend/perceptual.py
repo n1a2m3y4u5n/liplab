@@ -24,6 +24,12 @@ _VISIBILITY = {l["viseme_id"]: l["visibility"] for l in _cur.VISEME_LESSONS}
 _VIS_WEIGHT = {"high": 0.0, "medium": 0.5, "low": 1.0}  # '안 보이는 정도' 가중
 
 
+def viseme_invisibility(viseme_id: int) -> float:
+    """비심의 '안 보이는 정도'(0 뚜렷 ~ 1 안 보임). 난이도 지수(C)의 음소 단위 성분.
+    시각 증강(축 J)이 기호 표시 우선순위를 매길 때 재사용한다(안 보이는 비심일수록 우선)."""
+    return _VIS_WEIGHT.get(_VISIBILITY.get(viseme_id, "medium"), 0.5)
+
+
 def homophene_dictionary() -> Dict:
     """음소를 입모양(viseme)으로 묶은 동구형이음 사전. 같은 그룹은 눈으로 구별 불가."""
     groups: Dict[int, List[str]] = {}

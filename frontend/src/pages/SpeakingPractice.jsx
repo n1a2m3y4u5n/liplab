@@ -5,7 +5,7 @@ import { curriculumAPI, learningAPI, speakAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import LearnHeader from '../components/LearnHeader'
 import { getSpeakingStageMenuItem } from '../config/speakingNavigation'
-import { toBlendshapeMap, cosineScore } from '../lib/mouthScore'
+import { toBlendshapeMap, cosineScore, loadCalibration } from '../lib/mouthScore'
 
 /**
  * 말하기 연습 (발화 피드백)
@@ -134,10 +134,11 @@ export default function SpeakingPractice() {
     if (!buf.length || !frames.length) return null
     const targetVis = [...new Set(frames.map((f) => f.viseme).filter((v) => v && v <= 10))]
     if (!targetVis.length) return null
+    const profiles = loadCalibration() // 개인 얼굴 맞춤 기준(있으면 규칙 프로파일 대신 사용)
     let sum = 0
     for (const vid of targetVis) {
       let best = 0
-      for (const bs of buf) { const c = cosineScore(bs, vid, null); if (c > best) best = c }
+      for (const bs of buf) { const c = cosineScore(bs, vid, profiles); if (c > best) best = c }
       sum += best
     }
     return Math.max(0, Math.min(1, sum / targetVis.length))
