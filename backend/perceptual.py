@@ -66,28 +66,46 @@ def invisibility(word: str) -> Optional[float]:
     return round(sum(_VIS_WEIGHT.get(_VISIBILITY.get(v, "medium"), 0.5) for v in vis) / len(vis), 3)
 
 
+# 비심(1~10)별 소속 음소 수 — 그룹에 음소가 여럿이면 그 입모양은 '동구형이음'(눈으로 구별 불가).
+_VIS_GROUP_SIZE = Counter(v for v in VISEME_MAP.values() if 1 <= v <= 10)
+
+
+def homophene_ratio(word: str) -> Optional[float]:
+    """단어 음소 중 '입모양이 같은 다른 음소가 있는'(동구형이음) 비율(0~1).
+    난이도 지수(계획서 §3.3 '동구형이음 비율')의 corpus 비의존 성분 — 코퍼스 없이 라이브 계산."""
+    vis = word_visemes(word)
+    if not vis:
+        return None
+    amb = sum(1 for v in vis if _VIS_GROUP_SIZE.get(v, 1) >= 2)
+    return round(amb / len(vis), 3)
+
+
 def word_difficulty(word: str, corpus_signatures: Optional[Counter] = None) -> Optional[Dict]:
     """
     단어의 독화 난이도 지수(0 쉬움 ~ 1 어려움).
       · 안 보이는 정도(invisibility): 입 안쪽 자음처럼 눈에 안 드러나는 음소 비중.
-      · 혼동 이웃 밀도(neighbor_density): 같은 입모양(동구형이음)으로 보이는 다른 단어 수.
-    둘 다 높을수록 문맥 없이는 읽기 어렵다.
+      · 동구형이음 비율(homophene_ratio): 입모양이 같은 다른 음소가 있는 음소 비중(corpus 비의존).
+      · 혼동 이웃 밀도(neighbor_density): 같은 입모양으로 보이는 '다른 단어' 수(corpus 있을 때만).
+    셋 다 높을수록 문맥 없이는 읽기 어렵다. corpus가 없으면 이웃밀도는 0이지만, 동구형이음
+    비율이 시각 혼동을 잡아 라이브에서도 난이도가 유효하다.
     """
     if not is_hangul_word(word):
         return None
     inv = invisibility(word)
     if inv is None:
         return None
+    homo = homophene_ratio(word) or 0.0
     density = 0.0
     if corpus_signatures is not None:
         sig = viseme_signature(word)
         # 같은 입모양을 가진 다른 단어 수(자기 제외), 최대 5로 정규화
         density = round(min(max(corpus_signatures.get(sig, 1) - 1, 0), 5) / 5.0, 3)
-    difficulty = round(0.6 * inv + 0.4 * density, 3)
+    difficulty = round(0.5 * inv + 0.3 * homo + 0.2 * density, 3)
     return {
         "word": word,
         "difficulty": difficulty,
         "invisibility": inv,
+        "homophene_ratio": homo,
         "neighbor_density": density,
         "syllables": sum(1 for c in word if "가" <= c <= "힣"),
         "visemes": word_visemes(word),
