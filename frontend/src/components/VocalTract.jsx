@@ -7,7 +7,8 @@ import { useEffect, useRef } from 'react'
  *
  * articulationRef를 주면(웹캠 축 D·E) 관찰 가능한 차원(개구 jaw·원순 round·폐쇄 close)을
  * 사용자의 실제 얼굴에서 역추정한 값으로 매 프레임 덮어써, 목표가 아닌 '내 실제 조음'을 보여준다.
- * 혀(tip·back)는 웹캠으로 관찰되지 않아 viseme 규칙값을 유지한다(계획서 E의 부분 역추정).
+ * 웹캠은 혀(tip·back)를 관찰하지 못해 viseme 규칙값을 유지하지만, 성도 시뮬레이터처럼 혀 위치를
+ * 아는 입력원이 live.tip·live.back을 주면 그 값도 반영한다(계획서 E: 파라미터 조작→단면 변화).
  */
 // viseme → 조음 파라미터 {tip: 혀끝 들림, back: 혀뒤 들림, round: 원순, jaw: 개구, close: 양순폐쇄}
 const VIS_ART = {
@@ -49,6 +50,9 @@ export default function VocalTract({ visemeId = 15, articulationRef = null }) {
         if (live.jaw != null) t.jaw = clamp(live.jaw)
         if (live.round != null) t.round = clamp(live.round)
         if (live.close != null) t.close = clamp(live.close)
+        // 혀 위치를 아는 입력원(성도 시뮬레이터)이 주면 혀도 반영. 웹캠 경로는 tip·back을 안 줘 규칙값 유지.
+        if (live.tip != null) t.tip = clamp(live.tip)
+        if (live.back != null) t.back = clamp(live.back)
       }
       for (const k in c) c[k] += (t[k] - c[k]) * 0.25
       const tipX = 62, tipY = 120 - clamp(c.tip) * 34
