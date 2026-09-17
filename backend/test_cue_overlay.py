@@ -44,6 +44,15 @@ def test_target_focus():
     _ok(len(cues) == 1 and cues[0]["phoneme"] == "ㄴ", "표적 음소만 남김")
 
 
+def test_priority_and_cap():
+    cues = CU.generate_cues("코끼리를 타고 학교에 갔다")
+    _ok(all("priority" in c for c in cues), "각 기호에 우선순위(난이도지수) 부여")
+    idxs = [c["syllable_index"] for c in cues]
+    _ok(idxs == sorted(idxs), "기호는 타임라인 순 정렬")
+    capped = CU.generate_cues("코끼리를 타고 학교에 갔다", max_cues=2)
+    _ok(len(capped) <= 2, "max_cues 상한 적용")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
