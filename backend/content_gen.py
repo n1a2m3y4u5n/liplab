@@ -96,6 +96,16 @@ async def generate_sentences(n: int = 8, avoid: List[str] = None, with_intonatio
                 continue
             into = it.get("intonation") or ("rise" if t.rstrip().endswith("?") else "fall")
             out.append({"target": t, "intonation": "rise" if into == "rise" else "fall"})
-        return out
+        return _sort_by_difficulty(out)
     from content_rules import check_sentence
-    return [{"target": t} for t in await _call(system) if check_sentence(t)[0]]
+    out = [{"target": t} for t in await _call(system) if check_sentence(t)[0]]
+    return _sort_by_difficulty(out)
+
+
+def _sort_by_difficulty(items: List[dict]) -> List[dict]:
+    """생성 문장을 독화 난이도 지수(축 C)로 쉬운→어려운 정렬(진행형 제시). 실패 시 원순서 유지."""
+    try:
+        import perceptual as _perc
+        return sorted(items, key=lambda s: (_perc.sentence_difficulty(s["target"]).get("difficulty") or 0.0))
+    except Exception:
+        return items

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import VocalTract from './VocalTract'
 
 /**
  * 성도 시뮬레이터 (계획서 E '인터랙티브 조음 교구').
@@ -52,6 +53,8 @@ export default function VocalTractSimulator() {
   const nodesRef = useRef(null)                 // {osc, formants:[{bp,g}], master}
   const draggingRef = useRef(false)
   const padRef = useRef(null)
+  // 혀 위치·원순을 성도 단면(VocalTract)에 넘겨, 소리를 바꿀 때 입·혀 단면이 함께 변하게 한다(계획서 E).
+  const artRef = useRef({ tip: 0, back: 0, round: 0, jaw: 0.02, close: 0 })
 
   // 현재 좌표+원순 → 포먼트 3개
   const formants = useCallback((p, r) => {
@@ -133,6 +136,17 @@ export default function VocalTractSimulator() {
     }
     setNearest(bd < 0.33 ? best : null)
   }, [pos, round, on, applyFormants, formants])
+
+  // 혀 위치(전후=x, 고저=y)·원순 → 성도 단면 파라미터. 전설·고모음=혀끝↑, 후설·고모음=혀뒤↑, 저모음=개구↑.
+  useEffect(() => {
+    artRef.current = {
+      jaw: clamp(pos.y, 0, 1),
+      round: clamp(round, 0, 1),
+      tip: clamp((1 - pos.x) * (1 - pos.y), 0, 1),
+      back: clamp(pos.x * (1 - pos.y), 0, 1),
+      close: 0,
+    }
+  }, [pos, round])
 
   // 볼륨 변경 → 즉시 반영(발성 중이면 마스터 게인 조정)
   useEffect(() => {
@@ -217,6 +231,12 @@ export default function VocalTractSimulator() {
         {/* 현재 혀 위치 */}
         <div className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-500 border-2 border-white shadow-lg pointer-events-none"
           style={{ left: `${pos.x * 100}%`, top: `${pos.y * 100}%`, width: 18, height: 18, opacity: on ? 1 : 0.6 }} />
+      </div>
+
+      {/* 성도 단면 — 혀 위치·원순을 조작하면 소리와 함께 입·혀 단면이 움직인다(계획서 E) */}
+      <div className="mt-2 rounded-lg border border-gray-200 bg-slate-900/95 p-1">
+        <p className="px-1 pb-0.5 text-[10px] text-slate-300">성도 단면 — 혀·입술이 소리 따라 움직여요</p>
+        <div className="h-24"><VocalTract visemeId={15} articulationRef={artRef} /></div>
       </div>
 
       {/* 입술 원순 */}
