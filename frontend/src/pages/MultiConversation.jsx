@@ -9,6 +9,7 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
  * 입모양을 함께 읽는 실전 훈련. 화자마다 색·이름을 배정하고 발화 순서대로 입모양을 재생한다.
  */
 const SPK_COLOR = ['bg-sky-500', 'bg-rose-500', 'bg-amber-500']
+const SPK_RING = ['ring-sky-400', 'ring-rose-400', 'ring-amber-400']  // 화자별 시각 구분(답 후)
 const SPK_SOFT = ['bg-sky-50 text-sky-700 border-sky-200', 'bg-rose-50 text-rose-700 border-rose-200', 'bg-amber-50 text-amber-700 border-amber-200']
 const SPK_NAME = ['A', 'B', 'C']
 
@@ -183,7 +184,10 @@ export default function MultiConversation() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="card">
           <p className="mb-2 text-sm text-gray-500">{answered ? <>지금 <b className={`rounded px-1.5 py-0.5 text-white ${SPK_COLOR[turn.speaker]}`}>화자 {SPK_NAME[turn.speaker]}</b>가 말합니다</> : '입모양을 보고 화자를 먼저 맞혀보세요'}</p>
-          <MouthAvatar frames={frames} />
+          {/* 답 후 현재 화자 색으로 아바타를 감싸 여러 화자 장면을 시각적으로 구분(축 H) */}
+          <div className={answered ? `rounded-xl ring-2 ${SPK_RING[turn.speaker] || ''} transition` : ''}>
+            <MouthAvatar frames={frames} />
+          </div>
         </div>
         <div className="card flex flex-col justify-between">
           <div>
