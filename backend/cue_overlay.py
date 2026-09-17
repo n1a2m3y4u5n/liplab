@@ -53,16 +53,21 @@ def is_cueable(phoneme: str) -> bool:
 
 def generate_cues(text: str, target_visemes: Optional[List[int]] = None,
                   mastery: Optional[Dict[int, float]] = None,
-                  fade_threshold: float = 0.85) -> List[Dict]:
+                  fade_threshold: float = 0.85,
+                  max_cues: Optional[int] = None) -> List[Dict]:
     """
     텍스트를 '소리 나는 대로' 변환한 음절 타임라인에서 기호를 얹을 지점을 찾는다.
 
-    반환: [{"syllable_index", "position"("initial"|"final"), "phoneme", "viseme", "cue", "strength"}]
+    반환: [{"syllable_index", "position"("initial"|"final"), "phoneme", "viseme", "cue",
+            "strength", "priority"}]  (타임라인 순 정렬)
     개인화(소거):
       · target_visemes를 주면 그 표적 음소만 기호를 남긴다(집중 학습).
       · mastery를 주면 숙달도에 따라 기호의 strength(0.2~1.0)를 점진적으로 낮추고,
         fade_threshold 이상이면 완전히 소거한다(이진 컷오프가 아닌 점진 페이딩).
         프론트는 strength를 기호의 opacity로 반영한다.
+    표시 우선순위(계획서 J: 난이도지수 C 연동):
+      · 각 기호에 priority(안 보이는 정도, 0~1)를 매긴다 — 안 보이는 비심일수록 높다.
+      · max_cues를 주면 우선순위 상위 N개만 남겨 기호 과다를 막는다(빈도 감소).
     """
     tv = set(target_visemes) if target_visemes else None
     cues: List[Dict] = []
@@ -89,4 +94,13 @@ def generate_cues(text: str, target_visemes: Optional[List[int]] = None,
             cues.append({"syllable_index": i, "position": pos,
                          "phoneme": ph, "viseme": vid, "cue": cue,
                          "strength": strength})
+    # 표시 우선순위 = 난이도지수(C)의 음소 성분(안 보이는 정도). 안 보이는 비심일수록 우선.
+    import perceptual as _perc
+    for c in cues:
+        c["priority"] = _perc.viseme_invisibility(c["viseme"])
+    if max_cues is not None and len(cues) > max_cues:
+        keep = set(id(c) for c in sorted(cues, key=lambda c: -c["priority"])[:max_cues])
+        cues = [c for c in cues if id(c) in keep]
+    # 렌더는 타임라인 순으로(초성 먼저) — priority는 프론트가 강조/정렬에 별도로 쓸 수 있다.
+    cues.sort(key=lambda c: (c["syllable_index"], 0 if c["position"] == "initial" else 1))
     return cues

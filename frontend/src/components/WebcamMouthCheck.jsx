@@ -3,7 +3,7 @@ import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { toBlendshapeMap, scorePercent, coachHint, loadCalibration } from '../lib/mouthScore'
 import { faceSignals, FACE_SIGNAL_LABELS } from '../lib/faceCues'
 import { predictK, K_FACE_KEYS, K_WIN } from '../lib/kModel'
-import { curriculumAPI } from '../api'
+import { curriculumAPI, articulationAPI } from '../api'
 import MouthCalibration from './MouthCalibration'
 import AvatarVRM from './AvatarVRM'
 import VocalTract from './VocalTract'
@@ -45,6 +45,10 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   const liveBsRef = useRef(null) // 웹캠 실시간 blendshape → 아바타 미러링(축 F)
   const artRef = useRef({ jaw: 0, round: 0, close: 0 }) // 웹캠 역추정 조음(축 E, 관찰 차원)
   const [showMirror, setShowMirror] = useState(false)
+  const [mirrorXray, setMirrorXray] = useState(false) // 미러 아바타 투명 두상(축 F)
+  const [correction, setCorrection] = useState(null) // 축 E: 관찰 계수 목표 대비 교정
+  const [obs, setObs] = useState(null)               // 표시용 관찰 계수 샘플
+  const corrBusyRef = useRef(false)
 
   // 목표 viseme이 바뀌면 최고점·기록·점수창 초기화
   useEffect(() => { bestRef.current = 0; winRef.current = []; setRecorded(false) }, [visemeId])
@@ -118,6 +122,23 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
     } catch { /* 프레임 스킵 */ }
     rafRef.current = requestAnimationFrame(loop)
   }, [visemeId, profiles])
+
+  // 축 E: 관찰 계수(개구·원순·폐쇄)를 목표 조음과 비교해 "입을 더 벌리세요" 식 교정을 낸다.
+  // 프레임마다가 아니라 0.8초 주기로 백엔드(순수함수)에 보내 교정 문구·계수를 받는다(교정 로직 단일 소스).
+  useEffect(() => {
+    if (status !== 'running') { setCorrection(null); setObs(null); return }
+    const id = setInterval(() => {
+      const o = { ...artRef.current }
+      setObs(o)
+      if (corrBusyRef.current) return
+      corrBusyRef.current = true
+      articulationAPI.feedback(visemeId, o)
+        .then((r) => { if (r) setCorrection(r) })
+        .catch(() => {})
+        .finally(() => { corrBusyRef.current = false })
+    }, 800)
+    return () => clearInterval(id)
+  }, [status, visemeId])
 
   const stop = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
@@ -202,8 +223,12 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
         {/* 아바타 미러링(축 F) — 웹캠에서 읽은 입모양을 아바타가 그대로 따라한다 */}
         {showMirror && (
           <div className="relative overflow-hidden rounded-lg bg-gradient-to-b from-slate-800 to-slate-900" style={{ aspectRatio: '4/3' }}>
-            <AvatarVRM visemeId={15} bsFrameRef={liveBsRef} />
+            <AvatarVRM visemeId={15} bsFrameRef={liveBsRef} xray={mirrorXray} />
             <div className="absolute top-1.5 left-1.5 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white/80">아바타가 따라해요</div>
+            <button type="button" onClick={() => setMirrorXray((v) => !v)}
+              className="absolute top-1.5 right-1.5 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white/80 hover:bg-black/70">
+              {mirrorXray ? '겉면' : '투명 두상'}
+            </button>
           </div>
         )}
       </div>
@@ -227,6 +252,32 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
         <p className="mt-1 text-center text-xs text-sky-700">
           🔎 <b>안 보이는 조음</b> — {articulationGuide}
         </p>
+      )}
+      {/* 축 E: 조음 교정 — 관찰 계수(개구·원순·폐쇄)를 목표와 비교해 방향을 제시하고 계수를 노출한다 */}
+      {status === 'running' && correction && (
+        <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50/60 p-2">
+          <p className="mb-1 text-center text-[10px] text-sky-600">조음 교정 · 관찰 계수 (축 E)</p>
+          <p className="text-center text-sm font-semibold text-sky-900">
+            {correction.ok ? '👍 조음이 목표에 가까워요' : correction.primary}
+          </p>
+          {obs && (
+            <div className="mt-1.5 grid grid-cols-3 gap-2">
+              {[['jaw', '개구'], ['round', '원순'], ['close', '폐쇄']].map(([k, label]) => (
+                <div key={k} className="text-center">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-sky-100">
+                    <div className="h-full rounded-full bg-sky-500 transition-all" style={{ width: `${Math.round((obs[k] || 0) * 100)}%` }} />
+                  </div>
+                  <span className="mt-0.5 block text-[10px] text-sky-600">{label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {correction.cues && correction.cues.length > 1 && (
+            <ul className="mt-1 space-y-0.5 text-center text-[11px] text-sky-700">
+              {correction.cues.slice(1).map((c, i) => <li key={i}>· {c.text}</li>)}
+            </ul>
+          )}
+        </div>
       )}
       {status === 'running' && faceSig && (
         <div className="mt-2">

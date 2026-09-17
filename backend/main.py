@@ -90,6 +90,20 @@ async def _unhandled_exception(request, exc):
     return _JSONResponse(status_code=500, content={"detail": "서버 오류가 발생했습니다."})
 
 
+# 보안 응답 헤더(§4.9) — 다운그레이드·MIME 스니핑·클릭재킹·레퍼러 유출 방어.
+# CSP는 이 앱이 SPA(index.html·/assets·MediaPipe CDN·모델)를 함께 서빙하므로 잘못 좁히면
+# 앱이 깨진다 → 별도 정책 수립·검증 전까지는 넣지 않는다(안전 헤더만 우선 적용).
+@app.middleware("http")
+async def _security_headers(request, call_next):
+    resp = await call_next(request)
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    # HSTS는 HTTPS에서만 의미(브라우저가 http에선 무시). fly는 force_https라 실서비스에서 적용됨.
+    resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return resp
+
+
 # 업로드 상한(§4.9) — audio.read()로 전체를 메모리에 적재하므로 상한이 없으면 DoS 소지.
 _MAX_AUDIO_BYTES = 10 * 1024 * 1024  # 10MB
 
@@ -220,7 +234,7 @@ async def get_me(current_user = Depends(get_current_user)):
     return current_user
 
 
-@app.get("/api/account/data")
+@app.get("/api/account/data", dependencies=[Depends(ratelimit.rate_limit(10, 60, "account"))])
 async def account_export(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """개인정보 열람권(§4.9) — 내 계정·학습 데이터 전체를 JSON으로 내보낸다(데이터 이동성).
     민감 정보(비밀번호 해시)는 제외한다."""
@@ -237,7 +251,7 @@ async def account_export(current_user=Depends(get_current_user), db: AsyncSessio
             "note": "웹캠 영상·원음성은 기기 안에서만 처리되어 서버에 저장되지 않으므로 이 내보내기에 포함되지 않습니다."}
 
 
-@app.delete("/api/account")
+@app.delete("/api/account", dependencies=[Depends(ratelimit.rate_limit(5, 60, "account"))])
 async def account_delete(confirm: bool = False,
                          current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """개인정보 삭제권(§4.9) — 내 계정과 모든 학습 데이터를 영구 삭제한다.
@@ -263,6 +277,54 @@ async def account_delete(confirm: bool = False,
 
 from pydantic import BaseModel
 from typing import List, Optional
+
+
+class ProfileUpdateReq(BaseModel):
+    username: Optional[str] = None
+
+
+class PasswordChangeReq(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@app.patch("/api/account/profile", dependencies=[Depends(ratelimit.rate_limit(10, 60, "account"))])
+async def account_update_profile(req: ProfileUpdateReq,
+                                 current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """개인정보 정정권(§4.9) — 표시 이름(username)을 수정한다. 공용 데모 계정은 수정 불가."""
+    if (current_user.email or "").lower() == _DEMO_EMAIL:
+        raise HTTPException(status_code=403, detail="공용 데모 계정은 수정할 수 없습니다.")
+    if req.username is not None:
+        name = _sanitize_text(req.username, 100).strip()
+        if not (1 <= len(name) <= 100):
+            raise HTTPException(status_code=400, detail="이름은 1~100자여야 합니다.")
+        from sqlalchemy import select as _select
+        from database import User as _User
+        dup = (await db.execute(_select(_User).where(_User.username == name,
+                                                     _User.id != current_user.id))).scalar_one_or_none()
+        if dup:
+            raise HTTPException(status_code=409, detail="이미 사용 중인 이름입니다.")
+        current_user.username = name
+    await db.commit()
+    await db.refresh(current_user)
+    return {"ok": True, "username": current_user.username}
+
+
+@app.post("/api/account/password", dependencies=[Depends(ratelimit.rate_limit(5, 60, "account"))])
+async def account_change_password(req: PasswordChangeReq,
+                                  current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """비밀번호 변경(§4.9 정정권 + 민감동작 재인증) — 현재 비밀번호를 확인한 뒤에만 변경한다."""
+    from auth import verify_password, get_password_hash
+    if (current_user.email or "").lower() == _DEMO_EMAIL:
+        raise HTTPException(status_code=403, detail="공용 데모 계정은 비밀번호를 변경할 수 없습니다.")
+    if not verify_password(req.current_password or "", current_user.hashed_password):
+        raise HTTPException(status_code=403, detail="현재 비밀번호가 일치하지 않습니다.")
+    if len(req.new_password or "") < 8:
+        raise HTTPException(status_code=400, detail="새 비밀번호는 8자 이상이어야 합니다.")
+    current_user.hashed_password = get_password_hash(req.new_password)
+    await db.commit()
+    return {"ok": True}
+
 
 class VisemeFrame(BaseModel):
     viseme: int
@@ -1514,7 +1576,7 @@ async def curriculum_mouth_attempt(data: MouthAttempt, current_user=Depends(get_
 
 
 @app.get("/api/cues")
-async def get_cues(text: str, personalize: bool = True,
+async def get_cues(text: str, personalize: bool = True, max_cues: int | None = None,
                   current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """시각 증강(축 J) — 문장에서 '안 드러나는 자질'(격음·경음·비음)에 기호를 얹을 지점을 반환.
 
@@ -1533,7 +1595,8 @@ async def get_cues(text: str, personalize: bool = True,
                     "total_attempts": w.total_attempts, "last_error_at": w.last_error_at}
                    for w in r.scalars().all()]
         mastery = _kt.estimate_mastery(records)
-    cues = _cue.generate_cues(text or "", mastery=mastery)
+    cues = _cue.generate_cues(text or "", mastery=mastery,
+                              max_cues=max_cues if (max_cues and max_cues > 0) else None)
     return {"text": text, "cues": cues, "legend": _cue.CUE_FEATURES}
 
 
@@ -2273,6 +2336,7 @@ async def sign_translate(
         raise HTTPException(status_code=400, detail="text is required")
     if len(text) > 200:
         raise HTTPException(status_code=400, detail="text too long (max 200)")
+    text = _sanitize_text(text, 200)  # 제어문자 제거 — 타 LLM 경로와 동일한 입력 정규화(§4.9 주입 방어)
     try:
         from sign_service import translate_to_ksl
         return await translate_to_ksl(text)

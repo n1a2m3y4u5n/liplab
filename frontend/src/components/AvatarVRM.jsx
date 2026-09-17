@@ -33,10 +33,11 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null }) {
   if (meshesRef.current.length === 0) {
     scene.traverse((obj) => {
       if (!obj.isMesh) return
-      // 피부 재질 수집(투명 두상용): 겉면(body/high-poly)만, 혀·치아·눈은 제외.
+      // 피부 재질 수집(투명 두상용): 겉면(body/skin)만. 혀·치아·눈(안구=high-poly 메시)은 제외.
+      // 이 GLB에서 high-poly 메시는 eyeLook 모프 8개만 가진 안구라, 포함하면 xray 시 눈이 투명해진다.
       const mats = Array.isArray(obj.material) ? obj.material : (obj.material ? [obj.material] : [])
       const mn = ((obj.name || '') + ' ' + (mats[0]?.name || '')).toLowerCase()
-      if (/(^|[.\s_])(body|high-poly|skin)/.test(mn) && !/teeth|tongue|eye|cornea/.test(mn)) {
+      if (/(^|[.\s_])(body|skin)/.test(mn) && !/teeth|tongue|eye|cornea|high-poly/.test(mn)) {
         for (const m of mats) skinMatsRef.current.push({ m, op0: m.opacity, tr0: m.transparent, dw0: m.depthWrite })
       }
       if (obj.morphTargetDictionary && obj.morphTargetInfluences) {
