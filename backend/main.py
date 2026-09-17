@@ -1641,15 +1641,17 @@ async def curriculum_mouth_attempt(data: MouthAttempt, current_user=Depends(get_
 
 @app.get("/api/cues")
 async def get_cues(text: str, personalize: bool = True, max_cues: int | None = None,
+                  focus: bool = False,
                   current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """시각 증강(축 J) — 문장에서 '안 드러나는 자질'(격음·경음·비음)에 기호를 얹을 지점을 반환.
 
     동구형이음은 입모양이 같아 눈으로 못 가르므로, 그 순간의 조음 자질에 대응하는 최소
     기호를 프론트가 SVG로 겹쳐 준다. 로그인 유저는 숙달도(지식추적)로 이미 익숙한 음소의
-    기호를 소거(페이딩)한다.
+    기호를 소거(페이딩)한다. focus=true면 아직 약한 표적 음소에만 기호를 남긴다(집중 학습).
     """
     import cue_overlay as _cue
     mastery = None
+    target_visemes = None
     if personalize:
         import knowledge_tracing as _kt
         from database import WeakViseme
@@ -1659,7 +1661,10 @@ async def get_cues(text: str, personalize: bool = True, max_cues: int | None = N
                     "total_attempts": w.total_attempts, "last_error_at": w.last_error_at}
                    for w in r.scalars().all()]
         mastery = _kt.estimate_mastery(records)
-    cues = _cue.generate_cues(text or "", mastery=mastery,
+        if focus and mastery:
+            # 표적 = 아직 덜 익힌(숙달 0.85 미만) 비심만 → 그 음소 기호만 남겨 집중
+            target_visemes = [v for v, m in mastery.items() if m < 0.85]
+    cues = _cue.generate_cues(text or "", target_visemes=target_visemes, mastery=mastery,
                               max_cues=max_cues if (max_cues and max_cues > 0) else None)
     return {"text": text, "cues": cues, "legend": _cue.CUE_FEATURES}
 
