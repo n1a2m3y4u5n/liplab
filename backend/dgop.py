@@ -115,3 +115,30 @@ def fuse_audio_visual(audio_score: float, audio_uncertainty: float,
         "audio_score": round(audio_score, 1),
         "visual_score": round(float(visual_score), 1),
     }
+
+
+def fuse_audio_visual_per_phone(per_phone: List[Dict], visual_score: Optional[float],
+                                base_visual_weight: float = 0.25,
+                                uncertainty_gain: float = 0.5) -> Optional[Dict]:
+    """구간별(음소별) 후기 융합 — 문장 평균 가중이 아니라 각 음소를 그 음소의 불확실성으로
+    가중해 영상과 융합한 뒤 평균한다. 음향이 뭉갠 '그 구간'일수록 영상 가중이 국소적으로 커져
+    문장 평균 융합보다 세밀하다(계획서 B: '음향이 불확실한 구간일수록 영상 가중↑').
+    per_phone의 각 음소는 dgop(0~1)·uncertainty(0~1)를 갖는다. visual_score가 없으면 None."""
+    if not per_phone or visual_score is None:
+        return None
+    vis = float(visual_score)
+    fused_vals, weights = [], []
+    for p in per_phone:
+        unc = max(0.0, min(1.0, float(p.get("uncertainty", 0.0))))
+        w_v = max(0.0, min(0.9, base_visual_weight + uncertainty_gain * unc))
+        a = calibrate_score(float(p.get("dgop", 0.0)))  # 이 음소의 오디오 점수(0~100)
+        fused_vals.append((1.0 - w_v) * a + w_v * vis)
+        weights.append(w_v)
+    score = sum(fused_vals) / len(fused_vals)
+    return {
+        "score": round(score, 1),
+        "visual_weight": round(sum(weights) / len(weights), 3),  # 평균 영상 가중(표시용)
+        "visual_score": round(vis, 1),
+        "per_phone": True,
+        "n_phones": len(fused_vals),
+    }

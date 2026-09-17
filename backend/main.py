@@ -2057,6 +2057,7 @@ async def speak_assess(
             print(f"[WARN] acoustic D-GOP failed: {e}")
             acoustic_dgop = None
 
+        transcript_sim = None
         if is_available():
             try:
                 transcript = await transcribe(data)
@@ -2064,9 +2065,9 @@ async def speak_assess(
                 raise _server_error(e, "전사 실패")
             try:
                 sc = await calculate_score(correct=target, user_answer=transcript, db=db)
-                sim = sc.get("score", 0)
+                transcript_sim = sc.get("score", 0)
             except Exception:
-                sim = 0.0
+                transcript_sim = 0.0
             try:
                 from scoring import extract_jamo_sequence
                 cj = extract_jamo_sequence(target.replace(" ", ""))
@@ -2080,9 +2081,14 @@ async def speak_assess(
                         confusions.append({"correct": cm, "confused_as": um})
             except Exception:
                 pass
-        elif acoustic_dgop is not None:
-            # whisper 미탑재 → 전사 비의존 음향 점수로 채점(농인 발화는 ASR이 불안정하므로 유효한 폴백)
-            sim = acoustic_dgop.get("score", 0.0)
+
+        # 축 B(계획서 핵심): 전사 비의존 D-GOP를 '주 점수'로 삼는다. 전사 채점(음운 유사도)은
+        # 있으면 음소 혼동 진단·코칭에 쓰고, D-GOP가 없을 때만 점수로 폴백한다. 표준 GOP가 아닌
+        # 보정 점수(score_calibrated)를 사용해 농인 발화에서의 과신을 눌러 사용 가능한 대역으로 편다.
+        if acoustic_dgop is not None:
+            sim = acoustic_dgop.get("score_calibrated", acoustic_dgop.get("score", 0.0))
+        elif transcript_sim is not None:
+            sim = transcript_sim
         else:
             raise HTTPException(status_code=503, detail="서버에 음성인식 모델(faster-whisper/음향 D-GOP)이 없습니다.")
 
@@ -2108,11 +2114,17 @@ async def speak_assess(
         import dgop
         vis = mouth_confidence * 100 if mouth_confidence <= 1 else mouth_confidence
         # 음향 D-GOP가 있으면 그 실제 불확실성으로 가중(뭉갠 발음일수록 영상 의존↑).
-        # 없으면 점수 기반 근사(1 - score/100)로 폴백.
+        # 음소별(phones) 정보가 있으면 구간별 융합으로 세밀하게, 없으면 문장 단위 융합.
+        # 오디오 점수는 보정 점수(score_calibrated, 0~100)를 써 스케일을 영상과 맞춘다.
         if acoustic_dgop is not None:
-            a_score = acoustic_dgop.get("score", score)
-            a_unc = acoustic_dgop.get("uncertainty", max(0.0, 1 - score / 100.0))
-            av_fusion = dgop.fuse_audio_visual(a_score, a_unc, vis)
+            phones = acoustic_dgop.get("phones") or []
+            per = dgop.fuse_audio_visual_per_phone(phones, vis)
+            if per is not None:
+                av_fusion = per
+            else:
+                a_score = acoustic_dgop.get("score_calibrated", acoustic_dgop.get("score", score))
+                a_unc = acoustic_dgop.get("uncertainty", max(0.0, 1 - score / 100.0))
+                av_fusion = dgop.fuse_audio_visual(a_score, a_unc, vis)
         else:
             av_fusion = dgop.fuse_audio_visual(score, max(0.0, 1 - score / 100.0), vis)
         score = av_fusion["score"]
