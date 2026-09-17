@@ -171,6 +171,7 @@ export const curriculumAPI = {
   getCues: async (text) => (await api.get('/cues', { params: { text } })).data,
   recordMouth: async (viseme_id, score) => (await api.post('/curriculum/mouth-attempt', { viseme_id, score })).data,
   getMultiConversation: async (speakers = 2, turns = 6) => (await api.get('/conversation/multi', { params: { speakers, turns } })).data,
+  recordMultiConversation: async (payload) => (await api.post('/conversation/multi/result', payload)).data,
   getPlacement: async (n = 8, form = null) => (await api.get('/assessment/placement', { params: form ? { n, form } : { n } })).data,
   scorePlacement: async (items, responses, form = 'placement') => (await api.post('/assessment/score', { items, responses, form })).data,
 }
@@ -182,6 +183,9 @@ export const scoreAPI = {
 export const evalAPI = {
   summary: async () => (await api.get('/eval/summary')).data,
   progression: async () => (await api.get('/assessment/progression')).data,
+  // 축 C 공개 표준 자원(동구형이음 사전·난이도지수·지각공간·평가셋) — 연구·교육 활용용 내려받기
+  resources: async () => (await api.get('/assessment/resources')).data,
+  benchmark: async () => (await api.get('/assessment/benchmark')).data,
 }
 
 export const reviewAPI = {

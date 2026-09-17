@@ -1732,6 +1732,62 @@ async def conversation_multi(speakers: int = 2, turns: int = 6,
         raise _server_error(e, "conversation gen failed")
 
 
+class MultiConvResultReq(BaseModel):
+    speaker_correct: int = 0
+    speaker_total: int = 0
+    read_correct: int = 0
+    read_total: int = 0
+    read_hits: List[str] = []    # 립리딩(문맥추론) 정답 발화 텍스트
+    read_misses: List[str] = []  # 오독 발화 텍스트
+
+
+@app.post("/api/conversation/multi/result", dependencies=[Depends(ratelimit.rate_limit(30, 60, "llm"))])
+async def conversation_multi_result(req: MultiConvResultReq,
+                                    current_user=Depends(get_current_user),
+                                    db: AsyncSession = Depends(get_db)):
+    """다자대화(축 H) 세션 결과 기록·채점. 화자 식별 정확도와 립리딩(문맥추론) 정확도를 결합해
+    종합 점수를 내고, 오독한 발화의 비심을 지식추적(WeakViseme)에 반영해 개인화(축 G)로 잇는다.
+    (커리큘럼 단계 잠금·숙달 판정은 건드리지 않는다 — H는 실전 변형이라 보조 기록.)"""
+    from database import WeakViseme
+    from sqlalchemy import select as _select
+    from engine import get_viseme_feature
+    from content_rules import word_visemes
+    from datetime import datetime as _dt
+
+    spk_acc = (req.speaker_correct / req.speaker_total) if req.speaker_total else 0.0
+    read_acc = (req.read_correct / req.read_total) if req.read_total else 0.0
+    combined = round(100 * (0.5 * spk_acc + 0.5 * read_acc), 1)
+
+    def _vis(texts):
+        s = set()
+        for t in texts or []:
+            for v in word_visemes(t or ""):
+                if 1 <= v <= 10:
+                    s.add(v)
+        return s
+    missed = _vis(req.read_misses)
+    hit = _vis(req.read_hits) - missed   # 같은 비심이 오독에도 있으면 오독을 우선한다
+    for vid in (missed | hit):
+        is_err = vid in missed
+        r = await db.execute(_select(WeakViseme).where(
+            WeakViseme.user_id == current_user.id, WeakViseme.viseme_id == vid))
+        wv = r.scalar_one_or_none()
+        if wv:
+            wv.total_attempts += 1
+            if is_err:
+                wv.error_count += 1
+                wv.last_error_at = _dt.utcnow()
+        else:
+            wv = WeakViseme(user_id=current_user.id, viseme_id=vid,
+                            total_attempts=1, error_count=1 if is_err else 0,
+                            last_error_at=_dt.utcnow() if is_err else None,
+                            phonological_feature=get_viseme_feature(vid))
+            db.add(wv)
+    await db.commit()
+    return {"combined": combined, "speaker_accuracy": round(spk_acc, 3),
+            "read_accuracy": round(read_acc, 3), "recorded_visemes": sorted(missed | hit)}
+
+
 # ── 발화 커리큘럼(6단계) — 상태·게이팅·콘텐츠 ────────────────────────────────
 import speak_curriculum as _speakcur
 import tactile as _tactile

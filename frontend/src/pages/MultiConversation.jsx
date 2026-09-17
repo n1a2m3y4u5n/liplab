@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import LearnHeader from '../components/LearnHeader'
@@ -25,6 +25,11 @@ export default function MultiConversation() {
   const [readScore, setReadScore] = useState({ correct: 0, total: 0 })
   const [readSeen, setReadSeen] = useState({})       // idx→채점됨(재방문 시 이중집계 방지)
   const [numSpeakers, setNumSpeakers] = useState(2)  // 화자 수(2~3) — 난이도 조절
+  const [result, setResult] = useState(null)         // 서버 종합 채점(세션 종료 시)
+  const readHitsRef = useRef([])                      // 립리딩 정답 발화(비심 지식추적용)
+  const readMissesRef = useRef([])                    // 오독 발화
+  const spkRef = useRef({ correct: 0, total: 0 })     // 화자식별 누적(제출용, 최신값 보장)
+  const submittedRef = useRef(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -32,6 +37,8 @@ export default function MultiConversation() {
       const c = await curriculumAPI.getMultiConversation(numSpeakers, 6)
       setConv(c); setIdx(0); setReveal(false); setGuess(null); setSeen({}); setSpkScore({ correct: 0, total: 0 })
       setReadGuess(null); setReadScore({ correct: 0, total: 0 }); setReadSeen({})
+      setResult(null); readHitsRef.current = []; readMissesRef.current = []
+      spkRef.current = { correct: 0, total: 0 }; submittedRef.current = false
     } catch { /* ignore */ } finally { setLoading(false) }
   }, [numSpeakers])
 
@@ -64,8 +71,24 @@ export default function MultiConversation() {
     if (firstTime) {
       const ok = i === conv.turns[idx].speaker
       setSpkScore((s) => ({ correct: s.correct + (ok ? 1 : 0), total: s.total + 1 }))
+      spkRef.current = { correct: spkRef.current.correct + (ok ? 1 : 0), total: spkRef.current.total + 1 }
     }
   }
+
+  // 세션 종료 시 서버에 결과를 기록·채점(화자식별+립리딩 결합, 오독 비심은 지식추적으로).
+  const submitResult = useCallback(async () => {
+    if (submittedRef.current) return
+    submittedRef.current = true
+    const hits = readHitsRef.current, misses = readMissesRef.current
+    try {
+      const r = await curriculumAPI.recordMultiConversation({
+        speaker_correct: spkRef.current.correct, speaker_total: spkRef.current.total,
+        read_correct: hits.length, read_total: hits.length + misses.length,
+        read_hits: hits, read_misses: misses,
+      })
+      setResult(r)
+    } catch { /* 기록 실패는 조용히 무시 */ }
+  }, [])
 
   // 립리딩 이해 과제 — 입모양을 읽고 무슨 말이었는지 고른다(D 립리딩 + G 문맥추론 재조합).
   const chooseRead = (text) => {
@@ -74,7 +97,14 @@ export default function MultiConversation() {
     setReveal(true)
     if (readSeen[idx] == null) {   // 재방문 재채점 방지: 처음 고를 때만 점수 누적
       setReadSeen((m) => ({ ...m, [idx]: 1 }))
-      setReadScore((s) => ({ correct: s.correct + (text === conv.turns[idx].text ? 1 : 0), total: s.total + 1 }))
+      const ok = text === conv.turns[idx].text
+      setReadScore((s) => ({ correct: s.correct + (ok ? 1 : 0), total: s.total + 1 }))
+      if (ok) readHitsRef.current.push(conv.turns[idx].text)
+      else readMissesRef.current.push(conv.turns[idx].text)
+      // 모든 발화를 한 번씩 읽었으면 세션 종료 → 서버 기록·종합 채점(순서 무관)
+      if (readHitsRef.current.length + readMissesRef.current.length >= conv.turns.length) {
+        submitResult()
+      }
     }
   }
 
@@ -111,6 +141,17 @@ export default function MultiConversation() {
         })}
         <span className="ml-2 shrink-0 text-xs text-gray-400">화자 {spkScore.correct}/{spkScore.total} · 독해 {readScore.correct}/{readScore.total}</span>
       </div>
+
+      {/* 세션 종합 채점(축 H) — 화자 식별 + 립리딩(문맥추론) 결합. 오독 비심은 지식추적에 반영됨. */}
+      {result && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-2.5">
+          <span className="text-sm font-bold text-emerald-800">이번 대화 종합 {result.combined}점</span>
+          <span className="text-xs text-emerald-700">화자 식별 {Math.round(result.speaker_accuracy * 100)}% · 독해 {Math.round(result.read_accuracy * 100)}%</span>
+          {result.recorded_visemes?.length > 0 && (
+            <span className="text-[11px] text-emerald-600">약점 입모양 {result.recorded_visemes.length}개를 복습에 반영했어요</span>
+          )}
+        </div>
+      )}
 
       {/* 화자 식별 과제 — 답하기 전엔 현재 발화자를 숨긴다 */}
       <div className="mb-3">

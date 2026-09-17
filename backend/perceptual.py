@@ -23,6 +23,13 @@ from content_rules import (VISEME_MAP, discover_pairs, viseme_signature,
 _VISIBILITY = {l["viseme_id"]: l["visibility"] for l in _cur.VISEME_LESSONS}
 _VIS_WEIGHT = {"high": 0.0, "medium": 0.5, "low": 1.0}  # '안 보이는 정도' 가중
 
+# 공개 표준 자원 판본(§3.3 "판본과 함께 공개"). 재현성을 위해 빌드 타임스탬프가 아닌 고정 판을 쓴다.
+# 스키마·값이 바뀌면 semver를 올리고 edition(판)을 갱신한다.
+RESOURCE_SEMVER = "1.0.0"
+RESOURCE_EDITION = "2026-09"
+RESOURCE_LICENSE = "CC BY 4.0"
+RESOURCE_SOURCE = "LIPLAB (CNSAi)"
+
 
 def viseme_invisibility(viseme_id: int) -> float:
     """비심의 '안 보이는 정도'(0 뚜렷 ~ 1 안 보임). 난이도 지수(C)의 음소 단위 성분.
@@ -166,6 +173,8 @@ def build_standard_resources(words: List[str]) -> Dict:
     data_sim = load_data_similarity()
     return {
         "meta": {"kind": "korean-speechreading-perceptual-resources", "version": 2,
+                 "semver": RESOURCE_SEMVER, "edition": RESOURCE_EDITION,
+                 "license": RESOURCE_LICENSE, "source": RESOURCE_SOURCE,
                  "rules_based": True, "word_count": len(entries),
                  "note": "난이도지수·동구형이음사전·시각공간·평가셋은 규칙기반. jamo_visual_similarity_data는 "
                          "실화자 데이터 유래(별도 검증)."},

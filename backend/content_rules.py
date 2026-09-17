@@ -215,6 +215,33 @@ def check_word(word: str, min_syllable: int = 1, max_syllable: int = 3) -> Tuple
     return True, {"word": word, "tier": tier_of(word)}, "ok"
 
 
+def check_sentence(text: str, min_chars: int = 2, max_chars: int = 40) -> Tuple[bool, Optional[Dict], str]:
+    """연습 문장 후보 1건 검사 — 축 G 규칙 게이트 + LLM 출력 검증(§4.9).
+
+    한글 위주의 짧은 구어체 한 문장인지 규칙으로 확인한다. LLM이 지시를 이탈해 코드·외국어·
+    과도한 기호·제어문자를 내보내면 여기서 탈락시켜 그대로 클라이언트에 나가지 않게 한다.
+    """
+    text = (text or "").strip()
+    if not text:
+        return False, None, "빈 문자열"
+    if not (min_chars <= len(text) <= max_chars):
+        return False, None, f"길이 {len(text)} 범위 밖({min_chars}~{max_chars})"
+    if any(ord(c) < 32 and c != "\t" for c in text):
+        return False, None, "제어문자 포함"
+    # 한글 음절 비율이 낮으면(외국어·코드·기호 위주) 탈락 — 지시 이탈·주입 방어
+    hangul = sum(1 for c in text if "가" <= c <= "힣")
+    non_space = len(text.replace(" ", "")) or 1
+    if hangul < 2 or hangul / non_space < 0.6:
+        return False, None, "한글 음절 비율 낮음"
+    # 보이는 입모양이 하나도 없으면(전부 무음/기호) 독화 훈련에 부적합
+    vis: List[int] = []
+    for w in text.split():
+        vis += word_visemes(w)
+    if not vis:
+        return False, None, "보이는 입모양 없음"
+    return True, {"text": text, "visible_visemes": len(vis)}, "ok"
+
+
 def check_lookalike_pair(a: str, b: str, claimed_same_looking: Optional[bool] = None
                          ) -> Tuple[bool, Optional[Dict], str]:
     """
