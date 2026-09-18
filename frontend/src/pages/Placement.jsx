@@ -27,12 +27,21 @@ export default function Placement() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [mode, setMode] = useState('placement')  // placement | A(사전) | B(사후) — 향상도검사(축 I)
+  const [n, setN] = useState(8)  // 목표 문항 수(적응형 배치검사)
 
   const start = useCallback(async (m = mode) => {
     setLoading(true); setResult(null); setResponses({}); setIdx(0)
     try {
-      const d = await curriculumAPI.getPlacement(8, m === 'placement' ? null : m)
-      setItems(d.items)
+      if (m === 'placement') {
+        // 적응형: 첫 문항만 받고, 정오답에 따라 다음 문항을 서버가 고른다(축 I).
+        const d = await curriculumAPI.nextPlacementItem([], {}, 8)
+        setN(d.n || 8)
+        setItems(d.item ? [d.item] : [])
+      } else {
+        // 향상도 동형폼(A 사전 / B 사후)은 통제 비교를 위해 고정 배치 유지.
+        const d = await curriculumAPI.getPlacement(8, m)
+        setItems(d.items)
+      }
     } catch { /* ignore */ } finally { setLoading(false) }
   }, [mode])
 
@@ -49,6 +58,21 @@ export default function Placement() {
     const it = items[idx]
     const next = { ...responses, [it.id]: word }
     setResponses(next)
+    if (mode === 'placement') {
+      // 적응형: 방금 정오답으로 다음 문항을 서버가 고른다. done이면 지금까지 문항으로 채점.
+      setSubmitting(true)
+      try {
+        const d = await curriculumAPI.nextPlacementItem(items, next, n)
+        if (d.done || !d.item) {
+          const r = await curriculumAPI.scorePlacement(items, next, 'placement')
+          setResult(r)
+        } else {
+          setItems([...items, d.item]); setIdx(idx + 1)
+        }
+      } finally { setSubmitting(false) }
+      return
+    }
+    // 향상도 동형폼(A/B): 고정 배치 순차 진행 후 일괄 채점.
     if (idx < items.length - 1) {
       setIdx(idx + 1)
     } else {
@@ -123,6 +147,7 @@ export default function Placement() {
   }
 
   const it = items[idx]
+  if (!it) return <div className="p-8 text-center text-gray-400">문항을 불러오지 못했어요. 다시 시도해 주세요.</div>
   return (
     <div className="mx-auto max-w-3xl px-4 py-4">
       <LearnHeader title="독화 배치검사" />
@@ -136,9 +161,9 @@ export default function Placement() {
         <span className="ml-auto self-center text-[11px] text-gray-400">사전(A)·사후(B)로 향상도 측정</span>
       </div>
       <div className="mb-3">
-        <div className="flex justify-between text-xs text-gray-500"><span>진행</span><span>{idx + 1} / {items.length}</span></div>
+        <div className="flex justify-between text-xs text-gray-500"><span>진행{mode === 'placement' ? ' · 적응형' : ''}</span><span>{idx + 1} / {mode === 'placement' ? n : items.length}</span></div>
         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-200">
-          <div className="h-full rounded-full bg-slate-500 transition-all" style={{ width: `${((idx) / items.length) * 100}%` }} />
+          <div className="h-full rounded-full bg-slate-500 transition-all" style={{ width: `${(idx / (mode === 'placement' ? n : items.length)) * 100}%` }} />
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

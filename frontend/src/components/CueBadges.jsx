@@ -58,16 +58,22 @@ export function CueLegend() {
   )
 }
 
-export default function CueBadges({ text }) {
+export default function CueBadges({ text, showControls = false }) {
   const [cues, setCues] = useState(null)
+  // 축 J 조절: focus=약한 표적 음소에만 기호(지식추적 연동, 서버가 판단) / maxCues=기호 과다 상한(0=무제한)
+  const [focus, setFocus] = useState(false)
+  const [maxCues, setMaxCues] = useState(0)
   useEffect(() => {
     let on = true
     if (!text) return undefined
-    curriculumAPI.getCues(text)
-      .then((d) => { if (on) setCues(d.cues || []) })
-      .catch(() => { if (on) setCues([]) })
-    return () => { on = false }
-  }, [text])
+    // 슬라이더 연속 조작 시 요청 폭주 방지 — 250ms 디바운스
+    const timer = setTimeout(() => {
+      curriculumAPI.getCues(text, { focus, maxCues })
+        .then((d) => { if (on) setCues(d.cues || []) })
+        .catch(() => { if (on) setCues([]) })
+    }, 200)
+    return () => { on = false; clearTimeout(timer) }
+  }, [text, focus, maxCues])
 
   const bySyl = {}
   ;(cues || []).forEach((c) => {
@@ -75,7 +81,7 @@ export default function CueBadges({ text }) {
     bySyl[c.syllable_index].push(c)
   })
 
-  return (
+  const badges = (
     <span className="inline-flex items-end gap-0.5 rounded-lg border border-gray-200 bg-white px-2 py-1">
       {[...text].map((ch, i) => (
         <span key={i} className="inline-flex flex-col items-center">
@@ -94,6 +100,25 @@ export default function CueBadges({ text }) {
           <span className="text-lg font-semibold text-gray-800">{ch}</span>
         </span>
       ))}
+    </span>
+  )
+
+  if (!showControls) return badges
+
+  return (
+    <span className="inline-flex flex-col gap-1.5">
+      {badges}
+      <span className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-[11px] text-gray-500">
+        <label className="inline-flex cursor-pointer items-center gap-1.5" title="아직 약한 음소에만 기호를 남깁니다(개인 학습기록 기반).">
+          <input type="checkbox" checked={focus} onChange={(e) => setFocus(e.target.checked)} className="h-3 w-3 accent-violet-600" />
+          표적 음소 집중
+        </label>
+        <label className="inline-flex items-center gap-1.5" title="화면에 동시에 뜨는 기호 수를 제한해 과다를 막습니다.">
+          최대 기호
+          <input type="range" min="0" max="8" value={maxCues} onChange={(e) => setMaxCues(Number(e.target.value))} className="h-1 w-20 accent-violet-600" />
+          <span className="w-8 tabular-nums text-gray-600">{maxCues === 0 ? '무제한' : maxCues}</span>
+        </label>
+      </span>
     </span>
   )
 }

@@ -435,7 +435,7 @@ export default function Practice() {
                       )}
                     </div>
                     <div className="rounded-lg border border-gray-100 bg-gray-50 p-2.5 overflow-x-auto">
-                      <CueBadges text={currentSentence} />
+                      <CueBadges text={currentSentence} showControls />
                       <div className="mt-1.5"><CueLegend /></div>
                     </div>
                     <div className="flex gap-2">
