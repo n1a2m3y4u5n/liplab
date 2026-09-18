@@ -2,9 +2,10 @@
 Audio2Face 백본 — 고도화 축 A4(음성 → 얼굴 블렌드셰이프).
 
 한국어 wav2vec2(동결) hidden states → BiGRU 헤드 → 52 ARKit 블렌드셰이프 회귀.
-로그멜(화자 종속) 대신 wav2vec2 특징을 써서 '화자 불변' 매핑을 학습했고, 미학습 화자
-교차검증 jawOpen 상관 r≈0.68(8화자)을 얻은 모델(kr_a4_w2v)의 추론부. 실제 음성으로 아바타가
-립싱크하게 하는 계획서 축 A4의 제품 편입.
+로그멜(화자 종속) 대신 동결 음성 백본 특징을 써서 '화자 불변' 매핑을 학습한 모델의 추론부.
+제품 기본은 WavLM-large 백본·20화자(미학습 화자 교차검증 jawOpen 상관 r≈0.66,
+kr_a4_wavlm.pt). 옛 kresnik wav2vec2 체크포인트도 backbone 필드 없이 로드되어 하위호환.
+실제 음성으로 아바타가 립싱크하게 하는 계획서 축 A4의 제품 편입.
 
 **추론만 하므로 GPU 없이 CPU에서 동작**(느릴 뿐). torch·torchaudio·transformers·librosa가
 없으면 is_available()=False로, 앱은 텍스트→비심 경로로 폴백한다(배포 무영향).
@@ -18,7 +19,10 @@ FPS = 30
 _W2V = "kresnik/wav2vec2-large-xlsr-korean"
 
 # 모델 탐색 경로 — 앱 내부(backend/models) 우선, 없으면 랩 산출물.
+# kr_a4_wavlm.pt(WavLM 백본, 20화자)가 최우선: 동일 데이터 CV에서 kresnik를 상회하는
+# 오디오 표현이라 미학습 화자 립싱크가 더 정확하다(체크포인트의 backbone 필드로 자동 로드).
 _CKPT_CANDIDATES = [
+    os.path.join(os.path.dirname(__file__), "models", "kr_a4_wavlm.pt"),
     os.path.join(os.path.dirname(__file__), "models", "kr_a4_w2v.pt"),
     os.path.join(os.path.dirname(__file__), "models", "kr_a4_w2v_8spk.pt"),
     os.path.join(os.path.dirname(__file__), "models", "kr_a4_w2v_4spk.pt"),
@@ -28,6 +32,7 @@ _CKPT_CANDIDATES = [
 _w2v = None
 _head = None
 _names: Optional[List[str]] = None
+_backbone: Optional[str] = None
 
 
 def is_available() -> bool:
@@ -75,19 +80,24 @@ def _build_head(n_bs: int):
 
 
 def _load():
-    """wav2vec2(동결)와 학습된 헤드를 1회 로드."""
-    global _w2v, _head, _names
+    """동결 음성 백본과 학습된 헤드를 1회 로드.
+
+    백본은 체크포인트의 'backbone' 필드를 따른다(WavLM-large 등). 옛 체크포인트엔 이 필드가
+    없으므로 기존 kresnik wav2vec2로 폴백해 하위호환을 유지한다. WavLM-large·wav2vec2-large
+    모두 hidden 1024라 헤드 구조는 동일하고, AutoModel이 두 계열을 모두 로드한다."""
+    global _w2v, _head, _names, _backbone
     if _head is not None:
         return
     import torch
-    from transformers import Wav2Vec2Model
+    from transformers import AutoModel
     ckpt_path = _find_ckpt()
     ck = torch.load(ckpt_path, map_location="cpu")
     _names = ck["names"]
+    _backbone = ck.get("backbone", _W2V)
     _head = _build_head(len(_names))
     _head.load_state_dict(ck["state"])
     _head.eval()
-    _w2v = Wav2Vec2Model.from_pretrained(_W2V).eval()
+    _w2v = AutoModel.from_pretrained(_backbone).eval()
     for p in _w2v.parameters():
         p.requires_grad_(False)
 
