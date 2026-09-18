@@ -112,6 +112,65 @@ def _recommended_stage(level: int) -> Dict:
     return {"stage": stg["stage"], "key": key, "title": stg["title"]} if stg else {"key": key}
 
 
+def estimate_ability(asked: List[Dict], responses: Dict[str, str]) -> Dict:
+    """검사 진행 중 러닝 능력추정. asked=이미 낸 문항들(difficulty·visemes 포함),
+    responses={문항ID: 고른 단어}. θ(ability)는 '통과한 최고 난이도와 실패한 최저 난이도의
+    경계'로 추정하고, 오답 문항의 안 보이는 자질을 누적해 표적(error_visemes)을 만든다.
+    적응형 출제(select_next_item)와 진행 중 표시에 쓰인다(최종 채점은 score_placement가 담당)."""
+    by_id = {it["id"]: it for it in asked}
+    solved, failed = [], []
+    err = Counter()
+    for iid, chosen in responses.items():
+        it = by_id.get(iid)
+        if not it:
+            continue
+        if chosen == it["word"]:
+            solved.append(it["difficulty"])
+        else:
+            failed.append(it["difficulty"])
+            for v in it.get("visemes", []):
+                err[v] += 1
+    if solved and failed:
+        theta = (max(solved) + min(failed)) / 2.0
+    elif solved:
+        theta = min(1.0, max(solved) + 0.12)   # 다 맞음 → 더 어렵게
+    elif failed:
+        theta = max(0.0, min(failed) - 0.12)    # 다 틀림 → 더 쉽게
+    else:
+        theta = 0.5                              # 시작: 중간 난이도
+    return {"ability": round(theta, 3),
+            "error_visemes": [v for v, _ in err.most_common(3)],
+            "answered": len(solved) + len(failed)}
+
+
+def select_next_item(asked: List[Dict], responses: Dict[str, str],
+                     words: List[str], seed: Optional[int] = None) -> Optional[Dict]:
+    """적응형 다음 문항 1개. 추정 능력 θ에 난이도가 가장 가까운 단어를 고르되(난이도지수 C 기반),
+    누적 오답 자질(표적)을 포함하는 단어를 우선한다. 이미 낸 단어는 제외. 후보 없으면 None.
+    build_placement_items/build_progression_forms(동형폼)는 손대지 않는 별도 경로다."""
+    rng = random.Random(seed)
+    words = [w for w in dict.fromkeys(words) if _cr.is_hangul_word(w)]
+    used = {it["word"] for it in asked}
+    sig = Counter(_cr.viseme_signature(w) for w in words)
+    entries = [e for e in (_perc.word_difficulty(w, sig) for w in words)
+               if e and e["word"] not in used]
+    if not entries:
+        return None
+    est = estimate_ability(asked, responses)
+    theta = est["ability"]
+    targets = set(est["error_visemes"])
+
+    def key(e):
+        close = -abs(e["difficulty"] - theta)          # 1순위: θ 근접
+        hit = 1 if (targets and set(e["visemes"]) & targets) else 0  # 2순위: 약점 자질 겨냥
+        return (round(close, 3), hit, rng.random())
+    best = max(entries, key=key)
+    opts = _confusable_options(best["word"], words) + [best["word"]]
+    rng.shuffle(opts)
+    return {"id": f"q{len(asked) + 1}", "word": best["word"], "options": opts,
+            "difficulty": best["difficulty"], "visemes": best["visemes"]}
+
+
 def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
     """
     배치검사 채점. responses: {문항ID: 고른 단어}.

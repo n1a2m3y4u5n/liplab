@@ -1684,6 +1684,32 @@ async def assessment_placement(n: int = 8, form: str = None,
     return {"items": items, "form": "placement"}
 
 
+class PlacementNextReq(BaseModel):
+    asked: list = []
+    responses: dict = {}
+    n: int = 8
+
+
+@app.post("/api/assessment/placement/next")
+async def assessment_placement_next(data: PlacementNextReq,
+                                    current_user=Depends(get_current_user)):
+    """적응형 배치검사(축 I) — 지금까지의 정오답으로 능력 θ를 추정해 다음 문항 1개를 고른다.
+    난이도지수(C)에 θ를 맞추고 누적 오답 자질을 표적으로 겨냥한다. 고정 N 도달·문항 소진 시 done.
+    동형폼(A/B) 향상도검사는 이 경로를 타지 않아 사전·사후 통제 비교의 불변성을 지킨다."""
+    import assessment as _asmt
+    words = [w["word"] for w in _curriculum.WORD_BANK]
+    n = max(3, min(20, data.n or 8))
+    asked = data.asked or []
+    responses = data.responses or {}
+    est = _asmt.estimate_ability(asked, responses)
+    if len(asked) >= n:
+        return {"item": None, "done": True, "ability": est["ability"],
+                "target_visemes": est["error_visemes"], "index": len(asked), "n": n}
+    item = _asmt.select_next_item(asked, responses, words)
+    return {"item": item, "done": item is None, "ability": est["ability"],
+            "target_visemes": est["error_visemes"], "index": len(asked) + 1, "n": n}
+
+
 @app.post("/api/assessment/score")
 async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_current_user),
                            db: AsyncSession = Depends(get_db)):

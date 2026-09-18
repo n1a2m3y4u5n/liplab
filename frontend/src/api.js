@@ -168,12 +168,15 @@ export const curriculumAPI = {
   confusionMatrix: async () => (await api.get('/curriculum/confusion-matrix')).data,
   getRecommendedLevel: async () => (await api.get('/curriculum/recommended-level')).data,
   getNext: async () => (await api.get('/curriculum/next')).data,
-  getCues: async (text) => (await api.get('/cues', { params: { text } })).data,
+  getCues: async (text, { focus = false, maxCues = null } = {}) => (await api.get('/cues', {
+    params: { text, ...(focus ? { focus: true } : {}), ...(maxCues && maxCues > 0 ? { max_cues: maxCues } : {}) },
+  })).data,
   recordMouth: async (viseme_id, score) => (await api.post('/curriculum/mouth-attempt', { viseme_id, score })).data,
   getMultiConversation: async (speakers = 2, turns = 6) => (await api.get('/conversation/multi', { params: { speakers, turns } })).data,
   recordMultiConversation: async (payload) => (await api.post('/conversation/multi/result', payload)).data,
   getPlacement: async (n = 8, form = null) => (await api.get('/assessment/placement', { params: form ? { n, form } : { n } })).data,
   scorePlacement: async (items, responses, form = 'placement') => (await api.post('/assessment/score', { items, responses, form })).data,
+  nextPlacementItem: async (asked, responses, n = 8) => (await api.post('/assessment/placement/next', { asked, responses, n })).data,
 }
 
 export const scoreAPI = {
