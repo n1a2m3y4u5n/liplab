@@ -7,7 +7,7 @@ import { avatarAPI } from '../api'
  *
  * 텍스트→비심(engine.py) 경로와 달리, 사용자가 녹음/업로드한 '진짜 음성'을 화자 불변
  * wav2vec2 특징으로 받아 BiGRU 헤드가 얼굴 블렌드셰이프를 직접 회귀한다(미학습 화자
- * jawOpen 상관 r≈0.68, 8화자 교차검증). 프레임(30fps)을 오디오 재생과 동기화해 bsFrameRef로 아바타에 흘린다.
+ * jawOpen 상관 r≈0.66, 20화자 교차검증). 프레임(30fps)을 오디오 재생과 동기화해 bsFrameRef로 아바타에 흘린다.
  *
  * 서버에 A4 모델/토치가 없으면 status=false → 기능을 숨기고 텍스트 경로만 노출(전시 빌드 안전).
  */
@@ -244,7 +244,7 @@ export default function Audio2FaceAvatar() {
         </p>
       )}
       <p className="mt-1 text-[11px] text-gray-400 leading-relaxed">
-        화자 불변 음성특징(wav2vec2)으로 학습해 처음 듣는 목소리도 입모양을 예측합니다(미학습 화자 jawOpen 상관 r≈0.68, 8화자).
+        화자 불변 음성특징(WavLM)으로 학습해 처음 듣는 목소리도 입모양을 예측합니다(미학습 화자 jawOpen 상관 r≈0.66, 20화자 교차검증).
       </p>
     </div>
   )

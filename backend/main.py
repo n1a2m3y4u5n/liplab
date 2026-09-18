@@ -391,7 +391,7 @@ async def audio2face_status():
 async def avatar_audio2face(audio: UploadFile = File(...), current_user=Depends(get_current_user)):
     """
     음성 → 얼굴 블렌드셰이프 시퀀스(축 A4). 실제 음성으로 아바타가 립싱크한다.
-    화자 불변 wav2vec2 특징 → BiGRU → 52 ARKit 블렌드셰이프(미학습화자 jawOpen r≈0.68, 8화자 교차검증).
+    화자 불변 WavLM 특징 → BiGRU → 52 ARKit 블렌드셰이프(미학습화자 jawOpen r≈0.66, 20화자 교차검증).
     모델/라이브러리가 없으면 503(프론트는 텍스트→비심 경로로 폴백).
     """
     try:
