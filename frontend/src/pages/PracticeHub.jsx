@@ -11,7 +11,7 @@ const CARDS = [
   { key: 'scenario', title: '상황별 시나리오', desc: '카페·병원 등 상황을 골라 연습해요', icon: '/ui/card-scenario.svg', chip: '#fff3d6', to: '/learn/scenario' },
   { key: 'sign', title: '수어 함께 보기', desc: '문장을 수어로도 확인할 수 있어요', icon: '/ui/card-sign.svg', chip: '#dff7ec', to: '/learn/sign' },
   { key: 'retest', title: '자가진단 다시 하기', desc: '지금 수준으로 단계를 다시 추천받아요', icon: '/ui/card-retest.svg', chip: '#efe9fc', to: '/learn/placement' },
-  { key: 'endless', title: '엔드리스 학습', desc: '약한 유형만 골라 무한 연습해요', icon: '/ui/card-scenario.svg', chip: '#e0e7ff', to: '/learn/endless' },
+  { key: 'endless', title: '엔드리스 학습', desc: '틀렸던 유형이 계속 나와요', icon: '/ui/tab-card-endless.svg', chip: '#e0e7ff', to: '/learn/endless' },
 ]
 
 function PracticeCard({ card, onClick }) {

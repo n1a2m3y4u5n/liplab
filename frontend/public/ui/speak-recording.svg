@@ -1,0 +1,8 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Button / &#235;&#133;&#185;&#236;&#157;&#140; &#236;&#164;&#145;">
+<rect x="13" y="13" width="70" height="70" rx="35" fill="#EC4899"/>
+<rect x="13" y="13" width="70" height="70" rx="35" stroke="#BE185D" stroke-width="2"/>
+<rect id="Rectangle" x="36" y="36" width="24" height="24" rx="6" fill="white"/>
+<circle id="Pulse" opacity="0.35" cx="48" cy="48" r="46.5" stroke="#EC4899" stroke-width="3"/>
+</g>
+</svg>

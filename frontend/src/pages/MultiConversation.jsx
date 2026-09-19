@@ -11,6 +11,7 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
 const SPK_COLOR = ['bg-sky-500', 'bg-rose-500', 'bg-amber-500']
 const SPK_RING = ['ring-sky-400', 'ring-rose-400', 'ring-amber-400']  // 화자별 시각 구분(답 후)
 const SPK_SOFT = ['bg-sky-50 text-sky-700 border-sky-200', 'bg-rose-50 text-rose-700 border-rose-200', 'bg-amber-50 text-amber-700 border-amber-200']
+const SPK_TEXT = ['text-sky-600', 'text-rose-600', 'text-amber-600']  // 선택 전 화자별 글자색(Figma: 화자마다 색)
 const SPK_NAME = ['A', 'B', 'C']
 
 export default function MultiConversation() {
@@ -118,13 +119,14 @@ export default function MultiConversation() {
   const answered = guess != null
   return (
     <AppShell active="practice" title="다자 대화" description="입모양만 보고 누가 말했는지 맞혀보세요">
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <p className="text-sm text-gray-500">장면: <b className="text-gray-700">{conv.scene}</b> · 입모양만 보고 <b>누가 말했는지</b> 맞힌 뒤, 무슨 말인지 읽어보세요.</p>
-        <div className="flex items-center gap-1 text-xs">
-          <span className="text-gray-400">화자</span>
+      {/* 안내 + 화자 수 토글(난이도) */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <p className="text-[15px] text-ink-muted">장면 <b className="text-ink">{conv.scene}</b> · 입모양만 보고 <b className="text-ink">누가 말했는지</b> 맞힌 뒤, 무슨 말인지 읽어보세요.</p>
+        <div className="flex items-center gap-1.5 text-[13px]">
+          <span className="text-ink-muted">화자</span>
           {[2, 3].map((n) => (
             <button key={n} onClick={() => setNumSpeakers(n)}
-              className={`rounded-full px-2.5 py-0.5 font-bold transition ${numSpeakers === n ? 'bg-slate-900 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+              className={`rounded-full px-3.5 py-1 font-bold transition ${numSpeakers === n ? 'bg-primary-500 text-white' : 'bg-[#f3f3f7] text-ink-muted hover:bg-gray-200'}`}>
               {n}명
             </button>
           ))}
@@ -132,10 +134,10 @@ export default function MultiConversation() {
       </div>
 
       {/* 발화 순서 타임라인 — 지나간 발화는 화자색, 현재는 링, 이후는 회색(정답 미리보기 방지) */}
-      <div className="mb-3 flex items-center gap-1.5 overflow-x-auto pb-1">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
         {conv.turns.map((_, i) => {
           const spk = seen[i]
-          const cls = i === idx ? 'ring-2 ring-slate-900' : ''
+          const cls = i === idx ? 'ring-2 ring-primary-500' : ''
           const color = spk != null ? SPK_COLOR[spk] : (i < idx ? 'bg-gray-300' : 'bg-gray-200')
           return <span key={i} className={`h-3 w-6 shrink-0 rounded-full ${color} ${cls}`} title={`${i + 1}번째 발화`} />
         })}
@@ -144,7 +146,7 @@ export default function MultiConversation() {
 
       {/* 세션 종합 채점(축 H) — 화자 식별 + 립리딩(문맥추론) 결합. 오독 비심은 지식추적에 반영됨. */}
       {result && (
-        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[14px] border-2 border-emerald-200 bg-emerald-50/70 px-4 py-2.5">
           <span className="text-sm font-bold text-emerald-800">이번 대화 종합 {result.combined}점</span>
           <span className="text-xs text-emerald-700">화자 식별 {Math.round(result.speaker_accuracy * 100)}% · 독해 {Math.round(result.read_accuracy * 100)}%</span>
           {result.recorded_visemes?.length > 0 && (
@@ -153,18 +155,35 @@ export default function MultiConversation() {
         </div>
       )}
 
-      {/* 화자 식별 과제 — 답하기 전엔 현재 발화자를 숨긴다 */}
-      <div className="mb-3">
-        <p className="mb-1.5 text-xs font-semibold text-gray-500">누가 말했을까요? (입모양을 보고 고르세요)</p>
-        <div className="flex gap-2">
+      {/* 카드 1: 장면 무대 + 화자 식별 과제 */}
+      <div className="card">
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-[17px] font-bold text-ink">{conv.scene}</p>
+          <p className="text-[13px] font-bold text-ink-muted">{idx + 1} / {conv.turns.length}턴</p>
+        </div>
+
+        {/* 입모양 무대 — 답 후 현재 화자 색으로 아바타를 감싸 여러 화자 장면을 시각적으로 구분(축 H) */}
+        <div className="rounded-[16px] bg-[#fafafc] p-4">
+          <div className={answered ? `rounded-xl ring-2 ${SPK_RING[turn.speaker] || ''} transition` : ''}>
+            <MouthAvatar frames={frames} />
+          </div>
+          <p className="mt-3 text-center text-[15px] font-bold text-ink-muted">
+            {answered
+              ? <>지금 <span className={`rounded px-1.5 py-0.5 text-white ${SPK_COLOR[turn.speaker]}`}>화자 {SPK_NAME[turn.speaker]}</span>가 말합니다</>
+              : '지금 말하는 사람은 누구일까요?'}
+          </p>
+        </div>
+
+        {/* 화자 식별 선택 — Figma 3D 하단테두리 버튼 */}
+        <div className="mt-4 flex gap-3">
           {Array.from({ length: conv.speakers }).map((_, i) => {
             const isAns = answered && i === turn.speaker
             const isWrongPick = answered && i === guess && guess !== turn.speaker
-            const base = 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold transition'
-            const cls = isAns ? SPK_COLOR[i] + ' border-transparent text-white'
-              : isWrongPick ? 'border-rose-300 bg-rose-50 text-rose-600 line-through'
-              : answered ? 'border-gray-200 bg-white text-gray-400'
-              : 'border-gray-300 bg-white text-gray-700 hover:border-slate-400'
+            const base = 'flex flex-1 items-center justify-center gap-1.5 rounded-[14px] py-4 text-[17px] font-bold transition-all'
+            const cls = isAns ? `${SPK_COLOR[i]} border-2 border-b-2 border-transparent text-white`
+              : isWrongPick ? 'border-2 border-b-2 border-rose-300 bg-rose-50 text-rose-500 line-through'
+              : answered ? 'border-2 border-b-[5px] border-line bg-white text-gray-300'
+              : `border-2 border-b-[5px] border-line bg-white ${SPK_TEXT[i]} hover:border-primary-300 active:translate-y-[1px] active:border-b-2`
             return (
               <button key={i} disabled={answered} onClick={() => chooseSpeaker(i)} className={`${base} ${cls}`}>
                 <span className="grid h-5 w-5 place-items-center rounded-full bg-black/10 text-xs">{SPK_NAME[i]}</span>
@@ -172,63 +191,55 @@ export default function MultiConversation() {
               </button>
             )
           })}
-          {answered && (
-            <span className={`self-center text-sm font-bold ${guess === turn.speaker ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {guess === turn.speaker ? '정답!' : `아니에요 — 화자 ${SPK_NAME[turn.speaker]}`}
-            </span>
-          )}
         </div>
+        {answered && (
+          <p className={`mt-2 text-center text-sm font-bold ${guess === turn.speaker ? 'text-emerald-600' : 'text-rose-600'}`}>
+            {guess === turn.speaker ? '정답!' : `아니에요 — 화자 ${SPK_NAME[turn.speaker]}`}
+          </p>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="card">
-          <p className="mb-2 text-sm text-gray-500">{answered ? <>지금 <b className={`rounded px-1.5 py-0.5 text-white ${SPK_COLOR[turn.speaker]}`}>화자 {SPK_NAME[turn.speaker]}</b>가 말합니다</> : '입모양을 보고 화자를 먼저 맞혀보세요'}</p>
-          {/* 답 후 현재 화자 색으로 아바타를 감싸 여러 화자 장면을 시각적으로 구분(축 H) */}
-          <div className={answered ? `rounded-xl ring-2 ${SPK_RING[turn.speaker] || ''} transition` : ''}>
-            <MouthAvatar frames={frames} />
-          </div>
-        </div>
-        <div className="card flex flex-col justify-between">
-          <div>
-            {!answered ? (
-              <p className="mt-2 rounded-lg border-2 border-dashed border-gray-200 py-6 text-center text-sm font-bold text-gray-400">
-                먼저 화자를 맞혀 주세요
-              </p>
-            ) : readGuess == null ? (
-              <div>
-                <p className="mb-1.5 text-xs font-semibold text-gray-500">무슨 말이었나요? (입모양을 읽고 고르세요)</p>
-                <div className="space-y-1.5">
-                  {readOptions.map((opt) => (
-                    <button key={opt} onClick={() => chooseRead(opt)}
-                      className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-left text-sm font-medium text-gray-700 transition hover:border-slate-400 hover:bg-slate-50">
-                      {opt}
-                    </button>
-                  ))}
-                </div>
+      {/* 카드 2: 무슨 말이었나요(독해) + 네비게이션 */}
+      <div className="card flex flex-col">
+        <div className="min-h-[120px] flex-1">
+          {!answered ? (
+            <p className="mt-2 rounded-[14px] border-2 border-dashed border-line py-10 text-center text-sm font-bold text-gray-400">
+              먼저 화자를 맞혀 주세요
+            </p>
+          ) : readGuess == null ? (
+            <div>
+              <p className="mb-2 text-[13px] font-bold text-ink-muted">무슨 말이었나요? (입모양을 읽고 고르세요)</p>
+              <div className="space-y-2">
+                {readOptions.map((opt) => (
+                  <button key={opt} onClick={() => chooseRead(opt)}
+                    className="block w-full rounded-[12px] border-2 border-line bg-white px-4 py-3 text-left text-[15px] font-medium text-ink transition hover:border-primary-300 hover:bg-primary-50">
+                    {opt}
+                  </button>
+                ))}
               </div>
-            ) : (
-              <div className="mt-1 space-y-2">
-                <p className={`text-sm font-bold ${readGuess === turn.text ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {readGuess === turn.text ? '정답! 잘 읽었어요' : '아쉬워요 — 실제로는'}
-                </p>
-                <p className="text-lg font-bold text-gray-900">“{turn.text}”</p>
-                <div className="rounded-lg border border-gray-100 bg-gray-50 p-2.5 overflow-x-auto">
-                  <CueBadges text={turn.text} />
-                  <div className="mt-1.5"><CueLegend /></div>
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="mt-4 flex items-center justify-between">
-            <span className="text-xs text-gray-400">{idx + 1} / {conv.turns.length}</span>
-            <div className="flex gap-2">
-              {idx > 0 && <button onClick={() => setIdx(idx - 1)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-bold text-gray-700 hover:bg-gray-50">이전</button>}
-              {!last ? (
-                <button onClick={() => setIdx(idx + 1)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-bold text-white hover:bg-slate-700">다음 발화 →</button>
-              ) : (
-                <button onClick={load} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-bold text-white hover:bg-emerald-700">새 대화 ↻</button>
-              )}
             </div>
+          ) : (
+            <div className="mt-1 space-y-2">
+              <p className={`text-sm font-bold ${readGuess === turn.text ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {readGuess === turn.text ? '정답! 잘 읽었어요' : '아쉬워요 — 실제로는'}
+              </p>
+              <p className="text-lg font-bold text-ink">“{turn.text}”</p>
+              <div className="overflow-x-auto rounded-[12px] border border-gray-100 bg-gray-50 p-2.5">
+                <CueBadges text={turn.text} />
+                <div className="mt-1.5"><CueLegend /></div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="mt-4 flex items-center justify-between">
+          <span className="text-xs text-gray-400">{idx + 1} / {conv.turns.length}</span>
+          <div className="flex gap-2">
+            {idx > 0 && <button onClick={() => setIdx(idx - 1)} className="rounded-[12px] border-2 border-line px-3 py-1.5 text-sm font-bold text-ink hover:bg-gray-50">이전</button>}
+            {!last ? (
+              <button onClick={() => setIdx(idx + 1)} className="rounded-[12px] bg-primary-500 px-4 py-1.5 text-sm font-bold text-white hover:bg-primary-600">다음 발화 →</button>
+            ) : (
+              <button onClick={load} className="rounded-[12px] bg-emerald-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-emerald-700">새 대화 ↻</button>
+            )}
           </div>
         </div>
       </div>
