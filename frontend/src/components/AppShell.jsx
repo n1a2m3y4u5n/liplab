@@ -48,6 +48,9 @@ function DefaultRail() {
   const level = Math.max(1, statistics?.current_level || user?.current_level || 1)
   const xp = Math.max(0, statistics?.total_xp ?? user?.total_xp ?? 0)
   const streak = Math.max(0, user?.streak_count || 0)
+  const PER = 500
+  const inLevel = xp % PER
+  const remaining = PER - inLevel
   return (
     <div className="flex h-full w-[300px] shrink-0 flex-col gap-4 border-l-2 border-line bg-white p-6">
       <div className="flex items-center justify-center gap-4 pb-1">
@@ -58,6 +61,19 @@ function DefaultRail() {
         <StatPill icon="/ui/stat-streak.svg" value={streak} color="#b45309" />
         <StatPill icon="/ui/stat-xp.svg" value={xp.toLocaleString()} color="#5f3ab8" />
         <StatPill icon="/ui/stat-level.svg" value={`Lv.${level}`} color="#0369a1" />
+      </div>
+      <div className="card-flat">
+        <div className="flex items-center justify-between">
+          <p className="text-[17px] font-bold text-ink">레벨 진행</p>
+          <span className="text-sm font-bold text-primary-500">Lv.{level}</span>
+        </div>
+        <div className="mt-3 flex justify-between text-[13px] font-bold">
+          <span className="text-ink-muted">다음 레벨까지</span>
+          <span className="text-primary-500">{remaining} XP 남음</span>
+        </div>
+        <div className="mt-2 h-3 overflow-hidden rounded-full bg-gray-200">
+          <div className="h-full rounded-full bg-primary-500" style={{ width: `${(inLevel / PER) * 100}%` }} />
+        </div>
       </div>
       <div className="card-flat">
         <p className="text-[17px] font-bold text-ink">복습할 항목</p>
