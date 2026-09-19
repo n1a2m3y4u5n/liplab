@@ -430,10 +430,11 @@ export default function SpeakingPractice() {
         <>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="card">
-            <p className="text-sm text-gray-500 mb-1">{prompt ? '이렇게 해보세요' : '이렇게 말해보세요'}</p>
-            {prompt && <p className="text-base font-semibold text-rose-600 text-center mb-1">{prompt}</p>}
-            <div className="flex items-center justify-center gap-2 py-2">
-              <p className="text-3xl font-bold text-gray-900">{target || '…'}</p>
+            <p className="mb-2 text-[13px] font-bold text-rose-500">{prompt ? '이렇게 해보세요' : '이 단어를 소리 내어 말해보세요'}</p>
+            {prompt && <p className="mb-2 text-center text-base font-semibold text-rose-600">{prompt}</p>}
+            {/* 발화 목표 단어 — Figma 핑크 카드 */}
+            <div className="mb-4 flex items-center justify-center rounded-[18px] bg-[#ffe4e9] px-6 py-5">
+              <p className="text-[34px] font-bold tracking-[-0.7px] text-[#be185d]">{target || '…'}</p>
             </div>
             <MouthAvatar frames={frames} height={230} />
             <p className="text-xs text-gray-400 mt-2 text-center">
