@@ -20,7 +20,9 @@ const NAV = [
 function Logo() {
   return (
     <div className="flex items-center gap-2 px-2">
-      <img src="/ui/logo.png" alt="" className="h-7 w-auto" />
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100">
+        <img src="/ui/mascot.svg" alt="" className="h-6 w-6" />
+      </span>
       <span className="font-display text-[26px] leading-none tracking-[-1px] text-primary-500">LIPLAB</span>
     </div>
   )
@@ -35,8 +37,22 @@ function StatPill({ icon, value, color }) {
   )
 }
 
-/** 기본 우측 레일 — 스탯 + 복습할 항목. 페이지가 rightRail prop으로 대체 가능. */
+function TaskItem({ label, cur, total }) {
+  const done = cur >= total
+  return (
+    <div className="flex items-center gap-3">
+      <span className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] border-2 ${done ? 'border-primary-500 bg-primary-500' : 'border-line'}`}>
+        {done && <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>}
+      </span>
+      <span className="flex-1 text-[15px] font-medium text-ink-muted">{label}</span>
+      <span className="text-[13px] font-bold text-ink-muted">{cur}/{total}</span>
+    </div>
+  )
+}
+
+/** 기본 우측 레일 (Figma) — 스탯 + 오늘의 과제 + 복습할 항목. */
 function DefaultRail() {
+  const navigate = useNavigate()
   const user = useStore((s) => s.user)
   const statistics = useStore((s) => s.statistics)
   const [due, setDue] = useState(null)
@@ -48,11 +64,8 @@ function DefaultRail() {
   const level = Math.max(1, statistics?.current_level || user?.current_level || 1)
   const xp = Math.max(0, statistics?.total_xp ?? user?.total_xp ?? 0)
   const streak = Math.max(0, user?.streak_count || 0)
-  const PER = 500
-  const inLevel = xp % PER
-  const remaining = PER - inLevel
   return (
-    <div className="flex h-full w-[300px] shrink-0 flex-col gap-4 border-l-2 border-line bg-white p-6">
+    <div className="flex h-full w-[340px] shrink-0 flex-col gap-4 border-l border-line bg-white p-6">
       <div className="flex items-center justify-center gap-4 pb-1">
         <div className="flex h-[34px] w-[34px] items-center justify-center rounded-full border-2 border-primary-200 bg-primary-100 text-sm font-black text-primary-600">
           {(user?.username || '게')[0]}
@@ -64,34 +77,25 @@ function DefaultRail() {
       </div>
       <div className="card-flat">
         <div className="flex items-center justify-between">
-          <p className="text-[17px] font-bold text-ink">레벨 진행</p>
-          <span className="text-sm font-bold text-primary-500">Lv.{level}</span>
+          <p className="text-[17px] font-bold text-ink">오늘의 과제</p>
+          <button type="button" onClick={() => navigate('/tasks')} className="text-[14px] font-bold text-primary-500">모두 보기</button>
         </div>
-        <div className="mt-3 flex justify-between text-[13px] font-bold">
-          <span className="text-ink-muted">다음 레벨까지</span>
-          <span className="text-primary-500">{remaining} XP 남음</span>
-        </div>
-        <div className="mt-2 h-3 overflow-hidden rounded-full bg-gray-200">
-          <div className="h-full rounded-full bg-primary-500" style={{ width: `${(inLevel / PER) * 100}%` }} />
+        <div className="mt-4 flex flex-col gap-3.5">
+          <TaskItem label="오늘의 복습 정리" cur={due === 0 ? 1 : 0} total={1} />
+          <TaskItem label="독화 학습 1회" cur={0} total={1} />
+          <TaskItem label="학습 2회 채우기" cur={1} total={2} />
         </div>
       </div>
       <div className="card-flat">
         <p className="text-[17px] font-bold text-ink">복습할 항목</p>
         <p className="mt-3 text-sm leading-relaxed text-ink-muted">
-          오늘 다시 볼 항목이 <b className="text-[16px] text-primary-500">{due ?? '…'}개</b> 있어요.
+          오늘 다시 볼 오답이 <b className="text-[16px] text-primary-500">{due ?? '…'}개</b> 있어요.
         </p>
+        <button type="button" onClick={() => navigate('/review/today')} className="btn-primary mt-4 w-full !py-3.5 text-[17px]">
+          복습 시작하기
+        </button>
       </div>
-      <ReviewCta />
     </div>
-  )
-}
-
-function ReviewCta() {
-  const navigate = useNavigate()
-  return (
-    <button type="button" onClick={() => navigate('/review/today')} className="btn-primary w-full !py-4 text-[18px]">
-      복습 시작하기
-    </button>
   )
 }
 
@@ -103,7 +107,7 @@ export default function AppShell({ children, active, rightRail, title, descripti
   return (
     <div className="flex min-h-[100dvh] items-stretch bg-white">
       {/* 좌측 내비 (데스크톱) */}
-      <nav className="hidden w-[240px] shrink-0 flex-col gap-2 border-r-2 border-line bg-white px-4 pb-6 pt-7 lg:flex" aria-label="주 메뉴">
+      <nav className="hidden w-[240px] shrink-0 flex-col gap-2 border-r border-line bg-white px-4 pb-6 pt-7 lg:flex" aria-label="주 메뉴">
         <Logo />
         <div className="h-5" />
         {NAV.map((n) => (
