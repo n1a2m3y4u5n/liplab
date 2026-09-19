@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { speakAPI } from '../api'
-import LearnHeader from '../components/LearnHeader'
+import AppShell from '../components/AppShell'
 import { getSpeakingStageMenuItem } from '../config/speakingNavigation'
 
 const MODE_LABELS = {
@@ -48,15 +48,8 @@ export default function SpeakingReviewLanding() {
   }, [reloadKey])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <LearnHeader
-        accent="speaking"
-        title="말하기 복습"
-        description="다시 연습할 발음과 문장을 확인한 뒤 복습을 시작하세요"
-        onExit={() => navigate('/dashboard')}
-      />
-
-      <main className="mx-auto max-w-5xl space-y-5 px-4 py-8 sm:px-6">
+    <AppShell active="review" title="말하기 복습" description="다시 연습할 발음과 문장을 확인한 뒤 복습을 시작하세요">
+      <div className="w-full space-y-5">
         {loading ? (
           <div className="card py-16 text-center text-sm text-gray-400">말하기 복습 항목을 불러오는 중…</div>
         ) : error ? (
@@ -109,7 +102,7 @@ export default function SpeakingReviewLanding() {
             <button type="button" onClick={() => navigate('/learn/speaking?stage=0')} className="btn-primary">말하기 학습으로</button>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   )
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { learningAPI, speakAPI, tactileAPI } from '../api'
 import useStore from '../store/useStore'
-import LearnHeader from '../components/LearnHeader'
+import AppShell from '../components/AppShell'
 
 const QUESTION_TYPES = ['test', 'test-multiple', 'essay']
 const qTypes = (length) => Array.from({ length }, (_, index) => QUESTION_TYPES[index % QUESTION_TYPES.length]).sort(() => Math.random() - 0.5)
@@ -66,15 +66,8 @@ export default function ReviewLanding({ mode = 'today' }) {
 
   if (mode === 'mistakes') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-        <LearnHeader
-          accent="reading"
-          title="독화 복습"
-          description="독화 테스트에서 놓친 문장만 모아 다시 확인합니다"
-          onExit={() => navigate('/dashboard')}
-        />
-
-        <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-5">
+      <AppShell active="review" title="독화 복습" description="독화 테스트에서 놓친 문장만 모아 다시 확인합니다">
+        <div className="w-full space-y-5">
           {loading ? (
             <div className="card py-16 text-center text-sm text-gray-400">틀린 문장을 불러오는 중…</div>
           ) : mistakes.length ? (
@@ -106,8 +99,8 @@ export default function ReviewLanding({ mode = 'today' }) {
               <button type="button" onClick={() => navigate('/learn/scenario')} className="btn-primary">문장 학습으로</button>
             </div>
           )}
-        </main>
-      </div>
+        </div>
+      </AppShell>
     )
   }
 
@@ -120,20 +113,13 @@ export default function ReviewLanding({ mode = 'today' }) {
   const total = counts ? Object.values(counts).reduce((sum, value) => sum + value, 0) : 0
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <LearnHeader
-        accent="etc"
-        title="오늘의 복습"
-        description="독화·말하기·촉각별 복습 내용을 확인하고 원하는 영역으로 이동하세요"
-        onExit={() => navigate('/dashboard')}
-      />
-
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-5">
-        <section className="rounded-[24px] bg-slate-950 p-6 text-white">
+    <AppShell active="review" title="오늘의 복습" description="독화·말하기·촉각별 복습 내용을 확인하고 원하는 영역으로 이동하세요">
+      <div className="w-full space-y-5">
+        <section className="rounded-[24px] p-6 text-white" style={{ backgroundImage: 'linear-gradient(160deg, #a78bfa 0%, #7d53de 71%)' }}>
           <div>
-            <p className="text-xs font-bold tracking-[0.12em] text-amber-300">TODAY</p>
+            <p className="text-xs font-bold tracking-[0.12em] text-white/80">TODAY</p>
             <h2 className="mt-2 text-2xl font-black">{loading ? '복습 항목을 확인하고 있어요' : `${total}개 항목이 기다리고 있어요`}</h2>
-            <p className="mt-2 text-sm text-slate-400">독화·말하기·촉각 중 필요한 복습을 골라서 진행하세요.</p>
+            <p className="mt-2 text-sm text-white/85">독화·말하기·촉각 중 필요한 복습을 골라서 진행하세요.</p>
           </div>
         </section>
 
@@ -149,7 +135,7 @@ export default function ReviewLanding({ mode = 'today' }) {
             </button>
           ))}
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   )
 }
