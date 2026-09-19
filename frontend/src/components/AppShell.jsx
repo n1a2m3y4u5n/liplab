@@ -99,13 +99,66 @@ function DefaultRail() {
   )
 }
 
+/** 모바일 상단 바 (Figma 10) — 로고 + 컴팩트 스탯 + 아바타(프로필). lg 미만에서만. */
+function MobileTopBar() {
+  const navigate = useNavigate()
+  const user = useStore((s) => s.user)
+  const statistics = useStore((s) => s.statistics)
+  const level = Math.max(1, statistics?.current_level || user?.current_level || 1)
+  const xp = Math.max(0, statistics?.total_xp ?? user?.total_xp ?? 0)
+  const streak = Math.max(0, user?.streak_count || 0)
+  return (
+    <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
+      <Logo />
+      <div className="flex items-center gap-2.5">
+        <StatPill icon="/ui/stat-streak.svg" value={streak} color="#b45309" />
+        <StatPill icon="/ui/stat-xp.svg" value={xp.toLocaleString()} color="#5f3ab8" />
+        <StatPill icon="/ui/stat-level.svg" value={`Lv.${level}`} color="#0369a1" />
+        <button type="button" onClick={() => navigate('/profile')} aria-label="프로필"
+          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-primary-200 bg-primary-100 text-[13px] font-black text-primary-600">
+          {(user?.username || '게')[0]}
+        </button>
+      </div>
+    </header>
+  )
+}
+
+/** 모바일 하단 탭 바 (Figma 10) — 5개 주 탭. lg 미만에서만, 고정. */
+function MobileTabBar({ activeKey }) {
+  const navigate = useNavigate()
+  const tabs = NAV.filter((n) => n.key !== 'profile')
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line bg-white/97 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="주 메뉴">
+      {tabs.map((n) => {
+        const on = activeKey === n.key
+        return (
+          <button key={n.key} type="button" onClick={() => navigate(n.to)}
+            aria-current={on ? 'page' : undefined}
+            className="flex flex-1 flex-col items-center gap-1 py-2">
+            <span className="h-[22px] w-[22px]" aria-hidden="true"
+              style={{ backgroundColor: on ? '#7d53de' : '#b3b3c2',
+                WebkitMaskImage: `url(${n.icon})`, maskImage: `url(${n.icon})`,
+                WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
+                WebkitMaskSize: 'contain', maskSize: 'contain',
+                WebkitMaskPosition: 'center', maskPosition: 'center' }} />
+            <span className={`text-[11px] font-bold ${on ? 'text-primary-500' : 'text-gray-400'}`}>{n.label}</span>
+          </button>
+        )
+      })}
+    </nav>
+  )
+}
+
 export default function AppShell({ children, active, rightRail, title, description }) {
   const navigate = useNavigate()
   const location = useLocation()
   const activeKey = active || NAV.find((n) => location.pathname.startsWith(n.to))?.key
 
   return (
-    <div className="flex min-h-[100dvh] items-stretch bg-white">
+    <div className="flex min-h-[100dvh] flex-col bg-white lg:flex-row lg:items-stretch">
+      {/* 상단 바 (모바일) */}
+      <MobileTopBar />
+
       {/* 좌측 내비 (데스크톱) */}
       <nav className="hidden w-[240px] shrink-0 flex-col gap-2 border-r border-line bg-white px-4 pb-6 pt-7 lg:flex" aria-label="주 메뉴">
         <Logo />
@@ -125,10 +178,10 @@ export default function AppShell({ children, active, rightRail, title, descripti
       </nav>
 
       {/* 본문 */}
-      <main className="flex min-w-0 flex-1 flex-col gap-5 px-5 pb-10 pt-7 sm:px-8">
+      <main className="flex min-w-0 flex-1 flex-col gap-5 px-5 pb-24 pt-6 sm:px-8 lg:pb-10 lg:pt-7">
         {(title || description) && (
           <header className="flex flex-col gap-2">
-            {title && <h1 className="text-[26px] font-bold tracking-[-0.75px] text-ink sm:text-[30px]">{title}</h1>}
+            {title && <h1 className="text-[24px] font-bold tracking-[-0.75px] text-ink sm:text-[30px]">{title}</h1>}
             {description && <p className="text-[15px] text-ink-muted">{description}</p>}
           </header>
         )}
@@ -137,6 +190,9 @@ export default function AppShell({ children, active, rightRail, title, descripti
 
       {/* 우측 레일 (데스크톱) */}
       <aside className="hidden xl:flex">{rightRail || <DefaultRail />}</aside>
+
+      {/* 하단 탭 바 (모바일) */}
+      <MobileTabBar activeKey={activeKey} />
     </div>
   )
 }
