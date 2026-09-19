@@ -39,7 +39,6 @@ import { authAPI, curriculumAPI, seedAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
 import GlobalLearningMenu from './components/GlobalLearningMenu'
 import A11ySettings from './components/A11ySettings'
-import Dashboard from './pages/Dashboard'
 import Bookmarks from './pages/Bookmarks'
 import Guide from './pages/Guide'
 
@@ -158,7 +157,7 @@ function StageGate({ stage, children }) {
   }, [stage, isReview])
 
   if (state === 'loading') return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>불러오는 중…</div>
-  if (state === 'denied') return <Navigate to="/dashboard" replace />
+  if (state === 'denied') return <Navigate to="/learn/path" replace />
   return children
 }
 
@@ -189,7 +188,7 @@ function App() {
       <main id="main-content" className="app-shell">
       <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>불러오는 중…</div>}>
       <Routes>
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Navigate to="/learn/path" replace />} />
         <Route path="/practice" element={<StageGate stage={3}><Practice /></StageGate>} />
         <Route path="/conversation" element={<StageGate stage={4}><Conversation /></StageGate>} />
         <Route path="/sign" element={<Sign />} />
@@ -229,8 +228,8 @@ function App() {
         <Route path="/pronounce" element={<FreeSpeak />} />
         <Route path="/guide" element={<Guide />} />
         <Route path="/dev-viseme" element={<DevViseme />} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/learn/path" replace />} />
+        <Route path="*" element={<Navigate to="/learn/path" replace />} />
       </Routes>
       </Suspense>
       </main>
