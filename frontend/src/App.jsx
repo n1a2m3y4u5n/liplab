@@ -79,6 +79,7 @@ const AnalysisDetail = lazy(() => import('./pages/AnalysisDetail'))
 const EvalReport = lazy(() => import('./pages/EvalReport'))
 const HardwareBuild = lazy(() => import('./pages/HardwareBuild'))
 const ContentReview = lazy(() => import('./pages/ContentReview'))
+const PracticeHub = lazy(() => import('./pages/PracticeHub'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
@@ -156,6 +157,14 @@ function StageGate({ stage, children }) {
   return children
 }
 
+// AppShell(좌측 내비 자체 제공) 화면에서는 전역 상단메뉴를 숨긴다. Figma 리디자인 이관 시 확장.
+const SHELLED_ROUTES = ['/practice/hub', '/tasks', '/profile']
+function ConditionalGlobalMenu() {
+  const { pathname } = useLocation()
+  if (SHELLED_ROUTES.some((p) => pathname.startsWith(p))) return null
+  return <GlobalLearningMenu />
+}
+
 /**
  * Main App component with routing
  */
@@ -167,7 +176,7 @@ function App() {
       <AuthGate>
       <>
       <a href="#main-content" className="skip-link">본문으로 건너뛰기</a>
-      <GlobalLearningMenu />
+      <ConditionalGlobalMenu />
       <main id="main-content" className="app-shell">
       <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>불러오는 중…</div>}>
       <Routes>
@@ -201,6 +210,7 @@ function App() {
         <Route path="/analysis/history" element={<AnalysisDetail mode="history" />} />
         <Route path="/analysis/eval" element={<EvalReport />} />
         <Route path="/admin/content-review" element={<ContentReview />} />
+        <Route path="/practice/hub" element={<PracticeHub />} />
         <Route path="/learn/closure" element={<Closure />} />
         <Route path="/pronounce" element={<FreeSpeak />} />
         <Route path="/guide" element={<Guide />} />
