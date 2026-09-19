@@ -84,6 +84,7 @@ const TasksPage = lazy(() => import('./pages/TasksPage'))
 const ReviewTab = lazy(() => import('./pages/ReviewTab'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const AnalysisTab = lazy(() => import('./pages/AnalysisTab'))
+const CurriculumPath = lazy(() => import('./pages/CurriculumPath'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
@@ -162,7 +163,7 @@ function StageGate({ stage, children }) {
 }
 
 // AppShell(좌측 내비 자체 제공) 화면에서는 전역 상단메뉴를 숨긴다. Figma 리디자인 이관 시 확장.
-const SHELLED_ROUTES = ['/practice/hub', '/tasks', '/review/hub', '/analysis/hub', '/profile']
+const SHELLED_ROUTES = ['/practice/hub', '/tasks', '/review/hub', '/analysis/hub', '/profile', '/learn/path']
 function ConditionalGlobalMenu() {
   const { pathname } = useLocation()
   if (SHELLED_ROUTES.some((p) => pathname.startsWith(p))) return null
@@ -219,6 +220,7 @@ function App() {
         <Route path="/review/hub" element={<ReviewTab />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/analysis/hub" element={<AnalysisTab />} />
+        <Route path="/learn/path" element={<CurriculumPath />} />
         <Route path="/learn/closure" element={<Closure />} />
         <Route path="/pronounce" element={<FreeSpeak />} />
         <Route path="/guide" element={<Guide />} />
