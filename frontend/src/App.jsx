@@ -39,6 +39,7 @@ import { authAPI, curriculumAPI, seedAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
 import GlobalLearningMenu from './components/GlobalLearningMenu'
 import A11ySettings from './components/A11ySettings'
+import LoadingScreen from './components/LoadingScreen'
 import Bookmarks from './pages/Bookmarks'
 import Guide from './pages/Guide'
 
@@ -128,7 +129,7 @@ function AuthGate({ children }) {
       </div>
     </div>
   )
-  return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>불러오는 중…</div>
+  return <LoadingScreen label="들어가는 중…" />
 }
 
 /**
@@ -186,7 +187,7 @@ function App() {
       <a href="#main-content" className="skip-link">본문으로 건너뛰기</a>
       <ConditionalGlobalMenu />
       <main id="main-content" className="app-shell">
-      <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>불러오는 중…</div>}>
+      <Suspense fallback={<LoadingScreen />}>
       <Routes>
         <Route path="/dashboard" element={<Navigate to="/learn/path" replace />} />
         <Route path="/practice" element={<StageGate stage={3}><Practice /></StageGate>} />
