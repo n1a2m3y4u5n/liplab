@@ -8,17 +8,17 @@ import { reviewAPI, learningAPI } from '../api'
  * 실데이터: reviewAPI.getDue(예정), learningAPI.getReviewSentences(오답), getBookmarks(북마크).
  * 각 항목은 트랙 배지(독화=보라 / 발화=핑크) + 단어 + 사유. 클릭 시 해당 복습 흐름으로 이동.
  */
-function GradientCta({ count, title, sub, btn, from, to, border, btnColor, onClick }) {
+function GradientCta({ count, title, sub, btn, from, to, border, btnColor, btnBorder, onClick }) {
   return (
     <button type="button" onClick={onClick}
-      className="relative flex-1 overflow-hidden rounded-[20px] border-2 p-6 text-left"
+      className="relative flex-1 overflow-hidden rounded-[20px] border-2 border-b-[5px] p-6 text-left"
       style={{ backgroundImage: `linear-gradient(155deg, ${from} 0%, ${to} 71%)`, borderColor: border }}>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-[18px]">
         <div className="text-white">
           <p className="text-[22px] font-bold tracking-[-0.44px]">{title} {count}개</p>
-          <p className="mt-1 text-[13.5px] opacity-85">{sub}</p>
+          <p className="mt-1.5 text-[13.5px] opacity-85">{sub}</p>
         </div>
-        <span className="inline-flex w-fit items-center rounded-[13px] border-2 border-b-4 border-white/60 bg-white px-6 py-3 text-[15px] font-bold" style={{ color: btnColor }}>{btn}</span>
+        <span className="inline-flex w-fit items-center rounded-[13px] border-2 border-b-4 bg-white px-[26px] py-[13px] text-[15px] font-bold" style={{ color: btnColor, borderColor: btnBorder }}>{btn}</span>
       </div>
     </button>
   )
@@ -30,7 +30,7 @@ function ReviewItem({ track, word, meta, onClick, first }) {
     <button type="button" onClick={onClick}
       className={`flex w-full items-center gap-3.5 py-3.5 text-left ${first ? '' : 'border-t-[1.5px] border-line'}`}>
       <span className={`flex w-[54px] shrink-0 items-center justify-center rounded-lg py-[5px] text-[11.5px] font-bold ${isSpeak ? 'bg-[#ffe4e9] text-[#be185d]' : 'bg-primary-100 text-primary-700'}`}>{track}</span>
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
         <span className="text-[16px] font-bold text-ink">{word}</span>
         <span className="text-[12.5px] text-ink-muted">{meta}</span>
       </span>
@@ -84,17 +84,17 @@ export default function ReviewTab() {
     <AppShell active="review" title="복습" description="잊어버릴 때쯤 다시 나와요. 오늘 것만 가볍게 확인해보세요.">
       <div className="flex w-full flex-col gap-3.5 sm:flex-row">
         <GradientCta count={wrong + due} title="복습할 오답" sub="오답 다시보기" btn="오답 복습하기"
-          from="#a78bfa" to="#7d53de" border="#5f3ab8" btnColor="#5f3ab8" onClick={() => navigate('/review/mistakes')} />
+          from="#a78bfa" to="#7d53de" border="#5f3ab8" btnColor="#5f3ab8" btnBorder="#d9ccf7" onClick={() => navigate('/review/mistakes')} />
         <GradientCta count={marks} title="복습할 북마크" sub="북마크 다시보기" btn="북마크 복습하기"
-          from="#60a5fa" to="#2563eb" border="#1d4ed8" btnColor="#1d4ed8" onClick={() => navigate('/review/saved')} />
+          from="#60a5fa" to="#2563eb" border="#1d4ed8" btnColor="#1d4ed8" btnBorder="#c3dafb" onClick={() => navigate('/review/saved')} />
       </div>
 
       <section className="card-flat w-full">
         <div className="flex gap-2">
           {chips.map((c) => (
             <button key={c.key} type="button" onClick={() => setFilter(c.key)}
-              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-bold ${filter === c.key ? 'bg-primary-500 text-white' : 'bg-gray-100 text-ink-muted'}`}>
-              {c.label}<span className={filter === c.key ? 'text-white/75' : 'text-gray-400'}>{c.n}</span>
+              className={`flex items-center gap-1.5 rounded-full px-4 py-[9px] text-[13.5px] font-bold ${filter === c.key ? 'bg-primary-500 text-white' : 'bg-[#f3f3f7] text-ink-muted'}`}>
+              {c.label}<span className={`text-[12px] ${filter === c.key ? 'text-white/75' : 'text-[#a8a8b8]'}`}>{c.n}</span>
             </button>
           ))}
         </div>

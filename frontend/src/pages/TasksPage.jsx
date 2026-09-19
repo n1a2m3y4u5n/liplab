@@ -18,16 +18,16 @@ function TaskRow({ label, cur, total, xp }) {
       ) : (
         <span className="h-[26px] w-[26px] shrink-0 rounded-full border-2 border-line" />
       )}
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-[7px]">
         <div className="flex items-center justify-between text-[15px] font-bold">
           <span className="text-ink">{label}</span>
           <span className="text-[13px] text-primary-500">{cur} / {total}</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-gray-200">
+        <div className="h-2 overflow-hidden rounded-full bg-[#ededf3]">
           <div className="h-full rounded-full bg-primary-500" style={{ width: `${Math.min(100, (cur / total) * 100)}%` }} />
         </div>
       </div>
-      <span className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold ${done ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-400'}`}>+{xp} XP</span>
+      <span className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold ${done ? 'bg-primary-100 text-primary-700' : 'bg-[#f3f3f7] text-[#8a8a9b]'}`}>+{xp} XP</span>
     </div>
   )
 }
@@ -92,10 +92,10 @@ export default function TasksPage() {
       </section>
 
       {/* 이번 주 도전 */}
-      <section className="relative w-full overflow-hidden rounded-[20px] border border-[#c4b5fd] p-6"
+      <section className="relative w-full overflow-hidden rounded-[20px] border-2 border-b-[5px] border-[#6d3fc4] p-6"
         style={{ backgroundImage: 'linear-gradient(168deg, #a78bfa 0%, #7d53de 71%)' }}>
         <div className="flex max-w-[462px] flex-col gap-2.5">
-          <p className="text-[13px] font-bold uppercase tracking-wider text-white/80">특별 과제</p>
+          <p className="text-[13px] font-bold tracking-[0.26px] text-white/80">특별 과제</p>
           <p className="text-[23px] font-bold tracking-[-0.46px] text-white">이번 주 5일 학습하기</p>
           <div className="flex justify-between text-sm font-bold text-white/90">
             <span>{Math.min(5, Math.max(0, user?.streak_count || 3))} / 5일</span>
@@ -105,7 +105,7 @@ export default function TasksPage() {
             <div className="h-full rounded-full bg-white" style={{ width: `${(Math.min(5, Math.max(0, user?.streak_count || 3)) / 5) * 100}%` }} />
           </div>
         </div>
-        <div className="pointer-events-none absolute right-6 top-6 hidden h-[104px] w-[104px] items-center justify-center rounded-full bg-white/20 sm:flex">
+        <div className="pointer-events-none absolute right-6 top-6 hidden h-[104px] w-[104px] items-center justify-center rounded-full bg-white/[0.18] sm:flex">
           <img src="/ui/trophy.svg" alt="" className="h-14 w-14" />
         </div>
       </section>

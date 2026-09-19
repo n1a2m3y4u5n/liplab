@@ -80,8 +80,8 @@ export default function ScenarioHub() {
             return (
               <button key={item} type="button" onClick={() => setSituation(item)} aria-pressed={active}
                 className={active
-                  ? 'rounded-[14px] border-[2.5px] border-primary-500 bg-primary-100 py-4 text-[16px] font-bold text-primary-700'
-                  : 'rounded-[14px] border border-line bg-white py-4 text-[16px] font-bold text-ink transition-all hover:border-primary-300 active:scale-[0.98]'}>
+                  ? 'rounded-[14px] border-[2.5px] border-primary-500 bg-primary-100 py-[18px] text-[16px] font-bold text-primary-700'
+                  : 'rounded-[14px] border-2 border-b-[5px] border-line bg-white py-[18px] text-[16px] font-bold text-ink transition-all hover:border-primary-300 active:translate-y-[1px] active:border-b-2'}>{/* Figma: 비활성=3D 하단테두리 */}
                 {item}
               </button>
             )
@@ -120,7 +120,7 @@ export default function ScenarioHub() {
             <p className="mt-3 text-[13px] font-bold">{loadingMode === 'practice' ? '준비 중…' : locks.practice ? '🔒 잠김' : '시작하기 →'}</p>
           </button>
           <button type="button" onClick={() => start('conversation')} disabled={loadingMode || locks.conversation || !effectiveSituation}
-            className="flex-1 rounded-2xl bg-indigo-100 p-5 text-left text-indigo-700 transition hover:brightness-95 disabled:opacity-50">
+            className="flex-1 rounded-2xl bg-indigo-100 p-5 text-left text-indigo-600 transition hover:brightness-95 disabled:opacity-50">
             <p className="text-[17px] font-bold">AI 대화</p>
             <p className="mt-1 text-[13px] opacity-80">상황에 맞춰 대화해요</p>
             <p className="mt-3 text-[13px] font-bold">{loadingMode === 'conversation' ? '준비 중…' : locks.conversation ? '🔒 잠김' : '시작하기 →'}</p>

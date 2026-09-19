@@ -65,7 +65,7 @@ function VisemeAvatar({ visemeId, height = 300, variant = 'learn' }) {
         )}
         {isQuiz && (
           <button type="button" onClick={() => setNonce((n) => n + 1)}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-4 py-2 text-[13px] font-bold text-primary-600 shadow-sm backdrop-blur hover:bg-white">
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-primary-100 px-4 py-2 text-[13px] font-bold text-primary-700 shadow-sm hover:bg-primary-200">
             <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
             다시 보기
           </button>
@@ -249,7 +249,37 @@ function LearnPanel({ data }) {
 
 const QUIZ_LEN = 12  // 세션당 문항 수(진행바 분모) — 숙달 판정과 별개인 표시용
 
+// Figma "Lesson / 4. 완료"(93:12)를 숙달 완료 배너로 반영 — 전용 완료 라우트가 없으므로
+// 마스코트 + 통계(정답률·시도) + 3D 버튼 쌍으로 구성. 아이콘은 기존 디자인시스템 에셋 재사용.
+function MasteryBanner({ stage, subtitle, mastery, attempts, onNext, nextLabel, onHome }) {
+  return (
+    <div className="mt-6 flex flex-col items-center gap-4 rounded-[22px] border-2 border-line bg-white px-6 py-7 text-center shadow-[0_2px_12px_-2px_rgba(26,13,64,0.06)]">
+      <img src="/ui/mascot.svg" alt="" className="h-[92px] w-[92px]" />
+      <div>
+        <p className="text-[26px] font-bold tracking-[-0.7px] text-ink">{stage} 숙달!</p>
+        <p className="mt-1 text-[15px] text-ink-muted">{subtitle}</p>
+      </div>
+      <div className="flex w-full items-center justify-center gap-6 py-1">
+        <div className="flex flex-col items-center gap-1">
+          <div className="flex items-center gap-1.5"><img src="/ui/stat-percent.svg" alt="" className="h-[18px] w-[18px]" /><span className="text-[13px] font-bold text-[#7a7a8c]">정답률</span></div>
+          <span className="text-[24px] font-bold tracking-[-0.6px] text-primary-700">{mastery}%</span>
+        </div>
+        <div className="h-11 w-px bg-line" />
+        <div className="flex flex-col items-center gap-1">
+          <div className="flex items-center gap-1.5"><img src="/ui/stat-check.svg" alt="" className="h-[18px] w-[18px]" /><span className="text-[13px] font-bold text-[#7a7a8c]">시도</span></div>
+          <span className="text-[24px] font-bold tracking-[-0.6px] text-[#0369a1]">{attempts}회</span>
+        </div>
+      </div>
+      <div className="flex w-full flex-col gap-2.5">
+        <button onClick={onNext} className="w-full rounded-[16px] border-2 border-b-[6px] border-primary-700 bg-primary-500 px-8 py-[18px] text-[20px] font-bold tracking-[-0.2px] text-white transition-all hover:bg-primary-600 active:translate-y-[2px] active:border-b-2">{nextLabel}</button>
+        <button onClick={onHome} className="w-full rounded-[16px] border-2 border-b-[6px] border-line bg-white px-8 py-[18px] text-[20px] font-bold tracking-[-0.2px] text-primary-500 transition-all hover:bg-gray-50 active:translate-y-[1px] active:border-b-2">커리큘럼으로 돌아가기</button>
+      </div>
+    </div>
+  )
+}
+
 function QuizPanel({ data }) {
+  const navigate = useNavigate()
   const { lessons } = data
   const quizzable = useMemo(() => lessons.filter((l) => l.quizzable), [lessons])
   const [q, setQ] = useState(null)
@@ -290,77 +320,87 @@ function QuizPanel({ data }) {
 
   return (
     <div className="mx-auto flex max-w-[560px] flex-col">
-      {/* 상단: 진행바(N / 12) + 숙달도 배지 */}
-      <div className="flex items-center gap-4">
-        <div className="h-3 flex-1 overflow-hidden rounded-full bg-[#eceaf3]">
+      {/* 상단: 진행바(N / 12) — Figma Progress header (track 14px #e4e4ec, count 15px)
+          나가기(X)는 상위 LearnHeader가 이미 제공하므로 중복 배치하지 않는다. */}
+      <div className="flex items-center gap-[18px]">
+        <div className="h-[14px] flex-1 overflow-hidden rounded-full bg-[#e4e4ec]">
           <div className="h-full rounded-full bg-primary-500 transition-all duration-500" style={{ width: `${pct}%` }} />
         </div>
-        <span className="shrink-0 text-[14px] font-bold text-ink-muted">{Math.min(qNum, QUIZ_LEN)} / {QUIZ_LEN}</span>
+        <span className="shrink-0 text-[15px] font-bold text-ink-muted">{Math.min(qNum, QUIZ_LEN)} / {QUIZ_LEN}</span>
       </div>
 
+      {/* 숙달 완료 배너 — Figma "Lesson / 4. 완료" */}
+      {stat.mastered && (
+        <MasteryBanner stage="1단계" subtitle="입모양 학습을 완료했어요" mastery={stat.mastery} attempts={stat.attempts}
+          nextLabel="다음 단계로" onNext={() => navigate('/learn/word')} onHome={() => navigate('/dashboard')} />
+      )}
+
+      {/* 질문 — Figma Question (라벨 13px primary / 제목 30px, tracking -0.75) */}
       <div className="mt-6">
         <p className="text-[13px] font-bold text-primary-500">입모양 인지 · 숙달도 {stat.mastery}%</p>
-        <p className="mt-2 text-[26px] font-bold tracking-[-0.6px] text-ink sm:text-[28px]">이 입모양은 어느 그룹일까요?</p>
-        {stat.mastered && <p className="mt-1 text-sm font-semibold text-emerald-600">🎉 1단계 숙달! 입모양 학습을 완료했어요.</p>}
+        <p className="mt-2 text-[26px] font-bold tracking-[-0.75px] text-ink sm:text-[30px]">이 입모양은 어느 그룹일까요?</p>
       </div>
 
-      {/* 입모양(3D) + 다시 보기 */}
-      <div className="mt-6 rounded-[22px] border border-line bg-white p-4 shadow-[0_2px_12px_-2px_rgba(26,13,64,0.06)]">
+      {/* 입모양(3D) 카드 + 다시 보기 — Figma Mouth card (border-2, rounded-22) */}
+      <div className="mt-6 rounded-[22px] border-2 border-line bg-white p-4 shadow-[0_2px_12px_-2px_rgba(26,13,64,0.06)]">
         <VisemeAvatar visemeId={q.target.viseme_id} variant="quiz" />
       </div>
 
-      {/* 4지선다 (선택 → 확인) */}
+      {/* 4지선다 (선택 → 확인) — Figma Options (기본 3D 하단테두리, 정답/오답 색은 Figma 값) */}
       <div className="mt-6 flex flex-col gap-3">
         {q.choices.map((c, i) => {
           const isTarget = c.viseme_id === q.target.viseme_id
           const isChosen = (result ? result.chosenId : selected) === c.viseme_id
-          let cls = 'flex items-center gap-4 rounded-2xl border px-5 py-4 text-left font-bold text-[17px] transition-all '
-          let chip = 'bg-gray-100 text-ink-muted'
+          let cls = 'flex items-center gap-4 rounded-2xl px-5 py-4 text-left font-bold text-[20px] transition-all '
+          let chip = 'bg-[#ededf3] text-ink-muted'
           if (!result) {
-            if (isChosen) { cls += 'border-primary-500 bg-primary-50 text-ink'; chip = 'bg-primary-500 text-white' }
-            else cls += 'border-line bg-white text-ink hover:border-primary-300 active:scale-[0.99]'
+            if (isChosen) { cls += 'border-2 border-b-[5px] border-primary-500 bg-primary-50 text-ink'; chip = 'bg-primary-500 text-white' }
+            else cls += 'border-2 border-b-[5px] border-line bg-white text-ink hover:border-primary-300 active:scale-[0.99]'
           }
-          else if (isTarget) { cls += 'border-emerald-500 bg-emerald-50 text-emerald-800'; chip = 'bg-emerald-500 text-white' }
-          else if (isChosen) { cls += 'border-rose-400 bg-rose-50 text-rose-700'; chip = 'bg-rose-400 text-white' }
-          else cls += 'border-line bg-gray-50 text-gray-400'
+          else if (isTarget) cls += result.correct ? 'border-[2.5px] border-[#16a34a] bg-[#e7f8ef] text-[#15803d]' : 'border-[2.5px] border-[#16a34a] bg-white text-ink'
+          else if (isChosen) cls += 'border-[2.5px] border-[#dc2626] bg-[#feecec] text-[#b91c1c]'
+          else cls += 'border-2 border-b-[5px] border-line bg-gray-50 text-gray-400'
           return (
             <button key={c.viseme_id} disabled={!!result || submitting} onClick={() => setSelected(c.viseme_id)} className={cls}>
               <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[13px] ${chip}`}>{i + 1}</span>
               <span className="flex-1">{c.name}</span>
-              {result && isTarget && <span className="text-emerald-600">✓</span>}
-              {result && isChosen && !isTarget && <span className="text-rose-500">✕</span>}
+              {result && isTarget && <span className="text-[#16a34a]">✓</span>}
+              {result && isChosen && !isTarget && <span className="text-[#dc2626]">✕</span>}
             </button>
           )
         })}
       </div>
 
-      {/* 결과 피드백 */}
+      {/* 결과 상세(문맥 힌트 · 독화 포인트) — 헤드라인은 하단 피드백 바로 이동 */}
       <AnimatePresence>
         {result && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 space-y-3">
-            <div className={`rounded-2xl px-4 py-3 text-[15px] font-bold ${result.correct ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-              {result.correct ? '정답이에요! 🎉' : `오답 — 정답은 "${lessonLabel(q.target)}"`}
-              {!result.correct && result.same_cluster && (
-                <p className="mt-1 text-[13px] font-normal text-ink-muted">헷갈릴 만해요! 이 둘은 <b>같아 보이는 무리</b>라 입모양만으론 구별이 어렵습니다. 실제로는 문맥으로 판단해요.</p>
-              )}
-            </div>
+            {!result.correct && result.same_cluster && (
+              <div className="rounded-2xl border border-line bg-amber-50 px-4 py-3 text-[13px] text-amber-800">
+                헷갈릴 만해요! 이 둘은 <b>같아 보이는 무리</b>라 입모양만으론 구별이 어렵습니다. 실제로는 문맥으로 판단해요.
+              </div>
+            )}
             <div className="rounded-2xl border border-line bg-white p-3 text-[13px] text-ink-muted">{result.target.teach}</div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* 하단 액션 바: 안내 + 확인 / 다음 */}
-      <div className="mt-6 flex items-center justify-between border-t border-line pt-5">
-        <span className="text-[14px] text-ink-muted">
-          {result ? (result.correct ? '잘했어요!' : '다시 도전해봐요') : selected == null ? '보기를 선택해주세요' : '정답을 확인해보세요'}
-        </span>
+      {/* 하단 액션/피드백 바 — Figma Action bar(130:17) + Feedback(94:133/175) */}
+      <div className={`mt-6 flex items-center justify-between border-t-2 pt-5 ${result ? (result.correct ? 'border-[rgba(22,163,74,0.35)]' : 'border-[rgba(220,38,38,0.35)]') : 'border-line'}`}>
         {result ? (
-          <button onClick={next} className="btn-primary !px-8 !py-3.5 text-[17px]">다음 문제</button>
+          <div className="flex flex-col gap-1">
+            <p className={`text-[22px] font-bold tracking-[-0.44px] ${result.correct ? 'text-[#15803d]' : 'text-[#b91c1c]'}`}>{result.correct ? '정답이에요!' : '아쉬워요'}</p>
+            <p className={`text-[14px] font-bold opacity-80 ${result.correct ? 'text-[#15803d]' : 'text-[#b91c1c]'}`}>{result.correct ? '잘했어요!' : `정답은 「${lessonLabel(q.target)}」예요`}</p>
+          </div>
         ) : (
-          <button onClick={confirm} disabled={selected == null || submitting}
-            className={`rounded-2xl px-8 py-3.5 text-[17px] font-bold transition ${selected == null ? 'cursor-not-allowed bg-gray-200 text-gray-400' : 'btn-primary'}`}>
-            확인
-          </button>
+          <span className="text-[15px] text-[#8a8a9b]">{selected == null ? '보기를 선택해주세요' : '정답을 확인해보세요'}</span>
+        )}
+        {result ? (
+          <button onClick={next} className={`shrink-0 rounded-[14px] border-2 border-b-[5px] px-10 py-[15px] text-[17px] font-bold text-white transition-all active:translate-y-[2px] active:border-b-2 ${result.correct ? 'border-[#0f7a36] bg-[#16a34a] hover:bg-[#15903a]' : 'border-[#991b1b] bg-[#dc2626] hover:bg-[#c81f1f]'}`}>계속하기</button>
+        ) : selected == null ? (
+          <button disabled className="shrink-0 rounded-[14px] border-2 border-b-[5px] border-[#d2d2de] bg-[#e4e4ec] px-10 py-[15px] text-[17px] font-bold text-[#a0a0b0]">확인</button>
+        ) : (
+          <button onClick={confirm} disabled={submitting} className="btn-primary shrink-0 !px-10 !py-[15px] text-[17px]">확인</button>
         )}
       </div>
     </div>
