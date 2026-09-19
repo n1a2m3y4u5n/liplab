@@ -164,9 +164,13 @@ function StageGate({ stage, children }) {
 
 // AppShell(좌측 내비 자체 제공) 화면에서는 전역 상단메뉴를 숨긴다. Figma 리디자인 이관 시 확장.
 const SHELLED_ROUTES = ['/practice/hub', '/tasks', '/review/hub', '/analysis/hub', '/profile', '/learn/path']
+// 집중 레슨/학습 화면 — 자체 LearnHeader(나가기 포함)가 있어 전역 드롭다운을 숨겨도 이탈 가능.
+// Figma 리디자인의 '집중 모드'(상단 진행헤더+나가기, 좌측 드롭다운 없음)와 정합. 대시보드만 전역메뉴 유지.
+const FOCUSED_PREFIXES = ['/learn', '/practice', '/conversation', '/pronounce', '/tactile', '/review', '/analysis', '/guide', '/hardware', '/sign']
 function ConditionalGlobalMenu() {
   const { pathname } = useLocation()
   if (SHELLED_ROUTES.some((p) => pathname.startsWith(p))) return null
+  if (FOCUSED_PREFIXES.some((p) => pathname.startsWith(p))) return null
   return <GlobalLearningMenu />
 }
 
