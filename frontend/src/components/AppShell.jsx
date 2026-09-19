@@ -9,7 +9,7 @@ import { reviewAPI } from '../api'
  * data: 좌측 내비는 라우트 이동, 우측 레일은 useStore(user/statistics)+reviewAPI에서 스탯을 읽는다.
  */
 const NAV = [
-  { key: 'learn', label: '학습', to: '/dashboard', icon: '/ui/nav-learn.svg' },
+  { key: 'learn', label: '학습', to: '/learn/path', icon: '/ui/nav-learn.svg' },
   { key: 'practice', label: '연습', to: '/practice/hub', icon: '/ui/nav-practice.svg' },
   { key: 'task', label: '과제', to: '/tasks', icon: '/ui/nav-task.svg' },
   { key: 'review', label: '복습', to: '/review/hub', icon: '/ui/nav-review.svg' },
