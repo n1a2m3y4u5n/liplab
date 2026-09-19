@@ -1,0 +1,6510 @@
+{
+  "meta": {
+    "status": "approved",
+    "rules_version": 1,
+    "counts": {
+      "words": 134,
+      "pairs": 516,
+      "closures": 8
+    }
+  },
+  "words": [
+    {
+      "word": "귀",
+      "tier": 1
+    },
+    {
+      "word": "코",
+      "tier": 1
+    },
+    {
+      "word": "입",
+      "tier": 1
+    },
+    {
+      "word": "손",
+      "tier": 1
+    },
+    {
+      "word": "발",
+      "tier": 1
+    },
+    {
+      "word": "눈",
+      "tier": 1
+    },
+    {
+      "word": "닭",
+      "tier": 1
+    },
+    {
+      "word": "소",
+      "tier": 1
+    },
+    {
+      "word": "돼지",
+      "tier": 1
+    },
+    {
+      "word": "밥",
+      "tier": 1
+    },
+    {
+      "word": "국",
+      "tier": 1
+    },
+    {
+      "word": "떡",
+      "tier": 1
+    },
+    {
+      "word": "책",
+      "tier": 1
+    },
+    {
+      "word": "붓",
+      "tier": 1
+    },
+    {
+      "word": "공",
+      "tier": 1
+    },
+    {
+      "word": "사과",
+      "tier": 1
+    },
+    {
+      "word": "고양이",
+      "tier": 1
+    },
+    {
+      "word": "침대",
+      "tier": 1
+    },
+    {
+      "word": "양파",
+      "tier": 1
+    },
+    {
+      "word": "아버지",
+      "tier": 1
+    },
+    {
+      "word": "토끼",
+      "tier": 1
+    },
+    {
+      "word": "냄비",
+      "tier": 1
+    },
+    {
+      "word": "수박",
+      "tier": 1
+    },
+    {
+      "word": "할머니",
+      "tier": 1
+    },
+    {
+      "word": "강아지",
+      "tier": 1
+    },
+    {
+      "word": "베개",
+      "tier": 1
+    },
+    {
+      "word": "딸기",
+      "tier": 1
+    },
+    {
+      "word": "형제",
+      "tier": 1
+    },
+    {
+      "word": "코끼리",
+      "tier": 1
+    },
+    {
+      "word": "숟가락",
+      "tier": 1
+    },
+    {
+      "word": "학교",
+      "tier": 1
+    },
+    {
+      "word": "병원",
+      "tier": 1
+    },
+    {
+      "word": "버스",
+      "tier": 1
+    },
+    {
+      "word": "모자",
+      "tier": 1
+    },
+    {
+      "word": "의사",
+      "tier": 1
+    },
+    {
+      "word": "빨강",
+      "tier": 1
+    },
+    {
+      "word": "시장",
+      "tier": 1
+    },
+    {
+      "word": "배",
+      "tier": 1
+    },
+    {
+      "word": "치마",
+      "tier": 1
+    },
+    {
+      "word": "농부",
+      "tier": 1
+    },
+    {
+      "word": "가망",
+      "tier": 2
+    },
+    {
+      "word": "고",
+      "tier": 2
+    },
+    {
+      "word": "곡",
+      "tier": 2
+    },
+    {
+      "word": "그립",
+      "tier": 2
+    },
+    {
+      "word": "꼬",
+      "tier": 2
+    },
+    {
+      "word": "꽁",
+      "tier": 2
+    },
+    {
+      "word": "꾹",
+      "tier": 2
+    },
+    {
+      "word": "뀌",
+      "tier": 2
+    },
+    {
+      "word": "나부",
+      "tier": 2
+    },
+    {
+      "word": "날",
+      "tier": 2
+    },
+    {
+      "word": "넉",
+      "tier": 2
+    },
+    {
+      "word": "노",
+      "tier": 2
+    },
+    {
+      "word": "논",
+      "tier": 2
+    },
+    {
+      "word": "눌",
+      "tier": 2
+    },
+    {
+      "word": "다과",
+      "tier": 2
+    },
+    {
+      "word": "단",
+      "tier": 2
+    },
+    {
+      "word": "달기",
+      "tier": 2
+    },
+    {
+      "word": "덕",
+      "tier": 2
+    },
+    {
+      "word": "도",
+      "tier": 2
+    },
+    {
+      "word": "도끼",
+      "tier": 2
+    },
+    {
+      "word": "돈",
+      "tier": 2
+    },
+    {
+      "word": "동부",
+      "tier": 2
+    },
+    {
+      "word": "딸",
+      "tier": 2
+    },
+    {
+      "word": "또",
+      "tier": 2
+    },
+    {
+      "word": "띠장",
+      "tier": 2
+    },
+    {
+      "word": "로",
+      "tier": 2
+    },
+    {
+      "word": "론",
+      "tier": 2
+    },
+    {
+      "word": "룬",
+      "tier": 2
+    },
+    {
+      "word": "마다",
+      "tier": 2
+    },
+    {
+      "word": "만",
+      "tier": 2
+    },
+    {
+      "word": "맏",
+      "tier": 2
+    },
+    {
+      "word": "맛",
+      "tier": 2
+    },
+    {
+      "word": "맡",
+      "tier": 2
+    },
+    {
+      "word": "매",
+      "tier": 2
+    },
+    {
+      "word": "문",
+      "tier": 2
+    },
+    {
+      "word": "묻",
+      "tier": 2
+    },
+    {
+      "word": "뭇",
+      "tier": 2
+    },
+    {
+      "word": "뭍",
+      "tier": 2
+    },
+    {
+      "word": "반",
+      "tier": 2
+    },
+    {
+      "word": "밤",
+      "tier": 2
+    },
+    {
+      "word": "밭",
+      "tier": 2
+    },
+    {
+      "word": "분",
+      "tier": 2
+    },
+    {
+      "word": "붙",
+      "tier": 2
+    },
+    {
+      "word": "빨",
+      "tier": 2
+    },
+    {
+      "word": "빰",
+      "tier": 2
+    },
+    {
+      "word": "빼",
+      "tier": 2
+    },
+    {
+      "word": "뿔",
+      "tier": 2
+    },
+    {
+      "word": "사무",
+      "tier": 2
+    },
+    {
+      "word": "산",
+      "tier": 2
+    },
+    {
+      "word": "살기",
+      "tier": 2
+    },
+    {
+      "word": "삵",
+      "tier": 2
+    },
+    {
+      "word": "샅",
+      "tier": 2
+    },
+    {
+      "word": "석",
+      "tier": 2
+    },
+    {
+      "word": "솔",
+      "tier": 2
+    },
+    {
+      "word": "솟",
+      "tier": 2
+    },
+    {
+      "word": "송부",
+      "tier": 2
+    },
+    {
+      "word": "솥",
+      "tier": 2
+    },
+    {
+      "word": "수막",
+      "tier": 2
+    },
+    {
+      "word": "순",
+      "tier": 2
+    },
+    {
+      "word": "시작",
+      "tier": 2
+    },
+    {
+      "word": "시창",
+      "tier": 2
+    },
+    {
+      "word": "싼",
+      "tier": 2
+    },
+    {
+      "word": "쌌",
+      "tier": 2
+    },
+    {
+      "word": "썩",
+      "tier": 2
+    },
+    {
+      "word": "쏘",
+      "tier": 2
+    },
+    {
+      "word": "쏜",
+      "tier": 2
+    },
+    {
+      "word": "임",
+      "tier": 2
+    },
+    {
+      "word": "잎",
+      "tier": 2
+    },
+    {
+      "word": "짜",
+      "tier": 2
+    },
+    {
+      "word": "짹",
+      "tier": 2
+    },
+    {
+      "word": "콩",
+      "tier": 2
+    },
+    {
+      "word": "쿡",
+      "tier": 2
+    },
+    {
+      "word": "크림",
+      "tier": 2
+    },
+    {
+      "word": "탄",
+      "tier": 2
+    },
+    {
+      "word": "탉",
+      "tier": 2
+    },
+    {
+      "word": "탓",
+      "tier": 2
+    },
+    {
+      "word": "탔",
+      "tier": 2
+    },
+    {
+      "word": "턱",
+      "tier": 2
+    },
+    {
+      "word": "토",
+      "tier": 2
+    },
+    {
+      "word": "토기",
+      "tier": 2
+    },
+    {
+      "word": "톤",
+      "tier": 2
+    },
+    {
+      "word": "투박",
+      "tier": 2
+    },
+    {
+      "word": "파다",
+      "tier": 2
+    },
+    {
+      "word": "팔",
+      "tier": 2
+    },
+    {
+      "word": "팜",
+      "tier": 2
+    },
+    {
+      "word": "팝",
+      "tier": 2
+    },
+    {
+      "word": "패",
+      "tier": 2
+    },
+    {
+      "word": "평원",
+      "tier": 2
+    },
+    {
+      "word": "포자",
+      "tier": 2
+    },
+    {
+      "word": "풀",
+      "tier": 2
+    },
+    {
+      "word": "풋",
+      "tier": 2
+    },
+    {
+      "word": "하는",
+      "tier": 2
+    },
+    {
+      "word": "할머리",
+      "tier": 2
+    },
+    {
+      "word": "형체",
+      "tier": 2
+    }
+  ],
+  "pairs": [
+    {
+      "a": "귀",
+      "b": "뀌",
+      "visemes": [
+        7,
+        9
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "코",
+      "b": "고",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "코",
+      "b": "꼬",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "고",
+      "b": "꼬",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "입",
+      "b": "임",
+      "visemes": [
+        1,
+        3
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "입",
+      "b": "잎",
+      "visemes": [
+        1,
+        3
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "임",
+      "b": "잎",
+      "visemes": [
+        1,
+        3
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "손",
+      "b": "눈",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "손",
+      "b": "논",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "손",
+      "b": "눌",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "손",
+      "b": "돈",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "손",
+      "b": "론",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "손",
+      "b": "룬",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "손",
+      "b": "솔",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "손",
+      "b": "솟",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "손",
+      "b": "솥",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "손",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "손",
+      "b": "쏜",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "손",
+      "b": "톤",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "논",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "눌",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "돈",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "론",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "룬",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "솔",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "솟",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "솥",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "쏜",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눈",
+      "b": "톤",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "논",
+      "b": "눌",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "논",
+      "b": "돈",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "논",
+      "b": "론",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "논",
+      "b": "룬",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "논",
+      "b": "솔",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "논",
+      "b": "솟",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "논",
+      "b": "솥",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "논",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "논",
+      "b": "쏜",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "논",
+      "b": "톤",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눌",
+      "b": "돈",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눌",
+      "b": "론",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눌",
+      "b": "룬",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눌",
+      "b": "솔",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눌",
+      "b": "솟",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눌",
+      "b": "솥",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눌",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눌",
+      "b": "쏜",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "눌",
+      "b": "톤",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "돈",
+      "b": "론",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "돈",
+      "b": "룬",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "돈",
+      "b": "솔",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "돈",
+      "b": "솟",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "돈",
+      "b": "솥",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "돈",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "돈",
+      "b": "쏜",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "돈",
+      "b": "톤",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "론",
+      "b": "룬",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "론",
+      "b": "솔",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "론",
+      "b": "솟",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "론",
+      "b": "솥",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "론",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "론",
+      "b": "쏜",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "론",
+      "b": "톤",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "룬",
+      "b": "솔",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "룬",
+      "b": "솟",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "룬",
+      "b": "솥",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "룬",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "룬",
+      "b": "쏜",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "룬",
+      "b": "톤",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솔",
+      "b": "솟",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솔",
+      "b": "솥",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솔",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솔",
+      "b": "쏜",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솔",
+      "b": "톤",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솟",
+      "b": "솥",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솟",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솟",
+      "b": "쏜",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솟",
+      "b": "톤",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솥",
+      "b": "순",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솥",
+      "b": "쏜",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "솥",
+      "b": "톤",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "순",
+      "b": "쏜",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "순",
+      "b": "톤",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쏜",
+      "b": "톤",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "말",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "만",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "맏",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "맛",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "맡",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "반",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "밭",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "빨",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "발",
+      "b": "팔",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "말",
+      "b": "만",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "말",
+      "b": "맏",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "말",
+      "b": "맛",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "말",
+      "b": "맡",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "말",
+      "b": "반",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "말",
+      "b": "밭",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "말",
+      "b": "빨",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "말",
+      "b": "팔",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "만",
+      "b": "맏",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "만",
+      "b": "맛",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "만",
+      "b": "맡",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "만",
+      "b": "반",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "만",
+      "b": "밭",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "만",
+      "b": "빨",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "만",
+      "b": "팔",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맏",
+      "b": "맛",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맏",
+      "b": "맡",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맏",
+      "b": "반",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맏",
+      "b": "밭",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맏",
+      "b": "빨",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맏",
+      "b": "팔",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맛",
+      "b": "맡",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맛",
+      "b": "반",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맛",
+      "b": "밭",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맛",
+      "b": "빨",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맛",
+      "b": "팔",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맡",
+      "b": "반",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맡",
+      "b": "밭",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맡",
+      "b": "빨",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맡",
+      "b": "팔",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "반",
+      "b": "밭",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "반",
+      "b": "빨",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "반",
+      "b": "팔",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "밭",
+      "b": "빨",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "밭",
+      "b": "팔",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "빨",
+      "b": "팔",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "닭",
+      "b": "삵",
+      "visemes": [
+        2,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "닭",
+      "b": "탉",
+      "visemes": [
+        2,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "삵",
+      "b": "탉",
+      "visemes": [
+        2,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "소",
+      "b": "노",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "소",
+      "b": "도",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "소",
+      "b": "또",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "소",
+      "b": "로",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "소",
+      "b": "쏘",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "소",
+      "b": "토",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "노",
+      "b": "도",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "노",
+      "b": "또",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "노",
+      "b": "로",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "노",
+      "b": "쏘",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "노",
+      "b": "토",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "도",
+      "b": "또",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "도",
+      "b": "로",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "도",
+      "b": "쏘",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "도",
+      "b": "토",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "또",
+      "b": "로",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "또",
+      "b": "쏘",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "또",
+      "b": "토",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "로",
+      "b": "쏘",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "로",
+      "b": "토",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쏘",
+      "b": "토",
+      "visemes": [
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "밥",
+      "b": "맘",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "밥",
+      "b": "밤",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "밥",
+      "b": "빰",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "밥",
+      "b": "팜",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "밥",
+      "b": "팝",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맘",
+      "b": "밤",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맘",
+      "b": "빰",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맘",
+      "b": "팜",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "맘",
+      "b": "팝",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "밤",
+      "b": "빰",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "밤",
+      "b": "팜",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "밤",
+      "b": "팝",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "빰",
+      "b": "팜",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "빰",
+      "b": "팝",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "팜",
+      "b": "팝",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "국",
+      "b": "공",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "국",
+      "b": "곡",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "국",
+      "b": "꽁",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "국",
+      "b": "꾹",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "국",
+      "b": "콩",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "국",
+      "b": "쿡",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "공",
+      "b": "곡",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "공",
+      "b": "꽁",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "공",
+      "b": "꾹",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "공",
+      "b": "콩",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "공",
+      "b": "쿡",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "곡",
+      "b": "꽁",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "곡",
+      "b": "꾹",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "곡",
+      "b": "콩",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "곡",
+      "b": "쿡",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "꽁",
+      "b": "꾹",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "꽁",
+      "b": "콩",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "꽁",
+      "b": "쿡",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "꾹",
+      "b": "콩",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "꾹",
+      "b": "쿡",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "콩",
+      "b": "쿡",
+      "visemes": [
+        4,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "떡",
+      "b": "넉",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "떡",
+      "b": "덕",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "떡",
+      "b": "석",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "떡",
+      "b": "썩",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "떡",
+      "b": "턱",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "넉",
+      "b": "덕",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "넉",
+      "b": "석",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "넉",
+      "b": "썩",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "넉",
+      "b": "턱",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "덕",
+      "b": "석",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "덕",
+      "b": "썩",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "덕",
+      "b": "턱",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "석",
+      "b": "썩",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "석",
+      "b": "턱",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "썩",
+      "b": "턱",
+      "visemes": [
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "책",
+      "b": "짹",
+      "visemes": [
+        2,
+        7,
+        10
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붓",
+      "b": "물",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붓",
+      "b": "불",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붓",
+      "b": "문",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붓",
+      "b": "묻",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붓",
+      "b": "뭇",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붓",
+      "b": "뭍",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붓",
+      "b": "분",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붓",
+      "b": "붙",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붓",
+      "b": "뿔",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붓",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붓",
+      "b": "풋",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "불",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "문",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "묻",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "뭇",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "뭍",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "분",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "붙",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "뿔",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "물",
+      "b": "풋",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "불",
+      "b": "문",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "불",
+      "b": "묻",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "불",
+      "b": "뭇",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "불",
+      "b": "뭍",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "불",
+      "b": "분",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "불",
+      "b": "붙",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "불",
+      "b": "뿔",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "불",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "불",
+      "b": "풋",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "문",
+      "b": "묻",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "문",
+      "b": "뭇",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "문",
+      "b": "뭍",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "문",
+      "b": "분",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "문",
+      "b": "붙",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "문",
+      "b": "뿔",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "문",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "문",
+      "b": "풋",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "묻",
+      "b": "뭇",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "묻",
+      "b": "뭍",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "묻",
+      "b": "분",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "묻",
+      "b": "붙",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "묻",
+      "b": "뿔",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "묻",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "묻",
+      "b": "풋",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뭇",
+      "b": "뭍",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뭇",
+      "b": "분",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뭇",
+      "b": "붙",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뭇",
+      "b": "뿔",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뭇",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뭇",
+      "b": "풋",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뭍",
+      "b": "분",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뭍",
+      "b": "붙",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뭍",
+      "b": "뿔",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뭍",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뭍",
+      "b": "풋",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "분",
+      "b": "붙",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "분",
+      "b": "뿔",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "분",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "분",
+      "b": "풋",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붙",
+      "b": "뿔",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붙",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "붙",
+      "b": "풋",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뿔",
+      "b": "풀",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "뿔",
+      "b": "풋",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "풀",
+      "b": "풋",
+      "visemes": [
+        1,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "사과",
+      "b": "다과",
+      "visemes": [
+        2,
+        6,
+        7,
+        9
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "토끼",
+      "b": "도끼",
+      "visemes": [
+        3,
+        4,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "토끼",
+      "b": "토기",
+      "visemes": [
+        3,
+        4,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "도끼",
+      "b": "토기",
+      "visemes": [
+        3,
+        4,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "수박",
+      "b": "수막",
+      "visemes": [
+        1,
+        2,
+        4,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "수박",
+      "b": "투박",
+      "visemes": [
+        1,
+        2,
+        4,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "수막",
+      "b": "투박",
+      "visemes": [
+        1,
+        2,
+        4,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "할머니",
+      "b": "할머리",
+      "visemes": [
+        1,
+        2,
+        3,
+        5,
+        6,
+        8
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "딸기",
+      "b": "달기",
+      "visemes": [
+        2,
+        3,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "딸기",
+      "b": "살기",
+      "visemes": [
+        2,
+        3,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달기",
+      "b": "살기",
+      "visemes": [
+        2,
+        3,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "형제",
+      "b": "형체",
+      "visemes": [
+        3,
+        5,
+        7,
+        8,
+        10
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "병원",
+      "b": "평원",
+      "visemes": [
+        1,
+        5,
+        6,
+        7,
+        9
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "모자",
+      "b": "포자",
+      "visemes": [
+        1,
+        2,
+        4,
+        10
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "시장",
+      "b": "띠장",
+      "visemes": [
+        2,
+        3,
+        6,
+        7,
+        10
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "시장",
+      "b": "시작",
+      "visemes": [
+        2,
+        3,
+        6,
+        7,
+        10
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "시장",
+      "b": "시창",
+      "visemes": [
+        2,
+        3,
+        6,
+        7,
+        10
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "띠장",
+      "b": "시작",
+      "visemes": [
+        2,
+        3,
+        6,
+        7,
+        10
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "띠장",
+      "b": "시창",
+      "visemes": [
+        2,
+        3,
+        6,
+        7,
+        10
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "시작",
+      "b": "시창",
+      "visemes": [
+        2,
+        3,
+        6,
+        7,
+        10
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "배",
+      "b": "매",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "배",
+      "b": "빼",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "배",
+      "b": "패",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "매",
+      "b": "빼",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "매",
+      "b": "패",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "빼",
+      "b": "패",
+      "visemes": [
+        1,
+        2
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "농부",
+      "b": "동부",
+      "visemes": [
+        1,
+        4,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "농부",
+      "b": "송부",
+      "visemes": [
+        1,
+        4,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "동부",
+      "b": "송부",
+      "visemes": [
+        1,
+        4,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "가방",
+      "b": "가망",
+      "visemes": [
+        1,
+        2,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "하늘",
+      "b": "하는",
+      "visemes": [
+        2,
+        5,
+        6,
+        8
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "바다",
+      "b": "마다",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "바다",
+      "b": "파다",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "마다",
+      "b": "파다",
+      "visemes": [
+        1,
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "나무",
+      "b": "나부",
+      "visemes": [
+        1,
+        2,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "나무",
+      "b": "사무",
+      "visemes": [
+        1,
+        2,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "나부",
+      "b": "사무",
+      "visemes": [
+        1,
+        2,
+        4,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "자",
+      "b": "차",
+      "visemes": [
+        2,
+        10
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "자",
+      "b": "짜",
+      "visemes": [
+        2,
+        10
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "차",
+      "b": "짜",
+      "visemes": [
+        2,
+        10
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "탈",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "살",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "쌀",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "날",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "단",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "딸",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "산",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "샅",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "싼",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "쌌",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "탄",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "탓",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "달",
+      "b": "탔",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탈",
+      "b": "살",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탈",
+      "b": "쌀",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탈",
+      "b": "날",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탈",
+      "b": "단",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탈",
+      "b": "딸",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탈",
+      "b": "산",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탈",
+      "b": "샅",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탈",
+      "b": "싼",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탈",
+      "b": "쌌",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탈",
+      "b": "탄",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탈",
+      "b": "탓",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탈",
+      "b": "탔",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "살",
+      "b": "쌀",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "살",
+      "b": "날",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "살",
+      "b": "단",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "살",
+      "b": "딸",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "살",
+      "b": "산",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "살",
+      "b": "샅",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "살",
+      "b": "싼",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "살",
+      "b": "쌌",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "살",
+      "b": "탄",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "살",
+      "b": "탓",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "살",
+      "b": "탔",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌀",
+      "b": "날",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌀",
+      "b": "단",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌀",
+      "b": "딸",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌀",
+      "b": "산",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌀",
+      "b": "샅",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌀",
+      "b": "싼",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌀",
+      "b": "쌌",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌀",
+      "b": "탄",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌀",
+      "b": "탓",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌀",
+      "b": "탔",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "날",
+      "b": "단",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "날",
+      "b": "딸",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "날",
+      "b": "산",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "날",
+      "b": "샅",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "날",
+      "b": "싼",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "날",
+      "b": "쌌",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "날",
+      "b": "탄",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "날",
+      "b": "탓",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "날",
+      "b": "탔",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "단",
+      "b": "딸",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "단",
+      "b": "산",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "단",
+      "b": "샅",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "단",
+      "b": "싼",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "단",
+      "b": "쌌",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "단",
+      "b": "탄",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "단",
+      "b": "탓",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "단",
+      "b": "탔",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "딸",
+      "b": "산",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "딸",
+      "b": "샅",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "딸",
+      "b": "싼",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "딸",
+      "b": "쌌",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "딸",
+      "b": "탄",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "딸",
+      "b": "탓",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "딸",
+      "b": "탔",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "산",
+      "b": "샅",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "산",
+      "b": "싼",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "산",
+      "b": "쌌",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "산",
+      "b": "탄",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "산",
+      "b": "탓",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "산",
+      "b": "탔",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "샅",
+      "b": "싼",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "샅",
+      "b": "쌌",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "샅",
+      "b": "탄",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "샅",
+      "b": "탓",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "샅",
+      "b": "탔",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "싼",
+      "b": "쌌",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "싼",
+      "b": "탄",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "싼",
+      "b": "탓",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "싼",
+      "b": "탔",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌌",
+      "b": "탄",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌌",
+      "b": "탓",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "쌌",
+      "b": "탔",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탄",
+      "b": "탓",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탄",
+      "b": "탔",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "탓",
+      "b": "탔",
+      "visemes": [
+        2,
+        6
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "그림",
+      "b": "그립",
+      "visemes": [
+        1,
+        3,
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "그림",
+      "b": "크림",
+      "visemes": [
+        1,
+        3,
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "그립",
+      "b": "크림",
+      "visemes": [
+        1,
+        3,
+        5,
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "homophene",
+      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
+    },
+    {
+      "a": "고",
+      "b": "귀",
+      "visemes": [
+        4,
+        9
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅗ↔ㅟ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "고",
+      "b": "노",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄱ↔ㄴ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "고",
+      "b": "도",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄱ↔ㄷ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "고",
+      "b": "또",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄱ↔ㄸ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "고",
+      "b": "로",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄱ↔ㄹ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "고",
+      "b": "소",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄱ↔ㅅ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "고",
+      "b": "쏘",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄱ↔ㅆ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "고",
+      "b": "토",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄱ↔ㅌ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "꼬",
+      "b": "노",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄲ↔ㄴ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "꼬",
+      "b": "도",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄲ↔ㄷ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "꼬",
+      "b": "또",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄲ↔ㄸ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "꼬",
+      "b": "로",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄲ↔ㄹ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "꼬",
+      "b": "소",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄲ↔ㅅ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "꼬",
+      "b": "쏘",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄲ↔ㅆ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "꼬",
+      "b": "토",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄲ↔ㅌ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "노",
+      "b": "코",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅋ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "도",
+      "b": "코",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄷ↔ㅋ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "또",
+      "b": "코",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄸ↔ㅋ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "로",
+      "b": "코",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㅋ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "소",
+      "b": "코",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㅅ↔ㅋ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "쏘",
+      "b": "코",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㅆ↔ㅋ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "코",
+      "b": "토",
+      "visemes": [
+        6,
+        7
+      ],
+      "same_looking": true,
+      "relation": "minimal_pair",
+      "note": "ㅋ↔ㅌ 입모양 동일(구별 불가)"
+    },
+    {
+      "a": "산",
+      "b": "손",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅗ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "산",
+      "b": "순",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "날",
+      "b": "말",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "날",
+      "b": "발",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "날",
+      "b": "빨",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅃ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "날",
+      "b": "팔",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅍ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "달",
+      "b": "말",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄷ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "달",
+      "b": "발",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄷ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "달",
+      "b": "빨",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄷ↔ㅃ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "달",
+      "b": "팔",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄷ↔ㅍ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "딸",
+      "b": "말",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄸ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "딸",
+      "b": "발",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄸ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "딸",
+      "b": "빨",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄸ↔ㅃ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "딸",
+      "b": "팔",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄸ↔ㅍ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "말",
+      "b": "살",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "말",
+      "b": "쌀",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅆ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "말",
+      "b": "탈",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅌ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "발",
+      "b": "살",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅂ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "발",
+      "b": "쌀",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅂ↔ㅆ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "발",
+      "b": "탈",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅂ↔ㅌ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "빨",
+      "b": "살",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅃ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "빨",
+      "b": "쌀",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅃ↔ㅆ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "빨",
+      "b": "탈",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅃ↔ㅌ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "살",
+      "b": "팔",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅅ↔ㅍ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "쌀",
+      "b": "팔",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅆ↔ㅍ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "탈",
+      "b": "팔",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅌ↔ㅍ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "발",
+      "b": "불",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "반",
+      "b": "밤",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "반",
+      "b": "밥",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "발",
+      "b": "밤",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "발",
+      "b": "밥",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "밤",
+      "b": "밭",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅌ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "밥",
+      "b": "밭",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅂ↔ㅌ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "눈",
+      "b": "문",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "눈",
+      "b": "분",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "룬",
+      "b": "문",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "룬",
+      "b": "분",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "문",
+      "b": "순",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "분",
+      "b": "순",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅂ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "단",
+      "b": "닭",
+      "visemes": [
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㄺ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "달",
+      "b": "닭",
+      "visemes": [
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㄺ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "눌",
+      "b": "물",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "눌",
+      "b": "불",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "눌",
+      "b": "뿔",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅃ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "눌",
+      "b": "풀",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅍ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "말",
+      "b": "물",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "만",
+      "b": "맘",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "맏",
+      "b": "맘",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄷ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "말",
+      "b": "맘",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "맘",
+      "b": "맛",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "맘",
+      "b": "맡",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅌ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "파다",
+      "b": "파도",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅗ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "탄",
+      "b": "탉",
+      "visemes": [
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㄺ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "탈",
+      "b": "탉",
+      "visemes": [
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㄺ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "탉",
+      "b": "탓",
+      "visemes": [
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄺ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "탉",
+      "b": "탔",
+      "visemes": [
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄺ↔ㅆ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "살",
+      "b": "솔",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅗ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "산",
+      "b": "삵",
+      "visemes": [
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄴ↔ㄺ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "살",
+      "b": "삵",
+      "visemes": [
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㄺ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "삵",
+      "b": "샅",
+      "visemes": [
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄺ↔ㅌ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "꼬",
+      "b": "뀌",
+      "visemes": [
+        4,
+        9
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅗ↔ㅟ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "날",
+      "b": "눌",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "단",
+      "b": "만",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄷ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "단",
+      "b": "반",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄷ↔ㅂ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "만",
+      "b": "산",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "만",
+      "b": "싼",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅆ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "만",
+      "b": "탄",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅌ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "반",
+      "b": "산",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅂ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "반",
+      "b": "싼",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅂ↔ㅆ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "반",
+      "b": "탄",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅂ↔ㅌ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "단",
+      "b": "돈",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅗ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "만",
+      "b": "문",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "맏",
+      "b": "묻",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "맛",
+      "b": "탓",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅌ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "맛",
+      "b": "뭇",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "맡",
+      "b": "샅",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅁ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "밭",
+      "b": "샅",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅂ↔ㅅ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "맡",
+      "b": "뭍",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "반",
+      "b": "분",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "밭",
+      "b": "붙",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "빨",
+      "b": "뿔",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "빨",
+      "b": "빰",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "샅",
+      "b": "솥",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅗ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "싼",
+      "b": "쏜",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅗ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "탄",
+      "b": "톤",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅗ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "팔",
+      "b": "풀",
+      "visemes": [
+        2,
+        4
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㅏ↔ㅜ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "팔",
+      "b": "팜",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㅁ 입모양 다름(구별 가능)"
+    },
+    {
+      "a": "팔",
+      "b": "팝",
+      "visemes": [
+        1,
+        6
+      ],
+      "same_looking": false,
+      "relation": "minimal_pair",
+      "note": "ㄹ↔ㅂ 입모양 다름(구별 가능)"
+    }
+  ],
+  "closures": [
+    {
+      "display": "___을 차면 속이 시원해.",
+      "answer": "공",
+      "options": [
+        "공",
+        "콩"
+      ],
+      "hint": "발로 차는 둥근 물체",
+      "id": "g1"
+    },
+    {
+      "display": "이번 대회에서 ___ 위를 차지했어.",
+      "answer": "순",
+      "options": [
+        "순",
+        "쏜"
+      ],
+      "hint": "등수나 차례를 나타내는 말",
+      "id": "g2"
+    },
+    {
+      "display": "___이 너무 거칠어서 핸드크림 발랐어.",
+      "answer": "손",
+      "options": [
+        "손",
+        "돈"
+      ],
+      "hint": "피부 상태와 관리",
+      "id": "g3"
+    },
+    {
+      "display": "밥이 냄비 바닥에 ___어붙었어.",
+      "answer": "눌",
+      "options": [
+        "눌",
+        "솔"
+      ],
+      "hint": "열로 인해 음식이 바닥에 달라붙는 상황",
+      "id": "g4"
+    },
+    {
+      "display": "손에 ___은 흙을 털었어.",
+      "answer": "묻",
+      "options": [
+        "묻",
+        "뭍"
+      ],
+      "hint": "손에 달라붙은 흙을 털어내는 상황",
+      "id": "g5"
+    },
+    {
+      "display": "___에 지갑이랑 열쇠 넣었어.",
+      "answer": "가방",
+      "options": [
+        "가방",
+        "가망"
+      ],
+      "hint": "물건을 담는 용도",
+      "id": "g6"
+    },
+    {
+      "display": "밥 먹고 ___ 졸리네.",
+      "answer": "또",
+      "options": [
+        "또",
+        "토"
+      ],
+      "hint": "같은 상황이 반복될 때 쓰는 말",
+      "id": "g7"
+    },
+    {
+      "display": "___러붙은 밥이 더 맛있어.",
+      "answer": "눌",
+      "options": [
+        "눌",
+        "룬"
+      ],
+      "hint": "냄비 바닥에 생기는 것",
+      "id": "g8"
+    }
+  ]
+}
