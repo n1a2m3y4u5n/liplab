@@ -13,7 +13,7 @@ export default function Onboarding() {
   }
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-[420px] rounded-[24px] border-2 border-b-[5px] border-line bg-white p-8 text-center">
+      <div className="w-full max-w-[420px] rounded-[24px] border border-line bg-white p-8 text-center">
         <img src="/ui/mascot.svg" alt="" className="mx-auto h-24 w-24" />
         <h1 className="mt-4 text-[26px] font-bold tracking-[-0.5px] text-ink">어디서부터 시작할까요?</h1>
         <p className="mt-2 text-[14px] leading-relaxed text-ink-muted">

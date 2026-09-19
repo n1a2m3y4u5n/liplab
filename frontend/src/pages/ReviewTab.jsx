@@ -11,7 +11,7 @@ import { reviewAPI, learningAPI } from '../api'
 function GradientCta({ count, title, sub, btn, from, to, border, btnColor, onClick }) {
   return (
     <button type="button" onClick={onClick}
-      className="relative flex-1 overflow-hidden rounded-[20px] border-2 border-b-[5px] p-6 text-left"
+      className="relative flex-1 overflow-hidden rounded-[20px] border-2 p-6 text-left"
       style={{ backgroundImage: `linear-gradient(155deg, ${from} 0%, ${to} 71%)`, borderColor: border }}>
       <div className="flex flex-col gap-4">
         <div className="text-white">

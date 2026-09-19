@@ -92,7 +92,7 @@ export default function TasksPage() {
       </section>
 
       {/* 이번 주 도전 */}
-      <section className="relative w-full overflow-hidden rounded-[20px] border-2 border-b-[5px] border-[#6d3fc4] p-6"
+      <section className="relative w-full overflow-hidden rounded-[20px] border border-[#c4b5fd] p-6"
         style={{ backgroundImage: 'linear-gradient(168deg, #a78bfa 0%, #7d53de 71%)' }}>
         <div className="flex max-w-[462px] flex-col gap-2.5">
           <p className="text-[13px] font-bold uppercase tracking-wider text-white/80">특별 과제</p>

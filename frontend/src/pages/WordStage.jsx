@@ -122,9 +122,9 @@ function WordQuiz({ data }) {
         {q.choices.map((w, i) => {
           const isTarget = w === q.target
           const isChosen = result?.chosen === w
-          let cls = 'flex items-center gap-4 rounded-2xl border-2 border-b-[5px] px-5 py-4 text-left font-bold text-[20px] transition-all '
+          let cls = 'flex items-center gap-4 rounded-2xl border-2 px-5 py-4 text-left font-bold text-[20px] transition-all '
           let chip = 'bg-gray-100 text-ink-muted'
-          if (!result) cls += 'border-line bg-white text-ink hover:border-primary-400 hover:bg-primary-50 active:translate-y-[3px] active:border-b-2'
+          if (!result) cls += 'border-line bg-white text-ink hover:border-primary-400 hover:bg-primary-50 active:scale-[0.98]'
           else if (isTarget) { cls += 'border-emerald-500 bg-emerald-50 text-emerald-800'; chip = 'bg-emerald-500 text-white' }
           else if (isChosen) { cls += 'border-rose-400 bg-rose-50 text-rose-700'; chip = 'bg-rose-400 text-white' }
           else cls += 'border-line bg-gray-50 text-gray-400'
