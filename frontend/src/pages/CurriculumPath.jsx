@@ -8,7 +8,9 @@ import { curriculumAPI } from '../api'
  * 실 데이터: curriculumAPI.getStages()의 단계별 status(mastered/in_progress/unlocked/locked) + attempts.
  * 완료=보라 체크, 현재=별+상세카드(진행률·이어서 학습하기), 잠김=회색 별. 기존 학습 라우트로 이동.
  */
-const STAGE_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/practice', conversation: '/conversation' }
+// 문장 단계는 시나리오 선택(ScenarioHub)을 거쳐야 currentScenario가 세팅된 뒤 /practice 레슨이 뜬다.
+// 바로 /practice로 보내면 시나리오가 없어 Practice가 되돌려보내므로 /learn/scenario로 진입한다.
+const STAGE_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/learn/scenario', conversation: '/conversation' }
 const STAGE_DESC = {
   viseme: '입모양(비심) 10개 그룹을 눈으로 익혀요.',
   word: '자음과 모음이 만나 한 글자가 될 때 입모양이 어떻게 바뀌는지 익혀요. 「가·나·다」처럼 기본 조합을 다룹니다.',
