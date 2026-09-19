@@ -128,7 +128,7 @@ function MobileTabBar({ activeKey }) {
   const navigate = useNavigate()
   const tabs = NAV.filter((n) => n.key !== 'profile')
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line bg-white/97 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="주 메뉴">
+    <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_12px_-4px_rgba(26,13,64,0.08)] lg:hidden" aria-label="주 메뉴">
       {tabs.map((n) => {
         const on = activeKey === n.key
         return (
