@@ -11,6 +11,7 @@ const CARDS = [
   { key: 'scenario', title: '상황별 시나리오', desc: '카페·병원 등 상황을 골라 연습해요', icon: '/ui/card-scenario.svg', chip: '#fff3d6', to: '/learn/scenario' },
   { key: 'sign', title: '수어 함께 보기', desc: '문장을 수어로도 확인할 수 있어요', icon: '/ui/card-sign.svg', chip: '#dff7ec', to: '/learn/sign' },
   { key: 'retest', title: '자가진단 다시 하기', desc: '지금 수준으로 단계를 다시 추천받아요', icon: '/ui/card-retest.svg', chip: '#efe9fc', to: '/learn/placement' },
+  { key: 'endless', title: '엔드리스 학습', desc: '약한 유형만 골라 무한 연습해요', icon: '/ui/card-scenario.svg', chip: '#e0e7ff', to: '/learn/endless' },
 ]
 
 function PracticeCard({ card, onClick }) {
@@ -37,15 +38,6 @@ export default function PracticeHub() {
         {CARDS.map((c) => (
           <PracticeCard key={c.key} card={c} onClick={() => navigate(c.to)} />
         ))}
-        {/* 준비 중 — 그라데이션 + 마스코트 */}
-        <div className="relative overflow-hidden rounded-[20px] border-2 border-b-[5px] border-[#6d3fc4] p-6"
-          style={{ backgroundImage: 'linear-gradient(160deg, #c4b5fd 0%, #8b5cf6 71%)' }}>
-          <div className="flex flex-col items-center justify-center gap-3 py-2 text-center">
-            <img src="/ui/mascot.svg" alt="" className="h-16 w-16 drop-shadow" />
-            <span className="rounded-lg border-2 border-[#b45309] bg-[#fbbf24] px-4 py-1 text-[15px] font-bold text-[#7c2d12] shadow">공사 중</span>
-            <span className="text-xs font-medium text-white/90">새 연습 모드를 준비하고 있어요</span>
-          </div>
-        </div>
       </div>
     </AppShell>
   )
