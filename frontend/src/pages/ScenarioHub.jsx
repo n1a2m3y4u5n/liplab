@@ -81,7 +81,7 @@ export default function ScenarioHub() {
               <button key={item} type="button" onClick={() => setSituation(item)} aria-pressed={active}
                 className={active
                   ? 'rounded-[14px] border-[2.5px] border-primary-500 bg-primary-100 py-4 text-[16px] font-bold text-primary-700'
-                  : 'rounded-[14px] border-2 border-b-[5px] border-line bg-white py-4 text-[16px] font-bold text-ink transition-all hover:border-primary-300 active:translate-y-[3px] active:border-b-2'}>
+                  : 'rounded-[14px] border border-line bg-white py-4 text-[16px] font-bold text-ink transition-all hover:border-primary-300 active:scale-[0.98]'}>
                 {item}
               </button>
             )

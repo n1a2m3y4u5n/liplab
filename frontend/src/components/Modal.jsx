@@ -14,7 +14,7 @@ export default function Modal({ open, onClose, title, children, maxW = 'max-w-lg
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className={`w-full ${maxW} max-h-[86vh] overflow-y-auto rounded-[22px] border-2 border-b-[5px] border-line bg-white p-6 shadow-2xl`}
+      <div className={`w-full ${maxW} max-h-[86vh] overflow-y-auto rounded-[22px] border border-line bg-white p-6 shadow-2xl`}
         onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-[20px] font-bold tracking-[-0.4px] text-ink">{title}</h2>

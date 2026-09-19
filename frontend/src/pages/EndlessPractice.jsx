@@ -25,7 +25,7 @@ export default function EndlessPractice() {
   return (
     <AppShell active="practice" title="엔드리스 학습" description="틀렸던 유형이 계속 나와요">
       {/* 엔드리스 시작 — 그라데이션 카드 */}
-      <section className="relative w-full overflow-hidden rounded-[22px] border-2 border-b-[5px] border-[#6d3fc4] p-6 sm:p-8"
+      <section className="relative w-full overflow-hidden rounded-[22px] border border-[#c4b5fd] p-6 sm:p-8"
         style={{ backgroundImage: 'linear-gradient(160deg, #a78bfa 0%, #7d53de 71%)' }}>
         <div className="flex items-center gap-5">
           <img src="/ui/mascot.svg" alt="" className="hidden h-20 w-20 shrink-0 sm:block" />

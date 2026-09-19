@@ -27,14 +27,14 @@ function LockGlyph() {
 }
 
 function Node({ status }) {
-  if (status === 'mastered') return <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-b-[5px] border-primary-700 bg-primary-500"><CheckGlyph /></div>
+  if (status === 'mastered') return <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-primary-700 bg-primary-500"><CheckGlyph /></div>
   if (status === 'current') return (
-    <div className="relative flex h-[76px] w-[76px] items-center justify-center rounded-full border-b-[5px] border-primary-700 bg-primary-500 shadow-lg">
+    <div className="relative flex h-[76px] w-[76px] items-center justify-center rounded-full border-primary-700 bg-primary-500 shadow-lg">
       <span className="absolute -inset-2 rounded-full border-4 border-primary-300/70 animate-pulse" />
       <PlayGlyph />
     </div>
   )
-  return <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-2 border-b-[5px] border-line bg-gray-100"><LockGlyph /></div>
+  return <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full border border-line bg-gray-100"><LockGlyph /></div>
 }
 
 export default function CurriculumPath() {
@@ -70,7 +70,7 @@ export default function CurriculumPath() {
         </div>
 
         {/* 유닛 헤더 */}
-        <div className="flex w-full items-center gap-3.5 rounded-[18px] border-b-[5px] border-primary-700 bg-primary-500 py-5 pl-6 pr-5 text-white">
+        <div className="flex w-full items-center gap-3.5 rounded-[18px] border-primary-700 bg-primary-500 py-5 pl-6 pr-5 text-white">
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <span className="text-[13px] font-bold opacity-85">독화 · {cur ? `${cur.stage}단계` : '학습'}</span>
             <span className="text-[24px] font-bold tracking-[-0.48px]">{cur?.title || '커리큘럼'}</span>

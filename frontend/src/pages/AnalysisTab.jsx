@@ -76,7 +76,7 @@ function LineChart() {
 function DetailLink({ label, onClick }) {
   return (
     <button type="button" onClick={onClick}
-      className="flex flex-1 items-center justify-between rounded-2xl border-2 border-b-[5px] border-line bg-white py-[18px] pl-5 pr-[18px] text-[15px] font-bold text-ink transition-all active:translate-y-[3px] active:border-b-2">
+      className="flex flex-1 items-center justify-between rounded-2xl border border-line bg-white py-[18px] pl-5 pr-[18px] text-[15px] font-bold text-ink transition-all active:scale-[0.98]">
       {label}
       <img src="/ui/menu-arrow.svg" alt="" className="h-3.5 w-[7px]" />
     </button>

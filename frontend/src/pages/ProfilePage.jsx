@@ -86,7 +86,7 @@ export default function ProfilePage() {
   return (
     <AppShell active="profile" title="프로필">
       {/* 내 프로필 */}
-      <section className="relative w-full overflow-hidden rounded-[22px] border-2 border-b-[5px] border-[#6d3fc4] p-6 sm:p-8"
+      <section className="relative w-full overflow-hidden rounded-[22px] border border-[#c4b5fd] p-6 sm:p-8"
         style={{ backgroundImage: 'linear-gradient(166deg, #a78bfa 0%, #7d53de 71%)' }}>
         <div className="flex items-center gap-6">
           <div className="flex h-[100px] w-[100px] shrink-0 items-center justify-center rounded-full border-4 border-white/90 bg-white/20 text-4xl font-black text-white shadow-lg">
@@ -126,7 +126,7 @@ export default function ProfilePage() {
       </section>
 
       <button type="button" onClick={() => { logout(); navigate('/learn/path') }}
-        className="w-full rounded-2xl border-2 border-b-[5px] border-line bg-white py-4 text-[15px] font-bold text-ink-muted transition-all active:translate-y-[3px] active:border-b-2">
+        className="w-full rounded-2xl border border-line bg-white py-4 text-[15px] font-bold text-ink-muted transition-all active:scale-[0.98]">
         로그아웃
       </button>
 
@@ -160,7 +160,7 @@ export default function ProfilePage() {
         <div className="mt-5 flex gap-2">
           <button type="button" onClick={() => setModal(null)} className="btn-secondary flex-1 !py-3">취소</button>
           <button type="button" disabled={busy} onClick={resetLearning}
-            className="flex-1 rounded-2xl border-2 border-b-[5px] border-rose-700 bg-rose-500 py-3 font-bold text-white transition-all active:translate-y-[3px] active:border-b-2 disabled:opacity-60">
+            className="flex-1 rounded-2xl border-2 border-rose-700 bg-rose-500 py-3 font-bold text-white transition-all active:scale-[0.98] disabled:opacity-60">
             {busy ? '초기화 중…' : '초기화'}
           </button>
         </div>

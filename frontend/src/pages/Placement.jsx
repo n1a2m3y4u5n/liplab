@@ -94,7 +94,7 @@ export default function Placement() {
     return (
       <div className="mx-auto flex min-h-[100dvh] max-w-[560px] flex-col justify-center px-4 py-8">
         {/* 결과 리포트 카드 */}
-        <div className="overflow-hidden rounded-[22px] border-2 border-b-[5px] border-[#6d3fc4]"
+        <div className="overflow-hidden rounded-[22px] border border-[#c4b5fd]"
           style={{ backgroundImage: 'linear-gradient(166deg, #a78bfa 0%, #7d53de 71%)' }}>
           <div className="flex flex-col items-center gap-2 px-6 py-8 text-white">
             <img src="/ui/mascot.svg" alt="" className="h-16 w-16" />
@@ -192,7 +192,7 @@ export default function Placement() {
       <div className="mt-6 flex flex-col gap-3">
         {it.options.map((w, i) => (
           <button key={w} disabled={submitting} onClick={() => choose(w)}
-            className="flex items-center gap-4 rounded-2xl border-2 border-b-[5px] border-line bg-white px-5 py-4 text-left text-[20px] font-bold text-ink transition-all hover:border-primary-400 hover:bg-primary-50 active:translate-y-[3px] active:border-b-2 disabled:opacity-60">
+            className="flex items-center gap-4 rounded-2xl border border-line bg-white px-5 py-4 text-left text-[20px] font-bold text-ink transition-all hover:border-primary-400 hover:bg-primary-50 active:scale-[0.98] disabled:opacity-60">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-[13px] text-ink-muted">{i + 1}</span>
             <span className="flex-1">{w}</span>
           </button>
