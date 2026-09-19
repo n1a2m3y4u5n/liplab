@@ -12,7 +12,7 @@ const NAV = [
   { key: 'learn', label: '학습', to: '/dashboard', icon: '/ui/nav-learn.svg' },
   { key: 'practice', label: '연습', to: '/practice/hub', icon: '/ui/nav-practice.svg' },
   { key: 'task', label: '과제', to: '/tasks', icon: '/ui/nav-task.svg' },
-  { key: 'review', label: '복습', to: '/review/today', icon: '/ui/nav-review.svg' },
+  { key: 'review', label: '복습', to: '/review/hub', icon: '/ui/nav-review.svg' },
   { key: 'analysis', label: '분석', to: '/analysis/overview', icon: '/ui/nav-analytics.svg' },
   { key: 'profile', label: '프로필', to: '/profile', icon: '/ui/nav-profile.svg' },
 ]
