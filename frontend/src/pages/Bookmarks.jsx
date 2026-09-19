@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { learningAPI } from '../api'
 import useStore from '../store/useStore'
+import AppShell from '../components/AppShell'
 
 export default function Bookmarks() {
   const navigate = useNavigate()
@@ -40,20 +41,8 @@ export default function Bookmarks() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">북마크한 문장</h1>
-            <p className="text-sm text-gray-500">어려웠던 문장들을 다시 연습해보세요</p>
-          </div>
-          <button onClick={() => navigate('/dashboard')} className="text-gray-500 hover:text-gray-800 text-sm">
-            ✕ 나가기
-          </button>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 py-8">
+    <AppShell active="review" title="북마크한 문장" description="어려웠던 문장들을 다시 연습해보세요">
+      <div className="w-full">
         {loading ? (
           <div className="flex justify-center py-24">
             <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
@@ -105,7 +94,7 @@ export default function Bookmarks() {
             </AnimatePresence>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   )
 }
