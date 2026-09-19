@@ -82,6 +82,7 @@ const ContentReview = lazy(() => import('./pages/ContentReview'))
 const PracticeHub = lazy(() => import('./pages/PracticeHub'))
 const TasksPage = lazy(() => import('./pages/TasksPage'))
 const ReviewTab = lazy(() => import('./pages/ReviewTab'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
@@ -215,6 +216,7 @@ function App() {
         <Route path="/practice/hub" element={<PracticeHub />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/review/hub" element={<ReviewTab />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/learn/closure" element={<Closure />} />
         <Route path="/pronounce" element={<FreeSpeak />} />
         <Route path="/guide" element={<Guide />} />
