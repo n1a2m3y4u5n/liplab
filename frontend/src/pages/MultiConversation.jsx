@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
-import LearnHeader from '../components/LearnHeader'
+import AppShell from '../components/AppShell'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 
 /**
@@ -117,8 +117,7 @@ export default function MultiConversation() {
 
   const answered = guess != null
   return (
-    <div className="mx-auto max-w-3xl px-4 py-4">
-      <LearnHeader title="다자 대화 독화" />
+    <AppShell active="practice" title="다자 대화" description="입모양만 보고 누가 말했는지 맞혀보세요">
       <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <p className="text-sm text-gray-500">장면: <b className="text-gray-700">{conv.scene}</b> · 입모양만 보고 <b>누가 말했는지</b> 맞힌 뒤, 무슨 말인지 읽어보세요.</p>
         <div className="flex items-center gap-1 text-xs">
@@ -233,6 +232,6 @@ export default function MultiConversation() {
           </div>
         </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
