@@ -212,6 +212,8 @@ export const articulationAPI = {
 export const accountAPI = {
   exportData: async () => (await api.get('/account/data')).data,
   deleteAccount: async () => (await api.delete('/account', { params: { confirm: true } })).data,
+  updateProfile: async (payload) => (await api.patch('/account/profile', payload)).data,
+  changePassword: async (payload) => (await api.post('/account/password', payload)).data,
 }
 
 // 발화(말하기) — 커리큘럼 6단계 + 녹음 채점·코칭.
