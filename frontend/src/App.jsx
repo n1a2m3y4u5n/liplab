@@ -86,6 +86,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const AnalysisTab = lazy(() => import('./pages/AnalysisTab'))
 const CurriculumPath = lazy(() => import('./pages/CurriculumPath'))
 const EndlessPractice = lazy(() => import('./pages/EndlessPractice'))
+const Onboarding = lazy(() => import('./pages/Onboarding'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
@@ -164,10 +165,15 @@ function StageGate({ stage, children }) {
 }
 
 // AppShell(좌측 내비 자체 제공) 화면에서는 전역 상단메뉴를 숨긴다. Figma 리디자인 이관 시 확장.
-const SHELLED_ROUTES = ['/practice/hub', '/tasks', '/review/hub', '/analysis/hub', '/profile', '/learn/path']
+const SHELLED_ROUTES = ['/practice/hub', '/tasks', '/review/hub', '/analysis/hub', '/profile', '/learn/path', '/onboarding']
 // 집중 레슨/학습 화면 — 자체 LearnHeader(나가기 포함)가 있어 전역 드롭다운을 숨겨도 이탈 가능.
 // Figma 리디자인의 '집중 모드'(상단 진행헤더+나가기, 좌측 드롭다운 없음)와 정합. 대시보드만 전역메뉴 유지.
 const FOCUSED_PREFIXES = ['/learn', '/practice', '/conversation', '/pronounce', '/tactile', '/review', '/analysis', '/guide', '/hardware', '/sign']
+function HomeRedirect() {
+  let onboarded = false
+  try { onboarded = localStorage.getItem('liplab_onboarded') === '1' } catch { /* 무시 */ }
+  return <Navigate to={onboarded ? '/learn/path' : '/onboarding'} replace />
+}
 function ConditionalGlobalMenu() {
   const { pathname } = useLocation()
   if (SHELLED_ROUTES.some((p) => pathname.startsWith(p))) return null
@@ -231,7 +237,8 @@ function App() {
         <Route path="/pronounce" element={<FreeSpeak />} />
         <Route path="/guide" element={<Guide />} />
         <Route path="/dev-viseme" element={<DevViseme />} />
-        <Route path="/" element={<Navigate to="/learn/path" replace />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/" element={<HomeRedirect />} />
         <Route path="*" element={<Navigate to="/learn/path" replace />} />
       </Routes>
       </Suspense>
