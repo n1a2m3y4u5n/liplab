@@ -42,6 +42,7 @@ import A11ySettings from './components/A11ySettings'
 import LoadingScreen from './components/LoadingScreen'
 import Bookmarks from './pages/Bookmarks'
 import Guide from './pages/Guide'
+import Login from './pages/Login'
 
 // 탭·학습 단계 등 라우트가 바뀌면 이전 페이지의 스크롤 위치를 이어받지 않는다.
 function ScrollToTop() {
@@ -95,43 +96,14 @@ const Onboarding = lazy(() => import('./pages/Onboarding'))
  */
 function AuthGate({ children }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated)
-  const setAuth = useStore((s) => s.setAuth)
   const updateUser = useStore((s) => s.updateUser)
-  const [status, setStatus] = useState(isAuthenticated ? 'ready' : 'loading')
-
   useEffect(() => {
-    if (isAuthenticated) {
-      setStatus('ready')
-      // 재방문(캐시된 인증)에도 서버 최신값으로 user 동기화 — 스트릭 등 stale 방지
-      authAPI.getMe().then((u) => { if (u) updateUser(u) }).catch(() => {})
-      return
-    }
-    let cancelled = false
-    authAPI.demoLogin()
-      .then(async (data) => {
-        if (cancelled) return
-        setAuth(data.user, data.access_token)
-        try { await seedAPI.seedDemo() } catch { /* 데모 시드 실패는 무시 */ }
-        if (!cancelled) setStatus('ready')
-      })
-      .catch(() => { if (!cancelled) setStatus('error') })
-    return () => { cancelled = true }
-  }, [isAuthenticated, setAuth])
-
-  if (status === 'ready') return children
-  if (status === 'error') return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
-      <div>
-        <p style={{ fontSize: 40, margin: 0 }}>🔌</p>
-        <p style={{ color: '#64748b', margin: '8px 0 16px' }}>서버에 연결하지 못했어요.</p>
-        <button onClick={() => window.location.reload()}
-          style={{ padding: '10px 20px', borderRadius: 10, background: '#4f46e5', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
-          다시 시도
-        </button>
-      </div>
-    </div>
-  )
-  return <LoadingScreen label="들어가는 중…" />
+    // 재방문(캐시된 인증)에도 서버 최신값으로 user 동기화 — 스트릭 등 stale 방지
+    if (isAuthenticated) { authAPI.getMe().then((u) => { if (u) updateUser(u) }).catch(() => {}) }
+  }, [isAuthenticated, updateUser])
+  // 미인증이면 로그인 화면(Figma 00). '둘러보기(데모)'로 즉시 입장 가능.
+  if (!isAuthenticated) return <Login />
+  return children
 }
 
 /**
