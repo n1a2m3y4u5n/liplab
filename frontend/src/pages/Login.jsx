@@ -57,14 +57,22 @@ export default function Login() {
       {/* 우: 폼 */}
       <div className="flex flex-1 items-center justify-center px-6 py-10">
         <div className="w-full max-w-[380px]">
-          <div className="mb-8 flex items-center gap-2">
+          {/* 모바일: 중앙 마스코트 + 로고 (좌측 패널이 숨겨질 때) */}
+          <div className="mb-6 flex flex-col items-center gap-2.5 lg:hidden">
+            <span className="flex h-[76px] w-[76px] items-center justify-center rounded-[26px] bg-primary-100">
+              <img src="/ui/mascot.svg" alt="" className="h-11 w-11" />
+            </span>
+            <span className="font-display text-[26px] leading-none tracking-[-1px] text-primary-500">LIPLAB</span>
+          </div>
+          {/* 데스크톱: 좌상단 로고 */}
+          <div className="mb-8 hidden items-center gap-2 lg:flex">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100">
               <img src="/ui/mascot.svg" alt="" className="h-6 w-6" />
             </span>
             <span className="font-display text-[26px] leading-none tracking-[-1px] text-primary-500">LIPLAB</span>
           </div>
-          <h1 className="text-[24px] font-bold tracking-[-0.5px] text-ink">
-            {mode === 'login' ? '오늘도 학습을 시작해볼까요?' : '지금 시작해볼까요?'}
+          <h1 className="text-center text-[24px] font-bold tracking-[-0.5px] text-ink lg:text-left">
+            {mode === 'login' ? '다시 만나서 반가워요' : '지금 시작해볼까요?'}
           </h1>
 
           <form onSubmit={submit} className="mt-6 space-y-4">
