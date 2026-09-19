@@ -112,8 +112,8 @@ export default function CurriculumPath() {
                     </button>
                     {st === 'current' ? (
                       <>
-                        {/* 상세 카드 (왼쪽 삼각 포인터) */}
-                        <div className="relative w-[340px] max-w-[58vw] rounded-[20px] border border-line bg-white p-5 shadow-[0_10px_28px_-6px_rgba(26,13,64,0.12)]">
+                        {/* 상세 카드 (데스크톱: 노드 옆, 왼쪽 삼각 포인터) */}
+                        <div className="relative hidden w-[340px] max-w-[58vw] rounded-[20px] border border-line bg-white p-5 shadow-[0_10px_28px_-6px_rgba(26,13,64,0.12)] sm:block">
                           <span className="absolute -left-2 top-9 h-4 w-4 rotate-45 border-b border-l border-line bg-white" />
                           <p className="text-[20px] font-bold tracking-[-0.4px] text-ink">{s.title}</p>
                           <p className="mt-2 text-[13.5px] leading-relaxed text-ink-muted">{STAGE_DESC[s.key]}</p>
@@ -134,8 +134,23 @@ export default function CurriculumPath() {
                 </div>
               )
             })}
-            {/* 마스코트 — 우하단 플로팅 */}
-            <img src="/ui/mascot.svg" alt="" className="pointer-events-none absolute -right-2 bottom-4 h-24 w-24 opacity-95 sm:right-4" />
+            {/* 마스코트 — 우하단 플로팅(데스크톱) */}
+            <img src="/ui/mascot.svg" alt="" className="pointer-events-none absolute -right-2 bottom-4 hidden h-24 w-24 opacity-95 sm:block sm:right-4" />
+          </div>
+        )}
+
+        {/* 상세 바텀시트 (모바일: 탭 바 위 고정) */}
+        {cur && (
+          <div className="fixed inset-x-0 bottom-[62px] z-20 rounded-t-[22px] border-t border-line bg-white px-5 pb-4 pt-4 shadow-[0_-8px_24px_-8px_rgba(26,13,64,0.12)] sm:hidden">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[16px] font-bold text-ink">{cur.title}</p>
+              <span className="text-[12.5px] font-bold text-primary-500">{progCur} / {progTotal}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-[#eceaf3]">
+              <div className="h-full rounded-full bg-primary-500" style={{ width: `${(progCur / progTotal) * 100}%` }} />
+            </div>
+            <button type="button" onClick={() => navigate(STAGE_ROUTE[cur.key])}
+              className="btn-primary mt-3 w-full !py-3.5 text-[17px]">이어서 학습하기</button>
           </div>
         )}
       </div>
