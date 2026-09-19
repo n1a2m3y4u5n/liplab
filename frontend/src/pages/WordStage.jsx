@@ -16,6 +16,7 @@ const LipReadCheck = lazy(() => import('../components/LipReadCheck'))
  * 레이아웃만 Figma로 교체하고 채점·혼동진단·립리딩·수어·숙달 로직은 그대로 보존한다.
  */
 const shuffle = (a) => [...a].sort(() => Math.random() - 0.5)
+const QUIZ_LEN = 12  // 세션당 문항 수(진행바 분모) — 숙달 판정과 별개인 표시용
 
 function partnersOf(word, pairs, bankSet) {
   const out = new Set()
@@ -49,9 +50,11 @@ function WordQuiz({ data }) {
   const [q, setQ] = useState(null)
   const [frames, setFrames] = useState([])
   const [replayKey, setReplayKey] = useState(0)
+  const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계)
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
+  const [qNum, setQNum] = useState(1)              // 세션 내 문항 번호(진행바)
   const [signOpen, setSignOpen] = useState(false)
 
   const newQ = useCallback(async () => {
@@ -64,6 +67,7 @@ function WordQuiz({ data }) {
     const rest = shuffle(words.filter((w) => w !== target && !partners.includes(w)))
     const distractors = [...shuffle(partners), ...rest].slice(0, 3)
     setResult(null)
+    setSelected(null)
     setQ({ target, choices: shuffle([target, ...distractors]) })
     setFrames([])
     try { setFrames(await learningAPI.getVisemes(target)) } catch { /* ignore */ }
@@ -71,20 +75,22 @@ function WordQuiz({ data }) {
 
   useEffect(() => { newQ() }, [newQ])
 
-  const choose = async (word) => {
-    if (result || submitting) return
+  const confirm = async () => {
+    if (result || submitting || selected == null) return
     setSubmitting(true)
-    const correct = word === q.target
+    const correct = selected === q.target
     let confusions = []
     try {
-      const rr = await curriculumAPI.submitWord(q.target, correct, word)
+      const rr = await curriculumAPI.submitWord(q.target, correct, selected)
       setStat({ attempts: rr.attempts, mastery: rr.mastery_score, mastered: rr.mastered })
       confusions = rr.confusions || []
     } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
-    setResult({ correct, chosen: word, confusions })
+    setResult({ correct, chosen: selected, confusions })
   }
+  const next = () => { setQNum((n) => (n >= QUIZ_LEN ? 1 : n + 1)); newQ() }
 
   if (!q) return null
+  const pct = Math.round((Math.min(qNum, QUIZ_LEN) / QUIZ_LEN) * 100)
 
   return (
     <div className="mx-auto flex min-h-[100dvh] max-w-[680px] flex-col px-4 pb-10 pt-6 sm:px-6">
@@ -94,15 +100,15 @@ function WordQuiz({ data }) {
           className="shrink-0 text-ink-muted hover:text-ink">
           <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
-        <div className="h-3.5 flex-1 overflow-hidden rounded-full bg-line">
-          <div className="h-full rounded-full bg-primary-500 transition-all duration-500" style={{ width: `${Math.min(stat.mastery, 100)}%` }} />
+        <div className="h-3 flex-1 overflow-hidden rounded-full bg-[#eceaf3]">
+          <div className="h-full rounded-full bg-primary-500 transition-all duration-500" style={{ width: `${pct}%` }} />
         </div>
-        <span className="shrink-0 text-[15px] font-bold text-ink-muted">{stat.mastery}%</span>
+        <span className="shrink-0 text-[14px] font-bold text-ink-muted">{Math.min(qNum, QUIZ_LEN)} / {QUIZ_LEN}</span>
       </div>
 
       {/* 질문 */}
       <div className="mt-7">
-        <p className="text-[13px] font-bold text-primary-500">단어 독화 · {stat.attempts}회</p>
+        <p className="text-[13px] font-bold text-primary-500">단어 독화 · 숙달도 {stat.mastery}%</p>
         <p className="mt-2 text-[26px] font-bold tracking-[-0.75px] text-ink sm:text-[30px]">이 입모양은 어떤 단어일까요?</p>
         {stat.mastered && <p className="mt-1 text-sm font-semibold text-emerald-600">🎉 2단계 숙달! 단어 독화에 익숙해졌어요.</p>}
       </div>
@@ -121,15 +127,18 @@ function WordQuiz({ data }) {
       <div className="mt-6 flex flex-col gap-3">
         {q.choices.map((w, i) => {
           const isTarget = w === q.target
-          const isChosen = result?.chosen === w
-          let cls = 'flex items-center gap-4 rounded-2xl border-2 px-5 py-4 text-left font-bold text-[20px] transition-all '
+          const isChosen = (result ? result.chosen : selected) === w
+          let cls = 'flex items-center gap-4 rounded-2xl border px-5 py-4 text-left font-bold text-[20px] transition-all '
           let chip = 'bg-gray-100 text-ink-muted'
-          if (!result) cls += 'border-line bg-white text-ink hover:border-primary-400 hover:bg-primary-50 active:scale-[0.98]'
+          if (!result) {
+            if (isChosen) { cls += 'border-primary-500 bg-primary-50 text-ink'; chip = 'bg-primary-500 text-white' }
+            else cls += 'border-line bg-white text-ink hover:border-primary-300 active:scale-[0.99]'
+          }
           else if (isTarget) { cls += 'border-emerald-500 bg-emerald-50 text-emerald-800'; chip = 'bg-emerald-500 text-white' }
           else if (isChosen) { cls += 'border-rose-400 bg-rose-50 text-rose-700'; chip = 'bg-rose-400 text-white' }
           else cls += 'border-line bg-gray-50 text-gray-400'
           return (
-            <button key={w} type="button" disabled={!!result || submitting} onClick={() => choose(w)} className={cls}>
+            <button key={w} type="button" disabled={!!result || submitting} onClick={() => setSelected(w)} className={cls}>
               <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[13px] ${chip}`}>{i + 1}</span>
               <span className="flex-1">{w}</span>
               {result && isTarget && <span className="text-emerald-600">✓</span>}
@@ -173,10 +182,24 @@ function WordQuiz({ data }) {
             <Suspense fallback={null}>
               <LipReadCheck target={q.target} candidates={q.choices} />
             </Suspense>
-            <button type="button" onClick={newQ} className="btn-primary w-full !py-3.5 text-[18px]">다음 문제 →</button>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 하단 액션 바: 안내 + 확인 / 다음 */}
+      <div className="mt-6 flex items-center justify-between border-t border-line pt-5">
+        <span className="text-[14px] text-ink-muted">
+          {result ? (result.correct ? '잘했어요!' : '다시 도전해봐요') : selected == null ? '보기를 선택해주세요' : '정답을 확인해보세요'}
+        </span>
+        {result ? (
+          <button type="button" onClick={next} className="btn-primary !px-8 !py-3.5 text-[17px]">다음 문제</button>
+        ) : (
+          <button type="button" onClick={confirm} disabled={selected == null || submitting}
+            className={`rounded-2xl px-8 py-3.5 text-[17px] font-bold transition ${selected == null ? 'cursor-not-allowed bg-gray-200 text-gray-400' : 'btn-primary'}`}>
+            확인
+          </button>
+        )}
+      </div>
 
       <AnimatePresence>
         {signOpen && (
