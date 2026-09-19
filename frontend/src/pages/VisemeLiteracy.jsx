@@ -271,61 +271,62 @@ function QuizPanel({ data }) {
   if (!q) return null
 
   return (
-    <div className="space-y-5">
-      {/* 숙달도 */}
-      <div className="card">
-        <div className="flex justify-between text-sm mb-1.5">
-          <span className="text-gray-600">숙달도 (정확도)</span>
-          <span className="font-semibold text-primary-600">{stat.mastery}% · {stat.attempts}회</span>
+    <div className="mx-auto flex max-w-[680px] flex-col">
+      {/* 진행바 + 숙달도 */}
+      <div className="flex items-center gap-4">
+        <div className="h-3.5 flex-1 overflow-hidden rounded-full bg-line">
+          <div className="h-full rounded-full bg-primary-500 transition-all duration-500" style={{ width: `${Math.min(stat.mastery, 100)}%` }} />
         </div>
-        <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
-          <div className="bg-primary-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(stat.mastery, 100)}%` }} />
-        </div>
-        {stat.mastered && <p className="mt-2 text-sm font-semibold text-green-600">🎉 1단계 숙달! 입모양 학습을 완료했어요.</p>}
+        <span className="shrink-0 text-[15px] font-bold text-ink-muted">{stat.mastery}%</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
-          <p className="text-sm text-gray-500 mb-3">이 입모양은 어느 그룹일까요?</p>
-          <VisemeAvatar visemeId={q.target.viseme_id} />
-        </div>
-
-        <div className="card">
-          <div className="space-y-3">
-            {q.choices.map((c) => {
-              const isTarget = c.viseme_id === q.target.viseme_id
-              const isChosen = result?.chosenId === c.viseme_id
-              let cls = 'w-full text-left px-4 py-3 rounded-xl border-2 font-medium text-sm transition-all '
-              if (!result) cls += 'border-gray-200 bg-white hover:border-primary-400 hover:bg-primary-50 text-gray-800'
-              else if (isTarget) cls += 'border-green-500 bg-green-50 text-green-800'
-              else if (isChosen) cls += 'border-red-400 bg-red-50 text-red-700'
-              else cls += 'border-gray-200 bg-gray-50 text-gray-400'
-              return (
-                <button key={c.viseme_id} disabled={!!result || submitting} onClick={() => choose(c.viseme_id)} className={cls}>
-                  {c.name}
-                  {result && isTarget && <span className="float-right text-green-600">✓</span>}
-                  {result && isChosen && !isTarget && <span className="float-right text-red-500">✗</span>}
-                </button>
-              )
-            })}
-          </div>
-
-          <AnimatePresence>
-            {result && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-2">
-                <div className={`p-3 rounded-lg text-sm ${result.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                  {result.correct ? '정답! 🎉' : `오답 — 정답은 "${lessonLabel(q.target)}"`}
-                  {!result.correct && result.same_cluster && (
-                    <p className="mt-1 text-gray-600">헷갈릴 만해요! 이 둘은 <b>같아 보이는 무리</b>라 입모양만으론 구별이 어렵습니다. 실제로는 문맥으로 판단해요.</p>
-                  )}
-                </div>
-                <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-600">{result.target.teach}</div>
-                <button onClick={newQ} className="btn-primary w-full py-2 text-sm">다음 문제 →</button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+      <div className="mt-6">
+        <p className="text-[13px] font-bold text-primary-500">입모양 인지 · {stat.attempts}회</p>
+        <p className="mt-2 text-[26px] font-bold tracking-[-0.75px] text-ink sm:text-[30px]">이 입모양은 어느 그룹일까요?</p>
+        {stat.mastered && <p className="mt-1 text-sm font-semibold text-emerald-600">🎉 1단계 숙달! 입모양 학습을 완료했어요.</p>}
       </div>
+
+      {/* 입모양(3D) */}
+      <div className="mt-6 rounded-[22px] border-2 border-line bg-white p-4">
+        <VisemeAvatar visemeId={q.target.viseme_id} />
+      </div>
+
+      {/* 4지선다 */}
+      <div className="mt-6 flex flex-col gap-3">
+        {q.choices.map((c, i) => {
+          const isTarget = c.viseme_id === q.target.viseme_id
+          const isChosen = result?.chosenId === c.viseme_id
+          let cls = 'flex items-center gap-4 rounded-2xl border-2 border-b-[5px] px-5 py-4 text-left font-bold text-[17px] transition-all '
+          let chip = 'bg-gray-100 text-ink-muted'
+          if (!result) cls += 'border-line bg-white text-ink hover:border-primary-400 hover:bg-primary-50 active:translate-y-[3px] active:border-b-2'
+          else if (isTarget) { cls += 'border-emerald-500 bg-emerald-50 text-emerald-800'; chip = 'bg-emerald-500 text-white' }
+          else if (isChosen) { cls += 'border-rose-400 bg-rose-50 text-rose-700'; chip = 'bg-rose-400 text-white' }
+          else cls += 'border-line bg-gray-50 text-gray-400'
+          return (
+            <button key={c.viseme_id} disabled={!!result || submitting} onClick={() => choose(c.viseme_id)} className={cls}>
+              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[13px] ${chip}`}>{i + 1}</span>
+              <span className="flex-1">{c.name}</span>
+              {result && isTarget && <span className="text-emerald-600">✓</span>}
+              {result && isChosen && !isTarget && <span className="text-rose-500">✕</span>}
+            </button>
+          )
+        })}
+      </div>
+
+      <AnimatePresence>
+        {result && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 space-y-3">
+            <div className={`rounded-2xl px-4 py-3 text-[15px] font-bold ${result.correct ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+              {result.correct ? '정답이에요! 🎉' : `오답 — 정답은 "${lessonLabel(q.target)}"`}
+              {!result.correct && result.same_cluster && (
+                <p className="mt-1 text-[13px] font-normal text-ink-muted">헷갈릴 만해요! 이 둘은 <b>같아 보이는 무리</b>라 입모양만으론 구별이 어렵습니다. 실제로는 문맥으로 판단해요.</p>
+              )}
+            </div>
+            <div className="rounded-2xl border-2 border-line bg-white p-3 text-[13px] text-ink-muted">{result.target.teach}</div>
+            <button onClick={newQ} className="btn-primary w-full !py-3.5 text-[18px]">다음 문제 →</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
