@@ -37,7 +37,6 @@ class ErrorBoundary extends Component {
 import useStore from './store/useStore'
 import { authAPI, curriculumAPI, seedAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
-import GlobalLearningMenu from './components/GlobalLearningMenu'
 import A11ySettings from './components/A11ySettings'
 import LoadingScreen from './components/LoadingScreen'
 import Bookmarks from './pages/Bookmarks'
@@ -70,15 +69,12 @@ const WordStage = lazy(() => import('./pages/WordStage'))
 const Review = lazy(() => import('./pages/Review'))
 const Closure = lazy(() => import('./pages/Closure'))
 const SpeakingPractice = lazy(() => import('./pages/SpeakingPractice'))
-const TactilePractice = lazy(() => import('./pages/TactilePractice'))
 const FreeSpeak = lazy(() => import('./pages/FreeSpeak'))
 const ScenarioHub = lazy(() => import('./pages/ScenarioHub'))
-const PillarHub = lazy(() => import('./pages/PillarHub'))
 const ReviewLanding = lazy(() => import('./pages/ReviewLanding'))
 const SpeakingReviewLanding = lazy(() => import('./pages/SpeakingReviewLanding'))
 const AnalysisDetail = lazy(() => import('./pages/AnalysisDetail'))
 const EvalReport = lazy(() => import('./pages/EvalReport'))
-const HardwareBuild = lazy(() => import('./pages/HardwareBuild'))
 const ContentReview = lazy(() => import('./pages/ContentReview'))
 const PracticeHub = lazy(() => import('./pages/PracticeHub'))
 const TasksPage = lazy(() => import('./pages/TasksPage'))
@@ -136,21 +132,10 @@ function StageGate({ stage, children }) {
   return children
 }
 
-// AppShell(좌측 내비 자체 제공) 화면에서는 전역 상단메뉴를 숨긴다. Figma 리디자인 이관 시 확장.
-const SHELLED_ROUTES = ['/practice/hub', '/tasks', '/review/hub', '/analysis/hub', '/profile', '/learn/path', '/onboarding']
-// 집중 레슨/학습 화면 — 자체 LearnHeader(나가기 포함)가 있어 전역 드롭다운을 숨겨도 이탈 가능.
-// Figma 리디자인의 '집중 모드'(상단 진행헤더+나가기, 좌측 드롭다운 없음)와 정합. 대시보드만 전역메뉴 유지.
-const FOCUSED_PREFIXES = ['/learn', '/practice', '/conversation', '/pronounce', '/tactile', '/review', '/analysis', '/guide', '/hardware', '/sign']
 function HomeRedirect() {
   let onboarded = false
   try { onboarded = localStorage.getItem('liplab_onboarded') === '1' } catch { /* 무시 */ }
   return <Navigate to={onboarded ? '/learn/path' : '/onboarding'} replace />
-}
-function ConditionalGlobalMenu() {
-  const { pathname } = useLocation()
-  if (SHELLED_ROUTES.some((p) => pathname.startsWith(p))) return null
-  if (FOCUSED_PREFIXES.some((p) => pathname.startsWith(p))) return null
-  return <GlobalLearningMenu />
 }
 
 /** 부팅 스플래시 (Figma 08) — 세션당 1회, 앱 진입 시 브랜드 스플래시를 잠깐 보여준다. */
@@ -182,7 +167,6 @@ function App() {
       <AuthGate>
       <>
       <a href="#main-content" className="skip-link">본문으로 건너뛰기</a>
-      <ConditionalGlobalMenu />
       <main id="main-content" className="app-shell">
       <Suspense fallback={<LoadingScreen />}>
       <Routes>
@@ -190,26 +174,27 @@ function App() {
         <Route path="/practice" element={<StageGate stage={3}><Practice /></StageGate>} />
         <Route path="/conversation" element={<StageGate stage={4}><Conversation /></StageGate>} />
         <Route path="/sign" element={<Sign />} />
-        <Route path="/tactile" element={<TactilePractice />} />
         <Route path="/learn/viseme" element={<VisemeLiteracy />} />
         <Route path="/learn/word" element={<StageGate stage={2}><WordStage /></StageGate>} />
         <Route path="/learn/conversation-multi" element={<MultiConversation />} />
         <Route path="/learn/placement" element={<Placement />} />
         <Route path="/learn/scenario" element={<ScenarioHub />} />
-        <Route path="/pillar/:id" element={<PillarHub />} />
         <Route path="/learn/speaking" element={<SpeakingPractice />} />
-        <Route path="/learn/tactile" element={<TactilePractice />} />
-        <Route path="/learn/tactile/hardware" element={<TactilePractice />} />
-        <Route path="/hardware/build" element={<HardwareBuild />} />
         <Route path="/learn/sign" element={<Sign />} />
-        <Route path="/review/today" element={<ReviewLanding mode="today" />} />
+        {/* 복습·분석 탭 — 새 Figma 화면을 대표 경로로 */}
+        <Route path="/review" element={<ReviewTab />} />
+        <Route path="/analysis" element={<AnalysisTab />} />
+        {/* 구 경로 → 새 대표 경로 리다이렉트(신구 화면 혼재 방지) */}
+        <Route path="/review/hub" element={<Navigate to="/review" replace />} />
+        <Route path="/review/today" element={<Navigate to="/review" replace />} />
+        <Route path="/analysis/hub" element={<Navigate to="/analysis" replace />} />
+        <Route path="/analysis/overview" element={<Navigate to="/analysis" replace />} />
+        {/* 새 화면 안에서 '더 보기'로 진입하는 상세 경로 — 유지 */}
         <Route path="/review/scheduled" element={<Review />} />
         <Route path="/review/mistakes" element={<ReviewLanding mode="mistakes" />} />
         <Route path="/review/speaking" element={<SpeakingReviewLanding />} />
         <Route path="/review/speaking/session" element={<SpeakingPractice />} />
-        <Route path="/review/tactile" element={<TactilePractice />} />
         <Route path="/review/saved" element={<Bookmarks />} />
-        <Route path="/analysis/overview" element={<AnalysisDetail mode="overview" />} />
         <Route path="/analysis/activity" element={<AnalysisDetail mode="activity" />} />
         <Route path="/analysis/visemes" element={<AnalysisDetail mode="visemes" />} />
         <Route path="/analysis/scores" element={<AnalysisDetail mode="scores" />} />
@@ -218,9 +203,7 @@ function App() {
         <Route path="/admin/content-review" element={<ContentReview />} />
         <Route path="/practice/hub" element={<PracticeHub />} />
         <Route path="/tasks" element={<TasksPage />} />
-        <Route path="/review/hub" element={<ReviewTab />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/analysis/hub" element={<AnalysisTab />} />
         <Route path="/learn/path" element={<CurriculumPath />} />
         <Route path="/learn/endless" element={<EndlessPractice />} />
         <Route path="/learn/closure" element={<Closure />} />

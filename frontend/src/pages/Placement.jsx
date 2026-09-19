@@ -13,7 +13,8 @@ const VIS_NAME = {
   6: '치경음', 7: '연구개음', 8: '성문음', 9: '이중모음', 10: '경구개음',
 }
 
-const STAGE_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/practice' }
+// 문장 단계는 시나리오 선택(ScenarioHub)을 거쳐 currentScenario를 세팅한 뒤 /practice로 진입한다.
+const STAGE_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/learn/scenario' }
 
 const MODE_LABEL = { placement: '배치검사', A: '사전검사', B: '사후검사' }
 

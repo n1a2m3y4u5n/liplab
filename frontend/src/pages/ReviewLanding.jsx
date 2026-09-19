@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { learningAPI, speakAPI, tactileAPI } from '../api'
+import { learningAPI, speakAPI } from '../api'
 import useStore from '../store/useStore'
 import AppShell from '../components/AppShell'
 
@@ -10,7 +10,6 @@ const qTypes = (length) => Array.from({ length }, (_, index) => QUESTION_TYPES[i
 const REVIEW_LINKS = [
   { label: '독화', description: '독화 테스트에서 놓친 문장', to: '/review/mistakes', tone: 'bg-rose-50 text-rose-700' },
   { label: '말하기', description: '다르게 인식된 발음과 억양', to: '/review/speaking', tone: 'bg-amber-50 text-amber-800' },
-  { label: '촉각', description: '놓쳤던 촉각 퀴즈 항목', to: '/review/tactile', tone: 'bg-violet-50 text-violet-700' },
 ]
 
 function sumBuckets(buckets = {}) {
@@ -41,12 +40,10 @@ export default function ReviewLanding({ mode = 'today' }) {
     Promise.all([
       learningAPI.getReviewSentences().catch(() => []),
       speakAPI.getReview().catch(() => ({ buckets: {} })),
-      tactileAPI.getReview().catch(() => ({ buckets: {} })),
-    ]).then(([wrong, speaking, tactile]) => {
+    ]).then(([wrong, speaking]) => {
       setCounts({
         mistakes: (wrong || []).length,
         speaking: reviewCount(speaking),
-        tactile: reviewCount(tactile),
       })
     }).finally(() => setLoading(false))
   }, [mode])
@@ -108,12 +105,12 @@ export default function ReviewLanding({ mode = 'today' }) {
     if (!counts) return '—'
     if (to === '/review/mistakes') return counts.mistakes
     if (to === '/review/speaking') return counts.speaking
-    return counts.tactile
+    return '—'
   }
   const total = counts ? Object.values(counts).reduce((sum, value) => sum + value, 0) : 0
 
   return (
-    <AppShell active="review" title="오늘의 복습" description="독화·말하기·촉각별 복습 내용을 확인하고 원하는 영역으로 이동하세요">
+    <AppShell active="review" title="오늘의 복습" description="독화·말하기별 복습 내용을 확인하고 원하는 영역으로 이동하세요">
       <div className="w-full space-y-5">
         <section className="rounded-[24px] p-6 text-white" style={{ backgroundImage: 'linear-gradient(160deg, #a78bfa 0%, #7d53de 71%)' }}>
           <div>
