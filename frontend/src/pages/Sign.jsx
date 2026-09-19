@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SignPanel from '../components/SignPanel'
-import LearnHeader from '../components/LearnHeader'
+import AppShell from '../components/AppShell'
 
 /**
  * 한국어 → 한국수어(KSL) 학습 보조 페이지
@@ -26,15 +26,8 @@ export default function Sign() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <LearnHeader
-        accent="etc"
-        title="수어 학습"
-        description="문장을 입력하면 한국수어(KSL) 영상으로 함께 확인해요"
-        onExit={() => navigate('/dashboard')}
-      />
-
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <AppShell active="practice" title="수어 함께 보기" description="문장을 입력하면 한국수어(KSL) 영상으로 함께 확인해요">
+      <div className="w-full">
         <div className="mb-4 text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
           <b>AI 수어 번역 (베타)</b> · 한국어를 한국수어 문법으로 옮겨 실제 수어 영상으로 보여주는
           <b> 학습·이해 보조</b> 도구입니다. 공식 수어 통역이 아닙니다.
@@ -74,7 +67,7 @@ export default function Sign() {
         <div className="mt-6">
           <SignPanel text={query} />
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   )
 }

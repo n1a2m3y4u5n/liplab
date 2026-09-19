@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { learningAPI, articulationAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
 import Audio2FaceAvatar from '../components/Audio2FaceAvatar'
-import LearnHeader from '../components/LearnHeader'
+import AppShell from '../components/AppShell'
 
 /**
  * 내 문장 발음 보기 (자유 입력 → 3D 입모양)
@@ -67,15 +67,8 @@ export default function FreeSpeak() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <LearnHeader
-        accent="reading"
-        title="내 문장 발음 보기"
-        description="아무 글자나 문장을 입력하면 3D 얼굴이 그대로 발음해요"
-        onExit={() => navigate('/dashboard')}
-      />
-
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <AppShell active="practice" title="자유 발화" description="아무 글자나 문장을 입력하면 3D 얼굴이 그대로 발음해요">
+      <div className="grid w-full grid-cols-1 gap-6 lg:grid-cols-2">
         {/* 입력 */}
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card">
           <h3 className="text-lg font-semibold mb-4 text-gray-900">무엇을 발음해 볼까요?</h3>
@@ -192,7 +185,7 @@ export default function FreeSpeak() {
         >
           <Audio2FaceAvatar />
         </motion.div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   )
 }
