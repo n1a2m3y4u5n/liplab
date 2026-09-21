@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import Modal from '../components/Modal'
 import useStore from '../store/useStore'
@@ -87,10 +88,13 @@ export default function AnalysisTab() {
   const user = useStore((s) => s.user)
   const statistics = useStore((s) => s.statistics)
   const streak = Math.max(0, user?.streak_count || 7)
+  const navigate = useNavigate()
   const [modal, setModal] = useState(null)   // 'calendar' | 'history' | 'stats'
   const [cal, setCal] = useState(null)
+  const [acts, setActs] = useState(null)   // 날짜별 학습 내용(회차 히스토리)
   useEffect(() => {
     learningAPI.getCalendar().then(setCal).catch(() => setCal({}))
+    learningAPI.getCalendarActivities().then(setActs).catch(() => setActs({}))
   }, [])
 
   return (
@@ -129,7 +133,7 @@ export default function AnalysisTab() {
         <ActivityCalendar cal={cal} />
       </Modal>
       <Modal open={modal === 'history'} onClose={() => setModal(null)} title="회차 히스토리">
-        <HistoryList cal={cal} />
+        <HistoryList cal={cal} acts={acts} onGo={(to) => { setModal(null); navigate(to) }} />
       </Modal>
       <Modal open={modal === 'stats'} onClose={() => setModal(null)} title="전체 통계">
         <FullStats statistics={statistics} streak={streak} />
@@ -168,18 +172,61 @@ function ActivityCalendar({ cal }) {
   )
 }
 
-/** 회차 히스토리 — 학습한 날 목록(최근순). */
-function HistoryList({ cal }) {
+/** 회차 히스토리 — 학습한 날 목록(최근순). 같은 날이라도 주제가 다르면 각자 독립 블록으로 나눈다. */
+const KIND_TINT = {
+  assessment: 'bg-violet-50 text-violet-700', viseme: 'bg-sky-50 text-sky-700', word: 'bg-sky-50 text-sky-700',
+  closure: 'bg-amber-50 text-amber-700', trial: 'bg-sky-50 text-sky-700', sentence: 'bg-primary-100 text-primary-700',
+  speak: 'bg-rose-50 text-rose-700',
+}
+// 날짜 머리글용 — '9월 21일 · 일요일' + 오늘/어제 표시
+const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
+function dateParts(iso) {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const diff = Math.round((today - dt) / 86400000)
+  const rel = diff === 0 ? '오늘' : diff === 1 ? '어제' : null
+  return { md: `${m}월 ${d}일`, wd: `${WEEKDAY[dt.getDay()]}요일`, year: y, rel, weekend: dt.getDay() === 0 || dt.getDay() === 6 }
+}
+
+function HistoryList({ cal, acts, onGo }) {
   const entries = Object.entries(cal || {}).filter(([, c]) => c > 0).sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, 30)
   if (entries.length === 0) return <p className="py-8 text-center text-sm text-ink-muted">아직 학습 기록이 없어요.</p>
   return (
     <div className="flex flex-col">
-      {entries.map(([date, count], i) => (
-        <div key={date} className={`flex items-center justify-between py-3 ${i ? 'border-t border-line' : ''}`}>
-          <span className="text-[15px] font-bold text-ink">{date}</span>
-          <span className="rounded-full bg-primary-100 px-3 py-1 text-[12px] font-bold text-primary-700">{count}회 학습</span>
-        </div>
-      ))}
+      {entries.map(([date, count], di) => {
+        // 주제별 행이 오면 그것을, 아직 안 왔거나 없으면 기존 건수 하나로 블록을 만든다.
+        const rows = acts?.[date]?.length ? acts[date] : [{ kind: 'sentence', topic_label: `학습 ${count}회`, type_label: '문장 연습', route: '/learn/scenario' }]
+        return (
+          <div key={date} className={`py-4 ${di ? 'border-t border-line' : ''}`}>
+            {(() => {
+              const dp = dateParts(date)
+              return (
+                <div className="flex items-center gap-2.5">
+                  <span className="h-5 w-1.5 rounded-full bg-primary-500" aria-hidden="true" />
+                  <span className="text-[16px] font-bold tracking-[-0.3px] text-ink">{dp.md}</span>
+                  <span className={`text-[13px] font-semibold ${dp.weekend ? 'text-rose-500' : 'text-ink-muted'}`}>{dp.wd}</span>
+                  {dp.rel && <span className="rounded-full bg-primary-100 px-2.5 py-0.5 text-[11px] font-bold text-primary-700">{dp.rel}</span>}
+                  <span className="ml-auto text-[12px] font-medium text-gray-400">{dp.year}</span>
+                </div>
+              )
+            })()}
+            <div className="mt-2.5 flex flex-col gap-2">
+              {rows.map((r, i) => (
+                <button key={`${r.kind}-${r.topic ?? i}`} type="button" onClick={() => onGo(r.route)}
+                  aria-label={`${r.type_label} ${r.topic_label} 학습으로 이동`}
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl border border-line bg-white px-4 py-3 text-left shadow-[0_6px_18px_-8px_rgba(26,13,64,0.14)] transition-all hover:border-primary-300 hover:bg-primary-50/40 active:scale-[0.99]">
+                  <span className="truncate text-[14px] font-bold text-ink">{r.topic_label}</span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className={`rounded-full px-3 py-1 text-[12px] font-bold ${KIND_TINT[r.kind] || 'bg-primary-100 text-primary-700'}`}>{r.type_label}</span>
+                    <svg viewBox="0 0 24 24" className="h-4 w-4 text-gray-300" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
