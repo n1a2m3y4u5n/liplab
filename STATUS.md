@@ -1,8 +1,9 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
-> 최종 갱신 2026-09-16 — **세 사람이 세 브랜치에서 동시에 움직이고 있다.** 아래 '브랜치 현황'부터 본다.
+> 최종 갱신 2026-09-21 — **`feat/sublexical-feedback` 60커밋을 병합했다(미푸시).** 아래 '브랜치 현황'부터 본다.
 > 그 전: 채점식 naive 교체(1단계) 완료, A-6(E1·E2) 실행 완료, 체크포인트 HF 백업 완료.
-> 브랜치 `feat/content-scale` — origin과 동기화됨(`082bf7f`).
+> 브랜치 `feat/content-scale` — 로컬이 origin(`952f816`)보다 병합 커밋 1개 앞선다. 되돌리려면
+> `git reset --hard backup/pre-merge-2-content-scale`.
 > 이 파일은 **한 화면짜리 현황판**이다. 근거·수치는 각 항목의 링크를 따라간다.
 > 전체 이력은 `DEVELOPMENT_SUMMARY.md`.
 
@@ -21,24 +22,33 @@
 
 ---
 
-## 브랜치 현황 (2026-09-16)
+## 브랜치 현황 (2026-09-21)
 
 혼자 하던 저장소가 아니다. **같은 파일을 세 갈래가 동시에 고치고 있다.**
 
 | 브랜치 | 사람 | 하는 일 | content-scale 대비 |
 |---|---|---|---|
-| `feat/content-scale` | duadnwls | 축 A·B(음향 채점), 커리큘럼 | 기준 (`082bf7f`) |
-| `feat/sublexical-feedback` | namyunsu | 축 E·F·G·H·I·J·K, PWA·접근성·보안 | **19커밋 앞섬** (`c0175aa`) |
+| `feat/content-scale` | duadnwls | 축 A·B(음향 채점), 커리큘럼 | 기준 (`952f816` + 병합 커밋) |
+| `feat/sublexical-feedback` | namyunsu | 축 B~K 고도화 + **Figma 리디자인**(9/19, 30커밋) | **병합 완료** (`702c373`까지 60커밋, 2026-09-21) |
 | `feat/content-scaleUI` | JuHana | 프론트 IA 재구조화(App.jsx 라우팅·features/ 이동) | **7커밋 앞섬** (`ecbd12d`) |
 | `refactor/app-shell-routing` | JuHana | 위 중 셸·라우팅만 | 2커밋 앞섬 |
 
 `feat/content-scaleUI`는 2026-09-15에 content-scale로 fast-forward해 뒀고, 그 뒤 JuHana 님이
 그 위에 쌓았다. **`frontend/src/App.jsx`는 세 갈래가 전부 건드린다** — 손대기 전에 순서를 합의한다.
 
+⚠️ **이번 병합으로 프론트 IA가 namyunsu 님의 Figma 리디자인으로 바뀌었다.** 옛 `Dashboard.jsx`·
+`PillarHub.jsx`·`GlobalLearningMenu.jsx`는 삭제됐고 진입은 `/learn/path`(CurriculumPath)+`AppShell`이다.
+JuHana 님의 `feat/content-scaleUI`(features/ 이동·NavShell)는 **다른 구조**라 그대로 병합하면
+App.jsx에서 또 충돌한다 — 어느 셸을 기준으로 할지 먼저 합의한다.
+
 ---
 
 ## 바로 할 일 (우선순위)
 
+> **2026-09-21 — `feat/sublexical-feedback` 60커밋을 병합했다**(충돌 25파일). 방침은 아래 2절.
+> 백엔드 26 + scripts 3 + 프론트 35 테스트 통과, vite build 통과, 라우트 61개(촉각 0). **아직 푸시하지 않았다.**
+> 되돌리려면 `git reset --hard backup/pre-merge-2-content-scale`.
+>
 > **2026-09-15 — 앱 트랙을 병합했다**(`c82fb9f`). `feat/sublexical-feedback` 6커밋을 촉각 제거를
 > 유지한 채 합쳤고 테스트·빌드까지 확인했다. **아직 푸시하지 않았다.** 되돌리려면
 > `git reset --hard backup/pre-merge-content-scale`(병합 직전 상태로 걸어 둔 태그).
@@ -99,7 +109,24 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
 > 있어야 한다**(저장소가 비공개다). 빠뜨리면 모델 로드가 실패하고 전사 경로로 폴백하는데,
 > 이제 그 폴백이 조용하지 않다 — 서버 로그에 `[WARN] D-GOP 경로 실패`가 찍힌다.
 
-### 2. 축 B 병합 충돌 정리 ⭐
+### 2. 축 B 병합 충돌 정리 ✅ (2026-09-21 병합으로 해소)
+
+**병합에서 이렇게 정했다** — 아래 원래 분석의 권고를 그대로 따랐다.
+
+- `dgop.py`: 그쪽 로지스틱 `calibrate_score(raw01)`는 **삭제**. 앵커 보정 하나만 남았고 `sentence_dgop`의
+  `score_calibrated`는 원점수×100을 앵커 보정에 넣는다. 그쪽의 **구간별(per-phone) 후기융합**은 살려서
+  같은 눈금으로 옮겼다(`fuse_audio_visual_per_phone`, dgop×100 → 앵커 보정).
+- `dgop_acoustic.py`: **우리 것**(`assess_text`, 정렬기/채점기 분리, ctc_align, naive). 그쪽 `dgop_from_audio`는 버렸다.
+- `main.py` `/api/speak/assess`: **`DGOP_ALIGNER_ID` 게이트 유지**(미설정 = 전사 경로). D-GOP가 켜지면
+  음소별 정보로 구간별 융합, 없으면 문장 단위 융합. 그쪽의 `_server_error` 헬퍼는 채택.
+- 실측 확인: `calibrate_score(78.15) = 90.0`(19.5도 98도 아님). 단 **앵커 자체는 여전히 낡았다**(1순위 2·3단계).
+- 그 밖의 합집합: closure-answer(서버 채점 + XP·스트릭), 배치검사(`PlacementResult`로 통일 —
+  우리 `/api/assessment/history`는 그 테이블을 읽도록 고쳤고 그쪽 `progression`·`benchmark`·`resources`도 있다),
+  `AvatarVRM`(음성구동 `bsFrameRef` > 웹캠 거울 `mirrorRef` > viseme), `WebcamMouthCheck`(우리 ref 최신값
+  버그수정·입술 기하 + 그쪽 K 분류기·조음 교정·미러). 줄바꿈은 `main.py`·`api.js`·`scoring.py`·`index.css`를 LF로 정규화했다.
+- 우리 `MouthMirror.jsx`는 그쪽 `WebcamMouthCheck` 안의 미러와 겹쳐 **화면에서 뺐다**(파일은 남아 있음).
+
+<details><summary>원래 분석(2026-09-16)</summary>
 
 `feat/sublexical-feedback`이 19커밋(57파일, +10,912/−2,245) 앞서 있고, **축 B에서 양쪽이 같은 걸
 따로 만들었다.** 시험 병합(`git merge-tree`) 결과 **git이 잡는 충돌 14개 + 조용히 깨지는 곳 1개**.
@@ -137,13 +164,15 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
 > 이 정리는 1순위 2·3단계(A-3 재측정·A-4 재적합)와 **맞물린다** — 어느 보정을 남길지가
 > 앵커 재적합 결과에 달려 있다. 재적합 전까지는 **양쪽 다 켜지 않는다.**
 
+</details>
+
 ### 3. 그다음
 
 - **AI Hub 608 샘플 확인** — IRB 불필요, 본인인증만. 확인할 것 3가지는 `docs/deaf-speech-data-research.md` §2
 - **정민화 연구실 접촉**(서울대 언어학과) — 이제 E1·E2 실측을 들고 갈 수 있다. 우리 가설을 한국어로 이미 검증했고 코드가 MIT로 공개돼 있다. QoLT·CI 아동 데이터 경로이기도 하다
 - **`blank 제외` 변형 재덤프**(GPU ~12분) — A-6 "남은 일" 2번. 지금 npz로는 평가할 수 없다
-- **CLAUDE.md 로드맵 정리** — 트랙 2 백로그의 **혼동 매트릭스 분석**은 이번 병합으로 구현됐다.
-  목록에서 내리고, 새로 들어온 학습 효과 리포트를 구조 설명에 반영한다
+- ~~CLAUDE.md 로드맵 정리~~ — 2026-09-21 병합 때 반영했다(디렉터리·잠금 지점·백로그).
+- **병합 푸시 + 팀 공지** — `feat/content-scale`을 origin에 올리고, namyunsu·JuHana 님께 IA 기준(AppShell)을 알린다
 
 ---
 

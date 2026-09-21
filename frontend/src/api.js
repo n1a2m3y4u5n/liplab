@@ -156,7 +156,7 @@ export const learningAPI = {
 
 export const curriculumAPI = {
   getStages: async () => (await api.get('/curriculum/stages')).data,
-  setTrack: async (track) => (await api.post('/curriculum/track', { track })).data,
+  setTrack: async (track, start_stage) => (await api.post('/curriculum/track', { track, start_stage })).data,
   resetTrack: async () => (await api.post('/curriculum/track/reset')).data,
   getVisemeLessons: async () => (await api.get('/curriculum/viseme-lessons')).data,
   submitRecognition: async (viseme_id, chosen_id) =>
@@ -168,11 +168,15 @@ export const curriculumAPI = {
   confusionMatrix: async () => (await api.get('/curriculum/confusion-matrix')).data,
   getRecommendedLevel: async () => (await api.get('/curriculum/recommended-level')).data,
   getNext: async () => (await api.get('/curriculum/next')).data,
-  getCues: async (text) => (await api.get('/cues', { params: { text } })).data,
+  getCues: async (text, { focus = false, maxCues = null } = {}) => (await api.get('/cues', {
+    params: { text, ...(focus ? { focus: true } : {}), ...(maxCues && maxCues > 0 ? { max_cues: maxCues } : {}) },
+  })).data,
   recordMouth: async (viseme_id, score) => (await api.post('/curriculum/mouth-attempt', { viseme_id, score })).data,
   getMultiConversation: async (speakers = 2, turns = 6) => (await api.get('/conversation/multi', { params: { speakers, turns } })).data,
-  getPlacement: async (n = 8) => (await api.get('/assessment/placement', { params: { n } })).data,
-  scorePlacement: async (items, responses) => (await api.post('/assessment/score', { items, responses })).data,
+  recordMultiConversation: async (payload) => (await api.post('/conversation/multi/result', payload)).data,
+  getPlacement: async (n = 8, form = null) => (await api.get('/assessment/placement', { params: form ? { n, form } : { n } })).data,
+  scorePlacement: async (items, responses, form = 'placement') => (await api.post('/assessment/score', { items, responses, form })).data,
+  nextPlacementItem: async (asked, responses, n = 8) => (await api.post('/assessment/placement/next', { asked, responses, n })).data,
   getAssessmentHistory: async () => (await api.get('/assessment/history')).data,
 }
 
@@ -182,11 +186,35 @@ export const scoreAPI = {
 
 export const evalAPI = {
   summary: async () => (await api.get('/eval/summary')).data,
+  progression: async () => (await api.get('/assessment/progression')).data,
+  // 축 C 공개 표준 자원(동구형이음 사전·난이도지수·지각공간·평가셋) — 연구·교육 활용용 내려받기
+  resources: async () => (await api.get('/assessment/resources')).data,
+  benchmark: async () => (await api.get('/assessment/benchmark')).data,
 }
 
 export const reviewAPI = {
   getDue: async () => (await api.get('/review/due')).data,
   answer: async (kind, ref, correct) => (await api.post('/review/answer', { kind, ref, correct })).data,
+}
+
+// 축 G 콘텐츠 사람검수(운영자용) — 생성 후보 승인/반려. 서버가 LIPLAB_REVIEW=1일 때만 열림.
+export const contentReviewAPI = {
+  candidates: async () => (await api.get('/admin/content/candidates')).data,
+  review: async (kind, item, decision) => (await api.post('/admin/content/review', { kind, item, decision })).data,
+}
+
+// 축 E 조음 — 보이지 않는 조음(혀·조음위치) 가이드와 관찰 차원 교정
+export const articulationAPI = {
+  guide: async (text) => (await api.get('/articulation/guide', { params: { text } })).data,
+  feedback: async (viseme, observed) => (await api.post('/articulation/feedback', { viseme, observed })).data,
+}
+
+// 개인정보 열람·삭제권(§4.9)
+export const accountAPI = {
+  exportData: async () => (await api.get('/account/data')).data,
+  deleteAccount: async () => (await api.delete('/account', { params: { confirm: true } })).data,
+  updateProfile: async (payload) => (await api.patch('/account/profile', payload)).data,
+  changePassword: async (payload) => (await api.post('/account/password', payload)).data,
 }
 
 // 발화(말하기) — 커리큘럼 6단계 + 녹음 채점·코칭.
@@ -205,8 +233,22 @@ export const speakAPI = {
     if (opts.stage != null) fd.append('stage', String(opts.stage))
     if (opts.drill) fd.append('drill', opts.drill)
     if (opts.review) fd.append('review', '1')
+    if (opts.mouth_confidence != null) fd.append('mouth_confidence', String(opts.mouth_confidence))  // 웹캠 입모양 신뢰도(축 B AV융합)
     // FormData는 브라우저가 multipart 경계를 붙이도록 Content-Type을 비운다(인스턴스 기본 json 무효화).
     const res = await api.post('/speak/assess', fd, { headers: { 'Content-Type': undefined }, timeout: 60000 })
+    return res.data
+  },
+}
+
+// 음성구동 아바타(A4) — 실제 음성 → 52 블렌드셰이프 립싱크
+export const avatarAPI = {
+  audio2faceStatus: async () => (await api.get('/avatar/audio2face/status')).data,
+  audio2face: async (blob) => {
+    const fd = new FormData()
+    fd.append('audio', blob, 'speech.webm')
+    const res = await api.post('/avatar/audio2face', fd, {
+      headers: { 'Content-Type': undefined }, timeout: 120000,
+    })
     return res.data
   },
 }

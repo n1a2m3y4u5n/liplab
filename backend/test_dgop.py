@@ -123,6 +123,21 @@ def test_fit_rejects_unusable_input():
             pass
 
 
+def test_fuse_per_phone():
+    # 확신 구간 + 뭉갠 구간. 뭉갠 구간이 영상(90)에 더 끌려가야(구간별 가중) 한다.
+    clear = D.dgop_phone(0.9, [0.9, 0.05, 0.05])
+    blurry = D.dgop_phone(0.4, [0.4, 0.33, 0.27])
+    res = D.fuse_audio_visual_per_phone([clear, blurry], 90.0)
+    _ok(res is not None and 0 <= res["score"] <= 100, "구간별 융합 점수 범위")
+    _ok(res["per_phone"] is True and res["n_phones"] == 2, "구간별 융합 메타")
+    _ok(D.fuse_audio_visual_per_phone([], 90.0) is None, "음소 없으면 None")
+    _ok(D.fuse_audio_visual_per_phone([clear], None) is None, "영상 없으면 None(스칼라 경로로)")
+    # 전부 확신(불확실 낮음)일 때보다 전부 뭉갤 때 영상 평균 가중이 커야 한다
+    all_clear = D.fuse_audio_visual_per_phone([clear, clear], 90.0)
+    all_blur = D.fuse_audio_visual_per_phone([blurry, blurry], 90.0)
+    _ok(all_blur["visual_weight"] > all_clear["visual_weight"], "뭉갠 구간일수록 영상 가중↑(구간별)")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:

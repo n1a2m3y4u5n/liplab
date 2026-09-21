@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI } from '../api'
 import LearnHeader from '../components/LearnHeader'
 import AvatarVRM from '../components/AvatarVRM'
+import VocalTract from '../components/VocalTract'
+import VocalTractSimulator from '../components/VocalTractSimulator'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 
 // MediaPipe 번들이 커서 펼칠 때만 로드(초기 번들 보호)
 const WebcamMouthCheck = lazy(() => import('../components/WebcamMouthCheck'))
-const MouthMirror = lazy(() => import('../components/MouthMirror'))
 
 /**
  * 1단계 · 입모양 인지 (Viseme Literacy)
@@ -45,8 +46,12 @@ const lessonLabel = (lesson) => {
 
 // neutral(15) ↔ target 반복 → 입모양이 '만들어지는' 움직임을 보여준다.
 // 정적보다 인지가 쉽고, 정답 숫자를 노출하지 않는다.
-function VisemeAvatar({ visemeId, height = 300 }) {
+function VisemeAvatar({ visemeId, height = 300, variant = 'learn' }) {
+  const isQuiz = variant === 'quiz'
   const [vid, setVid] = useState(15)
+  const [nonce, setNonce] = useState(0)          // '다시 보기' → 재생 사이클 재시작
+  const [xray, setXray] = useState(false)        // 투명 두상: 피부 반투명 → 혀·치아 노출(계획서 F)
+  const [showTract, setShowTract] = useState(false)  // 성도 단면(측면) 도식(계획서 E)
   useEffect(() => {
     let on = true
     let t
@@ -58,11 +63,36 @@ function VisemeAvatar({ visemeId, height = 300 }) {
     setVid(15)
     t = setTimeout(() => cycle(true), 250)
     return () => { on = false; clearTimeout(t) }
-  }, [visemeId])
+  }, [visemeId, nonce])
   return (
-    <div className="w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-slate-800 to-slate-900"
-         style={{ height }}>
-      <AvatarVRM visemeId={vid} />
+    <div>
+      <div className={`relative w-full overflow-hidden ${isQuiz ? 'rounded-[18px] bg-gradient-to-b from-slate-800 to-slate-900' : 'rounded-2xl shadow-xl bg-gradient-to-b from-slate-800 to-slate-900'}`}
+           style={{ height }}>
+        <AvatarVRM visemeId={vid} xray={xray} />
+        {showTract && (
+          <div className="absolute bottom-2 right-2 w-28 bg-slate-900/85 border border-slate-700 rounded-xl p-1 backdrop-blur-sm">
+            <VocalTract visemeId={vid} />
+          </div>
+        )}
+        {isQuiz && (
+          <button type="button" onClick={() => setNonce((n) => n + 1)}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-4 py-2 text-[13px] font-bold text-primary-600 shadow-sm backdrop-blur hover:bg-white">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+            다시 보기
+          </button>
+        )}
+      </div>
+      {/* 안 보이는 조음(혀·치아) 시각화 토글 — 독화 교육 핵심 (학습 탭에서만) */}
+      {!isQuiz && (
+        <div className="mt-2 flex gap-2">
+          <button onClick={() => setXray((v) => !v)}
+            className={`flex-1 py-1.5 text-xs rounded-lg font-medium transition-colors ${xray ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            title="피부를 반투명하게 해 안 보이는 혀·치아를 드러냄">🫥 투명 두상</button>
+          <button onClick={() => setShowTract((v) => !v)}
+            className={`flex-1 py-1.5 text-xs rounded-lg font-medium transition-colors ${showTract ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            title="측면 성도 단면으로 혀·입술·턱 조음 보기">🗣️ 성도 단면</button>
+        </div>
+      )}
     </div>
   )
 }
@@ -121,7 +151,6 @@ function LearnPanel({ data }) {
   const [sel, setSel] = useState(lessons.find((l) => l.viseme_id === _tv) || lessons[0])
   const pairPreview = useMemo(() => pickPairPreview(minimal_pairs), [minimal_pairs])
   const [showCam, setShowCam] = useState(false)
-  const [showMirror, setShowMirror] = useState(false)
   const badge = VIS_BADGE[sel.visibility] || VIS_BADGE.medium
 
   return (
@@ -157,6 +186,17 @@ function LearnPanel({ data }) {
           <p className="text-sm text-gray-500">{sel.phonemes.join('  ·  ')}</p>
           <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700"><b>입모양</b> — {sel.look}</div>
           <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg text-sm text-amber-800"><b>독화 포인트</b> — {sel.teach}</div>
+          {sel.articulation && (
+            <div className="p-3 bg-sky-50 border border-sky-100 rounded-lg text-sm text-sky-900">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <b>소리 내는 법</b>
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700">{sel.articulation.place}</span>
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700">{sel.articulation.manner}</span>
+                {sel.articulation.nasal && <span className="text-[11px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700">비음</span>}
+              </div>
+              <span className="text-sky-800">밖에서 안 보이는 혀·조음 — {sel.articulation.guide}</span>
+            </div>
+          )}
           <div>
             <p className="text-xs text-gray-400 mb-1">예시 단어 · 안 보이는 소리를 기호로</p>
             <div className="flex flex-wrap items-end gap-2">
@@ -172,7 +212,7 @@ function LearnPanel({ data }) {
       {/* 웹캠으로 따라하기 (축 D) — 펼칠 때만 MediaPipe 로드 */}
       {showCam ? (
         <Suspense fallback={<div className="card text-sm text-gray-500">카메라 모듈 불러오는 중…</div>}>
-          <WebcamMouthCheck visemeId={sel.viseme_id} visemeName={sel.name} />
+          <WebcamMouthCheck visemeId={sel.viseme_id} visemeName={sel.name} articulationGuide={sel.articulation?.guide} />
         </Suspense>
       ) : (
         <button type="button" onClick={() => setShowCam(true)}
@@ -181,17 +221,12 @@ function LearnPanel({ data }) {
         </button>
       )}
 
-      {/* 아바타 거울 (축 F) — 내 입모양을 학습하던 그 아바타 얼굴로 비춰 본다 */}
-      {showMirror ? (
-        <Suspense fallback={<div className="card text-sm text-gray-500">거울 모듈 불러오는 중…</div>}>
-          <MouthMirror compareVisemeId={sel.viseme_id} compareLabel={sel.name} />
-        </Suspense>
-      ) : (
-        <button type="button" onClick={() => setShowMirror(true)}
-          className="w-full rounded-xl border-2 border-dashed border-gray-300 py-3 text-sm font-bold text-gray-600 transition hover:border-gray-400 hover:bg-gray-50">
-          🪞 아바타 거울 — 내 입모양을 아바타로 보기
-        </button>
-      )}
+      {/* 성도 실험실 (축 E) — 혀 위치↔소리를 귀로 잇는 인터랙티브 조음 교구 */}
+      <div className="card">
+        <h3 className="text-base font-bold text-gray-900 mb-1">🔊 성도 실험실 — 조음과 소리 잇기</h3>
+        <p className="text-sm text-gray-500 mb-3">밖에서 안 보이는 <b>혀 위치</b>를 직접 움직이면 소리가 어떻게 바뀌는지 들어봅니다. 모음마다 혀가 어디에 있어야 하는지 귀로 익힙니다.</p>
+        <VocalTractSimulator />
+      </div>
 
       {/* 동구형이음 교육 */}
       <div className="card">
@@ -224,30 +259,35 @@ function LearnPanel({ data }) {
   )
 }
 
+const QUIZ_LEN = 12  // 세션당 문항 수(진행바 분모) — 숙달 판정과 별개인 표시용
+
 function QuizPanel({ data }) {
   const { lessons } = data
   const quizzable = useMemo(() => lessons.filter((l) => l.quizzable), [lessons])
   const [q, setQ] = useState(null)
+  const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계)
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
+  const [qNum, setQNum] = useState(1)              // 세션 내 문항 번호(진행바)
 
   const newQ = useCallback(() => {
     const target = quizzable[Math.floor(Math.random() * quizzable.length)]
     const others = shuffle(lessons.filter((l) => l.viseme_id !== target.viseme_id)).slice(0, 3)
     const choices = shuffle([target, ...others]).map((l) => ({ viseme_id: l.viseme_id, name: lessonLabel(l) }))
     setQ({ target, choices })
+    setSelected(null)
     setResult(null)
   }, [lessons, quizzable])
 
   useEffect(() => { newQ() }, [newQ])
 
-  const choose = async (chosenId) => {
-    if (result || submitting) return
+  const confirm = async () => {
+    if (result || submitting || selected == null) return
     setSubmitting(true)
     try {
-      const r = await curriculumAPI.submitRecognition(q.target.viseme_id, chosenId)
-      setResult({ ...r, chosenId })
+      const r = await curriculumAPI.submitRecognition(q.target.viseme_id, selected)
+      setResult({ ...r, chosenId: selected })
       setStat({ attempts: r.attempts, mastery: r.mastery_score, mastered: r.mastered })
     } catch {
       /* 네트워크 실패는 조용히 무시 — 다시 시도 가능 */
@@ -255,65 +295,85 @@ function QuizPanel({ data }) {
       setSubmitting(false)
     }
   }
+  const next = () => { setQNum((n) => (n >= QUIZ_LEN ? 1 : n + 1)); newQ() }
 
   if (!q) return null
+  const pct = Math.round((Math.min(qNum, QUIZ_LEN) / QUIZ_LEN) * 100)
 
   return (
-    <div className="space-y-5">
-      {/* 숙달도 */}
-      <div className="card">
-        <div className="flex justify-between text-sm mb-1.5">
-          <span className="text-gray-600">숙달도 (정확도)</span>
-          <span className="font-semibold text-primary-600">{stat.mastery}% · {stat.attempts}회</span>
+    <div className="mx-auto flex max-w-[560px] flex-col">
+      {/* 상단: 진행바(N / 12) + 숙달도 배지 */}
+      <div className="flex items-center gap-4">
+        <div className="h-3 flex-1 overflow-hidden rounded-full bg-[#eceaf3]">
+          <div className="h-full rounded-full bg-primary-500 transition-all duration-500" style={{ width: `${pct}%` }} />
         </div>
-        <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
-          <div className="bg-primary-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(stat.mastery, 100)}%` }} />
-        </div>
-        {stat.mastered && <p className="mt-2 text-sm font-semibold text-green-600">🎉 1단계 숙달! 입모양 학습을 완료했어요.</p>}
+        <span className="shrink-0 text-[14px] font-bold text-ink-muted">{Math.min(qNum, QUIZ_LEN)} / {QUIZ_LEN}</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
-          <p className="text-sm text-gray-500 mb-3">이 입모양은 어느 그룹일까요?</p>
-          <VisemeAvatar visemeId={q.target.viseme_id} />
-        </div>
+      <div className="mt-6">
+        <p className="text-[13px] font-bold text-primary-500">입모양 인지 · 숙달도 {stat.mastery}%</p>
+        <p className="mt-2 text-[26px] font-bold tracking-[-0.6px] text-ink sm:text-[28px]">이 입모양은 어느 그룹일까요?</p>
+        {stat.mastered && <p className="mt-1 text-sm font-semibold text-emerald-600">🎉 1단계 숙달! 입모양 학습을 완료했어요.</p>}
+      </div>
 
-        <div className="card">
-          <div className="space-y-3">
-            {q.choices.map((c) => {
-              const isTarget = c.viseme_id === q.target.viseme_id
-              const isChosen = result?.chosenId === c.viseme_id
-              let cls = 'w-full text-left px-4 py-3 rounded-xl border-2 font-medium text-sm transition-all '
-              if (!result) cls += 'border-gray-200 bg-white hover:border-primary-400 hover:bg-primary-50 text-gray-800'
-              else if (isTarget) cls += 'border-green-500 bg-green-50 text-green-800'
-              else if (isChosen) cls += 'border-red-400 bg-red-50 text-red-700'
-              else cls += 'border-gray-200 bg-gray-50 text-gray-400'
-              return (
-                <button key={c.viseme_id} disabled={!!result || submitting} onClick={() => choose(c.viseme_id)} className={cls}>
-                  {c.name}
-                  {result && isTarget && <span className="float-right text-green-600">✓</span>}
-                  {result && isChosen && !isTarget && <span className="float-right text-red-500">✗</span>}
-                </button>
-              )
-            })}
-          </div>
+      {/* 입모양(3D) + 다시 보기 */}
+      <div className="mt-6 rounded-[22px] border border-line bg-white p-4 shadow-[0_2px_12px_-2px_rgba(26,13,64,0.06)]">
+        <VisemeAvatar visemeId={q.target.viseme_id} variant="quiz" />
+      </div>
 
-          <AnimatePresence>
-            {result && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-2">
-                <div role="status" aria-live="polite"
-                  className={`p-3 rounded-lg text-sm ${result.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                  {result.correct ? '정답! 🎉' : `오답 — 정답은 "${lessonLabel(q.target)}"`}
-                  {!result.correct && result.same_cluster && (
-                    <p className="mt-1 text-gray-600">헷갈릴 만해요! 이 둘은 <b>같아 보이는 무리</b>라 입모양만으론 구별이 어렵습니다. 실제로는 문맥으로 판단해요.</p>
-                  )}
-                </div>
-                <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-600">{result.target.teach}</div>
-                <button onClick={newQ} className="btn-primary w-full py-2 text-sm">다음 문제 →</button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+      {/* 4지선다 (선택 → 확인) */}
+      <div className="mt-6 flex flex-col gap-3">
+        {q.choices.map((c, i) => {
+          const isTarget = c.viseme_id === q.target.viseme_id
+          const isChosen = (result ? result.chosenId : selected) === c.viseme_id
+          let cls = 'flex items-center gap-4 rounded-2xl border px-5 py-4 text-left font-bold text-[17px] transition-all '
+          let chip = 'bg-gray-100 text-ink-muted'
+          if (!result) {
+            if (isChosen) { cls += 'border-primary-500 bg-primary-50 text-ink'; chip = 'bg-primary-500 text-white' }
+            else cls += 'border-line bg-white text-ink hover:border-primary-300 active:scale-[0.99]'
+          }
+          else if (isTarget) { cls += 'border-emerald-500 bg-emerald-50 text-emerald-800'; chip = 'bg-emerald-500 text-white' }
+          else if (isChosen) { cls += 'border-rose-400 bg-rose-50 text-rose-700'; chip = 'bg-rose-400 text-white' }
+          else cls += 'border-line bg-gray-50 text-gray-400'
+          return (
+            <button key={c.viseme_id} disabled={!!result || submitting} onClick={() => setSelected(c.viseme_id)} className={cls}>
+              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[13px] ${chip}`}>{i + 1}</span>
+              <span className="flex-1">{c.name}</span>
+              {result && isTarget && <span className="text-emerald-600">✓</span>}
+              {result && isChosen && !isTarget && <span className="text-rose-500">✕</span>}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* 결과 피드백 */}
+      <AnimatePresence>
+        {result && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 space-y-3">
+            <div className={`rounded-2xl px-4 py-3 text-[15px] font-bold ${result.correct ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+              {result.correct ? '정답이에요! 🎉' : `오답 — 정답은 "${lessonLabel(q.target)}"`}
+              {!result.correct && result.same_cluster && (
+                <p className="mt-1 text-[13px] font-normal text-ink-muted">헷갈릴 만해요! 이 둘은 <b>같아 보이는 무리</b>라 입모양만으론 구별이 어렵습니다. 실제로는 문맥으로 판단해요.</p>
+              )}
+            </div>
+            <div className="rounded-2xl border border-line bg-white p-3 text-[13px] text-ink-muted">{result.target.teach}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 하단 액션 바: 안내 + 확인 / 다음 */}
+      <div className="mt-6 flex items-center justify-between border-t border-line pt-5">
+        <span className="text-[14px] text-ink-muted">
+          {result ? (result.correct ? '잘했어요!' : '다시 도전해봐요') : selected == null ? '보기를 선택해주세요' : '정답을 확인해보세요'}
+        </span>
+        {result ? (
+          <button onClick={next} className="btn-primary !px-8 !py-3.5 text-[17px]">다음 문제</button>
+        ) : (
+          <button onClick={confirm} disabled={selected == null || submitting}
+            className={`rounded-2xl px-8 py-3.5 text-[17px] font-bold transition ${selected == null ? 'cursor-not-allowed bg-gray-200 text-gray-400' : 'btn-primary'}`}>
+            확인
+          </button>
+        )}
       </div>
     </div>
   )

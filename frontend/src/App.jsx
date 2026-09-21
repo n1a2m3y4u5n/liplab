@@ -38,10 +38,11 @@ class ErrorBoundary extends Component {
 import useStore from './store/useStore'
 import { authAPI, curriculumAPI, seedAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
-import GlobalLearningMenu from './components/GlobalLearningMenu'
-import Dashboard from './pages/Dashboard'
+import A11ySettings from './components/A11ySettings'
+import LoadingScreen from './components/LoadingScreen'
+import Login from './pages/Login'
 // Bookmarks·Guide는 /review/saved·/guide에서만 쓰이므로 지연로딩 —
-// 랜딩(로그인/대시보드) 진입 청크에서 빼 첫 로딩을 가볍게 한다(저사양·불안정 통신망 배려).
+// 랜딩(로그인) 진입 청크에서 빼 첫 로딩을 가볍게 한다(저사양·불안정 통신망 배려).
 
 // 탭·학습 단계 등 라우트가 바뀌면 이전 페이지의 스크롤 위치를 이어받지 않는다.
 function ScrollToTop() {
@@ -73,11 +74,19 @@ const Closure = lazy(() => import('./pages/Closure'))
 const SpeakingPractice = lazy(() => import('./pages/SpeakingPractice'))
 const FreeSpeak = lazy(() => import('./pages/FreeSpeak'))
 const ScenarioHub = lazy(() => import('./pages/ScenarioHub'))
-const PillarHub = lazy(() => import('./pages/PillarHub'))
 const ReviewLanding = lazy(() => import('./pages/ReviewLanding'))
 const SpeakingReviewLanding = lazy(() => import('./pages/SpeakingReviewLanding'))
 const AnalysisDetail = lazy(() => import('./pages/AnalysisDetail'))
 const EvalReport = lazy(() => import('./pages/EvalReport'))
+const ContentReview = lazy(() => import('./pages/ContentReview'))
+const PracticeHub = lazy(() => import('./pages/PracticeHub'))
+const TasksPage = lazy(() => import('./pages/TasksPage'))
+const ReviewTab = lazy(() => import('./pages/ReviewTab'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const AnalysisTab = lazy(() => import('./pages/AnalysisTab'))
+const CurriculumPath = lazy(() => import('./pages/CurriculumPath'))
+const EndlessPractice = lazy(() => import('./pages/EndlessPractice'))
+const Onboarding = lazy(() => import('./pages/Onboarding'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
@@ -86,43 +95,14 @@ const EvalReport = lazy(() => import('./pages/EvalReport'))
  */
 function AuthGate({ children }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated)
-  const setAuth = useStore((s) => s.setAuth)
   const updateUser = useStore((s) => s.updateUser)
-  const [status, setStatus] = useState(isAuthenticated ? 'ready' : 'loading')
-
   useEffect(() => {
-    if (isAuthenticated) {
-      setStatus('ready')
-      // 재방문(캐시된 인증)에도 서버 최신값으로 user 동기화 — 스트릭 등 stale 방지
-      authAPI.getMe().then((u) => { if (u) updateUser(u) }).catch(() => {})
-      return
-    }
-    let cancelled = false
-    authAPI.demoLogin()
-      .then(async (data) => {
-        if (cancelled) return
-        setAuth(data.user, data.access_token)
-        try { await seedAPI.seedDemo() } catch { /* 데모 시드 실패는 무시 */ }
-        if (!cancelled) setStatus('ready')
-      })
-      .catch(() => { if (!cancelled) setStatus('error') })
-    return () => { cancelled = true }
-  }, [isAuthenticated, setAuth])
-
-  if (status === 'ready') return children
-  if (status === 'error') return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
-      <div>
-        <p style={{ fontSize: 40, margin: 0 }}>🔌</p>
-        <p style={{ color: '#64748b', margin: '8px 0 16px' }}>서버에 연결하지 못했어요.</p>
-        <button onClick={() => window.location.reload()}
-          style={{ padding: '10px 20px', borderRadius: 10, background: '#4f46e5', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
-          다시 시도
-        </button>
-      </div>
-    </div>
-  )
-  return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>불러오는 중…</div>
+    // 재방문(캐시된 인증)에도 서버 최신값으로 user 동기화 — 스트릭 등 stale 방지
+    if (isAuthenticated) { authAPI.getMe().then((u) => { if (u) updateUser(u) }).catch(() => {}) }
+  }, [isAuthenticated, updateUser])
+  // 미인증이면 로그인 화면(Figma 00). '둘러보기(데모)'로 즉시 입장 가능.
+  if (!isAuthenticated) return <Login />
+  return children
 }
 
 /**
@@ -151,8 +131,31 @@ function StageGate({ stage, children }) {
   }, [stage, isReview])
 
   if (state === 'loading') return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>불러오는 중…</div>
-  if (state === 'denied') return <Navigate to="/dashboard" replace />
+  if (state === 'denied') return <Navigate to="/learn/path" replace />
   return children
+}
+
+function HomeRedirect() {
+  let onboarded = false
+  try { onboarded = localStorage.getItem('liplab_onboarded') === '1' } catch { /* 무시 */ }
+  return <Navigate to={onboarded ? '/learn/path' : '/onboarding'} replace />
+}
+
+/** 부팅 스플래시 (Figma 08) — 세션당 1회, 앱 진입 시 브랜드 스플래시를 잠깐 보여준다. */
+function BootSplash() {
+  const [show, setShow] = useState(() => {
+    try { return sessionStorage.getItem('liplab_booted') !== '1' } catch { return true }
+  })
+  useEffect(() => {
+    if (!show) return
+    const t = setTimeout(() => {
+      setShow(false)
+      try { sessionStorage.setItem('liplab_booted', '1') } catch { /* 무시 */ }
+    }, 1300)
+    return () => clearTimeout(t)
+  }, [show])
+  if (!show) return null
+  return <div className="fixed inset-0 z-[100]"><LoadingScreen variant="brand" /></div>
 }
 
 /**
@@ -163,48 +166,64 @@ function App() {
     <ErrorBoundary>
     {/* 동작 최소화 설정 시 framer-motion 애니메이션을 OS 설정에 맞춰 자동 축소(접근성) */}
     <MotionConfig reducedMotion="user">
+    <BootSplash />
     <Router>
       <ScrollToTop />
       <AuthGate>
       <>
-      <GlobalLearningMenu />
-      <div className="app-shell">
-      <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>불러오는 중…</div>}>
+      <a href="#main-content" className="skip-link">본문으로 건너뛰기</a>
+      <main id="main-content" className="app-shell">
+      <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Navigate to="/learn/path" replace />} />
         <Route path="/practice" element={<StageGate stage={3}><Practice /></StageGate>} />
         <Route path="/conversation" element={<StageGate stage={4}><Conversation /></StageGate>} />
+        <Route path="/sign" element={<Sign />} />
         <Route path="/learn/viseme" element={<VisemeLiteracy />} />
         <Route path="/learn/word" element={<StageGate stage={2}><WordStage /></StageGate>} />
         <Route path="/learn/conversation-multi" element={<MultiConversation />} />
         <Route path="/learn/placement" element={<Placement />} />
         <Route path="/learn/scenario" element={<ScenarioHub />} />
-        <Route path="/pillar/:id" element={<PillarHub />} />
         <Route path="/learn/speaking" element={<SpeakingPractice />} />
         <Route path="/learn/sign" element={<Sign />} />
-        <Route path="/review/today" element={<ReviewLanding mode="today" />} />
+        {/* 복습·분석 탭 — 새 Figma 화면을 대표 경로로 */}
+        <Route path="/review" element={<ReviewTab />} />
+        <Route path="/analysis" element={<AnalysisTab />} />
+        {/* 구 경로 → 새 대표 경로 리다이렉트(신구 화면 혼재 방지) */}
+        <Route path="/review/hub" element={<Navigate to="/review" replace />} />
+        <Route path="/review/today" element={<Navigate to="/review" replace />} />
+        <Route path="/analysis/hub" element={<Navigate to="/analysis" replace />} />
+        <Route path="/analysis/overview" element={<Navigate to="/analysis" replace />} />
+        {/* 새 화면 안에서 '더 보기'로 진입하는 상세 경로 — 유지 */}
         <Route path="/review/scheduled" element={<Review />} />
         <Route path="/review/mistakes" element={<ReviewLanding mode="mistakes" />} />
         <Route path="/review/speaking" element={<SpeakingReviewLanding />} />
         <Route path="/review/speaking/session" element={<SpeakingPractice />} />
         <Route path="/review/saved" element={<Bookmarks />} />
-        <Route path="/analysis/overview" element={<AnalysisDetail mode="overview" />} />
         <Route path="/analysis/activity" element={<AnalysisDetail mode="activity" />} />
         <Route path="/analysis/visemes" element={<AnalysisDetail mode="visemes" />} />
         <Route path="/analysis/scores" element={<AnalysisDetail mode="scores" />} />
         <Route path="/analysis/history" element={<AnalysisDetail mode="history" />} />
         <Route path="/analysis/eval" element={<EvalReport />} />
+        <Route path="/admin/content-review" element={<ContentReview />} />
+        <Route path="/practice/hub" element={<PracticeHub />} />
+        <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/learn/path" element={<CurriculumPath />} />
+        <Route path="/learn/endless" element={<EndlessPractice />} />
         <Route path="/learn/closure" element={<Closure />} />
         <Route path="/pronounce" element={<FreeSpeak />} />
         <Route path="/guide" element={<Guide />} />
         <Route path="/dev-viseme" element={<DevViseme />} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/" element={<HomeRedirect />} />
+        <Route path="*" element={<Navigate to="/learn/path" replace />} />
       </Routes>
       </Suspense>
-      </div>
+      </main>
       {/* 앱 어디서나 문장 선택 → 수어 번역 (수어 탭 이동 불필요) */}
       <SignSelectionOverlay />
+      <A11ySettings />
       </>
       </AuthGate>
     </Router>

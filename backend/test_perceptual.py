@@ -55,6 +55,15 @@ def test_consonant_visual_space():
     _ok(len(sp["mds_2d"]) == len(cons), "MDS 좌표가 자음마다 하나씩")
 
 
+def test_homophene_ratio_in_difficulty():
+    _ok(0.0 <= (P.homophene_ratio("밥") or 0) <= 1.0, "동구형이음 비율 범위 0~1")
+    d = P.word_difficulty("밥")
+    _ok("homophene_ratio" in d, "난이도에 동구형이음 비율 성분 포함")
+    _ok(d["difficulty"] > 0, "corpus 없어도 난이도>0(라이브에서 유효)")
+    # 잘 보이고 혼동 적은 단어 < 안 보이고 혼동 많은 단어
+    _ok(P.word_difficulty("이")["difficulty"] < P.word_difficulty("각")["difficulty"], "쉬운<어려운 유지")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
