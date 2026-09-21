@@ -55,10 +55,15 @@ backend/
   llm_service.py   Claude 기반 시나리오·대화 생성
   sign_service.py  한국수어(KSL) 학습 보조 변환
 frontend/src/
-  App.jsx          라우팅 + AuthGate(데모 자동 로그인) + StageGate(단계 잠금 가드)
+  App.jsx          라우팅 + AuthGate(미인증이면 Login, '둘러보기'=데모) + StageGate(단계 잠금 가드)
   api.js           API 클라이언트 (authAPI, learningAPI, curriculumAPI, scoreAPI …)
+  components/AppShell.jsx  Figma 셸 — 좌측 탭(학습·연습·과제·복습·분석), 모바일 상단 바+하단 탭 바
   pages/
-    Dashboard.jsx     학습 커리큘럼 카드 + 테스트 시작 + 복습 탭
+    CurriculumPath.jsx  /learn/path — 학습 커리큘럼 경로(단계 노드·잠김 표시). 앱의 홈
+    PracticeHub.jsx     /practice/hub — 연습 탭(상황별 시나리오·다자대화·자유발화·수어)
+    ReviewTab.jsx / AnalysisTab.jsx / TasksPage.jsx / ProfilePage.jsx  복습·분석·과제·프로필 탭
+    EvalReport.jsx      /analysis/eval — 학습 효과 리포트(학습곡선·향상도)
+    Login.jsx / Onboarding.jsx  로그인·회원가입 / 첫 방문 온보딩
     VisemeLiteracy.jsx  1단계 입모양 인지
     WordStage.jsx       2단계 음절·단어
     Practice.jsx        3단계 문장(상황별)
@@ -111,12 +116,12 @@ frontend/src/
 
 순차 잠금은 표시뿐 아니라 진입까지 3중으로 막는다:
 
-1. **커리큘럼 카드** — `Dashboard.jsx`의 `CurriculumPath`: 잠긴 카드는 흐리게 표시 + 클릭 시 안내.
+1. **커리큘럼 경로 노드** — `pages/CurriculumPath.jsx`: 잠긴 단계 노드는 회색 + 버튼 `disabled`.
 2. **라우트 가드** — `App.jsx`의 `StageGate`: `/learn/word`(2), `/practice`(3), `/conversation`(4)에
-   직접 URL·내비게이션으로 진입해도 잠겨 있으면 `/dashboard`로 리다이렉트.
+   직접 URL·내비게이션으로 진입해도 잠겨 있으면 `/learn/path`로 리다이렉트.
    (단계 조회 실패 시엔 막지 않음 — 네트워크 오류로 학습 전체가 잠기지 않도록 가용성 우선.)
-3. **테스트 시작 버튼** — `Dashboard.jsx`: 3단계 잠김이면 시나리오(LLM) 생성 전에 버튼 비활성화 +
-   "🔒 2단계 완료 후 열려요" 표시로 API 낭비 방지.
+3. **시나리오 시작 버튼** — `pages/ScenarioHub.jsx`: 3·4단계 잠김이면 시나리오(LLM) 생성 전에 버튼
+   비활성화 + "🔒 잠김" 표시로 API 낭비 방지(클릭 시 인앱 안내 배너).
 
 ### 진행도 기록 경로
 
@@ -185,10 +190,10 @@ frontend/src/
 
 ### 트랙 2: 기능 추가 (백로그, 우선순위 미정)
 
-- **웹캠 미러 모드** ⭐ — 아바타 옆에 사용자 입 표시. 확장: MediaPipe FaceMesh로 사용자 입모양을
-  목표 viseme과 비교·채점("따라 말하기").
+- ~~웹캠 미러 모드~~ — 구현됨: `components/WebcamMouthCheck.jsx`(MediaPipe 실시간 채점 + 아바타 미러
+  `AvatarVRM mirrorRef/bsFrameRef` + K 분류기·조음 교정), 자체 립리딩 ONNX `lib/lipreadModel.js`.
 - **최소대립쌍 A/B 아바타** — `MINIMAL_PAIRS` 재활용, 밥 vs 맘을 두 아바타로 동시 비교(2단계 강화).
-- **혼동 매트릭스 분석** — `WeakViseme` + `HOMOPHENE_CLUSTERS`로 개인별 헷갈림 리포트.
+- ~~혼동 매트릭스 분석~~ — 구현됨: `AnalysisDetail.jsx`(비심 혼동행렬 카드) + `EvalReport.jsx`(학습 효과 리포트).
 - **약점 기반 적응 템포** — 취약 viseme 프레임 자동 감속.
 - **내 문장 연습(Custom phrase)** — 실생활 문구 입력 → 즉시 드릴.
 - **실제 화자 영상 라이브러리** — 음소별 실제 입 영상 토글(아바타 ↔ 실제).

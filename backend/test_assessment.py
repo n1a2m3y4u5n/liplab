@@ -65,6 +65,40 @@ def test_improvement_delta_regression():
     _ok(d["new_error_visemes"] == [1], "새로 약해진 입모양 표시")
 
 
+def test_adaptive_staircase():
+    """적응형(축 I): 정답이면 다음 문항이 더 어렵고, 오답이면 더 쉬워야 한다."""
+    words = _words()
+    it1 = A.select_next_item([], {}, words, seed=0)
+    _ok(it1 is not None and len(it1["options"]) == 4, "첫 문항 4지선다")
+    # 정답
+    up = A.select_next_item([it1], {it1["id"]: it1["word"]}, words, seed=0)
+    _ok(up["difficulty"] >= it1["difficulty"] - 1e-9, "정답 후 난이도 상승(또는 동급)")
+    # 오답
+    wrong = next(o for o in it1["options"] if o != it1["word"])
+    est = A.estimate_ability([it1], {it1["id"]: wrong})
+    down = A.select_next_item([it1], {it1["id"]: wrong}, words, seed=0)
+    _ok(est["ability"] < 0.5, "오답 후 능력추정 하락")
+    _ok(down["difficulty"] <= it1["difficulty"] + 1e-9, "오답 후 난이도 하락(또는 동급)")
+
+
+def test_adaptive_no_repeat_and_targets():
+    """적응형: 같은 단어를 중복 출제하지 않고, 오답 자질을 표적으로 반영한다."""
+    words = _words()
+    asked, resp = [], {}
+    first = A.select_next_item([], {}, words, seed=1)
+    asked.append(first)
+    # 첫 문항 오답으로 표적 자질 생성
+    resp[first["id"]] = next(o for o in first["options"] if o != first["word"])
+    seen = {first["word"]}
+    for _ in range(7):
+        nx = A.select_next_item(asked, resp, words, seed=len(asked))
+        if nx is None:
+            break
+        _ok(nx["word"] not in seen, "이미 낸 단어 중복 금지")
+        seen.add(nx["word"]); asked.append(nx); resp[nx["id"]] = nx["word"]
+    _ok(len(seen) >= 6, "적응형으로 여러 문항 생성")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:

@@ -86,13 +86,16 @@ def dgop_phone(target_prob: float, probs: Sequence[float]) -> Dict:
 
 
 def sentence_dgop(per_phone: List[Dict]) -> Dict:
-    """음소별 D-GOP를 문장 점수로 집계. 평균 D-GOP와 평균 불확실성(융합 가중에 사용)."""
+    """음소별 D-GOP를 문장 점수로 집계. 평균 D-GOP와 평균 불확실성(융합 가중에 사용).
+    score는 원점수(raw×100). score_calibrated는 아래 앵커 보정(calibrate_score)을 거친 표시점수 —
+    2026-09-15 현재 앵커가 낡아(채점식 naive 교체) 재적합 전까지는 참고값이다(STATUS.md 1순위)."""
     if not per_phone:
-        return {"score": 0.0, "uncertainty": 1.0, "phones": []}
+        return {"score": 0.0, "score_calibrated": 0.0, "uncertainty": 1.0, "phones": []}
     mean_dgop = sum(p["dgop"] for p in per_phone) / len(per_phone)
     mean_unc = sum(p["uncertainty"] for p in per_phone) / len(per_phone)
     return {
-        "score": round(mean_dgop * 100, 1),      # 0~100
+        "score": round(mean_dgop * 100, 1),               # raw×100 (호환)
+        "score_calibrated": calibrate_score(mean_dgop * 100.0),   # 앵커 보정 표시점수(원점수 0~100 입력)
         "uncertainty": round(mean_unc, 4),
         "phones": per_phone,
     }
@@ -243,3 +246,33 @@ def calibrate_score(raw_score: Optional[float], calibration: Optional[Dict] = No
             t = (x - x1) / (x2 - x1) if x2 > x1 else 1.0
             return round(max(0.0, min(100.0, d1 + t * (d2 - d1))), 1)
     return round(float(anchors[-1][1]), 1)   # 최상위 앵커 초과 — 만점에서 멈춘다
+
+
+def fuse_audio_visual_per_phone(per_phone: List[Dict], visual_score: Optional[float],
+                                base_visual_weight: float = 0.25,
+                                uncertainty_gain: float = 0.5,
+                                calibration: Optional[Dict] = None) -> Optional[Dict]:
+    """구간별(음소별) 후기 융합 — 문장 평균 가중이 아니라 각 음소를 그 음소의 불확실성으로
+    가중해 영상과 융합한 뒤 평균한다. 음향이 뭉갠 '그 구간'일수록 영상 가중이 국소적으로 커져
+    문장 평균 융합보다 세밀하다(계획서 B: '음향이 불확실한 구간일수록 영상 가중↑').
+    per_phone의 각 음소는 dgop(0~1)·uncertainty(0~1)를 갖는다. visual_score가 없으면 None.
+    음소 오디오 점수는 문장 점수와 같은 눈금을 쓴다 — 원점수(dgop×100)를 위 calibrate_score
+    앵커 보정으로 0~100 표시점수로 옮긴다(병합 메모: 상대 브랜치의 0~1 로지스틱 보정은 버렸다)."""
+    if not per_phone or visual_score is None:
+        return None
+    vis = float(visual_score)
+    fused_vals, weights = [], []
+    for p in per_phone:
+        unc = max(0.0, min(1.0, float(p.get("uncertainty", 0.0))))
+        w_v = max(0.0, min(0.9, base_visual_weight + uncertainty_gain * unc))
+        a = calibrate_score(float(p.get("dgop", 0.0)) * 100.0, calibration)  # 이 음소의 오디오 표시점수(0~100)
+        fused_vals.append((1.0 - w_v) * a + w_v * vis)
+        weights.append(w_v)
+    score = sum(fused_vals) / len(fused_vals)
+    return {
+        "score": round(score, 1),
+        "visual_weight": round(sum(weights) / len(weights), 3),  # 평균 영상 가중(표시용)
+        "visual_score": round(vis, 1),
+        "per_phone": True,
+        "n_phones": len(fused_vals),
+    }

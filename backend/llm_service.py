@@ -333,6 +333,11 @@ async def generate_adaptive_scenario(
         result = llm_json.extract_json(response)
         sentences = result.get("sentences", [])
 
+        # LLM 출력 검증(§4.9) + 규칙 게이트(축 G) — 지시 이탈·주입·비정상 문장을 걸러
+        # 정상 한글 훈련 문장만 클라이언트로 내보낸다. 부족하면 폴백으로 넘어간다.
+        from content_rules import check_sentence
+        sentences = [s for s in sentences if isinstance(s, str) and check_sentence(s)[0]]
+
         if not sentences or len(sentences) < 3:
             raise ValueError("Generated sentences are insufficient")
 
@@ -529,6 +534,11 @@ async def generate_conversation_turn(
 
         if not text:
             raise ValueError("Empty text")
+
+        # 출력 정규화(§4.9) — 제어문자 제거·길이 상한. 대화 답변은 자유형이라 문장 게이트 대신 경량 필터.
+        text = "".join(ch for ch in text if ch >= " " or ch == "\n")[:300].strip()
+        if not text:
+            raise ValueError("Empty text after sanitize")
 
         return {"text": text}
 

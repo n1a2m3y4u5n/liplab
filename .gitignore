@@ -95,3 +95,5 @@ ckpt/
 # 축 B 채점식 스윕용 특징 덤프(GPU 세션 산출물) — 용량이 크고 언제든 재생성 가능하다.
 # 폴더 자체는 .gitkeep으로 남긴다(회수 시 scp 대상 폴더가 없으면 실패한다).
 data_out/*.npz
+# A4/audio2face 모델 가중치(대용량·torch 전용, 로컬/파드에서만 로드)
+backend/models/*.pt

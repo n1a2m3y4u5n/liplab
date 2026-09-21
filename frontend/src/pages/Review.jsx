@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, reviewAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
-import LearnHeader from '../components/LearnHeader'
+import AppShell from '../components/AppShell'
 
 /**
  * 오늘의 복습 (간격 반복 SRS)
@@ -46,15 +46,8 @@ export default function Review() {
   if (state === 'error') return <Splash text="불러오지 못했어요." />
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
-      <LearnHeader
-        accent="reading"
-        title="입모양·단어 복습"
-        description={state === 'active' ? `${idx + 1} / ${items.length}` : '복습 일정이 된 항목을 다시 만나요'}
-        maxWidth="max-w-3xl"
-        onExit={() => navigate('/dashboard')}
-      />
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+    <AppShell active="review" title="입모양·단어 복습" description={state === 'active' ? `${idx + 1} / ${items.length}` : '복습 일정이 된 항목을 다시 만나요'}>
+      <div className="w-full">
         {state === 'empty' && (
           <div className="card text-center py-14">
             <p className="text-5xl mb-3">🎉</p>
@@ -74,8 +67,8 @@ export default function Review() {
         {state === 'active' && items[idx] && (
           <ReviewCard key={idx} item={items[idx]} lessons={lessons} words={words} onDone={advance} />
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   )
 }
 

@@ -1755,3 +1755,37 @@ import). 앵커를 잰 방식과 합격을 판정한 방식이 어긋나면 두 
 전시용 앱 `liplab.fly.dev`(절대 미변경)와 별개로, **develop 배포 전용** `liplab-dev.fly.dev`(fly 앱 `liplab-dev`)를 신설.
 `fly.dev.toml`(app=liplab-dev, `LIPLAB_AI_ITEMS=0`=정적 커리큘럼, 자체 볼륨). 라이브 LLM 키 없이도
 규칙 기반 신기능(혼동행렬·자모 피드백·MWIS·학습 효과 리포트)을 그대로 시연·검증한다.
+
+## 2026-09-21 — `feat/sublexical-feedback` 2차 병합 (60커밋, 147파일)
+분기점 `5737007`(1차 병합 때 가져온 마지막 커밋) 이후 namyunsu 님이 쌓은 60커밋을 `feat/content-scale`에 합쳤다.
+내용은 두 덩어리 — ① 9/15~9/18 축 B~K 고도화(D-GOP 주경로·공개 자원·자체 립리딩 ONNX·조음 교정·성도 시뮬·
+다자대화 서버채점·적응형 배치검사·시각증강 조절·K 분류기·보안 하드닝), ② 9/19 Figma 리디자인 30커밋(AppShell·
+모바일 탭 바·로그인/온보딩·옛 대시보드 은퇴). 상대 쪽이 `main.py`·`api.js`를 LF로 정규화해 파일 전체가 충돌로
+잡혔는데, 세 판본을 LF로 맞춘 뒤 `git merge-file`로 다시 병합하니 실제 충돌은 main.py 4곳이었다.
+
+**충돌 25파일의 해소 원칙.**
+- **축 B는 우리 것이 기준**(STATUS.md 2절의 권고대로). `dgop_acoustic.py`는 우리 `assess_text` 판본, `dgop.py`의
+  그쪽 로지스틱 `calibrate_score(raw01)`는 삭제(같은 이름 두 개면 마지막 정의만 살아 깨끗한 발화가 19.5점이 되던
+  함정). `sentence_dgop.score_calibrated`와 그쪽 구간별 후기융합 `fuse_audio_visual_per_phone`은 원점수×100을
+  앵커 보정에 넣는 식으로 눈금을 통일했다. `/api/speak/assess`는 `DGOP_ALIGNER_ID` 게이트 유지(미설정=전사 경로),
+  D-GOP가 켜지면 음소별 정보로 구간별 융합.
+- **기능 충돌은 합집합.** closure-answer = 그쪽 `_server_error` + 우리 XP·스트릭 반환. 배치검사 저장은 그쪽
+  `PlacementResult`로 통일하고 우리 `/api/assessment/history`를 그 테이블로 옮겼다(그쪽 `progression`·`benchmark`·
+  `resources`와 공존). `AvatarVRM`은 세 입력원(음성구동 `bsFrameRef` > 웹캠 거울 `mirrorRef` > viseme) 우선순위로
+  단일화. `WebcamMouthCheck`는 우리 ref 최신값 버그수정·입술 기하 지표 + 그쪽 K 분류기·조음 교정·미러 모두.
+  `index.css`는 그쪽 skip-link·opt-in 접근성 클래스 + 우리 스피너 예외. `api.js`는 그쪽 시그니처(form·next) + 우리 history.
+- **프론트 페이지는 그쪽 Figma 레이아웃 채택**(WordStage·VisemeLiteracy·ScenarioHub·ReviewLanding·Placement·Guide).
+  우리가 base 이후 고친 것 중 살릴 만한 것만 이식 — WordStage 수어 모달 포커스 트랩(`useFocusTrap`), ScenarioHub
+  인앱 안내 배너(`alert` 대체). 우리 `MouthMirror` 버튼은 그쪽 `WebcamMouthCheck` 미러와 중복이라 화면에서 뺐다.
+  `Dashboard.jsx`·`PillarHub.jsx`·`GlobalLearningMenu.jsx`는 삭제 확정(우리 수정분은 촉각 제거뿐이라 옮길 게 없음).
+- `docs/perceptual-resources.json`은 손으로 합치지 않고 `scripts/export_perceptual.py`로 재생성.
+- `.gitignore`·테스트 파일·`perceptual.py`·`content_gen.py`(우리 `llm_json` 파서 + 그쪽 규칙 게이트)·
+  `conversation_scenario.py`(그쪽 try/폴백 구조 + 우리 파서)는 합집합.
+
+**검증.** backend 테스트 26파일 전부 통과(`backend/venv`), scripts 3, 프론트 35 통과, `vite build` 통과(`onnxruntime-web`
+설치 필요 — `npm install`). `main.py` 임포트 시 라우트 61개(촉각 0, 중복 경로 없음). TestClient 스모크: demo 로그인 →
+stages·words·closure·closure-answer(정답+XP)·assessment score(A/B)·history(count 2, delta)·progression(available·homogeneous)
+모두 200. `calibrate_score(78.15) = 90.0`.
+
+**남는 것.** ① 앵커는 여전히 낡았다(A-3 재측정·A-4 재적합 전까지 D-GOP 미가동). ② JuHana 님 `feat/content-scaleUI`는
+다른 셸 구조라 IA 기준 합의 후 병합. ③ 푸시 전. 되돌리기: `git reset --hard backup/pre-merge-2-content-scale`.

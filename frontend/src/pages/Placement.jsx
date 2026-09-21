@@ -13,7 +13,10 @@ const VIS_NAME = {
   6: '치경음', 7: '연구개음', 8: '성문음', 9: '이중모음', 10: '경구개음',
 }
 
-const STAGE_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/practice' }
+// 문장 단계는 시나리오 선택(ScenarioHub)을 거쳐 currentScenario를 세팅한 뒤 /practice로 진입한다.
+const STAGE_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/learn/scenario' }
+
+const MODE_LABEL = { placement: '배치검사', A: '사전검사', B: '사후검사' }
 
 export default function Placement() {
   const navigate = useNavigate()
@@ -22,18 +25,28 @@ export default function Placement() {
   const [responses, setResponses] = useState({})
   const [frames, setFrames] = useState([])
   const [result, setResult] = useState(null)
-  const [delta, setDelta] = useState(null) // 지난 검사(baseline) 대비 향상도
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [mode, setMode] = useState('placement')  // placement | A(사전) | B(사후) — 향상도검사(축 I)
+  const [n, setN] = useState(8)  // 목표 문항 수(적응형 배치검사)
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (m = mode) => {
     setLoading(true); setResult(null); setResponses({}); setIdx(0)
     try {
-      const d = await curriculumAPI.getPlacement(8)
-      setItems(d.items)
+      if (m === 'placement') {
+        // 적응형: 첫 문항만 받고, 정오답에 따라 다음 문항을 서버가 고른다(축 I).
+        const d = await curriculumAPI.nextPlacementItem([], {}, 8)
+        setN(d.n || 8)
+        setItems(d.item ? [d.item] : [])
+      } else {
+        // 향상도 동형폼(A 사전 / B 사후)은 통제 비교를 위해 고정 배치 유지.
+        const d = await curriculumAPI.getPlacement(8, m)
+        setItems(d.items)
+      }
     } catch { /* ignore */ } finally { setLoading(false) }
-  }, [])
+  }, [mode])
 
-  useEffect(() => { start() }, [start])
+  useEffect(() => { start('placement') }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!items || !items[idx]) return
@@ -42,68 +55,97 @@ export default function Placement() {
   }, [items, idx])
 
   const choose = async (word) => {
+    if (submitting || result) return   // 마지막 문항 중복 클릭 시 이중 채점·저장 방지
     const it = items[idx]
     const next = { ...responses, [it.id]: word }
     setResponses(next)
+    if (mode === 'placement') {
+      // 적응형: 방금 정오답으로 다음 문항을 서버가 고른다. done이면 지금까지 문항으로 채점.
+      setSubmitting(true)
+      try {
+        const d = await curriculumAPI.nextPlacementItem(items, next, n)
+        if (d.done || !d.item) {
+          const r = await curriculumAPI.scorePlacement(items, next, 'placement')
+          setResult(r)
+        } else {
+          setItems([...items, d.item]); setIdx(idx + 1)
+        }
+      } finally { setSubmitting(false) }
+      return
+    }
+    // 향상도 동형폼(A/B): 고정 배치 순차 진행 후 일괄 채점.
     if (idx < items.length - 1) {
       setIdx(idx + 1)
     } else {
-      const r = await curriculumAPI.scorePlacement(items, next)
-      setResult(r)
-      // 방금 결과가 저장됐으니, 첫 검사 대비 향상도(2회차부터)를 가져와 함께 보여준다
-      curriculumAPI.getAssessmentHistory().then((h) => setDelta(h?.delta || null)).catch(() => {})
+      setSubmitting(true)
+      try {
+        const r = await curriculumAPI.scorePlacement(items, next, mode)
+        setResult(r)
+      } finally {
+        setSubmitting(false)
+      }
     }
   }
+
+  const switchMode = (m) => { setMode(m); start(m) }
 
   if (loading || !items) return <div className="p-8 text-center text-gray-400">검사를 준비하는 중…</div>
 
   if (result) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-6">
-        <LearnHeader title="배치검사 결과" />
-        <div className="card space-y-4">
-          <div className="flex items-baseline gap-3">
-            <span className="text-4xl font-black text-slate-900">Lv.{result.level}</span>
-            <span className="text-sm text-gray-500">정확도 {Math.round(result.accuracy * 100)}% ({result.correct}/{result.total})</span>
+      <div className="mx-auto flex min-h-[100dvh] max-w-[560px] flex-col justify-center px-4 py-8">
+        {/* 결과 리포트 카드 */}
+        <div className="overflow-hidden rounded-[22px] border border-[#c4b5fd]"
+          style={{ backgroundImage: 'linear-gradient(166deg, #a78bfa 0%, #7d53de 71%)' }}>
+          <div className="flex flex-col items-center gap-2 px-6 py-8 text-white">
+            <img src="/ui/mascot.svg" alt="" className="h-16 w-16" />
+            <p className="text-[13px] font-bold opacity-85">{mode === 'placement' ? '배치검사 결과' : `${MODE_LABEL[mode]} 결과`}</p>
+            <p className="text-[40px] font-black leading-none tracking-[-1px]">Lv.{result.level}</p>
+            <p className="text-sm font-bold opacity-90">정확도 {Math.round(result.accuracy * 100)}% ({result.correct}/{result.total})</p>
           </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-500">추천 시작 단계</p>
-            <p className="mt-1 text-base font-bold text-slate-800">{result.recommended_start?.title || '입모양 인지'}</p>
+        </div>
+
+        <div className="mt-4 space-y-4">
+          <div className="card-flat">
+            <p className="text-xs font-bold text-ink-muted">추천 시작 단계</p>
+            <p className="mt-1 text-[17px] font-bold text-ink">{result.recommended_start?.title || '입모양 인지'}</p>
           </div>
           {result.error_visemes?.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-500">약한 입모양</p>
-              <div className="mt-1 flex flex-wrap gap-2">
+              <p className="text-xs font-bold text-ink-muted">약한 입모양</p>
+              <div className="mt-1.5 flex flex-wrap gap-2">
                 {result.error_visemes.map((v) => (
-                  <span key={v} className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">{VIS_NAME[v] || v}</span>
+                  <span key={v} className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">{VIS_NAME[v] || v}</span>
                 ))}
               </div>
             </div>
           )}
-          {delta && (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-bold text-slate-600">지난 첫 검사 대비 향상도</p>
-              <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                <span className={`font-black ${delta.accuracy >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
-                  정확도 {delta.accuracy >= 0 ? '+' : ''}{Math.round(delta.accuracy * 100)}%p
-                </span>
-                <span className={`font-black ${delta.level >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
-                  수준 {delta.level >= 0 ? '+' : ''}{delta.level}
-                </span>
+          {result.error_phonemes?.length > 0 && (
+            <div>
+              <p className="text-xs font-bold text-ink-muted">자주 놓친 소리(음소)</p>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {result.error_phonemes.map((e) => (
+                  <span key={e.phoneme} className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">{e.phoneme} ×{e.count}</span>
+                ))}
               </div>
-              {delta.resolved_visemes?.length > 0 && (
-                <p className="mt-1.5 text-xs text-emerald-700">
-                  이제 안 틀리는 입모양: {delta.resolved_visemes.map((v) => VIS_NAME[v] || v).join(', ')}
-                </p>
-              )}
             </div>
           )}
+          {mode !== 'placement' && (
+            <p className="rounded-2xl bg-primary-100 px-4 py-3 text-xs text-primary-700">
+              {MODE_LABEL[mode]} 결과를 저장했어요. 사전(A)·사후(B)를 모두 마치면 <b>학습 분석 → 통제 향상도</b>에서 변화가 보여요.
+            </p>
+          )}
           <div className="flex gap-2">
-            <button onClick={() => navigate(STAGE_ROUTE[result.recommended_start?.key] || '/learn/viseme')}
-              className="flex-1 rounded-lg bg-slate-900 py-2.5 text-sm font-bold text-white hover:bg-slate-700">
+            <button onClick={async () => {
+                if (mode === 'placement') {
+                  try { await curriculumAPI.setTrack('perception', result.recommended_start?.stage) } catch { /* 배치 실패해도 이동은 함 */ }
+                }
+                navigate(STAGE_ROUTE[result.recommended_start?.key] || '/learn/viseme')
+              }}
+              className="btn-primary flex-1 !py-3.5 text-[17px]">
               {result.recommended_start?.title || '입모양 인지'}부터 시작 →
             </button>
-            <button onClick={start} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50">다시 검사</button>
+            <button onClick={() => start(mode)} className="btn-secondary !px-5 !py-3.5 text-[15px]">다시 검사</button>
           </div>
         </div>
       </div>
@@ -111,32 +153,53 @@ export default function Placement() {
   }
 
   const it = items[idx]
+  if (!it) return <div className="p-8 text-center text-gray-400">문항을 불러오지 못했어요. 다시 시도해 주세요.</div>
+  const total = mode === 'placement' ? n : items.length
   return (
-    <div className="mx-auto max-w-3xl px-4 py-4">
-      <LearnHeader title="독화 배치검사" />
-      <div className="mb-3">
-        <div className="flex justify-between text-xs text-gray-500"><span>진행</span><span>{idx + 1} / {items.length}</span></div>
-        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-200">
-          <div className="h-full rounded-full bg-slate-500 transition-all" style={{ width: `${((idx) / items.length) * 100}%` }} />
+    <div className="mx-auto flex min-h-[100dvh] max-w-[680px] flex-col px-4 pb-10 pt-6 sm:px-6">
+      {/* 진행 헤더 */}
+      <div className="flex items-center gap-4">
+        <button type="button" onClick={() => navigate('/dashboard')} aria-label="나가기" className="shrink-0 text-ink-muted hover:text-ink">
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+        <div className="h-3.5 flex-1 overflow-hidden rounded-full bg-line">
+          <div className="h-full rounded-full bg-primary-500 transition-all" style={{ width: `${(idx / total) * 100}%` }} />
         </div>
+        <span className="shrink-0 text-[15px] font-bold text-ink-muted">{idx + 1} / {total}</span>
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="card">
-          <p className="mb-2 text-sm text-gray-500">이 입모양은 어떤 단어일까요?</p>
-          <MouthAvatar frames={frames} />
-        </div>
-        <div className="card">
-          <div className="grid grid-cols-2 gap-3">
-            {it.options.map((w) => (
-              <button key={w} onClick={() => choose(w)}
-                className="rounded-xl border-2 border-gray-200 bg-white px-4 py-4 text-base font-bold text-gray-800 transition-all hover:border-primary-400 hover:bg-primary-50">
-                {w}
-              </button>
-            ))}
-          </div>
-          <p className="mt-3 text-center text-xs text-gray-400">정답은 끝나면 결과로 알려드려요</p>
-        </div>
+
+      {/* 모드 스위처 */}
+      <div className="mt-5 flex gap-1 self-start rounded-[14px] bg-gray-100 p-1">
+        {['placement', 'A', 'B'].map((m) => (
+          <button key={m} onClick={() => switchMode(m)}
+            className={`rounded-[10px] px-4 py-2 text-[13px] font-bold transition ${mode === m ? 'bg-white text-primary-500 shadow-sm' : 'text-gray-400'}`}>
+            {MODE_LABEL[m]}
+          </button>
+        ))}
       </div>
+
+      {/* 질문 */}
+      <div className="mt-6">
+        <p className="text-[13px] font-bold text-primary-500">{mode === 'placement' ? '적응형 배치검사' : MODE_LABEL[mode]}</p>
+        <p className="mt-2 text-[26px] font-bold tracking-[-0.75px] text-ink sm:text-[30px]">이 입모양은 어떤 단어일까요?</p>
+      </div>
+
+      {/* 입모양 */}
+      <div className="mt-6 rounded-[22px] border-2 border-line bg-white p-4">
+        <MouthAvatar frames={frames} />
+      </div>
+
+      {/* 4지선다 */}
+      <div className="mt-6 flex flex-col gap-3">
+        {it.options.map((w, i) => (
+          <button key={w} disabled={submitting} onClick={() => choose(w)}
+            className="flex items-center gap-4 rounded-2xl border border-line bg-white px-5 py-4 text-left text-[20px] font-bold text-ink transition-all hover:border-primary-400 hover:bg-primary-50 active:scale-[0.98] disabled:opacity-60">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-[13px] text-ink-muted">{i + 1}</span>
+            <span className="flex-1">{w}</span>
+          </button>
+        ))}
+      </div>
+      <p className="mt-4 text-center text-xs text-gray-400">정답은 끝나면 결과로 알려드려요</p>
     </div>
   )
 }

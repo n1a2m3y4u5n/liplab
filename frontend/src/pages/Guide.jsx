@@ -47,6 +47,7 @@ const SPEAKING_HOW = [
   '단어·문장 단계는 AI가 매번 새 문항을 생성해 같은 문제만 반복하지 않아요.',
 ]
 
+
 // ── 도구 · 원리 ───────────────────────────────────────
 const TOOLS = [
   { icon: '🤟', title: '수어 번역', body: '앱 어디서나 한국어 문장을 드래그하면 "수어로 보기" 버튼이 떠요. 누르면 그 자리에서 한국수어(KSL) 영상으로 바꿔 보여줘요.' },
@@ -147,7 +148,7 @@ export default function Guide() {
                 <SectionTitle eyebrow="한눈에">학습은 이렇게 흘러가요</SectionTitle>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {[
-                    { n: '1', title: '기둥을 고른다', body: '독화·말하기 중 지금 훈련할 축을 선택해요.' },
+                    { n: '1', title: '트랙을 고른다', body: '독화·말하기 중 지금 훈련할 축을 선택해요.' },
                     { n: '2', title: '단계별로 학습한다', body: '기초부터 실전까지, 나에게 맞는 활동·단계를 밟아요.' },
                     { n: '3', title: '복습하고 분석한다', body: '틀린 문제·예정 항목을 다시 풀고, 분석에서 약점을 확인해요.' },
                   ].map((f) => (
@@ -163,7 +164,7 @@ export default function Guide() {
               <section>
                 <SectionTitle eyebrow="메뉴 사용법" sub="원하는 활동으로 바로 갈 수 있어요.">어디서 시작하나요</SectionTitle>
                 <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-5 text-sm leading-relaxed text-slate-700">
-                  <p>· <b>위쪽 메뉴바</b>(독화▾ · 말하기▾ · 기타▾)에서 세부 활동을 바로 골라요.</p>
+                  <p>· <b>왼쪽 탭</b>(학습 · 연습 · 과제 · 복습 · 분석)에서 원하는 활동으로 바로 이동해요. 모바일에서는 <b>아래쪽 탭 바</b>를 써요.</p>
                   <p>· <b>오른쪽 위</b>의 복습·사용법, 그리고 문장을 드래그하면 뜨는 <b>🤟 수어 번역</b>도 어디서나 쓸 수 있어요.</p>
                   <p>· 대시보드 가운데 <b>캐러셀</b>에서 두 기둥을 넘겨 보며 시작해도 돼요.</p>
                 </div>
