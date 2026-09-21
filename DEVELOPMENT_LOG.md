@@ -1789,3 +1789,13 @@ stages·words·closure·closure-answer(정답+XP)·assessment score(A/B)·histor
 
 **남는 것.** ① 앵커는 여전히 낡았다(A-3 재측정·A-4 재적합 전까지 D-GOP 미가동). ② JuHana 님 `feat/content-scaleUI`는
 다른 셸 구조라 IA 기준 합의 후 병합. ③ 푸시 전. 되돌리기: `git reset --hard backup/pre-merge-2-content-scale`.
+
+## 2026-09-21 — `feat/content-scaleUI`(JuHana) 병합 — 파일만, 라우팅은 Figma 셸 유지
+분기점 `082bf7f` 이후 8커밋(19파일, +1,775). JuHana 님의 IA 재구조화는 **옛 셸**(GlobalLearningMenu·PillarHub·
+`features/dashboard/Dashboard`)을 전제로 한 `AppLayout/TopBar/NavShell` + `/learn/lipreading/*` 트랙 라우트인데,
+직전 병합으로 셸이 namyunsu 님의 Figma `AppShell`로 바뀌어 두 구조가 App.jsx에서 정면 충돌한다.
+결정: **App.jsx는 우리(Figma) 것을 그대로 유지**하고 JuHana 님의 파일은 전부 들여오되 연결하지 않는다 —
+`layouts/`, `features/dashboard/`(옛 `pages/Dashboard.jsx`를 옮긴 것 포함), `features/learn/shared/`, `config/tracks.js`,
+`LIPLAB_REDESIGN_SPEC.md`. 들여온 파일이 참조하는 것(`config/speakingNavigation.js`·`DashboardPet`·`LearnHeader`·api)은
+모두 존재한다. 어느 셸을 기준으로 할지는 팀 결정으로 남긴다. 검증: 프론트 테스트(JuHana 님 테스트 2파일 포함) 통과, vite build 통과.
+

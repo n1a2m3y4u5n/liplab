@@ -30,7 +30,7 @@
 |---|---|---|---|
 | `feat/content-scale` | duadnwls | 축 A·B(음향 채점), 커리큘럼 | 기준 (`952f816` + 병합 커밋) |
 | `feat/sublexical-feedback` | namyunsu | 축 B~K 고도화 + **Figma 리디자인**(9/19, 30커밋) | **병합 완료** (`702c373`까지 60커밋, 2026-09-21) |
-| `feat/content-scaleUI` | JuHana | 프론트 IA 재구조화(App.jsx 라우팅·features/ 이동) | **7커밋 앞섬** (`ecbd12d`) |
+| `feat/content-scaleUI` | JuHana | 프론트 IA 재구조화(App.jsx 라우팅·features/ 이동) | **병합 완료** (`eceda09`까지 8커밋, 2026-09-21) — 파일만 들여오고 라우팅은 Figma 셸 유지 |
 | `refactor/app-shell-routing` | JuHana | 위 중 셸·라우팅만 | 2커밋 앞섬 |
 
 `feat/content-scaleUI`는 2026-09-15에 content-scale로 fast-forward해 뒀고, 그 뒤 JuHana 님이
@@ -38,16 +38,19 @@
 
 ⚠️ **이번 병합으로 프론트 IA가 namyunsu 님의 Figma 리디자인으로 바뀌었다.** 옛 `Dashboard.jsx`·
 `PillarHub.jsx`·`GlobalLearningMenu.jsx`는 삭제됐고 진입은 `/learn/path`(CurriculumPath)+`AppShell`이다.
-JuHana 님의 `feat/content-scaleUI`(features/ 이동·NavShell)는 **다른 구조**라 그대로 병합하면
-App.jsx에서 또 충돌한다 — 어느 셸을 기준으로 할지 먼저 합의한다.
+JuHana 님의 `feat/content-scaleUI`는 2026-09-21 두 번째 병합으로 들여왔다 — 단 **App.jsx는 우리(Figma 셸) 것을
+유지**했고, JuHana 님의 `layouts/`(AppLayout·TopBar·NavShell)·`features/dashboard/`·`features/learn/shared/`
+(TrackHub·LessonList·LessonRunner·LessonComplete)·`config/tracks.js`·`LIPLAB_REDESIGN_SPEC.md`는 **파일로만 들어와
+라우팅에 연결돼 있지 않다.** 두 셸 중 무엇을 기준으로 할지는 여전히 팀 결정 — 정해지면 그때 연결하거나 지운다.
 
 ---
 
 ## 바로 할 일 (우선순위)
 
-> **2026-09-21 — `feat/sublexical-feedback` 60커밋을 병합했다**(충돌 25파일). 방침은 아래 2절.
-> 백엔드 26 + scripts 3 + 프론트 35 테스트 통과, vite build 통과, 라우트 61개(촉각 0). **아직 푸시하지 않았다.**
-> 되돌리려면 `git reset --hard backup/pre-merge-2-content-scale`.
+> **2026-09-21 — `feat/sublexical-feedback` 60커밋을 병합했다**(`7491547`, 충돌 25파일, **푸시 완료**). 방침은 아래 2절.
+> 백엔드 26 + scripts 3 + 프론트 35 테스트 통과, vite build 통과, 라우트 61개(촉각 0).
+> 이어서 **`feat/content-scaleUI` 8커밋도 병합**(App.jsx는 Figma 셸 유지, JuHana 님 모듈은 파일로만). 되돌리기 태그:
+> `backup/pre-merge-2-content-scale`(1차 직전), `backup/pre-merge-3-content-scale`(2차 직전).
 >
 > **2026-09-15 — 앱 트랙을 병합했다**(`c82fb9f`). `feat/sublexical-feedback` 6커밋을 촉각 제거를
 > 유지한 채 합쳤고 테스트·빌드까지 확인했다. **아직 푸시하지 않았다.** 되돌리려면
@@ -172,7 +175,7 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
 - **정민화 연구실 접촉**(서울대 언어학과) — 이제 E1·E2 실측을 들고 갈 수 있다. 우리 가설을 한국어로 이미 검증했고 코드가 MIT로 공개돼 있다. QoLT·CI 아동 데이터 경로이기도 하다
 - **`blank 제외` 변형 재덤프**(GPU ~12분) — A-6 "남은 일" 2번. 지금 npz로는 평가할 수 없다
 - ~~CLAUDE.md 로드맵 정리~~ — 2026-09-21 병합 때 반영했다(디렉터리·잠금 지점·백로그).
-- **병합 푸시 + 팀 공지** — `feat/content-scale`을 origin에 올리고, namyunsu·JuHana 님께 IA 기준(AppShell)을 알린다
+- **팀 공지** — namyunsu·JuHana 님께 지금 라우팅 기준이 Figma `AppShell`이고 JuHana 님 모듈은 미연결 상태임을 알리고, 셸 기준을 정한다
 
 ---
 
