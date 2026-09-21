@@ -842,6 +842,97 @@ async def get_calendar(current_user=Depends(get_current_user), db: AsyncSession 
     return {row.day: row.cnt for row in result.all()}
 
 
+@app.get("/api/calendar/activities")
+async def get_calendar_activities(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """날짜별로 '무엇을 학습했는지' 요약 — 회차 히스토리 모달용.
+    /api/calendar는 문장 연습(Progress) 건수만 세므로, 여기서는 활동 종류별 테이블을 모두 모아
+    { 'YYYY-MM-DD': [ {kind, label, n}, ... ] }로 돌려준다. label은 화면에 그대로 붙이는 한국어 문구.
+    """
+    from database import Progress, TrialAttempt, SpeakAttempt, PlacementResult
+    from sqlalchemy import select, func
+    import datetime as dt
+    from collections import defaultdict, Counter
+    from urllib.parse import quote
+
+    cutoff = (dt.date.today() - dt.timedelta(days=90)).isoformat()
+    uid = current_user.id
+    days: dict = defaultdict(lambda: defaultdict(Counter))   # day → kind → Counter(detail)
+
+    # 문장 연습(3단계·복습) — 상황별로 묶는다
+    r = await db.execute(
+        select(func.date(Progress.created_at).label("day"), Progress.situation, func.count(Progress.id))
+        .where(Progress.user_id == uid, Progress.created_at >= cutoff)
+        .group_by("day", Progress.situation))
+    for day, situation, n in r.all():
+        days[day]["sentence"][situation or ""] += n
+
+    # 1·2단계·문맥 추론 시행
+    r = await db.execute(
+        select(func.date(TrialAttempt.created_at).label("day"), TrialAttempt.item_type, func.count(TrialAttempt.id))
+        .where(TrialAttempt.user_id == uid, TrialAttempt.created_at >= cutoff)
+        .group_by("day", TrialAttempt.item_type))
+    for day, item_type, n in r.all():
+        days[day][item_type or "trial"][""] += n
+
+    # 말하기 연습 — 모드별
+    r = await db.execute(
+        select(func.date(SpeakAttempt.created_at).label("day"), SpeakAttempt.mode, func.count(SpeakAttempt.id))
+        .where(SpeakAttempt.user_id == uid, SpeakAttempt.created_at >= cutoff)
+        .group_by("day", SpeakAttempt.mode))
+    for day, mode, n in r.all():
+        days[day]["speak"][mode or ""] += n
+
+    # 배치·향상도 검사
+    r = await db.execute(
+        select(func.date(PlacementResult.created_at).label("day"), PlacementResult.form, func.count(PlacementResult.id))
+        .where(PlacementResult.user_id == uid, PlacementResult.created_at >= cutoff)
+        .group_by("day", PlacementResult.form))
+    for day, form, n in r.all():
+        days[day]["assessment"][form or "placement"] += n
+
+    KIND_LABEL = {"viseme": "입모양 인지", "word": "단어", "closure": "문맥 추론", "trial": "인지 훈련"}
+    SPEAK_LABEL = {"voicing": "발성", "prosody": "억양", "phoneme": "음소", "word": "단어", "sentence": "문장"}
+    FORM_LABEL = {"placement": "배치검사", "A": "사전검사", "B": "사후검사"}
+    TYPE_LABEL = {"assessment": "검사", "viseme": "독화", "word": "독화", "closure": "독화", "trial": "독화",
+                  "sentence": "문장 연습", "speak": "말하기"}
+    # 블록 클릭 시 이동할 학습 화면. 말하기 모드는 speak_curriculum의 단계 번호로 연결한다.
+    SPEAK_STAGE = {"voicing": 0, "prosody": 1, "phoneme": 2, "word": 4, "sentence": 5}
+    KIND_ROUTE = {"assessment": "/learn/placement", "viseme": "/learn/viseme", "word": "/learn/word",
+                  "closure": "/learn/closure", "trial": "/learn/viseme"}
+    ORDER = ["assessment", "viseme", "word", "closure", "trial", "sentence", "speak"]
+
+    # 주제가 다르면 같은 날이라도 각자 한 행 — 문장 연습은 상황별, 말하기는 모드별, 검사는 폼별로 나눈다.
+    out = {}
+    for day, kinds in days.items():
+        rows = []
+        for kind in ORDER:
+            if kind not in kinds:
+                continue
+            for detail, n in kinds[kind].most_common():
+                # topic_label = 블록 제목(상황·모드·검사 종류), type_label = 유형 배지
+                if kind == "sentence":
+                    topic_label = detail or "문장 연습"
+                elif kind == "speak":
+                    topic_label = SPEAK_LABEL.get(detail, detail) if detail else "말하기"
+                elif kind == "assessment":
+                    topic_label = FORM_LABEL.get(detail, detail)
+                else:
+                    topic_label = KIND_LABEL[kind]
+                type_label = TYPE_LABEL[kind]
+                if kind == "sentence":
+                    route = "/review/mistakes" if detail == "복습" else (
+                        f"/learn/scenario?situation={quote(detail)}" if detail else "/learn/scenario")
+                elif kind == "speak":
+                    route = f"/learn/speaking?stage={SPEAK_STAGE[detail]}" if detail in SPEAK_STAGE else "/learn/speaking"
+                else:
+                    route = KIND_ROUTE[kind]
+                label = topic_label if topic_label == type_label or kind == "assessment" else f"{type_label} · {topic_label}"
+                rows.append({"kind": kind, "topic": detail, "topic_label": topic_label,
+                             "type_label": type_label, "label": label, "n": n, "route": route})
+        out[day] = rows
+    return out
+
+
 @app.get("/api/review-sentences")
 async def get_review_sentences(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """최근에도 틀린(가장 최근 시도 점수 < 60) 서로 다른 문장을 최대 10개 반환.

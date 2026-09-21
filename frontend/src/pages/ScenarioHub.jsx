@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { curriculumAPI, learningAPI } from '../api'
 import useStore from '../store/useStore'
 import AppShell from '../components/AppShell'
@@ -18,9 +18,12 @@ function shuffledTypes(length) {
 
 export default function ScenarioHub() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const user = useStore((state) => state.user)
   const setScenario = useStore((state) => state.setScenario)
-  const [situation, setSituation] = useState('카페')
+  // 회차 히스토리 등에서 ?situation=병원 으로 들어오면 그 상황을 미리 고른다(목록에 있을 때만).
+  const preset = searchParams.get('situation')
+  const [situation, setSituation] = useState(preset && SITUATIONS.includes(preset) ? preset : '카페')
   const [customSituation, setCustomSituation] = useState('')
   const [level, setLevel] = useState(Math.min(user?.current_level || 1, 5))
   const [recommended, setRecommended] = useState(null)

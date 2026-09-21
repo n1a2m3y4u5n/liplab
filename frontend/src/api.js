@@ -136,6 +136,8 @@ export const learningAPI = {
     const response = await api.get('/calendar')
     return response.data  // { 'YYYY-MM-DD': count }
   },
+  // 회차 히스토리 — 날짜별 '무엇을 학습했는지' { 'YYYY-MM-DD': [{kind,label,n}] }
+  getCalendarActivities: async () => (await api.get('/calendar/activities')).data,
 
   // Review sentences (wrong answers)
   getReviewSentences: async () => {
