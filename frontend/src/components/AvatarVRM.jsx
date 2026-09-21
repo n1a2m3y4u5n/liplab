@@ -7,6 +7,12 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 const MODEL_URL = '/models/realistic_face.glb'
 // 새 아바타(CC 모델)는 EXT_meshopt_compression 압축이라 meshopt 디코더를 붙여야 로드됨.
 const withMeshopt = (loader) => loader.setMeshoptDecoder(MeshoptDecoder)
+// CC(Character Creator) 모델은 ARKit jawOpen 모프가 피부를 거의 움직이지 않는다(실측 −0.5mm).
+// 입 벌림은 턱 뼈(CC_Base_JawRoot)가 담당한다 — 이 뼈에 아래 이·혀·턱 피부가 스키닝돼 있어
+// 로컬 Z축 +회전이 곧 벌림이다(20° 회전 시 아랫입술 −1.1cm·턱 −1.9cm 실측). 그래서 jawOpen
+// 가중치(0~1)를 이 각도로 옮겨 뼈를 돌린다. 뼈가 없는 모델이면 모프만 적용한다.
+const JAW_BONE_NAME = 'CC_Base_JawRoot'
+const JAW_OPEN_MAX_RAD = THREE.MathUtils.degToRad(30)
 import { VISEME_BLENDSHAPES, ACTIVE_MORPH_KEYS, VISEME_TONGUE, ACTIVE_TONGUE_KEYS } from '../lib/visemeShapes'
 import MouthFallback2D from './MouthFallback2D'
 
@@ -24,6 +30,7 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null }) {
   const { scene } = useGLTF(MODEL_URL, false, false, withMeshopt)
   const meshesRef = useRef([])
   const tongueMeshRef = useRef(null)
+  const jawRef = useRef(null)          // { bone, restZ } — 턱 뼈와 기본 각도
   const currentWeightsRef = useRef({})
   const tongueWeightsRef = useRef({})
   const skinMatsRef = useRef([])   // 투명(X-ray) 모드에서 반투명화할 피부 재질
@@ -50,6 +57,8 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null }) {
         }
       }
     })
+    const jawBone = scene.getObjectByName(JAW_BONE_NAME)
+    if (jawBone) jawRef.current = { bone: jawBone, restZ: jawBone.rotation.z }
   }
 
   useFrame((_, delta) => {
@@ -84,6 +93,12 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null }) {
           mesh.morphTargetInfluences[idx] = next
         }
       }
+    }
+
+    // 턱 뼈 — 보간된 jawOpen 가중치를 그대로 각도로 옮긴다(모프와 같은 타이밍으로 움직인다).
+    const jaw = jawRef.current
+    if (jaw) {
+      jaw.bone.rotation.z = jaw.restZ + JAW_OPEN_MAX_RAD * (currentWeightsRef.current.jawOpen || 0)
     }
 
     // 혀 전용 모프 — 혀 메시에만 적용해 얼굴 왜곡을 방지 (mesh-scoped)
@@ -153,7 +168,7 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
           (StrictMode에서 특히 재현). Canvas camera는 렌더러 생성 시점에 확정되므로
           OrbitControls가 항상 올바른 입 클로즈업 위치를 읽는다.
         */}
-        <Canvas camera={{ position: [0, 1.62, 0.45], fov: 16 }}>
+        <Canvas camera={{ position: [0, 1.68, 0.45], fov: 16 }}>
           <ambientLight intensity={1.2} />
           <directionalLight position={[1, 2, 2]} intensity={1.0} />
           <directionalLight position={[-1, 0, 1]} intensity={0.4} />
@@ -163,7 +178,7 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
           </Suspense>
 
           <OrbitControls
-            target={[0, 1.59, 0]}
+            target={[0, 1.652, 0]}
             enableZoom={false}
             enablePan={false}
             minPolarAngle={Math.PI / 2.2}

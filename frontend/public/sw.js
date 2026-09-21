@@ -1,7 +1,7 @@
 /* LIPLAB 서비스워커 — 설치·앱셸 오프라인(계획서 트랙2 PWA).
  * 보수적 전략: API는 절대 캐시하지 않고, 페이지 이동은 네트워크 우선(끊기면 캐시 셸),
  * 정적 자산(JS/CSS/이미지/폰트)은 stale-while-revalidate. 버전 올리면 옛 캐시 정리. */
-const CACHE = 'liplab-v1'
+const CACHE = 'liplab-v2'  // v2: 3D 입모양 모델 교체(2026-09-21) — 같은 URL의 구 모델 캐시 폐기
 const SHELL = ['/', '/index.html', '/icon.svg', '/manifest.webmanifest']
 
 self.addEventListener('install', (e) => {
