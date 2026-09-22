@@ -81,6 +81,15 @@ export default function ProfilePage() {
       setModal(null); navigate('/learn/path')
     } finally { setBusy(false) }
   }
+  // 계정 삭제(삭제권) — 확인 후 서버에서 계정·데이터 일괄 삭제하고 로그아웃한다.
+  const delAccount = async () => {
+    if (!window.confirm('계정과 모든 학습 기록이 영구 삭제됩니다. 계속할까요?')) return
+    setBusy(true); setMsg('')
+    try {
+      await accountAPI.deleteAccount()
+      logout(); navigate('/learn/path')
+    } catch (e) { setMsg(e?.response?.data?.detail || '삭제하지 못했어요.') } finally { setBusy(false) }
+  }
 
   const level = Math.max(1, statistics?.current_level || user?.current_level || 1)
   const xp = Math.max(0, statistics?.total_xp ?? user?.total_xp ?? 0)
@@ -158,8 +167,16 @@ export default function ProfilePage() {
           onSave={() => saveField('username')}
           onCancel={() => { setForm((f) => ({ ...f, username: name })); setEdit(null) }}
         />
-        {/* 이메일 — Figma: 값만 표시(읽기전용) */}
-        <FieldRow label="이메일" readOnly display={email || '미설정'} />
+        {/* 이메일 — 정정권(§4.9)상 수정 가능 */}
+        <FieldRow label="이메일" editing={edit === 'email'} type="email"
+          onEdit={() => { setEdit('email'); setMsg('') }}
+          value={form.email}
+          display={email || '미설정'}
+          busy={busy}
+          onChange={(v) => setForm({ ...form, email: v })}
+          onSave={() => saveField('email')}
+          onCancel={() => { setForm((f) => ({ ...f, email })); setEdit(null) }}
+        />
         {/* 비밀번호 */}
         <div className="flex w-full flex-col gap-[7px]">
           <p className="text-[13px] font-bold text-ink-muted">비밀번호</p>
@@ -188,8 +205,8 @@ export default function ProfilePage() {
             className="flex-1 rounded-[14px] border-2 border-b-[5px] border-line bg-white py-[15px] text-[15px] font-bold text-ink-muted transition-all active:translate-y-[1px] active:border-b-2">
             로그아웃
           </button>
-          <button type="button" onClick={() => setMsg('계정 삭제는 관리자에게 문의해 주세요.')}
-            className="flex-1 rounded-[14px] border-2 border-b-[5px] border-[#f3c8c8] bg-white py-[15px] text-[15px] font-bold text-[#b91c1c] transition-all active:translate-y-[1px] active:border-b-2">
+          <button type="button" disabled={busy} onClick={delAccount}
+            className="flex-1 rounded-[14px] border-2 border-b-[5px] border-[#f3c8c8] bg-white py-[15px] text-[15px] font-bold text-[#b91c1c] transition-all active:translate-y-[1px] active:border-b-2 disabled:opacity-50">
             계정 삭제
           </button>
         </div>
