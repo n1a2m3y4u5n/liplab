@@ -4,22 +4,21 @@
  * 이 매핑은 실제 모델(realistic_face.glb)의 모프타깃을 **직접 감사(audit)** 하여
  * 존재가 확인된 ARKit 블렌드셰이프만 사용해 작성했다.
  *
- * base 메시(66개 모프)에 확인된 ARKit 셰이프(발췌):
- *   jawOpen, mouthClose, mouthFunnel, mouthPucker,
- *   mouthPressLeft/Right, mouthRollUpper/Lower,
- *   mouthSmileLeft/Right, mouthStretchLeft/Right,
- *   mouthUpperUpLeft/Right, mouthLowerDownLeft/Right,
- *   mouthShrugUpper, tongueOut ...
+ * 2026-09-21 모델 교체: Character Creator(CC) 두상. 얼굴(CC_Base_Body) 메시에
+ * ARKit 52종이 전부 있고(jawOpen, mouthClose, mouthFunnel, mouthPucker,
+ * mouthPress/Roll/Smile/Stretch/UpperUp/LowerDown L/R, mouthShrugUpper, tongueOut …),
+ * 그 밖에 CC 고유 비심(V_*)·표정(Mouth_*, Brow_* …)·혀(T01~T11) 모프가 더 있다.
  *
  * 설계 원칙
- * 1) Oculus viseme_*(viseme_aa 등) 모프는 이 모델에서 메시를 과하게 왜곡시켜
- *    쓰지 않고, 표준 ARKit 셰이프만 조합한다.
+ * 1) CC 고유 모프(V_Open, Mouth_Open 등)는 실측상 입술을 거의 움직이지 않아 쓰지 않고,
+ *    표준 ARKit 셰이프만 조합한다(음성구동·웹캠 미러 프레임도 같은 52종을 쓴다).
  * 2) 기본(rest) 자세가 이미 '입술을 편하게 다문' 상태이므로, 각 viseme은
  *    거기서 필요한 만큼만 벌리고(jawOpen) / 오므리고(pucker·funnel) /
  *    당기고(smile·stretch) / 닫는다(mouthClose).
- * 3) jawOpen 은 base·teeth·tongue 세 메시에 공통 존재하여 턱·치아·혀가 함께
- *    움직인다. 반면 입술 셰이프(pucker/funnel/smile 등)는 base 메시 전용이다.
- *    → '벌림'은 jawOpen, '입술 모양'은 ARKit 립 셰이프로 역할을 분담한다.
+ * 3) 이 모델은 jawOpen '모프'가 피부를 움직이지 않는다(실측 −0.5mm). 벌림은 턱 뼈
+ *    (CC_Base_JawRoot)가 담당하며 아래 이·혀·턱 피부가 함께 돈다 — 렌더러(AvatarVRM)가
+ *    jawOpen 가중치를 뼈 회전각으로 옮긴다. 입술 셰이프는 그대로 모프로 적용한다.
+ *    → '벌림'은 jawOpen(=턱 뼈), '입술 모양'은 ARKit 립 셰이프로 역할을 분담한다.
  *
  * ⚠️ 병합 이력 — 중복 키 정리(2026-09-07)
  *   이 객체에 viseme 1·2·4·6·7·10이 **각각 두 번 정의**되어 있었다. JS 객체 리터럴은
@@ -108,29 +107,31 @@ export const ACTIVE_MORPH_KEYS = Array.from(
 /**
  * 혀 전용 모프타깃 매핑 (mesh-scoped) — 혀(tongue01) 메시에만 적용된다.
  *
- * viseme_DD(혀끝을 윗잇몸으로), viseme_kk(혀 뒤를 연구개로)는 이 모델의
- * 얼굴 메시에도 존재해 얼굴을 왜곡시키므로, 렌더러가 이 키들은 '혀 메시에만'
- * 적용한다. 덕분에 얼굴은 ARKit 블렌드셰이프로 자연스럽게 유지하면서
- * 혀의 조음(調音) 위치만 정확히 표현할 수 있다.
+ * CC 모델의 혀(CC_Base_Tongue) 메시가 가진 모프를 실측해 골랐다(각 모프 1.0에서
+ * 혀끝/혀뒤가 움직인 거리, 단위 mm):
+ *   T06_Tongue_Tip_Up  혀끝 +11.6 위·−4.7 뒤, 혀뒤 0     → 치경(혀끝을 윗잇몸에)
+ *   T01_Tongue_Up      혀끝 +17.2 위,         혀뒤 +5.5 위 → 혀 전체 올림
+ *   T10/T11_Bulge_L/R  혀뒤 +5.3 위, 혀끝 −12.6 뒤       → 설배 융기(연구개)
+ *   V_Tongue_Curl_D    혀끝 −10.2 뒤·−2.4 아래            → 혀끝 물러남
+ *   tongueOut          혀끝 +35.7 앞                      → 전방(소량만 쓴다)
+ * 렌더러가 이 키들은 '혀 메시에만' 적용하므로 얼굴은 왜곡되지 않는다.
  *
  * 참고: 독화에서 혀는 대부분 가려져 살짝만 보이므로 값은 과하지 않게 잡는다.
- * (예전 tongueOut=혀를 입 밖으로 내미는 잘못된 표현은 사용하지 않는다.)
+ * tongueOut은 소량(≤0.2)이라 입 밖으로 나오지 않고 앞니 뒤에서 혀끝이 톡 보이는 정도다.
  */
-// tongueOut(혀끝 전방)은 '혀 메시에만' 적용되므로 얼굴을 왜곡하지 않고,
-// 소량(≤0.2)이라 입 밖으로 나오지 않고 앞니 뒤에서 혀끝이 톡 보이는 정도다.
-// viseme_DD(혀끝 위로) + tongueOut(앞으로)를 함께 써서 움직임을 뚜렷하게 만든다.
 export const VISEME_TONGUE = {
   // 6) 치경음 ㄷ/ㄸ/ㅌ/ㄴ/ㄹ/ㅅ/ㅆ — 혀끝을 윗잇몸에 대고 앞으로 살짝 내밈
-  6: { viseme_DD: 1.0, tongueOut: 0.18 },
+  6: { T06_Tongue_Tip_Up: 1.0, tongueOut: 0.18 },
 
-  // 7) 연구개음 ㄱ/ㄲ/ㅋ/ㅇ — 혀 뒤가 연구개로 올라감 (뒤쪽이라 다소 덜 보임)
-  7: { viseme_kk: 0.75 },
+  // 7) 연구개음 ㄱ/ㄲ/ㅋ/ㅇ — 혀 뒤(설배)가 연구개로 올라가고 혀끝은 뒤로 물러남
+  //    (뒤쪽 융기는 Bulge 좌우를 같이 써서 좌우 대칭으로 만든다)
+  7: { T10_Tongue_Bulge_Left: 0.5, T11_Tongue_Bulge_Right: 0.5, V_Tongue_Curl_D: 0.4 },
 
-  // 10) 경구개음 ㅈ/ㅉ/ㅊ — 혓날이 경구개 부근 (viseme_DD로 근사)
-  10: { viseme_DD: 0.6, tongueOut: 0.1 },
+  // 10) 경구개음 ㅈ/ㅉ/ㅊ — 혓날이 경구개 부근 (혀끝 위 + 혀 전체를 조금 올림)
+  10: { T06_Tongue_Tip_Up: 0.6, T01_Tongue_Up: 0.3, tongueOut: 0.1 },
 
   // 12) 치경 전환 프레임 — 혀끝을 미리 올려 다음 조음으로 이어지게
-  12: { viseme_DD: 0.55, tongueOut: 0.12 },
+  12: { T06_Tongue_Tip_Up: 0.55, tongueOut: 0.12 },
 }
 
 /**
