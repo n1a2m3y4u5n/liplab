@@ -91,14 +91,16 @@ async def _unhandled_exception(request, exc):
 
 
 # 보안 응답 헤더(§4.9) — 다운그레이드·MIME 스니핑·클릭재킹·레퍼러 유출 방어.
-# CSP는 이 앱이 SPA(index.html·/assets·MediaPipe CDN·모델)를 함께 서빙하므로 잘못 좁히면
-# 앱이 깨진다 → 별도 정책 수립·검증 전까지는 넣지 않는다(안전 헤더만 우선 적용).
+# 자원 로딩을 제한하는 script/style/connect-src 류 CSP는 이 앱이 SPA(/assets·MediaPipe CDN·모델)를
+# 함께 서빙해 잘못 좁히면 깨진다 → 정책 수립·검증 전까지 보류. 다만 자원 로딩에 영향 없는
+# 안전한 지시어(object/frame-ancestors/base-uri)는 지금 적용해 클릭재킹·플러그인·base 하이재킹을 막는다.
 @app.middleware("http")
 async def _security_headers(request, call_next):
     resp = await call_next(request)
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    resp.headers.setdefault("Content-Security-Policy", "object-src 'none'; frame-ancestors 'self'; base-uri 'self'")
     # HSTS는 HTTPS에서만 의미(브라우저가 http에선 무시). fly는 force_https라 실서비스에서 적용됨.
     resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
     return resp
@@ -281,6 +283,7 @@ from typing import List, Optional
 
 class ProfileUpdateReq(BaseModel):
     username: Optional[str] = None
+    email: Optional[str] = None
 
 
 class PasswordChangeReq(BaseModel):
@@ -291,23 +294,35 @@ class PasswordChangeReq(BaseModel):
 @app.patch("/api/account/profile", dependencies=[Depends(ratelimit.rate_limit(10, 60, "account"))])
 async def account_update_profile(req: ProfileUpdateReq,
                                  current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """개인정보 정정권(§4.9) — 표시 이름(username)을 수정한다. 공용 데모 계정은 수정 불가."""
+    """개인정보 정정권(§4.9) — 표시 이름(username)·이메일을 수정한다. 공용 데모 계정은 수정 불가."""
     if (current_user.email or "").lower() == _DEMO_EMAIL:
         raise HTTPException(status_code=403, detail="공용 데모 계정은 수정할 수 없습니다.")
+    from sqlalchemy import select as _select
+    from database import User as _User
     if req.username is not None:
         name = _sanitize_text(req.username, 100).strip()
         if not (1 <= len(name) <= 100):
             raise HTTPException(status_code=400, detail="이름은 1~100자여야 합니다.")
-        from sqlalchemy import select as _select
-        from database import User as _User
         dup = (await db.execute(_select(_User).where(_User.username == name,
                                                      _User.id != current_user.id))).scalar_one_or_none()
         if dup:
             raise HTTPException(status_code=409, detail="이미 사용 중인 이름입니다.")
         current_user.username = name
+    if req.email is not None:
+        import re as _re
+        from sqlalchemy import func as _func
+        email = _sanitize_text(req.email, 200).strip().lower()
+        # 간단한 형식 검증(정정권 대응) — 대소문자 무시, 유일성 보장.
+        if not _re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            raise HTTPException(status_code=400, detail="이메일 형식이 올바르지 않습니다.")
+        dupe = (await db.execute(_select(_User).where(_func.lower(_User.email) == email,
+                                                      _User.id != current_user.id))).scalar_one_or_none()
+        if dupe:
+            raise HTTPException(status_code=409, detail="이미 사용 중인 이메일입니다.")
+        current_user.email = email
     await db.commit()
     await db.refresh(current_user)
-    return {"ok": True, "username": current_user.username}
+    return {"ok": True, "username": current_user.username, "email": current_user.email}
 
 
 @app.post("/api/account/password", dependencies=[Depends(ratelimit.rate_limit(5, 60, "account"))])

@@ -15,6 +15,7 @@ export default function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [agree, setAgree] = useState(false)
+  const [guardianOk, setGuardianOk] = useState(false)  // 만 14세 미만 보호자 동의(§4.9 미성년 보호)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
@@ -111,16 +112,28 @@ export default function Login() {
             )}
 
             {mode === 'signup' && (
-              <label className="flex items-center gap-2.5">
-                <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)}
-                  className="h-5 w-5 shrink-0 rounded-[6px] border-2 border-line accent-primary-500" />
-                <span className="text-[13.5px] text-ink-muted">이용약관 및 개인정보 처리방침에 동의해요</span>
-              </label>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2.5">
+                  <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)}
+                    className="h-5 w-5 shrink-0 rounded-[6px] border-2 border-line accent-primary-500" />
+                  <span className="text-[13.5px] text-ink-muted">
+                    <a href="/terms" target="_blank" rel="noreferrer" className="font-bold text-primary-500 hover:underline">이용약관</a>
+                    {' 및 '}
+                    <a href="/privacy" target="_blank" rel="noreferrer" className="font-bold text-primary-500 hover:underline">개인정보 처리방침</a>
+                    에 동의해요
+                  </span>
+                </label>
+                <label className="flex items-center gap-2.5">
+                  <input type="checkbox" checked={guardianOk} onChange={(e) => setGuardianOk(e.target.checked)}
+                    className="h-5 w-5 shrink-0 rounded-[6px] border-2 border-line accent-primary-500" />
+                  <span className="text-[13.5px] text-ink-muted">만 14세 이상이거나 보호자 동의를 받았어요</span>
+                </label>
+              </div>
             )}
 
             {err && <p className="text-[13px] font-bold text-rose-500">{err}</p>}
 
-            <button type="submit" disabled={busy || (mode === 'signup' && !agree)} className="btn-primary w-full !py-[17px] text-[17px]">
+            <button type="submit" disabled={busy || (mode === 'signup' && (!agree || !guardianOk))} className="btn-primary w-full !py-[17px] text-[17px]">
               {busy ? '…' : mode === 'login' ? '로그인' : '회원가입'}
             </button>
           </form>
