@@ -161,8 +161,10 @@ frontend/src/
 ### 3D 모션 파이프라인 현황 (개선 대상)
 
 - 백엔드 `engine.py`: 한글 → viseme 프레임(`viseme`, `duration_ms`, `transition_ms`) + 동시조음 전환 프레임(11~13).
-- 프론트 `AvatarVRM.jsx`: 단일 GLB(`/models/realistic_face.glb`), ARKit 블렌드셰이프를
-  `useFrame`에서 **고정 속도**(`delta*22`)로 lerp. 카메라는 입 클로즈업 정면 고정.
+- 프론트 `AvatarVRM.jsx`: 단일 GLB(`/models/realistic_face.glb` — 2026-09-21부터 Character Creator 두상,
+  ARKit 52종 + CC 혀 모프), ARKit 블렌드셰이프를 `useFrame`에서 **고정 속도**(`delta*22`)로 lerp.
+  이 모델은 `jawOpen` 모프가 피부를 안 움직여 **턱 뼈(`CC_Base_JawRoot`) 회전**으로 벌림을 만든다.
+  카메라는 입 클로즈업 정면 고정.
 - `LipSyncPlayer3D.jsx`: `setTimeout`으로 프레임 스테핑(속도·프레임 이동·리플레이 지원).
 
 ### 트랙 1: 3D 모션 개선 (구현 순서 **A → B → F → D**)

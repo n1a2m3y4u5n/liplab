@@ -1751,6 +1751,30 @@ import). 앵커를 잰 방식과 합격을 판정한 방식이 어긋나면 두 
 검증: 시드 10시행에서 baseline 33.3%→recent 100%(+66.7%p), 2단계 숙달(10/6회), same_viseme 1.0 확인. 프론트 빌드 통과.
 **변경 파일(M).** `backend/main.py`, `frontend/src/api.js`·`App.jsx`·`pages/EvalReport.jsx`·`components/GlobalLearningMenu.jsx`.
 
+## N. 3D 입모양 모델 교체 — Character Creator 두상 (2026-09-21)
+`realistic_face.glb`를 CC(Character Creator) 기반 새 두상으로 교체했다. ARKit 52종이 얼굴 메시에 전부 있고
+CC 고유 비심(V_*)·혀 모프(T01~T11)·정상 스켈레톤(턱 뼈)까지 갖췄다. 3.3MB(복구 후 2.5MB), meshopt 압축.
+- **파일 복구부터.** 받은 GLB는 `EXT_meshopt_compression` 스트림 오프셋이 **전부 768,448바이트 어긋나** 있어
+  어떤 로더에서도 `Malformed buffer data: -1`로 죽었다(BIN 안에 이미지 블록이 두 번 들어간 내보내기 오류 —
+  generator `pygltflib`). 헤더 바이트 상관분석으로 어긋난 양을 찾아 오프셋을 바로잡고 중복 블록을 제거,
+  1,725개 스트림 전부 디코딩되는 것을 node로 확인했다(`scripts/repair_meshopt_glb.py`).
+  **내보내기 파이프라인 쪽을 고쳐야 재발하지 않는다.**
+- **AvatarVRM.jsx.** 카메라·궤도 타깃을 새 모델의 입 높이(y 1.652, 실측)로 옮겼다. 이 모델은 ARKit `jawOpen`
+  **모프가 피부를 거의 움직이지 않는다**(실측 −0.5mm; `Mouth_Open`·`V_Open`도 마찬가지). 벌림은 턱 뼈
+  `CC_Base_JawRoot`가 담당하고(로컬 Z축 +20°에 아랫입술 −1.1cm·턱 −1.9cm, 아래 이·혀가 함께 돈다)
+  → `jawOpen` 가중치(0~1)를 뼈 회전(최대 30°)으로 옮긴다. 음성구동(A4)·웹캠 미러 프레임도 같은 경로를 탄다.
+  뼈가 없는 모델이면 모프만 적용해 하위호환.
+- **visemeShapes.js.** 혀 매핑을 CC 혀 모프로 재작성 — 각 모프 1.0에서 혀끝/혀뒤가 움직인 거리를 실측해
+  `T06_Tongue_Tip_Up`(치경) · `T10/T11_Tongue_Bulge`+`V_Tongue_Curl_D`(연구개) · `T01_Tongue_Up`(경구개 보조)를
+  골랐다. 입술 매핑(ARKit)은 손대지 않았다. 헤더 주석을 새 모델 기준으로 갱신.
+- **sw.js.** 캐시 이름 `liplab-v2` — 같은 URL의 구 모델이 stale-while-revalidate로 살아남지 않게.
+검증: 비심 1·2·3·4·5·6·7·9·10 정면 렌더 + 투명 두상(이·혀) 육안 확인. 파싱 0.1초, 첫 렌더 약 2.4초
+(RTX 3060 — 셰이더 컴파일 0.7초 + 모프 텍스처 패킹 1.6초). 프론트 빌드 통과.
+남은 것: 모프타깃 슬롯 825개 중 실사용은 약 330개(ARKit 52 + 혀). 파이프라인에서 미사용 CC 표정·EO/TL
+슬라이더를 걷어내면 첫 렌더 시간과 저사양 기기 부담이 절반으로 준다.
+**변경 파일(N).** `frontend/public/models/realistic_face.glb`, `frontend/src/components/AvatarVRM.jsx`,
+`frontend/src/lib/visemeShapes.js`, `frontend/public/sw.js`, `scripts/repair_meshopt_glb.py`(신규), `CLAUDE.md`·`AGENTS.md`(모델 설명).
+
 ## 배포 — 디벨롭/스테이징 분리
 전시용 앱 `liplab.fly.dev`(절대 미변경)와 별개로, **develop 배포 전용** `liplab-dev.fly.dev`(fly 앱 `liplab-dev`)를 신설.
 `fly.dev.toml`(app=liplab-dev, `LIPLAB_AI_ITEMS=0`=정적 커리큘럼, 자체 볼륨). 라이브 LLM 키 없이도
