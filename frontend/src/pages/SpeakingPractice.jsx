@@ -163,19 +163,6 @@ export default function SpeakingPractice() {
     return Math.max(0, Math.min(1, sum / targetVis.length))
   }
 
-  // 들어보기 — 브라우저 음성 합성(ko-KR)으로 목표 단어 읽어주기(잔존청력·멀티모달 보조)
-  const speakTarget = () => {
-    if (!target) return
-    try {
-      const synth = window.speechSynthesis
-      if (!synth) return
-      synth.cancel()
-      const u = new SpeechSynthesisUtterance(target)
-      u.lang = 'ko-KR'; u.rate = 0.85
-      synth.speak(u)
-    } catch { /* noop */ }
-  }
-
   useEffect(() => {
     let cancelled = false
     framesRequestRef.current += 1
@@ -504,13 +491,9 @@ export default function SpeakingPractice() {
               <p className="text-[28px] font-bold tracking-[-0.7px] text-[#1a1a2e] leading-tight">{heading}</p>
             </div>
 
-            {/* Target word — 핑크 카드 + 들어보기 */}
-            <div className="flex items-center justify-between rounded-[18px] bg-[#ffe4e9] pl-[28px] pr-[20px] py-[20px]">
+            {/* Target word — 핑크 카드(가운데 정렬). 들어보기 버튼 없음(§3.4 청각장애 대상) */}
+            <div className="flex items-center justify-center rounded-[18px] bg-[#ffe4e9] px-[24px] py-[20px]">
               <p className="text-[38px] font-bold tracking-[-0.76px] text-[#be185d] leading-none">{target || '…'}</p>
-              <button onClick={speakTarget} className="shrink-0 flex items-center gap-[8px] rounded-[12px] bg-white pl-[18px] pr-[20px] py-[12px] transition-transform hover:scale-[1.03] active:scale-95">
-                <img src={IC.speaker} alt="" className="w-[17px] h-[14px]" />
-                <span className="text-[15px] font-bold text-[#be185d]">들어보기</span>
-              </button>
             </div>
 
             {err && !exitError && (
