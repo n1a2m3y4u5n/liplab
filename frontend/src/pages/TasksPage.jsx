@@ -32,36 +32,94 @@ function TaskRow({ label, cur, total, xp }) {
   )
 }
 
+// desc: 배지 획득 조건 한 줄 설명, percent: 전체 사용자 중 획득 비율(게이미피케이션 카피)
+// 정확도 90% 배지의 desc/percent는 Figma 313:33 확정값. 나머지는 라벨에 맞춰 작성.
 const BADGES = [
-  { label: '첫 걸음', icon: '/ui/medal-0.svg', earned: true },
-  { label: '7일 연속', icon: '/ui/medal-1.svg', earned: true },
-  { label: '입모양 마스터', icon: '/ui/medal-2.svg', earned: true },
-  { label: '정확도 90%', shape: 'check', earned: true },
-  { label: '100문제 돌파', icon: '/ui/medal-3.svg', earned: true },
-  { label: '복습왕', icon: '/ui/medal-4.svg', earned: true },
-  { label: '자유 발화', icon: '/ui/medal-5.svg', earned: true },
-  { label: '수어 탐험', icon: '/ui/medal-6.svg', earned: false },
-  { label: '30일 연속', icon: '/ui/medal-7.svg', earned: false },
-  { label: '새벽 학습', icon: '/ui/medal-8.svg', earned: false },
-  { label: '완주', icon: '/ui/medal-9.svg', earned: false },
-  { label: '레벨 5', shape: 'lock', earned: false },
+  { label: '첫 걸음', icon: '/ui/medal-0.svg', earned: true, desc: '첫 학습을 마치고 여정을 시작하기', percent: 63 },
+  { label: '7일 연속', icon: '/ui/medal-1.svg', earned: true, desc: '이레 동안 하루도 빠짐없이 학습하기', percent: 34 },
+  { label: '입모양 마스터', icon: '/ui/medal-2.svg', earned: true, desc: '모든 입모양 그룹을 완벽하게 익히기', percent: 21 },
+  { label: '정확도 90%', shape: 'check', earned: true, desc: '한 레슨에서 정확도 90% 이상을 달성하기', percent: 8 },
+  { label: '100문제 돌파', icon: '/ui/medal-3.svg', earned: true, desc: '누적 100문제를 풀어내기', percent: 47 },
+  { label: '복습왕', icon: '/ui/medal-4.svg', earned: true, desc: '예정된 복습을 미루지 않고 모두 끝내기', percent: 26 },
+  { label: '자유 발화', icon: '/ui/medal-5.svg', earned: true, desc: '대화 실전 단계에서 자유롭게 말해보기', percent: 15 },
+  { label: '수어 탐험', icon: '/ui/medal-6.svg', earned: false, desc: '한국수어 학습을 처음으로 경험하기', percent: 52 },
+  { label: '30일 연속', icon: '/ui/medal-7.svg', earned: false, desc: '한 달 내내 학습 스트릭을 이어가기', percent: 6 },
+  { label: '새벽 학습', icon: '/ui/medal-8.svg', earned: false, desc: '새벽 시간에 학습을 완료하기', percent: 11 },
+  { label: '완주', icon: '/ui/medal-9.svg', earned: false, desc: '전체 커리큘럼을 끝까지 마치기', percent: 4 },
+  { label: '레벨 5', shape: 'lock', earned: false, desc: '학습을 반복해 레벨 5에 도달하기', percent: 13 },
 ]
 
-function Badge({ b }) {
+/** 배지 아이콘 그래픽(그리드·모달 공용). px로 크기를 받아 medal 이미지 또는 check/lock 도형을 렌더. */
+function BadgeMedal({ b, px }) {
+  const box = { height: px, width: px }
+  if (b.icon) return <img src={b.icon} alt="" style={box} />
+  if (b.shape === 'check') {
+    return (
+      <span className="flex items-center justify-center rounded-full bg-emerald-100" style={box}>
+        <span className="rotate-45 rounded-sm bg-emerald-500"
+          style={{ height: px * 0.36, width: px * 0.36, clipPath: 'polygon(40% 100%, 0 60%, 15% 45%, 40% 70%, 85% 15%, 100% 30%)' }} />
+      </span>
+    )
+  }
   return (
-    <div className={`flex flex-col items-center gap-2 ${b.earned ? '' : 'opacity-50'}`}>
-      {b.icon ? (
-        <img src={b.icon} alt="" className="h-14 w-14" />
-      ) : b.shape === 'check' ? (
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
-          <span className="h-5 w-5 rotate-45 rounded-sm bg-emerald-500" style={{ clipPath: 'polygon(40% 100%, 0 60%, 15% 45%, 40% 70%, 85% 15%, 100% 30%)' }} />
-        </span>
-      ) : (
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
-          <span className="h-6 w-6 rounded-md bg-gray-300" />
-        </span>
-      )}
+    <span className="flex items-center justify-center rounded-full bg-gray-100" style={box}>
+      <span className="rounded-md bg-gray-300" style={{ height: px * 0.43, width: px * 0.43 }} />
+    </span>
+  )
+}
+
+function Badge({ b, onSelect }) {
+  return (
+    <button type="button" onClick={() => onSelect(b)}
+      className={`flex flex-col items-center gap-2 rounded-2xl outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary-400 ${b.earned ? '' : 'opacity-50'}`}>
+      <BadgeMedal b={b} px={56} />
       <span className="text-center text-[11.5px] font-bold text-ink">{b.label}</span>
+    </button>
+  )
+}
+
+/**
+ * 배지 상세 모달 (Figma 313:33) — §3.5 예외: 흰 카드 없이 배경 블러 위에 배지를 크게 띄운다.
+ * 공용 Modal.jsx(흰 카드+X) 재사용 금지. 전용 오버레이 + 중앙 세로 스택.
+ * 배경 클릭·ESC로 닫힘.
+ */
+function BadgeDetailModal({ badge, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+  if (!badge) return null
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0d081c]/80 p-6 backdrop-blur-[9px]"
+      onClick={onClose} role="dialog" aria-modal="true" aria-label={badge.label}>
+      <div className="flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+        {/* 글로우 데코(배지 없음) 뒤 + 배지 중앙 */}
+        <div className="relative flex items-center justify-center" style={{ height: 200, width: 200 }}>
+          <img src="/ui/lp-313-33-glow-ring.svg" alt="" aria-hidden="true"
+            className="pointer-events-none absolute inset-0 h-full w-full" />
+          <div className={`relative z-10 ${badge.earned ? '' : 'opacity-60'}`}>
+            <BadgeMedal b={badge} px={92} />
+          </div>
+        </div>
+
+        {/* 제목·부제·희귀도 칩 */}
+        <div className="mt-6 flex flex-col items-center gap-2.5">
+          <h2 className="text-center text-[32px] font-bold tracking-[-0.64px] text-white">{badge.label}</h2>
+          <p className="max-w-[320px] text-center text-[15px] font-normal text-white opacity-70">{badge.desc}</p>
+          <span className="rounded-full border-[1.5px] border-white/20 bg-white/[0.12] px-[18px] py-[9px]">
+            <span className="text-[15px] text-white">전체 사용자 중 </span>
+            <span className="text-[18px] font-bold text-[#6ee7b7]">{badge.percent}%</span>
+            <span className="text-[15px] text-white">가 획득했어요</span>
+          </span>
+        </div>
+
+        {/* 닫기 */}
+        <button type="button" onClick={onClose}
+          className="mt-8 w-[220px] rounded-[14px] border-2 border-b-[5px] border-[#d4d4de] bg-white py-[15px] text-[17px] font-bold text-[#1a1a2e]">
+          닫기
+        </button>
+      </div>
     </div>
   )
 }
@@ -70,6 +128,7 @@ export default function TasksPage() {
   const navigate = useNavigate()
   const user = useStore((s) => s.user)
   const [due, setDue] = useState(null)
+  const [selectedBadge, setSelectedBadge] = useState(null)
   useEffect(() => {
     reviewAPI.getDue().then((d) => setDue((d.items || []).length)).catch(() => setDue(0))
   }, [])
@@ -117,9 +176,11 @@ export default function TasksPage() {
           <span className="text-[13px] text-ink-muted">{earned} / {BADGES.length}개 획득</span>
         </div>
         <div className="mt-4 grid grid-cols-4 gap-y-5 sm:grid-cols-6">
-          {BADGES.map((b) => <Badge key={b.label} b={b} />)}
+          {BADGES.map((b) => <Badge key={b.label} b={b} onSelect={setSelectedBadge} />)}
         </div>
       </section>
+
+      <BadgeDetailModal badge={selectedBadge} onClose={() => setSelectedBadge(null)} />
     </AppShell>
   )
 }

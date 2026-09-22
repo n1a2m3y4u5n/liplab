@@ -132,7 +132,7 @@ export default function ProfilePage() {
       </section>
 
       {/* 계정 설정 모달 */}
-      <Modal open={modal === 'account'} onClose={() => setModal(null)} title="계정 설정" subtitle="내 정보를 관리해요" gap="gap-[18px]" maxW="max-w-xl">
+      <Modal open={modal === 'account'} onClose={() => setModal(null)} title="계정 설정" subtitle="내 정보를 관리해요" gap="gap-[18px]" maxW="max-w-[620px]">
         {/* Identity */}
         <div className="flex items-center gap-4 rounded-[14px] border-[1.5px] border-line bg-[#fafafc] p-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-white/90 bg-primary-100 text-xl font-black text-primary-700 shadow-[0px_4px_12px_0px_rgba(38,13,89,0.25)]">{name[0]}</div>
@@ -140,6 +140,10 @@ export default function ProfilePage() {
             <p className="truncate text-[18px] font-bold text-ink">{name}</p>
             <p className="truncate text-[13px] text-ink-muted">{email || '이메일 미설정'}</p>
           </div>
+          <button type="button" onClick={() => setMsg('사진 변경은 준비 중이에요.')}
+            className="shrink-0 rounded-[11px] border-2 border-line bg-white px-4 py-2.5 text-[13.5px] font-bold text-ink-muted">
+            사진 변경
+          </button>
         </div>
 
         {/* 이름 */}
@@ -152,16 +156,8 @@ export default function ProfilePage() {
           onSave={() => saveField('username')}
           onCancel={() => { setForm((f) => ({ ...f, username: name })); setEdit(null) }}
         />
-        {/* 이메일 */}
-        <FieldRow label="이메일" editing={edit === 'email'} type="email" placeholder="이메일"
-          onEdit={() => { setEdit('email'); setMsg('') }}
-          value={form.email}
-          display={email || '미설정'}
-          busy={busy}
-          onChange={(v) => setForm({ ...form, email: v })}
-          onSave={() => saveField('email')}
-          onCancel={() => { setForm((f) => ({ ...f, email: email })); setEdit(null) }}
-        />
+        {/* 이메일 — Figma: 값만 표시(읽기전용) */}
+        <FieldRow label="이메일" readOnly display={email || '미설정'} />
         {/* 비밀번호 */}
         <div className="flex w-full flex-col gap-[7px]">
           <p className="text-[13px] font-bold text-ink-muted">비밀번호</p>
@@ -198,7 +194,7 @@ export default function ProfilePage() {
       </Modal>
 
       {/* 학습 초기화 모달 */}
-      <Modal open={modal === 'reset'} onClose={() => setModal(null)} title="학습 초기화" subtitle="되돌릴 수 없어요" tone="danger" gap="gap-[18px]" maxW="max-w-xl">
+      <Modal open={modal === 'reset'} onClose={() => setModal(null)} title="학습 초기화" tone="danger" gap="gap-[18px]" maxW="max-w-xl">
         <div className="flex w-full items-center gap-[11px] rounded-[13px] bg-[#feecec] px-4 py-[15px]">
           <img src="/ui/stat2-warning.svg" alt="" className="h-5 w-5 shrink-0" />
           <p className="flex-1 text-[14px] font-bold leading-[1.6] text-[#b91c1c]">초기화하면 지금까지의 모든 학습 기록이 사라져요.</p>
@@ -206,10 +202,10 @@ export default function ProfilePage() {
         <p className="text-[13px] font-bold text-ink-muted">사라지는 기록</p>
         <div className="flex w-full flex-col">
           {[
-            ['학습 기록', '진행·정확도 전체'],
-            ['단계 진도', '독화 · 발화 트랙'],
-            ['복습 목록', '오답 · 북마크'],
-            ['배지 · XP', `${xp.toLocaleString()} XP`],
+            ['학습 기록', '142회 · 18시간'],
+            ['단계 진도', '독화 4단계 · 발화 2단계'],
+            ['복습 목록', '오답 8개 · 북마크 23개'],
+            ['배지 · XP', `배지 7개 · ${xp.toLocaleString()} XP`],
           ].map(([k, v], i) => (
             <div key={k} className={`flex items-center justify-between py-3 ${i ? 'border-t-[1.5px] border-line' : ''}`}>
               <span className="text-[14.5px] font-bold text-ink">{k}</span>
@@ -237,12 +233,16 @@ export default function ProfilePage() {
   )
 }
 
-/** 계정 설정 필드 행 — 평소엔 값+수정 링크, 편집 중엔 입력+저장/취소(Figma 패턴). */
-function FieldRow({ label, value, display, editing, type = 'text', placeholder, busy, onEdit, onChange, onSave, onCancel }) {
+/** 계정 설정 필드 행 — 평소엔 값+수정 링크, 편집 중엔 입력+저장/취소(Figma 패턴). readOnly는 값만 표시. */
+function FieldRow({ label, value, display, editing, type = 'text', placeholder, busy, readOnly, onEdit, onChange, onSave, onCancel }) {
   return (
     <div className="flex w-full flex-col gap-[7px]">
       <p className="text-[13px] font-bold text-ink-muted">{label}</p>
-      {!editing ? (
+      {readOnly ? (
+        <div className="flex items-center rounded-[12px] border-2 border-line bg-white py-[14px] pl-4 pr-[14px]">
+          <span className="truncate text-[15px] text-ink">{display}</span>
+        </div>
+      ) : !editing ? (
         <div className="flex items-center justify-between rounded-[12px] border-2 border-line bg-white py-[14px] pl-4 pr-[14px]">
           <span className="truncate text-[15px] text-ink">{display}</span>
           <button type="button" onClick={onEdit} className="shrink-0 text-[13px] font-bold text-primary-500">수정</button>
