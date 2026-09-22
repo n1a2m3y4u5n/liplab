@@ -4,46 +4,45 @@ import AppShell from '../components/AppShell'
 import { curriculumAPI } from '../api'
 
 /**
- * 학습 탭 — 커리큘럼 경로 (Figma 리디자인 node 58:11, 데스크톱 1440 기준 픽셀 이식).
- * Duolingo식 세로 단계 경로. 노드 SVG는 Figma export(/ui/node-*.svg)를 그대로 사용.
+ * 학습 탭 — 커리큘럼 경로 (Figma node 58:11, 데스크톱 1440 기준 픽셀 이식).
+ * 경로 노드는 DOKA 마스코트(완료/현재/잠김) — Figma export(/ui/node-*.svg) 그대로.
  * 실 데이터: curriculumAPI.getStages()의 단계별 status(mastered/in_progress/unlocked/locked) + attempts.
- * 완료=보라 체크, 현재=별+링+상세카드(진행률·이어서 학습하기), 잠김=회색 별. 기존 학습 라우트로 이동.
  */
-// 문장 단계는 시나리오 선택(ScenarioHub)을 거쳐야 currentScenario가 세팅된 뒤 /practice 레슨이 뜬다.
-// 바로 /practice로 보내면 시나리오가 없어 Practice가 되돌려보내므로 /learn/scenario로 진입한다.
+// 문장 단계는 시나리오 선택(ScenarioHub)을 거쳐 currentScenario를 세팅한 뒤 /practice로 진입한다.
 const STAGE_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/learn/scenario', conversation: '/conversation' }
-const STAGE_DESC = {
-  viseme: '입모양(비심) 10개 그룹을 눈으로 익혀요.',
-  word: '자음과 모음이 만나 한 글자가 될 때 입모양이 어떻게 바뀌는지 익혀요. 「가·나·다」처럼 기본 조합을 다룹니다.',
-  sentence: '상황별 문장을 읽고 따라 말해요.',
-  conversation: '여러 상황의 실전 대화를 독화해요.',
-}
 // 단계별 숙달 최소 시도수 — 진행률 표시의 분모(main.py _STAGEn_MIN_ATTEMPTS와 정합).
 const STAGE_TOTAL = { viseme: 15, word: 12, sentence: 10, conversation: 8 }
 
-// Figma "Button / Primary" — 3D 하단테두리(brand/primary-dark) 스타일. index.css btn-primary는 flat이라 인라인 적용.
+// Figma "Button / Primary" (75:23) — 3D 하단테두리(brand + brand-dark).
 const BTN_3D =
   'flex w-full items-center justify-center rounded-[16px] border-2 border-b-[6px] border-primary-700 bg-primary-500 py-[18px] text-[20px] font-bold tracking-[-0.2px] text-white transition hover:bg-primary-600 active:translate-y-[2px] active:border-b-2 disabled:opacity-50'
 
-// 노드 — Figma export SVG(76px). 현재 노드는 94px 링(opacity 0.45)을 뒤에 겹친다.
+/** DOKA 노드 — 76px 슬롯에 SVG가 오버플로(inset -7% -12% -17% -12% → 124% 폭)로 얹힌다. */
 function Node({ status }) {
-  if (status === 'mastered') return <img src="/ui/node-done.svg" alt="" className="h-[76px] w-[76px]" />
-  if (status === 'current') return (
-    <span className="relative flex h-[76px] w-[76px] items-center justify-center">
-      <img src="/ui/node-ring.svg" alt="" className="pointer-events-none absolute h-[94px] w-[94px] max-w-none" />
-      <img src="/ui/node-current.svg" alt="" className="relative h-[76px] w-[76px]" />
+  if (status === 'mastered') return (
+    <span className="relative block size-[76px]">
+      <img src="/ui/node-done.svg" alt="" className="absolute max-w-none" style={{ top: '-7%', left: '-12%', width: '124%', height: '124%' }} />
+      <img src="/ui/node-check-badge.svg" alt="" className="absolute size-[24px]" style={{ left: '55px', top: '54px' }} />
     </span>
   )
-  return <img src="/ui/node-locked.svg" alt="" className="h-[76px] w-[76px]" />
+  if (status === 'current') return (
+    <span className="relative flex size-[87.4px] items-center justify-center">
+      <img src="/ui/node-ring.svg" alt="" className="pointer-events-none absolute size-[109px] max-w-none" />
+      <img src="/ui/node-current.svg" alt="" className="absolute max-w-none" style={{ top: '-7%', left: '-12%', width: '124%', height: '124%' }} />
+    </span>
+  )
+  return (
+    <span className="relative block size-[76px]">
+      <img src="/ui/node-locked.svg" alt="" className="absolute max-w-none" style={{ top: '-7%', left: '-12%', width: '124%', height: '124%' }} />
+    </span>
+  )
 }
 
-function NavArrow({ dir, onClick, disabled, className = '' }) {
+function StageArrow({ dir, onClick, disabled, className = '' }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled} aria-label={dir === 'prev' ? '이전 단계' : '다음 단계'}
-      className={`hidden h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-white shadow-[0_4px_10px_-3px_rgba(26,13,64,0.15)] transition sm:flex ${disabled ? 'opacity-30' : 'hover:border-primary-300 active:scale-95'} ${className}`}>
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="#7d53de" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d={dir === 'prev' ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'} />
-      </svg>
+      className={`hidden size-11 shrink-0 items-center justify-center transition sm:flex ${disabled ? 'opacity-30' : 'hover:opacity-80 active:scale-95'} ${className}`}>
+      <img src={dir === 'prev' ? '/ui/stage-arrow-prev.svg' : '/ui/stage-arrow-next.svg'} alt="" className="size-[58px] max-w-none" />
     </button>
   )
 }
@@ -93,11 +92,17 @@ export default function CurriculumPath() {
             className="shrink-0 rounded-[12px] border-2 border-white/40 bg-white/[0.18] px-[18px] py-3 text-[14px] font-bold text-white transition hover:bg-white/30">가이드</button>
         </div>
 
-        {/* 경로 (Figma 61:18) — 데스크톱은 좌측 정렬 노드열 + 우측 상세카드, 모바일은 중앙 정렬 */}
+        {/* 경로 (Figma 61:18) */}
         {!stages ? (
           <p className="py-16 text-sm text-ink-muted">불러오는 중…</p>
         ) : (
-          <div className="relative flex w-full flex-col items-center sm:items-start sm:pl-[130px]">
+          <div className="relative flex w-full flex-col items-center py-2">
+            {/* 좌우 단계 이동 화살표 (Figma 145:18 / 145:20) — 경로 좌우 끝, 현재 노드 높이 */}
+            <StageArrow dir="prev" disabled={!prevRoute} onClick={() => prevRoute && navigate(prevRoute)}
+              className="absolute left-0 top-1/2 -translate-y-1/2" />
+            <StageArrow dir="next" disabled onClick={() => {}}
+              className="absolute right-0 top-1/2 -translate-y-1/2" />
+
             {learn.map((s, i) => {
               const st = nodeStatus(s, i)
               const clickable = st !== 'locked'
@@ -111,38 +116,27 @@ export default function CurriculumPath() {
                       <Node status={st} />
                     </button>
 
+                    {/* 상세 카드 (Figma 75:12) — 노드 오른쪽, 왼쪽 삼각 포인터. 설명 문구 없음 */}
                     {st === 'current' && (
-                      <>
-                        {/* 이전/다음 단계 화살표 (Figma 145:18 / 145:20) — 노드 기준 절대배치, 데스크톱만 */}
-                        <NavArrow dir="prev" disabled={!prevRoute} onClick={() => prevRoute && navigate(prevRoute)}
-                          className="absolute right-full top-1/2 -translate-y-1/2 !mr-[30px]" />
-                        <NavArrow dir="next" disabled onClick={() => {}}
-                          className="absolute left-[526px] top-1/2 -translate-y-1/2" />
-
-                        {/* 상세 카드 (Figma 75:12) — 노드 오른쪽, 왼쪽 삼각 포인터 */}
-                        <div className="absolute left-[104px] top-1/2 hidden w-[360px] max-w-[58vw] -translate-y-1/2 flex-col gap-[14px] rounded-[20px] border-2 border-line bg-white px-6 py-[22px] shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] sm:flex">
-                          <span className="absolute -left-2 top-1/2 h-4 w-4 -translate-y-1/2 rotate-45 border-b-2 border-l-2 border-line bg-white" />
-                          <p className="text-[22px] font-bold tracking-[-0.44px] text-ink">{s.title}</p>
-                          <p className="text-[14px] leading-[1.75] text-ink-muted">{STAGE_DESC[s.key]}</p>
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center justify-between text-[13px] font-bold">
-                              <span className="text-ink-muted">진행률</span>
-                              <span className="text-primary-500">{progCur} / {progTotal}</span>
-                            </div>
-                            <div className="h-[10px] overflow-hidden rounded-full bg-[#ededf3]">
-                              <div className="h-full rounded-full bg-primary-500" style={{ width: `${(progCur / progTotal) * 100}%` }} />
-                            </div>
+                      <div className="absolute left-full top-1/2 z-10 ml-[28px] hidden w-[360px] max-w-[52vw] -translate-y-1/2 flex-col gap-[14px] rounded-[20px] border-2 border-line bg-white px-6 py-[22px] shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] sm:flex">
+                        <span className="absolute -left-[9px] top-1/2 h-4 w-4 -translate-y-1/2 rotate-45 border-b-2 border-l-2 border-line bg-white" />
+                        <p className="text-[22px] font-bold tracking-[-0.44px] text-ink">{s.title}</p>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center justify-between text-[13px] font-bold">
+                            <span className="text-ink-muted">진행률</span>
+                            <span className="text-primary-500">{progCur} / {progTotal}</span>
                           </div>
-                          <button type="button" onClick={() => navigate(STAGE_ROUTE[s.key])} className={BTN_3D}>이어서 학습하기</button>
+                          <div className="h-[10px] overflow-hidden rounded-full bg-[#ededf3]">
+                            <div className="h-full rounded-full bg-primary-500" style={{ width: `${(progCur / progTotal) * 100}%` }} />
+                          </div>
                         </div>
-                      </>
+                        <button type="button" onClick={() => navigate(STAGE_ROUTE[s.key])} className={BTN_3D}>이어서 학습하기</button>
+                      </div>
                     )}
                   </div>
                 </div>
               )
             })}
-            {/* 마스코트 — 우하단 플로팅(데스크톱), Figma 61:35 rotate 6° */}
-            <img src="/ui/mascot.svg" alt="" className="pointer-events-none absolute bottom-4 right-4 hidden h-24 w-24 rotate-6 opacity-95 sm:block" />
           </div>
         )}
 
