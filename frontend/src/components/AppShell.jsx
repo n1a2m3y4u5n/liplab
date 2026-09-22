@@ -17,15 +17,21 @@ const NAV = [
   { key: 'profile', label: '프로필', to: '/profile', icon: '/ui/nav-profile.svg' },
 ]
 
-function Logo() {
+function Logo({ pink }) {
   return (
     <div className="flex items-center gap-2 px-2">
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: pink ? '#ffe4e9' : '#efe9fc' }}>
         <img src="/ui/mascot.svg" alt="" className="h-6 w-6" />
       </span>
-      <span className="font-display text-[30px] leading-none tracking-[-1.5px] text-primary-500">LIPLAB</span>
+      <span className="font-display text-[30px] leading-none tracking-[-1.5px]" style={{ color: pink ? '#ec4899' : '#7d53de' }}>LIPLAB</span>
     </div>
   )
+}
+
+/** 발화 트랙(학습 경로 ?track=speak)일 때만 셸을 분홍으로 테마링. */
+function useSpeakLearn() {
+  const location = useLocation()
+  return location.pathname.startsWith('/learn/path') && new URLSearchParams(location.search).get('track') === 'speak'
 }
 
 function StatPill({ icon, value, color, size = 18 }) {
@@ -55,7 +61,7 @@ function TaskItem({ label, cur, total }) {
 }
 
 /** 기본 우측 레일 (Figma) — 스탯 + 오늘의 과제 + 복습할 항목. */
-function DefaultRail() {
+function DefaultRail({ pink }) {
   const navigate = useNavigate()
   const user = useStore((s) => s.user)
   const statistics = useStore((s) => s.statistics)
@@ -84,7 +90,7 @@ function DefaultRail() {
       <div className="card-flat !border-2">
         <div className="flex items-center justify-between">
           <p className="text-[17px] font-bold text-ink">오늘의 과제</p>
-          <button type="button" onClick={() => navigate('/tasks')} className="text-[14px] font-bold text-primary-500">모두 보기</button>
+          <button type="button" onClick={() => navigate('/tasks')} className="text-[14px] font-bold" style={{ color: pink ? '#ec4899' : '#7d53de' }}>모두 보기</button>
         </div>
         <div className="mt-4 flex flex-col gap-4">
           <TaskItem label="오늘의 복습 정리" cur={due === 0 ? 1 : 0} total={1} />
@@ -99,7 +105,8 @@ function DefaultRail() {
           <span className="h-[18px] w-[1.5px] rounded-sm bg-line" />
           <p className="text-[17px] font-bold text-ink">북마크 <span className="text-[22px] text-[#2563eb]">{marks ?? '…'}</span><span className="text-[#2563eb]">개</span></p>
         </div>
-        <button type="button" onClick={() => navigate('/review')} className={`${BTN_3D} !py-[14px] !text-[17px]`}>
+        <button type="button" onClick={() => navigate('/review')} className={`${BTN_3D} !py-[14px] !text-[17px]`}
+          style={pink ? { background: '#ec4899', borderColor: '#be185d' } : undefined}>
           복습하기
         </button>
       </div>
@@ -108,7 +115,7 @@ function DefaultRail() {
 }
 
 /** 모바일 상단 바 (Figma 10) — 로고 + 컴팩트 스탯 + 아바타(프로필). lg 미만에서만. */
-function MobileTopBar() {
+function MobileTopBar({ pink }) {
   const navigate = useNavigate()
   const user = useStore((s) => s.user)
   const statistics = useStore((s) => s.statistics)
@@ -117,7 +124,7 @@ function MobileTopBar() {
   const streak = Math.max(0, user?.streak_count || 0)
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
-      <Logo />
+      <Logo pink={pink} />
       <div className="flex items-center gap-2.5">
         <StatPill icon="/ui/stat-streak.svg" value={streak} color="#b45309" />
         <StatPill icon="/ui/stat-xp.svg" value={xp.toLocaleString()} color="#5f3ab8" />
@@ -160,29 +167,34 @@ function MobileTabBar({ activeKey }) {
 export default function AppShell({ children, active, rightRail, title, description }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const speak = useSpeakLearn()
   const activeKey = active || NAV.find((n) => location.pathname.startsWith(n.to))?.key
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-white lg:flex-row lg:items-stretch">
       {/* 상단 바 (모바일) */}
-      <MobileTopBar />
+      <MobileTopBar pink={speak} />
 
       {/* 좌측 내비 (데스크톱) */}
       <nav className="hidden w-[256px] shrink-0 flex-col gap-2 border-r border-line bg-white px-4 pb-6 pt-7 lg:flex" aria-label="주 메뉴">
-        <Logo />
+        <Logo pink={speak} />
         <div className="h-5" />
-        {NAV.map((n) => (
-          <button
-            key={n.key}
-            type="button"
-            onClick={() => navigate(n.to)}
-            aria-current={activeKey === n.key ? 'page' : undefined}
-            className={`side-item border-2 border-transparent ${activeKey === n.key ? 'side-item-active !border-primary-500 !text-primary-500' : ''}`}
-          >
-            <img src={n.icon} alt="" className="h-6 w-6" />
-            {n.label}
-          </button>
-        ))}
+        {NAV.map((n) => {
+          const on = activeKey === n.key
+          return (
+            <button
+              key={n.key}
+              type="button"
+              onClick={() => navigate(n.to)}
+              aria-current={on ? 'page' : undefined}
+              className={`side-item border-2 border-transparent ${on ? 'side-item-active !border-primary-500 !text-primary-500' : ''}`}
+              style={on && speak ? { background: '#ffe4e9', borderColor: '#ec4899', color: '#ec4899' } : undefined}
+            >
+              <img src={n.icon} alt="" className="h-6 w-6" />
+              {n.label}
+            </button>
+          )
+        })}
       </nav>
 
       {/* 본문 */}
@@ -197,7 +209,7 @@ export default function AppShell({ children, active, rightRail, title, descripti
       </main>
 
       {/* 우측 레일 (데스크톱) */}
-      <aside className="hidden xl:flex">{rightRail || <DefaultRail />}</aside>
+      <aside className="hidden xl:flex">{rightRail || <DefaultRail pink={speak} />}</aside>
 
       {/* 하단 탭 바 (모바일) */}
       <MobileTabBar activeKey={activeKey} />
