@@ -10,7 +10,7 @@ import { curriculumAPI } from '../api'
 const TRACKS = [
   { key: 'perception', label: '독화', sub: '입모양 읽기', icon: '👁', route: '/learn/path',
     tint: 'bg-primary-100', border: 'border-primary-500', ring: 'ring-primary-200', text: 'text-primary-700' },
-  { key: 'language', label: '발화', sub: '소리 내어 말하기', icon: '🔊', route: '/learn/speaking',
+  { key: 'language', label: '발화', sub: '소리 내어 말하기', icon: '🔊', route: '/learn/path?track=speak',
     tint: 'bg-[#ffe4e9]', border: 'border-[#ec4899]', ring: 'ring-[#fbcfe8]', text: 'text-[#be185d]' },
 ]
 
