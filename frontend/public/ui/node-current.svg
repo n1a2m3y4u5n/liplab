@@ -1,6 +1,28 @@
-<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="76" height="76" viewBox="0 0 76 76" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="108.376" height="108.376" viewBox="0 0 108.376 108.376" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g id="Lesson node / &#237;&#152;&#132;&#236;&#158;&#172;">
-<path d="M0 38C0 17.0132 17.0132 0 38 0V0C58.9868 0 76 17.0132 76 38V38C76 58.9868 58.9868 76 38 76V76C17.0132 76 0 58.9868 0 38V38Z" fill="#7D53DE"/>
-<path id="Star" d="M38 20.5L42.2321 30.6751L53.2169 31.5557L44.8476 38.7249L47.4046 49.4443L38 43.7L28.5954 49.4443L31.1524 38.7249L22.7831 31.5557L33.7679 30.6751L38 20.5Z" fill="white"/>
+<g id="Body" filter="url(#filter0_d_0_20)">
+<path d="M10.488 48.07C10.488 24.9006 29.2705 6.118 52.44 6.118H59.432C80.6706 6.118 97.888 23.3353 97.888 44.574V49.818C97.888 73.9528 78.3229 93.518 54.188 93.518H50.692C28.488 93.518 10.488 75.5181 10.488 53.314V48.07Z" fill="url(#paint0_linear_0_20)"/>
 </g>
+<circle id="Eye" cx="43.263" cy="47.0868" r="6.82812" fill="#0F172A"/>
+<circle id="Eye_2" cx="65.113" cy="47.0868" r="6.82812" fill="#0F172A"/>
+<circle id="Cheek" cx="25.51" cy="52.5492" r="5.4625" fill="white" fill-opacity="0.4"/>
+<circle id="Cheek_2" cx="82.8663" cy="52.5492" r="5.4625" fill="white" fill-opacity="0.4"/>
+<path id="Smile" d="M42.471 64.9972C45.9862 76.7143 62.39 76.7143 65.9052 64.9972" stroke="white" stroke-opacity="0.9" stroke-width="5.32594" stroke-linecap="round"/>
+</g>
+<defs>
+<filter id="filter0_d_0_20" x="0" y="0" width="108.376" height="108.376" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4.37"/>
+<feGaussianBlur stdDeviation="5.244"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.18 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_20"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_20" result="shape"/>
+</filter>
+<linearGradient id="paint0_linear_0_20" x1="10.488" y1="6.118" x2="72.2985" y2="67.9285" gradientUnits="userSpaceOnUse">
+<stop stop-color="#C4B5FD"/>
+<stop offset="0.5" stop-color="#A78BFA"/>
+<stop offset="1" stop-color="#7D53DE"/>
+</linearGradient>
+</defs>
 </svg>

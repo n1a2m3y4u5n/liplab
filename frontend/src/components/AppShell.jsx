@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import useStore from '../store/useStore'
-import { reviewAPI } from '../api'
+import { reviewAPI, learningAPI } from '../api'
 
 /**
  * 앱 셸 (Figma 리디자인 05 기타탭 공통 골격) — 좌측 아이콘 내비 + 본문 + 우측 스탯 레일.
@@ -60,9 +60,11 @@ function DefaultRail() {
   const user = useStore((s) => s.user)
   const statistics = useStore((s) => s.statistics)
   const [due, setDue] = useState(null)
+  const [marks, setMarks] = useState(null)
   useEffect(() => {
     let on = true
     reviewAPI.getDue().then((d) => { if (on) setDue((d.items || []).length) }).catch(() => { if (on) setDue(0) })
+    learningAPI.getBookmarks('read').then((b) => { if (on) setMarks((Array.isArray(b) ? b : b.items || []).length) }).catch(() => { if (on) setMarks(0) })
     return () => { on = false }
   }, [])
   const level = Math.max(1, statistics?.current_level || user?.current_level || 1)
@@ -90,13 +92,15 @@ function DefaultRail() {
           <TaskItem label="학습 2회 채우기" cur={1} total={2} />
         </div>
       </div>
-      <div className="card-flat !border-2">
-        <p className="text-[17px] font-bold text-ink">복습할 항목</p>
-        <p className="mt-4 text-[14px] leading-[1.65] text-ink-muted">
-          오늘 다시 볼 오답이 <b className="text-[16px] text-primary-500">{due ?? '…'}개</b> 있어요.
-        </p>
-        <button type="button" onClick={() => navigate('/review')} className={`${BTN_3D} mt-4`}>
-          복습 시작하기
+      {/* 복습할 항목 (Figma 59:39 / 296:32) — 오답 N개 │ 북마크 N개 + 복습하기 */}
+      <div className="card-flat flex flex-col items-center gap-3.5 !border-2 !p-5">
+        <div className="flex items-baseline gap-3">
+          <p className="text-[17px] font-bold text-ink">오답 <span className="text-[22px] text-primary-500">{due ?? '…'}</span><span className="text-primary-500">개</span></p>
+          <span className="h-[18px] w-[1.5px] rounded-sm bg-line" />
+          <p className="text-[17px] font-bold text-ink">북마크 <span className="text-[22px] text-[#2563eb]">{marks ?? '…'}</span><span className="text-[#2563eb]">개</span></p>
+        </div>
+        <button type="button" onClick={() => navigate('/review')} className={`${BTN_3D} !py-[14px] !text-[17px]`}>
+          복습하기
         </button>
       </div>
     </div>
