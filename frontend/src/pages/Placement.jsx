@@ -30,9 +30,10 @@ export default function Placement() {
   const [submitting, setSubmitting] = useState(false)
   const [mode, setMode] = useState('placement')  // placement | A(사전) | B(사후) — 향상도검사(축 I)
   const [n, setN] = useState(8)  // 목표 문항 수(적응형 배치검사)
+  const [selected, setSelected] = useState(null)  // 현재 문항에서 고른 보기(다음 눌러 확정)
 
   const start = useCallback(async (m = mode) => {
-    setLoading(true); setResult(null); setResponses({}); setIdx(0)
+    setLoading(true); setResult(null); setResponses({}); setIdx(0); setSelected(null)
     try {
       if (m === 'placement') {
         // 적응형: 첫 문항만 받고, 정오답에 따라 다음 문항을 서버가 고른다(축 I).
@@ -88,7 +89,13 @@ export default function Placement() {
     }
   }
 
-  const switchMode = (m) => { setMode(m); start(m) }
+  // 보기 클릭은 선택(로컬 state)만, '다음'을 눌러야 기존 채점 로직(choose)으로 확정한다.
+  const confirm = async () => {
+    if (!selected || submitting || result) return
+    const chosen = selected
+    setSelected(null)
+    await choose(chosen)
+  }
 
   if (loading || !items) return <div className="p-8 text-center text-gray-400">검사를 준비하는 중…</div>
 
@@ -182,12 +189,11 @@ export default function Placement() {
   if (!it) return <div className="p-8 text-center text-gray-400">문항을 불러오지 못했어요. 다시 시도해 주세요.</div>
   const total = mode === 'placement' ? n : items.length
   return (
-    <div className="mx-auto flex min-h-[100dvh] max-w-[560px] flex-col gap-8 bg-[#f3f3f3] px-4 pb-10 pt-8 sm:px-6">
+    <div className="mx-auto flex min-h-[100dvh] max-w-[640px] flex-col gap-8 bg-[#f3f3f3] px-4 pb-32 pt-8 sm:px-6">
       {/* 진행 헤더 (Figma Progress header) */}
       <div className="flex items-center gap-[18px]">
-        <button type="button" onClick={() => navigate('/dashboard')} aria-label="나가기"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-ink-muted transition hover:text-ink">
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        <button type="button" onClick={() => navigate('/dashboard')} aria-label="나가기" className="shrink-0">
+          <img src="/ui/lp-91-12-close.svg" alt="" className="h-9 w-9" />
         </button>
         <div className="h-[14px] flex-1 overflow-hidden rounded-full bg-[#e4e4ec]">
           <div className="h-full rounded-full bg-primary-500 transition-all" style={{ width: `${(idx / total) * 100}%` }} />
@@ -195,21 +201,10 @@ export default function Placement() {
         <span className="shrink-0 text-[15px] font-bold text-ink-muted">{idx + 1} / {total}</span>
       </div>
 
-      {/* 모드 스위처 */}
-      <div className="-mt-3 flex gap-1 self-start rounded-[14px] bg-gray-100 p-1">
-        {['placement', 'A', 'B'].map((m) => (
-          <button key={m} onClick={() => switchMode(m)}
-            className={`rounded-[10px] px-4 py-2 text-[13px] font-bold transition ${mode === m ? 'bg-white text-primary-500 shadow-sm' : 'text-gray-400'}`}>
-            {MODE_LABEL[m]}
-          </button>
-        ))}
-      </div>
-
-      {/* 질문 (Figma Question) */}
-      <div className="flex flex-col gap-2.5">
-        <p className="text-[13px] font-bold text-primary-500">{mode === 'placement' ? '적응형 배치검사' : MODE_LABEL[mode]}</p>
-        <p className="text-[30px] font-bold tracking-[-0.75px] text-ink">이 입모양은 어떤 단어일까요?</p>
-        <p className="text-[15px] text-ink-muted">입모양을 보고 알맞은 단어를 골라주세요.</p>
+      {/* 질문 (Figma 385:82) */}
+      <div className="flex flex-col gap-2">
+        <p className="text-[13px] font-bold text-[#7d53de]">자가진단</p>
+        <p className="text-[30px] font-bold tracking-[-0.75px] text-[#1a1a2e]">이 입모양은 어떤 단어일까요?</p>
       </div>
 
       {/* 입모양 */}
@@ -217,17 +212,32 @@ export default function Placement() {
         <MouthAvatar frames={frames} />
       </div>
 
-      {/* 4지선다 (Figma Options 카드 스타일) */}
+      {/* 4지선다 — 선택(로컬)→다음 확정 */}
       <div className="flex flex-col gap-3">
-        {it.options.map((w, i) => (
-          <button key={w} disabled={submitting} onClick={() => choose(w)}
-            className="flex items-center gap-4 rounded-[16px] border-2 border-b-[5px] border-line bg-white p-5 text-left transition-all hover:border-primary-500 hover:bg-primary-100 active:scale-[0.99] disabled:opacity-60">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-[14px] font-bold text-ink-muted">{i + 1}</span>
-            <span className="flex-1 text-[20px] font-bold text-ink">{w}</span>
-          </button>
-        ))}
+        {it.options.map((w, i) => {
+          const on = selected === w
+          return (
+            <button key={w} type="button" disabled={submitting} onClick={() => setSelected(w)}
+              className={`flex items-center gap-4 rounded-[16px] border-2 border-b-[5px] px-5 py-4 text-left transition-all active:scale-[0.99] disabled:opacity-60 ${on ? 'border-[#7d53de] bg-[#efe9fc]' : 'border-[#e2e2e8] bg-white'}`}>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-[#ededf3] text-[13px] font-bold text-[#5a5a6e]">{i + 1}</span>
+              <span className="flex-1 text-[20px] font-bold text-[#1a1a2e]">{w}</span>
+            </button>
+          )
+        })}
       </div>
-      <p className="-mt-3 text-center text-xs text-gray-400">정답은 끝나면 결과로 알려드려요</p>
+
+      {/* 하단 고정 액션 바 (Figma 385:82) */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-line bg-white">
+        <div className="mx-auto flex max-w-[640px] items-center justify-between px-4 py-6 sm:px-6">
+          <p className="text-[15px] text-[#8a8a9b]">정답은 끝나면 결과로 알려드려요</p>
+          <button type="button" onClick={confirm} disabled={!selected || submitting}
+            className={`rounded-[14px] border-2 border-b-[5px] px-10 py-[15px] text-[17px] font-bold transition ${selected
+              ? 'border-[#5f3ab8] bg-[#7d53de] text-white'
+              : 'border-[#d2d2de] bg-[#e4e4ec] text-[#a0a0b0]'}`}>
+            다음
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
