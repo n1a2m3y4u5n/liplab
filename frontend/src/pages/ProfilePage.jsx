@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import Modal from '../components/Modal'
+import GuideModal from '../components/GuideModal'
 import useStore from '../store/useStore'
 import { accountAPI, learningAPI, curriculumAPI } from '../api'
 
@@ -41,6 +42,7 @@ export default function ProfilePage() {
   const logout = useStore((s) => s.logout)
   const updateUser = useStore((s) => s.updateUser)
   const [modal, setModal] = useState(null)     // 'account' | 'reset'
+  const [guideOpen, setGuideOpen] = useState(false)  // 사용법 가이드 모달
   const [busy, setBusy] = useState(false)
   const [form, setForm] = useState({ username: '', email: '', current: '', next: '' })
   const [edit, setEdit] = useState(null)        // 'username' | 'email' | null
@@ -125,7 +127,7 @@ export default function ProfilePage() {
 
       {/* 설정 */}
       <section className="card-flat w-full !p-0">
-        <MenuRow first title="사용법 가이드" sub="처음이라면 여기부터" onClick={() => navigate('/guide')} />
+        <MenuRow first title="사용법 가이드" sub="처음이라면 여기부터" onClick={() => setGuideOpen(true)} />
         <MenuRow title="자가진단 다시 하기" sub="지금 수준으로 단계 재추천" onClick={() => navigate('/learn/placement')} />
         <MenuRow title="계정 설정" sub="이름 · 이메일 · 비밀번호 · 로그아웃" onClick={openAccount} />
         <MenuRow danger title="학습 초기화" sub="기록을 모두 지우고 처음부터" onClick={openReset} />
@@ -229,6 +231,9 @@ export default function ProfilePage() {
           </button>
         </div>
       </Modal>
+
+      {/* 사용법 가이드 모달 (Figma 338:57) — /guide 페이지 대신 모달로 연다 */}
+      <GuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
     </AppShell>
   )
 }
