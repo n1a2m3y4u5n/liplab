@@ -48,6 +48,16 @@ body,
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
+  /* 발화 트랙용 주 버튼 — btn-primary와 같은 형태, 색만 로즈 */
+  .btn-speak {
+    @apply px-6 py-3 bg-rose-500 text-white rounded-2xl font-bold
+           shadow-[0_4px_14px_-2px_rgba(244,63,94,0.4)]
+           hover:bg-rose-600 focus:outline-none focus:ring-2
+           focus:ring-rose-300 focus:ring-offset-2
+           transition-all duration-150 active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
   .btn-secondary {
     @apply px-6 py-3 bg-white text-ink rounded-2xl font-bold
            border border-line hover:bg-gray-50 focus:outline-none focus:ring-2
