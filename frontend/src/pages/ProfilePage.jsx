@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import Modal from '../components/Modal'
@@ -73,6 +73,19 @@ export default function ProfilePage() {
   const [confirmText, setConfirmText] = useState('')
   const [lost, setLost] = useState(null)        // 학습 초기화 '사라지는 기록' 실제 수치
   const [resetErr, setResetErr] = useState('')
+  const [pilot, setPilot] = useState(null)      // 파일럿 진행 여부·내 참여 상태(§4.7) — 진행 중일 때만 줄을 보인다
+  const [pilotCode, setPilotCode] = useState('')
+  const [pilotMsg, setPilotMsg] = useState('')
+  useEffect(() => { accountAPI.pilotStatus().then(setPilot).catch(() => setPilot(null)) }, [])
+  const joinPilot = async () => {
+    if (!pilotCode.trim()) return
+    setBusy(true); setPilotMsg('')
+    try {
+      const r = await accountAPI.pilotJoin(pilotCode.trim())
+      setPilot((p) => ({ ...(p || {}), joined: true, cohort: r.cohort }))
+      setPilotMsg('파일럿에 참여했어요. 학습 기록은 이름 없이 가명으로만 연구에 쓰여요.')
+    } catch (e) { setPilotMsg(e?.response?.data?.detail || '참여하지 못했어요.') } finally { setBusy(false) }
+  }
 
   const openAccount = () => {
     setForm({ username: user?.username || '', email: user?.email || '', current: '', next: '', emailPw: '', delPw: '' })
@@ -201,8 +214,26 @@ export default function ProfilePage() {
         <MenuRow first title="사용법 가이드" sub="처음이라면 여기부터" onClick={() => setGuideOpen(true)} />
         <MenuRow title="자가진단 다시 하기" sub="지금 수준으로 단계 재추천" onClick={() => navigate('/learn/placement')} />
         <MenuRow title="계정 설정" sub="이름 · 이메일 · 비밀번호 · 로그아웃" onClick={openAccount} />
+        {pilot?.enabled && (
+          <MenuRow title="파일럿 참여" sub={pilot.joined ? '참여 중이에요' : '받은 참여 코드를 입력해요'} onClick={() => { setPilotMsg(''); setModal('pilot') }} />
+        )}
         <MenuRow danger title="학습 초기화" sub="기록을 모두 지우고 처음부터" onClick={openReset} />
       </section>
+
+      {/* 파일럿 참여(§4.7) — 운영자가 나눠 준 코드로 집단을 정한다. 내보내기는 가명으로만 한다. */}
+      <Modal open={modal === 'pilot'} onClose={() => setModal(null)} title="파일럿 참여" gap="gap-[14px]" maxW="max-w-[480px]">
+        {pilot?.joined ? (
+          <p className="text-[14px] leading-[1.6] text-ink">파일럿에 참여 중이에요. 학습 기록은 이름·이메일 없이 가명으로만 연구에 쓰여요.</p>
+        ) : (
+          <>
+            <p className="text-[14px] leading-[1.6] text-ink-muted">안내받은 참여 코드를 입력해 주세요. 학습 기록은 이름·이메일 없이 가명으로만 연구에 쓰여요.</p>
+            <input value={pilotCode} onChange={(e) => setPilotCode(e.target.value)} maxLength={32} placeholder="참여 코드"
+              className="w-full rounded-13 border-2 border-line px-4 py-3 text-[15px] outline-none focus:border-primary-400" />
+            <button type="button" disabled={busy || !pilotCode.trim()} onClick={joinPilot} className="btn-primary w-full py-3 text-[15px]">참여하기</button>
+          </>
+        )}
+        {pilotMsg && <p role="status" className="text-center text-[13px] font-bold text-ink-muted">{pilotMsg}</p>}
+      </Modal>
 
       {/* 계정 설정 모달(220:164) */}
       <Modal open={modal === 'account'} onClose={() => setModal(null)} title="계정 설정" subtitle="내 정보를 관리해요" gap="gap-[18px]" maxW="max-w-[620px]">

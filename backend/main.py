@@ -2005,6 +2005,102 @@ def _review_gate(user=None):
         raise HTTPException(status_code=403, detail="운영자 계정만 콘텐츠를 검수할 수 있습니다.")
 
 
+# ── 파일럿 계측(§4.7) — 참여 코드·집단 등록과 운영자 가명 내보내기 ─────────────────
+def _pilot_codes() -> dict:
+    """LIPLAB_PILOT_CODES='코드:집단,코드:집단' → {코드: 집단}. 파일럿을 켜지 않았으면 빈 사전."""
+    if os.getenv("LIPLAB_PILOT") != "1":
+        return {}
+    out = {}
+    for part in os.getenv("LIPLAB_PILOT_CODES", "").split(","):
+        code, _, cohort = part.strip().partition(":")
+        if code.strip():
+            out[code.strip().upper()] = (cohort.strip() or "default")[:16]
+    return out
+
+
+def _pseudonym(user_id: int) -> str:
+    """가명 — 서버 비밀키로 만든 HMAC 앞 12자리. 비밀키 없이는 사용자 번호로 되돌릴 수 없다."""
+    import hmac, hashlib
+    from auth import SECRET_KEY
+    return hmac.new(SECRET_KEY.encode(), f"pilot:{user_id}".encode(), hashlib.sha256).hexdigest()[:12]
+
+
+@app.get("/api/pilot/status")
+async def pilot_status(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """파일럿 진행 여부와 내 참여 상태(프로필 화면이 참여 코드 입력 줄을 보일지 정한다)."""
+    enabled = bool(_pilot_codes()) and (current_user.email or "").lower() != _DEMO_EMAIL
+    prof = await _get_or_create_profile(current_user.id, db)
+    return {"enabled": enabled, "joined": bool(prof.pilot_code), "cohort": prof.cohort if prof.pilot_code else None}
+
+
+class PilotJoinReq(BaseModel):
+    code: str
+
+
+@app.post("/api/pilot/join", dependencies=[Depends(ratelimit.rate_limit(10, 60, "pilot"))])
+async def pilot_join(req: PilotJoinReq, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """파일럿 참여 코드 입력 → 집단 배정. 파일럿이 꺼져 있거나 코드가 틀리면 거부한다. 공용 데모 계정은 참여할 수 없다."""
+    codes = _pilot_codes()
+    if not codes:
+        raise HTTPException(status_code=403, detail="지금은 파일럿을 진행하지 않아요.")
+    if (current_user.email or "").lower() == _DEMO_EMAIL:
+        raise HTTPException(status_code=403, detail="공용 데모 계정은 파일럿에 참여할 수 없어요.")
+    code = (req.code or "").strip().upper()
+    if code not in codes:
+        raise HTTPException(status_code=400, detail="참여 코드가 올바르지 않아요.")
+    prof = await _get_or_create_profile(current_user.id, db)
+    prof.pilot_code, prof.cohort = code, codes[code]
+    await db.commit()
+    return {"joined": True, "cohort": prof.cohort}
+
+
+def _pilot_admin_gate(user):
+    if os.getenv("LIPLAB_PILOT") != "1":
+        raise HTTPException(status_code=403, detail="파일럿 기능이 비활성화되어 있습니다(운영자 전용).")
+    admins = {e.strip().lower() for e in os.getenv("LIPLAB_ADMIN_EMAILS", "").split(",") if e.strip()}
+    email = (getattr(user, "email", "") or "").lower()
+    if not email or email == _DEMO_EMAIL or email not in admins:
+        raise HTTPException(status_code=403, detail="운영자 계정만 파일럿 자료를 내보낼 수 있습니다.")
+
+
+@app.get("/api/pilot/export")
+async def pilot_export(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """파일럿 참여자 가명 자료(운영자 전용). 이메일·이름·전사문·입력 문장은 넣지 않는다.
+    참여자별로 가명, 집단, 표준검사(사전·사후) 결과, 단계별 시행·정답 수, 말하기 시도·평균 점수,
+    학습한 날 수를 준다(최소 수집, §4.7)."""
+    _pilot_admin_gate(current_user)
+    from sqlalchemy import select, func, cast, Integer
+    from datetime import datetime as _dt
+    from database import LearningProfile, PlacementResult, TrialAttempt, SpeakAttempt, Progress
+    profs = (await db.execute(select(LearningProfile).where(LearningProfile.pilot_code.is_not(None)))).scalars().all()
+    rows = []
+    for pf in profs:
+        uid = pf.user_id
+        tests = (await db.execute(select(PlacementResult).where(PlacementResult.user_id == uid)
+                                  .order_by(PlacementResult.created_at))).scalars().all()
+        trials = (await db.execute(select(TrialAttempt.stage, func.count(TrialAttempt.id),
+                                          func.sum(cast(TrialAttempt.correct, Integer)))
+                                   .where(TrialAttempt.user_id == uid).group_by(TrialAttempt.stage))).all()
+        sp = (await db.execute(select(func.count(SpeakAttempt.id), func.avg(SpeakAttempt.score))
+                               .where(SpeakAttempt.user_id == uid))).one()
+        days = set()
+        for M in (TrialAttempt, SpeakAttempt, Progress, PlacementResult):
+            for (d,) in (await db.execute(select(func.date(M.created_at)).where(M.user_id == uid))).all():
+                if d:
+                    days.add(str(d))
+        rows.append({
+            "pid": _pseudonym(uid), "cohort": pf.cohort, "track": pf.track,
+            "tests": [{"form": t.form, "form_version": t.form_version, "accuracy": round(t.accuracy or 0, 4),
+                       "level": t.level, "date": t.created_at.date().isoformat() if t.created_at else None}
+                      for t in tests],
+            "trials_by_stage": {str(st or 0): {"n": n, "correct": int(c or 0)} for st, n, c in trials},
+            "speak": {"n": sp[0] or 0, "mean_score": round(float(sp[1]), 2) if sp[1] is not None else None},
+            "active_days": len(days),
+        })
+    return {"exported_at": _dt.utcnow().replace(microsecond=0).isoformat() + "Z", "n": len(rows), "participants": rows,
+            "note": "가명(pid)은 서버 비밀키 HMAC이라 운영자도 자료만으로는 계정을 알 수 없다."}
+
+
 @app.get("/api/admin/content/candidates")
 async def content_candidates(current_user=Depends(get_current_user)):
     """검수 대기 후보(승인·반려 안 된 것) + 종류별 건수. 축 G 사람검수 게이트."""

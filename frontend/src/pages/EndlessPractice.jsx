@@ -46,6 +46,17 @@ export default function EndlessPractice() {
         </div>
       </section>
 
+      {/* 문맥 추론 이어 하기 — 입모양이 같은 단어를 문장 흐름으로 고른다. 약한 입모양이 든 문항부터 나온다(축 G-6). */}
+      <section className="card-flat flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <p className="text-[17px] font-bold text-ink">문맥으로 풀기</p>
+          <p className="text-[14px] text-ink-muted">입모양이 같은 단어 중에서 문장 흐름에 맞는 것을 골라요. 약한 입모양이 든 문제부터 나와요.</p>
+        </div>
+        <button type="button" onClick={() => navigate('/learn/closure')} className="btn-secondary shrink-0 px-5 py-2.5 text-[15px]">
+          문맥 추론 시작
+        </button>
+      </section>
+
       {/* 지금 출제되는 유형 — 숙달도 낮은 순 진행바(Figma) */}
       <section className="card-flat w-full">
         <div className="flex items-center justify-between">
