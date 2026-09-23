@@ -68,6 +68,9 @@ def main():
     ap.add_argument("--backend", required=True)
     ap.add_argument("--tools", default=os.path.dirname(os.path.abspath(__file__)))
     ap.add_argument("--out", required=True)
+    ap.add_argument("--manifest", default="manifest.tsv", help="--run 안의 manifest 파일 이름(세션 2는 manifest_all.tsv)")
+    ap.add_argument("--export-sim", default=None,
+                    help="자모 시각 유사도 표를 backend/data/c_jamo_similarity.json 형식으로 쓴다(LDA 중심점 거리 → 1−d/dmax)")
     a = ap.parse_args()
     sys.path.insert(0, a.backend)
     sys.path.insert(0, a.tools)
@@ -112,9 +115,10 @@ def main():
                 segs.append((r["spk"], "V", med, VISEME_MAP.get(med), vo.mean(0)))
 
     man = [(l.split("\t")[0], l.split("\t")[1], l.split("\t")[2].rstrip("\n"))
-           for l in open(os.path.join(a.run, "manifest.tsv"), encoding="utf-8") if l.count("\t") >= 2]
+           for l in open(os.path.join(a.run, a.manifest), encoding="utf-8") if l.count("\t") >= 2]
     folds = FO.make_folds(man, n_folds=5)
     out = {"n_segments": len(segs), "n_clips": len(clip_bs), "speakers": len(stats), "folds": len(folds)}
+    sim_pairs, sim_corr = {}, {}
 
     for kind, name in (("C", "consonant"), ("V", "vowel")):
         S = [s for s in segs if s[1] == kind and s[3] is not None and 1 <= s[3] <= 13]
@@ -151,6 +155,12 @@ def main():
                 hh.append(float(1 - Sim[i, k]))
                 pairs.append((syms[i], syms[k], dd[-1]))
         pairs.sort(key=lambda t: t[2])
+        # 공개 자원용 자모 시각 유사도: 이 종류(자음·모음) 안의 최대 거리로 나눠 1−d/dmax(가까울수록 1).
+        # 키는 두 자모를 유니코드 순으로 붙인 문자열(예전 판과 같은 규칙)
+        dmax = max(dd) if dd else 1.0
+        for (j1, j2, d) in pairs:
+            sim_pairs["".join(sorted((j1, j2)))] = round(1.0 - d / dmax, 4) if dmax > 0 else 1.0
+        sim_corr[name] = round(spearman(dd, hh), 4) if len(dd) > 2 else None
         out[name] = {
             "segments": len(S), "viseme_classes": sorted({s[3] for s in S}),
             "nearest_centroid_acc": round(float(np.mean(acc)), 4) if acc else None,
@@ -162,6 +172,21 @@ def main():
             "closest_pairs_in_data": [f"{p[0]}-{p[1]}" for p in pairs[:8]],
         }
     json.dump(out, open(a.out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    if a.export_sim:
+        exp = {"meta": {"source": "AI Hub 538 %d화자 %d클립, wav2vec2 강제정렬 음절 구간 + MediaPipe 입 주변 27차원(화자별 z)"
+                                  % (len(stats), len(clip_bs)),
+                        "method": "음절 창을 초성(앞 35%)·모음(30~70%) 구간으로 나눠 평균 → 전체 화자로 LDA(자음·모음 따로, "
+                                  "최대 6차원) → 자모 중심점 거리 d → 유사도 1 − d/dmax(종류 안에서 정규화). "
+                                  "20구간 미만 자모와 무음 초성 ㅇ은 뺀다",
+                        "key": "두 자모를 유니코드 순으로 붙인 문자열",
+                        "n_clips": len(clip_bs), "speakers": len(stats),
+                        "validation_note": "balanced_acc는 화자·대본 분리 5겹 교차검증의 비심 최근접 중심 분류(우연 0.2 안팎), "
+                                           "spearman은 이 거리와 손코딩 음운 거리의 순위상관"},
+               "jamo_similarity": sim_pairs,
+               "validation": {"spearman_data_vs_handcoded": sim_corr,
+                              "balanced_acc": {k: out[k]["balanced_acc"] for k in ("consonant", "vowel") if k in out}}}
+        json.dump(exp, open(a.export_sim, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print("C_SIM_EXPORT_OK", a.export_sim, len(sim_pairs), "pairs")
     print("C_DEMO_OK", json.dumps(out, ensure_ascii=False))
 
 
