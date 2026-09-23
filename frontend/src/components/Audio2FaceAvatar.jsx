@@ -8,7 +8,8 @@ import { avatarAPI } from '../api'
  * 텍스트→비심(engine.py) 경로와 달리, 사용자가 녹음/업로드한 '진짜 음성'을 화자 불변
  * 음성 특징(WavLM, backend/models/kr_a4_wavlm.pt)으로 받아 BiGRU 헤드가 얼굴 블렌드셰이프를 직접 회귀한다
  * (미학습 화자 jawOpen r≈0.66, 20화자 교차검증 — 평가 화자로 에폭을 고른 낙관치).
- * public/a2f-examples는 9/16에 이전 wav2vec2 8화자 모델로 미리 계산한 결과다. 프레임(30fps)을 오디오 재생과 동기화해 bsFrameRef로 아바타에 흘린다.
+ * public/a2f-examples는 macOS TTS(Yuna) 5문장을 지금 제품 모델(kr_a4_wavlm.pt)로 미리 계산한 결과다(9/23 재생성,
+ * liplab-lab/tools/regen_a4_examples.py). 프레임(30fps)을 오디오 재생과 동기화해 bsFrameRef로 아바타에 흘린다.
  *
  * 서버에 A4 모델/토치가 없으면 status=false → 기능을 숨기고 텍스트 경로만 노출(전시 빌드 안전).
  */
@@ -246,7 +247,7 @@ export default function Audio2FaceAvatar() {
       <p className="mt-1 text-[11px] text-gray-400 leading-relaxed">
         직접 녹음한 음성은 화자 불변 음성특징(WavLM, 20화자 학습) 모델이 입모양을 예측합니다. 처음 듣는 화자의
         입 벌림 상관은 r≈0.66인데, 평가 화자로 학습 시점을 고른 값이라 실제보다 높게 나왔을 수 있어요.
-        미리 준비한 예시 5개는 이전 모델(wav2vec2, 8화자)로 계산해 둔 결과입니다.
+        미리 준비한 예시 5개는 합성 음성(TTS)이고, 입모양은 같은 모델로 미리 계산해 둔 결과입니다.
       </p>
     </div>
   )
