@@ -468,9 +468,10 @@ export default function SpeakingPractice() {
 
   const exitError = err && !stageInfo && !reviewMode && stageNo != null && !target
 
-  // 소리 + 입모양 융합(182:77) — 음소별 융합은 audio_score를 주지 않으므로 음향 D-GOP 표시점수로 보충한다.
+  // 소리 + 입모양 융합(182:77) — 음소별 융합은 audio_score를 주지 않으므로 응답의 융합 전 음향 점수(audio_score),
+  // 없으면 D-GOP 표시점수(dgop.score_calibrated)로 보충한다.
   const fusion = assessment && !assessment.error ? assessment.av_fusion : null
-  const fusionAudio = fusion ? (fusion.audio_score ?? assessment.acoustic_dgop?.score_calibrated ?? null) : null
+  const fusionAudio = fusion ? (fusion.audio_score ?? assessment.audio_score ?? assessment.dgop?.score_calibrated ?? null) : null
 
   // 레슨 시작 전 = 발화 트랙 로딩(223:50 / 모바일 243:101) — 첫 문항·복습 목록을 받는 동안 + 최소 표시 시간.
   const pending = !err && (reviewMode ? reviewItems === null : stageNo != null ? !stageInfo : !target)

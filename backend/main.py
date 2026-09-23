@@ -255,7 +255,9 @@ async def get_me(current_user = Depends(get_current_user)):
 @app.get("/api/account/data", dependencies=[Depends(ratelimit.rate_limit(10, 60, "account-export"))])
 async def account_export(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """개인정보 열람권(§4.9) — 내 계정·학습 데이터 전체를 JSON으로 내보낸다(데이터 이동성).
-    민감 정보(비밀번호 해시)는 제외한다."""
+    민감 정보(비밀번호 해시)는 제외한다. 공용 데모 계정은 여러 방문자의 기록이 섞여 있어 내보내지 않는다."""
+    if (current_user.email or "").lower() == _DEMO_EMAIL:
+        raise HTTPException(status_code=403, detail="공용 데모 계정은 기록을 내려받을 수 없어요.")
     from sqlalchemy import select as _select
     from datetime import datetime as _dt
     user = {c.name: (getattr(current_user, c.name).isoformat()
@@ -282,15 +284,19 @@ async def account_learning_reset(confirm: bool = False, current_user=Depends(get
     if (current_user.email or "").lower() == _DEMO_EMAIL:
         raise HTTPException(status_code=403, detail="공용 데모 계정은 초기화할 수 없어요.")
     from sqlalchemy import delete as _delete
-    from database import ConsentRecord
+    from database import ConsentRecord, LearningProfile
     removed = {}
     for M in _user_data_models():
-        if M is ConsentRecord:
+        if M in (ConsentRecord, LearningProfile):
             continue
         res = await db.execute(_delete(M).where(M.user_id == current_user.id))
         removed[M.__tablename__] = res.rowcount if res.rowcount is not None else 0
+    # 학습 프로필은 지우지 않고 배치만 처음으로 — 파일럿 참여(코드·집단)는 학습 기록이 아니라 그대로 둔다
+    prof = await _get_or_create_profile(current_user.id, db)
+    prof.track, prof.current_stage, prof.placed = None, 0, False
     current_user.total_xp = 0
     current_user.streak_count = 0
+    current_user.last_practice_date = None   # 다시 시작한 날부터 연속 학습 1일로 센다
     current_user.current_level = 1
     db.add(current_user)
     await db.commit()
@@ -1049,12 +1055,15 @@ async def analysis_activity_detail(day: str, kind: str, topic: str = "", tz_offs
         return round(sum(xs) / len(xs), 1) if xs else None
 
     items, summary, coaching = [], {}, None
+    # 공용 데모 계정은 방문자 모두가 같은 기록을 본다 — 들린 발음·직접 쓴 답·코칭 문장처럼 다른 방문자가 한 말은 빼고 점수만 준다
+    demo = (current_user.email or "").lower() == _DEMO_EMAIL
     if kind == "speak":
         q = select(SpeakAttempt).where(SpeakAttempt.user_id == uid, SpeakAttempt.created_at >= lo,
                                        SpeakAttempt.created_at < hi)
         q = q.where(SpeakAttempt.mode == topic) if topic else q.where((SpeakAttempt.mode.is_(None)) | (SpeakAttempt.mode == ""))
         rows = (await db.execute(q.order_by(SpeakAttempt.created_at))).scalars().all()
-        items = [{"time": hm(r.created_at), "target": r.target, "heard": r.transcript, "score": round(r.score or 0, 1),
+        items = [{"time": hm(r.created_at), "target": r.target, "heard": None if demo else r.transcript,
+                  "score": round(r.score or 0, 1),
                   "passed": r.passed, "phones": r.phones or [], "confusions": r.confusions or []} for r in rows]
         unc = [r.uncertainty for r in rows if r.uncertainty is not None]
         summary = {"n": len(rows), "sound": mean([r.audio_score for r in rows]), "mouth": mean([r.mouth_score for r in rows]),
@@ -1062,7 +1071,7 @@ async def analysis_activity_detail(day: str, kind: str, topic: str = "", tz_offs
                    "uncertainty": round(sum(unc) / len(unc), 3) if unc else None,
                    "score": mean([r.score for r in rows]),
                    "pass_rate": round(sum(1 for r in rows if r.passed) / len(rows), 3) if rows and any(r.passed is not None for r in rows) else None}
-        coaching = next((r.coaching for r in reversed(rows) if r.coaching), None)
+        coaching = None if demo else next((r.coaching for r in reversed(rows) if r.coaching), None)
     elif kind in ("viseme", "word", "closure", "trial"):
         q = select(TrialAttempt).where(TrialAttempt.user_id == uid, TrialAttempt.created_at >= lo,
                                        TrialAttempt.created_at < hi)
@@ -1075,7 +1084,8 @@ async def analysis_activity_detail(day: str, kind: str, topic: str = "", tz_offs
         q = select(Progress).where(Progress.user_id == uid, Progress.created_at >= lo, Progress.created_at < hi,
                                    Progress.situation == topic)
         rows = (await db.execute(q.order_by(Progress.created_at))).scalars().all()
-        items = [{"time": hm(r.created_at), "target": r.sentence, "chosen": r.user_answer, "score": round(r.score or 0, 1)}
+        items = [{"time": hm(r.created_at), "target": r.sentence, "chosen": None if demo else r.user_answer,
+                  "score": round(r.score or 0, 1)}
                  for r in rows]
         summary = {"n": len(rows), "score": mean([r.score for r in rows])}
     elif kind == "assessment":
@@ -1660,11 +1670,13 @@ async def _kt_recommend(user_id: int, db: AsyncSession) -> dict:
 
 
 def _training_closures() -> list:
-    """훈련용 문맥 문항 — 정답이나 보기에 표준검사 문항 단어가 든 항목은 뺀다(축 I, 문항 노출 방지)."""
+    """훈련용 문맥 문항 — 정답이나 보기에 표준검사 문항 단어가 든 항목은 뺀다(축 I, 문항 노출 방지).
+    보기가 둘뿐인 항목(입모양이 같은 실단어 오답을 하나밖에 못 찾은 11개)은 반은 찍어도 맞아 문맥 훈련이 되지 않아 뺀다."""
     import assessment as _asmt
     tw = _asmt.test_only_words()
     return [c for c in _curriculum.CLOSURE_ITEMS
-            if c["answer"] not in tw and not (set(c.get("options") or []) & tw)]
+            if len(c.get("options") or []) >= 3
+            and c["answer"] not in tw and not (set(c.get("options") or []) & tw)]
 
 
 @app.get("/api/curriculum/closure")
@@ -2874,6 +2886,7 @@ async def speak_assess(
         "dgop": dgop_result,
         "metrics": metrics,
         "av_fusion": av_fusion,
+        "audio_score": None if audio_score is None else round(float(audio_score), 1),   # 입모양 융합 전 음향 점수
         "acoustic_dgop": acoustic_dgop,
         "vowel_feedback": vowel_fb,   # 축 E: {vowel, f1, f2, target_f1, target_f2, height, front, messages}
         "progress": progress,

@@ -69,6 +69,7 @@ function ReviewSession({ items, lessons, bank }) {
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [tally, setTally] = useState({ n: 0, correct: 0 })
+  const [xpEarned, setXpEarned] = useState(0)      // 서버가 준 XP 합(응답 xp_gained) → 완료 화면
   const [done, setDone] = useState(false)
   const startRef = useRef(Date.now())
   const [elapsedSec, setElapsedSec] = useState(0)
@@ -99,7 +100,10 @@ function ReviewSession({ items, lessons, bank }) {
     if (result || submitting || selected == null) return
     setSubmitting(true)
     const correct = selected === targetKey
-    try { await reviewAPI.answer(item.kind, item.ref, correct) } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
+    try {
+      const r = await reviewAPI.answer(item.kind, item.ref, correct)
+      setXpEarned((x) => x + (r?.xp_gained || 0))
+    } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
     setResult({ correct, chosen: selected })
     setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
   }
@@ -115,7 +119,7 @@ function ReviewSession({ items, lessons, bank }) {
   if (done) {
     const accuracy = tally.n ? Math.round((tally.correct / tally.n) * 100) : null
     return (
-      <LessonComplete accuracy={accuracy} xp={0} elapsedSec={elapsedSec}
+      <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
         onNext={() => navigate('/learn/path')} onHome={() => navigate('/review')} homeLabel="복습으로 돌아가기" />
     )
   }

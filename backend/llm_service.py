@@ -31,8 +31,9 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
         conf_txt = "다르게 들린 소리: " + ", ".join(f"{c.get('correct')}→{c.get('confused_as')}" for c in confusions[:4]) + "\n"
     weak_txt = ""
     if weak_phones:
-        weak_txt = ("목표 소리 자리에서 약하게 잰 소리(전사와 무관, 0~100): "
-                    + ", ".join(f"'{w['label']}' {round(100 * w['dgop'])}" for w in weak_phones[:3]) + "\n")
+        # D-GOP 원점수는 보정 전 값이라 절대 수치로 말하면 잘 낸 소리도 낮아 보인다 — 문장 안의 상대 비교로만 전한다.
+        weak_txt = ("이 문장 안에서 다른 소리보다 약하게 잰 소리(음성인식과 무관한 발음 채점, 상대 비교): "
+                    + ", ".join(f"'{w['label']}'" for w in weak_phones[:3]) + "\n")
     met_txt = ""
     m = metrics or {}
     parts = []
