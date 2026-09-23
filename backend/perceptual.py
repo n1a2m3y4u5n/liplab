@@ -180,8 +180,18 @@ def load_data_similarity() -> Optional[Dict]:
     return None
 
 
-def build_standard_resources(words: List[str]) -> Dict:
-    """동구형이음 사전 + 단어별 난이도 지수 + 최소대립/동구형 쌍 + 표준 평가셋을 한 자원으로 조립."""
+def publish_data_derived() -> bool:
+    """데이터 유래 부분(jamo_visual_similarity_data)을 밖으로 내보낼지. AI Hub 538에서 계산한 값이라 재배포
+    허용을 확인하기 전까지는 기본으로 뺀다(배포 묶음 scripts/build_resource_release.py와 같은 기준).
+    LIPLAB_PUBLISH_DATA_DERIVED=1이면 포함한다."""
+    return os.getenv("LIPLAB_PUBLISH_DATA_DERIVED", "") == "1"
+
+
+def build_standard_resources(words: List[str], include_data_derived: Optional[bool] = None) -> Dict:
+    """동구형이음 사전 + 단어별 난이도 지수 + 최소대립/동구형 쌍 + 표준 평가셋을 한 자원으로 조립.
+    include_data_derived가 None이면 publish_data_derived()를 따른다."""
+    if include_data_derived is None:
+        include_data_derived = publish_data_derived()
     valid = [w for w in dict.fromkeys(words) if is_hangul_word(w)]
     sig_count = Counter(viseme_signature(w) for w in valid)
     entries = [word_difficulty(w, sig_count) for w in valid]
@@ -194,19 +204,23 @@ def build_standard_resources(words: List[str]) -> Dict:
     except Exception:
         cons_space = None  # numpy 미설치 등 → 지각공간은 생략(나머지는 그대로)
         confusion = None
-    data_sim = load_data_similarity()
-    return {
+    res = {
         "meta": {"kind": "korean-speechreading-perceptual-resources", "version": 2,
                  "semver": RESOURCE_SEMVER, "edition": RESOURCE_EDITION,
                  "license": RESOURCE_LICENSE, "source": RESOURCE_SOURCE,
                  "rules_based": True, "word_count": len(entries),
-                 "note": "난이도지수·동구형이음사전·시각공간·평가셋은 규칙기반. jamo_visual_similarity_data는 "
-                         "실화자 데이터 유래(별도 검증)."},
+                 "data_derived_included": bool(include_data_derived),
+                 "note": ("난이도지수·동구형이음사전·시각공간·평가셋은 규칙기반. jamo_visual_similarity_data는 "
+                          "실화자 데이터 유래(별도 검증)." if include_data_derived else
+                          "난이도지수·동구형이음사전·시각공간·평가셋은 규칙기반. 실화자 데이터 유래 자모 시각유사도는 "
+                          "원천 데이터(AI Hub) 재배포 허용을 확인하기 전까지 싣지 않는다.")},
         "homophene_dictionary": homophene_dictionary(),
         "consonant_visual_space": cons_space,
         "phoneme_confusion_matrix": confusion,
         "difficulty_index": entries,
         "lookalike_pairs": discover_pairs(valid),
         "standard_benchmark": build_benchmark(valid),
-        "jamo_visual_similarity_data": data_sim,
     }
+    if include_data_derived:
+        res["jamo_visual_similarity_data"] = load_data_similarity()
+    return res

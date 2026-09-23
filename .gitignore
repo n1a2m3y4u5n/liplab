@@ -97,3 +97,6 @@ ckpt/
 data_out/*.npz
 # A4/audio2face 모델 가중치(대용량·torch 전용, 로컬/파드에서만 로드)
 backend/models/*.pt
+
+# 공개 자원 배포 묶음(scripts/build_resource_release.py로 언제든 똑같이 다시 만든다)
+release/

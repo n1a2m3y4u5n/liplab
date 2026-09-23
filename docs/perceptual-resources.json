@@ -8,6 +8,7 @@
     "source": "LIPLAB (CNSAi)",
     "rules_based": true,
     "word_count": 528,
+    "data_derived_included": true,
     "note": "난이도지수·동구형이음사전·시각공간·평가셋은 규칙기반. jamo_visual_similarity_data는 실화자 데이터 유래(별도 검증)."
   },
   "homophene_dictionary": {
@@ -21011,7 +21012,7 @@
     }
   },
   "standard_eval_set": {
-    "description": "난이도 오름차순으로 균등 표집한 배치검사 문항. 각 문항은 정답 단어와 '같아 보이는' 오답(동구형/최소대립)을 함께 담는다. seed 고정으로 재현 가능.",
+    "description": "난이도 오름차순으로 균등 표집한 배치검사 문항. 오답 보기는 입모양 혼동 거리가 가까운 단어(최소대립 등)로 고르고, 입모양이 완전히 같은 동구형이음은 빼서 입모양만으로 정답을 가릴 수 있게 한다. seed 고정으로 재현 가능.",
     "seed": 20260903,
     "count": 20,
     "items": [

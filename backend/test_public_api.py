@@ -10,6 +10,8 @@ def test_public_resources_and_score_without_login():
         assert r.status_code == 200
         meta = r.json()["meta"]
         assert meta["license"] == "CC BY 4.0" and meta["semver"]
+        # AI Hub 유래 자모 유사도는 재배포 허용 확인 전까지 기본으로 싣지 않는다
+        assert "jamo_visual_similarity_data" not in r.json() and meta["data_derived_included"] is False
         s = c.post("/api/public/score", json={"target": "밥 먹었어요", "answer": "맘 먹었어요"})
         assert s.status_code == 200
         body = s.json()
