@@ -235,6 +235,13 @@ class SpeakAttempt(Base):
     pitch_start = Column(Float, default=0.0)
     pitch_end = Column(Float, default=0.0)
     confusions = Column(JSON, default=list)         # [{correct, confused_as}]
+    # 회차 상세(Figma 212:24)용 — 소리(융합 전 음향 점수)·입모양(웹캠)·융합·불확실성, 음소 칩, 코칭 문장
+    audio_score = Column(Float, nullable=True)
+    mouth_score = Column(Float, nullable=True)
+    fused_score = Column(Float, nullable=True)
+    uncertainty = Column(Float, nullable=True)
+    phones = Column(JSON, nullable=True)            # [{label, dgop}] 정렬·채점 대상 음소만(최대 40)
+    coaching = Column(String(600), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -376,6 +383,13 @@ async def init_db():
             # 파일럿 참여 코드·집단(§4.7)
             "ALTER TABLE learning_profiles ADD COLUMN pilot_code VARCHAR(32)",
             "ALTER TABLE learning_profiles ADD COLUMN cohort VARCHAR(16)",
+            # 말하기 회차 상세(Figma 212:24)
+            "ALTER TABLE speak_attempts ADD COLUMN audio_score FLOAT",
+            "ALTER TABLE speak_attempts ADD COLUMN mouth_score FLOAT",
+            "ALTER TABLE speak_attempts ADD COLUMN fused_score FLOAT",
+            "ALTER TABLE speak_attempts ADD COLUMN uncertainty FLOAT",
+            "ALTER TABLE speak_attempts ADD COLUMN phones JSON",
+            "ALTER TABLE speak_attempts ADD COLUMN coaching VARCHAR(600)",
         ):
             try:
                 await conn.exec_driver_sql(ddl)

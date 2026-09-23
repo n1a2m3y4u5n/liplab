@@ -27,9 +27,19 @@ with TestClient(main.app) as c:
     del1 = c.request("DELETE", "/api/review/item", params={"kind": "word", "ref": item["answer"]}, headers=h).json()
     del2 = c.request("DELETE", "/api/review/item", params={"kind": "word", "ref": item["answer"]}, headers=h).json()
     today_kst = (dt.datetime.utcnow() + dt.timedelta(hours=9)).date().isoformat()
+    # 말하기(발성 단계, 전사 없이 지표 채점) + 웹캠 입모양 신뢰도 → 소리·입모양·융합이 시도 기록에 남는다
+    sp = c.post("/api/speak/assess", headers=h, files={"audio": ("a.webm", b"0" * 2000, "audio/webm")},
+                data={"target": "아", "loudness": "70", "pitch_range": "30", "duration": "1.2", "stage": "0",
+                      "mouth_confidence": "0.8"})
+    sdet = c.get("/api/analysis/activity-detail", params={"day": today_kst, "kind": "speak", "topic": "voicing",
+                                                          "tz_offset_min": -540}, headers=h).json()
+    det = c.get("/api/analysis/activity-detail", params={"day": today_kst, "kind": "closure", "tz_offset_min": -540},
+                headers=h).json()
+    bad = c.get("/api/analysis/activity-detail", params={"day": "x", "kind": "closure"}, headers=h).status_code
     today_utc = dt.datetime.utcnow().date().isoformat()
     print("RESULT " + json.dumps({"kst": kst, "utc": utc, "bm": bm, "today_kst": today_kst, "today_utc": today_utc,
-                                  "del1": del1, "del2": del2},
+                                  "del1": del1, "del2": del2, "det": det, "bad": bad,
+                                  "sp": sp.status_code, "sdet": sdet},
                                  ensure_ascii=False))
 '''
 
@@ -62,3 +72,19 @@ def test_bookmarks_have_created_at():
 def test_review_item_delete():
     r = _run()
     assert r["del1"]["deleted"] == 1 and r["del2"]["deleted"] == 0
+
+
+def test_activity_detail_lists_items():
+    r = _run()
+    d = r["det"]
+    assert d["summary"]["n"] == 2 and d["summary"]["accuracy"] == 0.5
+    assert [i["correct"] for i in d["items"]] == [False, True] and d["items"][0]["chosen"] == "틀린보기"
+    assert r["bad"] == 400
+
+
+def test_speak_detail_keeps_sound_mouth_fused():
+    r = _run()
+    assert r["sp"] == 200
+    s = r["sdet"]["summary"]
+    assert s["n"] == 1 and s["sound"] is not None and s["mouth"] == 80.0 and s["fused"] is not None
+    assert r["sdet"]["coaching"]
