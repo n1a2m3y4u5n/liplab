@@ -145,6 +145,10 @@ export const learningAPI = {
   getCalendarActivities: async (daysBack = 150) => (await api.get('/calendar/activities', {
     params: { days_back: daysBack, tz_offset_min: new Date().getTimezoneOffset() },
   })).data,
+  // 회차 상세(Figma 212:24) — 히스토리 한 행(현지 날짜×종류×주제)의 문제별 기록·요약·코칭
+  getActivityDetail: async (day, kind, topic = '') => (await api.get('/analysis/activity-detail', {
+    params: { day, kind, topic, tz_offset_min: new Date().getTimezoneOffset() },
+  })).data,
   // 분석 탭 요약·배지(backend/analytics.py). 날짜·연속 학습은 브라우저 시간대 기준.
   getAnalysisOverview: async () => (await api.get('/analysis/overview', {
     params: { tz_offset_min: new Date().getTimezoneOffset() },
