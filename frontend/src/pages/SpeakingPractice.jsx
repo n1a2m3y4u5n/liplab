@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { curriculumAPI, learningAPI, speakAPI } from '../api'
@@ -10,6 +10,10 @@ import Modal from '../components/Modal'
 import { getSpeakingStageMenuItem } from '../config/speakingNavigation'
 import { toBlendshapeMap, cosineScore, loadCalibration } from '../lib/mouthScore'
 import { scoreTone, scoreLevel } from '../lib/scoreTone'
+import { VOWEL_IDS } from '../lib/vtlShapes'
+
+// 혀 위치 성도 단면(E-6) — 모음 결과를 열 때만 받는다(그림 코드와 윤곽 자료 모두 지연 로드)
+const VocalTractVTL = lazy(() => import('../components/VocalTractVTL'))
 
 /**
  * 말하기 연습 (발화 피드백) — 발화 레슨(핸드오프 §4-04). /learn/speaking 과 /review/speaking/session 이 같이 쓴다.
@@ -508,6 +512,7 @@ export default function SpeakingPractice() {
   // 소리 + 입모양 융합(182:77) — 음소별 융합은 audio_score를 주지 않으므로 응답의 융합 전 음향 점수(audio_score),
   // 없으면 D-GOP 표시점수(dgop.score_calibrated)로 보충한다.
   const fusion = assessment && !assessment.error ? assessment.av_fusion : null
+  const vowelFb = assessment && !assessment.error ? assessment.vowel_feedback : null   // 모음 포먼트 교정(축 E)
   const fusionAudio = fusion ? (fusion.audio_score ?? assessment.audio_score ?? assessment.dgop?.score_calibrated ?? null) : null
 
   // 레슨 시작 전 = 발화 트랙 로딩(223:50 / 모바일 243:101) — 첫 문항·복습 목록을 받는 동안 + 최소 표시 시간.
@@ -763,6 +768,28 @@ export default function SpeakingPractice() {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* 혀 위치(축 E-2·E-6) — 모음 단계에서 녹음의 F1·F2로 추정한 혀 모양을 목표 모음(점선) 위에 겹친다.
+              포먼트는 화자 크기(speaker_scale)로 나눠 기준 화자 눈금으로 옮긴 뒤 VocalTractLab 격자에서 찾는다. */}
+          {vowelFb && VOWEL_IDS[vowelFb.vowel] && (
+            <div className="flex flex-col gap-3 rounded-14 border-1.5 border-fill bg-surface-muted px-4 py-3.5 sm:flex-row sm:items-center">
+              <div className="w-full shrink-0 sm:w-[220px]">
+                <Suspense fallback={<div className="aspect-[4/3] w-full animate-pulse rounded-lg bg-white" />}>
+                  <VocalTractVTL phoneme={VOWEL_IDS[vowelFb.vowel]} legend targetLabel={vowelFb.vowel}
+                    estimate={{ f1: vowelFb.f1 / (vowelFb.speaker_scale || 1), f2: vowelFb.f2 / (vowelFb.speaker_scale || 1) }} />
+                </Suspense>
+              </div>
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <p className="text-[13px] font-bold leading-figma text-ink-muted">혀 위치 · 목표 {vowelFb.vowel}</p>
+                {(vowelFb.messages || []).map((m, i) => (
+                  <p key={i} className="text-[14px] leading-[1.6] text-ink">{m}</p>
+                ))}
+                <p className="text-[11px] leading-relaxed text-ink-faint">
+                  목소리 공명(F1 {vowelFb.f1}Hz · F2 {vowelFb.f2}Hz)으로 추정한 한 가지 예시예요. 같은 소리를 내는 혀 모양은 여럿일 수 있어요.
+                </p>
               </div>
             </div>
           )}
