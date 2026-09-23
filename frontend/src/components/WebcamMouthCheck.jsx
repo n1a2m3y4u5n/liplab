@@ -42,7 +42,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   const [faceSig, setFaceSig] = useState(null) // 입술 너머 얼굴 신호(축 K, 규칙 보조)
   const [geo, setGeo] = useState(null)         // 입술 기하 지표(그림8, 결정론적 보조)
   const [kPred, setKPred] = useState(null)     // 학습된 K 분류기 예측(유성/비음)
-  const cuesOn = useCuesEnabled()               // 파일럿 기호 끈 집단이면 울림 기호를 숨긴다(J-12)
+  const cuesOn = useCuesEnabled()               // 파일럿 기호 끈 집단이면(또는 아직 모르면) 울림 기호를 숨긴다(J-12)
   const kWinRef = useRef([])                    // 최근 K_WIN 프레임의 얼굴 8차원 버퍼
   const kBusyRef = useRef(false)
   const bestRef = useRef(0)
@@ -340,7 +340,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
               <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${Math.round(kPred.nasal * 100)}%` }} />
             </div>
             <span className="mt-0.5 flex items-center justify-center gap-1 text-[11px] font-medium text-violet-700">
-              {cuesOn && (
+              {cuesOn === true && (
                 <span className={`transition-opacity ${kPred.nasal >= K_NASAL_ON ? 'opacity-100' : 'opacity-25'}`}
                   aria-label={kPred.nasal >= K_NASAL_ON ? '울림 기호 켜짐' : '울림 기호 꺼짐'}>
                   <CueGlyph cue="nasal" size={14} />
