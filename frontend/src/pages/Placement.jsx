@@ -2,11 +2,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
+import LoadingScreen from '../components/LoadingScreen'
+import useChoiceKeys from '../lib/useChoiceKeys'
 
 /**
  * 디지털 독화 배치검사(축 I) — 난이도가 통제된 입모양→단어 4지선다로 현재 수준을 진단한다.
- * 문항마다 정답을 즉시 공개하지 않고, 끝나면 수준·음소별 오류·시작 단계를 리포트로 보여준다.
- * 화면 골격/스타일은 Figma "온보딩 / 자기진단 설문·결과 리포트"를 따르되, 적응형 진단 로직은 그대로 유지한다.
+ * 문항마다 정답을 즉시 공개하지 않는다. 적응형 진단 로직(문항 선택·채점·시작 단계 추천)은 그대로다(핸드오프 §4-01).
+ * 화면: 문항 385:82(모바일 385:120) — 독화 레슨 템플릿과 같은 틀, 북마크 없음.
+ *       결과(배치 모드) 85:9(모바일 244:99) — 마스코트 + "학습 준비가 다 되었어요!" + 버튼 2개.
+ *       사전·사후 평가(A/B)의 결과 리포트는 §4-01에 따라 예전 리포트를 유지한다.
  */
 const VIS_NAME = {
   1: '양순음', 2: '개방모음', 3: '전설모음', 4: '원순모음', 5: '중설모음',
@@ -18,6 +22,9 @@ const STAGE_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/
 const STAGE_NUM = { viseme: 1, word: 2, sentence: 3, conversation: 4 }  // 추천 단계 배지 숫자
 
 const MODE_LABEL = { placement: '배치검사', A: '사전검사', B: '사후검사' }
+const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }   // 마스코트 SVG 그림자 여백(Figma inset)
+// 결과 버튼 — 데스크톱 75:23(btn-lg), lg 미만 244:129(r14·b5, py16, 16px)
+const RESULT_BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]'
 
 // 사전·사후 동형검사는 /learn/placement?form=A|B 로 들어온다(학습 효과 리포트의 시작 버튼).
 // 문항 화면의 모드 전환기는 Figma 385:82에 맞춰 없앴으므로 진입은 주소로만 한다(핸드오프 §4-01).
@@ -112,170 +119,193 @@ export default function Placement() {
     await choose(chosen)
   }
 
-  if (loading || !items) return <div className="p-8 text-center text-gray-400">검사를 준비하는 중…</div>
+  // 보기 숫자 키 1~4(§4-03 템플릿) — 채점 중·결과 화면에서는 받지 않는다.
+  const it = items?.[idx]
+  useChoiceKeys(it?.options, (w) => setSelected(w), !!it && !result && !submitting && !loading)
 
-  if (result) {
+  // 추천 시작 단계로 이동 — 배치 모드는 먼저 그 단계로 배치(setTrack)한다(기존 로직 그대로).
+  const goRecommended = async () => {
+    if (mode === 'placement') {
+      try { await curriculumAPI.setTrack('perception', result.recommended_start?.stage) } catch { /* 배치 실패해도 이동은 함 */ }
+    }
+    navigate(STAGE_ROUTE[result.recommended_start?.key] || '/learn/viseme')
+  }
+
+  // 데이터 로딩 = 기본 로딩(§4-10 256:34 / 모바일 256:48)
+  if (loading || !items) return <LoadingScreen />
+
+  if (result && mode === 'placement') {
+    // 결과(배치 모드) — Figma 85:9 / 모바일 244:99. 이것뿐인 단순 화면(§4-01).
     return (
-      <div className="mx-auto flex min-h-[100dvh] max-w-[560px] flex-col justify-center gap-6 bg-[#f3f3f3] px-4 py-8">
-        {/* 결과 히어로 (그라데이션 카드) */}
-        <div className="overflow-hidden rounded-[22px]"
-          style={{ backgroundImage: 'linear-gradient(166deg, #a78bfa 0%, #7d53de 71%)' }}>
-          <div className="flex flex-col items-center gap-1.5 px-6 py-8 text-white">
-            <img src="/ui/onb-mascot-light.svg" alt="" className="h-16 w-16" />
-            <p className="text-[13px] font-bold opacity-85">{mode === 'placement' ? '배치검사 결과' : `${MODE_LABEL[mode]} 결과`}</p>
-            <p className="text-[40px] font-black leading-none tracking-[-1px]">Lv.{result.level}</p>
-            <p className="text-sm font-bold opacity-90">정확도 {Math.round(result.accuracy * 100)}% ({result.correct}/{result.total})</p>
-          </div>
-        </div>
-
-        {/* 결과 리포트 카드 (Figma "3. 결과 리포트") */}
-        <div className="flex flex-col gap-[22px] rounded-[22px] border-2 border-line bg-white p-7">
-          <div className="flex flex-col gap-3">
-            <p className="text-[13px] font-bold text-ink-muted">추천 시작 단계</p>
-            <div className="flex flex-col items-center gap-2.5 rounded-[16px] bg-primary-100 px-4 py-[18px]">
-              <p className="text-[12px] font-bold tracking-[0.24px] text-primary-700 opacity-80">독화</p>
-              <div className="flex items-center gap-3">
-                <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-primary-500 text-[16px] font-bold text-white">{result.recommended_start?.stage ?? STAGE_NUM[result.recommended_start?.key] ?? 1}</span>
-                <p className="text-[19px] font-bold tracking-[-0.38px] text-primary-700">{result.recommended_start?.title || '입모양 인지'}</p>
-              </div>
-            </div>
-          </div>
-
-          {(result.error_visemes?.length > 0 || result.error_phonemes?.length > 0) && (
-            <>
-              <div className="h-[1.5px] w-full bg-line" />
-              <div className="flex flex-col gap-3">
-                <p className="text-[13px] font-bold text-ink-muted">진단 요약</p>
-                {result.error_visemes?.length > 0 && (
-                  <div>
-                    <p className="mb-1.5 text-xs text-ink-muted">약한 입모양</p>
-                    <div className="flex flex-wrap gap-2">
-                      {result.error_visemes.map((v) => (
-                        <span key={v} className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">{VIS_NAME[v] || v}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {result.error_phonemes?.length > 0 && (
-                  <div>
-                    <p className="mb-1.5 text-xs text-ink-muted">자주 놓친 소리(음소)</p>
-                    <div className="flex flex-wrap gap-2">
-                      {result.error_phonemes.map((e) => (
-                        <span key={e.phoneme} className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">{e.phoneme} ×{e.count}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* 지난 첫 검사 대비 향상도 (aa28c05) — 검사가 2회 이상일 때만. 첫 배치(온보딩) 결과 화면은 그대로다. */}
-          {delta && (
-            <>
-              <div className="h-[1.5px] w-full bg-line" />
-              <div className="flex flex-col gap-3">
-                <p className="text-[13px] font-bold text-ink-muted">지난 첫 검사 대비 향상도</p>
-                <div className="flex flex-wrap gap-2">
-                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${delta.accuracy >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                    정확도 {delta.accuracy >= 0 ? '+' : ''}{Math.round(delta.accuracy * 100)}%p
-                  </span>
-                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${delta.level >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                    수준 {delta.level >= 0 ? '+' : ''}{delta.level}
-                  </span>
-                </div>
-                {delta.resolved_visemes?.length > 0 && (
-                  <p className="text-xs text-emerald-700">
-                    이제 안 틀리는 입모양: {delta.resolved_visemes.map((v) => VIS_NAME[v] || v).join(', ')}
-                  </p>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* 노트 (Figma Note) */}
-          <div className="flex items-center gap-2.5 rounded-[12px] bg-[#fff3d6] px-4 py-3.5">
-            <span aria-hidden className="text-[14px]">💡</span>
-            <p className="flex-1 text-[14px] text-[#92400e]">언제든 다른 단계로 건너뛰거나 되돌아갈 수 있어요.</p>
-          </div>
-
-          {mode !== 'placement' && (
-            <p className="rounded-2xl bg-primary-100 px-4 py-3 text-xs text-primary-700">
-              {MODE_LABEL[mode]} 결과를 저장했어요. 사전(A)·사후(B)를 모두 마치면 <b>분석 → 전체 통계 → 학습 효과 리포트</b>에서 변화가 보여요.
-            </p>
-          )}
-          {mode !== 'placement' && (
-            <button type="button" onClick={() => navigate('/analysis/eval')}
-              className="btn-secondary w-full !py-3 text-[14px]">학습 효과 리포트 보기</button>
-          )}
-        </div>
-
-        {/* 하단 버튼 (공용 3D 버튼) */}
-        <div className="flex flex-col gap-3">
-          <button onClick={async () => {
-              if (mode === 'placement') {
-                try { await curriculumAPI.setTrack('perception', result.recommended_start?.stage) } catch { /* 배치 실패해도 이동은 함 */ }
-              }
-              navigate(STAGE_ROUTE[result.recommended_start?.key] || '/learn/viseme')
-            }}
-            className="btn-primary w-full !py-4 text-[18px]">
-            {result.recommended_start?.title || '입모양 인지'}부터 시작하기
-          </button>
-          <button onClick={() => start(mode)} className="btn-secondary w-full !py-3.5 text-[15px]">다시 검사</button>
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-[18px] bg-page px-[18px] py-10 lg:gap-6">
+        <span className="relative size-[84px] shrink-0 lg:size-24">
+          <img src="/ui/lp-84-7-mascot.svg" alt="" className="absolute max-w-none" style={OVERFLOW} />
+        </span>
+        <h1 className="text-center text-[25px] font-bold leading-figma tracking-[-0.625px] text-ink lg:text-[32px] lg:tracking-[-0.8px]">
+          학습 준비가 다 되었어요!
+        </h1>
+        <div className="flex w-full max-w-[640px] flex-col gap-2.5 lg:gap-3">
+          <button type="button" onClick={goRecommended} className={`btn-primary btn-lg ${RESULT_BTN}`}>학습하러 가기</button>
+          <button type="button" onClick={() => start(mode)} className={`btn-secondary btn-lg text-track ${RESULT_BTN}`}>다시 진단하기</button>
         </div>
       </div>
     )
   }
 
-  const it = items[idx]
-  if (!it) return <div className="p-8 text-center text-gray-400">문항을 불러오지 못했어요. 다시 시도해 주세요.</div>
+  if (result) {
+    // 사전·사후 평가(A/B) 결과 리포트 — §4-01에 따라 예전 리포트를 유지한다(색만 토큰으로).
+    return (
+      <div className="min-h-[100dvh] bg-page">
+        <div className="mx-auto flex min-h-[100dvh] max-w-[596px] flex-col justify-center gap-6 px-[18px] py-8">
+          {/* 결과 히어로 (그라데이션 카드) */}
+          <div className="bg-loading-perception overflow-hidden rounded-22">
+            <div className="flex flex-col items-center gap-1.5 px-6 py-8 text-white">
+              <img src="/ui/onb-mascot-light.svg" alt="" className="h-16 w-16" />
+              <p className="text-[13px] font-bold opacity-85">{MODE_LABEL[mode]} 결과</p>
+              <p className="text-[40px] font-black leading-none tracking-[-1px]">Lv.{result.level}</p>
+              <p className="text-sm font-bold opacity-90">정확도 {Math.round(result.accuracy * 100)}% ({result.correct}/{result.total})</p>
+            </div>
+          </div>
+
+          {/* 결과 리포트 카드 */}
+          <div className="flex flex-col gap-[22px] rounded-22 border-2 border-line bg-white p-7">
+            <div className="flex flex-col gap-3">
+              <p className="text-[13px] font-bold text-ink-muted">추천 시작 단계</p>
+              <div className="flex flex-col items-center gap-2.5 rounded-16 bg-primary-100 px-4 py-[18px]">
+                <p className="text-[12px] font-bold tracking-[0.24px] text-primary-700 opacity-80">독화</p>
+                <div className="flex items-center gap-3">
+                  <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-primary-500 text-[16px] font-bold text-white">{result.recommended_start?.stage ?? STAGE_NUM[result.recommended_start?.key] ?? 1}</span>
+                  <p className="text-[19px] font-bold tracking-[-0.38px] text-primary-700">{result.recommended_start?.title || '입모양 인지'}</p>
+                </div>
+              </div>
+            </div>
+
+            {(result.error_visemes?.length > 0 || result.error_phonemes?.length > 0) && (
+              <>
+                <div className="h-[1.5px] w-full bg-line" />
+                <div className="flex flex-col gap-3">
+                  <p className="text-[13px] font-bold text-ink-muted">진단 요약</p>
+                  {result.error_visemes?.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-xs text-ink-muted">약한 입모양</p>
+                      <div className="flex flex-wrap gap-2">
+                        {result.error_visemes.map((v) => (
+                          <span key={v} className="rounded-full bg-bad-tint px-3 py-1 text-xs font-bold text-bad-text">{VIS_NAME[v] || v}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {result.error_phonemes?.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-xs text-ink-muted">자주 놓친 소리(음소)</p>
+                      <div className="flex flex-wrap gap-2">
+                        {result.error_phonemes.map((e) => (
+                          <span key={e.phoneme} className="rounded-full bg-warn-tint px-3 py-1 text-xs font-bold text-warn-text">{e.phoneme} ×{e.count}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* 지난 첫 검사 대비 향상도 (aa28c05) — 검사가 2회 이상일 때만 */}
+            {delta && (
+              <>
+                <div className="h-[1.5px] w-full bg-line" />
+                <div className="flex flex-col gap-3">
+                  <p className="text-[13px] font-bold text-ink-muted">지난 첫 검사 대비 향상도</p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${delta.accuracy >= 0 ? 'bg-good-tint text-good-text' : 'bg-bad-tint text-bad-text'}`}>
+                      정확도 {delta.accuracy >= 0 ? '+' : ''}{Math.round(delta.accuracy * 100)}%p
+                    </span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${delta.level >= 0 ? 'bg-good-tint text-good-text' : 'bg-bad-tint text-bad-text'}`}>
+                      수준 {delta.level >= 0 ? '+' : ''}{delta.level}
+                    </span>
+                  </div>
+                  {delta.resolved_visemes?.length > 0 && (
+                    <p className="text-xs text-good-text">
+                      이제 안 틀리는 입모양: {delta.resolved_visemes.map((v) => VIS_NAME[v] || v).join(', ')}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* 노트 */}
+            <div className="rounded-13 bg-warn-tint px-4 py-3.5">
+              <p className="text-[14px] text-warn-text">언제든 다른 단계로 건너뛰거나 되돌아갈 수 있어요.</p>
+            </div>
+
+            <p className="rounded-16 bg-primary-100 px-4 py-3 text-xs text-primary-700">
+              {MODE_LABEL[mode]} 결과를 저장했어요. 사전(A)·사후(B)를 모두 마치면 <b>분석 → 전체 통계 → 학습 효과 리포트</b>에서 변화가 보여요.
+            </p>
+            <button type="button" onClick={() => navigate('/analysis/eval')}
+              className="btn-secondary w-full py-3 text-[14px]">학습 효과 리포트 보기</button>
+          </div>
+
+          {/* 하단 버튼 (공용 3D 버튼) */}
+          <div className="flex flex-col gap-3">
+            <button type="button" onClick={goRecommended} className="btn-primary w-full py-4 text-[18px]">
+              {result.recommended_start?.title || '입모양 인지'}부터 시작하기
+            </button>
+            <button type="button" onClick={() => start(mode)} className="btn-secondary w-full py-3.5 text-[15px]">다시 검사</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!it) return <div className="flex min-h-[100dvh] items-center justify-center bg-page p-8 text-center text-ink-faint">문항을 불러오지 못했어요. 다시 시도해 주세요.</div>
   const total = mode === 'placement' ? n : items.length
   return (
-    <div className="mx-auto flex min-h-[100dvh] max-w-[640px] flex-col gap-8 bg-[#f3f3f3] px-4 pb-32 pt-8 sm:px-6">
-      {/* 진행 헤더 (Figma Progress header) */}
-      <div className="flex items-center gap-[18px]">
-        <button type="button" onClick={() => navigate('/dashboard')} aria-label="나가기" className="shrink-0">
-          <img src="/ui/lp-91-12-close.svg" alt="" className="h-9 w-9" />
-        </button>
-        <div className="h-[14px] flex-1 overflow-hidden rounded-full bg-[#e4e4ec]">
-          <div className="h-full rounded-full bg-primary-500 transition-all" style={{ width: `${(idx / total) * 100}%` }} />
+    <div className="min-h-[100dvh] bg-page">
+      <div className="mx-auto flex w-full max-w-[676px] flex-col px-[18px] pb-[160px] pt-[18px] lg:pb-[150px] lg:pt-7">
+        {/* 진행 헤더(385:83 / 모바일 385:121) — 나가기 X + 트랙 + n / 전체(채움 = 현재 문항까지) */}
+        <div className="flex items-center gap-3 lg:gap-[18px]">
+          <button type="button" onClick={() => navigate('/learn/path')} aria-label="나가기" className="shrink-0">
+            <img src="/ui/lp-91-12-close.svg" alt="" className="size-8 lg:size-9" />
+          </button>
+          <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
+            <div className="h-full rounded-full bg-track transition-all" style={{ width: `${((idx + 1) / total) * 100}%` }} />
+          </div>
+          <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{idx + 1} / {total}</span>
         </div>
-        <span className="shrink-0 text-[15px] font-bold text-ink-muted">{idx + 1} / {total}</span>
+
+        <div className="mt-6 flex flex-col gap-4 lg:mt-5 lg:gap-5">
+          {/* 질문(385:89 / 모바일 385:128) — 북마크 없음 */}
+          <div className="flex flex-col gap-1.5 font-bold leading-figma lg:gap-2">
+            <p className="text-[12px] text-track lg:text-[13px]">자가진단</p>
+            <h1 className="text-[21px] tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">이 입모양은 어떤 단어일까요?</h1>
+          </div>
+
+          {/* 입모양 카드(385:93 560×370 / 모바일 385:132 전체 폭×214) */}
+          <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
+            <MouthAvatar frames={frames} height={null} className="h-full" />
+          </div>
+
+          {/* 4지선다(385:96 / 모바일 385:135) — 선택(로컬) → 다음 확정 */}
+          <div className="flex flex-col gap-2.5 lg:gap-3">
+            {it.options.map((w, i) => {
+              const on = selected === w
+              return (
+                <button key={w} type="button" disabled={submitting} onClick={() => setSelected(w)} aria-pressed={on}
+                  className={`flex w-full items-center gap-3.5 rounded-14 border-2 border-b-5 px-[18px] py-[15px] text-left transition-colors disabled:opacity-60 enabled:active:scale-[0.99] lg:gap-4 lg:rounded-16 lg:px-5 lg:py-4 ${on ? 'border-track bg-track-tint' : 'border-line bg-white enabled:hover:border-primary-300'}`}>
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold leading-figma text-ink-muted lg:size-7 lg:rounded-lg lg:text-[13px]">{i + 1}</span>
+                  <span className="flex-1 text-[18px] font-bold leading-figma text-ink lg:text-[20px]">{w}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* 질문 (Figma 385:82) */}
-      <div className="flex flex-col gap-2">
-        <p className="text-[13px] font-bold text-[#7d53de]">자가진단</p>
-        <p className="text-[30px] font-bold tracking-[-0.75px] text-[#1a1a2e]">이 입모양은 어떤 단어일까요?</p>
-      </div>
-
-      {/* 입모양 */}
-      <div className="rounded-[22px] border-2 border-line bg-white p-4">
-        <MouthAvatar frames={frames} />
-      </div>
-
-      {/* 4지선다 — 선택(로컬)→다음 확정 */}
-      <div className="flex flex-col gap-3">
-        {it.options.map((w, i) => {
-          const on = selected === w
-          return (
-            <button key={w} type="button" disabled={submitting} onClick={() => setSelected(w)}
-              className={`flex items-center gap-4 rounded-[16px] border-2 border-b-[5px] px-5 py-4 text-left transition-all active:scale-[0.99] disabled:opacity-60 ${on ? 'border-[#7d53de] bg-[#efe9fc]' : 'border-[#e2e2e8] bg-white'}`}>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-[#ededf3] text-[13px] font-bold text-[#5a5a6e]">{i + 1}</span>
-              <span className="flex-1 text-[20px] font-bold text-[#1a1a2e]">{w}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* 하단 고정 액션 바 (Figma 385:82) */}
+      {/* 하단 고정 바(385:113 / 모바일 385:152) — 데스크톱: 왼쪽 안내 + 오른쪽 '다음', lg 미만: 안내 없이 전체 폭 '다음' */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-line bg-white">
-        <div className="mx-auto flex max-w-[640px] items-center justify-between px-4 py-6 sm:px-6">
-          <p className="text-[15px] text-[#8a8a9b]">정답은 끝나면 결과로 알려드려요</p>
+        <div className="mx-auto flex max-w-[676px] flex-col items-stretch px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-4 lg:h-[110px] lg:flex-row lg:items-center lg:justify-between lg:py-0">
+          <p className="hidden text-[15px] leading-figma text-ink-faint lg:block">정답은 끝나면 결과로 알려드려요</p>
           <button type="button" onClick={confirm} disabled={!selected || submitting}
-            className={`rounded-[14px] border-2 border-b-[5px] px-10 py-[15px] text-[17px] font-bold transition ${selected
-              ? 'border-[#5f3ab8] bg-[#7d53de] text-white'
-              : 'border-[#d2d2de] bg-[#e4e4ec] text-[#a0a0b0]'}`}>
+            className="btn-primary btn-bar w-full shrink-0 max-lg:py-4 max-lg:text-[16px] lg:w-auto">
             다음
           </button>
         </div>

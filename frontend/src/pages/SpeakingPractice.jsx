@@ -1,36 +1,40 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { curriculumAPI, learningAPI, speakAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
+import BookmarkButton from '../components/BookmarkButton'
+import LoadingScreen from '../components/LoadingScreen'
+import Modal from '../components/Modal'
 import { getSpeakingStageMenuItem } from '../config/speakingNavigation'
 import { toBlendshapeMap, cosineScore, loadCalibration } from '../lib/mouthScore'
+import { scoreTone, scoreLevel } from '../lib/scoreTone'
 
 /**
- * 말하기 연습 (발화 피드백) — Figma "Speak lesson" 이식(핑크 accent).
+ * 말하기 연습 (발화 피드백) — 발화 레슨(핸드오프 §4-04). /learn/speaking 과 /review/speaking/session 이 같이 쓴다.
+ * Figma: 말하기 전 175:21 · 녹음 중 175:49 · 결과 176:21 · 자세히 보기 182:21 · 결과(아쉬움) 186:21,
+ *        모바일 236:34 · 237:34(lg 미만). 루트에 data-track="speak"를 달아 트랙색(버튼·진행률·단어 카드)이 분홍이 된다.
  *  1) 말하는 동안 볼륨·톤(피치)·파형 실시간 (Web Audio) — 귀 대신 눈.
  *  2) 녹음을 서버로 → Whisper 전사 + 기존 음운 채점 + Claude 코칭.
- * 정량 지표(목소리 크기 0~100, 억양 폭 Hz, 길이 s)를 함께 보여주고 코칭에도 반영한다.
- *  화면 골격·색·값은 Figma를 그대로 따르되(핑크), 기존 기능은 전량 보존한다.
+ * 점수·음소 칩 색은 lib/scoreTone(§3.2: 70 이상 초록 · 45~69 주황 · 45 미만 빨강).
+ * 발성·운율 단계(지표 모드)는 Figma 프레임이 없어 결과 상세에 목소리 곡선·지표를 그대로 둔다.
  */
 
-// Figma 발화 화면 에셋(핑크) — public/ui/speak-*.svg
+// Figma 발화 화면 에셋 — public/ui (닫기는 독화 레슨과 같은 91:12 Close)
 const IC = {
-  close: '/ui/speak-close.svg',
-  speaker: '/ui/speak-speaker.svg',
+  close: '/ui/lp-91-12-close.svg',
   mic: '/ui/speak-mic.svg',
-  recording: '/ui/speak-recording.svg',
-  chevron: '/ui/speak-chevron.svg',
-  coach: '/ui/speak-coach.svg',
+  recording: '/ui/speak-recording.svg',   // 96×96(펄스 링 포함) — 72 슬롯에 -16.67%씩 넘친다(175:79)
+  doka: '/ui/lp-303-32-doka.svg',         // 코칭 "DOKA의 한마디"(303:32)
 }
+const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }   // DOKA SVG 그림자 여백(Figma inset)
+// 레슨 시작 전 트랙 로딩(§4-10 223:50)을 최소 이만큼은 보인다 — 데이터가 빨리 와도 한 번 번쩍이고 끝나지 않게.
+const INTRO_MS = 1000
+// 결과 바 버튼(176:71 / 모바일 237:80) — 데스크톱 28/15·16px, lg 미만은 반반 폭 r13·15px
+const RESULT_BTN = 'btn-bar flex-1 max-lg:rounded-13 max-lg:px-0 max-lg:text-[15px] lg:flex-none lg:px-7 lg:text-[16px]'
 
-// 자음/모음 음소 정확도 → Figma 3색 칩(초록/노랑/빨강)
-const phoneTone = (v) =>
-  v >= 70
-    ? { bg: '#e7f8ef', border: '#16a34a', text: '#15803d' }
-    : v >= 45
-      ? { bg: '#fef3c7', border: '#f59e0b', text: '#b45309' }
-      : { bg: '#feecec', border: '#dc2626', text: '#b91c1c' }
+// 캔버스·SVG에 쓸 토큰 색 — 루트(data-track="speak") 기준으로 CSS 변수를 읽는다.
+const cssVar = (el, name) => (el ? getComputedStyle(el).getPropertyValue(name).trim() : '') || 'gray'
 
 // 자기상관 기반 기본주파수(피치) 추정
 function autoCorrelate(buf, sampleRate) {
@@ -85,6 +89,8 @@ export default function SpeakingPractice() {
   const [assessment, setAssessment] = useState(null)
   const [mirrorOn, setMirrorOn] = useState(false)   // 웹캠 미러(따라 말하기)
   const [showDetail, setShowDetail] = useState(false)   // 상세 분석 모달
+  const [saved, setSaved] = useState(false)          // 문항별 북마크(328:49 — 로컬 시각 토글, 저장 연결은 범위 밖)
+  const [introDone, setIntroDone] = useState(false)  // 레슨 시작 전 트랙 로딩 최소 표시 시간
 
   const items = reviewMode ? (reviewItems || []) : (stageInfo?.items || [])
   const curItem = items[itemIdx] || null
@@ -112,6 +118,7 @@ export default function SpeakingPractice() {
   const videoStreamRef = useRef(null)
   const landmarkerRef = useRef(null)     // MediaPipe FaceLandmarker(축 B AV융합용, 지연 로드)
   const mouthFramesRef = useRef([])      // 녹음 중 사용자 입모양 blendshape 버퍼
+  const waveColorsRef = useRef(null)     // 파형 캔버스 색(토큰에서 한 번 읽음)
 
   // 미러가 켜지면 FaceLandmarker를 지연 로드(발음채점 시 입모양 신뢰도 산출 → AV 후기융합)
   const ensureLandmarker = async () => {
@@ -145,6 +152,15 @@ export default function SpeakingPractice() {
   useEffect(() => {
     if (mirrorOn && videoRef.current && videoStreamRef.current) videoRef.current.srcObject = videoStreamRef.current
   }, [mirrorOn])
+
+  const closeDetail = useCallback(() => setShowDetail(false), [])
+  // 문항이 바뀌면 북마크 표시를 새로 시작한다.
+  useEffect(() => { setSaved(false) }, [target])
+  // 레슨 시작 전 로딩 — 첫 진입에서 한 번만 최소 시간을 보장한다.
+  useEffect(() => {
+    const t = setTimeout(() => setIntroDone(true), INTRO_MS)
+    return () => clearTimeout(t)
+  }, [])
 
   // 녹음 중 버퍼된 입모양 vs 목표 비심열 → mouth_confidence(0~1). 각 목표 비심에 대해
   // 버퍼 최고 코사인을 구해 평균(정렬 없이 '그 입모양이 한 번은 만들어졌나'를 잰다).
@@ -407,8 +423,10 @@ export default function SpeakingPractice() {
     const ctx = cv.getContext('2d')
     const W = cv.width, H = cv.height
     ctx.clearRect(0, 0, W, H)
+    // 소리 있음 = 트랙 분홍, 무음 = 회색 — 토큰 색은 한 번만 읽어 둔다(매 프레임 getComputedStyle 방지)
+    if (!waveColorsRef.current) waveColorsRef.current = { on: cssVar(cv, '--track'), off: cssVar(cv, '--fill-strong') }
     ctx.lineWidth = 2
-    ctx.strokeStyle = v > 0.15 ? '#ec4899' : '#cbd5e1'   // 발화 accent: 핑크
+    ctx.strokeStyle = v > 0.15 ? waveColorsRef.current.on : waveColorsRef.current.off
     ctx.beginPath()
     const step = Math.max(1, Math.ceil(buf.length / W))
     for (let x = 0; x < W; x++) {
@@ -421,10 +439,10 @@ export default function SpeakingPractice() {
 
   const volLabel = !recording ? '-' : vol < 0.15 ? '작게' : vol > 0.95 ? '크게' : '좋아요'
 
-  // 진행바 — 단계/복습이면 항목 진행(6/12), 자유면 숙달률
+  // 진행바 — 단계/복습이면 항목 진행(푼 문항 / 전체, 6 / 12), 자유면 숙달률
   const total = (reviewMode || stageNo != null) && items.length ? items.length : null
   const cur = total ? itemIdx + 1 : null
-  const barPct = total ? (cur / total) * 100 : (progress ? Math.min(progress.mastery_score, 100) : 8)
+  const barPct = total ? ((itemIdx + (summary ? 1 : 0)) / total) * 100 : (progress ? Math.min(progress.mastery_score, 100) : 8)
 
   const category = reviewMode
     ? '말하기 복습'
@@ -436,11 +454,11 @@ export default function SpeakingPractice() {
   const scoreNum = assessment && !assessment.error ? assessment.score
     : (metricMode && summary ? summary.loudness : null)
   const scoreLabel = metricMode ? '목소리 크기' : '발음 정확도'
-  const scoreColor = scoreNum == null ? '#8a8a9b' : scoreNum >= 70 ? '#16a34a' : scoreNum >= 45 ? '#d97706' : '#dc2626'
   const good = assessment && !assessment.error
     ? (assessment.passed ?? (assessment.score >= 65))
     : (summary ? (summary.volOk && summary.toneOk !== false) : null)
-  const goodCount = phones.filter((p) => Math.round((p.dgop ?? 0) * 100) >= 70).length
+  const phoneScore = (p) => Math.round((p.dgop ?? 0) * 100)
+  const goodCount = phones.filter((p) => scoreLevel(phoneScore(p), 'phone') === 'good').length
   const fbSub = good
     ? (phones.length ? `${phones.length}개 중 ${goodCount}개 소리를 정확히 냈어요` : (summary?.volMsg || '잘 전달됐어요'))
     : '소리가 잘 전달되지 않았어요'
@@ -450,133 +468,142 @@ export default function SpeakingPractice() {
 
   const exitError = err && !stageInfo && !reviewMode && stageNo != null && !target
 
+  // 소리 + 입모양 융합(182:77) — 음소별 융합은 audio_score를 주지 않으므로 음향 D-GOP 표시점수로 보충한다.
+  const fusion = assessment && !assessment.error ? assessment.av_fusion : null
+  const fusionAudio = fusion ? (fusion.audio_score ?? assessment.acoustic_dgop?.score_calibrated ?? null) : null
+
+  // 레슨 시작 전 = 발화 트랙 로딩(223:50 / 모바일 243:101) — 첫 문항·복습 목록을 받는 동안 + 최소 표시 시간.
+  const pending = !err && (reviewMode ? reviewItems === null : stageNo != null ? !stageInfo : !target)
+  if (pending || !introDone) return <LoadingScreen variant="brand" track="language" />
+
   return (
-    <div className="min-h-screen bg-[#f3f3f3] flex flex-col">
-      {/* Figma 진행 헤더 — X + 핑크 진행바 + 카운트 */}
-      <div className="w-full px-4 sm:px-6 pt-6">
-        <div className="mx-auto flex max-w-[640px] items-center gap-[18px]">
-          <button onClick={exit} aria-label="나가기" className="shrink-0 size-[36px] transition-transform hover:scale-105 active:scale-95">
-            <img src={IC.close} alt="" className="block size-full" />
+    <div data-track="speak" className="flex min-h-[100dvh] flex-col bg-page">
+      {/* 진행 헤더(175:22 / 모바일 236:35) — X + 트랙(분홍) 진행바 + n / 전체 */}
+      <div className="mx-auto w-full max-w-[676px] px-[18px] pt-[18px] lg:pt-7">
+        <div className="flex items-center gap-3 lg:gap-[18px]">
+          <button type="button" onClick={exit} aria-label="나가기" className="shrink-0">
+            <img src={IC.close} alt="" className="size-8 lg:size-9" />
           </button>
-          <div className="flex-1 h-[14px] rounded-full bg-[#e4e4ec] overflow-hidden">
-            <div className="h-full rounded-full bg-[#ec4899] transition-[width] duration-500" style={{ width: `${barPct}%` }} />
+          <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
+            <div className="h-full rounded-full bg-track transition-[width] duration-500" style={{ width: `${barPct}%` }} />
           </div>
-          {total && <span className="shrink-0 text-[15px] font-bold text-[#5a5a6e]">{cur} / {total}</span>}
+          {total && <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{cur} / {total}</span>}
         </div>
       </div>
 
-      <main className="flex-1 w-full px-4 sm:px-6 pt-7 pb-8">
-        <div className="mx-auto max-w-[640px]">
+      <main className="mx-auto w-full max-w-[676px] flex-1 px-[18px] pb-8 pt-6 lg:pt-5">
           {exitError ? (
-            <div className="rounded-[22px] border-2 border-[#e2e2e8] bg-white text-center py-16 px-6">
-              <div className="text-4xl mb-3">😵</div>
-              <p className="text-lg font-bold text-[#1a1a2e] mb-1">단계를 불러오지 못했어요</p>
-              <p className="text-sm text-[#8a8a9b] mb-5">{err} 네트워크를 확인하고 다시 시도해 주세요.</p>
+            <div className="flex flex-col items-center gap-2 rounded-22 border-2 border-line bg-white px-6 py-16 text-center">
+              <p className="text-lg font-bold text-ink">단계를 불러오지 못했어요</p>
+              <p className="mb-3 text-sm text-ink-faint">{err} 네트워크를 확인하고 다시 시도해 주세요.</p>
               <div className="flex justify-center gap-2">
-                <button onClick={() => setRetry((n) => n + 1)} className="rounded-[14px] bg-[#ec4899] text-white font-bold px-6 py-2.5 text-sm" style={{ borderColor: '#be185d', borderStyle: 'solid', borderWidth: 2, borderBottomWidth: 5 }}>다시 불러오기</button>
-                <button onClick={() => { teardown(); navigate('/learn/path?track=speak') }} className="px-6 py-2.5 text-sm rounded-[14px] border-2 border-[#e2e2e8] text-[#5a5a6e] hover:bg-gray-50">발화 커리큘럼으로</button>
+                <button type="button" onClick={() => setRetry((n) => n + 1)} className="btn-primary px-6 py-2.5 text-sm">다시 불러오기</button>
+                <button type="button" onClick={() => { teardown(); navigate('/learn/path?track=speak') }} className="btn-secondary px-6 py-2.5 text-sm">발화 커리큘럼으로</button>
               </div>
             </div>
           ) : reviewEmpty ? (
-            <div className="rounded-[22px] border-2 border-[#e2e2e8] bg-white text-center py-16 px-6">
-              <div className="text-4xl mb-3">🎉</div>
-              <p className="text-lg font-bold text-[#1a1a2e] mb-1">복습할 발음이 없어요</p>
-              <p className="text-sm text-[#8a8a9b] mb-5">최근 발음이 다 좋았어요. 단계 연습을 이어가 볼까요?</p>
-              <button onClick={() => { teardown(); navigate('/review/speaking') }} className="rounded-[14px] bg-[#ec4899] text-white font-bold px-6 py-2.5 text-sm" style={{ borderColor: '#be185d', borderStyle: 'solid', borderWidth: 2, borderBottomWidth: 5 }}>목록으로</button>
+            <div className="flex flex-col items-center gap-2 rounded-22 border-2 border-line bg-white px-6 py-16 text-center">
+              <p className="text-lg font-bold text-ink">복습할 발음이 없어요</p>
+              <p className="mb-3 text-sm text-ink-faint">최근 발음이 다 좋았어요. 단계 연습을 이어가 볼까요?</p>
+              <button type="button" onClick={() => { teardown(); navigate('/review/speaking') }} className="btn-primary px-6 py-2.5 text-sm">목록으로</button>
             </div>
           ) : (
-          <>
-            {/* Question */}
-            <div className="flex flex-col gap-[8px] mb-4">
-              <p className="text-[13px] font-bold text-[#ec4899]">{category}</p>
-              <p className="text-[28px] font-bold tracking-[-0.7px] text-[#1a1a2e] leading-tight">{heading}</p>
+          <div className="flex flex-col gap-4 lg:gap-5">
+            {/* 질문 + 북마크(175:28 · 328:49 / 모바일 236:71 · 328:70) — 북마크는 트랙과 무관한 브랜드색 */}
+            <div className="relative flex flex-col gap-1.5 pr-12 leading-figma lg:gap-2 lg:pr-[52px]">
+              <p className="text-[12px] font-bold text-track lg:text-[13px]">{category}</p>
+              <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[28px] lg:tracking-[-0.7px]">{heading}</h1>
+              <BookmarkButton active={saved} onToggle={() => setSaved((s) => !s)} className="absolute right-0 top-[14px] lg:top-5" />
             </div>
 
-            {/* Target word — 핑크 카드(가운데 정렬). 들어보기 버튼 없음(§3.4 청각장애 대상) */}
-            <div className="flex items-center justify-center rounded-[18px] bg-[#ffe4e9] px-[24px] py-[20px]">
-              <p className="text-[38px] font-bold tracking-[-0.76px] text-[#be185d] leading-none">{target || '…'}</p>
+            {/* 말할 단어(175:31 / 모바일 236:74) — 가운데 정렬 분홍 카드. 들어보기 버튼 없음(§3.4 청각장애 대상) */}
+            <div className="flex items-center justify-center rounded-16 bg-track-tint py-[18px] pl-[22px] pr-4 lg:rounded-18 lg:py-5 lg:pl-7 lg:pr-5">
+              <p className="text-center text-[32px] font-bold leading-figma tracking-[-0.64px] text-track-dark lg:text-[38px] lg:tracking-[-0.76px]">{target || '…'}</p>
             </div>
 
             {err && !exitError && (
-              <div className="mt-4 p-3 rounded-[14px] bg-[#feecec] border border-[#f3c8c8] text-sm text-[#b91c1c]">{err}</div>
+              <div className="rounded-14 border border-bad-line bg-bad-tint p-3 text-sm text-bad-text">{err}</div>
             )}
 
             {!summary ? (
               <>
-                {/* Mouth video (3D 아바타) */}
-                <div className="mt-4 rounded-[22px] border-2 border-[#e2e2e8] bg-white overflow-hidden">
-                  <div className="pt-6 pb-3">
-                    <MouthAvatar frames={frames} height={230} />
+                {/* 입모양(175:36 560×300 / 모바일 236:79 전체 폭×200) — 3D 아바타 + 안내 */}
+                <div className="mx-auto w-full max-w-[560px] overflow-hidden rounded-18 border-2 border-line bg-white lg:rounded-22">
+                  <div className="px-4 pt-4 lg:pt-6">
+                    <MouthAvatar frames={frames} height={null} className="h-[134px] lg:h-[209px]" />
                   </div>
-                  <p className="text-[14px] font-bold text-[#8a8a9b] text-center pb-5">
+                  <p className="pb-5 pt-2.5 text-center text-[13px] font-bold leading-figma text-ink-faint lg:pb-[34px] lg:pt-3 lg:text-[14px]">
                     {metricMode ? '아래 그래프로 목소리 크기·억양을 확인해요' : '입모양을 따라 해보세요'}
                   </p>
                 </div>
 
-                {/* 웹캠 미러 — 내 입모양을 거울처럼 띄워 목표 아바타와 비교(따라 말하기) */}
-                <div className="mt-3">
-                  <button onClick={toggleMirror}
-                    className={`w-full py-2.5 rounded-[14px] text-sm font-bold transition-colors ${mirrorOn ? 'bg-[#ffe4e9] text-[#be185d] hover:bg-[#ffd0da]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                    {mirrorOn ? '📷 웹캠 끄기' : '📷 웹캠 미러 — 내 입모양 보기'}
+                {/* 웹캠 미러 — 내 입모양을 거울처럼 띄워 목표 아바타와 비교(따라 말하기). Figma 175:21에는 없지만
+                    소리+입모양 융합 점수(182:77)의 입모양 입력이 여기서만 나와 남긴다(사용자 결정 대기). */}
+                <div className="mx-auto w-full max-w-[560px]">
+                  <button type="button" onClick={toggleMirror} aria-pressed={mirrorOn}
+                    className={`btn-secondary w-full py-2.5 text-[14px] ${mirrorOn ? 'bg-track-tint text-track-dark' : ''}`}>
+                    {mirrorOn ? '웹캠 끄기' : '웹캠 미러 — 내 입모양 보기'}
                   </button>
                   {mirrorOn && (
-                    <div className="mt-2 rounded-xl overflow-hidden bg-slate-900">
+                    <div className="mt-2 overflow-hidden rounded-14 bg-slate-900">
                       <video ref={videoRef} autoPlay muted playsInline
                         className="w-full" style={{ transform: 'scaleX(-1)', maxHeight: 220, objectFit: 'cover' }} />
-                      <p className="text-[11px] text-center text-white/70 py-1">거울처럼 좌우 반전 · 위 아바타 입모양과 내 입을 나란히 비교해보세요</p>
+                      <p className="py-1 text-center text-[11px] text-white/70">거울처럼 좌우 반전 · 위 아바타 입모양과 내 입을 나란히 비교해보세요</p>
                     </div>
                   )}
                 </div>
 
-                {/* 실시간 파형·볼륨·피치 (녹음 중) */}
+                {/* 실시간 파형·볼륨·피치(녹음 중) — 귀 대신 눈. 사용법 가이드 '발화 레슨'의 실시간 피드백 */}
                 {recording && (
-                  <div className="mt-3 rounded-[22px] border-2 border-[#e2e2e8] bg-white p-4">
+                  <div className="mx-auto w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:rounded-22">
                     <canvas ref={canvasRef} width={480} height={120}
-                      className="w-full rounded-xl bg-slate-50 border border-gray-100" style={{ height: 120 }} />
+                      className="w-full rounded-14 border border-fill bg-surface-muted" style={{ height: 120 }} />
                     <div className="mt-4">
-                      <div className="flex justify-between text-xs text-gray-500 mb-1"><span>볼륨</span><span>{volLabel}</span></div>
-                      <div className="bg-gray-200 rounded-full h-3 overflow-hidden">
-                        <div className="h-full rounded-full transition-[width] duration-75"
-                          style={{ width: `${Math.round(vol * 100)}%`, background: vol < 0.15 ? '#cbd5e1' : vol > 0.95 ? '#f59e0b' : '#ec4899' }} />
+                      <div className="mb-1 flex justify-between text-xs text-ink-muted"><span>볼륨</span><span>{volLabel}</span></div>
+                      <div className="h-3 overflow-hidden rounded-full bg-fill">
+                        <div className={`h-full rounded-full transition-[width] duration-75 ${vol < 0.15 ? 'bg-fill-strong' : vol > 0.95 ? 'bg-warn' : 'bg-track'}`}
+                          style={{ width: `${Math.round(vol * 100)}%` }} />
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between text-sm">
-                      <span className="text-gray-500">톤 (피치)</span>
-                      <span className="font-bold text-[#be185d]">{pitch ? `${pitch} Hz` : '…'}</span>
+                      <span className="text-ink-muted">톤 (피치)</span>
+                      <span className="font-bold text-track-dark">{pitch ? `${pitch} Hz` : '…'}</span>
                     </div>
                   </div>
                 )}
 
+                {/* 이 단계 숙달 진행 — 레슨 안에서 해금을 알려 주는 유일한 자리라 남긴다(사용자 결정 대기) */}
                 {progress && (
-                  <div className="mt-3">
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <div className="mx-auto w-full max-w-[560px]">
+                    <div className="mb-1 flex justify-between text-xs text-ink-muted">
                       <span>이 단계 숙달</span><span>{progress.mastery_score}% · {progress.attempts}회</span>
                     </div>
-                    <div className="bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-[#ec4899] h-full transition-[width]" style={{ width: `${Math.min(progress.mastery_score, 100)}%` }} />
+                    <div className="h-1.5 overflow-hidden rounded-full bg-fill">
+                      <div className="h-full bg-track transition-[width]" style={{ width: `${Math.min(progress.mastery_score, 100)}%` }} />
                     </div>
-                    {progress.mastered && <p className="mt-1 text-xs font-semibold text-green-600">🎉 이 단계를 숙달했어요! 다음 단계가 열렸어요.</p>}
+                    {progress.mastered && <p className="mt-1 text-xs font-bold text-good-text">이 단계를 숙달했어요! 다음 단계가 열렸어요.</p>}
                   </div>
                 )}
               </>
             ) : (
-              /* Pronunciation result — 점수 + 음소 칩 + 자세히 보기 */
+              /* 발음 결과(176:36 560×320 / 모바일 237:50) — 점수 + 음소 칩(§3.2) + 자세히 보기 */
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                className="mt-4 rounded-[22px] border-2 border-[#e2e2e8] bg-white px-6 py-8 flex flex-col items-center">
-                <p className="text-[52px] font-bold tracking-[-1.56px] leading-none" style={{ color: scoreColor }}>
-                  {assessing && scoreNum == null ? '…' : scoreNum != null ? `${scoreNum}%` : '-'}
-                </p>
-                <p className="text-[14px] font-bold text-[#8a8a9b] mt-1">{scoreLabel}</p>
+                className="mx-auto flex w-full max-w-[560px] flex-col items-center gap-3.5 rounded-18 border-2 border-line bg-white px-4 py-[18px] lg:gap-0 lg:rounded-22 lg:px-6 lg:py-[30px]">
+                <div className="flex flex-col items-center gap-0.5 font-bold leading-figma lg:gap-1">
+                  <p className={`text-[44px] tracking-[-1.32px] lg:text-[52px] lg:tracking-[-1.56px] ${scoreTone(scoreNum, 'phone').text}`}>
+                    {assessing && scoreNum == null ? '…' : scoreNum != null ? `${scoreNum}%` : '-'}
+                  </p>
+                  <p className="text-[13px] text-ink-faint lg:text-[14px]">{scoreLabel}</p>
+                </div>
 
                 {phones.length > 0 && (
-                  <div className="flex flex-wrap justify-center gap-[10px] mt-6">
+                  <div className="flex flex-wrap justify-center gap-2 lg:mt-[33px] lg:gap-2.5">
                     {phones.map((p, i) => {
-                      const v = Math.round((p.dgop ?? 0) * 100)
-                      const t = phoneTone(v)
+                      const v = phoneScore(p)
                       return (
-                        <div key={i} className="size-[52px] rounded-[14px] border-2 flex items-center justify-center"
-                          style={{ background: t.bg, borderColor: t.border }} title={`정확도 ${v} · 신뢰도 ${Math.round((p.confidence ?? 0) * 100)}`}>
-                          <span className="text-[22px] font-bold" style={{ color: t.text }}>{p.label || '·'}</span>
+                        <div key={i} title={`정확도 ${v} · 신뢰도 ${Math.round((p.confidence ?? 0) * 100)}`}
+                          className={`flex size-12 items-center justify-center rounded-13 border-2 lg:size-[52px] lg:rounded-14 ${scoreTone(v, 'phone').chip}`}>
+                          <span className="text-[20px] font-bold leading-figma lg:text-[22px]">{p.label || '·'}</span>
                         </div>
                       )
                     })}
@@ -584,200 +611,167 @@ export default function SpeakingPractice() {
                 )}
 
                 {assessing && !metricMode && (
-                  <div className="mt-6 flex items-center gap-2 text-sm text-[#be185d]">
-                    <span className="w-4 h-4 border-2 border-[#f9a8d4] border-t-[#be185d] rounded-full animate-spin" />
+                  <div className="flex items-center gap-2 text-sm text-track-dark lg:mt-6">
+                    <span className="spinner size-4 rounded-full border-2 border-speak/40 border-t-speak-dark" />
                     발음을 분석하는 중…
                   </div>
                 )}
 
-                <button onClick={() => setShowDetail(true)}
-                  className="mt-7 flex items-center gap-[8px] rounded-[14px] bg-white pl-[28px] pr-[24px] py-[15px] text-[16px] font-bold text-[#5a5a6e] transition-transform hover:scale-[1.02] active:scale-95"
-                  style={{ borderColor: '#e2e2e8', borderStyle: 'solid', borderWidth: 2, borderBottomWidth: 5 }}>
+                {/* 자세히 보기(179:21 / 모바일 237:74) — 쉐브론 없음 */}
+                <button type="button" onClick={() => setShowDetail(true)}
+                  className="btn-secondary rounded-[12px] border-b-4 px-[26px] py-3 text-[14px] lg:mt-[30px] lg:rounded-14 lg:border-b-5 lg:px-[30px] lg:py-[15px] lg:text-[16px]">
                   자세히 보기
-                  <img src={IC.chevron} alt="" className="size-[14px]" />
                 </button>
               </motion.div>
             )}
-          </>
+          </div>
           )}
-        </div>
       </main>
 
-      {/* 하단 바 — 발화 전/녹음 중: 마이크 액션바 · 결과: 피드백 바 */}
+      {/* 하단 바 — 말하기 전/녹음 중: 마이크 바(175:40 / 236:83) · 결과: 피드백 바(176:66 · 186:55 / 237:76) */}
       {!exitError && !reviewEmpty && (
         summary ? (
-          <div className="sticky bottom-0 w-full border-t-2 px-4 sm:px-6 py-5"
-            style={{ background: good ? '#e7f8ef' : '#feecec', borderColor: good ? 'rgba(22,163,74,0.35)' : 'rgba(220,38,38,0.35)' }}>
-            <div className="mx-auto flex max-w-[640px] items-center justify-between gap-3">
-              <div className="min-w-0" style={{ color: good ? '#15803d' : '#b91c1c' }}>
-                <p className="text-[22px] font-bold tracking-[-0.44px] leading-tight">{assessing && !metricMode ? '분석 중…' : fbTitle}</p>
-                <p className="text-[14px] font-bold opacity-80 truncate">{assessing && !metricMode ? '발음을 분석하고 있어요' : fbSub}</p>
+          <div className={`sticky bottom-0 w-full border-t-2 ${good ? 'border-good/35 bg-good-tint' : 'border-bad/35 bg-bad-tint'}`}>
+            <div className="mx-auto flex max-w-[676px] flex-col items-stretch gap-3 px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-4 lg:h-[110px] lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:py-0">
+              <div role="status" aria-live="polite" className={`flex min-w-0 flex-col gap-[3px] font-bold leading-figma lg:gap-1 ${good ? 'text-good-text' : 'text-bad-text'}`}>
+                <p className="text-[19px] tracking-[-0.38px] lg:text-[22px] lg:tracking-[-0.44px]">{assessing && !metricMode ? '분석 중…' : fbTitle}</p>
+                <p className="text-[13px] opacity-80 lg:truncate lg:text-[14px]">{assessing && !metricMode ? '발음을 분석하고 있어요' : fbSub}</p>
               </div>
-              <div className="flex gap-[10px] shrink-0">
+              {/* 버튼: 통과 = 다시 말하기 / 계속하기, 아쉬움 = 넘어가기 / 다시 말하기(§4-04). lg 미만은 반반 폭. */}
+              <div className="flex w-full gap-2.5 lg:w-auto lg:shrink-0">
                 {good ? (
                   <>
-                    <button onClick={resetAttempt} className="rounded-[14px] bg-white px-[24px] sm:px-[28px] py-[15px] text-[16px] font-bold text-[#15803d]"
-                      style={{ borderColor: '#cde7d7', borderStyle: 'solid', borderWidth: 2, borderBottomWidth: 5 }}>다시 발화</button>
-                    <button onClick={nextItem} className="rounded-[14px] px-[24px] sm:px-[28px] py-[15px] text-[16px] font-bold text-white"
-                      style={{ background: '#16a34a', borderColor: '#0f7a36', borderStyle: 'solid', borderWidth: 2, borderBottomWidth: 5 }}>{reviewMode || stageNo != null ? '계속하기' : '다음 단어'}</button>
+                    <button type="button" onClick={resetAttempt} className={`btn-secondary border-good-line text-good-text ${RESULT_BTN}`}>다시 말하기</button>
+                    <button type="button" onClick={nextItem} className={`btn-good ${RESULT_BTN}`}>{reviewMode || stageNo != null ? '계속하기' : '다음 단어'}</button>
                   </>
                 ) : (
                   <>
-                    <button onClick={nextItem} className="rounded-[14px] bg-white px-[24px] sm:px-[28px] py-[15px] text-[16px] font-bold text-[#b91c1c]"
-                      style={{ borderColor: '#f3c8c8', borderStyle: 'solid', borderWidth: 2, borderBottomWidth: 5 }}>넘어가기</button>
-                    <button onClick={resetAttempt} className="rounded-[14px] px-[24px] sm:px-[28px] py-[15px] text-[16px] font-bold text-white"
-                      style={{ background: '#dc2626', borderColor: '#991b1b', borderStyle: 'solid', borderWidth: 2, borderBottomWidth: 5 }}>다시 발화</button>
+                    <button type="button" onClick={nextItem} className={`btn-secondary border-bad-line text-bad-text ${RESULT_BTN}`}>넘어가기</button>
+                    <button type="button" onClick={resetAttempt} className={`btn-bad ${RESULT_BTN}`}>다시 말하기</button>
                   </>
                 )}
               </div>
             </div>
           </div>
         ) : (
-          <div className="sticky bottom-0 w-full bg-white border-t-2 border-[#e2e2e8] px-4 sm:px-6 py-6">
-            <div className="mx-auto flex max-w-[640px] flex-col items-center gap-[12px]">
+          <div className="sticky bottom-0 w-full border-t-2 border-line bg-white">
+            <div className="mx-auto flex max-w-[676px] flex-col items-center gap-2.5 px-[18px] pb-[calc(26px+env(safe-area-inset-bottom))] pt-[18px] lg:h-[148px] lg:justify-center lg:gap-3 lg:py-0">
               {!recording ? (
-                <button onClick={start} aria-label="눌러서 발화"
-                  className="rounded-full size-[72px] flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
-                  style={{ background: '#ec4899', borderColor: '#be185d', borderStyle: 'solid', borderTopWidth: 2, borderLeftWidth: 2, borderRightWidth: 2, borderBottomWidth: 6 }}>
-                  <img src={IC.mic} alt="" className="size-[32px]" />
+                <button type="button" onClick={start} aria-label="눌러서 말하기"
+                  className="flex size-[72px] items-center justify-center rounded-full border-2 border-b-6 border-track-dark bg-track transition-transform hover:scale-105 active:scale-95">
+                  <img src={IC.mic} alt="" className="size-8" />
                 </button>
               ) : (
-                <button onClick={stop} aria-label="멈추고 결과 보기" className="size-[72px] transition-transform hover:scale-105 active:scale-95">
-                  <img src={IC.recording} alt="" className="block size-full animate-pulse" />
+                <button type="button" onClick={stop} aria-label="멈추고 결과 보기" className="relative size-[72px] transition-transform hover:scale-105 active:scale-95">
+                  <img src={IC.recording} alt="" className="absolute max-w-none animate-pulse"
+                    style={{ top: '-16.67%', left: '-16.67%', width: '133.33%', height: '133.33%' }} />
                 </button>
               )}
-              <p className="text-[15px] font-bold" style={{ color: recording ? '#be185d' : '#8a8a9b' }}>
-                {recording ? '듣고 있어요' : '눌러서 발화'}
+              <p className={`text-[14px] font-bold leading-figma lg:text-[15px] ${recording ? 'text-track-dark' : 'text-ink-faint'}`}>
+                {recording ? '듣고 있어요' : '눌러서 말하기'}
               </p>
             </div>
           </div>
         )
       )}
 
-      {/* 상세 분석 모달 — 전사·음소별 정확도·AV융합·코칭 + 정량지표·목소리 곡선(전량 보존) */}
-      <AnimatePresence>
-        {showDetail && summary && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(15,10,31,0.5)' }}
-            onClick={() => setShowDetail(false)}>
-            <motion.div initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-[600px] max-h-[86vh] overflow-y-auto rounded-[22px] bg-white px-[26px] pt-[24px] pb-[26px] flex flex-col gap-[14px]"
-              style={{ boxShadow: '0px 18px 44px -6px rgba(13,5,31,0.3)' }}>
-              <div className="flex items-center justify-between">
-                <p className="text-[21px] font-bold tracking-[-0.42px] text-[#1a1a2e]">발음 분석</p>
-                <button onClick={() => setShowDetail(false)} aria-label="닫기" className="size-[36px] transition-transform hover:scale-105 active:scale-95">
-                  <img src={IC.close} alt="" className="block size-full" />
-                </button>
-              </div>
+      {/* 자세히 보기(182:21 · 182:68) — 공통 모달(§3.5: 딤 + 흰 카드 + 원형 X, 바깥 클릭·Esc로 닫힘).
+          이렇게 들렸어요 · 음소별 정확도 · 소리+입모양 융합 점수 · DOKA의 한마디 */}
+      {summary && (
+        <Modal open={showDetail} onClose={closeDetail} title="발음 분석" maxW="max-w-[600px]" gap="gap-3.5">
+          {((assessment && !assessment.error && assessment.transcript != null) || phones.length > 0 || fusion?.visual_score != null) && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {/* 이렇게 들렸어요(182:73) */}
+              {assessment && !assessment.error && assessment.transcript != null && (
+                <div className="flex min-h-[140px] flex-col items-center justify-center gap-2 rounded-14 border-1.5 border-fill bg-surface-muted px-4 py-3.5 sm:min-h-[207px]">
+                  <p className="text-[13px] font-bold leading-figma text-ink-muted">이렇게 들렸어요</p>
+                  <p className="text-center text-[34px] font-bold leading-figma tracking-[-0.68px] text-ink">"{assessment.transcript || '(잘 안 들렸어요)'}"</p>
+                </div>
+              )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-[12px]">
-                {/* 이렇게 들렸어요 */}
-                {assessment && !assessment.error && assessment.transcript != null && (
-                  <div className="rounded-[14px] bg-[#fafafc] border-[1.5px] border-[#ededf3] px-[16px] py-[14px] flex flex-col gap-[8px] items-center justify-center min-h-[140px]">
-                    <p className="text-[13px] font-bold text-[#5a5a6e]">이렇게 들렸어요</p>
-                    <p className="text-[34px] font-bold tracking-[-0.68px] text-[#1a1a2e] text-center">"{assessment.transcript || '(잘 안 들렸어요)'}"</p>
+              <div className="flex flex-col gap-3">
+                {/* 음소별 발음 정확도(182:88) */}
+                {phones.length > 0 && (
+                  <div className="flex flex-col items-center gap-2.5 rounded-14 border-1.5 border-fill bg-surface-muted px-4 py-3.5">
+                    <p className="text-[13px] font-bold leading-figma text-ink-muted">음소별 발음 정확도</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {phones.map((p, i) => {
+                        const v = phoneScore(p)
+                        return (
+                          <div key={i} className={`flex flex-col items-center gap-0.5 rounded-[11px] border-1.5 px-[15px] py-[9px] font-bold leading-figma ${scoreTone(v, 'phone').chip}`}>
+                            <span className="text-[18px]">{p.label || '·'}</span>
+                            <span className="text-[11px] opacity-80">{v}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
 
-                <div className="flex flex-col gap-[12px]">
-                  {/* 음소별 발음 정확도 */}
-                  {phones.length > 0 && (
-                    <div className="rounded-[14px] bg-[#fafafc] border-[1.5px] border-[#ededf3] px-[16px] py-[14px] flex flex-col gap-[10px] items-center">
-                      <p className="text-[13px] font-bold text-[#5a5a6e]">음소별 발음 정확도</p>
-                      <div className="flex flex-wrap gap-[8px] justify-center">
-                        {phones.map((p, i) => {
-                          const v = Math.round((p.dgop ?? 0) * 100)
-                          const t = phoneTone(v)
-                          return (
-                            <div key={i} className="rounded-[11px] border-[1.5px] px-[15px] py-[9px] flex flex-col items-center gap-[2px]"
-                              style={{ background: t.bg, borderColor: t.border, color: t.text }}>
-                              <span className="text-[18px] font-bold">{p.label || '·'}</span>
-                              <span className="text-[11px] font-bold opacity-80">{v}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                      {assessment?.acoustic_dgop?.uncertainty != null && (
-                        <p className="text-[11px] text-[#b0b0c0] text-center">불확실성 {Math.round(assessment.acoustic_dgop.uncertainty * 100)}% — 뭉갠 발음일수록 높아요</p>
+                {/* 소리 + 입모양 융합 점수(182:77) — 웹캠 미러로 입모양을 잰 시도에만 값이 있다 */}
+                {fusion && fusion.visual_score != null && (
+                  <div className="flex flex-col items-center gap-2.5 rounded-14 border-1.5 border-fill bg-surface-muted px-4 py-3.5">
+                    <p className="text-[13px] font-bold leading-figma text-ink-muted">소리 + 입모양 융합 점수</p>
+                    <div className="flex items-center gap-[9px] leading-figma">
+                      {fusionAudio != null && (
+                        <>
+                          <span className="text-[15px] text-ink-soft">소리 {Math.round(fusionAudio)}</span>
+                          <span className="text-[13px] text-inactive-line">+</span>
+                        </>
                       )}
+                      <span className="text-[15px] text-ink-soft">입모양 {Math.round(fusion.visual_score)}</span>
+                      <span className="text-[13px] text-inactive-line">→</span>
+                      <span className="text-[19px] font-bold text-track-dark">{Math.round(fusion.score)}</span>
                     </div>
-                  )}
-
-                  {/* 소리 + 입모양 융합 점수 */}
-                  {assessment?.av_fusion && assessment.av_fusion.visual_score != null && (
-                    <div className="rounded-[14px] bg-[#fafafc] border-[1.5px] border-[#ededf3] px-[16px] py-[14px] flex flex-col gap-[10px] items-center">
-                      <p className="text-[13px] font-bold text-[#5a5a6e]">소리 + 입모양 융합 점수</p>
-                      <div className="flex items-center gap-[9px]">
-                        <span className="text-[15px] text-[#7a7a8c]">소리 {Math.round(assessment.av_fusion.audio_score)}</span>
-                        <span className="text-[13px] text-[#c9c9d6]">+</span>
-                        <span className="text-[15px] text-[#7a7a8c]">입모양 {Math.round(assessment.av_fusion.visual_score)}</span>
-                        <span className="text-[13px] text-[#c9c9d6]">→</span>
-                        <span className="text-[19px] font-bold text-[#be185d]">{Math.round(assessment.av_fusion.score)}</span>
-                      </div>
-                      <p className="text-[10px] text-[#b0b0c0]">입모양 가중 {Math.round((assessment.av_fusion.visual_weight || 0) * 100)}%</p>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
+            </div>
+          )}
 
-              {/* 정량 지표 */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {/* 발성·운율(지표 모드)은 Figma 프레임이 없다 — 이 단계의 유일한 결과라 지표와 목소리 곡선을 둔다 */}
+          {metricMode && (
+            <>
+              <div className="grid grid-cols-3 gap-2">
                 <Stat label="목소리 크기" value={`${summary.loudness}/100`} />
                 <Stat label="억양 폭" value={`${summary.pitchRange}Hz`} />
                 <Stat label="길이" value={`${summary.duration}s`} />
-                <Stat label="점수" value={assessment && !assessment.error ? `${assessment.score}점` : assessing ? '…' : '-'} />
               </div>
-
-              {/* 내 목소리 곡선 — 억양(높낮이) + 크기를 시간축으로 '보이게' */}
               {summary.trace && summary.trace.length >= 3 && !summary.micIssue && (
-                <div className="p-3 rounded-[14px] bg-white border-[1.5px] border-[#ededf3]">
-                  <p className="text-xs text-gray-500 mb-1">내 목소리 곡선</p>
+                <div className="rounded-14 border-1.5 border-fill bg-white p-3">
+                  <p className="mb-1 text-xs text-ink-muted">내 목소리 곡선</p>
                   <PitchEnergyGraph trace={summary.trace} summary={summary} />
                 </div>
               )}
+            </>
+          )}
 
-              {/* 크기·톤 메시지(지표 모드에선 드릴 목표와 상충 가능 → 숨김) */}
-              {!metricMode && (
-                <div className="space-y-2">
-                  <div className={`p-3 rounded-lg text-sm ${summary.volOk ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>🔊 {summary.volMsg}</div>
-                  {summary.toneMsg && (
-                    <div className={`p-3 rounded-lg text-sm ${summary.toneOk === false ? 'bg-amber-50 text-amber-700' : summary.toneOk ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-600'}`}>🎵 {summary.toneMsg}</div>
-                  )}
-                </div>
-              )}
+          {/* DOKA의 한마디(182:106 — DOKA 303:32 · 제목 303:39 · 구분선 303:40) */}
+          {assessment?.coaching && (
+            <div className="flex items-center gap-2.5 rounded-14 bg-track-tint px-4 py-3.5">
+              <span className="relative size-[34px] shrink-0">
+                <img src={IC.doka} alt="" className="absolute max-w-none" style={OVERFLOW} />
+              </span>
+              <p className="shrink-0 whitespace-nowrap text-[14px] font-bold leading-figma text-track-dark">DOKA의 한마디</p>
+              <span aria-hidden className="h-4 w-[1.5px] shrink-0 rounded-[1px] bg-speak-dark/30" />
+              <p className="min-w-0 flex-1 text-[14px] leading-[1.6] text-track-dark">{assessment.coaching}</p>
+            </div>
+          )}
 
-              {/* 다르게 들린 소리 */}
-              {assessment?.confusions?.length > 0 && (
-                <div className="p-3 rounded-[14px] bg-amber-50 text-amber-700 text-xs">
-                  다르게 들린 소리: {assessment.confusions.map((c) => `${c.correct}→${c.confused_as}`).join(', ')}
-                </div>
-              )}
-
-              {/* 코칭 — 핑크 */}
-              {assessment?.coaching && (
-                <div className="flex gap-[10px] items-start rounded-[14px] bg-[#ffe4e9] px-[16px] py-[14px]">
-                  <img src={IC.coach} alt="" className="size-[18px] mt-0.5 shrink-0" />
-                  <p className="flex-1 text-[14px] leading-[1.6] text-[#be185d]">{assessment.coaching}</p>
-                </div>
-              )}
-
-              {assessment?.error && (
-                <div className="p-3 rounded-[14px] bg-gray-50 text-gray-500 text-sm">{assessment.error}</div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          {assessment?.error && (
+            <div className="rounded-14 bg-surface-muted p-3 text-sm text-ink-muted">{assessment.error}</div>
+          )}
+        </Modal>
+      )}
     </div>
   )
 }
 
 function Stat({ label, value }) {
   return (
-    <div className="p-2 rounded-lg bg-gray-50 text-center">
-      <p className="text-[10px] text-gray-400">{label}</p>
-      <p className="font-bold text-gray-800 text-sm">{value}</p>
+    <div className="rounded-lg bg-surface-muted p-2 text-center">
+      <p className="text-[10px] text-ink-faint">{label}</p>
+      <p className="text-sm font-bold text-ink">{value}</p>
     </div>
   )
 }
@@ -787,7 +781,7 @@ function Stat({ label, value }) {
  *  위 레인: 억양(높낮이). 평균 피치를 중심으로 ±90Hz 매핑 → 기준 목소리 높이와 무관하게
  *           '변화량'만 곡선으로 드러난다(평평하게 말하면 가운데 점선에 붙은 평평한 선).
  *  아래 레인: 목소리 크기(에너지 포락선) + '적정' 기준 점선. 자주 아래로 내려가면 너무 작았다는 뜻.
- *  발화 accent(핑크)로 배색.
+ *  발화 트랙 토큰(--speak)으로 배색.
  */
 function PitchEnergyGraph({ trace, summary }) {
   if (!trace || trace.length < 3) return null
@@ -854,42 +848,42 @@ function PitchEnergyGraph({ trace, summary }) {
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: 260 }}
            role="img" aria-label="발음 피치·강세 그래프">
         {/* 레인 배경 */}
-        <rect x={padL} y={pTop} width={innerW} height={pBot - pTop} rx="8" fill="#fce7f3" />
-        <rect x={padL} y={eTop} width={innerW} height={eBot - eTop} rx="8" fill="#f1f5f9" />
+        <rect x={padL} y={pTop} width={innerW} height={pBot - pTop} rx="8" style={{ fill: 'var(--speak-tint)' }} />
+        <rect x={padL} y={eTop} width={innerW} height={eBot - eTop} rx="8" style={{ fill: 'var(--fill)' }} />
 
         {/* 억양 기준선(평균=평평의 기준) */}
-        <line x1={padL} y1={midY} x2={W - padR} y2={midY} stroke="#f9a8d4" strokeWidth="1" strokeDasharray="4 4" />
+        <line x1={padL} y1={midY} x2={W - padR} y2={midY} strokeOpacity="0.45" strokeWidth="1" strokeDasharray="4 4" style={{ stroke: 'var(--speak)' }} />
         {/* 억양 곡선 */}
         {segs.map((pts, i) => (
-          <path key={i} d={smooth(pts)} fill="none" stroke="#ec4899" strokeWidth="2.5"
-                strokeLinejoin="round" strokeLinecap="round" />
+          <path key={i} d={smooth(pts)} fill="none" strokeWidth="2.5"
+                strokeLinejoin="round" strokeLinecap="round" style={{ stroke: 'var(--speak)' }} />
         ))}
 
         {/* 크기 포락선(면적 + 부드러운 상단선) + 적정 기준선 */}
-        <path d={areaFill} fill="#ec4899" fillOpacity="0.16" stroke="none" />
-        <path d={topLine} fill="none" stroke="#ec4899" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        <line x1={padL} y1={yTh} x2={W - padR} y2={yTh} stroke="#f59e0b" strokeWidth="1" strokeDasharray="5 4" />
-        <text x={W - padR} y={yTh - 3} textAnchor="end" fontSize="9" fill="#d97706">적정</text>
+        <path d={areaFill} fillOpacity="0.16" stroke="none" style={{ fill: 'var(--speak)' }} />
+        <path d={topLine} fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ stroke: 'var(--speak)' }} />
+        <line x1={padL} y1={yTh} x2={W - padR} y2={yTh} strokeWidth="1" strokeDasharray="5 4" style={{ stroke: 'var(--warn)' }} />
+        <text x={W - padR} y={yTh - 3} textAnchor="end" fontSize="9" style={{ fill: 'var(--warn-strong)' }}>적정</text>
 
         {/* 레인 라벨 */}
-        <text x="4" y={midY - 3} fontSize="10" fill="#ec4899" fontWeight="600">억양</text>
-        <text x="4" y={midY + 9} fontSize="8" fill="#94a3b8">높낮이</text>
-        <text x="4" y={(eTop + eBot) / 2 + 3} fontSize="10" fill="#64748b" fontWeight="600">크기</text>
+        <text x="4" y={midY - 3} fontSize="10" fontWeight="600" style={{ fill: 'var(--speak)' }}>억양</text>
+        <text x="4" y={midY + 9} fontSize="8" style={{ fill: 'var(--ink-faint)' }}>높낮이</text>
+        <text x="4" y={(eTop + eBot) / 2 + 3} fontSize="10" fontWeight="600" style={{ fill: 'var(--ink-muted)' }}>크기</text>
 
         {/* 시간축 */}
-        <text x={padL} y={H - 5} fontSize="9" fill="#94a3b8">0s</text>
-        <text x={W - padR} y={H - 5} textAnchor="end" fontSize="9" fill="#94a3b8">{tMax.toFixed(1)}s</text>
+        <text x={padL} y={H - 5} fontSize="9" style={{ fill: 'var(--ink-faint)' }}>0s</text>
+        <text x={W - padR} y={H - 5} textAnchor="end" fontSize="9" style={{ fill: 'var(--ink-faint)' }}>{tMax.toFixed(1)}s</text>
       </svg>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-gray-500">
-        <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-[2px] bg-[#ec4899]" /> 억양선</span>
-        <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-2 bg-[#fce7f3] border border-[#ec4899]" /> 목소리 크기</span>
-        <span className="inline-flex items-center gap-1"><span className="inline-block w-3 border-t border-dashed border-amber-500" /> 적정 크기</span>
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-muted">
+        <span className="inline-flex items-center gap-1"><span className="inline-block h-[2px] w-3 bg-speak" /> 억양선</span>
+        <span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-3 border border-speak bg-speak-tint" /> 목소리 크기</span>
+        <span className="inline-flex items-center gap-1"><span className="inline-block w-3 border-t border-dashed border-warn" /> 적정 크기</span>
       </div>
       <div className="mt-1 space-y-0.5">
-        {flat && <p className="text-[11px] text-amber-600">억양선이 가운데 점선을 거의 안 벗어났어요 → 문장 끝에서 선을 올리거나 내려보세요.</p>}
-        {quiet && <p className="text-[11px] text-amber-600">크기 곡선이 적정선 아래로 자주 내려갔어요 → 배에 힘을 주고 더 크게.</p>}
-        {!flat && !quiet && <p className="text-[11px] text-emerald-600">억양선과 크기 곡선이 잘 살아있어요 👍</p>}
+        {flat && <p className="text-[11px] text-warn-text">억양선이 가운데 점선을 거의 안 벗어났어요 → 문장 끝에서 선을 올리거나 내려보세요.</p>}
+        {quiet && <p className="text-[11px] text-warn-text">크기 곡선이 적정선 아래로 자주 내려갔어요 → 배에 힘을 주고 더 크게.</p>}
+        {!flat && !quiet && <p className="text-[11px] text-good-text">억양선과 크기 곡선이 잘 살아있어요.</p>}
       </div>
     </div>
   )

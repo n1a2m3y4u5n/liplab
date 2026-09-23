@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, reviewAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import AppShell from '../components/AppShell'
+import LoadingScreen from '../components/LoadingScreen'
 
 /**
  * 오늘의 복습 (간격 반복 SRS)
@@ -13,9 +14,6 @@ import AppShell from '../components/AppShell'
 
 const shuffle = (a) => [...a].sort(() => Math.random() - 0.5)
 
-function Splash({ text }) {
-  return <div className="min-h-screen flex items-center justify-center text-gray-500">{text}</div>
-}
 
 export default function Review() {
   const navigate = useNavigate()
@@ -42,25 +40,24 @@ export default function Review() {
     else setIdx(idx + 1)
   }
 
-  if (state === 'loading') return <Splash text="불러오는 중…" />
-  if (state === 'error') return <Splash text="불러오지 못했어요." />
+  // 데이터 로딩 = 기본 로딩(§4-10 256:34)
+  if (state === 'loading') return <LoadingScreen />
+  if (state === 'error') return <div className="flex min-h-[100dvh] items-center justify-center bg-page text-ink-muted">불러오지 못했어요.</div>
 
   return (
     <AppShell active="review" title="입모양·단어 복습" description={state === 'active' ? `${idx + 1} / ${items.length}` : '복습 일정이 된 항목을 다시 만나요'}>
       <div className="w-full">
         {state === 'empty' && (
-          <div className="card text-center py-14">
-            <p className="text-5xl mb-3">🎉</p>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">복습할 항목이 없어요</h2>
-            <p className="text-gray-500 mb-5">틀린 항목은 다음날부터 여기서 다시 만나요.</p>
+          <div className="card py-14 text-center">
+            <h2 className="mb-1 text-xl font-bold text-ink">복습할 항목이 없어요</h2>
+            <p className="mb-5 text-ink-muted">틀린 항목은 다음날부터 여기서 다시 만나요.</p>
             <button onClick={() => navigate('/dashboard')} className="btn-primary">나가기</button>
           </div>
         )}
         {state === 'done' && (
-          <div className="card text-center py-14">
-            <p className="text-5xl mb-3">✅</p>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">복습 완료!</h2>
-            <p className="text-gray-500 mb-5">수고했어요. 맞힌 항목은 더 나중에 다시 나와요.</p>
+          <div className="card py-14 text-center">
+            <h2 className="mb-1 text-xl font-bold text-ink">복습 완료!</h2>
+            <p className="mb-5 text-ink-muted">수고했어요. 맞힌 항목은 더 나중에 다시 나와요.</p>
             <button onClick={() => navigate('/dashboard')} className="btn-primary">나가기</button>
           </div>
         )}
@@ -106,9 +103,9 @@ function ReviewCard({ item, lessons, words, onDone }) {
   return (
     <div className="space-y-4">
       <div className="card">
-        <p className="text-sm text-gray-500 mb-3">
+        <p className="mb-3 text-sm text-ink-muted">
           {isViseme ? '이 입모양은 어느 그룹일까요?' : '이 입모양은 어떤 단어일까요?'}
-          <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">복습</span>
+          <span className="ml-2 rounded-full bg-warn-tint px-2 py-0.5 text-xs font-bold text-warn-text">복습</span>
         </p>
         <MouthAvatar
           frames={isViseme ? undefined : frames}
@@ -121,11 +118,11 @@ function ReviewCard({ item, lessons, words, onDone }) {
           {choices.map((c) => {
             const isT = c.key === targetKey
             const isC = result?.chosen === c.key
-            let cls = 'px-4 py-3 rounded-xl border-2 font-medium text-sm transition-all '
-            if (!result) cls += 'border-gray-200 bg-white hover:border-primary-400 hover:bg-primary-50 text-gray-800'
-            else if (isT) cls += 'border-green-500 bg-green-50 text-green-800'
-            else if (isC) cls += 'border-red-400 bg-red-50 text-red-700'
-            else cls += 'border-gray-200 bg-gray-50 text-gray-400'
+            let cls = 'px-4 py-3 rounded-14 border-2 font-bold text-sm transition-all '
+            if (!result) cls += 'border-b-5 border-line bg-white text-ink hover:border-primary-300 hover:bg-primary-50'
+            else if (isT) cls += 'border-good bg-good-tint text-good-text'
+            else if (isC) cls += 'border-bad bg-bad-tint text-bad-text'
+            else cls += 'border-line bg-surface-muted text-ink-faint'
             return (
               <button key={c.key} disabled={!!result || submitting} onClick={() => choose(c.key)} className={cls}>{c.label}</button>
             )
@@ -134,10 +131,10 @@ function ReviewCard({ item, lessons, words, onDone }) {
         <AnimatePresence>
           {result && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-2">
-              <div className={`p-3 rounded-lg text-sm ${result.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                {result.correct ? '정답! 🎉 다음 복습은 더 나중에 나와요.' : '오답 — 내일 다시 만나요.'}
+              <div role="status" aria-live="polite" className={`rounded-14 p-3 text-sm font-bold ${result.correct ? 'bg-good-tint text-good-text' : 'bg-bad-tint text-bad-text'}`}>
+                {result.correct ? '정답! 다음 복습은 더 나중에 나와요.' : '오답 — 내일 다시 만나요.'}
               </div>
-              <button onClick={onDone} className="btn-primary w-full py-2 text-sm">다음 →</button>
+              <button type="button" onClick={onDone} className="btn-primary w-full py-2 text-sm">다음 →</button>
             </motion.div>
           )}
         </AnimatePresence>

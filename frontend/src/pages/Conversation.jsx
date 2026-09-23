@@ -4,14 +4,17 @@ import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
 import { learningAPI, scoreAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
-import LearnHeader from '../components/LearnHeader'
+import LoadingScreen from '../components/LoadingScreen'
 
 /**
- * 대화형 독화 연습 모드
- * AI와 자연스러운 대화를 나누며 독화 능력 향상
+ * 4단계 · 대화 실전 — AI와 자연스러운 대화를 나누며 독화 능력 향상.
+ * 레슨 집중 모드(핸드오프 §3.4): AppShell 없이 전체 화면, 상단 X(나가기) + 진행률 바 + n / 전체(대화 턴).
+ * 첫 AI 말을 받는 동안은 레슨 시작 전 트랙 로딩(§4-10 223:30)을 띄운다. 대화·채점 로직은 그대로다.
  */
 
 const MAX_TURNS = 6
+// 레슨 시작 전 트랙 로딩을 최소 이만큼은 보인다 — 첫 응답이 빨리 와도 한 번 번쩍이고 끝나지 않게.
+const INTRO_MS = 1000
 
 export default function Conversation() {
   const navigate = useNavigate()
@@ -29,8 +32,15 @@ export default function Conversation() {
   const [turnCount, setTurnCount] = useState(0)
   const [scores, setScores] = useState([])
 
+  const [introDone, setIntroDone] = useState(false)
+
   const chatBottomRef = useRef(null)
   const startedRef = useRef(false)   // 최초 AI 말풍선 중복 생성 방지(StrictMode)
+
+  useEffect(() => {
+    const t = setTimeout(() => setIntroDone(true), INTRO_MS)
+    return () => clearTimeout(t)
+  }, [])
 
   useEffect(() => {
     if (!currentScenario) {
@@ -138,40 +148,38 @@ export default function Conversation() {
   }
 
   const handleFinish = () => {
-    navigate('/dashboard')
+    navigate('/learn/path')
   }
 
   if (!currentScenario) return null
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50 flex flex-col">
-      <LearnHeader
-        accent="reading"
-        title="문장 학습"
-        description={(
-          <span className="flex flex-wrap items-center gap-2">
-            AI 입모양을 읽고 답하기 · {currentScenario.situation} · 레벨 {currentScenario.level}
-            <span className="text-xs text-slate-500">{turnCount}/{MAX_TURNS} 대화</span>
-            <span className="h-1.5 w-20 overflow-hidden rounded-full bg-gray-200">
-              <span
-                className="block h-full rounded-full bg-primary-500 transition-all"
-                style={{ width: `${(turnCount / MAX_TURNS) * 100}%` }}
-              />
-            </span>
-          </span>
-        )}
-        onExit={handleFinish}
-      />
+  // 레슨 시작 전 = 독화 트랙 로딩(223:30 / 모바일 243:81) — 첫 AI 말(입모양)을 받는 동안 + 최소 표시 시간
+  if (messages.length === 0 || !introDone) return <LoadingScreen variant="brand" track="perception" />
 
-      <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden max-w-6xl mx-auto w-full px-4 py-4 gap-4">
+  return (
+    <div className="flex min-h-[100dvh] flex-col bg-page">
+      {/* 진행 헤더(91:13 / 모바일 235:35) — 나가기 X + 트랙 + 대화 턴 n / 6 */}
+      <div className="mx-auto w-full max-w-6xl px-[18px] pt-[18px] lg:pt-7">
+        <div className="flex items-center gap-3 lg:gap-[18px]">
+          <button type="button" onClick={handleFinish} aria-label="나가기" className="shrink-0">
+            <img src="/ui/lp-91-12-close.svg" alt="" className="size-8 lg:size-9" />
+          </button>
+          <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
+            <div className="h-full rounded-full bg-track transition-all duration-500" style={{ width: `${(turnCount / MAX_TURNS) * 100}%` }} />
+          </div>
+          <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{turnCount} / {MAX_TURNS}</span>
+        </div>
+      </div>
+
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-[18px] py-6 lg:flex-row lg:overflow-hidden lg:py-5">
         {/* Left: Avatar player — 모바일에선 위로 쌓이고, lg 이상에서만 좌측 고정폭 */}
         <div className="w-full lg:w-80 shrink-0 flex flex-col gap-3">
           <div className="card flex-1">
-            <p className="text-xs font-semibold text-gray-500 mb-2">입모양 읽기</p>
+            <p className="mb-2 text-xs font-bold text-ink-muted">입모양 읽기 · {currentScenario.situation}</p>
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-2">
-                <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-                <p className="text-xs text-gray-400">AI가 응답 중...</p>
+              <div className="flex flex-col items-center justify-center gap-2 py-12">
+                <div className="spinner size-8 rounded-full border-4 border-primary-200 border-t-primary-600" />
+                <p className="text-xs text-ink-faint">AI가 응답 중...</p>
               </div>
             ) : (
               <LipSyncPlayer3D
@@ -186,8 +194,9 @@ export default function Conversation() {
           {/* Reveal text button */}
           {phase === 'answering' && !revealedText && (
             <button
+              type="button"
               onClick={handleRevealText}
-              className="w-full py-2 text-sm rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors font-medium"
+              className="w-full rounded-14 bg-warn-tint py-2 text-sm font-bold text-warn-text transition hover:brightness-95"
             >
               무슨 말인지 보기
             </button>
@@ -197,7 +206,7 @@ export default function Conversation() {
             <motion.div
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 font-medium"
+              className="rounded-14 border border-good-line bg-good-tint p-3 text-sm font-bold text-good-text"
             >
               "{currentAIText}"
             </motion.div>
@@ -208,7 +217,7 @@ export default function Conversation() {
         <div className="flex-1 flex flex-col gap-3">
           {/* Chat messages */}
           <div className="flex-1 card overflow-y-auto" style={{ maxHeight: '400px' }}>
-            <p className="text-xs font-semibold text-gray-400 mb-3">대화 기록</p>
+            <p className="mb-3 text-xs font-bold text-ink-faint">대화 기록</p>
             <div className="space-y-3">
               <AnimatePresence>
                 {messages.map((msg, i) => (
@@ -219,12 +228,12 @@ export default function Conversation() {
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-xs px-3 py-2 rounded-xl text-sm ${
+                      className={`max-w-xs rounded-14 px-3 py-2 text-sm ${
                         msg.role === 'user'
-                          ? 'bg-primary-500 text-white rounded-br-sm'
+                          ? 'rounded-br-sm bg-primary-500 text-white'
                           : msg.revealed
-                          ? 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm shadow-sm'
-                          : 'bg-gray-100 text-gray-400 italic rounded-bl-sm'
+                          ? 'rounded-bl-sm border border-line bg-white text-ink shadow-card'
+                          : 'rounded-bl-sm bg-surface-sunken italic text-ink-faint'
                       }`}
                     >
                       {msg.role === 'ai' && !msg.revealed
@@ -248,7 +257,7 @@ export default function Conversation() {
               animate={{ opacity: 1, y: 0 }}
               className="card"
             >
-              <p className="text-sm font-medium text-gray-700 mb-2">
+              <p className="mb-2 text-sm font-bold text-ink">
                 무슨 말을 했나요? 읽은 내용을 답해보세요
               </p>
               <div className="flex gap-2">
@@ -262,9 +271,10 @@ export default function Conversation() {
                   autoFocus
                 />
                 <button
+                  type="button"
                   onClick={handleSendAnswer}
                   disabled={!userInput.trim()}
-                  className="btn-primary px-5 disabled:opacity-50"
+                  className="btn-primary px-5"
                 >
                   전송
                 </button>
@@ -273,7 +283,7 @@ export default function Conversation() {
           )}
 
           {phase === 'watching' && !isLoading && (
-            <div className="card text-center py-4 text-sm text-gray-500">
+            <div className="card py-4 text-center text-sm text-ink-muted">
               입모양 애니메이션을 보고 있는 중... 재생이 끝나면 답변할 수 있습니다.
             </div>
           )}
@@ -284,16 +294,16 @@ export default function Conversation() {
               animate={{ opacity: 1, scale: 1 }}
               className="card text-center py-6"
             >
-              <div className="text-4xl mb-2">대화 완료</div>
+              <h2 className="mb-2 text-[26px] font-bold leading-figma tracking-[-0.65px] text-ink">대화 완료</h2>
               {scores.length > 0 && (
-                <p className="text-lg font-bold text-primary-600 mb-1">
+                <p className="mb-1 text-lg font-bold text-primary-600">
                   평균 이해도 {Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}점
                 </p>
               )}
-              <p className="text-gray-600 mb-4">
+              <p className="mb-4 text-ink-muted">
                 {MAX_TURNS}번의 대화를 완료했습니다!
               </p>
-              <button onClick={handleFinish} className="btn-primary">
+              <button type="button" onClick={handleFinish} className="btn-primary">
                 나가기
               </button>
             </motion.div>
