@@ -53,6 +53,18 @@ with TestClient(main.app) as c:
     out["review_demo"] = c.get("/api/admin/content/candidates",
                                headers={"Authorization": f"Bearer {demo}"}).status_code
 
+    # 학습 초기화 — 확인 없으면 거부, 데모 계정은 거부, 본인 계정은 학습 기록·XP를 지우고 계정·동의 기록은 남긴다
+    c.post("/api/bookmarks", json={"sentence": "초기화 전 북마크", "situation": "인사", "level": 1}, headers=new_h)
+    out["reset_no_confirm"] = c.post("/api/account/learning-reset", headers=new_h).status_code
+    out["reset_demo"] = c.post("/api/account/learning-reset", params={"confirm": True},
+                               headers={"Authorization": f"Bearer {demo}"}).status_code
+    rr = c.post("/api/account/learning-reset", params={"confirm": True}, headers=new_h)
+    out["reset_ok"] = rr.status_code
+    after = c.get("/api/account/data", headers=new_h).json()
+    out["reset_bookmarks"] = len(after["data"].get("bookmarks", []))
+    out["reset_consent_kept"] = len(after["data"].get("consent_records", []))
+    out["reset_xp"] = after["user"].get("total_xp")
+
     # 계정 삭제 — 비밀번호가 틀리면 거부, 맞으면 삭제 후 토큰 무효
     out["del_bad_pw"] = c.request("DELETE", "/api/account", params={"confirm": True},
                                   json={"password": "wrong"}, headers=new_h).status_code
@@ -83,4 +95,6 @@ def test_account_security_flow():
     assert r["pw_change"] == 200
     assert r["old_token_me"] == 401 and r["new_token_me"] == 200, "비밀번호 변경 뒤 옛 토큰은 거부"
     assert r["review_no_admin"] == 403 and r["review_admin"] == 200 and r["review_demo"] == 403
+    assert r["reset_no_confirm"] == 400 and r["reset_demo"] == 403 and r["reset_ok"] == 200
+    assert r["reset_bookmarks"] == 0 and r["reset_consent_kept"] == 1 and r["reset_xp"] == 0
     assert r["del_bad_pw"] == 403 and r["del_ok"] == 200 and r["after_delete_me"] == 401

@@ -25,6 +25,11 @@ export function markSignExplored() {
   try { localStorage.setItem(SIGN_KEY, '1') } catch { /* 저장소 차단 시 무시 */ }
 }
 
+/** 학습 초기화 때 브라우저가 판정하는 '수어 탐험' 배지도 지운다. */
+export function clearSignExplored() {
+  try { localStorage.removeItem(SIGN_KEY) } catch { /* 저장소 차단 시 무시 */ }
+}
+
 function signExplored() {
   try { return localStorage.getItem(SIGN_KEY) === '1' } catch { return false }
 }

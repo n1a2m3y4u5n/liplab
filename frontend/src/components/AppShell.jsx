@@ -226,7 +226,8 @@ function useRailData(variant) {
     let on = true
     reviewAPI.getDue().then((d) => { if (on) setDue((d.items || []).length) }).catch(() => { if (on) setDue(null) })
     if (variant !== 'review') {
-      learningAPI.getBookmarks('read').then((b) => { if (on) setMarks((Array.isArray(b) ? b : b.items || []).length) }).catch(() => { if (on) setMarks(null) })
+      // 복습 탭 목록과 같게 두 트랙(독화·발화) 북마크를 모두 센다
+      learningAPI.getBookmarks().then((b) => { if (on) setMarks((Array.isArray(b) ? b : b.items || []).length) }).catch(() => { if (on) setMarks(null) })
     }
     if (variant !== 'tasks') {
       learningAPI.getAnalysisOverview().then((d) => { if (on) setOverview(d) }).catch(() => { if (on) setOverview(null) })

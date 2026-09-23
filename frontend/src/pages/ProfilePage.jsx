@@ -4,9 +4,9 @@ import AppShell from '../components/AppShell'
 import Modal from '../components/Modal'
 import GuideModal from '../components/GuideModal'
 import useStore from '../store/useStore'
-import { accountAPI, learningAPI, curriculumAPI, reviewAPI } from '../api'
+import { accountAPI, learningAPI, reviewAPI } from '../api'
 import { levelProgress } from '../lib/level'
-import { mergeBadges } from '../lib/badges'
+import { mergeBadges, clearSignExplored } from '../lib/badges'
 
 /**
  * 프로필 탭 (Figma 107:16 · 모바일 241:34) — 내 프로필(그라데이션 3D 카드) + 통계 3열 + 설정 리스트.
@@ -126,9 +126,11 @@ export default function ProfilePage() {
     if (confirmText.trim() !== '초기화') return
     setBusy(true); setResetErr('')
     try {
-      await learningAPI.resetAnalysis()
-      await curriculumAPI.resetTrack()
-      setModal(null); navigate('/learn/path')
+      // 목록에 적힌 범위(학습 기록·단계 진도·복습 목록·배지·XP)를 서버가 한 번에 지운다.
+      await accountAPI.resetLearning()
+      clearSignExplored()
+      setModal(null)
+      window.location.assign('/learn/path')   // 헤더의 XP·연속 학습까지 새로 읽도록 다시 불러온다
     } catch (e) {
       setResetErr(e?.response?.data?.detail || '초기화하지 못했어요. 잠시 후 다시 시도해 주세요.')
     } finally { setBusy(false) }

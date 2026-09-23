@@ -232,6 +232,8 @@ export const accountAPI = {
   deleteAccount: async (password) => (await api.delete('/account', { params: { confirm: true }, data: { password } })).data,
   updateProfile: async (payload) => (await api.patch('/account/profile', payload)).data,
   changePassword: async (payload) => (await api.post('/account/password', payload)).data,
+  // 학습 초기화 — 계정은 두고 학습 기록·XP·연속 학습·배치를 처음으로(공용 데모 계정은 403)
+  resetLearning: async () => (await api.post('/account/learning-reset', null, { params: { confirm: true } })).data,
 }
 
 // 발화(말하기) — 커리큘럼 6단계 + 녹음 채점·코칭.
