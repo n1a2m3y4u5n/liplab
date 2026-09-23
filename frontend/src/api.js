@@ -234,6 +234,9 @@ export const accountAPI = {
   changePassword: async (payload) => (await api.post('/account/password', payload)).data,
   // 학습 초기화 — 계정은 두고 학습 기록·XP·연속 학습·배치를 처음으로(공용 데모 계정은 403)
   resetLearning: async () => (await api.post('/account/learning-reset', null, { params: { confirm: true } })).data,
+  // 파일럿(§4.7) — 진행 중일 때만 참여 코드 입력(운영자가 LIPLAB_PILOT=1로 켠다)
+  pilotStatus: async () => (await api.get('/pilot/status')).data,
+  pilotJoin: async (code) => (await api.post('/pilot/join', { code })).data,
 }
 
 // 발화(말하기) — 커리큘럼 6단계 + 녹음 채점·코칭.

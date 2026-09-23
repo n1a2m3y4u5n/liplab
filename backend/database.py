@@ -146,6 +146,9 @@ class LearningProfile(Base):
     track = Column(String(20), nullable=True)      # 'perception'(중도·난청) | 'language'(선천성) | None(미배치)
     current_stage = Column(Integer, default=0)     # 0 입문 ~ 4 대화
     placed = Column(Boolean, default=False)        # 배치(트랙 선택) 완료 여부
+    # 파일럿(§4.7) — 참여 코드와 집단. 코드는 운영자가 나눠 준 값이고, 내보내기는 가명으로만 한다.
+    pilot_code = Column(String(32), nullable=True)
+    cohort = Column(String(16), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -370,6 +373,9 @@ async def init_db():
             # 표준검사 판본·문항 기록(축 I)
             "ALTER TABLE placement_results ADD COLUMN form_version VARCHAR(16)",
             "ALTER TABLE placement_results ADD COLUMN item_log JSON",
+            # 파일럿 참여 코드·집단(§4.7)
+            "ALTER TABLE learning_profiles ADD COLUMN pilot_code VARCHAR(32)",
+            "ALTER TABLE learning_profiles ADD COLUMN cohort VARCHAR(16)",
         ):
             try:
                 await conn.exec_driver_sql(ddl)
