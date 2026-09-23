@@ -30,6 +30,15 @@
 4. **Fly.io 계정 생성** (프로덕션 배포 시)
    - https://fly.io/app/sign-up
 
+5. **의존성 보안 점검** (계획서 §4.9 ⑦)
+   ```bash
+   bash scripts/security-audit.sh   # pip-audit + npm audit(운영 의존성, high 이상)
+   ```
+   `SECURITY_AUDIT_OK`가 아니면 목록을 보고 올릴 수 있는 패키지를 올린다(`backend/requirements.txt`의 상한도 함께).
+
+6. **공개 전 확인**: 전시앱 `liplab.fly.dev`는 새 fly 앱으로만 시험하고 덮어쓰지 않는다. 처리방침의 개인정보
+   보호책임자 연락처, `LIPLAB_UNLOCK_ALL`(전 단계 열기) 설정, 파일럿을 켤지(`LIPLAB_PILOT`)를 정한다.
+
 ---
 
 ## 로컬 Docker 테스트
