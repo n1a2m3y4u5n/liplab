@@ -2098,6 +2098,13 @@ def _pseudonym(user_id: int) -> str:
     return _pd.pseudonym(user_id)
 
 
+@app.get("/api/backbone/status")
+async def backbone_status(current_user=Depends(get_current_user)):
+    """공용 음성 백본(A-9) 상태 — 올라간 모델·장치·사용 횟수와 쓰는 축. 모델을 새로 올리지는 않는다."""
+    import backbone_service as _bb
+    return _bb.status()
+
+
 def _reviewer_tag(user) -> str:
     """콘텐츠 검수 기록(approved.json의 review_log)에 남길 운영자 태그. 저장소에 들어가는 파일이라 이메일 대신
     서버 비밀키 HMAC 앞 8자리를 쓴다(같은 서버에서는 같은 운영자가 같은 태그)."""
