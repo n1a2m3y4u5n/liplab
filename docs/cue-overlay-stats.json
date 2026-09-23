@@ -1,0 +1,26 @@
+{
+ "sentences": 186,
+ "mean_syllables": 10.63,
+ "cues_per_sentence_mean": 5.94,
+ "cues_per_sentence_median": 6.0,
+ "share_syllables_cued": 0.558,
+ "cues_with_max2_mean": 1.99,
+ "reduction_by_cap": 0.665,
+ "cue_kinds": {
+  "nasal": 636,
+  "tense": 224,
+  "aspirated": 244
+ },
+ "phonetic_mode_effect": {
+  "sentences_changed": 63,
+  "cues_added": 63,
+  "cues_removed": 22,
+  "by_kind": {
+   "+nasal": 21,
+   "+tense": 42,
+   "-tense": 13,
+   "-aspirated": 7,
+   "-nasal": 2
+  }
+ }
+}

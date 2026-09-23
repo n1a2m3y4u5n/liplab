@@ -3,6 +3,11 @@ import { toBlendshapeMap, scorePercent, coachHint, loadCalibration } from '../li
 import { faceSignals, FACE_SIGNAL_LABELS } from '../lib/faceCues'
 import { lipGeometry, LIP_GEOMETRY_LABELS } from '../lib/lipGeometry'
 import { predictK, K_FACE_KEYS, K_WIN } from '../lib/kModel'
+import { CueGlyph } from './CueBadges'
+
+// K→J 연결(K-4): 얼굴에서 추정한 비음 확률이 이 값 이상이면 J의 '울림' 기호를 켠다.
+// 비음 AUC가 0.60~0.64 수준이라(docs/k-facecue.md) 단정 대신 기호의 켜짐·흐림으로만 알린다.
+const K_NASAL_ON = 0.6
 import { curriculumAPI, articulationAPI } from '../api'
 import useFaceLandmarker from '../hooks/useFaceLandmarker'
 import MouthCalibration from './MouthCalibration'
@@ -308,7 +313,13 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
             <div className="h-2 w-full overflow-hidden rounded-full bg-violet-100">
               <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${Math.round(kPred.nasal * 100)}%` }} />
             </div>
-            <span className="mt-0.5 block text-[11px] font-medium text-violet-700">비음(코울림) {Math.round(kPred.nasal * 100)}</span>
+            <span className="mt-0.5 flex items-center justify-center gap-1 text-[11px] font-medium text-violet-700">
+              <span className={`transition-opacity ${kPred.nasal >= K_NASAL_ON ? 'opacity-100' : 'opacity-25'}`}
+                aria-label={kPred.nasal >= K_NASAL_ON ? '울림 기호 켜짐' : '울림 기호 꺼짐'}>
+                <CueGlyph cue="nasal" size={14} />
+              </span>
+              비음(코울림) {Math.round(kPred.nasal * 100)}
+            </span>
           </div>
           {/* 유성(성대울림)은 현재 모델 신뢰도가 우연 수준(AUC≈0.55)이라 표시하지 않는다(오해 방지). */}
         </div>
