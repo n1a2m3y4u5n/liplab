@@ -19,6 +19,13 @@ const STAGE_NUM = { viseme: 1, word: 2, sentence: 3, conversation: 4 }  // 추�
 
 const MODE_LABEL = { placement: '배치검사', A: '사전검사', B: '사후검사' }
 
+// 사전·사후 동형검사는 /learn/placement?form=A|B 로 들어온다(학습 효과 리포트의 시작 버튼).
+// 문항 화면의 모드 전환기는 Figma 385:82에 맞춰 없앴으므로 진입은 주소로만 한다(핸드오프 §4-01).
+function initialMode() {
+  const f = new URLSearchParams(window.location.search).get('form')
+  return f === 'A' || f === 'B' ? f : 'placement'
+}
+
 export default function Placement() {
   const navigate = useNavigate()
   const [items, setItems] = useState(null)
@@ -29,7 +36,7 @@ export default function Placement() {
   const [delta, setDelta] = useState(null)  // 첫 검사(baseline) 대비 향상도 — 2회차부터(aa28c05, 병합 복원)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [mode, setMode] = useState('placement')  // placement | A(사전) | B(사후) — 향상도검사(축 I)
+  const [mode] = useState(initialMode)  // placement | A(사전) | B(사후) — 향상도검사(축 I)
   const [n, setN] = useState(8)  // 목표 문항 수(적응형 배치검사)
   const [selected, setSelected] = useState(null)  // 현재 문항에서 고른 보기(다음 눌러 확정)
 
@@ -54,7 +61,7 @@ export default function Placement() {
     } catch { /* ignore */ } finally { setLoading(false) }
   }, [mode])
 
-  useEffect(() => { start('placement') }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { start(mode) }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!items || !items[idx]) return
@@ -194,8 +201,12 @@ export default function Placement() {
 
           {mode !== 'placement' && (
             <p className="rounded-2xl bg-primary-100 px-4 py-3 text-xs text-primary-700">
-              {MODE_LABEL[mode]} 결과를 저장했어요. 사전(A)·사후(B)를 모두 마치면 <b>학습 분석 → 통제 향상도</b>에서 변화가 보여요.
+              {MODE_LABEL[mode]} 결과를 저장했어요. 사전(A)·사후(B)를 모두 마치면 <b>분석 → 전체 통계 → 학습 효과 리포트</b>에서 변화가 보여요.
             </p>
+          )}
+          {mode !== 'placement' && (
+            <button type="button" onClick={() => navigate('/analysis/eval')}
+              className="btn-secondary w-full !py-3 text-[14px]">학습 효과 리포트 보기</button>
           )}
         </div>
 

@@ -108,12 +108,35 @@ async def filter_real_words(cands: List[str], batch: int = 40, concurrency: int 
     return list(dict.fromkeys(real))
 
 
-async def _closure_sentence(answer: str, distractor: str) -> Optional[str]:
-    """answer가 유일하게 자연스럽고 distractor를 넣으면 어색한 짧은 문장(___ 포함)."""
+def closure_distractors(answer: str, partner: str, want: int = 2) -> List[str]:
+    """문맥 문항 오답 — 쌍의 짝(partner)부터, 모자라면 정답과 입모양이 헷갈리는 흔한 실단어로 채운다.
+
+    content_rules.check_closure는 보기 3개 이상, 그중 시각 혼동 오답 2개 이상을 요구한다(7592f70).
+    예전에는 짝 하나만 넣은 2지선다로 게이트를 불러 새 문항이 하나도 통과하지 못했다.
+    """
+    picked: List[str] = []
+    if partner and partner != answer and R._visually_confusable(answer, partner):
+        picked.append(partner)
+    cands = sorted(
+        (w for w in R.lookalike_candidates(answer)
+         if w not in (answer, partner) and R.is_common_word(w) is not False
+         and R._visually_confusable(answer, w)),
+        key=lambda w: -(R.word_zipf(w) or 0))
+    for w in cands:
+        if len(picked) >= want:
+            break
+        picked.append(w)
+    return picked
+
+
+async def _closure_sentence(answer: str, distractors: List[str]) -> Optional[str]:
+    """answer만 자연스럽고 distractors 어느 것을 넣어도 어색한 짧은 문장(___ 포함).
+    오답을 모두 알려 준 채로 만들어야, 나중에 붙인 오답이 문맥에 맞아 버리는 문항이 안 생긴다."""
+    others = ", ".join(f"'{d}'" for d in distractors)
     system = (
         "너는 청각장애인 독화 훈련용 '문맥 추론' 문항 출제기다.\n"
-        f"- 두 단어 '{answer}'와 '{distractor}'는 입모양이 비슷해 눈으로는 구별이 어렵다.\n"
-        f"- 빈칸 자리에 '{answer}'를 넣으면 자연스럽고, '{distractor}'를 넣으면 "
+        f"- 정답 '{answer}'와 오답 {others}는 입모양이 비슷해 눈으로는 구별이 어렵다.\n"
+        f"- 빈칸 자리에 '{answer}'를 넣으면 자연스럽고, 오답({others}) 중 어느 것을 넣어도 "
         "말이 안 되는 짧은 한국어 문장을 만들어라. 즉 문맥만으로 답이 하나로 정해져야 한다.\n"
         f"- 빈칸은 정확히 '___'(밑줄 3개)로 표시하고, 그 자리에 '{answer}'가 들어간다.\n"
         "- 6~14자 내외 일상 구어체 한 문장. 너무 쉽거나 뻔하지 않게.\n"
@@ -146,12 +169,15 @@ async def build_closures(pairs: List[Dict], max_items: int = 40,
     sem = asyncio.Semaphore(concurrency)
 
     async def one(p: Dict) -> Optional[Dict]:
+        distractors = closure_distractors(p["a"], p["b"])
+        if len(distractors) < 2:
+            return None                      # 헷갈리는 오답을 2개 못 찾으면 3지선다를 못 만든다
         async with sem:
-            made = await _closure_sentence(p["a"], p["b"])
+            made = await _closure_sentence(p["a"], distractors)
         if not made:
             return None
         display, hint = made
-        ok, item, _ = R.check_closure(display, p["a"], [p["a"], p["b"]])
+        ok, item, _ = R.check_closure(display, p["a"], [p["a"]] + distractors)
         if not ok:
             return None
         item["hint"] = hint or "문맥에 어울리는 쪽을 고르세요."

@@ -113,9 +113,21 @@ export default function EvalReport() {
         title="학습 효과 리포트"
         description="시행 기록으로 학습곡선과 단계별 도달 시행수, 초기 대비 최근 향상도를 확인합니다."
         maxWidth="max-w-5xl"
-        onExit={() => navigate('/dashboard')}
+        onExit={() => navigate('/analysis')}
       />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-5">
+        {/* 표준검사 진입(축 I) — 난이도를 맞춘 동형 폼 A(사전)·B(사후). 훈련 전 A, 훈련 뒤 B를 보면
+            아래 '통제 향상도'에 변화가 나온다. 배치검사 화면에는 모드 전환기가 없으므로 여기서 연다. */}
+        <div className="flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-white p-5 sm:flex-row sm:items-center">
+          <div className="flex-1">
+            <p className="text-sm font-bold text-slate-800">표준검사 사전·사후</p>
+            <p className="mt-0.5 text-xs text-slate-500">훈련 전에 사전(A), 훈련 뒤에 사후(B)를 한 번씩 보면 향상도를 비교해요. 각 8문항.</p>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => navigate('/learn/placement?form=A')} className="btn-secondary !py-2.5 px-4 text-[14px]">사전 검사(A)</button>
+            <button type="button" onClick={() => navigate('/learn/placement?form=B')} className="btn-primary !py-2.5 px-4 text-[14px]">사후 검사(B)</button>
+          </div>
+        </div>
         {loading ? (
           <div className="rounded-[24px] border border-slate-200 bg-white py-20 text-center text-sm text-slate-400">리포트를 불러오는 중…</div>
         ) : !data ? (

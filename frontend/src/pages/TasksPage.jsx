@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
-import useStore from '../store/useStore'
-import { reviewAPI } from '../api'
+import { reviewAPI, learningAPI } from '../api'
+import { mergeBadges } from '../lib/badges'
 
 /**
  * 과제 탭 (Figma 리디자인 05) — 일일 과제 진행/보상 + 주간 도전 + 배지.
- * 게이미피케이션 화면(전용 백엔드 없음): 스트릭/레벨은 useStore, 복습수는 reviewAPI에서 읽고
- * 과제/배지는 그 값으로부터 파생해 표시한다.
+ * 진행도는 실제 기록에서 온다: 복습 수는 reviewAPI, 오늘 회차·독화 활동·이번 주 학습일·배지는
+ * GET /api/analysis/overview(backend/analytics.py). 불러오기 전에는 0·미획득으로 보인다.
  */
 function TaskRow({ label, cur, total, xp }) {
   const done = cur >= total
@@ -32,22 +32,7 @@ function TaskRow({ label, cur, total, xp }) {
   )
 }
 
-// desc: 배지 획득 조건 한 줄 설명, percent: 전체 사용자 중 획득 비율(게이미피케이션 카피)
-// 정확도 90% 배지의 desc/percent는 Figma 313:33 확정값. 나머지는 라벨에 맞춰 작성.
-const BADGES = [
-  { label: '첫 걸음', icon: '/ui/medal-0.svg', earned: true, desc: '첫 학습을 마치고 여정을 시작하기', percent: 63 },
-  { label: '7일 연속', icon: '/ui/medal-1.svg', earned: true, desc: '이레 동안 하루도 빠짐없이 학습하기', percent: 34 },
-  { label: '입모양 마스터', icon: '/ui/medal-2.svg', earned: true, desc: '모든 입모양 그룹을 완벽하게 익히기', percent: 21 },
-  { label: '정확도 90%', shape: 'check', earned: true, desc: '한 레슨에서 정확도 90% 이상을 달성하기', percent: 8 },
-  { label: '100문제 돌파', icon: '/ui/medal-3.svg', earned: true, desc: '누적 100문제를 풀어내기', percent: 47 },
-  { label: '복습왕', icon: '/ui/medal-4.svg', earned: true, desc: '예정된 복습을 미루지 않고 모두 끝내기', percent: 26 },
-  { label: '자유 발화', icon: '/ui/medal-5.svg', earned: true, desc: '대화 실전 단계에서 자유롭게 말해보기', percent: 15 },
-  { label: '수어 탐험', icon: '/ui/medal-6.svg', earned: false, desc: '한국수어 학습을 처음으로 경험하기', percent: 52 },
-  { label: '30일 연속', icon: '/ui/medal-7.svg', earned: false, desc: '한 달 내내 학습 스트릭을 이어가기', percent: 6 },
-  { label: '새벽 학습', icon: '/ui/medal-8.svg', earned: false, desc: '새벽 시간에 학습을 완료하기', percent: 11 },
-  { label: '완주', icon: '/ui/medal-9.svg', earned: false, desc: '전체 커리큘럼을 끝까지 마치기', percent: 4 },
-  { label: '레벨 5', shape: 'lock', earned: false, desc: '학습을 반복해 레벨 5에 도달하기', percent: 13 },
-]
+// 배지 목록·설명·판정은 lib/badges.js(mergeBadges)와 backend/analytics.py가 담당한다.
 
 /** 배지 아이콘 그래픽(그리드·모달 공용). px로 크기를 받아 medal 이미지 또는 check/lock 도형을 렌더. */
 function BadgeMedal({ b, px }) {
@@ -107,11 +92,14 @@ function BadgeDetailModal({ badge, onClose }) {
         <div className="mt-6 flex flex-col items-center gap-2.5">
           <h2 className="text-center text-[32px] font-bold tracking-[-0.64px] text-white">{badge.label}</h2>
           <p className="max-w-[320px] text-center text-[15px] font-normal text-white opacity-70">{badge.desc}</p>
-          <span className="rounded-full border-[1.5px] border-white/20 bg-white/[0.12] px-[18px] py-[9px]">
-            <span className="text-[15px] text-white">전체 사용자 중 </span>
-            <span className="text-[18px] font-bold text-[#6ee7b7]">{badge.percent}%</span>
-            <span className="text-[15px] text-white">가 획득했어요</span>
-          </span>
+          {/* 희귀도 칩: 계산 API가 없으면 숨긴다(핸드오프 §7-3). */}
+          {badge.percent != null && (
+            <span className="rounded-full border-[1.5px] border-white/20 bg-white/[0.12] px-[18px] py-[9px]">
+              <span className="text-[15px] text-white">전체 사용자 중 </span>
+              <span className="text-[18px] font-bold text-[#6ee7b7]">{badge.percent}%</span>
+              <span className="text-[15px] text-white">가 획득했어요</span>
+            </span>
+          )}
         </div>
 
         {/* 닫기 */}
@@ -126,17 +114,20 @@ function BadgeDetailModal({ badge, onClose }) {
 
 export default function TasksPage() {
   const navigate = useNavigate()
-  const user = useStore((s) => s.user)
   const [due, setDue] = useState(null)
+  const [ov, setOv] = useState(null)
   const [selectedBadge, setSelectedBadge] = useState(null)
   useEffect(() => {
-    reviewAPI.getDue().then((d) => setDue((d.items || []).length)).catch(() => setDue(0))
+    reviewAPI.getDue().then((d) => setDue((d.items || []).length)).catch(() => setDue(null))
+    learningAPI.getAnalysisOverview().then(setOv).catch(() => setOv(null))
   }, [])
   const reviewDone = due === 0 ? 1 : 0
-  const earned = BADGES.filter((b) => b.earned).length
+  const weekDays = Math.min(5, ov?.week_days ?? 0)
+  const badges = mergeBadges(ov?.badges)
+  const earned = badges.filter((b) => b.earned).length
 
   return (
-    <AppShell active="task" title="과제" description="매일 조금씩 채우면 보상이 쌓여요.">
+    <AppShell active="task" title="과제">
       {/* 오늘의 과제 */}
       <section className="card-flat w-full">
         <div className="flex items-center justify-between">
@@ -145,8 +136,8 @@ export default function TasksPage() {
         </div>
         <div className="mt-4 flex flex-col gap-4">
           <TaskRow label="오늘의 복습 정리" cur={reviewDone} total={1} xp={10} />
-          <TaskRow label="독화 학습 1회" cur={0} total={1} xp={15} />
-          <TaskRow label="학습 2회 채우기" cur={1} total={2} xp={20} />
+          <TaskRow label="독화 학습 1회" cur={Math.min(1, ov?.today_read ?? 0)} total={1} xp={15} />
+          <TaskRow label="학습 2회 채우기" cur={Math.min(2, ov?.today_sessions ?? 0)} total={2} xp={20} />
         </div>
       </section>
 
@@ -157,11 +148,11 @@ export default function TasksPage() {
           <p className="text-[13px] font-bold tracking-[0.26px] text-white/80">특별 과제</p>
           <p className="text-[23px] font-bold tracking-[-0.46px] text-white">이번 주 5일 학습하기</p>
           <div className="flex justify-between text-sm font-bold text-white/90">
-            <span>{Math.min(5, Math.max(0, user?.streak_count || 3))} / 5일</span>
+            <span>{weekDays} / 5일</span>
             <span>+100 XP</span>
           </div>
           <div className="h-3 overflow-hidden rounded-full bg-white/30">
-            <div className="h-full rounded-full bg-white" style={{ width: `${(Math.min(5, Math.max(0, user?.streak_count || 3)) / 5) * 100}%` }} />
+            <div className="h-full rounded-full bg-white" style={{ width: `${(weekDays / 5) * 100}%` }} />
           </div>
         </div>
         <div className="pointer-events-none absolute right-6 top-6 hidden h-[104px] w-[104px] items-center justify-center rounded-full bg-white/[0.18] sm:flex">
@@ -173,10 +164,10 @@ export default function TasksPage() {
       <section className="card-flat w-full">
         <div className="flex items-center justify-between">
           <p className="text-[17px] font-bold text-ink">배지</p>
-          <span className="text-[13px] text-ink-muted">{earned} / {BADGES.length}개 획득</span>
+          <span className="text-[13px] text-ink-muted">{earned} / {badges.length}개 획득</span>
         </div>
         <div className="mt-4 grid grid-cols-4 gap-y-5 sm:grid-cols-6">
-          {BADGES.map((b) => <Badge key={b.label} b={b} onSelect={setSelectedBadge} />)}
+          {badges.map((b) => <Badge key={b.key} b={b} onSelect={setSelectedBadge} />)}
         </div>
       </section>
 
