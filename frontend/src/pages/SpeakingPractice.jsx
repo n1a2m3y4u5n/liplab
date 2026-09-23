@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { curriculumAPI, learningAPI, speakAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import BookmarkButton from '../components/BookmarkButton'
+import useBookmark from '../lib/useBookmark'
 import LoadingScreen from '../components/LoadingScreen'
 import Modal from '../components/Modal'
 import { getSpeakingStageMenuItem } from '../config/speakingNavigation'
@@ -89,7 +90,6 @@ export default function SpeakingPractice() {
   const [assessment, setAssessment] = useState(null)
   const [mirrorOn, setMirrorOn] = useState(false)   // 웹캠 미러(따라 말하기)
   const [showDetail, setShowDetail] = useState(false)   // 상세 분석 모달
-  const [saved, setSaved] = useState(false)          // 문항별 북마크(328:49 — 로컬 시각 토글, 저장 연결은 범위 밖)
   const [introDone, setIntroDone] = useState(false)  // 레슨 시작 전 트랙 로딩 최소 표시 시간
 
   const items = reviewMode ? (reviewItems || []) : (stageInfo?.items || [])
@@ -154,8 +154,8 @@ export default function SpeakingPractice() {
   }, [mirrorOn])
 
   const closeDetail = useCallback(() => setShowDetail(false), [])
-  // 문항이 바뀌면 북마크 표시를 새로 시작한다.
-  useEffect(() => { setSaved(false) }, [target])
+  // 문항 북마크(328:49) — 발화 트랙으로 서버에 저장돼 말하기 복습에 나온다
+  const [saved, toggleSaved] = useBookmark(target, { situation: '발화 연습', domain: 'speak' })
   // 레슨 시작 전 로딩 — 첫 진입에서 한 번만 최소 시간을 보장한다.
   useEffect(() => {
     const t = setTimeout(() => setIntroDone(true), INTRO_MS)
@@ -513,7 +513,7 @@ export default function SpeakingPractice() {
             <div className="relative flex flex-col gap-1.5 pr-12 leading-figma lg:gap-2 lg:pr-[52px]">
               <p className="text-[12px] font-bold text-track lg:text-[13px]">{category}</p>
               <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[28px] lg:tracking-[-0.7px]">{heading}</h1>
-              <BookmarkButton active={saved} onToggle={() => setSaved((s) => !s)} className="absolute right-0 top-[14px] lg:top-5" />
+              <BookmarkButton active={saved} onToggle={toggleSaved} className="absolute right-0 top-[14px] lg:top-5" />
             </div>
 
             {/* 말할 단어(175:31 / 모바일 236:74) — 가운데 정렬 분홍 카드. 들어보기 버튼 없음(§3.4 청각장애 대상) */}
