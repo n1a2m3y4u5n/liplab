@@ -31,7 +31,9 @@ api.interceptors.response.use(
     const url = error.config?.url || ''
     // 토큰 만료/무효 시: 로그아웃 후 재부팅 → AuthGate가 데모 계정으로 자동 재로그인.
     // (데모 로그인 요청 자체의 실패는 무한루프 방지를 위해 재부팅하지 않는다.)
-    if (error.response?.status === 401 && !url.includes('/auth/demo')) {
+    // 토큰 없이 보낸 요청의 401(로그인 실패, 미인증으로 연 공개 페이지 /terms·/privacy)은 만료가 아니라서
+    // 재부팅하지 않는다. 재부팅하면 공개 페이지가 무한 새로고침된다(A11ySettings가 마운트마다 /auth/me 호출).
+    if (error.response?.status === 401 && !url.includes('/auth/demo') && useStore.getState().token) {
       useStore.getState().logout()
       window.location.reload()
     }

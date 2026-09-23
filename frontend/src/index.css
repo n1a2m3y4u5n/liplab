@@ -38,47 +38,46 @@ body,
 }
 
 @layer components {
-  /* 주 버튼 — Figma soft 스타일(솔리드 보라, 라운드, 은은한 그림자). 3D 하단테두리 아님. */
+  /* 주 버튼 — Figma "Button / Primary": 3D 하단테두리(brand + brand-dark). */
   .btn-primary {
-    @apply px-6 py-3 bg-primary-500 text-white rounded-2xl font-bold
-           shadow-[0_4px_14px_-2px_rgba(125,83,222,0.4)]
-           hover:bg-primary-600 focus:outline-none focus:ring-2
-           focus:ring-primary-300 focus:ring-offset-2
-           transition-all duration-150 active:scale-[0.98]
+    @apply px-6 py-3 bg-primary-500 text-white rounded-[14px] font-bold
+           border-2 border-b-[5px] border-primary-700
+           hover:bg-primary-600 focus:outline-none
+           transition-all duration-100 active:translate-y-[2px] active:border-b-2
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  /* 발화 트랙용 주 버튼 — btn-primary와 같은 형태, 색만 로즈 */
+  /* 발화 트랙용 주 버튼 — btn-primary와 같은 형태(3D 하단테두리), 색만 발화 분홍.
+     Figma 발화 트랙 색 #EC4899(pink-500) + 하단테두리 #be185d(pink-700). */
   .btn-speak {
-    @apply px-6 py-3 bg-rose-500 text-white rounded-2xl font-bold
-           shadow-[0_4px_14px_-2px_rgba(244,63,94,0.4)]
-           hover:bg-rose-600 focus:outline-none focus:ring-2
-           focus:ring-rose-300 focus:ring-offset-2
-           transition-all duration-150 active:scale-[0.98]
+    @apply px-6 py-3 bg-pink-500 text-white rounded-[14px] font-bold
+           border-2 border-b-[5px] border-pink-700
+           hover:bg-pink-600 focus:outline-none
+           transition-all duration-100 active:translate-y-[2px] active:border-b-2
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
+  /* 보조 버튼 — Figma "Button / Secondary": 흰 배경 + 라인 테두리(옅은 3D). */
   .btn-secondary {
-    @apply px-6 py-3 bg-white text-ink rounded-2xl font-bold
-           border border-line hover:bg-gray-50 focus:outline-none focus:ring-2
-           focus:ring-gray-200 focus:ring-offset-2
-           transition-all duration-150 active:scale-[0.98];
+    @apply px-6 py-3 bg-white text-ink rounded-[14px] font-bold
+           border-2 border-b-[4px] border-line hover:bg-gray-50 focus:outline-none
+           transition-all duration-100 active:translate-y-[1px] active:border-b-2;
   }
 
   .input-field {
-    @apply w-full px-4 py-3 border border-line rounded-xl bg-gray-50
+    @apply w-full px-4 py-3 border-2 border-line rounded-[12px] bg-gray-50
            focus:outline-none focus:ring-2 focus:ring-primary-200
            focus:border-primary-400 focus:bg-white transition-all duration-200;
   }
 
-  /* 카드 — Figma soft 카드(얇은 테두리 + 옅은 그림자, rounded-20). */
+  /* 카드 — Figma 카드(2px 테두리 + 옅은 그림자, rounded-20). */
   .card {
-    @apply bg-white rounded-[20px] p-6 border border-line
+    @apply bg-white rounded-[20px] p-6 border-2 border-line
            shadow-[0_2px_12px_-2px_rgba(26,13,64,0.06)];
   }
   /* 얕은 카드 — 정보 카드. */
   .card-flat {
-    @apply bg-white rounded-[18px] p-5 border border-line;
+    @apply bg-white rounded-[18px] p-5 border-2 border-line;
   }
   /* 파스텔 아이콘 칩(52px) — 카드 상단 아이콘 배경. */
   .icon-chip {
@@ -93,7 +92,7 @@ body,
            hover:bg-gray-50;
   }
   .side-item-active {
-    @apply bg-primary-100 text-primary-600 hover:bg-primary-100;
+    @apply bg-primary-100 text-primary-600 border-2 border-primary-500 hover:bg-primary-100;
   }
 
   .label {
