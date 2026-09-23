@@ -2363,8 +2363,9 @@ async def assessment_benchmark(current_user=Depends(get_current_user)):
 @app.get("/api/assessment/resources")
 async def assessment_resources(current_user=Depends(get_current_user)):
     """한국어 독화 공개 표준 리소스(축 C) — 동구형이음 사전·독화 난이도지수·최소대립쌍·
-    표준 평가셋·(있으면)데이터 유래 자모 시각유사도를 한 자원으로 제공한다. 한국어 독화에는
-    이런 표준 자원이 거의 없어, 앱 밖 연구·교육에서도 쓸 수 있게 노출한다."""
+    표준 평가셋을 한 자원으로 제공한다. 데이터 유래 자모 시각유사도는 LIPLAB_PUBLISH_DATA_DERIVED=1일 때만
+    싣는다(perceptual.publish_data_derived). 한국어 독화에는 이런 표준 자원이 거의 없어, 앱 밖 연구·교육에서도
+    쓸 수 있게 노출한다."""
     import perceptual as _perc
     return _perc.build_standard_resources([w["word"] for w in _curriculum.WORD_BANK])
 
@@ -2375,8 +2376,9 @@ _PUBLIC_RES = None
 
 @app.get("/api/public/resources", dependencies=[Depends(ratelimit.rate_limit(20, 60, "public"))])
 async def public_resources():
-    """공개 표준 독화 자원(축 C) — 동구형이음 사전·난이도 지수·최소대립/동구형 쌍·(있으면) 데이터 유래 자모
-    시각 유사도. 판본(semver)과 라이선스(CC BY 4.0)가 meta에 있다. 결정론적이라 한 번 만들어 둔다."""
+    """공개 표준 독화 자원(축 C) — 동구형이음 사전·난이도 지수·최소대립/동구형 쌍. 데이터 유래 자모 시각 유사도는
+    LIPLAB_PUBLISH_DATA_DERIVED=1일 때만 싣는다. 판본(semver)과 라이선스(CC BY 4.0)가 meta에 있다.
+    결정론적이라 한 번 만들어 둔다."""
     global _PUBLIC_RES
     if _PUBLIC_RES is None:
         import perceptual as _perc

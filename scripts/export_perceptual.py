@@ -30,12 +30,13 @@ _EVAL_N = 20
 
 
 def build_eval_set(words):
-    """난이도 스펙트럼에서 균등 표집한 고정 배치검사 문항(동구형 오답 포함).
+    """난이도 스펙트럼에서 균등 표집한 고정 배치검사 문항(입모양이 비슷한 오답 포함).
     한국어 독화에는 공개 표준 평가셋이 없으므로, 재현 가능한 벤치마크로 함께 배포한다."""
     items = A.build_placement_items(words, n=_EVAL_N, seed=_EVAL_SEED)
     return {
-        "description": ("난이도 오름차순으로 균등 표집한 배치검사 문항. 각 문항은 정답 단어와 "
-                        "'같아 보이는' 오답(동구형/최소대립)을 함께 담는다. seed 고정으로 재현 가능."),
+        "description": ("난이도 오름차순으로 균등 표집한 배치검사 문항. 오답 보기는 입모양 혼동 거리가 가까운 "
+                        "단어(최소대립 등)로 고르고, 입모양이 완전히 같은 동구형이음은 빼서 입모양만으로 정답을 "
+                        "가릴 수 있게 한다. seed 고정으로 재현 가능."),
         "seed": _EVAL_SEED,
         "count": len(items),
         "items": items,
@@ -44,7 +45,8 @@ def build_eval_set(words):
 
 def main(args):
     words = [w["word"] for w in C.WORD_BANK]
-    res = P.build_standard_resources(words)
+    # 저장소 안의 원본에는 데이터 유래 부분도 담는다. 밖으로 나가는 곳(공개 API, 배포 묶음)이 기본으로 뺀다.
+    res = P.build_standard_resources(words, include_data_derived=True)
     # 표준 평가셋을 마지막에 추가(build_placement_items가 seed를 고정하므로 다른 자원 생성 뒤에)
     # 공개 평가셋에는 앱의 표준검사(사전·사후 폼) 문항 단어를 넣지 않는다 — 문항이 공개되면 검사가 무너진다(축 I).
     tw = A.test_only_words()
