@@ -164,10 +164,11 @@ export default function Audio2FaceAvatar() {
   if (available === false && examples.length === 0) return null
 
   return (
-    <div className="card w-full">
+    // 카드 틀은 자유 발화 화면의 다른 카드(Figma 225:140 — 2px 테두리, r18, p22)와 맞춘다.
+    <div className="w-full rounded-18 border-2 border-line bg-white p-[18px] lg:p-[22px]">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">내 목소리로 아바타 움직이기</h3>
-        <span className="text-[11px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">AI 음성구동 · A4</span>
+        <h3 className="text-[17px] font-bold leading-figma text-ink">내 목소리로 아바타 움직이기</h3>
+        <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 font-bold">AI 음성구동 · A4</span>
       </div>
       <p className="text-sm text-gray-500 mb-3">
         {available === true
@@ -189,9 +190,7 @@ export default function Audio2FaceAvatar() {
         {exLabel && (
           <div role="status" aria-live="polite"
             className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-3 pt-10 text-center">
-            <span className="text-white text-base font-semibold">
-              {state === 'playing' && <span className="mr-1">🔊</span>}“{exLabel}”
-            </span>
+            <span className="text-white text-base font-semibold">“{exLabel}”</span>
           </div>
         )}
       </div>
@@ -201,7 +200,7 @@ export default function Audio2FaceAvatar() {
         <div className="mt-3 flex items-center gap-2">
           {state === 'recording' ? (
             <button onClick={stopRec} className="flex-1 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium">
-              ⏹ 녹음 종료 → 립싱크
+              녹음 종료 → 립싱크
             </button>
           ) : (
             <button
@@ -209,7 +208,7 @@ export default function Audio2FaceAvatar() {
               disabled={state === 'processing'}
               className="flex-1 py-2.5 rounded-lg bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white font-medium"
             >
-              {state === 'processing' ? '분석 중…' : '🎙 말하고 아바타로 보기'}
+              {state === 'processing' ? '분석 중…' : '말하고 아바타로 보기'}
             </button>
           )}
           <label className="py-2.5 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm cursor-pointer">
@@ -227,7 +226,7 @@ export default function Audio2FaceAvatar() {
             {examples.map((ex) => (
               <button key={ex.id} onClick={() => playExample(ex)} disabled={state === 'playing'}
                 className="px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-sm hover:bg-violet-100 disabled:opacity-50">
-                ▶ {ex.text}
+                {ex.text}
               </button>
             ))}
           </div>

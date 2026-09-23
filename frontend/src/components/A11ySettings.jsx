@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { accountAPI, authAPI } from '../api'
+import useStore from '../store/useStore'
 
 const DEMO_EMAIL = 'demo@liplab.app'
 
@@ -27,13 +28,16 @@ export default function A11ySettings() {
   const [open, setOpen] = useState(false)
   const [state, setState] = useState(load)
   const [isDemo, setIsDemo] = useState(true)  // 확인 전엔 안전하게 데모로 간주(내데이터 숨김)
+  const token = useStore((s) => s.token)
 
   // 공용 데모 계정이면 개인정보 열람·삭제를 숨긴다(내려받기=방문자간 데이터 노출, 삭제=항상 403).
+  // 로그인 전(약관·개인정보 처리방침 공개 페이지)에는 확인할 계정이 없으므로 /auth/me를 부르지 않는다.
   useEffect(() => {
+    if (!token) { setIsDemo(true); return undefined }
     let alive = true
     authAPI.getMe().then((u) => { if (alive) setIsDemo((u?.email || '') === DEMO_EMAIL) }).catch(() => {})
     return () => { alive = false }
-  }, [])
+  }, [token])
 
   useEffect(() => { apply(state) }, [state])
   // 최초 마운트 시 저장값 적용(다른 탭·새로고침 대비)
@@ -69,14 +73,14 @@ export default function A11ySettings() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label="접근성 설정 열기"
-        className="fixed bottom-4 left-4 z-40 grid h-11 w-11 place-items-center rounded-full bg-slate-900 text-white shadow-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+        className="fixed bottom-[calc(var(--tabbar-h)+16px+env(safe-area-inset-bottom))] left-4 z-40 grid h-11 w-11 place-items-center rounded-full bg-slate-900 text-white shadow-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 lg:bottom-4"
         title="접근성 설정"
       >
         <span aria-hidden className="text-lg">♿</span>
       </button>
       {open && (
         <div role="dialog" aria-label="접근성 설정"
-          className="fixed bottom-16 left-4 z-40 w-64 rounded-2xl border border-gray-200 bg-white p-3 shadow-xl">
+          className="fixed bottom-[calc(var(--tabbar-h)+64px+env(safe-area-inset-bottom))] left-4 z-40 w-64 rounded-2xl border border-gray-200 bg-white p-3 shadow-xl lg:bottom-16">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-bold text-gray-900">접근성 설정</span>
             <button onClick={() => setOpen(false)} aria-label="닫기" className="text-gray-400 hover:text-gray-700">✕</button>
@@ -103,11 +107,11 @@ export default function A11ySettings() {
             <p className="mb-1.5 text-xs font-semibold text-gray-500">내 데이터</p>
             <button type="button" onClick={exportData}
               className="mb-1.5 flex w-full items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50">
-              ⬇ 내 학습 데이터 내려받기 <span className="text-[11px] text-gray-400">(JSON)</span>
+              내 학습 데이터 내려받기 <span className="text-[11px] text-gray-400">(JSON)</span>
             </button>
             <button type="button" onClick={deleteAccount}
               className="flex w-full items-center gap-2 rounded-lg border border-rose-200 px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50">
-              🗑 계정·데이터 삭제 <span className="text-[11px] text-rose-400">(프로필 → 계정 설정)</span>
+              계정·데이터 삭제 <span className="text-[11px] text-rose-400">(프로필 → 계정 설정)</span>
             </button>
             <p className="mt-1.5 text-[11px] leading-snug text-gray-400">웹캠 영상은 기기 안에서만 처리돼요. 음성은 채점할 때만 서버로 보내 메모리에서 처리하고 저장하지 않으며, 전사문·음성 지표는 학습 기록으로 저장돼요.</p>
           </div>

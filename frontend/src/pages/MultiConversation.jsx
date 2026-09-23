@@ -28,20 +28,21 @@ export default function MultiConversation() {
   const [readSeen, setReadSeen] = useState({})       // idx→채점됨(재방문 시 이중집계 방지)
   const [numSpeakers, setNumSpeakers] = useState(2)  // 화자 수(2~3) — 난이도 조절
   const [result, setResult] = useState(null)         // 서버 종합 채점(세션 종료 시)
+  const [loadError, setLoadError] = useState(false)  // 대화를 못 불러오면 셸 안에서 다시 시도
   const readHitsRef = useRef([])                      // 립리딩 정답 발화(비심 지식추적용)
   const readMissesRef = useRef([])                    // 오독 발화
   const spkRef = useRef({ correct: 0, total: 0 })     // 화자식별 누적(제출용, 최신값 보장)
   const submittedRef = useRef(false)
 
   const load = useCallback(async () => {
-    setLoading(true)
+    setLoading(true); setLoadError(false)
     try {
       const c = await curriculumAPI.getMultiConversation(numSpeakers, 6)
       setConv(c); setIdx(0); setReveal(false); setGuess(null); setSeen({}); setSpkScore({ correct: 0, total: 0 })
       setReadGuess(null); setReadScore({ correct: 0, total: 0 }); setReadSeen({})
       setResult(null); readHitsRef.current = []; readMissesRef.current = []
       spkRef.current = { correct: 0, total: 0 }; submittedRef.current = false
-    } catch { /* ignore */ } finally { setLoading(false) }
+    } catch { setLoadError(true) } finally { setLoading(false) }
   }, [numSpeakers])
 
   useEffect(() => { load() }, [load])
@@ -110,8 +111,36 @@ export default function MultiConversation() {
     }
   }
 
+  // 불러오는 중·실패여도 셸(사이드바 '연습' 활성·레일·모바일 탭)은 그대로 두고 본문 자리만 바꾼다(§4-11).
+  // 화자 수 토글도 계속 떠 있어서, 바꿀 때 셸이 다시 마운트되지 않는다.
+  const speakerToggle = (
+    <div className="flex items-center gap-1.5 text-[13px]">
+      <span className="text-ink-muted">화자</span>
+      {[2, 3].map((n) => (
+        <button key={n} type="button" onClick={() => setNumSpeakers(n)} aria-pressed={numSpeakers === n} disabled={loading}
+          className={`rounded-full px-3.5 py-1 font-bold transition disabled:opacity-60 ${numSpeakers === n ? 'bg-primary-500 text-white' : 'bg-surface-sunken text-ink-muted hover:bg-surface-hover'}`}>
+          {n}명
+        </button>
+      ))}
+    </div>
+  )
+
   if (loading || !conv) {
-    return <div className="p-8 text-center text-gray-400">대화를 불러오는 중…</div>
+    return (
+      <AppShell active="practice" title="다자 대화" description="입모양만 보고 누가 말했는지 맞혀보세요">
+        <div className="flex justify-end">{speakerToggle}</div>
+        <div className="card flex flex-col items-center gap-3 py-16 text-center">
+          {loading ? (
+            <p role="status" className="text-[15px] font-bold text-ink-muted">대화를 불러오는 중…</p>
+          ) : (
+            <>
+              <p role="alert" className="text-[15px] font-bold text-ink">대화를 불러오지 못했어요.</p>
+              <button type="button" onClick={load} className="btn-primary">다시 불러오기</button>
+            </>
+          )}
+        </div>
+      </AppShell>
+    )
   }
   const turn = conv.turns[idx]
   const last = idx >= conv.turns.length - 1
@@ -122,16 +151,15 @@ export default function MultiConversation() {
       {/* 안내 + 화자 수 토글(난이도) */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <p className="text-[15px] text-ink-muted">장면 <b className="text-ink">{conv.scene}</b> · 입모양만 보고 <b className="text-ink">누가 말했는지</b> 맞힌 뒤, 무슨 말인지 읽어보세요.</p>
-        <div className="flex items-center gap-1.5 text-[13px]">
-          <span className="text-ink-muted">화자</span>
-          {[2, 3].map((n) => (
-            <button key={n} onClick={() => setNumSpeakers(n)}
-              className={`rounded-full px-3.5 py-1 font-bold transition ${numSpeakers === n ? 'bg-primary-500 text-white' : 'bg-[#f3f3f7] text-ink-muted hover:bg-gray-200'}`}>
-              {n}명
-            </button>
-          ))}
-        </div>
+        {speakerToggle}
       </div>
+      {/* 새 대화(화자 수 변경 등)를 못 불러왔으면 지금 대화는 두고 알린다 */}
+      {loadError && (
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-14 border-2 border-bad-line bg-bad-tint px-4 py-2.5 text-[13.5px] font-bold text-bad-text">
+          새 대화를 불러오지 못했어요.
+          <button type="button" onClick={load} className="shrink-0 underline">다시 불러오기</button>
+        </div>
+      )}
 
       {/* 발화 순서 타임라인 — 지나간 발화는 화자색, 현재는 링, 이후는 회색(정답 미리보기 방지) */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
