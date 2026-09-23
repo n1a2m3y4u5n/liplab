@@ -2685,6 +2685,7 @@ async def speak_assess(
     drill: str = Form(None),
     review: int = Form(0),
     mouth_confidence: float = Form(None),
+    mouth_track: str = Form(None),   # 녹음 중 입모양 타임라인(B-6) — {"visemes":[...], "frames":[[t, s…], …]}
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -2798,14 +2799,17 @@ async def speak_assess(
     if mouth_confidence is not None and mouth_confidence >= 0:
         import dgop
         vis = mouth_confidence * 100 if mouth_confidence <= 1 else mouth_confidence
-        # D-GOP 경로면 실측 불확실성을, 전사 경로면 기존 점수 기반 근사치를 쓴다.
+        # D-GOP 경로면 음소별 소리 점수(B-5)로, 전사 경로면 점수 기반 근사치(1 − 점수/100)로 영상 가중을 정한다.
         # 음소별(phones) 정보가 있으면 구간별 융합 — 음향이 뭉갠 '그 구간'일수록 영상 가중이
         # 국소적으로 커진다(계획서 B). 정렬됐고 채점 대상인 음소만 넣는다(어절 경계 제외).
         av_fusion = None
         if dgop_result:
             scored_phones = [p for p in (dgop_result.get("phones") or [])
                              if p.get("aligned") and p.get("scorable")]
-            av_fusion = dgop.fuse_audio_visual_per_phone(scored_phones, vis)
+            # B-6: 입모양 타임라인이 있으면 음소가 정렬된 시간 구간의 입모양 점수로 그 음소를 보완한다
+            track = dgop.parse_mouth_track(mouth_track) if mouth_track and len(mouth_track) <= 300_000 else None
+            vbp = dgop.visual_scores_for_phones(scored_phones, track) if track else None
+            av_fusion = dgop.fuse_audio_visual_per_phone(scored_phones, vis, visual_by_phone=vbp)
         if av_fusion is None:
             audio_uncertainty = dgop_result["uncertainty"] if dgop_result else max(0.0, 1 - score / 100.0)
             av_fusion = dgop.fuse_audio_visual(score, audio_uncertainty, vis)

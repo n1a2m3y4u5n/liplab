@@ -207,17 +207,22 @@ def phone_confidences(waveform, sample_rate: int, target_tokens: Sequence[str],
                 "구간을 옮길 수 없습니다. 두 모델의 conv stride 설정이 같아야 합니다."
             )
 
+    # 프레임 → 초(구간별 입모양 보완 B-6이 웹캠 입모양 타임라인과 맞출 때 쓴다). wav2vec2는 약 20ms/프레임.
+    n_frames = max(1, int(log_probs.shape[0]))
+    sec_per_frame = (len(waveform) / float(sample_rate)) / n_frames if len(waveform) else 0.02
     results = []
     for span in spans:
         token = span["token"]
         # 어절 경계 같은 특수토큰은 정렬은 제약하되 발음 채점 대상은 아니다.
         scorable = _is_scorable(token)
+        timing = ({"t0": round(span["start"] * sec_per_frame, 3), "t1": round((span["end"] + 1) * sec_per_frame, 3)}
+                  if span.get("start") is not None and span.get("end") is not None else {})
         dist = span_distribution(score_lp, span["start"], span["end"])
         if not dist or token not in score_vocab:
-            results.append({"token": token, "aligned": False, "scorable": scorable})
+            results.append({"token": token, "aligned": False, "scorable": scorable, **timing})
             continue
         target_prob = dist[score_vocab[token]]
-        results.append({"token": token, "aligned": True, "scorable": scorable,
+        results.append({"token": token, "aligned": True, "scorable": scorable, **timing,
                         **_dgop.dgop_phone(target_prob, dist)})
     return results
 
