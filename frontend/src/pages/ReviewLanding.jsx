@@ -116,7 +116,7 @@ export default function ReviewLanding({ mode = 'today' }) {
           <div>
             <p className="text-xs font-bold tracking-[0.12em] text-white/80">TODAY</p>
             <h2 className="mt-2 text-2xl font-black">{loading ? '복습 항목을 확인하고 있어요' : `${total}개 항목이 기다리고 있어요`}</h2>
-            <p className="mt-2 text-sm text-white/85">독화·말하기·촉각 중 필요한 복습을 골라서 진행하세요.</p>
+            <p className="mt-2 text-sm text-white/85">독화·말하기 중 필요한 복습을 골라서 진행하세요.</p>
           </div>
         </section>
 

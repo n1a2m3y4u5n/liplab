@@ -35,13 +35,17 @@ def _latest_candidates() -> Dict:
 
 
 def _key(kind: str, item: Dict) -> str:
-    """중복·매칭용 안정 키. pair는 순서 무관, closure는 id/display."""
+    """중복·매칭용 안정 키. pair는 순서 무관, closure는 내용(display|answer).
+
+    closure를 id로 매칭하면 배치마다 재사용된 id(g1…) 때문에 새 문항이 이미 승인된
+    것으로 오인되어 검수 대기 목록에 나타나지 않는다.
+    """
     if kind == "words":
         return str(item.get("word", "")).strip()
     if kind == "pairs":
         return "|".join(sorted([str(item.get("a", "")).strip(), str(item.get("b", "")).strip()]))
     if kind == "closures":
-        return str(item.get("id") or item.get("display", "")).strip()
+        return f"{str(item.get('display', '')).strip()}|{str(item.get('answer', '')).strip()}"
     return json.dumps(item, ensure_ascii=False, sort_keys=True)
 
 

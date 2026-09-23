@@ -87,21 +87,25 @@ const AnalysisTab = lazy(() => import('./pages/AnalysisTab'))
 const CurriculumPath = lazy(() => import('./pages/CurriculumPath'))
 const EndlessPractice = lazy(() => import('./pages/EndlessPractice'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
+const Legal = lazy(() => import('./pages/Legal'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
  * 부팅 시 미인증이면 /api/auth/demo로 자동 로그인하고, 완료까지 스플래시를 보인다.
  * 인증 체계 자체는 유지되므로 진행도·북마크 등은 정상 동작한다.
  */
+// 미인증에서도 접근 가능한 공개 페이지(약관·처리방침) — 회원가입 동의 문구 링크 대상.
+const PUBLIC_PATHS = ['/terms', '/privacy']
 function AuthGate({ children }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated)
   const updateUser = useStore((s) => s.updateUser)
+  const { pathname } = useLocation()
   useEffect(() => {
     // 재방문(캐시된 인증)에도 서버 최신값으로 user 동기화 — 스트릭 등 stale 방지
     if (isAuthenticated) { authAPI.getMe().then((u) => { if (u) updateUser(u) }).catch(() => {}) }
   }, [isAuthenticated, updateUser])
-  // 미인증이면 로그인 화면(Figma 00). '둘러보기(데모)'로 즉시 입장 가능.
-  if (!isAuthenticated) return <Login />
+  // 미인증이면 로그인 화면(Figma 00). '둘러보기(데모)'로 즉시 입장. 단 공개 페이지는 예외.
+  if (!isAuthenticated && !PUBLIC_PATHS.includes(pathname)) return <Login />
   return children
 }
 
@@ -216,6 +220,8 @@ function App() {
         <Route path="/guide" element={<Guide />} />
         <Route path="/dev-viseme" element={<DevViseme />} />
         <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/terms" element={<Legal />} />
+        <Route path="/privacy" element={<Legal />} />
         <Route path="/" element={<HomeRedirect />} />
         <Route path="*" element={<Navigate to="/learn/path" replace />} />
       </Routes>

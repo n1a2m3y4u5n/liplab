@@ -10,8 +10,10 @@ def test_key_stability():
     # 쌍은 순서 무관해야 중복 판정이 정확
     _ok(cr._key("pairs", {"a": "밥", "b": "맘"}) == cr._key("pairs", {"a": "맘", "b": "밥"}), "쌍 키 순서무관")
     _ok(cr._key("words", {"word": "책상"}) == "책상", "단어 키=단어")
-    _ok(cr._key("closures", {"id": "g1", "display": "x"}) == "g1", "문항 키=id 우선")
-    _ok(cr._key("closures", {"display": "빈칸 ___"}) == "빈칸 ___", "id 없으면 display")
+    # 문항 키는 내용(display|answer) — 배치마다 재사용되는 id(g1…)에 기대지 않는다
+    _ok(cr._key("closures", {"id": "g1", "display": "x", "answer": "a"}) == "x|a", "문항 키=내용")
+    _ok(cr._key("closures", {"id": "g1", "display": "x", "answer": "a"})
+        != cr._key("closures", {"id": "g1", "display": "y", "answer": "b"}), "같은 id·다른 내용은 다른 키")
 
 
 def test_pending_structure():

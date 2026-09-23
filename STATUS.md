@@ -1,5 +1,17 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
+> **2026-09-23 — 통합 브랜치 `integrate/2026-09-23` (검토 요청).** `feat/content-scale`(9f57939)에서 갈라
+> `feat/sublexical-feedback` 11커밋(9f08043 이후: Figma §8 이식, G 대량화 525/917/181, 보안·개인정보 보강,
+> 문맥문항 id 수정, B·A 문서 정정)을 병합했다. 두 원 브랜치는 건드리지 않았다. 방침은 9/21 병합(2절)과 같다:
+> 화면은 Figma 셸, B 채점식은 naive, 촉각 제거 유지, 양쪽 기능 보존. 충돌 8파일 해소.
+> 확인: 백엔드 pytest 180 통과, 프론트 node --test 47 통과, vite build 통과, 라우트 66개(중복 0, 촉각 0).
+> 병합 중 고친 것: `speak_assess`의 미정의 `acoustic_dgop`(9/21 병합에서 생김, D-GOP 켜면 오류),
+> 비로그인 `/terms`·`/privacy`에서 401 인터셉터가 새로고침을 반복하던 문제, 레슨 완료 XP를 서버 값으로,
+> 촉각 문구 잔재, 9/21 병합에서 빠진 aa28c05(첫 검사 대비 향상도)·c92fdc3(aria-live) 복원.
+> 남은 것: 사전·사후 A/B 검사 진입(Figma 이식 때 제거됨) 복원, 문맥문항 162개가 2지선다(3지 게이트 미달)이고
+> `content_pipeline.build_closures`가 2지로 게이트를 불러 새 문항을 못 만듦, JuHana 님 IA 모듈은 여전히 미연결.
+> `docs/dgop-demo.md`·`deaf-synthesis.md`의 D-GOP 수치는 옛 `dgop_from_audio` 기준이라 naive로 재측정 예정.
+>
 > 최종 갱신 2026-09-21 — **`feat/sublexical-feedback` 60커밋을 병합했다(미푸시).** 아래 '브랜치 현황'부터 본다.
 > 그 전: 채점식 naive 교체(1단계) 완료, A-6(E1·E2) 실행 완료, 체크포인트 HF 백업 완료.
 > 브랜치 `feat/content-scale` — 로컬이 origin(`952f816`)보다 병합 커밋 1개 앞선다. 되돌리려면
