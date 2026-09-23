@@ -39,6 +39,13 @@
 6. **공개 전 확인**: 전시앱 `liplab.fly.dev`는 새 fly 앱으로만 시험하고 덮어쓰지 않는다. 처리방침의 개인정보
    보호책임자 연락처, `LIPLAB_UNLOCK_ALL`(전 단계 열기) 설정, 파일럿을 켤지(`LIPLAB_PILOT`)를 정한다.
 
+7. **저장 데이터 암호화(계획서 §4.9 ①)**: fly 볼륨은 만들 때 `--no-encryption`을 주지 않으면 암호화된다. SQLite를
+   볼륨에 둘 때는 `fly volumes list -a <새 앱>`의 ENCRYPTED 열이 true인지 확인하고, 확인한 뒤에만 처리방침에
+   "암호화된 저장소에 보관"을 적는다(아직 적지 않았다).
+
+8. **파일럿을 켤 때**: `docs/pilot-data-spec.md`의 보관 기간·파기 방식·동의 철회 절차를 정하고,
+   기한이 되면 `scripts/pilot_retention.py`로 파기하고 대장을 남긴다.
+
 ---
 
 ## 로컬 Docker 테스트
