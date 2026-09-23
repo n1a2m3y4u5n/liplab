@@ -196,7 +196,7 @@
 |---|---|
 | 224:30 다자 대화 | `/learn/conversation-multi` · `MultiConversation` |
 | 225:30 자유 발화 | `/pronounce` · `FreeSpeak` |
-| 225:183 상황별 시나리오 | `/learn/scenario` · `ScenarioHub` |
+| 225:183 상황별 시나리오 (AI 대화) · 407:140 (문장 테스트) | `/learn/scenario` · `ScenarioHub` — 상황 직접 입력 → 난이도 → 연습 방법(라디오) → 시작하기. AI 대화·여러 명이면 `/learn/conversation-multi?speakers=2~4&situation=`(인원은 나를 뺀 상대 수), 1:1이면 `/conversation` |
 | 226:32 수어 함께 보기 | `/learn/sign` · `Sign` |
 | 226:175 엔드리스 학습 | `/learn/endless` · `EndlessPractice` |
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import AppShell from '../components/AppShell'
@@ -13,15 +14,16 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
  *    보면 구별이 안 되고 앞 대화 문맥으로 골라야 한다. 한 턴은 빈칸 문맥 추론 턴이다.
  *  - H-9: 서버가 준 서명 정답(answer_key)과 턴별 선택을 보내 서버가 다시 채점한다.
  */
-const SPK_COLOR = ['bg-sky-500', 'bg-rose-500', 'bg-amber-500']
-const SPK_RING = ['ring-sky-400', 'ring-rose-400', 'ring-amber-400']
-const SPK_TEXT = ['text-sky-600', 'text-rose-600', 'text-amber-600']  // 선택 전 화자별 글자색(Figma: 화자마다 색)
-const SPK_NAME = ['A', 'B', 'C']
+const SPK_COLOR = ['bg-sky-500', 'bg-rose-500', 'bg-amber-500', 'bg-teal-500']
+const SPK_RING = ['ring-sky-400', 'ring-rose-400', 'ring-amber-400', 'ring-teal-400']
+const SPK_TEXT = ['text-sky-600', 'text-rose-600', 'text-amber-600', 'text-teal-600']  // 선택 전 화자별 글자색(Figma: 화자마다 색)
+const SPK_NAME = ['A', 'B', 'C', 'D']
 // 듣는 사람의 맞장구 — 중립으로 있다가 잠깐 입술을 다문다('음'). 화자마다 길이를 달리해 박자가 겹치지 않게 한다.
 const BACKCHANNEL = [
   [{ viseme: 15, duration_ms: 1400 }, { viseme: 1, duration_ms: 380 }, { viseme: 15, duration_ms: 2300 }],
   [{ viseme: 15, duration_ms: 2100 }, { viseme: 1, duration_ms: 320 }, { viseme: 15, duration_ms: 1700 }],
   [{ viseme: 15, duration_ms: 2700 }, { viseme: 1, duration_ms: 420 }, { viseme: 15, duration_ms: 1300 }],
+  [{ viseme: 15, duration_ms: 1800 }, { viseme: 1, duration_ms: 360 }, { viseme: 15, duration_ms: 2000 }],
 ]
 
 function shuffle(arr, seed) {
@@ -44,7 +46,10 @@ export default function MultiConversation() {
   const [spkChoice, setSpkChoice] = useState([])     // 턴별로 고른 화자
   const [readChoice, setReadChoice] = useState([])   // 턴별로 고른 문장(빈칸 턴은 null)
   const [closureChoice, setClosureChoice] = useState(null)
-  const [numSpeakers, setNumSpeakers] = useState(2)  // 화자 수(2~3) — 난이도 조절
+  // 상황별 시나리오의 'AI 대화 · 여러 명'에서 들어오면 ?speakers=2~4 &situation=적은 상황(225:183). 없으면 2명·임의 장면.
+  const [params] = useSearchParams()
+  const scene = (params.get('situation') || '').trim() || undefined
+  const [numSpeakers, setNumSpeakers] = useState(() => Math.min(4, Math.max(2, parseInt(params.get('speakers'), 10) || 2)))  // 화자 수(2~4) — 난이도 조절
   const [result, setResult] = useState(null)         // 서버 종합 채점(세션 종료 시)
   const [loadError, setLoadError] = useState(false)  // 대화를 못 불러오면 셸 안에서 다시 시도
   const submittedRef = useRef(false)
@@ -53,12 +58,12 @@ export default function MultiConversation() {
   const load = useCallback(async () => {
     setLoading(true); setLoadError(false)
     try {
-      const c = await curriculumAPI.getMultiConversation(numSpeakers, 6)
+      const c = await curriculumAPI.getMultiConversation(numSpeakers, 6, scene)
       setConv({ ...c, seed: Math.floor(Math.random() * 1e9) })
       setIdx(0); setSpkChoice([]); setReadChoice([]); setClosureChoice(null)
       setResult(null); submittedRef.current = false
     } catch { setLoadError(true) } finally { setLoading(false) }
-  }, [numSpeakers])
+  }, [numSpeakers, scene])
 
   useEffect(() => { load() }, [load])
 
@@ -141,7 +146,7 @@ export default function MultiConversation() {
   const speakerToggle = (
     <div className="flex items-center gap-1.5 text-[13px]">
       <span className="text-ink-muted">화자</span>
-      {[2, 3].map((n) => (
+      {[2, 3, 4].map((n) => (
         <button key={n} type="button" onClick={() => setNumSpeakers(n)} aria-pressed={numSpeakers === n} disabled={loading}
           className={`rounded-full px-3.5 py-1 font-bold transition disabled:opacity-60 ${numSpeakers === n ? 'bg-primary-500 text-white' : 'bg-surface-sunken text-ink-muted hover:bg-surface-hover'}`}>
           {n}명
@@ -224,7 +229,7 @@ export default function MultiConversation() {
           <p className="text-[13px] font-bold text-ink-muted">{idx + 1} / {conv.turns.length}턴</p>
         </div>
 
-        <div className={`grid gap-2.5 ${conv.speakers >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        <div className={`grid gap-2.5 ${conv.speakers >= 4 ? 'grid-cols-2 lg:grid-cols-4' : conv.speakers === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
           {Array.from({ length: conv.speakers }).map((_, s) => {
             const speaking = s === turn.speaker
             return (

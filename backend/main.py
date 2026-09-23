@@ -2433,11 +2433,12 @@ async def assessment_progression(current_user=Depends(get_current_user),
 
 
 @app.get("/api/conversation/multi", dependencies=[Depends(ratelimit.rate_limit(30, 60, "llm-multi"))])
-async def conversation_multi(speakers: int = 2, turns: int = 6,
+async def conversation_multi(speakers: int = 2, turns: int = 6, scene: Optional[str] = None,
                              current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """다자 대화 시나리오(축 H) — 여러 화자가 번갈아 말하는 짧은 대화(화자 식별 + 입모양 읽기).
     학습자의 약점 입모양이 든 승인 단어(G)를 대화에 넣도록 요청하고(H-3), 턴마다 닮은꼴 오답과
-    빈칸 턴을 붙인다(H-4). answer_key는 서버 재채점용 서명 정답(H-9)이다."""
+    빈칸 턴을 붙인다(H-4). answer_key는 서버 재채점용 서명 정답(H-9)이다.
+    scene은 상황별 시나리오에서 학습자가 적은 상황(선택, 30자로 정리). speakers는 2~4명."""
     import conversation_scenario as _conv
     import knowledge_tracing as _kt
     import content_rules as _crules
@@ -2456,7 +2457,8 @@ async def conversation_multi(speakers: int = 2, turns: int = 6,
                  if targets and set(_crules.word_visemes(w["word"])) & targets][:30]
         import random as _rnd
         _rnd.shuffle(focus)
-        conv = await _conv.generate_multi_conversation(speakers=speakers, turns=turns, focus_words=focus[:6])
+        conv = await _conv.generate_multi_conversation(speakers=speakers, turns=turns, scene=scene,
+                                                       focus_words=focus[:6])
     except Exception as e:
         raise _server_error(e, "conversation gen failed")
     key = {"uid": current_user.id, "sp": [t["speaker"] for t in conv["turns"]],

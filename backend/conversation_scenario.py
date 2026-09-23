@@ -24,6 +24,19 @@ _FALLBACK_LINES = {
     "가게 계산대": ["이거 얼마예요?", "삼천 원이요", "봉투 주세요", "네 여기요", "카드 될까요?", "그럼요 됩니다"],
     "친구 모임": ["오랜만이야", "잘 지냈어?", "그럭저럭 지냈어", "얼굴 좋아 보여", "다음에 또 보자", "꼭 연락해"],
 }
+# 학습자가 직접 적은 상황(상황별 시나리오의 '어떤 상황인가요?')처럼 목록에 없는 장면의 폴백 — 어느 자리에나 맞는 인사·안부.
+_GENERIC_LINES = ["안녕하세요 반가워요", "네 오랜만이에요", "요즘 어떻게 지내요?", "그럭저럭 지내요", "잠깐 얘기할까요?", "좋아요 그래요"]
+MAX_SPEAKERS = 4
+
+
+def clean_scene(scene: Optional[str]) -> Optional[str]:
+    """학습자가 적은 장면 → 프롬프트에 넣을 짧은 한 줄(제어문자·따옴표·괄호 제거, 30자). 비면 None."""
+    if not scene:
+        return None
+    s = "".join(" " if ch.isspace() else ch for ch in str(scene))        # 줄바꿈·탭은 띄어쓰기로
+    s = "".join(ch for ch in s if ch.isprintable() and ch not in '"\'`{}[]<>')
+    s = " ".join(s.split())[:30].strip()
+    return s or None
 
 
 # 닮은꼴 치환에서 어절 끝에 붙어도 되는 조사(이것 외의 꼬리가 붙은 어절은 치환하지 않는다).
@@ -149,7 +162,7 @@ def score_multi(key: Dict, speaker_choices: List[Optional[int]], read_choices: L
 def _fallback_conversation(speakers: int, turns: int, scene: str,
                            rng: Optional[random.Random] = None) -> Dict:
     rng = rng or random.Random()
-    lines = _FALLBACK_LINES.get(scene) or _FALLBACK_LINES["카페"]
+    lines = _FALLBACK_LINES.get(scene) or _GENERIC_LINES
     seq = speaker_sequence(speakers, turns, rng)
     out = [{"speaker": seq[i], "text": lines[i % len(lines)]} for i in range(turns)]
     return {"scene": scene, "speakers": speakers, "turns": out, "fallback": True}
@@ -163,9 +176,9 @@ async def generate_multi_conversation(speakers: int = 2, turns: int = 6,
     턴마다 문장 게이트(content_rules.check_sentence)를 거치고, 화자 순서는 규칙적으로 번갈지 않게 한다."""
     import content_rules as _rules
     rng = random.Random()
-    speakers = max(2, min(speakers, 3))
+    speakers = max(2, min(speakers, MAX_SPEAKERS))
     turns = max(3, min(turns, 10))
-    scene = scene or rng.choice(_SCENES)
+    scene = clean_scene(scene) or rng.choice(_SCENES)
     focus = [w for w in (focus_words or []) if w][:6]
     focus_line = (f"- 가능하면 다음 단어 중 2개 이상을 자연스럽게 넣는다: {', '.join(focus)}\n" if focus else "")
     system = (
