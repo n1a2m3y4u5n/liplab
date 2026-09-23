@@ -14,7 +14,7 @@ import { curriculumAPI } from '../api'
  *  - cueFocus: true면 학습자의 약한 표적 입모양 음절에만 기호를 남긴다(필요한 순간에만 — /api/cues focus).
  * LipSyncPlayer3D는 'Viseme N' 오버레이가 있어 퀴즈에 부적합해 별도 컴포넌트로 둔다.
  */
-export default function MouthAvatar({ frames, visemeId, height = 300, className = '', cueText = null, cueFocus = false }) {
+export default function MouthAvatar({ frames, visemeId, height = 300, className = '', cueText = null, cueFocus = false, modelUrl }) {
   const [vid, setVid] = useState(15)
   const [syl, setSyl] = useState(null)      // 재생 중 프레임의 음절 번호(text_index)
   const [cues, setCues] = useState([])
@@ -69,7 +69,7 @@ export default function MouthAvatar({ frames, visemeId, height = 300, className 
   return (
     <div className={`relative w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-slate-800 to-slate-900 [container-type:size] ${className}`}
          style={height != null ? { height } : undefined}>
-      <AvatarVRM visemeId={vid} />
+      <AvatarVRM visemeId={vid} modelUrl={modelUrl} />
       {/* 기호는 오른쪽 입꼬리 옆 — 카메라 세로 화각이 고정이라 입 높이는 캔버스 높이의 약 68%, 입 반폭은 높이의 약 25% */}
       {active.length > 0 && (
         <div className="pointer-events-none absolute left-[calc(50%+30cqh)] top-[68%] flex -translate-y-1/2 gap-1" aria-hidden>

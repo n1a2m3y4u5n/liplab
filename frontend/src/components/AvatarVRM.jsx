@@ -34,8 +34,8 @@ const EMPTY = {}
  * (병합 메모: 혀 렌더링[YMJ]과 WebGL 폴백·카메라 경쟁조건 수정[feat/curriculum]이
  *  깨진 머지로 파일에 두 벌 복제돼 빌드가 깨져 있었다 → 두 기능을 모두 살려 단일화.)
  */
-function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null }) {
-  const { scene: shared } = useGLTF(MODEL_URL, false, false, withMeshopt)
+function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null, modelUrl = MODEL_URL }) {
+  const { scene: shared } = useGLTF(modelUrl, false, false, withMeshopt)
   // useGLTF는 캐시된 같은 scene 객체를 돌려준다. three.js 객체는 부모를 하나만 가질 수 있어, 그대로
   // <primitive>로 쓰면 한 화면에 아바타가 둘 이상일 때(다자 대화·웹캠 거울) 마지막 것만 보였다.
   // 인스턴스마다 뼈대까지 복제하고(형상은 공유) 재질도 복제해 투명 두상 토글이 서로 번지지 않게 한다.
@@ -185,7 +185,8 @@ class GLErrorBoundary extends Component {
   }
 }
 
-export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null }) {
+// modelUrl: 다른 얼굴 GLB(같은 CC 두상 규격 — ARKit 52 + 혀 모프 + CC_Base_JawRoot). 다자 대화가 화자마다 다르게 준다(H-6).
+export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null, modelUrl = MODEL_URL }) {
   const [webglOK] = useState(detectWebGL)
   const fallback = <MouthFallback2D visemeId={visemeId} />
 
@@ -207,7 +208,7 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
           <directionalLight position={[-1, 0, 1]} intensity={0.4} />
 
           <Suspense fallback={null}>
-            <RealisticFace visemeId={visemeId} xray={xray} bsFrameRef={bsFrameRef} mirrorRef={mirrorRef} />
+            <RealisticFace visemeId={visemeId} xray={xray} bsFrameRef={bsFrameRef} mirrorRef={mirrorRef} modelUrl={modelUrl} />
           </Suspense>
 
           <OrbitControls

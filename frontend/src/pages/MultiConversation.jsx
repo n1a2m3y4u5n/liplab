@@ -53,6 +53,14 @@ export default function MultiConversation() {
   const [result, setResult] = useState(null)         // 서버 종합 채점(세션 종료 시)
   const [loadError, setLoadError] = useState(false)  // 대화를 못 불러오면 셸 안에서 다시 시도
   const submittedRef = useRef(false)
+  // 화자별 얼굴(H-6) — public/models/faces/faces.json에 등록된 GLB를 화자 순서대로 배정한다. 목록이 비었거나 모자라면
+  // 기본 얼굴을 쓴다(없는 파일을 불러 오류가 나지 않게 목록에 있는 것만 쓴다).
+  const [faces, setFaces] = useState([])
+  useEffect(() => {
+    fetch('/models/faces/faces.json').then((r) => (r.ok ? r.json() : { faces: [] }))
+      .then((d) => setFaces(Array.isArray(d?.faces) ? d.faces.filter((f) => typeof f?.url === 'string') : []))
+      .catch(() => setFaces([]))
+  }, [])
   const framesReqRef = useRef(0)   // 입모양 요청 번호 — 빨리 넘기면 늦게 온 이전 턴 응답을 버린다
 
   const load = useCallback(async () => {
@@ -236,7 +244,7 @@ export default function MultiConversation() {
               <div key={s} className={`relative rounded-xl ${answered && speaking ? `ring-2 ${SPK_RING[s]}` : ''}`}>
                 {/* 화자별 아바타는 턴이 바뀌어도 다시 만들지 않는다(WebGL 캔버스 재생성 비용) — frames만 바뀐다 */}
                 <MouthAvatar frames={speaking ? frames : BACKCHANNEL[s % BACKCHANNEL.length]}
-                  height={null} className="h-[150px] lg:h-[230px]" />
+                  height={null} className="h-[150px] lg:h-[230px]" modelUrl={faces[s]?.url} />
                 <span className={`absolute left-2 top-2 rounded-md px-2 py-0.5 text-xs font-bold text-white ${SPK_COLOR[s]}`}>
                   {SPK_NAME[s]}
                 </span>
