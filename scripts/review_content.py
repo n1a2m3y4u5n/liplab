@@ -17,7 +17,7 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _BACKEND = os.path.join(os.path.dirname(_HERE), "backend")
@@ -40,6 +40,13 @@ def _load(path, default=None):
 
 def _load_approved():
     return _load(_APPROVED, {"meta": {"status": "approved"}, "words": [], "pairs": [], "closures": []})
+
+
+def _log(appr, kind, key):
+    """검수 기록(4.4-4): 인앱 검수(content_review.review)와 같은 모양으로 meta.review_log에 남긴다."""
+    appr.setdefault("meta", {}).setdefault("review_log", []).append(
+        {"kind": kind, "key": key, "decision": "approve", "by": "cli",
+         "at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")})
 
 
 def _save_approved(appr):
@@ -83,6 +90,7 @@ def main(args):
                 else _ask(f"[단어] '{w['word']}' (tier {w.get('tier', 1)}) 승인? [y/N/q] ")
             if ok:
                 appr["words"].append(w)
+                _log(appr, "words", w["word"])
                 seen_w.add(w["word"])
                 stats["words"] += 1
         for p in cand.get("pairs", []):
@@ -92,6 +100,7 @@ def main(args):
             ok = True if auto else _ask(f"[쌍] {p['a']}/{p['b']} ({p.get('note', '')}) 승인? [y/N/q] ")
             if ok:
                 appr["pairs"].append(p)
+                _log(appr, "pairs", "|".join(sorted([p["a"], p["b"]])))
                 seen_p.add(k)
                 stats["pairs"] += 1
         for c in cand.get("closures", []):
@@ -104,6 +113,7 @@ def main(args):
                 raw = f"{key[0]}|{key[1]}".encode("utf-8")
                 c = dict(c, id="g" + hashlib.sha1(raw).hexdigest()[:8])
                 appr["closures"].append(c)
+                _log(appr, "closures", f"{key[0]}|{key[1]}")
                 seen_c.add(key)
                 stats["closures"] += 1
     except KeyboardInterrupt:

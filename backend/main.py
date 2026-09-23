@@ -2106,6 +2106,15 @@ def _pseudonym(user_id: int) -> str:
     return hmac.new(SECRET_KEY.encode(), f"pilot:{user_id}".encode(), hashlib.sha256).hexdigest()[:12]
 
 
+def _reviewer_tag(user) -> str:
+    """콘텐츠 검수 기록(approved.json의 review_log)에 남길 운영자 태그. 저장소에 들어가는 파일이라 이메일 대신
+    서버 비밀키 HMAC 앞 8자리를 쓴다(같은 서버에서는 같은 운영자가 같은 태그)."""
+    import hmac, hashlib
+    from auth import SECRET_KEY
+    email = (getattr(user, "email", "") or "").lower()
+    return "op-" + hmac.new(SECRET_KEY.encode(), f"reviewer:{email}".encode(), hashlib.sha256).hexdigest()[:8]
+
+
 @app.get("/api/pilot/status")
 async def pilot_status(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """파일럿 진행 여부와 내 참여 상태(프로필 화면이 참여 코드 입력 줄을 보일지 정한다)."""
@@ -2202,7 +2211,7 @@ async def content_review_action(req: ContentReviewReq, current_user=Depends(get_
     _review_gate(current_user)
     import content_review as _cr
     try:
-        return _cr.review(req.kind, req.item or {}, req.decision)
+        return _cr.review(req.kind, req.item or {}, req.decision, reviewer=_reviewer_tag(current_user))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
