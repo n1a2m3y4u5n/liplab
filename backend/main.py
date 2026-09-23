@@ -157,16 +157,9 @@ _PRIVACY_VERSION = "2026-09-23"
 
 
 def _user_data_models():
-    """user_id를 가진 모든 사용자 데이터 모델(개인정보 열람·삭제 대상)."""
-    import inspect as _inspect
-    import database as _db
-    out = []
-    for name in dir(_db):
-        o = getattr(_db, name)
-        if _inspect.isclass(o) and hasattr(o, "__tablename__"):
-            if "user_id" in [c.name for c in o.__table__.columns]:
-                out.append(o)
-    return out
+    """user_id를 가진 모든 사용자 데이터 모델(개인정보 열람·삭제 대상). 파일럿 파기 스크립트와 같은 정의(pilot_data)."""
+    import pilot_data as _pd
+    return _pd.user_data_models()
 
 
 def _iso_utc(ts):
@@ -2100,10 +2093,9 @@ def _pilot_codes() -> dict:
 
 
 def _pseudonym(user_id: int) -> str:
-    """가명 — 서버 비밀키로 만든 HMAC 앞 12자리. 비밀키 없이는 사용자 번호로 되돌릴 수 없다."""
-    import hmac, hashlib
-    from auth import SECRET_KEY
-    return hmac.new(SECRET_KEY.encode(), f"pilot:{user_id}".encode(), hashlib.sha256).hexdigest()[:12]
+    """가명 — 서버 비밀키로 만든 HMAC 앞 12자리(pilot_data.pseudonym, 파기 스크립트도 같은 값을 쓴다)."""
+    import pilot_data as _pd
+    return _pd.pseudonym(user_id)
 
 
 def _reviewer_tag(user) -> str:
