@@ -35,6 +35,11 @@
    bash scripts/security-audit.sh   # pip-audit + npm audit(운영 의존성, high 이상)
    ```
    `SECURITY_AUDIT_OK`가 아니면 목록을 보고 올릴 수 있는 패키지를 올린다(`backend/requirements.txt`의 상한도 함께).
+   9/24 점검: 운영 의존성 7건(high 2: axios·form-data)을 호환 범위 안에서 올렸다(`package-lock.json`만, axios 1.20.0,
+   react-router-dom 6.30.6). 이 작업 폴더의 `node_modules`는 메인 체크아웃과 공유라 잠금 파일만 고쳤고(`npm audit fix
+   --package-lock-only`), 배포 이미지는 `npm ci`로 새 잠금 파일을 따른다. 남은 2건(react-router 6의 moderate)은 7로 올려야
+   풀린다. 하나는 사용자가 넣은 경로를 `<Link>`·`navigate`에 넘길 때의 열린 리디렉션인데 앱은 자체 목록의 경로만 넘기고,
+   다른 하나는 서버 렌더링(SSR) 경로라 이 앱(브라우저 전용)에는 해당하지 않아 메이저 업그레이드는 미뤘다.
 
 6. **공개 전 확인**: 전시앱 `liplab.fly.dev`는 새 fly 앱으로만 시험하고 덮어쓰지 않는다. 처리방침의 개인정보
    보호책임자 연락처, `LIPLAB_UNLOCK_ALL`(전 단계 열기) 설정, 파일럿을 켤지(`LIPLAB_PILOT`)를 정한다.
@@ -44,7 +49,9 @@
    "암호화된 저장소에 보관"을 적는다(아직 적지 않았다).
 
 8. **파일럿을 켤 때**: `docs/pilot-data-spec.md`의 보관 기간·파기 방식·동의 철회 절차를 정하고,
-   기한이 되면 `scripts/pilot_retention.py`로 파기하고 대장을 남긴다.
+   기한이 되면 `scripts/pilot_retention.py`로 파기하고 대장을 남긴다. 켜기 전에 가명 비밀키 `LIPLAB_PILOT_SECRET`을
+   `fly secrets set`으로 넣고 파기가 끝날 때까지 바꾸지 않는다. 기호 없는 집단을 두면 `LIPLAB_PILOT_NOCUE_COHORTS`도 정한다.
+   파기 도구는 이미지에 `/app/scripts/pilot_retention.py`로 들어 있고, 대장은 기본으로 볼륨(`/data`)에 남는다.
 
 ---
 
