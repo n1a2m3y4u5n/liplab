@@ -38,6 +38,17 @@ def test_select_personalized_strict_filters():
     assert len(fallback["words"]) == 4  # 부족 → 무적중 포함 폴백
 
 
+def test_select_personalized_level_caps_tier():
+    # level 1이면 tier 1까지가 상한 안. 표적(양순 1)을 담았어도 tier 3 단어는 상한 안 단어 뒤로 간다.
+    words = [{"word": "바보", "tier": 3}, {"word": "바", "tier": 1}, {"word": "가", "tier": 1}]
+    strict = cr.select_personalized(words, [], [], [1], level=1, n_words=1, strict=True)
+    assert [w["word"] for w in strict["words"]] == ["바"]
+    loose = cr.select_personalized(words, [], [], [1], level=1, n_words=2, strict=True)
+    assert [w["word"] for w in loose["words"]] == ["바", "가"]   # 상한 안 적중 1개뿐 → 정렬 폴백
+    top = cr.select_personalized(words, [], [], [1], level=3, n_words=3)
+    assert [w["word"] for w in top["words"]][:2] == ["바", "바보"]  # 상한이 넉넉하면 표적 적중 순
+
+
 def test_select_personalized_sort_only_default():
     words = [{"word": "바", "tier": 1}, {"word": "가", "tier": 1}]
     r = cr.select_personalized(words, [], [], [1], n_words=2, strict=False)

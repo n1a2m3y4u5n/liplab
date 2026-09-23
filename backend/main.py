@@ -1523,10 +1523,43 @@ async def _bookmark_refs(user_id: int, domain: str, db):
 
 
 # ── 3단계 문맥 추론(closure) + 대화 채점 + 적응형 난이도(Phase 3·4) ──────────
+async def _kt_recommend(user_id: int, db: AsyncSession) -> dict:
+    """WeakViseme 기록 → 지식추적 추천({mastery, target_visemes, level, coverage})."""
+    import knowledge_tracing as _kt
+    from database import WeakViseme
+    from sqlalchemy import select
+    r = await db.execute(select(WeakViseme).where(WeakViseme.user_id == user_id))
+    records = [{"viseme_id": w.viseme_id, "error_count": w.error_count,
+                "total_attempts": w.total_attempts, "last_error_at": w.last_error_at}
+               for w in r.scalars().all()]
+    return _kt.recommend(records, k=2)
+
+
+def _training_closures() -> list:
+    """훈련용 문맥 문항 — 정답이나 보기에 표준검사 문항 단어가 든 항목은 뺀다(축 I, 문항 노출 방지)."""
+    import assessment as _asmt
+    tw = _asmt.test_only_words()
+    return [c for c in _curriculum.CLOSURE_ITEMS
+            if c["answer"] not in tw and not (set(c.get("options") or []) & tw)]
+
+
 @app.get("/api/curriculum/closure")
-async def curriculum_closure(current_user=Depends(get_current_user)):
-    """문맥 추론 항목(빈칸+비슷하게 보이는 보기). 눈으로 구별 안 되니 문맥으로 답을 고른다."""
-    return {"items": _curriculum.CLOSURE_ITEMS}
+async def curriculum_closure(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """문맥 추론 항목(빈칸+비슷하게 보이는 보기). 눈으로 구별 안 되니 문맥으로 답을 고른다.
+
+    지식추적 표적 입모양을 정답에 많이 담은 항목부터 준다(축 G). 적중 수가 같은 항목끼리는
+    사용자·날짜로 정한 순서로 섞어, 날마다 같은 문항부터 시작하지 않게 한다.
+    """
+    import random
+    import content_rules as _crules
+    from datetime import date
+    rec = await _kt_recommend(current_user.id, db)
+    tv = set(rec["target_visemes"])
+    items = _training_closures()
+    random.Random(f"{current_user.id}:{date.today().isoformat()}").shuffle(items)
+    # 안정 정렬 — 같은 적중 수 안에서는 섞인 순서가 유지된다
+    items.sort(key=lambda c: -len(set(_crules.word_visemes(c["answer"])) & tv))
+    return {"items": items, "target_visemes": rec["target_visemes"]}
 
 
 class ClosureAnswer(BaseModel):
@@ -1776,16 +1809,9 @@ async def curriculum_next(current_user=Depends(get_current_user), db: AsyncSessi
     WeakViseme 기록에서 viseme별 숙달도를 추정(BKT 경량판)해 가장 약한 음소를 표적으로
     삼고, 대량화된 단어·최소대립쌍·문맥 문항 중 그 음소를 포함하고 난이도가 맞는 것을 앞세운다.
     """
-    import knowledge_tracing as _kt
     import content_rules as _crules
-    from database import WeakViseme
-    from sqlalchemy import select
 
-    r = await db.execute(select(WeakViseme).where(WeakViseme.user_id == current_user.id))
-    rows = r.scalars().all()
-    records = [{"viseme_id": w.viseme_id, "error_count": w.error_count,
-                "total_attempts": w.total_attempts, "last_error_at": w.last_error_at} for w in rows]
-    rec = _kt.recommend(records, k=2)
+    rec = await _kt_recommend(current_user.id, db)
     # 표준검사 사전·사후 문항 단어는 훈련 추천에서도 뺀다(축 I, 문항 노출 방지).
     import assessment as _asmt
     tw = _asmt.test_only_words()
@@ -1793,7 +1819,7 @@ async def curriculum_next(current_user=Depends(get_current_user), db: AsyncSessi
     pairs = [p for p in _curriculum.MINIMAL_PAIRS if p.get("a") not in tw and p.get("b") not in tw]
     # strict=True: 표적 음소 적중 콘텐츠가 충분하면 무적중을 걸러 개인화를 강화(부족하면 자동 정렬 폴백)
     sel = _crules.select_personalized(
-        bank, pairs, _curriculum.CLOSURE_ITEMS,
+        bank, pairs, _training_closures(),
         rec["target_visemes"], rec["level"], strict=True)
 
     targets = []
