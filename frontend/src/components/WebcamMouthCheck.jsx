@@ -4,7 +4,7 @@ import { faceSignals, FACE_SIGNAL_LABELS } from '../lib/faceCues'
 import { lipGeometry, LIP_GEOMETRY_LABELS } from '../lib/lipGeometry'
 import { predictK, K_FACE_KEYS, K_WIN } from '../lib/kModel'
 import { errorEnds } from '../lib/correctionTrend'
-import { CueGlyph } from './CueBadges'
+import { CueGlyph, useCuesEnabled } from './CueBadges'
 
 // K→J 연결(K-4): 얼굴에서 추정한 비음 확률이 이 값 이상이면 J의 '울림' 기호를 켠다.
 // 비음 AUC가 0.60~0.64 수준이라(docs/k-facecue.md) 단정 대신 기호의 켜짐·흐림으로만 알린다.
@@ -42,6 +42,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   const [faceSig, setFaceSig] = useState(null) // 입술 너머 얼굴 신호(축 K, 규칙 보조)
   const [geo, setGeo] = useState(null)         // 입술 기하 지표(그림8, 결정론적 보조)
   const [kPred, setKPred] = useState(null)     // 학습된 K 분류기 예측(유성/비음)
+  const cuesOn = useCuesEnabled()               // 파일럿 기호 끈 집단이면 울림 기호를 숨긴다(J-12)
   const kWinRef = useRef([])                    // 최근 K_WIN 프레임의 얼굴 8차원 버퍼
   const kBusyRef = useRef(false)
   const bestRef = useRef(0)
@@ -339,10 +340,12 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
               <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${Math.round(kPred.nasal * 100)}%` }} />
             </div>
             <span className="mt-0.5 flex items-center justify-center gap-1 text-[11px] font-medium text-violet-700">
-              <span className={`transition-opacity ${kPred.nasal >= K_NASAL_ON ? 'opacity-100' : 'opacity-25'}`}
-                aria-label={kPred.nasal >= K_NASAL_ON ? '울림 기호 켜짐' : '울림 기호 꺼짐'}>
-                <CueGlyph cue="nasal" size={14} />
-              </span>
+              {cuesOn && (
+                <span className={`transition-opacity ${kPred.nasal >= K_NASAL_ON ? 'opacity-100' : 'opacity-25'}`}
+                  aria-label={kPred.nasal >= K_NASAL_ON ? '울림 기호 켜짐' : '울림 기호 꺼짐'}>
+                  <CueGlyph cue="nasal" size={14} />
+                </span>
+              )}
               비음(코울림) {Math.round(kPred.nasal * 100)}
             </span>
           </div>

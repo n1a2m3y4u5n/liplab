@@ -41,6 +41,9 @@ RUN python -c "from faster_whisper import WhisperModel; WhisperModel('base', dev
 # Copy backend source
 COPY backend/ ./
 
+# 파일럿 자료 파기 도구(§4.7) — 서버에서 fly ssh로 실행한다(scripts/pilot_retention.py 머리말)
+COPY scripts/pilot_retention.py ./scripts/pilot_retention.py
+
 # Copy built frontend from stage 1
 COPY --from=frontend-builder /frontend/dist ./frontend/dist
 

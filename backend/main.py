@@ -271,21 +271,32 @@ async def account_learning_reset(confirm: bool = False, current_user=Depends(get
                                  db: AsyncSession = Depends(get_db)):
     """학습 초기화 — 계정은 두고 학습 기록 전부(시행·진행도·복습·북마크·검사·교정 기록)를 지우고
     XP·연속 학습·레벨·배치를 처음 상태로 되돌린다. 프로필 화면의 '사라지는 기록' 목록과 같은 범위다.
-    가입 동의 기록(ConsentRecord)은 법적 기록이라 남긴다. 공용 데모 계정은 방문자 모두의 화면이라 막는다."""
+    가입 동의 기록(ConsentRecord)은 법적 기록이라 남긴다. 공용 데모 계정은 방문자 모두의 화면이라 막는다.
+    파일럿 참여 중이면 표준검사 사전·사후(A·B) 결과는 남긴다 — 연구 자료이고, 지우면 사전검사를 다시 볼 수 없다.
+    참여 철회와 자료 삭제는 연구진을 통해 한다(docs/pilot-data-spec.md §5)."""
     if not confirm:
         raise HTTPException(status_code=400, detail="초기화를 확인하려면 confirm=true가 필요합니다.")
     if (current_user.email or "").lower() == _DEMO_EMAIL:
         raise HTTPException(status_code=403, detail="공용 데모 계정은 초기화할 수 없어요.")
     from sqlalchemy import delete as _delete
-    from database import ConsentRecord, LearningProfile
-    removed = {}
+    from database import ConsentRecord, LearningProfile, PlacementResult
+    prof = await _get_or_create_profile(current_user.id, db)
+    in_pilot = bool(prof.pilot_code)
+    removed, kept = {}, {}
     for M in _user_data_models():
         if M in (ConsentRecord, LearningProfile):
             continue
-        res = await db.execute(_delete(M).where(M.user_id == current_user.id))
+        q = _delete(M).where(M.user_id == current_user.id)
+        if in_pilot and M is PlacementResult:
+            from sqlalchemy import or_ as _or
+            q = q.where(_or(PlacementResult.form.is_(None), PlacementResult.form.not_in(("A", "B"))))
+        res = await db.execute(q)
         removed[M.__tablename__] = res.rowcount if res.rowcount is not None else 0
+    if in_pilot:
+        from sqlalchemy import select as _select, func as _func
+        kept["placement_results_ab"] = (await db.execute(
+            _select(_func.count(PlacementResult.id)).where(PlacementResult.user_id == current_user.id))).scalar() or 0
     # 학습 프로필은 지우지 않고 배치만 처음으로 — 파일럿 참여(코드·집단)는 학습 기록이 아니라 그대로 둔다
-    prof = await _get_or_create_profile(current_user.id, db)
     prof.track, prof.current_stage, prof.placed = None, 0, False
     current_user.total_xp = 0
     current_user.streak_count = 0
@@ -293,7 +304,7 @@ async def account_learning_reset(confirm: bool = False, current_user=Depends(get
     current_user.current_level = 1
     db.add(current_user)
     await db.commit()
-    return {"reset": True, "removed": removed}
+    return {"reset": True, "removed": removed, "kept": kept}
 
 
 from pydantic import BaseModel as _PydBaseModel
@@ -2043,8 +2054,11 @@ async def get_cues(text: str, personalize: bool = True, max_cues: int | None = N
     동구형이음은 입모양이 같아 눈으로 못 가르므로, 그 순간의 조음 자질에 대응하는 최소
     기호를 프론트가 SVG로 겹쳐 준다. 로그인 유저는 숙달도(지식추적)로 이미 익숙한 음소의
     기호를 소거(페이딩)한다. focus=true면 아직 약한 표적 음소에만 기호를 남긴다(집중 학습).
+    파일럿에서 기호 없이 학습하는 집단(LIPLAB_PILOT_NOCUE_COHORTS)이면 빈 목록을 준다(J-12 기호 켬·끔 비교).
     """
     import cue_overlay as _cue
+    if await _pilot_cues_off(current_user.id, db):
+        return {"text": text, "cues": [], "legend": _cue.CUE_FEATURES, "suppressed": "pilot_cohort"}
     mastery = None
     target_visemes = None
     if personalize:
@@ -2098,6 +2112,24 @@ def _pseudonym(user_id: int) -> str:
     return _pd.pseudonym(user_id)
 
 
+def _nocue_cohorts() -> set:
+    """기호(J) 없이 학습하는 파일럿 집단 — LIPLAB_PILOT_NOCUE_COHORTS='집단,집단'. 파일럿이 꺼져 있으면 없음."""
+    if os.getenv("LIPLAB_PILOT") != "1":
+        return set()
+    return {c.strip() for c in os.getenv("LIPLAB_PILOT_NOCUE_COHORTS", "").split(",") if c.strip()}
+
+
+async def _pilot_cues_off(user_id: int, db) -> bool:
+    """이 사용자가 기호를 끈 파일럿 집단에 있는가(J-12 기호 켬·끔 비교). 기호 API와 파일럿 상태가 같은 판정을 쓴다."""
+    off = _nocue_cohorts()
+    if not off:
+        return False
+    from sqlalchemy import select
+    from database import LearningProfile
+    prof = (await db.execute(select(LearningProfile).where(LearningProfile.user_id == user_id))).scalars().first()
+    return bool(prof and prof.pilot_code and prof.cohort in off)
+
+
 @app.get("/api/backbone/status")
 async def backbone_status(current_user=Depends(get_current_user)):
     """공용 음성 백본(A-9) 상태 — 올라간 모델·장치·사용 횟수와 쓰는 축. 모델을 새로 올리지는 않는다."""
@@ -2119,7 +2151,8 @@ async def pilot_status(current_user=Depends(get_current_user), db: AsyncSession 
     """파일럿 진행 여부와 내 참여 상태(프로필 화면이 참여 코드 입력 줄을 보일지 정한다)."""
     enabled = bool(_pilot_codes()) and (current_user.email or "").lower() != _DEMO_EMAIL
     prof = await _get_or_create_profile(current_user.id, db)
-    return {"enabled": enabled, "joined": bool(prof.pilot_code), "cohort": prof.cohort if prof.pilot_code else None}
+    return {"enabled": enabled, "joined": bool(prof.pilot_code), "cohort": prof.cohort if prof.pilot_code else None,
+            "cues": not await _pilot_cues_off(current_user.id, db)}
 
 
 class PilotJoinReq(BaseModel):
@@ -2138,6 +2171,9 @@ async def pilot_join(req: PilotJoinReq, current_user=Depends(get_current_user), 
     if code not in codes:
         raise HTTPException(status_code=400, detail="참여 코드가 올바르지 않아요.")
     prof = await _get_or_create_profile(current_user.id, db)
+    if prof.pilot_code != code or prof.pilot_joined_at is None:
+        from datetime import datetime as _dt
+        prof.pilot_joined_at = _dt.utcnow()   # 참여 뒤 활동만 따로 셀 수 있게(내보내기 since_join)
     prof.pilot_code, prof.cohort = code, codes[code]
     await db.commit()
     return {"joined": True, "cohort": prof.cohort}
@@ -2152,42 +2188,89 @@ def _pilot_admin_gate(user):
         raise HTTPException(status_code=403, detail="운영자 계정만 파일럿 자료를 내보낼 수 있습니다.")
 
 
+PILOT_EXPORT_VERSION = 2   # 2(9/24): 참여일·참여 뒤 집계·동형 폼 문항 기록·현지 날짜 추가
+
+
 @app.get("/api/pilot/export")
-async def pilot_export(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def pilot_export(tz_offset_min: int = -540, current_user=Depends(get_current_user),
+                       db: AsyncSession = Depends(get_db)):
     """파일럿 참여자 가명 자료(운영자 전용). 이메일·이름·전사문·입력 문장은 넣지 않는다.
-    참여자별로 가명, 집단, 표준검사(사전·사후) 결과, 단계별 시행·정답 수, 말하기 시도·평균 점수,
-    학습한 날 수를 준다(최소 수집, §4.7)."""
+    참여자별로 가명, 집단, 참여일, 표준검사 결과(동형 폼 A·B는 문항별 정오답 기록 포함), 단계별 시행·정답 수,
+    말하기 시도·평균 점수, 학습한 날 수를 준다(최소 수집, §4.7). 계정의 모든 기록(all)과 참여 코드를 넣은 뒤의
+    기록(since_join)을 따로 센다. 날짜는 tz_offset_min(한국 −540) 기준 현지 날짜다."""
     _pilot_admin_gate(current_user)
+    import analytics as _an
     from sqlalchemy import select, func, cast, Integer
     from datetime import datetime as _dt
     from database import LearningProfile, PlacementResult, TrialAttempt, SpeakAttempt, Progress
+    tz = max(-840, min(720, int(tz_offset_min)))
+
+    def day(ts):
+        return _an.to_local(ts, tz).date().isoformat() if ts else None
+
+    async def activity(uid, since):
+        def w(M):
+            q = M.user_id == uid
+            return q if since is None else (q & (M.created_at >= since))
+        trials = (await db.execute(select(TrialAttempt.stage, func.count(TrialAttempt.id),
+                                          func.sum(cast(TrialAttempt.correct, Integer)))
+                                   .where(w(TrialAttempt)).group_by(TrialAttempt.stage))).all()
+        sp = (await db.execute(select(func.count(SpeakAttempt.id), func.avg(SpeakAttempt.score))
+                               .where(w(SpeakAttempt)))).one()
+        days = set()
+        for M in (TrialAttempt, SpeakAttempt, Progress, PlacementResult):
+            for (ts,) in (await db.execute(select(M.created_at).where(w(M)))).all():
+                if ts:
+                    days.add(day(ts))
+        return {"trials_by_stage": {str(st or 0): {"n": n, "correct": int(c or 0)} for st, n, c in trials},
+                "speak": {"n": sp[0] or 0, "mean_score": round(float(sp[1]), 2) if sp[1] is not None else None},
+                "active_days": len(days)}
+
     profs = (await db.execute(select(LearningProfile).where(LearningProfile.pilot_code.is_not(None)))).scalars().all()
     rows = []
     for pf in profs:
         uid = pf.user_id
         tests = (await db.execute(select(PlacementResult).where(PlacementResult.user_id == uid)
                                   .order_by(PlacementResult.created_at))).scalars().all()
-        trials = (await db.execute(select(TrialAttempt.stage, func.count(TrialAttempt.id),
-                                          func.sum(cast(TrialAttempt.correct, Integer)))
-                                   .where(TrialAttempt.user_id == uid).group_by(TrialAttempt.stage))).all()
-        sp = (await db.execute(select(func.count(SpeakAttempt.id), func.avg(SpeakAttempt.score))
-                               .where(SpeakAttempt.user_id == uid))).one()
-        days = set()
-        for M in (TrialAttempt, SpeakAttempt, Progress, PlacementResult):
-            for (d,) in (await db.execute(select(func.date(M.created_at)).where(M.user_id == uid))).all():
-                if d:
-                    days.add(str(d))
+        everything = await activity(uid, None)
         rows.append({
             "pid": _pseudonym(uid), "cohort": pf.cohort, "track": pf.track,
+            "joined_on": day(pf.pilot_joined_at),
             "tests": [{"form": t.form, "form_version": t.form_version, "accuracy": round(t.accuracy or 0, 4),
-                       "level": t.level, "date": t.created_at.date().isoformat() if t.created_at else None}
+                       "level": t.level, "date": day(t.created_at),
+                       "after_join": bool(pf.pilot_joined_at and t.created_at and t.created_at >= pf.pilot_joined_at),
+                       # 동형 폼만 문항 기록을 싣는다(신뢰도 KR-20·문항 분석용). 고른 보기는 검사 단어라 개인정보가 아니다.
+                       "items": ([{"id": i.get("id"), "correct": bool(i.get("correct")), "chosen": i.get("chosen")}
+                                  for i in (t.item_log or []) if isinstance(i, dict)] if t.form in ("A", "B") else None)}
                       for t in tests],
-            "trials_by_stage": {str(st or 0): {"n": n, "correct": int(c or 0)} for st, n, c in trials},
-            "speak": {"n": sp[0] or 0, "mean_score": round(float(sp[1]), 2) if sp[1] is not None else None},
-            "active_days": len(days),
+            # 예전 형식과 같은 자리(계정 전체)
+            **everything,
+            "since_join": (await activity(uid, pf.pilot_joined_at)) if pf.pilot_joined_at else None,
         })
-    return {"exported_at": _dt.utcnow().replace(microsecond=0).isoformat() + "Z", "n": len(rows), "participants": rows,
-            "note": "가명(pid)은 서버 비밀키 HMAC이라 운영자도 자료만으로는 계정을 알 수 없다."}
+    return {"exported_at": _dt.utcnow().replace(microsecond=0).isoformat() + "Z", "version": PILOT_EXPORT_VERSION,
+            "tz_offset_min": tz, "n": len(rows), "participants": rows,
+            "note": "가명(pid)은 가명 비밀키(LIPLAB_PILOT_SECRET) HMAC이라 운영자도 자료만으로는 계정을 알 수 없다. "
+                    "참여 코드를 넣기 전 기록은 all 집계에만 들어가고 since_join에는 빠진다."}
+
+
+class PilotLookupReq(BaseModel):
+    email: str
+
+
+@app.post("/api/pilot/lookup", dependencies=[Depends(ratelimit.rate_limit(20, 60, "pilot-lookup"))])
+async def pilot_lookup(req: PilotLookupReq, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """참여자 계정 이메일 → 가명(운영자 전용). 철회·파기 요청을 받았을 때 내보낸 사본에서 그 사람의 행을 찾는 데 쓴다.
+    이메일은 주소줄에 남지 않도록 본문으로 받는다."""
+    _pilot_admin_gate(current_user)
+    from sqlalchemy import select, func
+    from database import User, LearningProfile
+    email = (req.email or "").strip().lower()
+    user = (await db.execute(select(User).where(func.lower(User.email) == email))).scalars().first() if email else None
+    if not user:
+        raise HTTPException(status_code=404, detail="그 이메일의 계정이 없습니다.")
+    prof = (await db.execute(select(LearningProfile).where(LearningProfile.user_id == user.id))).scalars().first()
+    return {"pid": _pseudonym(user.id), "joined": bool(prof and prof.pilot_code),
+            "cohort": prof.cohort if prof and prof.pilot_code else None}
 
 
 @app.get("/api/admin/content/candidates")
@@ -2258,7 +2341,9 @@ async def assessment_placement(n: int = 8, form: str = None,
         # 사전·사후는 동결된 판본(data/assessment/forms_v1.json)을 쓴다 — 콘텐츠가 바뀌어도 같은 문항.
         forms = _asmt.frozen_forms(words)
         return {"items": forms.get(form, []), "form": form, "version": forms.get("version")}
-    items = _asmt.build_placement_items(words, n=n)
+    # 배치검사는 사전·사후 문항 단어를 정답·보기에서 모두 뺀다 — 사전검사 전에 문항을 미리 보지 않게(축 I).
+    tw = _asmt.test_only_words()
+    items = _asmt.build_placement_items([w for w in words if w not in tw], n=n)
     return {"items": items, "form": "placement"}
 
 
@@ -2275,7 +2360,8 @@ async def assessment_placement_next(data: PlacementNextReq,
     난이도지수(C)에 θ를 맞추고 누적 오답 자질을 표적으로 겨냥한다. 고정 N 도달·문항 소진 시 done.
     동형폼(A/B) 향상도검사는 이 경로를 타지 않아 사전·사후 통제 비교의 불변성을 지킨다."""
     import assessment as _asmt
-    words = [w["word"] for w in _curriculum.WORD_BANK]
+    tw = _asmt.test_only_words()   # 사전·사후 문항 단어는 배치검사에 내지 않는다(위 GET과 같은 기준)
+    words = [w["word"] for w in _curriculum.WORD_BANK if w["word"] not in tw]
     n = max(3, min(20, data.n or 8))
     asked = data.asked or []
     responses = data.responses or {}
@@ -2409,8 +2495,9 @@ async def public_score(req: PublicScoreReq):
 @app.get("/api/assessment/progression")
 async def assessment_progression(current_user=Depends(get_current_user),
                                  db: AsyncSession = Depends(get_db)):
-    """통제된 향상도(축 I) — 동형 폼 사전(A)·사후(B) 결과를 비교해 델타·음소별 오류 감소를 반환.
-    A/B가 아직 없으면 가장 이른/최근 검사 회차로 대체 비교한다."""
+    """통제된 향상도(축 I) — 동형 폼 사전·사후 결과를 비교해 델타·음소별 오류 감소를 반환.
+    사전은 먼저 본 동형 폼, 사후는 그 뒤에 본 다른 동형 폼이다. 보통 A→B지만, 파일럿에서 순서를 바꿔(역균형)
+    B를 먼저 보면 B→A로 비교한다. 동형 폼 두 개가 없으면 가장 이른/최근 검사 회차로 대체 비교한다."""
     from database import PlacementResult
     from sqlalchemy import select
     rows = (await db.execute(
@@ -2420,9 +2507,10 @@ async def assessment_progression(current_user=Depends(get_current_user),
     if len(rows) < 2:
         return {"available": False, "n": len(rows),
                 "note": "사전·사후 검사가 2회 이상이면 향상도가 나옵니다."}
-    a = next((r for r in rows if r.form == "A"), rows[0])          # 사전
-    b = next((r for r in reversed(rows) if r.form == "B"), rows[-1])  # 사후
-    if a.id == b.id:
+    ab = [r for r in rows if r.form in ("A", "B")]
+    a = ab[0] if ab else None                                                    # 사전: 먼저 본 동형 폼
+    b = next((r for r in reversed(ab) if a is not None and r.form != a.form), None)  # 사후: 뒤에 본 다른 폼
+    if a is None or b is None:
         a, b = rows[0], rows[-1]
     err_a = {e["phoneme"]: e["count"] for e in (a.error_phonemes or []) if isinstance(e, dict)}
     err_b = {e["phoneme"]: e["count"] for e in (b.error_phonemes or []) if isinstance(e, dict)}
@@ -2437,7 +2525,8 @@ async def assessment_progression(current_user=Depends(get_current_user),
         "level_delta": b.level - a.level,
         "ability_delta": round(b.ability - a.ability, 3),
         "error_phoneme_change": per_phoneme,
-        "homogeneous": (a.form == "A" and b.form == "B"),
+        "homogeneous": {a.form, b.form} == {"A", "B"},
+        "order": f"{a.form}→{b.form}",
     }
 
 

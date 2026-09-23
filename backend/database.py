@@ -149,6 +149,7 @@ class LearningProfile(Base):
     # 파일럿(§4.7) — 참여 코드와 집단. 코드는 운영자가 나눠 준 값이고, 내보내기는 가명으로만 한다.
     pilot_code = Column(String(32), nullable=True)
     cohort = Column(String(16), nullable=True)
+    pilot_joined_at = Column(DateTime, nullable=True)   # 참여 코드를 처음 넣은 때(내보내기의 '참여 뒤' 집계 기준)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -383,6 +384,7 @@ async def init_db():
             # 파일럿 참여 코드·집단(§4.7)
             "ALTER TABLE learning_profiles ADD COLUMN pilot_code VARCHAR(32)",
             "ALTER TABLE learning_profiles ADD COLUMN cohort VARCHAR(16)",
+            "ALTER TABLE learning_profiles ADD COLUMN pilot_joined_at TIMESTAMP",
             # 말하기 회차 상세(Figma 212:24)
             "ALTER TABLE speak_attempts ADD COLUMN audio_score FLOAT",
             "ALTER TABLE speak_attempts ADD COLUMN mouth_score FLOAT",

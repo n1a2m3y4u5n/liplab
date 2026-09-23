@@ -337,6 +337,11 @@ export default function ProfilePage() {
             </div>
           ))}
         </div>
+        {pilot?.joined && (
+          <p className="w-full text-[13px] leading-[1.6] text-ink-muted">
+            파일럿에 참여 중이라 사전·사후 검사 기록은 남아요. 참여를 그만두거나 자료 삭제를 원하면 연구진에게 알려 주세요.
+          </p>
+        )}
         <div className="flex w-full flex-col gap-2">
           <p className="text-[13px] font-bold leading-figma text-ink-muted">계속하려면 «초기화»를 입력해주세요</p>
           <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="초기화"
