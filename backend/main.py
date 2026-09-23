@@ -2108,13 +2108,37 @@ async def assessment_progression(current_user=Depends(get_current_user),
 
 @app.get("/api/conversation/multi", dependencies=[Depends(ratelimit.rate_limit(30, 60, "llm-multi"))])
 async def conversation_multi(speakers: int = 2, turns: int = 6,
-                             current_user=Depends(get_current_user)):
-    """다자 대화 시나리오(축 H) — 여러 화자가 번갈아 말하는 짧은 대화(화자 식별 + 입모양 읽기)."""
+                             current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """다자 대화 시나리오(축 H) — 여러 화자가 번갈아 말하는 짧은 대화(화자 식별 + 입모양 읽기).
+    학습자의 약점 입모양이 든 승인 단어(G)를 대화에 넣도록 요청하고(H-3), 턴마다 닮은꼴 오답과
+    빈칸 턴을 붙인다(H-4). answer_key는 서버 재채점용 서명 정답(H-9)이다."""
     import conversation_scenario as _conv
+    import knowledge_tracing as _kt
+    import content_rules as _crules
+    from database import WeakViseme
+    from sqlalchemy import select as _select
+    from auth import SECRET_KEY, ALGORITHM
+    from jose import jwt as _jwt
+    from datetime import datetime as _dt, timedelta as _td
     try:
-        return await _conv.generate_multi_conversation(speakers=speakers, turns=turns)
+        rows = (await db.execute(_select(WeakViseme).where(WeakViseme.user_id == current_user.id))).scalars().all()
+        rec = _kt.recommend([{"viseme_id": w.viseme_id, "error_count": w.error_count,
+                              "total_attempts": w.total_attempts, "last_error_at": w.last_error_at}
+                             for w in rows], k=2)
+        targets = set(rec.get("target_visemes") or [])
+        focus = [w["word"] for w in _curriculum.WORD_BANK
+                 if targets and set(_crules.word_visemes(w["word"])) & targets][:30]
+        import random as _rnd
+        _rnd.shuffle(focus)
+        conv = await _conv.generate_multi_conversation(speakers=speakers, turns=turns, focus_words=focus[:6])
     except Exception as e:
         raise _server_error(e, "conversation gen failed")
+    key = {"uid": current_user.id, "sp": [t["speaker"] for t in conv["turns"]],
+           "tx": [t["text"] for t in conv["turns"]],
+           "cl": (conv.get("closure") or {}).get("answer"),
+           "exp": _dt.utcnow() + _td(hours=3)}
+    conv["answer_key"] = _jwt.encode(key, SECRET_KEY, algorithm=ALGORITHM)
+    return conv
 
 
 class MultiConvResultReq(BaseModel):
@@ -2124,6 +2148,11 @@ class MultiConvResultReq(BaseModel):
     read_total: int = 0
     read_hits: List[str] = []    # 립리딩(문맥추론) 정답 발화 텍스트
     read_misses: List[str] = []  # 오독 발화 텍스트
+    # 서버 재채점(H-9) — answer_key가 있으면 아래 선택으로 서버가 다시 채점하고 위 집계값은 무시한다.
+    answer_key: Optional[str] = None
+    speaker_choices: List[Optional[int]] = []   # 턴별로 고른 화자 번호
+    read_choices: List[Optional[str]] = []      # 턴별로 고른 문장(원문 또는 닮은꼴)
+    closure_choice: Optional[str] = None        # 빈칸 턴에서 고른 단어
 
 
 @app.post("/api/conversation/multi/result", dependencies=[Depends(ratelimit.rate_limit(30, 60, "llm"))])
@@ -2139,9 +2168,25 @@ async def conversation_multi_result(req: MultiConvResultReq,
     from content_rules import word_visemes
     from datetime import datetime as _dt
 
-    spk_acc = (req.speaker_correct / req.speaker_total) if req.speaker_total else 0.0
-    read_acc = (req.read_correct / req.read_total) if req.read_total else 0.0
-    combined = round(100 * (0.5 * spk_acc + 0.5 * read_acc), 1)
+    scored = None
+    if req.answer_key:
+        import conversation_scenario as _conv
+        from auth import SECRET_KEY, ALGORITHM
+        from jose import jwt as _jwt, JWTError as _JWTError
+        try:
+            key = _jwt.decode(req.answer_key, SECRET_KEY, algorithms=[ALGORITHM])
+        except _JWTError:
+            raise HTTPException(status_code=400, detail="대화 정답 키가 유효하지 않습니다(만료 또는 변조).")
+        if key.get("uid") != current_user.id:
+            raise HTTPException(status_code=403, detail="다른 사용자의 대화입니다.")
+        scored = _conv.score_multi(key, req.speaker_choices, req.read_choices, req.closure_choice)
+        req.read_hits, req.read_misses = scored["read_hits"], scored["read_misses"]
+        spk_acc, read_acc, combined = scored["speaker_accuracy"], scored["read_accuracy"], scored["combined"]
+    else:
+        # 구버전 화면(집계값만 보냄) 호환 — 화자식별·독해 평균
+        spk_acc = (req.speaker_correct / req.speaker_total) if req.speaker_total else 0.0
+        read_acc = (req.read_correct / req.read_total) if req.read_total else 0.0
+        combined = round(100 * (0.5 * spk_acc + 0.5 * read_acc), 1)
 
     def _vis(texts):
         s = set()
@@ -2170,7 +2215,9 @@ async def conversation_multi_result(req: MultiConvResultReq,
             db.add(wv)
     await db.commit()
     return {"combined": combined, "speaker_accuracy": round(spk_acc, 3),
-            "read_accuracy": round(read_acc, 3), "recorded_visemes": sorted(missed | hit)}
+            "read_accuracy": round(read_acc, 3), "recorded_visemes": sorted(missed | hit),
+            "closure_correct": (scored or {}).get("closure_correct"),
+            "server_scored": scored is not None}
 
 
 # ── 발화 커리큘럼(6단계) — 상태·게이팅·콘텐츠 ────────────────────────────────

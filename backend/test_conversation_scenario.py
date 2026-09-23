@@ -10,14 +10,16 @@ def test_fallback_structure_and_speaker_rotation():
     assert conv["speakers"] == 2
     assert conv["fallback"] is True
     assert len(conv["turns"]) == 6
-    # 화자는 0..speakers-1 안에서 번갈아
-    assert [t["speaker"] for t in conv["turns"]] == [0, 1, 0, 1, 0, 1]
+    # 화자는 0..speakers-1 안에서 모두 나오되, 순서만 보고 맞히지 못하게 규칙적으로 번갈지 않는다(H-2)
+    seq = [t["speaker"] for t in conv["turns"]]
+    assert set(seq) == {0, 1} and seq != [0, 1, 0, 1, 0, 1]
     assert all(t["text"] for t in conv["turns"])
 
 
 def test_fallback_three_speakers_rotation():
     conv = cs._fallback_conversation(3, 6, "학교 교실")
-    assert [t["speaker"] for t in conv["turns"]] == [0, 1, 2, 0, 1, 2]
+    seq = [t["speaker"] for t in conv["turns"]]
+    assert set(seq) == {0, 1, 2} and seq != [0, 1, 2, 0, 1, 2]
 
 
 def test_fallback_unknown_scene_uses_default_lines():

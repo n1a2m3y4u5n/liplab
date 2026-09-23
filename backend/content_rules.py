@@ -439,7 +439,13 @@ def _visually_confusable(answer: str, other: str) -> bool:
     mp = minimal_pair_diff(answer, other)
     if mp is None:
         return False
-    _, _, vis = mp                      # (음소1, 음소2, [viseme1, viseme2])
+    pa, pb, vis = mp                    # (음소1, 음소2, [viseme1, viseme2])
+    if len(vis) < 2:
+        # minimal_pair_diff는 입모양 번호를 집합으로 모아서, 두 음소가 같은 입모양이면 하나만 남는다
+        # (가장 헷갈리는 경우). 한쪽이 입모양 표에 없으면(겹받침 ㄺ 등) 판단할 수 없어 혼동으로 보지 않는다.
+        # 예전에는 vis[1]을 바로 읽어 달/닭·바위/바퀴 같은 쌍에서 IndexError로 게이트가 멈췄다.
+        va, vb = VISEME_MAP.get(pa), VISEME_MAP.get(pb)
+        return va is not None and va == vb
     v1, v2 = vis[0], vis[1]
     return v1 == v2 or (v1 in _INSIDE_CLUSTER and v2 in _INSIDE_CLUSTER)
 
