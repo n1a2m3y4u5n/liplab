@@ -6,42 +6,56 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
 
 /**
  * 다자 대화 독화(축 H) — 여러 화자가 번갈아 말하는 대화에서 '지금 누가 말하는지' + 그 사람
- * 입모양을 함께 읽는 실전 훈련. 화자마다 색·이름을 배정하고 발화 순서대로 입모양을 재생한다.
+ * 입모양을 함께 읽는 실전 훈련.
+ *  - H-2: 화자마다 아바타를 하나씩 나란히 둔다. 말하는 사람만 문장 입모양을 재생하고, 듣는 사람은
+ *    가끔 '음' 하고 입을 다무는 맞장구만 한다(움직임만으로 화자를 고르지 못하게 하는 방해 자극).
+ *  - H-4: '무슨 말이었나요' 보기는 한 단어를 입모양이 같은 다른 단어로 바꾼 닮은꼴 문장들이라, 입만
+ *    보면 구별이 안 되고 앞 대화 문맥으로 골라야 한다. 한 턴은 빈칸 문맥 추론 턴이다.
+ *  - H-9: 서버가 준 서명 정답(answer_key)과 턴별 선택을 보내 서버가 다시 채점한다.
  */
 const SPK_COLOR = ['bg-sky-500', 'bg-rose-500', 'bg-amber-500']
-const SPK_RING = ['ring-sky-400', 'ring-rose-400', 'ring-amber-400']  // 화자별 시각 구분(답 후)
-const SPK_SOFT = ['bg-sky-50 text-sky-700 border-sky-200', 'bg-rose-50 text-rose-700 border-rose-200', 'bg-amber-50 text-amber-700 border-amber-200']
+const SPK_RING = ['ring-sky-400', 'ring-rose-400', 'ring-amber-400']
 const SPK_TEXT = ['text-sky-600', 'text-rose-600', 'text-amber-600']  // 선택 전 화자별 글자색(Figma: 화자마다 색)
 const SPK_NAME = ['A', 'B', 'C']
+// 듣는 사람의 맞장구 — 중립으로 있다가 잠깐 입술을 다문다('음'). 화자마다 길이를 달리해 박자가 겹치지 않게 한다.
+const BACKCHANNEL = [
+  [{ viseme: 15, duration_ms: 1400 }, { viseme: 1, duration_ms: 380 }, { viseme: 15, duration_ms: 2300 }],
+  [{ viseme: 15, duration_ms: 2100 }, { viseme: 1, duration_ms: 320 }, { viseme: 15, duration_ms: 1700 }],
+  [{ viseme: 15, duration_ms: 2700 }, { viseme: 1, duration_ms: 420 }, { viseme: 15, duration_ms: 1300 }],
+]
+
+function shuffle(arr, seed) {
+  // 대화마다 고정된 순서(다시 방문해도 보기 순서가 바뀌지 않게) — 간단한 LCG
+  let s = seed >>> 0
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    s = (s * 1664525 + 1013904223) >>> 0
+    const j = s % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
 
 export default function MultiConversation() {
   const [conv, setConv] = useState(null)
   const [idx, setIdx] = useState(0)
   const [frames, setFrames] = useState([])
-  const [reveal, setReveal] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [guess, setGuess] = useState(null)   // 사용자가 고른 화자(누가 말했나 과제)
-  const [seen, setSeen] = useState({})        // idx→화자(지나간 발화만 타임라인에 색 표시)
-  const [spkScore, setSpkScore] = useState({ correct: 0, total: 0 })
-  const [readGuess, setReadGuess] = useState(null)  // 사용자가 고른 발화 내용(립리딩 이해 과제)
-  const [readScore, setReadScore] = useState({ correct: 0, total: 0 })
-  const [readSeen, setReadSeen] = useState({})       // idx→채점됨(재방문 시 이중집계 방지)
+  const [spkChoice, setSpkChoice] = useState([])     // 턴별로 고른 화자
+  const [readChoice, setReadChoice] = useState([])   // 턴별로 고른 문장(빈칸 턴은 null)
+  const [closureChoice, setClosureChoice] = useState(null)
   const [numSpeakers, setNumSpeakers] = useState(2)  // 화자 수(2~3) — 난이도 조절
   const [result, setResult] = useState(null)         // 서버 종합 채점(세션 종료 시)
   const [loadError, setLoadError] = useState(false)  // 대화를 못 불러오면 셸 안에서 다시 시도
-  const readHitsRef = useRef([])                      // 립리딩 정답 발화(비심 지식추적용)
-  const readMissesRef = useRef([])                    // 오독 발화
-  const spkRef = useRef({ correct: 0, total: 0 })     // 화자식별 누적(제출용, 최신값 보장)
   const submittedRef = useRef(false)
 
   const load = useCallback(async () => {
     setLoading(true); setLoadError(false)
     try {
       const c = await curriculumAPI.getMultiConversation(numSpeakers, 6)
-      setConv(c); setIdx(0); setReveal(false); setGuess(null); setSeen({}); setSpkScore({ correct: 0, total: 0 })
-      setReadGuess(null); setReadScore({ correct: 0, total: 0 }); setReadSeen({})
-      setResult(null); readHitsRef.current = []; readMissesRef.current = []
-      spkRef.current = { correct: 0, total: 0 }; submittedRef.current = false
+      setConv({ ...c, seed: Math.floor(Math.random() * 1e9) })
+      setIdx(0); setSpkChoice([]); setReadChoice([]); setClosureChoice(null)
+      setResult(null); submittedRef.current = false
     } catch { setLoadError(true) } finally { setLoading(false) }
   }, [numSpeakers])
 
@@ -50,69 +64,78 @@ export default function MultiConversation() {
   useEffect(() => {
     if (!conv) return
     const t = conv.turns[idx]
-    setReveal(false); setGuess(null); setReadGuess(null)
     setFrames([])
     if (t) learningAPI.getVisemes(t.text).then(setFrames).catch(() => {})
   }, [conv, idx])
 
-  // 립리딩 이해 과제 보기 — 정답(현재 발화) + 대화 내 다른 발화(오답보기), 발화마다 새로 섞음.
+  const closureIdx = conv?.closure ? conv.closure.index : -1
+
+  // 턴별 보기 — 정답 + 닮은꼴 문장(입모양이 같아 문맥이 필요한 오답). 닮은꼴이 없으면 다른 턴 문장으로 채운다.
   const readOptions = useMemo(() => {
     if (!conv) return []
-    const ans = conv.turns[idx]?.text
-    if (!ans) return []
-    const others = [...new Set(conv.turns.map((t) => t.text).filter((t) => t && t !== ans))]
-    const picked = others.sort(() => Math.random() - 0.5).slice(0, 3)
-    return [ans, ...picked].sort(() => Math.random() - 0.5)
-  }, [conv, idx])
+    return conv.turns.map((t, i) => {
+      const alike = (t.lookalikes || []).filter((x) => x && x !== t.text)
+      const others = conv.turns.map((u) => u.text).filter((x) => x && x !== t.text && !alike.includes(x))
+      const opts = [t.text, ...alike.slice(0, 3)]
+      for (const o of shuffle(others, conv.seed + i)) {
+        if (opts.length >= 4) break
+        if (!opts.includes(o)) opts.push(o)
+      }
+      return shuffle(opts, conv.seed * 7 + i)
+    })
+  }, [conv])
 
-  // 화자 식별 과제 — 입모양만 보고 누가 말했는지 고른다(정답은 고른 뒤 공개)
-  const chooseSpeaker = (i) => {
-    if (guess != null) return
-    setGuess(i)
-    const firstTime = seen[idx] == null   // 재방문 재채점 방지: 이 발화를 처음 맞힐 때만 점수 누적
-    setSeen((m) => ({ ...m, [idx]: conv.turns[idx].speaker }))
-    if (firstTime) {
-      const ok = i === conv.turns[idx].speaker
-      setSpkScore((s) => ({ correct: s.correct + (ok ? 1 : 0), total: s.total + 1 }))
-      spkRef.current = { correct: spkRef.current.correct + (ok ? 1 : 0), total: spkRef.current.total + 1 }
-    }
-  }
-
-  // 세션 종료 시 서버에 결과를 기록·채점(화자식별+립리딩 결합, 오독 비심은 지식추적으로).
-  const submitResult = useCallback(async () => {
-    if (submittedRef.current) return
+  // 모든 턴을 다 풀면(화자 + 문장 또는 빈칸) 서버에 한 번 보낸다 — 서명 정답으로 서버가 다시 채점한다.
+  const submit = useCallback(async (spk, read, clo) => {
+    if (submittedRef.current || !conv) return
     submittedRef.current = true
-    const hits = readHitsRef.current, misses = readMissesRef.current
+    const hits = [], misses = []
+    conv.turns.forEach((t, i) => {
+      if (read[i] == null) return
+      ;(read[i] === t.text ? hits : misses).push(t.text)
+    })
     try {
       const r = await curriculumAPI.recordMultiConversation({
-        speaker_correct: spkRef.current.correct, speaker_total: spkRef.current.total,
+        answer_key: conv.answer_key || null,
+        speaker_choices: conv.turns.map((_, i) => spk[i] ?? null),
+        read_choices: conv.turns.map((_, i) => read[i] ?? null),
+        closure_choice: clo,
+        // answer_key가 없는 옛 서버용 집계값(있으면 서버가 무시한다)
+        speaker_correct: conv.turns.filter((t, i) => spk[i] === t.speaker).length,
+        speaker_total: conv.turns.filter((_, i) => spk[i] != null).length,
         read_correct: hits.length, read_total: hits.length + misses.length,
         read_hits: hits, read_misses: misses,
       })
       setResult(r)
-    } catch { /* 기록 실패는 조용히 무시 */ }
-  }, [])
+    } catch { submittedRef.current = false }
+  }, [conv])
 
-  // 립리딩 이해 과제 — 입모양을 읽고 무슨 말이었는지 고른다(D 립리딩 + G 문맥추론 재조합).
+  const turnDone = (i, spk = spkChoice, read = readChoice, clo = closureChoice) =>
+    spk[i] != null && (i === closureIdx ? clo != null : read[i] != null)
+
+  const maybeSubmit = (spk, read, clo) => {
+    if (conv && conv.turns.every((_, i) => turnDone(i, spk, read, clo))) submit(spk, read, clo)
+  }
+
+  const chooseSpeaker = (s) => {
+    if (spkChoice[idx] != null) return
+    const next = [...spkChoice]; next[idx] = s
+    setSpkChoice(next)
+    maybeSubmit(next, readChoice, closureChoice)
+  }
   const chooseRead = (text) => {
-    if (readGuess != null) return
-    setReadGuess(text)
-    setReveal(true)
-    if (readSeen[idx] == null) {   // 재방문 재채점 방지: 처음 고를 때만 점수 누적
-      setReadSeen((m) => ({ ...m, [idx]: 1 }))
-      const ok = text === conv.turns[idx].text
-      setReadScore((s) => ({ correct: s.correct + (ok ? 1 : 0), total: s.total + 1 }))
-      if (ok) readHitsRef.current.push(conv.turns[idx].text)
-      else readMissesRef.current.push(conv.turns[idx].text)
-      // 모든 발화를 한 번씩 읽었으면 세션 종료 → 서버 기록·종합 채점(순서 무관)
-      if (readHitsRef.current.length + readMissesRef.current.length >= conv.turns.length) {
-        submitResult()
-      }
-    }
+    if (readChoice[idx] != null) return
+    const next = [...readChoice]; next[idx] = text
+    setReadChoice(next)
+    maybeSubmit(spkChoice, next, closureChoice)
+  }
+  const chooseClosure = (w) => {
+    if (closureChoice != null) return
+    setClosureChoice(w)
+    maybeSubmit(spkChoice, readChoice, w)
   }
 
   // 불러오는 중·실패여도 셸(사이드바 '연습' 활성·레일·모바일 탭)은 그대로 두고 본문 자리만 바꾼다(§4-11).
-  // 화자 수 토글도 계속 떠 있어서, 바꿀 때 셸이 다시 마운트되지 않는다.
   const speakerToggle = (
     <div className="flex items-center gap-1.5 text-[13px]">
       <span className="text-ink-muted">화자</span>
@@ -127,7 +150,7 @@ export default function MultiConversation() {
 
   if (loading || !conv) {
     return (
-      <AppShell active="practice" title="다자 대화" description="입모양만 보고 누가 말했는지 맞혀보세요">
+      <AppShell active="practice" title="다자 대화">
         <div className="flex justify-end">{speakerToggle}</div>
         <div className="card flex flex-col items-center gap-3 py-16 text-center">
           {loading ? (
@@ -144,16 +167,20 @@ export default function MultiConversation() {
   }
   const turn = conv.turns[idx]
   const last = idx >= conv.turns.length - 1
-
+  const guess = spkChoice[idx]
   const answered = guess != null
+  const isClosure = idx === closureIdx
+  const readGuess = readChoice[idx]
+  const done = turnDone(idx)
+  const nDone = conv.turns.filter((_, i) => turnDone(i)).length
+
   return (
-    <AppShell active="practice" title="다자 대화" description="입모양만 보고 누가 말했는지 맞혀보세요">
+    <AppShell active="practice" title="다자 대화">
       {/* 안내 + 화자 수 토글(난이도) */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <p className="text-[15px] text-ink-muted">장면 <b className="text-ink">{conv.scene}</b> · 입모양만 보고 <b className="text-ink">누가 말했는지</b> 맞힌 뒤, 무슨 말인지 읽어보세요.</p>
+        <p className="text-[15px] text-ink-muted">장면 <b className="text-ink">{conv.scene}</b> · <b className="text-ink">누가 말하는지</b> 찾은 뒤, 앞 대화 흐름으로 <b className="text-ink">무슨 말인지</b> 골라 보세요.</p>
         {speakerToggle}
       </div>
-      {/* 새 대화(화자 수 변경 등)를 못 불러왔으면 지금 대화는 두고 알린다 */}
       {loadError && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-14 border-2 border-bad-line bg-bad-tint px-4 py-2.5 text-[13.5px] font-bold text-bad-text">
           새 대화를 불러오지 못했어요.
@@ -161,48 +188,61 @@ export default function MultiConversation() {
         </div>
       )}
 
-      {/* 발화 순서 타임라인 — 지나간 발화는 화자색, 현재는 링, 이후는 회색(정답 미리보기 방지) */}
+      {/* 발화 순서 타임라인 — 푼 턴은 화자색, 현재는 링, 나머지는 회색(정답 미리보기 방지) */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        {conv.turns.map((_, i) => {
-          const spk = seen[i]
-          const cls = i === idx ? 'ring-2 ring-primary-500' : ''
-          const color = spk != null ? SPK_COLOR[spk] : (i < idx ? 'bg-gray-300' : 'bg-gray-200')
-          return <span key={i} className={`h-3 w-6 shrink-0 rounded-full ${color} ${cls}`} title={`${i + 1}번째 발화`} />
+        {conv.turns.map((t, i) => {
+          const color = spkChoice[i] != null ? SPK_COLOR[t.speaker] : (i < idx ? 'bg-gray-300' : 'bg-gray-200')
+          return (
+            <button key={i} type="button" onClick={() => setIdx(i)} aria-label={`${i + 1}번째 발화`}
+              className={`h-3 w-6 shrink-0 rounded-full ${color} ${i === idx ? 'ring-2 ring-primary-500' : ''}`} />
+          )
         })}
-        <span className="ml-2 shrink-0 text-xs text-gray-400">화자 {spkScore.correct}/{spkScore.total} · 독해 {readScore.correct}/{readScore.total}</span>
+        <span className="ml-2 shrink-0 text-xs text-ink-muted">{nDone} / {conv.turns.length}턴 완료</span>
       </div>
 
-      {/* 세션 종합 채점(축 H) — 화자 식별 + 립리딩(문맥추론) 결합. 오독 비심은 지식추적에 반영됨. */}
+      {/* 세션 종합 채점(축 H) — 서버 재채점. 종합 = 닮은꼴 문장 고르기 + 빈칸 문맥 추론, 화자 식별은 따로. */}
       {result && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[14px] border-2 border-emerald-200 bg-emerald-50/70 px-4 py-2.5">
           <span className="text-sm font-bold text-emerald-800">이번 대화 종합 {result.combined}점</span>
-          <span className="text-xs text-emerald-700">화자 식별 {Math.round(result.speaker_accuracy * 100)}% · 독해 {Math.round(result.read_accuracy * 100)}%</span>
-          {result.recorded_visemes?.length > 0 && (
-            <span className="text-[11px] text-emerald-600">약점 입모양 {result.recorded_visemes.length}개를 복습에 반영했어요</span>
+          <span className="text-xs text-emerald-700">
+            문장 {Math.round(result.read_accuracy * 100)}%
+            {result.closure_correct != null && <> · 빈칸 {result.closure_correct ? '정답' : '오답'}</>}
+            {' '}· 화자 찾기 {Math.round(result.speaker_accuracy * 100)}%
+          </span>
+          {result.missed_visemes?.length > 0 && (
+            <span className="text-[11px] text-emerald-600">잘못 읽은 입모양 {result.missed_visemes.length}개를 복습에 반영했어요</span>
           )}
         </div>
       )}
 
-      {/* 카드 1: 장면 무대 + 화자 식별 과제 */}
+      {/* 카드 1: 화자 아바타들 + 화자 찾기 */}
       <div className="card">
         <div className="mb-4 flex items-center justify-between">
           <p className="text-[17px] font-bold text-ink">{conv.scene}</p>
           <p className="text-[13px] font-bold text-ink-muted">{idx + 1} / {conv.turns.length}턴</p>
         </div>
 
-        {/* 입모양 무대 — 답 후 현재 화자 색으로 아바타를 감싸 여러 화자 장면을 시각적으로 구분(축 H) */}
-        <div className="rounded-[16px] bg-[#fafafc] p-4">
-          <div className={answered ? `rounded-xl ring-2 ${SPK_RING[turn.speaker] || ''} transition` : ''}>
-            <MouthAvatar frames={frames} />
-          </div>
-          <p className="mt-3 text-center text-[15px] font-bold text-ink-muted">
-            {answered
-              ? <>지금 <span className={`rounded px-1.5 py-0.5 text-white ${SPK_COLOR[turn.speaker]}`}>화자 {SPK_NAME[turn.speaker]}</span>가 말합니다</>
-              : '지금 말하는 사람은 누구일까요?'}
-          </p>
+        <div className={`grid gap-2.5 ${conv.speakers >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          {Array.from({ length: conv.speakers }).map((_, s) => {
+            const speaking = s === turn.speaker
+            return (
+              <div key={s} className={`relative rounded-xl ${answered && speaking ? `ring-2 ${SPK_RING[s]}` : ''}`}>
+                {/* 화자별 아바타는 턴이 바뀌어도 다시 만들지 않는다(WebGL 캔버스 재생성 비용) — frames만 바뀐다 */}
+                <MouthAvatar frames={speaking ? frames : BACKCHANNEL[s % BACKCHANNEL.length]}
+                  height={null} className="h-[150px] lg:h-[230px]" />
+                <span className={`absolute left-2 top-2 rounded-md px-2 py-0.5 text-xs font-bold text-white ${SPK_COLOR[s]}`}>
+                  {SPK_NAME[s]}
+                </span>
+              </div>
+            )
+          })}
         </div>
+        <p className="mt-3 text-center text-[15px] font-bold text-ink-muted">
+          {answered
+            ? <>지금 <span className={`rounded px-1.5 py-0.5 text-white ${SPK_COLOR[turn.speaker]}`}>화자 {SPK_NAME[turn.speaker]}</span>가 말합니다</>
+            : '지금 말하는 사람은 누구일까요?'}
+        </p>
 
-        {/* 화자 식별 선택 — Figma 3D 하단테두리 버튼 */}
         <div className="mt-4 flex gap-3">
           {Array.from({ length: conv.speakers }).map((_, i) => {
             const isAns = answered && i === turn.speaker
@@ -220,25 +260,46 @@ export default function MultiConversation() {
             )
           })}
         </div>
-        {answered && (
-          <p className={`mt-2 text-center text-sm font-bold ${guess === turn.speaker ? 'text-emerald-600' : 'text-rose-600'}`}>
-            {guess === turn.speaker ? '정답!' : `아니에요 — 화자 ${SPK_NAME[turn.speaker]}`}
-          </p>
-        )}
       </div>
 
-      {/* 카드 2: 무슨 말이었나요(독해) + 네비게이션 */}
+      {/* 카드 2: 무슨 말이었나요(닮은꼴 문장) 또는 빈칸 문맥 추론 + 네비게이션 */}
       <div className="card flex flex-col">
         <div className="min-h-[120px] flex-1">
           {!answered ? (
             <p className="mt-2 rounded-[14px] border-2 border-dashed border-line py-10 text-center text-sm font-bold text-gray-400">
-              먼저 화자를 맞혀 주세요
+              먼저 말하는 사람을 찾아 주세요
             </p>
+          ) : isClosure ? (
+            closureChoice == null ? (
+              <div>
+                <p className="mb-1 text-[13px] font-bold text-ink-muted">빈칸에 들어갈 말은? 보기는 입모양이 같아요 — 앞 대화 흐름으로 고르세요.</p>
+                <p className="mb-3 text-lg font-bold text-ink">“{conv.closure.display}”</p>
+                <div className="flex flex-wrap gap-2">
+                  {conv.closure.options.map((w) => (
+                    <button key={w} onClick={() => chooseClosure(w)}
+                      className="rounded-[12px] border-2 border-line bg-white px-5 py-3 text-[16px] font-bold text-ink transition hover:border-primary-300 hover:bg-primary-50">
+                      {w}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-1 space-y-2">
+                <p className={`text-sm font-bold ${closureChoice === conv.closure.answer ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {closureChoice === conv.closure.answer ? '정답! 문맥으로 골랐어요' : `아쉬워요 — 정답은 '${conv.closure.answer}'`}
+                </p>
+                <p className="text-lg font-bold text-ink">“{turn.text}”</p>
+                <div className="overflow-x-auto rounded-[12px] border border-gray-100 bg-gray-50 p-2.5">
+                  <CueBadges text={turn.text} />
+                  <div className="mt-1.5"><CueLegend /></div>
+                </div>
+              </div>
+            )
           ) : readGuess == null ? (
             <div>
-              <p className="mb-2 text-[13px] font-bold text-ink-muted">무슨 말이었나요? (입모양을 읽고 고르세요)</p>
+              <p className="mb-2 text-[13px] font-bold text-ink-muted">무슨 말이었나요? 입모양이 같은 문장이 섞여 있어요 — 대화 흐름에 맞는 것을 고르세요.</p>
               <div className="space-y-2">
-                {readOptions.map((opt) => (
+                {readOptions[idx].map((opt) => (
                   <button key={opt} onClick={() => chooseRead(opt)}
                     className="block w-full rounded-[12px] border-2 border-line bg-white px-4 py-3 text-left text-[15px] font-medium text-ink transition hover:border-primary-300 hover:bg-primary-50">
                     {opt}
@@ -264,7 +325,8 @@ export default function MultiConversation() {
           <div className="flex gap-2">
             {idx > 0 && <button onClick={() => setIdx(idx - 1)} className="rounded-[12px] border-2 border-line px-3 py-1.5 text-sm font-bold text-ink hover:bg-gray-50">이전</button>}
             {!last ? (
-              <button onClick={() => setIdx(idx + 1)} className="rounded-[12px] bg-primary-500 px-4 py-1.5 text-sm font-bold text-white hover:bg-primary-600">다음 발화 →</button>
+              <button onClick={() => setIdx(idx + 1)} disabled={!done}
+                className="rounded-[12px] bg-primary-500 px-4 py-1.5 text-sm font-bold text-white hover:bg-primary-600 disabled:opacity-40">다음 발화 →</button>
             ) : (
               <button onClick={load} className="rounded-[12px] bg-emerald-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-emerald-700">새 대화 ↻</button>
             )}
