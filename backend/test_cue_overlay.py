@@ -59,3 +59,13 @@ if __name__ == "__main__":
         t()
         print(f"  ✓ {t.__name__}")
     print(f"\n{len(tests)}개 테스트 통과")
+
+
+def test_cues_follow_actual_pronunciation():
+    # 국물[궁물]: 첫 음절 받침이 비음 → 울림 기호. 먹고[먹꼬]: 둘째 음절 초성이 된소리 → 긴장 기호.
+    gm = CU.generate_cues("국물")
+    assert any(c["syllable_index"] == 0 and c["position"] == "final" and c["cue"] == "nasal" for c in gm)
+    mg = CU.generate_cues("먹고")
+    assert any(c["syllable_index"] == 1 and c["position"] == "initial" and c["cue"] == "tense" for c in mg)
+    # 음절 수는 표기와 같아야 화면 위치와 맞는다
+    assert max(c["syllable_index"] for c in gm + mg) <= 1
