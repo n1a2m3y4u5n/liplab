@@ -180,6 +180,45 @@ def test_fuse_prefers_segment_visual_then_sentence_visual():
     _ok(only_seg is not None and only_seg["visual_score"] is None, "문장 입모양 없이 구간 입모양만으로도 융합")
 
 
+def test_parse_mouth_track_keeps_optional_nasal():
+    base = {"visemes": [1], "frames": [[0.0, 0.5]]}
+    ok = D.parse_mouth_track({**base, "nasal": [[0.2, 1.4], [0.1, 0.3]]})
+    _ok(ok["nasal"] == [(0.1, 0.3), (0.2, 1.0)], f"비음 확률은 시각 순·0~1 {ok['nasal']}")
+    _ok(D.parse_mouth_track(base)["nasal"] is None, "비음 트랙이 없으면 None")
+    bad = D.parse_mouth_track({**base, "nasal": [[0.1]]})
+    _ok(bad is not None and bad["nasal"] is None, "비음 트랙만 어긋나면 입모양 트랙은 살린다")
+
+
+def test_nasal_expectation_follows_pronunciation():
+    """K-5: 입모양이 같은 짝(ㅁ/ㅂ·ㄴ/ㄷ·ㅇ/ㄱ)에서만 비음 기대를 매긴다. 철자가 아니라 표준발음 기준."""
+    phones = [{"token": t} for t in ["밥", "|", "먹", "어", "|", "사", "|", "국", "물"]]
+    D.annotate_nasal_expectation(phones, "밥 먹어 사 국물")
+    got = [p["nasal_expect"] for p in phones]
+    # 밥=파열(0), 먹→[머]=비음(1), 어→[거]=파열(0), 사=해당 없음, 국→[궁]=파열+비음이라 판단 보류, 물→비음(1)
+    _ok(got == [0, None, 1, 0, None, None, None, None, 1], f"비음 기대 {got}")
+    jamo = [{"token": "o:ㄴ"}, {"token": "n:ㅏ"}, {"token": "c:ㄱ"}]
+    D.annotate_nasal_expectation(jamo, "낙")
+    _ok([p["nasal_expect"] for p in jamo] == [1, None, 0], "자모 토큰은 그대로(이미 발음형)")
+
+
+def test_nasal_evidence_moves_visual_score_a_little():
+    track = D.parse_mouth_track({"visemes": [1], "frames": [[0.0, 0.5]],
+                                 "nasal": [[0.05, 0.2], [0.1, 0.2], [0.5, 0.5], [0.55, 0.5], [0.9, 0.3]]})
+    phones = [{"token": "바", "t0": 0.0, "t1": 0.12, "nasal_expect": 0},    # 낮은 비음 → 파열음과 맞음
+              {"token": "마", "t0": 0.48, "t1": 0.6, "nasal_expect": 1},    # 높은 비음 → 비음과 맞음
+              {"token": "바", "t0": 0.48, "t1": 0.6, "nasal_expect": 0},    # 높은 비음인데 파열음 → 감점
+              {"token": "사", "t0": 0.0, "t1": 0.1, "nasal_expect": None}]
+    ev = D.nasal_evidence_for_phones(phones, track)
+    _ok(ev[0] > 0 and ev[1] > 0 and ev[2] < 0 and ev[3] is None, f"비음 근거 {ev}")
+    vbp, n = D.apply_nasal_evidence([60.0, 60.0, 60.0, 60.0], ev)
+    _ok(n == 3 and vbp[3] == 60.0, "해당 음소만 조정")
+    _ok(all(abs(v - 60.0) <= D.NASAL_POINTS for v in vbp), f"조정폭은 최대 ±{D.NASAL_POINTS}점 {vbp}")
+    _ok(vbp[1] > 60.0 > vbp[2], "맞으면 올리고 어긋나면 내린다")
+    _ok(D.nasal_evidence_for_phones(phones, {"frames": []}) == [None] * 4, "비음 트랙 없으면 전부 None")
+    same, n0 = D.apply_nasal_evidence([None, 50.0], [1.0, None])
+    _ok(same == [None, 50.0] and n0 == 0, "입모양 점수가 없는 음소는 두고, 근거 없는 음소도 둔다")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:

@@ -2877,7 +2877,14 @@ async def speak_assess(
             # B-6: 입모양 타임라인이 있으면 음소가 정렬된 시간 구간의 입모양 점수로 그 음소를 보완한다
             track = dgop.parse_mouth_track(mouth_track) if mouth_track and len(mouth_track) <= 300_000 else None
             vbp = dgop.visual_scores_for_phones(scored_phones, track) if track else None
+            # K-5: 웹캠 비음 확률이 오면 ㅁ/ㅂ·ㄴ/ㄷ·ㅇ/ㄱ처럼 입모양이 같은 짝에서만 입모양 점수를 조금 조정한다
+            n_nasal = 0
+            if track and track.get("nasal") and vbp:
+                dgop.annotate_nasal_expectation(dgop_result.get("phones") or [], target)
+                vbp, n_nasal = dgop.apply_nasal_evidence(vbp, dgop.nasal_evidence_for_phones(scored_phones, track))
             av_fusion = dgop.fuse_audio_visual_per_phone(scored_phones, vis, visual_by_phone=vbp)
+            if av_fusion is not None:
+                av_fusion["nasal_phones"] = n_nasal   # 비음 보조로 조정한 음소 수(K-5)
         if av_fusion is None:
             audio_uncertainty = dgop_result["uncertainty"] if dgop_result else max(0.0, 1 - score / 100.0)
             av_fusion = dgop.fuse_audio_visual(score, audio_uncertainty, vis)
