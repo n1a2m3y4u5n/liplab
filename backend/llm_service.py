@@ -20,12 +20,19 @@ anthropic_client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 
 async def generate_speaking_coaching(target: str, transcript: str, score: float,
-                                     confusions: list = None, metrics: dict = None) -> str:
+                                     confusions: list = None, metrics: dict = None,
+                                     weak_phones: list = None) -> str:
     """발화 채점 + 측정값(크기·억양·길이)을 근거로 '수치 기반·구체적' 발음 코칭.
-    Whisper 오인식 가능성을 감안해 발음 부분은 단정하지 않고 부드럽게. 실패 시 규칙 폴백."""
+    Whisper 오인식 가능성을 감안해 발음 부분은 단정하지 않고 부드럽게. 실패 시 규칙 폴백.
+    weak_phones: D-GOP가 가장 약하게 잰 소리들 [{label, dgop(0~1)}] — 전사와 무관하게 목표 소리 자리에서
+    잰 값이라, 음성인식이 틀려도 '어느 소리가 약했는지'를 짚을 수 있다(축 B-9)."""
     conf_txt = ""
     if confusions:
         conf_txt = "다르게 들린 소리: " + ", ".join(f"{c.get('correct')}→{c.get('confused_as')}" for c in confusions[:4]) + "\n"
+    weak_txt = ""
+    if weak_phones:
+        weak_txt = ("목표 소리 자리에서 약하게 잰 소리(전사와 무관, 0~100): "
+                    + ", ".join(f"'{w['label']}' {round(100 * w['dgop'])}" for w in weak_phones[:3]) + "\n")
     met_txt = ""
     m = metrics or {}
     parts = []
@@ -40,13 +47,14 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
 
     prompt = f"""당신은 청각장애인의 발음(구화) 연습을 돕는 따뜻하고 구체적인 코치입니다.
 목표: "{target}" / 음성인식 결과: "{transcript or '(잘 인식되지 않음)'}" / 발음 유사도 {round(score)}점
-{conf_txt}{met_txt}
+{conf_txt}{weak_txt}{met_txt}
 아래 지침으로 한국어 3~5문장(250자 이내, 번호·머리말 없이 자연스럽게):
 1) 잘한 점을 측정값 근거로 구체적으로(발음 점수·크기·억양 중 좋았던 것을 수치와 함께).
 2) 개선점을 '수치 + 방법'으로 구체적으로:
    - 목소리 크기 40/100 미만이면 더 크게 말하라고 강조.
    - 억양 변화 25Hz 미만이면 톤이 평평하다고 알리고 끝을 올리거나 내리라고.
    - 다르게 들린 소리가 있으면 그 소리를 입술/혀를 '어떻게' 하는지 구체적으로.
+   - 약하게 잰 소리가 있으면 그중 하나를 골라 입술·혀를 어떻게 하는지 알려 주기(음성인식 결과와 달라도 이 값을 믿어도 됨).
 3) 짧은 격려.
 주의: 음성인식은 완벽하지 않으니 발음 부분은 단정하지 말고 "~로 들렸어요" 식으로 부드럽게."""
     try:
@@ -65,6 +73,9 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
         if confusions:
             c = confusions[0]
             bits.append(f"'{c.get('correct')}' 소리가 '{c.get('confused_as')}'로 들렸어요. 입모양을 더 또렷하게 해보세요.")
+        elif weak_phones:
+            w = weak_phones[0]
+            bits.append(f"'{w['label']}' 소리가 약하게 났어요. 그 음절에서 입을 조금 더 크게, 천천히 움직여 보세요.")
         if not bits:
             bits.append("또렷하게 잘 전달됐어요! 이 느낌을 기억하며 다음 단어도 도전해봐요.")
         return " ".join(bits)
