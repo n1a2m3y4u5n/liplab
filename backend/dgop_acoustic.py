@@ -39,9 +39,6 @@ except Exception:  # torch/transformers 미설치
 # 버전이 나오면 이 상수만 바꾸면 된다 — 정렬·집계 로직은 vocab에 의존하지 않는다.
 DEFAULT_MODEL_ID = "kresnik/wav2vec2-large-xlsr-korean"
 
-_model_cache: Dict[str, tuple] = {}
-
-
 def resolve_device() -> str:
     """
     추론 장치. GPU가 있으면 쓴다 — wav2vec2-large 순전파는 CPU에서 수십 배 느려,
@@ -90,17 +87,11 @@ def load_calibration(path: Optional[str] = None) -> Dict:
 
 
 def _load(model_id: str = DEFAULT_MODEL_ID, device: str = None):
+    """정렬기·채점기 (processor, model). 공용 백본 서비스(A-9)가 한 번만 올려 두고 나눠 준다."""
     if not HAS_ACOUSTIC:
         raise RuntimeError("torch/transformers 미설치 — backend/requirements-ml.txt 설치 필요")
-    device = device or resolve_device()
-    key = f"{model_id}@{device}"
-    if key not in _model_cache:
-        processor = AutoProcessor.from_pretrained(model_id)
-        model = AutoModelForCTC.from_pretrained(model_id)
-        model.eval()
-        model.to(device)
-        _model_cache[key] = (processor, model)
-    return _model_cache[key]
+    import backbone_service as _bb
+    return _bb.load(model_id, "ctc", device or resolve_device())
 
 
 def ctc_outputs(waveform, sample_rate: int, model_id: str = DEFAULT_MODEL_ID):

@@ -89,7 +89,7 @@ def _load():
     if _head is not None:
         return
     import torch
-    from transformers import AutoModel
+    import backbone_service as _bb
     ckpt_path = _find_ckpt()
     ck = torch.load(ckpt_path, map_location="cpu")
     _names = ck["names"]
@@ -97,9 +97,8 @@ def _load():
     _head = _build_head(len(_names))
     _head.load_state_dict(ck["state"])
     _head.eval()
-    _w2v = AutoModel.from_pretrained(_backbone).eval()
-    for p in _w2v.parameters():
-        p.requires_grad_(False)
+    # 동결 백본은 공용 백본 서비스(A-9)가 올려 둔다 — 같은 모델을 쓰는 다른 축과 가중치를 나눠 쓴다.
+    _, _w2v = _bb.load(_backbone, "base", "cpu")
 
 
 def _to_mono16k(audio_bytes: bytes):
@@ -132,9 +131,8 @@ def _w2v_features(y, dev):
     """16k mono → wav2vec2 hidden states → 30fps 리샘플 (T,1024)."""
     import torch
     import torch.nn.functional as F
-    x = torch.tensor(y, dtype=torch.float32, device=dev)[None]
-    with torch.no_grad():
-        h = _w2v(x).last_hidden_state           # (1, T_w2v, 1024) ~49Hz
+    import backbone_service as _bb
+    h = _bb.embed(y, _backbone, device=dev)[None]   # (1, T_w2v, 1024) ~49Hz
     n_frames = max(1, int(round(len(y) / SR * FPS)))
     h = F.interpolate(h.transpose(1, 2), size=n_frames, mode="linear", align_corners=False)
     return h.transpose(1, 2)[0]                 # (n_frames, 1024)
