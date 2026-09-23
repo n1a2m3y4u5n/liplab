@@ -9,6 +9,9 @@
 > 확인: 백엔드 pytest 214 통과, 프론트 node --test 49 통과, vite build 통과.
 > 진행 중: RunPod 세션 1(A1), AI Hub 538 새 20화자 다운로드, 그 뒤 608 감음신경성 세션과 세션 2(A2·D v2·608 측정).
 > 앱 기본값 주의: D-GOP는 여전히 `DGOP_ALIGNER_ID` 미설정이면 꺼져 있다(말하기 회차 상세의 음소 칩·불확실성은 켰을 때만).
+> 보안 점검(`scripts/security-audit.sh`, 9/23): npm 운영 의존성에 axios·form-data(high), react-router(moderate)가 걸린다.
+> 모두 같은 주 버전 안에 수정판이 있다. 이 워크트리의 `frontend/node_modules`는 메인 체크아웃과 공유(심링크)라 여기서
+> `npm audit fix`를 하지 않았다 — 메인 체크아웃에서 올린 뒤 빌드·테스트하고 lockfile을 함께 커밋한다. pip-audit는 미설치.
 >
 > **2026-09-23 — 통합 브랜치 `integrate/2026-09-23` (검토 요청).** `feat/content-scale`(9f57939)에서 갈라
 > `feat/sublexical-feedback` 11커밋(9f08043 이후: Figma §8 이식, G 대량화 525/917/181, 보안·개인정보 보강,
