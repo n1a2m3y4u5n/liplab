@@ -1839,6 +1839,10 @@ async def curriculum_next(current_user=Depends(get_current_user), db: AsyncSessi
 class MouthAttempt(BaseModel):
     viseme_id: int
     score: float  # 0~100 (웹캠 입모양 코사인 채점)
+    # 조음 교정 세션 요약(축 E-9, 선택) — 관찰 차원 평균 |목표-관찰|의 처음·끝 값(0~1)과 표본 수
+    gap_start: Optional[float] = None
+    gap_end: Optional[float] = None
+    n_samples: int = 0
 
 
 @app.post("/api/curriculum/mouth-attempt")
@@ -1869,8 +1873,36 @@ async def curriculum_mouth_attempt(data: MouthAttempt, current_user=Depends(get_
                         last_error_at=datetime.utcnow(),
                         phonological_feature=get_viseme_feature(data.viseme_id))
         db.add(wv)
+    # 조음 교정 세션 요약(E-9) — 처음·끝 오차가 둘 다 0~1 범위일 때만 남긴다(원본 계수는 받지 않는다)
+    session_saved = False
+    gs, ge = data.gap_start, data.gap_end
+    if gs is not None and ge is not None and 0 <= gs <= 1 and 0 <= ge <= 1 and data.n_samples >= 2:
+        from database import ArticulationSession
+        db.add(ArticulationSession(user_id=current_user.id, viseme_id=data.viseme_id,
+                                   score=round(data.score, 1), gap_start=round(gs, 3), gap_end=round(ge, 3),
+                                   n_samples=min(int(data.n_samples), 10000)))
+        session_saved = True
     await db.commit()
-    return {"ok": True, "passed": passed, "viseme_id": data.viseme_id, "score": round(data.score, 1)}
+    return {"ok": True, "passed": passed, "viseme_id": data.viseme_id, "score": round(data.score, 1),
+            "session_saved": session_saved}
+
+
+@app.get("/api/analysis/articulation")
+async def analysis_articulation(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """웹캠 조음 교정 전후 오차(축 E-9) — 세션 처음과 끝의 관찰 차원 평균 |목표−관찰|.
+    change가 음수면 세션 안에서 목표에 가까워졌다는 뜻이다. 첫 세션들과 최근 세션들도 따로 준다."""
+    import articulation as _art
+    from database import ArticulationSession
+    from sqlalchemy import select
+    r = await db.execute(select(ArticulationSession).where(ArticulationSession.user_id == current_user.id)
+                         .order_by(ArticulationSession.created_at))
+    rows = [{"viseme_id": x.viseme_id, "gap_start": x.gap_start, "gap_end": x.gap_end,
+             "created_at": x.created_at} for x in r.scalars().all()]
+    out = _art.summarize_sessions(rows)
+    k = min(5, len(rows) // 2)   # 세션이 쌓이면 처음 k개 대 최근 k개로 세션 사이 변화도 본다
+    out["early"] = _art.summarize_sessions(rows[:k])["gap_start"] if k else None
+    out["recent"] = _art.summarize_sessions(rows[-k:])["gap_start"] if k else None
+    return out
 
 
 @app.get("/api/cues")

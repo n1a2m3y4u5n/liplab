@@ -258,6 +258,22 @@ class PlacementResult(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class ArticulationSession(Base):
+    """웹캠 조음 교정 세션 요약(축 E-9) — 관찰 차원(개구·원순·폐쇄)의 목표 대비 평균 |차이|를
+    세션 처음과 끝에서 재어 남긴다. 교정 전후 오차 비교의 원천 데이터.
+    영상·계수 원본은 저장하지 않는다(요약 수치만)."""
+    __tablename__ = "articulation_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    viseme_id = Column(Integer, nullable=False)
+    score = Column(Float, nullable=True)        # 입모양 채점 최고점(0~100)
+    gap_start = Column(Float, nullable=True)    # 처음 표본들의 평균 |목표-관찰| (0~1)
+    gap_end = Column(Float, nullable=True)      # 마지막 표본들의 평균 |목표-관찰|
+    n_samples = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class TrialAttempt(Base):
     """독화 개별 시행 기록 — 선다형 시행(1단계 입모양 인지·2단계 단어·문맥추론 MWIS)을
     '시행 단위'로 저장한다. 비심 혼동행렬·시행별 학습곡선·사전/사후 평가의 원천 데이터.

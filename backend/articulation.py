@@ -101,25 +101,61 @@ def articulation_correction(viseme: int, observed: Dict[str, float]) -> Dict:
     observed: 웹캠 역추정 {jaw, round, close} (0~1). 가장 크게 어긋난 한 차원을 우선 코칭한다."""
     v = _norm_viseme(viseme)
     tgt = _ART[v]
+    gaps = articulation_gaps(v, observed)
     cues: List[Dict] = []
-    for dim in OBSERVABLE:
-        t = float(tgt.get(dim, 0.0))
-        try:
-            o = float(observed.get(dim, 0.0) or 0.0)
-        except (TypeError, ValueError):
-            o = 0.0  # 비수치 관측값은 무시(0으로)
-        gap = t - o
+    for dim, gap in gaps.items():
         if abs(gap) >= _MIN_GAP:
             text = _CORR[dim][0] if gap > 0 else _CORR[dim][1]
-            cues.append({"dim": dim, "gap": round(gap, 3), "text": text})
+            cues.append({"dim": dim, "gap": gap, "text": text})
     cues.sort(key=lambda c: -abs(c["gap"]))
     return {
         "viseme": v,
         "ok": len(cues) == 0,
         "primary": cues[0]["text"] if cues else "좋아요, 그대로 유지하세요.",
         "cues": cues,
+        "gaps": gaps,                                  # 차원별 목표−관찰(교정 전후 오차 기록용, E-9)
+        "error": round(sum(abs(g) for g in gaps.values()) / len(gaps), 3),   # 평균 |차이|
         "hidden_guide": tgt["guide"],  # 관찰로는 안 잡히는 혀·조음은 항상 함께 안내
     }
+
+
+def articulation_gaps(viseme: int, observed: Dict[str, float]) -> Dict[str, float]:
+    """관찰 차원별 목표−관찰 차이(양수 = 부족, 음수 = 과함). 비수치 관측값은 0으로 본다."""
+    tgt = _ART[_norm_viseme(viseme)]
+    out: Dict[str, float] = {}
+    for dim in OBSERVABLE:
+        try:
+            o = float((observed or {}).get(dim, 0.0) or 0.0)
+        except (TypeError, ValueError):
+            o = 0.0
+        out[dim] = round(float(tgt.get(dim, 0.0)) - o, 3)
+    return out
+
+
+def summarize_sessions(rows: List[Dict]) -> Dict:
+    """웹캠 교정 세션 기록(E-9) → 세션 처음·끝의 평균 |차이|와 비심별 요약.
+
+    rows: [{viseme_id, gap_start, gap_end, created_at}] (시간순이 아니어도 된다).
+    오차는 관찰 차원(개구·원순·폐쇄) 평균 |목표−관찰|이라 0에 가까울수록 목표와 가깝다.
+    """
+    ok = [r for r in rows if r.get("gap_start") is not None and r.get("gap_end") is not None]
+    if not ok:
+        return {"sessions": 0, "gap_start": None, "gap_end": None, "change": None, "by_viseme": []}
+
+    def mean(xs):
+        return round(sum(xs) / len(xs), 3)
+
+    by: Dict[int, List[Dict]] = {}
+    for r in ok:
+        by.setdefault(int(r["viseme_id"]), []).append(r)
+    by_viseme = []
+    for v, rs in sorted(by.items()):
+        s, e = mean([r["gap_start"] for r in rs]), mean([r["gap_end"] for r in rs])
+        by_viseme.append({"viseme_id": v, "sessions": len(rs), "gap_start": s, "gap_end": e,
+                          "change": round(e - s, 3)})
+    s, e = mean([r["gap_start"] for r in ok]), mean([r["gap_end"] for r in ok])
+    return {"sessions": len(ok), "gap_start": s, "gap_end": e, "change": round(e - s, 3),
+            "by_viseme": by_viseme}
 
 
 def _jamo_sequence(char: str) -> List[Dict]:

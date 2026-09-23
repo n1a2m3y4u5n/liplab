@@ -95,3 +95,24 @@ def test_guide_nasal_per_jamo_not_per_viseme():
     assert _jamo(art.articulation_guide("강"), "강", "ㅇ")["nasal"] is True
     m = _jamo(art.articulation_guide("밤"), "밤", "ㅁ")
     assert m["nasal"] is True and "코로 울림" in m["guide"]
+
+
+def test_correction_reports_gaps_and_error():
+    # 양순(1) 목표: jaw 0.05, round 0, close 1.0. 입을 벌린 관찰이면 close 부족·jaw 과함
+    c = art.articulation_correction(1, {"jaw": 0.55, "round": 0.0, "close": 0.2})
+    assert c["gaps"] == {"jaw": -0.5, "round": 0.0, "close": 0.8}
+    assert c["error"] == round((0.5 + 0.0 + 0.8) / 3, 3)
+    assert c["cues"][0]["dim"] == "close"   # 가장 크게 어긋난 차원이 먼저
+
+
+def test_summarize_sessions_start_end_change():
+    rows = [{"viseme_id": 1, "gap_start": 0.4, "gap_end": 0.2},
+            {"viseme_id": 1, "gap_start": 0.3, "gap_end": 0.3},
+            {"viseme_id": 4, "gap_start": 0.5, "gap_end": 0.25},
+            {"viseme_id": 4, "gap_start": None, "gap_end": 0.1}]   # 불완전 기록은 뺀다
+    s = art.summarize_sessions(rows)
+    assert s["sessions"] == 3
+    assert s["gap_start"] == 0.4 and s["gap_end"] == 0.25 and s["change"] == -0.15
+    v1 = next(v for v in s["by_viseme"] if v["viseme_id"] == 1)
+    assert v1["sessions"] == 2 and v1["change"] == -0.1
+    assert art.summarize_sessions([])["sessions"] == 0
