@@ -1,5 +1,14 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
+> **2026-09-23 늦은 밤 — 계획서 재대조로 찾은 항목 처리(원격 푸시됨).**
+> 표6-C1 데이터 유래 자모 유사도 교체(공개 자원 1.2.0), 4.4-4 검수 기록·병합 재게이트(`scripts/merge_approved.py`),
+> 4.7 파일럿 데이터 명세와 보관·파기 스크립트(`docs/pilot-data-spec.md`, `scripts/pilot_retention.py`), G-6 엔드리스 혼합 세션
+> (단어 ↔ 문맥), C-현황 엔진 지속시간 실측 비교(`docs/engine-duration-check.md`), A-7 D-GOP 후보 앵커(538 기반, 적용 안 함),
+> 그림 5·12 다시 그림(`docs/figures/`), E-8·K-13 학습 스크립트 복원판(`liplab-lab/tools/train_aai.py`·`train_k_facecue.py`).
+> 세션 2(`liplab-lab/tools/pod/session2.sh`)는 A1 폴백(`--cond none --steps 5250`)으로 바꾸고 C 30화자 유사도, 608 측정,
+> A-2 kNN-VC 충실도를 붙였다. 세션 뒤 로컬에서 D-6(`d6_machine_confusion.py`)과 A-7(608 포함)을 돌린다.
+> 사용자 결정 대기: 파일럿 보관 기간·윤리 절차·보호책임자, D-GOP 켜기와 새 앵커, 엔진 지속시간 상수 조정, Figma 비목(집행대장).
+
 > **2026-09-23 밤 — 통합 브랜치에 계획서 잔여 작업과 Figma 적용을 이어서 올렸다(원격 푸시됨).**
 > 한 화면 요약은 `docs/고도화_현황_팀공유.md`, 보고서용 수치·정정은 `docs/report-notes.md`.
 > 이날 넣은 것: Figma 적용 2/3·3/3(레슨·탭·모달) + 회차 상세 모달(212:24), 문맥 추론·오늘의 복습 레슨 템플릿,
