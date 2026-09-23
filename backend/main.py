@@ -948,6 +948,64 @@ async def get_calendar_activities(current_user=Depends(get_current_user), db: As
     return out
 
 
+@app.get("/api/analysis/overview")
+async def get_analysis_overview(tz_offset_min: int = -540, current_user=Depends(get_current_user),
+                                db: AsyncSession = Depends(get_db)):
+    """분석 탭 요약 + 배지 — 활동 기록 전체에서 계산한다(집계 로직은 analytics.py).
+
+    학습 시간은 따로 저장하지 않으므로 활동 시각으로 회차를 나눠 추정하고(30분 공백 = 새 회차),
+    정확도는 독화 시행(정오답)·문장 점수·말하기 통과 여부를 0~1로 모아 평균한다.
+    tz_offset_min은 브라우저 Date.getTimezoneOffset()(한국 −540) — 날짜·연속 학습·새벽 판정에 쓴다.
+    """
+    import datetime as dt
+    import analytics as _an
+    from database import (Progress, TrialAttempt, SpeakAttempt, PlacementResult,
+                          StageProgress, SpeakStageProgress, ReviewItem)
+    from sqlalchemy import select
+
+    tz = max(-840, min(720, int(tz_offset_min)))
+    uid = current_user.id
+    events = []
+    for ts, score in (await db.execute(select(Progress.created_at, Progress.score)
+                                       .where(Progress.user_id == uid))).all():
+        events.append(_an.Event(ts, "read", None if score is None else max(0.0, min(1.0, score / 100.0))))
+    for ts, correct in (await db.execute(select(TrialAttempt.created_at, TrialAttempt.correct)
+                                         .where(TrialAttempt.user_id == uid))).all():
+        events.append(_an.Event(ts, "read", 1.0 if correct else 0.0))
+    for ts, passed, score in (await db.execute(select(SpeakAttempt.created_at, SpeakAttempt.passed, SpeakAttempt.score)
+                                               .where(SpeakAttempt.user_id == uid))).all():
+        g = (1.0 if passed else 0.0) if passed is not None else (None if score is None else max(0.0, min(1.0, score / 100.0)))
+        events.append(_an.Event(ts, "speak", g))
+    for (ts,) in (await db.execute(select(PlacementResult.created_at)
+                                   .where(PlacementResult.user_id == uid))).all():
+        events.append(_an.Event(ts, "test", None))
+    events = [e for e in events if e.ts is not None]
+
+    prof = await _get_or_create_profile(uid, db)
+    read_rows = (await db.execute(select(StageProgress).where(StageProgress.user_id == uid))).scalars().all()
+    read_mastered = {sp.stage for sp in read_rows if sp.status == "mastered"}
+    if prof.placed:
+        read_mastered.add(0)                     # 0단계는 배치(트랙 선택) 완료가 곧 숙달
+    conv = next((sp.attempts for sp in read_rows if sp.stage == 4), 0) or 0
+    speak_rows = (await db.execute(select(SpeakStageProgress).where(SpeakStageProgress.user_id == uid))).scalars().all()
+    speak_mastered = {sp.stage for sp in speak_rows if sp.status == "mastered"}
+
+    now = dt.datetime.utcnow()
+    today_local = _an.to_local(now, tz).date().isoformat()
+    reviews = (await db.execute(select(ReviewItem).where(ReviewItem.user_id == uid))).scalars().all()
+    reviews_done = sum(1 for r in reviews if (r.repetitions or 0) > 0 or (r.lapses or 0) > 0)
+    reviews_overdue = sum(1 for r in reviews if r.due_date and r.due_date < today_local)
+
+    return _an.overview(
+        events, now, tz,
+        read_mastered=read_mastered,
+        read_total=len([s for s in _curriculum.STAGES if not s.get("coming_soon")]),
+        speak_mastered=speak_mastered, speak_total=len(_speakcur.stages_overview()),
+        conversation_attempts=conv, reviews_done=reviews_done, reviews_overdue=reviews_overdue,
+        level=current_user.current_level or 1,
+    )
+
+
 @app.get("/api/review-sentences")
 async def get_review_sentences(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """최근에도 틀린(가장 최근 시도 점수 < 60) 서로 다른 문장을 최대 10개 반환.

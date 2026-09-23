@@ -13,6 +13,7 @@ approved.json은 curriculum.py가 앱 기동 시 자동 병합해 서빙한다.
 """
 import argparse
 import glob
+import hashlib
 import json
 import os
 import sys
@@ -66,7 +67,8 @@ def main(args):
     appr = _load_approved()
     seen_w = {w["word"] for w in appr["words"]}
     seen_p = {frozenset((p["a"], p["b"])) for p in appr["pairs"]}
-    seen_c = {c["display"] for c in appr["closures"]}
+    # 문항은 내용(display|answer)으로 중복을 거른다(content_review._key와 같은 기준).
+    seen_c = {(c.get("display", ""), c.get("answer", "")) for c in appr["closures"]}
     stats = {"words": 0, "pairs": 0, "closures": 0}
     auto = args.accept_tier is not None
     print(f"검토 대상: {os.path.basename(path)} — {cand.get('meta', {}).get('counts', {})}")
@@ -93,13 +95,16 @@ def main(args):
                 seen_p.add(k)
                 stats["pairs"] += 1
         for c in cand.get("closures", []):
-            if c["display"] in seen_c:
+            key = (c.get("display", ""), c.get("answer", ""))
+            if key in seen_c:
                 continue
             ok = True if auto else _ask(f"[문항] {c['display']} (답={c['answer']} 보기={c['options']}) 승인? [y/N/q] ")
             if ok:
-                c = dict(c, id=f"g{len(appr['closures']) + 1}")
+                # id는 내용 기반(content_pipeline.closure_id와 같은 식) — 번호로 다시 매기면 기존 id와 겹칠 수 있다.
+                raw = f"{key[0]}|{key[1]}".encode("utf-8")
+                c = dict(c, id="g" + hashlib.sha1(raw).hexdigest()[:8])
                 appr["closures"].append(c)
-                seen_c.add(c["display"])
+                seen_c.add(key)
                 stats["closures"] += 1
     except KeyboardInterrupt:
         print("\n검토 중단 — 지금까지 승인분만 저장합니다.")

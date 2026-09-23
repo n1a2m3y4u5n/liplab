@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import Modal from '../components/Modal'
-import useStore from '../store/useStore'
 import { learningAPI } from '../api'
+import { mergeBadges } from '../lib/badges'
 
 /**
  * 분석 탭 (Figma 리디자인) — 요약 통계 + 학습시간 막대차트 + 정확도 선차트 + 상세 링크.
  * 차트는 데이터 배열로 직접 렌더(막대=CSS 높이, 선=인라인 SVG). 상세는 모달로 연다.
- * 주간 추이는 요약용 표본이며, 상세 수치는 '전체 통계'(FullStats)에서 확인한다.
+ * 요약·주간 추이·전체 통계는 GET /api/analysis/overview(backend/analytics.py)의 실측값이다.
+ * 기록이 없으면 0·'–'로 보이고, 표본값으로 채우지 않는다.
  * 회차 히스토리는 GET /api/calendar/activities(날짜×주제)로 그리고, 행을 누르면 그 학습 화면으로 간다.
  */
 function StatCol({ icon, label, value, delta, color }) {
@@ -24,15 +25,21 @@ function StatCol({ icon, label, value, delta, color }) {
   )
 }
 
-const HOURS = [
-  { w: '1주', m: 100 }, { w: '2주', m: 130 }, { w: '3주', m: 110 }, { w: '4주', m: 160 },
-  { w: '5주', m: 140 }, { w: '6주', m: 190 }, { w: '7주', m: 230 },
-]
-const ACC = [46, 52, 58, 55, 66, 72, 78]
+/* 주별 추이는 GET /api/analysis/overview 의 weekly(오늘로 끝나는 7일 창 7개, 오래된 순).
+   학습 시간은 활동 시각으로 회차를 나눠 추정한 값이다(backend/analytics.py). */
+const EMPTY_WEEKS = Array.from({ length: 7 }, () => ({ minutes: 0, accuracy: null }))
+
+/** 분 → '3시간 20분' 식 표기(요약 행용). */
+function fmtDur(m) {
+  const v = Math.max(0, Math.round(m || 0))
+  if (v < 60) return `${v}분`
+  if (v >= 600) return `${Math.round(v / 60)}시간`
+  return v % 60 ? `${Math.floor(v / 60)}시간 ${v % 60}분` : `${v / 60}시간`
+}
 
 /** 학습시간 추이 막대 — Figma: 150px 플롯, 그리드 3줄, 막대(상단 8px·하단 2px 라운드), 값은 막대 아래. */
-function BarChart() {
-  const max = Math.max(...HOURS.map((h) => h.m))
+function BarChart({ weeks }) {
+  const max = Math.max(1, ...weeks.map((w) => w.minutes))
   const fmt = (m) => `${Math.floor(m / 60)}h ${m % 60}m`
   return (
     <div className="relative h-[150px] w-full">
@@ -40,22 +47,22 @@ function BarChart() {
         <div key={t} className="absolute left-0 right-0 h-px bg-[#ededf3]" style={{ top: `${t}px` }} />
       ))}
       <div className="absolute inset-x-0 bottom-[22px] top-0 flex items-end gap-2">
-        {HOURS.map((h, i) => {
-          const last = i === HOURS.length - 1
+        {weeks.map((w, i) => {
+          const last = i === weeks.length - 1
           return (
-            <div key={h.w} className="flex flex-1 justify-center">
+            <div key={i} className="flex flex-1 justify-center">
               <div className={`w-[46%] rounded-b-[2px] rounded-t-[8px] ${last ? 'bg-primary-500' : 'bg-primary-300'}`}
-                style={{ height: `${(h.m / max) * 114}px` }} />
+                style={{ height: `${(w.minutes / max) * 114}px` }} />
             </div>
           )
         })}
       </div>
       <div className="absolute inset-x-0 bottom-0 flex h-[18px] items-center gap-2">
-        {HOURS.map((h, i) => {
-          const last = i === HOURS.length - 1
+        {weeks.map((w, i) => {
+          const last = i === weeks.length - 1
           return (
-            <span key={h.w} className={`flex-1 text-center font-bold ${last ? 'text-[11.5px] text-primary-700' : 'text-[10.5px] text-[#a8a8b8]'}`}>
-              {fmt(h.m)}
+            <span key={i} className={`flex-1 text-center font-bold ${last ? 'text-[11.5px] text-primary-700' : 'text-[10.5px] text-[#a8a8b8]'}`}>
+              {fmt(w.minutes)}
             </span>
           )
         })}
@@ -64,28 +71,36 @@ function BarChart() {
   )
 }
 
-/** 정확도 추이 선 — Figma: emerald(#10b981) 라인, 각 포인트 emerald 채움+흰 테두리, 마지막 포인트 강조. */
-function LineChart() {
+/** 정확도 추이 선 — Figma: emerald(#10b981) 라인, 각 포인트 emerald 채움+흰 테두리, 마지막 포인트 강조.
+ *  채점 기록이 없는 주는 점을 찍지 않고 선을 끊는다(값 칸은 '–'). */
+function LineChart({ weeks }) {
   const W = 700, H = 130, pad = 8
-  const min = 40, max = 82
-  const pts = ACC.map((v, i) => {
-    const x = pad + (i * (W - pad * 2)) / (ACC.length - 1)
-    const y = pad + (1 - (v - min) / (max - min)) * (H - pad * 2)
-    return [x, y]
-  })
-  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')
+  const vals = weeks.map((w) => (w.accuracy == null ? null : Math.round(w.accuracy * 100)))
+  const known = vals.filter((v) => v != null)
+  if (!known.length) {
+    return <p className="flex h-[150px] items-center justify-center text-[14px] text-ink-muted">아직 채점된 기록이 없어요</p>
+  }
+  const min = Math.max(0, Math.min(...known) - 6)
+  const max = Math.min(100, Math.max(...known) + 6)
+  const span = Math.max(1, max - min)
+  const pts = vals.map((v, i) => (v == null ? null : [
+    pad + (i * (W - pad * 2)) / (vals.length - 1),
+    pad + (1 - (v - min) / span) * (H - pad * 2),
+  ]))
+  const d = pts.map((p, i) => (p ? `${i && pts[i - 1] ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}` : '')).join(' ')
+  const lastIdx = vals.length - 1
   return (
     <div className="relative w-full">
       <svg viewBox={`0 0 ${W} ${H}`} className="h-[150px] w-full" preserveAspectRatio="none">
         {[0.25, 0.5, 0.75].map((g) => <line key={g} x1="0" x2={W} y1={H * g} y2={H * g} stroke="#ededf3" strokeWidth="1" />)}
         <path d={d} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        {pts.map((p, i) => (
-          <circle key={i} cx={p[0]} cy={p[1]} r={i === pts.length - 1 ? 6 : 4}
+        {pts.map((p, i) => p && (
+          <circle key={i} cx={p[0]} cy={p[1]} r={i === lastIdx ? 6 : 4}
             fill="#10b981" stroke="#fff" strokeWidth="2.5" />
         ))}
       </svg>
       <div className="mt-1 flex justify-between px-1 text-[11.5px] font-bold text-[#7a9a8c]">
-        {ACC.map((v, i) => <span key={i} className={i === ACC.length - 1 ? 'text-[13px] text-emerald-700' : ''}>{v}</span>)}
+        {vals.map((v, i) => <span key={i} className={i === lastIdx ? 'text-[13px] text-emerald-700' : ''}>{v == null ? '–' : v}</span>)}
       </div>
     </div>
   )
@@ -103,26 +118,36 @@ function DetailLink({ label, onClick }) {
 }
 
 export default function AnalysisTab() {
-  const user = useStore((s) => s.user)
-  const statistics = useStore((s) => s.statistics)
-  const streak = Math.max(0, user?.streak_count || 7)
   const navigate = useNavigate()
   const [modal, setModal] = useState(null)   // 'calendar' | 'history' | 'stats'
   const [cal, setCal] = useState(null)
   const [acts, setActs] = useState(null)   // 날짜별 학습 내용(회차 히스토리)
+  const [ov, setOv] = useState(null)       // 요약·주별 추이·배지(/api/analysis/overview)
   useEffect(() => {
     learningAPI.getCalendar().then(setCal).catch(() => setCal({}))
     learningAPI.getCalendarActivities().then(setActs).catch(() => setActs({}))
+    learningAPI.getAnalysisOverview().then(setOv).catch(() => setOv(null))
   }, [])
 
+  const weeks = ov?.weekly?.length ? ov.weekly : EMPTY_WEEKS
+  const sign = (v) => (v > 0 ? '+' : v < 0 ? '−' : '±')
+  const minDelta = ov?.has_data
+    ? (ov.week_minutes_delta === 0 ? '지난주와 같음' : `지난주 ${sign(ov.week_minutes_delta)}${fmtDur(Math.abs(ov.week_minutes_delta))}`)
+    : null
+  const accDelta = ov?.week_accuracy_delta != null
+    ? `지난주 ${sign(ov.week_accuracy_delta)}${Math.abs(Math.round(ov.week_accuracy_delta * 100))}%p`
+    : null
+
   return (
-    <AppShell active="analysis" title="분석" description="얼마나 늘었는지 기록으로 확인해보세요.">
+    <AppShell active="analysis" title="분석">
       <section className="flex w-full items-center py-2">
-        <StatCol icon="/ui/stat-clock.svg" label="총 학습" value="18시간" delta="지난주 +2시간" color="#5f3ab8" />
+        <StatCol icon="/ui/stat-clock.svg" label="총 학습" value={ov ? fmtDur(ov.total_minutes) : '–'} delta={minDelta} color="#5f3ab8" />
         <span className="h-[58px] w-[1.5px] bg-line" />
-        <StatCol icon="/ui/stat-percent.svg" label="평균 정확도" value="78%" delta="지난주 +6%p" color="#047857" />
+        <StatCol icon="/ui/stat-percent.svg" label="평균 정확도"
+          value={ov?.accuracy != null ? `${Math.round(ov.accuracy * 100)}%` : '–'} delta={accDelta} color="#047857" />
         <span className="h-[58px] w-[1.5px] bg-line" />
-        <StatCol icon="/ui/stat-flame.svg" label="연속 학습" value={`${streak}일`} delta="최고 기록 12일" color="#b45309" />
+        <StatCol icon="/ui/stat-flame.svg" label="연속 학습" value={`${ov?.streak_current ?? 0}일`}
+          delta={ov ? `최고 기록 ${ov.streak_best}일` : null} color="#b45309" />
       </section>
 
       <section className="card-flat w-full !p-[22px]">
@@ -130,7 +155,7 @@ export default function AnalysisTab() {
           <p className="text-[17px] font-bold text-ink">학습시간 추이</p>
           <span className="text-[13px] text-ink-muted">최근 7주</span>
         </div>
-        <div className="mt-[18px]"><BarChart /></div>
+        <div className="mt-[18px]"><BarChart weeks={weeks} /></div>
       </section>
 
       <section className="card-flat w-full !p-[22px]">
@@ -138,7 +163,7 @@ export default function AnalysisTab() {
           <p className="text-[17px] font-bold text-ink">정확도 추이</p>
           <span className="text-[13px] text-ink-muted">최근 7주</span>
         </div>
-        <div className="mt-[18px]"><LineChart /></div>
+        <div className="mt-[18px]"><LineChart weeks={weeks} /></div>
       </section>
 
       <div className="flex w-full flex-col gap-3 sm:flex-row">
@@ -157,7 +182,7 @@ export default function AnalysisTab() {
       </Modal>
       <Modal open={modal === 'stats'} onClose={() => setModal(null)} title="전체 통계"
         subtitle="가입 후 누적 기록" maxW="max-w-2xl">
-        <FullStats statistics={statistics} streak={streak} />
+        <FullStats ov={ov} onGo={(to) => { setModal(null); navigate(to) }} />
       </Modal>
     </AppShell>
   )
@@ -280,19 +305,21 @@ function HistoryList({ cal, acts, onGo }) {
 }
 
 /** 전체 통계 — Figma: 3지표 요약행 + 트랙별(독화·발화) 진행 카드.
- *  회차/문항/배지·트랙 진도는 getCalendar/statistics에 없으면 Figma 표본값으로 대체한다. */
-function FullStats({ statistics, streak }) {
-  const s = statistics || {}
-  const num = (v) => (typeof v === 'number' ? v.toLocaleString() : v)
+ *  값은 /api/analysis/overview. 회차는 활동 시각을 30분 공백으로 나눈 추정 회차, 푼 문제는 채점된 시행 수,
+ *  단계 진도는 숙달한 단계 수다. 불러오기 전·실패 시엔 '–'. */
+function FullStats({ ov, onGo }) {
+  const num = (v) => (typeof v === 'number' ? v.toLocaleString() : '–')
+  const badgeCount = ov ? mergeBadges(ov.badges).filter((b) => b.earned).length : null
   const metrics = [
-    { label: '총 학습 회차', value: num(s.total_sessions ?? s.sessions ?? 142), unit: '회', color: '#7d53de' },
-    { label: '푼 문제', value: num(s.total_questions ?? s.questions_answered ?? 1684), unit: '개', color: '#7d53de' },
-    { label: '획득 배지', value: num(s.badges ?? s.badge_count ?? 7), unit: '개', color: '#ec4899' },
+    { label: '총 학습 회차', value: num(ov?.sessions), unit: '회', color: '#7d53de' },
+    { label: '푼 문제', value: num(ov?.questions), unit: '개', color: '#7d53de' },
+    { label: '획득 배지', value: num(badgeCount), unit: '개', color: '#ec4899' },
   ]
-  const acc = s.avg_accuracy != null ? Math.round(s.avg_accuracy * 100) : 81
+  const pct = (a) => (a == null ? '–' : Math.round(a * 100))
+  const tr = ov?.tracks || {}
   const tracks = [
-    { name: '독화', acc, done: 4, total: 6, bg: '#efe9fc', fg: '#5f3ab8', fill: '#7d53de' },
-    { name: '발화', acc: 72, done: 2, total: 6, bg: '#ffe4e9', fg: '#be185d', fill: '#ec4899' },
+    { name: '독화', acc: pct(tr.read?.accuracy), done: tr.read?.done ?? 0, total: tr.read?.total || 5, bg: '#efe9fc', fg: '#5f3ab8', fill: '#7d53de' },
+    { name: '발화', acc: pct(tr.speak?.accuracy), done: tr.speak?.done ?? 0, total: tr.speak?.total || 6, bg: '#ffe4e9', fg: '#be185d', fill: '#ec4899' },
   ]
   return (
     <div className="flex flex-col gap-[22px]">
@@ -315,7 +342,7 @@ function FullStats({ statistics, streak }) {
           <div key={t.name} className="flex flex-1 flex-col gap-[10px] rounded-[16px] p-[18px]" style={{ backgroundColor: t.bg }}>
             <div className="flex items-center justify-between font-bold" style={{ color: t.fg }}>
               <span className="text-[16px]">{t.name}</span>
-              <span className="text-[13px] opacity-80">정확도 {t.acc}%</span>
+              <span className="text-[13px] opacity-80">{t.acc === '–' ? '정확도 –' : `정확도 ${t.acc}%`}</span>
             </div>
             <span className="text-[13px] opacity-75" style={{ color: t.fg }}>{t.done} / {t.total}단계 완료</span>
             <div className="h-[10px] overflow-hidden rounded-full bg-white/60">
@@ -324,6 +351,20 @@ function FullStats({ statistics, streak }) {
           </div>
         ))}
       </div>
+      {/* 상세 화면 진입 — Figma 210:23 밖의 추가 링크. 약점 입모양·혼동 지도(/analysis/visemes)와
+          학습 효과 리포트(/analysis/eval, 사전·사후 검사 시작 포함)는 다른 진입점이 없어 여기 둔다. */}
+      {onGo && (
+        <div className="flex flex-col gap-2 border-t-[1.5px] border-line pt-4 sm:flex-row">
+          <button type="button" onClick={() => onGo('/analysis/visemes')}
+            className="flex flex-1 items-center justify-between rounded-[12px] px-3 py-2.5 text-[14px] font-bold text-ink hover:bg-[#f3f3f7]">
+            약점 입모양·혼동 지도 <img src="/ui/menu-arrow.svg" alt="" className="h-3 w-1.5" />
+          </button>
+          <button type="button" onClick={() => onGo('/analysis/eval')}
+            className="flex flex-1 items-center justify-between rounded-[12px] px-3 py-2.5 text-[14px] font-bold text-ink hover:bg-[#f3f3f7]">
+            학습 효과 리포트(사전·사후 검사) <img src="/ui/menu-arrow.svg" alt="" className="h-3 w-1.5" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

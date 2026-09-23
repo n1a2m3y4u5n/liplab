@@ -6,8 +6,9 @@
 import json
 import os
 
+import content_rules as R
 import curriculum as cur
-from content_pipeline import closure_id
+from content_pipeline import closure_distractors, closure_id
 
 
 def _approved():
@@ -39,3 +40,11 @@ def test_closure_id_is_content_based():
     assert closure_id(a) == closure_id(dict(a)), "같은 내용이면 같은 id"
     assert closure_id(a) != closure_id(b), "내용이 다르면 다른 id"
     assert closure_id(a).startswith("g") and len(closure_id(a)) == 9
+
+
+def test_closure_distractors_pass_three_choice_gate():
+    # 생성기는 오답 2개 이상을 먼저 골라야 3지선다 게이트(7592f70)를 통과한다.
+    ds = closure_distractors("배", "매")
+    assert len(ds) >= 2 and "배" not in ds
+    ok, _, why = R.check_closure("___를 깎아 먹었다", "배", ["배"] + ds[:2])
+    assert ok, why

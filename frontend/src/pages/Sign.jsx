@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SignPanel from '../components/SignPanel'
 import AppShell from '../components/AppShell'
+import { markSignExplored } from '../lib/badges'
 
 /**
  * 한국어 → 한국수어(KSL) 학습 보조 페이지
@@ -14,6 +15,9 @@ export default function Sign() {
   const navigate = useNavigate()
   const [text, setText] = useState('')
   const [query, setQuery] = useState('')   // SignPanel에 넘길 확정 문장
+
+  // '수어 탐험' 배지는 서버 기록이 없어 이 화면 진입을 브라우저에 표시해 판정한다(lib/badges.js).
+  useEffect(() => { markSignExplored() }, [])
 
   // Practice 등에서 /sign?text=문장 으로 넘어오면 자동 번역
   useEffect(() => {

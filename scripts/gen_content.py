@@ -47,14 +47,20 @@ def _merge_approved(existing: dict, new: dict) -> dict:
         if k not in seen_p:
             out["pairs"].append(p)
             seen_p.add(k)
-    base = len(out["closures"])
-    seen_disp = {c["display"] for c in out["closures"]}
+    # 문항은 내용(display|answer)으로 중복을 거르고 id도 내용 기반(content_pipeline.closure_id)으로 둔다.
+    # 번호(g{n})로 다시 매기면 이미 쓰인 id와 겹칠 수 있고, 로더·검수 키와도 어긋난다.
+    seen_ids = {c.get("id") for c in out["closures"]}
+    seen_content = {(c.get("display", ""), c.get("answer", "")) for c in out["closures"]}
     for c in new.get("closures", []):
-        if c["display"] not in seen_disp:
-            c = dict(c, id=f"g{base + 1}")
-            out["closures"].append(c)
-            seen_disp.add(c["display"])
-            base += 1
+        key = (c.get("display", ""), c.get("answer", ""))
+        if key in seen_content:
+            continue
+        c = dict(c, id=P.closure_id(c))
+        if c["id"] in seen_ids:
+            continue
+        out["closures"].append(c)
+        seen_ids.add(c["id"])
+        seen_content.add(key)
     out["meta"]["counts"] = {k: len(out[k]) for k in ("words", "pairs", "closures")}
     return out
 

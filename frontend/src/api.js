@@ -140,6 +140,10 @@ export const learningAPI = {
   },
   // 회차 히스토리 — 날짜별 '무엇을 학습했는지' { 'YYYY-MM-DD': [{kind,label,n}] }
   getCalendarActivities: async () => (await api.get('/calendar/activities')).data,
+  // 분석 탭 요약·배지(backend/analytics.py). 날짜·연속 학습은 브라우저 시간대 기준.
+  getAnalysisOverview: async () => (await api.get('/analysis/overview', {
+    params: { tz_offset_min: new Date().getTimezoneOffset() },
+  })).data,
 
   // Review sentences (wrong answers)
   getReviewSentences: async () => {
