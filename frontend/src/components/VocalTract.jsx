@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
+import VocalTractVTL from './VocalTractVTL'
+import { VISEME_TO_VTL } from '../lib/vtlShapes'
 
 /**
- * 성도(측면 단면) 도식 — 계획서 E '성도 시뮬레이터' lite.
+ * 성도(측면 단면) 도식. 계획서 E '성도 시뮬레이터'의 간이판(lite).
  * viseme(1~15)를 조음 파라미터(혀끝·혀뒤·원순·개구·폐쇄)로 바꿔, 겉으로 안 보이는
  * 혀·입술·턱의 움직임을 측면 단면으로 실시간 표시한다(독화 교육). GPU 불필요, 순수 SVG.
  *
@@ -9,7 +11,24 @@ import { useEffect, useRef } from 'react'
  * 사용자의 실제 얼굴에서 역추정한 값으로 매 프레임 덮어써, 목표가 아닌 '내 실제 조음'을 보여준다.
  * 웹캠은 혀(tip·back)를 관찰하지 못해 viseme 규칙값을 유지하지만, 성도 시뮬레이터처럼 혀 위치를
  * 아는 입력원이 live.tip·live.back을 주면 그 값도 반영한다(계획서 E: 파라미터 조작→단면 변화).
+ *
+ * vtl을 켜면(E-6) 목표 표시일 때(articulationRef 없음) 이 도식 대신 VocalTractLab으로 미리 계산한
+ * 윤곽(VocalTractVTL, 어두운 패널용 색)을 그린다. 비심별 대표 음소는 lib/vtlShapes의 VISEME_TO_VTL.
+ * 실시간 입력(웹캠·시뮬레이터)은 VTL 격자와 좌표가 맞지 않아 계속 이 도식을 쓴다. 자산을 못 받으면 도식으로 돌아온다.
  */
+export default function VocalTract({ visemeId = 15, articulationRef = null, vtl = false }) {
+  const phoneme = VISEME_TO_VTL[visemeId]
+  if (vtl && !articulationRef && phoneme) {
+    return (
+      <div>
+        <VocalTractVTL phoneme={phoneme} variant="dark" labels={false} fallback={<SchematicTract visemeId={visemeId} />} />
+        {KO[visemeId] && <p className="mt-0.5 text-center text-[10px] leading-none text-slate-400">{KO[visemeId]}</p>}
+      </div>
+    )
+  }
+  return <SchematicTract visemeId={visemeId} articulationRef={articulationRef} />
+}
+
 // viseme → 조음 파라미터 {tip: 혀끝 들림, back: 혀뒤 들림, round: 원순, jaw: 개구, close: 양순폐쇄}
 const VIS_ART = {
   1: { close: 1.0, jaw: 0.05 }, 11: { close: 0.92, jaw: 0.05 },     // 양순 ㅂㅍㅁ
@@ -24,7 +43,7 @@ const VIS_ART = {
 const KO = { 1: '양순 폐쇄', 11: '양순 폐쇄', 4: '원순', 9: '원순', 6: '혀끝(치경)', 12: '혀끝(치경)', 7: '혀뒤(연구개)', 13: '혀뒤(연구개)', 10: '경구개', 2: '개방', 5: '중설', 8: '성문', 3: '전설' }
 const clamp = (v) => (v < 0 ? 0 : v > 1 ? 1 : v)
 
-export default function VocalTract({ visemeId = 15, articulationRef = null }) {
+function SchematicTract({ visemeId = 15, articulationRef = null }) {
   const tongueRef = useRef(null)
   const jawRef = useRef(null)
   const lipLRef = useRef(null)
