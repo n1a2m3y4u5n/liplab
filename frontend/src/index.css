@@ -3,15 +3,63 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Figma 디자인 토큰(LIPLAB 리디자인) — 색·간격의 단일 출처 */
+/* Figma 디자인 토큰(LIPLAB 리디자인) — tailwind.config.js colors와 같은 값.
+   클래스로 못 쓰는 곳(인라인 style·SVG·그라데이션)에서 var(--…)로 쓴다. */
 :root {
   --brand: #7d53de;         /* brand/primary */
   --brand-dark: #5f3ab8;    /* brand/primary-dark (3D 하단테두리) */
   --brand-tint: #efe9fc;    /* brand/primary-tint (활성 배경) */
+  --brand-hover: #6d3fc4;
+  --on-primary: #ffffff;    /* text/on-primary */
   --ink: #1a1a2e;           /* text/primary */
   --ink-muted: #5a5a6e;     /* text/secondary */
+  --ink-faint: #8a8a9b;
   --line: #e2e2e8;          /* border/default */
   --surface: #ffffff;       /* surface/card */
+  --page: #f3f3f3;          /* surface/background */
+  --fill: #ededf3;
+  --fill-strong: #e4e4ec;
+
+  /* 발화 트랙(171:38)·북마크(§3.1 고정색) */
+  --speak: #ec4899;
+  --speak-dark: #be185d;
+  --speak-tint: #ffe4e9;
+  --speak-hover: #db2777;
+  --bookmark: #2563eb;
+
+  /* 점수 색(§3.2) */
+  --good: #16a34a;
+  --good-text: #15803d;
+  --good-tint: #e7f8ef;
+  --warn: #f59e0b;
+  --warn-strong: #d97706;
+  --warn-text: #b45309;
+  --warn-tint: #fef3c7;
+  --bad: #dc2626;
+  --bad-text: #b91c1c;
+  --bad-tint: #feecec;
+
+  /* 트랙 색(§3.1) — 기본은 독화 보라. data-track="speak" 아래에서는 분홍으로 바뀐다.
+     tailwind의 bg-track·text-track·border-track(-dark/-tint)과 .btn-primary가 이 변수를 읽는다. */
+  --track: var(--brand);
+  --track-dark: var(--brand-dark);
+  --track-tint: var(--brand-tint);
+  --track-hover: var(--brand-hover);
+
+  /* 모바일 하단 탭 바 높이(232:52, safe-area 제외) — 하단에 붙는 시트·여백 계산용 */
+  --tabbar-h: 78px;
+}
+[data-track="speak"] {
+  --track: var(--speak);
+  --track-dark: var(--speak-dark);
+  --track-tint: var(--speak-tint);
+  --track-hover: var(--speak-hover);
+}
+[data-track="read"] {
+  --track: var(--brand);
+  --track-dark: var(--brand-dark);
+  --track-tint: var(--brand-tint);
+  --track-hover: var(--brand-hover);
 }
 
 html,
@@ -32,36 +80,60 @@ body,
 }
 
 @layer base {
+  /* 페이지 배경 = Figma surface/background(#f3f3f3). 흰 카드·셸은 각자 bg-white를 칠한다. */
   body {
-    @apply bg-gray-50 text-gray-900 antialiased font-sans;
+    @apply bg-page text-ink antialiased font-sans;
   }
 }
 
 @layer components {
-  /* 주 버튼 — Figma "Button / Primary": 3D 하단테두리(brand + brand-dark). */
+  /* ── 버튼 (Figma "Button / Primary" 75:23 계열) ─────────────────────────────
+     3D 하단테두리 + 누르면 내려앉음. 색은 트랙 변수(--track)를 따른다: 셸(AppShell)이나
+     레슨 루트에 data-track="speak"가 있으면 분홍(#EC4899 / #BE185D)이 된다(§3.1).
+     기본 모양은 r14·b5(레슨 하단 바·모바일 버튼). Figma 크기는 아래 수정자로 맞춘다.
+       .btn-lg  = 75:23 Button / Primary (r16·b6, 32/18, 20px)
+       .btn-md  = 59:43 오른쪽 패널 "복습하기" (r16·b6, 18/14, 17px)
+       .btn-bar = 130:20·94:138 레슨 하단 바 "확인·계속하기" (r14·b5, 40/15, 17px)
+     비활성은 Figma "확인 (비활성)"(130:20) 회색. */
   .btn-primary {
-    @apply px-6 py-3 bg-primary-500 text-white rounded-[14px] font-bold
-           border-2 border-b-[5px] border-primary-700
-           hover:bg-primary-600 focus:outline-none
+    @apply px-6 py-3 rounded-14 border-2 border-b-5 font-bold leading-figma
+           bg-track border-track-dark text-white
+           hover:bg-track-hover focus:outline-none
            transition-all duration-100 active:translate-y-[2px] active:border-b-2
-           disabled:opacity-50 disabled:cursor-not-allowed;
+           disabled:cursor-not-allowed disabled:bg-inactive disabled:border-inactive-line disabled:text-inactive-text;
   }
 
-  /* 발화 트랙용 주 버튼 — btn-primary와 같은 형태(3D 하단테두리), 색만 발화 분홍.
-     Figma 발화 트랙 색 #EC4899(pink-500) + 하단테두리 #be185d(pink-700). */
-  .btn-speak {
-    @apply px-6 py-3 bg-pink-500 text-white rounded-[14px] font-bold
-           border-2 border-b-[5px] border-pink-700
-           hover:bg-pink-600 focus:outline-none
-           transition-all duration-100 active:translate-y-[2px] active:border-b-2
-           disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  /* 보조 버튼 — Figma "Button / Secondary": 흰 배경 + 라인 테두리(옅은 3D). */
+  /* 보조 버튼 — 흰 바탕 + 라인 테두리(222:225 "취소", 179:21 "자세히 보기").
+     글자를 트랙색으로 할 때(227:69 "둘러보기", 93:12 "커리큘럼으로 돌아가기")는 text-track을 덧붙인다. */
   .btn-secondary {
-    @apply px-6 py-3 bg-white text-ink rounded-[14px] font-bold
-           border-2 border-b-[4px] border-line hover:bg-gray-50 focus:outline-none
-           transition-all duration-100 active:translate-y-[1px] active:border-b-2;
+    @apply px-6 py-3 rounded-14 border-2 border-b-5 border-line bg-white font-bold leading-figma text-ink-muted
+           hover:bg-surface-muted focus:outline-none
+           transition-all duration-100 active:translate-y-[1px] active:border-b-2
+           disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  /* 정답·오답 하단 바의 주 버튼(94:138 초록 / 94:180·186:63 빨강). 같은 바의 흰 보조 버튼은
+     .btn-secondary + border-good-line text-good-text / border-bad-line text-bad-text. */
+  .btn-good {
+    @apply px-6 py-3 rounded-14 border-2 border-b-5 font-bold leading-figma
+           bg-good border-good-dark text-white focus:outline-none
+           transition-all duration-100 active:translate-y-[2px] active:border-b-2;
+  }
+  .btn-bad {
+    @apply px-6 py-3 rounded-14 border-2 border-b-5 font-bold leading-figma
+           bg-bad border-bad-dark text-white focus:outline-none
+           transition-all duration-100 active:translate-y-[2px] active:border-b-2;
+  }
+
+  /* 크기 수정자 — 위 버튼 클래스 뒤에 둔다(같은 명시도라 나중 선언이 이긴다). lg:btn-lg처럼 반응형도 된다. */
+  .btn-lg {
+    @apply rounded-16 border-b-6 px-8 py-[18px] text-[20px] tracking-[-0.2px];
+  }
+  .btn-md {
+    @apply rounded-16 border-b-6 px-[18px] py-[14px] text-[17px] tracking-[-0.17px];
+  }
+  .btn-bar {
+    @apply rounded-14 border-b-5 px-10 py-[15px] text-[17px];
   }
 
   .input-field {
@@ -72,27 +144,78 @@ body,
 
   /* 카드 — Figma 카드(2px 테두리 + 옅은 그림자, rounded-20). */
   .card {
-    @apply bg-white rounded-[20px] p-6 border-2 border-line
-           shadow-[0_2px_12px_-2px_rgba(26,13,64,0.06)];
+    @apply bg-white rounded-20 p-6 border-2 border-line shadow-card;
   }
-  /* 얕은 카드 — 정보 카드. */
+  /* 얕은 카드 — 정보 카드(59:23 오늘의 과제 등: r18·p20·2px). */
   .card-flat {
-    @apply bg-white rounded-[18px] p-5 border-2 border-line;
+    @apply bg-white rounded-18 p-5 border-2 border-line;
   }
   /* 파스텔 아이콘 칩(52px) — 카드 상단 아이콘 배경. */
   .icon-chip {
-    @apply flex items-center justify-center rounded-[15px] shrink-0;
+    @apply flex items-center justify-center rounded-15 shrink-0;
     width: 52px; height: 52px;
   }
+  /* 작은 아이콘 칩(44px, r13) — 모바일 연습 카드 행(238:126). */
+  .icon-chip-sm {
+    @apply flex items-center justify-center rounded-13 shrink-0;
+    width: 44px; height: 44px;
+  }
 
-  /* 좌측 내비 항목 */
+  /* 좌측 내비 항목(58:22) — 활성(58:19)만 2px 테두리가 붙어 50→54px가 된다. 색은 트랙을 따른다. */
   .side-item {
-    @apply flex items-center gap-3.5 px-3.5 py-3 rounded-[14px] w-full
-           font-bold text-[16px] text-ink-muted transition-colors
-           hover:bg-gray-50;
+    @apply flex items-center gap-3.5 px-3.5 py-[13px] rounded-14 w-full
+           font-bold text-[16px] leading-figma text-ink-muted transition-colors
+           hover:bg-surface-muted;
   }
   .side-item-active {
-    @apply bg-primary-100 text-primary-600 border-2 border-primary-500 hover:bg-primary-100;
+    @apply border-2 border-track bg-track-tint text-track hover:bg-track-tint;
+  }
+
+  /* 마스크 아이콘 — 단색 SVG를 글자색(currentColor)으로 칠한다. style={{ '--icon': 'url(/ui/…svg)' }}.
+     활성 탭·트랙색 틴트처럼 에셋 하나를 여러 색으로 쓸 때 쓴다. 크기는 size-* 로 준다. */
+  .mask-icon {
+    display: inline-block;
+    flex-shrink: 0;
+    background-color: currentColor;
+    -webkit-mask: var(--icon) center / contain no-repeat;
+    mask: var(--icon) center / contain no-repeat;
+  }
+
+  /* 워터마크 아이콘(§3.6) — components/WatermarkCard.jsx가 위치 변수를 넣는다.
+     카드(relative isolate overflow-hidden) 안에서 z -1로 깔려 글자 뒤·배경 위에 온다. */
+  .wm-deco {
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    width: var(--wm-s);
+    height: var(--wm-s);
+    top: var(--wm-t);
+    right: var(--wm-r);
+    transform: rotate(var(--wm-rot, -20deg));
+  }
+  @media (min-width: 1024px) {
+    .wm-deco {
+      width: var(--wm-s-lg, var(--wm-s));
+      height: var(--wm-s-lg, var(--wm-s));
+      top: var(--wm-t-lg, var(--wm-t));
+      right: var(--wm-r-lg, var(--wm-r));
+    }
+  }
+
+  /* 트랙별 로딩 그라데이션(Figma 223:30·223:50, 모바일 243:81·243:101 — 각도만 다르다) */
+  .bg-loading-perception {
+    background-image: linear-gradient(121.64deg, #a78bfa 0%, #8b5cf6 39.286%, #6d3fc4 71.429%);
+  }
+  .bg-loading-language {
+    background-image: linear-gradient(121.64deg, #fb7185 0%, #ec4899 39.286%, #be185d 71.429%);
+  }
+  @media (min-width: 1024px) {
+    .bg-loading-perception {
+      background-image: linear-gradient(151.93deg, #a78bfa 0%, #8b5cf6 39.286%, #6d3fc4 71.429%);
+    }
+    .bg-loading-language {
+      background-image: linear-gradient(151.93deg, #fb7185 0%, #ec4899 39.286%, #be185d 71.429%);
+    }
   }
 
   .label {
