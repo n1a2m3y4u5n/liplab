@@ -189,7 +189,7 @@ export default function LipSyncPlayer3D({
   return (
     <div className="relative w-full">
       {/* VRM Avatar Viewport */}
-      <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-b from-slate-800 to-slate-900"
+      <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-b from-slate-800 to-slate-900 [container-type:size]"
         style={{ height: `${stageHeight}px` }}
       >
         <AvatarVRM
@@ -199,7 +199,7 @@ export default function LipSyncPlayer3D({
 
         {/* 시각증강 기호(축 J) — 현재 음절의 안 보이는 자질(기식·긴장·비음)을 입 근처에 겹쳐 표시 */}
         {activeCues.length > 0 && (
-          <div className="absolute left-1/2 top-[30%] -translate-x-1/2 flex gap-1">
+          <div className="pointer-events-none absolute left-[calc(50%+30cqh)] top-[68%] -translate-y-1/2 flex gap-1">
             {activeCues.map((c, j) => (
               <span
                 key={j}
