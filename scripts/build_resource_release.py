@@ -18,7 +18,7 @@ docs/perceptual-resources.json을 읽어 release/korean-speechreading-resources-
 저자·게시일·DOI 같은 게시 정보는 아래 RELEASE_INFO의 [...] 자리표시로 나온다. 채운 뒤 다시 만들면 모든 파일과
 SHA256SUMS에 반영된다. 만든 파일을 손으로 고치면 체크섬이 어긋나므로 RELEASE_INFO에서 고친다.
 
-  python3 scripts/build_resource_release.py                        # → release/korean-speechreading-resources-1.2.0/
+  python3 scripts/build_resource_release.py                        # → release/korean-speechreading-resources-1.3.0/
   python3 scripts/build_resource_release.py --out /tmp/rel          # 출력 위치 변경
   python3 scripts/build_resource_release.py --include-data-derived  # AI Hub 확인 후에만
 """
@@ -67,11 +67,11 @@ KEYWORDS = ["speechreading", "lipreading", "Korean", "viseme", "homophene", "ben
 # README에 옮기는 데이터 유래 부분의 수치. docs/korean-speechreading-resources.md 표기 그대로다.
 # 원본 JSON에 이 부분이 있으면 표기 자릿수의 반올림 범위 안에서 맞는지 확인하고, 어긋나면 멈춘다.
 DOC_VALIDATION = {
-    "balanced_acc": {"consonant": "0.345", "vowel": "0.386"},
-    "spearman_data_vs_handcoded": {"consonant": "0.30", "vowel": "0.22"},
+    "balanced_acc": {"consonant": "0.366", "vowel": "0.408"},
+    "spearman_data_vs_handcoded": {"consonant": "0.39", "vowel": "0.28"},
 }
-DOC_PAIRS = {"consonant": (16, 120), "vowel": (18, 153)}   # (자모 수, 쌍 수)
-DOC_MB = "0.90"                                             # ㅁ·ㅂ 유사도(키 "ㅁㅂ")
+DOC_PAIRS = {"consonant": (18, 153), "vowel": (19, 171)}   # (자모 수, 쌍 수)
+DOC_MB = "0.92"                                             # ㅁ·ㅂ 유사도(키 "ㅁㅂ")
 
 
 def _die(msg):
@@ -389,7 +389,7 @@ def build_readme(meta, s, include):
           "", f"### 데이터 유래 부분 (`{DATA_DERIVED_KEY}`)", ""]
     if not include:
         L += [f"이 묶음에는 들어 있지 않다. LIPLAB {semver}에서 이 부분을 만든 방법과 검증 결과를 기록으로 남긴다.", ""]
-    L += ["- 자료: AI Hub 538 실화자 10명 300문장. wav2vec2 강제정렬과 MediaPipe를 썼다.",
+    L += ["- 자료: AI Hub 538 실화자 30명 900문장. wav2vec2 강제정렬과 MediaPipe를 썼다.",
           ("- 방법: 강제정렬한 음절 창을 초성·모음 구간으로 나눠 입 주변 블렌드셰이프 27차원(화자별 정규화)을 평균하고, "
            f"LDA 공간의 자모 중심점 거리 d를 1 − d/dmax로 바꿨다. 자음 {cj}개 {cp}쌍, 모음 {vj}개 {vp}쌍이며, 키는 두 자모를 "
            "유니코드 순으로 붙인 문자열이다."),
@@ -465,7 +465,7 @@ def build_readme(meta, s, include):
           ""]
     if include:
         L += [(f"**Included:** `{DATA_DERIVED_KEY}`, a jamo-pair visual similarity table computed from AI Hub dataset 538 "
-               "(10 speakers, 300 sentences). Use and redistribution of this part follow the AI Hub terms of use "
+               "(30 speakers, 900 sentences). Use and redistribution of this part follow the AI Hub terms of use "
                "(`meta.data_derived_included` is `true`)."), ""]
     else:
         L += [(f"**Excluded from this bundle:** `{DATA_DERIVED_KEY}`, a jamo-pair visual similarity table computed from "
