@@ -11,6 +11,8 @@ import { curriculumAPI } from '../api'
  * - Frame-by-frame navigation
  * - Speed control (0.5x ~ 2x)
  * - Replay bug fixed (uses internal ref, not prop)
+ * showControls=false면 아바타 무대만 남긴다(상태 배지·'Viseme N'·진행바·재생/프레임/속도·조음 토글 숨김).
+ * 레슨 입모양 카드처럼 "무한 반복 재생, 다시 보기 없음"(핸드오프 §3.4)인 자리에서 쓴다. 기본값은 기존 그대로(true).
  */
 export default function LipSyncPlayer3D({
   visemes = [],
@@ -20,6 +22,8 @@ export default function LipSyncPlayer3D({
   loop = false,
   restartKey = 0,
   cueText = null,   // 주면 재생 중 현재 음절의 시각증강 기호(축 J)를 입 근처에 겹쳐 표시
+  showControls = true,
+  stageHeight = 360,   // 아바타 무대 높이(px). 컨트롤을 숨긴 카드에서는 카드 높이에 맞춰 넘긴다.
 }) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [speed, setSpeed] = useState(1.0)
@@ -186,7 +190,7 @@ export default function LipSyncPlayer3D({
     <div className="relative w-full">
       {/* VRM Avatar Viewport */}
       <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-b from-slate-800 to-slate-900"
-        style={{ height: '360px' }}
+        style={{ height: `${stageHeight}px` }}
       >
         <AvatarVRM
           visemeId={currentViseme?.viseme ?? 15}
@@ -217,7 +221,7 @@ export default function LipSyncPlayer3D({
         )}
 
         {/* Status badge */}
-        {isRunning && (
+        {showControls && isRunning && (
           <div className="absolute top-3 right-3 bg-green-500/90 text-white px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 backdrop-blur-sm">
             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
             재생 중
@@ -225,12 +229,15 @@ export default function LipSyncPlayer3D({
         )}
 
         {/* Frame info overlay */}
-        <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs">
-          <span className="font-medium">Viseme {currentViseme?.viseme ?? '-'}</span>
-          <span className="text-gray-400 ml-2">{currentViseme?.duration_ms ?? 0}ms</span>
-        </div>
+        {showControls && (
+          <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs">
+            <span className="font-medium">Viseme {currentViseme?.viseme ?? '-'}</span>
+            <span className="text-gray-400 ml-2">{currentViseme?.duration_ms ?? 0}ms</span>
+          </div>
+        )}
       </div>
 
+      {showControls && (<>
       {/* Progress bar */}
       <div className="mt-3 bg-gray-200 rounded-full h-1.5 overflow-hidden">
         <motion.div
@@ -264,7 +271,7 @@ export default function LipSyncPlayer3D({
           onClick={togglePause}
           className="flex-1 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors"
         >
-          {isRunning ? '⏸ 일시정지' : '▶ 재생'}
+          {isRunning ? '일시정지' : '재생'}
         </button>
 
         {/* Next frame */}
@@ -316,16 +323,17 @@ export default function LipSyncPlayer3D({
           className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${xray ? 'bg-violet-600 text-white font-semibold' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           title="피부를 반투명하게 해 안 보이는 혀·치아를 드러냄"
         >
-          🫥 투명 두상
+          투명 두상
         </button>
         <button
           onClick={() => setShowTract((v) => !v)}
           className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${showTract ? 'bg-violet-600 text-white font-semibold' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           title="측면 성도 단면으로 혀·입술·턱 조음 보기"
         >
-          🗣️ 성도 단면
+          성도 단면
         </button>
       </div>
+      </>)}
     </div>
   )
 }

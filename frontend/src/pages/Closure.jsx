@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import LearnHeader from '../components/LearnHeader'
+import LoadingScreen from '../components/LoadingScreen'
 
 /**
  * 3단계 · 문맥 추론 (Closure)
@@ -22,16 +23,18 @@ export default function Closure() {
     curriculumAPI.getClosure().then((d) => setItems(d.items)).catch(() => setItems(null)).finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">불러오는 중…</div>
-  if (!items || !items.length) return <div className="min-h-screen flex items-center justify-center text-gray-500">불러오지 못했어요.</div>
+  // 데이터 로딩 = 기본 로딩(§4-10 256:34)
+  if (loading) return <LoadingScreen />
+  if (!items || !items.length) return <div className="flex min-h-[100dvh] items-center justify-center bg-page text-ink-muted">불러오지 못했어요.</div>
 
+  // 레슨 공통 템플릿(§4-03) 적용 여부는 사용자 확인 대기 — 지금은 예전 헤더를 두고 색·문구만 디자인 시스템에 맞춘다.
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
+    <div className="min-h-[100dvh] bg-page">
       <LearnHeader
         accent="reading"
         title="문맥 추론"
         description="입모양만으론 헷갈리는 단어, 문맥으로 골라보세요"
-        onExit={() => navigate('/dashboard')}
+        onExit={() => navigate('/learn/path')}
       />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <ClosureQuiz items={items} />
@@ -71,39 +74,39 @@ function ClosureQuiz({ items }) {
   return (
     <div className="space-y-5">
       <div className="card flex items-center justify-between text-sm">
-        <span className="text-gray-600">이번 세션 정확도</span>
-        <span className="font-semibold text-primary-600">{stat.n ? Math.round((stat.correct / stat.n) * 100) : 0}% · {stat.n}문제</span>
+        <span className="text-ink-muted">이번 세션 정확도</span>
+        <span className="font-bold text-primary-600">{stat.n ? Math.round((stat.correct / stat.n) * 100) : 0}% · {stat.n}문제</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
-          <p className="text-sm text-gray-500 mb-3">이 입모양은 무슨 말일까요? <span className="text-gray-400">(같아 보이는 단어라 문맥이 열쇠!)</span></p>
+          <p className="mb-3 text-sm text-ink-muted">이 입모양은 무슨 말일까요? <span className="text-ink-faint">(같아 보이는 단어라 문맥이 열쇠!)</span></p>
           <MouthAvatar frames={frames} />
         </div>
 
         <div className="card flex flex-col">
-          <div className="p-4 bg-gray-50 rounded-xl text-center mb-4">
-            <p className="text-2xl font-bold text-gray-900 tracking-wide">
+          <div className="mb-4 rounded-14 bg-surface-muted p-4 text-center">
+            <p className="text-2xl font-bold tracking-wide text-ink">
               {result ? full : item.display.replace('___', '◯◯')}
             </p>
           </div>
 
           {!result && (
-            <button onClick={() => setHint(true)} className="text-xs self-start mb-2 px-3 py-1 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200">
+            <button type="button" onClick={() => setHint(true)} className="mb-2 self-start rounded-full bg-warn-tint px-3 py-1 text-xs font-bold text-warn-text hover:brightness-95">
               힌트{hint ? '' : ' 보기'}
             </button>
           )}
-          {hint && !result && <p className="text-sm text-amber-700 mb-3">💡 {item.hint}</p>}
+          {hint && !result && <p className="mb-3 text-sm text-warn-text">{item.hint}</p>}
 
           <div className="grid grid-cols-3 gap-3">
             {choices.map((opt) => {
               const isT = opt === item.answer
               const isC = result?.chosen === opt
-              let cls = 'py-3 rounded-xl border-2 font-bold text-lg transition-all '
-              if (!result) cls += 'border-gray-200 bg-white hover:border-primary-400 hover:bg-primary-50 text-gray-800'
-              else if (isT) cls += 'border-green-500 bg-green-50 text-green-800'
-              else if (isC) cls += 'border-red-400 bg-red-50 text-red-700'
-              else cls += 'border-gray-200 bg-gray-50 text-gray-400'
+              let cls = 'py-3 rounded-14 border-2 font-bold text-lg transition-all '
+              if (!result) cls += 'border-b-5 border-line bg-white text-ink hover:border-primary-300 hover:bg-primary-50'
+              else if (isT) cls += 'border-good bg-good-tint text-good-text'
+              else if (isC) cls += 'border-bad bg-bad-tint text-bad-text'
+              else cls += 'border-line bg-surface-muted text-ink-faint'
               return <button key={opt} disabled={!!result} onClick={() => choose(opt)} className={cls}>{opt}</button>
             })}
           </div>
@@ -112,16 +115,16 @@ function ClosureQuiz({ items }) {
             {result && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 space-y-2">
                 <div role="status" aria-live="polite"
-                  className={`p-3 rounded-lg text-sm ${result.correct ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                  className={`rounded-14 p-3 text-sm font-bold ${result.correct ? 'bg-good-tint text-good-text' : 'bg-bad-tint text-bad-text'}`}>
                   {result.correct
-                    ? '정답! 🎉 문맥으로 잘 골랐어요.'
+                    ? '정답! 문맥으로 잘 골랐어요.'
                     : `아쉬워요 — 정답은 "${item.answer}". 보기들은 입모양이 거의 같아서 문맥이 열쇠예요.`}
                 </div>
                 {!result.correct && result.confusions?.length > 0 && (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-1.5">
-                    <p className="text-xs font-semibold text-amber-800">왜 헷갈렸나요?</p>
+                  <div className="space-y-1.5 rounded-14 border border-warn/40 bg-warn-tint p-3">
+                    <p className="text-xs font-bold text-warn-text">왜 헷갈렸나요?</p>
                     {result.confusions.map((cf, k) => (
-                      <p key={k} className="text-[13px] text-amber-900 leading-snug">
+                      <p key={k} className="text-[13px] leading-snug text-warn-text">
                         {cf.position} <b>‘{cf.target}’</b>↔<b>‘{cf.read}’</b> —{' '}
                         {cf.same_viseme
                           ? <>둘 다 <b>{cf.viseme_name_ko}</b>이라 입모양만으론 구별 불가. 그래서 <b>문맥</b>이 열쇠예요.</>
@@ -130,7 +133,7 @@ function ClosureQuiz({ items }) {
                     ))}
                   </div>
                 )}
-                <button onClick={() => setI(i + 1)} className="btn-primary w-full py-2 text-sm">다음 문제 →</button>
+                <button type="button" onClick={() => setI(i + 1)} className="btn-primary w-full py-2 text-sm">다음 문제 →</button>
               </motion.div>
             )}
           </AnimatePresence>
