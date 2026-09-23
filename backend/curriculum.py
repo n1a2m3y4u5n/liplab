@@ -240,6 +240,7 @@ CLOSURE_ITEMS = [
 # LLM 대량 생성 → 규칙 게이트 → 사람 검수를 거쳐 승인된 콘텐츠(approved.json)를
 # 위 큐레이션 상수에 얹는다. 파일이 없으면(초기 상태) 아무 것도 하지 않으므로
 # 기존 앱 동작이 그대로 유지된다(비파괴). 생성 파이프라인은 content_pipeline.py.
+import hashlib as _hashlib
 import json as _json
 import os as _os
 
@@ -271,13 +272,25 @@ def _merge_approved_content() -> Dict[str, int]:
             seen_pairs.add(frozenset((a, b)))
             added["pairs"] += 1
 
+    # 문맥 문항은 내용(display|answer)으로 중복을 판단한다. id가 겹쳐도 내용이 다르면
+    # 버리지 않고 내용 기반 id를 새로 붙여 싣는다(채점 API가 id로 문항을 찾으므로 id는 유일해야 함).
     seen_cl = {c["id"] for c in CLOSURE_ITEMS}
+    seen_cl_content = {(c.get("display", ""), c.get("answer", "")) for c in CLOSURE_ITEMS}
     for c in data.get("closures", []):
-        cid = (c or {}).get("id")
-        if cid and cid not in seen_cl and c.get("answer"):
-            CLOSURE_ITEMS.append(c)
-            seen_cl.add(cid)
-            added["closures"] += 1
+        if not c or not c.get("answer"):
+            continue
+        content = (c.get("display", ""), c.get("answer", ""))
+        if content in seen_cl_content:
+            continue
+        cid = c.get("id")
+        if not cid or cid in seen_cl:
+            c = dict(c)
+            c["id"] = "g" + _hashlib.sha1(f"{content[0]}|{content[1]}".encode("utf-8")).hexdigest()[:8]
+            added["closure_ids_rewritten"] = added.get("closure_ids_rewritten", 0) + 1
+        CLOSURE_ITEMS.append(c)
+        seen_cl.add(c["id"])
+        seen_cl_content.add(content)
+        added["closures"] += 1
 
     return added
 
