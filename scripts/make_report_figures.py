@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 """
-결과보고서용 그림 다시 그리기 — 그림 5(독화 난이도 지수)와 그림 12(시스템 데이터 흐름).
+결과보고서용 그림 다시 그리기 — 그림 5(독화 난이도 지수), 그림 7 대응(538 실발화 재측정), 그림 12(시스템 데이터 흐름).
 
 계획서의 두 그림은 제출 당시 프로토타입 출력과 계획 단계의 구조도다. 지금 구현에 맞춰 다시 그린다.
   · 그림 5: backend/perceptual.word_difficulty(규칙 기반, 528단어 은행 기준)의 실제 출력. 항목별 기여를 쌓아 보인다.
   · 그림 12: 실제 데이터·모델 흐름. 공유 백본 하나가 아니라 축마다 모델·규칙이 따로 있고, 영상은 기기 안에서만 처리한다.
 
-  python3 scripts/make_report_figures.py            # → docs/figures/fig5_difficulty.png, fig12_dataflow.png
+  python3 scripts/make_report_figures.py [--b608 b608.json]   # → docs/figures/fig5_difficulty.png, fig7_b_remeasure.png, fig12_dataflow.png
 의존성: matplotlib(시스템 python), 백엔드의 순수 파이썬 모듈(perceptual·curriculum·content_rules).
 """
 import os
@@ -167,7 +167,81 @@ def fig12():
     return p
 
 
+def fig7(ref, b608=None):
+    """B·A 실측 — 538 실발화 300문장에 규칙 교란(경·중·심)을 걸었을 때 전사 오류와 D-GOP가 강도에 따라 어떻게 변하는가.
+    (가)(나) 조건별 전사 오류·D-GOP 평균과 95% 부트스트랩 구간, (다) 문장 단위 D-GOP 대 전사 정확도(1 - CER, 5조건).
+    b608(선택)을 주면 실제
+    청각장애 발화(608 감음신경성) 문장 분포를 (가)에 함께 놓는다."""
+    import json
+    import numpy as np
+    per = json.load(open(ref, encoding="utf-8"))["per_clip"]
+    conds = [("clean", "원본"), ("mild", "경"), ("mod", "중"), ("sev", "심")]
+    real = None
+    if b608 and os.path.exists(b608):
+        rows = json.load(open(b608, encoding="utf-8"))["per_sentence"]
+        real = [r for r in rows if "감음신경성" in r.get("cat", "")]
+    rng = np.random.default_rng(0)
+
+    def mci(v):
+        v = np.asarray([x for x in v if x is not None], float)
+        bs = [rng.choice(v, len(v)).mean() for _ in range(2000)]
+        return v.mean(), np.percentile(bs, 2.5), np.percentile(bs, 97.5)
+
+    fig, axs = plt.subplots(1, 3, figsize=(12.5, 4.2), gridspec_kw={"width_ratios": [1, 1, 1.15]})
+    for ax, key, lab in ((axs[0], "cer", "전사 오류(음절 CER)"), (axs[1], "dgop", "D-GOP 원점수(naive ×100)")):
+        xs = list(range(len(conds)))
+        st = [mci([r[c][key] for r in per if r.get(c)]) for c, _ in conds]
+        ax.errorbar(xs, [m for m, _, _ in st], yerr=[[m - lo for m, lo, _ in st], [hi - m for m, _, hi in st]],
+                    color=C1, marker="o", capsize=3, lw=1.6, label="538 실발화 + 규칙 교란")
+        names = [n for _, n in conds]
+        if real:
+            m, lo, hi = mci([r[key] for r in real])
+            ax.errorbar([len(conds)], [m], yerr=[[m - lo], [hi - m]], color="#b45309", marker="s", capsize=3, lw=0,
+                        elinewidth=1.6, label="608 실제 청각장애 발화")
+            names = names + ["608"]
+        ax.set_xticks(list(range(len(names))), names)
+        ax.set_xlim(-0.4, len(names) - 0.6)
+        ax.set_title(lab, loc="left", fontsize=10.5, color=INK)
+        for sp in ("top", "right"):
+            ax.spines[sp].set_visible(False)
+    axs[0].set_ylim(0, 1)
+    axs[1].set_ylim(0, None)
+    axs[0].legend(loc="lower right", frameon=False, fontsize=8)
+    ax = axs[2]
+    sc = conds + [("blur", "흐림(평가용)")]            # remeasure_b 요약의 문장 단위 상관과 같은 5조건
+    for (c, n), col in zip(sc, (C1, C2, C3, "#9aa3b2", "#d4a373")):
+        pts = [(1 - r[c]["cer"], r[c]["dgop"]) for r in per if r.get(c) and r[c]["cer"] is not None and r[c]["dgop"] is not None]
+        ax.scatter([p[0] for p in pts], [p[1] for p in pts], s=7, color=col, alpha=0.6, label=n, lw=0)
+    allp = [(1 - r[c]["cer"], r[c]["dgop"]) for r in per for c, _ in sc
+            if r.get(c) and r[c]["cer"] is not None and r[c]["dgop"] is not None]
+    a, b = np.array([p[0] for p in allp]), np.array([p[1] for p in allp])
+    rho = np.corrcoef(a.argsort().argsort(), b.argsort().argsort())[0, 1]
+    ax.set_xlabel("전사 정확도(1 - CER)")
+    ax.set_ylabel("D-GOP 원점수")
+    ax.set_title(f"(다) 문장 단위(5조건), 스피어만 {rho:.2f}", loc="left", fontsize=10.5, color=INK)
+    ax.legend(loc="upper left", frameon=False, fontsize=8, markerscale=2)
+    for sp in ("top", "right"):
+        ax.spines[sp].set_visible(False)
+    axs[0].set_title("(가) " + axs[0].get_title(loc="left"), loc="left", fontsize=10.5, color=INK)
+    axs[1].set_title("(나) " + axs[1].get_title(loc="left"), loc="left", fontsize=10.5, color=INK)
+    fig.text(0.01, 0.01, f"AI Hub 538 10화자 {len(per)}문장, 전사·정렬 모델 kresnik wav2vec2(그리디). 막대는 평균의 95% 부트스트랩 구간."
+             + (" 608은 감음신경성 화자 문장(세션 문장 분할 후 같은 채점)." if real else ""), fontsize=8, color=MUTED)
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    p = os.path.join(OUT, "fig7_b_remeasure.png")
+    fig.savefig(p, dpi=200)
+    plt.close(fig)
+    return p
+
+
 if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--b-ref", default=os.path.expanduser("~/Downloads/liplab-lab/data/pod_runs/20260923_n5mpjqpx5cvge6/b_remeasure.json"),
+                    help="remeasure_b.py 결과(그림 7 대응)")
+    ap.add_argument("--b608", default=None, help="b608_measure.py 결과(있으면 그림 7에 608 분포를 더한다)")
+    a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     print(fig5())
     print(fig12())
+    if os.path.exists(a.b_ref):
+        print(fig7(a.b_ref, a.b608))
