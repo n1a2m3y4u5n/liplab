@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "buildDate": "2026-09-24",
+  "generator": "scripts/vtl_build_assets.py",
+  "vtl": {
+    "api": "API 2.4.2 Jun 14 2026",
+    "binding": "vocaltractlab-cython 0.0.17",
+    "speaker": "JD3.speaker",
+    "speakerSha256": "e1e592dae13991e981c17bcc326cccc7bce3705e3862eb77fdeaeb238418a503",
+    "glottisModel": "Geometric glottis (JD3 기본)",
+    "glottisShape": "modal",
+    "audioRateHz": 44100,
+    "stateRateHz": 400.9091
+  },
+  "wav": {
+    "rateHz": 16000,
+    "seconds": 0.6,
+    "rmsDbfs": -20.0,
+    "note": "모음마다 RMS를 같게 맞췄다(피크 -1 dBFS 이하)"
+  },
+  "formants": {
+    "method": "tract_state_to_transfer_function 크기 스펙트럼 극대점",
+    "nSpectrum": 8192,
+    "targetsFrom": "backend/formants.py VOWEL_TARGETS (VocalTractSimulator.jsx VOWELS와 같음)"
+  },
+  "grid": {
+    "step": 0.5,
+    "nodesPerLayer": 96,
+    "layers": [
+      0,
+      1
+    ],
+    "states": 192
+  },
+  "license": "VocalTractLab(Copyright Peter Birkholz)과 vocaltractlab-cython(Paul Krug)은 GPL-3.0이다. 이 폴더의 파일은 그 프로그램을 오프라인에서 실행해 얻은 좌표·포먼트·파형과 JD3 화자 파일의 형상 파라미터 값이며, 앱은 VTL 코드를 포함하거나 호출하지 않는다. 빌드 스크립트는 GPL-3.0-or-later.",
+  "attribution": [
+    "Birkholz, P. VocalTractLab. https://www.vocaltractlab.de",
+    "Krug, P. vocaltractlab-cython. https://github.com/paul-krug/vocaltractlab-cython"
+  ],
+  "files": {
+    "shapes.json": {
+      "bytes": 26877,
+      "sha256": "48005dbef4de7ab9d3a23445ae981053a6eba9ab71ca9736cc5c5448e2a1aa3a"
+    },
+    "vowel_grid.json": {
+      "bytes": 203725,
+      "sha256": "b3894a244023746a42c6b52c1bc717fb203e2ed724f74587ccd6e35ac1b84e7a"
+    },
+    "vowels/a.wav": {
+      "bytes": 19360,
+      "sha256": "5a0851811a7a76ee833789eff2c990343f6e77c2e9c8fbf9a55e4a49c4331e36"
+    },
+    "vowels/ae.wav": {
+      "bytes": 19360,
+      "sha256": "d84aaf7e839b48fd078b89ff4a5720b11bc34c2bdcba55c9621bcc17cf6e7d8c"
+    },
+    "vowels/e.wav": {
+      "bytes": 19360,
+      "sha256": "5137c303d877db7cceea938812afd66b20e0b1991e8aeec22483b8d7d5fb7d7d"
+    },
+    "vowels/eo.wav": {
+      "bytes": 19360,
+      "sha256": "e598e9095e803a5c81f6647229fb12fb1ea1d5a6d4bfb38f27576ef5b4f516fe"
+    },
+    "vowels/eu.wav": {
+      "bytes": 19360,
+      "sha256": "b734c73c7e5d9efabb305164a7ef6569e05f2a0d813cf4b04c9a3b2ddb6856e0"
+    },
+    "vowels/i.wav": {
+      "bytes": 19360,
+      "sha256": "3224906f0c650ffcd933739b3a9f8826284c5c0e7739766eab45c967d3a1149b"
+    },
+    "vowels/o.wav": {
+      "bytes": 19360,
+      "sha256": "68d39ee34f39f4eaf03a11a507f4929133e12bc42e30ca836500e690dec49c71"
+    },
+    "vowels/u.wav": {
+      "bytes": 19360,
+      "sha256": "7054593b311f08ab37616a975ff3e6367ac4a332a07046ce94b1cc790c5a0de6"
+    }
+  }
+}

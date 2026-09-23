@@ -216,7 +216,7 @@ export default function LipSyncPlayer3D({
         {/* 성도 단면 오버레이(계획서 E) — 혀·입술·턱 조음을 측면 도식으로 */}
         {showTract && (
           <div className="absolute bottom-2 right-2 w-28 sm:w-32 bg-slate-900/85 border border-slate-700 rounded-xl p-1 backdrop-blur-sm">
-            <VocalTract visemeId={currentViseme?.viseme ?? 15} />
+            <VocalTract visemeId={currentViseme?.viseme ?? 15} vtl />
           </div>
         )}
 

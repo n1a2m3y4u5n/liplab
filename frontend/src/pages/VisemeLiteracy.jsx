@@ -5,6 +5,8 @@ import { curriculumAPI } from '../api'
 import AvatarVRM from '../components/AvatarVRM'
 import VocalTract from '../components/VocalTract'
 import VocalTractSimulator from '../components/VocalTractSimulator'
+import VocalTractVTL from '../components/VocalTractVTL'
+import { VISEME_GROUP_VTL } from '../lib/vtlShapes'
 import BookmarkButton from '../components/BookmarkButton'
 import useBookmark from '../lib/useBookmark'
 import WatermarkCard from '../components/WatermarkCard'
@@ -81,7 +83,7 @@ function VisemeAvatar({ visemeId, height = 300, variant = 'learn', className = '
         <AvatarVRM visemeId={vid} xray={xray} />
         {showTract && (
           <div className="absolute bottom-2 right-2 w-28 bg-slate-900/85 border border-slate-700 rounded-xl p-1 backdrop-blur-sm">
-            <VocalTract visemeId={vid} />
+            <VocalTract visemeId={vid} vtl />
           </div>
         )}
       </div>
@@ -96,6 +98,24 @@ function VisemeAvatar({ visemeId, height = 300, variant = 'learn', className = '
             title="측면 성도 단면으로 혀·입술·턱 조음 보기">성도 단면</button>
         </div>
       )}
+    </div>
+  )
+}
+
+// 성도 단면(계획서 E-6): 같은 입모양 그룹 안에서 밖으로 안 보이는 차이(혀 높이·앞뒤, 연구개)를
+// VocalTractLab으로 미리 계산한 윤곽으로 나란히 보여 준다. 자산은 이 블록이 보일 때만 받는다.
+function GroupTract({ group }) {
+  const n = group.ids.length
+  return (
+    <div className="rounded-lg border border-line p-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <b className="text-sm text-ink">성도 단면</b>
+        <span className="text-[10px] text-ink-faint">VocalTractLab으로 미리 계산</span>
+      </div>
+      <div className={`mt-2 grid gap-3 ${n === 1 ? 'grid-cols-1 max-w-[260px]' : 'grid-cols-2'}`}>
+        {group.ids.map((id) => <VocalTractVTL key={id} phoneme={id} caption />)}
+      </div>
+      <p className="mt-2 text-xs leading-relaxed text-ink-muted">{group.note}</p>
     </div>
   )
 }
@@ -200,6 +220,7 @@ function LearnPanel({ data }) {
               <span className="text-sky-800">밖에서 안 보이는 혀·조음 — {sel.articulation.guide}</span>
             </div>
           )}
+          {VISEME_GROUP_VTL[sel.viseme_id] && <GroupTract group={VISEME_GROUP_VTL[sel.viseme_id]} />}
           <div>
             <p className="text-xs text-ink-faint mb-1">예시 단어 · 안 보이는 소리를 기호로</p>
             <div className="flex flex-wrap items-end gap-2">
