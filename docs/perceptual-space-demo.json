@@ -1,0 +1,94 @@
+{
+ "n_segments": 11583,
+ "n_clips": 300,
+ "speakers": 10,
+ "folds": 5,
+ "consonant": {
+  "segments": 4938,
+  "viseme_classes": [
+   1,
+   6,
+   7,
+   8,
+   10
+  ],
+  "nearest_centroid_acc": 0.3027,
+  "majority_baseline": 0.43,
+  "balanced_acc": 0.3445,
+  "balanced_chance": 0.2,
+  "jamos_used": [
+   "ㅂ",
+   "ㅃ",
+   "ㅍ",
+   "ㅁ",
+   "ㄷ",
+   "ㄸ",
+   "ㅌ",
+   "ㄴ",
+   "ㄹ",
+   "ㅅ",
+   "ㄱ",
+   "ㄲ",
+   "ㅋ",
+   "ㅈ",
+   "ㅊ",
+   "ㅎ"
+  ],
+  "spearman_data_vs_handcoded": 0.3014,
+  "closest_pairs_in_data": [
+   "ㄹ-ㄱ",
+   "ㄹ-ㄲ",
+   "ㅌ-ㅈ",
+   "ㄱ-ㄲ",
+   "ㅅ-ㅈ",
+   "ㄸ-ㄴ",
+   "ㄸ-ㅊ",
+   "ㄸ-ㅌ"
+  ]
+ },
+ "vowel": {
+  "segments": 6645,
+  "viseme_classes": [
+   2,
+   3,
+   4,
+   5,
+   9
+  ],
+  "nearest_centroid_acc": 0.3916,
+  "majority_baseline": 0.2863,
+  "balanced_acc": 0.3864,
+  "balanced_chance": 0.2,
+  "jamos_used": [
+   "ㅏ",
+   "ㅐ",
+   "ㅑ",
+   "ㅓ",
+   "ㅔ",
+   "ㅕ",
+   "ㅖ",
+   "ㅗ",
+   "ㅘ",
+   "ㅙ",
+   "ㅚ",
+   "ㅛ",
+   "ㅜ",
+   "ㅝ",
+   "ㅟ",
+   "ㅡ",
+   "ㅢ",
+   "ㅣ"
+  ],
+  "spearman_data_vs_handcoded": 0.2174,
+  "closest_pairs_in_data": [
+   "ㅐ-ㅔ",
+   "ㅓ-ㅕ",
+   "ㅙ-ㅚ",
+   "ㅙ-ㅝ",
+   "ㅛ-ㅝ",
+   "ㅔ-ㅖ",
+   "ㅓ-ㅟ",
+   "ㅟ-ㅡ"
+  ]
+ }
+}
