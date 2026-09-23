@@ -1,0 +1,46 @@
+{
+ "forms_version": "v1",
+ "items_per_form": 24,
+ "n_examinees": 300,
+ "reps": 200,
+ "model": {
+  "discrimination": 1.2,
+  "guessing": 0.25,
+  "difficulty_scale": 4.0
+ },
+ "kr20_A": {
+  "mean": 0.759,
+  "ci95": [
+   0.725,
+   0.793
+  ]
+ },
+ "kr20_B": {
+  "mean": 0.76,
+  "ci95": [
+   0.728,
+   0.79
+  ]
+ },
+ "kr20_A_plus_B": {
+  "mean": 0.863,
+  "ci95": [
+   0.847,
+   0.883
+  ]
+ },
+ "parallel_form_r_A_B": {
+  "mean": 0.759,
+  "ci95": [
+   0.718,
+   0.801
+  ]
+ },
+ "spearman_brown_by_length": {
+  "8": 0.513,
+  "16": 0.678,
+  "24": 0.759,
+  "32": 0.808,
+  "40": 0.84
+ }
+}
