@@ -54,6 +54,10 @@
   (혀 약 0.41). 언어가 달라(영어 조음) 제품에는 넣지 않았다. 제품은 웹캠으로 보이는 3차원(개구·원순·폐쇄) 교정,
   모음 포먼트 교정(E-2, LPC로 F1·F2 추정 후 목표 모음과 비교), 교정 세션 처음·끝 오차 기록(E-9)으로 대체했다.
   근거: `liplab-lab/notes/09-gpu-results.md`, `backend/formants.py`, `backend/articulation.py`.
+- **E-8(재현성).** 사라진 AAI 학습 스크립트를 `liplab-lab/tools/train_aai.py`로 복원했다. 모델 구조는 체크포인트
+  (`models/kr_e_aai_usctimit.pt`)를 strict로 읽어 확인했고(A4 헤드와 같은 구조, 출력 18채널), USC-TIMIT mview 형식 로더는
+  합성 파일로 시험했다. 음성 백본·주기·하이퍼파라미터는 원본 값이 남아 있지 않아 복원 기준값이다. 다시 학습하려면
+  파드에서 USC-TIMIT(8.5GB)를 받아야 한다.
 - **표7-③ 정정.** "립리딩은 클라이언트 ONNX(영상이 기기 밖으로 나가지 않음), 조음 진단은 규칙 교정,
   AAI는 랩 실증"으로 고친다.
 
