@@ -6,6 +6,9 @@ import LearnHeader from '../components/LearnHeader'
 // 학습 효과 리포트 — 개인별 시행 기록으로 학습곡선·단계 도달 시행수·초기 대비 최근 향상도를
 // 시각화한다. 공모전 평가/효과성 근거용. 데이터가 적으면 각 카드가 '쌓이면 표시' 상태를 그린다.
 
+// 동형 폼 비교 문구 — 먼저 본 폼이 사전이다(파일럿에서 B를 먼저 보면 B(사전)·A(사후)).
+const formPairLabel = (prog) => `동형 폼 ${prog.pre?.form || 'A'}(사전)·${prog.post?.form || 'B'}(사후) 비교`
+
 function Card({ title, hint, children }) {
   return (
     <section className="rounded-[22px] border border-slate-200 bg-white p-5">
@@ -105,7 +108,7 @@ function PrintReport({ r }) {
       {prog ? (
         <div className="mt-1">
           <p>정확도 {pct(prog.pre.accuracy)} → {pct(prog.post.accuracy)} ({prog.accuracy_delta >= 0 ? '+' : ''}{Math.round(prog.accuracy_delta * 100)}%p),
-            수준 Lv.{prog.pre.level} → Lv.{prog.post.level}{prog.homogeneous ? ' · 동형 폼 A(사전)·B(사후) 비교' : ' · 가장 이른·최근 검사 비교(동형 폼 아님)'}</p>
+            수준 Lv.{prog.pre.level} → Lv.{prog.post.level}{prog.homogeneous ? ` · ${formPairLabel(prog)}` : ' · 가장 이른·최근 검사 비교(동형 폼 아님)'}</p>
           {prog.error_phoneme_change?.some((e) => e.before || e.after) && (
             <p className="mt-1">자모별 오류 수 변화: {prog.error_phoneme_change.filter((e) => e.before || e.after).slice(0, 10)
               .map((e) => `${e.phoneme} ${e.before}→${e.after}`).join(', ')}</p>
@@ -232,7 +235,7 @@ export default function EvalReport() {
             {/* 통제 향상도(축 I) — 동형 폼 사전(A)·사후(B) 비교. 배치검사에서 A/B를 모두 마치면 표시 */}
             {prog?.available && (
               <Card title="통제 향상도 (표준검사 사전·사후)"
-                hint={prog.homogeneous ? '동형 폼 A(사전)·B(사후) 비교' : '가장 이른·최근 검사 비교'}>
+                hint={prog.homogeneous ? formPairLabel(prog) : '가장 이른·최근 검사 비교'}>
                 <div className="flex flex-wrap items-end gap-6">
                   <div>
                     <p className="text-[11px] font-bold text-slate-400">사전 정확도</p>

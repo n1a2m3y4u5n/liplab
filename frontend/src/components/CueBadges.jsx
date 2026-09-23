@@ -3,19 +3,22 @@ import { curriculumAPI, accountAPI } from '../api'
 import useStore from '../store/useStore'
 
 // 파일럿 기호 켬·끔(J-12) — 기호 없이 학습하는 집단이면 서버가 기호 목록을 비워 주고(/api/cues), 화면은 범례와
-// 웹캠 울림 기호도 숨긴다. 로그인한 계정마다 한 번만 묻는다. 조회에 실패하면 켠 것으로 본다.
+// 웹캠 울림 기호도 숨긴다. 로그인한 계정마다 한 번만 묻는다. 값은 true(켬)·false(끔)·null(아직 모름·조회 실패).
+// 범례는 null이면 보이고(기호 자체는 서버가 막는다), 웹캠 울림 기호는 true일 때만 보인다(연구 조건을 흐리지 않게).
 const _cueFlag = { token: undefined, promise: null }
 export function useCuesEnabled() {
   const token = useStore((s) => s.token)
-  const [on, setOn] = useState(true)
+  const [on, setOn] = useState(null)
   useEffect(() => {
     let alive = true
     if (!token) { setOn(true); return undefined }
     if (_cueFlag.token !== token || !_cueFlag.promise) {
       _cueFlag.token = token
-      _cueFlag.promise = accountAPI.pilotStatus().then((s) => s?.cues !== false).catch(() => true)
+      _cueFlag.promise = accountAPI.pilotStatus().then((s) => s?.cues !== false)
+        .catch(() => { _cueFlag.promise = null; return null })   // 실패는 기억하지 않고 다음에 다시 묻는다
     }
-    _cueFlag.promise.then((v) => { if (alive) setOn(v) })
+    const p = _cueFlag.promise
+    if (p) p.then((v) => { if (alive) setOn(v) })
     return () => { alive = false }
   }, [token])
   return on
@@ -66,7 +69,7 @@ export function CueGlyph({ cue, size = 14 }) {
 
 export function CueLegend() {
   const cuesOn = useCuesEnabled()
-  if (!cuesOn) return null
+  if (cuesOn === false) return null
   return (
     <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
       {Object.entries(CUE_META).map(([k, s]) => (
