@@ -44,32 +44,40 @@ export default function ProfilePage() {
   const [modal, setModal] = useState(null)     // 'account' | 'reset'
   const [guideOpen, setGuideOpen] = useState(false)  // 사용법 가이드 모달
   const [busy, setBusy] = useState(false)
-  const [form, setForm] = useState({ username: '', email: '', current: '', next: '' })
+  const [form, setForm] = useState({ username: '', email: '', current: '', next: '', emailPw: '', delPw: '' })
   const [edit, setEdit] = useState(null)        // 'username' | 'email' | null
   const [pwOpen, setPwOpen] = useState(false)
+  const [delOpen, setDelOpen] = useState(false) // 계정 삭제 재인증 칸
   const [msg, setMsg] = useState('')
   const [confirmText, setConfirmText] = useState('')
 
   const openAccount = () => {
-    setForm({ username: user?.username || '', email: user?.email || '', current: '', next: '' })
-    setEdit(null); setPwOpen(false); setMsg(''); setModal('account')
+    setForm({ username: user?.username || '', email: user?.email || '', current: '', next: '', emailPw: '', delPw: '' })
+    setEdit(null); setPwOpen(false); setDelOpen(false); setMsg(''); setModal('account')
   }
   const openReset = () => { setConfirmText(''); setModal('reset') }
 
   const saveField = async (field) => {
     setBusy(true); setMsg('')
     try {
-      const u = await accountAPI.updateProfile({ username: form.username, email: form.email })
+      // 이메일을 바꿀 때만 현재 비밀번호를 함께 보낸다(서버 재인증, §4.9).
+      const payload = { username: form.username, email: form.email }
+      if (field === 'email') payload.current_password = form.emailPw
+      const u = await accountAPI.updateProfile(payload)
       if (u && updateUser) updateUser(u)
-      setEdit(null); setMsg(field === 'email' ? '이메일을 저장했어요.' : '이름을 저장했어요.')
+      setEdit(null); setForm((f) => ({ ...f, emailPw: '' }))
+      setMsg(field === 'email' ? '이메일을 저장했어요.' : '이름을 저장했어요.')
     } catch (e) { setMsg(e?.response?.data?.detail || '저장하지 못했어요.') } finally { setBusy(false) }
   }
   const savePassword = async () => {
     if (!form.current || !form.next) { setMsg('현재·새 비밀번호를 입력해 주세요.'); return }
     setBusy(true); setMsg('')
     try {
-      await accountAPI.changePassword({ current_password: form.current, new_password: form.next })
-      setMsg('비밀번호를 변경했어요.'); setForm((f) => ({ ...f, current: '', next: '' })); setPwOpen(false)
+      const r = await accountAPI.changePassword({ current_password: form.current, new_password: form.next })
+      // 비밀번호를 바꾸면 기존 토큰이 모두 무효가 되므로, 응답의 새 토큰으로 이 기기 세션을 이어 간다.
+      if (r?.access_token) useStore.getState().setAuth(user, r.access_token)
+      setMsg('비밀번호를 변경했어요. 다른 기기에서는 다시 로그인해야 해요.')
+      setForm((f) => ({ ...f, current: '', next: '' })); setPwOpen(false)
     } catch (e) { setMsg(e?.response?.data?.detail || '변경하지 못했어요(현재 비밀번호 확인).') } finally { setBusy(false) }
   }
   const resetLearning = async () => {
@@ -81,12 +89,12 @@ export default function ProfilePage() {
       setModal(null); navigate('/learn/path')
     } finally { setBusy(false) }
   }
-  // 계정 삭제(삭제권) — 확인 후 서버에서 계정·데이터 일괄 삭제하고 로그아웃한다.
+  // 계정 삭제(삭제권) — 현재 비밀번호로 재인증한 뒤 서버에서 계정·데이터를 일괄 삭제하고 로그아웃한다.
   const delAccount = async () => {
-    if (!window.confirm('계정과 모든 학습 기록이 영구 삭제됩니다. 계속할까요?')) return
+    if (!form.delPw) { setMsg('계정을 삭제하려면 현재 비밀번호를 입력해 주세요.'); return }
     setBusy(true); setMsg('')
     try {
-      await accountAPI.deleteAccount()
+      await accountAPI.deleteAccount(form.delPw)
       logout(); navigate('/learn/path')
     } catch (e) { setMsg(e?.response?.data?.detail || '삭제하지 못했어요.') } finally { setBusy(false) }
   }
@@ -175,8 +183,12 @@ export default function ProfilePage() {
           busy={busy}
           onChange={(v) => setForm({ ...form, email: v })}
           onSave={() => saveField('email')}
-          onCancel={() => { setForm((f) => ({ ...f, email })); setEdit(null) }}
+          onCancel={() => { setForm((f) => ({ ...f, email, emailPw: '' })); setEdit(null) }}
         />
+        {edit === 'email' && form.email.trim().toLowerCase() !== email.toLowerCase() && (
+          <input type="password" className="input-field -mt-1" value={form.emailPw} autoComplete="current-password"
+            onChange={(e) => setForm({ ...form, emailPw: e.target.value })} placeholder="이메일 변경 확인용 현재 비밀번호" />
+        )}
         {/* 비밀번호 */}
         <div className="flex w-full flex-col gap-[7px]">
           <p className="text-[13px] font-bold text-ink-muted">비밀번호</p>
@@ -205,11 +217,23 @@ export default function ProfilePage() {
             className="flex-1 rounded-[14px] border-2 border-b-[5px] border-line bg-white py-[15px] text-[15px] font-bold text-ink-muted transition-all active:translate-y-[1px] active:border-b-2">
             로그아웃
           </button>
-          <button type="button" disabled={busy} onClick={delAccount}
+          <button type="button" disabled={busy} onClick={() => { setDelOpen((v) => !v); setMsg('') }}
             className="flex-1 rounded-[14px] border-2 border-b-[5px] border-[#f3c8c8] bg-white py-[15px] text-[15px] font-bold text-[#b91c1c] transition-all active:translate-y-[1px] active:border-b-2 disabled:opacity-50">
             계정 삭제
           </button>
         </div>
+        {delOpen && (
+          <div className="flex w-full flex-col gap-2 rounded-[12px] border-2 border-[#f3c8c8] bg-white p-3">
+            <p className="text-[13px] text-[#b91c1c]">계정과 모든 학습 기록이 영구 삭제되고 되돌릴 수 없어요. 현재 비밀번호를 입력해 주세요.</p>
+            <input type="password" className="input-field" value={form.delPw} autoComplete="current-password"
+              onChange={(e) => setForm({ ...form, delPw: e.target.value })} placeholder="현재 비밀번호" />
+            <div className="flex gap-2">
+              <button type="button" onClick={() => { setDelOpen(false); setForm((f) => ({ ...f, delPw: '' })) }} className="btn-secondary flex-1 !py-2.5">취소</button>
+              <button type="button" disabled={busy || !form.delPw} onClick={delAccount}
+                className="flex-1 rounded-[14px] border-2 border-b-[5px] border-[#991b1b] bg-[#dc2626] py-2.5 text-[15px] font-bold text-white disabled:opacity-50">영구 삭제</button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* 학습 초기화 모달 */}

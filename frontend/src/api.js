@@ -46,11 +46,14 @@ api.interceptors.response.use(
 // ============================================
 
 export const authAPI = {
-  register: async (email, username, password) => {
+  // consent: { agree_terms, age_confirmed } — 서버가 확인하고 동의 기록(ConsentRecord)으로 남긴다.
+  register: async (email, username, password, consent = {}) => {
     const response = await api.post('/auth/register', {
       email,
       username,
       password,
+      agree_terms: !!consent.agree_terms,
+      age_confirmed: !!consent.age_confirmed,
     })
     return response.data
   },
@@ -220,7 +223,8 @@ export const articulationAPI = {
 // 개인정보 열람·삭제권(§4.9)
 export const accountAPI = {
   exportData: async () => (await api.get('/account/data')).data,
-  deleteAccount: async () => (await api.delete('/account', { params: { confirm: true } })).data,
+  // 삭제·이메일 변경은 현재 비밀번호로 재인증한다(§4.9). 비밀번호 변경 응답의 access_token으로 이 기기 세션을 이어 간다.
+  deleteAccount: async (password) => (await api.delete('/account', { params: { confirm: true }, data: { password } })).data,
   updateProfile: async (payload) => (await api.patch('/account/profile', payload)).data,
   changePassword: async (payload) => (await api.post('/account/password', payload)).data,
 }

@@ -46,6 +46,8 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+    # 토큰 버전(§4.9 인증·세션) — 비밀번호를 바꾸면 1 올려, 그 전에 발급된 토큰(tv 불일치)을 모두 무효화한다.
+    token_version = Column(Integer, default=0)
 
     # Gamification fields
     current_level = Column(Integer, default=1)
@@ -313,6 +315,20 @@ async def get_db():
             await session.close()
 
 
+class ConsentRecord(Base):
+    """회원가입 동의 기록(§4.9 표11 ② 미성년 보호) — 어느 판본의 약관·처리방침에 언제 동의했는지,
+    만 14세 이상이거나 법정대리인 동의를 받았다고 확인했는지를 서버에 남긴다.
+    화면 체크박스만으로는 API 직접 호출로 우회되고 동의 시각도 남지 않았다."""
+    __tablename__ = "consent_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    terms_version = Column(String(20), nullable=False)
+    privacy_version = Column(String(20), nullable=False)
+    age_confirmed = Column(Boolean, default=False)   # 만 14세 이상 또는 법정대리인 동의 확인
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 async def init_db():
     """Initialize database tables"""
     async with engine.begin() as conn:
@@ -329,6 +345,8 @@ async def init_db():
             "ALTER TABLE review_items ADD COLUMN ease_factor FLOAT DEFAULT 2.5",
             "ALTER TABLE review_items ADD COLUMN repetitions INTEGER DEFAULT 0",
             "ALTER TABLE review_items ADD COLUMN lapses INTEGER DEFAULT 0",
+            # 토큰 무효화(비밀번호 변경 시) — 기존 users에 없으면 추가
+            "ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 0",
         ):
             try:
                 await conn.exec_driver_sql(ddl)

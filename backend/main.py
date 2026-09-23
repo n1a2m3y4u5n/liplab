@@ -151,6 +151,9 @@ def _sanitize_history(history, max_items: int = 20, max_len: int = 400) -> list:
 
 
 _DEMO_EMAIL = "demo@liplab.app"
+# 약관·처리방침 판본(frontend/src/pages/Legal.jsx의 시행일과 같게 유지). 가입 동의 기록에 남는다.
+_TERMS_VERSION = "2026-09-23"
+_PRIVACY_VERSION = "2026-09-23"
 
 
 def _user_data_models():
@@ -181,8 +184,16 @@ def _row_to_dict(row) -> dict:
 @app.post("/api/auth/register", response_model=Token, status_code=status.HTTP_201_CREATED,
           dependencies=[Depends(ratelimit.rate_limit(10, 60, "auth"))])
 async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
-    """Register a new user account"""
+    """회원가입. 약관·처리방침 동의와 연령(만 14세 이상 또는 법정대리인 동의) 확인을 서버에서도
+    검사하고, 동의한 판본·시각을 ConsentRecord로 남긴다(§4.9 표11 ②)."""
+    if not (user_data.agree_terms and user_data.age_confirmed):
+        raise HTTPException(status_code=400,
+                            detail="이용약관·개인정보 처리방침 동의와 연령 확인이 필요합니다.")
     user = await register_user(user_data, db)
+    from database import ConsentRecord
+    db.add(ConsentRecord(user_id=user.id, terms_version=_TERMS_VERSION,
+                         privacy_version=_PRIVACY_VERSION, age_confirmed=True))
+    await db.commit()
     return create_token_response(user)
 
 
@@ -236,7 +247,7 @@ async def get_me(current_user = Depends(get_current_user)):
     return current_user
 
 
-@app.get("/api/account/data", dependencies=[Depends(ratelimit.rate_limit(10, 60, "account"))])
+@app.get("/api/account/data", dependencies=[Depends(ratelimit.rate_limit(10, 60, "account-export"))])
 async def account_export(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """개인정보 열람권(§4.9) — 내 계정·학습 데이터 전체를 JSON으로 내보낸다(데이터 이동성).
     민감 정보(비밀번호 해시)는 제외한다."""
@@ -250,18 +261,31 @@ async def account_export(current_user=Depends(get_current_user), db: AsyncSessio
         r = await db.execute(_select(M).where(M.user_id == current_user.id))
         data[M.__tablename__] = [_row_to_dict(x) for x in r.scalars().all()]
     return {"exported_at": _dt.utcnow().isoformat(), "user": user, "data": data,
-            "note": "웹캠 영상·원음성은 기기 안에서만 처리되어 서버에 저장되지 않으므로 이 내보내기에 포함되지 않습니다."}
+            "note": ("웹캠 영상은 기기 안에서만 처리되고, 원음성은 채점하는 동안 서버 메모리에서만 처리한 뒤 "
+                     "저장하지 않으므로 이 내보내기에 포함되지 않습니다. 전사문·음성 지표·입모양 계수 기반 점수는 "
+                     "학습 기록으로 저장되어 아래 data에 들어 있습니다.")}
 
 
-@app.delete("/api/account", dependencies=[Depends(ratelimit.rate_limit(5, 60, "account"))])
-async def account_delete(confirm: bool = False,
+from pydantic import BaseModel as _PydBaseModel
+
+
+class AccountDeleteReq(_PydBaseModel):
+    password: str = ""
+
+
+@app.delete("/api/account", dependencies=[Depends(ratelimit.rate_limit(5, 60, "account-delete"))])
+async def account_delete(req: AccountDeleteReq, confirm: bool = False,
                          current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """개인정보 삭제권(§4.9) — 내 계정과 모든 학습 데이터를 영구 삭제한다.
-    실수 방지를 위해 confirm=true가 필요하며, 공용 데모 계정은 삭제할 수 없다."""
+    실수 방지를 위해 confirm=true, 탈취된 토큰으로 지우지 못하게 현재 비밀번호 재확인이 필요하다.
+    공용 데모 계정은 삭제할 수 없다."""
+    from auth import verify_password
     if not confirm:
         raise HTTPException(status_code=400, detail="삭제를 확인하려면 confirm=true가 필요합니다.")
     if (current_user.email or "").lower() == _DEMO_EMAIL:
         raise HTTPException(status_code=403, detail="공용 데모 계정은 삭제할 수 없습니다.")
+    if not verify_password(req.password or "", current_user.hashed_password):
+        raise HTTPException(status_code=403, detail="비밀번호가 일치하지 않습니다.")
     from sqlalchemy import delete as _delete
     from database import User as _User
     counts = {}
@@ -284,6 +308,7 @@ from typing import List, Optional
 class ProfileUpdateReq(BaseModel):
     username: Optional[str] = None
     email: Optional[str] = None
+    current_password: Optional[str] = None   # 이메일을 바꿀 때만 필요(재인증)
 
 
 class PasswordChangeReq(BaseModel):
@@ -291,7 +316,7 @@ class PasswordChangeReq(BaseModel):
     new_password: str
 
 
-@app.patch("/api/account/profile", dependencies=[Depends(ratelimit.rate_limit(10, 60, "account"))])
+@app.patch("/api/account/profile", dependencies=[Depends(ratelimit.rate_limit(10, 60, "account-profile"))])
 async def account_update_profile(req: ProfileUpdateReq,
                                  current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """개인정보 정정권(§4.9) — 표시 이름(username)·이메일을 수정한다. 공용 데모 계정은 수정 불가."""
@@ -315,6 +340,11 @@ async def account_update_profile(req: ProfileUpdateReq,
         # 간단한 형식 검증(정정권 대응) — 대소문자 무시, 유일성 보장.
         if not _re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
             raise HTTPException(status_code=400, detail="이메일 형식이 올바르지 않습니다.")
+        if email != (current_user.email or "").lower():
+            # 이메일은 로그인 식별자라, 바꿀 때는 현재 비밀번호로 본인임을 다시 확인한다(§4.9 재인증).
+            from auth import verify_password
+            if not verify_password(req.current_password or "", current_user.hashed_password):
+                raise HTTPException(status_code=403, detail="이메일을 바꾸려면 현재 비밀번호가 필요합니다.")
         dupe = (await db.execute(_select(_User).where(_func.lower(_User.email) == email,
                                                       _User.id != current_user.id))).scalar_one_or_none()
         if dupe:
@@ -325,7 +355,7 @@ async def account_update_profile(req: ProfileUpdateReq,
     return {"ok": True, "username": current_user.username, "email": current_user.email}
 
 
-@app.post("/api/account/password", dependencies=[Depends(ratelimit.rate_limit(5, 60, "account"))])
+@app.post("/api/account/password", dependencies=[Depends(ratelimit.rate_limit(5, 60, "account-password"))])
 async def account_change_password(req: PasswordChangeReq,
                                   current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """비밀번호 변경(§4.9 정정권 + 민감동작 재인증) — 현재 비밀번호를 확인한 뒤에만 변경한다."""
@@ -337,8 +367,11 @@ async def account_change_password(req: PasswordChangeReq,
     if len(req.new_password or "") < 8:
         raise HTTPException(status_code=400, detail="새 비밀번호는 8자 이상이어야 합니다.")
     current_user.hashed_password = get_password_hash(req.new_password)
+    # 토큰 버전을 올려 다른 기기·탈취된 토큰을 모두 무효화하고, 이 기기에는 새 토큰을 준다.
+    current_user.token_version = (current_user.token_version or 0) + 1
     await db.commit()
-    return {"ok": True}
+    await db.refresh(current_user)
+    return {"ok": True, "access_token": create_token_response(current_user).access_token}
 
 
 class VisemeFrame(BaseModel):
@@ -719,7 +752,7 @@ VISEME_GROUP_NAMES = {
 }
 
 
-@app.get("/api/analysis")
+@app.get("/api/analysis", dependencies=[Depends(ratelimit.rate_limit(30, 60, "llm-analysis"))])
 async def get_analysis(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     from database import Progress
     from sqlalchemy import select, func
@@ -1836,15 +1869,22 @@ async def get_cues(text: str, personalize: bool = True, max_cues: int | None = N
 # ── 콘텐츠 사람검수(축 G '이중 게이트'의 사람 단계) — 인앱 운영자용 ──────────────
 # 운영자 전용이라 기본 비활성(LIPLAB_REVIEW=1일 때만). 콘텐츠 승인은 커리큘럼에 영향을 주므로
 # 아무나 못 하게 게이트한다(§4.9 최소권한). 활성 시 인증된 사용자가 후보를 승인/반려한다.
-def _review_gate():
+def _review_gate(user=None):
+    """콘텐츠 검수는 운영자 전용. LIPLAB_REVIEW=1로 켜고, LIPLAB_ADMIN_EMAILS(쉼표 구분)에 든 계정만
+    쓸 수 있다. 목록이 비어 있으면 누구도 못 쓴다(켜기만 하면 공용 데모 계정으로 들어온 방문자도
+    승인·반려할 수 있던 문제, §4.9 표11 ③)."""
     if os.getenv("LIPLAB_REVIEW") != "1":
         raise HTTPException(status_code=403, detail="콘텐츠 검수 기능이 비활성화되어 있습니다(운영자 전용).")
+    admins = {e.strip().lower() for e in os.getenv("LIPLAB_ADMIN_EMAILS", "").split(",") if e.strip()}
+    email = (getattr(user, "email", "") or "").lower()
+    if not email or email == _DEMO_EMAIL or email not in admins:
+        raise HTTPException(status_code=403, detail="운영자 계정만 콘텐츠를 검수할 수 있습니다.")
 
 
 @app.get("/api/admin/content/candidates")
 async def content_candidates(current_user=Depends(get_current_user)):
     """검수 대기 후보(승인·반려 안 된 것) + 종류별 건수. 축 G 사람검수 게이트."""
-    _review_gate()
+    _review_gate(current_user)
     import content_review as _cr
     return _cr.pending()
 
@@ -1855,10 +1895,10 @@ class ContentReviewReq(BaseModel):
     decision: str      # approve | reject
 
 
-@app.post("/api/admin/content/review", dependencies=[Depends(ratelimit.rate_limit(60, 60, "account"))])
+@app.post("/api/admin/content/review", dependencies=[Depends(ratelimit.rate_limit(60, 60, "content-review"))])
 async def content_review_action(req: ContentReviewReq, current_user=Depends(get_current_user)):
     """후보 1건 승인/반려 → approved.json / rejected.json 반영(중복 없이)."""
-    _review_gate()
+    _review_gate(current_user)
     import content_review as _cr
     try:
         return _cr.review(req.kind, req.item or {}, req.decision)
@@ -2038,7 +2078,7 @@ async def assessment_progression(current_user=Depends(get_current_user),
     }
 
 
-@app.get("/api/conversation/multi")
+@app.get("/api/conversation/multi", dependencies=[Depends(ratelimit.rate_limit(30, 60, "llm-multi"))])
 async def conversation_multi(speakers: int = 2, turns: int = 6,
                              current_user=Depends(get_current_user)):
     """다자 대화 시나리오(축 H) — 여러 화자가 번갈아 말하는 짧은 대화(화자 식별 + 입모양 읽기)."""
@@ -2170,7 +2210,7 @@ async def speak_curriculum_stages(current_user=Depends(get_current_user), db: As
     return {"stages": stages}
 
 
-@app.get("/api/speak/stage/{n}")
+@app.get("/api/speak/stage/{n}", dependencies=[Depends(ratelimit.rate_limit(60, 60, "llm-speakstage"))])
 async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
     """단계 콘텐츠(항목·모드·가이드).
     단어(4)·문장(5) 단계는 매번 AI로 새 문항을 생성해 변주를 준다(실패 시 큐레이션 풀 폴백).
