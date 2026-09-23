@@ -1,4 +1,5 @@
-"""문맥 추론 개인화(축 G-6) API 테스트 — 표적 입모양 항목이 앞에 오고, 표준검사 문항 단어는 빠진다.
+"""문맥 추론 개인화(축 G-6)와 조음 교정 전후 오차 기록(축 E-9) API 테스트.
+G-6: 표적 입모양 항목이 앞에 오고, 표준검사 문항 단어는 빠진다. E-9: 세션 처음·끝 오차가 요약된다.
 
 test_account_security.py와 같은 방식: 임시 DB를 지정한 별도 프로세스에서 시나리오를 돌리고 결과(JSON)만 검사한다.
 """
@@ -32,6 +33,14 @@ with TestClient(main.app) as c:
     hits = [len(set(cr.word_visemes(it["answer"])) & set(d["target_visemes"])) for it in d["items"]]
     out["hits_sorted"] = hits == sorted(hits, reverse=True)
     out["first_hit"] = hits[0] if hits else 0
+    # E-9: 교정 세션 요약 기록 → 전후 오차 요약
+    c.post("/api/curriculum/mouth-attempt", json={"viseme_id": 1, "score": 70, "gap_start": 0.4,
+                                                  "gap_end": 0.2, "n_samples": 12}, headers=h)
+    bad = c.post("/api/curriculum/mouth-attempt", json={"viseme_id": 1, "score": 70, "gap_start": 3,
+                                                        "gap_end": 0.2, "n_samples": 12}, headers=h).json()
+    out["bad_gap_saved"] = bad["session_saved"]
+    art = c.get("/api/analysis/articulation", headers=h).json()
+    out["art_sessions"], out["art_change"] = art["sessions"], art["change"]
     nxt = c.get("/api/curriculum/next", headers=h).json()
     out["next_closure_leak"] = sum(1 for it in nxt["closures"] if it["answer"] in tw or set(it["options"]) & tw)
 print("RESULT " + json.dumps(out))
@@ -56,3 +65,5 @@ def test_closure_personalized_and_excludes_test_words():
     assert r["same_twice"], "같은 날 같은 사용자에게는 순서가 같아야 한다(이어 풀기)"
     assert 1 in r["targets"], "틀린 입모양이 표적이 되어야 한다"
     assert r["hits_sorted"] and r["first_hit"] > 0, "표적 입모양을 담은 문항이 앞에 와야 한다"
+    # E-9: 범위를 벗어난 오차는 저장하지 않고, 정상 기록은 전후 변화로 요약된다
+    assert r["bad_gap_saved"] is False and r["art_sessions"] == 1 and r["art_change"] == -0.2
