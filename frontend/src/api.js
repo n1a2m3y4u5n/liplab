@@ -206,6 +206,9 @@ export const scoreAPI = {
 export const evalAPI = {
   summary: async () => (await api.get('/eval/summary')).data,
   progression: async () => (await api.get('/assessment/progression')).data,
+  report: async () => (await api.get('/assessment/report', {   // 교사·언어재활사용 결과지(I-9)
+    params: { tz_offset_min: new Date().getTimezoneOffset() },
+  })).data,
   // 축 C 공개 표준 자원(동구형이음 사전·난이도지수·지각공간·평가셋) — 연구·교육 활용용 내려받기
   resources: async () => (await api.get('/assessment/resources')).data,
   benchmark: async () => (await api.get('/assessment/benchmark')).data,

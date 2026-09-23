@@ -319,3 +319,9 @@ html.a11y-contrast .border-gray-200 { border-color: #6b7280 !important; }
 .modal-scroll::-webkit-scrollbar-track { background: transparent; }
 .modal-scroll::-webkit-scrollbar-thumb { background: #d9d6e6; border-radius: 999px; border: 3px solid #fff; }
 .modal-scroll::-webkit-scrollbar-thumb:hover { background: #bfb9d6; }
+
+/* 인쇄(교사·언어재활사용 결과지, I-9) — A4 여백, 흰 바탕 */
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body { background: #fff; }
+}

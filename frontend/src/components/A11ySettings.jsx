@@ -82,7 +82,7 @@ export default function A11ySettings() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label="접근성 설정 열기"
-        className={`fixed bottom-[calc(var(--tabbar-h)+16px+env(safe-area-inset-bottom))] left-4 z-40 h-11 w-11 place-items-center rounded-full bg-slate-900 text-white shadow-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 lg:bottom-4 lg:grid ${hideMobile ? 'hidden' : 'grid'}`}
+        className={`fixed bottom-[calc(var(--tabbar-h)+16px+env(safe-area-inset-bottom))] left-4 z-40 h-11 w-11 print:!hidden place-items-center rounded-full bg-slate-900 text-white shadow-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 lg:bottom-4 lg:grid ${hideMobile ? 'hidden' : 'grid'}`}
         title="접근성 설정"
       >
         {/* 글자·화면 표시 설정 — 이모지 대신 글자 표시 */}

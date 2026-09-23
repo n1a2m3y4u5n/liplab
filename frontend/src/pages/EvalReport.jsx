@@ -75,6 +75,66 @@ function BarRow({ label, value, max = 100, unit = '%', sub }) {
   )
 }
 
+// 교사·언어재활사용 결과지(I-9) — 인쇄할 때만 보이는 흑백 A4 판. 화면용 카드와 달리 표와 숫자만 담는다.
+const pct = (x) => (x == null ? '–' : `${Math.round(x * 100)}%`)
+function PrintReport({ r }) {
+  const prog = r.progression?.available ? r.progression : null
+  const act = r.activity || {}
+  const art = r.articulation && r.articulation.sessions ? r.articulation : null
+  const th = 'border border-black px-2 py-1 text-left font-bold'
+  const td = 'border border-black px-2 py-1'
+  return (
+    <div className="hidden bg-white text-[11pt] leading-relaxed text-black print:block">
+      <h1 className="text-[16pt] font-bold">LIPLAB 독화 학습 결과지</h1>
+      <p className="mt-1">학습자 {r.learner?.name || '–'} · 발행 {r.issued_on || (r.generated_at || '').slice(0, 10)} · 교사·언어재활사 참고용</p>
+
+      <h2 className="mt-5 text-[12.5pt] font-bold">1. 표준검사 이력</h2>
+      {r.tests?.length ? (
+        <table className="mt-1 w-full border-collapse">
+          <thead><tr><th className={th}>날짜</th><th className={th}>폼</th><th className={th}>판본</th><th className={th}>정답/문항</th><th className={th}>정확도</th><th className={th}>수준</th></tr></thead>
+          <tbody>
+            {r.tests.map((t, i) => (
+              <tr key={i}><td className={td}>{t.date || '–'}</td><td className={td}>{t.form || '배치'}</td><td className={td}>{t.form_version || '–'}</td>
+                <td className={td}>{t.correct ?? '–'}/{t.total ?? '–'}</td><td className={td}>{pct(t.accuracy)}</td><td className={td}>Lv.{t.level ?? '–'}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      ) : <p className="mt-1">검사 기록이 없습니다.</p>}
+
+      <h2 className="mt-5 text-[12.5pt] font-bold">2. 사전·사후 비교</h2>
+      {prog ? (
+        <div className="mt-1">
+          <p>정확도 {pct(prog.pre.accuracy)} → {pct(prog.post.accuracy)} ({prog.accuracy_delta >= 0 ? '+' : ''}{Math.round(prog.accuracy_delta * 100)}%p),
+            수준 Lv.{prog.pre.level} → Lv.{prog.post.level}{prog.homogeneous ? ' · 동형 폼 A(사전)·B(사후) 비교' : ' · 가장 이른·최근 검사 비교(동형 폼 아님)'}</p>
+          {prog.error_phoneme_change?.some((e) => e.before || e.after) && (
+            <p className="mt-1">자모별 오류 수 변화: {prog.error_phoneme_change.filter((e) => e.before || e.after).slice(0, 10)
+              .map((e) => `${e.phoneme} ${e.before}→${e.after}`).join(', ')}</p>
+          )}
+        </div>
+      ) : <p className="mt-1">사전·사후 검사가 두 번 이상 있어야 비교할 수 있습니다.</p>}
+
+      <h2 className="mt-5 text-[12.5pt] font-bold">3. 오류 프로파일{r.error_profile?.from_test ? ` (${r.error_profile.from_test} 검사)` : ''}</h2>
+      <p className="mt-1">약한 입모양 그룹: {r.error_profile?.visemes?.length ? r.error_profile.visemes.map((v) => v.name).join(', ') : '없음'}</p>
+      <p>자주 틀린 자모: {r.error_profile?.phonemes?.length ? r.error_profile.phonemes.map((e) => `${e.phoneme}(${e.count})`).join(', ') : '없음'}</p>
+
+      <h2 className="mt-5 text-[12.5pt] font-bold">4. 학습량</h2>
+      <p className="mt-1">학습한 날 {act.active_days ?? 0}일{act.first_day ? ` (${act.first_day} ~ ${act.last_day})` : ''}</p>
+      {act.trials_by_stage?.length > 0 && (
+        <p>단계별 시행: {act.trials_by_stage.map((s) => `${s.name} ${s.n}회(정답 ${s.correct})`).join(', ')}</p>
+      )}
+      <p>말하기 연습 {act.speak?.n ?? 0}회{act.speak?.mean_score != null ? `, 평균 ${act.speak.mean_score}점` : ''}</p>
+
+      <h2 className="mt-5 text-[12.5pt] font-bold">5. 웹캠 조음 교정</h2>
+      {art ? (
+        <p className="mt-1">교정 세션 {art.sessions}회, 목표 대비 평균 오차 {art.gap_start} → {art.gap_end} (세션 처음 → 끝, 0에 가까울수록 목표와 가까움)</p>
+      ) : <p className="mt-1">교정 세션 기록이 없습니다.</p>}
+
+      <h2 className="mt-5 text-[12.5pt] font-bold">해석 주의</h2>
+      <ul className="mt-1 list-disc pl-5">{(r.notes || []).map((n, i) => <li key={i}>{n}</li>)}</ul>
+    </div>
+  )
+}
+
 export default function EvalReport() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
@@ -82,6 +142,8 @@ export default function EvalReport() {
   const [prog, setProg] = useState(null)   // 통제 향상도(축 I, 사전 A vs 사후 B)
   const [dl, setDl] = useState(false)      // 공개 자원 내려받기 상태(축 C)
   const [art, setArt] = useState(null)     // 웹캠 조음 교정 전후 오차(축 E-9)
+  const [report, setReport] = useState(null)  // 교사·언어재활사용 결과지(I-9) — 인쇄 버튼을 누를 때 받는다
+  const [printing, setPrinting] = useState(false)
 
   // 축 C 공개 표준 자원(동구형이음 사전·난이도지수·지각공간·평가셋)을 판본과 함께 JSON으로 내려받는다.
   const downloadResources = async () => {
@@ -98,6 +160,16 @@ export default function EvalReport() {
     } catch { /* 내려받기 실패는 조용히 무시 */ } finally { setDl(false) }
   }
 
+  const printReport = async () => {
+    setPrinting(true)
+    try { setReport(await evalAPI.report()) } catch { setPrinting(false) }
+  }
+  useEffect(() => {
+    if (!printing || !report) return undefined
+    const t = setTimeout(() => { window.print(); setPrinting(false) }, 60)   // 결과지가 그려진 뒤 인쇄 창
+    return () => clearTimeout(t)
+  }, [printing, report])
+
   useEffect(() => {
     evalAPI.summary().then(setData).catch(() => setData(null)).finally(() => setLoading(false))
     evalAPI.progression().then(setProg).catch(() => setProg(null))
@@ -109,7 +181,9 @@ export default function EvalReport() {
   const noData = ov && ov.total_trials === 0 && ov.total_sentences === 0
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50 print:min-h-0 print:bg-white">
+      {report && <PrintReport r={report} />}
+      <div className="print:hidden">
       <LearnHeader
         accent="etc"
         title="학습 효과 리포트"
@@ -128,6 +202,10 @@ export default function EvalReport() {
           <div className="flex gap-2">
             <button type="button" onClick={() => navigate('/learn/placement?form=A')} className="btn-secondary !py-2.5 px-4 text-[14px]">사전 검사(A)</button>
             <button type="button" onClick={() => navigate('/learn/placement?form=B')} className="btn-primary !py-2.5 px-4 text-[14px]">사후 검사(B)</button>
+            <button type="button" onClick={printReport} disabled={printing} className="btn-secondary !py-2.5 px-4 text-[14px]"
+              title="검사 이력·오류 프로파일·학습량을 한 장으로 인쇄해 교사·언어재활사와 나눠요">
+              {printing ? '준비 중…' : '결과지 인쇄'}
+            </button>
           </div>
         </div>
         {loading ? (
@@ -313,6 +391,7 @@ export default function EvalReport() {
           </Card>
         )}
       </main>
+      </div>
     </div>
   )
 }
