@@ -138,6 +138,48 @@ def test_fuse_per_phone():
     _ok(all_blur["visual_weight"] > all_clear["visual_weight"], "뭉갠 구간일수록 영상 가중↑(구간별)")
 
 
+def test_fuse_weight_signal_is_audio_score():
+    """B-5: 불확실성이 같아도 소리 점수가 낮은 음소일수록 입모양 비중이 커야 한다(가중 신호 = 보정 소리 점수)."""
+    good = {"dgop": 0.9, "uncertainty": 0.3}
+    poor = {"dgop": 0.05, "uncertainty": 0.3}
+    w_good = D.fuse_audio_visual_per_phone([good], 80.0)["visual_weight"]
+    w_poor = D.fuse_audio_visual_per_phone([poor], 80.0)["visual_weight"]
+    _ok(w_poor > w_good, "소리 점수가 낮을수록 영상 가중↑")
+    _ok(D.fuse_audio_visual_per_phone([good], 80.0)["weight_signal"] == "audio_score", "가중 신호 표시")
+
+
+def test_parse_mouth_track_validates():
+    ok = D.parse_mouth_track('{"visemes":[1,2],"frames":[[0.2,1.5,-1],[0.1,0.3,0.4]]}')
+    _ok(ok is not None and ok["frames"][0][0] == 0.1, "시각 순 정렬")
+    _ok(ok["frames"][1][1] == [1.0, 0.0], "점수는 0~1로 자른다")
+    for bad in ('{"visemes":[1,2],"frames":[[0.1,0.3]]}',        # 열 수 불일치
+                '{"visemes":[],"frames":[[0.1]]}',               # 입모양 없음
+                'not json',
+                {"visemes": [1], "frames": [[0.0, 0.5]] * (D.MOUTH_TRACK_MAX_FRAMES + 1)}):
+        _ok(D.parse_mouth_track(bad) is None, f"잘못된 타임라인은 None: {str(bad)[:30]}")
+
+
+def test_visual_scores_for_phones_uses_time_window():
+    """B-6: 음절 구간 안(±margin)의 목표 입모양 최고값. 구간 밖 프레임은 쓰지 않는다."""
+    track = D.parse_mouth_track({"visemes": [1, 2], "frames": [[0.05, 0.9, 0.1], [0.5, 0.1, 0.9], [0.95, 0.2, 0.2]]})
+    phones = [{"token": "마", "t0": 0.0, "t1": 0.1},    # ㅁ(1)·ㅏ(2) → (0.9 + 0.1)/2
+              {"token": "아", "t0": 0.45, "t1": 0.55},  # ㅏ(2) → 0.9
+              {"token": "|", "t0": 0.6, "t1": 0.7},     # 어절 경계 → None
+              {"token": "아"}]                          # 시각 없음 → None
+    vs = D.visual_scores_for_phones(phones, track)
+    _ok(vs == [50.0, 90.0, None, None], f"구간별 입모양 {vs}")
+    _ok(D.visual_scores_for_phones(phones, None) == [None] * 4, "타임라인 없으면 전부 None")
+
+
+def test_fuse_prefers_segment_visual_then_sentence_visual():
+    phones = [{"dgop": 0.2}, {"dgop": 0.2}]
+    seg = D.fuse_audio_visual_per_phone(phones, 30.0, visual_by_phone=[95.0, None])
+    sent = D.fuse_audio_visual_per_phone(phones, 30.0)
+    _ok(seg["visual_segments"] == 1 and seg["score"] > sent["score"], "구간 입모양이 있으면 그 값을 쓴다")
+    only_seg = D.fuse_audio_visual_per_phone(phones, None, visual_by_phone=[95.0, None])
+    _ok(only_seg is not None and only_seg["visual_score"] is None, "문장 입모양 없이 구간 입모양만으로도 융합")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:

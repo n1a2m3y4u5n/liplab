@@ -118,6 +118,7 @@ export default function SpeakingPractice() {
   const videoStreamRef = useRef(null)
   const landmarkerRef = useRef(null)     // MediaPipe FaceLandmarker(축 B AV융합용, 지연 로드)
   const mouthFramesRef = useRef([])      // 녹음 중 사용자 입모양 blendshape 버퍼
+  const mouthTimesRef = useRef([])       // 위 버퍼 각 프레임의 녹음 시작 기준 시각(초) — 구간별 보완(B-6)
   const waveColorsRef = useRef(null)     // 파형 캔버스 색(토큰에서 한 번 읽음)
 
   // 미러가 켜지면 FaceLandmarker를 지연 로드(발음채점 시 입모양 신뢰도 산출 → AV 후기융합)
@@ -177,6 +178,21 @@ export default function SpeakingPractice() {
       sum += best
     }
     return Math.max(0, Math.min(1, sum / targetVis.length))
+  }
+
+  // 구간별 입모양 보완(B-6) — 프레임마다 입모양 그룹 1~10의 코사인(0~1)을 시각과 함께 보낸다.
+  // 서버가 음소(음절)가 정렬된 시간 구간에서 그 음소의 목표 입모양 점수를 골라 소리 점수와 섞는다.
+  const buildMouthTrack = () => {
+    const buf = mouthFramesRef.current
+    const times = mouthTimesRef.current
+    if (!buf.length || buf.length !== times.length) return null
+    const profiles = loadCalibration()
+    const visemes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    const rows = buf.slice(0, 1500).map((bs, i) => [
+      Math.round(times[i] * 1000) / 1000,
+      ...visemes.map((vid) => Math.round(Math.max(0, Math.min(1, cosineScore(bs, vid, profiles))) * 1000) / 1000),
+    ])
+    return { visemes, frames: rows }
   }
 
   useEffect(() => {
@@ -275,7 +291,7 @@ export default function SpeakingPractice() {
 
   const start = async () => {
     setErr(null); setSummary(null); setAssessment(null); setShowDetail(false)
-    volHist.current = []; pitchHist.current = []; traceRef.current = []; chunksRef.current = []; mouthFramesRef.current = []
+    volHist.current = []; pitchHist.current = []; traceRef.current = []; chunksRef.current = []; mouthFramesRef.current = []; mouthTimesRef.current = []
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -318,7 +334,11 @@ export default function SpeakingPractice() {
       const opts = assessStage != null ? { stage: assessStage, drill, review: reviewMode } : {}
       // 축 B: 웹캠 미러로 버퍼된 입모양이 있으면 신뢰도를 실어 보내 AV 후기융합(백엔드 fuse_audio_visual)
       const mc = computeMouthConfidence()
-      if (mc != null) opts.mouth_confidence = mc
+      if (mc != null) {
+        opts.mouth_confidence = mc
+        const track = buildMouthTrack()
+        if (track) opts.mouth_track = JSON.stringify(track)
+      }
       setAssessing(true)
       try {
         const res = await speakAPI.assess(target, blob, metrics, opts)
@@ -408,7 +428,10 @@ export default function SpeakingPractice() {
         try {
           const r = landmarkerRef.current.detectForVideo(videoRef.current, performance.now())
           const bs = toBlendshapeMap(r.faceBlendshapes?.[0])
-          if (Object.keys(bs).length) mouthFramesRef.current.push(bs)
+          if (Object.keys(bs).length) {
+            mouthFramesRef.current.push(bs)
+            mouthTimesRef.current.push((performance.now() - startRef.current) / 1000)
+          }
         } catch { /* 프레임 스킵 */ }
       }
       frame++

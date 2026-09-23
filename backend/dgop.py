@@ -250,29 +250,119 @@ def calibrate_score(raw_score: Optional[float], calibration: Optional[Dict] = No
 
 def fuse_audio_visual_per_phone(per_phone: List[Dict], visual_score: Optional[float],
                                 base_visual_weight: float = 0.25,
-                                uncertainty_gain: float = 0.5,
-                                calibration: Optional[Dict] = None) -> Optional[Dict]:
-    """구간별(음소별) 후기 융합 — 문장 평균 가중이 아니라 각 음소를 그 음소의 불확실성으로
-    가중해 영상과 융합한 뒤 평균한다. 음향이 뭉갠 '그 구간'일수록 영상 가중이 국소적으로 커져
-    문장 평균 융합보다 세밀하다(계획서 B: '음향이 불확실한 구간일수록 영상 가중↑').
-    per_phone의 각 음소는 dgop(0~1)·uncertainty(0~1)를 갖는다. visual_score가 없으면 None.
-    음소 오디오 점수는 문장 점수와 같은 눈금을 쓴다 — 원점수(dgop×100)를 위 calibrate_score
-    앵커 보정으로 0~100 표시점수로 옮긴다(병합 메모: 상대 브랜치의 0~1 로지스틱 보정은 버렸다)."""
-    if not per_phone or visual_score is None:
+                                reliability_gain: float = 0.5,
+                                calibration: Optional[Dict] = None,
+                                visual_by_phone: Optional[List[Optional[float]]] = None) -> Optional[Dict]:
+    """구간별(음소별) 후기 융합 — 음소마다 소리 점수와 입모양 점수를 따로 섞은 뒤 평균한다(계획서 B).
+
+    가중 신호(B-5): 그 음소의 보정 소리 점수가 낮을수록(소리가 흐릴수록) 입모양 비중을 높인다.
+      w_v = base_visual_weight + reliability_gain × (1 − 소리 점수/100), 0~0.9로 자른다.
+      9/14 E2 실험에서 사후확률 엔트로피·여유값 '불확실성'은 품질을 가르는 정보가 없어(AUC 0.46~0.62)
+      가중 신호에서 뺐다. 계획서의 뜻(농인은 소리가 불안정하고 입모양이 상대적으로 안정적이다)대로
+      소리가 약한 구간을 보이는 조음이 받쳐 주게 한다.
+    구간 입모양(B-6): visual_by_phone[i]가 있으면 그 음소가 정렬된 시간 구간의 입모양 점수를 쓰고,
+      없으면 문장 전체 입모양 점수(visual_score)를 쓴다. 둘 다 없으면 None.
+    소리 점수는 문장 점수와 같은 눈금이다 — 원점수(dgop×100)를 calibrate_score로 0~100 표시점수로 옮긴다."""
+    if not per_phone:
         return None
-    vis = float(visual_score)
-    fused_vals, weights = [], []
-    for p in per_phone:
-        unc = max(0.0, min(1.0, float(p.get("uncertainty", 0.0))))
-        w_v = max(0.0, min(0.9, base_visual_weight + uncertainty_gain * unc))
-        a = calibrate_score(float(p.get("dgop", 0.0)) * 100.0, calibration)  # 이 음소의 오디오 표시점수(0~100)
-        fused_vals.append((1.0 - w_v) * a + w_v * vis)
+    vbp = list(visual_by_phone or [])
+    if visual_score is None and not any(v is not None for v in vbp):
+        return None
+    fused_vals, weights, n_seg = [], [], 0
+    for i, p in enumerate(per_phone):
+        a = calibrate_score(float(p.get("dgop", 0.0)) * 100.0, calibration)  # 이 음소의 소리 표시점수(0~100)
+        seg = vbp[i] if i < len(vbp) else None
+        v = seg if seg is not None else visual_score
+        if v is None:
+            fused_vals.append(a)
+            weights.append(0.0)
+            continue
+        n_seg += seg is not None
+        w_v = max(0.0, min(0.9, base_visual_weight + reliability_gain * (1.0 - max(0.0, min(100.0, a)) / 100.0)))
+        fused_vals.append((1.0 - w_v) * a + w_v * float(v))
         weights.append(w_v)
     score = sum(fused_vals) / len(fused_vals)
     return {
         "score": round(score, 1),
         "visual_weight": round(sum(weights) / len(weights), 3),  # 평균 영상 가중(표시용)
-        "visual_score": round(vis, 1),
+        "visual_score": None if visual_score is None else round(float(visual_score), 1),
         "per_phone": True,
         "n_phones": len(fused_vals),
+        "visual_segments": n_seg,        # 구간 입모양으로 융합한 음소 수(B-6)
+        "weight_signal": "audio_score",  # B-5: 보정 소리 점수가 낮을수록 영상 가중↑
     }
+
+
+MOUTH_TRACK_MAX_FRAMES = 1500   # 약 75초(20fps) — 녹음 상한보다 넉넉히
+
+
+def parse_mouth_track(raw) -> Optional[Dict]:
+    """웹캠 입모양 타임라인(프론트 SpeakingPractice가 보냄)을 검증해 {visemes, frames}로.
+    형식: {"visemes": [1..10], "frames": [[t초, s_1, …, s_k], …]}, s는 0~1(목표 입모양 프로파일과의 코사인).
+    형식이 어긋나거나 너무 크면 None(구간 보완 없이 문장 입모양 점수만 쓴다)."""
+    import json as _json
+    try:
+        d = _json.loads(raw) if isinstance(raw, (str, bytes)) else raw
+        vis = [int(v) for v in d["visemes"]]
+        frames = d["frames"]
+        if not vis or len(vis) > 16 or not isinstance(frames, list) or not frames or len(frames) > MOUTH_TRACK_MAX_FRAMES:
+            return None
+        out = []
+        for row in frames:
+            if not isinstance(row, list) or len(row) != len(vis) + 1:
+                return None
+            t = float(row[0])
+            vals = [max(0.0, min(1.0, float(x))) for x in row[1:]]
+            if not math.isfinite(t) or any(not math.isfinite(x) for x in vals):
+                return None
+            out.append((t, vals))
+        out.sort(key=lambda r: r[0])
+        return {"visemes": vis, "frames": out}
+    except Exception:
+        return None
+
+
+def _token_visemes(token: str) -> List[int]:
+    """정렬 토큰 → 그 토큰이 보여 줘야 할 입모양 번호들(1~10만, 무음 초성 ㅇ·어절 경계 제외).
+    토큰은 한국어 CTC 음절('가') 또는 자모 vocab('o:ㄱ')이다."""
+    import engine as _engine
+    tok = (token or "").strip()
+    if not tok or tok == "|":
+        return []
+    jamos: List[str] = []
+    if ":" in tok:
+        jamos = [tok.split(":", 1)[1]]
+    else:
+        for ch in tok:
+            if "\uac00" <= ch <= "\ud7a3":
+                ini, med, fin = _engine.decompose_hangul(ch)
+                jamos += [j for j in (ini if ini != "ㅇ" else "", med, fin) if j]
+    out: List[int] = []
+    for j in jamos:
+        v = _engine.VISEME_MAP.get(j)
+        if isinstance(v, int) and 1 <= v <= 10 and v not in out:
+            out.append(v)
+    return out
+
+
+def visual_scores_for_phones(per_phone: List[Dict], track: Optional[Dict], margin: float = 0.08) -> List[Optional[float]]:
+    """음소(음절) 구간 [t0−margin, t1+margin] 안에서 그 음소의 목표 입모양 점수(0~100). 구간 입모양 보완(B-6).
+    입모양마다 구간 안 최고값을 잡아 평균한다(그 입모양이 그 순간에 만들어졌나). 구간·입모양 정보가 없으면 None."""
+    out: List[Optional[float]] = []
+    if not track or not track.get("frames"):
+        return [None] * len(per_phone)
+    col = {v: i for i, v in enumerate(track["visemes"])}
+    frames = track["frames"]
+    for p in per_phone:
+        t0, t1 = p.get("t0"), p.get("t1")
+        vids = [v for v in _token_visemes(p.get("token", "")) if v in col]
+        if t0 is None or t1 is None or not vids:
+            out.append(None)
+            continue
+        window = [vals for (t, vals) in frames if t0 - margin <= t <= t1 + margin]
+        if not window:
+            out.append(None)
+            continue
+        best = [max(vals[col[v]] for vals in window) for v in vids]
+        out.append(round(100.0 * sum(best) / len(best), 1))
+    return out

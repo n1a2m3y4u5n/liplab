@@ -260,6 +260,7 @@ export const speakAPI = {
     if (opts.drill) fd.append('drill', opts.drill)
     if (opts.review) fd.append('review', '1')
     if (opts.mouth_confidence != null) fd.append('mouth_confidence', String(opts.mouth_confidence))  // 웹캠 입모양 신뢰도(축 B AV융합)
+    if (opts.mouth_track) fd.append('mouth_track', opts.mouth_track)  // 입모양 타임라인(축 B 구간별 보완, B-6)
     // FormData는 브라우저가 multipart 경계를 붙이도록 Content-Type을 비운다(인스턴스 기본 json 무효화).
     const res = await api.post('/speak/assess', fd, { headers: { 'Content-Type': undefined }, timeout: 60000 })
     return res.data
