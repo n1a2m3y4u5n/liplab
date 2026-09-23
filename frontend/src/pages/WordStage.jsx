@@ -9,6 +9,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import { ModalClose } from '../components/Modal'
 import useFocusTrap from '../hooks/useFocusTrap'
 import useChoiceKeys from '../lib/useChoiceKeys'
+import useBookmark from '../lib/useBookmark'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
@@ -104,6 +105,8 @@ function WordQuiz({ data }) {
   const tierOf = useMemo(() => Object.fromEntries(data.words.map((w) => [w.word, w.tier || 1])), [data])
   const bankSet = useMemo(() => new Set(words), [words])
   const [q, setQ] = useState(null)
+  // 문항 북마크 — 서버에 저장돼 복습 탭·저장한 문장에 나온다
+  const [saved, toggleSaved] = useBookmark(q?.target, { situation: '단어 독화' })
   const [frames, setFrames] = useState([])
   const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계)
   const [result, setResult] = useState(null)
@@ -115,7 +118,6 @@ function WordQuiz({ data }) {
   const [signOpen, setSignOpen] = useState(false)
   const closeSign = useCallback(() => setSignOpen(false), [])
   const signRef = useFocusTrap(signOpen, closeSign)          // 수어 모달 포커스 트랩·Esc
-  const [saved, setSaved] = useState(false)        // 문항별 북마크(로컬 시각 토글 — 저장 연결은 범위 밖)
   const [xpEarned, setXpEarned] = useState(0)      // 레슨 동안 서버가 준 XP 합(응답 xp_gained) → 완료 뷰
   const startRef = useRef(Date.now())              // 레슨 시작 시각 → 걸린 시간
   const [elapsedSec, setElapsedSec] = useState(0)
@@ -131,7 +133,6 @@ function WordQuiz({ data }) {
     const distractors = [...shuffle(partners), ...rest].slice(0, 3)
     setResult(null)
     setSelected(null)
-    setSaved(false)
     setQ({ target, choices: shuffle([target, ...distractors]) })
     setFrames([])
     try { setFrames(await learningAPI.getVisemes(target)) } catch { /* ignore */ }
@@ -214,7 +215,7 @@ function WordQuiz({ data }) {
           <div className="relative flex flex-col gap-1.5 pr-12 leading-figma lg:gap-2 lg:pr-[52px]">
             <p className="text-[12px] font-bold text-track lg:text-[13px]">단어 독화</p>
             <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">이 입모양은 어떤 단어일까요?</h1>
-            <BookmarkButton active={saved} onToggle={() => setSaved((s) => !s)} className="absolute right-0 top-[14px] lg:top-[21px]" />
+            <BookmarkButton active={saved} onToggle={toggleSaved} className="absolute right-0 top-[14px] lg:top-[21px]" />
           </div>
 
           {/* 입모양 카드(91:22 560×370 / 모바일 235:45 전체 폭×214) — 아바타만, 무한 반복(다시 보기 없음) */}

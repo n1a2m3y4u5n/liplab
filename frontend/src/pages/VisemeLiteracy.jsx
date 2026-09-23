@@ -6,6 +6,7 @@ import AvatarVRM from '../components/AvatarVRM'
 import VocalTract from '../components/VocalTract'
 import VocalTractSimulator from '../components/VocalTractSimulator'
 import BookmarkButton from '../components/BookmarkButton'
+import useBookmark from '../lib/useBookmark'
 import WatermarkCard from '../components/WatermarkCard'
 import LoadingScreen from '../components/LoadingScreen'
 import CueBadges, { CueLegend } from '../components/CueBadges'
@@ -316,8 +317,10 @@ function QuizPanel({ data }) {
   const [qNum, setQNum] = useState(1)              // 레슨 내 문항 번호(진행바)
   const [tally, setTally] = useState({ n: 0, correct: 0 })   // 이번 레슨에서 푼 문항·정답 수 → 완료 뷰 정답률
   const [done, setDone] = useState(false)          // 12문항을 마치면 완료 뷰(93:12)
-  const [saved, setSaved] = useState(false)        // 문항별 북마크(로컬 시각 토글 — 저장 연결은 범위 밖)
   const [xpEarned, setXpEarned] = useState(0)      // 레슨 동안 서버가 준 XP 합(응답 xp_gained) → 완료 뷰
+  // 문항 북마크 — 입모양 그룹의 대표 음절(없으면 이름)을 저장한다. 저장한 문장 화면에서 그 음절 입모양을 다시 본다.
+  const [saved, toggleSaved] = useBookmark(q ? (q.target.demo_syllable || lessonLabel(q.target)) : null,
+    { situation: q ? `입모양 · ${q.target.name}` : '' })
   const startRef = useRef(Date.now())              // 레슨 시작 시각 → 걸린 시간
   const [elapsedSec, setElapsedSec] = useState(0)
 
@@ -328,7 +331,6 @@ function QuizPanel({ data }) {
     setQ({ target, choices })
     setSelected(null)
     setResult(null)
-    setSaved(false)
   }, [lessons, quizzable])
 
   useEffect(() => { newQ() }, [newQ])
@@ -407,7 +409,7 @@ function QuizPanel({ data }) {
           <div className="relative flex flex-col gap-1.5 pr-12 leading-figma lg:gap-2 lg:pr-[52px]">
             <p className="text-[12px] font-bold text-track lg:text-[13px]">입모양 인지</p>
             <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">이 입모양은 어느 그룹일까요?</h1>
-            <BookmarkButton active={saved} onToggle={() => setSaved((s) => !s)} className="absolute right-0 top-[14px] lg:top-[21px]" />
+            <BookmarkButton active={saved} onToggle={toggleSaved} className="absolute right-0 top-[14px] lg:top-[21px]" />
           </div>
 
           {/* 입모양 카드(91:22 560×370 / 모바일 235:45 전체 폭×214) — 아바타만, 무한 반복(다시 보기 없음) */}
