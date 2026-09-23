@@ -2349,6 +2349,41 @@ async def assessment_resources(current_user=Depends(get_current_user)):
     return _perc.build_standard_resources([w["word"] for w in _curriculum.WORD_BANK])
 
 
+# ── 공개 인터페이스(§6.3) — 로그인 없이 쓰는 무상태 API. IP당 요청 수만 제한하고 아무것도 저장하지 않는다 ──
+_PUBLIC_RES = None
+
+
+@app.get("/api/public/resources", dependencies=[Depends(ratelimit.rate_limit(20, 60, "public"))])
+async def public_resources():
+    """공개 표준 독화 자원(축 C) — 동구형이음 사전·난이도 지수·최소대립/동구형 쌍·(있으면) 데이터 유래 자모
+    시각 유사도. 판본(semver)과 라이선스(CC BY 4.0)가 meta에 있다. 결정론적이라 한 번 만들어 둔다."""
+    global _PUBLIC_RES
+    if _PUBLIC_RES is None:
+        import perceptual as _perc
+        _PUBLIC_RES = _perc.build_standard_resources([w["word"] for w in _curriculum.WORD_BANK])
+    return _PUBLIC_RES
+
+
+class PublicScoreReq(BaseModel):
+    target: str
+    answer: str
+
+
+@app.post("/api/public/score", dependencies=[Depends(ratelimit.rate_limit(30, 60, "public-score"))])
+async def public_score(req: PublicScoreReq):
+    """독화 답 채점(무상태) — 목표 문장과 읽은 답을 '소리 나는 대로' 자모로 바꿔 음운 유사도로 채점하고,
+    어느 자리에서 어떤 입모양을 헷갈렸는지 준다. 앱 밖 수업·연구에서 같은 채점 기준을 쓰도록 연다.
+    입력은 각 100자까지, 요청 내용은 저장하지 않는다."""
+    target, answer = (req.target or "").strip(), (req.answer or "").strip()
+    if not target or len(target) > 100 or len(answer) > 100:
+        raise HTTPException(status_code=400, detail="target은 1~100자, answer는 100자까지")
+    from scoring import calculate_score as _score, viseme_confusions
+    r = await _score(target, answer)
+    return {"score": r.get("score"), "phoneme_accuracy": r.get("phoneme_accuracy"),
+            "viseme_errors": r.get("viseme_errors"), "confusions": viseme_confusions(target, answer) if answer else [],
+            "method": "표준발음 자모 정렬 + 입모양(viseme) 가중 음운 유사도(backend/scoring.py)"}
+
+
 @app.get("/api/assessment/progression")
 async def assessment_progression(current_user=Depends(get_current_user),
                                  db: AsyncSession = Depends(get_db)):
