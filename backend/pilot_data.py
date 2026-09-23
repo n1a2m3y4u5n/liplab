@@ -8,6 +8,7 @@ main.py(참여·가명 내보내기, 계정 열람·삭제)와 scripts/pilot_ret
 import hashlib
 import hmac
 import inspect
+import os
 from datetime import date, timedelta
 from typing import Dict, List, Optional
 
@@ -24,10 +25,20 @@ def user_data_models() -> List:
     return out
 
 
-def pseudonym(user_id: int) -> str:
-    """가명 — 서버 비밀키로 만든 HMAC 앞 12자리. 비밀키 없이는 사용자 번호로 되돌릴 수 없다."""
+def pilot_secret() -> str:
+    """가명 비밀키. LIPLAB_PILOT_SECRET을 쓰고, 없으면 서버 로그인 비밀키(JWT_SECRET)를 쓴다.
+    로그인 비밀키는 보안 사고 때 바꿀 수 있는데, 바뀌면 가명이 모두 달라져 철회·파기 때 자료를 찾지 못한다.
+    그래서 파일럿 전에 LIPLAB_PILOT_SECRET을 따로 정하고 연구가 끝날 때까지 바꾸지 않는다."""
+    s = os.getenv("LIPLAB_PILOT_SECRET", "").strip()
+    if s:
+        return s
     from auth import SECRET_KEY
-    return hmac.new(SECRET_KEY.encode(), f"pilot:{user_id}".encode(), hashlib.sha256).hexdigest()[:12]
+    return SECRET_KEY
+
+
+def pseudonym(user_id: int) -> str:
+    """가명 — 가명 비밀키로 만든 HMAC 앞 12자리. 비밀키 없이는 사용자 번호로 되돌릴 수 없다."""
+    return hmac.new(pilot_secret().encode(), f"pilot:{user_id}".encode(), hashlib.sha256).hexdigest()[:12]
 
 
 def due_date(study_end: date, retain_days: int) -> date:

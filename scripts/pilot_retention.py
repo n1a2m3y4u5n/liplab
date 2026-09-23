@@ -11,11 +11,16 @@
           연구용 가명 내보내기에 더는 나오지 않는다.
   delete  계정과 학습 기록 전부를 지운다(계정 삭제와 같은 범위). 연구 참여만을 위해 만든 계정에 쓴다.
 
-  cd backend    # 앱과 같은 DATABASE_URL·JWT_SECRET 환경에서 실행한다(가명이 같아야 한다)
+  cd backend    # 앱과 같은 DATABASE_URL·LIPLAB_PILOT_SECRET(없으면 JWT_SECRET) 환경에서 실행한다(가명이 같아야 한다)
   python ../scripts/pilot_retention.py --study-end 2026-12-31 --retain-days 365                 # 대상과 행 수만 본다
   python ../scripts/pilot_retention.py --study-end 2026-12-31 --retain-days 365 --apply --mode delete
   python ../scripts/pilot_retention.py --withdraw 1a2b3c4d5e6f --apply --mode delete           # 동의 철회
-파기 대장: --ledger(기본 ./pilot_destruction_ledger.jsonl)에 한 줄씩 덧붙인다. 이 파일은 연구 기록과 함께 보관한다.
+
+배포 서버(Docker 이미지)에도 /app/scripts/pilot_retention.py로 들어간다. 서버에서는
+  fly ssh console -C "python /app/scripts/pilot_retention.py --study-end … --retain-days …"
+처럼 실행한다. 이미지 안에는 backend 폴더가 따로 없고 /app이 곧 backend라, 아래에서 둘 다 찾는다.
+파기 대장: --ledger에 한 줄씩 덧붙인다. 기본은 /data가 있으면(배포 볼륨) /data/pilot_destruction_ledger.jsonl,
+없으면 ./pilot_destruction_ledger.jsonl이다. 컨테이너의 다른 경로는 재시작 때 사라진다. 대장은 연구 기록과 함께 보관한다.
 """
 import argparse
 import asyncio
@@ -25,7 +30,11 @@ import sys
 from datetime import date, datetime, timezone
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(os.path.dirname(_HERE), "backend"))
+_ROOT = os.path.dirname(_HERE)
+# 저장소에서는 <루트>/backend, 배포 이미지에서는 /app(= backend 내용) 자체가 모듈 위치다
+sys.path.insert(0, os.path.join(_ROOT, "backend") if os.path.isdir(os.path.join(_ROOT, "backend")) else _ROOT)
+_DEFAULT_LEDGER = ("/data/pilot_destruction_ledger.jsonl" if os.path.isdir("/data") and os.access("/data", os.W_OK)
+                   else "pilot_destruction_ledger.jsonl")
 
 
 def _parse(argv):
@@ -36,7 +45,7 @@ def _parse(argv):
     ap.add_argument("--cohort", default=None, help="이 집단만")
     ap.add_argument("--mode", choices=("unlink", "delete"), default=None)
     ap.add_argument("--apply", action="store_true", help="실제로 처리한다(없으면 보고만)")
-    ap.add_argument("--ledger", default="pilot_destruction_ledger.jsonl")
+    ap.add_argument("--ledger", default=_DEFAULT_LEDGER)
     ap.add_argument("--today", type=date.fromisoformat, default=None, help="오늘 날짜(시험용)")
     a = ap.parse_args(argv)
     if not a.withdraw and (a.study_end is None or a.retain_days is None):

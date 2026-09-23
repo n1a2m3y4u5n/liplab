@@ -1,5 +1,25 @@
 import { useState, useEffect } from 'react'
-import { curriculumAPI } from '../api'
+import { curriculumAPI, accountAPI } from '../api'
+import useStore from '../store/useStore'
+
+// 파일럿 기호 켬·끔(J-12) — 기호 없이 학습하는 집단이면 서버가 기호 목록을 비워 주고(/api/cues), 화면은 범례와
+// 웹캠 울림 기호도 숨긴다. 로그인한 계정마다 한 번만 묻는다. 조회에 실패하면 켠 것으로 본다.
+const _cueFlag = { token: undefined, promise: null }
+export function useCuesEnabled() {
+  const token = useStore((s) => s.token)
+  const [on, setOn] = useState(true)
+  useEffect(() => {
+    let alive = true
+    if (!token) { setOn(true); return undefined }
+    if (_cueFlag.token !== token || !_cueFlag.promise) {
+      _cueFlag.token = token
+      _cueFlag.promise = accountAPI.pilotStatus().then((s) => s?.cues !== false).catch(() => true)
+    }
+    _cueFlag.promise.then((v) => { if (alive) setOn(v) })
+    return () => { alive = false }
+  }, [token])
+  return on
+}
 
 /**
  * 시각 증강 오버레이(고도화 축 J) — 입모양이 같은 동구형이음을, 입술 밖으로 드러나지
@@ -45,6 +65,8 @@ export function CueGlyph({ cue, size = 14 }) {
 }
 
 export function CueLegend() {
+  const cuesOn = useCuesEnabled()
+  if (!cuesOn) return null
   return (
     <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
       {Object.entries(CUE_META).map(([k, s]) => (

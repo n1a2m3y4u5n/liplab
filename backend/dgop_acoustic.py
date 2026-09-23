@@ -209,7 +209,8 @@ def phone_confidences(waveform, sample_rate: int, target_tokens: Sequence[str],
 
     # 프레임 → 초(구간별 입모양 보완 B-6이 웹캠 입모양 타임라인과 맞출 때 쓴다). wav2vec2는 약 20ms/프레임.
     n_frames = max(1, int(log_probs.shape[0]))
-    sec_per_frame = (len(waveform) / float(sample_rate)) / n_frames if len(waveform) else 0.02
+    n_samples = len(waveform) if waveform is not None else 0
+    sec_per_frame = (n_samples / float(sample_rate)) / n_frames if n_samples else 0.02
     results = []
     for span in spans:
         token = span["token"]
