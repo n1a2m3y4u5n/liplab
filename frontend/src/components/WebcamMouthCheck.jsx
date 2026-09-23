@@ -3,6 +3,7 @@ import { toBlendshapeMap, scorePercent, coachHint, loadCalibration } from '../li
 import { faceSignals, FACE_SIGNAL_LABELS } from '../lib/faceCues'
 import { lipGeometry, LIP_GEOMETRY_LABELS } from '../lib/lipGeometry'
 import { predictK, K_FACE_KEYS, K_WIN } from '../lib/kModel'
+import { errorEnds } from '../lib/correctionTrend'
 import { CueGlyph } from './CueBadges'
 
 // K→J 연결(K-4): 얼굴에서 추정한 비음 확률이 이 값 이상이면 J의 '울림' 기호를 켠다.
@@ -17,7 +18,8 @@ import VocalTract from './VocalTract'
 /**
  * 웹캠 입모양 실시간 채점 (고도화 축 D).
  * MediaPipe Face Landmarker로 얼굴 blendshape를 브라우저에서 추출해 목표 비심과 비교한다.
- * 영상·계수는 기기 밖으로 나가지 않는다(서버 전송 없음).
+ * 영상과 blendshape 원본은 기기 밖으로 나가지 않는다. 서버에는 조음 교정용 관찰 계수 3개(개구·원순·폐쇄)를
+ * 0.8초마다 보내 교정 문구를 받고(저장하지 않음), '익힘 기록' 때 점수와 세션 처음·끝 오차 요약만 저장한다.
  *
  * 모델 로딩은 useFaceLandmarker 훅이 담당한다(축 F 거울 모드와 공용).
  */
@@ -59,9 +61,14 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   const [correction, setCorrection] = useState(null) // 축 E: 관찰 계수 목표 대비 교정
   const [obs, setObs] = useState(null)               // 표시용 관찰 계수 샘플
   const corrBusyRef = useRef(false)
+  const errRef = useRef([])                          // 축 E-9: 교정 표본별 평균 |목표−관찰| (세션 처음·끝 비교용)
+  const [errTrend, setErrTrend] = useState(null)     // { start, now } — 표본 4개 이상일 때만
 
-  // 목표 viseme이 바뀌면 최고점·기록·점수창 초기화
-  useEffect(() => { bestRef.current = 0; winRef.current = []; setRecorded(false) }, [visemeId])
+  // 목표 viseme이 바뀌면 최고점·기록·점수창·교정 표본 초기화
+  useEffect(() => {
+    bestRef.current = 0; winRef.current = []; errRef.current = []
+    setRecorded(false); setErrTrend(null)
+  }, [visemeId])
 
   // 화면 표시용 통합 상태 — 카메라가 우선, 그다음 모델 로딩/오류.
   const status = camStatus === 'running' ? 'running'
@@ -132,7 +139,17 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       if (corrBusyRef.current) return
       corrBusyRef.current = true
       articulationAPI.feedback(visemeId, o)
-        .then((r) => { if (r) setCorrection(r) })
+        .then((r) => {
+          if (!r) return
+          setCorrection(r)
+          if (typeof r.error === 'number' && liveBsRef.current) {   // 얼굴이 잡힌 표본만
+            const e = errRef.current
+            e.push(r.error)
+            if (e.length > 600) e.splice(5, 1)   // 약 8분 상한 — 처음 5개는 남긴다
+            const ends = errorEnds(e)
+            if (ends) setErrTrend({ start: ends.start, now: ends.end })
+          }
+        })
         .catch(() => {})
         .finally(() => { corrBusyRef.current = false })
     }, 800)
@@ -155,8 +172,11 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   }, [])
 
   const record = useCallback(async () => {
+    // 축 E-9: 이번 세션의 처음·끝 오차 요약만 보낸다(관찰 계수 원본은 보내지 않는다)
+    const ends = errorEnds(errRef.current)
+    const session = ends ? { gap_start: ends.start, gap_end: ends.end, n_samples: errRef.current.length } : {}
     try {
-      await curriculumAPI.recordMouth(visemeId, bestRef.current)
+      await curriculumAPI.recordMouth(visemeId, bestRef.current, session)
       setRecorded(true)
     } catch { /* 기록 실패는 조용히 무시 */ }
   }, [visemeId])
@@ -274,6 +294,11 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
             <ul className="mt-1 space-y-0.5 text-center text-[11px] text-sky-700">
               {correction.cues.slice(1).map((c, i) => <li key={i}>· {c.text}</li>)}
             </ul>
+          )}
+          {errTrend && (
+            <p className="mt-1 text-center text-[11px] tabular-nums text-sky-700">
+              목표와의 차이 · 처음 {Math.round(errTrend.start * 100)} → 지금 {Math.round(errTrend.now * 100)}
+            </p>
           )}
         </div>
       )}
