@@ -59,18 +59,8 @@ export default function A11ySettings() {
     } catch { alert('내려받기에 실패했어요.') }
   }, [])
 
-  // 개인정보 삭제권 — 계정·학습 데이터 영구 삭제(되돌릴 수 없음)
-  const deleteAccount = useCallback(async () => {
-    if (!window.confirm('내 계정과 모든 학습 데이터를 영구 삭제합니다. 되돌릴 수 없어요. 계속할까요?')) return
-    try {
-      await accountAPI.deleteAccount()
-      try { localStorage.clear() } catch { /* noop */ }
-      alert('삭제되었습니다.')
-      window.location.href = '/'
-    } catch (e) {
-      alert(e?.response?.data?.detail || '삭제할 수 없어요.')
-    }
-  }, [])
+  // 개인정보 삭제권 — 삭제는 현재 비밀번호 재확인이 필요해(§4.9) 프로필 → 계정 설정 한 곳에서 한다.
+  const deleteAccount = useCallback(() => { window.location.href = '/profile' }, [])
 
   return (
     <>
@@ -117,9 +107,9 @@ export default function A11ySettings() {
             </button>
             <button type="button" onClick={deleteAccount}
               className="flex w-full items-center gap-2 rounded-lg border border-rose-200 px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50">
-              🗑 계정·데이터 삭제 <span className="text-[11px] text-rose-400">(되돌릴 수 없음)</span>
+              🗑 계정·데이터 삭제 <span className="text-[11px] text-rose-400">(프로필 → 계정 설정)</span>
             </button>
-            <p className="mt-1.5 text-[11px] leading-snug text-gray-400">웹캠 영상·음성은 기기 안에서만 처리되어 서버에 저장되지 않습니다.</p>
+            <p className="mt-1.5 text-[11px] leading-snug text-gray-400">웹캠 영상은 기기 안에서만 처리돼요. 음성은 채점할 때만 서버로 보내 메모리에서 처리하고 저장하지 않으며, 전사문·음성 지표는 학습 기록으로 저장돼요.</p>
           </div>
           )}
         </div>

@@ -46,6 +46,9 @@ class UserRegister(BaseModel):
     email: EmailStr
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=6)
+    # 가입 동의(§4.9 ②) — 서버에서도 확인하고 ConsentRecord로 남긴다(화면 체크박스만으로는 우회 가능).
+    agree_terms: bool = False       # 이용약관·개인정보 처리방침 동의
+    age_confirmed: bool = False     # 만 14세 이상이거나 법정대리인 동의를 받음
 
 
 class UserLogin(BaseModel):
@@ -118,7 +121,8 @@ async def get_current_user(
         if user_id is None:
             raise credentials_exception
         user_id = int(user_id)
-    except JWTError:
+        token_version = int(payload.get("tv", 0))   # tv가 없는 옛 토큰은 0으로 본다
+    except (JWTError, ValueError, TypeError):
         raise credentials_exception
 
     # Fetch user from database
@@ -126,6 +130,9 @@ async def get_current_user(
     user = result.scalar_one_or_none()
 
     if user is None or not user.is_active:
+        raise credentials_exception
+    # 비밀번호를 바꾸면 token_version이 올라가 그 전에 발급된 토큰은 모두 거부된다(§4.9 인증·세션).
+    if token_version != (user.token_version or 0):
         raise credentials_exception
 
     return user
@@ -180,7 +187,8 @@ async def register_user(user_data: UserRegister, db: AsyncSession) -> User:
 
 def create_token_response(user: User) -> Token:
     """Create token response with user data"""
-    access_token = create_access_token(data={"sub": str(user.id)})
+    # tv(토큰 버전)를 넣어 두면 비밀번호 변경 뒤 옛 토큰을 get_current_user가 거부한다.
+    access_token = create_access_token(data={"sub": str(user.id), "tv": user.token_version or 0})
 
     return Token(
         access_token=access_token,

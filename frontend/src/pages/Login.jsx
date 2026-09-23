@@ -29,7 +29,8 @@ export default function Login() {
     try {
       const data = mode === 'login'
         ? await authAPI.login(email, password)
-        : await authAPI.register(email, username || email.split('@')[0], password)
+        : await authAPI.register(email, username || email.split('@')[0], password,
+            { agree_terms: agree, age_confirmed: guardianOk })
       await enter(data)
     } catch (e2) {
       setErr(e2?.response?.data?.detail || (mode === 'login' ? '이메일·비밀번호를 확인해 주세요.' : '가입에 실패했어요.'))
