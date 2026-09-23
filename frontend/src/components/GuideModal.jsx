@@ -1,37 +1,25 @@
 import { useEffect, useState } from 'react'
+import { ModalClose } from './Modal'
 
 /**
  * 사용법 가이드 모달 (Figma node 338:57 — Modal / 사용법 가이드).
  * 딤 오버레이 + 중앙 큰 흰 카드(rounded-24, 큰 그림자). 좌측 그룹형 세로 탭 + 우측 컨텐츠.
- * 컨텐츠는 화면을 상징하는 안내 카드(#f3f3f3) + 주석 불릿으로 구성한다(실제 스크린샷 미사용).
+ * 컨텐츠는 화면을 상징하는 안내 카드(page 배경색) + 주석 불릿으로 구성한다(실제 스크린샷 미사용).
  * 배경 클릭·ESC로 닫힌다. 모바일에서는 좌측 탭이 상단 가로 스크롤 탭으로 폴백한다.
  *
  * Figma 스펙(값 추측 없이 반영):
- *  - 카드 w-[1080px] h-[680px] rounded-[24px] shadow-[0px_18px_44px_-6px_rgba(13,5,31,0.32)]
- *  - 오버레이 rgba(15,10,31,.5)
- *  - Guide nav w-[248px] bg-[#f7f7fa] border-r-[1.5px] pt-28 pb-24 px-16 gap-2
- *    · 제목 20px bold tracking-[-.4px] / 그룹 라벨 11.5px bold #a4a4b4 tracking-[.345px]
- *    · 탭 14.5px bold, 활성 = primary-tint(#efe9fc) 배경 + primary(#7d53de) 텍스트, 비활성 = #5a5a6e
+ *  - 카드 w-[1080px] h-[680px] rounded-24 shadow-modal · 오버레이 overlay 50%
+ *  - Guide nav w-[248px] bg-surface-nav border-r-1.5 pt-28 pb-24 px-16 gap-2
+ *    · 제목 20px bold tracking-[-.4px] / 그룹 라벨 11.5px bold ink-hint tracking-[.345px]
+ *    · 탭 14.5px bold, 활성 = primary-tint 배경 + primary 텍스트, 비활성 = ink-muted
  *  - Guide content pl-36 pr-30 py-30 gap-22 / 제목 26px bold tracking-[-.65px]
- *    · 닫기 원형 36px / 안내 카드 #f3f3f3 border-[1.5px] rounded-14
- *    · 주석 = ● + 소제목 14.5px bold(#1a1a2e) + 설명 12.5px(#5a5a6e) leading-1.6
+ *    · 닫기 = Figma Close 에셋 36px(338:237, Modal.jsx ModalClose) / 안내 카드 bg-page border-1.5 rounded-14
+ *    · 주석 = ● + 소제목 14.5px bold(ink) + 설명 12.5px(ink-muted) leading-1.6
  */
 
-// 화면 안내 카드 아이콘 — public/ui의 nav·기능 아이콘을 primary 색으로 마스크 틴트(브랜드 통일).
+// 화면 안내 카드 아이콘 — public/ui의 nav·기능 아이콘을 primary 색으로 마스크 틴트(브랜드 통일, index.css .mask-icon).
 function MaskIcon({ src, className = '' }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={className}
-      style={{
-        backgroundColor: '#7d53de',
-        WebkitMaskImage: `url(${src})`, maskImage: `url(${src})`,
-        WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
-        WebkitMaskSize: 'contain', maskSize: 'contain',
-        WebkitMaskPosition: 'center', maskPosition: 'center',
-      }}
-    />
-  )
+  return <span aria-hidden="true" className={`mask-icon text-primary-500 ${className}`} style={{ '--icon': `url(${src})` }} />
 }
 
 // 그룹 → 탭. 각 탭: title(사이드/헤더 공용), screen(안내 카드; 없으면 텍스트만), bullets(주석).
@@ -160,12 +148,7 @@ const GROUPS = [
 const TABS = GROUPS.flatMap((g) => g.tabs)
 
 function CloseButton({ onClose }) {
-  return (
-    <button type="button" onClick={onClose} aria-label="닫기"
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f3f3f7] text-ink-muted transition-colors hover:bg-[#e9e9f0] hover:text-ink">
-      <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-    </button>
-  )
+  return <ModalClose onClose={onClose} />
 }
 
 // 주석 불릿 — ● + 소제목 + 설명 (Figma Annot).
@@ -181,11 +164,11 @@ function Annotation({ h, d }) {
   )
 }
 
-// 화면을 상징하는 안내 카드(#f3f3f3) — 스크린샷 대체. 아이콘칩 + 화면명.
+// 화면을 상징하는 안내 카드(bg-page) — 스크린샷 대체. 아이콘칩 + 화면명.
 function ScreenCard({ screen }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-[14px] border-[1.5px] border-line bg-[#f3f3f3] px-6 py-8">
-      <span className="flex h-14 w-14 items-center justify-center rounded-[15px] bg-primary-100">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-14 border-1.5 border-line bg-page px-6 py-8">
+      <span className="flex h-14 w-14 items-center justify-center rounded-15 bg-primary-100">
         <MaskIcon src={screen.icon} className="h-7 w-7" />
       </span>
       <span className="text-[15px] font-bold text-ink">{screen.name}</span>
@@ -215,24 +198,24 @@ export default function GuideModal({ open, onClose }) {
   const active = TABS.find((t) => t.key === activeKey) || TABS[0]
 
   const tabClass = (on) =>
-    `w-full rounded-[10px] px-3 py-[9px] text-left text-[14.5px] font-bold transition-colors ${
+    `w-full rounded-10 px-3 py-[9px] text-left text-[14.5px] font-bold transition-colors ${
       on ? 'bg-primary-100 text-primary-500' : 'text-ink-muted hover:bg-black/[0.03]'
     }`
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f0a1f]/50 p-4"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 p-4"
       onClick={onClose} role="dialog" aria-modal="true" aria-label="사용법 가이드">
       <div
-        className="flex h-[680px] max-h-[90vh] w-full max-w-[1080px] flex-col overflow-hidden rounded-[24px] bg-white shadow-[0px_18px_44px_-6px_rgba(13,5,31,0.32)] md:flex-row"
+        className="flex h-[680px] max-h-[90vh] w-full max-w-[1080px] flex-col overflow-hidden rounded-24 bg-white shadow-modal md:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 좌측 세로 탭 (데스크톱) */}
-        <nav className="hidden w-[248px] shrink-0 flex-col gap-[2px] overflow-y-auto border-r-[1.5px] border-line bg-[#f7f7fa] px-4 pb-6 pt-7 md:flex" aria-label="가이드 목차">
+        <nav className="hidden w-[248px] shrink-0 flex-col gap-[2px] overflow-y-auto border-r-1.5 border-line bg-surface-nav px-4 pb-6 pt-7 leading-figma md:flex" aria-label="가이드 목차">
           <p className="pb-[10px] pl-3 text-[20px] font-bold tracking-[-0.4px] text-ink">사용법 가이드</p>
           {GROUPS.map((g) => (
             <div key={g.label} className="flex flex-col gap-[2px]">
-              {/* 그룹 라벨 — Figma exact #a4a4b4(공용 토큰 외 유일 hex: 회색 그룹 헤더) */}
-              <p className="pb-[6px] pl-3 pt-[14px] text-[11.5px] font-bold tracking-[0.345px] text-[#a4a4b4]">{g.label}</p>
+              {/* 그룹 라벨 — Figma 회색 그룹 헤더(ink-hint) */}
+              <p className="pb-[6px] pl-3 pt-[14px] text-[11.5px] font-bold tracking-[0.345px] text-ink-hint">{g.label}</p>
               {g.tabs.map((t) => (
                 <button key={t.key} type="button" onClick={() => setActiveKey(t.key)}
                   aria-current={t.key === activeKey ? 'true' : undefined}
@@ -245,7 +228,7 @@ export default function GuideModal({ open, onClose }) {
         </nav>
 
         {/* 상단 가로 스크롤 탭 (모바일 폴백) */}
-        <div className="shrink-0 border-b border-line bg-[#f7f7fa] md:hidden">
+        <div className="shrink-0 border-b border-line bg-surface-nav md:hidden">
           <div className="flex items-center justify-between px-4 pt-4">
             <p className="text-[18px] font-bold text-ink">사용법 가이드</p>
             <CloseButton onClose={onClose} />
@@ -257,7 +240,7 @@ export default function GuideModal({ open, onClose }) {
                 <button key={t.key} type="button" onClick={() => setActiveKey(t.key)}
                   aria-current={on ? 'true' : undefined}
                   className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-[13.5px] font-bold transition-colors ${
-                    on ? 'bg-primary-100 text-primary-500' : 'bg-[#f3f3f7] text-ink-muted'
+                    on ? 'bg-primary-100 text-primary-500' : 'bg-surface-sunken text-ink-muted'
                   }`}>
                   {t.title}
                 </button>

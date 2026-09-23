@@ -12,21 +12,19 @@ class ErrorBoundary extends Component {
     // 사용자 친화 메시지 + 새로고침. 개발 모드에서만 상세 스택을 보여준다.
     const isChunk = /chunk|dynamically imported|Failed to fetch|Importing a module/i.test(err?.message || '')
     return (
-      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24,textAlign:'center'}}>
-        <div style={{maxWidth:420}}>
-          <p style={{fontSize:44,margin:0}}>😵</p>
-          <h1 style={{fontSize:18,fontWeight:700,margin:'8px 0',color:'#0f172a'}}>
+      <div className="flex min-h-[100dvh] items-center justify-center bg-page p-6 text-center">
+        <div className="flex max-w-[420px] flex-col items-center gap-2">
+          <h1 className="text-[18px] font-bold text-ink">
             {isChunk ? '페이지를 불러오지 못했어요' : '문제가 발생했어요'}
           </h1>
-          <p style={{color:'#64748b',fontSize:14,marginBottom:16}}>
+          <p className="mb-2 text-[14px] text-ink-muted">
             {isChunk ? '네트워크가 불안정할 수 있어요. 새로고침 해주세요.' : '잠시 후 다시 시도해 주세요.'}
           </p>
-          <button onClick={() => window.location.reload()}
-            style={{padding:'10px 20px',borderRadius:10,background:'#4f46e5',color:'#fff',border:'none',fontWeight:600,cursor:'pointer'}}>
+          <button type="button" onClick={() => window.location.reload()} className="btn-primary">
             새로고침
           </button>
           {import.meta.env?.DEV && (
-            <pre style={{marginTop:16,textAlign:'left',fontSize:11,color:'#ef4444',whiteSpace:'pre-wrap',overflow:'auto',maxHeight:200}}>
+            <pre className="mt-2 max-h-[200px] w-full overflow-auto whitespace-pre-wrap text-left text-[11px] text-bad">
               {err?.message}{'\n'}{err?.stack}
             </pre>
           )}
@@ -134,7 +132,8 @@ function StageGate({ stage, children }) {
     return () => { cancelled = true }
   }, [stage, isReview])
 
-  if (state === 'loading') return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>불러오는 중…</div>
+  // 단계 조회 대기 = 페이지 전환 로딩 → 기본 로딩 화면(§4-10, 256:34)
+  if (state === 'loading') return <LoadingScreen />
   if (state === 'denied') return <Navigate to="/learn/path" replace />
   return children
 }
@@ -143,6 +142,21 @@ function HomeRedirect() {
   let onboarded = false
   try { onboarded = localStorage.getItem('liplab_onboarded') === '1' } catch { /* 무시 */ }
   return <Navigate to={onboarded ? '/learn/path' : '/onboarding'} replace />
+}
+
+/**
+ * 앱 어디서나 떠 있는 요소 — 문장 선택 → 수어 번역, 접근성 설정.
+ * 공개 페이지(약관·처리방침)에서는 수어 첫 방문 안내 모달이 약관을 가리지 않도록 수어 오버레이를 뺀다.
+ * 접근성 설정은 글자 크게·고대비를 약관에도 적용해야 하므로 남긴다.
+ */
+function GlobalOverlays() {
+  const { pathname } = useLocation()
+  return (
+    <>
+      {!PUBLIC_PATHS.includes(pathname) && <SignSelectionOverlay />}
+      <A11ySettings />
+    </>
+  )
 }
 
 /** 부팅 스플래시 (Figma 08) — 세션당 1회, 앱 진입 시 브랜드 스플래시를 잠깐 보여준다. */
@@ -227,9 +241,8 @@ function App() {
       </Routes>
       </Suspense>
       </main>
-      {/* 앱 어디서나 문장 선택 → 수어 번역 (수어 탭 이동 불필요) */}
-      <SignSelectionOverlay />
-      <A11ySettings />
+      {/* 앱 어디서나 문장 선택 → 수어 번역 (수어 탭 이동 불필요) + 접근성 설정 */}
+      <GlobalOverlays />
       </>
       </AuthGate>
     </Router>
