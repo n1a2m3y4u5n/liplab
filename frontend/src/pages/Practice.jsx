@@ -436,7 +436,8 @@ export default function Practice() {
             <>
               {/* 입모양 카드(91:22 / 모바일 235:45) — 아바타만, 무한 반복(다시 보기·속도·프레임 조작 없음) */}
               <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
-                <MouthAvatar key={currentSentence} frames={visemes} height={null} className="h-full" />
+                {/* 약한 표적 입모양 음절에만 시각증강 기호(축 J-3, 숙달되면 흐려짐) */}
+                <MouthAvatar key={currentSentence} frames={visemes} height={null} className="h-full" cueText={currentSentence} cueFocus />
               </div>
 
               {/* 4지선다(91:28 / 모바일 235:51) — 선택 → 확인 */}
