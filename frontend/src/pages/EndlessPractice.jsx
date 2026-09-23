@@ -5,7 +5,8 @@ import { curriculumAPI } from '../api'
 
 /**
  * 엔드리스 학습 (Figma 리디자인 09 연습기능) — 약한 유형만 골라 무한 연습.
- * 숙달도 낮은 음소/입모양이 계속 출제된다. 엔진은 단어 레슨(약점 가중 표집·무한 루프)을 재사용.
+ * 숙달도 낮은 음소/입모양이 계속 출제된다. 단어 레슨(약점 가중 표집, 오답 보기는 최소대립 단어 우선)과
+ * 문맥 레슨(약한 입모양이 든 문항부터)이 12문항씩 번갈아 이어진다(?endless=1, G-6).
  * 지금 출제될 약점 유형은 curriculumAPI.getNext()의 추천(targets: 이름·데모음절·숙달도)에서 읽어
  * Figma의 "지금 출제되는 유형" 진행바(숙달도 낮은 순)로 보여준다.
  */
@@ -36,8 +37,8 @@ export default function EndlessPractice() {
         <div className="flex items-center justify-between gap-5">
           <div className="flex flex-col items-start gap-[18px] text-white">
             <p className="text-[24px] font-bold leading-tight tracking-[-0.48px]">약한 유형만 골라서 무한 연습</p>
-            <p className="text-[14px] leading-relaxed opacity-85">숙달도가 낮은 음소가 계속 출제돼요. 원할 때 멈출 수 있어요.</p>
-            <button type="button" onClick={() => navigate('/learn/word')}
+            <p className="text-[14px] leading-relaxed opacity-85">숙달도가 낮은 음소가 계속 출제돼요. 단어 문제와 문맥 문제가 번갈아 나오고, 원할 때 멈출 수 있어요.</p>
+            <button type="button" onClick={() => navigate('/learn/word?endless=1')}
               className="inline-flex items-center rounded-[13px] border-2 border-b-4 border-[#cbd2fa] bg-white px-[30px] py-[14px] text-[16px] font-bold text-[#3730a3] transition active:translate-y-[1px] active:border-b-2">
               시작하기 →
             </button>
