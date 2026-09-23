@@ -24,7 +24,7 @@ const WebcamMouthCheck = lazy(() => import('../components/WebcamMouthCheck'))
  * /learn/viseme 는 독화 레슨 공통 템플릿(핸드오프 §4-03 — 91:12 · 94:98 · 94:140 · 93:12, 모바일 235:34 · 235:71)
  * 으로 인지퀴즈를 바로 연다. 예전 상단 헤더·학습/퀴즈 탭은 Figma에 없어 뺐다.
  * 학습 자료(LearnPanel: 10그룹·웹캠·성도 실험실·동구형이음)는 Figma 프레임이 없어 지우지 않고
- * /learn/viseme?tab=learn (또는 ?v=그룹번호)로만 연다 — 어디에 연결할지는 사용자 결정 대기.
+ * /learn/viseme?tab=learn (또는 ?v=그룹번호)로 연다 — 연습 탭의 '입모양 교실' 카드가 이리로 온다.
  *
  * 퀴즈는 LipSyncPlayer3D를 쓰지 않는다 — 그 컴포넌트는 하단에 'Viseme N'을 노출해
  * 정답이 새기 때문. 대신 AvatarVRM을 직접 써서 오버레이 없이 입모양만 보여준다.
