@@ -1489,6 +1489,18 @@ async def review_due(current_user=Depends(get_current_user), db: AsyncSession = 
     return {"count": len(out), "items": out}
 
 
+@app.delete("/api/review/item")
+async def review_item_delete(kind: str, ref: str, current_user=Depends(get_current_user),
+                             db: AsyncSession = Depends(get_db)):
+    """복습 예정 항목 하나를 목록에서 뺀다(복습 탭 선택 삭제). 학습 기록(시행·진행도)은 그대로 둔다."""
+    from database import ReviewItem
+    from sqlalchemy import delete as _delete
+    res = await db.execute(_delete(ReviewItem).where(
+        ReviewItem.user_id == current_user.id, ReviewItem.kind == kind, ReviewItem.ref == ref))
+    await db.commit()
+    return {"deleted": res.rowcount or 0}
+
+
 class ReviewAnswer(BaseModel):
     kind: str
     ref: str

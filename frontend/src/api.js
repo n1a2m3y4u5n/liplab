@@ -209,6 +209,7 @@ export const evalAPI = {
 
 export const reviewAPI = {
   getDue: async () => (await api.get('/review/due')).data,
+  removeDue: async (kind, ref) => (await api.delete('/review/item', { params: { kind, ref } })).data,
   answer: async (kind, ref, correct) => (await api.post('/review/answer', { kind, ref, correct })).data,
 }
 

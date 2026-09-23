@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import { accountAPI, authAPI } from '../api'
 import useStore from '../store/useStore'
 
@@ -15,6 +16,11 @@ const OPTS = [
   { key: 'reduce', cls: 'a11y-reduce-motion', label: '모션 줄이기', desc: '애니메이션·전환 최소화' },
 ]
 const LS_KEY = 'liplab.a11y'
+// 레슨 화면(하단 고정 버튼 바)과 학습 경로의 모바일 시트에서는 떠 있는 버튼이 버튼·시트를 가려
+// 모바일에서는 숨긴다(데스크톱은 왼쪽 아래 빈자리라 그대로). 설정은 저장돼 있어 레슨에도 그대로 적용된다.
+const LESSON_PATHS = ['/practice', '/conversation', '/learn/viseme', '/learn/word', '/learn/placement',
+  '/learn/scenario', '/learn/speaking', '/learn/closure', '/learn/path', '/review/today', '/review/speaking/session']
+const isLesson = (path) => LESSON_PATHS.some((p) => path === p || path.startsWith(p + '/'))
 
 function load() {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}') } catch { return {} }
@@ -29,6 +35,8 @@ export default function A11ySettings() {
   const [state, setState] = useState(load)
   const [isDemo, setIsDemo] = useState(true)  // 확인 전엔 안전하게 데모로 간주(내데이터 숨김)
   const token = useStore((s) => s.token)
+  const { pathname } = useLocation()
+  const hideMobile = isLesson(pathname)
 
   // 공용 데모 계정이면 개인정보 열람·삭제를 숨긴다(내려받기=방문자간 데이터 노출, 삭제=항상 403).
   // 로그인 전(약관·개인정보 처리방침 공개 페이지)에는 확인할 계정이 없으므로 /auth/me를 부르지 않는다.
@@ -73,10 +81,11 @@ export default function A11ySettings() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label="접근성 설정 열기"
-        className="fixed bottom-[calc(var(--tabbar-h)+16px+env(safe-area-inset-bottom))] left-4 z-40 grid h-11 w-11 place-items-center rounded-full bg-slate-900 text-white shadow-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 lg:bottom-4"
+        className={`fixed bottom-[calc(var(--tabbar-h)+16px+env(safe-area-inset-bottom))] left-4 z-40 h-11 w-11 place-items-center rounded-full bg-slate-900 text-white shadow-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 lg:bottom-4 lg:grid ${hideMobile ? 'hidden' : 'grid'}`}
         title="접근성 설정"
       >
-        <span aria-hidden className="text-lg">♿</span>
+        {/* 글자·화면 표시 설정 — 이모지 대신 글자 표시 */}
+        <span aria-hidden className="text-[15px] font-bold tracking-tight">Aa</span>
       </button>
       {open && (
         <div role="dialog" aria-label="접근성 설정"

@@ -160,7 +160,7 @@ export default function Login() {
             {signup && (
               <label className="flex flex-col gap-1.5 lg:gap-[7px]">
                 <span className={LABEL}>사용자명</span>
-                <input value={username} onChange={(e) => setUsername(e.target.value)} maxLength={50} className={INPUT} placeholder="2~50자로 입력해주세요" />
+                <input value={username} onChange={(e) => setUsername(e.target.value)} minLength={3} maxLength={50} className={INPUT} placeholder="3~50자로 입력해주세요" />
               </label>
             )}
 
