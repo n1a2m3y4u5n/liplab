@@ -1,0 +1,5393 @@
+{
+ "meta": {
+  "kind": "c4-data-derived",
+  "sim_source": "AI Hub 538 10화자 300클립, wav2vec2 강제정렬 음절 구간 + MediaPipe 입 주변 27차원(화자별 z)",
+  "sim_path": "backend/data/c_jamo_similarity.json",
+  "bootstrap": 1000,
+  "seed": 20260924,
+  "note": "내부용. AI Hub 데이터 유래라 공개 자원에 싣지 않는다. 종성은 데이터 공간에 없어 빠졌다."
+ },
+ "jamo_confusability": {
+  "ㄹ": 1.0,
+  "ㅔ": 1.0,
+  "ㄱ": 0.997,
+  "ㄲ": 0.961,
+  "ㅈ": 0.957,
+  "ㅌ": 0.942,
+  "ㄸ": 0.93,
+  "ㅐ": 0.93,
+  "ㅙ": 0.928,
+  "ㄴ": 0.921,
+  "ㅊ": 0.916,
+  "ㅅ": 0.912,
+  "ㅝ": 0.909,
+  "ㅓ": 0.896,
+  "ㄷ": 0.866,
+  "ㅟ": 0.802,
+  "ㅎ": 0.793,
+  "ㅕ": 0.77,
+  "ㅖ": 0.759,
+  "ㅋ": 0.752,
+  "ㅚ": 0.735,
+  "ㅏ": 0.732,
+  "ㅛ": 0.714,
+  "ㅡ": 0.651,
+  "ㅢ": 0.57,
+  "ㅣ": 0.57,
+  "ㅂ": 0.547,
+  "ㅁ": 0.545,
+  "ㅍ": 0.249,
+  "ㅜ": 0.221,
+  "ㅘ": 0.101,
+  "ㅑ": 0.091,
+  "ㅃ": 0.0,
+  "ㅗ": 0.0
+ },
+ "validation": {
+  "word": {
+   "vs_rule_difficulty": {
+    "rho": 0.248,
+    "ci95": [
+     0.17,
+     0.325
+    ],
+    "n": 528
+   },
+   "vs_homophene_ratio": {
+    "rho": -0.028,
+    "ci95": [
+     -0.122,
+     0.059
+    ],
+    "n": 528
+   },
+   "vs_invisibility": {
+    "rho": 0.449,
+    "ci95": [
+     0.381,
+     0.516
+    ],
+    "n": 528
+   },
+   "jamo_coverage": 0.996
+  },
+  "sentence": {
+   "vs_rule_difficulty": {
+    "rho": 0.069,
+    "ci95": [
+     -0.073,
+     0.219
+    ],
+    "n": 186
+   }
+  },
+  "pairs": {
+   "n_candidates": 418,
+   "rule_same_looking_share": 0.6,
+   "auc_data_similarity_for_rule_same_looking": 0.983,
+   "top10pct_rule_agreement": 1.0,
+   "by_slot": {
+    "onset": {
+     "n": 350,
+     "auc": 0.989
+    },
+    "vowel": {
+     "n": 68,
+     "auc": 0.905
+    }
+   },
+   "onset_strict_within_inside": {
+    "n": 177,
+    "auc": 0.789
+   }
+  },
+  "jamo_same_viseme_auc": {
+   "consonant": {
+    "rule_group": 0.991,
+    "strict_viseme": 0.762,
+    "strict_within_inside": 0.678,
+    "n_inside_pairs": 66
+   },
+   "vowel": {
+    "rule_group": 0.783,
+    "strict_viseme": 0.783
+   }
+  }
+ },
+ "top_data_pairs": [
+  {
+   "a": "기자",
+   "b": "기타",
+   "slot": "onset",
+   "ja": "ㅈ",
+   "jb": "ㅌ",
+   "data_similarity": 0.9472,
+   "rule_same_looking": true
+  },
+  {
+   "a": "가치",
+   "b": "까치",
+   "slot": "onset",
+   "ja": "ㄱ",
+   "jb": "ㄲ",
+   "data_similarity": 0.9459,
+   "rule_same_looking": true
+  },
+  {
+   "a": "강",
+   "b": "깡",
+   "slot": "onset",
+   "ja": "ㄱ",
+   "jb": "ㄲ",
+   "data_similarity": 0.9459,
+   "rule_same_looking": true
+  },
+  {
+   "a": "개",
+   "b": "깨",
+   "slot": "onset",
+   "ja": "ㄱ",
+   "jb": "ㄲ",
+   "data_similarity": 0.9459,
+   "rule_same_looking": true
+  },
+  {
+   "a": "검",
+   "b": "껌",
+   "slot": "onset",
+   "ja": "ㄱ",
+   "jb": "ㄲ",
+   "data_similarity": 0.9459,
+   "rule_same_looking": true
+  },
+  {
+   "a": "도끼",
+   "b": "도기",
+   "slot": "onset",
+   "ja": "ㄲ",
+   "jb": "ㄱ",
+   "data_similarity": 0.9459,
+   "rule_same_looking": true
+  },
+  {
+   "a": "토끼",
+   "b": "토기",
+   "slot": "onset",
+   "ja": "ㄲ",
+   "jb": "ㄱ",
+   "data_similarity": 0.9459,
+   "rule_same_looking": true
+  },
+  {
+   "a": "기자",
+   "b": "기사",
+   "slot": "onset",
+   "ja": "ㅈ",
+   "jb": "ㅅ",
+   "data_similarity": 0.9439,
+   "rule_same_looking": true
+  },
+  {
+   "a": "의자",
+   "b": "의사",
+   "slot": "onset",
+   "ja": "ㅈ",
+   "jb": "ㅅ",
+   "data_similarity": 0.9439,
+   "rule_same_looking": true
+  },
+  {
+   "a": "남",
+   "b": "땀",
+   "slot": "onset",
+   "ja": "ㄴ",
+   "jb": "ㄸ",
+   "data_similarity": 0.9376,
+   "rule_same_looking": true
+  },
+  {
+   "a": "딸",
+   "b": "날",
+   "slot": "onset",
+   "ja": "ㄸ",
+   "jb": "ㄴ",
+   "data_similarity": 0.9376,
+   "rule_same_looking": true
+  },
+  {
+   "a": "땀",
+   "b": "탐",
+   "slot": "onset",
+   "ja": "ㄸ",
+   "jb": "ㅌ",
+   "data_similarity": 0.9327,
+   "rule_same_looking": true
+  },
+  {
+   "a": "떡",
+   "b": "턱",
+   "slot": "onset",
+   "ja": "ㄸ",
+   "jb": "ㅌ",
+   "data_similarity": 0.9327,
+   "rule_same_looking": true
+  },
+  {
+   "a": "탈",
+   "b": "딸",
+   "slot": "onset",
+   "ja": "ㅌ",
+   "jb": "ㄸ",
+   "data_similarity": 0.9327,
+   "rule_same_looking": true
+  },
+  {
+   "a": "기차",
+   "b": "기타",
+   "slot": "onset",
+   "ja": "ㅊ",
+   "jb": "ㅌ",
+   "data_similarity": 0.927,
+   "rule_same_looking": true
+  },
+  {
+   "a": "가지",
+   "b": "가치",
+   "slot": "onset",
+   "ja": "ㅈ",
+   "jb": "ㅊ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "기차",
+   "b": "기자",
+   "slot": "onset",
+   "ja": "ㅊ",
+   "jb": "ㅈ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "문제",
+   "b": "문체",
+   "slot": "onset",
+   "ja": "ㅈ",
+   "jb": "ㅊ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "방치",
+   "b": "방지",
+   "slot": "onset",
+   "ja": "ㅊ",
+   "jb": "ㅈ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "상추",
+   "b": "상주",
+   "slot": "onset",
+   "ja": "ㅊ",
+   "jb": "ㅈ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "자",
+   "b": "차",
+   "slot": "onset",
+   "ja": "ㅈ",
+   "jb": "ㅊ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "죽",
+   "b": "축",
+   "slot": "onset",
+   "ja": "ㅈ",
+   "jb": "ㅊ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "짐",
+   "b": "침",
+   "slot": "onset",
+   "ja": "ㅈ",
+   "jb": "ㅊ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "집",
+   "b": "칩",
+   "slot": "onset",
+   "ja": "ㅈ",
+   "jb": "ㅊ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "창고",
+   "b": "장고",
+   "slot": "onset",
+   "ja": "ㅊ",
+   "jb": "ㅈ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "창문",
+   "b": "장문",
+   "slot": "onset",
+   "ja": "ㅊ",
+   "jb": "ㅈ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "파지",
+   "b": "파치",
+   "slot": "onset",
+   "ja": "ㅈ",
+   "jb": "ㅊ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "포자",
+   "b": "포차",
+   "slot": "onset",
+   "ja": "ㅈ",
+   "jb": "ㅊ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "형제",
+   "b": "형체",
+   "slot": "onset",
+   "ja": "ㅈ",
+   "jb": "ㅊ",
+   "data_similarity": 0.9235,
+   "rule_same_looking": true
+  },
+  {
+   "a": "남",
+   "b": "탐",
+   "slot": "onset",
+   "ja": "ㄴ",
+   "jb": "ㅌ",
+   "data_similarity": 0.9208,
+   "rule_same_looking": true
+  },
+  {
+   "a": "납",
+   "b": "탑",
+   "slot": "onset",
+   "ja": "ㄴ",
+   "jb": "ㅌ",
+   "data_similarity": 0.9208,
+   "rule_same_looking": true
+  },
+  {
+   "a": "논",
+   "b": "톤",
+   "slot": "onset",
+   "ja": "ㄴ",
+   "jb": "ㅌ",
+   "data_similarity": 0.9208,
+   "rule_same_looking": true
+  },
+  {
+   "a": "놋",
+   "b": "톳",
+   "slot": "onset",
+   "ja": "ㄴ",
+   "jb": "ㅌ",
+   "data_similarity": 0.9208,
+   "rule_same_looking": true
+  },
+  {
+   "a": "탈",
+   "b": "날",
+   "slot": "onset",
+   "ja": "ㅌ",
+   "jb": "ㄴ",
+   "data_similarity": 0.9208,
+   "rule_same_looking": true
+  },
+  {
+   "a": "탓",
+   "b": "낫",
+   "slot": "onset",
+   "ja": "ㅌ",
+   "jb": "ㄴ",
+   "data_similarity": 0.9208,
+   "rule_same_looking": true
+  },
+  {
+   "a": "토",
+   "b": "노",
+   "slot": "onset",
+   "ja": "ㅌ",
+   "jb": "ㄴ",
+   "data_similarity": 0.9208,
+   "rule_same_looking": true
+  },
+  {
+   "a": "토기",
+   "b": "노기",
+   "slot": "onset",
+   "ja": "ㅌ",
+   "jb": "ㄴ",
+   "data_similarity": 0.9208,
+   "rule_same_looking": true
+  },
+  {
+   "a": "남",
+   "b": "담",
+   "slot": "onset",
+   "ja": "ㄴ",
+   "jb": "ㄷ",
+   "data_similarity": 0.9176,
+   "rule_same_looking": true
+  },
+  {
+   "a": "납",
+   "b": "답",
+   "slot": "onset",
+   "ja": "ㄴ",
+   "jb": "ㄷ",
+   "data_similarity": 0.9176,
+   "rule_same_looking": true
+  },
+  {
+   "a": "노",
+   "b": "도",
+   "slot": "onset",
+   "ja": "ㄴ",
+   "jb": "ㄷ",
+   "data_similarity": 0.9176,
+   "rule_same_looking": true
+  }
+ ],
+ "data_only_lookalikes": [
+  {
+   "a": "배",
+   "b": "비",
+   "ja": "ㅐ",
+   "jb": "ㅣ",
+   "data_similarity": 0.8251
+  },
+  {
+   "a": "패",
+   "b": "피",
+   "ja": "ㅐ",
+   "jb": "ㅣ",
+   "data_similarity": 0.8251
+  },
+  {
+   "a": "신발",
+   "b": "선발",
+   "ja": "ㅣ",
+   "jb": "ㅓ",
+   "data_similarity": 0.7093
+  },
+  {
+   "a": "반",
+   "b": "빈",
+   "ja": "ㅏ",
+   "jb": "ㅣ",
+   "data_similarity": 0.7023
+  },
+  {
+   "a": "비",
+   "b": "바",
+   "ja": "ㅣ",
+   "jb": "ㅏ",
+   "data_similarity": 0.7023
+  },
+  {
+   "a": "판",
+   "b": "핀",
+   "ja": "ㅏ",
+   "jb": "ㅣ",
+   "data_similarity": 0.7023
+  },
+  {
+   "a": "피",
+   "b": "파",
+   "ja": "ㅣ",
+   "jb": "ㅏ",
+   "data_similarity": 0.7023
+  },
+  {
+   "a": "귀",
+   "b": "개",
+   "ja": "ㅟ",
+   "jb": "ㅐ",
+   "data_similarity": 0.6553
+  },
+  {
+   "a": "단",
+   "b": "만",
+   "ja": "ㄷ",
+   "jb": "ㅁ",
+   "data_similarity": 0.6253
+  },
+  {
+   "a": "달",
+   "b": "말",
+   "ja": "ㄷ",
+   "jb": "ㅁ",
+   "data_similarity": 0.6253
+  },
+  {
+   "a": "맘",
+   "b": "담",
+   "ja": "ㅁ",
+   "jb": "ㄷ",
+   "data_similarity": 0.6253
+  },
+  {
+   "a": "망",
+   "b": "깡",
+   "ja": "ㅁ",
+   "jb": "ㄲ",
+   "data_similarity": 0.5989
+  },
+  {
+   "a": "매",
+   "b": "깨",
+   "ja": "ㅁ",
+   "jb": "ㄲ",
+   "data_similarity": 0.5989
+  },
+  {
+   "a": "사물",
+   "b": "사멸",
+   "ja": "ㅜ",
+   "jb": "ㅕ",
+   "data_similarity": 0.5731
+  },
+  {
+   "a": "달",
+   "b": "발",
+   "ja": "ㄷ",
+   "jb": "ㅂ",
+   "data_similarity": 0.5687
+  },
+  {
+   "a": "돈",
+   "b": "본",
+   "ja": "ㄷ",
+   "jb": "ㅂ",
+   "data_similarity": 0.5687
+  },
+  {
+   "a": "돌",
+   "b": "볼",
+   "ja": "ㄷ",
+   "jb": "ㅂ",
+   "data_similarity": 0.5687
+  },
+  {
+   "a": "반",
+   "b": "단",
+   "ja": "ㅂ",
+   "jb": "ㄷ",
+   "data_similarity": 0.5687
+  },
+  {
+   "a": "밤",
+   "b": "담",
+   "ja": "ㅂ",
+   "jb": "ㄷ",
+   "data_similarity": 0.5687
+  },
+  {
+   "a": "밥",
+   "b": "답",
+   "ja": "ㅂ",
+   "jb": "ㄷ",
+   "data_similarity": 0.5687
+  }
+ ],
+ "rule_lookalikes_data_sees_apart": [
+  {
+   "a": "빵",
+   "b": "망",
+   "ja": "ㅃ",
+   "jb": "ㅁ",
+   "data_similarity": 0.4726
+  },
+  {
+   "a": "물",
+   "b": "뿔",
+   "ja": "ㅁ",
+   "jb": "ㅃ",
+   "data_similarity": 0.4726
+  },
+  {
+   "a": "빵",
+   "b": "방",
+   "ja": "ㅃ",
+   "jb": "ㅂ",
+   "data_similarity": 0.5259
+  },
+  {
+   "a": "빨간",
+   "b": "발간",
+   "ja": "ㅃ",
+   "jb": "ㅂ",
+   "data_similarity": 0.5259
+  },
+  {
+   "a": "불",
+   "b": "뿔",
+   "ja": "ㅂ",
+   "jb": "ㅃ",
+   "data_similarity": 0.5259
+  },
+  {
+   "a": "순",
+   "b": "손",
+   "ja": "ㅜ",
+   "jb": "ㅗ",
+   "data_similarity": 0.609
+  },
+  {
+   "a": "솔",
+   "b": "술",
+   "ja": "ㅗ",
+   "jb": "ㅜ",
+   "data_similarity": 0.609
+  },
+  {
+   "a": "불",
+   "b": "볼",
+   "ja": "ㅜ",
+   "jb": "ㅗ",
+   "data_similarity": 0.609
+  },
+  {
+   "a": "분",
+   "b": "본",
+   "ja": "ㅜ",
+   "jb": "ㅗ",
+   "data_similarity": 0.609
+  },
+  {
+   "a": "눈",
+   "b": "논",
+   "ja": "ㅜ",
+   "jb": "ㅗ",
+   "data_similarity": 0.609
+  },
+  {
+   "a": "국",
+   "b": "곡",
+   "ja": "ㅜ",
+   "jb": "ㅗ",
+   "data_similarity": 0.609
+  },
+  {
+   "a": "공부",
+   "b": "공보",
+   "ja": "ㅜ",
+   "jb": "ㅗ",
+   "data_similarity": 0.609
+  },
+  {
+   "a": "공모",
+   "b": "공무",
+   "ja": "ㅗ",
+   "jb": "ㅜ",
+   "data_similarity": 0.609
+  },
+  {
+   "a": "뿔",
+   "b": "풀",
+   "ja": "ㅃ",
+   "jb": "ㅍ",
+   "data_similarity": 0.6456
+  },
+  {
+   "a": "호미",
+   "b": "호피",
+   "ja": "ㅁ",
+   "jb": "ㅍ",
+   "data_similarity": 0.6787
+  },
+  {
+   "a": "풋",
+   "b": "뭇",
+   "ja": "ㅍ",
+   "jb": "ㅁ",
+   "data_similarity": 0.6787
+  },
+  {
+   "a": "판",
+   "b": "만",
+   "ja": "ㅍ",
+   "jb": "ㅁ",
+   "data_similarity": 0.6787
+  },
+  {
+   "a": "파",
+   "b": "마",
+   "ja": "ㅍ",
+   "jb": "ㅁ",
+   "data_similarity": 0.6787
+  },
+  {
+   "a": "양말",
+   "b": "양팔",
+   "ja": "ㅁ",
+   "jb": "ㅍ",
+   "data_similarity": 0.6787
+  },
+  {
+   "a": "물",
+   "b": "풀",
+   "ja": "ㅁ",
+   "jb": "ㅍ",
+   "data_similarity": 0.6787
+  }
+ ],
+ "words": [
+  {
+   "word": "귤",
+   "data": 0.997,
+   "rule": 0.633,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "개",
+   "data": 0.964,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "설렘",
+   "data": 0.952,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "겁",
+   "data": 0.947,
+   "rule": 0.67,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "검",
+   "data": 0.947,
+   "rule": 0.67,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "깨",
+   "data": 0.946,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "어깨",
+   "data": 0.929,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "껌",
+   "data": 0.928,
+   "rule": 0.67,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "책",
+   "data": 0.923,
+   "rule": 0.633,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "턱",
+   "data": 0.919,
+   "rule": 0.876,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.833
+  },
+  {
+   "word": "전철",
+   "data": 0.916,
+   "rule": 0.716,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.833
+  },
+  {
+   "word": "서점",
+   "data": 0.915,
+   "rule": 0.6,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "떡",
+   "data": 0.913,
+   "rule": 0.876,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.833
+  },
+  {
+   "word": "선생",
+   "data": 0.913,
+   "rule": 0.675,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.75
+  },
+  {
+   "word": "자전거",
+   "data": 0.906,
+   "rule": 0.657,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.714
+  },
+  {
+   "word": "귀",
+   "data": 0.899,
+   "rule": 0.675,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.75
+  },
+  {
+   "word": "안개",
+   "data": 0.886,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "젓가락",
+   "data": 0.886,
+   "rule": 0.644,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.688
+  },
+  {
+   "word": "서랍",
+   "data": 0.885,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "덕",
+   "data": 0.881,
+   "rule": 0.876,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.833
+  },
+  {
+   "word": "형제",
+   "data": 0.88,
+   "rule": 0.63,
+   "homophene_ratio": 0.8,
+   "invisibility": 0.7
+  },
+  {
+   "word": "책상",
+   "data": 0.873,
+   "rule": 0.633,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "참새",
+   "data": 0.873,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "트럭",
+   "data": 0.872,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.8
+  },
+  {
+   "word": "계란",
+   "data": 0.872,
+   "rule": 0.68,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "형체",
+   "data": 0.87,
+   "rule": 0.63,
+   "homophene_ratio": 0.8,
+   "invisibility": 0.7
+  },
+  {
+   "word": "베개",
+   "data": 0.869,
+   "rule": 0.425,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "강",
+   "data": 0.865,
+   "rule": 0.714,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "각",
+   "data": 0.865,
+   "rule": 0.714,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "간",
+   "data": 0.865,
+   "rule": 0.753,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "갓",
+   "data": 0.865,
+   "rule": 0.753,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "세탁기",
+   "data": 0.859,
+   "rule": 0.585,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.571
+  },
+  {
+   "word": "장갑",
+   "data": 0.855,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "감자",
+   "data": 0.855,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "자라",
+   "data": 0.855,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "경찰",
+   "data": 0.854,
+   "rule": 0.675,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.75
+  },
+  {
+   "word": "계산",
+   "data": 0.85,
+   "rule": 0.68,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "다람쥐",
+   "data": 0.848,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "깡",
+   "data": 0.847,
+   "rule": 0.714,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "자",
+   "data": 0.845,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "서리",
+   "data": 0.845,
+   "rule": 0.613,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "가위",
+   "data": 0.844,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "사랑",
+   "data": 0.844,
+   "rule": 0.76,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "번개",
+   "data": 0.843,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "삼겹살",
+   "data": 0.842,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "햇살",
+   "data": 0.842,
+   "rule": 0.583,
+   "homophene_ratio": 0.833,
+   "invisibility": 0.667
+  },
+  {
+   "word": "학생",
+   "data": 0.842,
+   "rule": 0.583,
+   "homophene_ratio": 0.833,
+   "invisibility": 0.667
+  },
+  {
+   "word": "타자",
+   "data": 0.841,
+   "rule": 0.63,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "교사",
+   "data": 0.839,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "택시",
+   "data": 0.839,
+   "rule": 0.64,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "계단",
+   "data": 0.839,
+   "rule": 0.68,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "기러기",
+   "data": 0.838,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "탈",
+   "data": 0.837,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "탄",
+   "data": 0.837,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "탓",
+   "data": 0.837,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "탑",
+   "data": 0.837,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "탐",
+   "data": 0.837,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "찻잔",
+   "data": 0.834,
+   "rule": 0.633,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "사자",
+   "data": 0.833,
+   "rule": 0.63,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "연어",
+   "data": 0.833,
+   "rule": 0.633,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "딸",
+   "data": 0.831,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "색시",
+   "data": 0.831,
+   "rule": 0.64,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "땀",
+   "data": 0.831,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "돼지",
+   "data": 0.83,
+   "rule": 0.613,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "사탕",
+   "data": 0.83,
+   "rule": 0.76,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "낫",
+   "data": 0.827,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "날",
+   "data": 0.827,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "납",
+   "data": 0.827,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "남",
+   "data": 0.827,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "그릇",
+   "data": 0.825,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.8
+  },
+  {
+   "word": "가늠",
+   "data": 0.825,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "차",
+   "data": 0.824,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "컵",
+   "data": 0.824,
+   "rule": 0.67,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "가슴",
+   "data": 0.823,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "된장",
+   "data": 0.823,
+   "rule": 0.675,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.75
+  },
+  {
+   "word": "상근",
+   "data": 0.823,
+   "rule": 0.715,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.75
+  },
+  {
+   "word": "살",
+   "data": 0.822,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "산",
+   "data": 0.822,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "사상",
+   "data": 0.822,
+   "rule": 0.76,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "삽",
+   "data": 0.822,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "삼",
+   "data": 0.822,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "침대",
+   "data": 0.821,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "타당",
+   "data": 0.818,
+   "rule": 0.76,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "허리",
+   "data": 0.815,
+   "rule": 0.537,
+   "homophene_ratio": 0.75,
+   "invisibility": 0.625
+  },
+  {
+   "word": "가지",
+   "data": 0.814,
+   "rule": 0.63,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "기자",
+   "data": 0.814,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "셔츠",
+   "data": 0.812,
+   "rule": 0.675,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.75
+  },
+  {
+   "word": "당근",
+   "data": 0.811,
+   "rule": 0.715,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.75
+  },
+  {
+   "word": "지하철",
+   "data": 0.811,
+   "rule": 0.579,
+   "homophene_ratio": 0.857,
+   "invisibility": 0.643
+  },
+  {
+   "word": "사당",
+   "data": 0.81,
+   "rule": 0.76,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "기타",
+   "data": 0.81,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "학교",
+   "data": 0.809,
+   "rule": 0.58,
+   "homophene_ratio": 0.8,
+   "invisibility": 0.6
+  },
+  {
+   "word": "낙엽",
+   "data": 0.808,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "딸기",
+   "data": 0.807,
+   "rule": 0.6,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "열쇠",
+   "data": 0.806,
+   "rule": 0.675,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.75
+  },
+  {
+   "word": "나리",
+   "data": 0.806,
+   "rule": 0.63,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "그림",
+   "data": 0.804,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "기차",
+   "data": 0.804,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "가치",
+   "data": 0.804,
+   "rule": 0.63,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "산길",
+   "data": 0.803,
+   "rule": 0.633,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "기사",
+   "data": 0.803,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "사리",
+   "data": 0.803,
+   "rule": 0.63,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "타짜",
+   "data": 0.802,
+   "rule": 0.63,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "흰색",
+   "data": 0.801,
+   "rule": 0.625,
+   "homophene_ratio": 0.833,
+   "invisibility": 0.75
+  },
+  {
+   "word": "달",
+   "data": 0.799,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "닭",
+   "data": 0.799,
+   "rule": 0.633,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "지렁이",
+   "data": 0.799,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "단",
+   "data": 0.799,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "답",
+   "data": 0.799,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "담",
+   "data": 0.799,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "강아지",
+   "data": 0.798,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "교실",
+   "data": 0.798,
+   "rule": 0.64,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "교신",
+   "data": 0.798,
+   "rule": 0.64,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "언니",
+   "data": 0.796,
+   "rule": 0.613,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "까치",
+   "data": 0.795,
+   "rule": 0.63,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "참외",
+   "data": 0.794,
+   "rule": 0.487,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.375
+  },
+  {
+   "word": "시장",
+   "data": 0.793,
+   "rule": 0.64,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "시작",
+   "data": 0.793,
+   "rule": 0.64,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "시험",
+   "data": 0.793,
+   "rule": 0.49,
+   "homophene_ratio": 0.8,
+   "invisibility": 0.5
+  },
+  {
+   "word": "냉면",
+   "data": 0.792,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "다리",
+   "data": 0.792,
+   "rule": 0.63,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "주전자",
+   "data": 0.787,
+   "rule": 0.621,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.643
+  },
+  {
+   "word": "요리사",
+   "data": 0.786,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "개구리",
+   "data": 0.786,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "능",
+   "data": 0.786,
+   "rule": 0.876,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.833
+  },
+  {
+   "word": "기린",
+   "data": 0.784,
+   "rule": 0.6,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "수레",
+   "data": 0.783,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "형",
+   "data": 0.782,
+   "rule": 0.617,
+   "homophene_ratio": 0.667,
+   "invisibility": 0.833
+  },
+  {
+   "word": "혀",
+   "data": 0.782,
+   "rule": 0.525,
+   "homophene_ratio": 0.5,
+   "invisibility": 0.75
+  },
+  {
+   "word": "깁스",
+   "data": 0.782,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "급식",
+   "data": 0.782,
+   "rule": 0.631,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "금식",
+   "data": 0.782,
+   "rule": 0.631,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "배낭",
+   "data": 0.782,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "식상",
+   "data": 0.781,
+   "rule": 0.673,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "배상",
+   "data": 0.78,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "매상",
+   "data": 0.78,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "하늘",
+   "data": 0.774,
+   "rule": 0.59,
+   "homophene_ratio": 0.8,
+   "invisibility": 0.7
+  },
+  {
+   "word": "숙제",
+   "data": 0.772,
+   "rule": 0.6,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "선반",
+   "data": 0.772,
+   "rule": 0.631,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "선발",
+   "data": 0.772,
+   "rule": 0.631,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "담요",
+   "data": 0.771,
+   "rule": 0.545,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "식당",
+   "data": 0.77,
+   "rule": 0.673,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "시금치",
+   "data": 0.769,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "배당",
+   "data": 0.769,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "제비",
+   "data": 0.768,
+   "rule": 0.425,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "너구리",
+   "data": 0.768,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "어머니",
+   "data": 0.766,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "아기",
+   "data": 0.766,
+   "rule": 0.467,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "숟가락",
+   "data": 0.766,
+   "rule": 0.653,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "항아리",
+   "data": 0.765,
+   "rule": 0.5,
+   "homophene_ratio": 0.833,
+   "invisibility": 0.5
+  },
+  {
+   "word": "바나나",
+   "data": 0.764,
+   "rule": 0.467,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "김치",
+   "data": 0.763,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "짐",
+   "data": 0.763,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "집",
+   "data": 0.763,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "짚",
+   "data": 0.763,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "벼락",
+   "data": 0.762,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "라면",
+   "data": 0.762,
+   "rule": 0.71,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "펭귄",
+   "data": 0.762,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "떡국",
+   "data": 0.761,
+   "rule": 0.675,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.75
+  },
+  {
+   "word": "세수",
+   "data": 0.761,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "수세",
+   "data": 0.761,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "파란색",
+   "data": 0.759,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "등",
+   "data": 0.758,
+   "rule": 0.876,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.833
+  },
+  {
+   "word": "수건",
+   "data": 0.757,
+   "rule": 0.65,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.7
+  },
+  {
+   "word": "바가지",
+   "data": 0.756,
+   "rule": 0.467,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "냉장고",
+   "data": 0.756,
+   "rule": 0.613,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "바람",
+   "data": 0.753,
+   "rule": 0.4,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.2
+  },
+  {
+   "word": "의자",
+   "data": 0.753,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "가방",
+   "data": 0.752,
+   "rule": 0.54,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "버스",
+   "data": 0.752,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "가망",
+   "data": 0.752,
+   "rule": 0.54,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "발간",
+   "data": 0.752,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "아들",
+   "data": 0.75,
+   "rule": 0.613,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "노란색",
+   "data": 0.749,
+   "rule": 0.613,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "수저",
+   "data": 0.747,
+   "rule": 0.613,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "할머니",
+   "data": 0.743,
+   "rule": 0.507,
+   "homophene_ratio": 0.857,
+   "invisibility": 0.5
+  },
+  {
+   "word": "크림",
+   "data": 0.743,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "침",
+   "data": 0.743,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "칩",
+   "data": 0.743,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "냄비",
+   "data": 0.742,
+   "rule": 0.4,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.2
+  },
+  {
+   "word": "병원",
+   "data": 0.742,
+   "rule": 0.64,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "칼",
+   "data": 0.742,
+   "rule": 0.753,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "칸",
+   "data": 0.742,
+   "rule": 0.753,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "아버지",
+   "data": 0.74,
+   "rule": 0.45,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.3
+  },
+  {
+   "word": "사면",
+   "data": 0.74,
+   "rule": 0.71,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "사멸",
+   "data": 0.74,
+   "rule": 0.71,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "사변",
+   "data": 0.74,
+   "rule": 0.71,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "사별",
+   "data": 0.74,
+   "rule": 0.71,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "배",
+   "data": 0.739,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "의사",
+   "data": 0.738,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "매",
+   "data": 0.738,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "저고리",
+   "data": 0.737,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "지우개",
+   "data": 0.735,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "비행기",
+   "data": 0.735,
+   "rule": 0.472,
+   "homophene_ratio": 0.857,
+   "invisibility": 0.429
+  },
+  {
+   "word": "쌀",
+   "data": 0.732,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "욕실",
+   "data": 0.732,
+   "rule": 0.6,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "쌈",
+   "data": 0.732,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "밥상",
+   "data": 0.731,
+   "rule": 0.467,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "마상",
+   "data": 0.73,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "손가락",
+   "data": 0.729,
+   "rule": 0.653,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "두더지",
+   "data": 0.729,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "남동생",
+   "data": 0.727,
+   "rule": 0.578,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.556
+  },
+  {
+   "word": "국자",
+   "data": 0.727,
+   "rule": 0.6,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "천둥",
+   "data": 0.725,
+   "rule": 0.675,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.75
+  },
+  {
+   "word": "엄마",
+   "data": 0.724,
+   "rule": 0.362,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.125
+  },
+  {
+   "word": "이틀",
+   "data": 0.721,
+   "rule": 0.653,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "바다",
+   "data": 0.719,
+   "rule": 0.425,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "마당",
+   "data": 0.719,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "빨간색",
+   "data": 0.717,
+   "rule": 0.578,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.556
+  },
+  {
+   "word": "구름",
+   "data": 0.717,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "바늘",
+   "data": 0.713,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "부끄럼",
+   "data": 0.713,
+   "rule": 0.514,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.429
+  },
+  {
+   "word": "마늘",
+   "data": 0.712,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "김밥",
+   "data": 0.712,
+   "rule": 0.384,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.167
+  },
+  {
+   "word": "공책",
+   "data": 0.711,
+   "rule": 0.633,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "이슬",
+   "data": 0.711,
+   "rule": 0.653,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "바퀴",
+   "data": 0.708,
+   "rule": 0.487,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.375
+  },
+  {
+   "word": "램프",
+   "data": 0.708,
+   "rule": 0.45,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.3
+  },
+  {
+   "word": "상주",
+   "data": 0.706,
+   "rule": 0.68,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "거울",
+   "data": 0.705,
+   "rule": 0.613,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "무지개",
+   "data": 0.703,
+   "rule": 0.467,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "바지",
+   "data": 0.702,
+   "rule": 0.505,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "방지",
+   "data": 0.702,
+   "rule": 0.58,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "자동차",
+   "data": 0.701,
+   "rule": 0.585,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.571
+  },
+  {
+   "word": "누나",
+   "data": 0.699,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "발등",
+   "data": 0.699,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "광장",
+   "data": 0.697,
+   "rule": 0.675,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.75
+  },
+  {
+   "word": "여동생",
+   "data": 0.696,
+   "rule": 0.621,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.643
+  },
+  {
+   "word": "상추",
+   "data": 0.695,
+   "rule": 0.68,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "간호사",
+   "data": 0.694,
+   "rule": 0.543,
+   "homophene_ratio": 0.857,
+   "invisibility": 0.571
+  },
+  {
+   "word": "바위",
+   "data": 0.694,
+   "rule": 0.384,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.167
+  },
+  {
+   "word": "당주",
+   "data": 0.694,
+   "rule": 0.68,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "발바닥",
+   "data": 0.693,
+   "rule": 0.487,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.375
+  },
+  {
+   "word": "나비",
+   "data": 0.693,
+   "rule": 0.465,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "치마",
+   "data": 0.691,
+   "rule": 0.425,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "망치",
+   "data": 0.691,
+   "rule": 0.58,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "방치",
+   "data": 0.691,
+   "rule": 0.58,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "신발",
+   "data": 0.69,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "사비",
+   "data": 0.69,
+   "rule": 0.465,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "소나기",
+   "data": 0.689,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "보라색",
+   "data": 0.687,
+   "rule": 0.514,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.429
+  },
+  {
+   "word": "색연필",
+   "data": 0.686,
+   "rule": 0.581,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.562
+  },
+  {
+   "word": "항구",
+   "data": 0.686,
+   "rule": 0.58,
+   "homophene_ratio": 0.8,
+   "invisibility": 0.6
+  },
+  {
+   "word": "사과",
+   "data": 0.685,
+   "rule": 0.653,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "단추",
+   "data": 0.684,
+   "rule": 0.6,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "문제",
+   "data": 0.681,
+   "rule": 0.58,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "도시락",
+   "data": 0.68,
+   "rule": 0.585,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.571
+  },
+  {
+   "word": "눈썹",
+   "data": 0.679,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "파랑",
+   "data": 0.678,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "동생",
+   "data": 0.677,
+   "rule": 0.633,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "두꺼비",
+   "data": 0.677,
+   "rule": 0.508,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.417
+  },
+  {
+   "word": "수업",
+   "data": 0.676,
+   "rule": 0.487,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.375
+  },
+  {
+   "word": "다과",
+   "data": 0.674,
+   "rule": 0.653,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "빗자루",
+   "data": 0.671,
+   "rule": 0.514,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.429
+  },
+  {
+   "word": "장고",
+   "data": 0.671,
+   "rule": 0.64,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "문체",
+   "data": 0.67,
+   "rule": 0.58,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "물체",
+   "data": 0.67,
+   "rule": 0.58,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "도서",
+   "data": 0.668,
+   "rule": 0.613,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "남편",
+   "data": 0.668,
+   "rule": 0.508,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.417
+  },
+  {
+   "word": "놀이터",
+   "data": 0.666,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "바구니",
+   "data": 0.665,
+   "rule": 0.467,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "거북",
+   "data": 0.665,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "노랑",
+   "data": 0.663,
+   "rule": 0.8,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "노란",
+   "data": 0.663,
+   "rule": 0.68,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "금붕어",
+   "data": 0.662,
+   "rule": 0.514,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.429
+  },
+  {
+   "word": "창고",
+   "data": 0.661,
+   "rule": 0.64,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "소란",
+   "data": 0.661,
+   "rule": 0.68,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "화가",
+   "data": 0.656,
+   "rule": 0.537,
+   "homophene_ratio": 0.75,
+   "invisibility": 0.625
+  },
+  {
+   "word": "손수건",
+   "data": 0.656,
+   "rule": 0.644,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.688
+  },
+  {
+   "word": "배추",
+   "data": 0.654,
+   "rule": 0.425,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "태양",
+   "data": 0.654,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "원숭이",
+   "data": 0.653,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "손녀",
+   "data": 0.651,
+   "rule": 0.65,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.7
+  },
+  {
+   "word": "주먹밥",
+   "data": 0.65,
+   "rule": 0.456,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.312
+  },
+  {
+   "word": "도랑",
+   "data": 0.649,
+   "rule": 0.8,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "매미",
+   "data": 0.647,
+   "rule": 0.3,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "소탕",
+   "data": 0.646,
+   "rule": 0.8,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "평원",
+   "data": 0.643,
+   "rule": 0.64,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "마을",
+   "data": 0.643,
+   "rule": 0.487,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.375
+  },
+  {
+   "word": "코끼리",
+   "data": 0.642,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "노상",
+   "data": 0.641,
+   "rule": 0.8,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "고기",
+   "data": 0.641,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "소방차",
+   "data": 0.64,
+   "rule": 0.514,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.429
+  },
+  {
+   "word": "삼촌",
+   "data": 0.64,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "소금",
+   "data": 0.64,
+   "rule": 0.63,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "소급",
+   "data": 0.64,
+   "rule": 0.63,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "밥",
+   "data": 0.639,
+   "rule": 0.46,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "맘",
+   "data": 0.639,
+   "rule": 0.46,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "말",
+   "data": 0.639,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "발",
+   "data": 0.639,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "맛",
+   "data": 0.639,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "반",
+   "data": 0.639,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "밤",
+   "data": 0.639,
+   "rule": 0.46,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "밭",
+   "data": 0.639,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "망",
+   "data": 0.639,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "방",
+   "data": 0.639,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "마",
+   "data": 0.639,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "막",
+   "data": 0.639,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "만",
+   "data": 0.639,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "박",
+   "data": 0.639,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "밖",
+   "data": 0.639,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "바",
+   "data": 0.639,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "소상",
+   "data": 0.639,
+   "rule": 0.8,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "소산",
+   "data": 0.639,
+   "rule": 0.68,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "공원",
+   "data": 0.635,
+   "rule": 0.65,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.7
+  },
+  {
+   "word": "외투",
+   "data": 0.633,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "손바닥",
+   "data": 0.632,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "돌고래",
+   "data": 0.632,
+   "rule": 0.585,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.571
+  },
+  {
+   "word": "공항",
+   "data": 0.631,
+   "rule": 0.623,
+   "homophene_ratio": 0.833,
+   "invisibility": 0.667
+  },
+  {
+   "word": "공학",
+   "data": 0.631,
+   "rule": 0.623,
+   "homophene_ratio": 0.833,
+   "invisibility": 0.667
+  },
+  {
+   "word": "도서관",
+   "data": 0.629,
+   "rule": 0.657,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.714
+  },
+  {
+   "word": "대양",
+   "data": 0.629,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "도금",
+   "data": 0.629,
+   "rule": 0.63,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "토기",
+   "data": 0.627,
+   "rule": 0.75,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "파지",
+   "data": 0.627,
+   "rule": 0.505,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "초록색",
+   "data": 0.626,
+   "rule": 0.613,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "마루",
+   "data": 0.625,
+   "rule": 0.465,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "만루",
+   "data": 0.625,
+   "rule": 0.58,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "국밥",
+   "data": 0.624,
+   "rule": 0.467,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "강물",
+   "data": 0.624,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "노기",
+   "data": 0.622,
+   "rule": 0.75,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "우산",
+   "data": 0.622,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "소기",
+   "data": 0.62,
+   "rule": 0.75,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "호랑이",
+   "data": 0.619,
+   "rule": 0.5,
+   "homophene_ratio": 0.833,
+   "invisibility": 0.5
+  },
+  {
+   "word": "토끼",
+   "data": 0.618,
+   "rule": 0.75,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "칠판",
+   "data": 0.617,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "파치",
+   "data": 0.617,
+   "rule": 0.505,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "슬픔",
+   "data": 0.616,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "두려움",
+   "data": 0.616,
+   "rule": 0.508,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.417
+  },
+  {
+   "word": "이마",
+   "data": 0.616,
+   "rule": 0.3,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "도당",
+   "data": 0.616,
+   "rule": 0.8,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "빨강",
+   "data": 0.615,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "빨간",
+   "data": 0.615,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "장문",
+   "data": 0.614,
+   "rule": 0.67,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "작문",
+   "data": 0.614,
+   "rule": 0.67,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "작물",
+   "data": 0.614,
+   "rule": 0.67,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "투박",
+   "data": 0.611,
+   "rule": 0.54,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "룸",
+   "data": 0.611,
+   "rule": 0.546,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "배꼽",
+   "data": 0.61,
+   "rule": 0.4,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.2
+  },
+  {
+   "word": "국",
+   "data": 0.609,
+   "rule": 0.753,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "도기",
+   "data": 0.608,
+   "rule": 0.75,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "손등",
+   "data": 0.607,
+   "rule": 0.675,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.75
+  },
+  {
+   "word": "나무",
+   "data": 0.605,
+   "rule": 0.545,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "나물",
+   "data": 0.605,
+   "rule": 0.54,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "무릎",
+   "data": 0.604,
+   "rule": 0.45,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.3
+  },
+  {
+   "word": "창문",
+   "data": 0.604,
+   "rule": 0.67,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "수박",
+   "data": 0.603,
+   "rule": 0.54,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "사무",
+   "data": 0.603,
+   "rule": 0.545,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "사물",
+   "data": 0.603,
+   "rule": 0.54,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "사부",
+   "data": 0.603,
+   "rule": 0.545,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "만수",
+   "data": 0.603,
+   "rule": 0.58,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "칫솔",
+   "data": 0.6,
+   "rule": 0.633,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "도끼",
+   "data": 0.599,
+   "rule": 0.75,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "나뭇잎",
+   "data": 0.598,
+   "rule": 0.443,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.286
+  },
+  {
+   "word": "독수리",
+   "data": 0.595,
+   "rule": 0.585,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.571
+  },
+  {
+   "word": "만두",
+   "data": 0.591,
+   "rule": 0.58,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "패",
+   "data": 0.59,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "떡볶이",
+   "data": 0.589,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "죽",
+   "data": 0.589,
+   "rule": 0.673,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "국수",
+   "data": 0.588,
+   "rule": 0.6,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "비빔밥",
+   "data": 0.586,
+   "rule": 0.3,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "약사",
+   "data": 0.578,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "지붕",
+   "data": 0.574,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "눈",
+   "data": 0.571,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "이",
+   "data": 0.57,
+   "rule": 0.3,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "잎",
+   "data": 0.57,
+   "rule": 0.38,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "입",
+   "data": 0.57,
+   "rule": 0.38,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "임",
+   "data": 0.57,
+   "rule": 0.38,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "풍선",
+   "data": 0.57,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "찜",
+   "data": 0.57,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "눈보라",
+   "data": 0.57,
+   "rule": 0.514,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.429
+  },
+  {
+   "word": "망고",
+   "data": 0.569,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "로마",
+   "data": 0.569,
+   "rule": 0.545,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "축",
+   "data": 0.569,
+   "rule": 0.673,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "입술",
+   "data": 0.568,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "행복",
+   "data": 0.568,
+   "rule": 0.5,
+   "homophene_ratio": 0.833,
+   "invisibility": 0.5
+  },
+  {
+   "word": "순",
+   "data": 0.567,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "술",
+   "data": 0.567,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "숲",
+   "data": 0.567,
+   "rule": 0.546,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "숨",
+   "data": 0.567,
+   "rule": 0.546,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "빵집",
+   "data": 0.565,
+   "rule": 0.467,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "염소",
+   "data": 0.561,
+   "rule": 0.487,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.375
+  },
+  {
+   "word": "무서움",
+   "data": 0.559,
+   "rule": 0.425,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "비",
+   "data": 0.558,
+   "rule": 0.34,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "빗",
+   "data": 0.558,
+   "rule": 0.546,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "모자",
+   "data": 0.558,
+   "rule": 0.505,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "빈",
+   "data": 0.558,
+   "rule": 0.546,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "부엉이",
+   "data": 0.558,
+   "rule": 0.45,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.3
+  },
+  {
+   "word": "욕조",
+   "data": 0.557,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "소나무",
+   "data": 0.555,
+   "rule": 0.467,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "어부",
+   "data": 0.555,
+   "rule": 0.384,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.167
+  },
+  {
+   "word": "부엌",
+   "data": 0.555,
+   "rule": 0.487,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.375
+  },
+  {
+   "word": "운동장",
+   "data": 0.555,
+   "rule": 0.613,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.625
+  },
+  {
+   "word": "기쁨",
+   "data": 0.554,
+   "rule": 0.45,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.3
+  },
+  {
+   "word": "소방관",
+   "data": 0.548,
+   "rule": 0.581,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.562
+  },
+  {
+   "word": "밥솥",
+   "data": 0.548,
+   "rule": 0.467,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "벽돌",
+   "data": 0.546,
+   "rule": 0.591,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.583
+  },
+  {
+   "word": "도마",
+   "data": 0.536,
+   "rule": 0.545,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "보트",
+   "data": 0.535,
+   "rule": 0.568,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.375
+  },
+  {
+   "word": "연필",
+   "data": 0.53,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "보스",
+   "data": 0.528,
+   "rule": 0.568,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.375
+  },
+  {
+   "word": "토마토",
+   "data": 0.527,
+   "rule": 0.467,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "오리",
+   "data": 0.523,
+   "rule": 0.507,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "호박",
+   "data": 0.518,
+   "rule": 0.44,
+   "homophene_ratio": 0.8,
+   "invisibility": 0.4
+  },
+  {
+   "word": "보드",
+   "data": 0.516,
+   "rule": 0.568,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.375
+  },
+  {
+   "word": "꽃잎",
+   "data": 0.51,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "목소리",
+   "data": 0.505,
+   "rule": 0.554,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.429
+  },
+  {
+   "word": "우박",
+   "data": 0.5,
+   "rule": 0.425,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "공",
+   "data": 0.498,
+   "rule": 0.753,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "곰",
+   "data": 0.498,
+   "rule": 0.507,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "곡",
+   "data": 0.498,
+   "rule": 0.753,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "곱",
+   "data": 0.498,
+   "rule": 0.507,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "목도리",
+   "data": 0.497,
+   "rule": 0.554,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.429
+  },
+  {
+   "word": "여우",
+   "data": 0.495,
+   "rule": 0.425,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "볶음밥",
+   "data": 0.495,
+   "rule": 0.394,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.188
+  },
+  {
+   "word": "팔",
+   "data": 0.49,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "판",
+   "data": 0.49,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "팥",
+   "data": 0.49,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "팝",
+   "data": 0.49,
+   "rule": 0.46,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "파",
+   "data": 0.49,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "외로움",
+   "data": 0.489,
+   "rule": 0.45,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.3
+  },
+  {
+   "word": "아빠",
+   "data": 0.488,
+   "rule": 0.3,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "포자",
+   "data": 0.484,
+   "rule": 0.505,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "복숭아",
+   "data": 0.482,
+   "rule": 0.514,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.429
+  },
+  {
+   "word": "호수",
+   "data": 0.482,
+   "rule": 0.515,
+   "homophene_ratio": 0.75,
+   "invisibility": 0.5
+  },
+  {
+   "word": "오디",
+   "data": 0.479,
+   "rule": 0.507,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "초록",
+   "data": 0.479,
+   "rule": 0.64,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "호미",
+   "data": 0.477,
+   "rule": 0.39,
+   "homophene_ratio": 0.75,
+   "invisibility": 0.25
+  },
+  {
+   "word": "눈물",
+   "data": 0.477,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "노파",
+   "data": 0.476,
+   "rule": 0.545,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "부추",
+   "data": 0.476,
+   "rule": 0.425,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "부수",
+   "data": 0.475,
+   "rule": 0.585,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "포차",
+   "data": 0.474,
+   "rule": 0.505,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "소파",
+   "data": 0.473,
+   "rule": 0.545,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "톤",
+   "data": 0.471,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "빗물",
+   "data": 0.471,
+   "rule": 0.467,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "토",
+   "data": 0.471,
+   "rule": 0.67,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "톳",
+   "data": 0.471,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "톨",
+   "data": 0.471,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "호두",
+   "data": 0.47,
+   "rule": 0.515,
+   "homophene_ratio": 0.75,
+   "invisibility": 0.5
+  },
+  {
+   "word": "두부",
+   "data": 0.464,
+   "rule": 0.425,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "부두",
+   "data": 0.464,
+   "rule": 0.585,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "손톱",
+   "data": 0.464,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "파도",
+   "data": 0.462,
+   "rule": 0.465,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "논",
+   "data": 0.461,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "놋",
+   "data": 0.461,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "노",
+   "data": 0.461,
+   "rule": 0.67,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "황토",
+   "data": 0.459,
+   "rule": 0.63,
+   "homophene_ratio": 0.8,
+   "invisibility": 0.7
+  },
+  {
+   "word": "반복",
+   "data": 0.457,
+   "rule": 0.546,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "초속",
+   "data": 0.457,
+   "rule": 0.64,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "발목",
+   "data": 0.456,
+   "rule": 0.546,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "양말",
+   "data": 0.456,
+   "rule": 0.54,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "솥",
+   "data": 0.456,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "소",
+   "data": 0.456,
+   "rule": 0.67,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "솔",
+   "data": 0.456,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "반목",
+   "data": 0.456,
+   "rule": 0.546,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "손",
+   "data": 0.456,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "황소",
+   "data": 0.452,
+   "rule": 0.63,
+   "homophene_ratio": 0.8,
+   "invisibility": 0.7
+  },
+  {
+   "word": "이불",
+   "data": 0.446,
+   "rule": 0.465,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "이분",
+   "data": 0.446,
+   "rule": 0.465,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "공부",
+   "data": 0.441,
+   "rule": 0.66,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "공무",
+   "data": 0.441,
+   "rule": 0.66,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "연못",
+   "data": 0.438,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "약국",
+   "data": 0.436,
+   "rule": 0.6,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.6
+  },
+  {
+   "word": "돈",
+   "data": 0.433,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "돌",
+   "data": 0.433,
+   "rule": 0.833,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "도",
+   "data": 0.433,
+   "rule": 0.67,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "물통",
+   "data": 0.427,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "불통",
+   "data": 0.427,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "농부",
+   "data": 0.422,
+   "rule": 0.58,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "분노",
+   "data": 0.422,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "목수",
+   "data": 0.42,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "복수",
+   "data": 0.42,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "화분",
+   "data": 0.416,
+   "rule": 0.49,
+   "homophene_ratio": 0.8,
+   "invisibility": 0.5
+  },
+  {
+   "word": "고양이",
+   "data": 0.414,
+   "rule": 0.5,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "포크",
+   "data": 0.413,
+   "rule": 0.487,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.375
+  },
+  {
+   "word": "피",
+   "data": 0.409,
+   "rule": 0.34,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "동부",
+   "data": 0.409,
+   "rule": 0.58,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "핀",
+   "data": 0.409,
+   "rule": 0.546,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "동무",
+   "data": 0.408,
+   "rule": 0.58,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "호피",
+   "data": 0.403,
+   "rule": 0.39,
+   "homophene_ratio": 0.75,
+   "invisibility": 0.25
+  },
+  {
+   "word": "분홍",
+   "data": 0.39,
+   "rule": 0.5,
+   "homophene_ratio": 0.833,
+   "invisibility": 0.5
+  },
+  {
+   "word": "골목",
+   "data": 0.386,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "공모",
+   "data": 0.386,
+   "rule": 0.66,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "공보",
+   "data": 0.386,
+   "rule": 0.66,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "불",
+   "data": 0.384,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "분",
+   "data": 0.384,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "붓",
+   "data": 0.384,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "물",
+   "data": 0.383,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "무",
+   "data": 0.383,
+   "rule": 0.3,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "문",
+   "data": 0.383,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "뭍",
+   "data": 0.383,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "뭇",
+   "data": 0.383,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "코",
+   "data": 0.376,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "콩",
+   "data": 0.376,
+   "rule": 0.753,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.667
+  },
+  {
+   "word": "이모",
+   "data": 0.372,
+   "rule": 0.3,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "빵",
+   "data": 0.366,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "손목",
+   "data": 0.364,
+   "rule": 0.55,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "양파",
+   "data": 0.357,
+   "rule": 0.425,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "양팔",
+   "data": 0.357,
+   "rule": 0.54,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "보도",
+   "data": 0.353,
+   "rule": 0.585,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "복도",
+   "data": 0.353,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "목도",
+   "data": 0.353,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "풀잎",
+   "data": 0.347,
+   "rule": 0.4,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.2
+  },
+  {
+   "word": "우물",
+   "data": 0.329,
+   "rule": 0.425,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "포로",
+   "data": 0.312,
+   "rule": 0.585,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "폭로",
+   "data": 0.312,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "공포",
+   "data": 0.311,
+   "rule": 0.66,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "폭소",
+   "data": 0.29,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "오이",
+   "data": 0.285,
+   "rule": 0.3,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "포도",
+   "data": 0.279,
+   "rule": 0.585,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.25
+  },
+  {
+   "word": "폭도",
+   "data": 0.279,
+   "rule": 0.7,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.4
+  },
+  {
+   "word": "복",
+   "data": 0.274,
+   "rule": 0.546,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "봄",
+   "data": 0.274,
+   "rule": 0.34,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "볼",
+   "data": 0.274,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "본",
+   "data": 0.274,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "목",
+   "data": 0.273,
+   "rule": 0.546,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "몸",
+   "data": 0.273,
+   "rule": 0.34,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "오빠",
+   "data": 0.244,
+   "rule": 0.3,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "풀",
+   "data": 0.235,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "풋",
+   "data": 0.235,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "푼",
+   "data": 0.235,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "우유",
+   "data": 0.221,
+   "rule": 0.3,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  },
+  {
+   "word": "폭",
+   "data": 0.124,
+   "rule": 0.546,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "뿔",
+   "data": 0.111,
+   "rule": 0.667,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.333
+  },
+  {
+   "word": "양",
+   "data": 0.091,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "약",
+   "data": 0.091,
+   "rule": 0.59,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.5
+  },
+  {
+   "word": "뺨",
+   "data": 0.045,
+   "rule": 0.46,
+   "homophene_ratio": 1.0,
+   "invisibility": 0.0
+  }
+ ],
+ "sentences": [
+  {
+   "text": "사당에 제사 지내러 가자",
+   "data": 0.871,
+   "rule": 0.56
+  },
+  {
+   "text": "이렇게 날 잡아서 어떡해요?",
+   "data": 0.857,
+   "rule": 0.63
+  },
+  {
+   "text": "늦잠 잔 탓에 지각했어.",
+   "data": 0.847,
+   "rule": 0.618
+  },
+  {
+   "text": "탄력이 엄청 세서 멀리 날아갔어.",
+   "data": 0.845,
+   "rule": 0.596
+  },
+  {
+   "text": "첫 번째 칸에 이름 써줘.",
+   "data": 0.837,
+   "rule": 0.576
+  },
+  {
+   "text": "의사가 처방전을 써줬어.",
+   "data": 0.834,
+   "rule": 0.588
+  },
+  {
+   "text": "깊이를 가늠하기 어렵네.",
+   "data": 0.825,
+   "rule": 0.534
+  },
+  {
+   "text": "사당역 근처에서 만나자.",
+   "data": 0.822,
+   "rule": 0.633
+  },
+  {
+   "text": "지하철에서 껌 뱉으면 안 돼.",
+   "data": 0.82,
+   "rule": 0.576
+  },
+  {
+   "text": "어제 시장에서 산 파가 싱싱하더라.",
+   "data": 0.82,
+   "rule": 0.597
+  },
+  {
+   "text": "탈없이 넘어가길 바랐는데.",
+   "data": 0.816,
+   "rule": 0.564
+  },
+  {
+   "text": "그 사람이 내 임인 거 알잖아.",
+   "data": 0.807,
+   "rule": 0.558
+  },
+  {
+   "text": "산에서 메아리가 울렸어.",
+   "data": 0.803,
+   "rule": 0.517
+  },
+  {
+   "text": "밥이 식기 전에 어서 먹어.",
+   "data": 0.802,
+   "rule": 0.536
+  },
+  {
+   "text": "막차가 지나갔어.",
+   "data": 0.802,
+   "rule": 0.514
+  },
+  {
+   "text": "네 탓 이 지경이 됐잖아.",
+   "data": 0.797,
+   "rule": 0.569
+  },
+  {
+   "text": "새벽에 서리가 내려 잎이 하얗게 됐어.",
+   "data": 0.796,
+   "rule": 0.49
+  },
+  {
+   "text": "시험 답 잘 맞혔어?",
+   "data": 0.796,
+   "rule": 0.597
+  },
+  {
+   "text": "그 소설은 사변적 상상력이 넘쳐.",
+   "data": 0.796,
+   "rule": 0.643
+  },
+  {
+   "text": "생선 손질할 때 도마가 미끄러워서 힘들었어.",
+   "data": 0.791,
+   "rule": 0.574
+  },
+  {
+   "text": "배가 부두 에 닿자마자 내렸어.",
+   "data": 0.79,
+   "rule": 0.449
+  },
+  {
+   "text": "새벽에 부두까지 걸어갔어.",
+   "data": 0.789,
+   "rule": 0.497
+  },
+  {
+   "text": "시험 답이 틀렸어.",
+   "data": 0.789,
+   "rule": 0.478
+  },
+  {
+   "text": "요즘 얼굴에 탈이 났어.",
+   "data": 0.787,
+   "rule": 0.569
+  },
+  {
+   "text": "딸가 이번에 장학금을 받았대",
+   "data": 0.787,
+   "rule": 0.539
+  },
+  {
+   "text": "망신창이라 수리비가 더 들었어.",
+   "data": 0.787,
+   "rule": 0.571
+  },
+  {
+   "text": "그 애는 겁도 없이 뛰어들었어.",
+   "data": 0.786,
+   "rule": 0.581
+  },
+  {
+   "text": "어제 시장에서 팔 하나가 골절됐어.",
+   "data": 0.781,
+   "rule": 0.575
+  },
+  {
+   "text": "차를 마셔요",
+   "data": 0.78,
+   "rule": 0.55
+  },
+  {
+   "text": "이 치즈는 갓 만든 것처럼 신선해.",
+   "data": 0.78,
+   "rule": 0.589
+  },
+  {
+   "text": "나무에 새집을 달아줬어.",
+   "data": 0.779,
+   "rule": 0.475
+  },
+  {
+   "text": "가슴이 두근두근 뛰어.",
+   "data": 0.777,
+   "rule": 0.579
+  },
+  {
+   "text": "모자가 바람에 날아가 버렸어.",
+   "data": 0.777,
+   "rule": 0.467
+  },
+  {
+   "text": "밥이 설익어서 배탈 났어.",
+   "data": 0.775,
+   "rule": 0.481
+  },
+  {
+   "text": "작가마다 문체가 다르잖아요.",
+   "data": 0.773,
+   "rule": 0.518
+  },
+  {
+   "text": "대양을 건너는 항해가 두렵다",
+   "data": 0.772,
+   "rule": 0.587
+  },
+  {
+   "text": "반짝이 늘 먼저 자리 잡아요.",
+   "data": 0.771,
+   "rule": 0.595
+  },
+  {
+   "text": "막내 딸한테 용돈 줬어.",
+   "data": 0.771,
+   "rule": 0.558
+  },
+  {
+   "text": "시험 전날 밤새 공부했어.",
+   "data": 0.769,
+   "rule": 0.522
+  },
+  {
+   "text": "논두렁에 개구리가 많네.",
+   "data": 0.768,
+   "rule": 0.578
+  },
+  {
+   "text": "버스가 막 떠났어.",
+   "data": 0.768,
+   "rule": 0.609
+  },
+  {
+   "text": "돌잔치에 떡 빠지면 섭섭하지",
+   "data": 0.766,
+   "rule": 0.613
+  },
+  {
+   "text": "이번 달 안에 꼭 연락해 줘.",
+   "data": 0.766,
+   "rule": 0.626
+  },
+  {
+   "text": "가방에 지퍼가 고장 났어.",
+   "data": 0.764,
+   "rule": 0.525
+  },
+  {
+   "text": "쌀을 씻어서 밥솥에 넣었어.",
+   "data": 0.763,
+   "rule": 0.575
+  },
+  {
+   "text": "닭가슴살 요즘 매일 먹어.",
+   "data": 0.763,
+   "rule": 0.502
+  },
+  {
+   "text": "그 말이 씨가 됐잖아.",
+   "data": 0.762,
+   "rule": 0.55
+  },
+  {
+   "text": "칼로 깎아야 더 잘 깎여.",
+   "data": 0.759,
+   "rule": 0.602
+  },
+  {
+   "text": "포도가 너무 익어서 터질 것 같아.",
+   "data": 0.758,
+   "rule": 0.584
+  },
+  {
+   "text": "탄수가 너무 많아서 세기 힘들어",
+   "data": 0.758,
+   "rule": 0.534
+  },
+  {
+   "text": "그 말이 씨앗처럼 퍼졌어.",
+   "data": 0.757,
+   "rule": 0.559
+  },
+  {
+   "text": "돌멩이로 유리창을 깼어.",
+   "data": 0.757,
+   "rule": 0.551
+  },
+  {
+   "text": "시장마다 물가가 달라요.",
+   "data": 0.756,
+   "rule": 0.518
+  },
+  {
+   "text": "국 끓일 때 소금를 조금만 넣어.",
+   "data": 0.753,
+   "rule": 0.612
+  },
+  {
+   "text": "탄소리가 귀를 막을 만큼 컸어.",
+   "data": 0.752,
+   "rule": 0.584
+  },
+  {
+   "text": "그 살 너무 쪘나봐, 바지가 안 잠겨.",
+   "data": 0.751,
+   "rule": 0.602
+  },
+  {
+   "text": "그 검은 가짜야, 조심해.",
+   "data": 0.751,
+   "rule": 0.637
+  },
+  {
+   "text": "물이 새서 바닥이 다 젖었어.",
+   "data": 0.751,
+   "rule": 0.514
+  },
+  {
+   "text": "토끼가 깡충깡충 뛰어다녀.",
+   "data": 0.751,
+   "rule": 0.592
+  },
+  {
+   "text": "손이 차가워서 주머니에 넣었어.",
+   "data": 0.749,
+   "rule": 0.551
+  },
+  {
+   "text": "닭살이 탱탱해야 맛있어.",
+   "data": 0.747,
+   "rule": 0.565
+  },
+  {
+   "text": "밥을 다 먹으면 디저트 줄게.",
+   "data": 0.746,
+   "rule": 0.546
+  },
+  {
+   "text": "다 네 탓이야, 솔직히 말해.",
+   "data": 0.746,
+   "rule": 0.562
+  },
+  {
+   "text": "저 탑 꼭대기까지 올라가 봤어?",
+   "data": 0.745,
+   "rule": 0.616
+  },
+  {
+   "text": "컵에 커피 리필해 줄게.",
+   "data": 0.745,
+   "rule": 0.482
+  },
+  {
+   "text": "쌀이 떨어져서 죽을 끓였어.",
+   "data": 0.744,
+   "rule": 0.652
+  },
+  {
+   "text": "사부한테 혼날까봐 떨려.",
+   "data": 0.744,
+   "rule": 0.517
+  },
+  {
+   "text": "배가 고파서 집중이 안 돼.",
+   "data": 0.743,
+   "rule": 0.499
+  },
+  {
+   "text": "이건 반대로 해야 해.",
+   "data": 0.742,
+   "rule": 0.498
+  },
+  {
+   "text": "딸이 엄마 닮아서 눈이 크네.",
+   "data": 0.74,
+   "rule": 0.533
+  },
+  {
+   "text": "숲속에서 길을 잃었어.",
+   "data": 0.74,
+   "rule": 0.6
+  },
+  {
+   "text": "돈이 생기면 여행 가자!",
+   "data": 0.738,
+   "rule": 0.569
+  },
+  {
+   "text": "뚜껑 없는 솥에 밥을 지었어.",
+   "data": 0.737,
+   "rule": 0.573
+  },
+  {
+   "text": "꽃씨 심으러 마당에 나갔어.",
+   "data": 0.737,
+   "rule": 0.539
+  },
+  {
+   "text": "이번 공연에서 탈을 쓰는 역할을 맡았어.",
+   "data": 0.736,
+   "rule": 0.617
+  },
+  {
+   "text": "그 닭은 살 이 많아서 맛있어.",
+   "data": 0.736,
+   "rule": 0.598
+  },
+  {
+   "text": "돈이 생기면 제일 먼저 뭐 살 거야?",
+   "data": 0.735,
+   "rule": 0.596
+  },
+  {
+   "text": "괜히 겁 먹고 혼자 도망쳤어.",
+   "data": 0.735,
+   "rule": 0.588
+  },
+  {
+   "text": "그 사람만 오면 돼.",
+   "data": 0.734,
+   "rule": 0.55
+  },
+  {
+   "text": "그 소설은 사변적 내용이 너무 많아.",
+   "data": 0.733,
+   "rule": 0.586
+  },
+  {
+   "text": "도마에 칼자국이 깊게 팼어.",
+   "data": 0.73,
+   "rule": 0.493
+  },
+  {
+   "text": "개한테 물릴 뻔했어.",
+   "data": 0.729,
+   "rule": 0.546
+  },
+  {
+   "text": "오늘 점심은 반찬이 세 가지야.",
+   "data": 0.729,
+   "rule": 0.557
+  },
+  {
+   "text": "도기로 만든 컵이 깨졌어.",
+   "data": 0.728,
+   "rule": 0.543
+  },
+  {
+   "text": "나뭇잎이 바람에 흔들려.",
+   "data": 0.728,
+   "rule": 0.404
+  },
+  {
+   "text": "이 집 김치찌개 맛이 끝내줘!",
+   "data": 0.726,
+   "rule": 0.479
+  },
+  {
+   "text": "이건 완전 풋내기 실력이잖아.",
+   "data": 0.725,
+   "rule": 0.609
+  },
+  {
+   "text": "달콤한 냄새가 솔솔 나네.",
+   "data": 0.725,
+   "rule": 0.564
+  },
+  {
+   "text": "오늘 날 잡아서 요리할 거야.",
+   "data": 0.724,
+   "rule": 0.613
+  },
+  {
+   "text": "복도가 미끄러워서 넘어질 뻔했어.",
+   "data": 0.723,
+   "rule": 0.559
+  },
+  {
+   "text": "풀밭에 지렁이가 많네.",
+   "data": 0.722,
+   "rule": 0.512
+  },
+  {
+   "text": "솥뚜껑이 너무 뜨거워.",
+   "data": 0.721,
+   "rule": 0.546
+  },
+  {
+   "text": "어제 술 마시고 필름이 끊겼어.",
+   "data": 0.721,
+   "rule": 0.582
+  },
+  {
+   "text": "이번 판은 진짜 크게 벌였어.",
+   "data": 0.719,
+   "rule": 0.573
+  },
+  {
+   "text": "돈가 생기면 뭐 하고 싶어?",
+   "data": 0.717,
+   "rule": 0.52
+  },
+  {
+   "text": "밥을 먹었어요",
+   "data": 0.716,
+   "rule": 0.5
+  },
+  {
+   "text": "그 말이 이렇게 오래갈 줄 몰랐어.",
+   "data": 0.715,
+   "rule": 0.567
+  },
+  {
+   "text": "돈이 생기면 여행 가고 싶어.",
+   "data": 0.714,
+   "rule": 0.565
+  },
+  {
+   "text": "박물관에서 토기를 직접 만져봤어.",
+   "data": 0.712,
+   "rule": 0.587
+  },
+  {
+   "text": "교실마다 칠판이 하나씩 있어.",
+   "data": 0.712,
+   "rule": 0.526
+  },
+  {
+   "text": "그 말은 늘 약속을 어겨.",
+   "data": 0.711,
+   "rule": 0.65
+  },
+  {
+   "text": "어제 팔 굽혀서 운동했어.",
+   "data": 0.706,
+   "rule": 0.589
+  },
+  {
+   "text": "달이 밝아요",
+   "data": 0.702,
+   "rule": 0.548
+  },
+  {
+   "text": "저 달콤한 냄새 좀 맡아봐.",
+   "data": 0.701,
+   "rule": 0.547
+  },
+  {
+   "text": "토끼가 달을 보며 깡충깡충 뛰었어.",
+   "data": 0.701,
+   "rule": 0.549
+  },
+  {
+   "text": "그 말이 씨알도 안 먹히더라.",
+   "data": 0.7,
+   "rule": 0.55
+  },
+  {
+   "text": "그 말이 씨알도 안 먹혔어.",
+   "data": 0.699,
+   "rule": 0.55
+  },
+  {
+   "text": "솔로 이를 닦았더니 개운해",
+   "data": 0.698,
+   "rule": 0.59
+  },
+  {
+   "text": "삽으로 흙을 퍼서 화단을 만들었어.",
+   "data": 0.698,
+   "rule": 0.585
+  },
+  {
+   "text": "불이 꺼지면 나가야 해.",
+   "data": 0.697,
+   "rule": 0.503
+  },
+  {
+   "text": "공을 던져요",
+   "data": 0.695,
+   "rule": 0.641
+  },
+  {
+   "text": "반드시 확인하고 제출해.",
+   "data": 0.695,
+   "rule": 0.544
+  },
+  {
+   "text": "방이 너무 좁아서 답답해.",
+   "data": 0.695,
+   "rule": 0.473
+  },
+  {
+   "text": "그 말이 씨알도 안 먹혀.",
+   "data": 0.693,
+   "rule": 0.55
+  },
+  {
+   "text": "기타로 혼자 반주하며 노래했어.",
+   "data": 0.693,
+   "rule": 0.517
+  },
+  {
+   "text": "소파에 기대니까 허리가 좀 펴지더라.",
+   "data": 0.692,
+   "rule": 0.49
+  },
+  {
+   "text": "이 김치는 맛가 좀 싱겁네.",
+   "data": 0.691,
+   "rule": 0.462
+  },
+  {
+   "text": "찌개는 솥 채로 상에 올려.",
+   "data": 0.691,
+   "rule": 0.639
+  },
+  {
+   "text": "오늘 점심은 순대등볶음밥 먹었어.",
+   "data": 0.69,
+   "rule": 0.561
+  },
+  {
+   "text": "오늘 달 이 유난히 밝네.",
+   "data": 0.689,
+   "rule": 0.561
+  },
+  {
+   "text": "같은 실수를 반복하지 마.",
+   "data": 0.688,
+   "rule": 0.587
+  },
+  {
+   "text": "불이 꺼지기 전에 빨리 들어와.",
+   "data": 0.685,
+   "rule": 0.532
+  },
+  {
+   "text": "돈가 없으면 친구도 멀어진다.",
+   "data": 0.685,
+   "rule": 0.578
+  },
+  {
+   "text": "포도가 익으면 색이 진해져.",
+   "data": 0.685,
+   "rule": 0.522
+  },
+  {
+   "text": "복수는 달콤하다지만 후회가 남아.",
+   "data": 0.685,
+   "rule": 0.529
+  },
+  {
+   "text": "비가 와서 논 에 물이 찼어.",
+   "data": 0.684,
+   "rule": 0.523
+  },
+  {
+   "text": "솥에 눌어붙은 밥을 긁어냈어.",
+   "data": 0.684,
+   "rule": 0.539
+  },
+  {
+   "text": "팔이 너무 길어서 소매가 안 맞아.",
+   "data": 0.684,
+   "rule": 0.512
+  },
+  {
+   "text": "운동하고 나면 땀이 많이 나지",
+   "data": 0.683,
+   "rule": 0.542
+  },
+  {
+   "text": "솔로 머리 빗었더니 두피가 시원해",
+   "data": 0.682,
+   "rule": 0.535
+  },
+  {
+   "text": "밤새 공부한 보람이 있네!",
+   "data": 0.682,
+   "rule": 0.432
+  },
+  {
+   "text": "사과가 너무 셔서 못 먹겠어.",
+   "data": 0.681,
+   "rule": 0.605
+  },
+  {
+   "text": "이 나물에 가지가 좀 질기네.",
+   "data": 0.68,
+   "rule": 0.446
+  },
+  {
+   "text": "눈이 와서 길이 미끄러워.",
+   "data": 0.677,
+   "rule": 0.591
+  },
+  {
+   "text": "놋그릇에 밥 좀 담아줘.",
+   "data": 0.675,
+   "rule": 0.52
+  },
+  {
+   "text": "오늘 날 잡아줄 수 있어?",
+   "data": 0.674,
+   "rule": 0.657
+  },
+  {
+   "text": "파도에 보트가 흔들렸어.",
+   "data": 0.673,
+   "rule": 0.454
+  },
+  {
+   "text": "손이 자꾸 저려서 잠을 못 잤어.",
+   "data": 0.672,
+   "rule": 0.606
+  },
+  {
+   "text": "요즘 살 좀 쪘나봐.",
+   "data": 0.672,
+   "rule": 0.596
+  },
+  {
+   "text": "이번 달 돈이 부족해서 걱정이야.",
+   "data": 0.668,
+   "rule": 0.607
+  },
+  {
+   "text": "이번 주말에 복권 뽑으러 갈 거야.",
+   "data": 0.668,
+   "rule": 0.553
+  },
+  {
+   "text": "피곤한 건 야근 탓이야.",
+   "data": 0.667,
+   "rule": 0.614
+  },
+  {
+   "text": "눈이 빨개서 안약을 샀어.",
+   "data": 0.663,
+   "rule": 0.577
+  },
+  {
+   "text": "꽃씨를 마당에 뿌렸어.",
+   "data": 0.663,
+   "rule": 0.555
+  },
+  {
+   "text": "손이 너무 떨려서 글씨를 못 쓰겠어.",
+   "data": 0.662,
+   "rule": 0.622
+  },
+  {
+   "text": "오늘따라 달 이 유독 밝네.",
+   "data": 0.662,
+   "rule": 0.566
+  },
+  {
+   "text": "이 국은 맛가 좀 싱겁네.",
+   "data": 0.661,
+   "rule": 0.479
+  },
+  {
+   "text": "이번 경기엔 순 서울이 올라왔어.",
+   "data": 0.66,
+   "rule": 0.623
+  },
+  {
+   "text": "사무실 불 꺼줘.",
+   "data": 0.655,
+   "rule": 0.591
+  },
+  {
+   "text": "크림가 녹아서 옷에 묻었어.",
+   "data": 0.654,
+   "rule": 0.549
+  },
+  {
+   "text": "비 오는데 모자라도 써야겠다",
+   "data": 0.653,
+   "rule": 0.5
+  },
+  {
+   "text": "콩로 만든 두부가 탱글탱글해.",
+   "data": 0.652,
+   "rule": 0.553
+  },
+  {
+   "text": "문을 잠갔는지 다시 확인해봐.",
+   "data": 0.651,
+   "rule": 0.592
+  },
+  {
+   "text": "쌀이 떨어져서 죽을 못 끓였어.",
+   "data": 0.65,
+   "rule": 0.655
+  },
+  {
+   "text": "풀잎에 맺힌 이슬이 반짝여.",
+   "data": 0.648,
+   "rule": 0.478
+  },
+  {
+   "text": "노파의 말씀이 결국 맞았어.",
+   "data": 0.648,
+   "rule": 0.534
+  },
+  {
+   "text": "불이 꺼지기 전에 어서 와.",
+   "data": 0.645,
+   "rule": 0.566
+  },
+  {
+   "text": "눈이 빨개서 안약 샀어.",
+   "data": 0.643,
+   "rule": 0.563
+  },
+  {
+   "text": "손을 꼭 잡고 건너가자.",
+   "data": 0.641,
+   "rule": 0.634
+  },
+  {
+   "text": "이 살 좀 봐, 탱탱하게 올랐네.",
+   "data": 0.639,
+   "rule": 0.542
+  },
+  {
+   "text": "이 짐 좀 들어줄 수 있어?",
+   "data": 0.638,
+   "rule": 0.552
+  },
+  {
+   "text": "솥에 밥이 눌어붙었어.",
+   "data": 0.637,
+   "rule": 0.445
+  },
+  {
+   "text": "목이 마르면 물 한 잔 마셔.",
+   "data": 0.635,
+   "rule": 0.555
+  },
+  {
+   "text": "불이 꺼지기 전에 얼른 와.",
+   "data": 0.634,
+   "rule": 0.582
+  },
+  {
+   "text": "불이 꺼져서 앞이 안 보여.",
+   "data": 0.633,
+   "rule": 0.488
+  },
+  {
+   "text": "논에 물이 빠져서 걱정이야.",
+   "data": 0.633,
+   "rule": 0.522
+  },
+  {
+   "text": "죽 끓이려고 팥을 불렸어.",
+   "data": 0.632,
+   "rule": 0.621
+  },
+  {
+   "text": "이 고추장은 순 한국산이에요.",
+   "data": 0.629,
+   "rule": 0.579
+  },
+  {
+   "text": "매듭을 푼 다음에 다시 묶어.",
+   "data": 0.62,
+   "rule": 0.565
+  },
+  {
+   "text": "문을 잠그고 나왔어?",
+   "data": 0.619,
+   "rule": 0.55
+  },
+  {
+   "text": "다쳐서 팔 을 못 들었어.",
+   "data": 0.618,
+   "rule": 0.661
+  },
+  {
+   "text": "돈이 없으면 여행을 못 가잖아.",
+   "data": 0.617,
+   "rule": 0.598
+  },
+  {
+   "text": "눈이 빨개지도록 울었어.",
+   "data": 0.616,
+   "rule": 0.57
+  },
+  {
+   "text": "거울에 볼 비추다가 놀랐어.",
+   "data": 0.615,
+   "rule": 0.568
+  },
+  {
+   "text": "솥에 눌은 밥이 고소해.",
+   "data": 0.614,
+   "rule": 0.513
+  },
+  {
+   "text": "복수는 단수의 반대말이야.",
+   "data": 0.61,
+   "rule": 0.586
+  },
+  {
+   "text": "불이 꺼지면 영화 시작이야.",
+   "data": 0.606,
+   "rule": 0.537
+  },
+  {
+   "text": "물감이랑 붓 챙겨와.",
+   "data": 0.604,
+   "rule": 0.584
+  },
+  {
+   "text": "물을 마셔요",
+   "data": 0.603,
+   "rule": 0.5
+  },
+  {
+   "text": "볼이 빨개진 걸 보니 창피했나 봐.",
+   "data": 0.597,
+   "rule": 0.527
+  },
+  {
+   "text": "팔이 부러진 줄도 몰랐어.",
+   "data": 0.591,
+   "rule": 0.525
+  },
+  {
+   "text": "두부는 콩로 만들어.",
+   "data": 0.582,
+   "rule": 0.575
+  },
+  {
+   "text": "마음이 편해야 잠이 잘 와.",
+   "data": 0.578,
+   "rule": 0.467
+  },
+  {
+   "text": "풀로 붙인 봉투가 떨어졌어.",
+   "data": 0.569,
+   "rule": 0.505
+  },
+  {
+   "text": "목소리 톤을 좀 낮춰봐.",
+   "data": 0.55,
+   "rule": 0.557
+  },
+  {
+   "text": "비가 온 탓에 약속을 못 지켰어.",
+   "data": 0.513,
+   "rule": 0.579
+  }
+ ]
+}
