@@ -271,6 +271,32 @@ async def account_export(current_user=Depends(get_current_user), db: AsyncSessio
                      "학습 기록으로 저장되어 아래 data에 들어 있습니다.")}
 
 
+@app.post("/api/account/learning-reset", dependencies=[Depends(ratelimit.rate_limit(5, 60, "account-reset"))])
+async def account_learning_reset(confirm: bool = False, current_user=Depends(get_current_user),
+                                 db: AsyncSession = Depends(get_db)):
+    """학습 초기화 — 계정은 두고 학습 기록 전부(시행·진행도·복습·북마크·검사·교정 기록)를 지우고
+    XP·연속 학습·레벨·배치를 처음 상태로 되돌린다. 프로필 화면의 '사라지는 기록' 목록과 같은 범위다.
+    가입 동의 기록(ConsentRecord)은 법적 기록이라 남긴다. 공용 데모 계정은 방문자 모두의 화면이라 막는다."""
+    if not confirm:
+        raise HTTPException(status_code=400, detail="초기화를 확인하려면 confirm=true가 필요합니다.")
+    if (current_user.email or "").lower() == _DEMO_EMAIL:
+        raise HTTPException(status_code=403, detail="공용 데모 계정은 초기화할 수 없어요.")
+    from sqlalchemy import delete as _delete
+    from database import ConsentRecord
+    removed = {}
+    for M in _user_data_models():
+        if M is ConsentRecord:
+            continue
+        res = await db.execute(_delete(M).where(M.user_id == current_user.id))
+        removed[M.__tablename__] = res.rowcount if res.rowcount is not None else 0
+    current_user.total_xp = 0
+    current_user.streak_count = 0
+    current_user.current_level = 1
+    db.add(current_user)
+    await db.commit()
+    return {"reset": True, "removed": removed}
+
+
 from pydantic import BaseModel as _PydBaseModel
 
 
