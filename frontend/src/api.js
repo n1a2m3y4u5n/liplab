@@ -141,8 +141,10 @@ export const learningAPI = {
     const response = await api.get('/calendar')
     return response.data  // { 'YYYY-MM-DD': count }
   },
-  // 회차 히스토리 — 날짜별 '무엇을 학습했는지' { 'YYYY-MM-DD': [{kind,label,n}] }
-  getCalendarActivities: async () => (await api.get('/calendar/activities')).data,
+  // 회차 히스토리·활동 캘린더 — 날짜(브라우저 현지)별 '무엇을 학습했는지' { 'YYYY-MM-DD': [{kind,label,n,accuracy}] }
+  getCalendarActivities: async (daysBack = 150) => (await api.get('/calendar/activities', {
+    params: { days_back: daysBack, tz_offset_min: new Date().getTimezoneOffset() },
+  })).data,
   // 분석 탭 요약·배지(backend/analytics.py). 날짜·연속 학습은 브라우저 시간대 기준.
   getAnalysisOverview: async () => (await api.get('/analysis/overview', {
     params: { tz_offset_min: new Date().getTimezoneOffset() },
@@ -182,7 +184,9 @@ export const curriculumAPI = {
   getCues: async (text, { focus = false, maxCues = null } = {}) => (await api.get('/cues', {
     params: { text, ...(focus ? { focus: true } : {}), ...(maxCues && maxCues > 0 ? { max_cues: maxCues } : {}) },
   })).data,
-  recordMouth: async (viseme_id, score) => (await api.post('/curriculum/mouth-attempt', { viseme_id, score })).data,
+  // session(선택): 웹캠 조음 교정 세션 요약 { gap_start, gap_end, n_samples } (축 E-9)
+  recordMouth: async (viseme_id, score, session = {}) => (await api.post('/curriculum/mouth-attempt', { viseme_id, score, ...session })).data,
+  getArticulationTrend: async () => (await api.get('/analysis/articulation')).data,
   getMultiConversation: async (speakers = 2, turns = 6) => (await api.get('/conversation/multi', { params: { speakers, turns } })).data,
   recordMultiConversation: async (payload) => (await api.post('/conversation/multi/result', payload)).data,
   getPlacement: async (n = 8, form = null) => (await api.get('/assessment/placement', { params: form ? { n, form } : { n } })).data,

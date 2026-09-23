@@ -169,6 +169,11 @@ def _user_data_models():
     return out
 
 
+def _iso_utc(ts):
+    """DB의 naive UTC 시각 → 'YYYY-MM-DDTHH:MM:SSZ'(브라우저가 현지 시각으로 바꿔 상대 날짜를 만든다)."""
+    return ts.replace(microsecond=0).isoformat() + "Z" if ts else None
+
+
 def _row_to_dict(row) -> dict:
     d = {}
     for c in row.__table__.columns:
@@ -698,7 +703,8 @@ async def list_bookmarks(domain: str = None, current_user=Depends(get_current_us
     result = await db.execute(q.order_by(Bookmark.created_at.desc()))
     items = result.scalars().all()
     return [{"id": b.id, "sentence": b.sentence, "situation": b.situation,
-             "level": b.level, "domain": getattr(b, "domain", "read") or "read"} for b in items]
+             "level": b.level, "domain": getattr(b, "domain", "read") or "read",
+             "created_at": _iso_utc(b.created_at)} for b in items]
 
 
 @app.post("/api/bookmarks", status_code=201)
@@ -891,52 +897,59 @@ async def get_calendar(current_user=Depends(get_current_user), db: AsyncSession 
 
 
 @app.get("/api/calendar/activities")
-async def get_calendar_activities(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """날짜별로 '무엇을 학습했는지' 요약 — 회차 히스토리 모달용.
+async def get_calendar_activities(days_back: int = 140, tz_offset_min: int = -540,
+                                  current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """날짜별로 '무엇을 학습했는지' 요약 — 활동 캘린더·회차 히스토리용.
     /api/calendar는 문장 연습(Progress) 건수만 세므로, 여기서는 활동 종류별 테이블을 모두 모아
-    { 'YYYY-MM-DD': [ {kind, label, n}, ... ] }로 돌려준다. label은 화면에 그대로 붙이는 한국어 문구.
+    { 'YYYY-MM-DD': [ {kind, label, n, accuracy}, ... ] }로 돌려준다. label은 화면에 그대로 붙이는 한국어 문구.
+    날짜는 tz_offset_min(브라우저 Date.getTimezoneOffset(), 한국 −540)으로 정한 사용자 현지 날짜다(분석 개요와 같은 기준).
+    accuracy(0~1)는 채점된 시도의 평균이다 — 문장·말하기 점수는 /100, 선다형은 정오, 검사는 정답률.
+    채점 기록이 없는 행은 null.
     """
     from database import Progress, TrialAttempt, SpeakAttempt, PlacementResult
-    from sqlalchemy import select, func
+    from sqlalchemy import select
     import datetime as dt
-    from collections import defaultdict, Counter
+    from collections import defaultdict
     from urllib.parse import quote
+    import analytics as _an
 
-    cutoff = (dt.date.today() - dt.timedelta(days=90)).isoformat()
+    tz = max(-840, min(720, int(tz_offset_min)))
+    days_back = max(7, min(400, int(days_back)))
+    cutoff = dt.datetime.utcnow() - dt.timedelta(days=days_back + 1)
     uid = current_user.id
-    days: dict = defaultdict(lambda: defaultdict(Counter))   # day → kind → Counter(detail)
+    # day → kind → detail → [시도 수, 채점 합, 채점 수]
+    days: dict = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [0, 0.0, 0])))
+
+    def add(ts, kind, detail, grade):
+        if ts is None:
+            return
+        cell = days[_an.to_local(ts, tz).date().isoformat()][kind][detail]
+        cell[0] += 1
+        if grade is not None:
+            cell[1] += max(0.0, min(1.0, float(grade)))
+            cell[2] += 1
 
     # 문장 연습(3단계·복습) — 상황별로 묶는다
-    r = await db.execute(
-        select(func.date(Progress.created_at).label("day"), Progress.situation, func.count(Progress.id))
-        .where(Progress.user_id == uid, Progress.created_at >= cutoff)
-        .group_by("day", Progress.situation))
-    for day, situation, n in r.all():
-        days[day]["sentence"][situation or ""] += n
-
+    for ts, situation, score in (await db.execute(
+            select(Progress.created_at, Progress.situation, Progress.score)
+            .where(Progress.user_id == uid, Progress.created_at >= cutoff))).all():
+        add(ts, "sentence", situation or "", None if score is None else score / 100.0)
     # 1·2단계·문맥 추론 시행
-    r = await db.execute(
-        select(func.date(TrialAttempt.created_at).label("day"), TrialAttempt.item_type, func.count(TrialAttempt.id))
-        .where(TrialAttempt.user_id == uid, TrialAttempt.created_at >= cutoff)
-        .group_by("day", TrialAttempt.item_type))
-    for day, item_type, n in r.all():
-        days[day][item_type or "trial"][""] += n
-
-    # 말하기 연습 — 모드별
-    r = await db.execute(
-        select(func.date(SpeakAttempt.created_at).label("day"), SpeakAttempt.mode, func.count(SpeakAttempt.id))
-        .where(SpeakAttempt.user_id == uid, SpeakAttempt.created_at >= cutoff)
-        .group_by("day", SpeakAttempt.mode))
-    for day, mode, n in r.all():
-        days[day]["speak"][mode or ""] += n
-
+    for ts, item_type, correct in (await db.execute(
+            select(TrialAttempt.created_at, TrialAttempt.item_type, TrialAttempt.correct)
+            .where(TrialAttempt.user_id == uid, TrialAttempt.created_at >= cutoff))).all():
+        add(ts, item_type or "trial", "", 1.0 if correct else 0.0)
+    # 말하기 연습 — 모드별(통과 여부가 있으면 그것, 없으면 점수)
+    for ts, mode, passed, score in (await db.execute(
+            select(SpeakAttempt.created_at, SpeakAttempt.mode, SpeakAttempt.passed, SpeakAttempt.score)
+            .where(SpeakAttempt.user_id == uid, SpeakAttempt.created_at >= cutoff))).all():
+        g = (1.0 if passed else 0.0) if passed is not None else (None if score is None else score / 100.0)
+        add(ts, "speak", mode or "", g)
     # 배치·향상도 검사
-    r = await db.execute(
-        select(func.date(PlacementResult.created_at).label("day"), PlacementResult.form, func.count(PlacementResult.id))
-        .where(PlacementResult.user_id == uid, PlacementResult.created_at >= cutoff)
-        .group_by("day", PlacementResult.form))
-    for day, form, n in r.all():
-        days[day]["assessment"][form or "placement"] += n
+    for ts, form, acc in (await db.execute(
+            select(PlacementResult.created_at, PlacementResult.form, PlacementResult.accuracy)
+            .where(PlacementResult.user_id == uid, PlacementResult.created_at >= cutoff))).all():
+        add(ts, "assessment", form or "placement", acc)
 
     KIND_LABEL = {"viseme": "입모양 인지", "word": "단어", "closure": "문맥 추론", "trial": "인지 훈련"}
     SPEAK_LABEL = {"voicing": "발성", "prosody": "억양", "phoneme": "음소", "word": "단어", "sentence": "문장"}
@@ -951,12 +964,12 @@ async def get_calendar_activities(current_user=Depends(get_current_user), db: As
 
     # 주제가 다르면 같은 날이라도 각자 한 행 — 문장 연습은 상황별, 말하기는 모드별, 검사는 폼별로 나눈다.
     out = {}
-    for day, kinds in days.items():
+    for day, kinds in sorted(days.items()):
         rows = []
         for kind in ORDER:
             if kind not in kinds:
                 continue
-            for detail, n in kinds[kind].most_common():
+            for detail, (n, g_sum, g_n) in sorted(kinds[kind].items(), key=lambda kv: -kv[1][0]):
                 # topic_label = 블록 제목(상황·모드·검사 종류), type_label = 유형 배지
                 if kind == "sentence":
                     topic_label = detail or "문장 연습"
@@ -976,7 +989,8 @@ async def get_calendar_activities(current_user=Depends(get_current_user), db: As
                     route = KIND_ROUTE[kind]
                 label = topic_label if topic_label == type_label or kind == "assessment" else f"{type_label} · {topic_label}"
                 rows.append({"kind": kind, "topic": detail, "topic_label": topic_label,
-                             "type_label": type_label, "label": label, "n": n, "route": route})
+                             "type_label": type_label, "label": label, "n": n, "route": route,
+                             "accuracy": round(g_sum / g_n, 3) if g_n else None})
         out[day] = rows
     return out
 
@@ -1069,6 +1083,7 @@ async def get_review_sentences(current_user=Depends(get_current_user), db: Async
                 "situation": p.situation,
                 "difficulty_level": p.difficulty_level,
                 "score": round(p.score, 1),
+                "created_at": _iso_utc(p.created_at),   # 가장 최근에 틀린 시각
             })
         if len(unique) >= 10:
             break
@@ -1463,7 +1478,9 @@ async def review_due(current_user=Depends(get_current_user), db: AsyncSession = 
     items = r.scalars().all()
     out = []
     for it in items:
-        entry = {"kind": it.kind, "ref": it.ref}
+        # created_at = 처음 복습 큐에 들어온 시각, updated_at = 마지막으로 다시 푼 시각(목록의 상대 날짜용)
+        entry = {"kind": it.kind, "ref": it.ref, "due_date": it.due_date,
+                 "created_at": _iso_utc(it.created_at), "updated_at": _iso_utc(it.updated_at)}
         if it.kind == "viseme" and it.ref.isdigit():
             les = _curriculum.lesson_by_id(int(it.ref))
             if les:
