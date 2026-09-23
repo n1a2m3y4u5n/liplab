@@ -36,6 +36,11 @@ with TestClient(main.app) as c:
     out["n"] = body["n"]
     out["text"] = json.dumps(body, ensure_ascii=False)
     out["row"] = body["participants"][0] if body["participants"] else None
+    # 학습 초기화 뒤에도 파일럿 참여는 남는다
+    rr = c.post("/api/account/learning-reset", params={"confirm": True}, headers=p1)
+    out["reset"] = rr.status_code
+    out["after_reset_joined"] = c.get("/api/pilot/status", headers=p1).json()["joined"]
+    out["after_reset_n"] = c.get("/api/pilot/export", headers=op).json()["n"]
 print("RESULT " + json.dumps(out, ensure_ascii=False))
 '''
 
@@ -63,3 +68,4 @@ def test_pilot_join_and_pseudonymized_export():
     assert row["trials_by_stage"]["3"] == {"n": 1, "correct": 1}
     # 이메일·사용자명은 내보내기에 없어야 한다
     assert "p1@example.com" not in r["text"] and "pilot1" not in r["text"]
+    assert r["reset"] == 200 and r["after_reset_joined"] is True and r["after_reset_n"] == 1

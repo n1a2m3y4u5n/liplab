@@ -138,3 +138,12 @@ def test_score_logs_items_and_confusion_direction():
     _ok(len(r["item_log"]) == len(items), "문항 단위 기록(미응답 포함)")
     _ok(sum(1 for x in r["item_log"] if x["chosen"] is None) == len(items) - 3, "미응답은 chosen=None")
     _ok(all({"target", "read", "count"} <= set(c) for c in r["error_confusions"]), "오독 방향 필드")
+
+
+def test_error_phonemes_count_only_misread_jamo():
+    # 밥을 맘으로 읽었다 → 틀린 자모는 초성 ㅂ(→ㅁ)뿐. 모음 ㅏ나 종성 ㅂ은 오류로 세지 않는다.
+    items = [{"id": "q1", "word": "밥", "options": ["밥", "맘", "발", "방"], "visemes": [1, 2], "difficulty": 0.5}]
+    r = A.score_placement(items, {"q1": "맘"})
+    phs = {e["phoneme"]: e["count"] for e in r["error_phonemes"]}
+    assert "ㅏ" not in phs and sum(phs.values()) <= 2
+    assert r["error_confusions"], "무엇을 무엇으로 읽었는지도 남아야 한다"

@@ -52,6 +52,8 @@ with TestClient(main.app) as c:
     os.environ["LIPLAB_ADMIN_EMAILS"] = "demo@liplab.app"
     out["review_demo"] = c.get("/api/admin/content/candidates",
                                headers={"Authorization": f"Bearer {demo}"}).status_code
+    # 공용 데모 계정은 여러 방문자의 기록이 섞여 있어 내려받기를 막는다
+    out["demo_export"] = c.get("/api/account/data", headers={"Authorization": f"Bearer {demo}"}).status_code
 
     # 학습 초기화 — 확인 없으면 거부, 데모 계정은 거부, 본인 계정은 학습 기록·XP를 지우고 계정·동의 기록은 남긴다
     c.post("/api/bookmarks", json={"sentence": "초기화 전 북마크", "situation": "인사", "level": 1}, headers=new_h)
@@ -95,6 +97,7 @@ def test_account_security_flow():
     assert r["pw_change"] == 200
     assert r["old_token_me"] == 401 and r["new_token_me"] == 200, "비밀번호 변경 뒤 옛 토큰은 거부"
     assert r["review_no_admin"] == 403 and r["review_admin"] == 200 and r["review_demo"] == 403
+    assert r["demo_export"] == 403
     assert r["reset_no_confirm"] == 400 and r["reset_demo"] == 403 and r["reset_ok"] == 200
     assert r["reset_bookmarks"] == 0 and r["reset_consent_kept"] == 1 and r["reset_xp"] == 0
     assert r["del_bad_pw"] == 403 and r["del_ok"] == 200 and r["after_delete_me"] == 401

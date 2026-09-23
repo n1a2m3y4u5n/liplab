@@ -20,7 +20,8 @@ const LS_KEY = 'liplab.a11y'
 // 모바일에서는 숨긴다(데스크톱은 왼쪽 아래 빈자리라 그대로). 설정은 저장돼 있어 레슨에도 그대로 적용된다.
 const LESSON_PATHS = ['/practice', '/conversation', '/learn/viseme', '/learn/word', '/learn/placement',
   '/learn/scenario', '/learn/speaking', '/learn/closure', '/learn/path', '/review/scheduled', '/review/speaking/session']
-const isLesson = (path) => LESSON_PATHS.some((p) => path === p || path.startsWith(p + '/'))
+// 정확히 같은 경로만 — 앞부분만 맞추면 '/practice'가 연습 탭('/practice/hub')까지 잡는다
+const isLesson = (path) => LESSON_PATHS.includes(path.replace(/\/+$/, ''))
 
 function load() {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}') } catch { return {} }

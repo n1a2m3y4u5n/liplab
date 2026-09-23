@@ -48,6 +48,7 @@ export default function MultiConversation() {
   const [result, setResult] = useState(null)         // 서버 종합 채점(세션 종료 시)
   const [loadError, setLoadError] = useState(false)  // 대화를 못 불러오면 셸 안에서 다시 시도
   const submittedRef = useRef(false)
+  const framesReqRef = useRef(0)   // 입모양 요청 번호 — 빨리 넘기면 늦게 온 이전 턴 응답을 버린다
 
   const load = useCallback(async () => {
     setLoading(true); setLoadError(false)
@@ -64,8 +65,9 @@ export default function MultiConversation() {
   useEffect(() => {
     if (!conv) return
     const t = conv.turns[idx]
+    const req = ++framesReqRef.current
     setFrames([])
-    if (t) learningAPI.getVisemes(t.text).then(setFrames).catch(() => {})
+    if (t) learningAPI.getVisemes(t.text).then((f) => { if (framesReqRef.current === req) setFrames(f) }).catch(() => {})
   }, [conv, idx])
 
   const closureIdx = conv?.closure ? conv.closure.index : -1
@@ -210,7 +212,7 @@ export default function MultiConversation() {
             {' '}· 화자 찾기 {Math.round(result.speaker_accuracy * 100)}%
           </span>
           {result.missed_visemes?.length > 0 && (
-            <span className="text-[11px] text-emerald-600">잘못 읽은 입모양 {result.missed_visemes.length}개를 복습에 반영했어요</span>
+            <span className="text-[11px] text-emerald-600">잘못 읽은 입모양 {result.missed_visemes.length}개를 약점 통계에 넣었어요(다음 추천에 반영)</span>
           )}
         </div>
       )}

@@ -182,7 +182,7 @@ export default function AnalysisTab() {
   const [ov, setOv] = useState(null)       // 요약·주별 추이·배지(/api/analysis/overview)
   useEffect(() => {
     learningAPI.getCalendar().then(setCal).catch(() => setCal({}))
-    learningAPI.getCalendarActivities().then(setActs).catch(() => setActs({}))
+    learningAPI.getCalendarActivities().then(setActs).catch(() => setActs(null))   // 실패하면 /api/calendar로 대신
     learningAPI.getAnalysisOverview().then(setOv).catch(() => setOv(null))
   }, [])
 
@@ -236,12 +236,13 @@ export default function AnalysisTab() {
 /* ── 날짜 유틸 ── */
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
-/** 날짜별 활동 수 — 활동 요약(문장·입모양/단어/문맥·말하기·검사)을 합친다. 요약이 없으면 /api/calendar(문장 연습 수). */
+/** 날짜별 활동 수 — 활동 요약(문장·입모양/단어/문맥·말하기·검사, 현지 날짜)을 합친다.
+ *  요약을 불러왔으면 그것만 쓴다 — /api/calendar는 UTC 날짜로 묶어 섞으면 새벽 학습이 전날로 한 번 더 잡힌다.
+ *  요약을 못 불러왔을 때만 /api/calendar(문장 연습 수)로 대신한다. */
 function dayCounts(cal, acts) {
-  if (acts && Object.keys(acts).length) {
+  if (acts) {
     const out = {}
     for (const [d, rows] of Object.entries(acts)) out[d] = (rows || []).reduce((s, r) => s + (Number(r.n) || 0), 0)
-    for (const [d, c] of Object.entries(cal || {})) if (!(d in out)) out[d] = c
     return out
   }
   return cal || {}
@@ -306,10 +307,15 @@ function ActivityCalendar({ counts }) {
 }
 
 /* ── 회차 히스토리 데이터 ── */
-/** 히스토리에 올릴 날짜(최근순). /api/calendar는 문장 연습(Progress)만 세므로 활동 요약(acts)의 날짜도 합친다. */
+/** 히스토리에 올릴 날짜(최근순). 활동 요약(acts, 현지 날짜)을 불러왔으면 그것만 쓴다 — /api/calendar는 UTC 날짜라
+ *  섞으면 빈 날짜 행이 생긴다. 요약을 못 불러왔을 때만 /api/calendar의 날짜로 대신한다. */
 function historyDates(cal, acts) {
-  const days = new Set(Object.entries(cal || {}).filter(([, c]) => c > 0).map(([d]) => d))
-  for (const [d, rows] of Object.entries(acts || {})) if (rows?.length) days.add(d)
+  const days = new Set()
+  if (acts) {
+    for (const [d, rows] of Object.entries(acts)) if (rows?.length) days.add(d)
+  } else {
+    for (const [d, c] of Object.entries(cal || {})) if (c > 0) days.add(d)
+  }
   return [...days].sort((a, b) => (a < b ? 1 : -1))
 }
 /** 회차 = 날짜 × 주제 한 행(§7-1: 회차 묶음 id가 없어 날짜·레슨 단위로 묶는다). 활동 요약이 없는 날은 문장 연습 한 행. */

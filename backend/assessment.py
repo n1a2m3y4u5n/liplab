@@ -251,12 +251,18 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
         else:
             for v in it["visemes"]:
                 err[v] += 1
-            # 음소 단위: 정답 단어의 자모 중 시각적으로 안 드러나는 것을 카운트
-            for ph in _word_phonemes(it["word"]):
-                perr[ph] += 1
             # 무엇을 무엇으로 읽었는지(오답 보기와 자모 단위 대조)
-            for c in viseme_confusions(it["word"], chosen):
+            confs = viseme_confusions(it["word"], chosen)
+            for c in confs:
                 conf[(c["target"], c["read"], c["viseme_name_ko"], c["same_viseme"])] += 1
+            # 음소 단위 오류: 실제로 잘못 읽은 자모(대조에서 다른 자리)만 센다(I-5). 예전에는 정답 단어의
+            # 안 보이는 자모를 모두 세어, 맞게 읽은 자모까지 약점으로 잡혔다. 대조가 안 되면 예전 방식으로 대신한다.
+            if confs:
+                for c in confs:
+                    perr[c["target"]] += 1
+            else:
+                for ph in _word_phonemes(it["word"]):
+                    perr[ph] += 1
     ability = max(solved_diff) if solved_diff else 0.0
     level = min(5, max(1, int(ability * 4) + 1)) if solved_diff else 1
     return {
