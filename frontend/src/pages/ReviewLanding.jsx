@@ -90,7 +90,6 @@ export default function ReviewLanding({ mode = 'today' }) {
             </>
           ) : (
             <div className="card text-center py-16">
-              <p className="text-4xl mb-3">🎉</p>
               <h2 className="text-xl font-bold text-gray-900 mb-1">다시 풀 문장이 없어요</h2>
               <p className="text-gray-500 mb-5">새로운 문장 학습을 완료하면 오답이 이곳에 모입니다.</p>
               <button type="button" onClick={() => navigate('/learn/scenario')} className="btn-primary">문장 학습으로</button>

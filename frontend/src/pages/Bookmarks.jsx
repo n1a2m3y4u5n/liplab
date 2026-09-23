@@ -29,6 +29,8 @@ export default function Bookmarks() {
   }
 
   const practice = async (bm) => {
+    // 발화(말하기) 북마크는 말하기 복습에서 연습한다 — /api/speak/review가 발화 북마크를 함께 모은다.
+    if (bm.domain === 'speak') { navigate('/review/speaking'); return }
     // Create a mini-scenario with just this bookmarked sentence
     const scenario = {
       situation: bm.situation || '북마크',
@@ -49,9 +51,8 @@ export default function Bookmarks() {
           </div>
         ) : bookmarks.length === 0 ? (
           <div className="card text-center py-16">
-            <p className="text-4xl mb-3">☆</p>
             <p className="text-gray-500 font-medium">북마크한 문장이 없습니다.</p>
-            <p className="text-sm text-gray-400 mt-1">연습 중 어려운 문장에 ☆ 버튼을 눌러 저장하세요.</p>
+            <p className="text-sm text-gray-400 mt-1">연습 중 어려운 문장은 질문 옆 북마크 버튼을 눌러 저장하세요.</p>
             <button onClick={() => navigate('/dashboard')} className="btn-primary mt-6">
               연습 시작하기
             </button>

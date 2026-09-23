@@ -82,7 +82,7 @@ export default function SignSelectionOverlay() {
           style={{ position: 'fixed', left: hint.x, top: Math.max(8, hint.y - 46), transform: 'translateX(-50%)', zIndex: 60 }}
           className="px-3 py-1.5 rounded-full bg-primary-600 text-white text-sm font-semibold shadow-lg hover:bg-primary-700 whitespace-nowrap"
         >
-          🤟 수어로 보기
+          수어로 보기
         </button>
       )}
 
@@ -124,7 +124,10 @@ export default function SignSelectionOverlay() {
           <div ref={introRef} role="dialog" aria-modal="true" aria-label="수어 번역 사용법 안내" tabIndex={-1}
             className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 outline-none" onClick={(e) => e.stopPropagation()}>
             <div className="text-center mb-4">
-              <div className="text-4xl mb-2">🤟</div>
+              {/* 연습 탭 '수어 함께 보기' 카드와 같은 아이콘 칩(Figma 96:142) */}
+              <span className="icon-chip mx-auto mb-2 bg-[#dff7ec]" aria-hidden>
+                <img src="/ui/card-sign.svg" alt="" className="size-6" />
+              </span>
               <h3 className="text-lg font-bold text-gray-900">수어 번역, 이렇게 써요</h3>
               <p className="text-sm text-gray-500 mt-1">어느 화면에서든 문장을 수어로 바꿔볼 수 있어요.</p>
             </div>
@@ -134,13 +137,13 @@ export default function SignSelectionOverlay() {
               <p className="text-sm text-gray-700 leading-relaxed">
                 오늘 날씨가 <span className="bg-primary-200/80 rounded px-0.5">참 좋네요</span>
               </p>
-              <span className="absolute right-4 top-1 px-2.5 py-1 rounded-full bg-primary-600 text-white text-xs font-semibold shadow">🤟 수어로 보기</span>
+              <span className="absolute right-4 top-1 px-2.5 py-1 rounded-full bg-primary-600 text-white text-xs font-semibold shadow">수어로 보기</span>
             </div>
 
             <ol className="space-y-2.5 mb-5">
               {[
                 ['1', '한국어 문장을 마우스로 드래그해 선택 (터치 기기는 길게 눌러 선택)'],
-                ['2', '위에 뜨는 "🤟 수어로 보기" 버튼을 누르기'],
+                ['2', '위에 뜨는 "수어로 보기" 버튼을 누르기'],
                 ['3', '그 자리에서 바로 수어 영상으로 확인'],
               ].map(([n, t]) => (
                 <li key={n} className="flex gap-2.5 items-start">
