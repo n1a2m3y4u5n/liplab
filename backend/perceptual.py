@@ -25,7 +25,7 @@ _VIS_WEIGHT = {"high": 0.0, "medium": 0.5, "low": 1.0}  # '안 보이는 정도'
 
 # 공개 표준 자원 판본(§3.3 "판본과 함께 공개"). 재현성을 위해 빌드 타임스탬프가 아닌 고정 판을 쓴다.
 # 스키마·값이 바뀌면 semver를 올리고 edition(판)을 갱신한다.
-RESOURCE_SEMVER = "1.0.0"
+RESOURCE_SEMVER = "1.1.0"   # 1.1.0(9/23): 단어 은행 233→528, 표준 평가셋에서 표준검사(I) 문항 단어 제외
 RESOURCE_EDITION = "2026-09"
 RESOURCE_LICENSE = "CC BY 4.0"
 RESOURCE_SOURCE = "LIPLAB (CNSAi)"

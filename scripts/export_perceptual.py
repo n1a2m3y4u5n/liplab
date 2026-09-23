@@ -46,7 +46,9 @@ def main(args):
     words = [w["word"] for w in C.WORD_BANK]
     res = P.build_standard_resources(words)
     # 표준 평가셋을 마지막에 추가(build_placement_items가 seed를 고정하므로 다른 자원 생성 뒤에)
-    res["standard_eval_set"] = build_eval_set(words)
+    # 공개 평가셋에는 앱의 표준검사(사전·사후 폼) 문항 단어를 넣지 않는다 — 문항이 공개되면 검사가 무너진다(축 I).
+    tw = A.test_only_words()
+    res["standard_eval_set"] = build_eval_set([w for w in words if w not in tw])
     out = args.out or _DEFAULT_OUT
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
