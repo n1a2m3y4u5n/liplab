@@ -159,9 +159,18 @@ async def build_closures(pairs: List[Dict], max_items: int = 40,
 
     results = await asyncio.gather(*[one(p) for p in confusable])
     items = [r for r in results if r][:max_items]
-    for i, it in enumerate(items, 1):
-        it["id"] = f"g{i}"
+    # id는 내용 기반으로 매긴다. 배치마다 g1부터 다시 매기면 approved.json에 병합할 때
+    # id가 겹쳐 로더(id 기준 중복 제거)에서 문항이 빠진다(9/22 배치 181개 중 118개 누락).
+    for it in items:
+        it["id"] = closure_id(it)
     return items
+
+
+def closure_id(item: Dict) -> str:
+    """문맥 문항의 안정 id: 'g' + sha1(display|answer) 앞 8자리."""
+    import hashlib
+    raw = f"{item.get('display', '')}|{item.get('answer', '')}"
+    return "g" + hashlib.sha1(raw.encode("utf-8")).hexdigest()[:8]
 
 
 async def generate_all(word_target: int = 60, closure_max: int = 30,
