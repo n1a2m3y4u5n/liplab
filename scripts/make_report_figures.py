@@ -236,7 +236,7 @@ def fig7(ref, b608=None):
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("--b-ref", default=os.path.expanduser("~/Downloads/liplab-lab/data/pod_runs/20260923_n5mpjqpx5cvge6/b_remeasure.json"),
+    ap.add_argument("--b-ref", default=os.path.expanduser("~/Downloads/liplab-lab/data/pod_runs/session3_extra_20260924_0331/b_remeasure_fixed.json"),
                     help="remeasure_b.py 결과(그림 7 대응)")
     ap.add_argument("--b608", default=None, help="b608_measure.py 결과(있으면 그림 7에 608 분포를 더한다)")
     a = ap.parse_args()

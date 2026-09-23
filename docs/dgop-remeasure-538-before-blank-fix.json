@@ -33,9 +33,9 @@
     "n": 300
    },
    "dgop": {
-    "mean": 80.192,
-    "median": 82.45,
-    "sd": 11.6566,
+    "mean": 16.362,
+    "median": 16.55,
+    "sd": 4.9978,
     "n": 300
    },
    "exact_rate": 0.0433
@@ -48,9 +48,9 @@
     "n": 300
    },
    "dgop": {
-    "mean": 49.6197,
-    "median": 50.9,
-    "sd": 15.7712,
+    "mean": 9.113,
+    "median": 9.0,
+    "sd": 4.0436,
     "n": 300
    },
    "exact_rate": 0.0033
@@ -63,9 +63,9 @@
     "n": 300
    },
    "dgop": {
-    "mean": 26.68,
-    "median": 25.0,
-    "sd": 13.7141,
+    "mean": 5.273,
+    "median": 4.8,
+    "sd": 2.7221,
     "n": 300
    },
    "exact_rate": 0.0
@@ -78,9 +78,9 @@
     "n": 300
    },
    "dgop": {
-    "mean": 5.8123,
-    "median": 3.8,
-    "sd": 6.0458,
+    "mean": 2.1383,
+    "median": 1.9,
+    "sd": 1.5005,
     "n": 300
    },
    "exact_rate": 0.0
@@ -93,88 +93,87 @@
     "n": 300
    },
    "dgop": {
-    "mean": 17.8077,
-    "median": 16.8,
-    "sd": 11.0908,
+    "mean": 5.6043,
+    "median": 5.05,
+    "sd": 3.2196,
     "n": 300
    },
    "exact_rate": 0.0
   }
  },
- "monotone_clean_to_sev_rate": 0.9567,
- "spearman_dgop_vs_asr_acc_pooled": 0.9857953110201383,
+ "monotone_clean_to_sev_rate": 0.8233,
+ "spearman_dgop_vs_asr_acc_pooled": 0.8599400941955975,
  "speaker_mean_dgop": {
   "spk301": {
-   "clean": 74.38,
-   "mild": 43.9,
-   "mod": 30.03,
-   "sev": 8.42,
-   "blur": 12.92
+   "clean": 15.19,
+   "mild": 7.63,
+   "mod": 5.49,
+   "sev": 3.14,
+   "blur": 4.35
   },
   "spk302": {
-   "clean": 85.32,
-   "mild": 55.2,
-   "mod": 27.27,
-   "sev": 4.34,
-   "blur": 16.66
+   "clean": 19.08,
+   "mild": 11.27,
+   "mod": 5.59,
+   "sev": 1.74,
+   "blur": 6.27
   },
   "spk303": {
-   "clean": 88.46,
-   "mild": 60.9,
-   "mod": 39.63,
-   "sev": 6.8,
-   "blur": 20.67
+   "clean": 19.7,
+   "mild": 11.93,
+   "mod": 7.37,
+   "sev": 2.59,
+   "blur": 7.12
   },
   "spk304": {
-   "clean": 84.3,
-   "mild": 40.66,
-   "mod": 11.19,
-   "sev": 1.76,
-   "blur": 13.46
+   "clean": 10.62,
+   "mild": 4.41,
+   "mod": 2.54,
+   "sev": 0.99,
+   "blur": 3.7
   },
   "spk306": {
-   "clean": 76.39,
-   "mild": 50.96,
-   "mod": 32.54,
-   "sev": 9.04,
-   "blur": 20.71
+   "clean": 14.08,
+   "mild": 8.2,
+   "mod": 5.33,
+   "sev": 2.61,
+   "blur": 5.63
   },
   "spk305": {
-   "clean": 63.96,
-   "mild": 31.99,
-   "mod": 16.01,
-   "sev": 2.11,
-   "blur": 10.7
+   "clean": 13.7,
+   "mild": 7.26,
+   "mod": 3.56,
+   "sev": 1.35,
+   "blur": 4.33
   },
   "spk308": {
-   "clean": 82.08,
-   "mild": 59.53,
-   "mod": 30.74,
-   "sev": 6.74,
-   "blur": 22.25
+   "clean": 16.64,
+   "mild": 10.41,
+   "mod": 4.91,
+   "sev": 1.9,
+   "blur": 6.4
   },
   "spk307": {
-   "clean": 83.15,
-   "mild": 57.08,
-   "mod": 35.02,
-   "sev": 10.43,
-   "blur": 25.98
+   "clean": 16.33,
+   "mild": 10.06,
+   "mod": 6.58,
+   "sev": 2.91,
+   "blur": 6.97
   },
   "spk310": {
-   "clean": 84.39,
-   "mild": 53.82,
-   "mod": 24.66,
-   "sev": 5.65,
-   "blur": 19.39
+   "clean": 19.38,
+   "mild": 11.26,
+   "mod": 5.78,
+   "sev": 2.55,
+   "blur": 6.28
   },
   "spk309": {
-   "clean": 79.5,
-   "mild": 42.16,
-   "mod": 19.71,
-   "sev": 2.84,
-   "blur": 15.34
+   "clean": 18.89,
+   "mild": 8.69,
+   "mod": 5.57,
+   "sev": 1.6,
+   "blur": 4.99
   }
  },
- "elapsed_s": 285.3,
- "note": "9/24 정렬 blank 수정판(kresnik [PAD]를 blank로). 이전 결함판은 dgop-remeasure-538-before-blank-fix.json"
+ "elapsed_s": 740.7
 }
