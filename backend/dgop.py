@@ -296,10 +296,30 @@ def fuse_audio_visual_per_phone(per_phone: List[Dict], visual_score: Optional[fl
 MOUTH_TRACK_MAX_FRAMES = 1500   # 약 75초(20fps) — 녹음 상한보다 넉넉히
 
 
+def _parse_nasal(raw) -> Optional[List[tuple]]:
+    """선택 필드 nasal: [[t초, p], …] — 웹캠 K 분류기의 프레임별 비음 확률(0~1). 어긋나면 None(비음 보조만 뺀다)."""
+    try:
+        if not isinstance(raw, list) or not raw or len(raw) > MOUTH_TRACK_MAX_FRAMES:
+            return None
+        out = []
+        for row in raw:
+            if not isinstance(row, list) or len(row) != 2:
+                return None
+            t, p = float(row[0]), float(row[1])
+            if not (math.isfinite(t) and math.isfinite(p)):
+                return None
+            out.append((t, max(0.0, min(1.0, p))))
+        out.sort(key=lambda r: r[0])
+        return out
+    except Exception:
+        return None
+
+
 def parse_mouth_track(raw) -> Optional[Dict]:
-    """웹캠 입모양 타임라인(프론트 SpeakingPractice가 보냄)을 검증해 {visemes, frames}로.
-    형식: {"visemes": [1..10], "frames": [[t초, s_1, …, s_k], …]}, s는 0~1(목표 입모양 프로파일과의 코사인).
-    형식이 어긋나거나 너무 크면 None(구간 보완 없이 문장 입모양 점수만 쓴다)."""
+    """웹캠 입모양 타임라인(프론트 SpeakingPractice가 보냄)을 검증해 {visemes, frames, nasal}로.
+    형식: {"visemes": [1..10], "frames": [[t초, s_1, …, s_k], …], "nasal": [[t초, p], …](선택)},
+    s는 0~1(목표 입모양 프로파일과의 코사인), p는 K 분류기의 비음 확률. frames가 어긋나거나 너무 크면
+    None(구간 보완 없이 문장 입모양 점수만 쓴다). nasal만 어긋나면 nasal=None으로 둔다."""
     import json as _json
     try:
         d = _json.loads(raw) if isinstance(raw, (str, bytes)) else raw
@@ -317,7 +337,7 @@ def parse_mouth_track(raw) -> Optional[Dict]:
                 return None
             out.append((t, vals))
         out.sort(key=lambda r: r[0])
-        return {"visemes": vis, "frames": out}
+        return {"visemes": vis, "frames": out, "nasal": _parse_nasal(d.get("nasal"))}
     except Exception:
         return None
 
@@ -366,3 +386,88 @@ def visual_scores_for_phones(per_phone: List[Dict], track: Optional[Dict], margi
         best = [max(vals[col[v]] for vals in window) for v in vids]
         out.append(round(100.0 * sum(best) / len(best), 1))
     return out
+
+
+# ── K→B 융합(K-5) — 입술 너머 얼굴 신호(콧방울 등)로 추정한 비음 확률을 발음채점의 보조 입력으로 ──
+# 입모양으로는 ㅁ/ㅂ, ㄴ/ㄷ, ㅇ/ㄱ이 같아 보인다(같은 입모양 그룹). 비음 여부가 이 짝을 가르는 유일한 단서라,
+# 그런 음소에서만 입모양 점수를 조금 올리거나 내린다. 제품 K 모델의 비음 AUC는 0.60~0.64(미학습 화자)로
+# 약해서, 판정이 아니라 입모양 점수에 최대 ±NASAL_POINTS점을 더하는 보조로만 쓴다(계획서 §3.11 '보조 단서').
+NASAL_POINTS = 8.0       # 음소 입모양 점수(0~100)에 더하는 최대 조정폭
+NASAL_SCALE = 0.15       # 구간 평균 비음 확률이 발화 중앙값보다 이만큼 높으면(낮으면) 근거 +1(−1)
+_NASAL = {"ㅁ", "ㄴ"}                      # 초성 비음(초성 ㅇ은 무음)
+_NASAL_CODA = {"ㅁ", "ㄴ", "ㅇ"}
+_ORAL_STOP = {"ㅂ", "ㅍ", "ㅃ", "ㄷ", "ㅌ", "ㄸ", "ㄱ", "ㅋ", "ㄲ"}   # 같은 자리 비음과 입모양이 같은 파열음
+
+
+def _nasal_class(onset: str, coda: str) -> Optional[int]:
+    """발음된 음절의 비음 기대: 비음만 있으면 1, 짝이 되는 파열음만 있으면 0, 둘 다 있거나 둘 다 없으면 None."""
+    has_n = onset in _NASAL or coda in _NASAL_CODA
+    has_o = onset in _ORAL_STOP or coda in _ORAL_STOP
+    if has_n == has_o:
+        return None
+    return 1 if has_n else 0
+
+
+def annotate_nasal_expectation(phones: List[Dict], target_text: str) -> None:
+    """정렬 토큰마다 'nasal_expect'(1·0·None)를 붙인다. 음절 토큰은 철자대로 나오므로 표준발음(비음화 등)을
+    거친 음절로 판단한다(국물→[궁물]의 '국'은 비음). 자모 토큰('o:ㄴ')은 이미 발음형이다."""
+    import engine as _engine
+    chars = [ch for ch in (target_text or "") if "가" <= ch <= "힣"]
+    pron = [t for t in _engine.to_pronounced_syllables(target_text or "", phonetic=True) if isinstance(t, list)]
+    k = 0
+    for p in phones:
+        tok = (p.get("token") or "").strip()
+        p["nasal_expect"] = None
+        if ":" in tok:
+            kind, j = tok.split(":", 1)
+            if kind == "o":
+                p["nasal_expect"] = _nasal_class(j, "")
+            elif kind == "c":
+                p["nasal_expect"] = _nasal_class("", j)
+            continue
+        if len(tok) != 1 or not ("가" <= tok <= "힣"):
+            continue
+        while k < len(chars) and chars[k] != tok:    # 어휘에 없어 빠진 음절이 있으면 건너뛴다
+            k += 1
+        if k < len(chars) and k < len(pron):
+            ini, _, fin = pron[k]
+            p["nasal_expect"] = _nasal_class(ini, fin)
+            k += 1
+
+
+def nasal_evidence_for_phones(per_phone: List[Dict], track: Optional[Dict], margin: float = 0.08,
+                              scale: float = NASAL_SCALE) -> List[Optional[float]]:
+    """음소마다 비음 근거(−1~1): 기대가 비음이면 +, 파열음이면 −로 맞춘 값. 구간 평균 비음 확률을 그 발화의
+    중앙값과 비교한다(사람·조명마다 확률의 기준선이 달라 절대값 대신 발화 안 상대값을 쓴다)."""
+    nasal = (track or {}).get("nasal")
+    if not nasal:
+        return [None] * len(per_phone)
+    ps = sorted(p for _, p in nasal)
+    mid = ps[len(ps) // 2] if len(ps) % 2 else (ps[len(ps) // 2 - 1] + ps[len(ps) // 2]) / 2
+    out: List[Optional[float]] = []
+    for p in per_phone:
+        e, t0, t1 = p.get("nasal_expect"), p.get("t0"), p.get("t1")
+        if e is None or t0 is None or t1 is None:
+            out.append(None)
+            continue
+        win = [v for (t, v) in nasal if t0 - margin <= t <= t1 + margin]
+        if not win:
+            out.append(None)
+            continue
+        d = max(-1.0, min(1.0, (sum(win) / len(win) - mid) / scale))
+        out.append(round(d if e == 1 else -d, 3))
+    return out
+
+
+def apply_nasal_evidence(visual_by_phone: Optional[List[Optional[float]]], evidence: List[Optional[float]],
+                         points: float = NASAL_POINTS) -> tuple:
+    """구간 입모양 점수에 비음 근거 × points를 더한다(0~100로 자름). 입모양 점수가 없는 음소는 그대로 둔다.
+    (조정된 목록, 조정한 음소 수)를 돌려준다."""
+    vbp = list(visual_by_phone or [])
+    n = 0
+    for i, ev in enumerate(evidence):
+        if ev is None or i >= len(vbp) or vbp[i] is None:
+            continue
+        vbp[i] = round(max(0.0, min(100.0, vbp[i] + points * ev)), 1)
+        n += 1
+    return vbp, n

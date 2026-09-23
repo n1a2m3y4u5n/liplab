@@ -37,6 +37,10 @@ const RESULT_BTN = 'btn-bar flex-1 max-lg:rounded-13 max-lg:px-0 max-lg:text-[15
 // 캔버스·SVG에 쓸 토큰 색 — 루트(data-track="speak") 기준으로 CSS 변수를 읽는다.
 const cssVar = (el, name) => (el ? getComputedStyle(el).getPropertyValue(name).trim() : '') || 'gray'
 
+// 비음 추정(K-5)을 채점 전에 기다리는 최대 시간 — 넘으면 비음 보조 없이 보낸다.
+const NASAL_WAIT_MS = 2500
+const withTimeout = (p, ms) => Promise.race([p, new Promise((resolve) => setTimeout(() => resolve(null), ms))])
+
 // 자기상관 기반 기본주파수(피치) 추정
 function autoCorrelate(buf, sampleRate) {
   const SIZE = buf.length
@@ -146,6 +150,7 @@ export default function SpeakingPractice() {
         videoStreamRef.current = vs
         setMirrorOn(true)
         ensureLandmarker()   // 미러 켜는 순간 모델 준비(비동기)
+        import('../lib/kModel').then((m) => m.loadK()).catch(() => {})   // 비음 추정(K-5)도 미리 올린다
       } catch { setErr('웹캠을 쓸 수 없어요. 카메라 권한을 허용해 주세요.') }
     }
   }
@@ -182,7 +187,9 @@ export default function SpeakingPractice() {
 
   // 구간별 입모양 보완(B-6) — 프레임마다 입모양 그룹 1~10의 코사인(0~1)을 시각과 함께 보낸다.
   // 서버가 음소(음절)가 정렬된 시간 구간에서 그 음소의 목표 입모양 점수를 골라 소리 점수와 섞는다.
-  const buildMouthTrack = () => {
+  // K-5: 얼굴 신호로 추정한 비음 확률도 함께 보낸다(ㅁ/ㅂ처럼 입모양이 같은 짝을 가르는 보조 단서).
+  // 비음 모델이 늦거나 없으면 기다리지 않고 입모양만 보낸다.
+  const buildMouthTrack = async () => {
     const buf = mouthFramesRef.current
     const times = mouthTimesRef.current
     if (!buf.length || buf.length !== times.length) return null
@@ -192,7 +199,14 @@ export default function SpeakingPractice() {
       Math.round(times[i] * 1000) / 1000,
       ...visemes.map((vid) => Math.round(Math.max(0, Math.min(1, cosineScore(bs, vid, profiles))) * 1000) / 1000),
     ])
-    return { visemes, frames: rows }
+    const track = { visemes, frames: rows }
+    try {
+      const { nasalTrack, K_FACE_KEYS } = await import('../lib/kModel')
+      const face = buf.map((bs) => K_FACE_KEYS.map((k) => bs[k] || 0))
+      const nasal = await withTimeout(nasalTrack(face, times), NASAL_WAIT_MS)
+      if (nasal) track.nasal = nasal
+    } catch { /* 비음 보조 없이 */ }
+    return track
   }
 
   useEffect(() => {
@@ -336,7 +350,7 @@ export default function SpeakingPractice() {
       const mc = computeMouthConfidence()
       if (mc != null) {
         opts.mouth_confidence = mc
-        const track = buildMouthTrack()
+        const track = await buildMouthTrack()
         if (track) opts.mouth_track = JSON.stringify(track)
       }
       setAssessing(true)
