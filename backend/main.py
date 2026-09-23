@@ -2291,6 +2291,7 @@ async def conversation_multi_result(req: MultiConvResultReq,
     await db.commit()
     return {"combined": combined, "speaker_accuracy": round(spk_acc, 3),
             "read_accuracy": round(read_acc, 3), "recorded_visemes": sorted(missed | hit),
+            "missed_visemes": sorted(missed),   # 오독한 발화의 입모양(복습·지식추적에 오답으로 반영)
             "closure_correct": (scored or {}).get("closure_correct"),
             "server_scored": scored is not None}
 
