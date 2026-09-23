@@ -2439,6 +2439,72 @@ async def assessment_progression(current_user=Depends(get_current_user),
     }
 
 
+@app.get("/api/assessment/report")
+async def assessment_report(tz_offset_min: int = -540, current_user=Depends(get_current_user),
+                            db: AsyncSession = Depends(get_db)):
+    """교사·언어재활사용 결과지(I-9) — 검사 이력, 사전·사후 비교, 최근 검사의 오류 프로파일, 학습량, 조음 교정
+    요약을 한 번에 준다. 화면(학습 효과 리포트)이 이것으로 인쇄용 결과지를 만든다. 본인 기록만 준다.
+    날짜는 tz_offset_min(브라우저 Date.getTimezoneOffset(), 한국 −540)으로 정한 현지 날짜다(분석 개요와 같은 기준).
+    검사는 규준(연령·청력 집단별 기준)이 없고 신뢰도는 모의실험 값이라, 해석 주의를 notes에 함께 싣는다."""
+    import articulation as _art
+    import analytics as _an
+    from datetime import datetime as _dt
+    from sqlalchemy import select, func, cast, Integer
+    from database import PlacementResult, TrialAttempt, SpeakAttempt, Progress, ArticulationSession
+    tz = max(-840, min(720, int(tz_offset_min)))
+
+    def local_day(ts):
+        return _an.to_local(ts, tz).date().isoformat() if ts else None
+
+    uid = current_user.id
+    tests = (await db.execute(select(PlacementResult).where(PlacementResult.user_id == uid)
+                              .order_by(PlacementResult.created_at))).scalars().all()
+    vis_name = {l["viseme_id"]: l["name"] for l in _curriculum.VISEME_LESSONS}
+    latest = tests[-1] if tests else None
+    err_vis = [{"viseme_id": v, "name": vis_name.get(v, str(v))}
+               for v in ((latest.error_visemes or []) if latest else []) if isinstance(v, int)]
+    err_pho = sorted([e for e in ((latest.error_phonemes or []) if latest else []) if isinstance(e, dict)],
+                     key=lambda e: -int(e.get("count", 0)))[:8]
+    progression = await assessment_progression(current_user=current_user, db=db)
+    trials = (await db.execute(select(TrialAttempt.stage, func.count(TrialAttempt.id),
+                                      func.sum(cast(TrialAttempt.correct, Integer)))
+                               .where(TrialAttempt.user_id == uid).group_by(TrialAttempt.stage))).all()
+    sp = (await db.execute(select(func.count(SpeakAttempt.id), func.avg(SpeakAttempt.score))
+                           .where(SpeakAttempt.user_id == uid))).one()
+    days = set()
+    for M in (TrialAttempt, SpeakAttempt, Progress, PlacementResult):
+        for (ts,) in (await db.execute(select(M.created_at).where(M.user_id == uid))).all():
+            if ts:
+                days.add(local_day(ts))
+    arts = (await db.execute(select(ArticulationSession).where(ArticulationSession.user_id == uid)
+                             .order_by(ArticulationSession.created_at))).scalars().all()
+    art = _art.summarize_sessions([{"viseme_id": x.viseme_id, "gap_start": x.gap_start, "gap_end": x.gap_end,
+                                    "created_at": x.created_at} for x in arts]) if arts else None
+    stage_name = {1: "입모양 인지", 2: "음절·단어", 3: "문장", 4: "대화"}
+    now = _dt.utcnow().replace(microsecond=0)
+    return {
+        "generated_at": now.isoformat() + "Z",
+        "issued_on": local_day(now),
+        "learner": {"name": current_user.username},
+        "tests": [{"date": local_day(t.created_at), "form": t.form,
+                   "form_version": t.form_version, "total": t.total, "correct": t.correct,
+                   "accuracy": round(t.accuracy or 0, 3), "ability": round(t.ability or 0, 2), "level": t.level}
+                  for t in tests],
+        "progression": progression,
+        "error_profile": {"visemes": err_vis, "phonemes": err_pho,
+                          "from_test": local_day(latest.created_at) if latest else None},
+        "activity": {"active_days": len(days),
+                     "first_day": min(days) if days else None, "last_day": max(days) if days else None,
+                     "trials_by_stage": [{"stage": st or 0, "name": stage_name.get(st or 0, "기타"), "n": n,
+                                          "correct": int(c or 0)} for st, n, c in sorted(trials, key=lambda r: r[0] or 0)],
+                     "speak": {"n": sp[0] or 0, "mean_score": round(float(sp[1]), 1) if sp[1] is not None else None}},
+        "articulation": art,
+        "notes": ["이 검사는 규준(연령·청력 집단별 기준 점수)이 아직 없어 다른 학습자와 비교하는 점수가 아닙니다.",
+                  "동형 폼 A·B의 신뢰도(KR-20 약 0.76)는 모의실험 값이며, 실제 학습자 자료로 확인하고 있습니다.",
+                  "사전·사후 비교는 같은 학습자의 변화를 보는 용도로 씁니다."],
+    }
+
+
 @app.get("/api/conversation/multi", dependencies=[Depends(ratelimit.rate_limit(30, 60, "llm-multi"))])
 async def conversation_multi(speakers: int = 2, turns: int = 6, scene: Optional[str] = None,
                              current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
