@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
@@ -49,7 +49,7 @@ const STAT_VALUE = 'text-[20px] font-bold leading-figma tracking-[-0.5px] lg:tex
 const DONE_BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]'
 
 // Figma "Lesson / 4. 완료"(93:12) — 레슨 컴포넌트의 마지막 상태. DOKA + 워터마크 스탯 3칸 + 버튼 2개.
-function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome }) {
+function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, homeLabel = '커리큘럼으로 돌아가기' }) {
   return (
     <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center gap-[26px] bg-page px-[18px] py-12">
       <span className="relative size-[140px] shrink-0">
@@ -74,7 +74,7 @@ function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome }) {
 
       <div className="flex w-full max-w-[640px] flex-col gap-2.5 lg:gap-3">
         <button type="button" onClick={onNext} className={`btn-primary btn-lg ${DONE_BTN}`}>다음 레슨으로</button>
-        <button type="button" onClick={onHome} className={`btn-secondary btn-lg text-track ${DONE_BTN}`}>커리큘럼으로 돌아가기</button>
+        <button type="button" onClick={onHome} className={`btn-secondary btn-lg text-track ${DONE_BTN}`}>{homeLabel}</button>
       </div>
     </div>
   )
@@ -101,6 +101,8 @@ export default function WordStage() {
 
 function WordQuiz({ data }) {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const endless = params.get('endless') === '1'   // 엔드리스 혼합 세션(단어 ↔ 문맥, G-6)
   const words = useMemo(() => data.words.map((w) => w.word), [data])
   const tierOf = useMemo(() => Object.fromEntries(data.words.map((w) => [w.word, w.tier || 1])), [data])
   const bankSet = useMemo(() => new Set(words), [words])
@@ -180,10 +182,11 @@ function WordQuiz({ data }) {
     const accuracy = tally.n ? Math.round((tally.correct / tally.n) * 100) : 0
     return (
       // 다음 레슨: 단계를 숙달했으면 3단계 문장(시나리오 선택 ScenarioHub → /practice. CurriculumPath READ_ROUTE와
-      // 같은 진입점), 아니면 이 단계의 다음 12문항.
+      // 같은 진입점), 아니면 이 단계의 다음 12문항. 엔드리스(?endless=1)에서는 문맥 레슨과 번갈아 이어진다(G-6).
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
-        onNext={() => (stat.mastered ? navigate('/learn/scenario') : restart())}
-        onHome={() => navigate('/learn/path')} />
+        onNext={() => (endless ? navigate('/learn/closure?endless=1') : stat.mastered ? navigate('/learn/scenario') : restart())}
+        onHome={() => navigate(endless ? '/learn/endless' : '/learn/path')}
+        homeLabel={endless ? '엔드리스 학습으로' : undefined} />
     )
   }
 
@@ -201,7 +204,7 @@ function WordQuiz({ data }) {
       <div className="mx-auto flex w-full max-w-[676px] flex-col px-[18px] pb-[200px] pt-[18px] lg:pb-[150px] lg:pt-7">
         {/* 진행 헤더(91:13 / 모바일 235:35) — 나가기 X + 트랙 + n / 12 */}
         <div className="flex items-center gap-3 lg:gap-[18px]">
-          <button type="button" onClick={() => navigate('/learn/path')} aria-label="나가기" className="shrink-0">
+          <button type="button" onClick={() => navigate(endless ? '/learn/endless' : '/learn/path')} aria-label="나가기" className="shrink-0">
             <img src="/ui/lp-91-12-close.svg" alt="" className="size-8 lg:size-9" />
           </button>
           <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
