@@ -23,9 +23,13 @@ with TestClient(main.app) as c:
     kst = c.get("/api/calendar/activities", params={"tz_offset_min": -540}, headers=h).json()
     utc = c.get("/api/calendar/activities", params={"tz_offset_min": 0}, headers=h).json()
     bm = c.get("/api/bookmarks", headers=h).json()
+    # 오답으로 생긴 복습 예정 항목(단어)을 지운다 — 두 번째 삭제는 0건
+    del1 = c.request("DELETE", "/api/review/item", params={"kind": "word", "ref": item["answer"]}, headers=h).json()
+    del2 = c.request("DELETE", "/api/review/item", params={"kind": "word", "ref": item["answer"]}, headers=h).json()
     today_kst = (dt.datetime.utcnow() + dt.timedelta(hours=9)).date().isoformat()
     today_utc = dt.datetime.utcnow().date().isoformat()
-    print("RESULT " + json.dumps({"kst": kst, "utc": utc, "bm": bm, "today_kst": today_kst, "today_utc": today_utc},
+    print("RESULT " + json.dumps({"kst": kst, "utc": utc, "bm": bm, "today_kst": today_kst, "today_utc": today_utc,
+                                  "del1": del1, "del2": del2},
                                  ensure_ascii=False))
 '''
 
@@ -53,3 +57,8 @@ def test_calendar_rows_have_accuracy_and_local_dates():
 def test_bookmarks_have_created_at():
     r = _run()
     assert r["bm"] and r["bm"][0]["created_at"].endswith("Z")
+
+
+def test_review_item_delete():
+    r = _run()
+    assert r["del1"]["deleted"] == 1 and r["del2"]["deleted"] == 0

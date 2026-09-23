@@ -143,6 +143,7 @@ export default function ReviewTab() {
         word: x.word || x.sentence || x.text || x.target || x.name || x.ref || '복습 항목',
         meta: meta(x, kind),
         kind,
+        raw: x,   // 삭제 요청에 쓰는 원래 식별자(북마크 id, 예정 항목 kind·ref)
       }))
       setItems([...norm(wrongArr, 'wrong'), ...norm(dueItems, 'due'), ...norm(bmArr, 'bookmark')])
     })
@@ -184,9 +185,18 @@ export default function ReviewTab() {
     shown.forEach((it) => next.add(it.id))
     return next
   })
-  // 백엔드 삭제 API가 없어 로컬 목록에서만 제거 후 선택 모드 종료.
+  // 북마크는 서버에서 지우고, 복습 예정 항목은 예정 목록에서 뺀다. 최근 오답 문장은 시도 기록에서 계산되는
+  // 목록이라 지울 서버 항목이 없어 이 화면에서만 숨긴다(다시 틀리지 않으면 다음부터는 나오지 않는다).
   const deleteSelected = () => {
+    const picked = items.filter((it) => selected.has(it.id))
+    for (const it of picked) {
+      if (it.kind === 'bookmark' && it.raw?.id != null) learningAPI.removeBookmark(it.raw.id).catch(() => {})
+      else if (it.kind === 'due' && it.raw?.kind && it.raw?.ref != null) reviewAPI.removeDue(it.raw.kind, it.raw.ref).catch(() => {})
+    }
     setItems((prev) => prev.filter((it) => !selected.has(it.id)))
+    setMarks((n) => Math.max(0, n - picked.filter((it) => it.kind === 'bookmark').length))
+    setDue((n) => Math.max(0, n - picked.filter((it) => it.kind === 'due').length))
+    setWrong((n) => Math.max(0, n - picked.filter((it) => it.kind === 'wrong').length))
     exitSelect()
   }
   const openItem = (it) => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { evalAPI } from '../api'
+import { evalAPI, curriculumAPI } from '../api'
 import LearnHeader from '../components/LearnHeader'
 
 // 학습 효과 리포트 — 개인별 시행 기록으로 학습곡선·단계 도달 시행수·초기 대비 최근 향상도를
@@ -81,6 +81,7 @@ export default function EvalReport() {
   const [data, setData] = useState(null)
   const [prog, setProg] = useState(null)   // 통제 향상도(축 I, 사전 A vs 사후 B)
   const [dl, setDl] = useState(false)      // 공개 자원 내려받기 상태(축 C)
+  const [art, setArt] = useState(null)     // 웹캠 조음 교정 전후 오차(축 E-9)
 
   // 축 C 공개 표준 자원(동구형이음 사전·난이도지수·지각공간·평가셋)을 판본과 함께 JSON으로 내려받는다.
   const downloadResources = async () => {
@@ -100,6 +101,7 @@ export default function EvalReport() {
   useEffect(() => {
     evalAPI.summary().then(setData).catch(() => setData(null)).finally(() => setLoading(false))
     evalAPI.progression().then(setProg).catch(() => setProg(null))
+    curriculumAPI.getArticulationTrend().then(setArt).catch(() => setArt(null))
   }, [])
 
   const ov = data?.overview
@@ -221,6 +223,37 @@ export default function EvalReport() {
                 ) : <EmptyLine>선다형 시행이 쌓이면 표시됩니다.</EmptyLine>}
               </Card>
             </div>
+
+            {/* 조음 교정 전후 오차(축 E-9) — 웹캠 교정 세션의 처음·끝에서 잰 관찰 차원(개구·원순·폐쇄) 평균 |목표−관찰| */}
+            {art?.sessions > 0 && (
+              <Card title="조음 교정 전후 오차 (웹캠)" hint={`교정 세션 ${art.sessions}회 · 0에 가까울수록 목표 입모양`}>
+                <div className="flex flex-wrap items-end gap-6">
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-400">세션 처음</p>
+                    <p className="text-2xl font-black text-slate-500">{Math.round(art.gap_start * 100)}</p>
+                  </div>
+                  <div className="pb-1 text-slate-300">→</div>
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-400">세션 끝</p>
+                    <p className="text-2xl font-black text-violet-700">{Math.round(art.gap_end * 100)}</p>
+                  </div>
+                  <div className="pb-1">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${art.change <= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                      {art.change <= 0 ? '' : '+'}{Math.round(art.change * 100)}
+                    </span>
+                  </div>
+                  {art.early != null && art.recent != null && (
+                    <div className="pb-1 text-xs text-slate-500">
+                      처음 세션들 {Math.round(art.early * 100)} → 최근 세션들 {Math.round(art.recent * 100)}
+                    </div>
+                  )}
+                </div>
+                <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+                  입을 벌린 정도·입술 오므림·입술 닫힘을 목표와 비교한 평균 차이(0~100)입니다. 혀처럼 밖에서 안 보이는
+                  조음은 포함되지 않아요. 영상은 기기 밖으로 나가지 않고 요약 수치만 저장됩니다.
+                </p>
+              </Card>
+            )}
 
             <Card title="단계별 숙달 도달 시행수" hint="숙달 기준 시도수 대비 현재 시도">
               {data.trials_to_criterion?.length ? (
