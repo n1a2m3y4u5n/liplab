@@ -2432,6 +2432,24 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
 
 
 # ── 발화(말하기) 채점 — 단계 모드별 채점 + 진행률 + 코칭 ──────────────────────
+
+def _weak_phones(dgop_result, k: int = 3) -> list:
+    """D-GOP 음소 중 가장 약한 소리 k개 [{label, dgop}] — 문장 평균의 60% 미만인 것만(축 B-9 코칭 근거).
+    자모 토큰의 위치 접두(o:·n:·c:)와 어절 경계는 뗀다. D-GOP가 꺼져 있으면 빈 목록."""
+    phones = [p for p in ((dgop_result or {}).get("phones") or [])
+              if p.get("aligned") and p.get("scorable") and p.get("dgop") is not None]
+    if not phones:
+        return []
+    mean = sum(p["dgop"] for p in phones) / len(phones)
+    out = []
+    for p in sorted(phones, key=lambda x: x["dgop"]):
+        label = (p.get("token") or "").split(":", 1)[-1].replace("|", " ").strip()
+        if label and p["dgop"] < max(0.05, 0.6 * mean):
+            out.append({"label": label, "dgop": round(float(p["dgop"]), 3)})
+        if len(out) >= k:
+            break
+    return out
+
 @app.post("/api/speak/assess", dependencies=[Depends(ratelimit.rate_limit(40, 60, "audio"))])
 async def speak_assess(
     target: str = Form(...),
@@ -2605,7 +2623,8 @@ async def speak_assess(
         coaching = note
     else:
         from llm_service import generate_speaking_coaching
-        coaching = await generate_speaking_coaching(target, transcript, score, confusions, metrics)
+        coaching = await generate_speaking_coaching(target, transcript, score, confusions, metrics,
+                                                    weak_phones=_weak_phones(dgop_result))
         if note:
             coaching = f"{coaching} {note}"
     if vowel_fb and vowel_fb.get("messages"):
