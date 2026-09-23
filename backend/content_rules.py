@@ -392,8 +392,9 @@ def select_personalized(words: List[Dict], pairs: List[Dict], closures: List[Dic
                         strict: bool = False) -> Dict:
     """
     지식추적이 고른 표적 음소(target_visemes)와 난이도(level)에 맞춰 콘텐츠를 개인화 선별.
-    표적 viseme를 많이 포함하고 tier가 난이도 이하인 것을 앞세운다.
-    strict=True면 표적 적중(hits>0) 항목이 요청 수 이상 있을 때 무적중 항목을 '필터'로 제거해
+    단어는 tier가 난이도(level) 이하인 것이 상한 안이다. 상한 안을 먼저, 그 안에서 표적 viseme를
+    많이 포함한 것을 앞세운다(표적을 담았어도 난이도를 넘는 단어는 상한 안 단어가 모자랄 때만 나온다).
+    strict=True면 상한 안의 표적 적중(hits>0) 항목이 요청 수 이상 있을 때 나머지를 '필터'로 제거해
     개인화를 강화한다(콘텐츠가 부족하면 자동으로 정렬만 하는 폴백 — 항상 무언가는 돌려준다).
     """
     tv = set(target_visemes or [])
@@ -401,10 +402,10 @@ def select_personalized(words: List[Dict], pairs: List[Dict], closures: List[Dic
     def w_hits(w): return len(set(word_visemes(w["word"])) & tv)
     def p_hits(p): return len(set(p.get("visemes", [])) & tv)
     def c_hits(c): return len(set(word_visemes(c.get("answer", ""))) & tv)
+    def w_in_cap(w): return w.get("tier", 1) <= level
 
     def w_key(w: Dict):
-        over = 1 if w.get("tier", 1) > level else 0  # 난이도 초과는 뒤로
-        return (-w_hits(w), over, w.get("tier", 1), w["word"])
+        return (0 if w_in_cap(w) else 1, -w_hits(w), w.get("tier", 1), w["word"])
 
     def p_key(p: Dict):
         return (-p_hits(p), 0 if p.get("same_looking") else 1)  # 표적 많고 '헷갈리는' 쌍 우선
@@ -412,16 +413,16 @@ def select_personalized(words: List[Dict], pairs: List[Dict], closures: List[Dic
     def c_key(c: Dict):
         return (-c_hits(c), c.get("id", ""))
 
-    def pick(items, keyf, hitf, n):
+    def pick(items, keyf, hitf, n, capf=None):
         ranked = sorted(items, key=keyf)
         if strict and tv:
-            hit = [x for x in ranked if hitf(x) > 0]
+            hit = [x for x in ranked if hitf(x) > 0 and (capf is None or capf(x))]
             if len(hit) >= n:   # 표적 적중이 충분할 때만 무적중 제거(부족하면 정렬 폴백)
                 return hit[:n]
         return ranked[:n]
 
     return {
-        "words": pick(words, w_key, w_hits, n_words),
+        "words": pick(words, w_key, w_hits, n_words, w_in_cap),
         "pairs": pick(pairs, p_key, p_hits, n_pairs),
         "closures": pick(closures, c_key, c_hits, n_closures),
     }
