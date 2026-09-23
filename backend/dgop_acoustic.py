@@ -126,8 +126,28 @@ def ctc_log_probs(waveform, sample_rate: int, model_id: str = DEFAULT_MODEL_ID):
     return log_probs, vocab
 
 
+# CTC blank의 이름은 체크포인트마다 다르다(자모 vocab·fairseq 계열은 "<pad>", kresnik 음절 vocab은 "[PAD]").
+BLANK_CANDIDATES = ("<pad>", "[PAD]", "<blank>", "[BLANK]")
+# 발음 채점 대상이 아닌 특수토큰(blank·unk·문장 경계·어절 경계). 자모 vocab의 판정(jamo_vocab.SPECIAL)에 더해 쓴다.
+SPECIAL_TOKENS = frozenset(("<pad>", "[PAD]", "<unk>", "[UNK]", "<s>", "</s>", "|", "<blank>", "[BLANK]"))
+
+
+def blank_id_for(vocab: Dict[str, int], blank_token: Optional[str] = None) -> int:
+    """CTC blank의 id. blank_token을 주면 그 이름만, 없으면 BLANK_CANDIDATES를 차례로 찾는다.
+
+    ⚠️ 2026-09-24 수정 — 예전에는 blank_token 기본값 "<pad>"를 vocab.get(…, 0)으로 찾았다. kresnik 음절 vocab에는
+    "<pad>"가 없고(blank는 "[PAD]", id 1204) id 0은 음절 '볍'이라, 강제정렬이 '볍'을 blank로 두고 진짜 blank 프레임을
+    목표 음절에 나눠 붙였다. 구간이 넓게 퍼져 구간 평균 분포의 목표 확률이 묽어지고, 깨끗한 발화의 원점수가
+    낮게 나왔다(재측정은 GPU 세션 3). 이제는 찾지 못하면 조용히 0을 쓰지 않고 KeyError를 낸다."""
+    names = (blank_token,) if blank_token else BLANK_CANDIDATES
+    for name in names:
+        if name in vocab:
+            return int(vocab[name])
+    raise KeyError(f"CTC blank 토큰을 vocab에서 찾지 못함: {list(names)}")
+
+
 def align_targets(log_probs, vocab: Dict[str, int], target_tokens: Sequence[str],
-                   blank_token: str = "<pad>") -> List[Dict]:
+                   blank_token: Optional[str] = None) -> List[Dict]:
     """
     CTC 강제정렬로 target_tokens **각 출현**이 놓인 프레임 구간(시작·끝, 포함)을 찾는다.
     log_probs·vocab에만 의존하는 순수 함수 — 합성 log_probs로 모델 없이 테스트 가능.
@@ -148,7 +168,7 @@ def align_targets(log_probs, vocab: Dict[str, int], target_tokens: Sequence[str]
         raise RuntimeError("torch 미설치")
     import ctc_align
 
-    blank_id = vocab.get(blank_token, 0)
+    blank_id = blank_id_for(vocab, blank_token)
     missing = [t for t in target_tokens if t not in vocab]
     if missing:
         raise KeyError(f"vocab에 없는 토큰: {missing}")
@@ -234,12 +254,21 @@ def _is_jamo_vocab(vocab: Dict[str, int]) -> bool:
 
 
 def _is_scorable(token: str) -> bool:
-    """D-GOP 집계 대상 토큰인가. 자모 vocab이면 jamo_vocab의 판정을 따른다."""
+    """D-GOP 집계 대상 토큰인가. 특수토큰(음절 vocab의 [UNK]·[PAD] 포함)은 빼고, 자모 vocab이면 jamo_vocab의 판정을 따른다."""
+    if token in SPECIAL_TOKENS:
+        return False
     try:
         import jamo_vocab
         return jamo_vocab.is_scorable(token)
     except Exception:
         return True
+
+
+def normalize_syllable_text(text: str) -> str:
+    """음절 vocab 모델에 넣을 목표 문장 — 한글 음절과 공백만 남긴다. 문장부호·숫자·영문은 토크나이저가 [UNK]로 바꿔
+    강제정렬이 그 토큰에 프레임을 억지로 배정하고 채점까지 되던 것을 막는다(숫자는 읽는 법을 알 수 없어 뺀다)."""
+    import re
+    return re.sub(r"\s+", " ", re.sub(r"[^가-힣\s]", " ", text or "")).strip()
 
 
 def tokens_for_text(text: str, model_id: str = DEFAULT_MODEL_ID) -> List[str]:
@@ -250,8 +279,8 @@ def tokens_for_text(text: str, model_id: str = DEFAULT_MODEL_ID) -> List[str]:
     'o:ㄱ' 같은 위치 접두 문자열이라 HF 토크나이저가 원문에서 유도할 수 없고, 무엇보다
     **평파열음화·비음화 등 발음 규칙을 거쳐야** 라벨과 일치하기 때문이다.
 
-    그 외(음절 vocab 등)에는 모델의 토크나이저를 그대로 쓴다 — 체크포인트를 바꿔도
-    배관이 그대로 재사용된다.
+    그 외(음절 vocab 등)에는 모델의 토크나이저를 쓰되, 한글과 공백만 남긴 문장을 넣는다
+    (normalize_syllable_text) — 체크포인트를 바꿔도 배관이 그대로 재사용된다.
     """
     processor, _ = _load(model_id)
     tokenizer = processor.tokenizer
@@ -259,7 +288,7 @@ def tokens_for_text(text: str, model_id: str = DEFAULT_MODEL_ID) -> List[str]:
     if _is_jamo_vocab(vocab):
         import jamo_vocab
         return jamo_vocab.text_to_tokens(text)
-    ids = tokenizer(text).input_ids
+    ids = tokenizer(normalize_syllable_text(text)).input_ids
     id2tok = {v: k for k, v in vocab.items()}
     return [id2tok[i] for i in ids if i in id2tok]
 

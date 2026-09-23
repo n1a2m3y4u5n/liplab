@@ -223,6 +223,54 @@ def test_calibration_falls_back_when_unusable():
         os.unlink(path)
 
 
+# kresnik 음절 vocab을 흉내 낸 합성 예시: id 0은 실제 음절('볍'), blank는 맨 끝의 "[PAD]"다.
+_VOCAB_BR = {"볍": 0, "A": 1, "B": 2, "[UNK]": 3, "[PAD]": 4}
+_SEQ_BR = [4, 4, 1, 4, 4, 4, 2, 4, 4]   # blank 사이에 A·B가 한 프레임씩(실제 CTC의 뾰족한 출력)
+
+
+def _bracket_log_probs():
+    import torch
+    logits = torch.full((len(_SEQ_BR), len(_VOCAB_BR)), -8.0)
+    for i, tid in enumerate(_SEQ_BR):
+        logits[i, tid] = 8.0
+    return torch.log_softmax(logits, dim=-1)
+
+
+def test_blank_is_resolved_from_vocab_not_id0():
+    """2026-09-24 회귀 방지 — blank가 "[PAD]"인 vocab에서 id 0(실제 음절)을 blank로 쓰면 구간이 퍼진다."""
+    _ok(DA.blank_id_for(_VOCAB_BR) == 4, "[PAD]를 blank로 찾는다")
+    _ok(DA.blank_id_for(_VOCAB) == 0, "자모 vocab은 <pad>(0) 그대로")
+    try:
+        DA.blank_id_for({"A": 0, "B": 1})
+        raise AssertionError("blank가 없는 vocab은 KeyError여야 한다")
+    except KeyError:
+        pass
+    if not DA.HAS_ACOUSTIC:
+        print("  (torch 미설치 → 정렬 부분 스킵)")
+        return
+    import ctc_align
+    lp = _bracket_log_probs()
+    spans = {s["token"]: s for s in DA.align_targets(lp, _VOCAB_BR, ["A", "B"])}
+    _ok((spans["A"]["start"], spans["A"]["end"]) == (2, 2), f"A는 한 프레임(2) {spans['A']}")
+    _ok((spans["B"]["start"], spans["B"]["end"]) == (6, 6), f"B는 한 프레임(6) {spans['B']}")
+    # 옛 동작(blank=id 0) — 진짜 blank 프레임까지 목표 토큰에 붙어 구간이 넓어지고 목표 확률이 묽어진다
+    ids = [_VOCAB_BR["A"], _VOCAB_BR["B"]]
+    labels, _ = ctc_align.forced_align(lp, ids, blank=0)
+    old = ctc_align.token_spans(labels, ids, blank=0)
+    old_len = sum(sp["end"] - sp["start"] + 1 for sp in old)
+    _ok(old_len > 2, f"옛 정렬은 구간이 퍼진다(프레임 {old_len})")
+    new_p = DA.span_distribution(lp, spans["A"]["start"], spans["A"]["end"])[_VOCAB_BR["A"]]
+    old_p = DA.span_distribution(lp, old[0]["start"], old[0]["end"])[_VOCAB_BR["A"]]
+    _ok(new_p > 0.99 and old_p < new_p, f"목표 확률: 고친 뒤 {new_p:.3f}, 옛 {old_p:.3f}")
+
+
+def test_special_tokens_are_not_scored_and_text_is_hangul_only():
+    for t in ("[UNK]", "[PAD]", "<unk>", "<pad>", "|"):
+        _ok(not DA._is_scorable(t), f"{t}는 채점 대상이 아니다")
+    _ok(DA._is_scorable("가") and DA._is_scorable("o:ㄱ"), "음절·자모 토큰은 채점한다")
+    _ok(DA.normalize_syllable_text("밥 먹었어요? 3시에, 가요!") == "밥 먹었어요 시에 가요", "문장부호·숫자는 뺀다")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:
