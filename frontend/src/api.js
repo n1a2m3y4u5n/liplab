@@ -191,7 +191,7 @@ export const curriculumAPI = {
   // session(선택): 웹캠 조음 교정 세션 요약 { gap_start, gap_end, n_samples } (축 E-9)
   recordMouth: async (viseme_id, score, session = {}) => (await api.post('/curriculum/mouth-attempt', { viseme_id, score, ...session })).data,
   getArticulationTrend: async () => (await api.get('/analysis/articulation')).data,
-  getMultiConversation: async (speakers = 2, turns = 6) => (await api.get('/conversation/multi', { params: { speakers, turns } })).data,
+  getMultiConversation: async (speakers = 2, turns = 6, scene) => (await api.get('/conversation/multi', { params: { speakers, turns, ...(scene ? { scene } : {}) } })).data,
   recordMultiConversation: async (payload) => (await api.post('/conversation/multi/result', payload)).data,
   getPlacement: async (n = 8, form = null) => (await api.get('/assessment/placement', { params: form ? { n, form } : { n } })).data,
   scorePlacement: async (items, responses, form = 'placement') => (await api.post('/assessment/score', { items, responses, form })).data,
