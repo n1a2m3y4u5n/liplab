@@ -1021,6 +1021,75 @@ async def get_calendar_activities(days_back: int = 140, tz_offset_min: int = -54
     return out
 
 
+@app.get("/api/analysis/activity-detail")
+async def analysis_activity_detail(day: str, kind: str, topic: str = "", tz_offset_min: int = -540,
+                                   current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """회차 상세(Figma 212:24) — 회차 히스토리의 한 행(현지 날짜 × 활동 종류 × 주제)에 든 문제별 기록과 요약.
+    말하기는 소리(융합 전 음향)·입모양·융합·불확실성 평균과 문제별 점수·들린 발음·음소 칩·마지막 코칭을,
+    독화는 문제별 정답·고른 답을, 문장 연습은 문장·내 답·점수를, 검사는 회차별 정답률을 준다.
+    """
+    import datetime as dt
+    import analytics as _an
+    from sqlalchemy import select
+    from database import Progress, TrialAttempt, SpeakAttempt, PlacementResult
+    try:
+        d0 = dt.date.fromisoformat(day)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="day는 YYYY-MM-DD")
+    tz = max(-840, min(720, int(tz_offset_min)))
+    lo = dt.datetime.combine(d0, dt.time()) + dt.timedelta(minutes=tz)       # 현지 0시 → UTC
+    hi = lo + dt.timedelta(days=1)
+    uid = current_user.id
+
+    def hm(ts):
+        return _an.to_local(ts, tz).strftime("%H:%M") if ts else None
+
+    def mean(xs):
+        xs = [x for x in xs if x is not None]
+        return round(sum(xs) / len(xs), 1) if xs else None
+
+    items, summary, coaching = [], {}, None
+    if kind == "speak":
+        q = select(SpeakAttempt).where(SpeakAttempt.user_id == uid, SpeakAttempt.created_at >= lo,
+                                       SpeakAttempt.created_at < hi)
+        q = q.where(SpeakAttempt.mode == topic) if topic else q.where((SpeakAttempt.mode.is_(None)) | (SpeakAttempt.mode == ""))
+        rows = (await db.execute(q.order_by(SpeakAttempt.created_at))).scalars().all()
+        items = [{"time": hm(r.created_at), "target": r.target, "heard": r.transcript, "score": round(r.score or 0, 1),
+                  "passed": r.passed, "phones": r.phones or [], "confusions": r.confusions or []} for r in rows]
+        unc = [r.uncertainty for r in rows if r.uncertainty is not None]
+        summary = {"n": len(rows), "sound": mean([r.audio_score for r in rows]), "mouth": mean([r.mouth_score for r in rows]),
+                   "fused": mean([r.fused_score for r in rows]),
+                   "uncertainty": round(sum(unc) / len(unc), 3) if unc else None,
+                   "score": mean([r.score for r in rows]),
+                   "pass_rate": round(sum(1 for r in rows if r.passed) / len(rows), 3) if rows and any(r.passed is not None for r in rows) else None}
+        coaching = next((r.coaching for r in reversed(rows) if r.coaching), None)
+    elif kind in ("viseme", "word", "closure", "trial"):
+        q = select(TrialAttempt).where(TrialAttempt.user_id == uid, TrialAttempt.created_at >= lo,
+                                       TrialAttempt.created_at < hi)
+        q = q.where(TrialAttempt.item_type == kind) if kind != "trial" else q
+        rows = (await db.execute(q.order_by(TrialAttempt.created_at))).scalars().all()
+        items = [{"time": hm(r.created_at), "target": r.target, "chosen": r.chosen, "correct": bool(r.correct),
+                  "confusions": r.confusions or []} for r in rows]
+        summary = {"n": len(rows), "accuracy": round(sum(1 for r in rows if r.correct) / len(rows), 3) if rows else None}
+    elif kind == "sentence":
+        q = select(Progress).where(Progress.user_id == uid, Progress.created_at >= lo, Progress.created_at < hi,
+                                   Progress.situation == topic)
+        rows = (await db.execute(q.order_by(Progress.created_at))).scalars().all()
+        items = [{"time": hm(r.created_at), "target": r.sentence, "chosen": r.user_answer, "score": round(r.score or 0, 1)}
+                 for r in rows]
+        summary = {"n": len(rows), "score": mean([r.score for r in rows])}
+    elif kind == "assessment":
+        q = select(PlacementResult).where(PlacementResult.user_id == uid, PlacementResult.created_at >= lo,
+                                          PlacementResult.created_at < hi, PlacementResult.form == (topic or "placement"))
+        rows = (await db.execute(q.order_by(PlacementResult.created_at))).scalars().all()
+        items = [{"time": hm(r.created_at), "total": r.total, "correct": r.correct, "accuracy": round(r.accuracy or 0, 3),
+                  "level": r.level} for r in rows]
+        summary = {"n": len(rows), "accuracy": round(sum(r.accuracy or 0 for r in rows) / len(rows), 3) if rows else None}
+    else:
+        raise HTTPException(status_code=400, detail="알 수 없는 활동 종류")
+    return {"day": day, "kind": kind, "topic": topic, "summary": summary, "items": items, "coaching": coaching}
+
+
 @app.get("/api/analysis/overview")
 async def get_analysis_overview(tz_offset_min: int = -540, current_user=Depends(get_current_user),
                                 db: AsyncSession = Depends(get_db)):
@@ -2667,6 +2736,8 @@ async def speak_assess(
     # 축 B 오디오·비주얼 융합 — 웹캠 입모양(D) 신뢰도가 오면, 음향 점수가 낮을(불확실할)수록
     # 입모양에 더 가중해 최종 점수를 낸다(농인은 음성이 불안정하나 입모양은 상대적으로 안정적).
     av_fusion = None
+    audio_score = score        # 회차 상세의 '소리' — 입모양 융합 전 음향 점수
+    vis = None
     if mouth_confidence is not None and mouth_confidence >= 0:
         import dgop
         vis = mouth_confidence * 100 if mouth_confidence <= 1 else mouth_confidence
@@ -2685,12 +2756,22 @@ async def speak_assess(
 
     # 개별 시도 영속화(말하기 분석용 — 독화가 Progress에 쌓는 것과 대칭)
     from database import SpeakAttempt
-    db.add(SpeakAttempt(
+    _phones = [{"label": (p.get("token") or "").split(":", 1)[-1].replace("|", " ").strip(),
+                "dgop": round(float(p["dgop"]), 3)}
+               for p in ((dgop_result or {}).get("phones") or [])
+               if p.get("aligned") and p.get("scorable") and p.get("dgop") is not None][:40]
+    attempt = SpeakAttempt(
         user_id=current_user.id, stage=stage, mode=mode, target=target,
         transcript=transcript, score=score, passed=passed,
         loudness=loudness, pitch_range=pitch_range, duration=duration,
         pitch_start=pitch_start, pitch_end=pitch_end, confusions=confusions[:6],
-    ))
+        audio_score=None if audio_score is None else round(float(audio_score), 1),
+        mouth_score=None if vis is None else round(float(vis), 1),
+        fused_score=None if av_fusion is None else round(float(av_fusion["score"]), 1),
+        uncertainty=None if not dgop_result else round(float(dgop_result.get("uncertainty") or 0), 3),
+        phones=_phones or None,
+    )
+    db.add(attempt)
     # SRS 복습 큐 유지 — 발음/단어/문장은 틀리면 예정 등록, 맞으면 간격 확장(세 기둥 공통).
     # 말하기는 0~100 점수가 있으므로 이진 대신 점수 등급으로 복습 간격을 조절한다(SM-2).
     if mode in ("phoneme", "word", "sentence") and passed is not None:
@@ -2725,6 +2806,14 @@ async def speak_assess(
             coaching = f"{coaching} {note}"
     if vowel_fb and vowel_fb.get("messages"):
         coaching = f"{coaching} {' '.join(vowel_fb['messages'])}".strip()
+    # 회차 상세의 'DOKA의 한마디'용으로 코칭 문장도 시도 기록에 남긴다(채점 기록은 위에서 이미 저장됨)
+    if coaching:
+        try:
+            attempt.coaching = str(coaching)[:600]
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            print(f"[WARN] coaching save failed: {e}")
 
     # 프론트 음소 칩(SpeakingPractice)이 읽는 acoustic_dgop. 채점은 위 assess_text(naive)가 끝냈고,
     # 여기서는 그 결과를 화면용 모양으로만 옮긴다. 정렬됐고 채점 대상인 음소만 싣고, 자모 토큰의
