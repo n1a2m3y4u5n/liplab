@@ -97,3 +97,11 @@ if __name__ == "__main__":
         t()
         print(f"  ✓ {t.__name__}")
     print(f"\n{len(tests)}개 테스트 통과")
+
+
+def test_visually_confusable_handles_single_viseme_lists():
+    # 두 음소의 입모양 번호가 하나로 합쳐지거나(같은 입모양) 한쪽이 표에 없을 때(겹받침) 멈추지 않아야 한다.
+    import curriculum as _C
+    for p in _C.MINIMAL_PAIRS:
+        R._visually_confusable(p["a"], p["b"])          # IndexError 없이 끝나야 한다
+    assert R._visually_confusable("달", "닭") in (True, False)
