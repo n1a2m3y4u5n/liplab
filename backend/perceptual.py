@@ -25,7 +25,8 @@ _VIS_WEIGHT = {"high": 0.0, "medium": 0.5, "low": 1.0}  # '안 보이는 정도'
 
 # 공개 표준 자원 판본(§3.3 "판본과 함께 공개"). 재현성을 위해 빌드 타임스탬프가 아닌 고정 판을 쓴다.
 # 스키마·값이 바뀌면 semver를 올리고 edition(판)을 갱신한다.
-RESOURCE_SEMVER = "1.1.0"   # 1.1.0(9/23): 단어 은행 233→528, 표준 평가셋에서 표준검사(I) 문항 단어 제외
+RESOURCE_SEMVER = "1.2.0"   # 1.1.0(9/23): 단어 은행 233→528, 표준 평가셋에서 표준검사(I) 문항 단어 제외
+#                             1.2.0(9/23): 데이터 유래 자모 유사도를 538 10화자 LDA 판으로 교체(키 형식 동일)
 RESOURCE_EDITION = "2026-09"
 RESOURCE_LICENSE = "CC BY 4.0"
 RESOURCE_SOURCE = "LIPLAB (CNSAi)"
@@ -164,15 +165,18 @@ def build_benchmark(words: List[str], n_per_tier: int = 12, seed: int = 20260916
 
 
 def load_data_similarity() -> Optional[Dict]:
-    """C 실화자 데이터로 산출한 자모 시각유사도(있으면). 규칙판과 별개로 공개 리소스에 포함."""
+    """C 실화자 데이터로 산출한 자모 시각유사도(있으면). 규칙판과 별개로 공개 리소스에 포함.
+
+    저장소에 든 파일만 읽는다(실행 위치와 무관하게 이 모듈 옆 data/). 예전에는 작업 디렉토리 기준 상대 경로와
+    개인 실험 폴더를 차례로 찾아, 어디서 실행하느냐에 따라 공개 자원 내용이 달라질 수 있었다.
+    """
     import json
-    for p in ("data/c_jamo_similarity.json",
-              os.path.expanduser("~/Downloads/liplab-lab/data/c_out/c_jamo_similarity.json")):
-        if os.path.exists(p):
-            try:
-                return json.load(open(p, encoding="utf-8"))
-            except Exception:
-                pass
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "c_jamo_similarity.json")
+    if os.path.exists(p):
+        try:
+            return json.load(open(p, encoding="utf-8"))
+        except Exception:
+            pass
     return None
 
 
