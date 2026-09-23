@@ -2426,6 +2426,19 @@ async def speak_assess(
                     "mastery_score": round(sp.mastery_score, 1),
                     "mastered": sp.status == "mastered"}
 
+    # 축 E — 모음 단계에서 목표가 단모음 음절('아'·'이' 등)이면 녹음의 포먼트(F1·F2)로 혀 높낮이·앞뒤
+    # 교정 방향을 만든다(formants.py). 웹캠이 못 보는 혀 위치를 소리로 짚어 주는 경로다.
+    vowel_fb = None
+    if mode == "phoneme":
+        import formants as _fm
+        _v = _fm.target_vowel(target)
+        if _v:
+            try:
+                _y = await asyncio.to_thread(_fm.decode_mono16k, data)
+                vowel_fb = await asyncio.to_thread(_fm.vowel_feedback, _y, _v) if _y is not None else None
+            except Exception as e:  # 교정 실패는 채점 결과와 무관
+                print(f"[WARN] vowel formant feedback failed: {e}")
+
     # 발성·운율은 규칙 기반 note가 곧 구체 코칭, 모음~문장은 Claude 코칭(+억양 note)
     if mode in ("voicing", "prosody"):
         coaching = note
@@ -2434,6 +2447,8 @@ async def speak_assess(
         coaching = await generate_speaking_coaching(target, transcript, score, confusions, metrics)
         if note:
             coaching = f"{coaching} {note}"
+    if vowel_fb and vowel_fb.get("messages"):
+        coaching = f"{coaching} {' '.join(vowel_fb['messages'])}".strip()
 
     # 프론트 음소 칩(SpeakingPractice)이 읽는 acoustic_dgop. 채점은 위 assess_text(naive)가 끝냈고,
     # 여기서는 그 결과를 화면용 모양으로만 옮긴다. 정렬됐고 채점 대상인 음소만 싣고, 자모 토큰의
@@ -2460,6 +2475,7 @@ async def speak_assess(
         "metrics": metrics,
         "av_fusion": av_fusion,
         "acoustic_dgop": acoustic_dgop,
+        "vowel_feedback": vowel_fb,   # 축 E: {vowel, f1, f2, target_f1, target_f2, height, front, messages}
         "progress": progress,
         "mode": mode,
     }
