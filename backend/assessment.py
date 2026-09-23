@@ -11,6 +11,8 @@
 
 지각공간 임베딩(데이터 기반)이 준비되면 난이도 통제를 정교화한다(Phase 2).
 """
+import json
+import os
 import random
 from collections import Counter
 from typing import Dict, List, Optional
@@ -19,20 +21,53 @@ import content_rules as _cr
 import curriculum as _cur
 import perceptual as _perc
 
+# 동형 폼 A/B 판본 동결 파일. 콘텐츠(WORD_BANK)가 바뀌어도 사전·사후가 같은 문항을 쓰게 한다.
+FORMS_VERSION = "v1"
+# 사전·사후 폼 길이. 합성 응답 시뮬레이션(scripts/assessment_reliability_sim.py)에서 8문항은 KR-20≈0.52,
+# 24문항은 ≈0.76이라 집단 비교 기준(0.7)을 넘기려고 24로 둔다(docs/assessment-design.md). 배치검사는 8문항.
+FORM_LENGTH = 24
+_FORMS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "assessment",
+                           f"forms_{FORMS_VERSION}.json")
 
-def _confusable_options(answer: str, pool: List[str], k: int = 3) -> List[str]:
-    """정답과 시각적으로 혼동되는 오답 보기 k개(동구형이음·최소대립 우선, 부족하면 임의)."""
-    sig = _cr.viseme_signature(answer)
-    same = [w for w in pool if w != answer and _cr.viseme_signature(w) == sig]
-    mp = [w for w in pool if w != answer and _cr.minimal_pair_diff(answer, w) is not None]
-    cand = list(dict.fromkeys(same + mp))
-    random.shuffle(cand)
-    opts = cand[:k]
-    if len(opts) < k:
-        rest = [w for w in pool if w != answer and w not in opts]
-        random.shuffle(rest)
-        opts += rest[:k - len(opts)]
-    return opts
+
+def viseme_distance(a: str, b: str) -> float:
+    """두 단어 입모양 순열 사이의 거리(가중 편집거리). 치환 비용: 같은 비심 0, 둘 다 입 안쪽
+    무리({6,7,8,10}, 눈으로 거의 못 가름) 0.5, 그 외 1. 삽입·삭제 1. 0이면 입모양이 완전히 같다."""
+    sa, sb = _cr.viseme_signature(a), _cr.viseme_signature(b)
+    inside = _cr._INSIDE_CLUSTER
+    prev = [float(j) for j in range(len(sb) + 1)]
+    for i in range(1, len(sa) + 1):
+        cur = [float(i)] + [0.0] * len(sb)
+        for j in range(1, len(sb) + 1):
+            x, y = sa[i - 1], sb[j - 1]
+            sub = 0.0 if x == y else (0.5 if (x in inside and y in inside) else 1.0)
+            cur[j] = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + sub)
+        prev = cur
+    return prev[-1]
+
+
+def _confusable_options(answer: str, pool: List[str], k: int = 3, closeness: float = 0.5,
+                        rng: Optional[random.Random] = None) -> List[str]:
+    """오답 보기 k개를 입모양 거리로 고른다.
+
+    입모양이 정답과 완전히 같은 단어(동구형이음, 거리 0)는 입만 보고는 원리적으로 구별할 수 없어
+    독화 능력이 아니라 운을 재게 되므로 제외한다. closeness(0~1, 보통 문항 난이도)가 클수록 가까운
+    (헷갈리는) 보기, 작을수록 거리 순위 중간쯤의 보기를 쓴다(맨 끝의 무관한 단어는 피한다).
+    같은 음절 수 후보가 충분하면 그 안에서 고른다."""
+    rng = rng or random
+    cands = [(viseme_distance(answer, w), w) for w in pool if w != answer]
+    cands = [c for c in cands if c[0] > 0]
+    same_len = [c for c in cands if len(c[1]) == len(answer)]
+    base = same_len if len(same_len) >= k * 3 else cands
+    if not base:
+        return []
+    base.sort(key=lambda c: (c[0], c[1]))
+    win = max(k, min(len(base), k * 4))
+    # 헷갈릴 만한 구간(거리 순 상위 1/4) 안에서만 고른다. 어려운 문항은 그 앞쪽(가까운 쪽), 쉬운 문항은 뒤쪽.
+    region = base[:max(win, len(base) // 4)]
+    start = int((1.0 - max(0.0, min(1.0, closeness))) * max(0, len(region) - win))
+    window = region[start:start + win]
+    return [w for _, w in rng.sample(window, min(k, len(window)))]
 
 
 def build_placement_items(words: List[str], n: int = 8, seed: Optional[int] = None) -> List[Dict]:
@@ -50,7 +85,7 @@ def build_placement_items(words: List[str], n: int = 8, seed: Optional[int] = No
     items = []
     for i in range(n):
         e = entries[int(i * step)]
-        opts = _confusable_options(e["word"], words) + [e["word"]]
+        opts = _confusable_options(e["word"], words, closeness=e["difficulty"]) + [e["word"]]
         random.shuffle(opts)
         items.append({"id": f"q{i + 1}", "word": e["word"], "options": opts,
                       "difficulty": e["difficulty"], "visemes": e["visemes"]})
@@ -76,11 +111,30 @@ def build_progression_forms(words: List[str], n: int = 8, seed: int = 7) -> Dict
         for key, off in (("A", 0), ("B", 1)):
             idx = min(base + off, len(entries) - 1)
             e = entries[idx]
-            opts = _confusable_options(e["word"], words) + [e["word"]]
+            opts = _confusable_options(e["word"], words, closeness=e["difficulty"]) + [e["word"]]
             random.shuffle(opts)
             forms[key].append({"id": f"{key}{i + 1}", "word": e["word"], "options": opts,
                                "difficulty": e["difficulty"], "visemes": e["visemes"]})
     return forms
+
+
+def frozen_forms(words: Optional[List[str]] = None, build_if_missing: bool = True) -> Optional[Dict]:
+    """동결된 동형 폼 {"version", "A", "B"}. 파일이 있으면 그것을, 없으면 지금 단어 은행으로 만든다
+    (만든 결과를 저장하지는 않는다 — 동결은 `python assessment.py freeze`로 명시적으로 한다)."""
+    if os.path.exists(_FORMS_PATH):
+        with open(_FORMS_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    if not build_if_missing:
+        return None
+    words = words if words is not None else [w["word"] for w in _cur.WORD_BANK]
+    forms = build_progression_forms(words, n=FORM_LENGTH)
+    return {"version": f"{FORMS_VERSION}-unfrozen", "A": forms["A"], "B": forms["B"]}
+
+
+def test_only_words() -> set:
+    """동결 폼 A/B의 정답 단어 — 훈련 콘텐츠에서 빼서 사전·사후가 문항 암기를 재지 않게 한다."""
+    f = frozen_forms(build_if_missing=False) or {}
+    return {it["word"] for k in ("A", "B") for it in f.get(k, [])}
 
 
 def _word_phonemes(word: str) -> List[str]:
@@ -165,7 +219,7 @@ def select_next_item(asked: List[Dict], responses: Dict[str, str],
         hit = 1 if (targets and set(e["visemes"]) & targets) else 0  # 2순위: 약점 자질 겨냥
         return (round(close, 3), hit, rng.random())
     best = max(entries, key=key)
-    opts = _confusable_options(best["word"], words) + [best["word"]]
+    opts = _confusable_options(best["word"], words, closeness=best["difficulty"], rng=rng) + [best["word"]]
     rng.shuffle(opts)
     return {"id": f"q{len(asked) + 1}", "word": best["word"], "options": opts,
             "difficulty": best["difficulty"], "visemes": best["visemes"]}
@@ -176,17 +230,22 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
     배치검사 채점. responses: {문항ID: 고른 단어}.
     능력 = 통과한 문항 중 최고 난이도(어려운 걸 맞출수록 높다). 오류 프로파일 = 틀린 문항의 음소.
     """
-    by_id = {it["id"]: it for it in items}
+    from scoring import viseme_confusions
     n = len(items)
     correct = 0
     err = Counter()
     perr = Counter()   # 음소 단위 오류
+    conf = Counter()   # 오독 방향: (정답 자모, 읽은 자모, 입모양 이름, 같은 입모양 여부)
     solved_diff = []
-    for iid, chosen in responses.items():
-        it = by_id.get(iid)
-        if not it:
+    item_log = []      # 문항 단위 기록 — 신뢰도(KR-20)·문항 분석의 원자료
+    for it in items:
+        chosen = responses.get(it.get("id"))
+        ok = chosen == it["word"]
+        item_log.append({"id": it.get("id"), "word": it["word"], "chosen": chosen,
+                         "correct": bool(ok), "difficulty": it.get("difficulty")})
+        if chosen is None:
             continue
-        if chosen == it["word"]:
+        if ok:
             correct += 1
             solved_diff.append(it["difficulty"])
         else:
@@ -195,6 +254,9 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
             # 음소 단위: 정답 단어의 자모 중 시각적으로 안 드러나는 것을 카운트
             for ph in _word_phonemes(it["word"]):
                 perr[ph] += 1
+            # 무엇을 무엇으로 읽었는지(오답 보기와 자모 단위 대조)
+            for c in viseme_confusions(it["word"], chosen):
+                conf[(c["target"], c["read"], c["viseme_name_ko"], c["same_viseme"])] += 1
     ability = max(solved_diff) if solved_diff else 0.0
     level = min(5, max(1, int(ability * 4) + 1)) if solved_diff else 1
     return {
@@ -205,6 +267,9 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
         "level": level,
         "error_visemes": [v for v, _ in err.most_common(3)],
         "error_phonemes": [{"phoneme": p, "count": c} for p, c in perr.most_common(6)],
+        "error_confusions": [{"target": t, "read": r, "viseme": vn, "same_viseme": sv, "count": c}
+                             for (t, r, vn, sv), c in conf.most_common(6)],
+        "item_log": item_log,
         "recommended_start": _recommended_stage(level),
     }
 
@@ -223,3 +288,23 @@ def improvement_delta(baseline: Dict, latest: Dict) -> Dict:
         "resolved_visemes": sorted(base_err - late_err),   # 예전엔 틀렸는데 이제 안 틀림
         "new_error_visemes": sorted(late_err - base_err),  # 새로 약해진 입모양
     }
+
+
+if __name__ == "__main__":
+    # 동형 폼 동결: python assessment.py freeze [--force]
+    # 지금 단어 은행으로 A/B를 고정 시드로 만들어 data/assessment/forms_<판본>.json에 저장한다.
+    # 이미 있으면 덮어쓰지 않는다(판본을 바꾸려면 FORMS_VERSION을 올린다).
+    import sys
+    if len(sys.argv) >= 2 and sys.argv[1] == "freeze":
+        if os.path.exists(_FORMS_PATH) and "--force" not in sys.argv:
+            print(f"이미 동결됨: {_FORMS_PATH} (덮어쓰려면 --force)")
+            sys.exit(1)
+        words = [w["word"] for w in _cur.WORD_BANK]
+        forms = build_progression_forms(words, n=FORM_LENGTH)
+        os.makedirs(os.path.dirname(_FORMS_PATH), exist_ok=True)
+        with open(_FORMS_PATH, "w", encoding="utf-8") as f:
+            json.dump({"version": FORMS_VERSION, "n_bank": len(words), "A": forms["A"], "B": forms["B"]},
+                      f, ensure_ascii=False, indent=1)
+        print(f"동결 {_FORMS_PATH}: A {len(forms['A'])}문항, B {len(forms['B'])}문항")
+    else:
+        print("사용법: python assessment.py freeze [--force]")

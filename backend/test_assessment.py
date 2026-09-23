@@ -105,3 +105,36 @@ if __name__ == "__main__":
         t()
         print(f"  ✓ {t.__name__}")
     print(f"\n{len(tests)}개 테스트 통과")
+
+
+def test_no_homophene_distractors():
+    # 입모양이 정답과 완전히 같은 보기는 입만 보고 풀 수 없어 문항 타당도를 해친다 → 없어야 한다.
+    words = [w["word"] for w in C.WORD_BANK]
+    forms = A.build_progression_forms(words, n=8)
+    for k in ("A", "B"):
+        for it in forms[k]:
+            for o in it["options"]:
+                if o != it["word"]:
+                    _ok(A.viseme_distance(it["word"], o) > 0, f"동구형이음 보기 {it['word']}/{o}")
+
+
+def test_frozen_forms_v1():
+    f = A.frozen_forms(build_if_missing=False)
+    _ok(f is not None and f["version"] == A.FORMS_VERSION, "v1 동결 파일이 있어야 한다")
+    L = A.FORM_LENGTH
+    _ok(len(f["A"]) == L and len(f["B"]) == L, "A·B 각 FORM_LENGTH문항")
+    da = sum(i["difficulty"] for i in f["A"]) / L
+    db = sum(i["difficulty"] for i in f["B"]) / L
+    _ok(abs(da - db) < 0.02, "동형: 평균 난이도 차 < 0.02")
+    tw = A.test_only_words()
+    _ok(len(tw) == 2 * L and not ({i["word"] for i in f["A"]} & {i["word"] for i in f["B"]}), "A·B 문항 겹침 없음")
+
+
+def test_score_logs_items_and_confusion_direction():
+    f = A.frozen_forms(build_if_missing=False)
+    items = f["A"]
+    wrong = {it["id"]: next(o for o in it["options"] if o != it["word"]) for it in items[:3]}
+    r = A.score_placement(items, wrong)
+    _ok(len(r["item_log"]) == len(items), "문항 단위 기록(미응답 포함)")
+    _ok(sum(1 for x in r["item_log"] if x["chosen"] is None) == len(items) - 3, "미응답은 chosen=None")
+    _ok(all({"target", "read", "count"} <= set(c) for c in r["error_confusions"]), "오독 방향 필드")

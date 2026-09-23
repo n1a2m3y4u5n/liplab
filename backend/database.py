@@ -251,6 +251,10 @@ class PlacementResult(Base):
     level = Column(Integer, default=1)               # 추정 수준 1~5
     error_visemes = Column(JSON, default=list)       # [viseme_id...]
     error_phonemes = Column(JSON, default=list)      # [{phoneme, count}...] 음소 단위
+    # 동형 폼 판본(assessment.FORMS_VERSION)과 문항 단위 기록 — 사전·사후가 같은 판본인지 확인하고
+    # 신뢰도(KR-20)·문항 분석을 하려면 필요하다(docs/assessment-design.md).
+    form_version = Column(String(16), nullable=True)
+    item_log = Column(JSON, default=list)            # [{id, word, chosen, correct, difficulty}]
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -347,6 +351,9 @@ async def init_db():
             "ALTER TABLE review_items ADD COLUMN lapses INTEGER DEFAULT 0",
             # 토큰 무효화(비밀번호 변경 시) — 기존 users에 없으면 추가
             "ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 0",
+            # 표준검사 판본·문항 기록(축 I)
+            "ALTER TABLE placement_results ADD COLUMN form_version VARCHAR(16)",
+            "ALTER TABLE placement_results ADD COLUMN item_log JSON",
         ):
             try:
                 await conn.exec_driver_sql(ddl)

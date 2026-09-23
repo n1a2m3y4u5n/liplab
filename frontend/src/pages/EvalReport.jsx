@@ -121,7 +121,7 @@ export default function EvalReport() {
         <div className="flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-white p-5 sm:flex-row sm:items-center">
           <div className="flex-1">
             <p className="text-sm font-bold text-slate-800">표준검사 사전·사후</p>
-            <p className="mt-0.5 text-xs text-slate-500">훈련 전에 사전(A), 훈련 뒤에 사후(B)를 한 번씩 보면 향상도를 비교해요. 각 8문항.</p>
+            <p className="mt-0.5 text-xs text-slate-500">훈련 전에 사전(A), 훈련 뒤에 사후(B)를 한 번씩 보면 향상도를 비교해요. 각 24문항, 5분 안팎.</p>
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => navigate('/learn/placement?form=A')} className="btn-secondary !py-2.5 px-4 text-[14px]">사전 검사(A)</button>

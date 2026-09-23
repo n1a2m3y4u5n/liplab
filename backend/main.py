@@ -1379,8 +1379,13 @@ async def curriculum_words(current_user=Depends(get_current_user), db: AsyncSess
     except Exception:
         mastery = {}
     weak = {vid for vid, m in mastery.items() if m < 0.7}
+    # 표준검사 사전·사후 문항 단어는 훈련에서 뺀다 — 향상도가 문항 암기를 재지 않게(축 I, 폼 판본 동결).
+    import assessment as _asmt
+    test_words = _asmt.test_only_words()
     words = []
     for w in _curriculum.WORD_BANK:
+        if w["word"] in test_words:
+            continue
         pri = max(1, 4 - int(w.get("tier", 1)))       # tier1→3, tier2→2, tier3→1
         if weak:
             try:
@@ -1389,7 +1394,8 @@ async def curriculum_words(current_user=Depends(get_current_user), db: AsyncSess
             except Exception:
                 pass
         words.append({**w, "priority": pri})
-    return {"words": words, "minimal_pairs": _curriculum.MINIMAL_PAIRS}
+    pairs = [p for p in _curriculum.MINIMAL_PAIRS if p.get("a") not in test_words and p.get("b") not in test_words]
+    return {"words": words, "minimal_pairs": pairs}
 
 
 @app.post("/api/curriculum/word-answer")
@@ -1780,9 +1786,14 @@ async def curriculum_next(current_user=Depends(get_current_user), db: AsyncSessi
     records = [{"viseme_id": w.viseme_id, "error_count": w.error_count,
                 "total_attempts": w.total_attempts, "last_error_at": w.last_error_at} for w in rows]
     rec = _kt.recommend(records, k=2)
+    # 표준검사 사전·사후 문항 단어는 훈련 추천에서도 뺀다(축 I, 문항 노출 방지).
+    import assessment as _asmt
+    tw = _asmt.test_only_words()
+    bank = [w for w in _curriculum.WORD_BANK if w["word"] not in tw]
+    pairs = [p for p in _curriculum.MINIMAL_PAIRS if p.get("a") not in tw and p.get("b") not in tw]
     # strict=True: 표적 음소 적중 콘텐츠가 충분하면 무적중을 걸러 개인화를 강화(부족하면 자동 정렬 폴백)
     sel = _crules.select_personalized(
-        _curriculum.WORD_BANK, _curriculum.MINIMAL_PAIRS, _curriculum.CLOSURE_ITEMS,
+        bank, pairs, _curriculum.CLOSURE_ITEMS,
         rec["target_visemes"], rec["level"], strict=True)
 
     targets = []
@@ -1946,8 +1957,9 @@ async def assessment_placement(n: int = 8, form: str = None,
     import assessment as _asmt
     words = [w["word"] for w in _curriculum.WORD_BANK]
     if form in ("A", "B"):
-        forms = _asmt.build_progression_forms(words, n=n)
-        return {"items": forms.get(form, []), "form": form}
+        # 사전·사후는 동결된 판본(data/assessment/forms_v1.json)을 쓴다 — 콘텐츠가 바뀌어도 같은 문항.
+        forms = _asmt.frozen_forms(words)
+        return {"items": forms.get(form, []), "form": form, "version": forms.get("version")}
     items = _asmt.build_placement_items(words, n=n)
     return {"items": items, "form": "placement"}
 
@@ -1984,16 +1996,32 @@ async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_cur
     """배치검사/향상도검사 채점 → 추정 수준·음소별 오류 프로파일·시작 단계 추천.
     결과를 PlacementResult로 저장해 사전(A)·사후(B) 통제 비교(향상도)를 가능케 한다."""
     import assessment as _asmt
+    from engine import get_viseme_feature
     result = _asmt.score_placement(data.items, data.responses)
+    form = data.form or "placement"
+    version = None
+    if form in ("A", "B"):
+        version = (_asmt.frozen_forms(build_if_missing=False) or {}).get("version") or "unfrozen"
     try:
         from database import PlacementResult
         db.add(PlacementResult(
-            user_id=current_user.id, form=(data.form or "placement"),
+            user_id=current_user.id, form=form,
             total=result["total"], correct=result["correct"], accuracy=result["accuracy"],
             ability=result["ability"], level=result["level"],
             error_visemes=result.get("error_visemes", []),
             error_phonemes=result.get("error_phonemes", []),
+            form_version=version, item_log=result.get("item_log", []),
         ))
+        # 검사 → 학습 순환(축 I-10): 문항의 입모양별 정오답을 취약 입모양 통계에 넣어, 첫 검사 결과가
+        # 곧바로 개인화(지식추적·약점 출제)의 초기값이 되게 한다.
+        for it in data.items or []:
+            chosen = (data.responses or {}).get(it.get("id"))
+            if chosen is None:
+                continue
+            vids = [v for v in (it.get("visemes") or []) if isinstance(v, int)]
+            wrong = vids if chosen != it.get("word") else []
+            await _bump_weak_visemes(current_user.id, vids, wrong,
+                                     {str(v): get_viseme_feature(v) for v in vids}, db)
         await db.commit()
     except Exception as e:
         await db.rollback()  # 채점 결과 반환은 저장 실패와 무관하게 보장
