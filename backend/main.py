@@ -29,7 +29,7 @@ from auth import (
 # These imports will work once we create the modules
 try:
     from engine import text_to_visemes
-    from llm_service import generate_adaptive_scenario, generate_conversation_turn, generate_analysis_recommendation
+    from llm_service import generate_adaptive_scenario, generate_conversation_turn
     from scoring import calculate_score
 except ImportError:
     # Placeholder functions for initial setup
@@ -823,8 +823,10 @@ VISEME_GROUP_NAMES = {
 }
 
 
-@app.get("/api/analysis", dependencies=[Depends(ratelimit.rate_limit(30, 60, "llm-analysis"))])
+@app.get("/api/analysis", dependencies=[Depends(ratelimit.rate_limit(30, 60, "analysis"))])
 async def get_analysis(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """독화 문장 연습 집계(입모양별 정확도·강약점·자모 혼동). 예전엔 끝에 LLM 추천 문구(약 4초)를 붙였는데,
+    그 문구를 그리던 화면이 Figma 이식 뒤 없어져 9/24에 뺐다(분석 상세는 /api/statistics를 쓴다)."""
     from database import Progress
     from sqlalchemy import select, func
     import traceback
@@ -906,7 +908,7 @@ async def get_analysis(current_user=Depends(get_current_user), db: AsyncSession 
         top_confusions = sorted(confusion_map.items(), key=lambda x: -x[1])[:8]
         confusions = [{"correct": k[0], "confused_as": k[1], "count": v} for k, v in top_confusions]
 
-        analysis_data = {
+        return {
             "total_sessions": total,
             "average_score": round(avg_score, 1),
             "strengths": strengths,
@@ -914,15 +916,6 @@ async def get_analysis(current_user=Depends(get_current_user), db: AsyncSession 
             "viseme_stats": viseme_stats,
             "confusions": confusions,
         }
-
-        # Generate AI recommendation only if enough data
-        recommendation = ""
-        if total >= 3:
-            recommendation = await generate_analysis_recommendation(analysis_data)
-        else:
-            recommendation = "아직 데이터가 부족합니다. 테스트를 3회 이상 완료하면 맞춤형 분석을 받을 수 있어요!"
-
-        return {**analysis_data, "recommendation": recommendation}
 
     except Exception as e:
         print(f"[ERROR] get_analysis failed: {e}")

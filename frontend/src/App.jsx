@@ -39,7 +39,7 @@ import SignSelectionOverlay from './components/SignSelectionOverlay'
 import A11ySettings from './components/A11ySettings'
 import LoadingScreen from './components/LoadingScreen'
 import Login from './pages/Login'
-// Bookmarks·Guide는 /review/saved·/guide에서만 쓰이므로 지연로딩 —
+// Bookmarks는 /review/saved에서만 쓰이므로 지연로딩 —
 // 랜딩(로그인) 진입 청크에서 빼 첫 로딩을 가볍게 한다(저사양·불안정 통신망 배려).
 
 // 탭·학습 단계 등 라우트가 바뀌면 이전 페이지의 스크롤 위치를 이어받지 않는다.
@@ -62,7 +62,6 @@ const Conversation = lazy(() => import('./pages/Conversation'))
 const MultiConversation = lazy(() => import('./pages/MultiConversation'))
 const Placement = lazy(() => import('./pages/Placement'))
 const Bookmarks = lazy(() => import('./pages/Bookmarks'))
-const Guide = lazy(() => import('./pages/Guide'))
 const DevViseme = lazy(() => import('./pages/DevViseme'))
 const Sign = lazy(() => import('./pages/Sign'))
 const VisemeLiteracy = lazy(() => import('./pages/VisemeLiteracy'))
@@ -214,7 +213,6 @@ function App() {
         <Route path="/learn/endless" element={<EndlessPractice />} />
         <Route path="/learn/closure" element={<Closure />} />
         <Route path="/pronounce" element={<FreeSpeak />} />
-        <Route path="/guide" element={<Guide />} />
         <Route path="/dev-viseme" element={<DevViseme />} />
         <Route path="/lab/cue-video" element={<CueVideoDemo />} />
         <Route path="/onboarding" element={<Onboarding />} />

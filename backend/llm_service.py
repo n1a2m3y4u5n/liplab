@@ -418,52 +418,6 @@ async def generate_adaptive_scenario(
         }
 
 
-async def generate_analysis_recommendation(analysis: dict) -> str:
-    """
-    Generate personalized Korean learning recommendation using Claude.
-    analysis: {
-      "total_sessions": int,
-      "average_score": float,
-      "strengths": [{"name": str, "accuracy": float}],
-      "weaknesses": [{"name": str, "accuracy": float}],
-      "viseme_stats": [{"name": str, "accuracy": float, "attempts": int}]
-    }
-    Returns: Korean recommendation string
-    """
-    strengths_text = ", ".join(
-        f'{s["name"]}({s["accuracy"]:.0f}%)' for s in analysis.get("strengths", [])
-    ) or "아직 데이터 부족"
-    weaknesses_text = ", ".join(
-        f'{w["name"]}({w["accuracy"]:.0f}%)' for w in analysis.get("weaknesses", [])
-    ) or "아직 데이터 부족"
-
-    prompt = f"""다음은 청각장애인 독화(Speechreading) 학습자의 테스트 성과 데이터입니다.
-
-총 연습 횟수: {analysis.get('total_sessions', 0)}회
-평균 점수: {analysis.get('average_score', 0):.1f}점
-잘하는 유형: {strengths_text}
-취약한 유형: {weaknesses_text}
-
-이 학습자를 위해 다음을 한국어로 작성해주세요:
-1. 현재 수준 평가 (1-2문장)
-2. 취약한 부분의 원인 설명 (해당 입모양의 특성)
-3. 구체적인 학습 전략 3가지 (번호 매겨서)
-4. 격려 메시지 (1문장)
-
-300자 이내로 친절하고 실용적으로 작성하세요."""
-
-    try:
-        response = await anthropic_client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=500,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.content[0].text.strip()
-    except Exception as e:
-        print(f"Analysis recommendation error: {e}")
-        return "더 많은 연습을 통해 데이터가 쌓이면 맞춤형 학습 조언을 받을 수 있습니다. 꾸준히 연습해보세요!"
-
-
 async def generate_conversation_turn(
     situation: str,
     level: int,
