@@ -1,52 +1,53 @@
 # LIPLAB - AI 기반 독화 훈련 플랫폼
 
-청각장애인을 위한 인공지능 기반 독화(Speechreading) 훈련 플랫폼입니다.
+청각장애인을 위한 한국어 독화(Speechreading) 훈련 웹앱입니다. 입모양 인지부터 단어·문장·대화까지 단계형
+커리큘럼으로 배우는 **독화 트랙**과, 소리 내어 말하고 발음 점수를 받는 **발화 트랙**이 있습니다.
+
+> 작업을 이어받는다면 [STATUS.md](STATUS.md)부터 읽습니다. 축별 현황은 [docs/고도화_현황_팀공유.md](docs/고도화_현황_팀공유.md),
+> 화면 기준은 [LIPLAB_UI_HANDOFF.md](LIPLAB_UI_HANDOFF.md)(Figma), 배포는 [DEPLOY.md](DEPLOY.md)입니다.
 
 ## 주요 기능
 
-- **15단계 정교한 Viseme 매핑**: 한국어 조음 음운론을 반영한 세밀한 입모양 분류
-- **동시조음(Co-articulation) 모델링**: 자연스러운 입모양 전환 애니메이션
-- **적응형 학습**: 사용자의 취약점을 분석하여 맞춤형 시나리오 생성
-- **음운론적 유사도 채점**: 시각적으로 유사한 음소에 대한 부분 점수 제공
-- **자모 단위 피드백·혼동행렬**: '무엇을 무엇으로 읽었나'를 초성·중성·종성 위치별로 진단하고, 같은 입모양이라 헷갈린 비율을 함께 제시
-- **학습 효과 리포트**: 학습곡선·초기 대비 최근 향상도·단계별 숙달 도달 시행수를 개인별로 시각화(`/analysis/eval`)
-- **JWT 인증 및 학습 데이터 추적**: 개인별 진도 및 통계 관리
+**학습**
+- 단계형 커리큘럼: 독화 5단계(입모양 인지 → 단어 → 문장 → 대화), 발화 단계별 레슨. 직전 단계를 숙달하면 다음 단계가 열리고,
+  자가진단(배치검사)으로 시작 단계를 정할 수 있습니다.
+- 3D 아바타 립싱크: 한국어 → 비심(15개 입모양 그룹) 변환과 동시조음 모델링, Character Creator 두상, 속도 조절(2x = 실제 말 빠르기),
+  측면·투명 두상·성도 단면 보기.
+- 연습: 상황별 시나리오(직접 입력), 다자 대화(2~4명), 자유 발화, 수어 함께 보기(국립국어원 한국수어사전 영상), 엔드리스 학습,
+  문맥 추론, 입모양 교실(웹캠 따라 하기·조음 교정).
+- 복습: 간격 반복(SRS) 오늘의 복습, 틀린 문장·북마크 다시 풀기, 말하기 복습.
+
+**채점과 피드백**
+- 독화: 음운론적 유사도 채점(시각적으로 비슷한 음소에 부분 점수), 자모 단위 혼동 진단, 안 보이는 자질(기식·긴장·비음)을
+  보여 주는 시각 증강 기호.
+- 발화: 전사에 기대지 않는 음소별 발음 점수(D-GOP, 서버 추론을 켠 경우). 입모양 점수는 발음 점수에 섞지 않고 따로 보여 줍니다.
+- 웹캠: MediaPipe 입모양 점수와 자체 립리딩 모델(ONNX)을 브라우저에서만 돌립니다. 영상은 서버로 보내지 않습니다.
+
+**분석**
+- 분석 탭: 학습 시간·정확도 추이, 활동 캘린더, 회차 히스토리, 전체 통계.
+- 학습 효과 리포트(`/analysis/eval`): 학습곡선, 초기 대비 최근 향상도, 표준검사 사전(A)·사후(B) 비교, 교사·언어재활사용 인쇄 결과지.
 
 ## 기술 스택
 
-### Backend
-- Python 3.11+
-- FastAPI (비동기 웹 프레임워크)
-- SQLAlchemy (ORM, SQLite/PostgreSQL 호환)
-- G2P (한국어 발음 변환)
-- Anthropic Claude API (시나리오 생성)
-- PyJWT (인증)
+| 영역 | 스택 |
+|------|------|
+| Backend | Python 3.11+, FastAPI(async), SQLAlchemy(SQLite/PostgreSQL), PyJWT, Anthropic Claude API(시나리오·대화 생성) |
+| 서버 추론(선택) | torch(CPU) + transformers: D-GOP 발음채점(wav2vec2), 음성구동 아바타(WavLM). `backend/requirements-infer.txt` |
+| Frontend | React 18, Vite, Tailwind CSS(Figma 디자인 토큰), Zustand, React Router, Framer Motion, Three.js, MediaPipe, onnxruntime-web |
+| 배포 | Docker(멀티스테이지), Fly.io |
 
-### Frontend
-- React 18
-- Vite (빌드 도구)
-- Tailwind CSS (스타일링)
-- Zustand (상태 관리)
-- React Router (라우팅)
-- Framer Motion (애니메이션)
+## 로컬 실행
 
-### Deployment
-- Docker (멀티스테이지 빌드)
-- Fly.io (프로덕션 배포)
-
-## 로컬 개발 환경 설정
-
-### 1. 환경 변수 설정
+### 1. 환경 변수
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` 파일을 열어 다음 값들을 설정하세요:
-- `ANTHROPIC_API_KEY`: Claude API 키 (https://console.anthropic.com/)
-- `JWT_SECRET`: 강력한 랜덤 문자열
+`.env`에 `JWT_SECRET`(아무 긴 문자열)과 `ANTHROPIC_API_KEY`를 넣습니다. 키가 없어도 앱은 돌고, AI 시나리오·대화는
+준비된 문장으로 대신합니다.
 
-### 2. Backend 실행
+### 2. Backend (http://localhost:8080)
 
 ```bash
 cd backend
@@ -54,11 +55,10 @@ pip install -r requirements.txt
 python -m uvicorn main:app --reload --port 8080
 ```
 
-Backend는 http://localhost:8080 에서 실행됩니다.
+API 문서는 http://localhost:8080/docs 에서 볼 수 있습니다. D-GOP 발음채점까지 로컬에서 켜려면 `requirements-infer.txt`와
+torch를 더 설치하고 `DGOP_ALIGNER_ID`를 설정합니다(`.env.example`의 D-GOP 절, `DEPLOY.md` 9항).
 
-### 3. Frontend 실행
-
-새 터미널에서:
+### 3. Frontend (http://localhost:5173)
 
 ```bash
 cd frontend
@@ -66,165 +66,72 @@ npm install
 npm run dev
 ```
 
-Frontend는 http://localhost:5173 에서 실행됩니다.
+로그인 화면의 **둘러보기 (데모)** 를 누르면 회원가입 없이 데모 계정으로 들어갑니다.
 
-### 4. Viseme 이미지 생성 (선택사항)
+### 4. 테스트
 
 ```bash
-cd frontend/public/visemes
-python generate_placeholders.py
+cd backend && python -m pytest -q      # 백엔드
+cd frontend && npm test                # 프론트(node --test)
+cd frontend && npx vite build          # 프로덕션 빌드 확인
 ```
-
-실제 입모양 이미지로 교체하려면 `frontend/public/visemes/1.png` ~ `15.png` 파일을 준비하세요.
 
 ## Docker로 실행
 
-### 빌드
-
 ```bash
 docker build -t liplab .
+docker run -p 8080:8080 -e JWT_SECRET="your-secret-key" -e ANTHROPIC_API_KEY="your-api-key" liplab
 ```
 
-### 실행
+앱은 http://localhost:8080 에서 열립니다. `docker-compose up --build`도 됩니다.
+
+## 배포(Fly.io)
+
+두 앱을 나눠 운영합니다. 자세한 절차와 확인 방법은 [DEPLOY.md](DEPLOY.md)에 있습니다.
+
+| 앱 | 설정 | 용도 |
+|----|------|------|
+| `liplab` | `fly.toml` | 전시용. 서버 추론 없이(`WITH_ML=0`) 가볍게 돈다. 바꿀 때는 팀이 먼저 정한다 |
+| `liplab-dev` | `fly.dev.toml` | 개발 확인용. 서버 추론을 켠다(`WITH_ML=1`: D-GOP 발음채점·음성구동 아바타, shared-cpu 2개·4GB), 데모 계정만 전 단계 열림 |
 
 ```bash
-docker run -p 8080:8080 \
-  -e JWT_SECRET="your-secret-key" \
-  -e ANTHROPIC_API_KEY="your-api-key" \
-  liplab
+fly deploy -c fly.dev.toml -a liplab-dev --remote-only    # 개발 서버
 ```
 
-앱은 http://localhost:8080 에서 접근 가능합니다.
+## API 엔드포인트(주요)
 
-## Fly.io 배포
+전체 목록은 `/docs`(FastAPI 자동 문서)에서 봅니다.
 
-### 1. Fly.io CLI 설치
-
-```bash
-# macOS/Linux
-curl -L https://fly.io/install.sh | sh
-
-# Windows (PowerShell)
-iwr https://fly.io/install.ps1 -useb | iex
-```
-
-### 2. 로그인
-
-```bash
-fly auth login
-```
-
-### 3. 앱 생성 (최초 1회)
-
-```bash
-fly launch
-```
-
-프롬프트에서:
-- App name: 원하는 이름 입력 (예: liplab-prod)
-- Region: 가까운 리전 선택 (nrt = 도쿄)
-- PostgreSQL 추가 여부: Yes 선택 (권장) 또는 No (SQLite 사용)
-
-### 4. 환경 변수 설정
-
-```bash
-fly secrets set JWT_SECRET="your-super-secret-jwt-key-here"
-fly secrets set ANTHROPIC_API_KEY="your-anthropic-api-key-here"
-```
-
-PostgreSQL을 사용하는 경우:
-```bash
-fly secrets set DATABASE_URL="postgresql+asyncpg://user:pass@host:port/db"
-```
-
-### 5. 배포
-
-```bash
-fly deploy
-```
-
-### 6. 앱 열기
-
-```bash
-fly open
-```
-
-### 디벨롭/스테이징 배포 (전시앱과 분리)
-
-전시용 프로덕션 앱(`liplab`)과 develop 검증용 앱을 분리해 운영한다. develop 배포는
-`fly.dev.toml`(app=`liplab-dev`, `LIPLAB_AI_ITEMS=0`으로 정적 커리큘럼)을 사용하며 전시앱을 건드리지 않는다.
-
-```bash
-# 최초 1회
-fly apps create liplab-dev
-fly volumes create liplab_data -a liplab-dev -r nrt -n 1 -s 1
-fly secrets set -a liplab-dev JWT_SECRET=<random> ANTHROPIC_API_KEY=<key-or-placeholder>
-
-# 배포
-fly deploy -c fly.dev.toml -a liplab-dev --remote-only
-```
-
-라이브 LLM 키 없이도 규칙 기반 신기능(혼동행렬·자모 피드백·학습 효과 리포트)은 그대로 동작한다.
-AI 문항 생성까지 켜려면 `ANTHROPIC_API_KEY`를 실제 키로 두고 `LIPLAB_AI_ITEMS=1`로 배포한다.
-
-### 배포 후 관리
-
-```bash
-# 로그 확인
-fly logs
-
-# 스케일 조정
-fly scale count 2
-
-# SSH 접속
-fly ssh console
-
-# 상태 확인
-fly status
-```
-
-## API 엔드포인트
-
-### 인증
-- `POST /api/auth/register` - 회원가입
-- `POST /api/auth/login` - 로그인
-- `GET /api/auth/me` - 현재 사용자 정보
-
-### 학습
-- `GET /api/viseme?text={text}` - 텍스트를 Viseme 배열로 변환
-- `GET /api/scenario?situation={situation}&level={level}` - 시나리오 생성
-- `POST /api/progress` - 학습 결과 제출
-- `GET /api/statistics` - 사용자 통계 조회
-
-### 시스템
-- `GET /health` - 헬스 체크
+- 인증: `POST /api/auth/register` · `POST /api/auth/login` · `POST /api/auth/demo` · `GET /api/auth/me`
+- 커리큘럼: `GET /api/curriculum/stages` · `POST /api/curriculum/track` · `POST /api/curriculum/recognition` · `POST /api/curriculum/word-answer`
+- 발화: `GET /api/speak/curriculum` · `POST /api/speak/assess` · `POST /api/speak/skip`
+- 연습·채점: `GET /api/viseme` · `GET /api/scenario` · `POST /api/progress` · `POST /api/score` · `POST /api/conversation`
+- 복습: `GET /api/review/due` · `GET /api/review-sentences` · `GET/POST /api/bookmarks`
+- 분석: `GET /api/analysis/overview` · `GET /api/calendar/activities` · `GET /api/statistics` · `GET /api/eval/summary`
+- 시스템: `GET /health`
 
 ## 프로젝트 구조
 
 ```
-liplab/
-├── backend/
-│   ├── main.py              # FastAPI 앱
-│   ├── database.py          # SQLAlchemy 모델
-│   ├── auth.py              # JWT 인증
-│   ├── engine.py            # Viseme 변환 엔진
-│   ├── llm_service.py       # Claude API 연동
-│   ├── scoring.py           # 채점 알고리즘
-│   └── requirements.txt     # Python 의존성
-├── frontend/
-│   ├── src/
-│   │   ├── pages/          # 페이지 컴포넌트
-│   │   ├── components/     # 재사용 컴포넌트
-│   │   ├── store/          # Zustand 상태 관리
-│   │   └── api.js          # API 클라이언트
-│   ├── public/visemes/     # Viseme 이미지
-│   └── package.json        # Node.js 의존성
-├── Dockerfile              # 프로덕션 빌드
-├── fly.toml               # Fly.io 설정
-└── .env.example           # 환경 변수 템플릿
+backend/
+  main.py            FastAPI 엔드포인트(인증·커리큘럼·채점·대화·복습·분석)
+  curriculum.py      독화 커리큘럼 콘텐츠(순수 데이터·함수)
+  engine.py          한국어 → 비심 변환, 동시조음
+  scoring.py         음운론적 유사도 채점
+  dgop*.py           전사 비의존 발음채점(D-GOP)
+  audio2face.py      음성구동 아바타(음성 → 블렌드셰이프)
+  analytics.py       분석 탭 집계(회차·연속 학습·배지)
+  llm_service.py     Claude 기반 시나리오·대화 생성
+frontend/src/
+  App.jsx            라우팅, 로그인 게이트, 단계 잠금 가드
+  components/        AppShell(Figma 셸), 3D 아바타, 웹캠, 로딩 화면 등
+  pages/             학습 경로·레슨·탭 화면
+  lib/               채점 색, 립리딩 모델, 상대 날짜 등 보조 함수(node --test)
+docs/                보고서 메모, 파일럿 문서, 축별 검증 기록
+scripts/             평가·데이터 준비 스크립트
 ```
 
-## Viseme 분류 체계 (15단계)
+## 비심(Viseme) 분류 체계(15단계)
 
 1. **양순음** (ㅂ, ㅃ, ㅍ, ㅁ) - 입술 닫힘
 2. **개방 모음** (ㅏ, ㅐ, ㅑ, ㅒ) - 턱 벌림
@@ -240,54 +147,23 @@ liplab/
 14. **휴지기** - 침묵/공백
 15. **중립** - 알 수 없는 상태
 
-## 개발 로드맵
+## 2기 고도화(K-AI)
 
-### 현재 버전 (v1.0)
-- ✅ 15단계 Viseme 시스템
-- ✅ Claude API 시나리오 생성
-- ✅ 음운론적 채점 알고리즘
-- ✅ JWT 인증 및 진도 추적
-- ✅ 적응형 난이도 조정
+계획서 「멀티모달 발음·독화 평가를 중심으로 한 LIPLAB 고도화」의 축 A~K를 통합 브랜치 `integrate/2026-09-23`에서 진행합니다.
+축별로 제품에 들어간 것, 실측 수치, 한계는 [docs/고도화_현황_팀공유.md](docs/고도화_현황_팀공유.md)에, 보고서에 쓸 근거와 계획 대비
+달라진 설계는 [docs/report-notes.md](docs/report-notes.md)에 있습니다. 예전 개발 기록은 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)입니다.
 
-### 향후 계획
-- [ ] 실제 입모양 영상 데이터셋 통합
-- [ ] 3D 아바타 렌더링 (Three.js)
-- [ ] 음성 인식 연동 (발화 연습)
-- [ ] 모바일 앱 (React Native)
-- [ ] 다국어 지원 (영어, 일본어 등)
-- [ ] 소셜 기능 (친구와 경쟁, 리더보드)
+AI Hub 데이터(538·608)는 재배포할 수 없어 앱에 넣지 않습니다(앱의 예시 음성은 합성 음성). 공개 자원 묶음도 AI Hub에서
+나온 자모 시각유사도는 기본으로 빼고, `LIPLAB_PUBLISH_DATA_DERIVED=1`일 때만 넣습니다.
 
 ## 라이선스
 
 MIT License
 
-## 기여
-
-이슈 및 PR을 환영합니다!
-
 ## 문의
 
-프로젝트 관련 문의: [GitHub Issues](https://github.com/yourusername/liplab/issues)
+[GitHub Issues](https://github.com/n1a2m3y4u5n/liplab/issues)
 
 ---
 
 **LIPLAB** - 모두를 위한 독화 교육
-
-## 2기 고도화 (K-AI 콘텐츠 공모전)
-
-계획서 「멀티모달 발음·독화 평가를 중심으로 한 LIPLAB 고도화」의 축 A~K 중, 데이터·GPU 없이
-로컬에서 가능한 부분을 구현했다. 상세 개발 과정은 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md).
-
-**완료 (로컬)**
-- **G** 콘텐츠 대량화·개인화 — LLM 생성 + 비심 규칙 게이트 + 지식추적 개인화 + 사람 검수
-- **J** 시각 증강 — 안 보이는 자질(기식·긴장·비음)을 시각 기호로 오버레이(큐드 스피치 재해석)
-- **D** 웹캠 입모양 채점 — MediaPipe blendshape 코사인 채점, 개인 캘리브레이션, 영상 서버 전송 없음
-- **B** 전사 비의존 D-GOP(로직) — 불확실성 보정으로 과신 방지 + 오디오·비주얼 후기 융합
-- **C** 지각 자원(규칙) — 동구형이음 사전·독화 난이도 지수 공개(`docs/perceptual-resources.json`)
-- **I** 디지털 독화 표준검사 — 난이도 통제 배치검사 + 음소별 오류 프로파일
-- **K** 입술 너머 확장 단서 — 얼굴 전체(턱·볼·코) 보조 신호
-- **H** 다자 대화 시나리오 독화 — 여러 화자 번갈아 말하기, 화자 식별 + 입모양 읽기
-- 부가: OLKAVS 립리딩 데이터 전처리 파이프라인(`scripts/preprocess_olkavs.py`)
-
-**Phase 2 (torch·GPU·데이터 필요)**: A 공유 백본+농인 발화 합성 · B 음향 추론(wav2vec2) ·
-C 지각공간 임베딩 · D 자체 립리딩 모델 · E 조음 진단+성도 시뮬레이터 · F 실사·투명 아바타
