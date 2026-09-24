@@ -243,6 +243,30 @@ def test_calibration_follows_scorer_model():
         "kresnik 앵커의 표시 목표")
 
 
+def test_ours_calibration_matches_dev_config():
+    """자체 학습 채점기 앵커(9/25): 538 조건별 중앙값이 표시 목표에 맞고, liplab-dev 설정이 가리키는 파일·모델 경로가
+    이미지 안 경로(/app = backend/)와 맞아야 한다. 어긋나면 배포 뒤 D-GOP가 조용히 전사로 폴백하거나 눈금이 틀린다."""
+    import tomllib
+    here = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(here, "data", "dgop_calibration_ours.json")
+    cal = _load_calibration_fresh(path)
+    _ok("자체 학습" in cal["source"], "자체 학습 앵커 파일을 읽어야 함")
+    anchors = cal["anchors"]
+    _ok(all(a[0] < b[0] and a[1] < b[1] for a, b in zip(anchors, anchors[1:])), "앵커는 엄격히 단조")
+    for raw, disp in zip(cal["severity_medians"], cal["display_targets"]):
+        _ok(abs(D.calibrate_score(raw, cal) - disp) < 0.05, f"중앙값 {raw} → {disp}")
+    toml_path = os.path.join(here, "..", "fly.dev.toml")
+    if not os.path.exists(toml_path):          # 백엔드만 복사한 환경(파드 점검 등)
+        return
+    with open(toml_path, "rb") as f:
+        dev = tomllib.load(f)
+    if dev.get("build", {}).get("args", {}).get("DGOP_MODEL") == "ours":
+        env = dev["env"]
+        _ok(env["DGOP_CALIBRATION"] == "/app/data/dgop_calibration_ours.json", "dev 앵커 경로")
+        for key in ("DGOP_ALIGNER_ID", "DGOP_SCORER_ID"):
+            _ok(env[key].startswith("/app/models/dgop_ours/"), f"{key}는 이미지 안 체크포인트")
+
+
 # kresnik 음절 vocab을 흉내 낸 합성 예시: id 0은 실제 음절('볍'), blank는 맨 끝의 "[PAD]"다.
 _VOCAB_BR = {"볍": 0, "A": 1, "B": 2, "[UNK]": 3, "[PAD]": 4}
 _SEQ_BR = [4, 4, 1, 4, 4, 4, 2, 4, 4]   # blank 사이에 A·B가 한 프레임씩(실제 CTC의 뾰족한 출력)

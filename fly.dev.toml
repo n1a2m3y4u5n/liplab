@@ -6,6 +6,7 @@ primary_region = "nrt"
   dockerfile = "Dockerfile"
   [build.args]
     WITH_ML = "1"   # 서버 추론(D-GOP 발음채점·음성구동 아바타). 전시앱 fly.toml은 기본값 0이라 이미지가 그대로다.
+    DGOP_MODEL = "ours"   # 자체 학습 정렬기·채점기(9/25 재검 통과). 체크포인트는 backend/models/dgop_ours/에 둔다(git 제외, DEPLOY.md 9항)
 
 [env]
   PORT = "8080"
@@ -13,8 +14,12 @@ primary_region = "nrt"
   DATABASE_URL = "sqlite+aiosqlite:////data/liplab.db"
   LIPLAB_AI_ITEMS = "0"   # dev: static curriculum (no live LLM key). Rule-based features work fully.
   LIPLAB_UNLOCK_ALL = "demo"   # 둘러보기 데모 계정만 전 단계 열기, 실사용·파일럿 계정은 숙달 순서대로
-  DGOP_ALIGNER_ID = "kresnik/wav2vec2-large-xlsr-korean"   # D-GOP 발음채점 켜기(공개 모델, 앵커는 dgop_calibration_kresnik.json 자동)
-  HF_HUB_OFFLINE = "1"         # 모델은 이미지 안에 있다. 팀원 비공개 모델로 바꾸면 지우고 HF_TOKEN을 시크릿으로 넣는다
+  # D-GOP 발음채점: 자체 학습 정렬기·채점기와 그 앵커. 공개 kresnik으로 되돌리려면 DGOP_MODEL = "kresnik"으로 빌드하고
+  # DGOP_ALIGNER_ID = "kresnik/wav2vec2-large-xlsr-korean"만 남긴다(앵커는 dgop_calibration_kresnik.json 자동)
+  DGOP_ALIGNER_ID = "/app/models/dgop_ours/aligner"
+  DGOP_SCORER_ID = "/app/models/dgop_ours/scorer"
+  DGOP_CALIBRATION = "/app/data/dgop_calibration_ours.json"
+  HF_HUB_OFFLINE = "1"         # 모델은 이미지 안에 있다
   LIPLAB_WARMUP = "1"          # 기계가 켜질 때 모델을 뒤에서 미리 올린다(첫 요청 대기 줄임)
   LIPLAB_REVIEW = "1"          # 콘텐츠 검수 화면. 검수자 이메일은 fly secrets set LIPLAB_ADMIN_EMAILS=... (없으면 아무도 못 씀)
 
@@ -35,8 +40,8 @@ primary_region = "nrt"
 
 [[vm]]
   cpu_kind = "shared"
-  cpus = 2          # 발음채점 추론(wav2vec2-large, CPU) 지연을 줄인다
-  memory_mb = 4096  # 모델 두 개(각 약 1.2GB) + torch
+  cpus = 4          # shared-cpu 2개는 메모리 4GB가 상한이라 8GB를 쓰려면 4개. 발음채점 지연도 줄인다
+  memory_mb = 8192  # 정렬기·채점기(각 1.26GB)와 아바타 백본(1.2GB) + torch. 9/25 배포 전 점검 최대 5.0GB(kresnik 한 개일 때 3.1GB)
 
 [[mounts]]
   source = "liplab_data"

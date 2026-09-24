@@ -1,0 +1,123 @@
+{
+  "source": "자체 학습 정렬기·채점기(liplab-lab/models/dgop_ours_2026-09-25), AI Hub 538 10화자 300문장 × 규칙 교란(경·중·심) 조건별 원점수 중앙값 (9/25)",
+  "floor": 0.05,
+  "anchors": [
+    [
+      0.0,
+      0.0
+    ],
+    [
+      8.15,
+      40.0
+    ],
+    [
+      30.35,
+      58.0
+    ],
+    [
+      54.5,
+      72.0
+    ],
+    [
+      86.0,
+      90.0
+    ],
+    [
+      110.7977,
+      100.0
+    ]
+  ],
+  "dropped_severities": [],
+  "fitted_at": "2026-09-25",
+  "aligner": "liplab-lab/models/dgop_ours_2026-09-25/aligner (sha256 0e586260…)",
+  "scorer": "liplab-lab/models/dgop_ours_2026-09-25/scorer (sha256 6b960da4…)",
+  "dataset": "AI Hub 538(OLKAVS) 10화자 300문장, 규칙 교란(make_deaf_corpus PRESETS)",
+  "utterances": 300,
+  "severity_medians": [
+    86.0,
+    54.5,
+    30.35,
+    8.15
+  ],
+  "display_targets": [
+    90.0,
+    72.0,
+    58.0,
+    40.0
+  ],
+  "conditions": [
+    "clean",
+    "mild",
+    "mod",
+    "sev"
+  ],
+  "scoring": "dgop.sentence_dgop naive, raw ×100",
+  "check": {
+    "clean": {
+      "raw_median": 86.0,
+      "display_median": 90.0,
+      "pass50": 1.0,
+      "pass65": 1.0,
+      "n": 300
+    },
+    "mild": {
+      "raw_median": 54.5,
+      "display_median": 72.0,
+      "pass50": 1.0,
+      "pass65": 0.88,
+      "n": 300
+    },
+    "mod": {
+      "raw_median": 30.35,
+      "display_median": 58.0,
+      "pass50": 0.893,
+      "pass65": 0.203,
+      "n": 300
+    },
+    "sev": {
+      "raw_median": 8.15,
+      "display_median": 40.0,
+      "pass50": 0.09,
+      "pass65": 0.0,
+      "n": 300
+    }
+  },
+  "check_heldout": {
+    "clean": {
+      "raw_median": 86.0,
+      "display_median": 90.0,
+      "pass50": 1.0,
+      "pass65": 1.0,
+      "n": 600
+    },
+    "mild": {
+      "raw_median": 58.3,
+      "display_median": 74.7,
+      "pass50": 1.0,
+      "pass65": 0.915,
+      "n": 600
+    },
+    "mod": {
+      "raw_median": 31.5,
+      "display_median": 58.9,
+      "pass50": 0.918,
+      "pass65": 0.222,
+      "n": 600
+    },
+    "sev": {
+      "raw_median": 7.5,
+      "display_median": 39.4,
+      "pass50": 0.077,
+      "pass65": 0.0,
+      "n": 600
+    },
+    "608_감음신경성": {
+      "raw_median": 54.9,
+      "display_median": 72.3,
+      "pass50": 0.876,
+      "pass65": 0.643,
+      "n": 669
+    }
+  },
+  "note": "표시 목표(90·72·58·40)는 kresnik 앵커와 같고, 같은 538 문장으로 맞췄다. check_heldout은 맞출 때 쓰지 않은 538 20화자(재검)와 608 실발화. 이 채점기를 쓸 때 DGOP_CALIBRATION으로 이 파일을 준다."
+}
