@@ -30,7 +30,7 @@ export function useCuesEnabled() {
  *   기식(격음) 바람 / 긴장(경음) 채운마름모 / 울림(비음) 물결. 평음은 기준이라 기호 없음.
  * 숙달도가 오르면 백엔드가 strength를 낮춰 기호가 점진적으로 흐려진다(페이딩).
  */
-const CUE_META = {
+export const CUE_META = {
   aspirated: { label: '기식(바람)', color: '#0284c7', bg: 'bg-sky-50 border-sky-200' },
   tense: { label: '긴장(힘)', color: '#b45309', bg: 'bg-amber-50 border-amber-200' },
   nasal: { label: '울림(코)', color: '#7c3aed', bg: 'bg-violet-50 border-violet-200' },

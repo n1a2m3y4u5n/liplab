@@ -86,6 +86,7 @@ const CurriculumPath = lazy(() => import('./pages/CurriculumPath'))
 const EndlessPractice = lazy(() => import('./pages/EndlessPractice'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
 const Legal = lazy(() => import('./pages/Legal'))
+const CueVideoDemo = lazy(() => import('./pages/CueVideoDemo'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
@@ -233,6 +234,7 @@ function App() {
         <Route path="/pronounce" element={<FreeSpeak />} />
         <Route path="/guide" element={<Guide />} />
         <Route path="/dev-viseme" element={<DevViseme />} />
+        <Route path="/lab/cue-video" element={<CueVideoDemo />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/terms" element={<Legal />} />
         <Route path="/privacy" element={<Legal />} />
