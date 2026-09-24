@@ -1,7 +1,8 @@
 # 상한은 다음 메이저 미만 — 새 메이저가 나와도 배포 빌드가 깨지지 않게(§4.9 표11 ⑦).
 fastapi>=0.115.0,<1
 uvicorn[standard]>=0.32.0,<1
-sqlalchemy>=2.0.36,<3
+# asyncio 묶음: SQLAlchemy 2.1부터 greenlet이 기본 설치에서 빠져, 없으면 비동기 엔진이 뜨지 않는다(9/25 새 이미지 점검에서 발견).
+sqlalchemy[asyncio]>=2.0.36,<3
 pydantic>=2.10.0,<3
 pydantic-settings>=2.6.0,<3
 python-jose[cryptography]>=3.3.0,<4
