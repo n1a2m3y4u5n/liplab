@@ -127,10 +127,6 @@ export const learningAPI = {
   },
 
   // Analysis
-  getAnalysis: async () => {
-    const response = await api.get('/analysis', { timeout: 60000 })
-    return response.data
-  },
   resetAnalysis: async () => {
     const response = await api.delete('/analysis/reset')
     return response.data
