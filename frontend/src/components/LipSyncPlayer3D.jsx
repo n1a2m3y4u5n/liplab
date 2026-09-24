@@ -215,7 +215,7 @@ export default function LipSyncPlayer3D({
 
         {/* 성도 단면 오버레이(계획서 E) — 혀·입술·턱 조음을 측면 도식으로 */}
         {showTract && (
-          <div className="absolute bottom-2 right-2 w-28 sm:w-32 bg-slate-900/85 border border-slate-700 rounded-xl p-1 backdrop-blur-sm">
+          <div className="absolute bottom-2 right-2 w-36 sm:w-44 bg-slate-900/85 border border-slate-700 rounded-xl p-1 backdrop-blur-sm">
             <VocalTract visemeId={currentViseme?.viseme ?? 15} vtl />
           </div>
         )}
@@ -300,17 +300,19 @@ export default function LipSyncPlayer3D({
       <div className="mt-3 flex items-center gap-3">
         <span className="text-xs text-gray-500 shrink-0">재생 속도</span>
         <div className="flex gap-1 flex-1">
+          {/* 입모양 엔진은 실제 말보다 약 1.9배 느리게 만든다(docs/engine-duration-check.md) — 2x가 실제 말 빠르기에 가깝다 */}
           {[0.5, 0.75, 1.0, 1.5, 2.0].map((s) => (
             <button
               key={s}
               onClick={() => setSpeed(s)}
+              title={s === 2.0 ? '실제 말 빠르기에 가까워요' : undefined}
               className={`flex-1 py-1 text-xs rounded transition-colors ${
                 speed === s
                   ? 'bg-primary-500 text-white font-semibold'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {s}x
+              {s === 2.0 ? '2x·실제' : `${s}x`}
             </button>
           ))}
         </div>

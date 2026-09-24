@@ -55,6 +55,25 @@
    `fly secrets set`으로 넣고 파기가 끝날 때까지 바꾸지 않는다. 기호 없는 집단을 두면 `LIPLAB_PILOT_NOCUE_COHORTS`도 정한다.
    파기 도구는 이미지에 `/app/scripts/pilot_retention.py`로 들어 있고, 대장은 기본으로 볼륨(`/data`)에 남는다.
 
+9. **liplab-dev 서버 추론(9/24 코드 반영, 아직 배포하지 않음)**: `fly.dev.toml`은 `WITH_ML=1`로 빌드해 D-GOP 발음채점과
+   음성구동 아바타(A4)를 서버에서 켠다. 전시앱 `fly.toml`은 바꾸지 않았다(기본값 `WITH_ML=0`이라 이미지가 전과 같다).
+   - 이미지: torch CPU 휠 + transformers, 모델 두 개(kresnik wav2vec2-large 정렬·채점, microsoft/wavlm-large 아바타 백본,
+     각 약 1.2GB)를 빌드 때 받아 둔다(`HF_HUB_OFFLINE=1`). 이미지가 약 4GB로 커져 첫 빌드가 오래 걸린다.
+   - 기계: shared-cpu 2개, 메모리 4GB. 자동 정지는 그대로라 쓰는 동안만 과금된다. 켜질 때 `LIPLAB_WARMUP=1`이 모델을
+     뒤에서 미리 올린다(수십 초). 모델이 오르기 전에 온 발음 요청은 그 자리에서 적재를 기다린다.
+   - 채점: `DGOP_ALIGNER_ID=kresnik/...`이면 D-GOP가 주 경로이고, 실패하면 전사 경로로 폴백한다. 표시 앵커는
+     `backend/data/dgop_calibration_kresnik.json`이 자동으로 쓰인다(정상 발화 중앙값 90점). 입모양 점수는 채점에 섞지 않고
+     따로 보인다(`LIPLAB_AV_FUSION=1`이면 연구용 융합).
+   - 음성구동 아바타 체크포인트 `backend/models/kr_a4_wavlm.pt`(9.5MB)는 git에 없다(.gitignore). 이 작업 폴더에 복사해 두었으니
+     배포 전에 `ls backend/models/kr_a4_wavlm.pt`로 있는지만 확인한다. 없으면 아바타는 텍스트 비심으로 폴백한다.
+   - 단계 잠금: `LIPLAB_UNLOCK_ALL=demo`라 둘러보기 데모 계정만 전 단계가 열리고 실사용·파일럿 계정은 숙달 순서대로다.
+   - 시크릿(배포 전에): 콘텐츠 검수자 `fly secrets set LIPLAB_ADMIN_EMAILS=<이메일> -a liplab-dev`(없으면 검수 화면을 아무도
+     못 쓴다). 팀원 비공개 정렬·채점 모델로 바꾸려면 `HF_TOKEN`을 넣고 `DGOP_ALIGNER_ID`·`DGOP_SCORER_ID`를 바꾸고
+     `HF_HUB_OFFLINE`을 지운다(그 모델용 앵커는 기본 `dgop_calibration.json`).
+   - 배포(사용자 지시 뒤에만): `fly deploy -c fly.dev.toml -a liplab-dev --remote-only`. 확인은 `GET /api/backbone/status`에
+     두 모델이 올라왔는지, 발음 연습 응답의 `assessment_method`가 `dgop`인지 본다. 되돌리기는 `WITH_ML`을 0으로 바꾸거나
+     `DGOP_ALIGNER_ID`를 지우고 다시 배포한다.
+
 ---
 
 ## 로컬 Docker 테스트

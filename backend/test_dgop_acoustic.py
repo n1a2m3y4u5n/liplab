@@ -223,6 +223,26 @@ def test_calibration_falls_back_when_unusable():
         os.unlink(path)
 
 
+def test_calibration_follows_scorer_model():
+    """앵커는 채점기마다 다르다 — 공개 kresnik 채점기면 그 모델로 맞춘 앵커, 다른 모델이면 기본 파일, 환경변수가 우선."""
+    old = os.environ.pop("DGOP_CALIBRATION", None)
+    try:
+        _ok(DA.calibration_path_for(DA.DEFAULT_MODEL_ID) == DA.KRESNIK_CALIBRATION_PATH, "kresnik → 전용 앵커")
+        _ok(DA.calibration_path_for("duadnwls/liplab-dgop-scorer") == DA.DEFAULT_CALIBRATION_PATH, "팀원 채점기 → 기본")
+        _ok(DA.calibration_path_for(None) == DA.DEFAULT_CALIBRATION_PATH, "모름 → 기본")
+        os.environ["DGOP_CALIBRATION"] = "/tmp/x.json"
+        _ok(DA.calibration_path_for(DA.DEFAULT_MODEL_ID) == "/tmp/x.json", "환경변수가 우선")
+    finally:
+        os.environ.pop("DGOP_CALIBRATION", None)
+        if old is not None:
+            os.environ["DGOP_CALIBRATION"] = old
+    cal = _load_calibration_fresh(DA.KRESNIK_CALIBRATION_PATH)
+    _ok("kresnik" in cal["source"], "kresnik 앵커 파일을 읽어야 함")
+    # 538 정상 발화 원점수 중앙값 82.45 → 90, 심한 교란 3.8 → 40(A-7 표시 목표)
+    _ok(abs(D.calibrate_score(82.45, cal) - 90.0) < 0.05 and abs(D.calibrate_score(3.8, cal) - 40.0) < 0.05,
+        "kresnik 앵커의 표시 목표")
+
+
 # kresnik 음절 vocab을 흉내 낸 합성 예시: id 0은 실제 음절('볍'), blank는 맨 끝의 "[PAD]"다.
 _VOCAB_BR = {"볍": 0, "A": 1, "B": 2, "[UNK]": 3, "[PAD]": 4}
 _SEQ_BR = [4, 4, 1, 4, 4, 4, 2, 4, 4]   # blank 사이에 A·B가 한 프레임씩(실제 CTC의 뾰족한 출력)

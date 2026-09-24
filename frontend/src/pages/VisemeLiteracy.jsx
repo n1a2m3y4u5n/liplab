@@ -82,7 +82,7 @@ function VisemeAvatar({ visemeId, height = 300, variant = 'learn', className = '
            style={height != null ? { height } : undefined}>
         <AvatarVRM visemeId={vid} xray={xray} />
         {showTract && (
-          <div className="absolute bottom-2 right-2 w-28 bg-slate-900/85 border border-slate-700 rounded-xl p-1 backdrop-blur-sm">
+          <div className="absolute bottom-2 right-2 w-36 sm:w-44 bg-slate-900/85 border border-slate-700 rounded-xl p-1 backdrop-blur-sm">
             <VocalTract visemeId={vid} vtl />
           </div>
         )}

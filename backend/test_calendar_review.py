@@ -48,6 +48,7 @@ def _run():
     here = os.path.dirname(os.path.abspath(__file__))
     with tempfile.TemporaryDirectory() as d:
         env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", PYTHONDONTWRITEBYTECODE="1")
+        env.pop("LIPLAB_AV_FUSION", None)
         p = subprocess.run([sys.executable, "-c", _SCENARIO], cwd=here, env=env,
                            capture_output=True, text=True, timeout=180)
     line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
@@ -82,9 +83,11 @@ def test_activity_detail_lists_items():
     assert r["bad"] == 400
 
 
-def test_speak_detail_keeps_sound_mouth_fused():
+def test_speak_detail_keeps_sound_and_mouth_apart():
+    # 9/24부터 입모양 점수는 채점에 섞지 않고 따로 남긴다 — 융합 점수는 연구용 융합(LIPLAB_AV_FUSION=1) 기록에만 있다
     r = _run()
     assert r["sp"] == 200
     s = r["sdet"]["summary"]
-    assert s["n"] == 1 and s["sound"] is not None and s["mouth"] == 80.0 and s["fused"] is not None
+    assert s["n"] == 1 and s["sound"] is not None and s["mouth"] == 80.0 and s["fused"] is None
+    assert s["score"] == s["sound"]
     assert r["sdet"]["coaching"]

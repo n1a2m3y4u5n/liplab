@@ -1,0 +1,5 @@
+# 호스팅 추론 전용 의존성 — D-GOP 발음채점(축 B)과 음성구동 아바타(축 A4)를 서버에서 켤 때만 쓴다.
+# Dockerfile의 WITH_ML=1 빌드(fly.dev.toml)에서만 설치하고, 전시앱(fly.toml) 이미지에는 들어가지 않는다.
+# torch는 CPU 휠을 따로 설치한다(Dockerfile). 학습용 의존성(datasets·torchcodec 등)은 requirements-ml.txt.
+# 오디오 디코딩은 이미 있는 faster-whisper(PyAV)를 쓰므로 librosa·ffmpeg는 넣지 않는다.
+transformers>=5.16.0,<6

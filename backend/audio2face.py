@@ -107,10 +107,17 @@ def _to_mono16k(audio_bytes: bytes):
     import numpy as np
     y = None
     try:
-        import librosa
-        y, _ = librosa.load(io.BytesIO(audio_bytes), sr=SR, mono=True)
+        # 배포 이미지에는 librosa·ffmpeg가 없어 faster-whisper의 디코더(PyAV)를 먼저 쓴다(D-GOP와 같은 경로)
+        from faster_whisper.audio import decode_audio
+        y = np.asarray(decode_audio(io.BytesIO(audio_bytes), sampling_rate=SR), dtype=np.float32)
     except Exception:
         y = None
+    if y is None or getattr(y, "size", 0) == 0:
+        try:
+            import librosa
+            y, _ = librosa.load(io.BytesIO(audio_bytes), sr=SR, mono=True)
+        except Exception:
+            y = None
     if y is None or getattr(y, "size", 0) == 0:
         # ffmpeg 폴백 — stdin(webm/opus 등) → 16k mono f32le stdout
         import subprocess

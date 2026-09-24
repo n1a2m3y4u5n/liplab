@@ -41,10 +41,6 @@ const RESULT_BTN = 'btn-bar flex-1 max-lg:rounded-13 max-lg:px-0 max-lg:text-[15
 // 캔버스·SVG에 쓸 토큰 색 — 루트(data-track="speak") 기준으로 CSS 변수를 읽는다.
 const cssVar = (el, name) => (el ? getComputedStyle(el).getPropertyValue(name).trim() : '') || 'gray'
 
-// 비음 추정(K-5)을 채점 전에 기다리는 최대 시간 — 넘으면 비음 보조 없이 보낸다.
-const NASAL_WAIT_MS = 2500
-const withTimeout = (p, ms) => Promise.race([p, new Promise((resolve) => setTimeout(() => resolve(null), ms))])
-
 // 자기상관 기반 기본주파수(피치) 추정
 function autoCorrelate(buf, sampleRate) {
   const SIZE = buf.length
@@ -154,7 +150,6 @@ export default function SpeakingPractice() {
         videoStreamRef.current = vs
         setMirrorOn(true)
         ensureLandmarker()   // 미러 켜는 순간 모델 준비(비동기)
-        import('../lib/kModel').then((m) => m.loadK()).catch(() => {})   // 비음 추정(K-5)도 미리 올린다
       } catch { setErr('웹캠을 쓸 수 없어요. 카메라 권한을 허용해 주세요.') }
     }
   }
@@ -189,10 +184,9 @@ export default function SpeakingPractice() {
     return Math.max(0, Math.min(1, sum / targetVis.length))
   }
 
-  // 구간별 입모양 보완(B-6) — 프레임마다 입모양 그룹 1~10의 코사인(0~1)을 시각과 함께 보낸다.
-  // 서버가 음소(음절)가 정렬된 시간 구간에서 그 음소의 목표 입모양 점수를 골라 소리 점수와 섞는다.
-  // K-5: 얼굴 신호로 추정한 비음 확률도 함께 보낸다(ㅁ/ㅂ처럼 입모양이 같은 짝을 가르는 보조 단서).
-  // 비음 모델이 늦거나 없으면 기다리지 않고 입모양만 보낸다.
+  // 구간별 입모양(B-6) — 프레임마다 입모양 그룹 1~10의 코사인(0~1)을 시각과 함께 보낸다. 서버는 음소(음절)가
+  // 정렬된 시간 구간의 입모양 점수를 구해 따로 돌려준다(채점 점수에는 섞지 않는다, 9/24 융합 검증).
+  // 얼굴 비음 추정(K-5)은 화자 영상 측정에서 비음 음절을 가르지 못해(docs/cue-video-demo.md) 보내지 않는다.
   const buildMouthTrack = async () => {
     const buf = mouthFramesRef.current
     const times = mouthTimesRef.current
@@ -203,14 +197,7 @@ export default function SpeakingPractice() {
       Math.round(times[i] * 1000) / 1000,
       ...visemes.map((vid) => Math.round(Math.max(0, Math.min(1, cosineScore(bs, vid, profiles))) * 1000) / 1000),
     ])
-    const track = { visemes, frames: rows }
-    try {
-      const { nasalTrack, K_FACE_KEYS } = await import('../lib/kModel')
-      const face = buf.map((bs) => K_FACE_KEYS.map((k) => bs[k] || 0))
-      const nasal = await withTimeout(nasalTrack(face, times), NASAL_WAIT_MS)
-      if (nasal) track.nasal = nasal
-    } catch { /* 비음 보조 없이 */ }
-    return track
+    return { visemes, frames: rows }
   }
 
   useEffect(() => {
@@ -350,7 +337,7 @@ export default function SpeakingPractice() {
       }
       // 복습 세션이면 review=true → 백엔드가 채점/코칭만 하고 단계 숙달·해금은 건드리지 않음
       const opts = assessStage != null ? { stage: assessStage, drill, review: reviewMode } : {}
-      // 축 B: 웹캠 미러로 버퍼된 입모양이 있으면 신뢰도를 실어 보내 AV 후기융합(백엔드 fuse_audio_visual)
+      // 축 B: 웹캠 미러로 버퍼된 입모양이 있으면 함께 보낸다. 서버는 입모양 점수를 소리 점수와 따로 돌려준다.
       const mc = computeMouthConfidence()
       if (mc != null) {
         opts.mouth_confidence = mc
@@ -441,7 +428,7 @@ export default function SpeakingPractice() {
         traceRef.current.push({ t: (performance.now() - startRef.current) / 1000, rms, hz })
         setVol(disp); setPitch(hz)
       }
-      // 축 B: 미러가 켜져 있으면 입모양 blendshape를 버퍼링(발화 중 입 형태 → AV융합 신뢰도)
+      // 축 B: 미러가 켜져 있으면 입모양 blendshape를 버퍼링(발화 중 입 형태 → 따로 보여 줄 입모양 점수)
       if (frame % 3 === 0 && landmarkerRef.current && videoRef.current && videoRef.current.readyState >= 2) {
         try {
           const r = landmarkerRef.current.detectForVideo(videoRef.current, performance.now())
@@ -509,8 +496,9 @@ export default function SpeakingPractice() {
 
   const exitError = err && !stageInfo && !reviewMode && stageNo != null && !target
 
-  // 소리 + 입모양 융합(182:77) — 음소별 융합은 audio_score를 주지 않으므로 응답의 융합 전 음향 점수(audio_score),
-  // 없으면 D-GOP 표시점수(dgop.score_calibrated)로 보충한다.
+  // 입모양 점수 — 기본은 채점 점수(소리)와 따로 보인다(mouth). 서버가 연구용 융합(LIPLAB_AV_FUSION=1)을 켜면
+  // 예전 '소리 + 입모양 융합'(182:77)을 보이고, 그때 소리 점수는 융합 전 음향 점수(audio_score)로 보충한다.
+  const mouthRes = assessment && !assessment.error ? assessment.mouth : null
   const fusion = assessment && !assessment.error ? assessment.av_fusion : null
   const vowelFb = assessment && !assessment.error ? assessment.vowel_feedback : null   // 모음 포먼트 교정(축 E)
   const fusionAudio = fusion ? (fusion.audio_score ?? assessment.audio_score ?? assessment.dgop?.score_calibrated ?? null) : null
@@ -581,7 +569,7 @@ export default function SpeakingPractice() {
                 </div>
 
                 {/* 웹캠 미러 — 내 입모양을 거울처럼 띄워 목표 아바타와 비교(따라 말하기). Figma 175:21에는 없지만
-                    소리+입모양 융합 점수(182:77)의 입모양 입력이 여기서만 나와 남긴다(사용자 결정 대기). */}
+                    분석의 입모양 점수(소리와 따로 보임)의 입력이 여기서만 나와 남긴다. */}
                 <div className="mx-auto w-full max-w-[560px]">
                   <button type="button" onClick={toggleMirror} aria-pressed={mirrorOn}
                     className={`btn-secondary w-full py-2.5 text-[14px] ${mirrorOn ? 'bg-track-tint text-track-dark' : ''}`}>
@@ -722,7 +710,7 @@ export default function SpeakingPractice() {
           이렇게 들렸어요 · 음소별 정확도 · 소리+입모양 융합 점수 · DOKA의 한마디 */}
       {summary && (
         <Modal open={showDetail} onClose={closeDetail} title="발음 분석" maxW="max-w-[600px]" gap="gap-3.5">
-          {((assessment && !assessment.error && assessment.transcript != null) || phones.length > 0 || fusion?.visual_score != null) && (
+          {((assessment && !assessment.error && assessment.transcript != null) || phones.length > 0 || fusion?.visual_score != null || mouthRes?.score != null) && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {/* 이렇게 들렸어요(182:73) */}
               {assessment && !assessment.error && assessment.transcript != null && (
@@ -751,7 +739,16 @@ export default function SpeakingPractice() {
                   </div>
                 )}
 
-                {/* 소리 + 입모양 융합 점수(182:77) — 웹캠 미러로 입모양을 잰 시도에만 값이 있다 */}
+                {/* 입모양 점수 — 웹캠 미러로 입모양을 잰 시도에만 값이 있다. 발음 점수에는 섞지 않는다 */}
+                {mouthRes && mouthRes.score != null && (
+                  <div className="flex flex-col items-center gap-1.5 rounded-14 border-1.5 border-fill bg-surface-muted px-4 py-3.5">
+                    <p className="text-[13px] font-bold leading-figma text-ink-muted">입모양 점수</p>
+                    <span className="text-[19px] font-bold leading-figma text-track-dark">{Math.round(mouthRes.score)}</span>
+                    <p className="text-center text-[11px] leading-relaxed text-ink-faint">웹캠으로 본 입모양이에요. 발음 점수에는 섞지 않고 따로 보여 줘요.</p>
+                  </div>
+                )}
+
+                {/* 소리 + 입모양 융합 점수(182:77) — 서버가 연구용 융합을 켰을 때만 */}
                 {fusion && fusion.visual_score != null && (
                   <div className="flex flex-col items-center gap-2.5 rounded-14 border-1.5 border-fill bg-surface-muted px-4 py-3.5">
                     <p className="text-[13px] font-bold leading-figma text-ink-muted">소리 + 입모양 융합 점수</p>

@@ -1,5 +1,8 @@
-"""K→B 융합(K-5) 통합 테스트 — 발음채점 API가 입모양 타임라인의 비음 확률로 ㅁ/ㅂ 같은 짝의 입모양 점수를
-조금 조정하는가. D-GOP 모델 대신 정렬 결과를 흉내 낸 함수를 넣어, 모델 없이 경로 전체(파싱·발음 기대·근거·융합)를 본다.
+"""발음채점 API의 소리·입모양 처리 통합 테스트. D-GOP 모델 대신 정렬 결과를 흉내 낸 함수를 넣어 모델 없이 경로 전체를 본다.
+
+- 기본(9/24 결정): 입모양 점수는 채점 점수에 섞지 않고 따로(`mouth`) 돌려준다. 비음 확률(K-5)은 쓰지 않는다.
+- 연구용(LIPLAB_AV_FUSION=1): 예전 음소별 융합(B-5·B-6)과 비음 보조(K-5) — 입모양 타임라인의 비음 확률로
+  ㅁ/ㅂ 같은 짝의 입모양 점수를 조금 조정하는가.
 
 test_assessment_report.py와 같은 방식: 임시 DB를 지정한 별도 프로세스에서 시나리오를 돌리고 결과(JSON)만 검사한다.
 """
@@ -58,11 +61,12 @@ print("RESULT " + json.dumps(out, ensure_ascii=False))
 '''
 
 
-def _run():
+def _run(**extra_env):
     here = os.path.dirname(os.path.abspath(__file__))
     with tempfile.TemporaryDirectory() as d:
         env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", PYTHONDONTWRITEBYTECODE="1",
                    DGOP_ALIGNER_ID="fake/aligner", ANTHROPIC_API_KEY="")
+        env.update({"LIPLAB_AV_FUSION": "0", **extra_env})
         p = subprocess.run([sys.executable, "-c", _SCENARIO], cwd=here, env=env,
                            capture_output=True, text=True, timeout=180)
     line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
@@ -70,8 +74,21 @@ def _run():
     return json.loads(line[len("RESULT "):])
 
 
-def test_nasal_track_nudges_fused_score():
+def test_default_keeps_mouth_out_of_score():
     r = _run()
+    for k in ("plain", "agree", "disagree"):
+        assert r[k][0] == 200, f"{k}: {r[k]}"
+        body = r[k][1]
+        assert body["av_fusion"] is None
+        assert body["score"] == 50.0 and body["audio_score"] == 50.0       # 소리 점수 그대로
+        assert body["mouth"]["score"] == 60.0                              # 입모양은 따로
+        assert [x["label"] for x in body["mouth"]["by_phone"]] == ["밥", "마", "셔"]
+    # 비음 확률(K-5)은 기본 경로에서 쓰지 않는다 — 음소별 입모양 점수가 트랙의 비음 값과 무관하다
+    assert r["agree"][1]["mouth"]["by_phone"] == r["disagree"][1]["mouth"]["by_phone"] == r["plain"][1]["mouth"]["by_phone"]
+
+
+def test_research_fusion_nasal_track_nudges_fused_score():
+    r = _run(LIPLAB_AV_FUSION="1")
     for k in ("plain", "agree", "disagree"):
         assert r[k][0] == 200, f"{k}: {r[k]}"
     plain, agree, disagree = (r[k][1]["av_fusion"] for k in ("plain", "agree", "disagree"))

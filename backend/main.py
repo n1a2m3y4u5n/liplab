@@ -43,12 +43,40 @@ except ImportError:
         return {"text": "안녕하세요."}
 
 
+def _warmup_models():
+    """서버 추론 모델(D-GOP 정렬·채점, 음성구동 아바타)을 뒤에서 미리 올린다(LIPLAB_WARMUP=1).
+    호스팅 기계는 쉬면 멈췄다가 요청 때 켜지므로, 첫 사용자가 모델 적재(수십 초)를 기다리지 않게 한다.
+    실패해도 앱은 뜨고, 요청 때 다시 적재를 시도한다."""
+    import threading
+
+    def run():
+        try:
+            aligner = os.getenv("DGOP_ALIGNER_ID") or os.getenv("DGOP_MODEL_ID")
+            if aligner:
+                import dgop_acoustic
+                if dgop_acoustic.HAS_ACOUSTIC:
+                    dgop_acoustic._load(aligner)
+                    scorer = os.getenv("DGOP_SCORER_ID")
+                    if scorer and scorer != aligner:
+                        dgop_acoustic._load(scorer)
+            import audio2face
+            if audio2face.is_available():
+                audio2face._load()
+            print("[OK] 서버 추론 모델 예열 끝")
+        except Exception as e:
+            print(f"[WARN] 모델 예열 실패(요청 때 다시 시도): {type(e).__name__}: {e}")
+
+    threading.Thread(target=run, daemon=True, name="model-warmup").start()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for startup and shutdown"""
     # Startup
     await init_db()
     print("[OK] Database initialized")
+    if os.getenv("LIPLAB_WARMUP") == "1":
+        _warmup_models()
     yield
     # Shutdown
     await close_db()
@@ -1204,9 +1232,13 @@ async def get_review_sentences(current_user=Depends(get_current_user), db: Async
 # ============================================
 import curriculum as _curriculum
 
-# 심사·데모 편의: 모든 단계 잠금 해제(순차 잠금 로직은 유지하되 표시만 unlocked로).
-# 실제 순차 학습을 강제하려면 환경변수 LIPLAB_UNLOCK_ALL=0.
-_UNLOCK_ALL = os.getenv("LIPLAB_UNLOCK_ALL", "1") == "1"
+# 심사·데모 편의: 단계 잠금 해제(순차 잠금 로직은 유지하되 표시만 unlocked로). LIPLAB_UNLOCK_ALL:
+#   1(기본, 전시앱) 모든 계정 · demo 둘러보기 데모 계정만(실사용·파일럿 계정은 숙달 순서대로) · 0 아무도.
+def _unlock_all_for(user) -> bool:
+    mode = os.getenv("LIPLAB_UNLOCK_ALL", "1")
+    if mode == "demo":
+        return (getattr(user, "email", "") or "").lower() == _DEMO_EMAIL
+    return mode == "1"
 
 _STAGE1_MIN_ATTEMPTS = 8       # 숙달 판정 최소 시도
 _STAGE1_MASTERY = 70.0         # 숙달 판정 정확도(%)
@@ -1343,7 +1375,7 @@ async def curriculum_stages(current_user=Depends(get_current_user), db: AsyncSes
                 st["attempts"] = sp.attempts
         stages.append(st)
 
-    if _UNLOCK_ALL:
+    if _unlock_all_for(current_user):
         for st in stages:
             if st.get("status") == "locked":
                 st["status"] = "unlocked"
@@ -2771,7 +2803,7 @@ async def speak_curriculum_stages(current_user=Depends(get_current_user), db: As
             st["mastery_score"] = round(sp.mastery_score, 1)
             st["attempts"] = sp.attempts
         stages.append(st)
-    if _UNLOCK_ALL:
+    if _unlock_all_for(current_user):
         for st in stages:
             if st.get("status") == "locked":
                 st["status"] = "unlocked"
@@ -2828,6 +2860,11 @@ def _weak_phones(dgop_result, k: int = 3) -> list:
         if len(out) >= k:
             break
     return out
+
+def _av_fusion_on() -> bool:
+    """입모양 점수를 채점 점수에 섞을지(연구용). 기본은 섞지 않는다(9/24 융합 검증 결과)."""
+    return os.getenv("LIPLAB_AV_FUSION") == "1"
+
 
 @app.post("/api/speak/assess", dependencies=[Depends(ratelimit.rate_limit(40, 60, "audio"))])
 async def speak_assess(
@@ -2948,36 +2985,44 @@ async def speak_assess(
         score = round(sim or 0.0, 1)
         sp = None
 
-    # 축 B 오디오·비주얼 융합 — 웹캠 입모양(D) 신뢰도가 오면, 음향 점수가 낮을(불확실할)수록
-    # 입모양에 더 가중해 최종 점수를 낸다(농인은 음성이 불안정하나 입모양은 상대적으로 안정적).
+    # 축 B 소리·입모양 — 웹캠 입모양(D) 점수는 채점 점수에 섞지 않고 따로 돌려준다(9/24 결정).
+    # 538 융합 검증(docs/bfuse-validation.md)에서 웹캠 입모양 점수는 목표 문장을 가르지 못했고(AUC 0.49~0.53),
+    # 섞으면 판별력이 낮아졌다(심한 교란 0.778 → 0.583). LIPLAB_AV_FUSION=1이면 연구용으로 예전 융합
+    # (음소별 B-5·B-6, 비음 보조 K-5)을 그대로 재현한다.
     av_fusion = None
-    audio_score = score        # 회차 상세의 '소리' — 입모양 융합 전 음향 점수
+    audio_score = score        # 회차 상세의 '소리' — 채점 점수(입모양을 섞지 않은 음향 점수)
     vis = None
+    mouth = None
     if mouth_confidence is not None and mouth_confidence >= 0:
         import dgop
         vis = mouth_confidence * 100 if mouth_confidence <= 1 else mouth_confidence
-        # D-GOP 경로면 음소별 소리 점수(B-5)로, 전사 경로면 점수 기반 근사치(1 − 점수/100)로 영상 가중을 정한다.
-        # 음소별(phones) 정보가 있으면 구간별 융합 — 음향이 뭉갠 '그 구간'일수록 영상 가중이
-        # 국소적으로 커진다(계획서 B). 정렬됐고 채점 대상인 음소만 넣는다(어절 경계 제외).
-        av_fusion = None
-        if dgop_result:
-            scored_phones = [p for p in (dgop_result.get("phones") or [])
-                             if p.get("aligned") and p.get("scorable")]
-            # B-6: 입모양 타임라인이 있으면 음소가 정렬된 시간 구간의 입모양 점수로 그 음소를 보완한다
-            track = dgop.parse_mouth_track(mouth_track) if mouth_track and len(mouth_track) <= 300_000 else None
-            vbp = dgop.visual_scores_for_phones(scored_phones, track) if track else None
-            # K-5: 웹캠 비음 확률이 오면 ㅁ/ㅂ·ㄴ/ㄷ·ㅇ/ㄱ처럼 입모양이 같은 짝에서만 입모양 점수를 조금 조정한다
-            n_nasal = 0
-            if track and track.get("nasal") and vbp:
-                dgop.annotate_nasal_expectation(dgop_result.get("phones") or [], target)
-                vbp, n_nasal = dgop.apply_nasal_evidence(vbp, dgop.nasal_evidence_for_phones(scored_phones, track))
-            av_fusion = dgop.fuse_audio_visual_per_phone(scored_phones, vis, visual_by_phone=vbp)
-            if av_fusion is not None:
-                av_fusion["nasal_phones"] = n_nasal   # 비음 보조로 조정한 음소 수(K-5)
-        if av_fusion is None:
-            audio_uncertainty = dgop_result["uncertainty"] if dgop_result else max(0.0, 1 - score / 100.0)
-            av_fusion = dgop.fuse_audio_visual(score, audio_uncertainty, vis)
-        score = av_fusion["score"]
+        scored_phones = [p for p in ((dgop_result or {}).get("phones") or [])
+                         if p.get("aligned") and p.get("scorable")]
+        # B-6: 입모양 타임라인이 있으면 음소가 정렬된 시간 구간의 입모양 점수를 구한다
+        track = (dgop.parse_mouth_track(mouth_track)
+                 if dgop_result and mouth_track and len(mouth_track) <= 300_000 else None)
+        vbp = dgop.visual_scores_for_phones(scored_phones, track) if track else None
+        if _av_fusion_on():
+            # D-GOP 경로면 음소별 소리 점수(B-5)로, 전사 경로면 점수 기반 근사치(1 − 점수/100)로 영상 가중을 정한다.
+            if dgop_result:
+                # K-5: 웹캠 비음 확률이 오면 ㅁ/ㅂ·ㄴ/ㄷ·ㅇ/ㄱ처럼 입모양이 같은 짝에서만 입모양 점수를 조금 조정한다
+                n_nasal = 0
+                if track and track.get("nasal") and vbp:
+                    dgop.annotate_nasal_expectation(dgop_result.get("phones") or [], target)
+                    vbp, n_nasal = dgop.apply_nasal_evidence(vbp, dgop.nasal_evidence_for_phones(scored_phones, track))
+                av_fusion = dgop.fuse_audio_visual_per_phone(scored_phones, vis, visual_by_phone=vbp)
+                if av_fusion is not None:
+                    av_fusion["nasal_phones"] = n_nasal   # 비음 보조로 조정한 음소 수(K-5)
+            if av_fusion is None:
+                audio_uncertainty = dgop_result["uncertainty"] if dgop_result else max(0.0, 1 - score / 100.0)
+                av_fusion = dgop.fuse_audio_visual(score, audio_uncertainty, vis)
+            score = av_fusion["score"]
+        else:
+            by_phone = None
+            if vbp:
+                by_phone = [{"label": (p.get("token") or "").split(":", 1)[-1].replace("|", " ").strip(), "score": v}
+                            for p, v in zip(scored_phones, vbp) if v is not None] or None
+            mouth = {"score": round(float(vis), 1), "by_phone": by_phone}
 
     # 개별 시도 영속화(말하기 분석용 — 독화가 Progress에 쌓는 것과 대칭)
     from database import SpeakAttempt
@@ -3063,8 +3108,9 @@ async def speak_assess(
         "assessment_method": assessment_method,  # "dgop" | "asr_transcript" — 축 B 전환 투명성
         "dgop": dgop_result,
         "metrics": metrics,
-        "av_fusion": av_fusion,
-        "audio_score": None if audio_score is None else round(float(audio_score), 1),   # 입모양 융합 전 음향 점수
+        "av_fusion": av_fusion,     # 연구용 융합(LIPLAB_AV_FUSION=1)일 때만
+        "mouth": mouth,             # 입모양 점수(채점에 섞지 않음) {score, by_phone}. 웹캠을 켠 시도만
+        "audio_score": None if audio_score is None else round(float(audio_score), 1),   # 입모양을 섞지 않은 음향 점수
         "acoustic_dgop": acoustic_dgop,
         "vowel_feedback": vowel_fb,   # 축 E: {vowel, f1, f2, target_f1, target_f2, height, front, messages}
         "progress": progress,
