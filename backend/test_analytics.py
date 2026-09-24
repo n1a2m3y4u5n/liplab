@@ -54,6 +54,16 @@ def test_weekly_windows_and_overview():
     assert abs(ov["accuracy"] - 2 / 3) < 1e-3
     # 2026-09-23은 수요일 — 이번 주(9/21 월~)에 학습한 날은 9/22 하루, 오늘(9/23)은 0회
     assert ov["week_days"] == 1 and ov["today_sessions"] == 0 and ov["today_read"] == 0
+    # 날짜별 회차 — 합이 총 회차와 같고, 날짜는 현지 날짜(UTC 9/22 01:00 = 한국 9/22 10:00)
+    assert ov["session_days"] == {"2026-09-22": 1, "2026-09-14": 1}
+    assert sum(ov["session_days"].values()) == ov["sessions"]
+
+
+def test_session_days_keyed_by_local_start_date():
+    # UTC 9/22 14:50 = 한국 9/22 23:50에 시작해 자정을 넘긴 회차는 시작한 날(9/22) 한 번만 센다
+    ev = [_ev(2026, 9, 22, 14, 50), _ev(2026, 9, 22, 15, 10), _ev(2026, 9, 22, 16, 0)]
+    ov = an.overview(ev, datetime(2026, 9, 23, 3, 0), KST, **_info())
+    assert ov["sessions"] == 2 and ov["session_days"] == {"2026-09-22": 1, "2026-09-23": 1}
 
 
 def test_empty_history_has_no_fake_values():

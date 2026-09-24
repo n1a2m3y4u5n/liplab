@@ -156,6 +156,12 @@ def overview(events: Sequence[Event], now_utc: datetime, tz_offset_min: int, **t
     # 과제 탭: 오늘 회차·오늘 독화 활동 수, 이번 주(월요일 시작) 학습한 날 수
     today_sess = [s for s in sess if to_local(s[0].ts, tz_offset_min).date() == today]
     monday = today - timedelta(days=today.weekday())
+    # 분석 탭 활동 캘린더 부제의 '총 N회 학습'(207:26) — 회차를 시작한 현지 날짜별로 센다.
+    # '총 학습 회차'(sessions)와 같은 회차 정의라 기간을 좁혀 더해도 두 수가 어긋나지 않는다.
+    session_days: Dict[str, int] = {}
+    for s in sess:
+        k = to_local(s[0].ts, tz_offset_min).date().isoformat()
+        session_days[k] = session_days.get(k, 0) + 1
     return {
         "has_data": bool(events),
         "today_sessions": len(today_sess),
@@ -171,6 +177,7 @@ def overview(events: Sequence[Event], now_utc: datetime, tz_offset_min: int, **t
         "streak_best": best,
         "weekly": week,
         "sessions": len(sess),
+        "session_days": session_days,
         "questions": len([e for e in events if e.graded is not None]),
         "badges": b,
         "tracks": {

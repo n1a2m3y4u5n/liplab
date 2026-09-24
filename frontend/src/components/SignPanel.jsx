@@ -14,13 +14,15 @@ const MouthAvatar = lazy(() => import('./MouthAvatar'))
  * variant='default': 입모양(mouthing)은 옵션 토글(기본 off). WordStage·Practice·전역 수어 오버레이가 쓴다.
  * variant='split': Figma 226:156 "수어와 입모양"의 Players(226:160) — 같은 폭 두 칸
  *   ('수어 영상' 초록 | '입모양 아바타' 보라, 머리 글자 + 190px 무대). 입력 전에는 Figma 자리 그림(손·입)을 둔다.
- *   /learn/sign(Sign.jsx)만 쓴다. 단어 이동(토큰 칩·전체 재생)과 라이선스 출처 표기는 기능상 남긴다.
+ *   /learn/sign(Sign.jsx)만 쓴다. Figma에 없는 것 중 단어 이동(토큰 칩·전체 재생), 라이선스 출처 표기,
+ *   근접 수어 대체 안내('사전에 없어 근접 수어로 표시')는 기능·정확성 때문에 남긴다. 수형 설명·사전 링크·
+ *   번역 메모(수어 문법 주석)는 나란히 보기에서 뺐다(9/24, 기본형 패널에는 그대로 있다).
  */
 const FS_MS = 1200  // 전체재생 시 지문자 토큰 표시 시간
 
 /** 나란히 보기 한 칸(226:161 / 226:169) — 머리 글자 13.5px + 흰 70% 무대(190px, r14). */
 function Player({ label, tone, children }) {
-  const cls = tone === 'sign' ? 'bg-[#dff7ec] text-stat-accuracy' : 'bg-primary-100 text-primary-700'
+  const cls = tone === 'sign' ? 'bg-pastel-mint text-stat-accuracy' : 'bg-primary-100 text-primary-700'
   return (
     <div className={`flex min-w-0 flex-col items-center gap-2.5 rounded-16 py-4 ${cls}`}>
       <p className="text-[13.5px] font-bold leading-figma">{label}</p>
@@ -361,38 +363,12 @@ function SplitView({ text, loading, error, result, tokens, token, current, playi
             </button>
           </div>
 
-          {/* 현재 단어 부가정보 — 근접 수어 대체 안내 · 수형 설명 · 국립국어원 사전 링크 */}
-          {token.type === 'sign' && (token.signed_as || token.description || token.dict_url) && (
-            <div className="flex flex-col gap-1 text-[12px] leading-relaxed text-ink-muted">
-              {token.signed_as && (
-                /^\d+$/.test(String(token.word))
-                  ? <p>숫자 ‘{token.word}’ → 수어 ‘{token.signed_as}’</p>
-                  : <p className="text-warn-text">‘{token.word}’은 사전에 없어 근접 수어 ‘{token.signed_as}’로 표시합니다.</p>
-              )}
-              <div className="flex items-start justify-between gap-2">
-                {token.description && token.video_url && <p className="line-clamp-2 flex-1">{token.description}</p>}
-                {token.dict_url && (
-                  <a href={token.dict_url} target="_blank" rel="noopener noreferrer"
-                    className="ml-auto whitespace-nowrap text-[11.5px] text-ink-faint hover:text-primary-600">국립국어원 ↗</a>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 번역 메모(수어 문법 주석) */}
-          {(result.notes || result.annotations?.length > 0) && (
-            <div className="flex flex-col gap-1.5">
-              {result.notes && <p className="text-[12px] leading-relaxed text-ink-muted">{result.notes}</p>}
-              {result.annotations?.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {result.annotations.map((a, i) => (
-                    <span key={i} className="rounded-md bg-primary-50 px-2 py-0.5 text-[11px] text-primary-700">
-                      {a.marker}: {a.note}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+          {/* 근접 수어 안내 — 사전에 없는 단어를 다른 수어로 보일 때만. Figma 226:156 밖이지만, 보이는 영상이
+              입력한 단어가 아니라는 사실은 숨기지 않는다(맨 위 설명 참고). */}
+          {token.type === 'sign' && token.signed_as && (
+            /^\d+$/.test(String(token.word))
+              ? <p className="text-[12px] leading-relaxed text-ink-muted">숫자 ‘{token.word}’ → 수어 ‘{token.signed_as}’</p>
+              : <p className="text-[12px] leading-relaxed text-warn-text">‘{token.word}’은 사전에 없어 근접 수어 ‘{token.signed_as}’로 표시합니다.</p>
           )}
         </>
       )}

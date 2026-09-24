@@ -66,14 +66,14 @@ function BadgeMedal({ b, size, markOnly = false }) {
       )
     }
     return (
-      <span className={`flex items-center justify-center rounded-full bg-[#dff7ec] ${size}`}>
+      <span className={`flex items-center justify-center rounded-full bg-pastel-mint ${size}`}>
         <span className="size-[39.3%] rotate-45 rounded-[18%] bg-emerald-500" />
       </span>
     )
   }
   return (
-    <span className={`flex items-center justify-center rounded-full bg-[#f1f1f5] ${size}`}>
-      <span className="size-[44.6%] rounded-[20%] bg-[#c2c2ce]" />
+    <span className={`flex items-center justify-center rounded-full bg-inactive-bg ${size}`}>
+      <span className="size-[44.6%] rounded-[20%] bg-inactive-glyph" />
     </span>
   )
 }
@@ -107,7 +107,7 @@ function BadgeDetailModal({ badge, onClose }) {
   if (!badge) return null
   const figmaMark = badge.shape === 'check' && badge.earned
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0d081c]/80 p-6 backdrop-blur-[9px]"
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-overlay-deep/80 p-6 backdrop-blur-[9px]"
       onClick={onClose} role="dialog" aria-modal="true" aria-label={badge.label}>
       <div className="flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
         {/* 글로우(링 3개·부드러운 빛·반짝이) 뒤 + 배지 마크 가운데 */}
@@ -129,7 +129,7 @@ function BadgeDetailModal({ badge, onClose }) {
           {badge.percent != null && (
             <span className="rounded-full border-[1.5px] border-white/[0.22] bg-white/[0.12] px-[18px] py-[9px] leading-figma">
               <span className="text-[15px] text-white">전체 사용자 중 </span>
-              <span className="text-[18px] font-bold text-[#6ee7b7]">{badge.percent}%</span>
+              <span className="text-[18px] font-bold text-chart-onDark">{badge.percent}%</span>
               <span className="text-[15px] text-white">가 획득했어요</span>
             </span>
           )}
@@ -137,7 +137,7 @@ function BadgeDetailModal({ badge, onClose }) {
 
         {/* 닫기(313:230) */}
         <button type="button" onClick={onClose}
-          className="mt-8 w-[220px] rounded-14 border-2 border-b-5 border-[#d4d4de] bg-white py-[15px] text-[17px] font-bold leading-figma text-ink transition-all active:translate-y-[1px] active:border-b-2">
+          className="mt-8 w-[220px] rounded-14 border-2 border-b-5 border-line-strong bg-white py-[15px] text-[17px] font-bold leading-figma text-ink transition-all active:translate-y-[1px] active:border-b-2">
           닫기
         </button>
       </div>
@@ -177,7 +177,7 @@ export default function TasksPage() {
           src: '/ui/lp-137-17-deco-doka.svg', size: 165, top: -61.22, right: -61.21, inset: [-7, -12, -17, -12],
           lg: { size: 198, top: -73.06, right: -73.06 },
         }}
-        className="h-[132px] w-full rounded-18 border-2 border-b-5 border-primary-600 bg-[linear-gradient(158.74deg,#a78bfa_0%,#7d53de_70.92%)] pl-[18px] pt-[21px] lg:h-[158px] lg:rounded-20 lg:bg-[linear-gradient(167.63deg,#a78bfa_0%,#7d53de_70.92%)] lg:pl-[26px] lg:pt-[26px]">
+        className="h-[132px] w-full rounded-18 border-2 border-b-5 border-primary-600 bg-[linear-gradient(158.74deg,var(--brand-light)_0%,var(--brand)_70.92%)] pl-[18px] pt-[21px] lg:h-[158px] lg:rounded-20 lg:bg-[linear-gradient(167.63deg,var(--brand-light)_0%,var(--brand)_70.92%)] lg:pl-[26px] lg:pt-[26px]">
         <div className="flex w-[250px] max-w-full flex-col gap-[9px] font-bold leading-figma text-white lg:w-[462px] lg:gap-2.5">
           <p className="text-[11px] tracking-[0.22px] opacity-80 lg:text-[13px] lg:tracking-[0.26px]">특별 과제</p>
           <p className="text-[18px] tracking-[-0.36px] lg:text-[23px] lg:tracking-[-0.46px]">이번 주 5일 학습하기</p>
@@ -191,8 +191,9 @@ export default function TasksPage() {
         </div>
       </WatermarkCard>
 
-      {/* 배지 (313:130) — 모바일 238:160에는 이 카드가 없다(유지 여부는 결정 필요, 보고서 참고) */}
-      <section className="flex w-full flex-col gap-[18px] rounded-18 border-2 border-line bg-white p-5 lg:p-[22px]">
+      {/* 배지 (313:130) — 데스크톱만. 모바일 238:160에는 이 카드가 없어 lg 미만에서는 숨긴다(9/24 결정).
+          모바일에서는 분석 탭 '전체 통계'의 획득 배지 수로 본다. */}
+      <section className="hidden w-full flex-col gap-[18px] rounded-18 border-2 border-line bg-white p-5 lg:flex lg:p-[22px]">
         <div className="flex items-center justify-between font-bold leading-figma">
           <p className="text-[17px] text-ink">배지</p>
           <span className="text-[13px] text-ink-muted">{earned} / {badges.length}개 획득</span>

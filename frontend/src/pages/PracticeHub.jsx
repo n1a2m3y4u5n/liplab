@@ -9,12 +9,12 @@ import AppShell from '../components/AppShell'
  * 성도 실험(축 D·E·F·K)이 모인 입모양 학습 자료(/learn/viseme?tab=learn)로, 다른 진입점이 없던 화면이다.
  */
 const CARDS = [
-  { key: 'multi', title: '다자 대화', desc: '여러 사람이 주고받는 대화를 읽어요', icon: '/ui/card-multi.svg', chip: '#e0f2fe', to: '/learn/conversation-multi' },
-  { key: 'free', title: '자유 발화', desc: '내가 쓴 문장을 소리 내어 확인해요', icon: '/ui/card-free.svg', chip: '#ffe4e9', to: '/pronounce' },
-  { key: 'scenario', title: '상황별 시나리오', desc: '카페·병원 등 상황을 골라 연습해요', icon: '/ui/card-scenario.svg', chip: '#fff3d6', to: '/learn/scenario' },
-  { key: 'sign', title: '수어 함께 보기', desc: '문장을 수어로도 확인할 수 있어요', icon: '/ui/card-sign.svg', chip: '#dff7ec', to: '/learn/sign' },
-  { key: 'endless', title: '엔드리스 학습', desc: '틀렸던 유형이 계속 나와요', icon: '/ui/tab-card-endless.svg', chip: '#e0e7ff', to: '/learn/endless' },
-  { key: 'mouth', title: '입모양 교실', desc: '웹캠으로 따라 하고 안 보이는 혀 위치도 확인해요', icon: '/ui/nav-learn.svg', chip: '#ede9fe', to: '/learn/viseme?tab=learn' },
+  { key: 'multi', title: '다자 대화', desc: '여러 사람이 주고받는 대화를 읽어요', icon: '/ui/card-multi.svg', chip: 'bg-pastel-sky', to: '/learn/conversation-multi' },
+  { key: 'free', title: '자유 발화', desc: '내가 쓴 문장을 소리 내어 확인해요', icon: '/ui/card-free.svg', chip: 'bg-pastel-pink', to: '/pronounce' },
+  { key: 'scenario', title: '상황별 시나리오', desc: '카페·병원 등 상황을 골라 연습해요', icon: '/ui/card-scenario.svg', chip: 'bg-pastel-amber', to: '/learn/scenario' },
+  { key: 'sign', title: '수어 함께 보기', desc: '문장을 수어로도 확인할 수 있어요', icon: '/ui/card-sign.svg', chip: 'bg-pastel-mint', to: '/learn/sign' },
+  { key: 'endless', title: '엔드리스 학습', desc: '틀렸던 유형이 계속 나와요', icon: '/ui/tab-card-endless.svg', chip: 'bg-pastel-indigo', to: '/learn/endless' },
+  { key: 'mouth', title: '입모양 교실', desc: '웹캠으로 따라 하고 안 보이는 혀 위치도 확인해요', icon: '/ui/nav-learn.svg', chip: 'bg-pastel-violet', to: '/learn/viseme?tab=learn' },
 ]
 
 function PracticeCard({ card, onClick }) {
@@ -24,7 +24,7 @@ function PracticeCard({ card, onClick }) {
       onClick={onClick}
       className="flex items-center gap-3.5 rounded-16 border-2 border-b-5 border-line bg-white p-4 text-left transition-transform hover:-translate-y-0.5 lg:flex-col lg:items-start lg:rounded-20 lg:px-[22px] lg:py-6"
     >
-      <span className="icon-chip-sm lg:icon-chip" style={{ backgroundColor: card.chip }}>
+      <span className={`icon-chip-sm lg:icon-chip ${card.chip}`}>
         <img src={card.icon} alt="" className="size-[22px] lg:size-6" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-[3px] leading-figma lg:gap-3.5">

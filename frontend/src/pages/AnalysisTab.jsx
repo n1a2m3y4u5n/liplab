@@ -131,19 +131,19 @@ function LineChart({ weeks }) {
       <GridLines />
       {/* SVG는 대체 요소라 left/right만으로 늘어나지 않는다 — 폭을 점 중심 사이 거리로 직접 준다 */}
       <svg aria-hidden viewBox={`0 0 ${Math.max(1, n - 1)} 110`} preserveAspectRatio="none" className="absolute left-2 top-0 h-[110px] w-[calc(100%-12px)] overflow-visible lg:hidden">
-        <path d={path(32, 89)} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        <path d={path(32, 89)} fill="none" className="stroke-chart-accuracy" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
       <svg aria-hidden viewBox={`0 0 ${Math.max(1, n - 1)} 150`} preserveAspectRatio="none" className="absolute left-2.5 top-0 hidden h-[150px] w-[calc(100%-16px)] overflow-visible lg:block">
-        <path d={path(30, 123)} fill="none" stroke="#10b981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        <path d={path(30, 123)} fill="none" className="stroke-chart-accuracy" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
       {vals.map((v, i) => v != null && (
         <span key={`p${i}`} aria-hidden
-          className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-white bg-emerald-500 ${i === lastIdx ? 'size-3 border-[2.5px] lg:size-4 lg:border-[3px]' : 'size-2 border-[2.5px] lg:size-[11px] lg:border-[3px]'}`}
+          className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-white bg-chart-accuracy ${i === lastIdx ? 'size-3 border-[2.5px] lg:size-4 lg:border-[3px]' : 'size-2 border-[2.5px] lg:size-[11px] lg:border-[3px]'}`}
           style={{ left: posX(i), top: posY(v) }} />
       ))}
       {vals.map((v, i) => v != null && (
         <span key={`v${i}`}
-          className={`absolute hidden -translate-x-1/2 font-bold leading-figma lg:block ${i === lastIdx ? 'text-[13px] text-stat-accuracy' : 'text-[11.5px] text-[#7a9a8c]'}`}
+          className={`absolute hidden -translate-x-1/2 font-bold leading-figma lg:block ${i === lastIdx ? 'text-[13px] text-stat-accuracy' : 'text-[11.5px] text-chart-label'}`}
           style={{ left: posX(i), top: posY(v, i === lastIdx ? 31.2 : 26.67) }}>
           {v}
         </span>
@@ -217,11 +217,11 @@ export default function AnalysisTab() {
       </div>
 
       <Modal open={modal === 'calendar'} onClose={() => setModal(null)} title="활동 캘린더"
-        subtitle={calSubtitle(counts)} maxW="max-w-[900px]">
+        subtitle={calSubtitle(counts, ov?.session_days)} maxW="max-w-[900px]">
         <ActivityCalendar counts={counts} />
       </Modal>
       <Modal open={modal === 'history'} onClose={() => setModal(null)} title="회차 히스토리"
-        subtitle={`최근 학습 기록 · 총 ${history.length}회`} maxW="max-w-[820px]">
+        subtitle={`최근 학습 기록 · 총 ${(ov?.sessions ?? history.length).toLocaleString()}회`} maxW="max-w-[820px]">
         <HistoryList rows={history} onOpen={(r) => { setModal(null); setDetailRow(r) }} />
       </Modal>
       <SessionDetail row={detailRow} onClose={() => setDetailRow(null)}
@@ -250,7 +250,7 @@ function dayCounts(cal, acts) {
 
 /* ── 캘린더 데이터/레벨 ── */
 const CAL_WEEKS = 20
-const CAL_LEVELS = ['#ededf3', '#ddd3f7', '#b49bec', '#8b5cf6', '#5f3ab8']
+const CAL_LEVELS = ['bg-heat-0', 'bg-heat-1', 'bg-heat-2', 'bg-heat-3', 'bg-heat-4']   // tailwind heat 토큰(207:29)
 const calLevel = (c) => (c <= 0 ? 0 : c === 1 ? 1 : c === 2 ? 2 : c === 3 ? 3 : 4)
 
 /** 20주 × 7일 격자 — 열은 월요일에 맞춰 시작한다(행 라벨 월·수·금·일과 실제 요일이 같다). 날짜 키는 현지 날짜. */
@@ -264,10 +264,14 @@ function buildCalWeeks(counts) {
     return { key, count: Number(counts?.[key]) || 0, future: day > today }
   }))
 }
-/** 모달 부제(207:26) — 최근 20주 · 총 N회 학습(활동 수 합) · 최장 연속 N일. */
-function calSubtitle(counts) {
+/** 모달 부제(207:26) — 최근 20주 · 총 N회 학습 · 최장 연속 N일.
+ *  N은 회차 수다. 회차 히스토리 부제·전체 통계 '총 학습 회차'와 같은 정의(30분 공백 = 새 회차, 요약 API의
+ *  session_days)를 20주 창만큼 더한다. 요약을 못 불러왔을 때만 날짜별 활동 수 합으로 대신한다. */
+function calSubtitle(counts, sessionDays) {
   const days = buildCalWeeks(counts).flat().filter((d) => !d.future)
-  const total = days.reduce((s, d) => s + d.count, 0)
+  const total = sessionDays
+    ? days.reduce((s, d) => s + (Number(sessionDays[d.key]) || 0), 0)
+    : days.reduce((s, d) => s + d.count, 0)
   let best = 0, run = 0
   for (const d of days) { if (d.count > 0) { run += 1; best = Math.max(best, run) } else run = 0 }
   return `최근 ${CAL_WEEKS}주 · 총 ${total.toLocaleString()}회 학습 · 최장 연속 ${best}일`
@@ -291,7 +295,7 @@ function ActivityCalendar({ counts }) {
               <span className="h-4 whitespace-nowrap text-[11px] leading-figma text-ink-ghost">{i % 4 === 0 ? `${i + 1}주` : ''}</span>
               {week.map((d) => (
                 <span key={d.key} title={d.future ? undefined : `${d.key} · ${d.count}회`}
-                  className="size-8 rounded-lg" style={{ backgroundColor: d.future ? 'transparent' : CAL_LEVELS[calLevel(d.count)] }} />
+                  className={`size-8 rounded-lg ${d.future ? '' : CAL_LEVELS[calLevel(d.count)]}`} />
               ))}
             </div>
           ))}
@@ -299,7 +303,7 @@ function ActivityCalendar({ counts }) {
       </div>
       <div className="flex items-center justify-end gap-1.5 text-[11.5px] leading-figma text-ink-ghost">
         적음
-        {CAL_LEVELS.map((c) => <span key={c} className="size-4 rounded-[5px]" style={{ backgroundColor: c }} />)}
+        {CAL_LEVELS.map((c) => <span key={c} className={`size-4 rounded-[5px] ${c}`} />)}
         많음
       </div>
     </div>

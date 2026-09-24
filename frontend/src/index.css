@@ -10,6 +10,7 @@
   --brand-dark: #5f3ab8;    /* brand/primary-dark (3D 하단테두리) */
   --brand-tint: #efe9fc;    /* brand/primary-tint (활성 배경) */
   --brand-hover: #6d3fc4;
+  --brand-light: #a78bfa;   /* 보라 그라데이션 시작색(primary-light) */
   --on-primary: #ffffff;    /* text/on-primary */
   --ink: #1a1a2e;           /* text/primary */
   --ink-muted: #5a5a6e;     /* text/secondary */
@@ -26,6 +27,9 @@
   --speak-tint: #ffe4e9;
   --speak-hover: #db2777;
   --bookmark: #2563eb;
+  --bookmark-light: #60a5fa;
+  --endless: #4f46e5;       /* 엔드리스 인디고 카드(endless / endless-light) */
+  --endless-light: #818cf8;
 
   /* 점수 색(§3.2) */
   --good: #16a34a;

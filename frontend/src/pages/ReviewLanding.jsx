@@ -112,7 +112,7 @@ export default function ReviewLanding({ mode = 'today' }) {
   return (
     <AppShell active="review" title="오늘의 복습" description="독화·말하기별 복습 내용을 확인하고 원하는 영역으로 이동하세요">
       <div className="w-full space-y-5">
-        <section className="rounded-[24px] p-6 text-white" style={{ backgroundImage: 'linear-gradient(160deg, #a78bfa 0%, #7d53de 71%)' }}>
+        <section className="rounded-[24px] p-6 text-white" style={{ backgroundImage: 'linear-gradient(160deg, var(--brand-light) 0%, var(--brand) 71%)' }}>
           <div>
             <p className="text-xs font-bold tracking-[0.12em] text-white/80">TODAY</p>
             <h2 className="mt-2 text-2xl font-black">{loading ? '복습 항목을 확인하고 있어요' : `${total}개 항목이 기다리고 있어요`}</h2>

@@ -1209,6 +1209,11 @@ async def get_review_sentences(current_user=Depends(get_current_user), db: Async
         .limit(200)
     )
     records = result.scalars().all()
+    # 복습 탭 '2회 틀렸어요'(189:35) — 같은 창(최근 200회) 안에서 그 문장을 60점 미만으로 끝낸 횟수
+    wrong_counts: dict = {}
+    for p in records:
+        if p.score < 60:
+            wrong_counts[p.sentence] = wrong_counts.get(p.sentence, 0) + 1
     seen: set = set()
     unique = []
     for p in records:
@@ -1222,6 +1227,7 @@ async def get_review_sentences(current_user=Depends(get_current_user), db: Async
                 "difficulty_level": p.difficulty_level,
                 "score": round(p.score, 1),
                 "created_at": _iso_utc(p.created_at),   # 가장 최근에 틀린 시각
+                "wrong_count": wrong_counts[p.sentence],
             })
         if len(unique) >= 10:
             break
