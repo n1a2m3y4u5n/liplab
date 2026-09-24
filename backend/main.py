@@ -326,6 +326,7 @@ async def account_learning_reset(confirm: bool = False, current_user=Depends(get
             _select(_func.count(PlacementResult.id)).where(PlacementResult.user_id == current_user.id))).scalar() or 0
     # 학습 프로필은 지우지 않고 배치만 처음으로 — 파일럿 참여(코드·집단)는 학습 기록이 아니라 그대로 둔다
     prof.track, prof.current_stage, prof.placed = None, 0, False
+    prof.speak_current_stage = 0
     current_user.total_xp = 0
     current_user.streak_count = 0
     current_user.last_practice_date = None   # 다시 시작한 날부터 연속 학습 1일로 센다
@@ -1362,10 +1363,11 @@ async def curriculum_stages(current_user=Depends(get_current_user), db: AsyncSes
                 st["status"] = sp.status
                 st["mastery_score"] = round(sp.mastery_score, 1)
                 st["attempts"] = sp.attempts
-        else:  # 2·3·4단계 — 직전 단계를 숙달해야 순차 해금
+        else:  # 2·3·4단계 — 직전 단계를 숙달하거나, 배치검사·건너뛰기로 그 단계까지 왔으면(current_stage) 해금
             prev = sp_map.get(stage - 1)
             sp = sp_map.get(stage)
-            if not (prev is not None and prev.status == "mastered"):
+            by_pointer = bool(prof.placed) and stage <= (prof.current_stage or 0)
+            if not ((prev is not None and prev.status == "mastered") or by_pointer):
                 st["status"] = "locked"        # 전 단계 숙달 후 열림
             elif sp is None:
                 st["status"] = "unlocked"
@@ -2779,11 +2781,13 @@ async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
 
 @app.get("/api/speak/curriculum")
 async def speak_curriculum_stages(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """발화 6단계 + 사용자 상태. 게이팅: 0단계 항상 열림, N단계는 N-1 숙달 시 해금."""
+    """발화 6단계 + 사용자 상태. 게이팅: 0단계 항상 열림, N단계는 N-1 숙달 시 해금(건너뛰기로 연 단계까지는 열림)."""
     from database import SpeakStageProgress
     from sqlalchemy import select
     r = await db.execute(select(SpeakStageProgress).where(SpeakStageProgress.user_id == current_user.id))
     sp_map = {sp.stage: sp for sp in r.scalars().all()}
+    prof = await _get_or_create_profile(current_user.id, db)
+    pointer = prof.speak_current_stage or 0
     stages = []
     for meta in _speakcur.stages_overview():
         st = dict(meta)
@@ -2793,7 +2797,7 @@ async def speak_curriculum_stages(current_user=Depends(get_current_user), db: As
             base_open = True
         else:
             prev = sp_map.get(n - 1)
-            base_open = prev is not None and prev.status == "mastered"
+            base_open = (prev is not None and prev.status == "mastered") or n <= pointer
         if not base_open:
             st["status"] = "locked"
         elif sp is None:
@@ -2808,6 +2812,33 @@ async def speak_curriculum_stages(current_user=Depends(get_current_user), db: As
             if st.get("status") == "locked":
                 st["status"] = "unlocked"
     return {"stages": stages}
+
+
+class SpeakSkipReq(BaseModel):
+    stage: int
+
+
+@app.post("/api/speak/skip")
+async def speak_skip(req: SpeakSkipReq, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """발화 트랙 건너뛰기(Figma 78:8 말풍선 → 79:5 확인 → 80:6 해금). 잠긴 다음 단계 하나를 연다(바로 앞 단계가 열려
+    있어야 한다). 독화 트랙은 배치 API(/api/curriculum/track의 start_stage)가 같은 포인터(current_stage)를 옮긴다."""
+    from database import SpeakStageProgress
+    from sqlalchemy import select
+    n = int(req.stage)
+    order = [m["stage"] for m in _speakcur.stages_overview()]
+    if n not in order or n == 0:
+        raise HTTPException(status_code=400, detail="건너뛸 수 없는 단계입니다.")
+    prof = await _get_or_create_profile(current_user.id, db)
+    pointer = prof.speak_current_stage or 0
+    r = await db.execute(select(SpeakStageProgress).where(SpeakStageProgress.user_id == current_user.id))
+    mastered = {sp.stage for sp in r.scalars().all() if sp.status == "mastered"}
+    prev = n - 1
+    prev_open = prev == 0 or prev <= pointer or (prev - 1) in mastered
+    if not prev_open:
+        raise HTTPException(status_code=400, detail="바로 앞 단계를 먼저 열어야 건너뛸 수 있습니다.")
+    prof.speak_current_stage = max(pointer, n)
+    await db.commit()
+    return {"speak_current_stage": prof.speak_current_stage}
 
 
 @app.get("/api/speak/stage/{n}", dependencies=[Depends(ratelimit.rate_limit(60, 60, "llm-speakstage"))])

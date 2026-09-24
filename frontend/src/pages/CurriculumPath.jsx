@@ -16,7 +16,8 @@ import { curriculumAPI, speakAPI } from '../api'
  *
  * Figma는 한 단계의 레슨 6개를 노드로 그리고 좌우 화살표로 단계 페이지를 넘기지만, 백엔드에는 레슨 단위 데이터가
  * 없어 노드 = 단계로 둔다(의도된 차이). 화살표는 보고 있는 단계(배너·레슨 카드)를 앞뒤 단계로 옮긴다.
- * 건너뛰기는 백엔드 skip API가 없어 프론트 전용(setTrack start_stage로 포인터 이동 + navigate).
+ * 건너뛰기: 독화는 배치 API(setTrack start_stage)가, 발화는 speakAPI.skip이 서버 포인터를 옮겨 그 단계를 연다.
+ * 연 뒤에는 단계를 다시 받아 경로에 머물고, 연 단계가 현재 노드가 되어 레슨 카드가 뜬다(80:6).
  */
 
 // ── 독화 트랙 ─────────────────────────────────────────────────────────────
@@ -98,11 +99,12 @@ export default function CurriculumPath() {
   const [guideOpen, setGuideOpen] = useState(false)
   const closeGuide = useCallback(() => setGuideOpen(false), [])
 
-  // 두 트랙을 한 번에 받아 두면 스위처 전환이 즉시 된다.
-  useEffect(() => {
-    curriculumAPI.getStages().then((d) => setData((p) => ({ ...p, read: normalizeRead(d.stages) }))).catch(() => setData((p) => ({ ...p, read: [] })))
-    speakAPI.getCurriculum().then((d) => setData((p) => ({ ...p, speak: normalizeSpeak(d.stages) }))).catch(() => setData((p) => ({ ...p, speak: [] })))
-  }, [])
+  // 두 트랙을 한 번에 받아 두면 스위처 전환이 즉시 된다. 건너뛴 뒤에도 같은 함수로 다시 받는다.
+  const load = useCallback(() => Promise.all([
+    curriculumAPI.getStages().then((d) => setData((p) => ({ ...p, read: normalizeRead(d.stages), readTrack: d.track }))).catch(() => setData((p) => ({ ...p, read: p.read || [] }))),
+    speakAPI.getCurriculum().then((d) => setData((p) => ({ ...p, speak: normalizeSpeak(d.stages) }))).catch(() => setData((p) => ({ ...p, speak: p.speak || [] }))),
+  ]), [])
+  useEffect(() => { load() }, [load])
   useEffect(() => { setSkipTarget(null); setViewIdx(null) }, [track])
 
   const learn = data[track]
@@ -110,11 +112,14 @@ export default function CurriculumPath() {
   if (!learn) return <LoadingScreen />
 
   const list = learn
-  const currentIdx = list.findIndex((s) => s.status === 'in_progress' || s.status === 'unlocked')
+  // 현재 단계 = 열린 단계 중 가장 뒤(건너뛰기로 연 단계가 현재가 된다). 그 앞의 열린 단계는 지나온 단계로 보인다.
+  const openIdx = list.map((s, i) => (s.status === 'in_progress' || s.status === 'unlocked' ? i : -1)).filter((i) => i >= 0)
+  const currentIdx = openIdx.length ? openIdx[openIdx.length - 1] : -1
   const nextLockedIdx = currentIdx >= 0 ? currentIdx + 1 : list.findIndex((s) => s.status === 'locked')
   const nodeStatus = (s, i) => {
     if (s.status === 'mastered') return 'mastered'
     if (i === currentIdx) return 'current'
+    if (i < currentIdx && s.status !== 'locked') return 'mastered'   // 건너뛰고 지나온 단계
     if (i === nextLockedIdx && s.status === 'locked') return 'skip'   // 다음 잠긴 단계 = 건너뛰기 후보
     return 'locked'
   }
@@ -129,9 +134,13 @@ export default function CurriculumPath() {
 
   const switchTrack = (k) => setSearchParams(k === 'speak' ? { track: 'speak' } : {}, { replace: true })
   const doSkip = async (s) => {
-    if (track === 'read') { try { await curriculumAPI.setTrack('perception', s.stage) } catch { /* 무시 */ } }
+    try {
+      if (track === 'read') await curriculumAPI.setTrack(data.readTrack || 'perception', s.stage)   // 학습자의 트랙은 그대로
+      else await speakAPI.skip(s.stage)
+    } catch { /* 실패하면 잠긴 채로 둔다(다시 받은 상태가 그대로 보인다) */ }
     setSkipTarget(null)
-    navigate(s.route)
+    setViewIdx(null)
+    await load()
   }
   const go = (d) => { setSkipTarget(null); setViewIdx(Math.min(list.length - 1, Math.max(0, vIdx + d))) }
 
