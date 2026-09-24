@@ -270,7 +270,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       )}
       {articulationGuide && (
         <p className="mt-1 text-center text-xs text-sky-700">
-          🔎 <b>안 보이는 조음</b> — {articulationGuide}
+          <b>안 보이는 조음</b> — {articulationGuide}
         </p>
       )}
       {/* 축 E: 조음 교정 — 관찰 계수(개구·원순·폐쇄)를 목표와 비교해 방향을 제시하고 계수를 노출한다 */}
@@ -278,7 +278,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
         <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50/60 p-2">
           <p className="mb-1 text-center text-[10px] text-sky-600">조음 교정 · 관찰 계수 (축 E)</p>
           <p className="text-center text-sm font-semibold text-sky-900">
-            {correction.ok ? '👍 조음이 목표에 가까워요' : correction.primary}
+            {correction.ok ? '조음이 목표에 가까워요' : correction.primary}
           </p>
           {obs && (
             <div className="mt-1.5 grid grid-cols-3 gap-2">
@@ -369,7 +369,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
           </button>
           <button type="button" onClick={() => setShowMirror((v) => !v)}
             className="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-800">
-            {showMirror ? '아바타 미러 끄기' : '🪞 아바타로 내 입모양 비추기'}
+            {showMirror ? '아바타 미러 끄기' : '아바타로 내 입모양 비추기'}
           </button>
         </div>
       </div>

@@ -125,7 +125,7 @@ export default function MouthCalibration({ onDone, onCancel }) {
         )}
         {status === 'loading' && <div className="absolute inset-0 grid place-items-center text-sm text-white/70">카메라 준비 중…</div>}
         {status === 'error' && <div className="absolute inset-0 grid place-items-center px-4 text-center text-sm text-white/80">{errMsg}</div>}
-        {status === 'done' && <div className="absolute inset-0 grid place-items-center text-sm font-bold text-white">본뜨기 완료! 🎉</div>}
+        {status === 'done' && <div className="absolute inset-0 grid place-items-center text-sm font-bold text-white">본뜨기 완료!</div>}
       </div>
       {status === 'running' && (
         <div className="mt-2 flex flex-col items-center gap-1">
