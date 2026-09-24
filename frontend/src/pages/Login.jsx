@@ -110,7 +110,7 @@ export default function Login() {
     <div className="flex min-h-[100dvh] bg-white">
       {/* 좌: 브랜드 패널 (Figma "Brand panel" 560px, 126deg 그라데이션) */}
       <div className="relative hidden w-1/2 max-w-[560px] shrink-0 overflow-hidden lg:block"
-        style={{ backgroundImage: 'linear-gradient(126deg, #a78bfa 0%, #6d3fc4 71.4%)' }}>
+        style={{ backgroundImage: 'linear-gradient(126deg, var(--brand-light) 0%, var(--brand-hover) 71.4%)' }}>
         {/* Blob 1 / Blob 2 — 흰 반투명 원(227:37 · 227:38) */}
         <div className="absolute -left-[130px] -top-[110px] h-[420px] w-[420px] rounded-full bg-white/10" />
         <div className="absolute left-[420px] top-[780px] h-[320px] w-[320px] rounded-full bg-white/[0.08]" />

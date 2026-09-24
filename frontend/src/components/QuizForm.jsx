@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
+// 문장 점수 색 — 기준은 예전 그대로 80/60(핸드오프 §3.2는 음소·정답률 기준만 정한다), 색은 good/warn/bad 토큰.
+const TONE = {
+  good: { card: 'bg-good-tint border-good-line', text: 'text-good' },
+  warn: { card: 'bg-warn-tint border-warn/35', text: 'text-warn-strong' },
+  bad: { card: 'bg-bad-tint border-bad-line', text: 'text-bad' },
+}
+const toneOf = (score) => TONE[score >= 80 ? 'good' : score >= 60 ? 'warn' : 'bad']
+
 /**
  * QuizForm Component
  * Handles user answer input and displays scoring feedback
@@ -83,28 +91,14 @@ export default function QuizForm({
             <div
               role="status"
               aria-live="polite"
-              className={`card ${
-                result.score >= 80
-                  ? 'bg-green-50 border-green-200'
-                  : result.score >= 60
-                  ? 'bg-yellow-50 border-yellow-200'
-                  : 'bg-red-50 border-red-200'
-              }`}
+              className={`card ${toneOf(result.score).card}`}
             >
               <div className="text-center">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', stiffness: 200 }}
-                  className="text-6xl font-bold mb-2"
-                  style={{
-                    color:
-                      result.score >= 80
-                        ? '#10B981'
-                        : result.score >= 60
-                        ? '#F59E0B'
-                        : '#EF4444',
-                  }}
+                  className={`text-6xl font-bold mb-2 ${toneOf(result.score).text}`}
                 >
                   {Math.round(result.score)}
                 </motion.div>

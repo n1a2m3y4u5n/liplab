@@ -125,7 +125,7 @@ export default function SignSelectionOverlay() {
             className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 outline-none" onClick={(e) => e.stopPropagation()}>
             <div className="text-center mb-4">
               {/* 연습 탭 '수어 함께 보기' 카드와 같은 아이콘 칩(Figma 96:142) */}
-              <span className="icon-chip mx-auto mb-2 bg-[#dff7ec]" aria-hidden>
+              <span className="icon-chip mx-auto mb-2 bg-pastel-mint" aria-hidden>
                 <img src="/ui/card-sign.svg" alt="" className="size-6" />
               </span>
               <h3 className="text-lg font-bold text-gray-900">수어 번역, 이렇게 써요</h3>

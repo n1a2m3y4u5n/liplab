@@ -4,6 +4,8 @@
  *   흰 배경 + 보라 DOKA(170 / 120) + "로딩 중"(22px / 17px) + 점 3개(11px·간격 9 / 9px·간격 7, 진한→옅은).
  * variant='inline' — 셸(사이드바·탭) 안에서 내용만 불러올 때. 'plain'과 같은 DOKA·문구·점을 그대로 쓰고,
  *   창 전체 대신 내용 영역(최소 60vh)만 채운다(§4-10 256:34를 셸 안에 둔 것).
+ * variant='section' — 카드 한 칸 안에서 목록만 불러올 때. 같은 구성을 화면 폭과 상관없이 모바일 프레임 크기
+ *   (256:48: DOKA 120 · 17px · 점 9px)로, 위아래 여백만 두고 그린다.
  * variant='brand' — 레슨 시작 전 트랙별 로딩(223:30 독화 · 223:50 발화 / 모바일 243:81 · 243:101):
  *   트랙 그라데이션 + 블롭 2개 + 헤일로(220 / 158) 안 마스코트(158 / 116) + 흰 점 + 팁 카드.
  *   track='perception'(보라, 기본) | 'language'(분홍).
@@ -30,13 +32,15 @@ const TRACK_UI = {
 const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }
 
 // 점 3개(Figma Dots) — 진한 것에서 옅은 것으로(기본 보라 1·.55·.3 / 브랜드 흰색 1·.6·.35), 순차 펄스로 진행을 보인다.
-function Dots({ onBrand = false }) {
+function Dots({ onBrand = false, small = false }) {
   const steps = onBrand ? ['opacity-100', 'opacity-60', 'opacity-[0.35]'] : ['opacity-100', 'opacity-[0.55]', 'opacity-30']
+  const gap = onBrand ? 'gap-[8px] lg:gap-[10px]' : small ? 'gap-[7px]' : 'gap-[7px] lg:gap-[9px]'
+  const dot = onBrand ? 'size-[10px] bg-white lg:size-[12px]' : small ? 'size-[9px] bg-primary-500' : 'size-[9px] bg-primary-500 lg:size-[11px]'
   return (
-    <div aria-hidden className={`flex ${onBrand ? 'gap-[8px] lg:gap-[10px]' : 'gap-[7px] lg:gap-[9px]'}`}>
+    <div aria-hidden className={`flex ${gap}`}>
       {steps.map((step, i) => (
         <span key={i} className={step}>
-          <span className={`block animate-pulse rounded-full ${onBrand ? 'size-[10px] bg-white lg:size-[12px]' : 'size-[9px] bg-primary-500 lg:size-[11px]'}`}
+          <span className={`block animate-pulse rounded-full ${dot}`}
             style={{ animationDelay: `${i * 180}ms` }} />
         </span>
       ))}
@@ -45,15 +49,16 @@ function Dots({ onBrand = false }) {
 }
 
 export default function LoadingScreen({ label = '로딩 중', variant = 'plain', track = 'perception' }) {
-  if (variant === 'plain' || variant === 'inline') {
-    const box = variant === 'inline' ? 'min-h-[60vh] w-full' : 'min-h-[100dvh] bg-white'
+  if (variant === 'plain' || variant === 'inline' || variant === 'section') {
+    const small = variant === 'section'
+    const box = { plain: 'min-h-[100dvh] bg-white', inline: 'min-h-[60vh] w-full', section: 'w-full py-10' }[variant]
     return (
-      <div role="status" className={`flex flex-col items-center justify-center gap-[26px] lg:gap-[37px] ${box}`}>
-        <span className="relative size-[120px] lg:size-[170px]">
+      <div role="status" className={`flex flex-col items-center justify-center gap-[26px] ${small ? '' : 'lg:gap-[37px]'} ${box}`}>
+        <span className={`relative size-[120px] ${small ? '' : 'lg:size-[170px]'}`}>
           <img src="/ui/lp-84-7-mascot.svg" alt="" className="absolute max-w-none" style={OVERFLOW} />
         </span>
-        <p className="text-center text-[17px] font-bold leading-figma tracking-[-0.255px] text-ink-muted lg:text-[22px] lg:tracking-[-0.33px]">{label}</p>
-        <Dots />
+        <p className={`text-center text-[17px] font-bold leading-figma tracking-[-0.255px] text-ink-muted ${small ? '' : 'lg:text-[22px] lg:tracking-[-0.33px]'}`}>{label}</p>
+        <Dots small={small} />
       </div>
     )
   }

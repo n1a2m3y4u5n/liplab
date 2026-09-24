@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import WatermarkCard from '../components/WatermarkCard'
 import { reviewAPI, learningAPI } from '../api'
+import { relDay } from '../lib/relDay'
 
 /**
  * 복습 탭 (Figma 100:15 · 선택 모드 318:33 · 모바일 239:34 / 318:233) — 오답·북마크 복습 진입 + 복습 항목 리스트.
@@ -10,19 +11,20 @@ import { reviewAPI, learningAPI } from '../api'
  * 각 항목은 트랙 배지(독화=보라 / 발화=핑크) + 단어 + 사유. 클릭 시 해당 복습 흐름으로 이동.
  * 오른쪽 패널은 복습 탭 구성(스탯 + 오늘의 과제 + 이번 주 복습, 100:113).
  * 목록은 처음에 데스크톱 5개·모바일 3개만 보이고, 더 있으면 아래 원형 버튼(192:21 Scroll hint)으로 모두 펼친다.
- * 상대 날짜('3일 전 · ')는 목록 API가 시각을 주지 않아 아직 붙이지 않는다(rel이 오면 ReviewItem이 앞에 붙인다).
+ * 상대 날짜('3일 전 · ', lib/relDay)는 오답=가장 최근에 틀린 시각, 예정=마지막으로 다시 푼 시각(없으면 큐에 든 시각),
+ * 북마크=북마크한 시각으로 붙인다. 오답 횟수('2회 틀렸어요')는 /api/review-sentences의 wrong_count.
  */
 const HERO = {
   // 오답(199:22 / 239:122) — 보라, 워터마크 X(308:32)
   mistake: {
-    card: 'border-primary-700 bg-[linear-gradient(137.7deg,#a78bfa_0%,#7d53de_70.92%)] lg:bg-[linear-gradient(154.59deg,#a78bfa_0%,#7d53de_70.92%)]',
-    btn: 'text-primary-700 lg:border-[#d9ccf7]',
+    card: 'border-primary-700 bg-[linear-gradient(137.7deg,var(--brand-light)_0%,var(--brand)_70.92%)] lg:bg-[linear-gradient(154.59deg,var(--brand-light)_0%,var(--brand)_70.92%)]',
+    btn: 'text-primary-700 lg:border-primary-line',
     deco: { src: '/ui/lp-100-15-deco-mistake.svg', size: 170, top: -63.01, right: -63.01, hideBelowLg: true },
   },
   // 북마크(199:29 / 239:128) — 파랑, 워터마크 북마크(308:36, -30°)
   bookmark: {
-    card: 'border-bookmark-dark bg-[linear-gradient(137.7deg,#60a5fa_0%,#2563eb_70.92%)] lg:bg-[linear-gradient(154.59deg,#60a5fa_0%,#2563eb_70.92%)]',
-    btn: 'text-bookmark-dark lg:border-[#c3dafb]',
+    card: 'border-bookmark-dark bg-[linear-gradient(137.7deg,var(--bookmark-light)_0%,var(--bookmark)_70.92%)] lg:bg-[linear-gradient(154.59deg,var(--bookmark-light)_0%,var(--bookmark)_70.92%)]',
+    btn: 'text-bookmark-dark lg:border-bookmark-line',
     deco: { src: '/ui/lp-100-15-deco-bookmark.svg', size: 170, top: -87, right: -87.22, rotate: -30, hideBelowLg: true },
   },
 }
@@ -142,6 +144,7 @@ export default function ReviewTab() {
         // 예정 항목(/api/review/due)은 {kind, ref, name} — 입모양은 레슨 이름, 단어는 ref가 곧 단어
         word: x.word || x.sentence || x.text || x.target || x.name || x.ref || '복습 항목',
         meta: meta(x, kind),
+        rel: relDay(x.updated_at || x.created_at),
         kind,
         raw: x,   // 삭제 요청에 쓰는 원래 식별자(북마크 id, 예정 항목 kind·ref)
       }))
