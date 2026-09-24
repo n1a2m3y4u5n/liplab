@@ -249,6 +249,7 @@ export const accountAPI = {
 // 발화(말하기) — 커리큘럼 6단계 + 녹음 채점·코칭.
 export const speakAPI = {
   getCurriculum: async () => (await api.get('/speak/curriculum')).data,
+  skip: async (stage) => (await api.post('/speak/skip', { stage })).data,   // 건너뛰기(80:6) — 잠긴 다음 단계 하나를 연다
   getStage: async (n) => (await api.get(`/speak/stage/${n}`)).data,
   getAnalysis: async () => (await api.get('/speak/analysis', { timeout: 30000 })).data,
   getReview: async () => (await api.get('/speak/review')).data,

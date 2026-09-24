@@ -57,3 +57,45 @@ def test_default_unlocks_everyone_and_zero_unlocks_no_one():
     assert all(not _locked(on[a][k]) for a in ("user", "demo") for k in ("read", "speak"))
     off = _run("0")
     assert all(_locked(off[a][k]) for a in ("user", "demo") for k in ("read", "speak"))
+
+
+_SKIP_SCENARIO = r'''
+import json
+from fastapi.testclient import TestClient
+import main
+
+def st(c, h, path):
+    return {str(s["stage"]): s["status"] for s in c.get(path, headers=h).json()["stages"]}
+
+out = {}
+with TestClient(main.app) as c:
+    r = c.post("/api/auth/register", json={"email": "skip@example.com", "username": "건너뛰기", "password": "pw-123456",
+                                           "agree_terms": True, "age_confirmed": True})
+    h = {"Authorization": "Bearer " + r.json()["access_token"]}
+    out["read_before"] = st(c, h, "/api/curriculum/stages")
+    c.post("/api/curriculum/track", json={"track": "perception", "start_stage": 2}, headers=h)   # 독화 건너뛰기 = 포인터 이동
+    out["read_after"] = st(c, h, "/api/curriculum/stages")
+    out["speak_before"] = st(c, h, "/api/speak/curriculum")
+    out["skip_far"] = c.post("/api/speak/skip", json={"stage": 3}, headers=h).status_code
+    out["skip_1"] = c.post("/api/speak/skip", json={"stage": 1}, headers=h).status_code
+    out["speak_after"] = st(c, h, "/api/speak/curriculum")
+print("RESULT " + json.dumps(out, ensure_ascii=False))
+'''
+
+
+def test_skip_opens_only_the_next_stage_when_gated():
+    here = os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as d:
+        env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", PYTHONDONTWRITEBYTECODE="1",
+                   ANTHROPIC_API_KEY="")
+        env["LIPLAB_UNLOCK_ALL"] = "0"
+        p = subprocess.run([sys.executable, "-c", _SKIP_SCENARIO], cwd=here, env=env,
+                           capture_output=True, text=True, timeout=180)
+    line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
+    assert line, f"시나리오 실패:\n{p.stdout[-2000:]}\n{p.stderr[-3000:]}"
+    r = json.loads(line[len("RESULT "):])
+    assert r["read_before"]["2"] == "locked"
+    assert r["read_after"]["2"] == "unlocked" and r["read_after"]["3"] == "locked"   # 배치·건너뛰기로 2단계까지
+    assert r["speak_before"]["1"] == "locked"
+    assert r["skip_far"] == 400 and r["skip_1"] == 200                                 # 한 번에 한 단계만
+    assert r["speak_after"]["1"] == "unlocked" and r["speak_after"]["2"] == "locked"

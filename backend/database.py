@@ -145,6 +145,7 @@ class LearningProfile(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
     track = Column(String(20), nullable=True)      # 'perception'(중도·난청) | 'language'(선천성) | None(미배치)
     current_stage = Column(Integer, default=0)     # 0 입문 ~ 4 대화
+    speak_current_stage = Column(Integer, default=0)   # 발화 트랙 건너뛰기로 연 단계(0 발성 ~ 5 문장)
     placed = Column(Boolean, default=False)        # 배치(트랙 선택) 완료 여부
     # 파일럿(§4.7) — 참여 코드와 집단. 코드는 운영자가 나눠 준 값이고, 내보내기는 가명으로만 한다.
     pilot_code = Column(String(32), nullable=True)
@@ -385,6 +386,8 @@ async def init_db():
             "ALTER TABLE learning_profiles ADD COLUMN pilot_code VARCHAR(32)",
             "ALTER TABLE learning_profiles ADD COLUMN cohort VARCHAR(16)",
             "ALTER TABLE learning_profiles ADD COLUMN pilot_joined_at TIMESTAMP",
+            # 발화 트랙 건너뛰기(Figma 78:8·79:5·80:6)
+            "ALTER TABLE learning_profiles ADD COLUMN speak_current_stage INTEGER DEFAULT 0",
             # 말하기 회차 상세(Figma 212:24)
             "ALTER TABLE speak_attempts ADD COLUMN audio_score FLOAT",
             "ALTER TABLE speak_attempts ADD COLUMN mouth_score FLOAT",
