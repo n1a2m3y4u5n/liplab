@@ -11,7 +11,8 @@ import { curriculumAPI } from '../api'
  * - Frame-by-frame navigation
  * - Speed control (0.5x ~ 2x)
  * - Replay bug fixed (uses internal ref, not prop)
- * showControls=false면 아바타 무대만 남긴다(상태 배지·'Viseme N'·진행바·재생/프레임/속도·조음 토글 숨김).
+ * showControls=false면 아바타 무대만 남긴다(상태 배지·진행바·재생/프레임/속도·조음 토글 숨김).
+ * 비심 번호·길이('Viseme 12 · 50ms')는 개발용 값이라 학습 화면에 띄우지 않는다(9/24, Figma에 없음, 비심 확인은 /dev-viseme).
  * 레슨 입모양 카드처럼 "무한 반복 재생, 다시 보기 없음"(핸드오프 §3.4)인 자리에서 쓴다. 기본값은 기존 그대로(true).
  */
 export default function LipSyncPlayer3D({
@@ -228,13 +229,6 @@ export default function LipSyncPlayer3D({
           </div>
         )}
 
-        {/* Frame info overlay */}
-        {showControls && (
-          <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs">
-            <span className="font-medium">Viseme {currentViseme?.viseme ?? '-'}</span>
-            <span className="text-gray-400 ml-2">{currentViseme?.duration_ms ?? 0}ms</span>
-          </div>
-        )}
       </div>
 
       {showControls && (<>
