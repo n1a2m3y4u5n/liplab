@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { learningAPI, speakAPI, curriculumAPI } from '../api'
 import LearnHeader from '../components/LearnHeader'
+import LoadingScreen from '../components/LoadingScreen'
 
 const PAGE_META = {
   overview: { title: '학습 분석', description: '독화·말하기 학습에서 쌓인 핵심 성과를 한눈에 확인합니다.' },
@@ -22,7 +23,7 @@ const ANALYSIS_TABS = [
 ]
 
 function Loading() {
-  return <div className="rounded-[24px] border border-slate-200 bg-white py-20 text-center text-sm text-slate-400">분석 데이터를 불러오는 중…</div>
+  return <LoadingScreen variant="inline" />
 }
 
 function Empty({ children }) {

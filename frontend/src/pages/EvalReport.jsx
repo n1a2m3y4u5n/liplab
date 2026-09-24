@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { evalAPI, curriculumAPI } from '../api'
 import LearnHeader from '../components/LearnHeader'
+import LoadingScreen from '../components/LoadingScreen'
 
 // 학습 효과 리포트 — 개인별 시행 기록으로 학습곡선·단계 도달 시행수·초기 대비 최근 향상도를
 // 시각화한다. 공모전 평가/효과성 근거용. 데이터가 적으면 각 카드가 '쌓이면 표시' 상태를 그린다.
@@ -212,7 +213,7 @@ export default function EvalReport() {
           </div>
         </div>
         {loading ? (
-          <div className="rounded-[24px] border border-slate-200 bg-white py-20 text-center text-sm text-slate-400">리포트를 불러오는 중…</div>
+          <LoadingScreen variant="inline" />
         ) : !data ? (
           <div className="rounded-[24px] border border-slate-200 bg-white py-16 text-center text-sm text-slate-500">리포트를 불러오지 못했습니다.</div>
         ) : noData ? (
