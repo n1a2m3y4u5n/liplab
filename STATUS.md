@@ -1,5 +1,18 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
+> **2026-09-24 저녁 — 사용자 결정 반영(코드만, 배포 안 함).** 사용자가 결정을 위임했고 "호스팅 관련은 호스팅에도, 배포는 아직"이라고 했다.
+> - **채점은 소리만, 입모양은 따로.** `/api/speak/assess`가 입모양 점수를 `mouth`로 따로 돌려주고 화면도 '입모양 점수'를 따로 보인다.
+>   예전 융합(B-5·B-6·K-5)은 `LIPLAB_AV_FUSION=1`일 때만. 웹캠 울림 기호(K→J)와 K 표시는 끄고 연구 빌드(`VITE_LIPLAB_RESEARCH=1`)에서만.
+> - **호스팅(liplab-dev)에서 D-GOP·음성구동 아바타 켜기.** `fly.dev.toml`: `WITH_ML=1`(torch CPU + 모델 두 개를 이미지에),
+>   `DGOP_ALIGNER_ID=kresnik`, `HF_HUB_OFFLINE=1`, `LIPLAB_WARMUP=1`, `LIPLAB_UNLOCK_ALL=demo`, `LIPLAB_REVIEW=1`, shared-cpu 2·4GB.
+>   전시앱 `fly.toml`은 그대로. 표시 앵커는 채점기별 자동(kresnik → `data/dgop_calibration_kresnik.json`). 절차는 `DEPLOY.md` 9항.
+>   A4 체크포인트(`backend/models/kr_a4_wavlm.pt`, git 제외)를 이 작업 폴더에 복사해 둠.
+> - **그 밖의 결정:** 1구간 점검 확정(설계 변경 편차는 `docs/report-notes.md` '계획과 달라진 설계'), 콘텐츠 월간 루틴 확정,
+>   엔진 지속시간 상수 유지(2x를 '실제'로 표시), 통합 브랜치를 기준으로(원 브랜치 병합은 팀원 확인 뒤), 팀원 모델은 HF 토큰 재측정 뒤 채택.
+> - **예산:** RunPod $1.72(다른 과제)는 프로젝트 예산 처리, Figma 구독은 그대로, 3D 성도 모델은 사지 않고 VTL 단면으로 대체(화면 확인,
+>   두상 위 단면 창 확대), SpeechSuper는 나중에, CC5 얼굴은 사용자가 나중에.
+> - 확인: 백엔드 pytest 245 통과, 프론트 node --test 69 통과, vite build 통과. 계획서 이행률 68%(부분 인정 77%).
+
 > **2026-09-24 오후 — 사용자 입력 없이 할 수 있는 남은 항목 처리.**
 > - **J-9 실제 촬영 영상 위 기호.** 연구용 페이지 `/lab/cue-video`(메뉴 없음, 기호 없는 파일럿 집단은 열리지 않음)가 강제정렬 음절 시각에
 >   맞춰 기호를 입 옆에 띄운다. 538 8클립으로 확인. 묶음은 `liplab-lab/tools/cue_video.py pack`, 자체 촬영 영상은 `own`.

@@ -56,7 +56,21 @@ def resolve_device() -> str:
 # 표시용 점수 보정 앵커 파일. 없으면 dgop.DEFAULT_CALIBRATION(축 A A-3 실측)을 쓴다.
 DEFAULT_CALIBRATION_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                         "data", "dgop_calibration.json")
+# 공개 kresnik 모델을 정렬기·채점기로 쓸 때의 앵커(A-7, 538 blank 수정판). 기본 파일은 팀원 채점기(A-4)용이다.
+KRESNIK_CALIBRATION_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                        "data", "dgop_calibration_kresnik.json")
 _calibration_cache: Dict[str, Dict] = {}
+
+
+def calibration_path_for(scorer_id: Optional[str]) -> str:
+    """채점기에 맞는 앵커 파일. DGOP_CALIBRATION이 있으면 그것, 채점기가 공개 kresnik 모델이면 그 모델로 맞춘 앵커,
+    아니면 기본 파일. 원점수 눈금은 채점기마다 달라 다른 모델의 앵커를 쓰면 표시 점수가 어긋난다."""
+    env = os.getenv("DGOP_CALIBRATION")
+    if env:
+        return env
+    if scorer_id == DEFAULT_MODEL_ID and os.path.exists(KRESNIK_CALIBRATION_PATH):
+        return KRESNIK_CALIBRATION_PATH
+    return DEFAULT_CALIBRATION_PATH
 
 
 def load_calibration(path: Optional[str] = None) -> Dict:
@@ -326,7 +340,7 @@ def assess_text(audio_bytes: bytes, target_text: str,
     result = {**_dgop.sentence_dgop(scored), "phones": phones}
     result["raw_score"] = result["score"]
     if calibrate:
-        cal = load_calibration()
+        cal = load_calibration(calibration_path_for(scorer_id or aligner_id))
         result["score"] = _dgop.calibrate_score(result["raw_score"], cal)
         result["calibration"] = cal.get("source") or "내장 기본값"
     return result

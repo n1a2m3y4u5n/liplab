@@ -38,6 +38,20 @@ RUN pip install --no-cache-dir -r requirements.txt
 ENV WHISPER_MODEL=base
 RUN python -c "from faster_whisper import WhisperModel; WhisperModel('base', device='cpu', compute_type='int8')"
 
+# 서버 추론(D-GOP 발음채점·음성구동 아바타) — WITH_ML=1일 때만(fly.dev.toml). 기본값 0이라 전시앱 이미지는 그대로다.
+# torch CPU 휠과 transformers를 깔고, 모델 두 개(kresnik 정렬·채점, WavLM-large 아바타 백본, 각 약 1.2GB)를
+# 이미지에 미리 받아 둔다. 기계가 자동으로 멈췄다 켜질 때마다 다시 받지 않게 하려는 것이다.
+ARG WITH_ML=0
+ENV HF_HOME=/app/hf
+COPY backend/requirements-infer.txt ./
+RUN if [ "$WITH_ML" = "1" ]; then \
+      pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
+      pip install --no-cache-dir -r requirements-infer.txt && \
+      python -c "from transformers import AutoModel, AutoModelForCTC, AutoProcessor; \
+k='kresnik/wav2vec2-large-xlsr-korean'; AutoProcessor.from_pretrained(k); AutoModelForCTC.from_pretrained(k); \
+AutoModel.from_pretrained('microsoft/wavlm-large')"; \
+    fi
+
 # Copy backend source
 COPY backend/ ./
 

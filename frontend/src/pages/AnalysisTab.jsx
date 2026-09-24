@@ -478,7 +478,8 @@ function DetailItem({ it, i, kind }) {
 /**
  * 회차 상세 모달(212:190) — 히스토리 행 하나(현지 날짜 × 활동 종류 × 주제)의 문제별 기록.
  * 말하기는 요약(212:246: 소리·입모양·융합·불확실성) + 문제별 분석(음소 칩·들림·점수) + DOKA의 한마디(212:335).
- * 소리 = 입모양을 섞기 전 음향 점수, 입모양 = 웹캠 점수(웹캠을 켠 시도만), 불확실성 = D-GOP 불확실성.
+ * 소리 = 채점 점수(음향), 입모양 = 웹캠 점수(웹캠을 켠 시도만, 채점에 섞지 않음), 융합 = 연구용 융합 기록만,
+ * 불확실성 = D-GOP 불확실성.
  * 독화·문장·검사 행은 같은 틀에서 정답률 요약과 고른 답을 보여 준다(Figma에 따로 프레임이 없다).
  * 데이터: GET /api/analysis/activity-detail.
  */
@@ -520,8 +521,13 @@ function SessionDetail({ row, onClose, onGo }) {
                 <Divider />
                 <Metric label="입모양 점수" value={sm.mouth != null ? Math.round(sm.mouth) : null} cls="text-sky-500" />
                 <Divider />
-                <Metric label="융합 점수" value={sm.fused != null ? Math.round(sm.fused) : null} cls="text-speak-dark" />
-                <Divider />
+                {/* 융합 점수는 연구용 융합을 켠 기록에만 있다(9/24부터 입모양은 소리와 따로 보임) */}
+                {sm.fused != null && (
+                  <>
+                    <Metric label="융합 점수" value={Math.round(sm.fused)} cls="text-speak-dark" />
+                    <Divider />
+                  </>
+                )}
                 <Metric label="불확실성" value={sm.uncertainty != null ? `${Math.round(sm.uncertainty * 100)}%` : null} cls="text-warn-text" />
               </>
             ) : (

@@ -4,11 +4,11 @@ import { faceSignals, FACE_SIGNAL_LABELS } from '../lib/faceCues'
 import { lipGeometry, LIP_GEOMETRY_LABELS } from '../lib/lipGeometry'
 import { predictK, K_FACE_KEYS, K_WIN } from '../lib/kModel'
 import { errorEnds } from '../lib/correctionTrend'
-import { CueGlyph, useCuesEnabled } from './CueBadges'
 
-// K→J 연결(K-4): 얼굴에서 추정한 비음 확률이 이 값 이상이면 J의 '울림' 기호를 켠다.
-// 비음 AUC가 0.60~0.64 수준이라(docs/k-facecue.md) 단정 대신 기호의 켜짐·흐림으로만 알린다.
-const K_NASAL_ON = 0.6
+// 입술 너머 얼굴 신호(축 K)는 연구 빌드(VITE_LIPLAB_RESEARCH=1)에서만 보인다. 화자 영상 200클립에서 K 비음 확률이
+// 비음 음절과 같은 입모양 파열음 음절을 가르지 못해(음절 AUC 0.49, docs/cue-video-demo.md) 학습자 화면에서는
+// 비음 막대와 J '울림' 기호 연결(K→J)을 끄고, 규칙 신호 막대도 함께 숨긴다(9/24 결정).
+const K_RESEARCH = import.meta.env.VITE_LIPLAB_RESEARCH === '1'
 import { curriculumAPI, articulationAPI } from '../api'
 import useFaceLandmarker from '../hooks/useFaceLandmarker'
 import MouthCalibration from './MouthCalibration'
@@ -41,8 +41,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   const [recorded, setRecorded] = useState(false)
   const [faceSig, setFaceSig] = useState(null) // 입술 너머 얼굴 신호(축 K, 규칙 보조)
   const [geo, setGeo] = useState(null)         // 입술 기하 지표(그림8, 결정론적 보조)
-  const [kPred, setKPred] = useState(null)     // 학습된 K 분류기 예측(유성/비음)
-  const cuesOn = useCuesEnabled()               // 파일럿 기호 끈 집단이면(또는 아직 모르면) 울림 기호를 숨긴다(J-12)
+  const [kPred, setKPred] = useState(null)     // 학습된 K 분류기 예측(유성/비음) — 연구 빌드에서만
   const kWinRef = useRef([])                    // 최근 K_WIN 프레임의 얼굴 8차원 버퍼
   const kBusyRef = useRef(false)
   const bestRef = useRef(0)
@@ -107,17 +106,19 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
         setScore(s)
         if (s > bestRef.current) bestRef.current = s
         setHint(coachHint(bs, curViseme, curProfiles))
-        setFaceSig(faceSignals(bs)) // 입술 너머 규칙 신호(K 입력)
         setGeo(lipGeometry(res.faceLandmarks?.[0])) // 입술 기하 지표(그림8) — 좌표 기반 결정론적 보조
-        // 학습된 K 분류기: 최근 30프레임 창을 모아 유성/비음 확률 추론(과부하 방지 위해 순차)
-        const w = kWinRef.current
-        w.push(K_FACE_KEYS.map((k) => bs[k] || 0))
-        if (w.length > K_WIN) w.shift()
-        if (w.length === K_WIN && !kBusyRef.current) {
-          kBusyRef.current = true
-          const flat = new Float32Array(K_WIN * K_FACE_KEYS.length)
-          for (let i = 0; i < K_WIN; i++) for (let j = 0; j < K_FACE_KEYS.length; j++) flat[i * K_FACE_KEYS.length + j] = w[i][j]
-          predictK(flat).then((r) => { if (r) setKPred(r) }).finally(() => { kBusyRef.current = false })
+        if (K_RESEARCH) {
+          setFaceSig(faceSignals(bs)) // 입술 너머 규칙 신호(K 입력)
+          // 학습된 K 분류기: 최근 30프레임 창을 모아 유성/비음 확률 추론(과부하 방지 위해 순차)
+          const w = kWinRef.current
+          w.push(K_FACE_KEYS.map((k) => bs[k] || 0))
+          if (w.length > K_WIN) w.shift()
+          if (w.length === K_WIN && !kBusyRef.current) {
+            kBusyRef.current = true
+            const flat = new Float32Array(K_WIN * K_FACE_KEYS.length)
+            for (let i = 0; i < K_WIN; i++) for (let j = 0; j < K_FACE_KEYS.length; j++) flat[i * K_FACE_KEYS.length + j] = w[i][j]
+            predictK(flat).then((r) => { if (r) setKPred(r) }).finally(() => { kBusyRef.current = false })
+          }
         }
       } else {
         liveBsRef.current = null
@@ -303,9 +304,9 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
           )}
         </div>
       )}
-      {status === 'running' && faceSig && (
+      {K_RESEARCH && status === 'running' && faceSig && (
         <div className="mt-2">
-          <p className="mb-1 text-center text-[10px] text-gray-400">입술 너머 신호 (보조·실험)</p>
+          <p className="mb-1 text-center text-[10px] text-gray-400">입술 너머 신호 (연구용)</p>
           <div className="grid grid-cols-3 gap-2">
             {Object.entries(FACE_SIGNAL_LABELS).map(([k, label]) => (
               <div key={k} className="text-center">
@@ -331,21 +332,15 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
           </div>
         </div>
       )}
-      {/* 학습된 K 분류기 — 얼굴 표면신호로 '안 보이는' 유성/비음 추정(계획서 K). 실험적. */}
-      {status === 'running' && kPred && (
+      {/* 학습된 K 분류기 — 얼굴 표면신호로 '안 보이는' 비음 추정(계획서 K). 연구 빌드에서만, 기호와 잇지 않는다. */}
+      {K_RESEARCH && status === 'running' && kPred && (
         <div className="mt-2 rounded-lg border border-violet-200 bg-violet-50/60 p-2">
-          <p className="mb-1 text-center text-[10px] text-violet-600">입술 너머 자질 추정 · 학습모델(실험)</p>
+          <p className="mb-1 text-center text-[10px] text-violet-600">입술 너머 자질 추정 · 학습모델(연구용, 음절 수준 검증 실패)</p>
           <div className="mx-auto max-w-[220px] text-center">
             <div className="h-2 w-full overflow-hidden rounded-full bg-violet-100">
               <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${Math.round(kPred.nasal * 100)}%` }} />
             </div>
-            <span className="mt-0.5 flex items-center justify-center gap-1 text-[11px] font-medium text-violet-700">
-              {cuesOn === true && (
-                <span className={`transition-opacity ${kPred.nasal >= K_NASAL_ON ? 'opacity-100' : 'opacity-25'}`}
-                  aria-label={kPred.nasal >= K_NASAL_ON ? '울림 기호 켜짐' : '울림 기호 꺼짐'}>
-                  <CueGlyph cue="nasal" size={14} />
-                </span>
-              )}
+            <span className="mt-0.5 block text-[11px] font-medium text-violet-700">
               비음(코울림) {Math.round(kPred.nasal * 100)}
             </span>
           </div>
