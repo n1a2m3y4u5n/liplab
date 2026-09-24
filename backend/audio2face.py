@@ -7,8 +7,8 @@ Audio2Face 백본 — 고도화 축 A4(음성 → 얼굴 블렌드셰이프).
 kr_a4_wavlm.pt). 옛 kresnik wav2vec2 체크포인트도 backbone 필드 없이 로드되어 하위호환.
 실제 음성으로 아바타가 립싱크하게 하는 계획서 축 A4의 제품 편입.
 
-**추론만 하므로 GPU 없이 CPU에서 동작**(느릴 뿐). torch·torchaudio·transformers·librosa가
-없으면 is_available()=False로, 앱은 텍스트→비심 경로로 폴백한다(배포 무영향).
+**추론만 하므로 GPU 없이 CPU에서 동작**(느릴 뿐). torch·transformers와 오디오 디코더(faster-whisper의 PyAV 또는
+librosa)가 없으면 is_available()=False로, 앱은 텍스트→비심 경로로 폴백한다(배포 무영향).
 """
 import io
 import os
@@ -36,13 +36,15 @@ _backbone: Optional[str] = None
 
 
 def is_available() -> bool:
-    """추론에 필요한 라이브러리와 체크포인트가 모두 있으면 True."""
+    """추론에 필요한 라이브러리와 체크포인트가 모두 있으면 True. 오디오 디코더는 faster-whisper(PyAV)나 librosa 중
+    하나면 된다(서버 추론 이미지에는 librosa·torchaudio가 없다, requirements-infer.txt). torchaudio는 쓰지 않는다."""
+    import importlib.util
     try:
         import torch  # noqa: F401
-        import torchaudio  # noqa: F401
         import transformers  # noqa: F401
-        import librosa  # noqa: F401
     except Exception:
+        return False
+    if not any(importlib.util.find_spec(m) is not None for m in ("faster_whisper", "librosa")):
         return False
     return _find_ckpt() is not None
 
