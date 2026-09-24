@@ -70,6 +70,12 @@
    - 시크릿(배포 전에): 콘텐츠 검수자 `fly secrets set LIPLAB_ADMIN_EMAILS=<이메일> -a liplab-dev`(없으면 검수 화면을 아무도
      못 쓴다). 팀원 비공개 정렬·채점 모델로 바꾸려면 `HF_TOKEN`을 넣고 `DGOP_ALIGNER_ID`·`DGOP_SCORER_ID`를 바꾸고
      `HF_HUB_OFFLINE`을 지운다(그 모델용 앵커는 기본 `dgop_calibration.json`).
+   - 배포 전 점검(9/24, RunPod 파드에서 이미지와 같은 의존성·torch CPU 2스레드, 실제 음성 3문장을 webm/opus로):
+     예열에서 두 모델이 모두 올라옴(캐시에서 4.4초), 최대 메모리 3.1GB(4GB 기계로 맞음, 2GB는 부족). 발음 채점은
+     D-GOP 경로로 문장당 1.4~1.7초였다(fly 공유 CPU는 더 느릴 수 있다). 맞는 문장 86~95점, 다른 문장 0~45점, 입모양 점수는
+     따로 오고 점수에 섞이지 않았다. 음성구동 아바타는 3초 음성에 1.4~1.6초, 데모 계정만 모든 단계가 열렸다. 이 점검에서
+     아바타가 torchaudio·librosa 없이는 꺼지는 결함을 찾아 고쳤다(b7973dc). 도구 `liplab-lab/tools/pod/session6_hostcheck.sh`·
+     `hostcheck.py`, 결과 `liplab-lab/data/pod_runs/session6_hostcheck_20260924_1703/`.
    - 배포(사용자 지시 뒤에만): `fly deploy -c fly.dev.toml -a liplab-dev --remote-only`. 확인은 `GET /api/backbone/status`에
      두 모델이 올라왔는지, 발음 연습 응답의 `assessment_method`가 `dgop`인지 본다. 되돌리기는 `WITH_ML`을 0으로 바꾸거나
      `DGOP_ALIGNER_ID`를 지우고 다시 배포한다.
