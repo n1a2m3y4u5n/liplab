@@ -13,7 +13,7 @@ import Logo from '../components/Logo'
 const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }   // 마스코트 SVG 그림자 여백(Figma inset)
 
 // 입력칸(227:59 54px·15.5px / 모바일 243:52 50px·15px) — 전역 .input-field 위에 이 화면 값만 덮는다.
-const INPUT = 'input-field h-[50px] rounded-13 bg-white px-3 py-0 text-[15px] placeholder:text-inactive-line lg:h-[54px] lg:px-[13px] lg:text-[15.5px]'
+const INPUT = 'input-field h-[50px] rounded-13 bg-white px-[14px] py-0 text-[15px] placeholder:text-placeholder lg:h-[54px] lg:px-[15px] lg:text-[15.5px]'
 const LABEL = 'text-[12.5px] font-bold leading-figma text-ink-muted lg:text-[13px]'
 // 주 버튼(227:67 r15·py17·17px / 모바일 243:58 r14·py16·16px)
 const BTN = 'w-full py-4 text-[16px] lg:rounded-15 lg:py-[17px] lg:text-[17px]'
@@ -29,7 +29,7 @@ function authErrorMessage(detail, mode) {
   if (Array.isArray(detail)) {
     const field = detail.map((d) => (Array.isArray(d?.loc) ? d.loc[d.loc.length - 1] : null)).find(Boolean)
     if (field === 'password') return '비밀번호는 6자 이상 입력해주세요.'
-    if (field === 'username') return '사용자명은 3~50자로 입력해주세요.'
+    if (field === 'username') return '사용자명은 2~50자로 입력해주세요.'
     if (field === 'email') return '이메일 형식을 확인해 주세요.'
   }
   return mode === 'login' ? '이메일·비밀번호를 확인해 주세요.' : '가입에 실패했어요.'
@@ -160,7 +160,7 @@ export default function Login() {
             {signup && (
               <label className="flex flex-col gap-1.5 lg:gap-[7px]">
                 <span className={LABEL}>사용자명</span>
-                <input value={username} onChange={(e) => setUsername(e.target.value)} minLength={3} maxLength={50} className={INPUT} placeholder="3~50자로 입력해주세요" />
+                <input value={username} onChange={(e) => setUsername(e.target.value)} minLength={2} maxLength={50} className={INPUT} placeholder="2~50자로 입력해주세요" />
               </label>
             )}
 

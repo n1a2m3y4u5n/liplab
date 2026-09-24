@@ -82,7 +82,7 @@ export default function FreeSpeak() {
             aria-busy={loading}
             aria-label="발음해 볼 글자나 문장"
             placeholder="예: 안녕하세요, 오늘 날씨 좋네요"
-            className="h-[58px] w-full rounded-14 border-2 border-line bg-white px-4 text-[16px] text-ink placeholder:text-[#c9c9d6] focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+            className="h-[58px] w-full rounded-14 border-2 border-line bg-white px-4 text-[16px] text-ink placeholder:text-placeholder focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
           />
         </form>
         {error && <p role="alert" className="-mt-1 text-sm text-bad">{error}</p>}
