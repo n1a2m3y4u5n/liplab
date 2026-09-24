@@ -44,7 +44,7 @@ security = HTTPBearer()
 # Pydantic models for request/response
 class UserRegister(BaseModel):
     email: EmailStr
-    username: str = Field(..., min_length=3, max_length=50)
+    username: str = Field(..., min_length=2, max_length=50)   # Figma 227:103 '2~50자'(두 글자 이름 허용)
     password: str = Field(..., min_length=6)
     # 가입 동의(§4.9 ②) — 서버에서도 확인하고 ConsentRecord로 남긴다(화면 체크박스만으로는 우회 가능).
     agree_terms: bool = False       # 이용약관·개인정보 처리방침 동의

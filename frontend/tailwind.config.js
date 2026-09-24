@@ -64,6 +64,7 @@ export default {
         stat: { streak: '#b45309', xp: '#5f3ab8', level: '#0369a1', accuracy: '#047857' },
         // 비활성 버튼(130:20 "확인 (비활성)")
         inactive: { DEFAULT: '#e4e4ec', line: '#d2d2de', text: '#a0a0b0' },
+        placeholder: '#c9c9d6',   // 입력칸 안내 문구(227:59·243:52 로그인, 입력 화면 공통)
       },
       fontFamily: {
         // 본문·UI = Noto Sans KR, 로고·디스플레이 = Rowdies (index.css에서 Google Fonts 로드)

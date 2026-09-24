@@ -345,7 +345,7 @@ export default function ProfilePage() {
         <div className="flex w-full flex-col gap-2">
           <p className="text-[13px] font-bold leading-figma text-ink-muted">계속하려면 «초기화»를 입력해주세요</p>
           <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="초기화"
-            className="h-[50px] w-full rounded-[12px] border-2 border-bad-line bg-white px-[14px] text-[15px] text-ink placeholder:text-[#c9c9d6] focus:outline-none" />
+            className="h-[50px] w-full rounded-[12px] border-2 border-bad-line bg-white px-[14px] text-[15px] text-ink placeholder:text-placeholder focus:outline-none" />
         </div>
         {resetErr && <p role="alert" className="text-center text-[13px] font-bold text-bad-text">{resetErr}</p>}
         <div className="flex w-full gap-2.5">
