@@ -110,7 +110,7 @@ export default function LipReadCheck({ target, candidates = [] }) {
   return (
     <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-sm font-bold text-violet-900">🤖 기계가 내 입모양 읽기 <span className="font-normal text-violet-500">(축 D · 실험)</span></h4>
+        <h4 className="text-sm font-bold text-violet-900">기계가 내 입모양 읽기 <span className="font-normal text-violet-500">(축 D · 실험)</span></h4>
         <span className="text-[10px] text-gray-400">영상은 기기 안에서만 처리</span>
       </div>
       <div className="relative overflow-hidden rounded-lg bg-gray-900" style={{ aspectRatio: '4/3' }}>

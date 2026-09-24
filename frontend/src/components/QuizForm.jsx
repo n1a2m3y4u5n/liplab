@@ -114,7 +114,7 @@ export default function QuizForm({
 
                 {result.xp_gained && (
                   <div className="inline-flex items-center bg-primary-100 text-primary-700 px-4 py-2 rounded-full font-medium">
-                    ⭐ +{result.xp_gained} XP
+                    +{result.xp_gained} XP
                   </div>
                 )}
               </div>
@@ -152,7 +152,7 @@ export default function QuizForm({
               {result.feedback?.specific_tip && (
                 <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-800">
-                    💡 <strong>팁:</strong> {result.feedback.specific_tip}
+                    <strong>팁:</strong> {result.feedback.specific_tip}
                   </p>
                 </div>
               )}
@@ -184,7 +184,6 @@ export default function QuizForm({
                 animate={{ scale: 1, opacity: 1 }}
                 className="card bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-center"
               >
-                <div className="text-4xl mb-2">🎉</div>
                 <p className="text-xl font-bold">레벨 업!</p>
                 <p className="text-lg">레벨 {result.new_level} 달성</p>
               </motion.div>
@@ -196,7 +195,7 @@ export default function QuizForm({
                 onClick={handleRetry}
                 className="w-full py-2.5 rounded-lg border-2 border-primary-400 text-primary-600 font-medium hover:bg-primary-50 transition-colors text-sm"
               >
-                ↩ 같은 문장 다시 도전
+                같은 문장 다시 도전
               </button>
             )}
           </motion.div>
