@@ -188,6 +188,11 @@
 
 ## 6. 분석 계획
 
+분석은 `scripts/pilot_analysis.py`가 이 절의 규칙대로 한다. 가명 내보내기 JSON을 넣으면 보고서(report.md), 수치(results.json),
+참여자별 표(participants.csv)를 만든다. 예: `python scripts/pilot_analysis.py export.json --learning [집단] --control [집단]
+--withdrawn [철회 가명] --min-active-days [기준] --plots`. 통계 값(KR-20, 신뢰구간, 효과크기)은 `scripts/test_pilot_analysis.py`가
+손으로 계산한 값과 맞춰 본다.
+
 ### 6.1 분석에 쓰는 기록(자료를 보기 전에 정한다)
 
 - 사전 점수: 학습을 시작하기 전에 처음 완료한 A폼(역균형이면 그 참여자의 첫 폼).
