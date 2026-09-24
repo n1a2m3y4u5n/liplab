@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { learningAPI, speakAPI } from '../api'
 import useStore from '../store/useStore'
 import AppShell from '../components/AppShell'
+import LoadingScreen from '../components/LoadingScreen'
 
 const QUESTION_TYPES = ['test', 'test-multiple', 'essay']
 const qTypes = (length) => Array.from({ length }, (_, index) => QUESTION_TYPES[index % QUESTION_TYPES.length]).sort(() => Math.random() - 0.5)
@@ -66,7 +67,7 @@ export default function ReviewLanding({ mode = 'today' }) {
       <AppShell active="review" title="독화 복습" description="독화 테스트에서 놓친 문장만 모아 다시 확인합니다">
         <div className="w-full space-y-5">
           {loading ? (
-            <div className="card py-16 text-center text-sm text-gray-400">틀린 문장을 불러오는 중…</div>
+            <LoadingScreen variant="inline" />
           ) : mistakes.length ? (
             <>
               <div className="card flex flex-wrap items-center justify-between gap-3">

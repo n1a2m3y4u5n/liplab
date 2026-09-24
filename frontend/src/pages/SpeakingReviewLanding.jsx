@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { speakAPI } from '../api'
 import AppShell from '../components/AppShell'
 import { getSpeakingStageMenuItem } from '../config/speakingNavigation'
+import LoadingScreen from '../components/LoadingScreen'
 
 const MODE_LABELS = {
   phoneme: '소리',
@@ -51,7 +52,7 @@ export default function SpeakingReviewLanding() {
     <AppShell active="review" title="말하기 복습" description="다시 연습할 발음과 문장을 확인한 뒤 복습을 시작하세요">
       <div className="w-full space-y-5">
         {loading ? (
-          <div className="card py-16 text-center text-sm text-gray-400">말하기 복습 항목을 불러오는 중…</div>
+          <LoadingScreen variant="inline" />
         ) : error ? (
           <div className="card py-16 text-center">
             <p className="text-lg font-bold text-gray-900">복습 항목을 불러오지 못했어요</p>

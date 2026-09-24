@@ -2,6 +2,8 @@
  * 로딩 (핸드오프 §4-10 · §4-12). lg 미만은 모바일 프레임 값, lg 이상은 데스크톱 프레임 값.
  * variant='plain'(기본) — 페이지 전환·데이터 로딩(256:34 / 모바일 256:48):
  *   흰 배경 + 보라 DOKA(170 / 120) + "로딩 중"(22px / 17px) + 점 3개(11px·간격 9 / 9px·간격 7, 진한→옅은).
+ * variant='inline' — 셸(사이드바·탭) 안에서 내용만 불러올 때. 'plain'과 같은 DOKA·문구·점을 그대로 쓰고,
+ *   창 전체 대신 내용 영역(최소 60vh)만 채운다(§4-10 256:34를 셸 안에 둔 것).
  * variant='brand' — 레슨 시작 전 트랙별 로딩(223:30 독화 · 223:50 발화 / 모바일 243:81 · 243:101):
  *   트랙 그라데이션 + 블롭 2개 + 헤일로(220 / 158) 안 마스코트(158 / 116) + 흰 점 + 팁 카드.
  *   track='perception'(보라, 기본) | 'language'(분홍).
@@ -43,9 +45,10 @@ function Dots({ onBrand = false }) {
 }
 
 export default function LoadingScreen({ label = '로딩 중', variant = 'plain', track = 'perception' }) {
-  if (variant === 'plain') {
+  if (variant === 'plain' || variant === 'inline') {
+    const box = variant === 'inline' ? 'min-h-[60vh] w-full' : 'min-h-[100dvh] bg-white'
     return (
-      <div role="status" className="flex min-h-[100dvh] flex-col items-center justify-center gap-[26px] bg-white lg:gap-[37px]">
+      <div role="status" className={`flex flex-col items-center justify-center gap-[26px] lg:gap-[37px] ${box}`}>
         <span className="relative size-[120px] lg:size-[170px]">
           <img src="/ui/lp-84-7-mascot.svg" alt="" className="absolute max-w-none" style={OVERFLOW} />
         </span>

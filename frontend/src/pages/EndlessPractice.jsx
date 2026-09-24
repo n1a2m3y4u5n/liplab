@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import { curriculumAPI } from '../api'
+import LoadingScreen from '../components/LoadingScreen'
 
 /**
  * 엔드리스 학습 (Figma 리디자인 09 연습기능) — 약한 유형만 골라 무한 연습.
@@ -65,7 +66,7 @@ export default function EndlessPractice() {
           <span className="text-[13px] text-ink-muted">숙달도 낮은 순</span>
         </div>
         {targets == null ? (
-          <p className="py-6 text-center text-sm text-ink-muted">불러오는 중…</p>
+          <LoadingScreen variant="inline" />
         ) : targets.length === 0 ? (
           <p className="py-6 text-center text-sm text-ink-muted">약점이 뚜렷하지 않아요. 다양한 유형이 골고루 나와요.</p>
         ) : (

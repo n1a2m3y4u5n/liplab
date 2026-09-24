@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { contentReviewAPI } from '../api'
 import LearnHeader from '../components/LearnHeader'
+import LoadingScreen from '../components/LoadingScreen'
 
 /**
  * 콘텐츠 사람검수(축 G '이중 게이트'의 사람 단계) — 운영자용.
@@ -79,7 +80,7 @@ export default function ContentReview() {
         maxWidth="max-w-3xl" onExit={() => navigate('/dashboard')} />
       <main className="mx-auto max-w-3xl px-4 py-8 space-y-5">
         {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white py-16 text-center text-sm text-slate-400">불러오는 중…</div>
+          <LoadingScreen variant="inline" />
         ) : disabled ? (
           <div className="rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center text-sm text-slate-500">
             검수 기능이 꺼져 있습니다. 서버에 <code className="rounded bg-slate-100 px-1">LIPLAB_REVIEW=1</code>을 설정하면 운영자 검수가 열립니다.

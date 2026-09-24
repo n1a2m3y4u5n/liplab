@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { learningAPI } from '../api'
 import useStore from '../store/useStore'
 import AppShell from '../components/AppShell'
+import LoadingScreen from '../components/LoadingScreen'
 
 export default function Bookmarks() {
   const navigate = useNavigate()
@@ -46,9 +47,7 @@ export default function Bookmarks() {
     <AppShell active="review" title="북마크한 문장" description="어려웠던 문장들을 다시 연습해보세요">
       <div className="w-full">
         {loading ? (
-          <div className="flex justify-center py-24">
-            <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-          </div>
+          <LoadingScreen variant="inline" />
         ) : bookmarks.length === 0 ? (
           <div className="card text-center py-16">
             <p className="text-gray-500 font-medium">북마크한 문장이 없습니다.</p>

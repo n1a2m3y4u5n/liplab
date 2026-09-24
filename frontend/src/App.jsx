@@ -160,23 +160,6 @@ function GlobalOverlays() {
   )
 }
 
-/** 부팅 스플래시 (Figma 08) — 세션당 1회, 앱 진입 시 브랜드 스플래시를 잠깐 보여준다. */
-function BootSplash() {
-  const [show, setShow] = useState(() => {
-    try { return sessionStorage.getItem('liplab_booted') !== '1' } catch { return true }
-  })
-  useEffect(() => {
-    if (!show) return
-    const t = setTimeout(() => {
-      setShow(false)
-      try { sessionStorage.setItem('liplab_booted', '1') } catch { /* 무시 */ }
-    }, 1300)
-    return () => clearTimeout(t)
-  }, [show])
-  if (!show) return null
-  return <div className="fixed inset-0 z-[100]"><LoadingScreen variant="brand" /></div>
-}
-
 /**
  * Main App component with routing
  */
@@ -185,7 +168,6 @@ function App() {
     <ErrorBoundary>
     {/* 동작 최소화 설정 시 framer-motion 애니메이션을 OS 설정에 맞춰 자동 축소(접근성) */}
     <MotionConfig reducedMotion="user">
-    <BootSplash />
     <Router>
       <ScrollToTop />
       <AuthGate>
