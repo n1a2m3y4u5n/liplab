@@ -44,25 +44,23 @@ export default function AnalysisDetail({ mode = 'overview' }) {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [statistics, setStatistics] = useState(null)
-  const [analysis, setAnalysis] = useState(null)
   const [calendar, setCalendar] = useState({})
   const [speaking, setSpeaking] = useState(null)
   const [confusion, setConfusion] = useState(null)
   const meta = PAGE_META[mode] || PAGE_META.overview
 
+  // 독화 학습 횟수·평균 점수는 /api/statistics로 충분하다. /api/analysis는 AI 추천 문구(LLM, 약 4초)를 만든 뒤에야
+  // 응답하는데, 그 문구를 그리던 개요 모드는 /analysis/overview가 분석 탭으로 넘어가 이제 보이지 않는다(9/24).
   useEffect(() => {
     setLoading(true)
-    const needsAnalysis = ['overview', 'visemes', 'scores'].includes(mode)
     const needsCalendar = ['activity', 'history'].includes(mode)
     Promise.all([
       learningAPI.getStatistics().catch(() => null),
-      needsAnalysis ? learningAPI.getAnalysis().catch(() => null) : Promise.resolve(null),
       needsCalendar ? learningAPI.getCalendar().catch(() => ({})) : Promise.resolve({}),
       mode === 'scores' ? speakAPI.getAnalysis().catch(() => null) : Promise.resolve(null),
       mode === 'visemes' ? curriculumAPI.confusionMatrix().catch(() => null) : Promise.resolve(null),
-    ]).then(([stats, readAnalysis, activity, speakAnalysis, confusionMatrix]) => {
+    ]).then(([stats, activity, speakAnalysis, confusionMatrix]) => {
       setStatistics(stats)
-      setAnalysis(readAnalysis)
       setCalendar(activity || {})
       setSpeaking(speakAnalysis)
       setConfusion(confusionMatrix)
@@ -110,12 +108,6 @@ export default function AnalysisDetail({ mode = 'overview' }) {
           </div>
         ) : <p className="mt-5 text-sm text-slate-400">아직 취약점을 판단할 기록이 충분하지 않아요.</p>}
       </section>
-      {analysis?.recommendation && (
-        <section className="mt-5 rounded-[24px] bg-violet-50 p-5 sm:p-7">
-          <p className="text-xs font-black text-violet-700">AI 학습 제안</p>
-          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-violet-950">{analysis.recommendation}</p>
-        </section>
-      )}
     </>
   )
 
@@ -188,7 +180,7 @@ export default function AnalysisDetail({ mode = 'overview' }) {
 
   const renderScores = () => {
     const scores = [
-      { label: '독화', value: Number(analysis?.average_score || 0), description: `${analysis?.total_sessions || 0}회 학습`, tone: 'bg-sky-500' },
+      { label: '독화', value: Math.round(Number(statistics?.average_score || 0) * 10) / 10, description: `${statistics?.total_sessions || 0}회 학습`, tone: 'bg-sky-500' },
       { label: '말하기', value: Number(speaking?.avg_score || 0), description: `${speaking?.total || 0}회 발화`, tone: 'bg-rose-500' },
     ]
     return (
