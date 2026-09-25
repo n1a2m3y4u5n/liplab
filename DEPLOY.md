@@ -55,7 +55,7 @@
    `fly secrets set`으로 넣고 파기가 끝날 때까지 바꾸지 않는다. 기호 없는 집단을 두면 `LIPLAB_PILOT_NOCUE_COHORTS`도 정한다.
    파기 도구는 이미지에 `/app/scripts/pilot_retention.py`로 들어 있고, 대장은 기본으로 볼륨(`/data`)에 남는다.
 
-9. **liplab-dev 서버 추론(9/24 코드 반영, 9/25 채점 모델을 자체 학습 모델로 바꿈, 아직 배포하지 않음)**: `fly.dev.toml`은
+9. **liplab-dev 서버 추론(9/24 코드 반영, 9/25 채점 모델을 자체 학습 모델로 바꾸고 int8로 4GB에 맞춤, 아직 배포하지 않음)**: `fly.dev.toml`은
    `WITH_ML=1`로 빌드해 D-GOP 발음채점과 음성구동 아바타(A4)를 서버에서 켠다. 전시앱 `fly.toml`은 바꾸지 않았다(기본값
    `WITH_ML=0`이라 이미지가 전과 같다).
    - 채점 모델(9/25): 자체 학습 정렬기·채점기(`DGOP_MODEL=ours`). 사전등록 독립 재검(538 새 20화자)을 통과해 공개 kresnik
@@ -65,13 +65,18 @@
      체크포인트가 없으면 빌드가 멈춘다(조용히 전사 경로로 떨어지지 않게). 빌드 폴더 업로드가 약 2.5GB 늘어난다.
    - 이미지: torch CPU 휠 + transformers, 자체 정렬기·채점기, microsoft/wavlm-large(아바타 백본, 빌드 때 받음).
      kresnik은 `DGOP_MODEL=kresnik`일 때만 받는다. `HF_HUB_OFFLINE=1`. 이미지가 약 6GB라 첫 빌드가 오래 걸린다.
-   - 기계: shared-cpu 4개, 메모리 8GB(shared-cpu 2개는 4GB가 상한). 자동 정지는 그대로라 쓰는 동안만 과금된다. 켜질 때
+   - int8(9/25 오후): `BACKBONE_QUANT=int8`이면 정렬기·채점기의 선형층 가중치를 int8로 두고 계산은 fp32로 한다
+     (`backend/quant_int8.py`, 모델당 약 1.2GB → 0.4GB). 아바타 백본은 fp32 그대로다. 사전등록 점검(`liplab-lab/notes/int8_prereg_2026-09-25.md`)
+     다섯 조건을 모두 통과했다: 재검 관문 재현(단조 비율 Δ +3.5%p [2.2, 5.0]), 538 2,400쌍 표시 점수 차 평균 0.20점(95백분위 0.7),
+     608 실발화 669문장 평균 0.36점(95백분위 1.0), CPU·GPU 경로 차 최대 0.1점, 호스팅 점검 최대 3.15GB(채점 뒤 2.7GB).
+   - 기계: shared-cpu 2개, 메모리 4GB(int8 덕분에 9/25 오전의 8GB·4CPU에서 되돌림). 자동 정지는 그대로라 쓰는 동안만 과금된다. 켜질 때
      `LIPLAB_WARMUP=1`이 모델 세 개를 뒤에서 미리 올린다. 모델이 오르기 전에 온 발음 요청은 그 자리에서 적재를 기다린다.
    - 채점: `DGOP_ALIGNER_ID`·`DGOP_SCORER_ID`가 이미지 안 체크포인트(`/app/models/dgop_ours/...`)를 가리키고, 앵커는
      `DGOP_CALIBRATION=/app/data/dgop_calibration_ours.json`(538 조건별 중앙값 86.0·54.5·30.4·8.2 → 90·72·58·40). D-GOP가
      주 경로이고 실패하면 전사 경로로 폴백한다. 입모양 점수는 채점에 섞지 않고 따로 보인다(`LIPLAB_AV_FUSION=1`이면 연구용 융합).
    - 되돌리기(공개 kresnik): `[build.args]`의 `DGOP_MODEL`을 `"kresnik"`으로, `[env]`는 `DGOP_ALIGNER_ID = "kresnik/wav2vec2-large-xlsr-korean"`만
-     남기고(`DGOP_SCORER_ID`·`DGOP_CALIBRATION` 삭제, 앵커는 `dgop_calibration_kresnik.json` 자동), 기계를 shared-cpu 2개·4GB로 되돌린다.
+     남기고(`DGOP_SCORER_ID`·`DGOP_CALIBRATION` 삭제, 앵커는 `dgop_calibration_kresnik.json` 자동) `BACKBONE_QUANT`도 지운다(모델이 하나라
+     fp32로 4GB에 들어간다). int8만 끄려면 `BACKBONE_QUANT` 줄을 지우고 기계를 shared-cpu 4개·8GB로 올린다.
    - 음성구동 아바타 체크포인트 `backend/models/kr_a4_wavlm.pt`(9.5MB)도 git에 없다(.gitignore). 이 작업 폴더에 복사해 두었으니
      배포 전에 `ls backend/models/kr_a4_wavlm.pt`로 있는지만 확인한다. 없으면 아바타는 텍스트 비심으로 폴백한다.
    - 단계 잠금: `LIPLAB_UNLOCK_ALL=demo`라 둘러보기 데모 계정만 전 단계가 열리고 실사용·파일럿 계정은 숙달 순서대로다.
@@ -83,7 +88,10 @@
      다른 문장이 65점을 넘은 경우는 두 모델 모두 없었다(`docs/scorer-selftrain.md` 5절). 새 가상환경에서 SQLAlchemy 2.1이
      greenlet을 빼 앱이 뜨지 않는 결함을 찾아 고쳤다(`sqlalchemy[asyncio]`, ba3f8a7). 9/24 점검(kresnik)에서는 아바타가
      torchaudio·librosa 없이 꺼지는 결함을 고쳤다(b7973dc). 도구 `liplab-lab/tools/pod/hostcheck.py`(`HC_ALIGNER`·`HC_SCORER`·
-     `HC_CALIBRATION`), 결과 `liplab-lab/data/pod_runs/20260925_a39mpqnc24np42/hostcheck/`.
+     `HC_CALIBRATION`), 결과 `liplab-lab/data/pod_runs/20260925_a39mpqnc24np42/hostcheck/`. 같은 날 오후 int8 점검(같은 방식,
+     `BACKBONE_QUANT=int8`): 최대 3.15GB(모델을 int8로 바꾸는 순간), 채점 뒤 상주 2.7GB, 문장당 2.5~3.0초로 fp32(4.3GB, 2.4~2.9초)와
+     점수가 같았다. 첫 시도는 변환 뒤에도 체크포인트 파일 매핑이 남아 6.2GB로 재졌고, 나머지 파라미터를 복사해 매핑을 끊도록
+     고친 뒤 다시 쟀다. 결과 `liplab-lab/data/pod_runs/20260925_4aol7xkyf762yh/hc2/`.
    - 배포(사용자 지시 뒤에만): `fly deploy -c fly.dev.toml -a liplab-dev --remote-only`. 확인은 `GET /api/backbone/status`에
      세 모델이 올라왔는지, 발음 연습 응답의 `assessment_method`가 `dgop`이고 `dgop.calibration`이 자체 학습 앵커인지 본다.
      D-GOP를 끄려면 `WITH_ML`을 0으로 바꾸거나 `DGOP_ALIGNER_ID`를 지우고 다시 배포한다.

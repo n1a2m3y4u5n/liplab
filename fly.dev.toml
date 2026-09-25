@@ -20,6 +20,8 @@ primary_region = "nrt"
   DGOP_SCORER_ID = "/app/models/dgop_ours/scorer"
   DGOP_CALIBRATION = "/app/data/dgop_calibration_ours.json"
   HF_HUB_OFFLINE = "1"         # 모델은 이미지 안에 있다
+  BACKBONE_QUANT = "int8"      # 정렬기·채점기 선형층 가중치 int8(quant_int8.py). 9/25 사전등록 점검 통과: 표시 점수 차 평균 0.2점,
+                               # 호스팅 점검 최대 3.15GB(fp32 4.3GB). 아바타 백본은 fp32. 끄려면 이 줄을 지우고 8GB·4CPU로
   LIPLAB_WARMUP = "1"          # 기계가 켜질 때 모델을 뒤에서 미리 올린다(첫 요청 대기 줄임)
   LIPLAB_REVIEW = "1"          # 콘텐츠 검수 화면. 검수자 이메일은 fly secrets set LIPLAB_ADMIN_EMAILS=... (없으면 아무도 못 씀)
 
@@ -40,8 +42,8 @@ primary_region = "nrt"
 
 [[vm]]
   cpu_kind = "shared"
-  cpus = 4          # shared-cpu 2개는 메모리 4GB가 상한이라 8GB를 쓰려면 4개. 발음채점 지연도 줄인다
-  memory_mb = 8192  # 정렬기·채점기(각 1.26GB)와 아바타 백본(1.2GB) + torch. 9/25 배포 전 점검 최대 5.0GB(kresnik 한 개일 때 3.1GB)
+  cpus = 2          # 발음채점 추론(wav2vec2-large, CPU) 지연을 줄인다
+  memory_mb = 4096  # 정렬기·채점기 int8(각 약 0.4GB) + 아바타 백본 fp32(1.26GB) + torch. 9/25 점검 최대 3.15GB, 채점 뒤 2.7GB
 
 [[mounts]]
   source = "liplab_data"

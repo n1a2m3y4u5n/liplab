@@ -58,11 +58,39 @@ def _load_base(model_id: str, device: str) -> tuple:
     return None, model
 
 
+QUANT_MODES = ("", "none", "fp32", "int8")
+
+
+def quant_mode() -> str:
+    """BACKBONE_QUANT. int8이면 CPU에 올리는 CTC 모델(D-GOP 정렬기·채점기)의 선형층 가중치를 int8로 둔다(quant_int8.py,
+    모델당 약 1.2GB → 0.4GB). A4 아바타 백본(kind=base)은 int8 품질을 따로 재지 않았으므로 fp32 그대로다."""
+    mode = (os.getenv("BACKBONE_QUANT") or "").strip().lower()
+    if mode not in QUANT_MODES:
+        raise ValueError(f"알 수 없는 BACKBONE_QUANT: {mode} (가능: int8, none)")
+    return mode
+
+
 def _load_ctc(model_id: str, device: str) -> tuple:
     from transformers import AutoModelForCTC, AutoProcessor
+    mode = quant_mode()
     processor = AutoProcessor.from_pretrained(model_id)
     model = AutoModelForCTC.from_pretrained(model_id).eval().to(device)
+    if mode == "int8" and device == "cpu":
+        import gc
+        import quant_int8
+        quant_int8.quantize_linears(model, skip=("lm_head",))
+        gc.collect()
+        _malloc_trim()
     return processor, model
+
+
+def _malloc_trim() -> None:
+    """glibc가 해제된 힙을 OS에 돌려주게 한다(리눅스만, 실패해도 무시)."""
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:
+        pass
 
 
 # 종류별 적재 함수. 테스트는 이 표를 바꿔 모델을 받지 않고 캐시·통계만 확인한다.
@@ -72,7 +100,11 @@ _DEFAULT_LOADERS = dict(_LOADERS)
 
 def _param_count(model) -> Optional[int]:
     try:
-        return int(sum(p.numel() for p in model.parameters()))
+        n = sum(p.numel() for p in model.parameters())
+        for m in getattr(model, "modules", lambda: [])():   # int8 선형층(quant_int8.Int8Linear) 가중치는 버퍼라 따로 센다
+            if type(m).__name__ == "Int8Linear":
+                n += m.qweight.numel() + (m.bias.numel() if m.bias is not None else 0)
+        return int(n)
     except Exception:
         return None
 
@@ -92,6 +124,7 @@ def load(model_id: str, kind: str = "base", device: Optional[str] = None) -> tup
             _STATS[key] = {"model_id": model_id, "kind": kind, "device": device,
                            "load_seconds": round(time.time() - t0, 2),
                            "params": _param_count(_CACHE[key][1]),
+                           "quant": getattr(_CACHE[key][1], "liplab_quant", None),
                            "loaded_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
                            "uses": 0}
         _STATS[key]["uses"] += 1
