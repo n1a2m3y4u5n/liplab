@@ -37,7 +37,7 @@ npm run dev
 
 - 환경변수: `cp .env.example .env` 후 `ANTHROPIC_API_KEY`, `JWT_SECRET` 설정.
 - 프론트 프로덕션 빌드 검증: `cd frontend && npx vite build`.
-- 로그인은 **데모 계정 자동 입장**(`AuthGate` → `/api/auth/demo`)이라 별도 회원가입 불필요.
+- 비로그인 첫 화면은 랜딩(`/`)이고, 로그인 화면의 '둘러보기(데모)'로 회원가입 없이 들어갈 수 있다(`/api/auth/demo`).
 
 > ⚠️ 개발 중 `--reload` 없이 uvicorn을 띄웠다면 `main.py` 수정 후 **수동 재시작**해야 반영된다.
 
@@ -55,7 +55,7 @@ backend/
   llm_service.py   Claude 기반 시나리오·대화 생성
   sign_service.py  한국수어(KSL) 학습 보조 변환
 frontend/src/
-  App.jsx          라우팅 + AuthGate(미인증이면 Login, '둘러보기'=데모) + StageGate(단계 잠금 가드)
+  App.jsx          라우팅 + AuthGate(미인증이면 `/`는 Landing, 그 밖은 Login, '둘러보기'=데모) + StageGate(단계 잠금 가드)
   api.js           API 클라이언트 (authAPI, learningAPI, curriculumAPI, scoreAPI …)
   components/AppShell.jsx  Figma 셸 — 좌측 탭(학습·연습·과제·복습·분석), 모바일 상단 바+하단 탭 바
   pages/
@@ -63,6 +63,7 @@ frontend/src/
     PracticeHub.jsx     /practice/hub — 연습 탭(상황별 시나리오·다자대화·자유발화·수어)
     ReviewTab.jsx / AnalysisTab.jsx / TasksPage.jsx / ProfilePage.jsx  복습·분석·과제·프로필 탭
     EvalReport.jsx      /analysis/eval — 학습 효과 리포트(학습곡선·향상도)
+    Landing.jsx         비로그인 `/` 랜딩(Figma 02. Landing 9:12). 시작하기 → /signup, 계정이 이미 있습니다 → /login
     Login.jsx / Onboarding.jsx  로그인·회원가입 / 첫 방문 온보딩
     VisemeLiteracy.jsx  1단계 입모양 인지
     WordStage.jsx       2단계 음절·단어

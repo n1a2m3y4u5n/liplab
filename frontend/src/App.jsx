@@ -39,6 +39,7 @@ import SignSelectionOverlay from './components/SignSelectionOverlay'
 import A11ySettings from './components/A11ySettings'
 import LoadingScreen from './components/LoadingScreen'
 import Login from './pages/Login'
+import Landing from './pages/Landing'
 // Bookmarks는 /review/saved에서만 쓰이므로 지연로딩 —
 // 랜딩(로그인) 진입 청크에서 빼 첫 로딩을 가볍게 한다(저사양·불안정 통신망 배려).
 
@@ -102,8 +103,13 @@ function AuthGate({ children }) {
     // 재방문(캐시된 인증)에도 서버 최신값으로 user 동기화 — 스트릭 등 stale 방지
     if (isAuthenticated) { authAPI.getMe().then((u) => { if (u) updateUser(u) }).catch(() => {}) }
   }, [isAuthenticated, updateUser])
-  // 미인증이면 로그인 화면(Figma 00). '둘러보기(데모)'로 즉시 입장. 단 공개 페이지는 예외.
-  if (!isAuthenticated && !PUBLIC_PATHS.includes(pathname)) return <Login />
+  // 미인증이면 "/"는 랜딩(Figma 02. Landing 9:12), 그 밖은 로그인 화면(Figma 00, /signup이면 회원가입부터).
+  // '둘러보기(데모)'는 로그인 화면에서 즉시 입장. 공개 페이지(약관·처리방침)는 예외.
+  // key: /login ↔ /signup을 오가도 Login을 새로 올려 첫 모드가 주소를 따르게 한다.
+  if (!isAuthenticated && !PUBLIC_PATHS.includes(pathname)) {
+    if (pathname === '/') return <Landing />
+    return <Login key={pathname} initialMode={pathname === '/signup' ? 'signup' : 'login'} />
+  }
   return children
 }
 

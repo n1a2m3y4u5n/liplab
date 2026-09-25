@@ -65,11 +65,11 @@ function AgreeCheck({ checked, onChange, children }) {
   )
 }
 
-export default function Login() {
+export default function Login({ initialMode = 'login' }) {
   const navigate = useNavigate()
   const setAuth = useStore((s) => s.setAuth)
   const isDesktop = useIsDesktop()
-  const [mode, setMode] = useState('login')  // login | signup
+  const [mode, setMode] = useState(initialMode)  // login | signup (랜딩 '시작하기'는 /signup으로 와서 회원가입부터)
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')

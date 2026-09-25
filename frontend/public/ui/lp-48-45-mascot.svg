@@ -1,0 +1,28 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="167.4" height="167.4" viewBox="0 0 167.4 167.4" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Mascot">
+<g id="Body" filter="url(#filter0_d_0_23)">
+<path d="M16.2 74.25C16.2 38.4619 45.2119 9.45 81 9.45H91.8C124.606 9.45 151.2 36.0443 151.2 68.85V76.95C151.2 114.229 120.979 144.45 83.7 144.45H78.3C44.0031 144.45 16.2 116.647 16.2 82.35V74.25Z" fill="url(#paint0_linear_0_23)"/>
+</g>
+<circle id="Eye" cx="66.825" cy="72.7312" r="10.5469" fill="#0F172A"/>
+<circle id="Eye_2" cx="100.575" cy="72.7312" r="10.5469" fill="#0F172A"/>
+<circle id="Cheek" cx="39.4031" cy="81.1688" r="8.4375" fill="white" fill-opacity="0.4"/>
+<circle id="Cheek_2" cx="127.997" cy="81.1688" r="8.4375" fill="white" fill-opacity="0.4"/>
+<path id="Smile" d="M65.6016 100.396C71.0311 118.495 96.3689 118.495 101.798 100.396" stroke="white" stroke-opacity="0.9" stroke-width="8.22656" stroke-linecap="round"/>
+</g>
+<defs>
+<filter id="filter0_d_0_23" x="0" y="0" width="167.4" height="167.4" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="6.75"/>
+<feGaussianBlur stdDeviation="8.1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.18 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_23"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_23" result="shape"/>
+</filter>
+<linearGradient id="paint0_linear_0_23" x1="16.2" y1="9.45" x2="111.674" y2="104.924" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6EE7B7"/>
+<stop offset="0.5" stop-color="#34D399"/>
+<stop offset="1" stop-color="#10B981"/>
+</linearGradient>
+</defs>
+</svg>
