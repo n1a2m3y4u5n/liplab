@@ -5,6 +5,7 @@
  * 범위를 한정한다(계획서 D). 모델/WASM 로드 실패 시 null(폴백).
  */
 import * as ort from 'onnxruntime-web'
+import { decomposeToJamo } from './ctcScore'
 
 ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/'
 ort.env.logLevel = 'error'
@@ -12,28 +13,8 @@ ort.env.logLevel = 'error'
 const ONNX_URL = '/models/kr_d_lipread.onnx'
 const META_URL = '/models/kr_d_lipread.meta.json'
 
-// 학습 때와 동일한 자모 분해(호환 자모). train_lipread.decompose와 일치해야 한다.
-const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'.split('')
-const JUNG = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ'.split('')
-const JONG = 'ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ'.split('')
-
-/** 한글 문자열 → 자모(호환) 배열. 학습 라벨과 같은 규칙(초·중·종, 공백 포함). */
-export function decomposeToJamo(text) {
-  const out = []
-  for (const ch of (text || '')) {
-    const o = ch.codePointAt(0)
-    if (o >= 0xac00 && o <= 0xd7a3) {
-      const s = o - 0xac00
-      out.push(CHO[Math.floor(s / 588)])
-      out.push(JUNG[Math.floor((s % 588) / 28)])
-      const jong = s % 28
-      if (jong) out.push(JONG[jong - 1])
-    } else if (ch === ' ') {
-      out.push(' ')
-    }
-  }
-  return out
-}
+// 자모 분해(train_lipread.decompose와 같은 규칙)는 ctcScore.js에 둔다(노드 테스트에서 onnxruntime 없이 쓰려고).
+export { decomposeToJamo }
 
 function editDistance(a, b) {
   const m = a.length, n = b.length
