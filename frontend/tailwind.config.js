@@ -79,6 +79,8 @@ export default {
         chart: { accuracy: '#10b981', label: '#7a9a8c', onDark: '#6ee7b7' },
         // 활동 캘린더 5단계(207:29) — 0 = 기록 없음
         heat: { 0: '#ededf3', 1: '#ddd3f7', 2: '#b49bec', 3: '#8b5cf6', 4: '#5f3ab8' },
+        // 랜딩(9:12) 그림에만 나오는 고정색 — 단계 막대(54:8·54:9·54:10), 출석 칸(54:18·54:21), 기기 테두리(19:37)
+        landing: { step2: '#c9b8f2', step3: '#b49bec', step4: '#9e7ce6', day: '#fce8b8', done: '#f7b733', device: '#dbdbe5' },
         // 엔드리스 학습(연습 탭 인디고 카드) — 히어로 그라데이션·3D 테두리·버튼, 유형 막대(낮음 분홍 · 높음 앰버)
         endless: {
           DEFAULT: '#4f46e5', light: '#818cf8', dark: '#3730a3', line: '#cbd2fa',
@@ -103,6 +105,8 @@ export default {
         card: '0 2px 12px -2px rgba(26,13,64,0.06)',
         modal: '0px 18px 44px -6px rgba(13,5,31,0.32)',
         sheet: '0px -4px 16px -2px rgba(26,13,64,0.12)',  // 모바일 레슨 시트(233:61)
+        art: '0px 14px 30px -4px rgba(26,13,64,0.14)',    // 랜딩 섹션 그림 카드(54:6·54:17)
+        device: '0px 18px 40px -4px rgba(26,13,64,0.22)', // 랜딩 히어로 기기(19:37)
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in',

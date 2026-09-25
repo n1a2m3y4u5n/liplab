@@ -1,0 +1,27 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="282" height="342" viewBox="0 0 282 342" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Card" filter="url(#filter0_d_0_103)">
+<g clip-path="url(#clip0_0_103)">
+<rect x="26" y="12" width="230" height="290" rx="24" fill="#FFE4E9"/>
+<circle id="Wave 1" cx="60" cy="162" r="32" stroke="#F9A8C0" stroke-opacity="0.9" stroke-width="6"/>
+<circle id="Wave 2" cx="60" cy="162" r="54.5" stroke="#F9A8C0" stroke-opacity="0.73" stroke-width="6"/>
+<circle id="Wave 3" cx="60" cy="162" r="77" stroke="#F9A8C0" stroke-opacity="0.56" stroke-width="6"/>
+<circle id="Wave 4" cx="60" cy="162" r="99.5" stroke="#F9A8C0" stroke-opacity="0.39" stroke-width="6"/>
+<circle id="Source" cx="60" cy="162" r="13" fill="#F472A0"/>
+</g>
+</g>
+<defs>
+<filter id="filter0_d_0_103" x="0" y="0" width="282" height="342" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feMorphology radius="4" operator="erode" in="SourceAlpha" result="effect1_dropShadow_0_103"/>
+<feOffset dy="14"/>
+<feGaussianBlur stdDeviation="15"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.1 0 0 0 0 0.05 0 0 0 0 0.25 0 0 0 0.14 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_103"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_103" result="shape"/>
+</filter>
+<clipPath id="clip0_0_103">
+<rect x="26" y="12" width="230" height="290" rx="24" fill="white"/>
+</clipPath>
+</defs>
+</svg>

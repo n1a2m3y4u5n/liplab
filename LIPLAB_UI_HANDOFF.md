@@ -4,7 +4,7 @@
 > Figma MCP는 "화면이 어떻게 생겼는지"를 알려주고, 이 문서는 "그 화면이 어느 기능·라우트·상태인지, 어디서 어디로 이어지는지"를 알려준다.
 
 - 기준 브랜치: `feat/sublexical-feedback`
-- Figma fileKey: `yF6TQfdpIqZ9jUQxDbFIEa` / 페이지: `03. App`
+- Figma fileKey: `yF6TQfdpIqZ9jUQxDbFIEa` / 페이지: `03. App`(랜딩은 `02. Landing`)
 - 노드 링크 형식: `https://www.figma.com/design/yF6TQfdpIqZ9jUQxDbFIEa/LIPLAB?node-id=58-11` (노드 ID의 `:`를 `-`로 바꾼다)
 
 ---
@@ -40,6 +40,8 @@
 | 10. 로딩 | 트랙별 로딩, 기본 로딩 | 로딩 상태 |
 | 11. 연습 기능 | 연습 탭에서 들어가는 기능 5개 | 탭 하위 페이지 |
 | 12. 모바일 | 위 화면들의 모바일 버전 | **같은 라우트의 반응형** |
+
+`02. Landing` 페이지의 `Landing — Desktop`(9:12)은 비로그인 첫 화면이다(§4-00, 9/25 추가).
 
 ---
 
@@ -119,8 +121,9 @@
 ### 4-00. 로그인 · 회원가입
 | Figma | 대상 | 비고 |
 |---|---|---|
-| 227:35 로그인 | `pages/Login.jsx` | `App.jsx`에서 비로그인 시 `<Login />` 렌더(라우트 없음). 이메일·비밀번호, 로그인, 둘러보기(데모 → `/api/auth/demo`) |
-| 227:74 회원가입 | `Login.jsx`의 회원가입 모드 | 이메일·사용자명(2~50자)·비밀번호(6자 이상), "이용약관 및 개인정보 처리방침에 동의해요" 체크. 별도 라우트 만들지 않음. 코드는 법적 요건으로 만 14세 확인 줄을 한 줄 더 둔다 |
+| 9:12 랜딩(Desktop) | `pages/Landing.jsx` | `App.jsx` AuthGate가 비로그인 `/`에서 렌더. "시작하기" → `/signup`, "계정이 이미 있습니다" → `/login`. Figma는 데스크톱뿐이라 lg 미만은 세로로 쌓고 그림은 zoom으로 줄인다. 제목 글꼴은 Figma가 Josefin Sans(한글은 대체 글꼴)라 Noto Sans KR로 쓴다(64px에서 폭 거의 같음) |
+| 227:35 로그인 | `pages/Login.jsx` | `App.jsx` AuthGate가 비로그인 `/` 밖의 경로에서 `<Login />` 렌더(`/login`·`/signup`은 AuthGate만 읽는 주소, `/signup`이면 회원가입 모드로 연다). 이메일·비밀번호, 로그인, 둘러보기(데모 → `/api/auth/demo`) |
+| 227:74 회원가입 | `Login.jsx`의 회원가입 모드 | 이메일·사용자명(2~50자)·비밀번호(6자 이상), "이용약관 및 개인정보 처리방침에 동의해요" 체크. 코드는 법적 요건으로 만 14세 확인 줄을 한 줄 더 둔다 |
 
 ### 4-01. 온보딩 · 자가진단 (배치검사)
 - **자가진단 = 기존 배치검사(`Placement.jsx`)를 그대로 쓴다.** 적응형 8문항, 문항 선택·채점·시작 단계 추천 로직은 바꾸지 않고 UI만 교체한다.
@@ -211,6 +214,7 @@
 ## 5. 이동 흐름
 
 ```
+[비로그인] / 랜딩 ─ 시작하기 ─▶ /signup · 계정이 이미 있습니다 ─▶ /login
 [비로그인] Login ─ 로그인/데모 ─▶ (첫 방문) /onboarding ─ 시작하기 ─▶ /learn/placement ─ 결과 ─▶ /learn/path
                                                    └ 나중에 할게요 ───────────────────────────▶ /learn/path
 
