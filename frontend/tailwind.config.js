@@ -24,6 +24,7 @@ export default {
           900: '#3b246f',
           light: '#a78bfa',  // 보라 그라데이션 시작색(137:17 특별 과제·199:22 오답 복습·243:34 로그인 헤더)
           line: '#d9ccf7',   // 보라 카드 위 흰 버튼 테두리(199:22)
+          faint: '#d6c9f6',  // 가이드 독화 요령 번호 01~06(370:84)
         },
         // 글자 — text/primary, text/secondary + Figma 보조 회색(라벨·캡션·그룹 머리)
         ink: {
@@ -33,6 +34,7 @@ export default {
           faint: '#8a8a9b',    // 캡션·힌트(130:19, 178:23)
           ghost: '#a8a8b8',    // 축 눈금·보조 숫자
           hint: '#a4a4b4',     // 가이드 모달 그룹 머리(338:57)
+          pale: '#b9b9c8',     // 가이드 독화 요령 '사과'의 뒷글자(370:142)
         },
         line: {
           DEFAULT: '#e2e2e8',  // border/default

@@ -38,7 +38,7 @@ export default function EndlessPractice() {
         <div className="flex items-center justify-between gap-5">
           <div className="flex flex-col items-start gap-[18px] text-white">
             <p className="text-[24px] font-bold leading-tight tracking-[-0.48px]">약한 유형만 골라서 무한 연습</p>
-            <p className="text-[14px] leading-relaxed opacity-85">숙달도가 낮은 음소가 계속 출제돼요. 단어 문제와 문맥 문제가 번갈아 나오고, 원할 때 멈출 수 있어요.</p>
+            <p className="text-[14px] leading-relaxed opacity-85">숙달도가 낮은 음소가 계속 출제돼요. 원할 때 멈출 수 있어요.</p>
             <button type="button" onClick={() => navigate('/learn/word?endless=1')}
               className="inline-flex items-center rounded-[13px] border-2 border-b-4 border-endless-line bg-white px-[30px] py-[14px] text-[16px] font-bold text-endless-dark transition active:translate-y-[1px] active:border-b-2">
               시작하기 →

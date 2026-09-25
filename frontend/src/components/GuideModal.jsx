@@ -2,38 +2,53 @@ import { useEffect, useState } from 'react'
 import { ModalClose } from './Modal'
 
 /**
- * 사용법 가이드 모달 (Figma node 338:57 — Modal / 사용법 가이드).
+ * 사용법 가이드 모달 (Figma "09. 사용법 가이드" 338:57 ~ 342:348).
  * 딤 오버레이 + 중앙 큰 흰 카드(rounded-24, 큰 그림자). 좌측 그룹형 세로 탭 + 우측 컨텐츠.
- * 컨텐츠는 화면을 상징하는 안내 카드(page 배경색) + 주석 불릿으로 구성한다(실제 스크린샷 미사용).
- * 배경 클릭·ESC로 닫힌다. 모바일에서는 좌측 탭이 상단 가로 스크롤 탭으로 폴백한다.
+ * 배경 클릭·ESC로 닫힌다. 모바일에서는 좌측 탭이 상단 가로 스크롤 탭으로 폴백한다(Figma에 모바일 가이드 없음).
  *
- * Figma 스펙(값 추측 없이 반영):
+ * Figma 스펙:
  *  - 카드 w-[1080px] h-[680px] rounded-24 shadow-modal · 오버레이 overlay 50%
  *  - Guide nav w-[248px] bg-surface-nav border-r-1.5 pt-28 pb-24 px-16 gap-2
  *    · 제목 20px bold tracking-[-.4px] / 그룹 라벨 11.5px bold ink-hint tracking-[.345px]
  *    · 탭 14.5px bold, 활성 = primary-tint 배경 + primary 텍스트, 비활성 = ink-muted
- *  - Guide content pl-36 pr-30 py-30 gap-22 / 제목 26px bold tracking-[-.65px]
- *    · 닫기 = Figma Close 에셋 36px(338:237, Modal.jsx ModalClose) / 안내 카드 bg-page border-1.5 rounded-14
- *    · 주석 = ● + 소제목 14.5px bold(ink) + 설명 12.5px(ink-muted) leading-1.6
+ *  - Guide content pl-36 pr-30 py-30 gap-22 / 제목 26px bold tracking-[-.65px] / 닫기 36px(338:237)
+ *  - 내용(Body 766px)은 탭마다 네 가지 꼴이다.
+ *    · overview(01): 화면 축소본 766×404 + 아래 주석 2열(338:273)
+ *    · screens(02·03·04·06~10): 화면 축소본 + 오른쪽 주석(Screen guide). 축소본은 Figma "Mini screen" 노드를
+ *      PNG 2배로 내보낸 이미지다(핸드오프 §0-9, public/ui/lp-<노드>-guide-*.png). 03·04는 축소본 2장에 작은 주석.
+ *    · tips(05): 번호 + 요령 + 작은 예시, 2열 3행(340:249)
+ *    · team(11): 팀원 5명 + 소스 코드(342:530). 역할 '개1발'(372:121)은 Figma 오타로 보고 '개발'로 쓴다.
  */
 
-// 화면 안내 카드 아이콘 — public/ui의 nav·기능 아이콘을 primary 색으로 마스크 틴트(브랜드 통일, index.css .mask-icon).
-function MaskIcon({ src, className = '' }) {
-  return <span aria-hidden="true" className={`mask-icon text-primary-500 ${className}`} style={{ '--icon': `url(${src})` }} />
+// 주석(Annot, 345:295) — 점(10×20 에셋) + 소제목 + 설명. small = 03·04 레슨 탭(14px·12px, 간격 9).
+function Annotation({ h, d, small = false }) {
+  return (
+    <div className={`flex items-start ${small ? 'gap-[9px]' : 'gap-[10px]'}`}>
+      <img src="/ui/lp-366-91-guide-dot.svg" alt="" aria-hidden className="h-5 w-[10px] shrink-0" />
+      <div className="flex min-w-0 flex-1 flex-col gap-px">
+        <p className={`font-bold leading-figma text-ink ${small ? 'text-[14px]' : 'text-[14.5px]'}`}>{h}</p>
+        <p className={`break-keep leading-[1.58] text-ink-muted ${small ? 'text-[12px]' : 'text-[12.5px]'}`}>{d}</p>
+      </div>
+    </div>
+  )
 }
 
-// 그룹 → 탭. 각 탭: title(사이드/헤더 공용), screen(안내 카드; 없으면 텍스트만), bullets(주석).
+// 화면 축소본 — Figma에서 내보낸 PNG(2배). 너비는 Figma 값, 좁은 화면에서는 칸에 맞춰 줄어든다.
+function Shot({ src, w, h }) {
+  return <img src={src} alt="" width={w} height={h} className="h-auto w-full shrink-0" style={{ maxWidth: w }} />
+}
+
+// 그룹 → 탭. kind: overview | screens | tips | team. annots = [소제목, 설명] (Figma 원문).
 const GROUPS = [
   {
     label: '시작',
     tabs: [
       {
-        key: 'tour', title: '화면 둘러보기',
-        screen: { icon: '/ui/nav-learn.svg', name: '대시보드 둘러보기' },
-        bullets: [
-          { h: '내 기록', d: '불꽃은 연속 학습 일수, 별은 XP, 육각형은 레벨이에요. 사진을 누르면 프로필로 가요.' },
-          { h: '오른쪽 패널', d: '오늘의 과제와 복습할 오답·북마크 수를 어느 탭에서든 확인해요.' },
-          { h: '왼쪽 탭', d: '학습·연습·과제·복습·분석으로 바로 이동하고, 모바일에서는 아래쪽 탭 바를 써요.' },
+        key: 'tour', title: '화면 둘러보기', kind: 'overview',
+        shots: [{ src: '/ui/lp-338-274-guide-overview.png', w: 766, h: 404 }],
+        annots: [
+          ['내 기록', '불꽃은 연속 학습 일수, 별은 XP, 육각형은 레벨이에요. 사진을 누르면 프로필로 가요.'],
+          ['오른쪽 패널', '오늘의 과제와 복습할 오답·북마크 수를 어느 탭에서든 확인해요.'],
         ],
       },
     ],
@@ -42,106 +57,99 @@ const GROUPS = [
     label: '학습',
     tabs: [
       {
-        key: 'learn', title: '학습 탭',
-        screen: { icon: '/ui/nav-learn.svg', name: '학습 · 커리큘럼 경로' },
-        bullets: [
-          { h: '트랙 선택', d: '독화(입 읽기)와 발화(발음) 중 지금 훈련할 축을 골라요.' },
-          { h: '단계별 경로', d: '기초부터 실전까지 레슨을 순서대로 밟고, 앞 단계를 익히면 다음이 열려요.' },
-          { h: '이어서 학습', d: '현재 레슨을 누르면 진행률과 함께 바로 이어서 시작해요.' },
+        key: 'learn', title: '학습 탭', kind: 'screens',
+        shots: [{ src: '/ui/lp-345-147-guide-learn.png', w: 446, h: 560 }],
+        annots: [
+          ['트랙 전환', '독화 · 발화를 골라요. 트랙마다 경로와 진도가 따로 저장돼요.'],
+          ['가이드', '이 단계에서 무엇을 배우는지 미리 봐요.'],
+          ['레슨 노드', '연한 DOKA는 끝낸 레슨, 링을 두른 큰 DOKA는 지금 할 레슨, 잠든 DOKA는 아직 열리지 않은 레슨이에요.'],
+          ['단계 이동', '좌우 화살표로 이전 · 다음 단계를 둘러봐요. 잠긴 단계도 한 번 더 확인을 받고 들어갈 수 있어요.'],
+          ['레슨 카드', '지금 할 레슨을 누르면 떠요. 진행률을 보고 이어서 학습하기로 시작해요.'],
         ],
       },
       {
-        key: 'reading', title: '독화 레슨',
-        screen: { icon: '/ui/card-scenario.svg', name: '독화 학습' },
-        bullets: [
-          { h: '입모양부터 문장까지', d: '자음·모음 입모양, 단어, 상황별 문장을 3D 아바타로 단계별로 익혀요.' },
-          { h: '문맥 추론', d: '같아 보이는 소리를 앞뒤 맥락으로 좁혀 맞히는 훈련이에요.' },
-          { h: 'AI 문항', d: 'AI가 매번 새 문장을 내줘서 같은 문제만 반복하지 않아요.' },
+        key: 'reading', title: '독화 레슨', kind: 'screens', small: true,
+        shots: [{ src: '/ui/lp-348-81-guide-read-q.png', w: 238, h: 358 }, { src: '/ui/lp-348-135-guide-read-wrong.png', w: 238, h: 358 }],
+        annots: [
+          ['북마크', '다시 보고 싶은 문제를 저장해요.'],
+          ['입모양 영상', '3D 아바타의 입모양이 계속 반복돼요. 알아볼 때까지 보면 돼요.'],
+          ['보기 고르기', '글자를 누르거나 숫자 키 1~4로 골라요.'],
+          ['결과 바', '맞히면 초록, 틀리면 빨강이에요. 틀리면 정답을 함께 보여주고 복습 목록에 담아요.'],
         ],
       },
       {
-        key: 'speaking', title: '발화 레슨',
-        screen: { icon: '/ui/speak-mic.svg', name: '발화 학습' },
-        bullets: [
-          { h: '6단계 커리큘럼', d: '발성부터 운율·모음·자음·단어·문장 억양까지 순서대로 연습해요.' },
-          { h: '실시간 피드백', d: '마이크로 말하면 크기·억양이 곡선으로 보이고, AI가 전사·채점·코칭해요.' },
-          { h: '웹캠 미러', d: '내 입모양을 아바타와 나란히 두고 비교할 수 있어요.' },
+        key: 'speaking', title: '발화 레슨', kind: 'screens', small: true,
+        shots: [{ src: '/ui/lp-348-233-guide-speak-before.png', w: 238, h: 358 }, { src: '/ui/lp-348-268-guide-speak-result.png', w: 238, h: 358 }],
+        annots: [
+          ['입모양 따라 하기', '아바타의 입모양을 보고 그대로 따라 해요.'],
+          ['마이크', '누르고 말한 뒤 다시 누르면 끝나요.'],
+          ['발음 정확도', '목표 발음에 얼마나 가까웠는지 %로 보여줘요.'],
+          ['소리별 결과', '초록은 잘했어요, 주황은 조금 더, 빨강은 다시 연습이에요.'],
+          ['자세히 보기', '들린 발음, 소리와 입모양을 합친 점수, DOKA의 한마디를 봐요.'],
         ],
       },
-      {
-        key: 'strategy', title: '독화 요령',
-        screen: { icon: '/ui/card-retest.svg', name: '독화 전략' },
-        bullets: [
-          { h: '가능성 좁히기', d: 'ㅂ·ㅁ·ㅍ처럼 똑같이 보이는 소리가 많아요. 정확히 읽기보다 후보를 좁혀요.' },
-          { h: '모음을 닻으로', d: '모음이 자음보다 잘 보여요. 모음 뼈대를 먼저 잡고 자음을 채워요.' },
-          { h: '문맥으로 메꾸기', d: '입모양이 애매하면 앞뒤 말과 상황으로 판단해요.' },
-        ],
-      },
+      { key: 'strategy', title: '독화 요령', kind: 'tips' },
     ],
   },
   {
     label: '탭 안내',
     tabs: [
       {
-        key: 'practice', title: '연습',
-        screen: { icon: '/ui/nav-practice.svg', name: '연습 허브' },
-        bullets: [
-          { h: '자유 연습', d: '단계와 상관없이 다자 대화·상황별 시나리오·엔드리스 학습을 골라 풀어요.' },
-          { h: '자유 발화', d: '내가 쓴 문장을 소리 내어 발음을 확인해요.' },
-          { h: '수어 함께 보기', d: '문장을 한국수어(KSL) 영상으로도 확인할 수 있어요.' },
+        key: 'practice', title: '연습', kind: 'screens',
+        shots: [{ src: '/ui/lp-346-77-guide-practice.png', w: 446, h: 560 }],
+        annots: [
+          ['다자 대화', '여러 사람이 주고받는 대화에서 지금 누가 말하는지 입모양으로 맞혀요.'],
+          ['자유 발화', '내가 쓴 문장을 입력하면 3D 입모양과 혀 위치 같은 소리 내는 법을 보여줘요.'],
+          ['상황별 시나리오', '카페 · 병원 · 학교 같은 장소와 난이도를 골라 문장 테스트나 AI 대화로 연습해요.'],
+          ['수어 함께 보기', '문장을 수어 영상과 입모양 아바타로 나란히 봐요.'],
+          ['엔드리스 학습', '숙달도가 낮은 유형만 골라 끝없이 나와요. 원할 때 멈추면 돼요.'],
         ],
       },
       {
-        key: 'task', title: '과제',
-        screen: { icon: '/ui/nav-task.svg', name: '오늘의 과제' },
-        bullets: [
-          { h: '오늘의 과제', d: '매일 주어지는 작은 목표를 채우면 XP 보상을 받아요.' },
-          { h: '주간 도전', d: '이번 주 목표를 이어가면 큰 보너스가 쌓여요.' },
-          { h: '배지', d: '조건을 달성하면 배지를 모을 수 있어요.' },
+        key: 'task', title: '과제', kind: 'screens',
+        shots: [{ src: '/ui/lp-346-291-guide-task.png', w: 470, h: 407 }],
+        annots: [
+          ['오늘의 과제', '매일 새로 주어져요. 1 / 2처럼 채운 만큼 보여주고, 오늘 남은 시간도 함께 보여요.'],
+          ['특별 과제', '일주일 단위의 조금 긴 도전이에요.'],
+          ['배지', '조건을 채우면 모여요. 누르면 크게 보고, 전체 학습자 중 몇 %가 가졌는지 알 수 있어요. 회색은 아직 받지 못한 배지예요.'],
         ],
       },
       {
-        key: 'review', title: '복습',
-        screen: { icon: '/ui/nav-review.svg', name: '복습' },
-        bullets: [
-          { h: '오답·북마크', d: '틀린 문제와 저장한 북마크를 나눠서 다시 풀어요.' },
-          { h: '간격 반복', d: '잊어버릴 때쯤 다시 나오도록 예정된 항목을 오늘 것만 가볍게 확인해요.' },
-          { h: '정리', d: '필요 없는 항목은 지우기로 목록에서 정리해요.' },
+        key: 'review', title: '복습', kind: 'screens',
+        shots: [{ src: '/ui/lp-346-516-guide-review.png', w: 446, h: 560 }],
+        annots: [
+          ['오답 복습', '레슨에서 틀린 문제가 자동으로 모여요. 잊어버릴 때쯤 다시 나오도록 순서를 맞춰줘요.'],
+          ['북마크 복습', '레슨 중 북마크 버튼으로 저장한 문제예요.'],
+          ['항목', '언제 몇 번 틀렸는지 보여주고, 누르면 그 문제로 가요.'],
+          ['지우기', '누르면 항목마다 체크박스가 생겨요. 골라서 한 번에 지워요.'],
         ],
       },
       {
-        key: 'analysis', title: '분석',
-        screen: { icon: '/ui/nav-analytics.svg', name: '학습 분석' },
-        bullets: [
-          { h: '성장 기록', d: '평균 점수와 학습 흐름을 그래프로 확인해요.' },
-          { h: '취약 입모양', d: '자주 헷갈리는 입모양을 짚어줘요.' },
-          { h: 'AI 제안', d: '다음에 무엇을 연습하면 좋을지 알려줘요.' },
+        key: 'analysis', title: '분석', kind: 'screens',
+        shots: [{ src: '/ui/lp-347-79-guide-analysis.png', w: 446, h: 560 }],
+        annots: [
+          ['맨 위 세 칸', '총 학습 시간 · 평균 정확도 · 연속 학습 일수예요.'],
+          ['학습시간 추이', '최근 7주 동안 주마다 얼마나 공부했는지 막대로 보여줘요.'],
+          ['정확도 추이', '주별 정답률이 어떻게 변했는지 선으로 보여줘요.'],
+          ['활동 캘린더', '공부한 날이 잔디처럼 칠해져요. 진할수록 많이 한 날이에요.'],
+          ['회차 히스토리', '레슨마다 정답률을 보고, 누르면 문제별로 어떻게 들렸는지까지 봐요.'],
+          ['전체 통계', '가입 후 총 학습 회차, 푼 문제, 배지, 트랙별 진도를 모아 봐요.'],
         ],
       },
       {
-        key: 'profile', title: '프로필',
-        screen: { icon: '/ui/nav-profile.svg', name: '프로필' },
-        bullets: [
-          { h: '내 정보', d: '레벨·XP·학습한 날·완료한 레슨을 한눈에 봐요.' },
-          { h: '계정 설정', d: '이름·이메일·비밀번호를 바꾸고 로그아웃해요.' },
-          { h: '다시 시작', d: '자가진단으로 단계를 재추천받거나 학습을 초기화할 수 있어요.' },
+        key: 'profile', title: '프로필', kind: 'screens',
+        shots: [{ src: '/ui/lp-347-294-guide-profile.png', w: 446, h: 560 }],
+        annots: [
+          ['자가진단 다시 하기', '시작 단계를 새로 추천받아요. 지금까지의 기록은 그대로 남아요.'],
+          ['계정 설정', '이름 · 이메일 · 비밀번호와 사진을 바꾸고, 로그아웃도 여기서 해요.'],
+          ['학습 초기화', '기록을 모두 지워요. 되돌릴 수 없어서 "초기화"를 직접 입력해야 진행돼요.'],
         ],
       },
     ],
   },
   {
     label: '더 알아보기',
-    tabs: [
-      {
-        key: 'about', title: '개발자 소개',
-        screen: null,
-        bullets: [
-          { h: 'LIPLAB', d: '청각장애인의 한국어 독화·발화 훈련을 돕는 AI 학습 웹앱이에요.' },
-          { h: '만든 이유', d: '입모양 인지부터 실전 대화까지 단계별로 연습할 도구가 마땅치 않아 직접 만들었어요.' },
-          { h: '함께 만들기', d: '개선 아이디어나 버그 제보는 언제든 환영해요.' },
-        ],
-      },
-    ],
+    tabs: [{ key: 'about', title: '개발자 소개', kind: 'team' }],
   },
 ]
 
@@ -151,31 +159,145 @@ function CloseButton({ onClose }) {
   return <ModalClose onClose={onClose} />
 }
 
-// 주석 불릿 — ● + 소제목 + 설명 (Figma Annot).
-function Annotation({ h, d }) {
+// 01 화면 둘러보기(338:273) — 축소본 아래 주석 2열(간격 28)
+function OverviewBody({ tab }) {
   return (
-    <div className="flex gap-2.5">
-      <span className="mt-[6px] h-[9px] w-[9px] shrink-0 rounded-full bg-primary-500" />
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <p className="text-[14.5px] font-bold text-ink">{h}</p>
-        <p className="text-[12.5px] leading-[1.6] text-ink-muted">{d}</p>
+    <div className="flex flex-col gap-5">
+      {tab.shots.map((s) => <Shot key={s.src} {...s} />)}
+      <div className="grid gap-x-7 gap-y-[13px] sm:grid-cols-2">
+        {tab.annots.map(([h, d]) => <Annotation key={h} h={h} d={d} />)}
       </div>
     </div>
   )
 }
 
-// 화면을 상징하는 안내 카드(bg-page) — 스크린샷 대체. 아이콘칩 + 화면명.
-function ScreenCard({ screen }) {
+// 02·03·04·06~10(Screen guide) — 축소본(1~2장) + 오른쪽 주석. 축소본 사이 14, 주석까지 24(2장이면 14, 주석 안쪽 8)
+function ScreensBody({ tab }) {
+  const two = tab.shots.length > 1
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-14 border-1.5 border-line bg-page px-6 py-8">
-      <span className="flex h-14 w-14 items-center justify-center rounded-15 bg-primary-100">
-        <MaskIcon src={screen.icon} className="h-7 w-7" />
-      </span>
-      <span className="text-[15px] font-bold text-ink">{screen.name}</span>
-      <span className="text-[12px] text-ink-muted">이 화면에서 아래 기능을 확인해요</span>
+    <div className={`flex flex-col md:flex-row md:items-start ${two ? 'gap-[14px]' : 'gap-6'}`}>
+      <div className={two ? 'grid grid-cols-2 gap-[14px] md:flex md:shrink-0' : 'md:shrink-0'}>
+        {tab.shots.map((s) => <Shot key={s.src} {...s} />)}
+      </div>
+      <div className={`flex min-w-0 flex-1 flex-col ${tab.small ? 'gap-[11px] md:pl-2' : 'gap-[13px]'}`}>
+        {tab.annots.map(([h, d]) => <Annotation key={h} h={h} d={d} small={tab.small} />)}
+      </div>
     </div>
   )
 }
+
+// 05 독화 요령(340:249) — 번호(30px, primary-faint) + 제목 16 + 설명 13 + 예시. 2열 3행, 행 사이 구분선.
+const CHIP = 'rounded-[8px] px-[10px] py-1 text-[13px] font-bold leading-figma'
+const BUBBLE = 'rounded-[12px] rounded-bl-[3px] bg-inactive-bg px-3 py-1.5 text-[12.5px] leading-figma text-ink'
+const TIPS = [
+  ['01', '똑같이 보이는 소리가 있어요', 'ㅂ · ㅁ · ㅍ는 입술이 닫혀 똑같이 보여요. 정확히 읽기보다 가능성을 좁힌다고 생각해요.', (
+    <div className="flex items-center gap-[10px]">
+      {['ㅂ', 'ㅁ', 'ㅍ'].map((j) => (
+        <div key={j} className="flex flex-col items-center gap-[3px]">
+          <img src="/ui/lp-370-90-guide-lips.svg" alt="" aria-hidden className="h-[18px] w-[34px]" />
+          <span className="text-[11.5px] font-bold leading-figma text-ink-muted">{j}</span>
+        </div>
+      ))}
+      <span className="text-[12px] leading-figma text-ink-faint">모두 같은 입모양</span>
+    </div>
+  )],
+  ['02', '문맥으로 메꿔요', '입모양이 애매하면 앞뒤 말과 상황으로 판단해요.', (
+    <div className="flex items-center gap-2">
+      <span className="text-[14px] font-bold leading-figma text-ink">___ 마셔요</span>
+      <span className={`${CHIP} bg-primary-100 text-primary-700`}>물</span>
+      <span className={`${CHIP} bg-inactive-bg text-ink-hint line-through`}>불</span>
+    </div>
+  )],
+  ['03', '모음을 닻으로 삼아요', '자음보다 모음이 훨씬 잘 보여요. 모음 뼈대를 먼저 잡고 자음을 채워요.', (
+    <div className="flex items-center gap-1.5">
+      {['ㅏ', 'ㅣ', 'ㅗ', 'ㅜ'].map((v) => <span key={v} className={`${CHIP} bg-primary-100 text-primary-700`}>{v}</span>)}
+    </div>
+  )],
+  ['04', '첫 소리에 집중해요', '단어의 첫 입모양에 정보가 가장 많아요. 시작을 놓치면 뒤가 다 흔들려요.', (
+    <p className="flex items-baseline gap-px font-bold leading-figma">
+      <span className="text-[22px] text-primary-500">사</span><span className="text-[16px] text-ink-pale">과</span>
+    </p>
+  )],
+  ['05', '보기 좋은 환경을 골라요', '밝은 곳에서 얼굴이 정면으로 보이고 천천히 말할 때 잘 보여요.', <span className={BUBBLE}>천천히, 마주 보고 말해 주세요</span>],
+  ['06', '모르면 되물어요', '전부 읽을 필요는 없어요. 핵심 단어만 확인해도 충분해요.', <span className={BUBBLE}>○○ 말씀이세요?</span>],
+]
+
+function TipsBody() {
+  const rows = [TIPS.slice(0, 2), TIPS.slice(2, 4), TIPS.slice(4, 6)]
+  return (
+    <div className="flex flex-col">
+      {rows.map((row, i) => (
+        <div key={row[0][0]} className={`flex flex-col gap-6 md:flex-row md:gap-11 ${i === 0 ? 'pb-[22px] pt-1' : 'border-t border-fill py-[22px]'}`}>
+          {row.map(([n, h, d, ex]) => (
+            <div key={n} className="flex gap-4 md:w-[361px] md:shrink-0">
+              <p className="w-[42px] shrink-0 text-[30px] font-bold leading-figma tracking-[-0.9px] text-primary-faint">{n}</p>
+              <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+                <p className="text-[16px] font-bold leading-figma text-ink">{h}</p>
+                <p className="break-keep text-[13px] leading-[1.6] text-ink-muted">{d}</p>
+                <div className="pt-0.5">{ex}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// 11 개발자 소개(342:530) — 사진(또는 DOKA) 60 + 이름 17 · 역할 13.5 · 핸들 12.5. 핸들은 깃허브 계정과 다를 수 있어 링크를 걸지 않는다.
+const TEAM = [
+  { name: '남윤수', role: '팀장 · 개발', handle: '@namyunsu', photo: '/ui/lp-372-91-team-photo.png' },
+  { name: '황성주', role: 'UI 디자인 · 개발', handle: '@JuHana' },
+  { name: '염우진', role: '개발', handle: '@duadnwls' },
+  { name: '나현빈', role: '개발', handle: '@Devna08' },
+  { name: '최윤건', role: '타도마 기능 개발', note: '지금은 빠진 기능이에요' },
+]
+const MASCOT_OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }
+
+function Member({ m }) {
+  return (
+    <div className="flex items-center gap-4 md:w-[361px] md:shrink-0">
+      {m.photo
+        ? <img src={m.photo} alt="" className="size-[60px] shrink-0 rounded-full object-cover" />
+        : (
+          <span aria-hidden className="relative size-[60px] shrink-0 overflow-hidden rounded-full bg-primary-100">
+            <span className="absolute left-[9px] top-[10px] size-[42px]">
+              <img src="/ui/lp-372-98-guide-mascot.svg" alt="" className="absolute max-w-none" style={MASCOT_OVERFLOW} />
+            </span>
+          </span>
+        )}
+      <div className="flex min-w-0 flex-col gap-1 whitespace-nowrap leading-figma">
+        <p className="text-[17px] font-bold text-ink">{m.name}</p>
+        <p className="text-[13.5px] text-ink-muted">{m.role}</p>
+        {m.handle
+          ? <p className="text-[12.5px] font-bold text-primary-500">{m.handle}</p>
+          : <p className="text-[12px] text-ink-hint">{m.note}</p>}
+      </div>
+    </div>
+  )
+}
+
+function TeamBody() {
+  const rows = [TEAM.slice(0, 2), TEAM.slice(2, 4), TEAM.slice(4)]
+  return (
+    <div className="flex flex-col">
+      <p className="pb-[22px] text-[15px] leading-[1.6] text-ink-muted">LIPLAB을 함께 만든 사람들이에요.</p>
+      {rows.map((row, i) => (
+        <div key={row[0].name} className={`flex flex-col gap-5 md:flex-row md:gap-11 ${i === 0 ? 'pb-5 pt-1' : 'border-t border-fill py-5'}`}>
+          {row.map((m) => <Member key={m.name} m={m} />)}
+        </div>
+      ))}
+      <p className="flex items-center gap-[10px] whitespace-nowrap border-t border-fill pt-5 font-bold leading-figma">
+        <span className="text-[13px] text-ink-faint">소스 코드</span>
+        <a href="https://github.com/n1a2m3y4u5n/liplab" target="_blank" rel="noreferrer" className="text-[14px] text-primary-500 hover:underline">
+          github.com/n1a2m3y4u5n/liplab
+        </a>
+      </p>
+    </div>
+  )
+}
+
+const BODY = { overview: OverviewBody, screens: ScreensBody, tips: TipsBody, team: TeamBody }
 
 export default function GuideModal({ open, onClose }) {
   const [activeKey, setActiveKey] = useState(TABS[0].key)
@@ -196,6 +318,7 @@ export default function GuideModal({ open, onClose }) {
 
   if (!open) return null
   const active = TABS.find((t) => t.key === activeKey) || TABS[0]
+  const Body = BODY[active.kind]
 
   const tabClass = (on) =>
     `w-full rounded-10 px-3 py-[9px] text-left text-[14.5px] font-bold transition-colors ${
@@ -252,16 +375,13 @@ export default function GuideModal({ open, onClose }) {
         {/* 우측 컨텐츠 */}
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-6 py-6 md:py-[30px] md:pl-9 md:pr-[30px]">
           <div className="flex items-start justify-between gap-4">
-            <h2 className="text-[22px] font-bold tracking-[-0.65px] text-ink md:text-[26px]">{active.title}</h2>
+            <h2 className="text-[22px] font-bold leading-figma tracking-[-0.65px] text-ink md:text-[26px]">{active.title}</h2>
             {/* 데스크톱 닫기(모바일은 상단 탭 헤더에 있음) */}
-            <span className="hidden md:block"><CloseButton onClose={onClose} /></span>
+            <span className="hidden md:flex"><CloseButton onClose={onClose} /></span>
           </div>
 
-          <div className="mt-5 flex flex-col gap-5">
-            {active.screen && <ScreenCard screen={active.screen} />}
-            <div className="grid gap-x-7 gap-y-4 sm:grid-cols-2">
-              {active.bullets.map((b) => <Annotation key={b.h} {...b} />)}
-            </div>
+          <div className="mt-[22px]">
+            <Body tab={active} />
           </div>
         </div>
       </div>
