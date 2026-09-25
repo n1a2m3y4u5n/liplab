@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { toBlendshapeMap } from '../lib/mouthScore'
 import { predictLipread, loadLipread } from '../lib/lipreadModel'
+import { resampleFrames } from '../lib/frameRate'
 
 /**
  * 축 D — 기계가 내 입모양을 읽어본다(자체 립리딩). 사용자가 목표 단어를 입모양으로 말하면
@@ -14,13 +15,16 @@ const MP_VERSION = '1.0.1'
 const WASM_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/wasm`
 const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
 const REC_MS = 2500  // 녹화(수집) 길이
+const SEQ_HZ = 60    // 모델 입력 속도. 30 fps 카메라면 프레임마다 두 번(벤치에서 검증한 제품 조건 dup2)
 
 export default function LipReadCheck({ target, candidates = [] }) {
   const videoRef = useRef(null)
   const landmarkerRef = useRef(null)
   const rafRef = useRef(null)
   const streamRef = useRef(null)
-  const framesRef = useRef([])
+  const framesRef = useRef([])       // [{t, bs}] 새 영상 프레임만
+  const recStartRef = useRef(0)
+  const lastVideoTimeRef = useRef(-1)
   const recordingRef = useRef(false)
   const [status, setStatus] = useState('idle') // idle | loading | ready | recording | thinking | done | error
   const [result, setResult] = useState(null)   // {jamo, matched, ranked}
@@ -58,11 +62,14 @@ export default function LipReadCheck({ target, candidates = [] }) {
 
   const loop = useCallback(() => {
     const fl = landmarkerRef.current, video = videoRef.current
-    if (fl && video && video.readyState >= 2) {
+    // 새 영상 프레임일 때만 검출한다. 화면 갱신마다 검출하면 같은 프레임이 60 Hz 화면에서 2번, 120 Hz 화면에서 4번 들어간다
+    if (fl && video && video.readyState >= 2 && video.currentTime !== lastVideoTimeRef.current) {
+      lastVideoTimeRef.current = video.currentTime
       try {
-        const res = fl.detectForVideo(video, performance.now())
+        const now = performance.now()
+        const res = fl.detectForVideo(video, now)
         const bs = toBlendshapeMap(res.faceBlendshapes?.[0])
-        if (recordingRef.current && Object.keys(bs).length) framesRef.current.push(bs)
+        if (recordingRef.current && Object.keys(bs).length) framesRef.current.push({ t: now, bs })
       } catch { /* 프레임 스킵 */ }
     }
     rafRef.current = requestAnimationFrame(loop)
@@ -85,13 +92,15 @@ export default function LipReadCheck({ target, candidates = [] }) {
   const record = useCallback(() => {
     if (status !== 'ready' && status !== 'done') return
     framesRef.current = []
+    recStartRef.current = performance.now()
     recordingRef.current = true
     setResult(null)
     setStatus('recording')
     setTimeout(async () => {
       recordingRef.current = false
       setStatus('thinking')
-      const r = await predictLipread(framesRef.current, candidates)
+      const seq = resampleFrames(framesRef.current, recStartRef.current, REC_MS, SEQ_HZ)
+      const r = await predictLipread(seq, candidates)
       setResult(r)
       setStatus('done')
     }, REC_MS)
