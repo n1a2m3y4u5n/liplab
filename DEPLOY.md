@@ -93,7 +93,8 @@
      점수가 같았다. 첫 시도는 변환 뒤에도 체크포인트 파일 매핑이 남아 6.2GB로 재졌고, 나머지 파라미터를 복사해 매핑을 끊도록
      고친 뒤 다시 쟀다. 결과 `liplab-lab/data/pod_runs/20260925_4aol7xkyf762yh/hc2/`.
    - 배포(사용자 지시 뒤에만): `fly deploy -c fly.dev.toml -a liplab-dev --remote-only`. 확인은 `GET /api/backbone/status`에
-     세 모델이 올라왔는지, 발음 연습 응답의 `assessment_method`가 `dgop`이고 `dgop.calibration`이 자체 학습 앵커인지 본다.
+     세 모델이 올라왔고 정렬기·채점기의 `quant`가 `int8`인지, 발음 연습 응답의 `assessment_method`가 `dgop`이고
+     `dgop.calibration`이 자체 학습 앵커인지 본다. 메모리는 `fly machine status`나 대시보드에서 4GB 안(점검 최대 3.15GB)인지 본다.
      D-GOP를 끄려면 `WITH_ML`을 0으로 바꾸거나 `DGOP_ALIGNER_ID`를 지우고 다시 배포한다.
 
 ---
