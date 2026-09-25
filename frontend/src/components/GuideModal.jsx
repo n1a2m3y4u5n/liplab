@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ModalClose } from './Modal'
+import TeamAvatar from './TeamAvatar'
+import { TEAM, REPO_URL } from '../config/team'
 
 /**
  * 사용법 가이드 모달 (Figma "09. 사용법 가이드" 338:57 ~ 342:348).
@@ -244,28 +246,11 @@ function TipsBody() {
   )
 }
 
-// 11 개발자 소개(342:530) — 사진(또는 DOKA) 60 + 이름 17 · 역할 13.5 · 핸들 12.5. 핸들은 깃허브 계정과 다를 수 있어 링크를 걸지 않는다.
-const TEAM = [
-  { name: '남윤수', role: '팀장 · 개발', handle: '@namyunsu', photo: '/ui/lp-372-91-team-photo.png' },
-  { name: '황성주', role: 'UI 디자인 · 개발', handle: '@JuHana' },
-  { name: '염우진', role: '개발', handle: '@duadnwls' },
-  { name: '나현빈', role: '개발', handle: '@Devna08' },
-  { name: '최윤건', role: '타도마 기능 개발', note: '지금은 빠진 기능이에요' },
-]
-const MASCOT_OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }
-
+// 11 개발자 소개(342:530) — 사진(또는 DOKA) 60 + 이름 17 · 역할 13.5 · 핸들 12.5. 팀 정보는 config/team.js(랜딩과 같이 씀).
 function Member({ m }) {
   return (
     <div className="flex items-center gap-4 md:w-[361px] md:shrink-0">
-      {m.photo
-        ? <img src={m.photo} alt="" className="size-[60px] shrink-0 rounded-full object-cover" />
-        : (
-          <span aria-hidden className="relative size-[60px] shrink-0 overflow-hidden rounded-full bg-primary-100">
-            <span className="absolute left-[9px] top-[10px] size-[42px]">
-              <img src="/ui/lp-372-98-guide-mascot.svg" alt="" className="absolute max-w-none" style={MASCOT_OVERFLOW} />
-            </span>
-          </span>
-        )}
+      <TeamAvatar m={m} />
       <div className="flex min-w-0 flex-col gap-1 whitespace-nowrap leading-figma">
         <p className="text-[17px] font-bold text-ink">{m.name}</p>
         <p className="text-[13.5px] text-ink-muted">{m.role}</p>
@@ -289,8 +274,8 @@ function TeamBody() {
       ))}
       <p className="flex items-center gap-[10px] whitespace-nowrap border-t border-fill pt-5 font-bold leading-figma">
         <span className="text-[13px] text-ink-faint">소스 코드</span>
-        <a href="https://github.com/n1a2m3y4u5n/liplab" target="_blank" rel="noreferrer" className="text-[14px] text-primary-500 hover:underline">
-          github.com/n1a2m3y4u5n/liplab
+        <a href={REPO_URL} target="_blank" rel="noreferrer" className="text-[14px] text-primary-500 hover:underline">
+          {REPO_URL.replace('https://', '')}
         </a>
       </p>
     </div>

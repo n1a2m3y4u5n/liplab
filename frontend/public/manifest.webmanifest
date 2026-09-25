@@ -1,5 +1,5 @@
 {
-  "name": "LIPLAB — 독화 훈련",
+  "name": "LIPLAB - 독화 훈련",
   "short_name": "LIPLAB",
   "description": "AI 기반 청각장애인 한국어 독화·발화 훈련 플랫폼",
   "lang": "ko",
@@ -7,10 +7,32 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f8fafc",
-  "theme_color": "#0f172a",
+  "background_color": "#f3f3f3",
+  "theme_color": "#7d53de",
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
