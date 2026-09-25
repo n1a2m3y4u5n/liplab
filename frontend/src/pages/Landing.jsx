@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import Button from '../components/Button'
 import Logo from '../components/Logo'
+import TeamAvatar from '../components/TeamAvatar'
+import { TEAM, TEAM_ORG, AWARD, REPO_URL } from '../config/team'
 
 /**
  * 랜딩 (Figma "02. Landing" 9:12 Landing, Desktop 1440). 로그인하지 않은 사람이 "/"에 오면 보인다(App.jsx AuthGate).
@@ -164,6 +166,56 @@ const DECO = [
   { src: '/ui/lp-48-86-deco-mascot.svg', size: 104, box: 126.071, rotate: 14, right: 23.929, top: 320 },
 ]
 
+// 개발자 정보(9/25 사용자 요청, Figma 랜딩에는 없는 구역): 수상 표시 · 만든 사람들 · 팀원 카드. 팀 정보는 가이드 11번 탭과 같다.
+function TrophyIcon() {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-[18px] shrink-0">
+      <path d="M7 3h10v5a5 5 0 0 1-10 0V3Z" />
+      <path d="M7 5H4v1a3 3 0 0 0 3 3" />
+      <path d="M17 5h3v1a3 3 0 0 1-3 3" />
+      <path d="M12 13v4" />
+      <path d="M9 21l1-4h4l1 4" />
+      <path d="M8 21h8" />
+    </svg>
+  )
+}
+
+function Developers() {
+  return (
+    <section className="bg-white">
+      <div className="mx-auto flex max-w-[1440px] flex-col gap-9 px-4 py-16 sm:px-8 lg:px-16 lg:py-20 xl:px-[120px]">
+        <div className="flex flex-col items-start gap-4">
+          <p className="inline-flex items-center gap-2 rounded-full bg-primary-100 px-4 py-2 text-[14px] font-bold leading-figma text-primary-700">
+            <TrophyIcon />{AWARD}
+          </p>
+          <h2 className="text-[30px] font-bold leading-[1.35] tracking-[-0.025em] text-primary-500 sm:text-[36px]">만든 사람들</h2>
+          <p className="break-keep text-[16px] leading-[1.7] text-ink-muted xl:text-[18px]">{TEAM_ORG}이 함께 만들었어요.</p>
+        </div>
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
+          {TEAM.map((m) => (
+            <li key={m.name} className="flex items-center gap-4 rounded-18 border-2 border-line bg-white px-5 py-4">
+              <TeamAvatar m={m} />
+              <div className="flex min-w-0 flex-col gap-1 leading-figma">
+                <p className="text-[17px] font-bold text-ink">{m.name}</p>
+                <p className="text-[13.5px] text-ink-muted">{m.role}</p>
+                {m.handle
+                  ? <p className="text-[12.5px] font-bold text-primary-500">{m.handle}</p>
+                  : <p className="text-[12px] text-ink-hint">{m.note}</p>}
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="flex flex-wrap items-center gap-x-[10px] gap-y-1 font-bold leading-figma">
+          <span className="text-[13px] text-ink-faint">소스 코드</span>
+          <a href={REPO_URL} target="_blank" rel="noreferrer" className="text-[14px] text-primary-500 hover:underline">
+            {REPO_URL.replace('https://', '')}
+          </a>
+        </p>
+      </div>
+    </section>
+  )
+}
+
 export default function Landing() {
   const navigate = useNavigate()
   const buttons = (width) => (
@@ -223,8 +275,10 @@ export default function Landing() {
         </div>
       </section>
 
+      <Developers />
+
       {/* Footer (9:56) */}
-      <footer className="bg-white">
+      <footer className="border-t border-line bg-white">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-6 sm:px-8 lg:px-16 lg:py-9">
           <Logo size={22} />
           <p className="text-[14px] leading-figma text-ink-muted">© 2026 LIPLAB</p>
