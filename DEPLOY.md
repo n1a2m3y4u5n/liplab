@@ -55,7 +55,7 @@
    `fly secrets set`으로 넣고 파기가 끝날 때까지 바꾸지 않는다. 기호 없는 집단을 두면 `LIPLAB_PILOT_NOCUE_COHORTS`도 정한다.
    파기 도구는 이미지에 `/app/scripts/pilot_retention.py`로 들어 있고, 대장은 기본으로 볼륨(`/data`)에 남는다.
 
-9. **liplab-dev 서버 추론(9/24 코드 반영, 9/25 채점 모델을 자체 학습 모델로 바꾸고 int8로 4GB에 맞춤, 아직 배포하지 않음)**: `fly.dev.toml`은
+9. **liplab-dev 서버 추론(9/24 코드 반영, 9/25 채점 모델을 자체 학습 모델로 바꾸고 int8로 4GB에 맞춤, 9/25 18:18 배포)**: `fly.dev.toml`은
    `WITH_ML=1`로 빌드해 D-GOP 발음채점과 음성구동 아바타(A4)를 서버에서 켠다. 전시앱 `fly.toml`은 바꾸지 않았다(기본값
    `WITH_ML=0`이라 이미지가 전과 같다).
    - 채점 모델(9/25): 자체 학습 정렬기·채점기(`DGOP_MODEL=ours`). 사전등록 독립 재검(538 새 20화자)을 통과해 공개 kresnik
@@ -92,6 +92,10 @@
      `BACKBONE_QUANT=int8`): 최대 3.15GB(모델을 int8로 바꾸는 순간), 채점 뒤 상주 2.7GB, 문장당 2.5~3.0초로 fp32(4.3GB, 2.4~2.9초)와
      점수가 같았다. 첫 시도는 변환 뒤에도 체크포인트 파일 매핑이 남아 6.2GB로 재졌고, 나머지 파라미터를 복사해 매핑을 끊도록
      고친 뒤 다시 쟀다. 결과 `liplab-lab/data/pod_runs/20260925_4aol7xkyf762yh/hc2/`.
+   - 9/25 배포 결과(사용자 지시, 이미지 deployment-01M3BX59ZYQB7SBF5TR0QV30AH, 4.6GB, 빌드 컨텍스트 2.6GB): 기계 shared-cpu 2개·4GB,
+     볼륨 liplab_data 1GB(암호화 켜짐 확인), 비밀키 JWT_SECRET·ANTHROPIC_API_KEY 있음. 켜진 뒤 정렬기·채점기 int8 적재 각 약 75초,
+     아바타 백본 2.4초. 맞는 문장 84.1점·다른 문장 29.5점(맥 음성합성 문장, D-GOP 경로, 자체 앵커), 채점 2.4~2.8초.
+     기계가 멈췄다 켜지면 첫 발음 채점은 적재가 끝날 때까지(약 1~2분) 기다린다.
    - 배포(사용자 지시 뒤에만): `fly deploy -c fly.dev.toml -a liplab-dev --remote-only`. 확인은 `GET /api/backbone/status`에
      세 모델이 올라왔고 정렬기·채점기의 `quant`가 `int8`인지, 발음 연습 응답의 `assessment_method`가 `dgop`이고
      `dgop.calibration`이 자체 학습 앵커인지 본다. 메모리는 `fly machine status`나 대시보드에서 4GB 안(점검 최대 3.15GB)인지 본다.
