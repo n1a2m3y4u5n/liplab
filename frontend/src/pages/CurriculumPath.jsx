@@ -21,9 +21,10 @@ import { curriculumAPI, speakAPI } from '../api'
  */
 
 // ── 독화 트랙 ─────────────────────────────────────────────────────────────
-// 문장 단계는 시나리오 선택(ScenarioHub)을 거쳐야 currentScenario가 세팅된 뒤 /practice 레슨이 뜬다.
-// 바로 /practice로 보내면 시나리오가 없어 Practice가 되돌려보내므로 /learn/scenario로 진입한다.
-const READ_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/learn/scenario', conversation: '/conversation' }
+// 문장·대화 단계는 시나리오 선택(ScenarioHub)을 거쳐야 currentScenario가 세팅된 뒤 레슨(/practice·/conversation)이 뜬다.
+// 바로 보내면 시나리오가 없어 레슨이 되돌려보내므로(9/25 '학습 시작하기를 눌러도 아무 일 없음') /learn/scenario로 진입하고,
+// 대화 단계는 연습 방법을 'AI 대화'로 골라 둔다.
+const READ_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/learn/scenario', conversation: '/learn/scenario?mode=conversation' }
 // 단계별 숙달 최소 시도수 — 진행률 표시의 분모(backend/main.py _STAGE1~4_MIN_ATTEMPTS = 8·6·5·4와 같게).
 const READ_TOTAL = { viseme: 8, word: 6, sentence: 5, conversation: 4 }
 const TRACK_LABEL = { read: '독화', speak: '발화' }

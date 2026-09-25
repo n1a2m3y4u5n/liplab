@@ -11,6 +11,8 @@ import AppShell from '../components/AppShell'
  *    (/learn/conversation-multi?speakers=2~4&situation=)로 — 인원은 나를 뺀 상대 수(407:131).
  *  - 잠금은 예전과 같다: 문장 테스트는 3단계, 1:1 대화는 4단계가 열려야 한다. 다자 대화는 연습 탭처럼 잠그지 않는다.
  *  - 회차 히스토리 등에서 ?situation=은행 으로 들어오면 그 상황을 입력칸에 채워 이어서 연습하게 한다.
+ *  - ?mode=conversation 이면 연습 방법을 'AI 대화'로 골라 둔다(학습 경로 4단계 '학습 시작하기'와 상황 없이 들어온 대화 실전이
+ *    여기로 온다. 대화 실전은 상황이 있어야 시작된다).
  */
 const QUESTION_TYPES = ['test', 'test-multiple', 'essay']
 // 카드 틀(407:82) — 2px 테두리, r18, p20, 머리-본문 14
@@ -39,7 +41,7 @@ export default function ScenarioHub() {
   const [level, setLevel] = useState(Math.min(user?.current_level || 1, 5))
   const [recommended, setRecommended] = useState(null)
   const [locks, setLocks] = useState({ practice: false, conversation: false })
-  const [mode, setMode] = useState('practice')
+  const [mode, setMode] = useState(searchParams.get('mode') === 'conversation' ? 'conversation' : 'practice')
   const [partner, setPartner] = useState('one')
   const [people, setPeople] = useState(2)
   const [loading, setLoading] = useState(false)

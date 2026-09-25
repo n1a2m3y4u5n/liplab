@@ -221,7 +221,7 @@ export default function Practice() {
 
   useEffect(() => {
     if (!currentScenario) {
-      navigate('/dashboard')
+      navigate('/learn/scenario', { replace: true })   // 상황 없이 들어오면 상황 선택으로(예전 /dashboard는 학습 경로로 되돌아갔다)
       return
     }
     loadVisemes()

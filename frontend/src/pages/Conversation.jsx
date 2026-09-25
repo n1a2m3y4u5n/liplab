@@ -44,7 +44,9 @@ export default function Conversation() {
 
   useEffect(() => {
     if (!currentScenario) {
-      navigate('/dashboard')
+      // 상황이 없으면 대화를 시작할 수 없다. 상황 선택(AI 대화 모드)으로 보낸다(예전에는 /dashboard → 학습 경로로 되돌아가
+      // 버튼이 아무 일도 안 하는 것처럼 보였다).
+      navigate('/learn/scenario?mode=conversation', { replace: true })
       return
     }
     // StrictMode(개발)에서 이 effect가 두 번 실행되면 첫 AI 말풍선이 2개 생긴다.
