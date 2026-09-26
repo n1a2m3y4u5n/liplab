@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import WatermarkCard from '../components/WatermarkCard'
 import { reviewAPI, learningAPI } from '../api'
 import { mergeBadges } from '../lib/badges'
+import useFocusTrap from '../hooks/useFocusTrap'
 
 /**
  * 과제 탭 (Figma 137:17 · 모바일 238:160) — 일일 과제 진행/보상 + 주간 도전 + 배지.
@@ -20,10 +22,12 @@ function hoursLeftToday() {
 }
 
 /** 과제 한 줄(139:18 / 238:254) — 완료 원 + 제목·n / n + 진행 막대 + 보상 칩. */
-function TaskRow({ label, cur, total, xp }) {
+function TaskRow({ label, cur, total, xp, onClick }) {
   const done = cur >= total
+  // onClick을 주면(오늘의 복습 정리 → 예정 복습) 같은 모양의 버튼으로 그린다.
+  const Row = onClick ? 'button' : 'div'
   return (
-    <div className="flex items-center gap-3 lg:gap-3.5">
+    <Row {...(onClick ? { type: 'button', onClick } : {})} className={`flex items-center gap-3 lg:gap-3.5 ${onClick ? 'w-full text-left' : ''}`}>
       {done ? (
         <img src="/ui/task-done.svg" alt="" className="size-6 shrink-0 lg:size-[26px]" />
       ) : (
@@ -40,7 +44,7 @@ function TaskRow({ label, cur, total, xp }) {
         </div>
       </div>
       <span className={`shrink-0 rounded-full px-[9px] py-[5px] text-[11px] font-bold leading-figma lg:px-3 lg:py-1.5 lg:text-[12px] ${done ? 'bg-primary-100 text-primary-700' : 'bg-surface-sunken text-ink-faint'}`}>+{xp} XP</span>
-    </div>
+    </Row>
   )
 }
 
@@ -96,18 +100,14 @@ function Badge({ b, onSelect }) {
  * 글로우 420(313:215) 가운데 배지 마크 130(313:224), 문구 묶음(313:225)은 글로우 아래쪽에 40px 겹친다.
  * 모바일 프레임이 없어 lg 미만은 같은 비율로 줄인다(글로우 260 · 마크 80 · 겹침 25).
  * 정확도 90%(획득)는 Figma가 글로우와 마크를 한 에셋으로 내보낸 lp-313-33-glow.svg를 그대로 쓴다.
- * 배경 클릭·ESC로 닫힘.
+ * 배경 클릭·ESC로 닫힘. 열린 동안 포커스를 모달 안에 가두고, 닫히면 누른 배지로 포커스를 돌려준다(hooks/useFocusTrap).
  */
 function BadgeDetailModal({ badge, onClose }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  const dialogRef = useFocusTrap(!!badge, onClose)
   if (!badge) return null
   const figmaMark = badge.shape === 'check' && badge.earned
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-overlay-deep/80 p-6 backdrop-blur-[9px]"
+    <div ref={dialogRef} className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-overlay-deep/80 p-6 backdrop-blur-[9px]"
       onClick={onClose} role="dialog" aria-modal="true" aria-label={badge.label}>
       <div className="flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
         {/* 글로우(링 3개·부드러운 빛·반짝이) 뒤 + 배지 마크 가운데 */}
@@ -146,6 +146,7 @@ function BadgeDetailModal({ badge, onClose }) {
 }
 
 export default function TasksPage() {
+  const navigate = useNavigate()
   const [due, setDue] = useState(null)
   const [ov, setOv] = useState(null)
   const [selectedBadge, setSelectedBadge] = useState(null)
@@ -166,7 +167,9 @@ export default function TasksPage() {
           <p className="text-[16px] text-ink lg:text-[17px]">오늘의 과제</p>
           <span className="text-[12px] text-ink-muted lg:text-[13px]">오늘 남은 시간 {hoursLeftToday()}시간</span>
         </div>
-        <TaskRow label="오늘의 복습 정리" cur={reviewDone} total={1} xp={10} />
+        {/* 예정 복습(입모양·단어, /api/review/due)이 남아 있으면 눌러서 그 복습 세션으로 간다(틀린 문장 목록에는 나오지 않는다) */}
+        <TaskRow label="오늘의 복습 정리" cur={reviewDone} total={1} xp={10}
+          onClick={due > 0 ? () => navigate('/review/scheduled') : undefined} />
         <TaskRow label="독화 학습 1회" cur={Math.min(1, ov?.today_read ?? 0)} total={1} xp={15} />
         <TaskRow label="학습 2회 채우기" cur={Math.min(2, ov?.today_sessions ?? 0)} total={2} xp={20} />
       </section>

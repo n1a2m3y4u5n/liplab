@@ -79,9 +79,10 @@ export default function Login({ initialMode = 'login' }) {
   const [err, setErr] = useState('')
   const signup = mode === 'signup'
 
-  const enter = async (data) => {
+  // 데모 기록 채우기는 공용 데모 계정에만 한다(로그인·회원가입 계정에 부르면 가짜 기록이 들어가고 예전 기록이 지워졌다).
+  const enter = async (data, { demo = false } = {}) => {
     setAuth(data.user, data.access_token)
-    try { await seedAPI.seedDemo() } catch { /* 무시 */ }
+    if (demo) { try { await seedAPI.seedDemo() } catch { /* 무시 */ } }
     navigate('/')
   }
   const submit = async (e) => {
@@ -98,7 +99,7 @@ export default function Login({ initialMode = 'login' }) {
   }
   const demo = async () => {
     setBusy(true); setErr('')
-    try { await enter(await authAPI.demoLogin()) }
+    try { await enter(await authAPI.demoLogin(), { demo: true }) }
     catch { setErr('데모 입장에 실패했어요.') } finally { setBusy(false) }
   }
   const toggle = () => {

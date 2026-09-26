@@ -186,8 +186,11 @@ export default function Practice() {
   // 테스트는 문장마다 유형이 다르다: 주관식(test) · 4지선다(test-multiple) · 서술형(essay)
   const qType = currentScenario?.qTypes?.[currentSentenceIndex]
   const effectiveMode = practiceMode === 'study' ? 'study' : (qType || 'test')
-  // 독화 복습(틀린 문장 다시 풀기)에서 넘어온 세션인지 — ReviewLanding이 심어둔 scenario_id로 판별
-  const isReviewSession = !!currentScenario?.scenario_id?.startsWith('mistake_review_')
+  // 복습에서 넘어온 세션인지는 심어 둔 scenario_id로 판별한다. 틀린 문장 다시 풀기(ReviewLanding, mistake_review_*)와
+  // 북마크 다시 연습(Bookmarks, bookmark_*). 나가기와 완료 뒤 '다음 레슨으로'는 학습 경로 대신 그 목록으로 돌아간다.
+  const scenarioId = String(currentScenario?.scenario_id || '')
+  const reviewReturn = scenarioId.startsWith('mistake_review_') ? '/review/mistakes'
+    : scenarioId.startsWith('bookmark_') ? '/review/saved' : null
 
   const [visemes, setVisemes] = useState([])
   const [isPlaying, setIsPlaying] = useState(false)
@@ -207,6 +210,9 @@ export default function Practice() {
   const [xpEarned, setXpEarned] = useState(0)                // 이번 레슨에서 서버가 준 XP 합(xp_gained)
   const lessonStartRef = useRef(Date.now())
   const [elapsedSec, setElapsedSec] = useState(0)
+  const [visemeError, setVisemeError] = useState(false)      // 입모양을 받지 못함 → 다시 받기 안내
+  const visemeReqRef = useRef(0)                             // 입모양 요청 순번(늦게 온 이전 문장의 응답은 버린다)
+  const answerShownRef = useRef(false)                       // 이 문장의 정답을 이미 보였는지(채점 결과에 정답이 나온다)
   const closeSign = useCallback(() => setSignOpen(false), [])
   const signRef = useFocusTrap(signOpen, closeSign)          // 수어 모달 포커스 트랩·Esc
 
@@ -237,34 +243,54 @@ export default function Practice() {
   useChoiceKeys(choices, (c) => setSelectedChoice(c),
     effectiveMode === 'test-multiple' && !!currentSentence && !result && !submitting && !signOpen)
 
+  // 지금 문장의 입모양을 받는다. 받기 전에 이전 문장 입모양을 비워, 실패해도 이전 문장의 입모양이 새 문장 문제로
+  // 재생되지 않게 한다. 실패하면 다시 받기 안내를 띄운다(다시 받기는 문항 상태를 그대로 두고 입모양만 받는다).
+  const fetchVisemes = async () => {
+    const req = ++visemeReqRef.current
+    setVisemes([])
+    setIsPlaying(false)
+    setVisemeError(false)
+    setLoading(true)
+    try {
+      const visemeData = await learningAPI.getVisemes(currentSentence)
+      if (req !== visemeReqRef.current) return
+      if (!Array.isArray(visemeData) || visemeData.length === 0) { setVisemeError(true); return }
+      setVisemes(visemeData)
+      setIsPlaying(true)
+    } catch (error) {
+      if (req !== visemeReqRef.current) return
+      console.error('Failed to load visemes:', error)
+      setVisemeError(true)
+    } finally {
+      if (req === visemeReqRef.current) {
+        setLoading(false)
+        setBooted(true)
+      }
+    }
+  }
+
   const loadVisemes = async () => {
     if (!currentSentence) {
+      visemeReqRef.current += 1   // 마지막 문장의 늦은 응답은 완료 화면 뒤에 쓰지 않는다
       setLoading(false)
       setBooted(true)
       return
     }
 
-    setLoading(true)
     setResult(null)
     setHintLevel(0)
     setRevealedTextIndex(-1)
     setStartTime(Date.now())
-
-    try {
-      const visemeData = await learningAPI.getVisemes(currentSentence)
-      setVisemes(visemeData)
-      setIsPlaying(true)
-    } catch (error) {
-      console.error('Failed to load visemes:', error)
-    } finally {
-      setLoading(false)
-      setBooted(true)
-    }
+    answerShownRef.current = false
+    await fetchVisemes()
   }
 
   const handleSubmitAnswer = async (userAnswer) => {
     setSubmitting(true)
     const timeSpent = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0
+    // 정답을 이미 본 뒤의 제출(같은 문장 다시 도전)과 힌트 3(발음 자막)으로 문장을 본 뒤의 제출은 연습으로만 채점한다.
+    // 서버는 practice_only면 점수만 주고 3단계 숙달·XP에는 넣지 않는다. 이 레슨의 정답률에도 넣지 않는다.
+    const practiceOnly = answerShownRef.current || hintLevel >= 3
 
     try {
       const response = await learningAPI.submitProgress({
@@ -274,12 +300,16 @@ export default function Practice() {
         time_spent_seconds: timeSpent,
         situation: currentScenario.situation,
         difficulty_level: currentScenario.level,
+        ...(practiceOnly ? { practice_only: true } : {}),
       })
 
       setResult(response)
+      answerShownRef.current = true   // 채점 결과와 함께 정답 문장이 보인다
       setIsPlaying(false)
+      // 4지선다는 고른 문장을 답으로 보내 서버가 음운 유사도로 채점한다. 화면은 같은 문장인지로 정오를 가르므로 비슷한 오답
+      // 보기가 서버에서 통과 점수를 받아 3단계 숙달·XP에 들어갈 수 있다. 보기 정오를 받는 서버 필드가 없어 프론트만으로는 못 고친다.
       const correct = effectiveMode === 'test-multiple' ? userAnswer === currentSentence : (response.score ?? 0) >= CORRECT_SCORE
-      setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
+      if (!practiceOnly) setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
       setXpEarned((x) => x + (response.xp_gained || 0))
 
       const updates = {}
@@ -315,7 +345,7 @@ export default function Practice() {
 
   const handleFinish = () => {
     resetPractice()
-    navigate(isReviewSession ? '/review/mistakes' : '/learn/path')
+    navigate(reviewReturn || '/learn/path')
   }
 
   const showNextHint = () => {
@@ -361,7 +391,7 @@ export default function Practice() {
     const accuracy = tally.n ? Math.round((tally.correct / tally.n) * 100) : null
     return (
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
-        onNext={() => { resetPractice(); navigate(isReviewSession ? '/review/mistakes' : '/learn/scenario') }}
+        onNext={() => { resetPractice(); navigate(reviewReturn || '/learn/scenario') }}
         onHome={() => { resetPractice(); navigate('/learn/path') }} />
     )
   }
@@ -432,6 +462,14 @@ export default function Practice() {
               label={isBookmarked ? '이 문장 북마크 해제' : '이 문장 북마크 저장'}
               className="absolute right-0 top-[14px] lg:top-[21px]" />
           </div>
+
+          {/* 입모양을 받지 못했을 때: 이전 문장 입모양은 비운 채 다시 받기를 둔다(문항 상태는 그대로) */}
+          {visemeError && (
+            <div role="alert" className="flex items-center justify-between gap-3 rounded-14 border-2 border-bad-line bg-bad-tint px-4 py-2.5 text-[13.5px] font-bold text-bad-text">
+              입모양을 불러오지 못했어요.
+              <button type="button" onClick={fetchVisemes} className="shrink-0 underline">다시 불러오기</button>
+            </div>
+          )}
 
           {multiple ? (
             <>

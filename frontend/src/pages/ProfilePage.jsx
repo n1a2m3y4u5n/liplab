@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import Modal from '../components/Modal'
 import GuideModal from '../components/GuideModal'
-import useStore from '../store/useStore'
+import useStore, { clearUserLocalData } from '../store/useStore'
 import { accountAPI, learningAPI, reviewAPI } from '../api'
 import { levelProgress } from '../lib/level'
-import { mergeBadges, clearSignExplored } from '../lib/badges'
+import { mergeBadges } from '../lib/badges'
 
 /**
  * 프로필 탭 (Figma 107:16 · 모바일 241:34) — 내 프로필(그라데이션 3D 카드) + 통계 3열 + 설정 리스트.
@@ -62,8 +62,11 @@ export default function ProfilePage() {
   const statistics = useStore((s) => s.statistics)
   const logout = useStore((s) => s.logout)
   const updateUser = useStore((s) => s.updateUser)
+  const resetPractice = useStore((s) => s.resetPractice)
   const [modal, setModal] = useState(null)     // 'account' | 'reset'
   const [guideOpen, setGuideOpen] = useState(false)  // 사용법 가이드 모달
+  // 가이드 닫기는 한 번만 만든다. 렌더마다 새 함수를 넘기면 가이드가 보던 탭을 첫 탭으로 되돌렸다.
+  const closeGuide = useCallback(() => setGuideOpen(false), [])
   const [busy, setBusy] = useState(false)
   const [form, setForm] = useState({ username: '', email: '', current: '', next: '', emailPw: '', delPw: '' })
   const [edit, setEdit] = useState(null)        // 'username' | 'email' | null
@@ -77,6 +80,9 @@ export default function ProfilePage() {
   const [pilotCode, setPilotCode] = useState('')
   const [pilotMsg, setPilotMsg] = useState('')
   useEffect(() => { accountAPI.pilotStatus().then(setPilot).catch(() => setPilot(null)) }, [])
+  // 통계 줄의 학습한 날·학습 회차는 분석 요약(/api/analysis/overview)에서 읽는다. 불러오기 전 undefined, 실패 null.
+  const [summary, setSummary] = useState(undefined)
+  useEffect(() => { learningAPI.getAnalysisOverview().then(setSummary).catch(() => setSummary(null)) }, [])
   const joinPilot = async () => {
     if (!pilotCode.trim()) return
     setBusy(true); setPilotMsg('')
@@ -141,7 +147,9 @@ export default function ProfilePage() {
     try {
       // 목록에 적힌 범위(학습 기록·단계 진도·복습 목록·배지·XP)를 서버가 한 번에 지운다.
       await accountAPI.resetLearning()
-      clearSignExplored()
+      // 브라우저가 판정하는 수어 탐험 배지 등 계정별 저장값과 메모리 속 연습 세션도 처음으로(store/useStore.js)
+      clearUserLocalData()
+      resetPractice()
       setModal(null)
       window.location.assign('/learn/path')   // 헤더의 XP·연속 학습까지 새로 읽도록 다시 불러온다
     } catch (e) {
@@ -163,8 +171,10 @@ export default function ProfilePage() {
   const lp = levelProgress(level, xp)
   const name = user?.username || '게스트'
   const email = user?.email || ''
-  const days = Math.max(0, user?.streak_count || statistics?.days_learned || 0)
-  const lessons = statistics?.lessons_completed ?? statistics?.completed_lessons ?? '—'
+  // 통계 줄: 예전 값(스토어 statistics)은 연결되지 않은 대시보드만 채워, '완료한 레슨'은 늘 비고 '학습한 날'은 연속 학습 수였다.
+  // 학습한 날 = 회차를 시작한 현지 날짜 수(session_days), 레슨 완료 수는 서버에 없어 같은 요약의 회차 수를 '학습 회차'로 보인다.
+  const statVal = (v, unit) => (typeof v === 'number' ? `${v.toLocaleString()}${unit}` : summary === undefined ? '…' : '–')
+  const studyDays = summary?.session_days ? Object.keys(summary.session_days).length : null
 
   // 사라지는 기록(222:207) — 불러오기 전 '…', 못 읽은 값은 '–'
   const n = (v) => (typeof v === 'number' ? v.toLocaleString() : lost ? '–' : '…')
@@ -202,9 +212,9 @@ export default function ProfilePage() {
 
       {/* 통계(107:165 / 241:133) — 모바일은 흰 카드, 데스크톱은 카드 없이 */}
       <section className="flex w-full items-center rounded-16 border-2 border-line bg-white py-4 lg:rounded-none lg:border-0 lg:bg-transparent lg:py-2">
-        <StatCol icon="/ui/stat-calendar.svg" label="학습한 날" value={`${days}일`} color="text-stat-xp" />
+        <StatCol icon="/ui/stat-calendar.svg" label="학습한 날" value={statVal(studyDays, '일')} color="text-stat-xp" />
         <span className="h-[34px] w-[1.5px] shrink-0 bg-line lg:h-[46px]" />
-        <StatCol icon="/ui/stat-check.svg" label="완료한 레슨" value={typeof lessons === 'number' ? `${lessons}개` : lessons} color="text-stat-accuracy" />
+        <StatCol icon="/ui/stat-check.svg" label="학습 회차" value={statVal(summary?.sessions, '회')} color="text-stat-accuracy" />
         <span className="h-[34px] w-[1.5px] shrink-0 bg-line lg:h-[46px]" />
         <StatCol icon="/ui/stat-starplus.svg" label="누적 XP" value={xp.toLocaleString()} color="text-stat-streak" />
       </section>
@@ -299,6 +309,7 @@ export default function ProfilePage() {
         <div className="h-[1.5px] w-full bg-line" />
         {/* Danger zone(220:220) — 로그아웃 · 계정 삭제 */}
         <div className="flex w-full gap-2.5">
+          {/* 스토어 logout이 연습 세션(메모리)과 계정별 브라우저 저장값까지 지운다(store/useStore.js) */}
           <button type="button" onClick={() => { logout(); navigate('/learn/path') }}
             className="btn-secondary flex-1 py-[15px] text-[15px]">
             로그아웃
@@ -360,7 +371,7 @@ export default function ProfilePage() {
       </Modal>
 
       {/* 사용법 가이드 모달 (Figma 338:57) — /guide 페이지 대신 모달로 연다 */}
-      <GuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
+      <GuideModal open={guideOpen} onClose={closeGuide} />
     </AppShell>
   )
 }

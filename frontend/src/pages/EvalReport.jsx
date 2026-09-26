@@ -170,7 +170,9 @@ export default function EvalReport() {
     } catch { /* 내려받기 실패는 조용히 무시 */ } finally { setDl(false) }
   }
 
+  // 누를 때마다 결과지를 새로 받는다. 이전 결과지를 먼저 비워, 두 번째 인쇄가 새 결과지를 받기 전에 지난 것을 인쇄하지 않게 한다.
   const printReport = async () => {
+    setReport(null)
     setPrinting(true)
     try { setReport(await evalAPI.report()) } catch { setPrinting(false) }
   }

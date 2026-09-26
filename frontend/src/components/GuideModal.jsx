@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ModalClose } from './Modal'
+import useFocusTrap from '../hooks/useFocusTrap'
 import TeamAvatar from './TeamAvatar'
 import { TEAM, REPO_URL } from '../config/team'
 
@@ -285,20 +286,19 @@ const BODY = { overview: OverviewBody, screens: ScreensBody, tips: TipsBody, tea
 
 export default function GuideModal({ open, onClose }) {
   const [activeKey, setActiveKey] = useState(TABS[0].key)
+  // 포커스 가두기·ESC 닫기·닫으면 연 버튼으로 포커스 복원(hooks/useFocusTrap)
+  const dialogRef = useFocusTrap(open, onClose)
 
-  // 열릴 때 첫 탭으로 리셋 + ESC 닫기 + 배경 스크롤 잠금.
+  // 열릴 때 첫 탭으로 리셋 + 배경 스크롤 잠금. onClose에 기대지 않아, 부모가 다시 그려져도 보던 탭이 첫 탭으로 돌아가지 않는다.
   useEffect(() => {
     if (!open) return undefined
     setActiveKey(TABS[0].key)
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
-      document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
   const active = TABS.find((t) => t.key === activeKey) || TABS[0]
@@ -310,7 +310,7 @@ export default function GuideModal({ open, onClose }) {
     }`
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 p-4"
+    <div ref={dialogRef} className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 p-4"
       onClick={onClose} role="dialog" aria-modal="true" aria-label="사용법 가이드">
       <div
         className="flex h-[680px] max-h-[90vh] w-full max-w-[1080px] flex-col overflow-hidden rounded-24 bg-white shadow-modal md:flex-row"

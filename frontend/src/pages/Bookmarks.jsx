@@ -40,7 +40,9 @@ export default function Bookmarks() {
       scenario_id: `bookmark_${bm.id}`,
     }
     setScenario(scenario, 'test')
-    navigate('/practice')
+    // 복습 진입 표시(state.review): 3단계가 잠겨 있어도 StageGate가 막지 않게 한다(ReviewLanding과 같은 방식).
+    // Practice는 scenario_id(bookmark_*)로 북마크 복습임을 알고, 나가면 이 목록(/review/saved)으로 돌아온다.
+    navigate('/practice', { state: { review: true } })
   }
 
   return (

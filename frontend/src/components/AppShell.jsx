@@ -115,16 +115,18 @@ export function RailStats() {
   )
 }
 
-function TaskItem({ label, cur, total }) {
+function TaskItem({ label, cur, total, onClick }) {
   const done = cur >= total
+  // 누르면 해당 학습으로 가는 과제(오늘의 복습 정리 → 예정 복습)는 같은 모양의 버튼으로 그린다.
+  const Row = onClick ? 'button' : 'div'
   return (
-    <div className="flex items-center gap-3">
+    <Row {...(onClick ? { type: 'button', onClick } : {})} className={`flex items-center gap-3 ${onClick ? 'w-full text-left' : ''}`}>
       {done
         ? <img src="/ui/lp-318-33-checkbox-on.svg" alt="" className="size-[22px] shrink-0" />
         : <span className="size-[22px] shrink-0 rounded-[7px] border-2 border-line" />}
       <span className="min-w-0 flex-1 text-[15px] font-medium leading-figma text-ink-muted">{label}</span>
       <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted">{cur}/{total}</span>
-    </div>
+    </Row>
   )
 }
 
@@ -137,7 +139,9 @@ export function RailTasksCard({ due, overview }) {
         <p className="text-[17px] text-ink">오늘의 과제</p>
         <button type="button" onClick={() => navigate('/tasks')} className="text-[14px] text-track">모두 보기</button>
       </div>
-      <TaskItem label="오늘의 복습 정리" cur={due === 0 ? 1 : 0} total={1} />
+      {/* 예정 복습(입모양·단어, /api/review/due)이 남아 있으면 눌러서 그 복습 세션으로 간다(틀린 문장 목록에는 나오지 않는다) */}
+      <TaskItem label="오늘의 복습 정리" cur={due === 0 ? 1 : 0} total={1}
+        onClick={due > 0 ? () => navigate('/review/scheduled') : undefined} />
       <TaskItem label="독화 학습 1회" cur={Math.min(1, overview?.today_read ?? 0)} total={1} />
       <TaskItem label="학습 2회 채우기" cur={Math.min(2, overview?.today_sessions ?? 0)} total={2} />
     </div>
@@ -154,7 +158,8 @@ export function RailReviewCard({ due, marks }) {
         <span className="h-[18px] w-[1.5px] shrink-0 rounded-[1px] bg-line" />
         <p className="text-[17px] text-ink">북마크 <span className="text-[22px] text-bookmark">{marks ?? '…'}</span><span className="text-bookmark">개</span></p>
       </div>
-      <button type="button" onClick={() => navigate('/review')} className="btn-primary btn-md w-full">복습하기</button>
+      {/* 여기 오답 수는 예정 복습(입모양·단어, /api/review/due)이라, 남아 있으면 그 복습 세션으로 바로 간다. 없으면 복습 탭으로. */}
+      <button type="button" onClick={() => navigate(due > 0 ? '/review/scheduled' : '/review')} className="btn-primary btn-md w-full">복습하기</button>
     </div>
   )
 }
@@ -325,7 +330,8 @@ export default function AppShell({ children, active, rail = 'default', rightRail
       </nav>
 
       {/* 본문 — 모바일 232:51(좌우 18 · 간격 14), 데스크톱 58:11(32 · 20). 모바일 하단은 탭 바 높이만큼 비운다. */}
-      <main className="flex min-w-0 flex-1 flex-col gap-3.5 px-[18px] pb-[calc(var(--tabbar-h)+18px+env(safe-area-inset-bottom))] pt-5 lg:gap-5 lg:px-8 lg:pb-10 lg:pt-8">
+      {/* id="main-content"는 '본문으로 건너뛰기'(App.jsx SkipLink)의 대상이다. */}
+      <main id="main-content" className="flex min-w-0 flex-1 flex-col gap-3.5 px-[18px] pb-[calc(var(--tabbar-h)+18px+env(safe-area-inset-bottom))] pt-5 lg:gap-5 lg:px-8 lg:pb-10 lg:pt-8">
         {(title || description) && (
           <header className="flex flex-col gap-2 leading-figma">
             {/* 제목 줄(453:82 Page head): 제목 + 오른쪽 끝 나가기 X */}

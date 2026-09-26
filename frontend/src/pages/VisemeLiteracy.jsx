@@ -11,6 +11,7 @@ import BookmarkButton from '../components/BookmarkButton'
 import useBookmark from '../lib/useBookmark'
 import WatermarkCard from '../components/WatermarkCard'
 import LoadingScreen from '../components/LoadingScreen'
+import { LoadFailed } from '../components/ErrorScreen'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 import useChoiceKeys from '../lib/useChoiceKeys'
 
@@ -129,29 +130,36 @@ export default function VisemeLiteracy() {
   const [params] = useSearchParams()
   // 학습 자료는 ?tab=learn 또는 ?v=그룹(약점 입모양 바로가기)일 때만 — 기본은 레슨(인지퀴즈)
   const learnMode = params.get('tab') === 'learn' || params.get('v') != null
+  // 나가기: 연습 탭 '입모양 교실' 카드(?tab=learn, PracticeHub)로 들어왔으면 연습 탭으로, 그 밖(레슨·약점 바로가기 ?v=)은 학습 경로로
+  const exitTo = params.get('tab') === 'learn' ? '/practice/hub' : '/learn/path'
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [introDone, setIntroDone] = useState(false)
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true)
     curriculumAPI.getVisemeLessons()
       .then(setData)
       .catch(() => setData(null))
       .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    load()
     const t = setTimeout(() => setIntroDone(true), INTRO_MS)
     return () => clearTimeout(t)
-  }, [])
+  }, [load])
 
   // 레슨 시작 전 = 독화 트랙 로딩(223:30 / 모바일 243:81). 학습 자료는 레슨이 아니라 기본 로딩(256:34).
   if (loading) return learnMode ? <LoadingScreen /> : <LoadingScreen variant="brand" track="perception" />
   if (!learnMode && !introDone) return <LoadingScreen variant="brand" track="perception" />
-  if (!data) return <div className="flex min-h-[100dvh] items-center justify-center bg-page text-[15px] text-ink-muted">콘텐츠를 불러오지 못했어요.</div>
+  if (!data) return <LoadFailed message="콘텐츠를 불러오지 못했어요." onRetry={load} onExit={() => navigate(exitTo)} />
 
   if (learnMode) {
     return (
       <div className="min-h-[100dvh] bg-page">
         <main className="mx-auto max-w-5xl px-[18px] pb-12 pt-[18px] lg:px-6 lg:pt-7">
-          <button type="button" onClick={() => navigate('/learn/path')} aria-label="나가기" className="mb-5 block">
+          <button type="button" onClick={() => navigate(exitTo)} aria-label="나가기" className="mb-5 block">
             <img src="/ui/lp-91-12-close.svg" alt="" className="size-8 lg:size-9" />
           </button>
           <LearnPanel data={data} />

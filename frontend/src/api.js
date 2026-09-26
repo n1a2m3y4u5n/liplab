@@ -97,6 +97,8 @@ export const learningAPI = {
     return response.data
   },
 
+  // progressData.practice_only(선택): 정답을 본 뒤의 다시 풀기·자막 힌트 뒤 제출이면 true를 넣는다.
+  // 서버가 점수만 주고 3단계 숙달·XP에는 넣지 않는다. 다른 호출은 이 필드 없이 그대로 보낸다.
   submitProgress: async (progressData) => {
     const response = await api.post('/progress', progressData)
     return response.data
@@ -196,7 +198,10 @@ export const curriculumAPI = {
 }
 
 export const scoreAPI = {
-  score: async (correct, user_answer) => (await api.post('/score', { correct, user_answer })).data,
+  // practiceOnly(선택): 문장을 미리 본 뒤의 답('무슨 말인지 보기')이면 true. 서버가 점수만 주고 4단계 숙달·XP에는 넣지 않는다.
+  score: async (correct, user_answer, { practiceOnly = false } = {}) => (await api.post('/score', {
+    correct, user_answer, ...(practiceOnly ? { practice_only: true } : {}),
+  })).data,
 }
 
 export const evalAPI = {
