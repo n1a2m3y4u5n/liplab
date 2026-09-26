@@ -225,7 +225,7 @@ async def _gloss_via_llm(text: str) -> Optional[Dict]:
         return None
     try:
         from anthropic import AsyncAnthropic
-        client = AsyncAnthropic(api_key=api_key)
+        client = AsyncAnthropic(api_key=api_key, timeout=30.0, max_retries=1)   # llm_service와 같은 제한
         response = await client.messages.create(
             model=_SIGN_MODEL,
             max_tokens=800,
@@ -273,8 +273,11 @@ async def translate_to_ksl(text: str) -> Dict:
 
     tokens: List[Dict] = []
     matched = fingerspelled = 0
-    for item in parsed.get("gloss", []):
-        word = (item.get("word") or "").strip()
+    gloss = parsed.get("gloss") if isinstance(parsed, dict) else None
+    for item in gloss if isinstance(gloss, list) else []:
+        if not isinstance(item, dict):   # 모델이 문자열·숫자 항목을 내면 건너뛴다(예전에는 500)
+            continue
+        word = str(item.get("word") or "").strip()
         if not word:
             continue
 

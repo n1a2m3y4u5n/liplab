@@ -2,6 +2,7 @@
 Advanced Scoring Algorithm with Phonological Similarity Weighting
 Evaluates user responses using articulatory feature-based partial credit
 """
+import unicodedata
 from typing import Dict, List, Optional, Tuple
 from engine import decompose_hangul, VISEME_MAP, get_viseme_feature, to_pronounced_syllables
 
@@ -223,7 +224,8 @@ def calculate_jamo_score(correct: List[Tuple], user: List[Tuple]) -> Dict:
         "phoneme_accuracy": {
             "initial": round(initial_matches / total_initials * 100, 1) if total_initials > 0 else 0,
             "medial": round(medial_matches / total_medials * 100, 1) if total_medials > 0 else 0,
-            "final": round(final_matches / total_finals * 100, 1) if total_finals > 0 else 0,
+            # 정답에 받침이 없으면 틀릴 받침도 없다(예전에는 0이라 만점 답에도 "받침 연습" 팁이 떴다)
+            "final": round(final_matches / total_finals * 100, 1) if total_finals > 0 else 100.0,
         }
     }
 
@@ -390,6 +392,9 @@ async def calculate_score(correct: str, user_answer: str, db=None) -> Dict:
         - feedback: Human-readable feedback
         - features: Mapping of viseme IDs to phonological features
     """
+    # 자모가 분해된(NFD) 한글도 같은 글자로 본다(예전에는 맞는 답이 0점이었다)
+    correct = unicodedata.normalize("NFC", correct or "")
+    user_answer = unicodedata.normalize("NFC", user_answer or "")
     # Normalize inputs
     correct_clean = correct.strip().replace(" ", "")
     user_clean = user_answer.strip().replace(" ", "")

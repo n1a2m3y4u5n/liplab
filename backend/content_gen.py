@@ -51,7 +51,9 @@ async def generate_words(n: int = 10, max_syllable: int = 3, avoid: List[str] = 
         f"제외: {', '.join(avoid[:50]) if avoid else '(없음)'}\n"
         f'반드시 JSON만 출력: {{"items": ["단어", ...]}} — 정확히 {n}개.'
     )
-    return await _call(system)
+    # 문장처럼 단어도 규칙 게이트(축 G)를 거친다. 예전에는 단어만 검사 없이 연습 화면에 나갔다.
+    from content_rules import check_word
+    return [w for w in await _call(system) if isinstance(w, str) and check_word(w, max_syllable=max_syllable)[0]]
 
 
 async def generate_sentences(n: int = 8, avoid: List[str] = None, with_intonation: bool = False) -> List[dict]:

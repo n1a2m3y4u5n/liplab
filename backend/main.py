@@ -135,6 +135,27 @@ async def _security_headers(request, call_next):
     return resp
 
 
+# 요청 본문 상한. FastAPI는 인증·속도 제한보다 먼저 본문을 모두 읽으므로(JSON은 메모리, 멀티파트는 임시 파일),
+# 로그인 없이도 아주 큰 요청 하나로 기계가 멈출 수 있었다. Content-Length로 먼저 거른다(오디오 10MB 상한보다 조금 크게).
+_MAX_BODY_MULTIPART = 12 * 1024 * 1024
+_MAX_BODY_OTHER = 2 * 1024 * 1024
+
+
+@app.middleware("http")
+async def _limit_body(request, call_next):
+    cl = request.headers.get("content-length")
+    if cl and cl.isdigit():
+        cap = _MAX_BODY_MULTIPART if request.headers.get("content-type", "").startswith("multipart/") else _MAX_BODY_OTHER
+        if int(cl) > cap:
+            return _JSONResponse(status_code=413, content={"detail": "요청이 너무 커요."})
+    return await call_next(request)
+
+
+# 서버 추론(발음 채점·음성구동 아바타·전사) 동시 실행 수. 추론 하나가 수백 MB를 더 쓰므로 여러 개가 겹치면 4GB 기계가
+# 멈출 수 있어 차례로 돌린다(요청은 기다렸다 처리된다). LIPLAB_ML_CONCURRENCY로 늘릴 수 있다.
+_ML_SEM = asyncio.Semaphore(max(1, int(os.getenv("LIPLAB_ML_CONCURRENCY", "1") or 1)))
+
+
 # 업로드 상한(§4.9) — audio.read()로 전체를 메모리에 적재하므로 상한이 없으면 DoS 소지.
 _MAX_AUDIO_BYTES = 10 * 1024 * 1024  # 10MB
 
@@ -372,7 +393,11 @@ async def account_delete(req: AccountDeleteReq, confirm: bool = False,
 # Core API Endpoints
 # ============================================
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+# 채점할 글자 수 상한. 자모 정렬이 두 문장 길이의 곱만큼 표를 만들고 이벤트 루프에서 돌아, 아주 긴 입력 하나로
+# 모든 요청이 멈췄다(1500자끼리 약 1.5~3.8초, 더 길면 수 GB). 앱의 문장은 수십 자라 300자면 넉넉하다.
+_TEXT_MAX = 300
 from typing import List, Optional
 
 
@@ -437,6 +462,9 @@ async def account_change_password(req: PasswordChangeReq,
         raise HTTPException(status_code=403, detail="현재 비밀번호가 일치하지 않습니다.")
     if len(req.new_password or "") < 8:
         raise HTTPException(status_code=400, detail="새 비밀번호는 8자 이상이어야 합니다.")
+    from auth import password_fits, PASSWORD_TOO_LONG
+    if not password_fits(req.new_password):
+        raise HTTPException(status_code=400, detail=PASSWORD_TOO_LONG)
     current_user.hashed_password = get_password_hash(req.new_password)
     # 토큰 버전을 올려 다른 기기·탈취된 토큰을 모두 무효화하고, 이 기기에는 새 토큰을 준다.
     current_user.token_version = (current_user.token_version or 0) + 1
@@ -460,12 +488,13 @@ class ScenarioResponse(BaseModel):
 
 
 class ProgressSubmission(BaseModel):
-    scenario_id: str
-    sentence: str
-    user_answer: str
-    time_spent_seconds: int
-    situation: str
-    difficulty_level: int
+    scenario_id: str = Field(..., max_length=200)
+    sentence: str = Field(..., max_length=_TEXT_MAX)
+    user_answer: str = Field(..., max_length=_TEXT_MAX)
+    time_spent_seconds: int      # 처리부에서 0~3600으로 맞춘다(음수면 시간 보너스로 XP가 수만씩 붙었다)
+    situation: str = Field(..., max_length=200)
+    difficulty_level: int        # 처리부에서 1~5로 맞춘다
+    practice_only: bool = False  # 정답을 본 뒤의 다시 풀기·자막 힌트 뒤 제출: 점수만 돌려주고 기록·숙달·XP에는 넣지 않는다
 
 
 class ProgressResponse(BaseModel):
@@ -523,7 +552,8 @@ async def avatar_audio2face(audio: UploadFile = File(...), current_user=Depends(
         raise HTTPException(status_code=503, detail="서버에 음성구동 아바타 모델(A4)이 없습니다.")
     data = await _read_audio_limited(audio)
     try:
-        result = await asyncio.to_thread(audio2face.blendshapes_from_audio, data)
+        async with _ML_SEM:
+            result = await asyncio.to_thread(audio2face.blendshapes_from_audio, data)
     except Exception as e:
         logging.getLogger("liplab").exception("audio2face 추론 실패")
         raise HTTPException(status_code=500, detail="음성구동 처리에 실패했습니다.")
@@ -561,12 +591,19 @@ async def get_scenario(
 # ── 공용 학습 보상 — 모든 활동(문장·인지·단어·문맥·복습·대화)이 XP·스트릭·취약 입모양을
 #    동일하게 갱신하도록 한 곳에 모은다. 예전엔 문장 연습만 XP/스트릭을 줘서, 인지·단어·복습만
 #    한 날은 스트릭이 끊기고 다른 활동이 개인화(WeakViseme) 데이터에 전혀 기여하지 못했다.
+def _kst_today():
+    """오늘 날짜(한국 시간). 서버(fly)는 UTC라 date.today()를 쓰면 오전 9시 전 학습이 전날로 잡혀, 스트릭·복습일이
+    기기 시간을 쓰는 분석 탭과 어긋났다. 서비스 대상이 한국이라 KST(UTC+9)로 고정한다."""
+    from datetime import datetime as _dtm, timedelta as _td
+    return (_dtm.utcnow() + _td(hours=9)).date()
+
+
 def _award_xp_and_streak(user, base_xp: int, bonus: int = 0) -> dict:
     """스트릭(하루 1회 갱신·idempotent) + XP + 레벨업을 계산해 user에 반영. 커밋은 호출부.
     base_xp는 활동별 기본 XP(스트릭 배수 적용 전), bonus는 배수 미적용 가산점(예: 시간 보너스)."""
     from datetime import date, timedelta
-    today_str = date.today().isoformat()
-    yesterday_str = (date.today() - timedelta(days=1)).isoformat()
+    today_str = _kst_today().isoformat()
+    yesterday_str = (_kst_today() - timedelta(days=1)).isoformat()
     last_date = user.last_practice_date
     if last_date is None or last_date < yesterday_str:
         user.streak_count = 1            # 첫 학습 또는 스트릭 끊김
@@ -603,7 +640,7 @@ async def _bump_weak_visemes(user_id: int, viseme_ids, error_ids, features: dict
             continue
         r = await db.execute(select(WeakViseme).where(
             WeakViseme.user_id == user_id, WeakViseme.viseme_id == vid))
-        wv = r.scalar_one_or_none()
+        wv = r.scalars().first()
         if wv is None:
             wv = WeakViseme(user_id=user_id, viseme_id=vid, error_count=0,
                             total_attempts=0,
@@ -641,6 +678,17 @@ async def submit_progress(
             user_answer=submission.user_answer,
             db=db
         )
+        time_spent = max(0, min(int(submission.time_spent_seconds), 3600))
+        difficulty = max(1, min(int(submission.difficulty_level), 5))
+        if submission.practice_only:
+            # 정답을 이미 본 제출은 숙달(해금)·XP·연습 기록에 넣지 않는다(다시 풀기 네 번이면 3단계가 숙달되던 문제)
+            award = _award_xp_and_streak(current_user, 0)
+            await db.commit()
+            return ProgressResponse(
+                status="practice_only", score=scoring_result["score"], new_level=award["new_level"],
+                old_level=award["old_level"], xp_gained=0, streak_count=award["streak_count"],
+                streak_multiplier=award["streak_multiplier"], feedback=scoring_result.get("feedback", {}),
+                phoneme_accuracy=scoring_result.get("phoneme_accuracy", {}))
 
         # Save progress to database
         from database import Progress
@@ -651,8 +699,8 @@ async def submit_progress(
             sentence=submission.sentence,
             user_answer=submission.user_answer,
             score=scoring_result["score"],
-            time_spent_seconds=submission.time_spent_seconds,
-            difficulty_level=submission.difficulty_level,
+            time_spent_seconds=time_spent,
+            difficulty_level=difficulty,
             situation=submission.situation,
             viseme_errors=scoring_result.get("viseme_errors", []),
             phoneme_accuracy=scoring_result.get("phoneme_accuracy", {})
@@ -671,14 +719,15 @@ async def submit_progress(
             scoring_result.get("features", {}), db, when=progress.created_at)
 
         # XP·스트릭·레벨 — 공용 보상 (문장 연습은 시간 보너스를 가산)
-        base_xp = int(scoring_result["score"] * submission.difficulty_level * 2)
-        time_bonus = max(0, 50 - submission.time_spent_seconds // 2)
+        base_xp = int(scoring_result["score"] * difficulty * 2)
+        time_bonus = max(0, 50 - time_spent // 2)
         award = _award_xp_and_streak(current_user, base_xp, bonus=time_bonus)
 
-        # 3단계(문장 연습) 숙달 갱신 — 점수 PASS 이상이면 성공 1회로 누적(4단계 해금 근거)
-        await _bump_stage_progress(
-            current_user.id, 3, scoring_result["score"] >= _STAGE3_PASS,
-            _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db)
+        # 3단계(문장 연습) 숙달 갱신: 점수 PASS 이상이면 성공 1회로 누적(4단계 해금 근거). 잠긴 단계면 넣지 않는다
+        if await _stage_open(current_user, 3, db):
+            await _bump_stage_progress(
+                current_user.id, 3, scoring_result["score"] >= _STAGE3_PASS,
+                _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db)
 
         await db.commit()
 
@@ -755,8 +804,8 @@ async def get_statistics(
 # ============================================
 
 class BookmarkCreate(BaseModel):
-    sentence: str
-    situation: str = ""
+    sentence: str = Field(..., max_length=_TEXT_MAX)
+    situation: str = Field("", max_length=200)
     level: int = 1
     domain: str = "read"   # read | speak — 두 기둥 공통 북마크
 
@@ -931,6 +980,8 @@ async def reset_analysis(current_user=Depends(get_current_user), db: AsyncSessio
     """Clear all practice history for the current user to start fresh."""
     from database import Progress, WeakViseme
     from sqlalchemy import delete as sql_delete
+    if (current_user.email or "").lower() == _DEMO_EMAIL:   # 공용 계정: 한 사람이 지우면 모든 방문자의 기록이 사라진다
+        raise HTTPException(status_code=403, detail="공용 데모 계정은 초기화할 수 없어요.")
     await db.execute(sql_delete(WeakViseme).where(WeakViseme.user_id == current_user.id))
     await db.execute(sql_delete(Progress).where(Progress.user_id == current_user.id))
     await db.commit()
@@ -944,7 +995,7 @@ async def get_calendar(current_user=Depends(get_current_user), db: AsyncSession 
     from sqlalchemy import select, func
     import datetime as dt
 
-    cutoff = (dt.date.today() - dt.timedelta(days=90)).isoformat()
+    cutoff = (_kst_today() - dt.timedelta(days=90)).isoformat()
     result = await db.execute(
         select(
             func.date(Progress.created_at).label("day"),
@@ -1174,7 +1225,9 @@ async def get_analysis_overview(tz_offset_min: int = -540, current_user=Depends(
     now = dt.datetime.utcnow()
     today_local = _an.to_local(now, tz).date().isoformat()
     reviews = (await db.execute(select(ReviewItem).where(ReviewItem.user_id == uid))).scalars().all()
-    reviews_done = sum(1 for r in reviews if (r.repetitions or 0) > 0 or (r.lapses or 0) > 0)
+    # 복습을 실제로 한 항목: 연속 성공이 있거나 등록 뒤 다시 틀린 항목. 첫 오답으로 등록될 때 lapses가 1이라
+    # 예전 조건(lapses > 0)이면 복습을 한 번도 안 해도 '복습왕' 배지가 나왔다.
+    reviews_done = sum(1 for r in reviews if (r.repetitions or 0) > 0 or (r.lapses or 0) > 1)
     reviews_overdue = sum(1 for r in reviews if r.due_date and r.due_date < today_local)
 
     return _an.overview(
@@ -1264,7 +1317,7 @@ async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
     from sqlalchemy import select
     r = await db.execute(select(StageProgress).where(
         StageProgress.user_id == user_id, StageProgress.stage == stage))
-    sp = r.scalar_one_or_none()
+    sp = r.scalars().first()
     if sp is None:
         # default=0은 flush 시점 적용 → 즉시 증감하려면 초기값 명시
         sp = StageProgress(user_id=user_id, stage=stage, status="in_progress",
@@ -1274,7 +1327,8 @@ async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
     if passed:
         sp.correct += 1
     sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
-    sp.status = "mastered" if (sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct) else "in_progress"
+    # 한번 숙달하면 유지한다(누적 정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게)
+    sp.status = "mastered" if (sp.status == "mastered" or (sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct)) else "in_progress"
     return sp
 
 from datetime import date as _sr_date, timedelta as _sr_delta
@@ -1293,29 +1347,34 @@ async def _srs_apply(user_id: int, kind: str, ref, quality: int, db, create: boo
         return {"removed": False, "due_date": None, "interval_days": None}
     r = await db.execute(select(ReviewItem).where(
         ReviewItem.user_id == user_id, ReviewItem.kind == kind, ReviewItem.ref == ref))
-    item = r.scalar_one_or_none()
+    item = r.scalars().first()
 
     if item is None:
         if not create or quality >= 3:
-            return {"removed": False, "due_date": None, "interval_days": None}
+            return {"removed": False, "due_date": None, "interval_days": None, "found": False}
         s = srs.schedule(quality)  # 첫 실패 → 내일 재등장
-        due = (_sr_date.today() + _sr_delta(days=s["interval_days"])).isoformat()
+        due = (_kst_today() + _sr_delta(days=s["interval_days"])).isoformat()
         db.add(ReviewItem(user_id=user_id, kind=kind, ref=ref, due_date=due,
                           interval_days=s["interval_days"], ease_factor=s["ease_factor"],
                           repetitions=s["repetitions"], lapses=s["lapses"]))
         return {"removed": False, "due_date": due, "interval_days": s["interval_days"]}
 
+    # 아직 복습일이 아닌 항목은 맞혀도 간격을 늘리지 않는다(예전에는 '다시 말하기'로 한자리에서 다섯 번 맞히면
+    # 1·6·14·32·74일로 늘어 졸업했다). 틀리면 날짜와 상관없이 다시 잡는다.
+    if quality >= 3 and item.due_date and item.due_date > _kst_today().isoformat():
+        return {"removed": False, "due_date": item.due_date, "interval_days": item.interval_days,
+                "found": True, "early": True}
     s = srs.schedule(quality, ease_factor=item.ease_factor, interval_days=item.interval_days,
                      repetitions=item.repetitions, lapses=item.lapses)
     if s["graduated"] and quality >= 3:
         await db.delete(item)   # 졸업 — 큐에서 제거
-        return {"removed": True, "due_date": None, "interval_days": s["interval_days"]}
+        return {"removed": True, "due_date": None, "interval_days": s["interval_days"], "found": True}
     item.interval_days = s["interval_days"]
     item.ease_factor = s["ease_factor"]
     item.repetitions = s["repetitions"]
     item.lapses = s["lapses"]
-    item.due_date = (_sr_date.today() + _sr_delta(days=s["interval_days"])).isoformat()
-    return {"removed": False, "due_date": item.due_date, "interval_days": item.interval_days}
+    item.due_date = (_kst_today() + _sr_delta(days=s["interval_days"])).isoformat()
+    return {"removed": False, "due_date": item.due_date, "interval_days": item.interval_days, "found": True}
 
 
 async def _srs_schedule_wrong(user_id: int, kind: str, ref, db: AsyncSession):
@@ -1337,9 +1396,8 @@ async def _get_or_create_profile(user_id: int, db: AsyncSession):
     return prof
 
 
-@app.get("/api/curriculum/stages")
-async def curriculum_stages(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """단계형 학습 경로 + 사용자별 상태(대시보드/오늘의 학습 구동)."""
+async def _compute_stages(current_user, db):
+    """사용자별 단계 상태(학습 경로·StageGate·잠긴 단계 기록 막기가 함께 쓴다). (prof, 단계 목록)."""
     from database import StageProgress
     from sqlalchemy import select
 
@@ -1369,7 +1427,10 @@ async def curriculum_stages(current_user=Depends(get_current_user), db: AsyncSes
             prev = sp_map.get(stage - 1)
             sp = sp_map.get(stage)
             by_pointer = bool(prof.placed) and stage <= (prof.current_stage or 0)
-            if not ((prev is not None and prev.status == "mastered") or by_pointer):
+            # 직전 단계가 이번 계산에서 열려 있어야 한다. 예전에는 직전 단계 행만 보아, 잠긴 단계에 쌓인 기록
+            # (문맥 추론은 3단계에 쌓인다)으로 2·3단계가 잠긴 채 4단계가 열렸다.
+            prev_open = bool(stages) and stages[-1].get("status") not in ("locked", "coming_soon")
+            if not ((prev_open and prev is not None and prev.status == "mastered") or by_pointer):
                 st["status"] = "locked"        # 전 단계 숙달 후 열림
             elif sp is None:
                 st["status"] = "unlocked"
@@ -1383,7 +1444,20 @@ async def curriculum_stages(current_user=Depends(get_current_user), db: AsyncSes
         for st in stages:
             if st.get("status") == "locked":
                 st["status"] = "unlocked"
+    return prof, stages
 
+
+async def _stage_open(current_user, stage: int, db) -> bool:
+    """그 단계가 지금 열려 있는가. 잠긴 단계의 답은 숙달에 넣지 않는다(API를 바로 불러 순서를 건너뛰지 못하게)."""
+    _, stages = await _compute_stages(current_user, db)
+    st = next((x for x in stages if x.get("stage") == stage), None)
+    return st is not None and st.get("status") not in ("locked", "coming_soon")
+
+
+@app.get("/api/curriculum/stages")
+async def curriculum_stages(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """단계형 학습 경로 + 사용자별 상태(대시보드/오늘의 학습 구동)."""
+    prof, stages = await _compute_stages(current_user, db)
     return {"track": prof.track, "placed": prof.placed,
             "current_stage": prof.current_stage, "stages": stages}
 
@@ -1463,7 +1537,7 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
         # 1단계 진행/숙달 갱신
         r = await db.execute(select(StageProgress).where(
             StageProgress.user_id == current_user.id, StageProgress.stage == 1))
-        sp = r.scalar_one_or_none()
+        sp = r.scalars().first()
         if sp is None:
             # default=0은 flush 시점에 적용되므로 즉시 증감하려면 초기값을 명시한다
             sp = StageProgress(user_id=current_user.id, stage=1, status="in_progress",
@@ -1473,12 +1547,13 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
         if correct:
             sp.correct += 1
         sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
-        sp.status = "mastered" if (sp.attempts >= _STAGE1_MIN_ATTEMPTS and sp.mastery_score >= _STAGE1_MASTERY) else "in_progress"
+        # 한번 숙달하면 유지한다(누적 정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게)
+        sp.status = "mastered" if (sp.status == "mastered" or (sp.attempts >= _STAGE1_MIN_ATTEMPTS and sp.mastery_score >= _STAGE1_MASTERY)) else "in_progress"
 
         # 취약 입모양 반영 — 기존 분석·적응 로직과 통합
         r2 = await db.execute(select(WeakViseme).where(
             WeakViseme.user_id == current_user.id, WeakViseme.viseme_id == data.viseme_id))
-        wv = r2.scalar_one_or_none()
+        wv = r2.scalars().first()
         if wv is None:
             wv = WeakViseme(user_id=current_user.id, viseme_id=data.viseme_id,
                             error_count=0, total_attempts=0, phonological_feature=target["name"])
@@ -1516,9 +1591,9 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
 
 
 class WordAnswer(BaseModel):
-    word: str
+    word: str = Field(..., max_length=50)
     correct: bool
-    chosen: Optional[str] = None   # 사용자가 실제로 고른 단어(오답 시 자모 혼동 분석용)
+    chosen: Optional[str] = Field(None, max_length=50)   # 사용자가 실제로 고른 단어(오답 시 자모 혼동 분석용)
 
 
 @app.get("/api/curriculum/words")
@@ -1566,21 +1641,25 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
     from database import StageProgress
     from sqlalchemy import select
     try:
+        open2 = await _stage_open(current_user, 2, db)   # 잠긴 2단계의 답은 숙달에 넣지 않는다(직접 API 호출로 건너뛰기 방지)
         r = await db.execute(select(StageProgress).where(
             StageProgress.user_id == current_user.id, StageProgress.stage == 2))
-        sp = r.scalar_one_or_none()
+        sp = r.scalars().first()
         if sp is None:
             sp = StageProgress(user_id=current_user.id, stage=2, status="in_progress",
                                attempts=0, correct=0, mastery_score=0.0)
-            db.add(sp)
+            if open2:
+                db.add(sp)
         # 정답 여부는 서버가 재계산(클라이언트 data.correct를 신뢰하지 않음 — 숙달·해금·평가 조작 방지).
         # chosen이 없는 구버전 호출만 data.correct로 폴백.
         correct = (data.chosen == data.word) if data.chosen is not None else bool(data.correct)
-        sp.attempts += 1
-        if correct:
-            sp.correct += 1
-        sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
-        sp.status = "mastered" if (sp.attempts >= _STAGE2_MIN_ATTEMPTS and sp.mastery_score >= _STAGE2_MASTERY) else "in_progress"
+        if open2:
+            sp.attempts += 1
+            if correct:
+                sp.correct += 1
+            sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
+            # 한번 숙달하면 유지한다(누적 정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게)
+            sp.status = "mastered" if (sp.status == "mastered" or (sp.attempts >= _STAGE2_MIN_ATTEMPTS and sp.mastery_score >= _STAGE2_MASTERY)) else "in_progress"
         # 취약 입모양 반영 — 오답이면 단어의 모든 유명 viseme을 오류로 누적(단어 인식 실패 신호).
         # 예전엔 단어 학습이 개인화(WeakViseme)에 전혀 기여하지 못했다.
         vids, features = await _weak_visemes_for_text(data.word)
@@ -1616,7 +1695,7 @@ async def review_due(current_user=Depends(get_current_user), db: AsyncSession = 
     """오늘까지 복습 예정인 독화 항목(입모양/단어)만. 말하기 예정은 /api/speak/review가 별도 반환."""
     from database import ReviewItem
     from sqlalchemy import select
-    today = _sr_date.today().isoformat()
+    today = _kst_today().isoformat()
     r = await db.execute(select(ReviewItem).where(
         ReviewItem.user_id == current_user.id, ReviewItem.due_date <= today,
         ReviewItem.kind.in_(["viseme", "word"])).order_by(ReviewItem.due_date))
@@ -1647,8 +1726,8 @@ async def review_item_delete(kind: str, ref: str, current_user=Depends(get_curre
 
 
 class ReviewAnswer(BaseModel):
-    kind: str
-    ref: str
+    kind: str = Field(..., max_length=20)
+    ref: str = Field(..., max_length=100)
     correct: bool
 
 
@@ -1656,11 +1735,11 @@ class ReviewAnswer(BaseModel):
 async def review_answer(data: ReviewAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """복습 결과로 다음 등장일 재조정(SM-2). ease·반복에 따라 간격이 늘고, 충분히 커지면 졸업(제거)."""
     import srs
-    # 공용 보상 — 복습도 XP·스트릭에 기여(복습만 한 날 스트릭이 끊기던 문제 해결)
-    award = _award_xp_and_streak(current_user, 10 if data.correct else 3)
-    reward = {"xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
     res = await _srs_apply(current_user.id, data.kind, data.ref,
                            srs.quality_from_correct(data.correct), db, create=False)
+    # 공용 보상: 복습도 XP·스트릭에 기여(복습만 한 날 스트릭이 끊기던 문제 해결). 큐에 없는 항목은 XP 없음
+    award = _award_xp_and_streak(current_user, (10 if data.correct else 3) if res.get("found") else 0)
+    reward = {"xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
     await db.commit()
     return {"ok": True, "removed": res["removed"], "next_due": res["due_date"],
             "interval_days": res["interval_days"], **reward}
@@ -1680,7 +1759,7 @@ async def _due_refs(user_id: int, kinds, db):
     """오늘까지 예정인 ReviewItem ref 목록(kinds 중 하나)."""
     from database import ReviewItem
     from sqlalchemy import select
-    today = _sr_date.today().isoformat()
+    today = _kst_today().isoformat()
     r = await db.execute(select(ReviewItem).where(
         ReviewItem.user_id == user_id, ReviewItem.kind.in_(list(kinds)),
         ReviewItem.due_date <= today).order_by(ReviewItem.due_date))
@@ -1732,7 +1811,7 @@ async def curriculum_closure(current_user=Depends(get_current_user), db: AsyncSe
     rec = await _kt_recommend(current_user.id, db)
     tv = set(rec["target_visemes"])
     items = _training_closures()
-    random.Random(f"{current_user.id}:{date.today().isoformat()}").shuffle(items)
+    random.Random(f"{current_user.id}:{_kst_today().isoformat()}").shuffle(items)
     # 안정 정렬 — 같은 적중 수 안에서는 섞인 순서가 유지된다
     items.sort(key=lambda c: -len(set(_crules.word_visemes(c["answer"])) & tv))
     return {"items": items, "target_visemes": rec["target_visemes"]}
@@ -1758,9 +1837,11 @@ async def curriculum_closure_answer(data: ClosureAnswer, current_user=Depends(ge
     try:
         db.add(TrialAttempt(user_id=current_user.id, stage=3, item_type="closure",
                             target=answer, chosen=data.chosen, correct=correct, confusions=confusions))
-        # 3단계(문맥 추론) 숙달 — 문장 연습과 같은 트랙에 성공/시도 누적
-        await _bump_stage_progress(
-            current_user.id, 3, correct, _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db)
+        # 3단계(문맥 추론) 숙달: 문장 연습과 같은 트랙에 성공/시도 누적. 문맥 추론 화면은 단계 잠금이 없어,
+        # 3단계가 잠긴 동안의 답은 넣지 않는다(예전에는 잠긴 3단계가 미리 숙달돼 2단계를 마치자마자 4단계가 열렸다)
+        if await _stage_open(current_user, 3, db):
+            await _bump_stage_progress(
+                current_user.id, 3, correct, _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db)
         # 취약 입모양 — 오답이면 정답 단어의 유명 viseme들을 오류로 누적(문맥으로도 못 가른 입모양)
         vids, features = await _weak_visemes_for_text(answer)
         await _bump_weak_visemes(current_user.id, vids,
@@ -1926,8 +2007,9 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
 
 
 class ScoreRequest(BaseModel):
-    correct: str
-    user_answer: str
+    correct: str = Field(..., max_length=_TEXT_MAX)
+    user_answer: str = Field(..., max_length=_TEXT_MAX)
+    practice_only: bool = False   # '무슨 말인지 보기'로 문장을 본 뒤의 답: 점수만 주고 4단계 숙달·XP에는 넣지 않는다
 
 
 @app.post("/api/score", dependencies=[Depends(ratelimit.rate_limit(60, 60, "llm"))])
@@ -1937,10 +2019,15 @@ async def score_answer(data: ScoreRequest, current_user=Depends(get_current_user
     try:
         r = await calculate_score(correct=data.correct, user_answer=data.user_answer, db=db)
         score = round(r.get("score", 0), 1)
-        # 4단계(대화 실전) 숙달 갱신 — 이해도 PASS 이상이면 성공 1회로 누적
-        await _bump_stage_progress(
-            current_user.id, 4, score >= _STAGE4_PASS,
-            _STAGE4_MIN_ATTEMPTS, _STAGE4_MASTERY, db)
+        if data.practice_only:
+            return {"score": score, "feedback": r.get("feedback", {}),
+                    "phoneme_accuracy": r.get("phoneme_accuracy", {}), "xp_gained": 0,
+                    "streak_count": current_user.streak_count, "practice_only": True}
+        # 4단계(대화 실전) 숙달 갱신: 이해도 PASS 이상이면 성공 1회로 누적. 잠긴 단계면 넣지 않는다
+        if await _stage_open(current_user, 4, db):
+            await _bump_stage_progress(
+                current_user.id, 4, score >= _STAGE4_PASS,
+                _STAGE4_MIN_ATTEMPTS, _STAGE4_MASTERY, db)
         # 취약 입모양 — 정답 문장의 오류 비심 반영(대화도 개인화에 기여)
         vids, features = await _weak_visemes_for_text(data.correct)
         await _bump_weak_visemes(current_user.id, vids, r.get("viseme_errors", []), features, db)
@@ -2037,7 +2124,7 @@ async def curriculum_mouth_attempt(data: MouthAttempt, current_user=Depends(get_
     passed = data.score >= 60
     r = await db.execute(select(WeakViseme).where(
         WeakViseme.user_id == current_user.id, WeakViseme.viseme_id == data.viseme_id))
-    wv = r.scalar_one_or_none()
+    wv = r.scalars().first()
     if wv:
         wv.total_attempts += 1
         if not passed:
@@ -2380,7 +2467,8 @@ async def assessment_placement(n: int = 8, form: str = None,
         return {"items": forms.get(form, []), "form": form, "version": forms.get("version")}
     # 배치검사는 사전·사후 문항 단어를 정답·보기에서 모두 뺀다 — 사전검사 전에 문항을 미리 보지 않게(축 I).
     tw = _asmt.test_only_words()
-    items = _asmt.build_placement_items([w for w in words if w not in tw], n=n)
+    # n은 1~20으로 맞춘다(0이면 0으로 나눠 500, 아주 크면 단어장 전체를 돌며 몇 초씩 서버를 붙잡았다).
+    items = _asmt.build_placement_items([w for w in words if w not in tw], n=max(1, min(int(n), 20)))
     return {"items": items, "form": "placement"}
 
 
@@ -2715,8 +2803,9 @@ async def conversation_multi_result(req: MultiConvResultReq,
         spk_acc, read_acc, combined = scored["speaker_accuracy"], scored["read_accuracy"], scored["combined"]
     else:
         # 구버전 화면(집계값만 보냄) 호환 — 화자식별·독해 평균
-        spk_acc = (req.speaker_correct / req.speaker_total) if req.speaker_total else 0.0
-        read_acc = (req.read_correct / req.read_total) if req.read_total else 0.0
+        # 클라이언트 집계값이라 0~1로 맞춘다(맞힌 수가 전체보다 크면 합산 점수가 500이 나왔다)
+        spk_acc = min(1.0, max(0.0, req.speaker_correct / req.speaker_total)) if req.speaker_total > 0 else 0.0
+        read_acc = min(1.0, max(0.0, req.read_correct / req.read_total)) if req.read_total > 0 else 0.0
         combined = round(100 * (0.5 * spk_acc + 0.5 * read_acc), 1)
 
     def _vis(texts):
@@ -2732,7 +2821,7 @@ async def conversation_multi_result(req: MultiConvResultReq,
         is_err = vid in missed
         r = await db.execute(_select(WeakViseme).where(
             WeakViseme.user_id == current_user.id, WeakViseme.viseme_id == vid))
-        wv = r.scalar_one_or_none()
+        wv = r.scalars().first()
         if wv:
             wv.total_attempts += 1
             if is_err:
@@ -2758,7 +2847,11 @@ import speak_curriculum as _speakcur
 
 @app.post("/api/seed-demo")
 async def seed_demo(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """데모 계정이 비어 있으면 더미 학습 기록을 채운다(멱등 — 기록 있으면 스킵)."""
+    """데모 계정이 비어 있으면 더미 학습 기록을 채운다(멱등, 기록 있으면 건너뜀).
+    공용 데모 계정에만 한다. 9/19~9/26 로그인 화면이 로그인·회원가입 뒤에도 불러, 실제 계정에 가짜 기록이 들어가고
+    표시가 없던 예전 계정은 기록이 지워졌다."""
+    if (current_user.email or "").lower() != _DEMO_EMAIL:
+        return {"seeded": False}
     import demo_seed
     seeded = await demo_seed.run(current_user, db)
     return {"seeded": seeded}
@@ -2771,7 +2864,7 @@ async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
     from sqlalchemy import select
     r = await db.execute(select(SpeakStageProgress).where(
         SpeakStageProgress.user_id == user_id, SpeakStageProgress.stage == stage))
-    sp = r.scalar_one_or_none()
+    sp = r.scalars().first()
     if sp is None:
         sp = SpeakStageProgress(user_id=user_id, stage=stage, status="in_progress",
                                 attempts=0, correct=0, mastery_score=0.0)
@@ -2780,7 +2873,8 @@ async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
     if passed:
         sp.correct += 1
     sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
-    sp.status = "mastered" if (sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct) else "in_progress"
+    # 한번 숙달하면 유지한다(누적 정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게)
+    sp.status = "mastered" if (sp.status == "mastered" or (sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct)) else "in_progress"
     return sp
 
 
@@ -2921,6 +3015,8 @@ async def speak_assess(
 ):
     """녹음 → (단계 모드에 따라) 지표/전사 채점 → 진행률 갱신 → 코칭.
     발성·운율(0·1)은 지표만으로, 모음·자음·단어·문장(2~5)은 Whisper 전사+음운 유사도."""
+    if len(target or "") > _TEXT_MAX:   # 채점 정렬 비용이 길이의 곱이라 상한을 둔다(다른 채점 요청과 같다)
+        raise HTTPException(status_code=400, detail="목표 문장이 너무 길어요.")
     data = await _read_audio_limited(audio)
 
     metrics = {"loudness": loudness, "pitch_range": pitch_range, "duration": duration,
@@ -2959,10 +3055,11 @@ async def speak_assess(
                 import dgop_acoustic
                 if not dgop_acoustic.HAS_ACOUSTIC:
                     raise RuntimeError("torch/torchaudio/transformers 미설치")
-                result = await asyncio.to_thread(
-                    dgop_acoustic.assess_text,
-                    data, target, aligner_id=dgop_aligner_id, scorer_id=dgop_scorer_id,
-                )
+                async with _ML_SEM:
+                    result = await asyncio.to_thread(
+                        dgop_acoustic.assess_text,
+                        data, target, aligner_id=dgop_aligner_id, scorer_id=dgop_scorer_id,
+                    )
                 if result.get("score") is not None:
                     dgop_result = result
                     # 표시용 보정 점수를 쓴다 — 원점수는 깨끗한 발화도 10점 안쪽이라
@@ -2983,7 +3080,8 @@ async def speak_assess(
             if not is_available():
                 raise HTTPException(status_code=503, detail="서버에 음성인식 모델(faster-whisper)이 없습니다.")
             try:
-                transcript = await transcribe(data)
+                async with _ML_SEM:
+                    transcript = await transcribe(data)
             except Exception as e:
                 raise _server_error(e, "전사 실패")
             try:
@@ -3031,7 +3129,7 @@ async def speak_assess(
     mouth = None
     if mouth_confidence is not None and mouth_confidence >= 0:
         import dgop
-        vis = mouth_confidence * 100 if mouth_confidence <= 1 else mouth_confidence
+        vis = min(100.0, mouth_confidence * 100 if mouth_confidence <= 1 else mouth_confidence)   # 0~100으로 맞춘다
         scored_phones = [p for p in ((dgop_result or {}).get("phones") or [])
                          if p.get("aligned") and p.get("scorable")]
         # B-6: 입모양 타임라인이 있으면 음소가 정렬된 시간 구간의 입모양 점수를 구한다

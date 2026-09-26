@@ -16,7 +16,9 @@ from engine import get_viseme_feature
 
 
 # Initialize Anthropic client
-anthropic_client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+# 기본값(600초, 재시도 2번)이면 느린 응답 하나가 코칭·채점 응답을 붙잡아 화면 제한(60초)을 넘긴다.
+# 이 앱의 호출은 모두 1024토큰 이하라 30초·재시도 1번이면 넉넉하고, 넘으면 각 호출의 대체 경로로 간다.
+anthropic_client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"), timeout=30.0, max_retries=1)
 
 
 async def generate_speaking_coaching(target: str, transcript: str, score: float,
@@ -83,6 +85,20 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
 
 
 # Situation-based context prompts
+# 상황별 시나리오 문장의 글자 수 상한(난이도별 어절 수 지시에 맞춤: 1단계 5~8어절부터 5단계 15어절 이상까지)
+SCENARIO_MAX_CHARS = {1: 40, 2: 45, 3: 60, 4: 70, 5: 90}
+
+# 대화 실전에서 LLM이 실패했을 때 상대가 말하는 대체 대사(온전한 문장). 없는 상황은 어느 자리에나 맞는 대사.
+FALLBACK_TURNS = {
+    "카페": ["어서 오세요. 무엇으로 드릴까요?", "드시고 가세요?", "영수증 드릴까요?", "맛있게 드세요."],
+    "병원": ["어디가 아프세요?", "언제부터 아프셨어요?", "약은 하루 세 번 드세요.", "몸조리 잘하세요."],
+    "식당": ["몇 분이세요?", "주문하시겠어요?", "음식 나왔습니다.", "맛있게 드세요."],
+    "은행": ["어떤 업무 보러 오셨어요?", "신분증 있으세요?", "여기에 서명해 주세요.", "처리됐습니다."],
+    "쇼핑": ["찾으시는 거 있으세요?", "입어 보시겠어요?", "이건 할인 중이에요.", "봉투 필요하세요?"],
+    "대중교통": ["어디까지 가세요?", "다음 역에서 내리세요.", "이 버스 타시면 돼요.", "조심히 가세요."],
+}
+FALLBACK_TURNS_GENERIC = ["안녕하세요.", "무엇을 도와드릴까요?", "네, 알겠습니다.", "잠시만 기다려 주세요."]
+
 SITUATION_CONTEXTS = {
     "카페": {
         "description": "카페에서 주문하고 대화하는 상황",
@@ -348,7 +364,10 @@ async def generate_adaptive_scenario(
         # LLM 출력 검증(§4.9) + 규칙 게이트(축 G) — 지시 이탈·주입·비정상 문장을 걸러
         # 정상 한글 훈련 문장만 클라이언트로 내보낸다. 부족하면 폴백으로 넘어간다.
         from content_rules import check_sentence
-        sentences = [s for s in sentences if isinstance(s, str) and check_sentence(s)[0]]
+        # 글자 수 상한은 난이도의 어절 수에 맞춘다. 기본 40자로 걸러 4·5단계(12~15어절 이상, 약 42~55자)와 3단계 일부가
+        # 늘 탈락해, 요청한 단계 이름을 단 쉬운 대체 문장이 나갔다.
+        max_chars = SCENARIO_MAX_CHARS.get(level, 40)
+        sentences = [s for s in sentences if isinstance(s, str) and check_sentence(s, max_chars=max_chars)[0]]
 
         if not sentences or len(sentences) < 3:
             raise ValueError("Generated sentences are insufficient")
@@ -510,7 +529,8 @@ async def generate_conversation_turn(
 
     except Exception as e:
         print(f"Conversation API error: {e}")
-        # Fallback openings
-        fallbacks = context.get("common_phrases", ["안녕하세요.", "무엇을 도와드릴까요?", "네, 알겠습니다."])
+        # 대체 대사: 온전한 문장으로 잇는다. 예전에는 '자주 쓰이는 표현'(주세요 같은 조각)을 썼고,
+        # 목록에 없는 상황(상황별 시나리오의 자유 입력)은 빈 목록이라 0으로 나눠 500이 났다.
+        fallbacks = FALLBACK_TURNS.get(situation) or FALLBACK_TURNS_GENERIC
         idx = len(history) % len(fallbacks)
         return {"text": fallbacks[idx]}
