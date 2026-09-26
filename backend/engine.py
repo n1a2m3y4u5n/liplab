@@ -3,6 +3,7 @@ Advanced Viseme Engine for Korean Speechreading
 Converts Korean text to 15 fine-grained visemes with co-articulation modeling
 g2pk-free version: uses built-in Korean phonological rules
 """
+import unicodedata
 from typing import List, Dict
 
 # 한국어 발음 변환 (g2p) — g2pk 없이 자체 구현
@@ -325,6 +326,7 @@ async def text_to_visemes(text: str) -> List[Dict]:
     먼저 '소리 나는 대로'(연음·겹받침·ㅎ탈락·무음 초성 ㅇ)로 변환한 뒤
     음절별 초성/중성/종성 입모양 프레임을 생성한다.
     """
+    text = unicodedata.normalize("NFC", text or "")   # 분해형(NFD) 한글도 음절로 읽는다
     text = text.strip()
     if not text:
         return []

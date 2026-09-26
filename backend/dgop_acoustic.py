@@ -329,7 +329,8 @@ def assess_text(audio_bytes: bytes, target_text: str,
     from faster_whisper.audio import decode_audio
     import io as _io
 
-    waveform = decode_audio(_io.BytesIO(audio_bytes), sampling_rate=sample_rate)
+    # 앞 30초만 채점한다(연습 발화는 몇 초이고, 긴 업로드를 통째로 넣으면 정렬기·채점기 메모리가 길이에 따라 커진다)
+    waveform = decode_audio(_io.BytesIO(audio_bytes), sampling_rate=sample_rate)[:sample_rate * 30]
     tokens = tokens_for_text(target_text, model_id=aligner_id)
     phones = phone_confidences(waveform, sample_rate, tokens,
                                aligner_id=aligner_id, scorer_id=scorer_id)

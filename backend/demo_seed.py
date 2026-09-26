@@ -5,13 +5,14 @@
 재시드 정책(SEED_VERSION):
   - 시드 버전 마커(Progress.scenario_id == SEED_MARKER)가 있으면 최신 → 스킵.
   - 구버전 데이터만 있으면(마커 없음) 데모 계정의 학습 데이터를 싹 지우고 새 값으로 재시드.
-    (데모 계정 전용 더미이므로 안전. 실사용 계정은 이 함수 대상이 아님)
+    (데모 계정 전용 더미이므로 안전. 실사용 계정이면 아무것도 하지 않고 False)
 """
 import random
 from datetime import datetime, timedelta, date as _date
 
 SEED_VERSION = 3
 SEED_MARKER = f"seed_marker_v{SEED_VERSION}"
+DEMO_EMAIL = "demo@liplab.app"   # main._DEMO_EMAIL과 같다(이 계정에만 시드)
 
 # (문장, 사용자 답, 점수) — 일부는 오답으로 음소 혼동 유발(독화 분석)
 SENTENCES = [
@@ -59,6 +60,10 @@ async def run(user, db):
                           ReviewItem, Bookmark)
     from sqlalchemy import select, delete
 
+    # 공용 데모 계정만(9/26: 로그인 화면이 실제 계정에도 불러 가짜 기록이 들어간 결함의 이중 방어)
+    if (getattr(user, "email", "") or "").lower() != DEMO_EMAIL:
+        return False
+
     # 이미 최신 버전으로 시드됐는지 — 마커 확인
     m = await db.execute(
         select(Progress.id).where(Progress.user_id == user.id,
@@ -66,13 +71,12 @@ async def run(user, db):
     if m.scalar_one_or_none() is not None:
         return False   # 최신 시드 존재 → 스킵
 
-    # 구버전 데이터가 있으면 데모 계정의 학습 데이터를 싹 지우고 재시드
-    has_any = await db.execute(select(Progress.id).where(Progress.user_id == user.id).limit(1))
-    if has_any.scalar_one_or_none() is not None:
-        for M in (Progress, WeakViseme, StageProgress, SpeakStageProgress, SpeakAttempt,
-                  ReviewItem, Bookmark):
-            await db.execute(delete(M).where(M.user_id == user.id))
-        await db.commit()
+    # 마커가 없으면 데모 계정의 학습 데이터를 모두 지우고 재시드한다. 예전에는 Progress가 있을 때만 지워,
+    # 학습 초기화(Progress·WeakViseme만 지움) 뒤 재시드하면 단계·복습·북마크 행이 두 벌이 되어 조회가 500으로 깨졌다.
+    for M in (Progress, WeakViseme, StageProgress, SpeakStageProgress, SpeakAttempt,
+              ReviewItem, Bookmark):
+        await db.execute(delete(M).where(M.user_id == user.id))
+    await db.commit()
 
     now = datetime.utcnow()
     situations = ["카페", "병원", "식당", "학교", "은행", "대중교통", "직장"]

@@ -400,6 +400,35 @@ async def init_db():
                 await conn.exec_driver_sql(ddl)
             except Exception:
                 pass  # 이미 존재
+        await _dedupe_and_index(conn)
+
+
+# 사용자별로 한 행이어야 하는 표. 예전에는 고유 제약이 없어(조회 뒤 없으면 넣기) 동시 첫 제출이나 데모 재시드로
+# 같은 키의 행이 두 벌 생겼고, 그 뒤 scalar_one_or_none()이 예외를 내 그 단계의 답 제출이 계속 500이었다
+# (9/26 liplab-dev 데모 계정 2단계). 켜질 때 한 행만 남기고(숙달 > 시도 많은 행 > 최근 행) 고유 인덱스를 건다.
+_UNIQUE_KEYS = (
+    ("stage_progress", "user_id, stage",
+     "CASE status WHEN 'mastered' THEN 0 ELSE 1 END, attempts DESC, id DESC"),
+    ("speak_stage_progress", "user_id, stage",
+     "CASE status WHEN 'mastered' THEN 0 ELSE 1 END, attempts DESC, id DESC"),
+    ("tactile_stage_progress", "user_id, stage",
+     "CASE status WHEN 'mastered' THEN 0 ELSE 1 END, attempts DESC, id DESC"),
+    ("weak_visemes", "user_id, viseme_id", "total_attempts DESC, id DESC"),
+    ("review_items", "user_id, kind, ref", "updated_at DESC, id DESC"),
+)
+
+
+async def _dedupe_and_index(conn) -> None:
+    for table, key, order in _UNIQUE_KEYS:
+        name = "ux_" + table + "_" + key.replace(", ", "_")
+        try:
+            await conn.exec_driver_sql(
+                f"DELETE FROM {table} WHERE id IN (SELECT id FROM ("
+                f"SELECT id, ROW_NUMBER() OVER (PARTITION BY {key} ORDER BY {order}) AS rn FROM {table}"
+                f") AS ranked WHERE rn > 1)")
+            await conn.exec_driver_sql(f"CREATE UNIQUE INDEX IF NOT EXISTS {name} ON {table} ({key})")
+        except Exception as e:   # 켜지는 것을 막지 않는다(조회 쪽도 여러 행에서 첫 행을 쓴다)
+            print(f"[WARN] {table} 중복 정리·고유 인덱스 실패: {e}")
 
 
 async def close_db():

@@ -9,8 +9,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import bcrypt as bcrypt_lib
 from jose import JWTError, jwt
-from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import select
+from pydantic import BaseModel, EmailStr, Field, field_validator
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import User, get_db
@@ -41,6 +41,15 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 security = HTTPBearer()
 
 
+# bcrypt는 비밀번호 앞 72바이트만 쓰고, bcrypt 5는 그보다 길면 예외를 낸다(예전에는 한글 25자 이상이면 가입·로그인이 500).
+MAX_PASSWORD_BYTES = 72
+PASSWORD_TOO_LONG = "비밀번호는 72바이트(한글 약 24자, 영문 72자)까지 쓸 수 있어요."
+
+
+def password_fits(password: str) -> bool:
+    return len((password or "").encode("utf-8")) <= MAX_PASSWORD_BYTES
+
+
 # Pydantic models for request/response
 class UserRegister(BaseModel):
     email: EmailStr
@@ -49,6 +58,13 @@ class UserRegister(BaseModel):
     # 가입 동의(§4.9 ②) — 서버에서도 확인하고 ConsentRecord로 남긴다(화면 체크박스만으로는 우회 가능).
     agree_terms: bool = False       # 이용약관·개인정보 처리방침 동의
     age_confirmed: bool = False     # 만 14세 이상이거나 법정대리인 동의를 받음
+
+    @field_validator("password")
+    @classmethod
+    def _password_fits_bcrypt(cls, v: str) -> str:
+        if not password_fits(v):
+            raise ValueError(PASSWORD_TOO_LONG)
+        return v
 
 
 class UserLogin(BaseModel):
@@ -78,11 +94,15 @@ class UserResponse(BaseModel):
 # Password utilities
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
+    if not password_fits(plain_password):   # 가입할 수 없는 길이라 맞을 수 없다(예외 대신 불일치)
+        return False
     return bcrypt_lib.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
 
 
 def get_password_hash(password: str) -> str:
     """Generate password hash"""
+    if not password_fits(password):
+        raise ValueError(PASSWORD_TOO_LONG)
     return bcrypt_lib.hashpw(password.encode("utf-8"), bcrypt_lib.gensalt()).decode("utf-8")
 
 
@@ -143,6 +163,9 @@ async def authenticate_user(email: str, password: str, db: AsyncSession) -> Opti
     """Authenticate user by email and password"""
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
+    if user is None:   # 9/26부터 가입 이메일을 소문자로 저장한다. 예전 계정은 대소문자만 달라도 찾는다
+        result = await db.execute(select(User).where(func.lower(User.email) == (email or "").lower()).order_by(User.id))
+        user = result.scalars().first()
 
     if not user:
         return None
@@ -154,9 +177,11 @@ async def authenticate_user(email: str, password: str, db: AsyncSession) -> Opti
 
 async def register_user(user_data: UserRegister, db: AsyncSession) -> User:
     """Register a new user"""
-    # Check if email already exists
-    result = await db.execute(select(User).where(User.email == user_data.email))
-    if result.scalar_one_or_none():
+    # Check if email already exists. 이메일은 소문자로 저장하고 대소문자를 무시해 중복을 본다. 운영자 권한은 이메일로
+    # 주므로(LIPLAB_ADMIN_EMAILS), 대소문자만 바꾼 주소로 다른 계정을 만들 수 없어야 한다.
+    email = str(user_data.email).lower()
+    result = await db.execute(select(User).where(func.lower(User.email) == email))
+    if result.scalars().first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
@@ -173,7 +198,7 @@ async def register_user(user_data: UserRegister, db: AsyncSession) -> User:
     # Create new user
     hashed_password = get_password_hash(user_data.password)
     new_user = User(
-        email=user_data.email,
+        email=email,
         username=user_data.username,
         hashed_password=hashed_password
     )

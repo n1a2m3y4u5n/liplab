@@ -15,6 +15,9 @@ import os
 from typing import Dict, List, Optional
 
 SR = 16000
+# 추론에 넣는 최대 길이(초). 업로드 상한은 바이트(10MB)라 압축 음성이면 수십 분이 들어올 수 있고, 모델 메모리는
+# 길이(주의 층은 제곱)에 따라 커져 4GB 기계가 멈출 수 있다. 앞 30초만 쓴다(연습 문장·예시는 모두 이보다 짧다).
+MAX_SECONDS = 30
 FPS = 30
 _W2V = "kresnik/wav2vec2-large-xlsr-korean"
 
@@ -142,6 +145,7 @@ def _to_mono16k(audio_bytes: bytes):
             return np.zeros(0, dtype=np.float32)
     if y.size == 0:
         return y
+    y = y[:SR * MAX_SECONDS]
     return (y - y.mean()) / (y.std() + 1e-6)
 
 

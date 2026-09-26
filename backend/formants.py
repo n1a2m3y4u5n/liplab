@@ -16,6 +16,7 @@ from typing import Dict, List, Optional
 import numpy as np
 
 SR = 16000
+MAX_SECONDS = 30   # audio2face.MAX_SECONDS와 같다(긴 업로드는 앞부분만 분석)
 # 한국어 단모음 목표(F1, F2 Hz, 성인 남성 대략치) — frontend VocalTractSimulator.jsx VOWELS와 같은 값.
 VOWEL_TARGETS: Dict[str, Dict] = {
     "ㅣ": {"f1": 300, "f2": 2300, "round": 0}, "ㅔ": {"f1": 450, "f2": 2000, "round": 0},
@@ -45,12 +46,12 @@ def decode_mono16k(audio_bytes: bytes) -> Optional[np.ndarray]:
     로컬 개발은 librosa를 쓴다. 둘 다 실패하면 None."""
     try:
         from faster_whisper.audio import decode_audio
-        return np.asarray(decode_audio(io.BytesIO(audio_bytes), sampling_rate=SR), dtype=np.float32)
+        return np.asarray(decode_audio(io.BytesIO(audio_bytes), sampling_rate=SR), dtype=np.float32)[:SR * MAX_SECONDS]
     except Exception:
         pass
     try:
         import librosa
-        y, _ = librosa.load(io.BytesIO(audio_bytes), sr=SR, mono=True)
+        y, _ = librosa.load(io.BytesIO(audio_bytes), sr=SR, mono=True, duration=MAX_SECONDS)
         return y.astype(np.float32)
     except Exception:
         return None
