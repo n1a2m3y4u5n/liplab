@@ -4,15 +4,16 @@ import AppShell from '../components/AppShell'
 /**
  * 연습 탭 허브 (Figma 96:14 · 모바일 238:34) — 단계와 무관하게 자유롭게 고르는 연습 모드 카드.
  * 각 카드는 기존 연습 화면으로 연결한다. 탭 제목 아래 설명 문구는 없다(§4-05).
+ * 9/26 변경 내역 §2·§4-4: 다자 대화 카드를 뺐다(카드 4개 + 공사 중 자리). 여러 명 대화는 상황별 시나리오의 'AI 대화 → 여러 명 대화'로
+ * 들어간다. 수어 카드 제목은 데스크톱 96:14·기능 화면 226:32의 "수어 보기"를 따른다(모바일 238:34는 아직 "수어 함께 보기").
  * 카드: lg 이상은 세로형(96:125 — 52px 칩·19px 제목·설명), lg 미만은 가로 행(238:125 — 44px 칩·제목/설명·화살표).
  * 6번째 칸은 Figma의 '공사 중' 자리(98:15)에 '입모양 교실'을 둔다 — 웹캠 따라 하기·조음 교정·아바타 거울·
  * 성도 실험(축 D·E·F·K)이 모인 입모양 학습 자료(/learn/viseme?tab=learn)로, 다른 진입점이 없던 화면이다.
  */
 const CARDS = [
-  { key: 'multi', title: '다자 대화', desc: '여러 사람이 주고받는 대화를 읽어요', icon: '/ui/card-multi.svg', chip: 'bg-pastel-sky', to: '/learn/conversation-multi' },
   { key: 'free', title: '자유 발화', desc: '내가 쓴 문장을 소리 내어 확인해요', icon: '/ui/card-free.svg', chip: 'bg-pastel-pink', to: '/pronounce' },
   { key: 'scenario', title: '상황별 시나리오', desc: '카페·병원 등 상황을 골라 연습해요', icon: '/ui/card-scenario.svg', chip: 'bg-pastel-amber', to: '/learn/scenario' },
-  { key: 'sign', title: '수어 함께 보기', desc: '문장을 수어로도 확인할 수 있어요', icon: '/ui/card-sign.svg', chip: 'bg-pastel-mint', to: '/learn/sign' },
+  { key: 'sign', title: '수어 보기', desc: '문장을 수어로도 확인할 수 있어요', icon: '/ui/card-sign.svg', chip: 'bg-pastel-mint', to: '/learn/sign' },
   { key: 'endless', title: '엔드리스 학습', desc: '틀렸던 유형이 계속 나와요', icon: '/ui/tab-card-endless.svg', chip: 'bg-pastel-indigo', to: '/learn/endless' },
   { key: 'mouth', title: '입모양 교실', desc: '웹캠으로 따라 하고 안 보이는 혀 위치도 확인해요', icon: '/ui/nav-learn.svg', chip: 'bg-pastel-violet', to: '/learn/viseme?tab=learn' },
 ]

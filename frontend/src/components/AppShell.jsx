@@ -16,7 +16,9 @@ import { levelProgress } from '../lib/level'
  * props
  *   active       사이드바·하단 탭 활성 key(learn·practice·task·review·analysis·profile). 없으면 경로로 찾는다.
  *   title        탭 제목(모바일 25px / lg 30px).
- *   description  제목 아래 부제 — §4-11 연습 하위 페이지만. 탭 페이지(§4-05)는 넘기지 않는다.
+ *   description  제목 아래 부제. 9/26 Figma에서 연습 기능 화면의 부제가 모두 빠져 지금은 넘기는 곳이 없다.
+ *   closeTo      주면 제목 줄 오른쪽 끝에 나가기 X(40px 원, 453:83)를 두고 누르면 그 경로로 간다(연습 기능 화면 → /practice/hub,
+ *                변경 내역 §4-4).
  *   rail         오른쪽 패널 구성: 'default'(스탯 + 오늘의 과제 + 복습할 항목, 59:12)
  *                | 'tasks'(스탯 + 레벨 진행 + 복습할 항목, 137:151) | 'review'(스탯 + 오늘의 과제 + 이번 주 복습, 100:113)
  *   rightRail    직접 만든 패널 노드(rail보다 우선). 아래 Rail* 조각을 조합해 쓸 수 있다.
@@ -291,7 +293,7 @@ function MobileTabBar({ activeKey }) {
   )
 }
 
-export default function AppShell({ children, active, rail = 'default', rightRail, title, description }) {
+export default function AppShell({ children, active, rail = 'default', rightRail, title, description, closeTo }) {
   const navigate = useNavigate()
   const location = useLocation()
   const speak = useSpeakLearn()
@@ -326,7 +328,16 @@ export default function AppShell({ children, active, rail = 'default', rightRail
       <main className="flex min-w-0 flex-1 flex-col gap-3.5 px-[18px] pb-[calc(var(--tabbar-h)+18px+env(safe-area-inset-bottom))] pt-5 lg:gap-5 lg:px-8 lg:pb-10 lg:pt-8">
         {(title || description) && (
           <header className="flex flex-col gap-2 leading-figma">
-            {title && <h1 className="text-[25px] font-bold tracking-[-0.625px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">{title}</h1>}
+            {/* 제목 줄(453:82 Page head): 제목 + 오른쪽 끝 나가기 X */}
+            <div className="flex items-center justify-between gap-3">
+              {title && <h1 className="text-[25px] font-bold tracking-[-0.625px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">{title}</h1>}
+              {closeTo && (
+                <button type="button" onClick={() => navigate(closeTo)} aria-label="나가기"
+                  className="size-10 shrink-0 rounded-full transition-opacity hover:opacity-80">
+                  <img src="/ui/lp-453-83-page-close.svg" alt="" className="size-10" />
+                </button>
+              )}
+            </div>
             {description && <p className="text-[15px] text-ink-muted">{description}</p>}
           </header>
         )}

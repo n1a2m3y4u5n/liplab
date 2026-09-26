@@ -494,10 +494,11 @@ const BAR_BTN = 'w-full shrink-0 max-lg:py-4 max-lg:text-[16px] lg:w-auto'
 
 // 보기 한 줄(91:29 / 모바일 235:52) — 기본 3D 하단테두리. 정답·오답 공개(94:119 · 94:161 · 94:169)는 2.5px 테두리.
 const OPTION_BASE = 'flex w-full items-center gap-3.5 rounded-14 px-[18px] py-[15px] text-left transition-colors lg:gap-4 lg:rounded-16 lg:px-5 lg:py-4'
+// 정답·오답 공개(2.5px 테두리)는 하단 테두리가 5 → 2.5px로 얇아지므로 위 패딩을 2px 더해 보기 높이를 맞춘다(변경 내역 §0-4).
 const OPTION_CLASS = {
   idle: `${OPTION_BASE} border-2 border-b-5 border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
   selected: `${OPTION_BASE} border-2 border-b-5 border-track bg-track-tint text-ink`,
-  correct: `${OPTION_BASE} border-[2.5px] border-good bg-good-tint text-good-text`,   // 고른 답이 정답
-  target: `${OPTION_BASE} border-[2.5px] border-good bg-white text-ink`,              // 오답일 때 정답 표시
-  wrong: `${OPTION_BASE} border-[2.5px] border-bad bg-bad-tint text-bad-text`,        // 고른 오답
+  correct: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-good-tint text-good-text`,   // 고른 답이 정답
+  target: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-white text-ink`,              // 오답일 때 정답 표시
+  wrong: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-bad bg-bad-tint text-bad-text`,        // 고른 오답
 }

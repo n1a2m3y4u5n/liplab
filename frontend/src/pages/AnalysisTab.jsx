@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import Modal from '../components/Modal'
 import WatermarkCard from '../components/WatermarkCard'
+import ScrollHintList from '../components/ScrollHintList'
 import { learningAPI } from '../api'
 import { mergeBadges } from '../lib/badges'
 import { scoreLevel, scoreTone } from '../lib/scoreTone'
@@ -390,9 +391,7 @@ function HistoryList({ rows, onOpen }) {
 
 /* ── 회차 상세(212:24 · 모달 212:190) ── */
 const DOKA_ICON = '/ui/lp-303-32-doka.svg'
-const MORE_ICON = '/ui/lp-318-33-scroll-more.svg'
 const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }   // DOKA SVG 그림자 여백(Figma inset)
-const PEEK = 4   // 처음에는 문제 4개만 — 나머지는 More(213:28)로 펼친다
 
 /** 들린 발음에서 목표와 다른 글자를 표시한다(최장 공통 부분열 밖의 글자 = 빨강, 333:65). */
 function heardMarks(target, heard) {
@@ -490,11 +489,10 @@ function DetailItem({ it, i, kind }) {
 function SessionDetail({ row, onClose, onGo }) {
   const [data, setData] = useState(null)
   const [err, setErr] = useState(false)
-  const [expanded, setExpanded] = useState(false)
   useEffect(() => {
     if (!row) return undefined
     let on = true
-    setData(null); setErr(false); setExpanded(false)
+    setData(null); setErr(false)
     learningAPI.getActivityDetail(row.date, row.kind, row.topic || '')
       .then((d) => { if (on) setData(d) }).catch(() => { if (on) setErr(true) })
     return () => { on = false }
@@ -508,7 +506,6 @@ function SessionDetail({ row, onClose, onGo }) {
   const subtitle = `${relDay(row.date)} · ${trackLabel} · ${row.kind === 'assessment' ? `${row.n}회` : `${row.n}문제`}${acc != null ? ` · 정답률 ${acc}%` : ''}`
   const sm = data?.summary || {}
   const items = data?.items || []
-  const shown = expanded ? items : items.slice(0, PEEK)
   const to = isReview(row) ? '/review/mistakes' : row.route
   return (
     <Modal open={!!row} onClose={onClose} title={title} subtitle={subtitle} gap="gap-[18px]" maxW="max-w-[640px]">
@@ -545,19 +542,16 @@ function SessionDetail({ row, onClose, onGo }) {
             )}
           </div>
           <p className="text-[14px] font-bold leading-figma text-ink">문제별 분석</p>
-          <div className="flex w-full flex-col">
-            {items.length === 0
-              ? <p className="py-6 text-center text-sm text-ink-muted">이 회차의 문제 기록이 없어요.</p>
-              : shown.map((it, i) => <DetailItem key={i} it={it} i={i} kind={row.kind} />)}
-            {!expanded && items.length > PEEK && (
-              <div className="relative h-14 w-full bg-gradient-to-b from-white/0 to-white to-[55%]">
-                <button type="button" onClick={() => setExpanded(true)} aria-label={`나머지 ${items.length - PEEK}문제 더 보기`}
-                  className="absolute left-1/2 top-3 size-9 -translate-x-1/2">
-                  <img src={MORE_ICON} alt="" className="absolute max-w-none" style={{ top: '-11.11%', left: '-19.44%', width: '138.88%', height: '138.89%' }} />
-                </button>
-              </div>
+          {/* Item list(212:263): 최대 369(문제 313 + 안내 56) 안에서 스크롤, 바닥에 스크롤 안내(213:27, 버튼 아님) */}
+          {items.length === 0
+            ? <p className="py-6 text-center text-sm text-ink-muted">이 회차의 문제 기록이 없어요.</p>
+            : (
+              <ScrollHintList maxHeightClass="max-h-[369px]" hintHeight={56} iconSize={36} iconTop={12}>
+                <div className="flex w-full flex-col">
+                  {items.map((it, i) => <DetailItem key={i} it={it} i={i} kind={row.kind} />)}
+                </div>
+              </ScrollHintList>
             )}
-          </div>
           {data.coaching && (
             <div className="flex items-center gap-2.5 rounded-14 bg-speak-tint px-4 py-3.5">
               <span className="relative size-[34px] shrink-0">

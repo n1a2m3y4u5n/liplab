@@ -14,9 +14,11 @@ const MouthAvatar = lazy(() => import('./MouthAvatar'))
  * variant='default': 입모양(mouthing)은 옵션 토글(기본 off). WordStage·Practice·전역 수어 오버레이가 쓴다.
  * variant='split': Figma 226:156 "수어와 입모양"의 Players(226:160) — 같은 폭 두 칸
  *   ('수어 영상' 초록 | '입모양 아바타' 보라, 머리 글자 + 190px 무대). 입력 전에는 Figma 자리 그림(손·입)을 둔다.
- *   /learn/sign(Sign.jsx)만 쓴다. Figma에 없는 것 중 단어 이동(토큰 칩·전체 재생), 라이선스 출처 표기,
+ *   Figma에 없는 것 중 단어 이동(토큰 칩·전체 재생), 라이선스 출처 표기,
  *   근접 수어 대체 안내('사전에 없어 근접 수어로 표시')는 기능·정확성 때문에 남긴다. 수형 설명·사전 링크·
  *   번역 메모(수어 문법 주석)는 나란히 보기에서 뺐다(9/24, 기본형 패널에는 그대로 있다).
+ * variant='single': 9/26 Figma 226:156: 머리글 '수어'와 회색 영상 칸 하나(226:161, 높이 222, r16)만 둔다. 입모양 아바타 칸과
+ *   입력 전 손 그림은 Figma에서 빠졌다. /learn/sign(Sign.jsx)이 쓴다.
  */
 const FS_MS = 1200  // 전체재생 시 지문자 토큰 표시 시간
 
@@ -95,9 +97,9 @@ export default function SignPanel({ text, variant = 'default' }) {
     return clearFs
   }, [playingAll, current, token, advance])
 
-  if (variant === 'split') {
+  if (variant === 'split' || variant === 'single') {
     return (
-      <SplitView text={text} loading={loading} error={error} result={result} tokens={tokens} token={token}
+      <SplitView single={variant === 'single'} text={text} loading={loading} error={error} result={result} tokens={tokens} token={token}
         current={current} playingAll={playingAll} advance={advance}
         onPick={(i) => { setPlayingAll(false); setCurrent(i) }}
         onPlayAll={() => { setCurrent(0); setPlayingAll(true) }} />
@@ -274,11 +276,11 @@ function Attribution({ className = '' }) {
  * 수어 칸: 영상(반복, 전체 재생 중엔 끝나면 다음 단어) · 영상이 없으면 수형 설명 · 사전 미등재어는 지문자 그림.
  * 입모양 칸: 현재 단어의 입모양 프레임을 MouthAvatar가 반복 재생(컨트롤·오버레이 없음).
  */
-function SplitView({ text, loading, error, result, tokens, token, current, playingAll, advance, onPick, onPlayAll }) {
+function SplitView({ single = false, text, loading, error, result, tokens, token, current, playingAll, advance, onPick, onPlayAll }) {
   const ready = !!(text && !loading && !error && result && tokens.length && token)
   let signStage
   if (!text) {
-    signStage = <img src="/ui/lp-226-32-hand.svg" alt="" aria-hidden className="size-[72px]" />
+    signStage = single ? null : <img src="/ui/lp-226-32-hand.svg" alt="" aria-hidden className="size-[72px]" />
   } else if (loading) {
     signStage = <p role="status" className="text-[13.5px] font-bold text-stat-accuracy">수어로 변환 중…</p>
   } else if (error) {
@@ -333,17 +335,24 @@ function SplitView({ text, loading, error, result, tokens, token, current, playi
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Players(226:160) — 같은 폭 두 칸, 간격 14 */}
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-        <Player label="수어 영상" tone="sign">{signStage}</Player>
-        <Player label="입모양 아바타" tone="mouth">
-          {ready ? (
-            <Suspense fallback={<MouthPlaceholder />}>
-              <MouthAvatar frames={token.visemes || []} height={190} />
-            </Suspense>
-          ) : <MouthPlaceholder />}
-        </Player>
-      </div>
+      {single ? (
+        /* Player / 수어 영상(226:161): 회색 칸 하나, 높이 222 */
+        <div className="flex h-[222px] w-full items-center justify-center overflow-hidden rounded-16 bg-fill-strong py-4">
+          {signStage}
+        </div>
+      ) : (
+        /* Players(226:160): 같은 폭 두 칸, 간격 14 */
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <Player label="수어 영상" tone="sign">{signStage}</Player>
+          <Player label="입모양 아바타" tone="mouth">
+            {ready ? (
+              <Suspense fallback={<MouthPlaceholder />}>
+                <MouthAvatar frames={token.visemes || []} height={190} />
+              </Suspense>
+            ) : <MouthPlaceholder />}
+          </Player>
+        </div>
+      )}
 
       {ready && (
         <>

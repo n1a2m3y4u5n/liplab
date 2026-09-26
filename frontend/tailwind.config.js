@@ -35,6 +35,7 @@ export default {
           ghost: '#a8a8b8',    // 축 눈금·보조 숫자
           hint: '#a4a4b4',     // 가이드 모달 그룹 머리(338:57)
           pale: '#b9b9c8',     // 가이드 독화 요령 '사과'의 뒷글자(370:142)
+          tick: '#b0b0c0',     // 슬라이더 눈금 숫자(아직 안 지난 칸, 449:91)
         },
         line: {
           DEFAULT: '#e2e2e8',  // border/default
@@ -97,7 +98,7 @@ export default {
       // Figma 글자 상자의 "leading normal" — Noto Sans KR에서 글자 크기의 1.2배(16px→19, 30px→36).
       // 브라우저의 line-height: normal(≈1.45)과 달라서 토큰으로 둔다.
       lineHeight: { figma: '1.2' },
-      borderWidth: { 1.5: '1.5px', 5: '5px', 6: '6px' },  // Figma 구분선 1.5 / 3D 하단테두리 5·6
+      borderWidth: { 1.5: '1.5px', 3: '3px', 5: '5px', 6: '6px' },  // Figma 구분선 1.5 / 슬라이더 손잡이 3(449:98) / 3D 하단테두리 5·6
       // Figma 반경 — rounded-14(버튼·칩) 16(주 버튼) 18(정보 카드) 20(카드) 22(모달) 24(가이드 모달)
       borderRadius: {
         '2xl': '1rem', '10': '10px', '13': '13px', '14': '14px', '15': '15px', '16': '16px',
@@ -109,6 +110,8 @@ export default {
         sheet: '0px -4px 16px -2px rgba(26,13,64,0.12)',  // 모바일 레슨 시트(233:61)
         art: '0px 14px 30px -4px rgba(26,13,64,0.14)',    // 랜딩 섹션 그림 카드(54:6·54:17)
         device: '0px 18px 40px -4px rgba(26,13,64,0.22)', // 랜딩 히어로 기기(19:37)
+        knob: '0px 3px 8px 0px rgba(26,13,64,0.18)',       // 슬라이더 손잡이(449:98)
+        seg: '0px 2px 2.5px 0px rgba(26,13,64,0.1)',       // 세그먼트 선택 칸(407:126)
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in',

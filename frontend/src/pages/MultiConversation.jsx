@@ -13,6 +13,8 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
  *  - H-4: '무슨 말이었나요' 보기는 한 단어를 입모양이 같은 다른 단어로 바꾼 닮은꼴 문장들이라, 입만
  *    보면 구별이 안 되고 앞 대화 문맥으로 골라야 한다. 한 턴은 빈칸 문맥 추론 턴이다.
  *  - H-9: 서버가 준 서명 정답(answer_key)과 턴별 선택을 보내 서버가 다시 채점한다.
+ * 9/26 변경 내역 §2·§5: 연습 탭의 '다자 대화' 기능은 없어지고, 상황별 시나리오 'AI 대화 → 여러 명 대화'가 이 화면으로 온다
+ * (?speakers=2~4&situation=). 그래서 제목을 그 선택지 이름('여러 명 대화')으로 바꾸고 부제를 뺐다. 라우트·파일 삭제는 따로 정한다.
  */
 const SPK_COLOR = ['bg-sky-500', 'bg-rose-500', 'bg-amber-500', 'bg-teal-500']
 const SPK_RING = ['ring-sky-400', 'ring-rose-400', 'ring-amber-400', 'ring-teal-400']
@@ -165,7 +167,7 @@ export default function MultiConversation() {
 
   if (loading || !conv) {
     return (
-      <AppShell active="practice" title="다자 대화" description="입모양만 보고 누가 말했는지 맞혀보세요">
+      <AppShell active="practice" title="여러 명 대화" closeTo="/practice/hub">
         <div className="flex justify-end">{speakerToggle}</div>
         <div className="card flex flex-col items-center gap-3 py-16 text-center">
           {loading ? (
@@ -190,7 +192,7 @@ export default function MultiConversation() {
   const nDone = conv.turns.filter((_, i) => turnDone(i)).length
 
   return (
-    <AppShell active="practice" title="다자 대화" description="입모양만 보고 누가 말했는지 맞혀보세요">
+    <AppShell active="practice" title="여러 명 대화" closeTo="/practice/hub">
       {/* 안내 + 화자 수 토글(난이도) */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <p className="text-[15px] text-ink-muted">장면 <b className="text-ink">{conv.scene}</b> · <b className="text-ink">누가 말하는지</b> 찾은 뒤, 앞 대화 흐름으로 <b className="text-ink">무슨 말인지</b> 골라 보세요.</p>

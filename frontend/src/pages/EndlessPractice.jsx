@@ -10,6 +10,7 @@ import LoadingScreen from '../components/LoadingScreen'
  * 문맥 레슨(약한 입모양이 든 문항부터)이 12문항씩 번갈아 이어진다(?endless=1, G-6).
  * 지금 출제될 약점 유형은 curriculumAPI.getNext()의 추천(targets: 이름·데모음절·숙달도)에서 읽어
  * Figma의 "지금 출제되는 유형" 진행바(숙달도 낮은 순)로 보여준다.
+ * 9/26 Figma(226:175): 제목 아래 부제가 빠지고 제목 줄 오른쪽에 나가기 X(연습 탭으로).
  */
 const VIS_NAME = {
   1: '양순음', 2: '개방모음', 3: '전설모음', 4: '원순모음', 5: '중설모음',
@@ -31,7 +32,7 @@ export default function EndlessPractice() {
   }, [])
 
   return (
-    <AppShell active="practice" title="엔드리스 학습" description="틀렸던 유형이 계속 나와요">
+    <AppShell active="practice" title="엔드리스 학습" closeTo="/practice/hub">
       {/* 엔드리스 시작 — Figma 인디고 그라데이션 히어로(3D 하단테두리) */}
       <section className="relative w-full overflow-hidden rounded-[20px] border-2 border-b-[5px] border-endless-dark p-6 sm:p-[26px]"
         style={{ backgroundImage: 'linear-gradient(166deg, var(--endless-light) 0%, var(--endless) 71%)' }}>
