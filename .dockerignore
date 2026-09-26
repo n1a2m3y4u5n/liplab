@@ -14,3 +14,9 @@ frontend/dist
 
 # OS / editor
 .DS_Store
+
+# 비밀값·테스트 부산물은 이미지에 넣지 않는다(backend/.env가 있으면 main.py의 load_dotenv가 그대로 읽는다)
+**/.env
+**/.env.*
+!**/.env.example
+**/.pytest_cache

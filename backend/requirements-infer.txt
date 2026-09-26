@@ -2,4 +2,6 @@
 # Dockerfile의 WITH_ML=1 빌드(fly.dev.toml)에서만 설치하고, 전시앱(fly.toml) 이미지에는 들어가지 않는다.
 # torch는 CPU 휠을 따로 설치한다(Dockerfile). 학습용 의존성(datasets·torchcodec 등)은 requirements-ml.txt.
 # 오디오 디코딩은 이미 있는 faster-whisper(PyAV)를 쓰므로 librosa·ffmpeg는 넣지 않는다.
-transformers>=5.16.0,<6
+# 판을 고정한다: 미리 변환한 int8 파일과 채점 점수는 torch 2.14.0(Dockerfile)·transformers 5.17.0에서 검증했다
+# (docs/scorer-selftrain.md). 범위로 두면 빌드 캐시가 비는 날 새 판이 들어와 점수가 조용히 바뀔 수 있다.
+transformers==5.17.0
