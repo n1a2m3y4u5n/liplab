@@ -16,8 +16,8 @@
 
 | 영역 | 스택 |
 |------|------|
-| Backend | Python 3.11+, FastAPI(async), SQLAlchemy(SQLite/PostgreSQL), PyJWT, Anthropic Claude API |
-| Frontend | React 18, Vite, Tailwind CSS, Zustand(상태), React Router, Framer Motion, Three.js(3D 아바타) |
+| Backend | Python 3.11+, FastAPI(async), SQLAlchemy(SQLite/PostgreSQL), python-jose(JWT), Anthropic Claude API |
+| Frontend | React 19, Vite, Tailwind CSS 3.4, Zustand(상태), React Router, Framer Motion, Three.js(3D 아바타) |
 | 배포 | Docker(멀티스테이지), Fly.io |
 
 ---
@@ -108,14 +108,17 @@ frontend/src/
 
 | 단계 | 최소 시도 | 숙달 정답률 | PASS 점수 |
 |------|-----------|-------------|-----------|
-| 1 | 15 | 80% | — (인지퀴즈: 정오답) |
-| 2 | 12 | 80% | — (단어: 정오답) |
-| 3 | 10 | 75% | 70점 |
-| 4 | 8 | 70% | 65점 |
+| 1 | 8 | 70% | 없음(인지퀴즈: 정오답) |
+| 2 | 6 | 70% | 없음(단어: 정오답) |
+| 3 | 5 | 65% | 60점 |
+| 4 | 4 | 60% | 55점 |
 
-### 잠금이 강제되는 3개 지점
+> 9/26 검토에서 이 표가 7/13 이후 코드와 달랐던 것을 바로잡았다(값은 `main.py`의 `_STAGEn_*`).
+> 한번 숙달한 단계는 이후 오답으로 누적 정확도가 떨어져도 숙달을 유지한다(다음 단계가 다시 잠기지 않게).
 
-순차 잠금은 표시뿐 아니라 진입까지 3중으로 막는다:
+### 잠금이 강제되는 4개 지점
+
+순차 잠금은 표시뿐 아니라 진입과 기록까지 막는다:
 
 1. **커리큘럼 경로 노드** — `pages/CurriculumPath.jsx`: 잠긴 단계 노드는 회색 + 버튼 `disabled`.
 2. **라우트 가드** — `App.jsx`의 `StageGate`: `/learn/word`(2), `/practice`(3), `/conversation`(4)에
@@ -123,6 +126,9 @@ frontend/src/
    (단계 조회 실패 시엔 막지 않음 — 네트워크 오류로 학습 전체가 잠기지 않도록 가용성 우선.)
 3. **시나리오 시작 버튼** — `pages/ScenarioHub.jsx`: 3·4단계 잠김이면 시나리오(LLM) 생성 전에 버튼
    비활성화 + "🔒 잠김" 표시로 API 낭비 방지(클릭 시 인앱 안내 배너).
+4. **서버 기록**: `main.py`의 `_compute_stages`·`_stage_open`: 2~4단계는 직전 단계가 (이번 계산에서) 열려 있고
+   숙달됐거나 배치 포인터가 그 단계 이상일 때만 열린다. 잠긴 단계의 답(문맥 추론은 3단계, 대화는 4단계에 쌓임)은
+   숙달에 넣지 않는다(API를 바로 불러 순서를 건너뛰지 못하게). 정답을 본 뒤의 제출은 `practice_only`로 점수만 준다.
 
 ### 진행도 기록 경로
 
@@ -181,15 +187,15 @@ frontend/src/
 
 | 코드 | 작업 | 핵심 | 상태 |
 |------|------|------|------|
-| **A** | `transition_ms` 실제 반영 | 프레임별 `transition_ms`(+재생 속도)로 보간 속도 결정. `LipSyncPlayer3D`→`AvatarVRM`→`RealisticFace`로 전달 | ✅ 완료 |
-| **B** | 이징 + 피크 도달 보장 | 시간추적 ease-in-out 보간, 전환은 프레임 길이의 60% 내 완료→목표 도달 후 유지(`durationMs` 전달) | ✅ 완료 |
-| **F** | 측면(프로필) 뷰 토글 | `AvatarVRM`에 `view`('front'/'side') + `CameraRig`·`VIEW_CONFIG`. 플레이어 좌상단 정면/측면 버튼 | ✅ 완료 |
-| **D** | 아이들 모션 | `RealisticFace` useFrame에 눈 깜빡임(`eyeBlinkLeft/Right`)·미세 머리 흔들림·호흡. 입모양 모프와 독립 | ✅ 완료 |
+| **A** | `transition_ms` 실제 반영 | 프레임별 `transition_ms`(+재생 속도)로 보간 속도 결정. `LipSyncPlayer3D`→`AvatarVRM`→`RealisticFace`로 전달 | 빠짐(7/14 d3605d3 병합에서 코드가 사라짐, 다시 구현 필요) |
+| **B** | 이징 + 피크 도달 보장 | 시간추적 ease-in-out 보간, 전환은 프레임 길이의 60% 내 완료→목표 도달 후 유지(`durationMs` 전달) | 빠짐(7/14 d3605d3 병합에서 코드가 사라짐, 다시 구현 필요) |
+| **F** | 측면(프로필) 뷰 토글 | `AvatarVRM`에 `view`('front'/'side') + `CameraRig`·`VIEW_CONFIG`. 플레이어 좌상단 정면/측면 버튼 | 빠짐(7/14 d3605d3 병합에서 코드가 사라짐, 다시 구현 필요) |
+| **D** | 아이들 모션 | `RealisticFace` useFrame에 눈 깜빡임(`eyeBlinkLeft/Right`)·미세 머리 흔들림·호흡. 입모양 모프와 독립 | 빠짐(7/14 d3605d3 병합에서 코드가 사라짐, 다시 구현 필요) |
 | **E** | 선행 동시조음 | 원순음 등에서 다음 viseme을 미리 블렌딩(anticipatory) | 백로그 |
 
-> A~D 구현 지점: `frontend/src/components/AvatarVRM.jsx`(보간·뷰·아이들 모션),
-> `frontend/src/components/LipSyncPlayer3D.jsx`(프레임 데이터·뷰 토글 UI 전달).
-> 전부 프론트 전용이라 백엔드 재시작 불필요(vite HMR로 반영).
+> A~D는 7/13(ee5366f)에 `AvatarVRM.jsx`·`LipSyncPlayer3D.jsx`에 들어갔다가 7/14 병합 정합(d3605d3)에서 빠졌다.
+> 9/26 검토 기준 지금 코드는 `transition_ms`를 쓰지 않고, 이징·측면 보기·눈 깜빡임도 없다. 다시 넣을 때 두 파일을 고친다
+> (프론트 전용이라 백엔드 재시작 불필요).
 
 ### 트랙 2: 기능 추가 (백로그, 우선순위 미정)
 
