@@ -55,16 +55,19 @@
    `fly secrets set`으로 넣고 파기가 끝날 때까지 바꾸지 않는다. 기호 없는 집단을 두면 `LIPLAB_PILOT_NOCUE_COHORTS`도 정한다.
    파기 도구는 이미지에 `/app/scripts/pilot_retention.py`로 들어 있고, 대장은 기본으로 볼륨(`/data`)에 남는다.
 
-9. **liplab-dev 서버 추론(9/24 코드 반영, 9/25 채점 모델을 자체 학습 모델로 바꾸고 int8로 4GB에 맞춤, 9/25 18:18 배포)**: `fly.dev.toml`은
+9. **liplab-dev 서버 추론(9/24 코드 반영, 9/25 채점 모델을 자체 학습 모델로 바꾸고 int8로 4GB에 맞춤, 9/25 18:18 배포, 9/26 콜드 스타트 개선은 배포 전)**: `fly.dev.toml`은
    `WITH_ML=1`로 빌드해 D-GOP 발음채점과 음성구동 아바타(A4)를 서버에서 켠다. 전시앱 `fly.toml`은 바꾸지 않았다(기본값
    `WITH_ML=0`이라 이미지가 전과 같다).
    - 채점 모델(9/25): 자체 학습 정렬기·채점기(`DGOP_MODEL=ours`). 사전등록 독립 재검(538 새 20화자)을 통과해 공개 kresnik
-     대신 쓴다(`docs/scorer-selftrain.md`). 체크포인트(각 1.26GB)는 git에 없으므로 배포 전에 빌드 폴더에 있는지 확인한다:
-     `ls -l backend/models/dgop_ours/*/model.safetensors`. 없으면
-     `cp -cR ~/Downloads/liplab-lab/models/dgop_ours_2026-09-25 backend/models/dgop_ours`(APFS 복제라 디스크를 더 쓰지 않는다).
-     체크포인트가 없으면 빌드가 멈춘다(조용히 전사 경로로 떨어지지 않게). 빌드 폴더 업로드가 약 2.5GB 늘어난다.
+     대신 쓴다(`docs/scorer-selftrain.md`). 체크포인트는 git에 없으므로 배포 전에 빌드 폴더에 있는지 확인한다:
+     `ls -l backend/models/dgop_ours/*/model.int8.safetensors`(9/26부터 미리 변환한 int8 파일, 각 355MB). 없으면
+     `cp -cR ~/Downloads/liplab-lab/models/dgop_ours_2026-09-25_int8 backend/models/dgop_ours`(APFS 복제라 디스크를 더 쓰지 않는다).
+     fp32 원본(각 1.26GB)은 `liplab-lab/models/dgop_ours_2026-09-25`에 있고, int8 파일은
+     `backend/.venv/bin/python scripts/export_int8.py <fp32 폴더> <출력 폴더> --wav <16kHz 음성>`으로 다시 만든다(실행 중 변환과
+     비트 단위로 같은지 확인하고 다르면 실패한다). 체크포인트가 없으면 빌드가 멈추고(조용히 전사 경로로 떨어지지 않게), int8 파일은
+     빌드 때 이미지의 torch·transformers로 한 번 올려 본다. 빌드 폴더 업로드가 약 0.7GB 늘어난다(fp32를 싣던 9/25는 2.5GB).
    - 이미지: torch CPU 휠 + transformers, 자체 정렬기·채점기, microsoft/wavlm-large(아바타 백본, 빌드 때 받음).
-     kresnik은 `DGOP_MODEL=kresnik`일 때만 받는다. `HF_HUB_OFFLINE=1`. 이미지가 약 6GB라 첫 빌드가 오래 걸린다.
+     kresnik은 `DGOP_MODEL=kresnik`일 때만 받는다. `HF_HUB_OFFLINE=1`. 9/25 이미지는 4.6GB였고, int8 파일로 바꾸면 약 1.8GB 준다.
    - int8(9/25 오후): `BACKBONE_QUANT=int8`이면 정렬기·채점기의 선형층 가중치를 int8로 두고 계산은 fp32로 한다
      (`backend/quant_int8.py`, 모델당 약 1.2GB → 0.4GB). 아바타 백본은 fp32 그대로다. 사전등록 점검(`liplab-lab/notes/int8_prereg_2026-09-25.md`)
      다섯 조건을 모두 통과했다: 재검 관문 재현(단조 비율 Δ +3.5%p [2.2, 5.0]), 538 2,400쌍 표시 점수 차 평균 0.20점(95백분위 0.7),
@@ -96,9 +99,27 @@
      볼륨 liplab_data 1GB(암호화 켜짐 확인), 비밀키 JWT_SECRET·ANTHROPIC_API_KEY 있음. 켜진 뒤 정렬기·채점기 int8 적재 각 약 75초,
      아바타 백본 2.4초. 맞는 문장 84.1점·다른 문장 29.5점(맥 음성합성 문장, D-GOP 경로, 자체 앵커), 채점 2.4~2.8초.
      기계가 멈췄다 켜지면 첫 발음 채점은 적재가 끝날 때까지(약 1~2분) 기다린다.
+   - 콜드 스타트(9/26 실측과 개선, 배포 전, 원자료 `liplab-lab/data/hosting_runs/20260926_liplab-dev_cold/`): 멈춘 기계를 깨우면
+     앱 응답 10초, 정렬기·채점기 적재 각 76초(차례로), 아바타 백본은 적재 2.6초였지만 첫 아바타 요청이 76초 걸렸다(가중치를 파일
+     매핑으로 올려 첫 추론 때 읽는다). 전부 준비되기까지 약 4분이다. 원인은 CPU가 아니라 루트 파일시스템 읽기로, 1.26GB를 76초에
+     읽어 초당 약 17MB였다(fly 문서는 루트 파일시스템을 기계 종류와 상관없이 8MiB/s·2000 IOPS로 제한한다고 적는다). 같은 적재가
+     파드에서는 모델당 1.6초였다. 세 가지를 고쳤다.
+     (1) 일시정지: `auto_stop_machines = "suspend"`. 수동 시험(`fly machine suspend`)에서 4GB 기계가 8초 만에 일시정지됐고, 깨운 뒤
+     앱 응답 0.9초, 첫 발음 채점 3.6초, 첫 아바타 3.1초였으며 올려 둔 모델이 그대로 있었다(적재 시각 유지). 요금은 멈춘 기계와 같이
+     저장 공간만이다. fly 문서는 2GB 넘는 기계에는 권하지 않고(일시정지 시간이 길어서) 스냅샷 보존을 보장하지 않으며, 배포하면
+     스냅샷을 버린다. 그때는 (2)·(3)이 콜드 스타트를 줄인다. 문제가 생기면 `"stop"`으로 되돌린다.
+     (2) 미리 변환한 int8: 정렬기·채점기를 `model.int8.safetensors`(fp32의 28%)로 싣고 fp32를 읽지 않고 바로 올린다
+     (`quant_int8.load_ctc`, 빌드 폴더에 int8 파일만 있으면 `BACKBONE_QUANT`와 상관없이 이 경로). 텐서 569개가 실행 중 변환과 모두
+     같고 로짓 차이 0(무작위 3초·음성합성 문장), D-GOP 점수도 배포 서버와 같았다(맞는 문장 84.1, 다른 문장 29.5). 읽는 양으로 따지면
+     적재가 모델당 약 21초로 줄 것으로 본다(배포 뒤 확인). 변환 순간의 메모리 최고치(9/25 점검 3.15GB)도 없어진다.
+     (3) 예열이 아바타 백본까지 1초 무음으로 한 번 돌려 가중치를 미리 읽는다(`audio2face.warm`). 일시정지 스냅샷에도 들어간다.
+     함께 고친 결함: `GET /api/backbone/status`가 적재 내내 잠금을 기다려, 적재 중에 부르면 서버 전체가 멈췄다(비동기 엔드포인트
+     안의 동기 대기). 이제 바로 답하고 올리는 중인 모델을 `loading`에 보인다. 제품 화면은 이 주소를 부르지 않아 측정 때만 드러났다.
    - 배포(사용자 지시 뒤에만): `fly deploy -c fly.dev.toml -a liplab-dev --remote-only`. 확인은 `GET /api/backbone/status`에
-     세 모델이 올라왔고 정렬기·채점기의 `quant`가 `int8`인지, 발음 연습 응답의 `assessment_method`가 `dgop`이고
+     세 모델이 올라왔고 정렬기·채점기의 `quant`가 `int8`, `quant_from`이 `file`인지, 발음 연습 응답의 `assessment_method`가 `dgop`이고
      `dgop.calibration`이 자체 학습 앵커인지 본다. 메모리는 `fly machine status`나 대시보드에서 4GB 안(점검 최대 3.15GB)인지 본다.
+     일시정지는 몇 분 쉰 뒤 `fly status -a liplab-dev`의 STATE가 `suspended`인지, 깨운 뒤 `load_seconds`·`loaded_at`이 그대로인지
+     본다. 콜드 스타트 시간은 `liplab-lab/tools/cold_start_measure.sh`로 잰다.
      D-GOP를 끄려면 `WITH_ML`을 0으로 바꾸거나 `DGOP_ALIGNER_ID`를 지우고 다시 배포한다.
 
 ---
