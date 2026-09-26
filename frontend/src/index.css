@@ -318,14 +318,15 @@ html.a11y-contrast .border-gray-100,
 html.a11y-contrast .border-gray-200 { border-color: #6b7280 !important; }
 
 /* 모달 본문 스크롤바 — 카드 안쪽에 얇고 연하게. 트랙은 투명, 손잡이는 여백만큼 안쪽으로 */
-/* 스크롤 안내 목록(components/ScrollHintList): 바닥의 페이드·화살표가 스크롤을 알리므로 막대는 숨긴다(Figma에 없음) */
-.scroll-hint-list { scrollbar-width: none; }
-.scroll-hint-list::-webkit-scrollbar { display: none; }
 .modal-scroll { scrollbar-width: thin; scrollbar-color: #d9d6e6 transparent; scrollbar-gutter: stable; }
 .modal-scroll::-webkit-scrollbar { width: 10px; }
 .modal-scroll::-webkit-scrollbar-track { background: transparent; }
 .modal-scroll::-webkit-scrollbar-thumb { background: #d9d6e6; border-radius: 999px; border: 3px solid #fff; }
 .modal-scroll::-webkit-scrollbar-thumb:hover { background: #bfb9d6; }
+
+/* 스크롤 안내 목록(components/ScrollHintList): 바닥의 페이드·화살표가 스크롤을 알리므로 막대는 숨긴다(Figma에 없음) */
+.scroll-hint-list { scrollbar-width: none; }
+.scroll-hint-list::-webkit-scrollbar { display: none; }
 
 /* 인쇄(교사·언어재활사용 결과지, I-9) — A4 여백, 흰 바탕 */
 @media print {

@@ -60,18 +60,20 @@ AutoModel.from_pretrained('microsoft/wavlm-large')"; \
 # Copy backend source
 COPY backend/ ./
 # 자체 학습 채점 모델로 빌드할 때는 체크포인트가 빌드 폴더에 있어야 한다(없으면 D-GOP가 전사로 폴백하므로 빌드를 멈춘다).
-# int8 파일이면 이 이미지의 torch·transformers로 실제로 올려 본다(판이 달라 못 읽으면 배포 전에 빌드에서 멈춘다).
+# 켜질 때와 같은 적재 경로(backbone_service._load_ctc, fly.dev.toml의 BACKBONE_QUANT=int8)로 전처리기까지 실제로 올려 본다
+# (이 이미지의 torch·transformers로 못 읽으면 배포 전에 빌드에서 멈춘다). int8 파일로 올렸는지(file) 실행 중 변환인지(runtime)와
+# torch·transformers 판을 빌드 기록에 남긴다.
 RUN if [ "$WITH_ML" = "1" ] && [ "$DGOP_MODEL" = "ours" ]; then \
       for m in aligner scorer; do \
         test -s models/dgop_ours/$m/model.int8.safetensors || test -s models/dgop_ours/$m/model.safetensors \
         || { echo "backend/models/dgop_ours/$m 체크포인트가 없다(DEPLOY.md 9항)"; exit 1; }; \
       done && \
-      python -c "import os, torch, quant_int8 as Q; \
-ds=[d for d in ('models/dgop_ours/aligner','models/dgop_ours/scorer') if Q.has_int8(d)]; \
-ms=[Q.load_ctc(d) for d in ds]; \
+      BACKBONE_QUANT=int8 python -c "import torch, transformers, backbone_service as B; \
+torch.set_grad_enabled(False); \
+rs=[(d,) + B._load_ctc('models/dgop_ours/' + d, 'cpu') for d in ('aligner', 'scorer')]; \
 x=torch.zeros(1, 16000); \
-[m(x) for m in ms]; \
-print('int8 checkpoints ok:', ds)"; \
+[m(x) for _, p, m in rs]; \
+print('dgop_ours ok:', [(d, getattr(m, 'liplab_quant_from', None)) for d, p, m in rs], 'torch', torch.__version__, 'transformers', transformers.__version__)"; \
     fi
 
 # 파일럿 자료 파기 도구(§4.7) — 서버에서 fly ssh로 실행한다(scripts/pilot_retention.py 머리말)

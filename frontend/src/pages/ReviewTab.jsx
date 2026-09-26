@@ -247,7 +247,7 @@ export default function ReviewTab() {
           <p className="py-10 text-center text-sm text-ink-muted">복습할 항목이 없어요. 잘하고 있어요!</p>
         ) : (
           /* 항목 묶음(316:33 / 316:35): 간격 0, 각 항목 위아래 패딩으로 구분선 위아래를 같게 */
-          <ScrollHintList maxHeightClass="max-h-[241px] lg:max-h-[419px]" onOverflowChange={setListOverflow}>
+          <ScrollHintList maxHeightClass="max-h-[241px] lg:max-h-[419px]" onOverflowChange={setListOverflow} resetKey={filter} label="복습 항목">
             <div className="flex flex-col">
               {shown.map((it, i) => (
                 <ReviewItem key={it.id} {...it} first={i === 0}

@@ -546,7 +546,7 @@ function SessionDetail({ row, onClose, onGo }) {
           {items.length === 0
             ? <p className="py-6 text-center text-sm text-ink-muted">이 회차의 문제 기록이 없어요.</p>
             : (
-              <ScrollHintList maxHeightClass="max-h-[369px]" hintHeight={56} iconSize={36} iconTop={12}>
+              <ScrollHintList maxHeightClass="max-h-[369px]" hintHeight={56} iconSize={36} iconTop={12} label="이 회차 문항">
                 <div className="flex w-full flex-col">
                   {items.map((it, i) => <DetailItem key={i} it={it} i={i} kind={row.kind} />)}
                 </div>

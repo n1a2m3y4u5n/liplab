@@ -83,11 +83,12 @@ def test_status_answers_while_a_model_is_loading():
         release.wait(5)
         return None, _FakeModel()
 
+    bb.available()   # torch 첫 불러오기(1초 넘게 걸리기도 한다)는 잠금과 무관하니 재는 구간 밖에서 끝내 둔다
     old = dict(bb._LOADERS)
     bb.clear()
     bb._LOADERS["base"] = slow
+    t = threading.Thread(target=bb.load, args=("m/slow", "base", "cpu"))
     try:
-        t = threading.Thread(target=bb.load, args=("m/slow", "base", "cpu"))
         t.start()
         assert started.wait(5)
         done = threading.Event()
@@ -101,6 +102,8 @@ def test_status_answers_while_a_model_is_loading():
         assert st["loading"] == [] and st["loaded"][0]["uses"] == 1
     finally:
         release.set()
+        if t.is_alive():
+            t.join(5)   # 실패해도 적재 스레드가 끝난 뒤에 비워야 캐시에 m/slow가 다시 들어가지 않는다
         bb._LOADERS.clear()
         bb._LOADERS.update(old)
         bb.clear()

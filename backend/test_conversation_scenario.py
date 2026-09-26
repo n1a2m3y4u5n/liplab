@@ -62,3 +62,23 @@ def test_clean_scene():
     assert cs.clean_scene('카페 "주문" {x}') == "카페 주문 x"
     assert len(cs.clean_scene("가" * 100)) == 30
 
+
+
+def test_level_sets_turn_length_in_prompt(monkeypatch):
+    # 상황별 시나리오에서 고른 난이도(1~5)가 한 턴 길이 지시로 들어가고, 단계가 없으면 예전 그대로(6~14자)
+    seen = []
+
+    class _Messages:
+        async def create(self, **kw):
+            seen.append(kw["system"])
+            raise RuntimeError("테스트: LLM 호출 없음")   # 프롬프트만 보고 폴백으로 끝낸다
+
+    class _Client:
+        messages = _Messages()
+
+    monkeypatch.setattr(cs, "anthropic_client", _Client())
+    for level in (1, 5, None, 9):
+        conv = asyncio.run(cs.generate_multi_conversation(speakers=2, turns=4, scene="카페", level=level))
+        assert conv["fallback"] is True
+    assert "4~8자" in seen[0] and "14~22자" in seen[1]
+    assert "6~14자" in seen[2] and "6~14자" in seen[3]   # 범위 밖 단계도 기본 길이

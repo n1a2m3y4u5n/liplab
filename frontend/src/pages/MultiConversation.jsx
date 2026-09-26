@@ -48,9 +48,11 @@ export default function MultiConversation() {
   const [spkChoice, setSpkChoice] = useState([])     // 턴별로 고른 화자
   const [readChoice, setReadChoice] = useState([])   // 턴별로 고른 문장(빈칸 턴은 null)
   const [closureChoice, setClosureChoice] = useState(null)
-  // 상황별 시나리오의 'AI 대화 · 여러 명'에서 들어오면 ?speakers=2~4 &situation=적은 상황(225:183). 없으면 2명·임의 장면.
+  // 상황별 시나리오의 'AI 대화 · 여러 명'에서 들어오면 ?speakers=2~4 &level=1~5 &situation=적은 상황(225:183). 없으면 2명·임의 장면.
   const [params] = useSearchParams()
   const scene = (params.get('situation') || '').trim() || undefined
+  const lv = parseInt(params.get('level'), 10)
+  const level = lv >= 1 && lv <= 5 ? lv : undefined   // 그 화면에서 고른 난이도(1~5): 한 턴 길이. 없으면 서버 기본
   const [numSpeakers, setNumSpeakers] = useState(() => Math.min(4, Math.max(2, parseInt(params.get('speakers'), 10) || 2)))  // 화자 수(2~4) — 난이도 조절
   const [result, setResult] = useState(null)         // 서버 종합 채점(세션 종료 시)
   const [loadError, setLoadError] = useState(false)  // 대화를 못 불러오면 셸 안에서 다시 시도
@@ -68,12 +70,12 @@ export default function MultiConversation() {
   const load = useCallback(async () => {
     setLoading(true); setLoadError(false)
     try {
-      const c = await curriculumAPI.getMultiConversation(numSpeakers, 6, scene)
+      const c = await curriculumAPI.getMultiConversation(numSpeakers, 6, scene, level)
       setConv({ ...c, seed: Math.floor(Math.random() * 1e9) })
       setIdx(0); setSpkChoice([]); setReadChoice([]); setClosureChoice(null)
       setResult(null); submittedRef.current = false
     } catch { setLoadError(true) } finally { setLoading(false) }
-  }, [numSpeakers, scene])
+  }, [numSpeakers, scene, level])
 
   useEffect(() => { load() }, [load])
 

@@ -498,10 +498,12 @@ async def get_visemes(text: str):
 
 @app.get("/api/avatar/audio2face/status")
 async def audio2face_status():
-    """음성구동 아바타(A4) 사용 가능 여부 — 프론트가 UI 노출 판단에 사용."""
+    """음성구동 아바타(A4) 사용 가능 여부. 프론트가 UI 노출 판단에 쓴다.
+    is_available()은 처음 부를 때 torch를 불러온다. 켜진 직후에는 예열 스레드가 torch를 불러오는 동안 기다리므로
+    스레드에서 불러 이벤트 루프(다른 요청)를 막지 않는다."""
     try:
         import audio2face
-        return {"available": audio2face.is_available()}
+        return {"available": await asyncio.to_thread(audio2face.is_available)}
     except Exception:
         return {"available": False}
 
@@ -2166,9 +2168,10 @@ async def _pilot_cues_off(user_id: int, db) -> bool:
 
 @app.get("/api/backbone/status")
 async def backbone_status(current_user=Depends(get_current_user)):
-    """공용 음성 백본(A-9) 상태 — 올라간 모델·장치·사용 횟수와 쓰는 축. 모델을 새로 올리지는 않는다."""
+    """공용 음성 백본(A-9) 상태: 올라간 모델·장치·사용 횟수와 쓰는 축. 모델을 새로 올리지는 않는다.
+    status()는 처음에 torch를 불러오므로(켜진 직후에는 예열 스레드의 불러오기를 기다린다) 스레드에서 부른다."""
     import backbone_service as _bb
-    return _bb.status()
+    return await asyncio.to_thread(_bb.status)
 
 
 def _reviewer_tag(user) -> str:
@@ -2631,12 +2634,13 @@ async def assessment_report(tz_offset_min: int = -540, current_user=Depends(get_
 
 
 @app.get("/api/conversation/multi", dependencies=[Depends(ratelimit.rate_limit(30, 60, "llm-multi"))])
-async def conversation_multi(speakers: int = 2, turns: int = 6, scene: Optional[str] = None,
+async def conversation_multi(speakers: int = 2, turns: int = 6, scene: Optional[str] = None, level: Optional[int] = None,
                              current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """다자 대화 시나리오(축 H) — 여러 화자가 번갈아 말하는 짧은 대화(화자 식별 + 입모양 읽기).
     학습자의 약점 입모양이 든 승인 단어(G)를 대화에 넣도록 요청하고(H-3), 턴마다 닮은꼴 오답과
     빈칸 턴을 붙인다(H-4). answer_key는 서버 재채점용 서명 정답(H-9)이다.
-    scene은 상황별 시나리오에서 학습자가 적은 상황(선택, 30자로 정리). speakers는 2~4명."""
+    scene은 상황별 시나리오에서 학습자가 적은 상황(선택, 30자로 정리). speakers는 2~4명.
+    level은 그 화면에서 고른 난이도(1~5, 선택)로 한 턴 길이를 정한다."""
     import conversation_scenario as _conv
     import knowledge_tracing as _kt
     import content_rules as _crules
@@ -2656,7 +2660,8 @@ async def conversation_multi(speakers: int = 2, turns: int = 6, scene: Optional[
         import random as _rnd
         _rnd.shuffle(focus)
         conv = await _conv.generate_multi_conversation(speakers=speakers, turns=turns, scene=scene,
-                                                       focus_words=focus[:6])
+                                                       focus_words=focus[:6],
+                                                       level=max(1, min(5, level)) if level else None)
     except Exception as e:
         raise _server_error(e, "conversation gen failed")
     key = {"uid": current_user.id, "sp": [t["speaker"] for t in conv["turns"]],

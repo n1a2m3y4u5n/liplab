@@ -124,11 +124,27 @@ def test_backbone_loads_int8_file_without_fp32(tmp_path, monkeypatch):
         assert proc is not None and model.liplab_quant_from == "file"
         row = bb.status()["loaded"][0]
         assert row["quant"] == "int8" and row["quant_from"] == "file"
-        # fp32가 함께 있으면 BACKBONE_QUANT가 int8일 때만 파일을 쓴다
+        # fp32만 있는 폴더는 fp32 그대로
         _, m2 = bb._load_ctc(src, "cpu")
         assert getattr(m2, "liplab_quant", None) is None
     finally:
         bb.clear()
+
+
+def test_both_files_use_int8_only_on_cpu_with_int8_mode(tmp_path, monkeypatch):
+    """fp32와 int8 파일이 함께 있으면 실행 중 변환과 같은 조건(BACKBONE_QUANT=int8, CPU)일 때만 int8 파일을 쓴다.
+    GPU 대신 meta 장치로 CPU가 아닌 경우를 본다(fp32 경로는 CPU가 아니면 변환하지 않는다)."""
+    import shutil
+    src = _tiny_ctc_dir(str(tmp_path))
+    out = os.path.join(str(tmp_path), "int8")
+    Q.export_ctc(src, out)
+    shutil.copy(os.path.join(out, Q.INT8_FILE), src)
+    assert Q.has_int8(src) and Q.has_fp32(src)
+    monkeypatch.delenv("BACKBONE_QUANT", raising=False)
+    assert getattr(bb._load_ctc(src, "cpu")[1], "liplab_quant", None) is None
+    monkeypatch.setenv("BACKBONE_QUANT", "int8")
+    assert bb._load_ctc(src, "cpu")[1].liplab_quant_from == "file"
+    assert getattr(bb._load_ctc(src, "meta")[1], "liplab_quant", None) is None
 
 
 def test_dev_config_auto_stop_value_is_valid():

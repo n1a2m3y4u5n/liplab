@@ -43,6 +43,7 @@ export default function FreeSpeak() {
       if (!data || data.length === 0) {
         setVisemes([])
         setPlayedText('')
+        setVisemeId(15)   // 입모양 칸이 자리 그림으로 돌아가니 성도 단면도 쉼으로
         setError('입모양으로 바꿀 한글이 없어요. 한글을 입력해주세요. (예: 안녕하세요)')
         return
       }
