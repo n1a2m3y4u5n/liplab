@@ -61,7 +61,9 @@
    - 채점 모델(9/25): 자체 학습 정렬기·채점기(`DGOP_MODEL=ours`). 사전등록 독립 재검(538 새 20화자)을 통과해 공개 kresnik
      대신 쓴다(`docs/scorer-selftrain.md`). 체크포인트는 git에 없으므로 배포 전에 빌드 폴더에 있는지 확인한다:
      `ls -l backend/models/dgop_ours/*/model.int8.safetensors`(9/26부터 미리 변환한 int8 파일, 각 355MB). 없으면
-     `cp -cR ~/Downloads/liplab-lab/models/dgop_ours_2026-09-25_int8 backend/models/dgop_ours`(APFS 복제라 디스크를 더 쓰지 않는다).
+     `rm -rf backend/models/dgop_ours && cp -cR ~/Downloads/liplab-lab/models/dgop_ours_2026-09-25_int8 backend/models/dgop_ours`
+     (APFS 복제라 디스크를 더 쓰지 않는다. 먼저 지우지 않으면 폴더가 이미 있을 때 그 안에 하위 폴더로 들어가, 예전 fp32가 남은 채
+     빌드되고 켜질 때마다 실행 중 변환을 한다. 빌드 기록의 `dgop_ours ok:`가 `file`인지 본다).
      fp32 원본(각 1.26GB)은 `liplab-lab/models/dgop_ours_2026-09-25`에 있고, int8 파일은
      `backend/.venv/bin/python scripts/export_int8.py <fp32 폴더> <출력 폴더> --wav <16kHz 음성>`으로 다시 만든다(실행 중 변환과
      비트 단위로 같은지 확인하고 다르면 실패한다). 체크포인트가 없으면 빌드가 멈추고(조용히 전사 경로로 떨어지지 않게), int8 파일은
@@ -117,10 +119,21 @@
      안의 동기 대기). 이제 바로 답하고 올리는 중인 모델을 `loading`에 보인다. 제품 화면은 이 주소를 부르지 않아 측정 때만 드러났다.
    - 배포(사용자 지시 뒤에만): `fly deploy -c fly.dev.toml -a liplab-dev --remote-only`. 확인은 `GET /api/backbone/status`에
      세 모델이 올라왔고 정렬기·채점기의 `quant`가 `int8`, `quant_from`이 `file`인지, 발음 연습 응답의 `assessment_method`가 `dgop`이고
-     `dgop.calibration`이 자체 학습 앵커인지 본다. 메모리는 `fly machine status`나 대시보드에서 4GB 안(점검 최대 3.15GB)인지 본다.
+     `dgop.calibration`이 자체 학습 앵커인지 본다. 메모리는 서버 프로세스(로그의 `Started server process [N]`)의 최고치를
+     `fly ssh console -a liplab-dev -C "cat /proc/N/status"`의 VmHWM으로 보고 4GB 안(점검 최대 3.15GB)인지 본다.
      일시정지는 몇 분 쉰 뒤 `fly status -a liplab-dev`의 STATE가 `suspended`인지, 깨운 뒤 `load_seconds`·`loaded_at`이 그대로인지
      본다. 콜드 스타트 시간은 `liplab-lab/tools/cold_start_measure.sh`로 잰다.
      D-GOP를 끄려면 `WITH_ML`을 0으로 바꾸거나 `DGOP_ALIGNER_ID`를 지우고 다시 배포한다.
+   - 9/26 배포 결과(사용자 지시, v9 19:47, 이미지 deployment-01M3EMZ4N7SQW835D0F5JDMT7W 2.9GB(9/25 4.6GB), 빌드 폴더 754MB,
+     원자료 `liplab-lab/data/hosting_runs/20260926_liplab-dev_cold/`의 deploy1·resume2·resume3): 빌드 점검에서 int8 두 모델을 실제로
+     올렸고, 켜진 뒤 정렬기·채점기가 int8 파일에서 바로 올라왔다(`quant_from: file`, 적재 각 21.8초·21.2초, 전에는 각 76초).
+     예열이 끝나 모두 준비되기까지 켜진 뒤 2분 14초(전에는 약 4분). 첫 발음 채점 2.7초, 맞는 문장 84.1점으로 전과 같다.
+     서버 프로세스 메모리 최고 2.40GiB(VmHWM), 채점 뒤 2.36GiB. 예열이 아바타 백본(1.26GB)을 읽는 동안(켜진 뒤 약 2분) 들어온 첫
+     아바타 요청은 그 읽기를 함께 기다려 72초였고, 예열 뒤에는 1.8초였다.
+     일시정지: 요청이 없으면 fly 프록시가 2.5~4분 뒤 스스로 일시정지했다(스냅샷 6~9초). 두 번 깨웠다. 한 번은 fly가 깨우면서 기계를
+     다른 호스트로 옮겨(`fly machine status` 이벤트 `launch migrated=true`) 스냅샷 없이 새로 켜졌고, 앱 응답까지 73초(새 호스트가
+     이미지를 받는 시간 포함), 그 뒤 예열 2분 15초가 걸렸다. 다른 한 번은 앱 응답 1.8초, 세 모델이 그대로 있었고(적재 시각 같음) 첫
+     아바타 3.6초, 첫 채점 2.8초였다. 일시정지는 대개 몇 초 안에 깨우지만, 이주가 일어나면 새로 켜는 것과 같다.
 
 ---
 
