@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import WatermarkCard from '../components/WatermarkCard'
+import ScrollHintList from '../components/ScrollHintList'
 import { reviewAPI, learningAPI } from '../api'
 import { relDay } from '../lib/relDay'
 
@@ -10,7 +11,8 @@ import { relDay } from '../lib/relDay'
  * 실데이터: reviewAPI.getDue(예정), learningAPI.getReviewSentences(오답), getBookmarks(북마크 — 독화·발화 모두).
  * 각 항목은 트랙 배지(독화=보라 / 발화=핑크) + 단어 + 사유. 클릭 시 해당 복습 흐름으로 이동.
  * 오른쪽 패널은 복습 탭 구성(스탯 + 오늘의 과제 + 이번 주 복습, 100:113).
- * 목록은 처음에 데스크톱 5개·모바일 3개만 보이고, 더 있으면 아래 원형 버튼(192:21 Scroll hint)으로 모두 펼친다.
+ * 목록은 최대 높이(데스크톱 419 = 항목 351 + 간격 16 + 안내 52, 모바일 241) 안에서 세로로 스크롤되고, 더 있으면 바닥에
+ * 스크롤 안내(192:21 · 320:36)가 겹친다. 안내는 버튼이 아니다(변경 내역 §0-1, components/ScrollHintList).
  * 상대 날짜('3일 전 · ', lib/relDay)는 오답=가장 최근에 틀린 시각, 예정=마지막으로 다시 푼 시각(없으면 큐에 든 시각),
  * 북마크=북마크한 시각으로 붙인다. 오답 횟수('2회 틀렸어요')는 /api/review-sentences의 wrong_count.
  */
@@ -104,10 +106,6 @@ function EraseButton({ onClick, className = '' }) {
   )
 }
 
-// 목록 첫 화면 개수(Figma 항목 수) — 모바일 3 · 데스크톱 5
-const PEEK_MOBILE = 3
-const PEEK_DESKTOP = 5
-
 export default function ReviewTab() {
   const navigate = useNavigate()
   const [due, setDue] = useState(0)
@@ -115,7 +113,7 @@ export default function ReviewTab() {
   const [marks, setMarks] = useState(0)
   const [items, setItems] = useState([])
   const [filter, setFilter] = useState('all')
-  const [expanded, setExpanded] = useState(false)       // 스크롤 힌트로 목록 전체 펼침
+  const [listOverflow, setListOverflow] = useState(false)  // 목록이 틀보다 길어 스크롤 안내가 붙는가
   const [selectMode, setSelectMode] = useState(false)  // 복습 선택(삭제) 모드 UI 상태
   const [selected, setSelected] = useState(new Set())  // 선택된 항목 id 집합
 
@@ -159,16 +157,9 @@ export default function ReviewTab() {
     { key: 'wrong', label: '오답', n: wrong + due },
     { key: 'bookmark', label: '북마크', n: marks },
   ]
-  // 펼치기 전에는 모바일 3개·데스크톱 5개만 — 나머지는 CSS로 숨기고, 넘치는 쪽 화면에만 스크롤 힌트를 둔다.
-  const hintMobile = !expanded && shown.length > PEEK_MOBILE
-  const hintDesktop = !expanded && shown.length > PEEK_DESKTOP
-  const peekClass = (i) => {
-    if (expanded || i < PEEK_MOBILE) return ''
-    return i < PEEK_DESKTOP ? 'hidden lg:flex' : 'hidden'
-  }
   const deleteShown = selectMode && selected.size > 0
-  // 카드 아래 여백 — 스크롤 힌트가 마지막이면 힌트가 여백을 대신한다(239:134 pb 4 · 189:21 pb 0).
-  const padBottom = `${hintMobile && !deleteShown ? 'pb-1' : selectMode ? 'pb-5' : 'pb-[18px]'} ${hintDesktop && !deleteShown ? 'lg:pb-0' : 'lg:pb-[22px]'}`
+  // 카드 아래 여백: 스크롤 안내가 카드 바닥에 닿으면 안내가 여백을 대신한다(239:134 pb 4 · 189:21 pb 0).
+  const padBottom = listOverflow && !deleteShown ? 'pb-1 lg:pb-0' : selectMode ? 'pb-5 lg:pb-[22px]' : 'pb-[18px] lg:pb-[22px]'
 
   const exitSelect = () => { setSelectMode(false); setSelected(new Set()) }
   const toggleItem = (id) => setSelected((prev) => {
@@ -252,25 +243,19 @@ export default function ReviewTab() {
           ) : null}
         </div>
 
-        <div className="flex flex-col">
-          {shown.length === 0 ? (
-            <p className="py-10 text-center text-sm text-ink-muted">복습할 항목이 없어요. 잘하고 있어요!</p>
-          ) : shown.map((it, i) => (
-            <ReviewItem key={it.id} {...it} first={i === 0} className={peekClass(i)}
-              selectMode={selectMode} checked={selected.has(it.id)}
-              onClick={() => (selectMode ? toggleItem(it.id) : openItem(it))} />
-          ))}
-        </div>
-
-        {/* 스크롤 힌트(192:21 / 320:36) — 가운데 38px 원 버튼(에셋 52px: 그림자 포함), 누르면 목록을 모두 펼친다 */}
-        {(hintMobile || hintDesktop) && (
-          <div className={`relative h-[52px] w-full shrink-0 ${hintDesktop ? '' : 'lg:hidden'}`}>
-            <button type="button" onClick={() => setExpanded(true)} aria-label="복습할 항목 더 보기"
-              className="absolute left-1/2 top-2 size-[38px] -translate-x-1/2 rounded-full">
-              <img src="/ui/lp-318-33-scroll-more.svg" alt="" className="absolute max-w-none"
-                style={{ top: '-10.53%', left: '-18.42%', width: '136.84%', height: '136.85%' }} />
-            </button>
-          </div>
+        {shown.length === 0 ? (
+          <p className="py-10 text-center text-sm text-ink-muted">복습할 항목이 없어요. 잘하고 있어요!</p>
+        ) : (
+          /* 항목 묶음(316:33 / 316:35): 간격 0, 각 항목 위아래 패딩으로 구분선 위아래를 같게 */
+          <ScrollHintList maxHeightClass="max-h-[241px] lg:max-h-[419px]" onOverflowChange={setListOverflow}>
+            <div className="flex flex-col">
+              {shown.map((it, i) => (
+                <ReviewItem key={it.id} {...it} first={i === 0}
+                  selectMode={selectMode} checked={selected.has(it.id)}
+                  onClick={() => (selectMode ? toggleItem(it.id) : openItem(it))} />
+              ))}
+            </div>
+          </ScrollHintList>
         )}
 
         {deleteShown && (

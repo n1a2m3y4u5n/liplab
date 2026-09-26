@@ -1,0 +1,30 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="198.4" height="198.4" viewBox="0 0 198.4 198.4" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Mascot">
+<g id="Body" filter="url(#filter0_d_0_4)">
+<path d="M19.2 88C19.2 45.5845 53.5845 11.2 96 11.2H108.8C147.681 11.2 179.2 42.7192 179.2 81.6V91.2C179.2 135.383 143.383 171.2 99.2 171.2H92.8C52.1518 171.2 19.2 138.248 19.2 97.6V88Z" fill="url(#paint0_linear_0_4)"/>
+</g>
+<circle id="Cheek" cx="46.7" cy="96.1992" r="10" fill="white" fill-opacity="0.4"/>
+<circle id="Cheek_2" cx="151.7" cy="96.2003" r="10" fill="white" fill-opacity="0.4"/>
+<path id="Smile" d="M77.7501 133.069C87.1501 116.969 111.25 116.969 120.65 133.069" stroke="white" stroke-opacity="0.9" stroke-width="9.75"/>
+<path id="Eye X" d="M66.075 73.0747L92.375 99.3747" stroke="#4C1D95" stroke-width="4.89412" stroke-linecap="round"/>
+<path id="Eye X_2" d="M92.375 73.0747L66.075 99.3747" stroke="#4C1D95" stroke-width="4.89412" stroke-linecap="round"/>
+<path id="Eye X_3" d="M106.075 73.0748L132.375 99.3748" stroke="#4C1D95" stroke-width="4.89412" stroke-linecap="round"/>
+<path id="Eye X_4" d="M132.375 73.0748L106.075 99.3748" stroke="#4C1D95" stroke-width="4.89412" stroke-linecap="round"/>
+</g>
+<defs>
+<filter id="filter0_d_0_4" x="0" y="0" width="198.4" height="198.4" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="8"/>
+<feGaussianBlur stdDeviation="9.6"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.18 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_4"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_4" result="shape"/>
+</filter>
+<linearGradient id="paint0_linear_0_4" x1="19.2" y1="11.2" x2="132.354" y2="124.354" gradientUnits="userSpaceOnUse">
+<stop stop-color="#C4B5FD"/>
+<stop offset="0.5" stop-color="#A78BFA"/>
+<stop offset="1" stop-color="#7D53DE"/>
+</linearGradient>
+</defs>
+</svg>

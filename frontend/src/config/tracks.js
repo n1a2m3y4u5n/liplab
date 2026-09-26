@@ -33,7 +33,6 @@ export const TRACKS = {
     ],
     practice: [
       { id: 'closure', title: '문맥 추론', desc: '앞뒤 맥락으로 뜻 찾기', icon: '🧩', to: '/learn/lipreading/lesson/closure' },
-      { id: 'multi-conversation', title: '다자 대화', desc: '여러 사람 대화에서 화자와 입모양 읽기', icon: '👥', to: '/learn/lipreading/lesson/multi-conversation' },
       { id: 'pronounce', title: '내 문장 발음 보기', desc: '원하는 문장의 입모양 확인하기', icon: '✍️', to: '/pronounce' },
       { id: 'review', title: '독화 복습', desc: '틀렸던 문장 다시 풀기', icon: '🔁', to: '/review/mistakes' },
     ],

@@ -1,6 +1,7 @@
 import { Component, lazy, Suspense, useState, useEffect, useLayoutEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { MotionConfig } from 'framer-motion'
+import ErrorScreen from './components/ErrorScreen'
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null } }
@@ -8,28 +9,17 @@ class ErrorBoundary extends Component {
   render() {
     const err = this.state.error
     if (!err) return this.props.children
-    // 코드분할(lazy) 청크 로드 실패(불안정 통신망)도 여기로 전파된다 → 원본 스택 대신
-    // 사용자 친화 메시지 + 새로고침. 개발 모드에서만 상세 스택을 보여준다.
-    const isChunk = /chunk|dynamically imported|Failed to fetch|Importing a module/i.test(err?.message || '')
+    // 코드분할(lazy) 청크 로드 실패(불안정 통신망)도 여기로 전파된다 → 원본 스택 대신 Figma '문제 발생'
+    // 화면(438:103 / 438:143). 이 경계는 라우터 밖이라 버튼은 주소를 직접 바꾼다. 개발 모드에서만 상세 스택을 보여준다.
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-page p-6 text-center">
-        <div className="flex max-w-[420px] flex-col items-center gap-2">
-          <h1 className="text-[18px] font-bold text-ink">
-            {isChunk ? '페이지를 불러오지 못했어요' : '문제가 발생했어요'}
-          </h1>
-          <p className="mb-2 text-[14px] text-ink-muted">
-            {isChunk ? '네트워크가 불안정할 수 있어요. 새로고침 해주세요.' : '잠시 후 다시 시도해 주세요.'}
-          </p>
-          <button type="button" onClick={() => window.location.reload()} className="btn-primary">
-            새로고침
-          </button>
-          {import.meta.env?.DEV && (
-            <pre className="mt-2 max-h-[200px] w-full overflow-auto whitespace-pre-wrap text-left text-[11px] text-bad">
-              {err?.message}{'\n'}{err?.stack}
-            </pre>
-          )}
-        </div>
-      </div>
+      <ErrorScreen kind="error" onRetry={() => window.location.reload()}
+        onHome={() => window.location.assign('/learn/path')}>
+        {import.meta.env?.DEV && (
+          <pre className="mt-2 max-h-[200px] w-full overflow-auto whitespace-pre-wrap text-left text-[11px] text-bad">
+            {err?.message}{'\n'}{err?.stack}
+          </pre>
+        )}
+      </ErrorScreen>
     )
   }
 }
@@ -165,6 +155,12 @@ function GlobalOverlays() {
   )
 }
 
+/** 없는 주소(Figma 404 438:83 / 438:123): 예전에는 학습 경로로 조용히 돌려보냈다(변경 내역 §1). */
+function NotFound() {
+  const navigate = useNavigate()
+  return <ErrorScreen kind="notfound" onHome={() => navigate('/learn/path')} />
+}
+
 /**
  * Main App component with routing
  */
@@ -225,7 +221,10 @@ function App() {
         <Route path="/terms" element={<Legal />} />
         <Route path="/privacy" element={<Legal />} />
         <Route path="/" element={<HomeRedirect />} />
-        <Route path="*" element={<Navigate to="/learn/path" replace />} />
+        {/* 로그인한 채 /login·/signup에 오면 첫 화면으로(로그인 뒤 이동 경로) */}
+        <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route path="/signup" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       </Suspense>
       </main>
