@@ -95,6 +95,7 @@ export default function CurriculumPath() {
   const [searchParams, setSearchParams] = useSearchParams()
   const track = searchParams.get('track') === 'speak' ? 'speak' : 'read'
   const [data, setData] = useState({ read: null, speak: null })
+  const [failed, setFailed] = useState({ read: false, speak: false })   // 트랙별 단계 조회 실패(빈 경로 대신 다시 불러오기)
   const [skipTarget, setSkipTarget] = useState(null)  // 건너뛰기 확인 중인 단계 key
   const [viewIdx, setViewIdx] = useState(null)        // 화살표로 보고 있는 단계(null = 현재 단계)
   const [guideOpen, setGuideOpen] = useState(false)
@@ -102,9 +103,23 @@ export default function CurriculumPath() {
 
   // 두 트랙을 한 번에 받아 두면 스위처 전환이 즉시 된다. 건너뛴 뒤에도 같은 함수로 다시 받는다.
   const load = useCallback(() => Promise.all([
-    curriculumAPI.getStages().then((d) => setData((p) => ({ ...p, read: normalizeRead(d.stages), readTrack: d.track }))).catch(() => setData((p) => ({ ...p, read: p.read || [] }))),
-    speakAPI.getCurriculum().then((d) => setData((p) => ({ ...p, speak: normalizeSpeak(d.stages) }))).catch(() => setData((p) => ({ ...p, speak: p.speak || [] }))),
+    curriculumAPI.getStages().then((d) => {
+      setData((p) => ({ ...p, read: normalizeRead(d.stages), readTrack: d.track }))
+      setFailed((f) => ({ ...f, read: false }))
+    }).catch(() => {
+      setData((p) => ({ ...p, read: p.read || [] }))
+      setFailed((f) => ({ ...f, read: true }))
+    }),
+    speakAPI.getCurriculum().then((d) => {
+      setData((p) => ({ ...p, speak: normalizeSpeak(d.stages) }))
+      setFailed((f) => ({ ...f, speak: false }))
+    }).catch(() => {
+      setData((p) => ({ ...p, speak: p.speak || [] }))
+      setFailed((f) => ({ ...f, speak: true }))
+    }),
   ]), [])
+  // 다시 불러오기: 보고 있는 트랙을 로딩으로 돌리고 두 트랙을 다시 받는다
+  const retry = () => { setData((p) => ({ ...p, [track]: null })); load() }
   useEffect(() => { load() }, [load])
   useEffect(() => { setSkipTarget(null); setViewIdx(null) }, [track])
 
@@ -130,6 +145,12 @@ export default function CurriculumPath() {
   const viewOpen = viewStatus === 'mastered' || viewStatus === 'current'   // 레슨 카드를 띄울 수 있는 단계
   const progTotal = view?.total || 8
   const progCur = Math.min(progTotal, view?.attempts ?? 0)
+  // 진행률은 숙달 최소 시도 대비 시도 수다. 시도를 다 채워도 정답률이 모자라면 아직 숙달 전이라(서버 _bump_stage_progress),
+  // 그때는 막대를 끝까지 채우지 않고 수 대신 '숙달 중'으로 적는다(경로 노드가 완료로 보이는 단계는 그대로 둔다).
+  const progPending = viewStatus !== 'mastered' && progCur >= progTotal
+  const progLabel = progPending ? '숙달 중' : `${progCur} / ${progTotal}`
+  const progPct = progPending ? 90 : (progCur / progTotal) * 100
+  const loadFailed = list.length === 0 && failed[track]   // 단계를 못 받아 빈 경로 → 안내와 다시 불러오기
   const startLabel = (view?.attempts ?? 0) === 0 ? '학습 시작하기' : '이어서 학습하기'   // 80:6 / 58:11
   const skipStage = list.find((s) => s.key === skipTarget) || null
 
@@ -171,8 +192,16 @@ export default function CurriculumPath() {
           </button>
         </div>
 
+        {/* 단계를 불러오지 못했으면 빈 경로 대신 안내와 다시 불러오기(여러 명 대화의 실패 카드와 같은 모양) */}
+        {loadFailed && (
+          <div className="card flex w-full flex-col items-center gap-3 py-16 text-center">
+            <p role="alert" className="text-[15px] font-bold text-ink">학습 경로를 불러오지 못했어요.</p>
+            <button type="button" onClick={retry} className="btn-primary">다시 불러오기</button>
+          </div>
+        )}
+
         {/* 경로(61:18 / 모바일 233:45) — 모바일은 가운데, 데스크톱은 왼쪽(x 130)에 노드 열을 두고 오른쪽에 카드 */}
-        <div className="relative w-full py-2 max-lg:pb-[170px]"
+        <div className={`relative w-full py-2 max-lg:pb-[170px] ${loadFailed ? 'hidden' : ''}`}
           style={{ '--arrow-top': `${8 + vIdx * PITCH_MOBILE + 9}px` }}>
           {list.length > 1 && (
             <>
@@ -230,10 +259,10 @@ export default function CurriculumPath() {
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center justify-between text-[13px] font-bold leading-figma">
                             <span className="text-ink-muted">진행률</span>
-                            <span className="text-track">{progCur} / {progTotal}</span>
+                            <span className="text-track">{progLabel}</span>
                           </div>
                           <div className="h-[10px] overflow-hidden rounded-full bg-fill">
-                            <div className="h-full rounded-full bg-track" style={{ width: `${(progCur / progTotal) * 100}%` }} />
+                            <div className="h-full rounded-full bg-track" style={{ width: `${progPct}%` }} />
                           </div>
                         </div>
                         {/* 처음이면 80:125 "학습 시작하기"(r15·py17·17px), 이어서면 75:23 "이어서 학습하기"(btn-lg) */}
@@ -263,10 +292,10 @@ export default function CurriculumPath() {
           <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 flex flex-col gap-[11px] rounded-t-22 border-t-2 border-line bg-white px-[18px] pb-5 pt-[18px] shadow-sheet lg:hidden">
             <div className="flex items-center justify-between gap-3 font-bold leading-figma">
               <p className="min-w-0 truncate text-[17px] text-ink">{view.title}</p>
-              <span className="shrink-0 text-[13px] text-track">{progCur} / {progTotal}</span>
+              <span className="shrink-0 text-[13px] text-track">{progLabel}</span>
             </div>
             <div className="h-[9px] overflow-hidden rounded-full bg-fill">
-              <div className="h-full rounded-full bg-track" style={{ width: `${(progCur / progTotal) * 100}%` }} />
+              <div className="h-full rounded-full bg-track" style={{ width: `${progPct}%` }} />
             </div>
             <button type="button" onClick={() => navigate(view.route)} className="btn-primary w-full py-4 text-[16px]">{startLabel}</button>
           </div>

@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { curriculumAPI, reviewAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import LoadingScreen from '../components/LoadingScreen'
 import LessonComplete from '../components/LessonComplete'
+import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
 
 /**
@@ -30,7 +31,8 @@ export default function Review() {
   const [lessons, setLessons] = useState([])
   const [bank, setBank] = useState({ words: [], pairs: [] })
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setState('loading')
     Promise.all([reviewAPI.getDue(), curriculumAPI.getVisemeLessons(), curriculumAPI.getWords()])
       .then(([due, vl, wd]) => {
         setLessons(vl.lessons)
@@ -41,9 +43,10 @@ export default function Review() {
       })
       .catch(() => setState('error'))
   }, [])
+  useEffect(() => { load() }, [load])
 
   if (state === 'loading') return <LoadingScreen variant="brand" track="perception" />
-  if (state === 'error') return <div className="flex min-h-[100dvh] items-center justify-center bg-page text-[15px] text-ink-muted">불러오지 못했어요.</div>
+  if (state === 'error') return <LoadFailed onRetry={load} onExit={() => navigate('/review')} />
   if (state === 'empty') {
     return (
       <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-page px-6 text-center">

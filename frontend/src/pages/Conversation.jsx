@@ -33,8 +33,9 @@ export default function Conversation() {
   const [scores, setScores] = useState([])
 
   const [introDone, setIntroDone] = useState(false)
+  const [notice, setNotice] = useState('')   // 입모양을 받지 못해 재생 없이 답하게 됐을 때의 안내
 
-  const chatBottomRef = useRef(null)
+  const chatBoxRef = useRef(null)    // 대화 기록 칸(자체 스크롤)
   const startedRef = useRef(false)   // 최초 AI 말풍선 중복 생성 방지(StrictMode)
 
   useEffect(() => {
@@ -57,13 +58,29 @@ export default function Conversation() {
   }, [])
 
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // 새 말풍선이 보이게 대화 기록 칸만 끝으로 내린다(scrollIntoView는 휴대폰에서 창 전체를 끌어내렸다).
+    const box = chatBoxRef.current
+    if (box) box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' })
   }, [messages])
+
+  // 받은 입모양으로 이번 턴 재생을 시작한다. 입모양이 비면(AI 문장·대체 문장 모두 못 받음) 재생 끝 알림(onComplete)이
+  // 오지 않아 '재생이 끝나면 답변할 수 있습니다'에 멈추므로, 바로 답하는 단계로 넘기고 안내를 띄운다.
+  const startTurn = (text, frames) => {
+    const ok = Array.isArray(frames) && frames.length > 0
+    setCurrentAIVisemes(ok ? frames : [])
+    setCurrentAIText(text)
+    setIsPlaying(ok)
+    if (!ok) {
+      setPhase('answering')
+      setNotice('입모양을 불러오지 못했어요. 무슨 말인지 보기로 문장을 확인할 수 있어요.')
+    }
+  }
 
   const sendAIMessage = async (history) => {
     setIsLoading(true)
     setRevealedText(false)
     setPhase('watching')
+    setNotice('')
 
     try {
       const response = await learningAPI.getConversationTurn(
@@ -73,9 +90,7 @@ export default function Conversation() {
       )
 
       const visemeData = await learningAPI.getVisemes(response.text)
-      setCurrentAIVisemes(visemeData)
-      setCurrentAIText(response.text)
-      setIsPlaying(true)
+      startTurn(response.text, visemeData)
 
       // Add to chat history (hidden until played)
       setMessages((prev) => [
@@ -90,9 +105,7 @@ export default function Conversation() {
         '안녕하세요. 무엇을 도와드릴까요?'
 
       const visemeData = await learningAPI.getVisemes(fallbackText).catch(() => [])
-      setCurrentAIVisemes(visemeData)
-      setCurrentAIText(fallbackText)
-      setIsPlaying(true)
+      startTurn(fallbackText, visemeData)
 
       setMessages((prev) => [
         ...prev,
@@ -123,14 +136,17 @@ export default function Conversation() {
     setUserInput('')
 
     // 이해도 채점 — 방금 본 AI 문장(currentAIText)과 비교 (음운 유사도 엔진 재사용)
+    // '무슨 말인지 보기'로 문장을 본 뒤의 답은 연습으로만 채점한다(서버 practice_only: 4단계 숙달·XP에 넣지 않는다).
+    // 끝 화면의 평균 이해도에도 넣지 않는다(말풍선의 점수는 그대로 보인다).
+    const practiceOnly = revealedText
     let turnScore = null
     try {
-      const r = await scoreAPI.score(currentAIText, answer)
+      const r = await scoreAPI.score(currentAIText, answer, { practiceOnly })
       turnScore = r.score
     } catch { /* 채점 실패해도 대화는 진행 */ }
 
     setMessages((prev) => [...prev, { role: 'user', text: answer, score: turnScore }])
-    if (turnScore != null) setScores((prev) => [...prev, turnScore])
+    if (turnScore != null && !practiceOnly) setScores((prev) => [...prev, turnScore])
 
     const newTurn = turnCount + 1
     setTurnCount(newTurn)
@@ -193,6 +209,12 @@ export default function Conversation() {
             )}
           </div>
 
+          {notice && (
+            <div role="alert" className="rounded-14 border-2 border-bad-line bg-bad-tint px-4 py-2.5 text-[13.5px] font-bold text-bad-text">
+              {notice}
+            </div>
+          )}
+
           {/* Reveal text button */}
           {phase === 'answering' && !revealedText && (
             <button
@@ -218,7 +240,7 @@ export default function Conversation() {
         {/* Right: Chat history + input */}
         <div className="flex-1 flex flex-col gap-3">
           {/* Chat messages */}
-          <div className="flex-1 card overflow-y-auto" style={{ maxHeight: '400px' }}>
+          <div ref={chatBoxRef} className="flex-1 card overflow-y-auto" style={{ maxHeight: '400px' }}>
             <p className="mb-3 text-xs font-bold text-ink-faint">대화 기록</p>
             <div className="space-y-3">
               <AnimatePresence>
@@ -248,7 +270,6 @@ export default function Conversation() {
                   </motion.div>
                 ))}
               </AnimatePresence>
-              <div ref={chatBottomRef} />
             </div>
           </div>
 

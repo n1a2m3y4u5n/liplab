@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import useFocusTrap from '../hooks/useFocusTrap'
 
 /** 모달 닫기 — Figma Close(36px 원 + X, 210:194·222:170·338:237 공통 에셋). 다른 모달에서도 쓴다. */
 export function ModalClose({ onClose, className = '' }) {
@@ -12,7 +12,8 @@ export function ModalClose({ onClose, className = '' }) {
 
 /**
  * 모달 (핸드오프 §3.5, Figma 210:189 · 222:165 등 상세 모달 공통) — 딤 오버레이 + 중앙 흰 카드 + 오른쪽 위 원형 X.
- * ESC·배경 클릭으로 닫힘. 본문은 children.
+ * ESC·배경 클릭으로 닫힘. 본문은 children. 열린 동안 포커스를 카드 안에 가두고(Tab 순환), 닫히면 연 버튼으로
+ * 포커스를 돌려준다(hooks/useFocusTrap).
  * Figma 스펙: 오버레이 bg-overlay/50, 카드 rounded-22 / pt-26 pb-28 px-28,
  * 그림자 shadow-modal, 제목 21px tracking-[-.42px], 닫기 = Figma Close 에셋(36px, 210:194).
  * 선택 props: subtitle(제목 아래 보조문구 — Figma 모달 제목부에는 없으니 넣지 않는 것이 기본),
@@ -22,18 +23,14 @@ export function ModalClose({ onClose, className = '' }) {
  * 헤더(pt-26·px-28)와 본문(px-28·pb-28)이 나눠 갖고, gap은 헤더-본문 사이와 본문 항목 사이에 똑같이 들어간다.
  */
 export default function Modal({ open, onClose, title, subtitle, children, maxW = 'max-w-lg', tone = 'default', gap = 'gap-[22px]', cardClass = '' }) {
-  useEffect(() => {
-    if (!open) return undefined
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  const cardRef = useFocusTrap(open, onClose)   // 포커스 가두기·Esc 닫기·포커스 복원
   if (!open) return null
   const danger = tone === 'danger'
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 p-4" onClick={onClose}>
       {/* 카드는 overflow-hidden으로 모서리를 지키고, 스크롤은 본문 영역만 — 스크롤바가 둥근 모서리 밖으로 튀어나오지 않는다 */}
       <div
+        ref={cardRef}
         role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}
         className={`flex w-full flex-col ${gap} ${maxW} max-h-[86vh] overflow-hidden rounded-22 bg-white shadow-modal ${danger ? 'border-2 border-bad-line' : ''} ${cardClass}`}
         onClick={(e) => e.stopPropagation()}

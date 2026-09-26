@@ -1,5 +1,16 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { clearSignExplored } from '../lib/badges'
+
+/**
+ * 계정마다 다른 브라우저 저장값을 지운다(로그아웃·학습 초기화). 공용 기기에서 다음 사람에게 넘어가지 않게 한다.
+ * 수어 탐험 배지는 서버 기록이 없어 브라우저가 판정하고(lib/badges.js), liplab_onboarded는 예전 온보딩 완료 표시다
+ * (지금은 서버 배치 여부로 판단해 읽지 않는다). 접근성 설정·수어 안내를 본 여부는 기기 설정이라 남긴다.
+ */
+export function clearUserLocalData() {
+  clearSignExplored()
+  try { localStorage.removeItem('liplab_onboarded') } catch { /* 저장소 차단 시 무시 */ }
+}
 
 /**
  * Global state management using Zustand
@@ -25,12 +36,18 @@ const useStore = create(
         user: state.user ? { ...state.user, ...updates } : null
       })),
 
-      // Clear auth state on logout
-      logout: () => set({
-        user: null,
-        token: null,
-        isAuthenticated: false
-      }),
+      // Clear auth state on logout. 이 계정의 연습 세션(메모리)·통계 캐시·계정별 브라우저 저장값도 함께 지운다
+      // (토큰 만료로 풀린 경우도 같다. 다음에 로그인하는 사람이 앞사람의 시나리오·배지를 이어받지 않게).
+      logout: () => {
+        clearUserLocalData()
+        get().resetPractice()
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          statistics: null,
+        })
+      },
 
       // Practice session state
       currentScenario: null,

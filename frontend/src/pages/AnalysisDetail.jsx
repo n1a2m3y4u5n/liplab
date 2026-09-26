@@ -53,7 +53,10 @@ export default function AnalysisDetail({ mode = 'activity' }) {
 
   // 독화 학습 횟수·평균 점수는 /api/statistics로 충분하다. /api/analysis는 AI 추천 문구(LLM, 약 4초)를 만든 뒤에야
   // 응답하는데, 그 문구를 그리던 개요 모드는 /analysis/overview가 분석 탭으로 넘어가 이제 보이지 않는다(9/24).
+  // /analysis/* 경로는 이 화면 하나를 다시 쓰므로(탭을 바꿔도 새로 올라오지 않는다), 이전 탭의 늦은 응답이
+  // 지금 탭의 화면을 덮거나 로딩을 먼저 끄지 않게 모드가 바뀌면 이전 요청의 결과를 버린다.
   useEffect(() => {
+    let alive = true
     setLoading(true)
     const needsCalendar = ['activity', 'history'].includes(mode)
     Promise.all([
@@ -62,11 +65,13 @@ export default function AnalysisDetail({ mode = 'activity' }) {
       mode === 'scores' ? speakAPI.getAnalysis().catch(() => null) : Promise.resolve(null),
       mode === 'visemes' ? curriculumAPI.confusionMatrix().catch(() => null) : Promise.resolve(null),
     ]).then(([stats, activity, speakAnalysis, confusionMatrix]) => {
+      if (!alive) return
       setStatistics(stats)
       setCalendar(activity || {})
       setSpeaking(speakAnalysis)
       setConfusion(confusionMatrix)
-    }).finally(() => setLoading(false))
+    }).finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
   }, [mode])
 
   const activityDays = useMemo(() => {

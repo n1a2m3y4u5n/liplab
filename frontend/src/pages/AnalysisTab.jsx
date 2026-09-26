@@ -365,19 +365,21 @@ function HistoryList({ rows, onOpen }) {
         const day = relDay(r.date)
         const acc = r.accuracy == null ? null : Math.round(Number(r.accuracy) * 100)
         const level = acc == null ? null : scoreLevel(acc, 'accuracy')
+        // sm 미만(모바일 모달 본문 약 287px)에서는 한 줄에 날짜·칩·문제 수·정답률을 두면 레슨 이름 칸이 약 28px만 남아
+        // 한 글자와 '…'만 보였다. 그 폭에서는 레슨 이름을 첫 줄에 따로 두고(order-first·basis-full), 나머지를 둘째 줄에 둔다.
         return (
           <button key={`${r.date}-${r.kind}-${r.topic ?? i}`} type="button" onClick={() => onOpen(r)}
             aria-label={`${day} ${chip.label} ${lesson} 회차 상세 보기`}
-            className={`flex w-full items-center gap-3 py-[15px] pr-0.5 text-left leading-figma hover:bg-surface-muted lg:gap-4 ${i ? 'border-t-1.5 border-line' : ''}`}>
+            className={`flex w-full items-center gap-3 py-[15px] pr-0.5 text-left leading-figma hover:bg-surface-muted max-sm:flex-wrap max-sm:gap-y-1.5 lg:gap-4 ${i ? 'border-t-1.5 border-line' : ''}`}>
             <span className="w-12 shrink-0 text-[12.5px] text-ink-muted lg:w-[70px]" title={r.date}>{day}</span>
             <span className={`flex w-[54px] shrink-0 items-center justify-center rounded-lg py-[5px] text-[11.5px] font-bold ${chip.cls}`}>{chip.label}</span>
-            <span className={`min-w-0 truncate text-[15px] font-bold text-ink ${level ? 'flex-1 sm:w-[150px] sm:flex-none sm:shrink-0' : 'flex-1'}`}>{lesson}</span>
+            <span className={`min-w-0 truncate text-[15px] font-bold text-ink max-sm:order-first max-sm:basis-full ${level ? 'flex-1 sm:w-[150px] sm:flex-none sm:shrink-0' : 'flex-1'}`}>{lesson}</span>
             {level && (
               <span className="hidden h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-fill sm:block">
                 <span className={`block h-full rounded-full ${ACC_BAR[level]}`} style={{ width: `${Math.min(100, Math.max(0, acc))}%` }} />
               </span>
             )}
-            <span className="shrink-0 text-right text-[12.5px] text-ink-muted lg:w-14">{r.kind === 'assessment' ? `${r.n}회` : `${r.n}문제`}</span>
+            <span className="shrink-0 text-right text-[12.5px] text-ink-muted max-sm:ml-auto lg:w-14">{r.kind === 'assessment' ? `${r.n}회` : `${r.n}문제`}</span>
             {level && <span className={`w-12 shrink-0 text-right text-[15px] font-bold ${ACC_TEXT[level]}`}>{acc}%</span>}
             <span aria-hidden className="relative h-3.5 w-[7px] shrink-0">
               <img src="/ui/lp-209-22-arrow.svg" alt="" className="absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2" />

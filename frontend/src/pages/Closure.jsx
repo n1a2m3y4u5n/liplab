@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { curriculumAPI, learningAPI } from '../api'
@@ -6,6 +6,7 @@ import MouthAvatar from '../components/MouthAvatar'
 import BookmarkButton from '../components/BookmarkButton'
 import LoadingScreen from '../components/LoadingScreen'
 import LessonComplete from '../components/LessonComplete'
+import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import useBookmark from '../lib/useBookmark'
 
@@ -22,18 +23,28 @@ const QUIZ_LEN = 12
 const INTRO_MS = 1000
 
 const ENDLESS_POS_KEY = 'liplab.closure.endlessPos'
+// 나가기·완료 뒤 돌아갈 곳: 엔드리스 혼합 세션이면 엔드리스 화면, 아니면 연습 탭(완료 화면의 '연습으로 돌아가기'와 같다)
+const hubOf = (endless) => (endless ? '/learn/endless' : '/practice/hub')
 
 export default function Closure() {
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
   const [items, setItems] = useState(null)
   const [loading, setLoading] = useState(true)
   const [introDone, setIntroDone] = useState(false)
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true)
     curriculumAPI.getClosure().then((d) => setItems(d.items)).catch(() => setItems(null)).finally(() => setLoading(false))
+  }, [])
+  useEffect(() => {
+    load()
     const t = setTimeout(() => setIntroDone(true), INTRO_MS)
     return () => clearTimeout(t)
-  }, [])
+  }, [load])
   if (loading || !introDone) return <LoadingScreen variant="brand" track="perception" />
-  if (!items || !items.length) return <div className="flex min-h-[100dvh] items-center justify-center bg-page text-[15px] text-ink-muted">불러오지 못했어요.</div>
+  if (!items || !items.length) {
+    return <LoadFailed onRetry={load} onExit={() => navigate(hubOf(params.get('endless') === '1'))} />
+  }
   return (
     <div className="min-h-[100dvh] bg-page">
       <ClosureQuiz items={items} />
@@ -103,8 +114,9 @@ function ClosureQuiz({ items }) {
     startRef.current = Date.now()
     setI((k) => k + 1)
   }
-  // 나가기 — 들어온 곳(엔드리스·분석 히스토리 등)으로. 기록이 없으면 연습 탭으로.
-  const exit = () => (window.history.length > 1 ? navigate(-1) : navigate('/practice/hub'))
+  // 나가기: 정해진 곳으로 간다. 예전에는 뒤로 가기(navigate(-1))라, 엔드리스에서는 방금 끝낸 단어 레슨이 다시 열리고
+  // 다른 사이트에서 바로 들어왔으면 앱을 떠났다.
+  const exit = () => navigate(hubOf(endless))
 
   if (done) {
     const accuracy = tally.n ? Math.round((tally.correct / tally.n) * 100) : null
@@ -114,7 +126,7 @@ function ClosureQuiz({ items }) {
           try { sessionStorage.setItem(ENDLESS_POS_KEY, String(i + 1)) } catch { /* 저장 못 해도 진행 */ }
           navigate('/learn/word?endless=1')
         } : restart}
-        onHome={() => navigate(endless ? '/learn/endless' : '/practice/hub')}
+        onHome={() => navigate(hubOf(endless))}
         homeLabel={endless ? '엔드리스 학습으로' : '연습으로 돌아가기'} />
     )
   }

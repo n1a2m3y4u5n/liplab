@@ -6,6 +6,7 @@ import MouthAvatar from '../components/MouthAvatar'
 import BookmarkButton from '../components/BookmarkButton'
 import WatermarkCard from '../components/WatermarkCard'
 import LoadingScreen from '../components/LoadingScreen'
+import { LoadFailed } from '../components/ErrorScreen'
 import { ModalClose } from '../components/Modal'
 import useFocusTrap from '../hooks/useFocusTrap'
 import useChoiceKeys from '../lib/useChoiceKeys'
@@ -81,17 +82,27 @@ function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, homeLabel = 
 }
 
 export default function WordStage() {
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [introDone, setIntroDone] = useState(false)
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true)
     curriculumAPI.getWords().then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+  }, [])
+  useEffect(() => {
+    load()
     const t = setTimeout(() => setIntroDone(true), INTRO_MS)
     return () => clearTimeout(t)
-  }, [])
+  }, [load])
   // 레슨 시작 전 = 독화 트랙 로딩(223:30 / 모바일 243:81)
   if (loading || !introDone) return <LoadingScreen variant="brand" track="perception" />
-  if (!data) return <div className="flex min-h-[100dvh] items-center justify-center bg-page text-[15px] text-ink-muted">불러오지 못했어요.</div>
+  // 불러오기 실패: 다시 시도, 나가기는 레슨의 X와 같은 곳(엔드리스면 엔드리스 화면, 아니면 학습 경로)
+  if (!data) {
+    return <LoadFailed onRetry={load}
+      onExit={() => navigate(params.get('endless') === '1' ? '/learn/endless' : '/learn/path')} />
+  }
   return (
     <div className="min-h-[100dvh] bg-page">
       <WordQuiz data={data} />

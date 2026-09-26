@@ -44,16 +44,16 @@ export default function ContentReview() {
   const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [disabled, setDisabled] = useState(false)
+  const [denied, setDenied] = useState('')   // 403 사유(서버 문구). 기능이 꺼진 것과 운영자가 아닌 것을 구분해 보인다
   const [busyKey, setBusyKey] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       setData(await contentReviewAPI.candidates())
-      setDisabled(false)
+      setDenied('')
     } catch (e) {
-      if (e?.response?.status === 403) setDisabled(true)
+      if (e?.response?.status === 403) setDenied(e.response.data?.detail || '운영자 계정만 콘텐츠를 검수할 수 있습니다.')
     } finally { setLoading(false) }
   }, [])
 
@@ -81,9 +81,12 @@ export default function ContentReview() {
       <main className="mx-auto max-w-3xl px-4 py-8 space-y-5">
         {loading ? (
           <LoadingScreen variant="inline" />
-        ) : disabled ? (
+        ) : denied ? (
           <div className="rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center text-sm text-slate-500">
-            검수 기능이 꺼져 있습니다. 서버에 <code className="rounded bg-slate-100 px-1">LIPLAB_REVIEW=1</code>을 설정하면 운영자 검수가 열립니다.
+            {denied}
+            {/비활성/.test(denied) && (
+              <> 서버에 <code className="rounded bg-slate-100 px-1">LIPLAB_REVIEW=1</code>을 설정하면 운영자 검수가 열립니다.</>
+            )}
           </div>
         ) : !data ? (
           <div className="rounded-2xl border border-slate-200 bg-white py-16 text-center text-sm text-slate-500">불러오지 못했습니다.</div>

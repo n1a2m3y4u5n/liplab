@@ -114,19 +114,22 @@ function StageGate({ stage, children }) {
   // 복습은 /practice를 재사용하므로, 복습 진입은 navigate state({review:true})로 표시해 예외 처리한다.
   // (스토어가 아닌 라우터 state를 쓰는 이유: 이 이동에만 붙어 이후 직접 진입엔 남지 않아 우회 누수가 없다.)
   const isReview = location.state?.review === true
-  const [state, setState] = useState(isReview ? 'allowed' : 'loading')   // loading | allowed | denied
+  // 조회 결과는 어느 단계의 것인지와 함께 둔다. 같은 StageGate가 다른 단계 경로(/practice → /conversation)에
+  // 재사용돼도 새 단계의 조회가 끝나기 전에는 이전 단계의 허용으로 자식을 그리지 않고 로딩을 보인다.
+  const [gate, setGate] = useState({ stage: null, status: 'loading' })   // status: loading | allowed | denied
   useEffect(() => {
-    if (isReview) { setState('allowed'); return }
+    if (isReview) return undefined
     let cancelled = false
     curriculumAPI.getStages()
       .then((data) => {
         const s = (data?.stages || []).find((x) => x.stage === stage)
         const locked = !s || s.status === 'locked' || s.status === 'coming_soon'
-        if (!cancelled) setState(locked ? 'denied' : 'allowed')
+        if (!cancelled) setGate({ stage, status: locked ? 'denied' : 'allowed' })
       })
-      .catch(() => { if (!cancelled) setState('allowed') })
+      .catch(() => { if (!cancelled) setGate({ stage, status: 'allowed' }) })
     return () => { cancelled = true }
   }, [stage, isReview])
+  const state = isReview ? 'allowed' : gate.stage === stage ? gate.status : 'loading'
 
   // 단계 조회 대기 = 페이지 전환 로딩 → 기본 로딩 화면(§4-10, 256:34)
   if (state === 'loading') return <LoadingScreen />
@@ -134,10 +137,45 @@ function StageGate({ stage, children }) {
   return children
 }
 
+/**
+ * 첫 화면: 서버의 배치 여부(/api/curriculum/stages의 placed)로 정한다. 배치 전이면 온보딩, 아니면 학습 경로.
+ * 예전에는 브라우저 전체에 하나인 localStorage 표시(liplab_onboarded)를 봐서, 공용 태블릿의 다음 사람이 온보딩을
+ * 건너뛰고 배치 없이 학습 경로에 들어갔다. 조회 중에는 기본 로딩, 실패하면 학습 경로로 보낸다(가용성 우선).
+ * 다시 '/'로 오면(로그인 직후 데모 기록 채우기가 끝난 뒤 등) 새로 조회한다.
+ */
 function HomeRedirect() {
-  let onboarded = false
-  try { onboarded = localStorage.getItem('liplab_onboarded') === '1' } catch { /* 무시 */ }
-  return <Navigate to={onboarded ? '/learn/path' : '/onboarding'} replace />
+  const { key } = useLocation()
+  const [to, setTo] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    setTo(null)
+    curriculumAPI.getStages()
+      .then((data) => { if (!cancelled) setTo(data?.placed === false ? '/onboarding' : '/learn/path') })
+      .catch(() => { if (!cancelled) setTo('/learn/path') })
+    return () => { cancelled = true }
+  }, [key])
+  if (!to) return <LoadingScreen />
+  return <Navigate to={to} replace />
+}
+
+/**
+ * 본문으로 건너뛰기: 셸 화면은 AppShell의 <main id="main-content">(사이드바 다음)로 포커스를 옮긴다.
+ * 셸이 없는 화면(레슨·온보딩 등)은 그 화면의 <main>, 없으면 화면 영역(#app-content) 처음으로 옮긴다.
+ * 주소에 #을 붙이지 않고 포커스만 옮겨, 라우터가 새 주소로 보고 맨 위로 스크롤하지 않게 한다.
+ */
+function SkipLink() {
+  const skip = (e) => {
+    const root = document.getElementById('app-content')
+    const target = document.getElementById('main-content') || root?.querySelector('main') || root
+    if (!target) return
+    e.preventDefault()
+    if (!target.hasAttribute('tabindex')) {
+      target.setAttribute('tabindex', '-1')
+      target.classList.add('outline-none')   // 본문 전체에 포커스 테두리를 그리지 않는다
+    }
+    target.focus()
+  }
+  return <a href="#main-content" className="skip-link" onClick={skip}>본문으로 건너뛰기</a>
 }
 
 /**
@@ -173,8 +211,9 @@ function App() {
       <ScrollToTop />
       <AuthGate>
       <>
-      <a href="#main-content" className="skip-link">본문으로 건너뛰기</a>
-      <main id="main-content" className="app-shell">
+      <SkipLink />
+      {/* 화면 영역. <main>은 AppShell(셸 화면)이나 각 화면이 둔다(여기서 감싸면 셸의 <main>과 겹친다). */}
+      <div id="app-content" className="app-shell">
       <Suspense fallback={<LoadingScreen />}>
       <Routes>
         <Route path="/dashboard" element={<Navigate to="/learn/path" replace />} />
@@ -227,7 +266,7 @@ function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       </Suspense>
-      </main>
+      </div>
       {/* 앱 어디서나 문장 선택 → 수어 번역 (수어 탭 이동 불필요) + 접근성 설정 */}
       <GlobalOverlays />
       </>

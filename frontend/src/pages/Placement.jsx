@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import LoadingScreen from '../components/LoadingScreen'
+import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
 
 /**
@@ -46,6 +47,8 @@ export default function Placement() {
   const [mode] = useState(initialMode)  // placement | A(사전) | B(사후) — 향상도검사(축 I)
   const [n, setN] = useState(8)  // 목표 문항 수(적응형 배치검사)
   const [selected, setSelected] = useState(null)  // 현재 문항에서 고른 보기(다음 눌러 확정)
+  const [loadError, setLoadError] = useState(false)      // 문항을 받지 못함(첫 문항·다시 진단) → 다시 시도·나가기
+  const [submitError, setSubmitError] = useState(false)  // 답을 보내지 못함 → 하단 바에 안내, 다음으로 다시 보낸다
 
   // 방금 결과가 서버에 저장됐으니, 첫 검사 대비 향상도(/api/assessment/history의 delta)를 받아 함께 보여준다.
   const loadDelta = () => {
@@ -54,6 +57,7 @@ export default function Placement() {
 
   const start = useCallback(async (m = mode) => {
     setLoading(true); setResult(null); setDelta(null); setResponses({}); setIdx(0); setSelected(null)
+    setLoadError(false); setSubmitError(false)
     try {
       if (m === 'placement') {
         // 적응형: 첫 문항만 받고, 정오답에 따라 다음 문항을 서버가 고른다(축 I).
@@ -65,7 +69,9 @@ export default function Placement() {
         const d = await curriculumAPI.getPlacement(8, m)
         setItems(d.items)
       }
-    } catch { /* ignore */ } finally { setLoading(false) }
+    } catch {
+      setLoadError(true)   // 예전에는 무시해 items가 비어 로딩 화면에 계속 머물렀다
+    } finally { setLoading(false) }
   }, [mode])
 
   useEffect(() => { start(mode) }, [])  // eslint-disable-line react-hooks/exhaustive-deps
@@ -76,11 +82,13 @@ export default function Placement() {
     learningAPI.getVisemes(items[idx].word).then(setFrames).catch(() => {})
   }, [items, idx])
 
+  // 확정한 답을 기록하고 다음 문항으로 가거나 채점한다. 보내지 못하면 false(안내를 띄우고 confirm이 고른 보기를 되살린다).
   const choose = async (word) => {
-    if (submitting || result) return   // 마지막 문항 중복 클릭 시 이중 채점·저장 방지
+    if (submitting || result) return false   // 마지막 문항 중복 클릭 시 이중 채점·저장 방지
     const it = items[idx]
     const next = { ...responses, [it.id]: word }
     setResponses(next)
+    setSubmitError(false)
     if (mode === 'placement') {
       // 적응형: 방금 정오답으로 다음 문항을 서버가 고른다. done이면 지금까지 문항으로 채점.
       setSubmitting(true)
@@ -93,21 +101,28 @@ export default function Placement() {
         } else {
           setItems([...items, d.item]); setIdx(idx + 1)
         }
+        return true
+      } catch {
+        setSubmitError(true)
+        return false
       } finally { setSubmitting(false) }
-      return
     }
     // 향상도 동형폼(A/B): 고정 배치 순차 진행 후 일괄 채점.
     if (idx < items.length - 1) {
       setIdx(idx + 1)
-    } else {
-      setSubmitting(true)
-      try {
-        const r = await curriculumAPI.scorePlacement(items, next, mode)
-        setResult(r)
-        loadDelta()
-      } finally {
-        setSubmitting(false)
-      }
+      return true
+    }
+    setSubmitting(true)
+    try {
+      const r = await curriculumAPI.scorePlacement(items, next, mode)
+      setResult(r)
+      loadDelta()
+      return true
+    } catch {
+      setSubmitError(true)
+      return false
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -116,7 +131,7 @@ export default function Placement() {
     if (!selected || submitting || result) return
     const chosen = selected
     setSelected(null)
-    await choose(chosen)
+    if (!(await choose(chosen))) setSelected(chosen)   // 보내지 못했으면 고른 보기를 되살려 다음으로 다시 보낸다
   }
 
   // 보기 숫자 키 1~4(§4-03 템플릿) — 채점 중·결과 화면에서는 받지 않는다.
@@ -132,7 +147,9 @@ export default function Placement() {
   }
 
   // 데이터 로딩 = 기본 로딩(§4-10 256:34 / 모바일 256:48)
-  if (loading || !items) return <LoadingScreen />
+  if (loading) return <LoadingScreen />
+  const failed = <LoadFailed message="문항을 불러오지 못했어요." onRetry={() => start(mode)} onExit={() => navigate('/learn/path')} />
+  if (loadError || !items) return failed
 
   if (result && mode === 'placement') {
     // 결과(배치 모드) — Figma 85:9 / 모바일 244:99. 이것뿐인 단순 화면(§4-01).
@@ -256,7 +273,7 @@ export default function Placement() {
     )
   }
 
-  if (!it) return <div className="flex min-h-[100dvh] items-center justify-center bg-page p-8 text-center text-ink-faint">문항을 불러오지 못했어요. 다시 시도해 주세요.</div>
+  if (!it) return failed
   const total = mode === 'placement' ? n : items.length
   return (
     <div className="min-h-[100dvh] bg-page">
@@ -303,7 +320,13 @@ export default function Placement() {
       {/* 하단 고정 바(385:113 / 모바일 385:152) — 데스크톱: 왼쪽 안내 + 오른쪽 '다음', lg 미만: 안내 없이 전체 폭 '다음' */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-line bg-white">
         <div className="mx-auto flex max-w-[676px] flex-col items-stretch px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-4 lg:h-[110px] lg:flex-row lg:items-center lg:justify-between lg:py-0">
-          <p className="hidden text-[15px] leading-figma text-ink-faint lg:block">정답은 끝나면 결과로 알려드려요</p>
+          {submitError ? (
+            <p role="alert" className="mb-3 text-center text-[14px] font-bold leading-figma text-bad-text lg:mb-0 lg:text-left lg:text-[15px]">
+              답을 보내지 못했어요. 다음을 다시 눌러 주세요.
+            </p>
+          ) : (
+            <p className="hidden text-[15px] leading-figma text-ink-faint lg:block">정답은 끝나면 결과로 알려드려요</p>
+          )}
           <button type="button" onClick={confirm} disabled={!selected || submitting}
             className="btn-primary btn-bar w-full shrink-0 max-lg:py-4 max-lg:text-[16px] lg:w-auto">
             다음

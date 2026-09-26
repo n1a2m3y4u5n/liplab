@@ -193,8 +193,11 @@ export default function ReviewTab() {
     setWrong((n) => Math.max(0, n - picked.filter((it) => it.kind === 'wrong').length))
     exitSelect()
   }
+  // 예정 복습(입모양·단어, /api/review/due)은 간격 반복 세션(/review/scheduled)에서, 틀린 문장은 오답 복습(/review/mistakes)에서 푼다.
+  // 오답 복습 화면에는 틀린 문장만 나와, 예전처럼 예정 항목을 그리로 보내면 풀 방법이 없었다.
   const openItem = (it) => {
-    if (it.kind !== 'bookmark') return navigate('/review/mistakes')
+    if (it.kind === 'due') return navigate('/review/scheduled')
+    if (it.kind === 'wrong') return navigate('/review/mistakes')
     // 발화 북마크는 말하기 복습(/api/speak/review가 발화 북마크를 함께 모은다)으로 간다.
     return navigate(it.track === '발화' ? '/review/speaking' : '/review/saved')
   }
@@ -202,8 +205,9 @@ export default function ReviewTab() {
   return (
     <AppShell active="review" title="복습" rail="review">
       <div className="flex w-full gap-2.5 lg:gap-3.5">
+        {/* 오답 수 = 틀린 문장 + 예정 복습. 예정 복습이 남아 있으면 그 세션부터 연다(다 풀면 틀린 문장 복습으로 간다). */}
         <GradientCta tone="mistake" count={wrong + due} title="복습할 오답" sub="오답 다시보기" subMobile="약 3분이면 끝나요"
-          btn="오답 복습하기" onClick={() => navigate('/review/mistakes')} />
+          btn="오답 복습하기" onClick={() => navigate(due > 0 ? '/review/scheduled' : '/review/mistakes')} />
         <GradientCta tone="bookmark" count={marks} title="복습할 북마크" sub="북마크 다시보기" subMobile="저장해둔 문장이에요"
           btn="북마크 복습하기" onClick={() => navigate('/review/saved')} />
       </div>
