@@ -71,3 +71,36 @@ def test_status_does_not_load_anything():
         st = bb.status()
         assert st["loaded"] == [] and calls == []
     _with_fake_loaders(run)
+
+
+def test_status_answers_while_a_model_is_loading():
+    """적재 중에도 status()가 기다리지 않고 '올리는 중'을 보여야 한다(비동기 엔드포인트가 서버를 멈추지 않게)."""
+    import threading
+    started, release = threading.Event(), threading.Event()
+
+    def slow(model_id, device):
+        started.set()
+        release.wait(5)
+        return None, _FakeModel()
+
+    old = dict(bb._LOADERS)
+    bb.clear()
+    bb._LOADERS["base"] = slow
+    try:
+        t = threading.Thread(target=bb.load, args=("m/slow", "base", "cpu"))
+        t.start()
+        assert started.wait(5)
+        done = threading.Event()
+        box = {}
+        threading.Thread(target=lambda: (box.setdefault("st", bb.status()), done.set())).start()
+        assert done.wait(1), "적재 중 status()가 막혔다"
+        assert [r["model_id"] for r in box["st"]["loading"]] == ["m/slow"] and box["st"]["loaded"] == []
+        release.set()
+        t.join(5)
+        st = bb.status()
+        assert st["loading"] == [] and st["loaded"][0]["uses"] == 1
+    finally:
+        release.set()
+        bb._LOADERS.clear()
+        bb._LOADERS.update(old)
+        bb.clear()

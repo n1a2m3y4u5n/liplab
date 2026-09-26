@@ -17,9 +17,11 @@ import time
 from datetime import datetime, timezone
 from typing import Dict, Optional, Tuple
 
-_LOCK = threading.Lock()
+_LOCK = threading.Lock()        # _CACHE·_STATS·_LOADING을 읽고 쓸 때만 잠깐 잡는다
+_LOAD_LOCK = threading.Lock()   # 적재는 한 번에 하나(호스팅 기계는 디스크 읽기가 병목이라 동시에 올려도 빨라지지 않는다)
 _CACHE: Dict[Tuple[str, str, str], tuple] = {}     # (model_id, kind, device) → (processor 또는 None, model)
 _STATS: Dict[Tuple[str, str, str], Dict] = {}
+_LOADING: Dict[Tuple[str, str, str], float] = {}   # 지금 올리는 모델 → 시작 시각
 
 CONSUMERS = {
     "a4_audio2face": "음성 → 입모양 52계수(동결 은닉 표현, kind=base)",
@@ -71,14 +73,21 @@ def quant_mode() -> str:
 
 
 def _load_ctc(model_id: str, device: str) -> tuple:
+    """폴더에 미리 변환한 int8 파일(quant_int8.INT8_FILE)이 있으면 그것을 바로 올린다. fp32 가중치가 함께 있으면
+    BACKBONE_QUANT=int8일 때만 파일을 쓰고, int8 파일만 있으면(배포 이미지) 설정과 상관없이 쓴다."""
     from transformers import AutoModelForCTC, AutoProcessor
     mode = quant_mode()
     processor = AutoProcessor.from_pretrained(model_id)
+    if os.path.isdir(model_id):
+        import quant_int8
+        if quant_int8.has_int8(model_id) and (mode == "int8" or not quant_int8.has_fp32(model_id)):
+            return processor, quant_int8.load_ctc(model_id).to(device)
     model = AutoModelForCTC.from_pretrained(model_id).eval().to(device)
     if mode == "int8" and device == "cpu":
         import gc
         import quant_int8
         quant_int8.quantize_linears(model, skip=("lm_head",))
+        model.liplab_quant_from = "runtime"
         gc.collect()
         _malloc_trim()
     return processor, model
@@ -118,17 +127,32 @@ def load(model_id: str, kind: str = "base", device: Optional[str] = None) -> tup
     device = device or resolve_device()
     key = (model_id, kind, device)
     with _LOCK:
-        if key not in _CACHE:
-            t0 = time.time()
-            _CACHE[key] = _LOADERS[kind](model_id, device)
-            _STATS[key] = {"model_id": model_id, "kind": kind, "device": device,
-                           "load_seconds": round(time.time() - t0, 2),
-                           "params": _param_count(_CACHE[key][1]),
-                           "quant": getattr(_CACHE[key][1], "liplab_quant", None),
-                           "loaded_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-                           "uses": 0}
-        _STATS[key]["uses"] += 1
-        return _CACHE[key]
+        if key in _CACHE:
+            _STATS[key]["uses"] += 1
+            return _CACHE[key]
+    with _LOAD_LOCK:
+        with _LOCK:
+            if key in _CACHE:                      # 기다리는 사이 다른 스레드가 올렸다
+                _STATS[key]["uses"] += 1
+                return _CACHE[key]
+            _LOADING[key] = time.time()
+        t0 = time.time()
+        try:
+            obj = _LOADERS[kind](model_id, device)
+        finally:
+            with _LOCK:
+                _LOADING.pop(key, None)
+        stats = {"model_id": model_id, "kind": kind, "device": device,
+                 "load_seconds": round(time.time() - t0, 2),
+                 "params": _param_count(obj[1]),
+                 "quant": getattr(obj[1], "liplab_quant", None),
+                 "quant_from": getattr(obj[1], "liplab_quant_from", None),
+                 "loaded_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+                 "uses": 1}
+        with _LOCK:
+            _CACHE[key] = obj
+            _STATS[key] = stats
+        return obj
 
 
 def embed(wave16k, model_id: str, device: Optional[str] = None, layer: Optional[int] = None):
@@ -146,11 +170,15 @@ def embed(wave16k, model_id: str, device: Optional[str] = None, layer: Optional[
 
 
 def status() -> Dict:
-    """올라간 모델·장치·사용 횟수. 이 함수는 모델을 새로 올리지 않는다."""
+    """올라간 모델·장치·사용 횟수와 지금 올리는 모델. 이 함수는 모델을 새로 올리지 않고, 적재가 끝나기를 기다리지도 않는다
+    (예전에는 적재 내내 잡힌 잠금을 기다려, 비동기 엔드포인트에서 부르면 적재가 끝날 때까지 서버 전체가 멈췄다)."""
     ok = available()
+    now = time.time()
     with _LOCK:
         loaded = [dict(v) for v in _STATS.values()]
-    return {"available": ok, "device": resolve_device() if ok else None, "loaded": loaded,
+        loading = [{"model_id": k[0], "kind": k[1], "device": k[2], "seconds": round(now - t, 1)}
+                   for k, t in _LOADING.items()]
+    return {"available": ok, "device": resolve_device() if ok else None, "loaded": loaded, "loading": loading,
             "consumers": CONSUMERS}
 
 
@@ -159,3 +187,4 @@ def clear() -> None:
     with _LOCK:
         _CACHE.clear()
         _STATS.clear()
+        _LOADING.clear()

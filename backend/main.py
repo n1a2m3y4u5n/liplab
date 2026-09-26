@@ -45,7 +45,8 @@ except ImportError:
 
 def _warmup_models():
     """서버 추론 모델(D-GOP 정렬·채점, 음성구동 아바타)을 뒤에서 미리 올린다(LIPLAB_WARMUP=1).
-    호스팅 기계는 쉬면 멈췄다가 요청 때 켜지므로, 첫 사용자가 모델 적재(수십 초)를 기다리지 않게 한다.
+    호스팅 기계는 쉬면 멈췄다가(fly.dev.toml은 일시정지) 요청 때 켜지므로, 첫 사용자가 모델 적재를 기다리지 않게 한다.
+    일시정지에서 깨어나면 올려 둔 모델이 그대로 있고, 스냅샷이 없을 때(배포 직후 등)만 이 예열이 다시 돈다.
     실패해도 앱은 뜨고, 요청 때 다시 적재를 시도한다."""
     import threading
 
@@ -61,7 +62,7 @@ def _warmup_models():
                         dgop_acoustic._load(scorer)
             import audio2face
             if audio2face.is_available():
-                audio2face._load()
+                audio2face.warm()   # 적재에 더해 백본 가중치를 끝까지 읽어 둔다(첫 아바타 요청이 느린 디스크를 기다리지 않게)
             print("[OK] 서버 추론 모델 예열 끝")
         except Exception as e:
             print(f"[WARN] 모델 예열 실패(요청 때 다시 시도): {type(e).__name__}: {e}")

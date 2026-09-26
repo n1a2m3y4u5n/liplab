@@ -103,6 +103,15 @@ def _load():
     _, _w2v = _bb.load(_backbone, "base", "cpu")
 
 
+def warm() -> None:
+    """백본 가중치를 한 번 끝까지 읽어 둔다(1초 무음 추론, 서버 예열용).
+    백본은 파일 매핑으로 올라가 첫 추론 때 디스크에서 읽히는데, 호스팅 기계의 루트 파일시스템은 초당 약 17MB라
+    (9/26 liplab-dev 실측) 첫 아바타 요청이 76초 걸렸다. 예열 때 미리 읽으면 일시정지 스냅샷에도 들어간다."""
+    import numpy as np
+    _load()
+    _w2v_features(np.zeros(SR, dtype=np.float32), "cpu")
+
+
 def _to_mono16k(audio_bytes: bytes):
     """오디오 바이트 → 16k mono float32 numpy.
     브라우저 녹음은 webm/opus라 soundfile로는 못 읽는 경우가 많아, 실패 시 ffmpeg로 폴백한다."""

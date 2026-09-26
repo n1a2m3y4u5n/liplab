@@ -44,6 +44,7 @@ RUN python -c "from faster_whisper import WhisperModel; WhisperModel('base', dev
 ARG WITH_ML=0
 # D-GOP 채점 모델: kresnik(공개 모델, 빌드 때 받는다) 또는 ours(자체 학습 정렬기·채점기, 9/25 재검 통과).
 # ours는 backend/models/dgop_ours/{aligner,scorer}에 둔 체크포인트(git 제외, DEPLOY.md 9항)를 아래 COPY로 싣는다.
+# 9/26부터는 미리 변환한 int8 파일(model.int8.safetensors, 모델당 355MB)을 싣는다. fp32(1.26GB)도 받지만 켜질 때 느리다.
 ARG DGOP_MODEL=kresnik
 ENV HF_HOME=/app/hf
 COPY backend/requirements-infer.txt ./
@@ -58,10 +59,19 @@ AutoModel.from_pretrained('microsoft/wavlm-large')"; \
 
 # Copy backend source
 COPY backend/ ./
-# 자체 학습 채점 모델로 빌드할 때는 체크포인트가 빌드 폴더에 있어야 한다(없으면 D-GOP가 전사로 폴백하므로 빌드를 멈춘다)
+# 자체 학습 채점 모델로 빌드할 때는 체크포인트가 빌드 폴더에 있어야 한다(없으면 D-GOP가 전사로 폴백하므로 빌드를 멈춘다).
+# int8 파일이면 이 이미지의 torch·transformers로 실제로 올려 본다(판이 달라 못 읽으면 배포 전에 빌드에서 멈춘다).
 RUN if [ "$WITH_ML" = "1" ] && [ "$DGOP_MODEL" = "ours" ]; then \
-      test -s models/dgop_ours/aligner/model.safetensors && test -s models/dgop_ours/scorer/model.safetensors \
-      || { echo "backend/models/dgop_ours/{aligner,scorer} 체크포인트가 없다(DEPLOY.md 9항)"; exit 1; }; \
+      for m in aligner scorer; do \
+        test -s models/dgop_ours/$m/model.int8.safetensors || test -s models/dgop_ours/$m/model.safetensors \
+        || { echo "backend/models/dgop_ours/$m 체크포인트가 없다(DEPLOY.md 9항)"; exit 1; }; \
+      done && \
+      python -c "import os, torch, quant_int8 as Q; \
+ds=[d for d in ('models/dgop_ours/aligner','models/dgop_ours/scorer') if Q.has_int8(d)]; \
+ms=[Q.load_ctc(d) for d in ds]; \
+x=torch.zeros(1, 16000); \
+[m(x) for m in ms]; \
+print('int8 checkpoints ok:', ds)"; \
     fi
 
 # 파일럿 자료 파기 도구(§4.7) — 서버에서 fly ssh로 실행한다(scripts/pilot_retention.py 머리말)
