@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { toBlendshapeMap, pickPeakFrame, saveCalibration } from '../lib/mouthScore'
+import { mediaErrorMessage } from '../lib/mediaError'
 
 /**
  * 입모양 본뜨기(개인 캘리브레이션, 축 D 보정).
@@ -28,6 +29,7 @@ export default function MouthCalibration({ onDone, onCancel }) {
   const streamRef = useRef(null)
   const collectRef = useRef(null) // 수집 중이면 프레임 배열
   const capturedRef = useRef({})
+  const captureTimerRef = useRef(null)
   const [status, setStatus] = useState('loading') // loading | running | error | saving | done
   const [stepIdx, setStepIdx] = useState(0)
   const [collecting, setCollecting] = useState(false)
@@ -49,6 +51,7 @@ export default function MouthCalibration({ onDone, onCancel }) {
   // 모델 로드 + 웹캠 시작
   useEffect(() => {
     let cancelled = false
+    let phase = 'model'   // 어디서 실패했는지(모델·카메라)에 맞춰 안내한다
     ;(async () => {
       try {
         const vision = await FilesetResolver.forVisionTasks(WASM_URL)
@@ -58,19 +61,26 @@ export default function MouthCalibration({ onDone, onCancel }) {
         })
         if (cancelled) { fl.close?.(); return }
         landmarkerRef.current = fl
+        phase = 'camera'
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
         if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return }
         streamRef.current = stream
         videoRef.current.srcObject = stream
         await videoRef.current.play()
+        // 재생을 기다리는 사이 닫혔다(스트림은 정리 함수가 이미 멈췄다) → 닫힌 모델로 도는 루프를 시작하지 않는다
+        if (cancelled) return
         setStatus('running')
         rafRef.current = requestAnimationFrame(loop)
-      } catch {
-        if (!cancelled) { setStatus('error'); setErrMsg('카메라나 모델을 불러오지 못했어요. 권한·네트워크를 확인해 주세요.') }
+      } catch (e) {
+        if (!cancelled) {
+          setStatus('error')
+          setErrMsg(phase === 'model' ? '입모양 모델을 불러오지 못했어요. 네트워크를 확인해 주세요.' : mediaErrorMessage(e, 'camera'))
+        }
       }
     })()
     return () => {
       cancelled = true
+      clearTimeout(captureTimerRef.current)   // 본뜨는 중에 닫으면 저장·onDone을 부르지 않는다
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
       landmarkerRef.current?.close?.()
@@ -81,7 +91,7 @@ export default function MouthCalibration({ onDone, onCancel }) {
     if (collecting || status !== 'running') return
     setCollecting(true)
     collectRef.current = []
-    setTimeout(() => {
+    captureTimerRef.current = setTimeout(() => {
       const frames = collectRef.current || []
       collectRef.current = null
       setCollecting(false)

@@ -3,6 +3,7 @@ import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { toBlendshapeMap } from '../lib/mouthScore'
 import { predictLipread, loadLipread } from '../lib/lipreadModel'
 import { resampleFrames } from '../lib/frameRate'
+import { mediaErrorMessage } from '../lib/mediaError'
 
 /**
  * 축 D — 기계가 내 입모양을 읽어본다(자체 립리딩). 사용자가 목표 단어를 입모양으로 말하면
@@ -26,10 +27,16 @@ export default function LipReadCheck({ target, candidates = [] }) {
   const recStartRef = useRef(0)
   const lastVideoTimeRef = useRef(-1)
   const recordingRef = useRef(false)
+  const camGenRef = useRef(0)       // 언마운트마다 올린다. 켜는 중이던 카메라가 늦게 오면 끈다
+  const startingRef = useRef(false)
+  const recTimerRef = useRef(null)
   const [status, setStatus] = useState('idle') // idle | loading | ready | recording | thinking | done | error
   const [result, setResult] = useState(null)   // {jamo, matched, ranked}
   const [errMsg, setErrMsg] = useState('')
   const [modelOK, setModelOK] = useState(null)  // 립리딩 모델 로드 가능 여부
+  const [mpReady, setMpReady] = useState(false) // MediaPipe 준비 완료(카메라 오류 뒤 다시 켜기 허용 판단)
+  const [starting, setStarting] = useState(false) // 카메라를 여는 중(권한 창 대기), 그동안 버튼을 막는다
+  const hidden = modelOK === false
 
   // 립리딩 모델 미리 로드 시도(없으면 컴포넌트 자체를 숨김)
   useEffect(() => {
@@ -38,9 +45,11 @@ export default function LipReadCheck({ target, candidates = [] }) {
     return () => { cancelled = true }
   }, [])
 
-  // MediaPipe 로드
+  // MediaPipe 로드: 립리딩 모델 확인(modelOK)과 나란히, 마운트마다 한 번만 만든다. 예전에는 modelOK가
+  // null→true로 바뀔 때 다시 돌아 두 번 만들었고, 먼저 만든 인스턴스가 덮여 닫히지 않았다.
+  // 모델이 없다고 판명되면(hidden) 정리 함수가 닫는다.
   useEffect(() => {
-    if (modelOK === false) return
+    if (hidden) return
     let cancelled = false
     ;(async () => {
       try {
@@ -51,14 +60,21 @@ export default function LipReadCheck({ target, candidates = [] }) {
           outputFaceBlendshapes: true, runningMode: 'VIDEO', numFaces: 1,
         })
         if (cancelled) { fl.close?.(); return }
+        landmarkerRef.current?.close?.()
         landmarkerRef.current = fl
+        setMpReady(true)
         setStatus('idle')
       } catch {
         if (!cancelled) { setStatus('error'); setErrMsg('입모양 모델을 불러오지 못했어요.') }
       }
     })()
-    return () => { cancelled = true }
-  }, [modelOK])
+    return () => {
+      cancelled = true
+      landmarkerRef.current?.close?.()
+      landmarkerRef.current = null
+      setMpReady(false)
+    }
+  }, [hidden])
 
   const loop = useCallback(() => {
     const fl = landmarkerRef.current, video = videoRef.current
@@ -76,16 +92,28 @@ export default function LipReadCheck({ target, candidates = [] }) {
   }, [])
 
   const startCam = useCallback(async () => {
-    if (!landmarkerRef.current) return
+    if (!landmarkerRef.current || startingRef.current) return   // 권한 창 대기 중 두 번 눌림 방지
+    startingRef.current = true; setStarting(true)
+    const gen = camGenRef.current
+    let stream = null
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
+      // 권한을 기다리는 사이 화면을 떠났다 → 켠 카메라를 바로 끈다
+      const video = videoRef.current
+      if (gen !== camGenRef.current || !video) { stream.getTracks().forEach((t) => t.stop()); return }
       streamRef.current = stream
-      videoRef.current.srcObject = stream
-      await videoRef.current.play()
+      video.srcObject = stream
+      await video.play()
+      if (gen !== camGenRef.current) return   // 재생을 기다리는 사이 떠났다(스트림은 정리 함수가 이미 닫았다)
       setStatus('ready')
       rafRef.current = requestAnimationFrame(loop)
-    } catch {
-      setStatus('error'); setErrMsg('카메라를 사용할 수 없어요. 권한을 허용해 주세요.')
+    } catch (e) {
+      if (gen !== camGenRef.current) return
+      if (stream) stream.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+      setStatus('error'); setErrMsg(mediaErrorMessage(e, 'camera'))
+    } finally {
+      startingRef.current = false; setStarting(false)
     }
   }, [loop])
 
@@ -96,7 +124,7 @@ export default function LipReadCheck({ target, candidates = [] }) {
     recordingRef.current = true
     setResult(null)
     setStatus('recording')
-    setTimeout(async () => {
+    recTimerRef.current = setTimeout(async () => {
       recordingRef.current = false
       setStatus('thinking')
       const seq = resampleFrames(framesRef.current, recStartRef.current, REC_MS, SEQ_HZ)
@@ -106,11 +134,12 @@ export default function LipReadCheck({ target, candidates = [] }) {
     }, REC_MS)
   }, [status, candidates])
 
-  // 정리
+  // 정리 (landmarker는 MediaPipe 로드 effect가 닫는다)
   useEffect(() => () => {
+    camGenRef.current += 1
+    clearTimeout(recTimerRef.current)
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
-    landmarkerRef.current?.close?.()
   }, [])
 
   if (modelOK === false) return null  // 모델 없으면 조용히 숨김
@@ -160,7 +189,8 @@ export default function LipReadCheck({ target, candidates = [] }) {
 
       <div className="mt-2 flex justify-center gap-2">
         {status === 'idle' || status === 'loading' || status === 'error' ? (
-          <button type="button" onClick={startCam} disabled={status !== 'idle'}
+          // 카메라 오류(권한·장치) 뒤에는 다시 켜 볼 수 있게 둔다. 입모양 모델이 준비되지 않았을 때만 막는다
+          <button type="button" onClick={startCam} disabled={!mpReady || status === 'loading' || starting}
             className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-bold text-white hover:bg-slate-700 disabled:opacity-40">
             카메라 켜기
           </button>

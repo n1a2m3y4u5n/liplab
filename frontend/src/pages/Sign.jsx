@@ -17,6 +17,7 @@ const CARD = 'flex w-full flex-col gap-4 rounded-18 border-2 border-line bg-whit
 export default function Sign() {
   const [text, setText] = useState('')
   const [query, setQuery] = useState('')   // SignPanel에 넘길 확정 문장
+  const [attempt, setAttempt] = useState(0)   // 같은 문장을 다시 보낸 횟수(SignPanel key)
 
   // '수어 탐험' 배지는 서버 기록이 없어 이 화면 진입을 브라우저에 표시해 판정한다(lib/badges.js).
   useEffect(() => { markSignExplored() }, [])
@@ -34,7 +35,11 @@ export default function Sign() {
   const onSubmit = (e) => {
     e.preventDefault()
     const q = text.trim()
-    if (q) setQuery(q)
+    if (!q) return
+    // SignPanel은 문장이 바뀔 때만 다시 번역한다. 번역이 실패한 뒤 같은 문장을 다시 보내면 아무 일도 없어
+    // 다시 시도할 길이 없었다 → 같은 문장이면 key를 바꿔 패널을 새로 띄워 다시 번역한다.
+    if (q === query) setAttempt((n) => n + 1)
+    else setQuery(q)
   }
 
   return (
@@ -58,7 +63,7 @@ export default function Sign() {
       {/* 수어 (226:156): 머리글 + 영상 칸 하나 */}
       <section className={CARD}>
         <p className="text-[17px] font-bold leading-figma text-ink">수어</p>
-        <SignPanel text={query} variant="single" />
+        <SignPanel key={attempt} text={query} variant="single" />
       </section>
     </AppShell>
   )

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import AvatarVRM from './AvatarVRM'
 import { avatarAPI } from '../api'
+import { mediaErrorMessage } from '../lib/mediaError'
 
 /**
  * 음성구동 아바타(계획서 축 A4) — 실제 음성 → 52 ARKit 블렌드셰이프 립싱크.
@@ -20,6 +21,7 @@ export default function Audio2FaceAvatar() {
   const [nFrames, setNFrames] = useState(0)
   const [examples, setExamples] = useState([])     // 프리컴퓨트 예시(torch 없는 배포에서도 시연)
   const [exLabel, setExLabel] = useState('')
+  const [starting, setStarting] = useState(false)  // 마이크를 여는 중(권한 창 대기), 그동안 버튼을 막는다
 
   const bsFrameRef = useRef(null)     // 현재 프레임 {name:value} — AvatarVRM이 매 프레임 읽음
   const framesRef = useRef([])        // 미리 만든 프레임 객체 배열
@@ -30,8 +32,12 @@ export default function Audio2FaceAvatar() {
   const recorderRef = useRef(null)
   const streamRef = useRef(null)
   const chunksRef = useRef([])
+  const aliveRef = useRef(true)       // 언마운트 뒤 늦게 끝난 권한 요청·분석 결과를 버린다
+  const playTokenRef = useRef(0)      // 재생 회차. 새 재생·정지 때 올려 이전 루프와 play() 결과를 무시한다
+  const startingRef = useRef(false)
 
   useEffect(() => {
+    aliveRef.current = true
     let alive = true
     avatarAPI.audio2faceStatus()
       .then((s) => { if (alive) setAvailable(!!s.available) })
@@ -43,51 +49,75 @@ export default function Audio2FaceAvatar() {
       .catch(() => {})
     return () => {
       alive = false
+      aliveRef.current = false
+      // 녹음 중에 화면을 떠나면 onstop이 분석 요청(POST)과 다른 화면에서의 재생을 시작하지 않게 끊고 멈춘다
+      const rec = recorderRef.current
+      if (rec) {
+        rec.ondataavailable = null; rec.onstop = null
+        try { if (rec.state !== 'inactive') rec.stop() } catch { /* noop */ }
+        recorderRef.current = null
+      }
+      if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null }
       stopPlayback()
-      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current)
-      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
+      const audio = audioElRef.current
+      if (audio) { audio.removeAttribute('src'); try { audio.load() } catch { /* noop */ } }   // 받던 소리도 놓는다
+      if (audioUrlRef.current) { URL.revokeObjectURL(audioUrlRef.current); audioUrlRef.current = null }
     }
   }, [])
 
   const stopPlayback = useCallback(() => {
+    playTokenRef.current += 1
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     rafRef.current = null
     bsFrameRef.current = null
     if (audioElRef.current) { try { audioElRef.current.pause() } catch { /* noop */ } }
   }, [])
 
-  // 오디오 재생 시각에 맞춰 프레임을 bsFrameRef에 흘린다.
-  const playSynced = useCallback(() => {
+  const audioEl = () => {
+    if (!audioElRef.current) audioElRef.current = new Audio()
+    return audioElRef.current
+  }
+
+  // 오디오 재생 시각에 맞춰 프레임을 bsFrameRef에 흘린다. playPromise는 방금 부른 audio.play()의 결과다.
+  // play()가 막히면(iOS·Safari 자동재생 정책, 재생할 수 없는 파일) 소리 없이 화면 시계(performance.now)로
+  // 같은 속도로 흘려 아바타는 그대로 움직인다.
+  const runFrames = useCallback((playPromise) => {
     const audio = audioElRef.current
     const frames = framesRef.current
     const fps = fpsRef.current
     if (!frames.length) return
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    const token = ++playTokenRef.current
+    let silentFrom = null   // 무음 대체를 시작한 시각(ms). null이면 오디오 재생 시각을 따른다
+    Promise.resolve(playPromise).catch(() => {
+      if (token === playTokenRef.current) silentFrom = performance.now()
+    })
     setState('playing')
     const tick = () => {
-      const t = audio ? audio.currentTime : 0
-      let idx = Math.floor(t * fps)
-      if (idx >= frames.length) idx = frames.length - 1
-      bsFrameRef.current = frames[idx]
-      if (audio && (audio.ended || audio.paused)) {
-        // 재생 종료 → 잠시 마지막 프레임 유지 후 rest 복귀
+      if (token !== playTokenRef.current) return
+      const t = silentFrom != null ? (performance.now() - silentFrom) / 1000 : (audio ? audio.currentTime : 0)
+      const idx = Math.floor(t * fps)
+      const ended = silentFrom != null ? idx >= frames.length : (!audio || audio.ended || audio.paused)
+      if (ended) {
+        // 재생 종료 → rest 복귀
         bsFrameRef.current = null
         setState('idle')
         rafRef.current = null
         return
       }
+      bsFrameRef.current = frames[Math.min(idx, frames.length - 1)]
       rafRef.current = requestAnimationFrame(tick)
-    }
-    if (audio) {
-      audio.currentTime = 0
-      audio.play().catch(() => { /* 자동재생 차단 시 무음으로 프레임만 */ })
     }
     rafRef.current = requestAnimationFrame(tick)
   }, [])
 
   const process = useCallback(async (blob) => {
-    setErr(null); setState('processing')
+    stopPlayback()   // 앞 재생 루프가 끝나며 상태를 idle로 되돌리지 않게 먼저 멈춘다
+    setErr(null); setState('processing'); setExLabel('')   // 직접 녹음·파일은 예시 자막이 아니다
     try {
       const res = await avatarAPI.audio2face(blob)
+      // 분석 중에 화면을 떠났다. 이 API는 요청 취소(AbortSignal)를 받지 않아 결과만 버린다(재생하지 않는다)
+      if (!aliveRef.current) return
       const names = res.names || []
       const frames = (res.frames || []).map((row) => {
         const o = {}
@@ -101,40 +131,56 @@ export default function Audio2FaceAvatar() {
       // 오디오 엘리먼트 준비(동기 재생용)
       if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current)
       audioUrlRef.current = URL.createObjectURL(blob)
-      if (!audioElRef.current) audioElRef.current = new Audio()
-      audioElRef.current.src = audioUrlRef.current
-      audioElRef.current.onloadeddata = () => playSynced()
-      audioElRef.current.load()
+      const audio = audioEl()
+      audio.src = audioUrlRef.current
+      // 분석이 끝난 뒤라 탭(사용자 제스처) 밖이다 → 막히면 runFrames가 무음으로 프레임만 돌린다
+      runFrames(audio.play())
     } catch (e) {
+      if (!aliveRef.current) return
       const code = e?.response?.status
       setErr(code === 503 ? '서버에 음성구동 아바타 모델이 아직 없어요.' : '분석에 실패했어요.')
       setState('error')
     }
-  }, [playSynced])
+  }, [runFrames, stopPlayback])
 
   const startRec = useCallback(async () => {
+    if (startingRef.current) return   // 권한 창이 떠 있는 동안 다시 눌러 마이크를 두 번 여는 것을 막는다
+    startingRef.current = true; setStarting(true)
+    // 재생 중이면 먼저 멈춘다. 재생 루프가 끝나며 상태를 idle로 돌려 '녹음 종료' 버튼이 사라지는 것을 막는다
+    stopPlayback()
+    setState((s) => (s === 'playing' ? 'idle' : s))
     setErr(null); chunksRef.current = []
+    let stream = null
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       })
+      // 권한을 기다리는 사이 화면을 떠났다 → 연 마이크를 바로 닫는다
+      if (!aliveRef.current) { stream.getTracks().forEach((t) => t.stop()); return }
       streamRef.current = stream
       const rec = new MediaRecorder(stream)
       rec.ondataavailable = (e) => { if (e.data && e.data.size) chunksRef.current.push(e.data) }
       rec.onstop = () => {
+        recorderRef.current = null
         const blob = new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' })
         stream.getTracks().forEach((t) => t.stop())
         streamRef.current = null
+        if (!aliveRef.current) return
         if (blob.size > 500) process(blob)
         else { setErr('녹음이 비었어요.'); setState('idle') }
       }
       rec.start()
       recorderRef.current = rec
       setState('recording')
-    } catch {
-      setErr('마이크 권한을 허용해 주세요.')
+    } catch (e) {
+      // 마이크는 열렸는데 녹음기를 못 만든 경우(MediaRecorder 미지원 등)에도 연 마이크를 닫는다
+      if (stream) stream.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+      if (aliveRef.current) setErr(mediaErrorMessage(e, 'mic'))
+    } finally {
+      startingRef.current = false; setStarting(false)
     }
-  }, [process])
+  }, [process, stopPlayback])
 
   const stopRec = useCallback(() => {
     const rec = recorderRef.current
@@ -149,17 +195,23 @@ export default function Audio2FaceAvatar() {
 
   // 프리컴퓨트 예시 재생(라이브 모델 없이 A4 예측 시연) — 오디오 + 미리 계산한 블렌드셰이프 동기
   const playExample = useCallback((ex) => {
+    stopPlayback()
     const names = ex.names || []
     framesRef.current = (ex.frames || []).map((row) => {
       const o = {}; for (let i = 0; i < names.length; i++) o[names[i]] = row[i]; return o
     })
     fpsRef.current = ex.fps || 30
     setNFrames(framesRef.current.length); setExLabel(ex.text || ''); setErr(null)
-    if (!audioElRef.current) audioElRef.current = new Audio()
-    audioElRef.current.src = `/a2f-examples/clip_${ex.id}.wav`
-    audioElRef.current.onloadeddata = () => playSynced()
-    audioElRef.current.load()
-  }, [playSynced])
+    const audio = audioEl()
+    audio.src = `/a2f-examples/clip_${ex.id}.wav`
+    // 앞서 녹음한 소리의 blob URL은 더 쓰지 않으니 놓는다
+    if (audioUrlRef.current) { URL.revokeObjectURL(audioUrlRef.current); audioUrlRef.current = null }
+    // 탭 안에서 바로 play()를 불러야 iOS·Safari에서도 소리가 난다(예전에는 onloadeddata에서 불러 막혔다)
+    runFrames(audio.play())
+  }, [runFrames, stopPlayback])
+
+  // 녹음·분석 중(또는 마이크를 여는 중)에는 예시·파일을 막는다. 누르면 '녹음 종료'가 사라지고 녹음기는 계속 돌았다
+  const busy = starting || state === 'recording' || state === 'processing'
 
   // 라이브 모델도 없고 예시도 없으면 조용히 숨김(전시 안전)
   if (available === false && examples.length === 0) return null
@@ -206,15 +258,16 @@ export default function Audio2FaceAvatar() {
           ) : (
             <button
               onClick={startRec}
-              disabled={state === 'processing'}
+              disabled={state === 'processing' || starting}
               className="flex-1 py-2.5 rounded-lg bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white font-medium"
             >
               {state === 'processing' ? '분석 중…' : '말하고 아바타로 보기'}
             </button>
           )}
-          <label className="py-2.5 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm cursor-pointer">
+          <label aria-disabled={busy}
+            className={`py-2.5 px-3 rounded-lg bg-gray-100 text-gray-700 text-sm ${busy ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-200'}`}>
             파일
-            <input type="file" accept="audio/*" onChange={onFile} className="hidden" />
+            <input type="file" accept="audio/*" onChange={onFile} disabled={busy} className="hidden" />
           </label>
         </div>
       )}
@@ -225,7 +278,7 @@ export default function Audio2FaceAvatar() {
           <p className="text-xs text-gray-500 mb-1.5">예시 음성으로 보기 {available === true ? '(또는 위에서 직접 말하기)' : ''}</p>
           <div className="flex flex-wrap gap-2">
             {examples.map((ex) => (
-              <button key={ex.id} onClick={() => playExample(ex)} disabled={state === 'playing'}
+              <button key={ex.id} onClick={() => playExample(ex)} disabled={state === 'playing' || busy}
                 className="px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-sm hover:bg-violet-100 disabled:opacity-50">
                 {ex.text}
               </button>

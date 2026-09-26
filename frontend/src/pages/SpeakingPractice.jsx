@@ -8,9 +8,10 @@ import useBookmark from '../lib/useBookmark'
 import LoadingScreen from '../components/LoadingScreen'
 import Modal from '../components/Modal'
 import { getSpeakingStageMenuItem } from '../config/speakingNavigation'
-import { toBlendshapeMap, cosineScore, loadCalibration } from '../lib/mouthScore'
+import { toBlendshapeMap, scorePercent, loadCalibration } from '../lib/mouthScore'
 import { scoreTone, scoreLevel } from '../lib/scoreTone'
 import { VOWEL_IDS } from '../lib/vtlShapes'
+import { mediaErrorMessage } from '../lib/mediaError'
 
 // 혀 위치 성도 단면(E-6) — 모음 결과를 열 때만 받는다(그림 코드와 윤곽 자료 모두 지연 로드)
 const VocalTractVTL = lazy(() => import('../components/VocalTractVTL'))
@@ -40,6 +41,19 @@ const RESULT_BTN = 'btn-bar flex-1 max-lg:rounded-13 max-lg:px-0 max-lg:text-[15
 
 // 캔버스·SVG에 쓸 토큰 색 — 루트(data-track="speak") 기준으로 CSS 변수를 읽는다.
 const cssVar = (el, name) => (el ? getComputedStyle(el).getPropertyValue(name).trim() : '') || 'gray'
+
+// /api/viseme 실패 안내(아바타만 멈추고 녹음·채점은 된다). 다음 문항에서 받으면 이 안내만 지운다.
+const VISEME_ERR = '입모양 자료를 불러오지 못해 아바타가 움직이지 않아요. 녹음과 채점은 그대로 할 수 있어요.'
+
+// 지표 모드 점수 이름: 서버가 드릴마다 다른 것을 잰다(backend/speak_curriculum.py _score_prosody).
+// 발성(voicing)은 길이 60% + 크기 40%라 '길이·크기'로 따로 붙인다.
+const PROSODY_SCORE_LABEL = { long: '길이', rise: '억양', fall: '억양', soft: '작게 말하기', loud: '크게 말하기' }
+
+// AudioContext.close()는 이미 닫히는 중이면 거부된 약속을 돌려준다 → 삼켜서 처리되지 않은 거부를 막는다
+const closeContext = (ac) => {
+  if (!ac || ac.state === 'closed') return
+  try { Promise.resolve(ac.close()).catch(() => {}) } catch { /* noop */ }
+}
 
 // 자기상관 기반 기본주파수(피치) 추정
 function autoCorrelate(buf, sampleRate) {
@@ -95,6 +109,8 @@ export default function SpeakingPractice() {
   const [mirrorOn, setMirrorOn] = useState(false)   // 웹캠 미러(따라 말하기)
   const [showDetail, setShowDetail] = useState(false)   // 상세 분석 모달
   const [introDone, setIntroDone] = useState(false)  // 레슨 시작 전 트랙 로딩 최소 표시 시간
+  const [starting, setStarting] = useState(false)      // 마이크를 여는 중(권한 창 대기), 그동안 마이크 버튼을 막는다
+  const [mirrorBusy, setMirrorBusy] = useState(false)  // 웹캠을 여는 중, 그동안 미러 버튼을 막는다
 
   const items = reviewMode ? (reviewItems || []) : (stageInfo?.items || [])
   const curItem = items[itemIdx] || null
@@ -124,39 +140,66 @@ export default function SpeakingPractice() {
   const mouthFramesRef = useRef([])      // 녹음 중 사용자 입모양 blendshape 버퍼
   const mouthTimesRef = useRef([])       // 위 버퍼 각 프레임의 녹음 시작 기준 시각(초) — 구간별 보완(B-6)
   const waveColorsRef = useRef(null)     // 파형 캔버스 색(토큰에서 한 번 읽음)
+  const landmarkerLoadRef = useRef(null) // FaceLandmarker를 불러오는 중인 약속(두 벌 만들지 않게)
+  const mediaGenRef = useRef(0)          // teardown마다 올린다. 그 전에 요청한 마이크·카메라·모델이 늦게 오면 닫고 버린다
+  const attemptRef = useRef(0)           // 녹음 시도 번호(늦게 온 채점 결과가 지금 시도를 덮지 않게)
+  const startingRef = useRef(false)
+  const mirrorBusyRef = useRef(false)
 
-  // 미러가 켜지면 FaceLandmarker를 지연 로드(발음채점 시 입모양 신뢰도 산출 → AV 후기융합)
-  const ensureLandmarker = async () => {
-    if (landmarkerRef.current) return landmarkerRef.current
-    try {
-      const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision')
-      const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm')
-      landmarkerRef.current = await FaceLandmarker.createFromOptions(vision, {
-        baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', delegate: 'GPU' },
-        outputFaceBlendshapes: true, runningMode: 'VIDEO', numFaces: 1,
-      })
-    } catch { landmarkerRef.current = null }
-    return landmarkerRef.current
+  // 미러가 켜지면 FaceLandmarker를 지연 로드(발음채점 시 입모양 신뢰도 산출 → AV 후기융합).
+  // 불러오는 중이면 같은 약속을 돌려주고, 그사이 화면을 떠났으면(teardown) 다 만든 모델을 바로 닫는다.
+  const ensureLandmarker = () => {
+    if (landmarkerRef.current) return Promise.resolve(landmarkerRef.current)
+    if (landmarkerLoadRef.current) return landmarkerLoadRef.current
+    const gen = mediaGenRef.current
+    const load = (async () => {
+      let fl = null
+      try {
+        const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision')
+        const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm')
+        fl = await FaceLandmarker.createFromOptions(vision, {
+          baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', delegate: 'GPU' },
+          outputFaceBlendshapes: true, runningMode: 'VIDEO', numFaces: 1,
+        })
+      } catch { fl = null }
+      if (gen !== mediaGenRef.current) { try { fl?.close?.() } catch { /* noop */ } return null }
+      landmarkerLoadRef.current = null
+      landmarkerRef.current = fl
+      return fl
+    })()
+    landmarkerLoadRef.current = load
+    return load
   }
 
   const toggleMirror = async () => {
+    if (mirrorBusyRef.current) return   // 권한 창이 떠 있는 동안 다시 눌러 카메라를 두 번 여는 것을 막는다
     if (mirrorOn) {
       if (videoStreamRef.current) { videoStreamRef.current.getTracks().forEach((t) => t.stop()); videoStreamRef.current = null }
       if (videoRef.current) videoRef.current.srcObject = null
       setMirrorOn(false)
     } else {
+      mirrorBusyRef.current = true; setMirrorBusy(true)
+      const gen = mediaGenRef.current
       try {
         const vs = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+        // 권한을 기다리는 사이 화면을 떠났거나 단계가 바뀌었다 → 켠 카메라를 바로 끈다
+        if (gen !== mediaGenRef.current) { vs.getTracks().forEach((t) => t.stop()); return }
         videoStreamRef.current = vs
         setMirrorOn(true)
         ensureLandmarker()   // 미러 켜는 순간 모델 준비(비동기)
-      } catch { setErr('웹캠을 쓸 수 없어요. 카메라 권한을 허용해 주세요.') }
+      } catch (e) {
+        if (gen === mediaGenRef.current) setErr(mediaErrorMessage(e, 'camera'))
+      } finally {
+        mirrorBusyRef.current = false; setMirrorBusy(false)
+      }
     }
   }
-  // <video>가 마운트된 뒤 스트림 연결(조건부 렌더 타이밍 대응)
-  useEffect(() => {
-    if (mirrorOn && videoRef.current && videoStreamRef.current) videoRef.current.srcObject = videoStreamRef.current
-  }, [mirrorOn])
+  // 미러 <video>는 결과 화면에서 사라졌다가 '다시 말하기'로 새로 붙는다 → 붙을 때마다 스트림을 연결한다(콜백 ref).
+  // 예전에는 mirrorOn이 바뀔 때만 연결해, 두 번째 시도부터 화면이 검고 입모양 프레임도 모이지 않았다.
+  const attachVideo = useCallback((el) => {
+    videoRef.current = el
+    if (el && videoStreamRef.current && el.srcObject !== videoStreamRef.current) el.srcObject = videoStreamRef.current
+  }, [])
 
   const closeDetail = useCallback(() => setShowDetail(false), [])
   // 문항 북마크(328:49) — 발화 트랙으로 서버에 저장돼 말하기 복습에 나온다
@@ -168,7 +211,9 @@ export default function SpeakingPractice() {
   }, [])
 
   // 녹음 중 버퍼된 입모양 vs 목표 비심열 → mouth_confidence(0~1). 각 목표 비심에 대해
-  // 버퍼 최고 코사인을 구해 평균(정렬 없이 '그 입모양이 한 번은 만들어졌나'를 잰다).
+  // 버퍼 최고 점수를 구해 평균(정렬 없이 '그 입모양이 한 번은 만들어졌나'를 잰다).
+  // 점수는 방향(코사인) × 크기 정합(scorePercent/100, WebcamMouthCheck와 같은 척도). 코사인만 쓰면 턱 벌림 크기만
+  // 다른 비심(2·5·7·8)을 가르지 못해 100 가까이로 포화한다(lib/mouthScore.js magnitudeMatch).
   const computeMouthConfidence = () => {
     const buf = mouthFramesRef.current
     if (!buf.length || !frames.length) return null
@@ -178,13 +223,13 @@ export default function SpeakingPractice() {
     let sum = 0
     for (const vid of targetVis) {
       let best = 0
-      for (const bs of buf) { const c = cosineScore(bs, vid, profiles); if (c > best) best = c }
+      for (const bs of buf) { const c = scorePercent(bs, vid, profiles) / 100; if (c > best) best = c }
       sum += best
     }
     return Math.max(0, Math.min(1, sum / targetVis.length))
   }
 
-  // 구간별 입모양(B-6) — 프레임마다 입모양 그룹 1~10의 코사인(0~1)을 시각과 함께 보낸다. 서버는 음소(음절)가
+  // 구간별 입모양(B-6): 프레임마다 입모양 그룹 1~10의 점수(0~1, 방향 × 크기)를 시각과 함께 보낸다. 서버는 음소(음절)가
   // 정렬된 시간 구간의 입모양 점수를 구해 따로 돌려준다(채점 점수에는 섞지 않는다, 9/24 융합 검증).
   // 얼굴 비음 추정(K-5)은 화자 영상 측정에서 비음 음절을 가르지 못해(docs/cue-video-demo.md) 보내지 않는다.
   const buildMouthTrack = async () => {
@@ -195,7 +240,7 @@ export default function SpeakingPractice() {
     const visemes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     const rows = buf.slice(0, 1500).map((bs, i) => [
       Math.round(times[i] * 1000) / 1000,
-      ...visemes.map((vid) => Math.round(Math.max(0, Math.min(1, cosineScore(bs, vid, profiles))) * 1000) / 1000),
+      ...visemes.map((vid) => Math.round(Math.max(0, Math.min(1, scorePercent(bs, vid, profiles) / 100)) * 1000) / 1000),
     ])
     return { visemes, frames: rows }
   }
@@ -211,6 +256,7 @@ export default function SpeakingPractice() {
     setFrames([])
     setSummary(null)
     setAssessment(null)
+    setAssessing(false)
     setProgress(null)
     setShowDetail(false)
 
@@ -250,11 +296,16 @@ export default function SpeakingPractice() {
 
   const loadFrames = async (t) => {
     const requestId = ++framesRequestRef.current
-    setTarget(t); setFrames([]); setSummary(null); setAssessment(null); setShowDetail(false)
+    attemptRef.current += 1   // 문항이 바뀌면 이전 녹음의 늦은 채점 결과는 버린다
+    setTarget(t); setFrames([]); setSummary(null); setAssessment(null); setAssessing(false); setShowDetail(false)
+    setErr((e) => (e === VISEME_ERR ? null : e))
     try {
       const nextFrames = await learningAPI.getVisemes(t)
       if (requestId === framesRequestRef.current) setFrames(nextFrames)
-    } catch { /* ignore */ }
+    } catch {
+      // 입모양 자료가 없으면 아바타가 가만히 있다 → 이유를 짧게 알린다
+      if (requestId === framesRequestRef.current) setErr(VISEME_ERR)
+    }
   }
 
   const applyItem = (its, idx) => {
@@ -276,59 +327,83 @@ export default function SpeakingPractice() {
     else pickWord()
   }
 
-  const resetAttempt = () => { setSummary(null); setAssessment(null); setShowDetail(false) }
+  // 다시 말하기: 채점 중이던 이전 시도의 결과는 버린다(시도 번호를 올린다)
+  const resetAttempt = () => { attemptRef.current += 1; setSummary(null); setAssessment(null); setAssessing(false); setShowDetail(false) }
 
   const closeAudio = () => {
     if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null }
-    if (acRef.current && acRef.current.state !== 'closed') { try { acRef.current.close() } catch { /* noop */ } }
+    closeContext(acRef.current)
     acRef.current = null; analyserRef.current = null
   }
 
   const teardown = () => {
+    mediaGenRef.current += 1   // 아직 열리는 중인 마이크·카메라·모델은 도착하는 대로 닫힌다
+    attemptRef.current += 1    // 채점 중이던 결과도 버린다
+    landmarkerLoadRef.current = null
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     rafRef.current = null
     const rec = recorderRef.current
     if (rec) { rec.onstop = null; try { if (rec.state !== 'inactive') rec.stop() } catch { /* noop */ } recorderRef.current = null }
     if (videoStreamRef.current) { videoStreamRef.current.getTracks().forEach((t) => t.stop()); videoStreamRef.current = null }
     if (landmarkerRef.current) { try { landmarkerRef.current.close?.() } catch { /* noop */ } landmarkerRef.current = null }
+    setMirrorOn(false)   // 스트림을 닫았으니 미러 버튼도 꺼진 상태로 맞춘다(단계가 바뀌어 화면이 남는 경우)
     closeAudio()
   }
 
   const start = async () => {
-    setErr(null); setSummary(null); setAssessment(null); setShowDetail(false)
+    if (startingRef.current) return   // 권한 창이 떠 있는 동안 다시 눌러 마이크를 두 번 여는 것을 막는다
+    startingRef.current = true; setStarting(true)
+    const gen = mediaGenRef.current
+    const attempt = ++attemptRef.current
+    setErr(null); setSummary(null); setAssessment(null); setAssessing(false); setShowDetail(false)
     volHist.current = []; pitchHist.current = []; traceRef.current = []; chunksRef.current = []; mouthFramesRef.current = []; mouthTimesRef.current = []
+    let stream = null
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      // 크기를 재는 단계(발성, 운율 '크게'·'작게')는 자동 음량 조절(AGC)을 끈다. 켜 두면 브라우저가 작은 소리는 키우고
+      // 큰 소리는 줄여 크기 점수가 실제 목소리와 달라진다. 나머지 단계는 예전 설정 그대로다.
+      const measuresLoudness = mode === 'voicing' || drill === 'loud' || drill === 'soft'
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: !measuresLoudness },
       })
+      // 권한을 기다리는 사이 화면을 떠났거나 단계가 바뀌었다 → 연 마이크를 바로 닫는다
+      if (gen !== mediaGenRef.current) { stream.getTracks().forEach((t) => t.stop()); return }
       streamRef.current = stream
       const AC = window.AudioContext || window.webkitAudioContext
       const ac = new AC(); acRef.current = ac
       // 중요: 사용자 제스처 없이 만든 AudioContext는 suspended 상태로 시작할 수 있어
       // 분석 버퍼가 0으로만 읽힌다("소리 안 잡힘"의 주범) → 반드시 resume.
       if (ac.state === 'suspended') { try { await ac.resume() } catch { /* noop */ } }
+      if (gen !== mediaGenRef.current) { stream.getTracks().forEach((t) => t.stop()); closeContext(ac); return }
       const src = ac.createMediaStreamSource(stream)
       const analyser = ac.createAnalyser(); analyser.fftSize = 2048
       src.connect(analyser); analyserRef.current = analyser
       try {
         const rec = new MediaRecorder(stream)
         rec.ondataavailable = (e) => { if (e.data && e.data.size) chunksRef.current.push(e.data) }
-        rec.onstop = onRecStop
+        rec.onstop = () => onRecStop(attempt)
         rec.start()
         recorderRef.current = rec
       } catch { recorderRef.current = null }
       startRef.current = performance.now()
       setRecording(true)
       loop()
-    } catch {
-      setErr('마이크를 쓸 수 없어요. 브라우저에서 마이크 권한을 허용해 주세요.')
+    } catch (e) {
+      // 마이크는 열렸는데 그 뒤(AudioContext·분석기)에서 실패해도 연 장치를 닫는다
+      if (stream) stream.getTracks().forEach((t) => t.stop())
+      closeAudio()
+      if (gen === mediaGenRef.current) setErr(mediaErrorMessage(e, 'mic'))
+    } finally {
+      startingRef.current = false; setStarting(false)
     }
   }
 
-  const onRecStop = async () => {
+  // attempt: 이 녹음을 시작할 때의 시도 번호. 그사이 '다시 말하기'·다음 문항·화면 이동으로 번호가 바뀌면
+  // 채점을 보내지 않거나, 늦게 온 결과를 버린다(지금 시도의 '분석 중' 표시도 건드리지 않는다).
+  const onRecStop = async (attempt) => {
     const rec = recorderRef.current
     const blob = new Blob(chunksRef.current, { type: (rec && rec.mimeType) || 'audio/webm' })
     closeAudio()
+    if (attempt !== attemptRef.current) return
     if (blob.size > 500 && target) {
       const s = summaryRef.current || {}
       const metrics = {
@@ -344,15 +419,18 @@ export default function SpeakingPractice() {
         const track = await buildMouthTrack()
         if (track) opts.mouth_track = JSON.stringify(track)
       }
+      if (attempt !== attemptRef.current) return
       setAssessing(true)
       try {
         const res = await speakAPI.assess(target, blob, metrics, opts)
+        if (attempt !== attemptRef.current) return
         setAssessment(res)
         if (res.progress) setProgress(res.progress)
       } catch (e) {
+        if (attempt !== attemptRef.current) return
         setAssessment({ error: e?.response?.data?.detail || '발음 분석에 실패했어요. 잠시 후 다시 시도해 주세요.' })
       } finally {
-        setAssessing(false)
+        if (attempt === attemptRef.current) setAssessing(false)
       }
     }
   }
@@ -456,9 +534,10 @@ export default function SpeakingPractice() {
     ctx.lineWidth = 2
     ctx.strokeStyle = v > 0.15 ? waveColorsRef.current.on : waveColorsRef.current.off
     ctx.beginPath()
-    const step = Math.max(1, Math.ceil(buf.length / W))
+    // 버퍼 전체(2048)를 캔버스 폭(480)에 고르게 편다. 예전 정수 간격(5)은 480×5가 버퍼를 넘어 오른쪽 약 15%가 평평했다.
+    const ratio = buf.length / W
     for (let x = 0; x < W; x++) {
-      const s = buf[x * step] || 0
+      const s = buf[Math.floor(x * ratio)] || 0
       const y = H / 2 + s * (H / 2) * 0.9
       if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
     }
@@ -481,7 +560,11 @@ export default function SpeakingPractice() {
   const phones = (!metricMode && assessment && !assessment.error && assessment.acoustic_dgop?.phones) || []
   const scoreNum = assessment && !assessment.error ? assessment.score
     : (metricMode && summary ? summary.loudness : null)
-  const scoreLabel = metricMode ? '목소리 크기' : '발음 정확도'
+  // 지표 모드는 서버가 잰 것에 맞춰 이름을 붙인다. 서버 점수 전(또는 실패)에는 위처럼 소리 크기를 보이므로 '목소리 크기'.
+  const scoreLabel = !metricMode ? '발음 정확도'
+    : !(assessment && !assessment.error) ? '목소리 크기'
+      : mode === 'voicing' ? '길이·크기'
+        : (PROSODY_SCORE_LABEL[drill] || '운율')
   const good = assessment && !assessment.error
     ? (assessment.passed ?? (assessment.score >= 65))
     : (summary ? (summary.volOk && summary.toneOk !== false) : null)
@@ -571,13 +654,13 @@ export default function SpeakingPractice() {
                 {/* 웹캠 미러 — 내 입모양을 거울처럼 띄워 목표 아바타와 비교(따라 말하기). Figma 175:21에는 없지만
                     분석의 입모양 점수(소리와 따로 보임)의 입력이 여기서만 나와 남긴다. */}
                 <div className="mx-auto w-full max-w-[560px]">
-                  <button type="button" onClick={toggleMirror} aria-pressed={mirrorOn}
+                  <button type="button" onClick={toggleMirror} aria-pressed={mirrorOn} disabled={mirrorBusy}
                     className={`btn-secondary w-full py-2.5 text-[14px] ${mirrorOn ? 'bg-track-tint text-track-dark' : ''}`}>
                     {mirrorOn ? '웹캠 끄기' : '웹캠 미러 — 내 입모양 보기'}
                   </button>
                   {mirrorOn && (
                     <div className="mt-2 overflow-hidden rounded-14 bg-slate-900">
-                      <video ref={videoRef} autoPlay muted playsInline
+                      <video ref={attachVideo} autoPlay muted playsInline
                         className="w-full" style={{ transform: 'scaleX(-1)', maxHeight: 220, objectFit: 'cover' }} />
                       <p className="py-1 text-center text-[11px] text-white/70">거울처럼 좌우 반전 · 위 아바타 입모양과 내 입을 나란히 비교해보세요</p>
                     </div>
@@ -688,7 +771,7 @@ export default function SpeakingPractice() {
           <div className="sticky bottom-0 w-full border-t-2 border-line bg-white">
             <div className="mx-auto flex max-w-[676px] flex-col items-center gap-2.5 px-[18px] pb-[calc(26px+env(safe-area-inset-bottom))] pt-[18px] lg:h-[148px] lg:justify-center lg:gap-3 lg:py-0">
               {!recording ? (
-                <button type="button" onClick={start} aria-label="눌러서 말하기"
+                <button type="button" onClick={start} aria-label="눌러서 말하기" disabled={starting}
                   className="flex size-[72px] items-center justify-center rounded-full border-2 border-b-6 border-track-dark bg-track transition-transform hover:scale-105 active:scale-95">
                   <img src={IC.mic} alt="" className="size-8" />
                 </button>
