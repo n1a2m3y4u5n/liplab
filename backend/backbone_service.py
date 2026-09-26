@@ -74,13 +74,14 @@ def quant_mode() -> str:
 
 def _load_ctc(model_id: str, device: str) -> tuple:
     """폴더에 미리 변환한 int8 파일(quant_int8.INT8_FILE)이 있으면 그것을 바로 올린다. fp32 가중치가 함께 있으면
-    BACKBONE_QUANT=int8일 때만 파일을 쓰고, int8 파일만 있으면(배포 이미지) 설정과 상관없이 쓴다."""
+    실행 중 변환과 같은 조건(BACKBONE_QUANT=int8이고 CPU)일 때만 파일을 쓰고, GPU는 fp32로 올린다(CPU int8 대 GPU fp32
+    비교가 섞이지 않게). int8 파일만 있으면(배포 이미지) 설정·장치와 상관없이 쓴다."""
     from transformers import AutoModelForCTC, AutoProcessor
     mode = quant_mode()
     processor = AutoProcessor.from_pretrained(model_id)
     if os.path.isdir(model_id):
         import quant_int8
-        if quant_int8.has_int8(model_id) and (mode == "int8" or not quant_int8.has_fp32(model_id)):
+        if quant_int8.has_int8(model_id) and (not quant_int8.has_fp32(model_id) or (mode == "int8" and device == "cpu")):
             return processor, quant_int8.load_ctc(model_id).to(device)
     model = AutoModelForCTC.from_pretrained(model_id).eval().to(device)
     if mode == "int8" and device == "cpu":

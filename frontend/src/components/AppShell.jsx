@@ -16,7 +16,7 @@ import { levelProgress } from '../lib/level'
  * props
  *   active       사이드바·하단 탭 활성 key(learn·practice·task·review·analysis·profile). 없으면 경로로 찾는다.
  *   title        탭 제목(모바일 25px / lg 30px).
- *   description  제목 아래 부제. 9/26 Figma에서 연습 기능 화면의 부제가 모두 빠져 지금은 넘기는 곳이 없다.
+ *   description  제목 아래 부제. 9/26 Figma에서 연습 기능 화면의 부제는 모두 빠졌고, 복습·분석 쪽 일부 화면만 넘긴다.
  *   closeTo      주면 제목 줄 오른쪽 끝에 나가기 X(40px 원, 453:83)를 두고 누르면 그 경로로 간다(연습 기능 화면 → /practice/hub,
  *                변경 내역 §4-4).
  *   rail         오른쪽 패널 구성: 'default'(스탯 + 오늘의 과제 + 복습할 항목, 59:12)

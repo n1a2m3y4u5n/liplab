@@ -27,6 +27,8 @@ _FALLBACK_LINES = {
 # 학습자가 직접 적은 상황(상황별 시나리오의 '어떤 상황인가요?')처럼 목록에 없는 장면의 폴백 — 어느 자리에나 맞는 인사·안부.
 _GENERIC_LINES = ["안녕하세요 반가워요", "네 오랜만이에요", "요즘 어떻게 지내요?", "그럭저럭 지내요", "잠깐 얘기할까요?", "좋아요 그래요"]
 MAX_SPEAKERS = 4
+# 상황별 시나리오 난이도(1~5단계)별 한 턴 길이. 단계를 주지 않으면 예전 그대로 6~14자(3단계와 같다).
+TURN_LENGTH_BY_LEVEL = {1: "4~8자", 2: "6~10자", 3: "6~14자", 4: "10~18자", 5: "14~22자"}
 
 
 def clean_scene(scene: Optional[str]) -> Optional[str]:
@@ -170,9 +172,11 @@ def _fallback_conversation(speakers: int, turns: int, scene: str,
 
 async def generate_multi_conversation(speakers: int = 2, turns: int = 6,
                                       scene: Optional[str] = None,
-                                      focus_words: Optional[List[str]] = None) -> Dict:
+                                      focus_words: Optional[List[str]] = None,
+                                      level: Optional[int] = None) -> Dict:
     """N명이 나누는 짧은 일상 대화. 각 턴은 {speaker, text, lookalikes}, 대화에는 빈칸 턴(closure)이 붙는다.
     focus_words는 학습자의 약점 입모양이 든 승인 단어(G) — 대화에 자연스럽게 넣도록 요청한다(H-3).
+    level은 상황별 시나리오에서 고른 난이도(1~5)로, 한 턴 길이를 정한다(TURN_LENGTH_BY_LEVEL). 폴백 대사는 단계와 무관하다.
     턴마다 문장 게이트(content_rules.check_sentence)를 거치고, 화자 순서는 규칙적으로 번갈지 않게 한다."""
     import content_rules as _rules
     rng = random.Random()
@@ -181,10 +185,11 @@ async def generate_multi_conversation(speakers: int = 2, turns: int = 6,
     scene = clean_scene(scene) or rng.choice(_SCENES)
     focus = [w for w in (focus_words or []) if w][:6]
     focus_line = (f"- 가능하면 다음 단어 중 2개 이상을 자연스럽게 넣는다: {', '.join(focus)}\n" if focus else "")
+    length = TURN_LENGTH_BY_LEVEL.get(level, TURN_LENGTH_BY_LEVEL[3])
     system = (
         f"너는 청각장애인 독화 훈련용 '다자 대화' 출제기다.\n"
         f"- {speakers}명이 '{scene}'에서 나누는 자연스러운 일상 대화를 만든다.\n"
-        "- 각 턴은 6~14자의 짧은 구어체 한 문장.\n"
+        f"- 각 턴은 {length}의 짧은 구어체 한 문장.\n"
         "- 화자 순서를 규칙적으로 번갈지 말 것. 같은 사람이 연달아 두 번 말하는 경우를 한 번 이상 넣는다.\n"
         f"- 화자 번호는 0~{speakers - 1}.\n"
         f"{focus_line}"

@@ -13,7 +13,7 @@ import AppShell from '../components/AppShell'
  *  - 연습 방식은 문장 테스트 / AI 대화 2개, 고른 것은 오른쪽 위 체크 동그라미(407:115). AI 대화일 때만 대화 상대(1:1 / 여러 명)가
  *    펼쳐지고, 여러 명이면 인원(2~4명, 나를 뺀 상대 수, 407:131)을 고른다. 문장 테스트면 이 영역을 렌더링하지 않는다.
  *  - 문장 테스트: 기존 문장 학습(/practice). AI 대화: 1:1이면 기존 대화 실전(/conversation), 여러 명이면 여러 명 대화 화면
- *    (/learn/conversation-multi?speakers=2~4&situation=). 연습 탭의 다자 대화 기능을 이것이 대신한다(§2).
+ *    (/learn/conversation-multi?speakers=2~4&level=1~5&situation=, 난이도는 한 턴 길이). 연습 탭의 다자 대화 기능을 이것이 대신한다(§2).
  *  - 잠금은 예전과 같다: 문장 테스트는 3단계, 1:1 대화는 4단계가 열려야 한다. 여러 명 대화는 잠그지 않는다.
  *  - 난이도는 추천 단계(/curriculum/recommended-level)로 시작하고, 사용자가 움직이면 추천값이 덮어쓰지 않는다.
  *  - 회차 히스토리 등에서 ?situation=은행 으로 들어오면 그 상황을 입력칸에 채워 이어서 연습하게 한다.
@@ -39,11 +39,19 @@ function shuffledTypes(length) {
 
 const Divider = () => <div className="h-[1.5px] w-full shrink-0 bg-line" />
 
-/** 난이도 슬라이더(449:85): 트랙·채움·눈금 5개·숫자·손잡이는 그림이고, 실제 입력은 투명한 range(1~5, step 1)가 받는다. */
+/** 난이도 슬라이더(449:85): 트랙·채움·눈금 5개·숫자·손잡이는 그림이고, 실제 입력은 투명한 range(1~5, step 1)가 받는다.
+ * iOS Safari의 range는 손잡이를 끌어야만 움직이고 트랙·숫자를 눌러도 가만히 있다. 그래서 슬라이더 어디를 누르든
+ * 누른 가로 위치에서 가장 가까운 단계로 옮긴다(다른 브라우저에서는 range가 이미 같은 값으로 옮겨 두어 차이가 없다). */
 function LevelSlider({ value, onChange }) {
   const at = (n) => `calc(16px + (100% - 32px) * ${(n - 1) / 4})`
+  const jump = (e) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    if (r.width <= 32) return
+    const n = Math.round(((e.clientX - r.left - 16) / (r.width - 32)) * 4) + 1
+    onChange(Math.min(5, Math.max(1, n)))
+  }
   return (
-    <div className="relative h-14 w-full">
+    <div className="relative h-14 w-full" onClick={jump}>
       <div className="absolute inset-x-4 top-[18px] h-2 rounded-full bg-fill" />
       <div className="absolute left-4 top-[18px] h-2 rounded-full bg-primary-500"
         style={{ width: `max(8px, calc((100% - 32px) * ${(value - 1) / 4}))` }} />
@@ -109,7 +117,7 @@ export default function ScenarioHub() {
     const text = situation.trim()
     if (!text || loading) return
     if (mode === 'conversation' && partner === 'multi') {
-      navigate(`/learn/conversation-multi?speakers=${people}&situation=${encodeURIComponent(text)}`)
+      navigate(`/learn/conversation-multi?speakers=${people}&level=${level}&situation=${encodeURIComponent(text)}`)
       return
     }
     if (locks[mode]) {
