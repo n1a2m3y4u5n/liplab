@@ -35,6 +35,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Pre-download the Whisper model into the image so cold starts don't fetch it
 # at runtime (the machine auto-stops and its filesystem resets between wakes).
+# HF_HOME을 받기 전에 정한다. 예전에는 아래(ML 단계)에서 정해 Whisper가 /root/.cache에 받혔고, 실행 때는 /app/hf만
+# 찾아 전시앱은 켜질 때마다 다시 받고, 오프라인(HF_HUB_OFFLINE=1)인 liplab-dev는 전사 대체 경로가 모델을 못 찾았다.
+ENV HF_HOME=/app/hf
 ENV WHISPER_MODEL=base
 RUN python -c "from faster_whisper import WhisperModel; WhisperModel('base', device='cpu', compute_type='int8')"
 
@@ -46,10 +49,9 @@ ARG WITH_ML=0
 # ours는 backend/models/dgop_ours/{aligner,scorer}에 둔 체크포인트(git 제외, DEPLOY.md 9항)를 아래 COPY로 싣는다.
 # 9/26부터는 미리 변환한 int8 파일(model.int8.safetensors, 모델당 355MB)을 싣는다. fp32(1.26GB)도 받지만 켜질 때 느리다.
 ARG DGOP_MODEL=kresnik
-ENV HF_HOME=/app/hf
 COPY backend/requirements-infer.txt ./
 RUN if [ "$WITH_ML" = "1" ]; then \
-      pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
+      pip install --no-cache-dir torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu && \
       pip install --no-cache-dir -r requirements-infer.txt && \
       python -c "from transformers import AutoModel, AutoModelForCTC, AutoProcessor; \
 k='kresnik/wav2vec2-large-xlsr-korean'; \

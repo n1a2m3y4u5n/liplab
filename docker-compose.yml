@@ -7,9 +7,10 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - JWT_SECRET=${JWT_SECRET:-dev-secret-key-change-in-production}
+      # 기본값을 두지 않는다: 공개 저장소의 기본 서명키로 켜면 누구나 임의 사용자 토큰을 만들 수 있다(auth.py는 이 값을 못 막는다)
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET를 설정하세요}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///./liplab.db}
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:////data/liplab.db}   # 아래 볼륨(./data)에 둔다
       - PORT=8080
     volumes:
       - ./data:/data

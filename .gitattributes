@@ -1,0 +1,3 @@
+# 셸 스크립트는 LF로 둔다(CRLF면 ./scripts/setup.sh가 "bad interpreter: /bin/bash^M"로 실패했다).
+# 다른 파일은 지금 줄바꿈 그대로 두려고 여기서 정하지 않는다.
+*.sh text eol=lf
