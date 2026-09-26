@@ -19,6 +19,11 @@ import { MIRROR_KEYS } from '../lib/mouthMirror'
 import MouthFallback2D from './MouthFallback2D'
 
 const EMPTY = {}
+const ACTIVE_KEY_SET = new Set(ACTIVE_MORPH_KEYS)
+const MIRROR_KEY_SET = new Set(MIRROR_KEYS)
+// GLB 로드가 실패하면 이만큼 기다렸다가 다시 시도한다(회차마다 늘린다). 네트워크가 잠깐 끊긴 경우를 되살린다.
+const GLB_RETRY_MS = 3000
+const GLB_RETRY_MAX = 2
 
 /**
  * 한국어 Viseme → 3D 입모양 렌더링
@@ -50,6 +55,7 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
   const tongueMeshRef = useRef(null)
   const jawRef = useRef(null)          // { bone, restZ } — 턱 뼈와 기본 각도
   const currentWeightsRef = useRef({})
+  const extraKeysRef = useRef(new Set())   // 기본 키 집합 밖에서 원본 프레임이 움직인 모프(0으로 돌아올 때까지 보간)
   const tongueWeightsRef = useRef({})
   const skinMatsRef = useRef([])   // 투명(X-ray) 모드에서 반투명화할 피부 재질
   const xrayAppliedRef = useRef(null)
@@ -102,28 +108,38 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
     const LERP = Math.min(1, delta * (rawFrame ? 34 : 22))
 
     /*
-      보간할 키 집합. 음성구동이면 프레임의 모든 키. mirrorRef를 받은 인스턴스는 **항상**
-      MIRROR_KEYS(=ACTIVE_MORPH_KEYS의 상위집합)를 돈다. 목표 맵에 없는 키는 0으로 읽히므로,
-      거울 모드를 끄면 거울에서만 쓰던 모프(jawForward·cheekPuff 등)가 자동으로 0으로 복귀한다.
+      보간할 키 집합. mirrorRef를 받은 인스턴스는 **항상** MIRROR_KEYS(=ACTIVE_MORPH_KEYS의 상위집합)를,
+      아니면 ACTIVE_MORPH_KEYS를 돈다. 목표 맵에 없는 키는 0으로 읽히므로, 거울 모드를 끄면 거울에서만
+      쓰던 모프(jawForward·cheekPuff 등)가 자동으로 0으로 복귀한다.
       — 개발일지 3절의 함정: 매 프레임 '사용 키 목록'만 보간하면, 목록에서 빠진 키는
         아무도 0으로 되돌리지 않아 직전 값이 얼굴에 남는다.
-      둘 다 없는 기존 호출부는 종전과 동일하게 ACTIVE_MORPH_KEYS만 돈다(동작 불변).
+      원본 프레임(음성구동 A4·웹캠 bsFrameRef)은 이 집합 밖의 모프(눈 찡그림·눈썹 등)도 움직인다. 그런 키는
+      extraKeysRef에 모아 두고, 프레임이 멈추거나 키가 빠져도 0에 닿을 때까지 보간한다(예전에는 재생이
+      끝나면 마지막 값으로 얼굴에 굳었다).
     */
-    const morphKeys = rawFrame ? Object.keys(rawFrame) : (mirrorRef ? MIRROR_KEYS : ACTIVE_MORPH_KEYS)
+    const baseKeys = mirrorRef ? MIRROR_KEYS : ACTIVE_MORPH_KEYS
+    const baseSet = mirrorRef ? MIRROR_KEY_SET : ACTIVE_KEY_SET
+    const extra = extraKeysRef.current
+    if (rawFrame) for (const key in rawFrame) if (!baseSet.has(key)) extra.add(key)
 
     // 얼굴·턱 모프 — 모든 메시에 이름으로 일괄 적용 (jawOpen은 혀도 함께 따라감)
-    for (const key of morphKeys) {
-      const tgt = target[key] || 0
-      const cur = currentWeightsRef.current[key] || 0
-      const next = THREE.MathUtils.lerp(cur, tgt, LERP)
-      currentWeightsRef.current[key] = next
-
+    const applyMorph = (key, value) => {
+      currentWeightsRef.current[key] = value
       for (const mesh of meshesRef.current) {
         const idx = mesh.morphTargetDictionary?.[key]
         if (idx !== undefined) {
-          mesh.morphTargetInfluences[idx] = next
+          mesh.morphTargetInfluences[idx] = value
         }
       }
+    }
+    for (const key of baseKeys) {
+      applyMorph(key, THREE.MathUtils.lerp(currentWeightsRef.current[key] || 0, target[key] || 0, LERP))
+    }
+    for (const key of extra) {
+      const tgt = target[key] || 0
+      const next = THREE.MathUtils.lerp(currentWeightsRef.current[key] || 0, tgt, LERP)
+      if (tgt === 0 && Math.abs(next) < 1e-3) { applyMorph(key, 0); extra.delete(key) }   // 제자리로 돌아왔다
+      else applyMorph(key, next)
     }
 
     // 턱 뼈 — 보간된 jawOpen 가중치를 그대로 각도로 옮긴다(모프와 같은 타이밍으로 움직인다).
@@ -171,14 +187,41 @@ function detectWebGL() {
   }
 }
 
-/** 3D 렌더/로드 중 오류를 잡아 2D 폴백으로 전환하는 경계 */
+/**
+ * 3D 렌더/로드 중 오류를 잡아 2D 폴백으로 전환하는 경계.
+ * GLB 로드 실패는 useGLTF(suspend-react) 캐시에 오류째 남아, 그대로 두면 새로고침 전까지 모든 3D 아바타가
+ * 같은 오류를 곧바로 다시 던진다. 그래서 로드 실패를 잡으면 그 URL을 캐시에서 지우고 잠시 뒤 다시 시도한다
+ * (GLB_RETRY_MAX번까지). URL이 바뀌면 경계를 새로 시작하고, 새로 마운트되는 아바타는 지운 캐시로 다시 받는다.
+ */
 class GLErrorBoundary extends Component {
   constructor(props) {
     super(props)
     this.state = { failed: false }
+    this.retries = 0
+    this.retryTimer = null
   }
   static getDerivedStateFromError() {
     return { failed: true }
+  }
+  componentDidCatch(error) {
+    // useLoader는 로더 오류를 'Could not load <url>: …'로 감싸 던진다. 렌더 오류라면 멀쩡한 캐시는 두고 다시 시도하지 않는다.
+    if (!/^Could not load/.test(error?.message || '')) return
+    if (this.props.url) { try { useGLTF.clear(this.props.url) } catch { /* noop */ } }
+    if (this.retries < GLB_RETRY_MAX) {
+      this.retries += 1
+      clearTimeout(this.retryTimer)
+      this.retryTimer = setTimeout(() => this.setState({ failed: false }), GLB_RETRY_MS * this.retries)
+    }
+  }
+  componentDidUpdate(prevProps) {
+    if (prevProps.url !== this.props.url) {
+      this.retries = 0
+      clearTimeout(this.retryTimer)
+      if (this.state.failed) this.setState({ failed: false })
+    }
+  }
+  componentWillUnmount() {
+    clearTimeout(this.retryTimer)
   }
   render() {
     return this.state.failed ? this.props.fallback : this.props.children
@@ -193,7 +236,7 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
   if (!webglOK) return <div className="w-full h-full">{fallback}</div>
 
   return (
-    <GLErrorBoundary fallback={<div className="w-full h-full">{fallback}</div>}>
+    <GLErrorBoundary url={modelUrl} fallback={<div className="w-full h-full">{fallback}</div>}>
       <div className="w-full h-full">
         {/*
           카메라는 Canvas에 직접 지정한다. 예전처럼 <PerspectiveCamera makeDefault>를
@@ -201,8 +244,11 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
           기본 위치 [0,0,5]를 읽어 얼굴 전체(눈)를 비추는 경쟁 조건이 생긴다
           (StrictMode에서 특히 재현). Canvas camera는 렌더러 생성 시점에 확정되므로
           OrbitControls가 항상 올바른 입 클로즈업 위치를 읽는다.
+          touch-action: OrbitControls가 연결하면서 이벤트 요소(Canvas 바깥 div)에 인라인으로 none을 걸어,
+          휴대폰에서 아바타 위에서 시작한 스와이프가 페이지를 스크롤하지 못했다. !important 클래스로 pan-y를
+          앞세워 세로 스와이프는 페이지 스크롤, 가로 드래그와 마우스 드래그는 그대로 회전이 되게 한다.
         */}
-        <Canvas camera={{ position: [0, 1.68, 0.45], fov: 16 }}>
+        <Canvas className="![touch-action:pan-y]" camera={{ position: [0, 1.68, 0.45], fov: 16 }}>
           <ambientLight intensity={1.2} />
           <directionalLight position={[1, 2, 2]} intensity={1.0} />
           <directionalLight position={[-1, 0, 1]} intensity={0.4} />

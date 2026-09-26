@@ -10,6 +10,7 @@ import { errorEnds } from '../lib/correctionTrend'
 // 비음 막대와 J '울림' 기호 연결(K→J)을 끄고, 규칙 신호 막대도 함께 숨긴다(9/24 결정).
 const K_RESEARCH = import.meta.env.VITE_LIPLAB_RESEARCH === '1'
 import { curriculumAPI, articulationAPI } from '../api'
+import { mediaErrorMessage } from '../lib/mediaError'
 import useFaceLandmarker from '../hooks/useFaceLandmarker'
 import MouthCalibration from './MouthCalibration'
 import AvatarVRM from './AvatarVRM'
@@ -29,13 +30,23 @@ function scoreColor(s) {
   return 'text-rose-600'
 }
 
+// 점수 창 길이(ms). 발음 정점을 잡으려 최근 이만큼의 최고점을 보인다. 프레임 수가 아니라 시간으로 잘라
+// 화면 주사율(60·120 Hz)과 카메라 fps에 관계없이 약 1초가 된다.
+const WIN_MS = 1000
+
 export default function WebcamMouthCheck({ visemeId, visemeName, articulationGuide = null }) {
   const videoRef = useRef(null)
   const rafRef = useRef(null)
   const streamRef = useRef(null)
+  const lastVideoTimeRef = useRef(-1)   // 마지막으로 검출한 카메라 프레임 시각(새 프레임만 검출)
+  const camGenRef = useRef(0)           // 멈춤·본뜨기 전환·언마운트마다 올린다. 켜는 중이던 카메라가 늦게 오면 끈다
+  const startingRef = useRef(false)
+  const artSeqRef = useRef(0)           // 얼굴을 잡은 새 프레임을 처리할 때마다 올린다(교정 표본의 신선도)
+  const sentSeqRef = useRef(0)          // 마지막으로 교정 표본을 보낸 시점의 artSeqRef
   const { landmarkerRef, status: modelStatus, errMsg: modelErr } = useFaceLandmarker()
   const [camStatus, setCamStatus] = useState('idle') // idle | running | error
   const [camErr, setCamErr] = useState('')
+  const [starting, setStarting] = useState(false)   // 카메라를 여는 중(권한 창 대기), 그동안 버튼을 막는다
   const [score, setScore] = useState(null)
   const [hint, setHint] = useState('')
   const [recorded, setRecorded] = useState(false)
@@ -81,12 +92,16 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   const loop = useCallback(() => {
     const fl = landmarkerRef.current
     const video = videoRef.current
-    if (!fl || !video || video.readyState < 2) {
+    // 새 카메라 프레임일 때만 검출한다(LipReadCheck와 같은 방식). 화면 갱신마다 검출하면 같은 프레임이 60 Hz
+    // 화면에서 2번, 120 Hz 화면에서 4번 들어가, 예전 '25프레임 = 약 1초' 창이 0.4초·0.2초로 줄었다.
+    if (!fl || !video || video.readyState < 2 || video.currentTime === lastVideoTimeRef.current) {
       rafRef.current = requestAnimationFrame(loop)
       return
     }
+    lastVideoTimeRef.current = video.currentTime
     try {
-      const res = fl.detectForVideo(video, performance.now())
+      const now = performance.now()
+      const res = fl.detectForVideo(video, now)
       const bs = toBlendshapeMap(res.faceBlendshapes?.[0])
       if (Object.keys(bs).length) {
         liveBsRef.current = bs // 아바타 미러링용(같은 ARKit 이름 → morph target 직접 구동)
@@ -96,13 +111,15 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
           round: Math.max(bs.mouthPucker || 0, bs.mouthFunnel || 0),
           close: bs.mouthClose || 0,
         }
+        artSeqRef.current += 1
         const curViseme = visemeIdRef.current   // 항상 현재 목표로 채점(옛 클로저 방지)
         const curProfiles = profilesRef.current
         const inst = scorePercent(bs, curViseme, curProfiles)
         const win = winRef.current
-        win.push(inst)
-        if (win.length > 25) win.shift() // 약 1초 창
-        const s = Math.max(...win) // 최근 창의 최고점(발음 정점을 잡아 안정적으로 표시)
+        win.push({ t: now, s: inst })
+        while (win.length && now - win[0].t > WIN_MS) win.shift() // 최근 약 1초 창
+        let s = 0 // 최근 창의 최고점(발음 정점을 잡아 안정적으로 표시)
+        for (const w of win) if (w.s > s) s = w.s
         setScore(s)
         if (s > bestRef.current) bestRef.current = s
         setHint(coachHint(bs, curViseme, curProfiles))
@@ -136,6 +153,9 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   useEffect(() => {
     if (status !== 'running') { setCorrection(null); setObs(null); return }
     const id = setInterval(() => {
+      // 탭이 가려졌거나 지난 표본 뒤로 얼굴을 잡은 새 프레임이 없으면 보내지 않는다(예전에는 멈춘 옛 계수를 계속 보냈다)
+      if (document.hidden || artSeqRef.current === sentSeqRef.current) return
+      sentSeqRef.current = artSeqRef.current
       const o = { ...artRef.current }
       setObs(o)
       if (corrBusyRef.current) return
@@ -159,6 +179,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   }, [status, visemeId])
 
   const stop = useCallback(() => {
+    camGenRef.current += 1   // 켜는 중이던 카메라는 도착하는 대로 끈다
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     rafRef.current = null
     if (streamRef.current) {
@@ -184,22 +205,36 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   }, [visemeId])
 
   const start = useCallback(async () => {
-    if (!landmarkerRef.current) return
+    if (!landmarkerRef.current || startingRef.current) return   // 권한 창 대기 중 두 번 눌림 방지
+    startingRef.current = true; setStarting(true)
+    const gen = camGenRef.current
+    let stream = null
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
+      // 권한을 기다리는 사이 멈춤·본뜨기 전환·언마운트가 있었다 → 켠 카메라를 바로 끈다
+      const video = videoRef.current
+      if (gen !== camGenRef.current || !video) { stream.getTracks().forEach((t) => t.stop()); return }
       streamRef.current = stream
-      videoRef.current.srcObject = stream
-      await videoRef.current.play()
+      video.srcObject = stream
+      await video.play()
+      if (gen !== camGenRef.current) return   // 재생을 기다리는 사이 멈췄다(스트림은 stop·정리 함수가 이미 닫았다)
+      lastVideoTimeRef.current = -1
       setCamStatus('running')
       rafRef.current = requestAnimationFrame(loop)
-    } catch {
+    } catch (e) {
+      if (gen !== camGenRef.current) return
+      if (stream) stream.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
       setCamStatus('error')
-      setCamErr('카메라를 사용할 수 없어요. 권한을 허용해 주세요.')
+      setCamErr(mediaErrorMessage(e, 'camera'))
+    } finally {
+      startingRef.current = false; setStarting(false)
     }
   }, [loop, landmarkerRef])
 
   // 언마운트 정리 (landmarker 자체는 useFaceLandmarker가 정리한다)
   useEffect(() => () => {
+    camGenRef.current += 1
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
   }, [])
@@ -357,13 +392,16 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
             <button type="button" onClick={stop} className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm font-bold text-gray-700 hover:bg-gray-50">멈추기</button>
           </div>
         ) : (
-          <button type="button" onClick={start} disabled={status === 'loading' || status === 'error'}
+          // 카메라 오류(권한·장치) 뒤에는 다시 켜 볼 수 있게 둔다. 모델이 준비되지 않았을 때만 막는다
+          <button type="button" onClick={start} disabled={modelStatus !== 'ready' || starting}
             className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-bold text-white hover:bg-slate-700 disabled:opacity-40">
             카메라 켜기
           </button>
         )}
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => setShowCalib(true)}
+          {/* 본뜨기는 자기 카메라를 따로 연다. 이 화면의 카메라·교정 타이머를 먼저 멈춰, 가려진 채 옛 계수를 보내거나
+              돌아왔을 때 검은 화면으로 남지 않게 한다(돌아오면 '카메라 켜기'로 다시 켠다). */}
+          <button type="button" onClick={() => { stop(); setShowCalib(true) }}
             className="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-800">
             {calibrated ? '✓ 내 얼굴 맞춤 적용됨 · 다시 본뜨기' : '정확도 높이기 — 내 입모양 본뜨기'}
           </button>
