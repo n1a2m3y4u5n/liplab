@@ -4,6 +4,7 @@ import { learningAPI, speakAPI } from '../api'
 import useStore from '../store/useStore'
 import AppShell from '../components/AppShell'
 import LoadingScreen from '../components/LoadingScreen'
+import { mistakeReviewScenario } from '../lib/reviewScenario'
 
 const QUESTION_TYPES = ['test', 'test-multiple', 'essay']
 const qTypes = (length) => Array.from({ length }, (_, index) => QUESTION_TYPES[index % QUESTION_TYPES.length]).sort(() => Math.random() - 0.5)
@@ -50,15 +51,10 @@ export default function ReviewLanding({ mode = 'today' }) {
   }, [mode])
 
   const startMistakes = () => {
-    const sentences = mistakes.map((item) => item.sentence).filter(Boolean)
-    if (!sentences.length) return
-    setScenario({
-      situation: '틀린 문장 복습',
-      level: 1,
-      sentences,
-      qTypes: qTypes(sentences.length),
-      scenario_id: `mistake_review_${Date.now()}`,
-    }, 'test')
+    // 문장마다 원래 난이도(difficulty_level)를 levels에 담는다. 예전에는 level 1 고정이라 4·5단계 문장의 복습도 1로 저장됐다
+    const scenario = mistakeReviewScenario(mistakes, qTypes)
+    if (!scenario.sentences.length) return
+    setScenario(scenario, 'test')
     navigate('/practice', { state: { review: true } })
   }
 
