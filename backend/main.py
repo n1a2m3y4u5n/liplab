@@ -3315,8 +3315,10 @@ async def speak_assess(
         coaching = note
     else:
         from llm_service import generate_speaking_coaching
+        # 억양은 문장에서만, 그것도 기대 방향 규칙(note)이 판정하지 않았을 때만 코칭에 넣는다(음절·단어는 음높이가 고른 게 자연스럽다)
         coaching = await generate_speaking_coaching(target, transcript, score, confusions, metrics,
-                                                    weak_phones=_weak_phones(dgop_result))
+                                                    weak_phones=_weak_phones(dgop_result),
+                                                    intonation=(mode == "sentence" and not note))
         if note:
             coaching = f"{coaching} {note}"
     if vowel_fb and vowel_fb.get("messages"):
@@ -3411,8 +3413,11 @@ async def speak_analysis(current_user=Depends(get_current_user), db: AsyncSessio
         tips.append(f"'{w['correct']}' 소리를 '{w['confused_as']}'로 내는 경우가 많아요. 그 입모양·조음을 다시 연습해보세요.")
     if voiced and avg_loud < 40:
         tips.append("전반적으로 목소리가 작은 편이에요(크기 %d/100). 배에 힘을 주고 크게 내보세요." % round(avg_loud))
-    if voiced and avg_range < 25:
-        tips.append("억양이 평평한 편이에요(폭 %dHz). 문장 끝을 올리고 내리며 억양을 넣어보세요." % round(avg_range))
+    # 억양 팁은 문장 시도만 본다. 모음 늘이기·음절·단어는 음높이가 고른 게 자연스러워, 전체 평균으로 재면 거의 모두 '평평'이었다.
+    sent = [r for r in voiced if r.mode == "sentence"]
+    sent_range = sum(r.pitch_range for r in sent) / len(sent) if sent else None
+    if len(sent) >= 3 and sent_range < 25:
+        tips.append("문장 억양이 평평한 편이에요(폭 %dHz). 문장 끝을 올리고 내리며 억양을 넣어보세요." % round(sent_range))
     if not tips:
         tips.append("좋아요! 지금처럼 단계 연습을 꾸준히 이어가세요.")
 

@@ -35,3 +35,31 @@ def test_coaching_fallback_mentions_weak_phone(monkeypatch):
     text = asyncio.run(llm_service.generate_speaking_coaching(
         "안녕", "안녕", 80, [], {"loudness": 70, "pitch_range": 40}, weak_phones=[{"label": "녕", "dgop": 0.05}]))
     assert "'녕'" in text
+
+
+def test_flat_tone_only_for_sentences(monkeypatch):
+    # 한 음절·단어는 음높이가 고른 게 자연스럽다: 억양 폭이 작아도 '톤이 평평'이라 하지 않는다(문장에서만)
+    class _Boom:
+        class messages:
+            @staticmethod
+            async def create(*a, **k):
+                raise RuntimeError("no key")
+    monkeypatch.setattr(llm_service, "anthropic_client", _Boom)
+    m = {"loudness": 70, "pitch_range": 5}
+    word = asyncio.run(llm_service.generate_speaking_coaching("사과", "사과", 90, [], m))
+    sent = asyncio.run(llm_service.generate_speaking_coaching("밥 먹었어요?", "밥 먹었어요", 90, [], m, intonation=True))
+    assert "평평" not in word and "평평" in sent
+
+
+def test_coaching_prompt_leaves_out_pitch_unless_asked(monkeypatch):
+    seen = []
+
+    class _Rec:
+        class messages:
+            @staticmethod
+            async def create(*a, **k):
+                seen.append(k["messages"][0]["content"])
+                raise RuntimeError("stop")
+    monkeypatch.setattr(llm_service, "anthropic_client", _Rec)
+    asyncio.run(llm_service.generate_speaking_coaching("아", "아", 90, [], {"loudness": 70, "pitch_range": 5}))
+    assert "억양 변화 5Hz" not in seen[0] and "25Hz" not in seen[0]
