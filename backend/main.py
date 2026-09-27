@@ -1327,7 +1327,7 @@ def _ewma_mastery(prev_estimate, prev_attempts, correct: bool, alpha: float = _S
     n = max(0, int(prev_attempts or 0))
     raw = float(prev_estimate or 0.0) * (1 - (1 - alpha) ** n)
     raw += alpha * ((100.0 if correct else 0.0) - raw)
-    return raw / (1 - (1 - alpha) ** (n + 1))
+    return min(100.0, max(0.0, raw / (1 - (1 - alpha) ** (n + 1))))   # 부동소수점 오차로 100을 넘지 않게
 # 3·4단계는 점수(0~100)를 내는 활동이라 'PASS 이상이면 성공 1회'로 환산해 누적한다.
 _STAGE3_MIN_ATTEMPTS = 5       # 문장 연습
 _STAGE3_MASTERY = 65.0
