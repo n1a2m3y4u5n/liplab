@@ -1863,14 +1863,27 @@ async def _kt_recommend(user_id: int, db: AsyncSession) -> dict:
     return _kt.recommend(records, k=2)
 
 
+_CLOSURE_SERVED = None
+
+
 def _training_closures() -> list:
     """훈련용 문맥 문항 — 정답이나 보기에 표준검사 문항 단어가 든 항목은 뺀다(축 I, 문항 노출 방지).
-    보기가 둘뿐인 항목(입모양이 같은 실단어 오답을 하나밖에 못 찾은 11개)은 반은 찍어도 맞아 문맥 훈련이 되지 않아 뺀다."""
-    import assessment as _asmt
-    tw = _asmt.test_only_words()
-    return [c for c in _curriculum.CLOSURE_ITEMS
-            if len(c.get("options") or []) >= 3
-            and c["answer"] not in tw and not (set(c.get("options") or []) & tw)]
+    보기가 둘뿐인 항목(입모양이 같은 실단어 오답을 하나밖에 못 찾은 11개)은 반은 찍어도 맞아 문맥 훈련이 되지 않아 뺀다.
+    서빙할 때도 규칙 게이트(조사 호응, 조사로 정답이 드러나는지, 힌트 속 정답, 빈칸 뒤 단어 조각)를 다시 걸고, 사람이 읽고
+    뺀 문항(CLOSURE_EXCLUDED)을 거른다. 승인 파일의 문항은 예전 게이트만 거쳐 결함이 섞여 있었다(9/27 감사)."""
+    global _CLOSURE_SERVED
+    if _CLOSURE_SERVED is None:
+        import assessment as _asmt
+        import content_rules as _crules
+        tw = _asmt.test_only_words()
+        ex = getattr(_curriculum, "CLOSURE_EXCLUDED", {})
+        _CLOSURE_SERVED = [
+            c for c in _curriculum.CLOSURE_ITEMS
+            if c["id"] not in ex and len(c.get("options") or []) >= 3
+            and c["answer"] not in tw and not (set(c.get("options") or []) & tw)
+            and _crules.check_closure(c.get("display", ""), c["answer"], c.get("options") or [],
+                                      hint=c.get("hint"), compound=bool(c.get("compound")))[0]]
+    return [dict(c) for c in _CLOSURE_SERVED]
 
 
 @app.get("/api/curriculum/closure")

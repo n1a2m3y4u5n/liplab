@@ -118,7 +118,8 @@ def _gate(kind: str, item: Dict) -> Tuple[bool, str]:
     elif kind == "pairs":
         ok, _, why = R.check_lookalike_pair(str(item.get("a", "")), str(item.get("b", "")))
     else:
-        ok, _, why = R.check_closure(item.get("display", ""), item.get("answer", ""), item.get("options") or [])
+        ok, _, why = R.check_closure(item.get("display", ""), item.get("answer", ""), item.get("options") or [],
+                                     hint=item.get("hint"), compound=bool(item.get("compound")))
     return ok, why
 
 

@@ -25,7 +25,7 @@ def test_pending_structure():
         _ok(c["pending"] >= 0, "대기 수 음수 아님")
 
 
-_CL = {"display": "오늘 ___ 이 유난히 밝네.", "answer": "달", "options": ["달", "살", "쌀"], "id": "g1"}
+_CL = {"display": "오늘 ___이 유난히 밝네.", "answer": "달", "options": ["달", "살", "쌀"], "id": "g1"}
 
 
 def test_review_logs_reviewer_and_content_id():
@@ -44,7 +44,7 @@ def test_review_logs_reviewer_and_content_id():
     _ok(store["closures"][0]["id"] == cr.closure_id(_CL) != "g1", "내용 기반 id")
     log = store["meta"]["review_log"]
     _ok(len(log) == 1 and log[0]["by"] == "op-test" and log[0]["at"] == "2026-09-23T00:00:00Z"
-        and log[0]["decision"] == "approve" and log[0]["key"] == "오늘 ___ 이 유난히 밝네.|달", "검수 기록")
+        and log[0]["decision"] == "approve" and log[0]["key"] == "오늘 ___이 유난히 밝네.|달", "검수 기록")
 
 
 def test_merge_union_and_regate():

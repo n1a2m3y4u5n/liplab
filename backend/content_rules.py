@@ -16,6 +16,7 @@ LIPLAB 콘텐츠 규칙 검사 게이트 — LLM 대량 생성물의 '자동 1�
     무리면 same_looking(구별 불가), 다르면 구별 가능.
 """
 import math
+import re
 from collections import defaultdict
 from itertools import combinations
 from typing import Dict, List, Optional, Tuple
@@ -455,11 +456,71 @@ def _visually_confusable(answer: str, other: str) -> bool:
     return v1 == v2 or (v1 in _INSIDE_CLUSTER and v2 in _INSIDE_CLUSTER)
 
 
-def check_closure(display: str, answer: str, options: List[str]
-                  ) -> Tuple[bool, Optional[Dict], str]:
+# ── 문맥 문항의 조사·빈칸 점검(9/27 문항 감사, docs/content-routine.md 4절) ──────────────────────
+# 빈칸 바로 뒤의 조사가 받침에 따라 모양이 바뀌면(이/가, 을/를 …) 정답과 모든 보기가 그 조사와 맞아야 한다.
+# 정답만 맞으면 조사만 보고 오답을 지울 수 있고(솔로 ↔ 손으로), 정답이 안 맞으면 문장이 틀린다(맛가, 소금를).
+_PARTICLE_NEEDS = {
+    "이": "consonant", "가": "vowel", "을": "consonant", "를": "vowel", "은": "consonant", "는": "vowel",
+    "과": "consonant", "와": "vowel", "으로": "consonant_not_rieul", "로": "vowel_or_rieul",
+    "이랑": "consonant", "랑": "vowel", "이나": "consonant", "이야": "consonant", "이에요": "consonant",
+    "예요": "vowel", "이라": "consonant", "이라도": "consonant", "이란": "consonant",
+}
+# 빈칸 뒤에 붙어도 되는 말: 조사(겹조사 포함), 하다 활용, 서술격 조사 활용. 그 밖의 말이 붙으면 정답이 더 긴
+# 단어의 조각일 수 있다(달콤한의 '달', 마음의 '마'). 명사+명사 합성어(솥뚜껑)는 문항에 compound 표시로 허용한다.
+_BLANK_FOLLOW_OK = re.compile(
+    r"^(?:(?:이|가|을|를|은|는|의|에|에서|에게|께|께서|한테|로|으로|와|과|도|만|까지|부터|마다|처럼|보다|이랑|랑"
+    r"|이나|나|이라도|라도|대로|하고|밖에|조차|마저|뿐|만큼)(?:는|도|은|만|서|의|까지|부터|라도|요)?"
+    r"|이(?:야|다|고|지|면|라|며|었|에요|어서|니까|라서|라고|란|든|나).*|(?:예요|야|인|일|임).*"
+    r"|(?:하|한|할|함|합|했|해).*)$")
+_SPACED_PARTICLE = re.compile(r"___\s+(?:이|가|을|를|은|는|의|에|로|으로|와|과|도|만)(?=[\s.,!?~]|$)")
+
+
+def _final_jong(word: str) -> Optional[int]:
+    """마지막 음절의 받침 번호(0 = 받침 없음, 8 = ㄹ). 한글 음절이 아니면 None."""
+    ch = (word or "")[-1:]
+    if not ch or not (0xAC00 <= ord(ch) <= 0xD7A3):
+        return None
+    return (ord(ch) - 0xAC00) % 28
+
+
+def _agrees(word: str, need: str) -> bool:
+    j = _final_jong(word)
+    if j is None:
+        return True
+    return {"consonant": j != 0, "vowel": j == 0,
+            "consonant_not_rieul": j not in (0, 8), "vowel_or_rieul": j in (0, 8)}[need]
+
+
+def blank_follower(display: str) -> str:
+    """빈칸(___) 바로 뒤에 붙은 한글 연쇄(띄어쓰기·문장부호 전까지)."""
+    m = re.search(r"___([가-힣]*)", display or "")
+    return m.group(1) if m else ""
+
+
+def particle_need(display: str) -> Optional[Tuple[str, str]]:
+    """빈칸 뒤 조사가 받침에 따라 모양이 바뀌는 것이면 (조사, 요구), 아니면 None."""
+    fol = blank_follower(display)
+    if not fol:
+        return None
+    if fol in _PARTICLE_NEEDS:
+        return fol, _PARTICLE_NEEDS[fol]
+    for base in ("으로", "로", "이랑", "랑"):
+        if fol.startswith(base) and fol[len(base):] in ("는", "도", "만", "서", "부터", "까지", "은", "의"):
+            return base, _PARTICLE_NEEDS[base]
+    if fol[0] == "이" and len(fol) > 1 and fol[1] in "야다고지면라며었에어니란든나":
+        return "이", "consonant"          # 서술격 조사 활용(이야, 이었어, 이라서 …)은 받침 뒤에만
+    if fol.startswith(("예요", "였")):
+        return fol[:2] if fol.startswith("예요") else "였", "vowel"
+    return None
+
+
+def check_closure(display: str, answer: str, options: List[str], hint: Optional[str] = None,
+                  compound: bool = False) -> Tuple[bool, Optional[Dict], str]:
     """
     문맥 추론(closure) 문항 검사. 보기(오답)가 정답과 '비슷하게 보여야'
     문맥으로 판단하는 훈련이 성립한다. 눈으로 뻔히 구별되면 문항이 무의미하다.
+    9/27부터 조사 호응, 조사로 정답이 드러나는지, 띄어 쓴 조사, 힌트 속 정답, 빈칸 뒤 단어 조각도 본다.
+    compound=True는 사람이 확인한 명사+명사 합성어 문항(솥___ → 솥뚜껑)이다.
     """
     answer = (answer or "").strip()
     options = [str(o).strip() for o in (options or []) if str(o).strip()]
@@ -479,5 +540,20 @@ def check_closure(display: str, answer: str, options: List[str]
     confusable = [o for o in distractors if _visually_confusable(answer, o)]
     if len(confusable) < 2:
         return False, None, "정답과 시각적으로 혼동되는 오답이 2개 미만(문맥 문항으로 약함)"
+    if _SPACED_PARTICLE.search(display):
+        return False, None, "빈칸과 조사가 띄어져 있음(문장이 틀리고 아바타가 쉼을 넣음)"
+    fol = blank_follower(display)
+    if fol and not compound and not _BLANK_FOLLOW_OK.match(fol):
+        return False, None, f"빈칸 뒤에 조사·어미가 아닌 말('{fol}')이 붙음(정답이 더 긴 단어의 조각일 수 있음)"
+    need = particle_need(display)
+    if need:
+        form, req = need
+        if not _agrees(answer, req):
+            return False, None, f"정답과 조사 '{form}'가 맞지 않음"
+        bad = [o for o in distractors if not _agrees(o, req)]
+        if bad:
+            return False, None, f"조사 '{form}'와 맞지 않는 오답({', '.join(bad)})은 조사만 보고 지울 수 있음"
+    if hint and answer in hint:
+        return False, None, "힌트에 정답이 들어 있음"
     item = {"display": display.strip(), "answer": answer, "options": options}
     return True, item, "ok"
