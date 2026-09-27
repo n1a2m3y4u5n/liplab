@@ -1960,17 +1960,30 @@ async def curriculum_closure(current_user=Depends(get_current_user), db: AsyncSe
 
     지식추적 표적 입모양을 정답에 많이 담은 항목부터 준다(축 G). 적중 수가 같은 항목끼리는
     사용자·날짜로 정한 순서로 섞어, 날마다 같은 문항부터 시작하지 않게 한다.
+    최근 14일 안에 푼 문항은 뒤로 보낸다(오래전에 푼 것부터). 예전에는 화면이 늘 첫 문항부터 시작해 같은 날 레슨을 다시
+    열면 같은 12문항이 같은 순서로 나왔고, 다시 맞힌 답이 3단계 숙달에 또 들어갔다.
     """
     import random
     import content_rules as _crules
-    from datetime import date
+    from datetime import datetime as _dt, timedelta
+    from database import TrialAttempt
+    from sqlalchemy import select, func
     rec = await _kt_recommend(current_user.id, db)
     tv = set(rec["target_visemes"])
     items = _training_closures()
     random.Random(f"{current_user.id}:{_kst_today().isoformat()}").shuffle(items)
     # 안정 정렬 — 같은 적중 수 안에서는 섞인 순서가 유지된다
     items.sort(key=lambda c: -len(set(_crules.word_visemes(c["answer"])) & tv))
-    return {"items": items, "target_visemes": rec["target_visemes"]}
+    since = _dt.utcnow() - timedelta(days=14)
+    rows = (await db.execute(
+        select(TrialAttempt.item_id, func.max(TrialAttempt.created_at))
+        .where(TrialAttempt.user_id == current_user.id, TrialAttempt.item_type == "closure",
+               TrialAttempt.item_id.isnot(None), TrialAttempt.created_at >= since)
+        .group_by(TrialAttempt.item_id))).all()
+    last_seen = {iid: ts for iid, ts in rows}
+    fresh = [c for c in items if c["id"] not in last_seen]
+    seen = sorted((c for c in items if c["id"] in last_seen), key=lambda c: last_seen[c["id"]])
+    return {"items": fresh + seen, "target_visemes": rec["target_visemes"]}
 
 
 class ClosureAnswer(BaseModel):
@@ -1991,7 +2004,7 @@ async def curriculum_closure_answer(data: ClosureAnswer, current_user=Depends(ge
     from database import TrialAttempt
     confusions = [] if correct else viseme_confusions(answer, data.chosen)
     try:
-        db.add(TrialAttempt(user_id=current_user.id, stage=3, item_type="closure",
+        db.add(TrialAttempt(user_id=current_user.id, stage=3, item_type="closure", item_id=item["id"],
                             target=answer, chosen=data.chosen, correct=correct, confusions=confusions))
         # 3단계(문맥 추론) 숙달: 문장 연습과 같은 트랙에 성공/시도 누적. 문맥 추론 화면은 단계 잠금이 없어,
         # 3단계가 잠긴 동안의 답은 넣지 않는다(예전에는 잠긴 3단계가 미리 숙달돼 2단계를 마치자마자 4단계가 열렸다)

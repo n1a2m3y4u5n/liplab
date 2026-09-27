@@ -303,6 +303,7 @@ class TrialAttempt(Base):
     correct = Column(Boolean, default=False)
     phase = Column(String(10), default="practice")  # 'pre' | 'post' | 'practice'
     confusions = Column(JSON, default=list)         # [{position,target,read,viseme,same_viseme}]
+    item_id = Column(String(40), nullable=True)     # 문맥 추론 문항 id(정답 단어가 여러 문항에 겹쳐 target으로는 못 가린다)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -400,6 +401,8 @@ async def init_db():
             # 숙달 도달 시행수(docs/eval-metrics.md)
             "ALTER TABLE stage_progress ADD COLUMN mastered_attempts INTEGER",
             "ALTER TABLE stage_progress ADD COLUMN mastered_at TIMESTAMP",
+            # 문맥 추론 문항 id(최근에 푼 문항을 뒤로 보내기)
+            "ALTER TABLE trial_attempts ADD COLUMN item_id VARCHAR(40)",
         ):
             try:
                 await conn.exec_driver_sql(ddl)
