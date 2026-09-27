@@ -84,7 +84,36 @@ def pool_difficulties():
     return [e["difficulty"] for e in (P.word_difficulty(w, sig) for w in words) if e]
 
 
-def run(seed, specs, n_learners=6000, select="boundary"):
+CUTS = (0.25, 0.75)   # 시작 단계 경계(수준 1|2, 3|4)
+
+
+def stage_probs(items, slope=10.0, prior_sd=0.25, prior_m=0.55):
+    """EAP와 같은 사후분포에서 세 시작 단계의 확률."""
+    logp = -((GRID - prior_m) ** 2) / (2 * prior_sd ** 2)
+    for d, ok, k in items:
+        c = 1.0 / k
+        p = c + (1 - c) / (1 + np.exp(-slope * (GRID - d)))
+        logp = logp + np.log(p if ok else 1 - p)
+    w = np.exp(logp - logp.max())
+    w = w / w.sum()
+    return np.array([w[GRID < CUTS[0]].sum(), w[(GRID >= CUTS[0]) & (GRID < CUTS[1])].sum(), w[GRID >= CUTS[1]].sum()])
+
+
+def select_target(items, select):
+    if select == "boundary":
+        return boundary_estimate(items)
+    th = est_eap(items, 10.0, 0.25) if items else 0.55
+    if select == "eap":
+        return th
+    if select == "cut":        # 진행 추정에 가까운 단계 경계
+        return min(CUTS, key=lambda c: abs(c - th))
+    if select == "cutp":       # 사후 확률이 더 불확실한 경계(두 인접 단계 확률의 곱이 큰 쪽)
+        pr = stage_probs(items)
+        return CUTS[0] if pr[0] * pr[1] >= pr[1] * pr[2] else CUTS[1]
+    raise ValueError(select)
+
+
+def run(seed, specs, n_learners=6000, select="boundary", maxq=8, minq=None, stop=None):
     forms = A.frozen_forms(build_if_missing=False)
     form_d = [it["difficulty"] for it in forms["A"]]
     pool = pool_difficulties()
@@ -93,7 +122,7 @@ def run(seed, specs, n_learners=6000, select="boundary"):
     for gi, (a, sd) in enumerate(GEN):
         rng = np.random.default_rng([seed, gi])
         for test in ("form", "adaptive"):
-            acc = {s: {"agree": 0, "over": 0, "severe_over": 0, "under": 0, "abs_level": 0.0} for s in specs}
+            acc = {s: {"agree": 0, "over": 0, "severe_over": 0, "under": 0, "abs_level": 0.0, "n_items": 0.0} for s in specs}
             for _ in range(n_learners):
                 theta = rng.uniform(0.15, 0.95)
                 lv, st = level_of(theta), stage_of(level_of(theta))
@@ -106,10 +135,12 @@ def run(seed, specs, n_learners=6000, select="boundary"):
                 else:
                     asked, responses, items = [], {}, []
                     avail = list(pool)
-                    for q in range(8):
-                        # 다음 문항 선택용 진행 추정: boundary(지금 estimate_ability) 또는 eap(최종 추정과 같은 식)
-                        th = (boundary_estimate(items) if select == "boundary"
-                              else (est_eap(items, 10.0, 0.25) if items else 0.55))
+                    for q in range(maxq):
+                        # 멈춤 규칙(선택): minq 문항 뒤 한 단계의 사후 확률이 stop 이상이면 끝낸다
+                        if stop and q >= (minq or 0) and stage_probs(items).max() >= stop:
+                            break
+                        # 다음 문항 선택 목표: boundary(예전 경계 추정), eap(진행 EAP, 지금), cut·cutp(단계 경계)
+                        th = select_target(items, select)
                         j = min(range(len(avail)), key=lambda i: (abs(avail[i] - th), rng.random()))
                         d = avail.pop(j)
                         p = 0.25 + 0.75 / (1 + np.exp(-a * (theta - (d + rng.normal(0, sd) if sd else d))))
@@ -127,6 +158,7 @@ def run(seed, specs, n_learners=6000, select="boundary"):
                     r["severe_over"] += st_hat == 3 and st <= 2 and lv <= 2
                     r["under"] += st_hat < st
                     r["abs_level"] += abs(lv_hat - lv)
+                    r["n_items"] += len(items)
             for s in specs:
                 r = acc[s]
                 out["results"].append({"gen_slope": a, "gen_sd": sd, "test": test, "est": s,
@@ -140,9 +172,12 @@ def main():
     ap.add_argument("--est", default="max,eap:10:0.25")
     ap.add_argument("--n", type=int, default=6000)
     ap.add_argument("--out", default=None)
-    ap.add_argument("--select", default="boundary", choices=["boundary", "eap"])
+    ap.add_argument("--select", default="boundary", choices=["boundary", "eap", "cut", "cutp"])
+    ap.add_argument("--maxq", type=int, default=8)
+    ap.add_argument("--minq", type=int, default=None)
+    ap.add_argument("--stop", type=float, default=None)
     a = ap.parse_args()
-    res = run(a.seed, a.est.split(","), a.n, a.select)
+    res = run(a.seed, a.est.split(","), a.n, a.select, a.maxq, a.minq, a.stop)
     txt = json.dumps(res, ensure_ascii=False, indent=1)
     if a.out:
         with open(a.out, "w", encoding="utf-8") as f:
@@ -153,7 +188,7 @@ def main():
     for r in res["results"]:
         agg[(r["est"], r["test"])].append(r)
     for (e, t), rs in sorted(agg.items()):
-        m = {k: round(sum(x[k] for x in rs) / len(rs), 4) for k in ("agree", "over", "severe_over", "under", "abs_level")}
+        m = {k: round(sum(x[k] for x in rs) / len(rs), 4) for k in ("agree", "over", "severe_over", "under", "abs_level", "n_items")}
         print(e, t, m)
 
 
