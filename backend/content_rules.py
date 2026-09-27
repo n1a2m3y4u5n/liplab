@@ -228,6 +228,10 @@ def check_sentence(text: str, min_chars: int = 2, max_chars: int = 40) -> Tuple[
         return False, None, f"길이 {len(text)} 범위 밖({min_chars}~{max_chars})"
     if any(ord(c) < 32 and c != "\t" for c in text):
         return False, None, "제어문자 포함"
+    # 영문자는 입모양으로 읽을 수 없고 채점 음절도 없다(예전에는 'Wi-Fi 비밀번호 알려주세요'가 통과했다).
+    # 숫자는 입모양 엔진이 한국어 읽기로 바꾸므로(korean_numbers) 받는다.
+    if any("a" <= c.lower() <= "z" for c in text):
+        return False, None, "영문자 포함"
     # 한글 음절 비율이 낮으면(외국어·코드·기호 위주) 탈락 — 지시 이탈·주입 방어
     hangul = sum(1 for c in text if "가" <= c <= "힣")
     non_space = len(text.replace(" ", "")) or 1
