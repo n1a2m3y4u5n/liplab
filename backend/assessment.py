@@ -231,10 +231,8 @@ _EAP_SLOPE = 10.0
 _EAP_PRIOR = (0.55, 0.25)
 
 
-def ability_eap(answered) -> float:
-    """answered = [(난이도, 정답 여부, 보기 수)]. 답한 문항이 없으면 0."""
-    if not answered:
-        return 0.0
+def _posterior(answered) -> List[float]:
+    """_EAP_GRID 위의 정규화된 사후분포. answered = [(난이도, 정답 여부, 보기 수)]."""
     m, sd = _EAP_PRIOR
     logp = [-(g - m) ** 2 / (2 * sd * sd) for g in _EAP_GRID]
     for d, ok, k in answered:
@@ -244,7 +242,32 @@ def ability_eap(answered) -> float:
             logp[j] += math.log(p if ok else 1 - p)
     top = max(logp)
     w = [math.exp(x - top) for x in logp]
-    return sum(g * wi for g, wi in zip(_EAP_GRID, w)) / sum(w)
+    tot = sum(w)
+    return [x / tot for x in w]
+
+
+def ability_eap(answered) -> float:
+    """answered = [(난이도, 정답 여부, 보기 수)]. 답한 문항이 없으면 0."""
+    if not answered:
+        return 0.0
+    return sum(g * w for g, w in zip(_EAP_GRID, _posterior(answered)))
+
+
+# 적응형 배치검사 길이(docs/assessment-design.md 12절). 예전에는 누구에게나 8문항이었다. 이제 최소 5문항 뒤 한 시작 단계의
+# 사후 확률이 0.85 이상이면 끝내고, 아니면 12문항까지 낸다. 시드 1 확인에서 평균 7.78문항으로 시작 단계 일치 77.7 → 80.7%.
+ADAPTIVE_MAX_ITEMS = 12
+STOP_MIN_ITEMS = 5
+STOP_CONFIDENCE = 0.85
+_STAGE_CUTS = (0.25, 0.75)   # 수준 1|2, 3|4 = 시작 단계 입모양|단어|문장(level_of·_recommended_stage와 같은 경계)
+
+
+def stage_probabilities(answered) -> List[float]:
+    """세 시작 단계(입모양·단어·문장)의 사후 확률. 답한 문항이 없으면 사전분포 기준."""
+    w = _posterior(answered)
+    lo, hi = _STAGE_CUTS
+    return [sum(x for g, x in zip(_EAP_GRID, w) if g < lo),
+            sum(x for g, x in zip(_EAP_GRID, w) if lo <= g < hi),
+            sum(x for g, x in zip(_EAP_GRID, w) if g >= hi)]
 
 
 def level_of(ability: float) -> int:
@@ -293,9 +316,12 @@ def estimate_ability(asked: List[Dict], responses: Dict[str, str]) -> Dict:
             for v in it.get("visemes", []):
                 err[v] += 1
     theta = ability_eap(answered) if answered else _EAP_PRIOR[0]
+    conf = max(stage_probabilities(answered))
     return {"ability": round(theta, 3),
             "error_visemes": [v for v, _ in err.most_common(3)],
-            "answered": len(answered)}
+            "answered": len(answered),
+            "stage_confidence": round(conf, 3),
+            "confident": len(answered) >= STOP_MIN_ITEMS and conf >= STOP_CONFIDENCE}
 
 
 def select_next_item(asked: List[Dict], responses: Dict[str, str],
