@@ -169,8 +169,15 @@ def to_pronounced_syllables(text: str, phonetic: bool = False):
             cur[2] = ''  # ㅎ 탈락 (좋아→조아), 다음 초성은 무음 ㅇ 유지
         elif fin in DOUBLE_FINAL_LINK:
             keep, move = DOUBLE_FINAL_LINK[fin]
-            cur[2] = keep
-            nxt[0] = move  # 뒤 자음만 다음 초성으로 (닭이→달기)
+            if move == 'ㅎ' and not phonetic:
+                # ㄶ·ㅀ + 모음: ㅎ은 발음하지 않고 앞 자음이 넘어간다(많이→마니, 싫어→시러, 괜찮아요→괜차나요,
+                # 표준발음법 12항 4). 예전에는 ㅎ이 다음 초성으로 넘어가 아바타에 없는 ㅎ(성문음) 프레임이 들어갔다.
+                # 채점 라벨 경로(phonetic)는 자체 채점 모델을 학습한 라벨과 맞추려 그대로 둔다(바꾸려면 D-GOP 재평가 뒤).
+                cur[2] = ''
+                nxt[0] = keep
+            else:
+                cur[2] = keep
+                nxt[0] = move  # 뒤 자음만 다음 초성으로 (닭이→달기)
         elif fin in ('ㄷ', 'ㅌ') and nxt[1] in ('ㅣ', 'ㅑ', 'ㅕ', 'ㅛ', 'ㅠ', 'ㅒ', 'ㅖ'):
             # 구개음화 — 종성 ㄷ·ㅌ이 뒤 ㅣ/반모음을 만나 ㅈ·ㅊ으로(굳이→구지, 같이→가치, 붙여→부쳐).
             # 입모양이 치경(viseme 6)에서 경구개(viseme 10)로 실제로 바뀌므로 비심 엔진이 반영한다.
@@ -186,6 +193,11 @@ def to_pronounced_syllables(text: str, phonetic: bool = False):
         # 연음되지 않고 남은 겹받침 단순화 (값→갑, 닭→닥)
         if tok[2] in DOUBLE_FINAL:
             tok[2] = DOUBLE_FINAL[tok[2]]
+        # 남은 받침 ㅈ·ㅊ은 ㄷ으로 난다(꽃→꼳, 몇 시→멷 시). 다른 평파열음화(ㅅ·ㅆ·ㅌ→ㄷ, ㅋ·ㄲ→ㄱ, ㅍ→ㅂ)는 입모양 무리가
+        # 그대로라 viseme 경로에서는 이것만 한다. 예전에는 끝에 경구개(10) 입모양이 나왔다. phonetic 경로는 어차피 1단계에서
+        # 같은 변환을 하므로 결과가 같다.
+        if tok[2] in ('ㅈ', 'ㅊ'):
+            tok[2] = 'ㄷ'
         # 무음 초성 ㅇ → '' (입모양 프레임 없음). 종성 ㅇ[ŋ]은 그대로 둔다.
         if tok[0] == 'ㅇ':
             tok[0] = ''
