@@ -508,6 +508,7 @@ class ProgressResponse(BaseModel):
     streak_multiplier: float = 1.0
     feedback: dict
     phoneme_accuracy: dict
+    passed: Optional[bool] = None   # 3단계 합격선(_STAGE3_PASS) 이상인가. 화면의 레슨 집계·표시가 이 값을 쓴다
 
 
 @app.get("/api/viseme", response_model=List[VisemeFrame])
@@ -703,7 +704,8 @@ async def submit_progress(
                 status="practice_only", score=scoring_result["score"], new_level=award["new_level"],
                 old_level=award["old_level"], xp_gained=0, streak_count=award["streak_count"],
                 streak_multiplier=award["streak_multiplier"], feedback=scoring_result.get("feedback", {}),
-                phoneme_accuracy=scoring_result.get("phoneme_accuracy", {}))
+                phoneme_accuracy=scoring_result.get("phoneme_accuracy", {}),
+                passed=scoring_result["score"] >= _STAGE3_PASS)
 
         # Save progress to database
         from database import Progress
@@ -755,7 +757,8 @@ async def submit_progress(
             streak_count=award["streak_count"],
             streak_multiplier=award["streak_multiplier"],
             feedback=scoring_result.get("feedback", {}),
-            phoneme_accuracy=scoring_result.get("phoneme_accuracy", {})
+            phoneme_accuracy=scoring_result.get("phoneme_accuracy", {}),
+            passed=scoring_result["score"] >= _STAGE3_PASS,
         )
 
     except Exception as e:
@@ -1778,9 +1781,22 @@ async def _sr_touch(user_id: int, kind: str, ref: str, correct: bool, db, score:
     """SRS 큐 유지(SM-2) — 틀리면 내일 재등장(신규면 등록), 맞으면 ease·반복에 따라 간격을 늘려
     충분히 커지면 졸업. 점수(score 0~100)가 오면 이진 대신 등급(quality)으로 반영한다.
     커밋은 호출부에서. review/answer와 동일한 규칙."""
+    await _srs_apply(user_id, kind, ref, _review_quality(score, correct), db, create=True)
+
+
+def _review_quality(score, correct: bool) -> int:
+    """복습 등급(SM-2 0~5). 점수가 있으면 점수 등급을 쓰되, 합격 여부(단계별 합격선으로 이미 판정, 말하기는 50·65점이나
+    지표)와 등급의 합격(3 이상)이 어긋나지 않게 맞춘다. 예전에는 등급이 60점 고정이라 합격선 50인 단계에서 55점으로
+    합격해도 복습은 실패로 잡히고, 합격선 65인 단계에서 62점으로 떨어져도 성공으로 잡혔다."""
     import srs
-    quality = srs.quality_from_score(score) if score is not None else srs.quality_from_correct(correct)
-    await _srs_apply(user_id, kind, ref, quality, db, create=True)
+    if score is None:
+        return srs.quality_from_correct(correct)
+    quality = srs.quality_from_score(score)
+    if correct and quality < 3:
+        return 3
+    if not correct and quality >= 3:
+        return 2
+    return quality
 
 
 async def _due_refs(user_id: int, kinds, db):
