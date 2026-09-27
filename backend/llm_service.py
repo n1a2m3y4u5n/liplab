@@ -499,6 +499,11 @@ async def _fallback_scenario(situation: str, level: int, db: AsyncSession) -> Di
 _CONV_MAX_CHARS = {1: 9, 2: 13, 3: 20, 4: 26}
 
 
+def _norm_turn(text: str) -> str:
+    """반복 비교용: 한글·숫자만."""
+    return re.sub(r"[^가-힣0-9]", "", text or "")
+
+
 def conv_turn_ok(text: str, level: int) -> bool:
     """대화 턴이 단계 길이 상한 안이고 영문이 없는가."""
     if re.search(r"[A-Za-z]", text or ""):
@@ -545,7 +550,9 @@ async def generate_conversation_turn(
 1. 실제 해당 상황에서 쓰일 법한 자연스러운 한국어 한 문장만 말하세요.
 2. 난이도에 맞게: {level_guide.get(level, level_guide[3])}
 3. 이전 대화 흐름에 자연스럽게 이어지도록 하세요.
-4. 반드시 JSON 형식으로만 응답: {{"text": "문장 내용"}}"""
+4. 처음 맡은 한 역할(예: 직원·의사)을 끝까지 유지하세요. 사용자 메시지는 대답이 아니라 학습자가 당신의 직전 문장을 입모양으로
+   읽고 적은 글입니다. 상대가 자연스럽게 대답했다고 가정하고 대화를 앞으로 진행하세요. 앞에서 한 문장은 되풀이하지 마세요.
+5. 반드시 JSON 형식으로만 응답: {{"text": "문장 내용"}}"""
 
     if not history:
         messages_for_api = [{"role": "user", "content": f"대화를 시작해주세요. 상황: {situation}"}]
@@ -557,6 +564,10 @@ async def generate_conversation_turn(
             content = h.get("content", "").strip()
             if not content:
                 continue
+            if role == "user":
+                # 학습자 입력은 대답이 아니라 직전 문장을 읽고 적은 글이다. 그대로 사용자 턴으로 넘기면 모델이 따라 한 말에
+                # 응답해 같은 문장을 되풀이하거나 역할을 바꿨다(9/27 밤: 카페 직원이 첫 문장을 반복한 뒤 손님이 됨, 의사·환자 번갈아).
+                content = f"(학습자가 당신의 직전 문장을 '{content[:120]}'(으)로 읽었습니다. 대답이 아닙니다.) 대화를 이어 다음 한 문장을 말하세요."
             # Merge consecutive same-role messages
             if clean and clean[-1]["role"] == role:
                 clean[-1]["content"] += " " + content
@@ -579,6 +590,7 @@ async def generate_conversation_turn(
         # 단계 길이 상한(conv_turn_ok)을 넘으면 이유를 알려 한 번 다시 받고, 그래도 넘으면 영문이 없고 짧은 쪽을 쓴다.
         cands = []
         msgs = list(messages_for_api)
+        prev_lines = {_norm_turn(h.get("content", "")) for h in (history or []) if h.get("role") == "assistant"}
         for attempt in range(2):
             response = await anthropic_client.messages.create(
                 model="claude-haiku-4-5-20251001",
@@ -595,17 +607,19 @@ async def generate_conversation_turn(
             text = "".join(ch for ch in text if ch >= " " or ch == "\n")[:300].strip()
             if text:
                 cands.append(text)
-            if text and conv_turn_ok(text, level):
+            repeated = bool(text) and _norm_turn(text) in prev_lines
+            if text and conv_turn_ok(text, level) and not repeated:
                 return {"text": text}
             lim = _CONV_MAX_CHARS.get(level)
-            why = (f"방금 문장은 {len(text)}자라 이 난이도에 너무 깁니다. 같은 뜻을 {lim}자 이하 한국어 한 문장으로 다시 말하세요."
+            why = ("방금 문장은 앞에서 이미 한 말입니다. 대화를 앞으로 진행하는 새 문장을 말하세요." if repeated
+                   else f"방금 문장은 {len(text)}자라 이 난이도에 너무 깁니다. 같은 뜻을 {lim}자 이하 한국어 한 문장으로 다시 말하세요."
                    if lim and text and len(text) > lim else "영문 없이 한국어 한 문장으로 다시 말하세요.")
             msgs = msgs + [{"role": "assistant", "content": json.dumps({"text": text}, ensure_ascii=False)},
                            {"role": "user", "content": why}]
 
         if not cands:
             raise ValueError("Empty text")
-        return {"text": min(cands, key=lambda t: (bool(re.search(r"[A-Za-z]", t)), len(t)))}
+        return {"text": min(cands, key=lambda t: (_norm_turn(t) in prev_lines, bool(re.search(r"[A-Za-z]", t)), len(t)))}
 
     except Exception as e:
         print(f"Conversation API error: {e}")
