@@ -88,3 +88,19 @@ def test_bun_counts_people_only_with_honorific_endings():
     assert normalize_numbers("3분이면 돼요.") == "삼분이면 돼요."
     assert normalize_numbers("10분이 지났어요.") == "십분이 지났어요."
     assert normalize_numbers("20분 걸려요.") == "이십분 걸려요."
+
+
+def test_clock_units_and_phone_numbers():
+    # 시각·단위 기호·전화번호가 입모양·채점에서 빠지거나 수로 잘못 읽히지 않게(9/27 밤)
+    assert normalize_numbers("3:30에 만나요") == "세시 삼십분에 만나요"
+    assert normalize_numbers("12:00에 문 닫아요") == "열두시에 문 닫아요"
+    assert normalize_numbers("50% 할인해요") == "오십퍼센트 할인해요"
+    assert normalize_numbers("오늘은 10℃예요") == "오늘은 십도예요"
+    assert normalize_numbers("3.5km 걸었어요") == "삼점오킬로미터 걸었어요"
+    assert normalize_numbers("2L 주세요") == "이리터 주세요"
+    assert normalize_numbers("100m 달리기") == "백미터 달리기"
+    assert normalize_numbers("010-1234-5678로 전화해요") == "공일공 일이삼사 오육칠팔로 전화해요"
+    assert normalize_numbers("1588-1234") == "일오팔팔 일이삼사"
+    # 연도 범위·영문 약어는 그대로 수로
+    assert normalize_numbers("2024-2025") == "이천이십사-이천이십오"
+    assert normalize_numbers("3D 영화") == "삼D 영화"

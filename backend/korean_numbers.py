@@ -88,10 +88,37 @@ def _reading(num: str, after: str) -> str:
 
 _NUM = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?")
 
+# 숫자 뒤 단위 기호는 읽는 말로 바꾼다. 예전에는 기호가 입모양·채점에서 빠져 "50% 할인"을 아바타가 "오십 할인"으로 보여 주고,
+# 학습자가 "오십 퍼센트"라고 적으면 정답에 없는 음절로 감점됐다(9/27 밤). 모두 한자어 수로 읽는 단위다.
+_UNIT_WORDS = {"%": "퍼센트", "％": "퍼센트", "℃": "도", "°C": "도", "°": "도", "km": "킬로미터", "kg": "킬로그램",
+               "cm": "센티미터", "mm": "밀리미터", "ml": "밀리리터", "mL": "밀리리터", "L": "리터", "l": "리터",
+               "g": "그램", "m": "미터"}
+_UNIT = re.compile(r"(\d)\s?(" + "|".join(sorted(map(re.escape, _UNIT_WORDS), key=len, reverse=True)) + r")(?![A-Za-z])")
+# 시각 3:30 → 세시 삼십분(시는 고유어, 분은 한자어, 정각은 시만)
+_CLOCK = re.compile(r"(?<![\d:])([01]?\d|2[0-4]):([0-5]\d)(?![\d:])")
+# 전화번호(0으로 시작하는 지역·휴대전화 번호, 1588-0000 같은 대표번호)는 한 자리씩(0은 공). 수로 읽으면 "010-1234"가
+# "십-천이백삼십사"가 됐다. 2024-2025 같은 연도 범위는 수로 읽는다
+_PHONE = re.compile(r"(?<![\d-])(?:0\d{1,3}-\d{3,4}-\d{4}|1[5-9]\d{2}-\d{4})(?![\d-])")
+_DIGIT_READ = ["공", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
+
+
+def _clock(m) -> str:
+    h, mm = int(m.group(1)), int(m.group(2))
+    return (native(h) if 1 <= h <= 24 else sino(h)) + "시" + (f" {sino(mm)}분" if mm else "")
+
+
+def _phone(m) -> str:
+    return " ".join("".join(_DIGIT_READ[int(d)] for d in part) for part in m.group().split("-"))
+
 
 def normalize_numbers(text: str) -> str:
     """문장 안의 숫자를 한국어 읽기로 바꾼다. 숫자가 없으면 그대로 돌려준다."""
     if not text or not any(ch.isdigit() for ch in text):
+        return text
+    text = _PHONE.sub(_phone, text)
+    text = _CLOCK.sub(_clock, text)
+    text = _UNIT.sub(lambda m: m.group(1) + _UNIT_WORDS[m.group(2)], text)
+    if not any(ch.isdigit() for ch in text):
         return text
     out: List[str] = []
     pos = 0
