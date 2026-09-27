@@ -194,14 +194,14 @@ frontend/src/
 
 | 코드 | 작업 | 핵심 | 상태 |
 |------|------|------|------|
-| **A** | `transition_ms` 실제 반영 | 프레임별 `transition_ms`(+재생 속도)로 보간 속도 결정. `LipSyncPlayer3D`→`AvatarVRM`→`RealisticFace`로 전달 | 빠짐(7/14 d3605d3 병합에서 코드가 사라짐, 다시 구현 필요) |
-| **B** | 이징 + 피크 도달 보장 | 시간추적 ease-in-out 보간, 전환은 프레임 길이의 60% 내 완료→목표 도달 후 유지(`durationMs` 전달) | 빠짐(7/14 d3605d3 병합에서 코드가 사라짐, 다시 구현 필요) |
+| **A** | `transition_ms` 실제 반영 | 프레임별 `transition_ms`(+재생 속도)로 보간 속도 결정. `LipSyncPlayer3D`→`AvatarVRM`→`RealisticFace`로 전달 | 완료(9/27 dd8bbf6 재구현, 퀴즈 아바타 `MouthAvatar`까지 9ee48ad) |
+| **B** | 이징 + 피크 도달 보장 | 시간추적 ease-in-out 보간, 전환은 프레임 길이의 60% 내 완료→목표 도달 후 유지(`durationMs` 전달) | 완료(9/27 dd8bbf6·9ee48ad, `lib/visemeTiming.js`) |
 | **F** | 측면(프로필) 뷰 토글 | `AvatarVRM`에 `view`('front'/'side') + `CameraRig`·`VIEW_CONFIG`. 플레이어 좌상단 정면/측면 버튼 | 빠짐(7/14 d3605d3 병합에서 코드가 사라짐, 다시 구현 필요) |
 | **D** | 아이들 모션 | `RealisticFace` useFrame에 눈 깜빡임(`eyeBlinkLeft/Right`)·미세 머리 흔들림·호흡. 입모양 모프와 독립 | 빠짐(7/14 d3605d3 병합에서 코드가 사라짐, 다시 구현 필요) |
 | **E** | 선행 동시조음 | 원순음 등에서 다음 viseme을 미리 블렌딩(anticipatory) | 백로그 |
 
 > A~D는 7/13(ee5366f)에 `AvatarVRM.jsx`·`LipSyncPlayer3D.jsx`에 들어갔다가 7/14 병합 정합(d3605d3)에서 빠졌다.
-> 9/26 검토 기준 지금 코드는 `transition_ms`를 쓰지 않고, 이징·측면 보기·눈 깜빡임도 없다. 다시 넣을 때 두 파일을 고친다
+> A·B는 9/27 다시 넣었다(dd8bbf6, 퀴즈 아바타 9ee48ad). 측면 보기(F)·눈 깜빡임(D)은 아직 없다. 다시 넣을 때 두 파일을 고친다
 > (프론트 전용이라 백엔드 재시작 불필요).
 
 ### 트랙 2: 기능 추가 (백로그, 우선순위 미정)
