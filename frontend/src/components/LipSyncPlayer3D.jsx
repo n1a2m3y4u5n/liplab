@@ -196,6 +196,9 @@ export default function LipSyncPlayer3D({
         <AvatarVRM
           visemeId={currentViseme?.viseme ?? 15}
           xray={xray}
+          transitionMs={currentViseme?.transition_ms}
+          durationMs={currentViseme?.duration_ms}
+          speed={speed}
         />
 
         {/* 시각증강 기호(축 J) — 현재 음절의 안 보이는 자질(기식·긴장·비음)을 입 근처에 겹쳐 표시 */}
