@@ -155,9 +155,16 @@ def semitones(f_from: float, f_to: float) -> float:
     return 12.0 * math.log2(f_to / f_from) if f_from and f_to and f_from > 0 and f_to > 0 else 0.0
 
 
+def _sustained(m: Dict) -> float:
+    """이어 낸 소리 길이(초). 클라이언트가 가장 긴 발성 구간(voiced_duration)을 보내면 그것, 없으면 녹음 길이(예전 클라이언트).
+    예전에는 늘 녹음 길이라 '아'를 짧게 내고 기다렸다 멈춰도 '길게 유지'로 통과했다."""
+    v = m.get("voiced_duration")
+    return float(v) if v is not None else float(m.get("duration", 0) or 0)
+
+
 def _score_prosody(drill: str, m: Dict) -> Tuple[float, bool, str]:
     loud = m.get("loudness", 0) or 0
-    dur = m.get("duration", 0) or 0
+    dur = _sustained(m)
     d = semitones(m.get("pitch_start", 0) or 0, m.get("pitch_end", 0) or 0)   # 시작 → 끝(반음)
     if drill == "loud":
         passed = loud >= 60
@@ -196,7 +203,7 @@ def score_attempt(stage_no: int, target: str, transcript: Optional[str],
 
     if mode == "voicing":
         loud = m.get("loudness", 0) or 0
-        dur = m.get("duration", 0) or 0
+        dur = _sustained(m)
         voiced = loud >= 22
         passed = voiced and dur >= 1.2
         score = min(100.0, min(dur, 2.0) / 2.0 * 60 + min(loud, 60) / 60 * 40)

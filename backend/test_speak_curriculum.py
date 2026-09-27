@@ -66,3 +66,13 @@ def test_prosody_uses_semitones_so_voice_pitch_does_not_matter():
     _ok(S._score_prosody("rise", {"pitch_start": 220, "pitch_end": 245})[1] is True, "여성 +25Hz(1.9반음) 통과")
     _ok(S._score_prosody("rise", {"pitch_start": 0, "pitch_end": 200})[1] is False, "음높이를 못 쟀으면 판정하지 않음")
     _ok(abs(S.semitones(150, 165) - S.RISE_FALL_ST) < 0.01, "문턱은 150Hz 목소리의 15Hz")
+
+
+def test_long_and_voicing_use_sustained_voice_not_recording_length():
+    # '아'를 0.4초 내고 2.5초 기다렸다 멈춤: 예전에는 녹음 길이(2.5초)로 '길게' 통과
+    m = {"loudness": 70, "duration": 2.5, "voiced_duration": 0.4}
+    _ok(S._score_prosody("long", m)[1] is False, "이어 낸 소리가 짧으면 '길게' 실패")
+    _ok(S._score_prosody("long", {**m, "voiced_duration": 2.2})[1] is True, "2초 넘게 이어 내면 통과")
+    _ok(S._score_prosody("long", {"loudness": 70, "duration": 2.5})[1] is True, "예전 클라이언트(값 없음)는 녹음 길이")
+    stg0 = S.SPEAK_STAGES[0]
+    _ok(S.score_attempt(0, stg0["items"][0]["target"], None, m)[1] is False, "발성 단계도 이어 낸 길이로")
