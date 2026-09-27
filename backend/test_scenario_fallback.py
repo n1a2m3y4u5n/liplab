@@ -63,3 +63,44 @@ def test_fallback_prefers_regated_cache_then_level_bank():
     assert r["static4"]["fallback"] == "static" and set(r["static4"]["sentences"]) <= set(FALLBACK_BY_LEVEL[4])
     assert len(r["static4"]["sentences"]) == 5
     assert "아메리카노 한 잔 주세요." in r["static1"]["sentences"]     # 1단계는 상황별 기본 문장
+
+
+_SHORT_FLOW = r'''
+import asyncio, json
+import database, llm_service
+
+class _Msg:
+    def __init__(self, t):
+        self.content = [type("B", (), {"text": t, "type": "text"})()]
+
+class _Fake:
+    class messages:
+        @staticmethod
+        async def create(*a, **k):
+            # 3단계를 요청했는데 2단계보다 짧은 문장만 준 경우(9/27 밤 표본에서 3단계의 8/10)
+            return _Msg(json.dumps({"sentences": ["커피 주세요.", "얼마예요?", "여기서 마실게요.", "카드 되나요?", "감사합니다."]},
+                                   ensure_ascii=False))
+
+llm_service.anthropic_client = _Fake
+
+async def main():
+    await database.init_db()
+    async with database.AsyncSessionLocal() as db:
+        r = await llm_service.generate_adaptive_scenario(1, "카페", 3, db)
+    print("RESULT " + json.dumps(r, ensure_ascii=False))
+
+asyncio.run(main())
+'''
+
+
+def test_scenario_drops_sentences_too_short_for_level():
+    here = os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as d:
+        env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", PYTHONDONTWRITEBYTECODE="1")
+        p = subprocess.run([sys.executable, "-c", _SHORT_FLOW], cwd=here, env=env, capture_output=True, text=True, timeout=180)
+    line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
+    assert line, f"시나리오 실패:\n{p.stdout[-2000:]}\n{p.stderr[-3000:]}"
+    r = json.loads(line[len("RESULT "):])
+    from llm_service import SCENARIO_MIN_WORDS
+    assert r.get("fallback") == "static", r
+    assert all(len(s.split()) >= SCENARIO_MIN_WORDS[3] for s in r["sentences"]), r["sentences"]

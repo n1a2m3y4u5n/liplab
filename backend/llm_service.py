@@ -107,6 +107,8 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
 # Situation-based context prompts
 # 상황별 시나리오 문장의 글자 수 상한(난이도별 어절 수 지시에 맞춤: 1단계 5~8어절부터 5단계 15어절 이상까지)
 SCENARIO_MAX_CHARS = {1: 40, 2: 45, 3: 60, 4: 70, 5: 90}
+# 단계별 최소 어절 수(지시 하한보다 2 적게): 3·4단계가 2단계보다 짧은 문장을 내던 것을 거른다. 1단계는 짧아도 된다(대체 문장도 3~4어절)
+SCENARIO_MIN_WORDS = {1: 1, 2: 5, 3: 8, 4: 10, 5: 13}
 
 # 대화 실전에서 LLM이 실패했을 때 상대가 말하는 대체 대사(온전한 문장). 없는 상황은 어느 자리에나 맞는 대사.
 FALLBACK_TURNS = {
@@ -324,12 +326,14 @@ async def generate_adaptive_scenario(
         target_phonemes.extend(phonemes)
 
     # Construct adaptive prompt based on level
+    # 어절 수(띄어쓰기로 센 덩어리)를 예문과 함께 준다. 예전에는 범위만 적어 3단계 문장이 5~11어절(기준에 든 것 2/10)로
+    # 2단계와 겹치고 4단계도 4/10만 맞았다(9/27 밤 표본 단계당 10문장). SCENARIO_MIN_WORDS가 너무 짧은 문장을 거른다.
     level_instructions = {
-        1: "매우 쉬운 수준: 짧고 명확한 문장 (5-8어절). 시각적으로 구별이 명확한 음소만 사용. 일상적 표현.",
-        2: "쉬운 수준: 일상 대화 문장 (7-10어절). 기본적인 문맥이 있는 자연스러운 표현.",
-        3: "중간 수준: 자연스러운 대화 (10-13어절). 약간의 시각적 유사 음소 포함. 상황에 맞는 다양한 표현.",
-        4: "어려운 수준: 복잡한 문장 구조 (12-15어절). 시각적으로 유사한 음소(ㅂ/ㅍ, ㄱ/ㅋ 등) 의도적 포함.",
-        5: "매우 어려운 수준: 문맥 없이는 구별이 어려운 문장 (15어절 이상). 동음이의어, 시각적 유사 음소를 다량 포함."
+        1: "매우 쉬운 수준: 짧고 명확한 문장, 띄어쓰기로 센 어절 5~8개(예: '저는 아침마다 공원에서 산책을 해요.' 5어절). 시각적으로 구별이 명확한 음소만 사용. 일상적 표현.",
+        2: "쉬운 수준: 일상 대화 문장, 어절 7~10개(예: '이번 주 토요일에 친구 생일 파티가 있어요.' 7어절). 기본적인 문맥이 있는 자연스러운 표현.",
+        3: "중간 수준: 자연스러운 대화, 어절 10~13개(예: '다음 주 월요일에 회의가 있으니까 자료를 미리 준비해 두면 좋겠어요.' 11어절). 약간의 시각적 유사 음소 포함. 상황에 맞는 다양한 표현.",
+        4: "어려운 수준: 복잡한 문장 구조, 어절 12~15개(예: '비가 많이 와서 퇴근길 버스가 평소보다 훨씬 붐빌 것 같으니 조금 일찍 출발하세요.' 14어절). 시각적으로 유사한 음소(ㅂ/ㅍ, ㄱ/ㅋ 등) 의도적 포함.",
+        5: "매우 어려운 수준: 문맥 없이는 구별이 어려운 문장, 어절 15개 이상. 동음이의어, 시각적 유사 음소를 다량 포함."
     }
 
     # Build phoneme focus instruction
@@ -416,7 +420,9 @@ async def generate_adaptive_scenario(
         # 글자 수 상한은 난이도의 어절 수에 맞춘다. 기본 40자로 걸러 4·5단계(12~15어절 이상, 약 42~55자)와 3단계 일부가
         # 늘 탈락해, 요청한 단계 이름을 단 쉬운 대체 문장이 나갔다.
         max_chars = SCENARIO_MAX_CHARS.get(level, 40)
-        sentences = [s for s in sentences if isinstance(s, str) and check_sentence(s, max_chars=max_chars)[0]]
+        min_words = SCENARIO_MIN_WORDS.get(level, 1)
+        sentences = [s for s in sentences if isinstance(s, str) and check_sentence(s, max_chars=max_chars)[0]
+                     and len(s.split()) >= min_words]
 
         if not sentences or len(sentences) < 3:
             raise ValueError("Generated sentences are insufficient")
@@ -472,7 +478,8 @@ async def _fallback_scenario(situation: str, level: int, db: AsyncSession) -> Di
         rows = list(rows)
         random.shuffle(rows)
         for row in rows:
-            ok = [x for x in (row.sentences or []) if isinstance(x, str) and check_sentence(x, max_chars=max_chars)[0]]
+            ok = [x for x in (row.sentences or []) if isinstance(x, str) and check_sentence(x, max_chars=max_chars)[0]
+                  and len(x.split()) >= SCENARIO_MIN_WORDS.get(level, 1)]
             if len(ok) >= 3:
                 return {"situation": situation, "level": level, "sentences": ok[:5],
                         "scenario_id": f"cache_{row.id}_{ts}", "fallback": "cache"}
