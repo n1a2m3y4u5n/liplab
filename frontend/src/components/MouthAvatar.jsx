@@ -13,6 +13,8 @@ import { curriculumAPI } from '../api'
  *    기호 세기는 서버(/api/cues)가 숙달도로 낮춘다(페이딩). 글자는 보이지 않아 정답이 드러나지 않는다.
  *  - cueFocus: true면 학습자의 약한 표적 입모양 음절에만 기호를 남긴다(필요한 순간에만 — /api/cues focus).
  * LipSyncPlayer3D는 'Viseme N' 오버레이가 있어 퀴즈에 부적합해 별도 컴포넌트로 둔다.
+ * 문항이 바뀌어도 key로 다시 마운트하지 않는다. frames가 바뀌면 재생을 처음부터 다시 하고, 다시 마운트하면 캔버스·WebGL
+ * 컨텍스트·셰이더·모델 버퍼를 새로 만든다(9/27 측정: 문항마다 컨텍스트가 새로 생기고 첫 그리기까지 0.1~1.1초).
  */
 export default function MouthAvatar({ frames, visemeId, height = 300, className = '', cueText = null, cueFocus = false, modelUrl }) {
   const [vid, setVid] = useState(15)

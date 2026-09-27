@@ -200,18 +200,22 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
   return <primitive object={scene} />
 }
 
-/** WebGL 지원 여부 감지 (컨텍스트 생성 실패 시 false) */
+/** WebGL 지원 여부 감지 (컨텍스트 생성 실패 시 false). 페이지에서 한 번만 재고 시험용 컨텍스트는 바로 놓는다.
+ * 예전에는 아바타가 마운트될 때마다 시험용 컨텍스트를 새로 만들고 놓지 않아(문항마다 하나), 렌더러 컨텍스트와 함께
+ * 브라우저의 활성 WebGL 컨텍스트 한도(크롬 16)로 쌓였다. */
+let webglSupported = null
 function detectWebGL() {
+  if (webglSupported !== null) return webglSupported
   if (typeof document === 'undefined') return true
   try {
     const canvas = document.createElement('canvas')
-    return !!(
-      window.WebGLRenderingContext &&
-      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
-    )
+    const gl = window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+    webglSupported = !!gl
+    gl?.getExtension?.('WEBGL_lose_context')?.loseContext()
   } catch {
-    return false
+    webglSupported = false
   }
+  return webglSupported
 }
 
 /**

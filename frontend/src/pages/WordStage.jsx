@@ -228,7 +228,7 @@ function WordQuiz({ data, reload }) {
           <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
             {/* 시각증강 기호(축 J-3)는 답을 확인한 뒤에만 — 보기가 최소대립 짝이라 문제 중에 보이면 기호만으로 답이 드러난다.
                 확인 뒤에는 약한 표적 입모양 음절에만 입꼬리 옆에 겹쳐 무엇이 달랐는지 보여 준다(숙달되면 흐려짐). */}
-            <MouthAvatar key={q.target} frames={frames} height={null} className="h-full" cueText={result ? q.target : null} cueFocus />
+            <MouthAvatar frames={frames} height={null} className="h-full" cueText={result ? q.target : null} cueFocus />
           </div>
 
           {/* 4지선다(91:28 / 모바일 235:51) — 선택 → 확인 */}
