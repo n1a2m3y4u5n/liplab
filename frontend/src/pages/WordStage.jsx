@@ -12,6 +12,7 @@ import useFocusTrap from '../hooks/useFocusTrap'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import useBookmark from '../lib/useBookmark'
 import CueBadges, { CueLegend } from '../components/CueBadges'
+import { pickDistractors } from '../lib/wordOptions'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
@@ -30,15 +31,6 @@ const QUIZ_LEN = 12  // 레슨 1회 문항 수(진행바 분모) — 숙달 판�
 // 레슨 시작 전 트랙 로딩(§4-10 223:30)을 최소 이만큼은 보인다 — 데이터가 빨리 와도 한 번 번쩍이고 끝나지 않게.
 const INTRO_MS = 1000
 const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }   // 마스코트 SVG 그림자 여백(Figma inset)
-
-function partnersOf(word, pairs, bankSet) {
-  const out = new Set()
-  for (const m of pairs) {
-    if (m.a === word && bankSet.has(m.b)) out.add(m.b)
-    if (m.b === word && bankSet.has(m.a)) out.add(m.a)
-  }
-  return [...out]
-}
 
 const fmtDuration = (sec) => `${Math.floor(sec / 60)}분 ${sec % 60}초`
 
@@ -105,18 +97,18 @@ export default function WordStage() {
   }
   return (
     <div className="min-h-[100dvh] bg-page">
-      <WordQuiz data={data} />
+      <WordQuiz data={data} reload={load} />
     </div>
   )
 }
 
-function WordQuiz({ data }) {
+function WordQuiz({ data, reload }) {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const endless = params.get('endless') === '1'   // 엔드리스 혼합 세션(단어 ↔ 문맥, G-6)
   const words = useMemo(() => data.words.map((w) => w.word), [data])
   const tierOf = useMemo(() => Object.fromEntries(data.words.map((w) => [w.word, w.tier || 1])), [data])
-  const bankSet = useMemo(() => new Set(words), [words])
+  const byWord = useMemo(() => new Map(data.words.map((w) => [w.word, w])), [data])
   const [q, setQ] = useState(null)
   // 문항 북마크 — 서버에 저장돼 복습 탭·저장한 문장에 나온다
   const [saved, toggleSaved] = useBookmark(q?.target, { situation: '단어 독화' })
@@ -141,15 +133,13 @@ function WordQuiz({ data }) {
     let r = Math.random() * total
     let target = pool[pool.length - 1].word
     for (const w of pool) { r -= (w.priority || 1); if (r <= 0) { target = w.word; break } }
-    const partners = partnersOf(target, data.minimal_pairs, bankSet)
-    const rest = shuffle(words.filter((w) => w !== target && !partners.includes(w)))
-    const distractors = [...shuffle(partners), ...rest].slice(0, 3)
+    const distractors = pickDistractors(target, byWord, words)
     setResult(null)
     setSelected(null)
     setQ({ target, choices: shuffle([target, ...distractors]) })
     setFrames([])
     try { setFrames(await learningAPI.getVisemes(target)) } catch { /* ignore */ }
-  }, [data, words, bankSet])
+  }, [data, words, byWord])
 
   useEffect(() => { newQ() }, [newQ])
 
@@ -195,7 +185,7 @@ function WordQuiz({ data }) {
       // 다음 레슨: 단계를 숙달했으면 3단계 문장(시나리오 선택 ScenarioHub → /practice. CurriculumPath READ_ROUTE와
       // 같은 진입점), 아니면 이 단계의 다음 12문항. 엔드리스(?endless=1)에서는 문맥 레슨과 번갈아 이어진다(G-6).
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
-        onNext={() => (endless ? navigate('/learn/closure?endless=1') : stat.mastered ? navigate('/learn/scenario') : restart())}
+        onNext={() => (endless ? navigate('/learn/closure?endless=1') : stat.mastered ? navigate('/learn/scenario') : (reload ? reload() : restart()))}
         onHome={() => navigate(endless ? '/learn/endless' : '/learn/path')}
         homeLabel={endless ? '엔드리스 학습으로' : undefined} />
     )

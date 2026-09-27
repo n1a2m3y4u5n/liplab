@@ -6,6 +6,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import LessonComplete from '../components/LessonComplete'
 import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
+import { pickDistractors } from '../lib/wordOptions'
 
 /**
  * 오늘의 복습(간격 반복 SRS) — 독화 레슨 공통 템플릿(핸드오프 §4-03, WordStage·Closure와 같은 틀).
@@ -15,28 +16,19 @@ import useChoiceKeys from '../lib/useChoiceKeys'
  */
 const shuffle = (a) => [...a].sort(() => Math.random() - 0.5)
 
-function partnersOf(word, pairs, bankSet) {
-  const out = new Set()
-  for (const m of pairs || []) {
-    if (m.a === word && bankSet.has(m.b)) out.add(m.b)
-    if (m.b === word && bankSet.has(m.a)) out.add(m.a)
-  }
-  return [...out]
-}
-
 export default function Review() {
   const navigate = useNavigate()
   const [state, setState] = useState('loading') // loading | empty | active | error
   const [items, setItems] = useState([])
   const [lessons, setLessons] = useState([])
-  const [bank, setBank] = useState({ words: [], pairs: [] })
+  const [bank, setBank] = useState({ words: [], byWord: new Map() })
 
   const load = useCallback(() => {
     setState('loading')
     Promise.all([reviewAPI.getDue(), curriculumAPI.getVisemeLessons(), curriculumAPI.getWords()])
       .then(([due, vl, wd]) => {
         setLessons(vl.lessons)
-        setBank({ words: wd.words.map((w) => w.word), pairs: wd.minimal_pairs || [] })
+        setBank({ words: wd.words.map((w) => w.word), byWord: new Map(wd.words.map((w) => [w.word, w])) })
         if (!due.items.length) { setState('empty'); return }
         setItems(due.items)
         setState('active')
@@ -65,7 +57,6 @@ export default function Review() {
 
 function ReviewSession({ items, lessons, bank }) {
   const navigate = useNavigate()
-  const bankSet = useMemo(() => new Set(bank.words), [bank])
   const [idx, setIdx] = useState(0)
   const [frames, setFrames] = useState([])
   const [selected, setSelected] = useState(null)
@@ -86,11 +77,9 @@ function ReviewSession({ items, lessons, bank }) {
       const others = shuffle(lessons.filter((l) => l.viseme_id !== vid)).slice(0, 3)
       return { targetKey: String(vid), choices: shuffle([t, ...others].filter(Boolean)).map((l) => ({ key: String(l.viseme_id), label: l.name })) }
     }
-    const partners = partnersOf(item.ref, bank.pairs, bankSet)
-    const rest = shuffle(bank.words.filter((w) => w !== item.ref && !partners.includes(w)))
-    const distractors = [...shuffle(partners), ...rest].slice(0, 3)
+    const distractors = pickDistractors(item.ref, bank.byWord, bank.words)
     return { targetKey: item.ref, choices: shuffle([item.ref, ...distractors]).map((w) => ({ key: w, label: w })) }
-  }, [item, lessons, bank, bankSet, isViseme])
+  }, [item, lessons, bank, isViseme])
 
   useEffect(() => {
     setResult(null); setSelected(null); setFrames([])
