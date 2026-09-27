@@ -45,7 +45,7 @@ export default function Placement() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [mode] = useState(initialMode)  // placement | A(사전) | B(사후) — 향상도검사(축 I)
-  const [n, setN] = useState(8)  // 목표 문항 수(적응형 배치검사)
+  const [n, setN] = useState(12)  // 최대 문항 수(적응형 배치검사). 시작 단계가 분명해지면 서버가 일찍 끝낸다
   const [selected, setSelected] = useState(null)  // 현재 문항에서 고른 보기(다음 눌러 확정)
   const [loadError, setLoadError] = useState(false)      // 문항을 받지 못함(첫 문항·다시 진단) → 다시 시도·나가기
   const [submitError, setSubmitError] = useState(false)  // 답을 보내지 못함 → 하단 바에 안내, 다음으로 다시 보낸다
@@ -61,8 +61,8 @@ export default function Placement() {
     try {
       if (m === 'placement') {
         // 적응형: 첫 문항만 받고, 정오답에 따라 다음 문항을 서버가 고른다(축 I).
-        const d = await curriculumAPI.nextPlacementItem([], {}, 8)
-        setN(d.n || 8)
+        const d = await curriculumAPI.nextPlacementItem([], {}, 12)
+        setN(d.n || 12)
         setItems(d.item ? [d.item] : [])
       } else {
         // 향상도 동형폼(A 사전 / B 사후)은 통제 비교를 위해 고정 배치 유지.
@@ -286,7 +286,7 @@ export default function Placement() {
           <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
             <div className="h-full rounded-full bg-track transition-all" style={{ width: `${((idx + 1) / total) * 100}%` }} />
           </div>
-          <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{idx + 1} / {total}</span>
+          <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{idx + 1} / {mode === 'placement' ? `최대 ${total}` : total}</span>
         </div>
 
         <div className="mt-6 flex flex-col gap-4 lg:mt-5 lg:gap-5">

@@ -99,6 +99,24 @@ def test_adaptive_no_repeat_and_targets():
     _ok(len(seen) >= 6, "적응형으로 여러 문항 생성")
 
 
+def test_adaptive_stops_when_stage_is_clear():
+    """적응형 길이(docs/assessment-design.md 12절): 최소 5문항 뒤 한 시작 단계의 사후 확률이 0.85 이상이면 끝낸다."""
+    def run(pattern):
+        asked, resp = [], {}
+        for i, (d, ok) in enumerate(pattern):
+            it = {"id": f"q{i + 1}", "word": "정답", "difficulty": d, "visemes": [], "options": ["정답", "a", "b", "c"]}
+            asked.append(it)
+            resp[it["id"]] = "정답" if ok else "a"
+        return A.estimate_ability(asked, resp)
+    pr = A.stage_probabilities([(0.6, True, 4), (0.7, False, 4)])
+    _ok(abs(sum(pr) - 1) < 1e-9 and len(pr) == 3, "세 단계 확률의 합은 1")
+    strong = run([(0.6, True), (0.7, True), (0.8, True), (0.85, True), (0.87, True)])
+    _ok(strong["confident"] and strong["stage_confidence"] >= A.STOP_CONFIDENCE, "어려운 문항을 모두 맞히면 5문항에서 끝")
+    _ok(not run([(0.6, True)] * 4)["confident"], "5문항 전에는 끝내지 않는다")
+    edge = run([(0.6, True), (0.7, False), (0.65, True), (0.72, True), (0.76, False)])
+    _ok(not edge["confident"], "단계 경계 근처면 계속 낸다")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:

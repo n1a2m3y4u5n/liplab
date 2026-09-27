@@ -195,7 +195,7 @@ export const curriculumAPI = {
   recordMultiConversation: async (payload) => (await api.post('/conversation/multi/result', payload)).data,
   getPlacement: async (n = 8, form = null) => (await api.get('/assessment/placement', { params: form ? { n, form } : { n } })).data,
   scorePlacement: async (items, responses, form = 'placement') => (await api.post('/assessment/score', { items, responses, form })).data,
-  nextPlacementItem: async (asked, responses, n = 8) => (await api.post('/assessment/placement/next', { asked, responses, n })).data,
+  nextPlacementItem: async (asked, responses, n = 12) => (await api.post('/assessment/placement/next', { asked, responses, n })).data,
   getAssessmentHistory: async () => (await api.get('/assessment/history')).data,
 }
 
