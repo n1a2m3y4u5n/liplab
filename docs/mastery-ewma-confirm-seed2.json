@@ -1,0 +1,56 @@
+{
+ "min8": {
+  "rows": {
+   "R0": {
+    "false_rate": 0.1242,
+    "judged": 9637,
+    "delay_median": 39.0,
+    "skilled_median": 8.0
+   },
+   "EWMA": {
+    "false_rate": 0.0556,
+    "judged": 11758,
+    "delay_median": 32,
+    "skilled_median": 28.0
+   },
+   "EWMA_bc": {
+    "false_rate": 0.0651,
+    "judged": 11836,
+    "delay_median": 28.0,
+    "skilled_median": 8.0
+   }
+  },
+  "qualifies": {
+   "EWMA": false,
+   "EWMA_bc": true
+  },
+  "chosen": "EWMA_bc"
+ },
+ "min6": {
+  "rows": {
+   "R0": {
+    "false_rate": 0.1559,
+    "judged": 9720,
+    "delay_median": 40.0,
+    "skilled_median": 6.0
+   },
+   "EWMA": {
+    "false_rate": 0.0556,
+    "judged": 11758,
+    "delay_median": 32,
+    "skilled_median": 28.0
+   },
+   "EWMA_bc": {
+    "false_rate": 0.0822,
+    "judged": 11904,
+    "delay_median": 28.0,
+    "skilled_median": 6.0
+   }
+  },
+  "qualifies": {
+   "EWMA": false,
+   "EWMA_bc": true
+  },
+  "chosen": "EWMA_bc"
+ }
+}
