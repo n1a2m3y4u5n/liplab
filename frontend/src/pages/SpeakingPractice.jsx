@@ -13,6 +13,7 @@ import { scoreTone, scoreLevel } from '../lib/scoreTone'
 import { VOWEL_IDS } from '../lib/vtlShapes'
 import { mediaErrorMessage } from '../lib/mediaError'
 import { toneDirection, toneMissed } from '../lib/speakTone'
+import { longestVoicedRun } from '../lib/voicing'
 
 // 혀 위치 성도 단면(E-6) — 모음 결과를 열 때만 받는다(그림 코드와 윤곽 자료 모두 지연 로드)
 const VocalTractVTL = lazy(() => import('../components/VocalTractVTL'))
@@ -410,6 +411,7 @@ export default function SpeakingPractice() {
       const metrics = {
         loudness: s.loudness ?? 0, pitch_range: s.pitchRange ?? 0, duration: s.duration ?? 0,
         pitch_start: s.pitchStart ?? 0, pitch_end: s.pitchEnd ?? 0,
+        voiced_duration: s.voicedDuration ?? null,
       }
       // 복습 세션이면 review=true → 백엔드가 채점/코칭만 하고 단계 숙달·해금은 건드리지 않음
       const opts = assessStage != null ? { stage: assessStage, drill, review: reviewMode } : {}
@@ -453,7 +455,7 @@ export default function SpeakingPractice() {
     const raw = volHist.current, ps = pitchHist.current
     const dur = startRef.current ? Math.round((performance.now() - startRef.current) / 100) / 10 : 0
     if (!raw.length) {
-      return { micIssue: true, loudness: 0, volMsg: '마이크 소리가 안 잡혔어요. 권한/연결을 확인하고 가까이서 말해보세요.', volOk: false, pitchRange: 0, duration: dur }
+      return { micIssue: true, loudness: 0, volMsg: '마이크 소리가 안 잡혔어요. 권한/연결을 확인하고 가까이서 말해보세요.', volOk: false, pitchRange: 0, duration: dur, voicedDuration: 0 }
     }
     const peak = raw.reduce((m, v) => (v > m ? v : m), 0)
     const voiced = raw.filter((v) => v > 0.01)   // 발성 프레임만 (무음 제외 → '항상 작음' 버그 방지)
@@ -480,7 +482,9 @@ export default function SpeakingPractice() {
       pitchStart = Math.round(head.reduce((a, b) => a + b, 0) / head.length)
       pitchEnd = Math.round(tail.reduce((a, b) => a + b, 0) / tail.length)
     }
-    return { micIssue, loudness, volMsg, volOk, pitchRange, pitchMean, pitchStart, pitchEnd, duration: dur }
+    // 발성 단계·'길게' 연습은 녹음 길이가 아니라 가장 길게 이어 낸 소리로 판정한다(lib/voicing)
+    const voicedDuration = longestVoicedRun(traceRef.current)
+    return { micIssue, loudness, volMsg, volOk, pitchRange, pitchMean, pitchStart, pitchEnd, duration: dur, voicedDuration }
   }
 
   const loop = () => {
@@ -878,7 +882,7 @@ export default function SpeakingPractice() {
               <div className="grid grid-cols-3 gap-2">
                 <Stat label="목소리 크기" value={`${summary.loudness}/100`} />
                 <Stat label="억양 폭" value={`${summary.pitchRange}Hz`} />
-                <Stat label="길이" value={`${summary.duration}s`} />
+                <Stat label="이어 낸 길이" value={`${summary.voicedDuration ?? summary.duration}s`} />
               </div>
               {summary.trace && summary.trace.length >= 3 && !summary.micIssue && (
                 <div className="rounded-14 border-1.5 border-fill bg-white p-3">
