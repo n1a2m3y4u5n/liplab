@@ -1,0 +1,21 @@
+{
+ "seed": 1,
+ "N": 20000,
+ "min_attempts": 5,
+ "R0": {
+  "false_rate": 0.1708,
+  "judged": 9693,
+  "delay_median": 39.0,
+  "skilled_median": 5.0
+ },
+ "R1": [
+  {
+   "alpha": 0.08,
+   "thr": 80.0,
+   "false_rate": 0.1094,
+   "judged": 12015,
+   "delay_median": 25.0,
+   "skilled_median": 5.0
+  }
+ ]
+}
