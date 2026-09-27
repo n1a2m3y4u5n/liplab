@@ -43,7 +43,8 @@ RUN python -c "from faster_whisper import WhisperModel; WhisperModel('base', dev
 
 # 서버 추론(D-GOP 발음채점·음성구동 아바타) — WITH_ML=1일 때만(fly.dev.toml). 기본값 0이라 전시앱 이미지는 그대로다.
 # torch CPU 휠과 transformers를 깔고, 모델 두 개(kresnik 정렬·채점, WavLM-large 아바타 백본, 각 약 1.2GB)를
-# 이미지에 미리 받아 둔다. 기계가 자동으로 멈췄다 켜질 때마다 다시 받지 않게 하려는 것이다.
+# 이미지에 미리 받아 둔다. 기계가 자동으로 멈췄다 켜질 때마다 다시 받지 않게 하려는 것이다. WavLM-large는 아래에서 int8로
+# 바꾼 뒤 fp32를 지운다(9/27).
 ARG WITH_ML=0
 # D-GOP 채점 모델: kresnik(공개 모델, 빌드 때 받는다) 또는 ours(자체 학습 정렬기·채점기, 9/25 재검 통과).
 # ours는 backend/models/dgop_ours/{aligner,scorer}에 둔 체크포인트(git 제외, DEPLOY.md 9항)를 아래 COPY로 싣는다.
@@ -76,6 +77,17 @@ rs=[(d,) + B._load_ctc('models/dgop_ours/' + d, 'cpu') for d in ('aligner', 'sco
 x=torch.zeros(1, 16000); \
 [m(x) for _, p, m in rs]; \
 print('dgop_ours ok:', [(d, getattr(m, 'liplab_quant_from', None)) for d, p, m in rs], 'torch', torch.__version__, 'transformers', transformers.__version__)"; \
+    fi
+
+# A4 아바타 백본(WavLM-large)을 int8로 바꿔 싣고 fp32 허브 캐시는 지운다(9/27 세션 10 관문 통과: jawOpen 상관 0.9995,
+# 앱 프로세스 메모리 약 0.87GiB 감소, 켜질 때 읽는 양 1.26GB → 0.36GB, 추론 1.08배, docs/speed-int8-a4.md). audio2face는
+# models/wavlm_large_int8의 원본 id(source)가 체크포인트 백본과 같을 때 그 폴더를 쓴다. 켜질 때와 같은 경로로 올려 본다.
+RUN if [ "$WITH_ML" = "1" ]; then \
+      python -c "import quant_int8 as Q; print('wavlm int8:', Q.export_base('microsoft/wavlm-large', 'models/wavlm_large_int8'))" && \
+      rm -rf "$HF_HOME/hub/models--microsoft--wavlm-large" && \
+      python -c "import torch, backbone_service as B, audio2face as A; torch.set_grad_enabled(False); \
+loc = A._backbone_location('microsoft/wavlm-large'); p, m = B._load_base(loc, 'cpu'); m(torch.zeros(1, 16000)); \
+print('a4 backbone ok:', loc, m.liplab_quant_from, 'torch', torch.__version__)"; \
     fi
 
 # 파일럿 자료 파기 도구(§4.7) — 서버에서 fly ssh로 실행한다(scripts/pilot_retention.py 머리말)

@@ -48,6 +48,13 @@ class Int8Linear(nn.Module):
         self.register_buffer("bias", torch.empty(out_features, dtype=torch.float32, device=device) if bias else None)
         return self
 
+    @property
+    def weight(self) -> torch.Tensor:
+        """fp32로 푼 가중치(qweight × scale, 읽기 전용). WavLM 주의층은 q·k·v·out 투영의 weight를
+        F.multi_head_attention_forward에 바로 넘기고 모듈 순전파를 거치지 않아, 이 속성이 없으면 순전파가 멈춘다(9/27 세션 10).
+        wav2vec2(D-GOP)는 모듈 순전파를 쓰므로 이 속성을 거치지 않는다."""
+        return self.qweight.to(self.scale.dtype) * self.scale[:, None]
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = F.linear(x, self.qweight.to(x.dtype)) * self.scale.to(x.dtype)
         if self.bias is not None:
@@ -147,8 +154,8 @@ def load_ctc(model_dir: str) -> nn.Module:
     with open(path, "rb") as f:
         raw = f.read()
     meta = _read_metadata(raw)
-    if meta.get("liplab_quant") != "int8":
-        raise ValueError(f"{path}: liplab int8 파일이 아니다(metadata={meta})")
+    if meta.get("liplab_quant") != "int8" or meta.get("kind", "ctc") != "ctc":
+        raise ValueError(f"{path}: liplab int8 CTC 파일이 아니다(metadata={meta})")
     skip = tuple(x for x in meta.get("skip", "").split(",") if x)
     config = AutoConfig.from_pretrained(model_dir)
     with torch.device("meta"):
@@ -166,6 +173,88 @@ def load_ctc(model_dir: str) -> nn.Module:
         p.requires_grad_(False)
     model.liplab_quant = "int8"
     model.liplab_quant_from = "file"
+    return model
+
+
+_WEIGHT_EXT = (".bin", ".safetensors", ".h5", ".msgpack", ".ckpt", ".pt", ".pth", ".onnx")
+
+
+def _src_dir(src: str) -> str:
+    """허브 id면 허브 캐시의 스냅숏 폴더, 폴더면 그대로(설정 파일을 복사할 곳)."""
+    if os.path.isdir(src):
+        return src
+    from huggingface_hub import try_to_load_from_cache
+    cfg = try_to_load_from_cache(src, "config.json")
+    if not isinstance(cfg, str):
+        raise FileNotFoundError(f"{src}: 허브 캐시에 config.json이 없다(먼저 from_pretrained로 받는다)")
+    return os.path.dirname(cfg)
+
+
+def export_base(src: str, out_dir: str, skip: Iterable[str] = ()) -> Dict:
+    """fp32 기본 모델(AutoModel, 예: A4 아바타 백본 WavLM-large) → int8 폴더(model.int8.safetensors + 설정 파일).
+    모든 nn.Linear를 Int8Linear로 바꾼다(9/27 세션 10에서 A4 출력 충실도·메모리·속도 관문 통과, docs/speed-int8-a4.md).
+    metadata에 kind=base와 원본 id(source)를 남겨 load_base·audio2face가 확인한다."""
+    from safetensors.torch import save_file
+    from transformers import AutoModel
+    skip = tuple(skip or ())
+    model = AutoModel.from_pretrained(src).eval()
+    info = quantize_linears(model, skip=skip)
+    os.makedirs(out_dir, exist_ok=True)
+    sdir = _src_dir(src)
+    for name in sorted(os.listdir(sdir)):
+        p = os.path.join(sdir, name)
+        if os.path.isfile(p) and name not in _SKIP_COPY and not name.startswith(".") and not name.endswith(_WEIGHT_EXT):
+            shutil.copy2(p, os.path.join(out_dir, name))        # 허브 캐시의 링크는 실제 내용으로 복사된다
+    sd = {k: v.detach().contiguous() for k, v in model.state_dict().items()}
+    path = os.path.join(out_dir, INT8_FILE)
+    save_file(sd, path, metadata={"liplab_quant": "int8", "format": "1", "skip": ",".join(skip), "kind": "base",
+                                  "source": src})
+    os.chmod(path, 0o644)
+    info["file_bytes"] = os.path.getsize(path)
+    info["n_tensors"] = len(sd)
+    return info
+
+
+def file_metadata(model_dir: str) -> Dict:
+    """int8 파일의 metadata만 읽는다(머리만, 파일 전체를 읽지 않는다). 파일이 없으면 {}."""
+    import json
+    import struct
+    path = os.path.join(model_dir, INT8_FILE)
+    if not os.path.isfile(path):
+        return {}
+    with open(path, "rb") as f:
+        n = struct.unpack("<Q", f.read(8))[0]
+        return json.loads(f.read(n).decode("utf-8")).get("__metadata__") or {}
+
+
+def load_base(model_dir: str) -> nn.Module:
+    """export_base()로 만든 폴더를 fp32 가중치 없이 올린다(load_ctc와 같은 방식). 실행 중 변환과 텐서·출력이 비트 단위로 같다."""
+    from safetensors.torch import load as st_load
+    from transformers import AutoConfig, AutoModel
+    path = os.path.join(model_dir, INT8_FILE)
+    with open(path, "rb") as f:
+        raw = f.read()
+    meta = _read_metadata(raw)
+    if meta.get("liplab_quant") != "int8" or meta.get("kind") != "base":
+        raise ValueError(f"{path}: liplab int8 기본 모델 파일이 아니다(metadata={meta})")
+    skip = tuple(x for x in meta.get("skip", "").split(",") if x)
+    config = AutoConfig.from_pretrained(model_dir)
+    with torch.device("meta"):
+        model = AutoModel.from_config(config)
+    for parent, child_name, child in list(_linear_targets(model, skip)):
+        setattr(parent, child_name, Int8Linear.empty(child.in_features, child.out_features, child.bias is not None))
+    sd = st_load(raw)
+    del raw
+    model.load_state_dict(sd, strict=True, assign=True)
+    left = [n for n, t in list(model.named_parameters()) + list(model.named_buffers()) if t is not None and t.is_meta]
+    if left:
+        raise RuntimeError(f"{path}: 값이 안 채워진 텐서 {len(left)}개(예: {left[:3]})")
+    model.eval()
+    for p in model.parameters():
+        p.requires_grad_(False)
+    model.liplab_quant = "int8"
+    model.liplab_quant_from = "file"
+    model.liplab_source = meta.get("source")
     return model
 
 

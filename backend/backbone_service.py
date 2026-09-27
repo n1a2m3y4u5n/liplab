@@ -53,7 +53,14 @@ def resolve_device() -> str:
 
 
 def _load_base(model_id: str, device: str) -> tuple:
+    """기본 모델(A4 아바타 백본). 폴더에 미리 변환한 int8 파일(kind=base)이 있으면 D-GOP의 _load_ctc와 같은 규칙으로 그것을
+    올린다: fp32 가중치가 없으면 늘, 함께 있으면 BACKBONE_QUANT=int8이고 CPU일 때만(9/27 세션 10 관문 통과)."""
     from transformers import AutoModel
+    if os.path.isdir(model_id):
+        import quant_int8
+        if (quant_int8.file_metadata(model_id).get("kind") == "base"
+                and (not quant_int8.has_fp32(model_id) or (quant_mode() == "int8" and device == "cpu"))):
+            return None, quant_int8.load_base(model_id).to(device)
     model = AutoModel.from_pretrained(model_id).eval().to(device)
     for p in model.parameters():
         p.requires_grad_(False)
@@ -65,7 +72,8 @@ QUANT_MODES = ("", "none", "fp32", "int8")
 
 def quant_mode() -> str:
     """BACKBONE_QUANT. int8이면 CPU에 올리는 CTC 모델(D-GOP 정렬기·채점기)의 선형층 가중치를 int8로 둔다(quant_int8.py,
-    모델당 약 1.2GB → 0.4GB). A4 아바타 백본(kind=base)은 int8 품질을 따로 재지 않았으므로 fp32 그대로다."""
+    모델당 약 1.2GB → 0.4GB). A4 아바타 백본(kind=base)은 미리 변환한 int8 폴더가 있을 때만 int8로 올린다(_load_base,
+    9/27 세션 10: jawOpen 상관 0.9995, 서버 메모리 약 0.87GiB 감소, 추론 1.08배)."""
     mode = (os.getenv("BACKBONE_QUANT") or "").strip().lower()
     if mode not in QUANT_MODES:
         raise ValueError(f"알 수 없는 BACKBONE_QUANT: {mode} (가능: int8, none)")

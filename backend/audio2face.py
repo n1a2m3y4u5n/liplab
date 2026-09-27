@@ -84,6 +84,25 @@ def _build_head(n_bs: int):
     return Head()
 
 
+_INT8_DIR = os.path.join(os.path.dirname(__file__), "models", "wavlm_large_int8")
+
+
+def _backbone_location(ck_backbone: str) -> str:
+    """백본을 어디서 올릴지. LIPLAB_A4_BACKBONE이 있으면 그 폴더, 없으면 이미지 안의 int8 폴더(models/wavlm_large_int8)가
+    체크포인트의 백본과 같은 원본(source)에서 만든 것일 때 그 폴더, 아니면 체크포인트의 백본 id(허브 캐시)."""
+    forced = os.getenv("LIPLAB_A4_BACKBONE")
+    if forced:
+        return forced
+    try:
+        import quant_int8
+        meta = quant_int8.file_metadata(_INT8_DIR)
+        if meta.get("kind") == "base" and meta.get("source") == ck_backbone:
+            return _INT8_DIR
+    except Exception:
+        pass
+    return ck_backbone
+
+
 def _load():
     """동결 음성 백본과 학습된 헤드를 1회 로드.
 
@@ -98,7 +117,7 @@ def _load():
     ckpt_path = _find_ckpt()
     ck = torch.load(ckpt_path, map_location="cpu")
     _names = ck["names"]
-    _backbone = ck.get("backbone", _W2V)
+    _backbone = _backbone_location(ck.get("backbone", _W2V))
     _head = _build_head(len(_names))
     _head.load_state_dict(ck["state"])
     _head.eval()

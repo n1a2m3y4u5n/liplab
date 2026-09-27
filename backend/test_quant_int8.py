@@ -156,3 +156,73 @@ def test_dev_config_auto_stop_value_is_valid():
     with open(p, "rb") as f:
         svc = tomllib.load(f).get("http_service", {})
     assert svc.get("auto_stop_machines") in ("off", "stop", "suspend", True, False)
+
+
+# ── A4 아바타 백본(WavLM, kind=base) int8(9/27 세션 10 관문 통과) ────────────────────────────────
+def _tiny_wavlm_dir(root):
+    """작은 WavLM 기본 모델(fp32)을 root에 만든다(내려받지 않음)."""
+    transformers = pytest.importorskip("transformers")
+    torch.manual_seed(0)
+    cfg = transformers.WavLMConfig(
+        hidden_size=32, num_hidden_layers=2, num_attention_heads=4, intermediate_size=64,
+        conv_dim=(16, 16), conv_stride=(5, 2), conv_kernel=(10, 3), num_conv_pos_embeddings=8,
+        num_conv_pos_embedding_groups=2, num_buckets=16, max_bucket_distance=64)
+    model = transformers.WavLMModel(cfg).eval()
+    src = os.path.join(root, "wavlm")
+    model.save_pretrained(src)
+    return src
+
+
+def test_wavlm_attention_needs_weight_property():
+    """WavLM 주의층은 투영 weight를 직접 읽는다. Int8Linear의 weight 속성은 qweight × scale이고, 모듈 순전파와 거의 같다."""
+    lin = nn.Linear(8, 4)
+    q = Q.Int8Linear(lin)
+    w = q.weight
+    assert w.shape == (4, 8) and w.dtype == torch.float32
+    x = torch.randn(3, 8)
+    assert torch.allclose(q(x), nn.functional.linear(x, w, q.bias), atol=1e-5)
+    assert "weight" not in dict(q.named_buffers()) and "weight" not in q.state_dict()   # 저장 형식은 그대로
+
+
+def test_export_base_then_load_is_bit_identical(tmp_path):
+    """export_base → load_base가 실행 중 변환과 텐서·출력 모두 비트 단위로 같고, 모든 nn.Linear가 바뀐다."""
+    from transformers import AutoModel
+    src = _tiny_wavlm_dir(str(tmp_path))
+    out = os.path.join(str(tmp_path), "wavlm_int8")
+    fp32 = AutoModel.from_pretrained(src).eval()
+    n_linear = sum(1 for m in fp32.modules() if type(m) is nn.Linear)
+    info = Q.export_base(src, out)
+    meta = Q.file_metadata(out)
+    assert meta["kind"] == "base" and meta["source"] == src and info["replaced"] == n_linear
+    ref = AutoModel.from_pretrained(src).eval()
+    Q.quantize_linears(ref, skip=())
+    got = Q.load_base(out)
+    assert got.liplab_quant_from == "file" and got.liplab_source == src
+    assert sum(1 for m in got.modules() if isinstance(m, Q.Int8Linear)) == n_linear
+    a, b = ref.state_dict(), got.state_dict()
+    assert a.keys() == b.keys() and all(torch.equal(a[k], b[k]) for k in a)
+    x = torch.randn(1, 4000)
+    with torch.no_grad():
+        y_ref, y_got, y_fp = ref(x).last_hidden_state, got(x).last_hidden_state, fp32(x).last_hidden_state
+    assert torch.equal(y_ref, y_got)
+    assert not torch.equal(y_got, y_fp) and torch.allclose(y_got, y_fp, atol=0.2)
+    with pytest.raises(ValueError):
+        Q.load_ctc(out)                          # CTC 적재 경로는 기본 모델 파일을 받지 않는다
+
+
+def test_backbone_base_uses_int8_folder(tmp_path, monkeypatch):
+    """기본 모델도 int8 폴더면 그 파일로 올린다(fp32가 없으면 늘). audio2face는 같은 원본에서 만든 폴더만 쓴다."""
+    import audio2face as A2F
+    src = _tiny_wavlm_dir(str(tmp_path))
+    out = os.path.join(str(tmp_path), "wavlm_int8")
+    Q.export_base(src, out)
+    monkeypatch.delenv("BACKBONE_QUANT", raising=False)
+    _, m = bb._load_base(out, "cpu")
+    assert m.liplab_quant_from == "file"
+    assert getattr(bb._load_base(src, "cpu")[1], "liplab_quant", None) is None
+    monkeypatch.setattr(A2F, "_INT8_DIR", out)
+    monkeypatch.delenv("LIPLAB_A4_BACKBONE", raising=False)
+    assert A2F._backbone_location(src) == out                 # 원본이 같으면 int8 폴더
+    assert A2F._backbone_location("microsoft/wavlm-large") == "microsoft/wavlm-large"   # 원본이 다르면 체크포인트 백본
+    monkeypatch.setenv("LIPLAB_A4_BACKBONE", "/x/forced")
+    assert A2F._backbone_location(src) == "/x/forced"

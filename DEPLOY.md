@@ -124,6 +124,11 @@
      (3) 예열이 아바타 백본까지 1초 무음으로 한 번 돌려 가중치를 미리 읽는다(`audio2face.warm`). 일시정지 스냅샷에도 들어간다.
      함께 고친 결함: `GET /api/backbone/status`가 적재 내내 잠금을 기다려, 적재 중에 부르면 서버 전체가 멈췄다(비동기 엔드포인트
      안의 동기 대기). 이제 바로 답하고 올리는 중인 모델을 `loading`에 보인다. 제품 화면은 이 주소를 부르지 않아 측정 때만 드러났다.
+   - A4 아바타 백본 int8(9/27, 배포 전): 빌드 때 WavLM-large를 int8(`backend/models/wavlm_large_int8`, 355MB)로 바꾸고 fp32
+     허브 캐시(1.26GB)를 지운다(Dockerfile). `audio2face`는 이 폴더의 원본 id가 체크포인트 백본과 같으면 그것을 쓰고, 다른 폴더를 쓰려면
+     `LIPLAB_A4_BACKBONE`을 준다. 사전등록 관문 통과(jawOpen 상관 0.9995, 추론 1.08배, 앱 프로세스 메모리 약 0.87GiB 감소,
+     `docs/speed-int8-a4.md`). 기대: 이미지 약 0.9GB 감소, 켜질 때 백본 읽기 약 74초 → 21초. 배포 뒤 `tools/cold_start_measure.sh`와
+     `GET /api/backbone/status`(백본 행의 quant·quant_from이 int8·file)로 확인한다.
    - 배포(사용자 지시 뒤에만): `fly deploy -c fly.dev.toml -a liplab-dev --remote-only`. 확인은 `GET /api/backbone/status`에
      세 모델이 올라왔고 정렬기·채점기의 `quant`가 `int8`, `quant_from`이 `file`인지, 발음 연습 응답의 `assessment_method`가 `dgop`이고
      `dgop.calibration`이 자체 학습 앵커인지 본다. 메모리는 서버 프로세스(로그의 `Started server process [N]`)의 최고치를
