@@ -74,7 +74,9 @@ def generate_cues(text: str, target_visemes: Optional[List[int]] = None,
     # 기호는 '실제 소리'의 자질을 보여 주므로 표준발음법(비음화·경음화·유음화 등)까지 적용한 발음 모드를 쓴다.
     # 입모양 경로(기본값)로 풀면 국물[궁물]의 비음, 먹고[먹꼬]의 된소리처럼 들리는 자질을 놓친다(J-5).
     # 음절 수는 두 모드가 같아 syllable_index는 화면의 음절 위치와 그대로 맞는다.
-    for i, tok in enumerate(to_pronounced_syllables(text, phonetic=True)):
+    # ㄶ·ㅀ + 모음의 ㅎ은 표준 발음에서 내지 않으므로 뺀다(h_delete). 채점 라벨 경로의 기본값은 모델 학습 라벨에 맞춰 ㅎ을 남겨,
+    # 예전에는 많이·괜찮아요·싫어요에 없는 기식(ㅎ) 기호가 붙었다.
+    for i, tok in enumerate(to_pronounced_syllables(text, phonetic=True, h_delete=True)):
         if not isinstance(tok, list):
             continue
         ini, _med, fin = tok
