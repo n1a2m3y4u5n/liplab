@@ -18,3 +18,18 @@ export function toneMissed(summary, dir) {
   const d = semitones(summary.pitchStart, summary.pitchEnd)
   return dir === 'rise' ? d < TONE_STEP_ST : -d < TONE_STEP_ST
 }
+
+const median = (a) => {
+  const s = [...a].sort((x, y) => x - y)
+  const m = s.length >> 1
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+}
+
+/** 문장 끝 억양용 기준·끝 음높이(Hz). 유성 프레임 음높이 목록 ps(약 67ms 간격)를 3프레임 중앙값으로 다듬어(옥타브 튐 제거)
+ * 전체 중앙값(ref)과 마지막 3프레임 중앙값(final)을 준다. 서버 speak_curriculum.sentence_direction이 둘의 반음 차로 판정한다.
+ * 예전 앞 30% 대 뒤 30% 평균은 마지막 음절의 상승을 앞 음절과 섞어 묻었다(docs/sentence-intonation.md). 4프레임 미만이면 0. */
+export function finalTone(ps) {
+  if (!ps || ps.length < 4) return { ref: 0, final: 0 }
+  const q = ps.map((_, i) => median(ps.slice(Math.max(0, i - 1), i + 2)))
+  return { ref: Math.round(median(q)), final: Math.round(median(q.slice(-3))) }
+}

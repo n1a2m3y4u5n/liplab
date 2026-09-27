@@ -13,6 +13,7 @@
   sentence — 문장: Whisper 전사 + 문장 억양(pitch 방향) 곁들임
 """
 import math
+import re
 from typing import Dict, List, Optional, Tuple
 
 try:
@@ -103,7 +104,7 @@ SPEAK_STAGES: List[Dict] = [
     {
         "stage": 5, "title": "문장·억양", "icon": "💬", "mode": "sentence",
         "desc": "문장 억양 — 평서문은 내림, 의문문은 올림",
-        "guide": "문장 끝의 억양까지 살려보세요. 평서문(.)은 끝을 내리고, 의문문(?)은 끝을 올려요.",
+        "guide": "문장 끝의 억양까지 살려보세요. 평서문(.)은 끝을 내리고, 예/아니오로 답하는 의문문(?)은 마지막 음절을 올려요.",
         "min_attempts": 6, "mastery": 85.0, "pass": 65.0,
         "items": [
             {"target": "밥 먹었어요.", "intonation": "fall"},
@@ -111,15 +112,15 @@ SPEAK_STAGES: List[Dict] = [
             {"target": "오늘 날씨가 좋아요.", "intonation": "fall"},
             {"target": "같이 갈래요?", "intonation": "rise"},
             {"target": "고맙습니다.", "intonation": "fall"},
-            {"target": "어디 가요?", "intonation": "rise"},
+            {"target": "학교 가요?", "intonation": "rise"},
             {"target": "물 좀 주세요.", "intonation": "fall"},
-            {"target": "이름이 뭐예요?", "intonation": "rise"},
+            {"target": "처음 오셨어요?", "intonation": "rise"},
             {"target": "정말 재미있어요.", "intonation": "fall"},
-            {"target": "지금 몇 시예요?", "intonation": "rise"},
+            {"target": "지금 바빠요?", "intonation": "rise"},
             {"target": "내일 만나요.", "intonation": "fall"},
             {"target": "괜찮으세요?", "intonation": "rise"},
             {"target": "잘 지냈어요.", "intonation": "fall"},
-            {"target": "이거 얼마예요?", "intonation": "rise"},
+            {"target": "이거 새로 샀어요?", "intonation": "rise"},
             {"target": "천천히 말해 주세요.", "intonation": "fall"},
             {"target": "다시 한 번요?", "intonation": "rise"},
         ],
@@ -153,6 +154,30 @@ SENTENCE_DIR_ST = 1.33   # 문장 억양 방향(예전 12Hz)
 def semitones(f_from: float, f_to: float) -> float:
     """f_from → f_to 음높이 변화(반음). 둘 중 하나라도 0 이하면(음높이를 못 잼) 0."""
     return 12.0 * math.log2(f_to / f_from) if f_from and f_to and f_from > 0 and f_to > 0 else 0.0
+
+
+def sentence_direction(m: Dict) -> float:
+    """문장 끝 억양(반음). 클라이언트가 pitch_ref(유성 프레임 전체 중앙값)·pitch_final(마지막 3프레임 중앙값)을 보내면 그것으로,
+    없으면(예전 클라이언트) 앞 30% → 뒤 30% 평균. 예전 척도는 마지막 음절의 상승을 앞 음절과 섞어 묻었다. 538 음성 확인 절반에서
+    예/아니오 의문문 대 평서문 AUC 0.540 → 0.670, 의문문 올림 판정 0.25 → 0.38, 평서문 내림 판정 0.53 → 0.70
+    (docs/sentence-intonation.md)."""
+    ref, fin = m.get("pitch_ref") or 0, m.get("pitch_final") or 0
+    if ref > 0 and fin > 0:
+        return semitones(ref, fin)
+    return semitones(m.get("pitch_start", 0) or 0, m.get("pitch_end", 0) or 0)
+
+
+# 의문사 의문문(설명 의문문)은 끝이 대개 내려가(538 음성에서 끝 상승 비율이 평서문과 비슷) '끝을 올리라'는 문항으로 맞지 않는다.
+_WH_WORD = re.compile(r"(뭐|뭘|무엇|무슨|어디|언제|누구|누가|누굴|왜|어떻게|어떤|어느|몇|얼마)")
+
+
+def expected_intonation(text: str) -> Optional[str]:
+    """문장 부호로 정한 기대 억양. 예/아니오 의문문 'rise', 평서·감탄 'fall', 의문사 의문문은 None(억양 문항으로 쓰지 않음)."""
+    t = (text or "").strip()
+    if t.endswith("?"):
+        last = re.split(r"(?<=[.?!])\s+", t)[-1]
+        return None if _WH_WORD.search(last) else "rise"
+    return "fall"
 
 
 def _sustained(m: Dict) -> float:
@@ -223,7 +248,7 @@ def score_attempt(stage_no: int, target: str, transcript: Optional[str],
     if mode == "sentence":
         exp = next((it.get("intonation") for it in stg["items"] if it["target"] == target), None)
         if exp:
-            d = semitones(m.get("pitch_start", 0) or 0, m.get("pitch_end", 0) or 0)
+            d = sentence_direction(m)
             got = "rise" if d > SENTENCE_DIR_ST else "fall" if d < -SENTENCE_DIR_ST else "flat"
             if got == exp:
                 note = "억양 방향도 맞았어요!"

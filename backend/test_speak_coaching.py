@@ -149,3 +149,19 @@ def test_conversation_marks_transcription_and_avoids_repeats(monkeypatch):
     user_turns = [m["content"] for m in seen[0] if m["role"] == "user"]
     assert any("읽었습니다" in u and "대답이 아닙니다" in u for u in user_turns)
     assert "이미 한 말" in seen[1][-1]["content"]
+
+
+def test_sentence_intonation_uses_final_syllable_and_skips_wh_questions():
+    # 5단계 문장 억양(docs/sentence-intonation.md): 기준·끝 음높이가 오면 그것으로, 없으면 예전 앞·뒤 30% 평균으로 판정
+    import speak_curriculum as sc
+    stg = sc.get_stage(5)
+    for it in stg["items"]:
+        assert sc.expected_intonation(it["target"]) == it["intonation"], it   # 의문사 의문문은 '올림' 문항에 없다
+    rise = {"pitch_start": 210, "pitch_end": 212, "pitch_ref": 200, "pitch_final": 230}
+    _, _, note = sc.score_attempt(5, "밥 먹었어요?", "밥 먹었어요", rise, sim_score=90)
+    assert note == "억양 방향도 맞았어요!"
+    old = {"pitch_start": 210, "pitch_end": 212}
+    _, _, note = sc.score_attempt(5, "밥 먹었어요?", "밥 먹었어요", old, sim_score=90)
+    assert "평평" in note
+    assert sc.expected_intonation("이름이 뭐예요?") is None and sc.expected_intonation("괜찮으세요?") == "rise"
+    assert sc.expected_intonation("정말 맛있어요!") == "fall"
