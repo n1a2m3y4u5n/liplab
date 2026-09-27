@@ -12,6 +12,7 @@ import { toBlendshapeMap, scorePercent, loadCalibration } from '../lib/mouthScor
 import { scoreTone, scoreLevel } from '../lib/scoreTone'
 import { VOWEL_IDS } from '../lib/vtlShapes'
 import { mediaErrorMessage } from '../lib/mediaError'
+import { toneDirection, toneMissed } from '../lib/speakTone'
 
 // 혀 위치 성도 단면(E-6) — 모음 결과를 열 때만 받는다(그림 코드와 윤곽 자료 모두 지연 로드)
 const VocalTractVTL = lazy(() => import('../components/VocalTractVTL'))
@@ -452,7 +453,7 @@ export default function SpeakingPractice() {
     const raw = volHist.current, ps = pitchHist.current
     const dur = startRef.current ? Math.round((performance.now() - startRef.current) / 100) / 10 : 0
     if (!raw.length) {
-      return { micIssue: true, loudness: 0, volMsg: '마이크 소리가 안 잡혔어요. 권한/연결을 확인하고 가까이서 말해보세요.', volOk: false, toneMsg: '', toneOk: null, pitchRange: 0, duration: dur }
+      return { micIssue: true, loudness: 0, volMsg: '마이크 소리가 안 잡혔어요. 권한/연결을 확인하고 가까이서 말해보세요.', volOk: false, pitchRange: 0, duration: dur }
     }
     const peak = raw.reduce((m, v) => (v > m ? v : m), 0)
     const voiced = raw.filter((v) => v > 0.01)   // 발성 프레임만 (무음 제외 → '항상 작음' 버그 방지)
@@ -465,7 +466,8 @@ export default function SpeakingPractice() {
     else if (loudness > 92) { volMsg = `조금 컸어요(크기 ${loudness}/100). 편하게 낮춰도 괜찮아요.`; volOk = true }
     else { volMsg = `볼륨 적당해요(크기 ${loudness}/100). 좋아요!`; volOk = true }
 
-    let pitchRange = 0, pitchMean = 0, pitchStart = 0, pitchEnd = 0, toneMsg, toneOk = null
+    // 억양 판정은 여기서 하지 않는다(연습마다 기준이 달라 lib/speakTone.js가 모드·드릴을 보고 한다)
+    let pitchRange = 0, pitchMean = 0, pitchStart = 0, pitchEnd = 0
     if (ps.length >= 4) {
       const sorted = [...ps].sort((a, b) => a - b)
       const lo = sorted[Math.floor(sorted.length * 0.1)]
@@ -477,12 +479,8 @@ export default function SpeakingPractice() {
       const tail = ps.slice(Math.floor(ps.length * 0.7))
       pitchStart = Math.round(head.reduce((a, b) => a + b, 0) / head.length)
       pitchEnd = Math.round(tail.reduce((a, b) => a + b, 0) / tail.length)
-      if (pitchRange < 25) { toneMsg = `톤이 평평했어요(억양 폭 ${pitchRange}Hz). 끝을 올리거나 내리며 억양을 넣어보세요.`; toneOk = false }
-      else { toneMsg = `톤에 자연스러운 변화가 있었어요(억양 폭 ${pitchRange}Hz)!`; toneOk = true }
-    } else {
-      toneMsg = '소리를 조금 더 이어서 내보면 억양을 볼 수 있어요.'
     }
-    return { micIssue, loudness, volMsg, volOk, pitchRange, pitchMean, pitchStart, pitchEnd, toneMsg, toneOk, duration: dur }
+    return { micIssue, loudness, volMsg, volOk, pitchRange, pitchMean, pitchStart, pitchEnd, duration: dur }
   }
 
   const loop = () => {
@@ -567,7 +565,7 @@ export default function SpeakingPractice() {
         : (PROSODY_SCORE_LABEL[drill] || '운율')
   const good = assessment && !assessment.error
     ? (assessment.passed ?? (assessment.score >= 65))
-    : (summary ? (summary.volOk && summary.toneOk !== false) : null)
+    : (summary ? (summary.volOk && !toneMissed(summary, toneDirection(mode, drill))) : null)
   const phoneScore = (p) => Math.round((p.dgop ?? 0) * 100)
   const goodCount = phones.filter((p) => scoreLevel(phoneScore(p), 'phone') === 'good').length
   const fbSub = good
@@ -885,7 +883,7 @@ export default function SpeakingPractice() {
               {summary.trace && summary.trace.length >= 3 && !summary.micIssue && (
                 <div className="rounded-14 border-1.5 border-fill bg-white p-3">
                   <p className="mb-1 text-xs text-ink-muted">내 목소리 곡선</p>
-                  <PitchEnergyGraph trace={summary.trace} summary={summary} />
+                  <PitchEnergyGraph trace={summary.trace} summary={summary} dir={toneDirection(mode, drill)} />
                 </div>
               )}
             </>
@@ -928,7 +926,7 @@ function Stat({ label, value }) {
  *  아래 레인: 목소리 크기(에너지 포락선) + '적정' 기준 점선. 자주 아래로 내려가면 너무 작았다는 뜻.
  *  발화 트랙 토큰(--speak)으로 배색.
  */
-function PitchEnergyGraph({ trace, summary }) {
+function PitchEnergyGraph({ trace, summary, dir }) {
   if (!trace || trace.length < 3) return null
   const W = 480, H = 250
   const padL = 40, padR = 12, padT = 16, padB = 22
@@ -984,7 +982,7 @@ function PitchEnergyGraph({ trace, summary }) {
   const topLine = smooth(topPts)
   const areaFill = topLine + ` L${X(last.t).toFixed(1)} ${eBot} L${X(trace[0].t).toFixed(1)} ${eBot} Z`
 
-  const flat = summary?.toneOk === false
+  const flat = toneMissed(summary, dir)   // 운율 올리기·내리기에서 끝이 목표 방향으로 움직이지 않음
   const quiet = summary?.volOk === false && !summary?.micIssue
   const midY = (pTop + pBot) / 2
 
@@ -1026,9 +1024,9 @@ function PitchEnergyGraph({ trace, summary }) {
         <span className="inline-flex items-center gap-1"><span className="inline-block w-3 border-t border-dashed border-warn" /> 적정 크기</span>
       </div>
       <div className="mt-1 space-y-0.5">
-        {flat && <p className="text-[11px] text-warn-text">억양선이 가운데 점선을 거의 안 벗어났어요 → 문장 끝에서 선을 올리거나 내려보세요.</p>}
+        {flat && <p className="text-[11px] text-warn-text">억양선 끝이 시작보다 {dir === 'rise' ? '높아지지' : '낮아지지'} 않았어요 → 끝에서 선을 {dir === 'rise' ? '올려' : '내려'}보세요.</p>}
         {quiet && <p className="text-[11px] text-warn-text">크기 곡선이 적정선 아래로 자주 내려갔어요 → 배에 힘을 주고 더 크게.</p>}
-        {!flat && !quiet && <p className="text-[11px] text-good-text">억양선과 크기 곡선이 잘 살아있어요.</p>}
+        {!flat && !quiet && <p className="text-[11px] text-good-text">{dir ? '억양선과 크기 곡선이 잘 살아있어요.' : '크기 곡선이 고르게 잘 유지됐어요.'}</p>}
       </div>
     </div>
   )
