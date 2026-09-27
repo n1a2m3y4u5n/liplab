@@ -1312,9 +1312,22 @@ def _unlock_all_for(user) -> bool:
     return mode == "1"
 
 _STAGE1_MIN_ATTEMPTS = 8       # 숙달 판정 최소 시도
-_STAGE1_MASTERY = 70.0         # 숙달 판정 정확도(%)
+# 1·2단계(4지선다) 숙달 점수는 편향 보정 지수 이동 평균(최근 답에 무게, docs/mastery-ewma.md)이고 문턱은 85다.
+# 가상 학습자 시뮬레이션에서 누적 정답률 70% 대비 거짓 숙달 12.4 -> 6.5%, 숙달까지 지연 39 -> 28번, 처음부터 잘하는
+# 학습자는 그대로 8번이었다(시드 2 확인). 초반 실패가 끝까지 남던 누적 방식의 문제를 던다.
+_STAGE1_MASTERY = 85.0
 _STAGE2_MIN_ATTEMPTS = 6
-_STAGE2_MASTERY = 70.0
+_STAGE2_MASTERY = 85.0
+_STAGE12_EWMA_ALPHA = 0.08
+
+
+def _ewma_mastery(prev_estimate, prev_attempts, correct: bool, alpha: float = _STAGE12_EWMA_ALPHA) -> float:
+    """편향 보정 지수 이동 평균(0~100) 한 번 갱신. 저장된 추정값과 그 전 시도 수로 원래 평균을 되살린다
+    (스키마 변경 없음). 초반에는 누적 평균에 가깝고 뒤로 갈수록 최근 답에 무게가 실린다."""
+    n = max(0, int(prev_attempts or 0))
+    raw = float(prev_estimate or 0.0) * (1 - (1 - alpha) ** n)
+    raw += alpha * ((100.0 if correct else 0.0) - raw)
+    return raw / (1 - (1 - alpha) ** (n + 1))
 # 3·4단계는 점수(0~100)를 내는 활동이라 'PASS 이상이면 성공 1회'로 환산해 누적한다.
 _STAGE3_MIN_ATTEMPTS = 5       # 문장 연습
 _STAGE3_MASTERY = 65.0
@@ -1561,7 +1574,7 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
         sp.attempts += 1
         if correct:
             sp.correct += 1
-        sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
+        sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, correct)   # 최근 답에 무게(docs/mastery-ewma.md)
         # 한번 숙달하면 유지한다(누적 정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게)
         sp.status = "mastered" if (sp.status == "mastered" or (sp.attempts >= _STAGE1_MIN_ATTEMPTS and sp.mastery_score >= _STAGE1_MASTERY)) else "in_progress"
 
@@ -1672,7 +1685,7 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
             sp.attempts += 1
             if correct:
                 sp.correct += 1
-            sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
+            sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, correct)   # 최근 답에 무게
             # 한번 숙달하면 유지한다(누적 정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게)
             sp.status = "mastered" if (sp.status == "mastered" or (sp.attempts >= _STAGE2_MIN_ATTEMPTS and sp.mastery_score >= _STAGE2_MASTERY)) else "in_progress"
         # 취약 입모양 반영 — 오답이면 단어의 모든 유명 viseme을 오류로 누적(단어 인식 실패 신호).
