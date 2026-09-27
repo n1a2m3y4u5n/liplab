@@ -13,6 +13,7 @@
   sentence — 문장: Whisper 전사 + 문장 억양(pitch 방향) 곁들임
 """
 import math
+import random
 import re
 from typing import Dict, List, Optional, Tuple
 
@@ -128,6 +129,28 @@ SPEAK_STAGES: List[Dict] = [
 ]
 
 _BY_STAGE = {s["stage"]: s for s in SPEAK_STAGES}
+
+
+def _n_syllables(text: str) -> int:
+    return sum(1 for ch in text or "" if "가" <= ch <= "힣")
+
+
+def mixed_order(items: List[Dict], seed: str, lead: int = 3) -> List[Dict]:
+    """4단계 단어 순서. 음절 수 층(1·2·3음절)을 seed로 각각 섞고, 처음 lead개는 1음절로 둔 뒤 층을 크기 비율대로 고르게 끼운다
+    (층마다 (i+0.5)/층 크기 자리에 놓고 합친다). 예전에는 늘 같은 고정 순서라 앞 14개가 모두 1음절(밥·물·손…)이었고, 프론트는
+    들어올 때마다 0번부터 시작해 합격률 0.95 학습자의 93%가 1음절 단어만 말하고 숙달했다(최소 8회, 이동 평균 90).
+    seed는 (사용자, 날짜)라 같은 날에는 순서가 고정되고 날마다 앞 문항이 바뀐다."""
+    rng = random.Random(seed)
+    strata: Dict[int, List[Dict]] = {}
+    for it in items:
+        strata.setdefault(_n_syllables(it.get("target", "")), []).append(it)
+    for k in sorted(strata):
+        rng.shuffle(strata[k])
+    shortest = min(strata) if strata else 0
+    head = strata.get(shortest, [])[:lead]
+    rest = {k: (v[len(head):] if k == shortest else v) for k, v in strata.items()}
+    slots = [((i + 0.5) / len(v), k, i) for k, v in rest.items() for i in range(len(v))]
+    return head + [rest[k][i] for _, k, i in sorted(slots)]
 
 
 def get_stage(n: Optional[int]) -> Optional[Dict]:
