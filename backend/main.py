@@ -1648,7 +1648,8 @@ def _stage2_table():
     import assessment as _asmt
     import visual_difficulty as _vd
     tw = _asmt.test_only_words()
-    pool = tuple(w["word"] for w in _curriculum.WORD_BANK if w["word"] not in tw)
+    ex = getattr(_curriculum, "STAGE2_EXCLUDED", {})   # 드문 말·홀로 안 쓰이는 말(9/27 감사)은 문제로도 오답으로도 내지 않는다
+    pool = tuple(w["word"] for w in _curriculum.WORD_BANK if w["word"] not in tw and w["word"] not in ex)
     if _STAGE2_TABLE["key"] != pool:
         table = _vd.Stage2Table(pool)
         for w in table.words:
