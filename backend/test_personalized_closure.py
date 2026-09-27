@@ -43,6 +43,9 @@ with TestClient(main.app) as c:
     out["art_sessions"], out["art_change"] = art["sessions"], art["change"]
     nxt = c.get("/api/curriculum/next", headers=h).json()
     out["next_closure_leak"] = sum(1 for it in nxt["closures"] if it["answer"] in tw or set(it["options"]) & tw)
+    import curriculum as _cur
+    out["next_rare_leak"] = sum(1 for w in nxt["words"] if w["word"] in _cur.STAGE2_EXCLUDED)
+    out["next_n_words"] = len(nxt["words"])
 print("RESULT " + json.dumps(out))
 '''
 
@@ -63,6 +66,7 @@ def test_closure_personalized_and_excludes_test_words():
     # 9/27 감사로 결함 문항 45개를 빼 서빙 문항은 91개(docs/content-routine.md 4절)
     assert r["n_items"] == r["n_training"] >= 80, "훈련용 문맥 문항 전체를 돌려줘야 한다"
     assert r["test_word_leak"] == 0 and r["next_closure_leak"] == 0, "표준검사 문항 단어가 훈련에 나오면 안 된다"
+    assert r["next_n_words"] > 0 and r["next_rare_leak"] == 0, "2단계 풀에서 뺀 드문 말은 추천 단어에도 나오면 안 된다"
     assert r["same_twice"], "같은 날 같은 사용자에게는 순서가 같아야 한다(이어 풀기)"
     assert 1 in r["targets"], "틀린 입모양이 표적이 되어야 한다"
     assert r["hits_sorted"] and r["first_hit"] > 0, "표적 입모양을 담은 문항이 앞에 와야 한다"
