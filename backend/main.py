@@ -1627,14 +1627,38 @@ class WordAnswer(BaseModel):
     chosen: Optional[str] = Field(None, max_length=50)   # 사용자가 실제로 고른 단어(오답 시 자모 혼동 분석용)
 
 
+# 2단계 서빙 풀의 정적 표(난이도·분위·보기 부류). 풀(단어 은행 - 표준검사 단어)이 같으면 재사용한다.
+# 보기 부류는 처음 만들 때 약 1.5초가 들어 스레드에서 만든다(이후 요청은 약 20ms).
+_STAGE2_TABLE = {"key": None, "table": None}
+
+
+def _stage2_table():
+    import assessment as _asmt
+    import visual_difficulty as _vd
+    tw = _asmt.test_only_words()
+    pool = tuple(w["word"] for w in _curriculum.WORD_BANK if w["word"] not in tw)
+    if _STAGE2_TABLE["key"] != pool:
+        table = _vd.Stage2Table(pool)
+        for w in table.words:
+            table.classes(w)
+        _STAGE2_TABLE["key"], _STAGE2_TABLE["table"] = pool, table
+    return _STAGE2_TABLE["table"]
+
+
 @app.get("/api/curriculum/words")
 async def curriculum_words(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """2단계 콘텐츠: 큐레이션 단어 은행 + 최소대립쌍(프론트가 단어 퀴즈를 구성).
-    각 단어에 개인화 priority를 실어 준다(tier가 낮을수록·약점 비심을 포함할수록 높음).
-    프론트가 이 값으로 가중 표집하면 쉬운 것부터·약점 위주로 자연스레 출제된다."""
+    """2단계 콘텐츠: 단어 은행 + 단어별 오답 보기 + 출제 가중(visual_difficulty.stage2_plan).
+    distractors: 입모양이 완전히 같은 단어(동구형이음)와 입 안쪽 무리 차이뿐인 단어를 뺀 오답 3개. 숙달 전에는 보이는
+      최소대립 1개 + 입모양이 다른 단어 2개, 숙달 뒤에는 보이는 최소대립 3개. 예전에는 최소대립 짝을 먼저 넣었는데 짝의
+      약 2/3가 동구형이음이라 문항의 57%가 입모양만으로는 풀 수 없었고, 입모양을 완벽히 읽어도 평균 65%였다.
+    priority: 시각 난이도 분위가 목표 위치(2단계에서 답한 수로 쉬운 쪽 0.15에서 0.9까지)에 가까울수록 크고, 약점 비심을
+      담으면 1.5배. 예전 tier 가중은 짧고 입모양이 같은 단어가 많은 1음절어(가장 어려움)를 가장 자주 냈다.
+    minimal_pairs는 다른 화면 호환을 위해 그대로 싣는다(보기 구성에는 쓰지 않는다)."""
+    import asyncio as _asyncio
+    import random as _random
     import knowledge_tracing as _kt
-    from content_rules import word_visemes as _wv
-    from database import WeakViseme as _WV
+    import visual_difficulty as _vd
+    from database import WeakViseme as _WV, StageProgress as _SP
     from sqlalchemy import select as _select
     try:
         r = await db.execute(_select(_WV).where(_WV.user_id == current_user.id))
@@ -1645,23 +1669,19 @@ async def curriculum_words(current_user=Depends(get_current_user), db: AsyncSess
     except Exception:
         mastery = {}
     weak = {vid for vid, m in mastery.items() if m < 0.7}
-    # 표준검사 사전·사후 문항 단어는 훈련에서 뺀다 — 향상도가 문항 암기를 재지 않게(축 I, 폼 판본 동결).
+    sp = (await db.execute(_select(_SP).where(_SP.user_id == current_user.id, _SP.stage == 2))).scalars().first()
+    n_answers = int(sp.attempts or 0) if sp else 0
+    mastered = bool(sp and sp.status == "mastered")
+    # 표준검사 사전·사후 문항 단어는 훈련 풀에서 뺀다(축 I). 오답 보기도 이 풀 안에서만 고른다.
+    table = await _asyncio.to_thread(_stage2_table)
+    plan = _vd.stage2_plan(table, n_answers=n_answers, mastered=mastered, weak_visemes=weak, rng=_random.Random())
+    meta = {w["word"]: w for w in _curriculum.WORD_BANK}
+    words = [{**meta.get(e["word"], {}), **e} for e in plan["words"]]
     import assessment as _asmt
     test_words = _asmt.test_only_words()
-    words = []
-    for w in _curriculum.WORD_BANK:
-        if w["word"] in test_words:
-            continue
-        pri = max(1, 4 - int(w.get("tier", 1)))       # tier1→3, tier2→2, tier3→1
-        if weak:
-            try:
-                if any(v in weak for v in _wv(w["word"])):
-                    pri += 2                            # 약점 비심 포함 단어를 더 자주
-            except Exception:
-                pass
-        words.append({**w, "priority": pri})
     pairs = [p for p in _curriculum.MINIMAL_PAIRS if p.get("a") not in test_words and p.get("b") not in test_words]
-    return {"words": words, "minimal_pairs": pairs}
+    return {"words": words, "minimal_pairs": pairs,
+            "option_level": plan["option_level"], "target_quantile": plan["target_quantile"]}
 
 
 @app.post("/api/curriculum/word-answer")
