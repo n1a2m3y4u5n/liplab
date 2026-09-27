@@ -21,7 +21,7 @@ from collections import defaultdict
 from itertools import combinations
 from typing import Dict, List, Optional, Tuple
 
-from engine import VISEME_MAP, decompose_hangul, to_pronounced_syllables
+from engine import VISEME_MAP, decompose_hangul, to_pronounced_syllables, DOUBLE_FINAL
 
 # 단어 빈도 사전(wordfreq) — 콘텐츠 생성 시 희귀어·비단어를 결정론적으로 거르는 용도.
 # 형태소 분석(MeCab) 없이 토큰 빈도 사전만 직접 조회한다. 설치돼 있지 않으면
@@ -445,15 +445,13 @@ def _visually_confusable(answer: str, other: str) -> bool:
     mp = minimal_pair_diff(answer, other)
     if mp is None:
         return False
-    pa, pb, vis = mp                    # (음소1, 음소2, [viseme1, viseme2])
-    if len(vis) < 2:
-        # minimal_pair_diff는 입모양 번호를 집합으로 모아서, 두 음소가 같은 입모양이면 하나만 남는다
-        # (가장 헷갈리는 경우). 한쪽이 입모양 표에 없으면(겹받침 ㄺ 등) 판단할 수 없어 혼동으로 보지 않는다.
-        # 예전에는 vis[1]을 바로 읽어 달/닭·바위/바퀴 같은 쌍에서 IndexError로 게이트가 멈췄다.
-        va, vb = VISEME_MAP.get(pa), VISEME_MAP.get(pb)
-        return va is not None and va == vb
-    v1, v2 = vis[0], vis[1]
-    return v1 == v2 or (v1 in _INSIDE_CLUSTER and v2 in _INSIDE_CLUSTER)
+    pa, pb, _ = mp                      # (음소1, 음소2, [viseme…])
+    # 겹받침은 대표음의 입모양으로 본다(닭[닥]의 ㄺ → ㄱ). 예전에는 입모양 표에 없어 판단을 포기해, 달/닭·단/닭처럼
+    # 둘 다 입 안쪽 소리라 겉모습이 같은 짝을 '구별 가능'으로 봤다. 그 밖에 표에 없는 자모면 혼동으로 보지 않는다.
+    va, vb = VISEME_MAP.get(DOUBLE_FINAL.get(pa, pa)), VISEME_MAP.get(DOUBLE_FINAL.get(pb, pb))
+    if va is None or vb is None:
+        return False
+    return va == vb or (va in _INSIDE_CLUSTER and vb in _INSIDE_CLUSTER)
 
 
 # ── 문맥 문항의 조사·빈칸 점검(9/27 문항 감사, docs/content-routine.md 4절) ──────────────────────

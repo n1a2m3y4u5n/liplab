@@ -109,13 +109,15 @@ HOMOPHENE_CLUSTERS: List[Dict] = [
 VISIBLE_ANCHORS: List[int] = [2, 3, 4]  # 개방·전설·원순 모음
 
 # 최소대립쌍 — 한 음소만 다른 단어쌍으로 '같아 보임/다르게 보임'을 체감시킨다.
+#   9/27 바다/파도(둘째 음절 모음 ㅏ/ㅗ까지 달라 '같아 보임'이 틀림)를 불/풀로, 밥/입(두 자리가 다르고 입의 ㅣ를 '크게 벌림'으로
+#   설명)을 말/물로 바꿨다. 1단계 짝 미리보기가 목록 앞쪽을 보여 줘 모든 사용자에게 보이던 짝이다.
 #   same_looking=True  → 입모양이 같아 구별 불가(문맥 필요)를 가르침
 #   same_looking=False → 입모양이 달라 구별 가능함을 가르침
 MINIMAL_PAIRS: List[Dict] = [
     {"a": "밥", "b": "맘", "visemes": [1], "same_looking": True,
      "note": "ㅂ↔ㅁ 양순음. 입술 닫힘이 똑같아 구별 불가."},
-    {"a": "바다", "b": "파도", "visemes": [1], "same_looking": True,
-     "note": "ㅂ↔ㅍ 양순음. 첫 입모양이 동일."},
+    {"a": "불", "b": "풀", "visemes": [1], "same_looking": True,
+     "note": "ㅂ↔ㅍ 양순음. 숨의 세기만 달라 입모양이 같다."},
     {"a": "물", "b": "불", "visemes": [1], "same_looking": True,
      "note": "ㅁ↔ㅂ 양순음."},
     {"a": "달", "b": "탈", "visemes": [6], "same_looking": True,
@@ -124,8 +126,8 @@ MINIMAL_PAIRS: List[Dict] = [
      "note": "ㅅ↔ㅆ. 구별 불가."},
     {"a": "자요", "b": "차요", "visemes": [10], "same_looking": True,
      "note": "ㅈ↔ㅊ 경구개음."},
-    {"a": "밥", "b": "입", "visemes": [1, 2], "same_looking": False,
-     "note": "입술 닫힘(밥) vs 크게 벌림(입) — 뚜렷이 다르다."},
+    {"a": "말", "b": "물", "visemes": [2, 4], "same_looking": False,
+     "note": "크게 벌린 입(말) vs 둥글게 오므린 입(물), 뚜렷이 다르다."},
     {"a": "우유", "b": "이유", "visemes": [4, 3], "same_looking": False,
      "note": "둥근 입(우) vs 옆으로 퍼진 입(이) — 정반대."},
     {"a": "말", "b": "발", "visemes": [1], "same_looking": True,
