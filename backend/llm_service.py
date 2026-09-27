@@ -198,22 +198,22 @@ async def get_user_weak_visemes(user_id: int, db: AsyncSession, limit: int = 3) 
     """
     Retrieve user's top weak visemes from database
     Returns list of {viseme_id, feature, error_rate}
+    순위는 지식추적 숙달도가 낮은 순(knowledge_tracing.rank_weak). 예전 오류 횟수 순은 자주 나오는 입모양을 표적으로 삼았다.
     """
-    result = await db.execute(
-        select(WeakViseme)
-        .where(WeakViseme.user_id == user_id)
-        .order_by(WeakViseme.error_count.desc())
-        .limit(limit)
-    )
-    weak_visemes = result.scalars().all()
-
+    import knowledge_tracing as _kt
+    result = await db.execute(select(WeakViseme).where(WeakViseme.user_id == user_id))
+    rows = result.scalars().all()
+    feature = {wv.viseme_id: wv.phonological_feature for wv in rows}
+    ranked = _kt.rank_weak([{"viseme_id": wv.viseme_id, "error_count": wv.error_count,
+                             "total_attempts": wv.total_attempts, "last_error_at": wv.last_error_at}
+                            for wv in rows], k=limit)
     return [
         {
-            "viseme_id": wv.viseme_id,
-            "feature": wv.phonological_feature or get_viseme_feature(wv.viseme_id),
-            "error_rate": wv.error_count / wv.total_attempts if wv.total_attempts > 0 else 0
+            "viseme_id": r["viseme_id"],
+            "feature": feature.get(r["viseme_id"]) or get_viseme_feature(r["viseme_id"]),
+            "error_rate": r["error_rate"],
         }
-        for wv in weak_visemes
+        for r in ranked
     ]
 
 

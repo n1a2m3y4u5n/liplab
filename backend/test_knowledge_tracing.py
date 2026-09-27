@@ -62,3 +62,19 @@ if __name__ == "__main__":
         t()
         print(f"  ✓ {t.__name__}")
     print(f"\n{len(tests)}개 테스트 통과")
+
+
+def test_rank_weak_prefers_high_error_rate_over_high_error_count():
+    # 자주 나오는 모음(2): 200번 중 30번 틀림(15%). 드문 ㅎ(8): 10번 중 6번 틀림(60%).
+    # 예전(오류 횟수 순)은 모음이 위였고, 상위 5개를 자르면 ㅎ이 빠지기도 했다
+    recs = [{"viseme_id": 2, "error_count": 30, "total_attempts": 200, "last_error_at": None},
+            {"viseme_id": 8, "error_count": 6, "total_attempts": 10, "last_error_at": None},
+            {"viseme_id": 6, "error_count": 25, "total_attempts": 190, "last_error_at": None}]
+    r = KT.rank_weak(recs, k=5, now=NOW)
+    _ok([x["viseme_id"] for x in r][0] == 8, f"오답률 높은 ㅎ이 먼저: {r}")
+    _ok(r[0]["attempts"] == 10 and abs(r[0]["error_rate"] - 0.6) < 1e-9, "시도 수·오답률을 함께 준다")
+    # 표본이 작으면 0.5 쪽으로 당긴다: 3번 중 2번(67%)보다 20번 중 13번(65%)이 더 약하다고 본다
+    r2 = KT.rank_weak([{"viseme_id": 10, "error_count": 2, "total_attempts": 3, "last_error_at": None},
+                       {"viseme_id": 8, "error_count": 13, "total_attempts": 20, "last_error_at": None}], k=5, now=NOW)
+    _ok([x["viseme_id"] for x in r2] == [8, 10], f"표본이 작은 입모양은 덜 믿는다: {r2}")
+    _ok(KT.rank_weak([], now=NOW) == [], "기록이 없으면 빈 목록")

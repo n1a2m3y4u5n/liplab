@@ -846,14 +846,14 @@ async def get_statistics(
     )
     average = avg_score.scalar() or 0
 
-    # Get weak visemes
-    weak_visemes_query = await db.execute(
-        select(WeakViseme)
-        .where(WeakViseme.user_id == current_user.id)
-        .order_by(WeakViseme.error_count.desc())
-        .limit(5)
-    )
-    weak_visemes = weak_visemes_query.scalars().all()
+    # 약점 입모양: 지식추적 숙달도가 낮은 순 5개(knowledge_tracing.rank_weak). 예전에는 오류 횟수 상위 5개를 잘라, 자주 나오는
+    # 입모양이 오답률이 낮아도 올라오고 적게 나왔지만 자주 틀린 입모양은 빠졌다. 화면은 이 순서를 그대로 쓰고 시도 수를 함께 보인다.
+    import knowledge_tracing as _kt
+    rows = (await db.execute(select(WeakViseme).where(WeakViseme.user_id == current_user.id))).scalars().all()
+    feature = {wv.viseme_id: wv.phonological_feature for wv in rows}
+    ranked = _kt.rank_weak([{"viseme_id": wv.viseme_id, "error_count": wv.error_count,
+                             "total_attempts": wv.total_attempts, "last_error_at": wv.last_error_at}
+                            for wv in rows], k=5)
 
     return {
         "total_sessions": total_count,
@@ -862,11 +862,13 @@ async def get_statistics(
         "total_xp": current_user.total_xp,
         "weak_visemes": [
             {
-                "viseme_id": wv.viseme_id,
-                "error_rate": round(wv.error_count / wv.total_attempts * 100, 1) if wv.total_attempts > 0 else 0,
-                "feature": VISEME_GROUP_NAMES.get(wv.viseme_id, wv.phonological_feature or f"viseme {wv.viseme_id}")
+                "viseme_id": r["viseme_id"],
+                "error_rate": round(r["error_rate"] * 100, 1),
+                "attempts": r["attempts"],
+                "mastery": r["mastery"],
+                "feature": VISEME_GROUP_NAMES.get(r["viseme_id"], feature.get(r["viseme_id"]) or f"viseme {r['viseme_id']}")
             }
-            for wv in weak_visemes
+            for r in ranked
         ]
     }
 

@@ -76,6 +76,22 @@ def weakest_visemes(mastery: Dict[int, float], k: int = 2,
     return unseen[:k] if unseen else [vid for vid, _ in learned[:k]]
 
 
+def rank_weak(records: List[Dict], k: int = 5, now: Optional[datetime] = None) -> List[Dict]:
+    """약점 입모양 순위: 숙달도(베타 사후평균 + 최근 오답 감쇠)가 낮은 순 k개. 분석 화면(/api/statistics)과 시나리오 표적이 쓴다.
+    예전에는 오류 횟수 상위를 잘라, 자주 나오는 입모양(모음 ㅏ·치경음)이 오답률이 낮아도 올라오고 적게 나왔지만 자주 틀린
+    입모양(ㅎ·ㅈ)은 빠졌다. 가상 학습자 3000명(scripts/weak_viseme_rank_sim.py, seed 1)에서 가장 약한 입모양이 목록에 드는
+    비율 0.70 → 0.90, 약한 셋과 겹치는 수 1.79 → 1.95, 1위 적중은 비슷(0.38)."""
+    mastery = estimate_mastery(records, now=now)
+    by = {r.get("viseme_id"): r for r in records}
+    out = []
+    for vid in sorted(mastery, key=lambda v: (mastery[v], v))[:k]:
+        r = by[vid]
+        a, e = int(r.get("total_attempts", 0) or 0), int(r.get("error_count", 0) or 0)
+        out.append({"viseme_id": vid, "mastery": mastery[vid], "errors": e, "attempts": a,
+                    "error_rate": (e / a) if a else 0.0})
+    return out
+
+
 def overall_level(mastery: Dict[int, float]) -> int:
     """전체 평균 숙달도로 문장 난이도(1~5)를 제안한다. 데이터 없으면 1."""
     if not mastery:
