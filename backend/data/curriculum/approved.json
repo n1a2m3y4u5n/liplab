@@ -3573,11 +3573,12 @@
       "a": "달",
       "b": "닭",
       "visemes": [
-        6
+        6,
+        7
       ],
-      "same_looking": false,
+      "same_looking": true,
       "relation": "minimal_pair",
-      "note": "ㄹ↔ㄺ 입모양 다름(구별 가능)"
+      "note": "ㄹ↔ㄺ(대표음 ㄱ, 닭[닥]) 둘 다 입 안쪽 소리라 겉모습이 같다(구별 불가)"
     },
     {
       "a": "달",
@@ -8722,11 +8723,12 @@
       "a": "단",
       "b": "닭",
       "visemes": [
-        6
+        6,
+        7
       ],
-      "same_looking": false,
+      "same_looking": true,
       "relation": "minimal_pair",
-      "note": "ㄴ↔ㄺ 입모양 다름(구별 가능)"
+      "note": "ㄴ↔ㄺ(대표음 ㄱ, 닭[닥]) 둘 다 입 안쪽 소리라 겉모습이 같다(구별 불가)"
     },
     {
       "a": "단",

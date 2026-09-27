@@ -105,3 +105,13 @@ def test_visually_confusable_handles_single_viseme_lists():
     for p in _C.MINIMAL_PAIRS:
         R._visually_confusable(p["a"], p["b"])          # IndexError 없이 끝나야 한다
     assert R._visually_confusable("달", "닭") in (True, False)
+
+
+def test_minimal_pair_labels_agree_with_rule():
+    # 짝 목록의 '같아 보임' 표시가 규칙(_visually_confusable)과 어긋나면 1단계 미리보기·추천 카드가 틀린 것을 가르친다
+    # (9/27: 바다/파도는 모음까지 다른데 '같아 보임', 달/닭·단/닭은 겹받침을 판단하지 못해 '다름')
+    import curriculum as C
+    bad = [(p["a"], p["b"]) for p in C.MINIMAL_PAIRS
+           if bool(p.get("same_looking")) != R._visually_confusable(p["a"], p["b"])]
+    assert bad == [], bad
+    assert R._visually_confusable("달", "닭") and not R._visually_confusable("밥", "발")
