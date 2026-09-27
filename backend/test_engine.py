@@ -95,3 +95,15 @@ def test_h_deletion_is_viseme_path_only():
 if __name__ == "__main__":
     import sys
     sys.exit(0 if run() else 1)
+
+
+def test_diphthong_frames_glide():
+    # 이중모음은 활음 → 모음 두 프레임(와: 원순 4 → 개방 2, 의: ㅡ 5 → ㅣ 3). 서명(word_visemes)은 그대로 9
+    import asyncio
+    from engine import text_to_visemes
+    import content_rules as cr
+    assert [f["viseme"] for f in asyncio.run(text_to_visemes("와"))] == [4, 2]
+    assert [f["viseme"] for f in asyncio.run(text_to_visemes("의"))] == [5, 3]
+    assert [f["viseme"] for f in asyncio.run(text_to_visemes("뭐"))] == [1, 4, 5]
+    assert sum(f["duration_ms"] for f in asyncio.run(text_to_visemes("와"))) == 200
+    assert cr.word_visemes("와") == [9]
