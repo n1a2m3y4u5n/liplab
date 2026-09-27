@@ -13,6 +13,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="LIPLAB" />
+    <!-- 폰트 CSS는 HTML에서 바로 받는다. 예전에는 index.css 첫 줄의 @import라, 앱 CSS를 받아 해석한 뒤에야 폰트 CSS 요청이
+         시작돼(직렬 왕복) 첫 화면 렌더링이 그만큼 늦었다. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Rowdies:wght@400;700&display=swap" />
     <title>LIPLAB - 독화 훈련 플랫폼</title>
   </head>
   <body>
