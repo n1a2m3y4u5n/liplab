@@ -71,12 +71,12 @@ def pool_difficulties():
     return [e["difficulty"] for e in (P.word_difficulty(w, sig) for w in words) if e]
 
 
-def run(seed, specs, n_learners=6000):
+def run(seed, specs, n_learners=6000, select="boundary"):
     forms = A.frozen_forms(build_if_missing=False)
     form_d = [it["difficulty"] for it in forms["A"]]
     pool = pool_difficulties()
     ests = {s: estimator(s) for s in specs}
-    out = {"seed": seed, "n": n_learners, "results": []}
+    out = {"seed": seed, "n": n_learners, "select": select, "results": []}
     for gi, (a, sd) in enumerate(GEN):
         rng = np.random.default_rng([seed, gi])
         for test in ("form", "adaptive"):
@@ -94,7 +94,9 @@ def run(seed, specs, n_learners=6000):
                     asked, responses, items = [], {}, []
                     avail = list(pool)
                     for q in range(8):
-                        th = A.estimate_ability(asked, responses)["ability"]
+                        # 다음 문항 선택용 진행 추정: boundary(지금 estimate_ability) 또는 eap(최종 추정과 같은 식)
+                        th = (A.estimate_ability(asked, responses)["ability"] if select == "boundary"
+                              else (est_eap(items, 10.0, 0.25) if items else 0.55))
                         j = min(range(len(avail)), key=lambda i: (abs(avail[i] - th), rng.random()))
                         d = avail.pop(j)
                         p = 0.25 + 0.75 / (1 + np.exp(-a * (theta - (d + rng.normal(0, sd) if sd else d))))
@@ -125,8 +127,9 @@ def main():
     ap.add_argument("--est", default="max,eap:10:0.25")
     ap.add_argument("--n", type=int, default=6000)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--select", default="boundary", choices=["boundary", "eap"])
     a = ap.parse_args()
-    res = run(a.seed, a.est.split(","), a.n)
+    res = run(a.seed, a.est.split(","), a.n, a.select)
     txt = json.dumps(res, ensure_ascii=False, indent=1)
     if a.out:
         with open(a.out, "w", encoding="utf-8") as f:
