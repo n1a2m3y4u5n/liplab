@@ -216,10 +216,62 @@ def _score_prosody(drill: str, m: Dict) -> Tuple[float, bool, str]:
     return 0.0, False, ""
 
 
+NO_VOICE_NOTE = "소리가 잡히지 않았어요. 마이크를 확인하고 가까이에서 다시 말해 보세요."
+
+
+def no_voice(m: Dict) -> bool:
+    """녹음에 소리가 없음(프론트 micIssue: 크기 0 또는 이어 낸 소리 0초). 값이 없으면(예전 클라이언트) 판정하지 않는다.
+    이런 녹음도 크기가 500바이트를 넘으면 채점에 와서, Whisper가 무음에서 만든 문장이 합격할 수 있었다
+    ('시청해 주셔서 감사합니다.'이면 2단계 8/8, 3단계 9/9 합격)."""
+    loud, vd = m.get("loudness"), m.get("voiced_duration")
+    return (loud is not None and loud <= 0) or (vd is not None and vd <= 0)
+
+
+# 전사 경로 모음·자음 단계의 초점 자모. 음운 유사도(scoring)는 초성 30·중성 50·종성 20이고 받침이 둘 다 없으면 종성 몫을 줘서,
+# 무음 초성 음절은 모음이 틀려도 50점(합격선 50)이 됐다. 9/27 감사에서 틀린 모음 160/160, 같은 모음의 틀린 첫소리 162/162가
+# 합격했다(아→우 50.15, 풀→불 91.0). 모음 단계는 중성, 자음 단계는 첫소리와 (있으면) 받침이 전사와 같아야 합격이다.
+# ㅐ와 ㅔ는 같은 소리로 본다(합류 여부는 사용자 결정 대기라 여기서 앞지르지 않는다).
+_FOCUS = {2: ("중성",), 3: ("초성", "종성")}
+_SAME_VOWEL = {"ㅔ": "ㅐ"}
+
+
+def focus_miss(stage_no: int, target: str, transcript: str) -> Optional[str]:
+    """모음·자음 단계에서 초점 자모가 전사와 어긋나면 안내 한 문장, 맞거나 대상 단계가 아니면 None.
+    정렬은 채점·혼동 표시와 같은 scoring.align_jamos(소리 나는 대로 바꾼 자모)를 쓴다."""
+    parts = _FOCUS.get(stage_no)
+    if not parts:
+        return None
+    import unicodedata
+    from scoring import align_jamos, to_pronounced_jamos
+    cj = to_pronounced_jamos(unicodedata.normalize("NFC", target or "").replace(" ", ""))
+    uj = to_pronounced_jamos(unicodedata.normalize("NFC", transcript or "").replace(" ", ""))
+    for cs, us in align_jamos(cj, uj):
+        if cs is None:
+            continue
+        if "중성" in parts:
+            want = cs[1]
+            if us is None:
+                return f"목표 모음 '{want}' 소리가 들리지 않았어요."
+            if _SAME_VOWEL.get(us[1], us[1]) != _SAME_VOWEL.get(want, want):
+                return f"목표 모음은 '{want}'인데 '{us[1]}' 소리로 들렸어요."
+        if "초성" in parts and cs[0]:
+            if us is None or not us[0]:
+                return f"목표 첫소리 '{cs[0]}' 소리가 들리지 않았어요."
+            if us[0] != cs[0]:
+                return f"목표 첫소리는 '{cs[0]}'인데 '{us[0]}' 소리로 들렸어요."
+        if "종성" in parts and cs[2]:
+            if us is None or not us[2]:
+                return f"받침 '{cs[2]}' 소리가 들리지 않았어요."
+            if us[2] != cs[2]:
+                return f"목표 받침은 '{cs[2]}'인데 '{us[2]}' 소리로 들렸어요."
+    return None
+
+
 def score_attempt(stage_no: int, target: str, transcript: Optional[str],
                   metrics: Dict, drill: Optional[str] = None,
                   sim_score: Optional[float] = None) -> Tuple[float, bool, str]:
-    """단계 모드에 맞춰 (점수 0~100, 성공 여부, 한 줄 코칭)을 반환."""
+    """단계 모드에 맞춰 (점수 0~100, 성공 여부, 한 줄 코칭)을 반환.
+    transcript는 전사 경로에서만 문자열이다(D-GOP 경로는 None). 소리 없음·초점 자모 판정은 전사 경로에만 적용한다."""
     stg = get_stage(stage_no)
     if not stg:
         return round(sim_score or 0.0, 1), (sim_score or 0) >= 60, ""
@@ -241,10 +293,15 @@ def score_attempt(stage_no: int, target: str, transcript: Optional[str],
         return _score_prosody(drill or "", m)
 
     # phoneme / word / sentence — 음운 유사도 기반
+    if transcript is not None and no_voice(m):
+        return 0.0, False, NO_VOICE_NOTE
     sc = float(sim_score or 0.0)
     passf = float(stg.get("pass", 60.0))
     passed = sc >= passf
     note = ""
+    if mode == "phoneme" and transcript is not None:
+        note = focus_miss(stage_no, target, transcript) or ""
+        passed = passed and not note
     if mode == "sentence":
         # 고정 문항에 없는 문장(AI 생성·복습)은 문장 부호로 기대 억양을 정한다. 예전에는 고정 16문항만 찾아 AI 문장은 억양 판정이
         # 없었고, 대신 코칭에 목소리 높이에 따라 어려움이 다른 25Hz 규칙이 들어갔다. 의문사 의문문은 None이라 판정하지 않는다.
