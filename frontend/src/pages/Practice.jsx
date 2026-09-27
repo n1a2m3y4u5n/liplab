@@ -301,13 +301,14 @@ export default function Practice() {
         situation: currentScenario.situation,
         difficulty_level: currentScenario.level,
         ...(practiceOnly ? { practice_only: true } : {}),
+        // 4지선다는 보기를 고른 것이라 서버가 채점식 대신 정확 일치(100 또는 0)로 준다(비슷한 오답 보기가 통과하지 않게)
+        ...(effectiveMode === 'test-multiple' ? { answer_mode: 'choice' } : {}),
       })
 
       setResult(response)
       answerShownRef.current = true   // 채점 결과와 함께 정답 문장이 보인다
       setIsPlaying(false)
-      // 4지선다는 고른 문장을 답으로 보내 서버가 음운 유사도로 채점한다. 화면은 같은 문장인지로 정오를 가르므로 비슷한 오답
-      // 보기가 서버에서 통과 점수를 받아 3단계 숙달·XP에 들어갈 수 있다. 보기 정오를 받는 서버 필드가 없어 프론트만으로는 못 고친다.
+      // 4지선다는 answer_mode 'choice'로 보내 서버도 같은 문장인지(정확 일치)로 채점한다(화면의 정오와 같다).
       const correct = effectiveMode === 'test-multiple' ? userAnswer === currentSentence : (response.score ?? 0) >= CORRECT_SCORE
       if (!practiceOnly) setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
       setXpEarned((x) => x + (response.xp_gained || 0))

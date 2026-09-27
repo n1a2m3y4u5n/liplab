@@ -495,6 +495,7 @@ class ProgressSubmission(BaseModel):
     situation: str = Field(..., max_length=200)
     difficulty_level: int        # 처리부에서 1~5로 맞춘다
     practice_only: bool = False  # 정답을 본 뒤의 다시 풀기·자막 힌트 뒤 제출: 점수만 돌려주고 기록·숙달·XP에는 넣지 않는다
+    answer_mode: Optional[str] = Field(None, max_length=10)   # 'choice'면 보기를 고른 답: 정확 일치(100 또는 0)로 채점
 
 
 class ProgressResponse(BaseModel):
@@ -661,6 +662,17 @@ async def _weak_visemes_for_text(text: str):
     return vids, features
 
 
+def _choice_result(sentence: str, chosen: str, result: dict) -> dict:
+    """객관식 답: 고른 보기가 정답 문장과 같은지만 본다(공백·문장부호 무시). 채점식을 쓰면 비슷한 오답 보기가 통과
+    점수를 받아 숙달에 들어갔다. 오류 입모양(취약 입모양 갱신용)은 채점식 정렬 결과를 그대로 쓴다."""
+    import re as _re
+    from scoring import generate_feedback
+    norm = lambda t: _re.sub(r"[\s.,?!~]", "", t or "")   # noqa: E731
+    score = 100.0 if norm(sentence) == norm(chosen) else 0.0
+    acc = result.get("phoneme_accuracy") or {"initial": 0, "medial": 0, "final": 0}
+    return {**result, "score": score, "feedback": generate_feedback(score, acc)}
+
+
 @app.post("/api/progress", response_model=ProgressResponse)
 async def submit_progress(
     submission: ProgressSubmission,
@@ -672,12 +684,15 @@ async def submit_progress(
     Returns score, XP gained, and adaptive feedback
     """
     try:
-        # Calculate score with phonological similarity weighting
+        # 독화 이해 채점 v2(입모양 기준, docs/scoring-v2.md). 객관식은 정확 일치로 준다.
         scoring_result = await calculate_score(
             correct=submission.sentence,
             user_answer=submission.user_answer,
-            db=db
+            db=db,
+            mode="visual",
         )
+        if submission.answer_mode == "choice":
+            scoring_result = _choice_result(submission.sentence, submission.user_answer, scoring_result)
         time_spent = max(0, min(int(submission.time_spent_seconds), 3600))
         difficulty = max(1, min(int(submission.difficulty_level), 5))
         if submission.practice_only:
@@ -2017,7 +2032,7 @@ async def score_answer(data: ScoreRequest, current_user=Depends(get_current_user
     """임의 문장 채점(대화 이해도 등) — 기존 음운 유사도 엔진 재사용.
     대화 실전에서 호출되므로 4단계 숙달도 함께 갱신한다."""
     try:
-        r = await calculate_score(correct=data.correct, user_answer=data.user_answer, db=db)
+        r = await calculate_score(correct=data.correct, user_answer=data.user_answer, db=db, mode="visual")
         score = round(r.get("score", 0), 1)
         if data.practice_only:
             return {"score": score, "feedback": r.get("feedback", {}),
@@ -2611,10 +2626,10 @@ async def public_score(req: PublicScoreReq):
     if not target or len(target) > 100 or len(answer) > 100:
         raise HTTPException(status_code=400, detail="target은 1~100자, answer는 100자까지")
     from scoring import calculate_score as _score, viseme_confusions
-    r = await _score(target, answer)
+    r = await _score(target, answer, mode="visual")
     return {"score": r.get("score"), "phoneme_accuracy": r.get("phoneme_accuracy"),
             "viseme_errors": r.get("viseme_errors"), "confusions": viseme_confusions(target, answer) if answer else [],
-            "method": "표준발음 자모 정렬 + 입모양(viseme) 가중 음운 유사도(backend/scoring.py)"}
+            "method": "표준발음 자모 정렬 + 입모양 기준 유사도·정밀도/재현율(독화 이해 채점 v2, docs/scoring-v2.md)"}
 
 
 @app.get("/api/assessment/progression")
