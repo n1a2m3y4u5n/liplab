@@ -9,3 +9,9 @@ export function pickDistractors(target, byWord, words) {
   if (served?.length >= 3) return served.slice(0, 3)
   return shuffle(words.filter((w) => w !== target)).slice(0, 3)
 }
+
+/** 시각 난이도 분위(0~1, 서버 visual_difficulty) → 입모양 난이도 1~5. 분위가 없으면(풀 밖 단어) null. */
+export function visualLevel(quantile) {
+  if (typeof quantile !== 'number' || !Number.isFinite(quantile)) return null
+  return Math.min(5, 1 + Math.floor(Math.max(0, quantile) * 5))
+}
