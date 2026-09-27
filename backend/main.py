@@ -2755,7 +2755,9 @@ async def assessment_history(current_user=Depends(get_current_user), db: AsyncSe
     sb, sl = _placement_scores(rows[0], rows[-1])
     baseline.update(sb)
     latest.update(sl)
-    delta = _asmt.improvement_delta(baseline, latest) if len(rows) >= 2 else None
+    # 극복·신규 입모양은 두 검사의 문항 기록을 전부 다시 세어 정한다(저장된 상위 3개끼리 비교하면 순위만 밀린 입모양도 극복으로 나왔다)
+    delta = (_asmt.improvement_delta(baseline, latest, getattr(rows[0], "item_log", None),
+                                     getattr(rows[-1], "item_log", None)) if len(rows) >= 2 else None)
     return {"count": len(rows), "baseline": baseline, "latest": latest, "delta": delta}
 
 
@@ -2820,6 +2822,7 @@ async def assessment_progression(current_user=Depends(get_current_user),
     """통제된 향상도(축 I) — 동형 폼 사전·사후 결과를 비교해 델타·음소별 오류 감소를 반환.
     사전은 먼저 본 동형 폼, 사후는 그 뒤에 본 다른 동형 폼이다. 보통 A→B지만, 파일럿에서 순서를 바꿔(역균형)
     B를 먼저 보면 B→A로 비교한다. 동형 폼 두 개가 없으면 가장 이른/최근 검사 회차로 대체 비교한다."""
+    import assessment as _asmt
     from database import PlacementResult
     from sqlalchemy import select
     rows = (await db.execute(
@@ -2838,11 +2841,9 @@ async def assessment_progression(current_user=Depends(get_current_user),
         b = next((r for r in reversed(ab) if a is not None and r.form != a.form), None)
     if a is None or b is None:
         a, b = rows[0], rows[-1]
-    err_a = {e["phoneme"]: e["count"] for e in (a.error_phonemes or []) if isinstance(e, dict)}
-    err_b = {e["phoneme"]: e["count"] for e in (b.error_phonemes or []) if isinstance(e, dict)}
-    phonemes = sorted(set(err_a) | set(err_b))
-    per_phoneme = [{"phoneme": p, "before": err_a.get(p, 0), "after": err_b.get(p, 0),
-                    "delta": err_b.get(p, 0) - err_a.get(p, 0)} for p in phonemes]
+    # 자모별 오류 변화는 두 검사의 문항 기록을 전부 다시 센 값끼리 비교한다. 예전에는 저장된 상위 6개끼리라, 6위 밖으로 밀린
+    # 자모가 'n→0'으로 나왔다. 문항 기록이 없는 옛 검사가 끼면 비운다(assessment.phoneme_change)
+    per_phoneme = _asmt.phoneme_change(getattr(a, "item_log", None), getattr(b, "item_log", None))
     sa, sb = _placement_scores(a, b)
     return {
         "available": True,
