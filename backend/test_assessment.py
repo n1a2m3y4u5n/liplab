@@ -46,6 +46,23 @@ def test_empty_response():
     _ok(r["level"] == 1 and r["recommended_start"]["key"] == "viseme", "무응답 기본 수준")
 
 
+def _form_log(items, wrong_ids):
+    """폼 문항을 wrong_ids만 틀리게(정답이 아닌 첫 보기) 풀었을 때의 score_placement 결과."""
+    resp = {it["id"]: (next(o for o in it["options"] if o != it["word"]) if it["id"] in wrong_ids else it["word"])
+            for it in items}
+    return A.score_placement(items, resp)
+
+
+def _full_viseme_errors(items, wrong_ids):
+    """저장된 문항 입모양(it['visemes'])으로 센 전체 오류 수. 구현과 따로 세는 기준값."""
+    c = {}
+    for it in items:
+        if it["id"] in wrong_ids:
+            for v in it["visemes"]:
+                c[v] = c.get(v, 0) + 1
+    return c
+
+
 def test_improvement_delta():
     base = {"accuracy": 0.4, "ability": 0.25, "level": 2, "error_visemes": [6, 7, 10]}
     late = {"accuracy": 0.8, "ability": 0.75, "level": 4, "error_visemes": [10]}
@@ -53,7 +70,14 @@ def test_improvement_delta():
     _ok(abs(d["accuracy"] - 0.4) < 1e-9, "정답률 향상 +0.4")
     _ok(abs(d["ability"] - 0.5) < 1e-9, "능력 향상 +0.5")
     _ok(d["level"] == 2, "수준 +2")
-    _ok(d["resolved_visemes"] == [6, 7], "극복한 취약 입모양")
+    # 문항 기록이 없는 옛 검사는 잘린 상위 3개로 극복을 정하지 않고 비운다
+    _ok(d["resolved_visemes"] == [] and d["new_error_visemes"] == [], "문항 기록이 없으면 극복·신규를 비운다")
+    # 문항 기록이 있으면: 첫 검사에서 틀린 입모양을 최근 검사에서 모두 맞혔다
+    items = A.frozen_forms(build_if_missing=False)["A"]
+    wrong = {it["id"] for it in items[:4]}
+    s0, s1 = _form_log(items, wrong), _form_log(items, set())
+    d = A.improvement_delta(s0, s1, s0["item_log"], s1["item_log"])
+    _ok(d["resolved_visemes"] == sorted(_full_viseme_errors(items, wrong)), "극복한 취약 입모양")
     _ok(d["new_error_visemes"] == [], "새로 약해진 것 없음")
 
 
@@ -62,7 +86,70 @@ def test_improvement_delta_regression():
     d = A.improvement_delta({"accuracy": 0.6, "ability": 0.5, "level": 3, "error_visemes": []},
                             {"accuracy": 0.5, "ability": 0.5, "level": 3, "error_visemes": [1]})
     _ok(d["accuracy"] < 0, "정답률 하락은 음수")
-    _ok(d["new_error_visemes"] == [1], "새로 약해진 입모양 표시")
+    items = A.frozen_forms(build_if_missing=False)["A"]
+    wrong = {items[5]["id"]}
+    s0, s1 = _form_log(items, set()), _form_log(items, wrong)
+    d = A.improvement_delta(s0, s1, s0["item_log"], s1["item_log"])
+    _ok(d["new_error_visemes"] == sorted(set(items[5]["visemes"])), "새로 약해진 입모양 표시")
+    _ok(d["resolved_visemes"] == [], "극복 없음")
+
+
+def test_resolved_visemes_use_full_counts_not_top3():
+    # 감사 재현(폼 A, 두 검사 모두 6문항 오답): 예전에는 상위 3개끼리 비교해 극복 목록이 뜬 보고서의 99%가
+    # 최근 검사에서도 틀린 입모양을 '이제 안 틀리는 입모양'으로 보였다. 이제 극복은 최근 검사 오류 0이고 풀어 본 입모양뿐이다.
+    import random
+    items = A.frozen_forms(build_if_missing=False)["A"]
+    ids = [it["id"] for it in items]
+    rng = random.Random(0)
+    shown = stale = 0
+    for _ in range(300):
+        w0, w1 = set(rng.sample(ids, 6)), set(rng.sample(ids, 6))
+        s0, s1 = _form_log(items, w0), _form_log(items, w1)
+        f0, f1 = _full_viseme_errors(items, w0), _full_viseme_errors(items, w1)
+        top3_resolved = set(s0["error_visemes"]) - set(s1["error_visemes"])
+        stale += any(f1.get(v, 0) for v in top3_resolved)
+        d = A.improvement_delta(s0, s1, s0["item_log"], s1["item_log"])
+        expect = sorted(v for v in f0 if not f1.get(v))            # 폼 A는 입모양 1~10을 모두 묻는다
+        _ok(d["resolved_visemes"] == expect, f"극복 = 첫 검사 오류 > 0, 최근 오류 0: {d['resolved_visemes']} != {expect}")
+        _ok(d["new_error_visemes"] == sorted(v for v in f1 if not f0.get(v)), "신규도 전체 개수로")
+        shown += bool(d["resolved_visemes"])
+    _ok(stale > 200, f"예전 방식이면 여전히 틀리는 입모양이 극복으로 나온다(재현 확인): {stale}")
+    _ok(shown > 0, "진짜 극복한 입모양은 계속 보인다")
+
+
+def test_error_counts_match_stored_visemes_and_score_placement():
+    f = A.frozen_forms(build_if_missing=False)
+    for k in ("A", "B"):
+        items = f[k]
+        wrong = {it["id"] for it in items[::3]}
+        s = _form_log(items, wrong)
+        ec = A.error_counts(s["item_log"])
+        _ok(dict(ec["visemes"]) == _full_viseme_errors(items, wrong), f"폼 {k}: item_log로 다시 센 입모양 오류 = 저장 입모양")
+        top = [v for v, _ in ec["visemes"].most_common(3)]
+        _ok(top == s["error_visemes"], "상위 3개는 저장값과 같다(같은 셈)")
+        _ok({e["phoneme"]: e["count"] for e in s["error_phonemes"]}
+            == {p: c for p, c in ec["phonemes"].most_common(6)}, "상위 6개 자모도 저장값과 같다")
+    _ok(A.error_counts(None) is None and A.error_counts([]) is None, "기록 없음")
+    _ok(A.error_counts([{"id": "q1", "word": "밥", "chosen": None}]) is None, "답한 문항이 없으면 None")
+
+
+def test_phoneme_change_full_counts_and_tested_in_both():
+    import random
+    f = A.frozen_forms(build_if_missing=False)
+    fa, fb = f["A"], f["B"]
+    rng = random.Random(1)
+    wa = set(rng.sample([it["id"] for it in fa], 6))
+    wb = set(rng.sample([it["id"] for it in fb], 6))
+    s0, s1 = _form_log(fa, wa), _form_log(fb, wb)
+    rows = A.phoneme_change(s0["item_log"], s1["item_log"])
+    in_a = {p for it in fa for p in A._word_phonemes(it["word"])}
+    in_b = {p for it in fb for p in A._word_phonemes(it["word"])}
+    _ok(rows and all(r["phoneme"] in in_a and r["phoneme"] in in_b for r in rows), "두 폼 모두 묻는 자모만 싣는다")
+    ea, eb = A.error_counts(s0["item_log"]), A.error_counts(s1["item_log"])
+    _ok(all(r["before"] == ea["phonemes"][r["phoneme"]] and r["after"] == eb["phonemes"][r["phoneme"]]
+            and r["delta"] == r["after"] - r["before"] for r in rows), "전체 개수끼리 비교")
+    _ok(A.phoneme_change(s0["item_log"], []) == [] and A.phoneme_change(None, s1["item_log"]) == [],
+        "문항 기록이 없는 검사가 끼면 비운다")
 
 
 def test_adaptive_staircase():

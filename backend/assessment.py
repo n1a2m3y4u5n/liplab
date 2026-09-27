@@ -352,6 +352,15 @@ def select_next_item(asked: List[Dict], responses: Dict[str, str],
             "difficulty": best["difficulty"], "visemes": best["visemes"]}
 
 
+def _misread_phonemes(word: str, confs) -> List[str]:
+    """틀린 문항에서 오류로 셀 자모. 음소 단위 오류는 실제로 잘못 읽은 자모(대조에서 다른 자리)만 센다(I-5). 예전에는 정답
+    단어의 안 보이는 자모를 모두 세어, 맞게 읽은 자모까지 약점으로 잡혔다. 대조가 안 되면 예전 방식(단어의 자모 전부)으로
+    대신한다. 소리 없는 초성 ㅇ(viseme None)은 놓친 소리가 아니라 없는 자음을 읽은 것이라 세지 않는다('자주 놓친 소리 ㅇ'이 떴다)."""
+    if confs:
+        return [c["target"] for c in confs if c["viseme"] is not None]
+    return _word_phonemes(word)
+
+
 def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
     """
     배치검사 채점. responses: {문항ID: 고른 단어}.
@@ -380,16 +389,7 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
             confs = viseme_confusions(it["word"], chosen)
             for c in confs:
                 conf[(c["target"], c["read"], c["viseme_name_ko"], c["same_viseme"])] += 1
-            # 음소 단위 오류: 실제로 잘못 읽은 자모(대조에서 다른 자리)만 센다(I-5). 예전에는 정답 단어의
-            # 안 보이는 자모를 모두 세어, 맞게 읽은 자모까지 약점으로 잡혔다. 대조가 안 되면 예전 방식으로 대신한다.
-            # 소리 없는 초성 ㅇ(viseme None)은 놓친 소리가 아니라 없는 자음을 읽은 것이라 세지 않는다('자주 놓친 소리 ㅇ'이 떴다).
-            if confs:
-                for c in confs:
-                    if c["viseme"] is not None:
-                        perr[c["target"]] += 1
-            else:
-                for ph in _word_phonemes(it["word"]):
-                    perr[ph] += 1
+            perr.update(_misread_phonemes(it["word"], confs))
     answered = [(it["difficulty"], responses.get(it.get("id")) == it["word"], len(it.get("options") or []) or 4)
                 for it in items if responses.get(it.get("id")) is not None]
     ability = ability_eap(answered)
@@ -409,19 +409,65 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
     }
 
 
-def improvement_delta(baseline: Dict, latest: Dict) -> Dict:
+def error_counts(item_log) -> Optional[Dict]:
+    """문항 기록(item_log: word·chosen)에서 입모양·자모 오류를 자르지 않고 다시 센다. 사전·사후 비교 전용이다.
+    저장된 error_visemes(상위 3)·error_phonemes(상위 6)는 화면용으로 잘린 목록이라, 그것끼리 비교하면 순위만 밀린 입모양·
+    자모도 '극복'으로 나왔다. 입모양은 score_placement처럼 틀린 문항 단어의 입모양마다 1씩 센다(item_log에 입모양이 없어
+    단어에서 다시 구한다. 동결 폼 48문항에서 저장값과 모두 같다). seen_*은 그 입모양·자모가 든 답한 문항 수다.
+    답한 문항이 없거나 기록이 없는 옛 검사는 None."""
+    from scoring import viseme_confusions
+    rows = [it for it in (item_log or [])
+            if isinstance(it, dict) and it.get("word") and it.get("chosen") is not None]
+    if not rows:
+        return None
+    vis, seen_v, pho, seen_p = Counter(), Counter(), Counter(), Counter()
+    for it in rows:
+        word, chosen = it["word"], it["chosen"]
+        vids = _cr.word_visemes(word)
+        seen_v.update(set(vids))
+        seen_p.update(set(_word_phonemes(word)))
+        if chosen == word:
+            continue
+        vis.update(vids)
+        pho.update(_misread_phonemes(word, viseme_confusions(word, chosen)))
+    return {"visemes": vis, "seen_visemes": seen_v, "phonemes": pho, "seen_phonemes": seen_p}
+
+
+def phoneme_change(base_log, late_log) -> List[Dict]:
+    """사전·사후 자모별 오류 수 변화(전체 개수). 두 검사 모두 그 자모가 든 문항을 풀었을 때만 싣는다. 동결 폼 v2에도 A에만
+    있는 자모(ㄸ·ㅃ·ㅋ·ㅐ·ㅝ)가 있어, 이 조건이 없으면 A→B 모의 비교(두 검사 6문항 오답) 보고서의 92.3%에 사후에 묻지 않은
+    자모가 'n→0'으로 나왔다. 예전에는 두 검사의 상위 6개끼리 비교해, 'after 0'이 나온 보고서의 93.6%에서 그 자모가 사후에도
+    틀렸다(지금 0%). 문항 기록이 없는 검사가 끼면 비운다."""
+    ea, eb = error_counts(base_log), error_counts(late_log)
+    if not (ea and eb):
+        return []
+    phonemes = sorted(p for p in set(ea["phonemes"]) | set(eb["phonemes"])
+                      if ea["seen_phonemes"][p] and eb["seen_phonemes"][p])
+    return [{"phoneme": p, "before": ea["phonemes"][p], "after": eb["phonemes"][p],
+             "delta": eb["phonemes"][p] - ea["phonemes"][p]} for p in phonemes]
+
+
+def improvement_delta(baseline: Dict, latest: Dict, base_log=None, late_log=None) -> Dict:
     """첫 검사(baseline)와 최근 검사(latest)의 향상도 — 각 지표의 증감과 극복/신규 취약 입모양.
-    훈련 전/후를 같은 척도로 비교해 '실제로 나아졌는지'를 객관 수치로 준다. 순수 함수."""
+    훈련 전/후를 같은 척도로 비교해 '실제로 나아졌는지'를 객관 수치로 준다. 순수 함수.
+    극복(resolved)은 첫 검사에서 틀렸고, 최근 검사에서 그 입모양이 든 문항을 1개 이상 풀었으며 오류가 0인 입모양이다.
+    신규(new_error)는 거꾸로 첫 검사에서 그 입모양이 든 문항을 풀었고 오류가 0이었는데 최근 검사에서 틀린 입모양이다.
+    둘 다 두 검사의 문항 기록(base_log·late_log)을 다시 센 전체 개수로 정하고, 기록이 없는 검사가 끼면 비운다.
+    예전에는 저장된 상위 3개끼리의 차집합이라, 폼 A 재검사 모의(두 검사 6문항 오답)에서 극복 목록이 뜬 보고서의 99.2%에
+    최근 검사에서도 틀린 입모양이 있었다(지금 0%)."""
     def g(d, k, dflt=0.0):
         return (d or {}).get(k, dflt)
-    base_err = set(g(baseline, "error_visemes", []) or [])
-    late_err = set(g(latest, "error_visemes", []) or [])
+    ea, eb = error_counts(base_log), error_counts(late_log)
+    resolved, new = [], []
+    if ea and eb:
+        resolved = sorted(v for v in ea["visemes"] if eb["seen_visemes"][v] and not eb["visemes"][v])
+        new = sorted(v for v in eb["visemes"] if ea["seen_visemes"][v] and not ea["visemes"][v])
     return {
         "accuracy": round(g(latest, "accuracy") - g(baseline, "accuracy"), 3),
         "ability": round(g(latest, "ability") - g(baseline, "ability"), 3),
         "level": int(g(latest, "level", 1)) - int(g(baseline, "level", 1)),
-        "resolved_visemes": sorted(base_err - late_err),   # 예전엔 틀렸는데 이제 안 틀림
-        "new_error_visemes": sorted(late_err - base_err),  # 새로 약해진 입모양
+        "resolved_visemes": resolved,     # 예전엔 틀렸는데 이제 안 틀림
+        "new_error_visemes": new,         # 새로 약해진 입모양
     }
 
 
