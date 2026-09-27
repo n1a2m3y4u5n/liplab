@@ -177,6 +177,8 @@ export const curriculumAPI = {
   submitRecognition: async (viseme_id, chosen_id) =>
     (await api.post('/curriculum/recognition', { viseme_id, chosen_id })).data,
   getWords: async () => (await api.get('/curriculum/words')).data,
+  // 3단계 문장 4지선다 오답 보기(레슨 밖·음절 수가 가까운 문장). exclude = 이번 레슨 문장들
+  getSentenceOptions: async (sentence, exclude) => (await api.post('/curriculum/sentence-options', { sentence, exclude })).data,
   submitWord: async (word, correct, chosen) => (await api.post('/curriculum/word-answer', { word, correct, chosen })).data,
   getClosure: async () => (await api.get('/curriculum/closure')).data,
   submitClosure: async (item_id, chosen) => (await api.post('/curriculum/closure-answer', { item_id, chosen })).data,

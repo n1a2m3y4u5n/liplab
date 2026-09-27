@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
-import { learningAPI } from '../api'
+import { curriculumAPI, learningAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
 import MouthAvatar from '../components/MouthAvatar'
 import QuizForm from '../components/QuizForm'
@@ -216,15 +216,21 @@ export default function Practice() {
   const closeSign = useCallback(() => setSignOpen(false), [])
   const signRef = useFocusTrap(signOpen, closeSign)          // 수어 모달 포커스 트랩·Esc
 
-  // 4지선다 보기 생성 — 정답 1개 + 다른 문장 3개, 랜덤 순서
-  const choices = useMemo(() => {
-    if (!currentScenario || !currentSentence) return []
-    const others = currentScenario.sentences
-      .filter((s) => s !== currentSentence)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3)
-    return [...others, currentSentence].sort(() => Math.random() - 0.5)
-  }, [currentSentence])
+  // 4지선다 보기 — 정답 + 서버가 고른 레슨 밖 문장 3개(음절 수가 가까운 것), 랜덤 순서. 예전 보기는 같은 레슨의 다른
+  // 문장이라 뒤에 주관식으로 나올 문장이 먼저 보였고(그런 문항의 40~56%), 이미 푼 문장은 지울 수 있었고, 길이 차이로도
+  // 골랐다(backend/sentence_options.py). 서버 보기를 못 받으면 예전 방식으로 낸다.
+  const [choices, setChoices] = useState([])
+  useEffect(() => {
+    if (!currentScenario || !currentSentence || effectiveMode !== 'test-multiple') { setChoices([]); return undefined }
+    let alive = true
+    const local = () => currentScenario.sentences.filter((s) => s !== currentSentence).sort(() => Math.random() - 0.5).slice(0, 3)
+    setChoices([])
+    curriculumAPI.getSentenceOptions(currentSentence, currentScenario.sentences)
+      .then((r) => (Array.isArray(r?.options) && r.options.length >= 3 ? r.options.slice(0, 3) : local()))
+      .catch(local)
+      .then((others) => { if (alive) setChoices([...others, currentSentence].sort(() => Math.random() - 0.5)) })
+    return () => { alive = false }
+  }, [currentSentence, effectiveMode])
 
   useEffect(() => {
     if (!currentScenario) {
