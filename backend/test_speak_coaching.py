@@ -124,3 +124,28 @@ def test_engine_h_delete_param_keeps_label_path_default():
     assert engine.to_pronounced_syllables("많이", phonetic=True)[1][0] == "ㅎ"          # 채점 라벨은 그대로
     assert engine.to_pronounced_syllables("많이", phonetic=True, h_delete=True)[1][0] == "ㄴ"
     assert engine.to_pronounced_syllables("많이")[1][0] == "ㄴ"                        # 입모양 경로는 탈락
+
+
+def test_conversation_marks_transcription_and_avoids_repeats(monkeypatch):
+    # 학습자 입력은 대답이 아니라 직전 문장을 읽고 적은 글. 예전에는 그대로 사용자 턴으로 넘겨 모델이 같은 문장을 되풀이하거나
+    # 역할을 바꿨다(카페 직원이 첫 문장 반복 뒤 손님이 됨). 앞에서 한 문장이 나오면 한 번 다시 받는다
+    replies = iter(['{"text": "어서오세요, 뭘 드릴까요?"}', '{"text": "따뜻한 걸로 드릴까요?"}'])
+    seen = []
+
+    class _Msg:
+        def __init__(self, t):
+            self.content = [type("B", (), {"text": t, "type": "text"})()]
+
+    class _Fake:
+        class messages:
+            @staticmethod
+            async def create(*a, **k):
+                seen.append(k["messages"])
+                return _Msg(next(replies))
+    monkeypatch.setattr(llm_service, "anthropic_client", _Fake)
+    hist = [{"role": "assistant", "content": "어서오세요, 뭘 드릴까요?"}, {"role": "user", "content": "어서오세요 뭘 드릴까요"}]
+    r = asyncio.run(llm_service.generate_conversation_turn("카페", 3, hist))
+    assert r["text"] == "따뜻한 걸로 드릴까요?" and len(seen) == 2
+    user_turns = [m["content"] for m in seen[0] if m["role"] == "user"]
+    assert any("읽었습니다" in u and "대답이 아닙니다" in u for u in user_turns)
+    assert "이미 한 말" in seen[1][-1]["content"]
