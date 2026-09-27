@@ -213,3 +213,25 @@ def test_weak_coda_gets_coda_articulation(monkeypatch):
     text = asyncio.run(llm_service.generate_speaking_coaching("밥", None, 80, [], {"loudness": 70}, weak_phones=weak))
     assert text.startswith("'받침 ㅂ' 소리가 약하게 났어요.") and "멈춥니다" in text and "떼며" not in text
     assert "'받침 ㅂ' — 두 입술을 붙인 채 멈춥니다" in seen[0] and "떼며 가볍게 터뜨립니다" not in seen[0]
+
+
+def test_dgop_coaching_prompt_has_no_asr_line(monkeypatch):
+    # D-GOP 경로는 전사를 하지 않아 transcript가 None이다. 예전 프롬프트는 '음성인식 결과: "(잘 인식되지 않음)"'과
+    # '~로 들렸어요' 주의를 넣어 92점 시도도 '인식되지 않았다'는 거짓 입력이 됐다. 전사 경로 프롬프트는 그대로다
+    seen = []
+
+    class _Rec:
+        class messages:
+            @staticmethod
+            async def create(*a, **k):
+                seen.append(k["messages"][0]["content"])
+                raise RuntimeError("stop")
+    monkeypatch.setattr(llm_service, "anthropic_client", _Rec)
+    m = {"loudness": 55, "pitch_range": 30, "duration": 1.4}
+    asyncio.run(llm_service.generate_speaking_coaching("밥", None, 92.0, [], m, method="dgop",
+                                                       weak_phones=[{"label": "ㅂ", "dgop": 0.21, "position": "종성"}]))
+    asyncio.run(llm_service.generate_speaking_coaching("밥", "밥", 92.0, [], m, method="asr_transcript"))
+    dg, asr = seen
+    assert "음성인식 결과" not in dg and "잘 인식되지 않음" not in dg and "들렸어요" not in dg
+    assert '목표: "밥" / 발음 채점 점수 92점(음성인식 아님)' in dg
+    assert '음성인식 결과: "밥" / 발음 유사도 92점' in asr and "들렸어요" in asr
