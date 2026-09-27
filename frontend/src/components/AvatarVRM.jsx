@@ -1,5 +1,5 @@
-import { Component, Suspense, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Component, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
@@ -93,7 +93,14 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
     if (jawBone) jawRef.current = { bone: jawBone, restZ: jawBone.rotation.z }
   }
 
-  useFrame((_, delta) => {
+  // 텍스트 입모양은 쉴 때 그리지 않는다(Canvas frameloop="demand"). 입모양·시간·투명 모드가 바뀌면 여기서 깨우고, 전환이 끝나
+  // 모든 가중치가 목표에 닿으면 useFrame이 다음 화면을 더 요청하지 않는다. 예전에는 멈춰 있어도 초당 60번 다시 그렸다.
+  const invalidate = useThree((st) => st.invalidate)
+  useEffect(() => { invalidate() }, [visemeId, xray, transitionMs, durationMs, speed, invalidate])
+
+  useFrame((state, rawDelta) => {
+    // 쉬었다 다시 그리는 첫 화면은 경과 시간이 길다(마지막 화면 뒤 전부). 그대로 쓰면 보간이 한 번에 목표로 튀므로 자른다.
+    const delta = Math.min(rawDelta, 0.05)
     // 투명 두상 토글 — 피부만 반투명화해 안쪽 혀·치아를 드러냄(계획서 F). 상태 바뀔 때만 적용.
     if (xrayAppliedRef.current !== xray) {
       xrayAppliedRef.current = xray
@@ -195,6 +202,23 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
         }
       }
     }
+
+    // 아직 움직이는 중이면 다음 화면을 요청한다(음성구동·거울은 Canvas가 늘 그리므로 해당 없음).
+    if (!rawFrame && !mirror) {
+      let moving = extra.size > 0 || (eased != null && eased < 1)
+      if (!moving) {
+        for (const key of baseKeys) {
+          if (Math.abs((currentWeightsRef.current[key] || 0) - (target[key] || 0)) > 1e-3) { moving = true; break }
+        }
+      }
+      if (!moving && tongue) {
+        const tT = VISEME_TONGUE[visemeId] || EMPTY
+        for (const key of ACTIVE_TONGUE_KEYS) {
+          if (Math.abs((tongueWeightsRef.current[key] || 0) - (tT[key] || 0)) > 1e-3) { moving = true; break }
+        }
+      }
+      if (moving) state.invalidate()
+    }
   })
 
   return <primitive object={scene} />
@@ -280,7 +304,8 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
           휴대폰에서 아바타 위에서 시작한 스와이프가 페이지를 스크롤하지 못했다. !important 클래스로 pan-y를
           앞세워 세로 스와이프는 페이지 스크롤, 가로 드래그와 마우스 드래그는 그대로 회전이 되게 한다.
         */}
-        <Canvas className="![touch-action:pan-y]" camera={{ position: [0, 1.68, 0.45], fov: 16 }}>
+        <Canvas className="![touch-action:pan-y]" camera={{ position: [0, 1.68, 0.45], fov: 16 }}
+          frameloop={mirrorRef || bsFrameRef ? 'always' : 'demand'}>
           <ambientLight intensity={1.2} />
           <directionalLight position={[1, 2, 2]} intensity={1.0} />
           <directionalLight position={[-1, 0, 1]} intensity={0.4} />
