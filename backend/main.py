@@ -691,6 +691,48 @@ def _choice_result(sentence: str, chosen: str, result: dict) -> dict:
     return {**result, "score": score, "feedback": generate_feedback(score, acc)}
 
 
+class SentenceOptionsRequest(BaseModel):
+    sentence: str = Field(..., max_length=_TEXT_MAX)
+    exclude: List[str] = Field(default_factory=list, max_length=40)   # 이번 레슨 문장들
+
+
+_SENTENCE_POOL = {"at": 0.0, "pool": []}
+
+
+async def _sentence_option_pool(db: AsyncSession) -> List[str]:
+    """4지선다 오답 보기 풀: 코드의 문장 + 캐시된 LLM 시나리오 문장(지금 게이트를 통과한 것). 10분 캐시."""
+    import time as _time
+    now = _time.time()
+    if _SENTENCE_POOL["pool"] and now - _SENTENCE_POOL["at"] < 600:
+        return _SENTENCE_POOL["pool"]
+    import sentence_options as _so
+    from content_rules import check_sentence
+    from database import ScenarioCache
+    from sqlalchemy import select
+    import llm_service as _L
+    pool = _so.static_pool()
+    try:
+        rows = (await db.execute(select(ScenarioCache.sentences)
+                                 .order_by(ScenarioCache.created_at.desc()).limit(400))).scalars().all()
+        longest = max(_L.SCENARIO_MAX_CHARS.values())
+        for ss in rows:
+            pool += [x for x in (ss or []) if isinstance(x, str) and check_sentence(x, max_chars=longest)[0]]
+    except Exception as e:
+        print(f"[WARN] sentence option pool (cache) failed: {e}")
+    _SENTENCE_POOL.update(at=now, pool=list(dict.fromkeys(pool)))
+    return _SENTENCE_POOL["pool"]
+
+
+@app.post("/api/curriculum/sentence-options")
+async def curriculum_sentence_options(data: SentenceOptionsRequest, current_user=Depends(get_current_user),
+                                      db: AsyncSession = Depends(get_db)):
+    """3단계 문장 4지선다의 오답 보기 3개: 이번 레슨 밖 문장 가운데 음절 수가 가까운 것(sentence_options 머리말).
+    예전 보기(같은 레슨의 다른 문장)는 뒤 문항의 답을 미리 보여 주고 길이로도 고를 수 있었다."""
+    import sentence_options as _so
+    pool = await _sentence_option_pool(db)
+    return {"options": _so.pick_options(data.sentence, pool, data.exclude)}
+
+
 @app.post("/api/progress", response_model=ProgressResponse)
 async def submit_progress(
     submission: ProgressSubmission,
