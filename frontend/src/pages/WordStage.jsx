@@ -129,12 +129,18 @@ function WordQuiz({ data, reload }) {
   const startRef = useRef(Date.now())              // 레슨 시작 시각 → 걸린 시간
   const [elapsedSec, setElapsedSec] = useState(0)
 
-  const newQ = useCallback(async () => {
-    const pool = data.words
+  // 이번 레슨에서 이미 낸 단어. 예전에는 가중 복원추출이라 12문항 레슨의 33~39%에서 같은 단어가 다시 나와(앞에서 정답을 봤으니)
+  // 기억으로 맞힌 답이 숙달에 들어갔다. 레슨 안에서는 뺀 채 가중 추출한다(새 레슨에서 초기화).
+  const askedRef = useRef(new Set())
+  const newQ = useCallback(async (fresh = false) => {
+    if (fresh) askedRef.current = new Set()
+    const left = data.words.filter((w) => !askedRef.current.has(w.word))
+    const pool = left.length ? left : data.words
     const total = pool.reduce((s, w) => s + (w.priority || 1), 0)
     let r = Math.random() * total
     let target = pool[pool.length - 1].word
     for (const w of pool) { r -= (w.priority || 1); if (r <= 0) { target = w.word; break } }
+    askedRef.current.add(target)
     const distractors = pickDistractors(target, byWord, words)
     setResult(null)
     setSelected(null)
@@ -143,7 +149,7 @@ function WordQuiz({ data, reload }) {
     try { setFrames(await learningAPI.getVisemes(target)) } catch { /* ignore */ }
   }, [data, words, byWord])
 
-  useEffect(() => { newQ() }, [newQ])
+  useEffect(() => { newQ(true) }, [newQ])
 
   // 보기 숫자 키 1~4(§4-03) — 채점 중·결과 표시 중·수어 창이 열려 있으면 받지 않는다.
   useChoiceKeys(q?.choices, (w) => setSelected(w), !!q && !result && !submitting && !signOpen && !done)
@@ -176,7 +182,7 @@ function WordQuiz({ data, reload }) {
   const restart = () => {
     setDone(false); setQNum(1); setTally({ n: 0, correct: 0 }); setXpEarned(0)
     startRef.current = Date.now()
-    newQ()
+    newQ(true)
   }
 
   if (!q) return null
