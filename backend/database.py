@@ -409,6 +409,7 @@ async def init_db():
             except Exception:
                 pass  # 이미 존재
         await _dedupe_and_index(conn)
+        await _user_indexes(conn)
 
 
 # 사용자별로 한 행이어야 하는 표. 예전에는 고유 제약이 없어(조회 뒤 없으면 넣기) 동시 첫 제출이나 데모 재시드로
@@ -437,6 +438,30 @@ async def _dedupe_and_index(conn) -> None:
             await conn.exec_driver_sql(f"CREATE UNIQUE INDEX IF NOT EXISTS {name} ON {table} ({key})")
         except Exception as e:   # 켜지는 것을 막지 않는다(조회 쪽도 여러 행에서 첫 행을 쓴다)
             print(f"[WARN] {table} 중복 정리·고유 인덱스 실패: {e}")
+
+
+# 사용자별 기록 표는 늘 user_id로(대개 시간순까지) 읽는다(분석 탭·학습 효과 리포트·말하기 분석·문맥 추론 순서·배치검사 비교).
+# 예전에는 인덱스가 id뿐이라 요청마다 표 전체를 훑었다. 켜질 때 없으면 만든다(create_all은 기존 표에 인덱스를 더하지 않는다).
+_USER_INDEXES = (
+    ("progress", "user_id, created_at"),
+    ("trial_attempts", "user_id, created_at"),
+    ("speak_attempts", "user_id, created_at"),
+    ("placement_results", "user_id, created_at"),
+    ("tactile_attempts", "user_id, created_at"),
+    ("articulation_sessions", "user_id, created_at"),
+    ("assessment_results", "user_id, created_at"),
+    ("bookmarks", "user_id"),
+    ("consent_records", "user_id"),
+)
+
+
+async def _user_indexes(conn) -> None:
+    for table, cols in _USER_INDEXES:
+        name = "ix_" + table + "_" + cols.replace(", ", "_")
+        try:
+            await conn.exec_driver_sql(f"CREATE INDEX IF NOT EXISTS {name} ON {table} ({cols})")
+        except Exception as e:   # 켜지는 것을 막지 않는다
+            print(f"[WARN] {table} 인덱스 실패: {e}")
 
 
 async def close_db():
