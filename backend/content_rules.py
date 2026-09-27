@@ -22,6 +22,7 @@ from itertools import combinations
 from typing import Dict, List, Optional, Tuple
 
 from engine import VISEME_MAP, decompose_hangul, to_pronounced_syllables, DOUBLE_FINAL
+from korean_numbers import normalize_numbers
 
 # 단어 빈도 사전(wordfreq) — 콘텐츠 생성 시 희귀어·비단어를 결정론적으로 거르는 용도.
 # 형태소 분석(MeCab) 없이 토큰 빈도 사전만 직접 조회한다. 설치돼 있지 않으면
@@ -229,14 +230,16 @@ def check_sentence(text: str, min_chars: int = 2, max_chars: int = 40) -> Tuple[
         return False, None, f"길이 {len(text)} 범위 밖({min_chars}~{max_chars})"
     if any(ord(c) < 32 and c != "\t" for c in text):
         return False, None, "제어문자 포함"
+    # 숫자·단위 기호·시각은 입모양 엔진이 한국어 읽기로 바꾸므로(korean_numbers) 읽은 글로 검사한다. 예전에는 원문으로 세어
+    # "10,000원 주세요", "50% 할인해요", "3:30에 봐요"가 한글 비율 미달로, "3km 걸었어요"가 영문자로 탈락했다(9/27 밤).
+    spoken = normalize_numbers(text)
     # 영문자는 입모양으로 읽을 수 없고 채점 음절도 없다(예전에는 'Wi-Fi 비밀번호 알려주세요'가 통과했다).
-    # 숫자는 입모양 엔진이 한국어 읽기로 바꾸므로(korean_numbers) 받는다.
-    if any("a" <= c.lower() <= "z" for c in text):
+    if any("a" <= c.lower() <= "z" for c in spoken):
         return False, None, "영문자 포함"
     # 한글 음절 비율이 낮으면(외국어·코드·기호 위주) 탈락 — 지시 이탈·주입 방어
-    hangul = sum(1 for c in text if "가" <= c <= "힣")
-    non_space = len(text.replace(" ", "")) or 1
-    if hangul < 2 or hangul / non_space < 0.6:
+    hangul = sum(1 for c in spoken if "가" <= c <= "힣")
+    non_space = len(spoken.replace(" ", "")) or 1
+    if hangul < 2 or hangul / non_space < 0.6 or sum(1 for c in text if "가" <= c <= "힣") < 2:   # 숫자만인 글은 원문 한글로 거른다
         return False, None, "한글 음절 비율 낮음"
     # 보이는 입모양이 하나도 없으면(전부 무음/기호) 독화 훈련에 부적합
     vis: List[int] = []
