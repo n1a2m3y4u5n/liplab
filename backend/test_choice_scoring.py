@@ -19,10 +19,12 @@ with TestClient(main.app) as c:
     h = {"Authorization": f"Bearer {r.json()['access_token']}"}
     body = {"scenario_id": "t", "sentence": "여기 커피가 너무 뜨거워요.", "time_spent_seconds": 5,
             "situation": "카페", "difficulty_level": 1}
-    out["choice_wrong"] = c.post("/api/progress", json={**body, "user_answer": "여기 커피가 너무 차가워요.",
-                                                         "answer_mode": "choice"}, headers=h).json()["score"]
-    out["choice_right"] = c.post("/api/progress", json={**body, "user_answer": "여기 커피가 너무 뜨거워요",
-                                                         "answer_mode": "choice"}, headers=h).json()["score"]
+    w = c.post("/api/progress", json={**body, "user_answer": "여기 커피가 너무 차가워요.", "answer_mode": "choice"},
+               headers=h).json()
+    r = c.post("/api/progress", json={**body, "user_answer": "여기 커피가 너무 뜨거워요", "answer_mode": "choice"},
+               headers=h).json()
+    out["choice_wrong"], out["wrong_passed"] = w["score"], w.get("passed")
+    out["choice_right"], out["right_passed"] = r["score"], r.get("passed")
     out["typed_similar"] = c.post("/api/progress", json={**body, "user_answer": "여기 커피가 너무 차가워요."},
                                   headers=h).json()["score"]
 print("RESULT " + json.dumps(out))
@@ -40,4 +42,5 @@ def test_choice_answers_use_exact_match():
     r = json.loads(line[len("RESULT "):])
     assert r["choice_wrong"] == 0, "비슷한 오답 보기가 점수를 받았다"
     assert r["choice_right"] == 100, "공백·문장부호만 다른 정답 보기는 만점"
+    assert r["wrong_passed"] is False and r["right_passed"] is True, "응답의 합격 여부가 점수와 맞아야 한다"
     assert 0 < r["typed_similar"] < 100   # 직접 적은 답은 v2 채점(부분 점수)

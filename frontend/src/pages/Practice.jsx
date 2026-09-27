@@ -309,7 +309,9 @@ export default function Practice() {
       answerShownRef.current = true   // 채점 결과와 함께 정답 문장이 보인다
       setIsPlaying(false)
       // 4지선다는 answer_mode 'choice'로 보내 서버도 같은 문장인지(정확 일치)로 채점한다(화면의 정오와 같다).
-      const correct = effectiveMode === 'test-multiple' ? userAnswer === currentSentence : (response.score ?? 0) >= CORRECT_SCORE
+      // 레슨 집계의 맞힘은 서버의 합격 판정(3단계 합격선, response.passed)을 따른다. 예전에는 80점 기준이라 숙달(60점)과
+      // 오답 목록(60점 미만)과 어긋났다. 옛 서버 응답에 passed가 없으면 예전 기준으로 둔다.
+      const correct = effectiveMode === 'test-multiple' ? userAnswer === currentSentence : (response.passed ?? ((response.score ?? 0) >= CORRECT_SCORE))
       if (!practiceOnly) setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
       setXpEarned((x) => x + (response.xp_gained || 0))
 

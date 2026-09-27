@@ -30,3 +30,11 @@ def test_direction_of_updates():
 
 def test_bounded():
     assert 0.0 <= run([False] * 30) <= 100.0 and 0.0 <= run([True] * 30) <= 100.0
+
+
+def test_review_quality_agrees_with_pass_decision():
+    # 말하기 합격선 50: 55점 합격이면 복습도 성공(3 이상). 합격선 65: 62점 불합격이면 복습도 실패(3 미만)
+    assert main._review_quality(55, True) >= 3
+    assert main._review_quality(62, False) < 3
+    assert main._review_quality(90, True) >= 4
+    assert main._review_quality(None, True) >= 3 and main._review_quality(None, False) < 3
