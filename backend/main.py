@@ -1263,7 +1263,8 @@ async def get_analysis_overview(tz_offset_min: int = -540, current_user=Depends(
     """분석 탭 요약 + 배지 — 활동 기록 전체에서 계산한다(집계 로직은 analytics.py).
 
     학습 시간은 따로 저장하지 않으므로 활동 시각으로 회차를 나눠 추정하고(30분 공백 = 새 회차),
-    정확도는 독화 시행(정오답)·문장 점수·말하기 통과 여부를 0~1로 모아 평균한다.
+    정확도는 독화 시행(정오답)·문장 점수·말하기 통과 여부를 0~1로 모아 평균한다. 주별 추이와 지난주 대비는
+    문항 유형 구성과 떼어 본다(유형 고정효과 보정·유형 안 비교, analytics 머리말).
     tz_offset_min은 브라우저 Date.getTimezoneOffset()(한국 −540) — 날짜·연속 학습·새벽 판정에 쓴다.
     """
     import datetime as dt
@@ -1275,16 +1276,19 @@ async def get_analysis_overview(tz_offset_min: int = -540, current_user=Depends(
     tz = max(-840, min(720, int(tz_offset_min)))
     uid = current_user.id
     events = []
-    for ts, score in (await db.execute(select(Progress.created_at, Progress.score)
-                                       .where(Progress.user_id == uid))).all():
-        events.append(_an.Event(ts, "read", None if score is None else max(0.0, min(1.0, score / 100.0))))
-    for ts, correct in (await db.execute(select(TrialAttempt.created_at, TrialAttempt.correct)
-                                         .where(TrialAttempt.user_id == uid))).all():
-        events.append(_an.Event(ts, "read", 1.0 if correct else 0.0))
-    for ts, passed, score in (await db.execute(select(SpeakAttempt.created_at, SpeakAttempt.passed, SpeakAttempt.score)
-                                               .where(SpeakAttempt.user_id == uid))).all():
+    # kind(문항 유형)는 주별 정확도를 유형 구성과 떼어 보는 데 쓴다(analytics 머리말). 문장은 난이도 단계까지 나눈다.
+    for ts, score, lvl in (await db.execute(select(Progress.created_at, Progress.score, Progress.difficulty_level)
+                                            .where(Progress.user_id == uid))).all():
+        events.append(_an.Event(ts, "read", None if score is None else max(0.0, min(1.0, score / 100.0)),
+                                f"sentence:{lvl or 0}"))
+    for ts, correct, itype in (await db.execute(select(TrialAttempt.created_at, TrialAttempt.correct, TrialAttempt.item_type)
+                                                .where(TrialAttempt.user_id == uid))).all():
+        events.append(_an.Event(ts, "read", 1.0 if correct else 0.0, itype or ""))
+    for ts, passed, score, smode in (await db.execute(
+            select(SpeakAttempt.created_at, SpeakAttempt.passed, SpeakAttempt.score, SpeakAttempt.mode)
+            .where(SpeakAttempt.user_id == uid))).all():
         g = (1.0 if passed else 0.0) if passed is not None else (None if score is None else max(0.0, min(1.0, score / 100.0)))
-        events.append(_an.Event(ts, "speak", g))
+        events.append(_an.Event(ts, "speak", g, f"speak:{smode or ''}"))
     for (ts,) in (await db.execute(select(PlacementResult.created_at)
                                    .where(PlacementResult.user_id == uid))).all():
         events.append(_an.Event(ts, "test", None))

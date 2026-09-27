@@ -8,6 +8,11 @@ Event 목록으로 받아 학습 시간·정확도 추이·연속 학습·배지
 회차 길이 = 마지막 활동 − 첫 활동 + 1분(마지막 문항을 푸는 시간)으로 잡는다.
 날짜는 사용자 시간대 기준이다. DB 시각은 UTC이고, tz_offset_min은 브라우저
 Date.getTimezoneOffset() 값(UTC − 현지, 한국 = −540)이다.
+
+주별 정확도는 문항 유형(입모양·단어·문맥·문장·말하기 모드)마다 정답률이 달라, 학습 경로를 따라 쉬운 유형에서 어려운
+유형으로 옮겨 가면 실력이 그대로여도 내려갔다(학습 효과 리포트의 eval_metrics와 같은 문제). 이제 추이는 유형 평균을 빼고
+전체 평균을 더한 값(유형 고정효과 보정, accuracy_raw는 보정 전)이고, 지난주 대비는 두 주에 모두 있는 유형 안에서 잰 차이를
+두 주 문항 수의 조화평균으로 가중 평균한다(겹치는 유형이 없으면 None). 유형이 하나뿐이면 예전 값과 같다.
 """
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -23,6 +28,7 @@ class Event:
     ts: datetime                 # UTC(naive, DB 저장 형식)
     track: str                   # 'read' | 'speak' | 'test'
     graded: Optional[float]      # 0~1 정오답·점수. 채점하지 않는 활동은 None
+    kind: str = ""               # 문항 유형(viseme·word·closure·sentence·speak:<모드>). 주별 정확도 보정에 쓴다
 
 
 def to_local(ts: datetime, tz_offset_min: int) -> datetime:
@@ -66,11 +72,41 @@ def streaks(days: Set[date], today: date) -> Tuple[int, int]:
     return cur, best
 
 
+def _kind_adjusted(events: Sequence[Event]) -> Dict[int, float]:
+    """채점된 이벤트마다 (값 − 그 유형 평균 + 전체 평균). id(e) → 보정값."""
+    g = [e for e in events if e.graded is not None]
+    if not g:
+        return {}
+    by: Dict[str, List[float]] = {}
+    for e in g:
+        by.setdefault(e.kind, []).append(e.graded)
+    mean = {k: sum(v) / len(v) for k, v in by.items()}
+    overall = sum(e.graded for e in g) / len(g)
+    return {id(e): e.graded - mean[e.kind] + overall for e in g}
+
+
+def within_kind_delta(recent: Sequence[Event], before: Sequence[Event]) -> Optional[float]:
+    """두 기간 정확도 차이를 유형 안에서 재서, 두 기간 문항 수의 조화평균으로 가중 평균한다. 겹치는 유형이 없으면 None."""
+    def by_kind(evs):
+        out: Dict[str, List[float]] = {}
+        for e in evs:
+            if e.graded is not None:
+                out.setdefault(e.kind, []).append(e.graded)
+        return out
+    a, b = by_kind(recent), by_kind(before)
+    shared = set(a) & set(b)
+    if not shared:
+        return None
+    w = {k: 2.0 / (1.0 / len(a[k]) + 1.0 / len(b[k])) for k in shared}
+    return sum(w[k] * (sum(a[k]) / len(a[k]) - sum(b[k]) / len(b[k])) for k in shared) / sum(w.values())
+
+
 def weekly(events: Sequence[Event], today: date, tz_offset_min: int, weeks: int = WEEKS) -> List[Dict]:
     """최근 weeks주(오늘로 끝나는 7일 창, 오래된 순)의 학습 분·정확도.
-    회차 시간은 회차 시작일이 속한 주에 넣는다."""
+    회차 시간은 회차 시작일이 속한 주에 넣는다. accuracy는 유형 고정효과 보정값, accuracy_raw는 보정 전."""
     starts = [today - timedelta(days=7 * k + 6) for k in range(weeks)][::-1]
-    buckets = [{"minutes": 0.0, "graded": []} for _ in starts]
+    buckets = [{"minutes": 0.0, "graded": [], "adjusted": []} for _ in starts]
+    adj = _kind_adjusted(events)
 
     def idx(d: date) -> Optional[int]:
         for i, s in enumerate(starts):
@@ -88,11 +124,13 @@ def weekly(events: Sequence[Event], today: date, tz_offset_min: int, weeks: int 
         i = idx(to_local(e.ts, tz_offset_min).date())
         if i is not None:
             buckets[i]["graded"].append(e.graded)
+            buckets[i]["adjusted"].append(adj[id(e)])
     out = []
     for s, b in zip(starts, buckets):
-        g = b["graded"]
+        g, a = b["graded"], b["adjusted"]
         out.append({"start": s.isoformat(), "minutes": round(b["minutes"]),
-                    "accuracy": round(sum(g) / len(g), 4) if g else None, "n_graded": len(g)})
+                    "accuracy": round(min(1.0, max(0.0, sum(a) / len(a))), 4) if a else None,
+                    "accuracy_raw": round(sum(g) / len(g), 4) if g else None, "n_graded": len(g)})
     return out
 
 
@@ -144,8 +182,12 @@ def overview(events: Sequence[Event], now_utc: datetime, tz_offset_min: int, **t
     read_ev = [e for e in events if e.track == "read"]
     speak_ev = [e for e in events if e.track == "speak"]
     this_w, prev_w = week[-1], week[-2]
-    acc_delta = (None if this_w["accuracy"] is None or prev_w["accuracy"] is None
-                 else round(this_w["accuracy"] - prev_w["accuracy"], 4))
+    # 지난주 대비: weekly의 마지막 두 창(오늘로 끝나는 7일, 그 앞 7일)과 같은 구간에서 유형 안 차이
+    loc = [(to_local(e.ts, tz_offset_min).date(), e) for e in events]
+    this_ev = [e for d0, e in loc if today - timedelta(days=6) <= d0 <= today]
+    prev_ev = [e for d0, e in loc if today - timedelta(days=13) <= d0 <= today - timedelta(days=7)]
+    d = within_kind_delta(this_ev, prev_ev)
+    acc_delta = None if d is None else round(d, 4)
     b = badges(events, tz_offset_min, best,
                read_mastered=track_info["read_mastered"], read_total=track_info["read_total"],
                speak_mastered=track_info["speak_mastered"], speak_total=track_info["speak_total"],
