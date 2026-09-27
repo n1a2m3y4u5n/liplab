@@ -1,0 +1,28 @@
+{
+ "min8": {
+  "R0": {
+   "false_rate": 0.119,
+   "judged": 9538,
+   "delay_median": 38.0
+  },
+  "EWMA_a0.08_thr85": {
+   "false_rate": 0.0496,
+   "judged": 11702,
+   "delay_median": 32
+  },
+  "adopt": true
+ },
+ "min6": {
+  "R0": {
+   "false_rate": 0.1596,
+   "judged": 9662,
+   "delay_median": 39
+  },
+  "EWMA_a0.08_thr85": {
+   "false_rate": 0.0496,
+   "judged": 11702,
+   "delay_median": 32
+  },
+  "adopt": true
+ }
+}
