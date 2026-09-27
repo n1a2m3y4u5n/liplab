@@ -50,3 +50,17 @@ def test_stage2_pool_skips_rare_and_non_standalone_words():
     assert not (pool & set(ex)) and len(pool) >= 400
     for w in list(pool)[:60]:
         assert not (set(t.classes(w).get("distinct", [])) & set(ex))
+
+
+def test_test_words_and_rare_words_stay_out_of_other_pools():
+    """9/27 감사: 말하기 4단계 풀·배치검사 풀·대화 초점 단어에도 표준검사 정답과 드문 말이 없다."""
+    import assessment
+    import curriculum
+    import main
+    import speak_curriculum as sc
+    skip = set(assessment.test_only_words()) | set(curriculum.STAGE2_EXCLUDED)
+    assert main._excluded_training_words() == skip and len(skip) >= 90
+    words4 = [it["target"] for it in sc.get_stage(4)["items"]]
+    assert words4 and not (set(words4) & skip)
+    items = assessment.build_placement_items([w["word"] for w in curriculum.WORD_BANK if w["word"] not in skip], n=8, seed=0)
+    assert not ({it["word"] for it in items} | {o for it in items for o in it["options"]}) & skip

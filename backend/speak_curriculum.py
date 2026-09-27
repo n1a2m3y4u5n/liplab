@@ -30,8 +30,19 @@ _STAGE4_BASE = [
     # 3음절
     "자동차", "강아지", "고양이", "바나나", "무지개", "선생님", "운동화", "책가방",
 ]
-# 읽기 WORD_BANK에서 중복 없이 보강 → 풀을 더 크게
-_STAGE4_WORDS = list(dict.fromkeys(_STAGE4_BASE + [w["word"] for w in _WORD_BANK]))
+# 읽기 WORD_BANK에서 중복 없이 보강 → 풀을 더 크게. 사전·사후 표준검사 정답과 드문 말은 뺀다(9/27 감사: 말하기 화면은 아바타로
+# 그 단어의 입모양을 보여 줘 검사 단어가 훈련에 노출됐다. 우유·가방·하늘·무지개가 처음 60문항 안에 있었다).
+try:
+    from assessment import test_only_words as _test_only_words
+    _SKIP = set(_test_only_words())
+except Exception:
+    _SKIP = set()
+try:
+    from curriculum import STAGE2_EXCLUDED as _RARE
+    _SKIP |= set(_RARE)
+except Exception:
+    pass
+_STAGE4_WORDS = [w for w in dict.fromkeys(_STAGE4_BASE + [w["word"] for w in _WORD_BANK]) if w not in _SKIP]
 
 
 SPEAK_STAGES: List[Dict] = [
