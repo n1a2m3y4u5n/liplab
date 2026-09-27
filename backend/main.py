@@ -1620,10 +1620,14 @@ async def curriculum_viseme_lessons(current_user=Depends(get_current_user)):
             "articulation": {"place": tgt["place"], "manner": tgt["manner"],
                              "guide": tgt["hidden_guide"], "nasal": tgt["nasal"]},
         })
+    # 짝은 화면이 쓰는 미리보기(같아 보임 3, 달라 보임 2, VisemeLiteracy.pickPairPreview와 같은 규칙)만 보낸다. 예전에는 921쌍
+    # 전부(약 100KB)를 보냈다(이 응답을 쓰는 화면은 1단계 미리보기와 복습의 레슨 이름뿐).
+    pairs = _curriculum.MINIMAL_PAIRS
+    preview = [p for p in pairs if p.get("same_looking")][:3] + [p for p in pairs if not p.get("same_looking")][:2]
     return {
         "lessons": lessons,
         "homophene_clusters": _curriculum.HOMOPHENE_CLUSTERS,
-        "minimal_pairs": _curriculum.MINIMAL_PAIRS,
+        "minimal_pairs": preview,
         "anchors": _curriculum.VISIBLE_ANCHORS,
     }
 
