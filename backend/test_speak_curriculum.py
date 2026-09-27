@@ -57,3 +57,12 @@ if __name__ == "__main__":
         t()
         print(f"  ✓ {t.__name__}")
     print(f"\n{len(tests)}개 테스트 통과")
+
+
+def test_prosody_uses_semitones_so_voice_pitch_does_not_matter():
+    # 같은 15Hz 올림도 남성(120Hz)은 2.0반음, 여성(220Hz)은 1.1반음이다. 반음으로 재면 목소리 높이와 상관없이 같은 기준
+    _ok(S._score_prosody("rise", {"pitch_start": 120, "pitch_end": 135})[1] is True, "남성 +15Hz(2.0반음) 통과")
+    _ok(S._score_prosody("rise", {"pitch_start": 220, "pitch_end": 235})[1] is False, "여성 +15Hz(1.1반음)는 부족")
+    _ok(S._score_prosody("rise", {"pitch_start": 220, "pitch_end": 245})[1] is True, "여성 +25Hz(1.9반음) 통과")
+    _ok(S._score_prosody("rise", {"pitch_start": 0, "pitch_end": 200})[1] is False, "음높이를 못 쟀으면 판정하지 않음")
+    _ok(abs(S.semitones(150, 165) - S.RISE_FALL_ST) < 0.01, "문턱은 150Hz 목소리의 15Hz")

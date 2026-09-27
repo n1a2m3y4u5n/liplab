@@ -12,6 +12,7 @@
   word     — 단어: Whisper 전사 + 명료도
   sentence — 문장: Whisper 전사 + 문장 억양(pitch 방향) 곁들임
 """
+import math
 from typing import Dict, List, Optional, Tuple
 
 try:
@@ -142,10 +143,22 @@ def stages_overview() -> List[Dict]:
     return out
 
 
+# 억양 방향은 반음(로그 척도)으로 잰다. 예전 Hz 기준(올리기·내리기 15Hz, 문장 방향 12Hz)은 목소리 높이에 따라 실제 어려움이 달랐다
+# (15Hz가 남성 120Hz에서는 2.0반음, 여성 220Hz에서는 1.1반음, 아동 260Hz에서는 1.0반음). 문턱은 예전 Hz 기준을 150Hz 목소리에서 환산한
+# 값이라 남성은 조금 쉬워지고(약 12Hz) 여성·아동은 조금 어려워진다(약 22·26Hz). 프론트 lib/speakTone.js도 같은 값이다.
+RISE_FALL_ST = 1.65      # 올리기·내리기 연습(예전 15Hz)
+SENTENCE_DIR_ST = 1.33   # 문장 억양 방향(예전 12Hz)
+
+
+def semitones(f_from: float, f_to: float) -> float:
+    """f_from → f_to 음높이 변화(반음). 둘 중 하나라도 0 이하면(음높이를 못 잼) 0."""
+    return 12.0 * math.log2(f_to / f_from) if f_from and f_to and f_from > 0 and f_to > 0 else 0.0
+
+
 def _score_prosody(drill: str, m: Dict) -> Tuple[float, bool, str]:
     loud = m.get("loudness", 0) or 0
     dur = m.get("duration", 0) or 0
-    d = (m.get("pitch_end", 0) or 0) - (m.get("pitch_start", 0) or 0)   # 끝 - 시작 (Hz)
+    d = semitones(m.get("pitch_start", 0) or 0, m.get("pitch_end", 0) or 0)   # 시작 → 끝(반음)
     if drill == "loud":
         passed = loud >= 60
         return round(min(100, loud / 60 * 100), 1), passed, (
@@ -161,12 +174,12 @@ def _score_prosody(drill: str, m: Dict) -> Tuple[float, bool, str]:
         return round(min(100, dur / 2.0 * 100), 1), passed, (
             "충분히 길게 유지했어요!" if passed else f"더 길게 (지금 {dur:.1f}초, 목표 2초↑).")
     if drill == "rise":
-        passed = d >= 15
-        return round(min(100, max(0.0, d) / 15 * 100), 1), passed, (
+        passed = d >= RISE_FALL_ST
+        return round(min(100, max(0.0, d) / RISE_FALL_ST * 100), 1), passed, (
             "끝을 잘 올렸어요!" if passed else "끝을 더 확실히 올려보세요 (끝음이 시작보다 높게).")
     if drill == "fall":
-        passed = (-d) >= 15
-        return round(min(100, max(0.0, -d) / 15 * 100), 1), passed, (
+        passed = (-d) >= RISE_FALL_ST
+        return round(min(100, max(0.0, -d) / RISE_FALL_ST * 100), 1), passed, (
             "끝을 잘 내렸어요!" if passed else "끝을 더 확실히 내려보세요 (끝음이 시작보다 낮게).")
     return 0.0, False, ""
 
@@ -203,8 +216,8 @@ def score_attempt(stage_no: int, target: str, transcript: Optional[str],
     if mode == "sentence":
         exp = next((it.get("intonation") for it in stg["items"] if it["target"] == target), None)
         if exp:
-            d = (m.get("pitch_end", 0) or 0) - (m.get("pitch_start", 0) or 0)
-            got = "rise" if d > 12 else "fall" if d < -12 else "flat"
+            d = semitones(m.get("pitch_start", 0) or 0, m.get("pitch_end", 0) or 0)
+            got = "rise" if d > SENTENCE_DIR_ST else "fall" if d < -SENTENCE_DIR_ST else "flat"
             if got == exp:
                 note = "억양 방향도 맞았어요!"
             elif got == "flat":
