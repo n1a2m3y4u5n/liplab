@@ -23,3 +23,14 @@ test('거리는 대칭이고 뚜렷이 다른 무리는 멀다', () => {
   assert.equal(shapeDistance(5, 7), shapeDistance(7, 5))
   assert.ok(shapeDistance(5, 7) < MIN_SHAPE_DISTANCE && shapeDistance(1, 2) > 0.5 && shapeDistance(3, 4) > 0.5)
 })
+
+test('12문항에 보이는 무리 6개가 두 번씩, 연달아 같은 무리 없음', async () => {
+  const { balancedTargets } = await import('./visemeOptions.js')
+  const groups = [1, 2, 3, 4, 5, 9]
+  for (let k = 0; k < 200; k++) {
+    const seq = balancedTargets(groups, 12)
+    assert.equal(seq.length, 12)
+    for (const g of groups) assert.equal(seq.filter((x) => x === g).length, 2)
+    for (let i = 1; i < seq.length; i++) assert.notEqual(seq[i], seq[i - 1])
+  }
+})

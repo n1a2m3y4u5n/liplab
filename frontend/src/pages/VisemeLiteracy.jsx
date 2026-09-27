@@ -14,7 +14,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import { LoadFailed } from '../components/ErrorScreen'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 import useChoiceKeys from '../lib/useChoiceKeys'
-import { pickVisemeDistractors } from '../lib/visemeOptions'
+import { pickVisemeDistractors, balancedTargets } from '../lib/visemeOptions'
 import { visemeCycleSteps } from '../lib/visemeCycle'
 
 // MediaPipe 번들이 커서 펼칠 때만 로드(초기 번들 보호)
@@ -360,8 +360,12 @@ function QuizPanel({ data }) {
   const startRef = useRef(Date.now())              // 레슨 시작 시각 → 걸린 시간
   const [elapsedSec, setElapsedSec] = useState(0)
 
-  const newQ = useCallback(() => {
-    const target = quizzable[Math.floor(Math.random() * quizzable.length)]
+  // 레슨(12문항)의 정답 무리 순서: 무리마다 두 번씩, 연달아 같은 무리 없이(lib/visemeOptions.balancedTargets).
+  // 예전 매 문항 무작위는 한 레슨에서 무리 하나 이상이 빠질 확률이 56%였다.
+  const deckRef = useRef({ list: [], i: 0 })
+  const newQ = useCallback((fresh = false) => {
+    if (fresh || deckRef.current.i >= deckRef.current.list.length) deckRef.current = { list: balancedTargets(quizzable, QUIZ_LEN), i: 0 }
+    const target = deckRef.current.list[deckRef.current.i++] || quizzable[0]
     // 오답은 화면에서 가를 수 있는 무리만(정답이 중설모음이면 입 안쪽 무리 제외, lib/visemeOptions)
     const others = pickVisemeDistractors(target.viseme_id, lessons)
     const choices = shuffle([target, ...others]).map((l) => ({ viseme_id: l.viseme_id, name: lessonLabel(l) }))
@@ -370,7 +374,7 @@ function QuizPanel({ data }) {
     setResult(null)
   }, [lessons, quizzable])
 
-  useEffect(() => { newQ() }, [newQ])
+  useEffect(() => { newQ(true) }, [newQ])
 
   // 보기 숫자 키 1~4(§4-03) — 채점 중·결과 표시 중에는 받지 않는다.
   useChoiceKeys(q?.choices, (c) => setSelected(c.viseme_id), !!q && !result && !submitting && !done)
@@ -404,7 +408,7 @@ function QuizPanel({ data }) {
   const restart = () => {
     setDone(false); setQNum(1); setTally({ n: 0, correct: 0 }); setXpEarned(0)
     startRef.current = Date.now()
-    newQ()
+    newQ(true)
   }
 
   if (!q) return null
