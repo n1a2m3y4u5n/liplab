@@ -230,6 +230,105 @@ def calculate_jamo_score(correct: List[Tuple], user: List[Tuple]) -> Dict:
     }
 
 
+# ── 독화 이해 채점 v2: 입모양 기준(docs/scoring-v2.md) ───────────────────────────────
+# 독화 과제라 입모양으로 구별할 수 있는 차이만 감점한다. 기존 채점(calculate_jamo_score)은 받침 없는 음절끼리
+# 종성 몫을 무조건 주고 다른 자모에도 부분 점수를 주며, 건너뛰기에 벌점이 없고 분모가 정답 길이뿐이라, 관계없는
+# 문장이 평균 47점을 받고 덧붙인 말은 감점되지 않았다. 발음 채점(전사 경로)은 소리 기준이라 기존 채점을 그대로 쓴다.
+VISUAL_SAME_GROUP = 0.8          # 같은 입모양 그룹의 다른 자모(눈으로 구별할 수 없음)
+VISUAL_WEIGHTS = (0.35, 0.45, 0.2)   # 초성·중성·종성
+VISUAL_CHANCE = 0.0              # 우연 공제: 음절쌍 점수에서 빼고 정렬한다(개발 절반에서 정함, scripts/scoring_bench.py --tune)
+VISUAL_BASELINE = 0.4            # 우연 보정: F1에서 빼고 다시 0~1로 편다(개발 절반에서 정함)
+
+
+def _visual_jamo_sim(p1: str, p2: str) -> float:
+    if p1 == p2:
+        return 1.0
+    if not p1 or not p2:   # 무음 초성 ㅇ('')은 ㅇ끼리만 같다
+        return 0.0
+    v1, v2 = VISEME_MAP.get(p1), VISEME_MAP.get(p2)
+    return VISUAL_SAME_GROUP if (v1 is not None and v1 == v2) else 0.0
+
+
+def _visual_syllable_sim(cs: Tuple, us: Tuple) -> float:
+    wi, wm, wf = VISUAL_WEIGHTS
+    if cs[2] or us[2]:
+        final = _visual_jamo_sim(cs[2], us[2]) if (cs[2] and us[2]) else 0.0
+    else:
+        final = 1.0   # 둘 다 받침 없음
+    return wi * _visual_jamo_sim(cs[0], us[0]) + wm * _visual_jamo_sim(cs[1], us[1]) + wf * final
+
+
+def align_visual(correct: List[Tuple], user: List[Tuple], chance: Optional[float] = None
+                 ) -> List[Tuple[Optional[Tuple], Optional[Tuple]]]:
+    """음절쌍 점수에서 chance를 뺀 값으로 최대 단조 정렬(건너뛰기 0점). chance 이하로 닮은 쌍은 붙이지 않아,
+    관계없는 문장에서 우연히 닮은 음절을 골라 모으지 못한다. 반환 형식은 align_jamos와 같다."""
+    c = VISUAL_CHANCE if chance is None else chance
+    n, m = len(correct), len(user)
+    dp = [[0.0] * (m + 1) for _ in range(n + 1)]
+    bt = [[None] * (m + 1) for _ in range(n + 1)]
+    for i in range(1, n + 1):
+        bt[i][0] = 'C'
+    for j in range(1, m + 1):
+        bt[0][j] = 'U'
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            match = dp[i - 1][j - 1] + _visual_syllable_sim(correct[i - 1], user[j - 1]) - c
+            skip_c, skip_u = dp[i - 1][j], dp[i][j - 1]
+            if match > skip_c and match > skip_u:   # 건너뛰기와 같으면 붙이지 않는다(허위 정렬 방지)
+                dp[i][j], bt[i][j] = match, 'M'
+            elif skip_c >= skip_u:
+                dp[i][j], bt[i][j] = skip_c, 'C'
+            else:
+                dp[i][j], bt[i][j] = skip_u, 'U'
+    pairs: List[Tuple[Optional[Tuple], Optional[Tuple]]] = []
+    i, j = n, m
+    while i > 0 or j > 0:
+        move = bt[i][j]
+        if move == 'M':
+            pairs.append((correct[i - 1], user[j - 1])); i -= 1; j -= 1
+        elif move == 'C':
+            pairs.append((correct[i - 1], None)); i -= 1
+        else:
+            pairs.append((None, user[j - 1])); j -= 1
+    pairs.reverse()
+    return pairs
+
+
+def calculate_visual_score(correct: List[Tuple], user: List[Tuple],
+                           chance: Optional[float] = None, baseline: Optional[float] = None) -> Dict:
+    """입모양 기준 채점. 일치량 M(정렬쌍 음절 유사도 합)으로 재현율(M/정답 음절 수)과 정밀도(M/답 음절 수)를 구해
+    F1을 내고, 관계없는 문장에서 남는 몫(baseline)을 빼 0~100으로 편다. 음소별 정확도는 정답 쪽 기준이다."""
+    b = VISUAL_BASELINE if baseline is None else baseline
+    alignment = align_visual(correct, user, chance)
+    n_c, n_u = len(correct), len(user)
+    matched = sum(_visual_syllable_sim(cs, us) for cs, us in alignment if cs and us)
+    recall = matched / n_c if n_c else 0.0
+    precision = matched / n_u if n_u else 0.0
+    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+    score = 100.0 * max(0.0, (f1 - b) / (1.0 - b)) if b < 1 else 0.0
+
+    initial = medial = final = 0.0
+    total_finals = sum(1 for _, _, f in correct if f)
+    for cs, us in alignment:
+        if cs is None or us is None:
+            continue
+        initial += _visual_jamo_sim(cs[0], us[0])
+        medial += _visual_jamo_sim(cs[1], us[1])
+        if cs[2] and us[2]:
+            final += _visual_jamo_sim(cs[2], us[2])
+    return {
+        "score": round(min(100.0, score), 2),
+        "precision": round(precision, 3),
+        "recall": round(recall, 3),
+        "alignment": alignment,
+        "phoneme_accuracy": {
+            "initial": round(initial / n_c * 100, 1) if n_c else 0,
+            "medial": round(medial / n_c * 100, 1) if n_c else 0,
+            "final": round(final / total_finals * 100, 1) if total_finals else 100.0,
+        },
+    }
+
+
 def extract_jamo_sequence(text: str) -> List[Tuple]:
     """
     Extract jamo sequence from Korean text
@@ -375,7 +474,7 @@ def viseme_confusions(target: str, chosen: str) -> List[Dict]:
     return out
 
 
-async def calculate_score(correct: str, user_answer: str, db=None) -> Dict:
+async def calculate_score(correct: str, user_answer: str, db=None, mode: str = "phonological") -> Dict:
     """
     Main scoring function with phonological similarity weighting
 
@@ -383,6 +482,7 @@ async def calculate_score(correct: str, user_answer: str, db=None) -> Dict:
         correct: Correct sentence
         user_answer: User's answer
         db: Database session (optional, for additional context)
+        mode: "phonological"(기존, 발음 전사 채점) 또는 "visual"(독화 이해 채점 v2, docs/scoring-v2.md)
 
     Returns:
         Dictionary containing:
@@ -415,7 +515,10 @@ async def calculate_score(correct: str, user_answer: str, db=None) -> Dict:
     user_jamos = to_pronounced_jamos(user_clean)
 
     # Calculate detailed score
-    score_result = calculate_jamo_score(correct_jamos, user_jamos)
+    if mode == "visual":
+        score_result = calculate_visual_score(correct_jamos, user_jamos)
+    else:
+        score_result = calculate_jamo_score(correct_jamos, user_jamos)
 
     # Identify error visemes — 채점과 '같은 정렬'을 재사용해 오정렬 허위 오류 방지
     error_visemes = error_visemes_from_alignment(score_result["alignment"])
@@ -437,7 +540,9 @@ async def calculate_score(correct: str, user_answer: str, db=None) -> Dict:
         "viseme_errors": error_visemes,
         "feedback": feedback,
         "features": viseme_features,
-        "levenshtein_ratio": round(levenshtein_ratio, 2)
+        "levenshtein_ratio": round(levenshtein_ratio, 2),
+        **({"precision": score_result["precision"], "recall": score_result["recall"], "method": "visual_v2"}
+           if mode == "visual" else {}),
     }
 
 
