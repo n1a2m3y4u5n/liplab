@@ -60,6 +60,7 @@ def _warmup_models():
                     scorer = os.getenv("DGOP_SCORER_ID")
                     if scorer and scorer != aligner:
                         dgop_acoustic._load(scorer)
+                        dgop_acoustic._share_once(aligner, scorer)   # 특징 추출부 공유도 미리(첫 채점이 확인하지 않게)
             import audio2face
             if audio2face.is_available():
                 audio2face.warm()   # 적재에 더해 백본 가중치를 끝까지 읽어 둔다(첫 아바타 요청이 느린 디스크를 기다리지 않게)
@@ -70,12 +71,30 @@ def _warmup_models():
     threading.Thread(target=run, daemon=True, name="model-warmup").start()
 
 
+def _warmup_content():
+    """학습 콘텐츠 표를 뒤에서 미리 만든다(모델과 무관, 늘 켬, LIPLAB_CONTENT_WARMUP=0이면 끔). 2단계 출제 표(보기 부류, 약 1.5초)와
+    문맥 문항 서빙 목록(규칙 게이트)을 켜진 뒤 첫 레슨 요청이 기다리지 않게 한다(9/27)."""
+    import threading
+
+    def run():
+        try:
+            _stage2_table()
+            _training_closures()
+            print("[OK] 콘텐츠 표 예열 끝")
+        except Exception as e:
+            print(f"[WARN] 콘텐츠 표 예열 실패(요청 때 다시 만든다): {type(e).__name__}: {e}")
+
+    threading.Thread(target=run, daemon=True, name="content-warmup").start()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for startup and shutdown"""
     # Startup
     await init_db()
     print("[OK] Database initialized")
+    if os.getenv("LIPLAB_CONTENT_WARMUP", "1") != "0":
+        _warmup_content()
     if os.getenv("LIPLAB_WARMUP") == "1":
         _warmup_models()
     yield
