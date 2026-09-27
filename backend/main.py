@@ -3228,6 +3228,7 @@ async def speak_assess(
     sim = None
     dgop_result = None
     assessment_method = None
+    no_voice = False   # 전사 경로에서 소리 없는 녹음이라 전사를 건너뜀
     need_asr = (mode in ("phoneme", "word", "sentence")) or (stage is None)
     if need_asr:
         # 축 B — 전사 비의존 D-GOP 경로. 아래 환경변수가 설정된 경우에만 시도하고,
@@ -3274,7 +3275,12 @@ async def speak_assess(
                       f"(aligner={dgop_aligner_id}): {type(e).__name__}: {e}")
                 dgop_result = None
 
-        if assessment_method != "dgop":
+        if assessment_method != "dgop" and _speakcur.no_voice(metrics):
+            # 소리가 없는 녹음(프론트 micIssue)은 전사하지 않고 불합격이다. Whisper가 무음에서 만든 문장이 채점되어 합격할 수
+            # 있었다(speak_curriculum.no_voice). D-GOP 경로는 그대로 둔다.
+            transcript, sim, no_voice = "", 0.0, True
+            assessment_method = "asr_transcript"
+        elif assessment_method != "dgop":
             from speak_service import transcribe, is_available
             if not is_available():
                 raise HTTPException(status_code=503, detail="서버에 음성인식 모델(faster-whisper)이 없습니다.")
@@ -3388,7 +3394,7 @@ async def speak_assess(
     # 축 E — 모음 단계에서 목표가 단모음 음절('아'·'이' 등)이면 녹음의 포먼트(F1·F2)로 혀 높낮이·앞뒤
     # 교정 방향을 만든다(formants.py). 웹캠이 못 보는 혀 위치를 소리로 짚어 주는 경로다.
     vowel_fb = None
-    if mode == "phoneme":
+    if mode == "phoneme" and not no_voice:   # 소리 없는 녹음은 포먼트를 재지 않는다
         import formants as _fm
         _v = _fm.target_vowel(target)
         if _v:
@@ -3401,6 +3407,8 @@ async def speak_assess(
     # 발성·운율은 규칙 기반 note가 곧 구체 코칭, 모음~문장은 Claude 코칭(+억양 note)
     if mode in ("voicing", "prosody"):
         coaching = note
+    elif no_voice:
+        coaching = note or _speakcur.NO_VOICE_NOTE   # 들은 것이 없으니 LLM 코칭을 부르지 않는다
     else:
         from llm_service import generate_speaking_coaching
         # 억양은 문장에서만, 그것도 기대 방향 규칙(note)이 판정하지 않았을 때만 코칭에 넣는다(음절·단어는 음높이가 고른 게 자연스럽다)
