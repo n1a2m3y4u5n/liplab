@@ -17,6 +17,7 @@ const JAW_OPEN_MAX_RAD = THREE.MathUtils.degToRad(30)
 import { VISEME_BLENDSHAPES, ACTIVE_MORPH_KEYS, VISEME_TONGUE, ACTIVE_TONGUE_KEYS } from '../lib/visemeShapes'
 import { MIRROR_KEYS } from '../lib/mouthMirror'
 import MouthFallback2D from './MouthFallback2D'
+import { transitionProgress } from '../lib/visemeTiming'
 
 const EMPTY = {}
 const ACTIVE_KEY_SET = new Set(ACTIVE_MORPH_KEYS)
@@ -39,7 +40,8 @@ const GLB_RETRY_MAX = 2
  * (병합 메모: 혀 렌더링[YMJ]과 WebGL 폴백·카메라 경쟁조건 수정[feat/curriculum]이
  *  깨진 머지로 파일에 두 벌 복제돼 빌드가 깨져 있었다 → 두 기능을 모두 살려 단일화.)
  */
-function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null, modelUrl = MODEL_URL }) {
+function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null, modelUrl = MODEL_URL,
+  transitionMs, durationMs, speed = 1 }) {
   const { scene: shared } = useGLTF(modelUrl, false, false, withMeshopt)
   // useGLTF는 캐시된 같은 scene 객체를 돌려준다. three.js 객체는 부모를 하나만 가질 수 있어, 그대로
   // <primitive>로 쓰면 한 화면에 아바타가 둘 이상일 때(다자 대화·웹캠 거울) 마지막 것만 보였다.
@@ -57,6 +59,12 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
   const currentWeightsRef = useRef({})
   const extraKeysRef = useRef(new Set())   // 기본 키 집합 밖에서 원본 프레임이 움직인 모프(0으로 돌아올 때까지 보간)
   const tongueWeightsRef = useRef({})
+  // 텍스트 입모양 전환(lib/visemeTiming): 입모양이 바뀐 순간의 가중치(출발점)와 그 뒤 흐른 시간
+  const fromWeightsRef = useRef({})
+  const lastVisemeRef = useRef(null)
+  const elapsedRef = useRef(0)
+  const timingRef = useRef({ transitionMs, durationMs, speed })
+  timingRef.current = { transitionMs, durationMs, speed }
   const skinMatsRef = useRef([])   // 투명(X-ray) 모드에서 반투명화할 피부 재질
   const xrayAppliedRef = useRef(null)
 
@@ -106,6 +114,25 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
     const target = rawFrame || mirror || VISEME_BLENDSHAPES[visemeId] || EMPTY
     // A4 프레임은 이미 30fps 시퀀스라 빠르게 따라가고, 나머지는 부드럽게 전환(~45ms).
     const LERP = Math.min(1, delta * (rawFrame ? 34 : 22))
+    // 텍스트 입모양(음성구동·거울이 아닐 때)은 프레임의 전환 시간으로 옮긴다: 입모양이 바뀌면 지금 가중치를 출발점으로 잡고,
+    // transition_ms(프레임 길이의 60% 이하, 재생 속도 반영) 동안 이징으로 목표까지 간 뒤 멈춘다. 시간이 없으면 예전 방식.
+    let eased = null
+    if (!rawFrame && !mirror) {
+      if (lastVisemeRef.current !== visemeId) {
+        lastVisemeRef.current = visemeId
+        fromWeightsRef.current = { ...currentWeightsRef.current }
+        elapsedRef.current = 0
+      } else {
+        elapsedRef.current += delta * 1000
+      }
+      const tm = timingRef.current
+      eased = transitionProgress(elapsedRef.current, tm.transitionMs, tm.durationMs, tm.speed)
+    } else {
+      lastVisemeRef.current = null   // 음성구동·거울이 끝나고 텍스트로 돌아오면 그때 가중치에서 새로 출발
+    }
+    const nextWeight = (key, tgt) => (eased == null
+      ? THREE.MathUtils.lerp(currentWeightsRef.current[key] || 0, tgt, LERP)
+      : (fromWeightsRef.current[key] || 0) + (tgt - (fromWeightsRef.current[key] || 0)) * eased)
 
     /*
       보간할 키 집합. mirrorRef를 받은 인스턴스는 **항상** MIRROR_KEYS(=ACTIVE_MORPH_KEYS의 상위집합)를,
@@ -133,7 +160,7 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
       }
     }
     for (const key of baseKeys) {
-      applyMorph(key, THREE.MathUtils.lerp(currentWeightsRef.current[key] || 0, target[key] || 0, LERP))
+      applyMorph(key, nextWeight(key, target[key] || 0))
     }
     for (const key of extra) {
       const tgt = target[key] || 0
@@ -229,7 +256,8 @@ class GLErrorBoundary extends Component {
 }
 
 // modelUrl: 다른 얼굴 GLB(같은 CC 두상 규격 — ARKit 52 + 혀 모프 + CC_Base_JawRoot). 다자 대화가 화자마다 다르게 준다(H-6).
-export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null, modelUrl = MODEL_URL }) {
+export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null, modelUrl = MODEL_URL,
+  transitionMs, durationMs, speed }) {
   const [webglOK] = useState(detectWebGL)
   const fallback = <MouthFallback2D visemeId={visemeId} />
 
@@ -254,7 +282,8 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
           <directionalLight position={[-1, 0, 1]} intensity={0.4} />
 
           <Suspense fallback={null}>
-            <RealisticFace visemeId={visemeId} xray={xray} bsFrameRef={bsFrameRef} mirrorRef={mirrorRef} modelUrl={modelUrl} />
+            <RealisticFace visemeId={visemeId} xray={xray} bsFrameRef={bsFrameRef} mirrorRef={mirrorRef} modelUrl={modelUrl}
+              transitionMs={transitionMs} durationMs={durationMs} speed={speed} />
           </Suspense>
 
           <OrbitControls
