@@ -223,27 +223,40 @@ export function RailWeekCard({ activeDays }) {
   )
 }
 
+// 패널 값 캐시(사용자별). 탭을 옮길 때마다 셸이 다시 마운트돼 같은 요청을 새로 보내고 응답 전까지 '…'가 깜박였다. 마지막 값을 먼저
+// 보여 주고 뒤에서 새로 받는다(값이 바뀌었으면 곧 갱신). 5초 안에 받은 값은 다시 부르지 않는다(탭을 빠르게 오갈 때).
+const railCache = new Map()   // `${uid}:${key}` → { at, value }
+function railCached(uid, key) { return railCache.get(`${uid}:${key}`)?.value }
+function railLoad(uid, key, fetcher, set, on, failValue = null) {
+  const hit = railCache.get(`${uid}:${key}`)
+  if (hit && Date.now() - hit.at < 5000) return
+  fetcher().then((v) => { railCache.set(`${uid}:${key}`, { at: Date.now(), value: v }); if (on()) set(v) })
+    .catch(() => { if (on() && !hit) set(failValue) })
+}
+
 /** 패널 카드가 쓰는 데이터 — 구성(variant)에 필요한 것만 부른다. 실패하면 null(표시는 '…'·미완료). */
 function useRailData(variant) {
-  const [due, setDue] = useState(null)
-  const [marks, setMarks] = useState(null)
-  const [overview, setOverview] = useState(null)
-  const [activeDays, setActiveDays] = useState(null)
+  const uid = useStore((st) => st.user?.id ?? 'anon')
+  const [due, setDue] = useState(() => railCached(uid, 'due') ?? null)
+  const [marks, setMarks] = useState(() => railCached(uid, 'marks') ?? null)
+  const [overview, setOverview] = useState(() => railCached(uid, 'overview') ?? null)
+  const [activeDays, setActiveDays] = useState(() => railCached(uid, 'days') ?? null)
   useEffect(() => {
-    let on = true
-    reviewAPI.getDue().then((d) => { if (on) setDue((d.items || []).length) }).catch(() => { if (on) setDue(null) })
+    let alive = true
+    const on = () => alive
+    railLoad(uid, 'due', () => reviewAPI.getDue().then((d) => (d.items || []).length), setDue, on)
     if (variant !== 'review') {
       // 복습 탭 목록과 같게 두 트랙(독화·발화) 북마크를 모두 센다
-      learningAPI.getBookmarks().then((b) => { if (on) setMarks((Array.isArray(b) ? b : b.items || []).length) }).catch(() => { if (on) setMarks(null) })
+      railLoad(uid, 'marks', () => learningAPI.getBookmarks().then((b) => (Array.isArray(b) ? b : b.items || []).length), setMarks, on)
     }
     if (variant !== 'tasks') {
-      learningAPI.getAnalysisOverview().then((d) => { if (on) setOverview(d) }).catch(() => { if (on) setOverview(null) })
+      railLoad(uid, 'overview', () => learningAPI.getAnalysisOverview(), setOverview, on)
     }
     if (variant === 'review') {
-      learningAPI.getCalendarActivities().then((d) => { if (on) setActiveDays(new Set(Object.keys(d || {}))) }).catch(() => { if (on) setActiveDays(new Set()) })
+      railLoad(uid, 'days', () => learningAPI.getCalendarActivities().then((d) => new Set(Object.keys(d || {}))), setActiveDays, on, new Set())
     }
-    return () => { on = false }
-  }, [variant])
+    return () => { alive = false }
+  }, [variant, uid])
   return { due, marks, overview, activeDays }
 }
 
