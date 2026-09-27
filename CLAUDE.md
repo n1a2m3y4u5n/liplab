@@ -117,6 +117,10 @@ frontend/src/
 > 한번 숙달한 단계는 이후 오답으로 누적 정확도가 떨어져도 숙달을 유지한다(다음 단계가 다시 잠기지 않게).
 > 1·2단계의 정답률은 9/27부터 편향 보정 지수 이동 평균(`main._ewma_mastery`, a 0.08)이다. 초반 실패가 끝까지 남던 누적 방식보다
 > 거짓 숙달과 지연이 모두 줄었다(가상 학습자 시뮬레이션, `docs/mastery-ewma.md`). 3·4단계는 누적 그대로다.
+> 처음 숙달한 순간의 시도 수·시각은 `stage_progress.mastered_attempts`·`mastered_at`에 남는다(`main._settle_mastery`, 학습 효과
+> 리포트의 숙달 도달 시행수, `docs/eval-metrics.md`). 2단계 보기는 서버가 고른다(`visual_difficulty.stage2_plan`): 입모양이 똑같은
+> 단어는 빼고, 숙달 전 '보이는 최소대립 1 + 입모양이 다른 단어 2', 숙달 뒤 '보이는 최소대립 3'. 풀은 단어 은행에서 표준검사 단어와
+> `curriculum.STAGE2_EXCLUDED`(드문 말 등)를 뺀 것이다. 문맥 추론은 `check_closure`를 통과하고 `CLOSURE_EXCLUDED`에 없는 문항만 낸다.
 
 ### 잠금이 강제되는 4개 지점
 
