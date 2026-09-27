@@ -3420,7 +3420,8 @@ async def speak_assess(
         # 억양은 문장에서만, 그것도 기대 방향 규칙(note)이 판정하지 않았을 때만 코칭에 넣는다(음절·단어는 음높이가 고른 게 자연스럽다)
         coaching = await generate_speaking_coaching(target, transcript, score, confusions, metrics,
                                                     weak_phones=_weak_phones(dgop_result),
-                                                    intonation=(mode == "sentence" and not note))
+                                                    intonation=(mode == "sentence" and not note),
+                                                    method=assessment_method)   # D-GOP면 '음성인식 결과' 줄을 뺀다
         if note:
             coaching = f"{coaching} {note}"
     if vowel_fb and vowel_fb.get("messages"):
