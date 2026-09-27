@@ -182,8 +182,12 @@ export default function AnalysisTab() {
   const [acts, setActs] = useState(null)   // 날짜별 학습 내용(활동 캘린더·회차 히스토리)
   const [ov, setOv] = useState(null)       // 요약·주별 추이·배지(/api/analysis/overview)
   useEffect(() => {
-    learningAPI.getCalendar().then(setCal).catch(() => setCal({}))
-    learningAPI.getCalendarActivities().then(setActs).catch(() => setActs(null))   // 실패하면 /api/calendar로 대신
+    // /api/calendar는 활동 요약을 못 받았을 때만 부른다(dayCounts·historyDates가 acts가 없을 때만 읽는다).
+    // 예전에는 늘 받고 버려 이 화면 요청이 패널 포함 6개였다(지금 4개).
+    learningAPI.getCalendarActivities().then(setActs).catch(() => {
+      setActs(null)
+      learningAPI.getCalendar().then(setCal).catch(() => setCal({}))
+    })
     learningAPI.getAnalysisOverview().then(setOv).catch(() => setOv(null))
   }, [])
 

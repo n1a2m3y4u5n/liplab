@@ -253,7 +253,9 @@ function useRailData(variant) {
       railLoad(uid, 'overview', () => learningAPI.getAnalysisOverview(), setOverview, on)
     }
     if (variant === 'review') {
-      railLoad(uid, 'days', () => learningAPI.getCalendarActivities().then((d) => new Set(Object.keys(d || {}))), setActiveDays, on, new Set())
+      // 이번 주 7일의 유무만 쓴다. 기본값 150일(응답 84,444바이트)을 받던 것을 서버 하한 7일(7,948바이트)로 줄였다.
+      // 서버는 now−8일부터 모으므로 이번 주 월요일이 늘 들어온다.
+      railLoad(uid, 'days', () => learningAPI.getCalendarActivities(7).then((d) => new Set(Object.keys(d || {}))), setActiveDays, on, new Set())
     }
     return () => { alive = false }
   }, [variant, uid])
