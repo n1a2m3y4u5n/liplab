@@ -28,27 +28,34 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
                                      weak_phones: list = None, intonation: bool = False) -> str:
     """발화 채점 + 측정값(크기·억양·길이)을 근거로 '수치 기반·구체적' 발음 코칭.
     Whisper 오인식 가능성을 감안해 발음 부분은 단정하지 않고 부드럽게. 실패 시 규칙 폴백.
-    weak_phones: D-GOP가 가장 약하게 잰 소리들 [{label, dgop(0~1)}] — 전사와 무관하게 목표 소리 자리에서
-    잰 값이라, 음성인식이 틀려도 '어느 소리가 약했는지'를 짚을 수 있다(축 B-9).
+    weak_phones: D-GOP가 가장 약하게 잰 소리들 [{label, dgop(0~1), position}] — 전사와 무관하게 목표 소리 자리에서
+    잰 값이라, 음성인식이 틀려도 '어느 소리가 약했는지'를 짚을 수 있다(축 B-9). position이 '종성'이면 '받침 ㅂ'처럼 부르고
+    받침 조음 문장을 준다(예전에는 받침 ㅂ·ㄱ·ㄷ에도 '떼며 터뜨립니다', 받침 ㄹ에 '한 번 튕깁니다'가 나갔다).
     intonation: 억양(음높이 폭)을 코칭에 넣을지. 문장 연습에서 기대 방향 규칙(speak_curriculum.score_attempt)이 따로
     판정하지 않았을 때만 True다. 한 음절·단어는 음높이가 고른 게 자연스러운데, 예전에는 모든 모드에서 폭 25Hz 미만이면
     '톤이 평평하니 끝을 올리거나 내리라'고 했고, 문장에서는 방향 규칙의 안내('끝을 내려보세요')와 겹쳤다."""
     conf_txt = ""
     if confusions:
         conf_txt = "다르게 들린 소리: " + ", ".join(f"{c.get('correct')}→{c.get('confused_as')}" for c in confusions[:4]) + "\n"
+    def _name(j, pos):   # 받침이면 위치를 붙여 부른다(첫소리 ㅂ과 받침 ㅂ은 내는 법이 다르다)
+        return f"받침 {j}" if pos == "종성" else j
+
     weak_txt = ""
     if weak_phones:
         # D-GOP 원점수는 보정 전 값이라 절대 수치로 말하면 잘 낸 소리도 낮아 보인다 — 문장 안의 상대 비교로만 전한다.
         weak_txt = ("이 발화 안에서 다른 소리보다 약하게 잰 소리(음성인식과 무관한 발음 채점, 상대 비교): "
-                    + ", ".join(f"'{w['label']}'" for w in weak_phones[:3]) + "\n")
+                    + ", ".join(f"'{_name(w['label'], w.get('position'))}'" for w in weak_phones[:3]) + "\n")
     # 다르게 들린 소리·약한 소리의 조음 설명을 참고로 준다(articulation.jamo_tip). 없으면 모델이 조음 설명을 지어낸다.
     import articulation as _art
     tips, seen = [], set()
-    for j in [c.get("correct") for c in (confusions or [])[:3]] + [w.get("label") for w in (weak_phones or [])[:3]]:
-        t = _art.jamo_tip(j) if j and j not in seen else None
+    refs = ([(c.get("correct"), None) for c in (confusions or [])[:3]]
+            + [(w.get("label"), w.get("position")) for w in (weak_phones or [])[:3]])
+    for j, pos in refs:
+        name = _name(j, pos)
+        t = _art.jamo_tip(j, pos) if j and name not in seen else None
         if t:
-            seen.add(j)
-            tips.append(f"'{j}' — {t}")
+            seen.add(name)
+            tips.append(f"'{name}' — {t}")
     art_txt = ("조음 참고(정확한 설명이니 이것을 바탕으로): " + " / ".join(tips[:3]) + "\n") if tips else ""
     met_txt = ""
     m = metrics or {}
@@ -96,8 +103,8 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
                         + (tip or "입모양을 더 또렷하게 해보세요."))
         elif weak_phones:
             w = weak_phones[0]
-            tip = _art.jamo_tip(w["label"])
-            bits.append(f"'{w['label']}' 소리가 약하게 났어요. "
+            tip = _art.jamo_tip(w["label"], w.get("position"))
+            bits.append(f"'{_name(w['label'], w.get('position'))}' 소리가 약하게 났어요. "
                         + (tip or "그 음절에서 입을 조금 더 크게, 천천히 움직여 보세요."))
         if not bits:
             bits.append("또렷하게 잘 전달됐어요! 이 느낌을 기억하며 다음 단어도 도전해봐요.")
