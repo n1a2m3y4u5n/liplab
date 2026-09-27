@@ -19,7 +19,10 @@ _NATIVE_TENS = ["", "열", "스물", "서른", "마흔", "쉰", "예순", "일�
 
 # 고유어로 세는 단위(1~99). 그 밖의 단위와 단위가 없을 때는 한자어로 읽는다.
 _NATIVE_COUNTERS = ("시간", "번째", "사람", "켤레", "그루", "송이", "마리", "시", "개", "명", "살", "잔", "병",
-                    "권", "장", "벌", "대", "달", "채", "척", "통", "곡", "판", "줄", "군데", "가지", "배", "살짜리")
+                    "권", "장", "벌", "대", "달", "채", "척", "통", "곡", "판", "줄", "군데", "가지", "배", "살짜리",
+                    "정거장", "정류장", "그릇", "봉지", "상자", "접시", "조각", "방울", "모금", "자루", "쌍", "개비")
+# 고유어 단위와 앞글자가 겹치는 한자어 단위(3개월 → 삼 개월, 5달러 → 오 달러). 고유어 단위보다 먼저 본다(9/27 감사).
+_SINO_BEFORE_NATIVE = ("개월", "달러")
 # '번'은 횟수면 고유어(두 번), 번호면 한자어(3번 출구). 뒤 명사로 번호를 가른다.
 _NUMBERING_AFTER_BEON = ("출구", "버스", "방", "문제", "선", "게이트", "창구", "트랙", "좌석", "홀", "칸", "줄")
 
@@ -63,6 +66,10 @@ def _reading(num: str, after: str) -> str:
         whole, frac = num.split(".", 1)
         return sino(int(whole or "0")) + "점" + "".join(_SINO_DIGIT[int(d)] or "영" for d in frac)
     n = int(num)
+    if after.startswith(_SINO_BEFORE_NATIVE):
+        return sino(n)
+    if after.startswith("번째"):
+        return "첫" if n == 1 else native(n)     # 1번째 → 첫 번째
     if after.startswith("번") and not after.startswith("번째"):
         rest = after[1:].lstrip()
         return sino(n) if rest.startswith(_NUMBERING_AFTER_BEON) else native(n)

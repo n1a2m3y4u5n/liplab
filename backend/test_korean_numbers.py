@@ -62,3 +62,14 @@ def test_gate_rejects_latin_but_accepts_digits():
     from content_rules import check_sentence
     assert not check_sentence("Wi-Fi 비밀번호 알려주세요")[0]
     assert check_sentence("2시에 만나요")[0]
+
+
+def test_counters_found_in_audit():
+    """9/27 감사: 앞글자가 겹치는 한자어 단위, 첫 번째, 빠졌던 고유어 단위."""
+    assert normalize_numbers("3개월 걸려요") == "삼개월 걸려요"
+    assert normalize_numbers("5달러예요") == "오달러예요"
+    assert normalize_numbers("1번째 집") == "첫번째 집" and normalize_numbers("3번째 줄") == "세번째 줄"
+    assert normalize_numbers("2정거장 가요") == "두정거장 가요"
+    assert normalize_numbers("3그릇 주세요") == "세그릇 주세요"
+    assert normalize_numbers("10개 주세요") == "열개 주세요" and normalize_numbers("2달 뒤") == "두달 뒤"
+
