@@ -321,3 +321,53 @@ if __name__ == "__main__":
         t()
         print(f"  ✓ {t.__name__}")
     print(f"\n{len(tests)}개 테스트 통과")
+
+
+def _tiny_ctc_pair():
+    """특징 추출부 가중치만 같은 작은 wav2vec2 CTC 두 개(정렬기·채점기 흉내)."""
+    import pytest
+    torch = pytest.importorskip("torch")
+    transformers = pytest.importorskip("transformers")
+    cfg = transformers.Wav2Vec2Config(
+        vocab_size=8, hidden_size=32, num_hidden_layers=2, num_attention_heads=2, intermediate_size=64,
+        conv_dim=(16, 16), conv_stride=(5, 2), conv_kernel=(10, 3), num_conv_pos_embeddings=8,
+        num_conv_pos_embedding_groups=2, do_stable_layer_norm=True, feat_extract_norm="layer")
+    torch.manual_seed(0)
+    a = transformers.Wav2Vec2ForCTC(cfg).eval()
+    torch.manual_seed(1)
+    b = transformers.Wav2Vec2ForCTC(cfg).eval()
+    b.wav2vec2.feature_extractor.load_state_dict(a.wav2vec2.feature_extractor.state_dict())
+    return torch, a, b
+
+
+def test_shared_feature_encoder_is_bit_identical_and_runs_cnn_once():
+    torch, a, b = _tiny_ctc_pair()
+    x = torch.randn(1, 4000)
+    with torch.no_grad():
+        ra, rb = a(x).logits, b(x).logits
+    assert DA.share_feature_encoder(a, b) is True
+    assert a.wav2vec2.feature_extractor is b.wav2vec2.feature_extractor
+    calls = {"n": 0}
+    inner = a.wav2vec2.feature_extractor.inner
+    orig = inner.forward
+
+    def counted(v):
+        calls["n"] += 1
+        return orig(v)
+    inner.forward = counted
+    with torch.no_grad():
+        sa, sb = a(x.clone()).logits, b(x.clone()).logits     # 값이 같은 새 텐서(전처리를 두 번 한 것과 같다)
+    assert torch.equal(ra, sa) and torch.equal(rb, sb)
+    assert calls["n"] == 1, "같은 입력이면 CNN을 한 번만 돌린다"
+    with torch.no_grad():
+        a(torch.randn(1, 4000))
+    assert calls["n"] == 2, "입력이 바뀌면 다시 계산한다"
+    assert DA.share_feature_encoder(a, b) is True               # 두 번 불러도 그대로
+
+
+def test_feature_encoder_not_shared_when_weights_differ():
+    torch, a, b = _tiny_ctc_pair()
+    with torch.no_grad():
+        b.wav2vec2.feature_extractor.conv_layers[0].conv.weight.add_(1e-3)
+    assert DA.share_feature_encoder(a, b) is False
+    assert not isinstance(a.wav2vec2.feature_extractor, DA.SharedFeatureEncoder)

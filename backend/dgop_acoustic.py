@@ -202,6 +202,61 @@ def span_distribution(log_probs, start, end) -> List[float]:
     return probs.mean(dim=0).tolist()
 
 
+class SharedFeatureEncoder(torch.nn.Module if HAS_ACOUSTIC else object):
+    """정렬기·채점기의 CNN 특징 추출부를 한 벌로 두고, 바로 전과 같은 입력이면 결과를 다시 쓴다(9/27).
+    정렬기는 채점기에서 이어받아 미세조정할 때 특징 추출부를 고정해 두 모델의 이 부분 가중치가 비트 단위로 같다(28개 텐서).
+    그래서 한 번만 계산해도 결과가 같고, 채점 한 번에 CNN 한 번(모델 순전파의 약 18%, 맥 2스레드)을 아낀다. 모델 순전파는
+    그대로 쓰고 이 모듈만 바꿔 끼우므로 transformers 내부 순서를 흉내 내지 않는다."""
+
+    def __init__(self, inner):
+        super().__init__()
+        self.inner = inner
+        self._last = None          # (입력 사본, 출력)
+
+    def forward(self, input_values):
+        last = self._last
+        if last is not None and last[0].shape == input_values.shape and torch.equal(last[0], input_values):
+            return last[1]
+        out = self.inner(input_values)
+        self._last = (input_values.detach().clone(), out)
+        return out
+
+
+_SHARED_PAIRS = set()
+
+
+def share_feature_encoder(aligner_model, scorer_model) -> bool:
+    """두 CTC 모델의 특징 추출부 가중치가 모두 같으면 한 벌(SharedFeatureEncoder)로 묶는다. 묶었으면 True.
+    이미 묶였거나 가중치가 하나라도 다르면 아무것도 바꾸지 않는다(결과가 달라질 수 있는 공유는 하지 않는다)."""
+    a, b = aligner_model.wav2vec2, scorer_model.wav2vec2
+    if isinstance(a.feature_extractor, SharedFeatureEncoder) and a.feature_extractor is b.feature_extractor:
+        return True
+    if isinstance(a.feature_extractor, SharedFeatureEncoder) or isinstance(b.feature_extractor, SharedFeatureEncoder):
+        return False
+    sa, sb = a.feature_extractor.state_dict(), b.feature_extractor.state_dict()
+    if sa.keys() != sb.keys() or not all(torch.equal(sa[k], sb[k]) for k in sa):
+        return False
+    shared = SharedFeatureEncoder(a.feature_extractor)
+    a.feature_extractor = shared
+    b.feature_extractor = shared
+    return True
+
+
+def _share_once(aligner_id: str, scorer_id: str) -> None:
+    key = (aligner_id, scorer_id)
+    if key in _SHARED_PAIRS:
+        return
+    _SHARED_PAIRS.add(key)
+    try:
+        device = resolve_device()
+        _, am = _load(aligner_id, device=device)
+        _, sm = _load(scorer_id, device=device)
+        ok = share_feature_encoder(am, sm)
+        print(f"[dgop] 특징 추출부 공유: {'켬' if ok else '가중치가 달라 끔'} ({aligner_id} · {scorer_id})")
+    except Exception as e:   # 공유는 속도 최적화일 뿐이라 실패해도 채점은 그대로 한다
+        print(f"[WARN] 특징 추출부 공유 실패: {type(e).__name__}: {e}")
+
+
 def phone_confidences(waveform, sample_rate: int, target_tokens: Sequence[str],
                        aligner_id: str = DEFAULT_MODEL_ID,
                        scorer_id: str = None) -> List[Dict]:
@@ -228,6 +283,8 @@ def phone_confidences(waveform, sample_rate: int, target_tokens: Sequence[str],
     모델 다운로드가 필요해 유닛테스트 대상이 아니다(scripts/eval_dgop_discrimination.py로 검증).
     """
     scorer_id = scorer_id or aligner_id
+    if scorer_id != aligner_id:
+        _share_once(aligner_id, scorer_id)
     log_probs, vocab = ctc_log_probs(waveform, sample_rate, aligner_id)
     spans = align_targets(log_probs, vocab, target_tokens)
 
