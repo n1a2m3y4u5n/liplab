@@ -4,7 +4,7 @@ Converts Korean text to 15 fine-grained visemes with co-articulation modeling
 g2pk-free version: uses built-in Korean phonological rules
 """
 import unicodedata
-from typing import List, Dict
+from typing import List, Dict, Optional
 from korean_numbers import normalize_numbers
 
 # 한국어 발음 변환 (g2p) — g2pk 없이 자체 구현
@@ -43,6 +43,9 @@ ASPIRATE = {'ㄱ': 'ㅋ', 'ㄷ': 'ㅌ', 'ㅂ': 'ㅍ', 'ㅈ': 'ㅊ'}
 CODA_T_CLASS = {'ㅅ', 'ㅆ', 'ㅊ', 'ㅌ'}
 # 코다 ㅎ을 품은 겹받침(격음화 후 앞 자음이 코다로 남음)
 H_CODA = {'ㅎ': '', 'ㄶ': 'ㄴ', 'ㅀ': 'ㄹ'}
+# ㄶ·ㅀ + 모음의 ㅎ 탈락(많이→마니)을 채점 라벨 경로(phonetic=True)에도 적용할지. 입모양 경로는 늘 적용한다. 자체 채점 모델은
+# ㅎ을 남긴 라벨로 학습해, 켜기 전에 D-GOP를 두 라벨로 비교해야 한다(STATUS.md 9/27 밤). 실험 스크립트가 켠다.
+H_DELETE_PHONETIC = False
 
 
 # ── 이하 phonetic 모드 전용 상수 (표준발음법) ──────────────────────────────
@@ -107,7 +110,7 @@ def _apply_phonetic_rules(tokens):
     return tokens
 
 
-def to_pronounced_syllables(text: str, phonetic: bool = False):
+def to_pronounced_syllables(text: str, phonetic: bool = False, h_delete: Optional[bool] = None):
     """
     한국어 텍스트를 '소리 나는 대로'의 음절 리스트로 변환.
     한글 음절은 [초성, 중성, 종성] 리스트로(초성 ''는 무음 ㅇ),
@@ -115,6 +118,7 @@ def to_pronounced_syllables(text: str, phonetic: bool = False):
 
     phonetic=False (기본, viseme 경로) — 입모양을 바꾸는 규칙만: 연음·격음화·구개음화·
       겹받침 단순화·ㅎ탈락·초성 ㅇ 무음화.
+    h_delete: ㄶ·ㅀ + 모음의 ㅎ 탈락. None이면 입모양 경로만(채점 라벨은 H_DELETE_PHONETIC을 따른다).
     phonetic=True (축 A 학습 라벨용) — 위에 더해 평파열음화·유음화·비음화·경음화까지
       적용해 '실제 소리'와 일치시킨다. _apply_phonetic_rules 참고.
     """
@@ -169,7 +173,7 @@ def to_pronounced_syllables(text: str, phonetic: bool = False):
             cur[2] = ''  # ㅎ 탈락 (좋아→조아), 다음 초성은 무음 ㅇ 유지
         elif fin in DOUBLE_FINAL_LINK:
             keep, move = DOUBLE_FINAL_LINK[fin]
-            if move == 'ㅎ' and not phonetic:
+            if move == 'ㅎ' and ((not phonetic or H_DELETE_PHONETIC) if h_delete is None else h_delete):
                 # ㄶ·ㅀ + 모음: ㅎ은 발음하지 않고 앞 자음이 넘어간다(많이→마니, 싫어→시러, 괜찮아요→괜차나요,
                 # 표준발음법 12항 4). 예전에는 ㅎ이 다음 초성으로 넘어가 아바타에 없는 ㅎ(성문음) 프레임이 들어갔다.
                 # 채점 라벨 경로(phonetic)는 자체 채점 모델을 학습한 라벨과 맞추려 그대로 둔다(바꾸려면 D-GOP 재평가 뒤).

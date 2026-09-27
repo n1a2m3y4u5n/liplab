@@ -3166,8 +3166,9 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
 def _weak_phones(dgop_result, k: int = 3) -> list:
     """D-GOP 음소 중 가장 약한 소리 k개 [{label, dgop}] — 문장 평균의 60% 미만인 것만(축 B-9 코칭 근거).
     자모 토큰의 위치 접두(o:·n:·c:)와 어절 경계는 뗀다. D-GOP가 꺼져 있으면 빈 목록."""
+    # silent_h: ㄶ·ㅀ + 모음에서 라벨에만 남은 ㅎ(많이[마니]) — 내지 않는 소리라 코칭하지 않는다(jamo_vocab.silent_linking_h)
     phones = [p for p in ((dgop_result or {}).get("phones") or [])
-              if p.get("aligned") and p.get("scorable") and p.get("dgop") is not None]
+              if p.get("aligned") and p.get("scorable") and p.get("dgop") is not None and not p.get("silent_h")]
     if not phones:
         return []
     mean = sum(p["dgop"] for p in phones) / len(phones)
@@ -3352,7 +3353,7 @@ async def speak_assess(
     _phones = [{"label": (p.get("token") or "").split(":", 1)[-1].replace("|", " ").strip(),
                 "dgop": round(float(p["dgop"]), 3)}
                for p in ((dgop_result or {}).get("phones") or [])
-               if p.get("aligned") and p.get("scorable") and p.get("dgop") is not None][:40]
+               if p.get("aligned") and p.get("scorable") and p.get("dgop") is not None and not p.get("silent_h")][:40]
     attempt = SpeakAttempt(
         user_id=current_user.id, stage=stage, mode=mode, target=target,
         transcript=transcript, score=score, passed=passed,
@@ -3420,7 +3421,7 @@ async def speak_assess(
             "uncertainty": dgop_result.get("uncertainty"),
             "phones": [{**p, "label": (p.get("token") or "").split(":", 1)[-1].replace("|", " ").strip()}
                        for p in (dgop_result.get("phones") or [])
-                       if p.get("aligned") and p.get("scorable")],
+                       if p.get("aligned") and p.get("scorable") and not p.get("silent_h")],   # 내지 않는 ㅎ은 칩에서 뺀다
         }
 
     return {
