@@ -109,3 +109,18 @@ def test_no_voice_recording_fails_on_transcript_path():
     _ok(not S.no_voice({}) and not S.no_voice({"loudness": 40, "voiced_duration": None}), "값이 없으면 판정하지 않음")
     _ok(S.score_attempt(4, "밥", None, {"loudness": 0, "voiced_duration": 0}, sim_score=80.0)[1] is True,
         "D-GOP 경로(transcript None)는 그대로")
+
+
+def test_stage4_order_mixes_syllable_lengths():
+    # 예전 고정 순서는 앞 14개가 1음절이라 합격률 0.95 학습자의 93%가 1음절만 말하고 숙달했다(최소 8회, 이동 평균 90).
+    items = S.SPEAK_STAGES[4]["items"]
+    a = S.mixed_order(items, "1:2026-09-27")
+    _ok(sorted(x["target"] for x in a) == sorted(x["target"] for x in items), "풀 전체를 빠짐없이 한 번씩")
+    _ok(a == S.mixed_order(items, "1:2026-09-27"), "같은 사용자·같은 날은 같은 순서")
+    firsts = {S.mixed_order(items, f"{u}:2026-09-27")[0]["target"] for u in range(20)}
+    _ok(len(firsts) > 5, "사용자·날짜가 바뀌면 첫 문항이 바뀐다")
+    for u in range(200):
+        o = S.mixed_order(items, f"{u}:2026-09-28")
+        _ok(all(len(x["target"]) == 1 for x in o[:3]), "처음 3개는 1음절(짧은 것부터)")
+        _ok(sum(len(x["target"]) > 1 for x in o[:8]) >= 4, "최소 시도 수(8) 안에 다음절 단어가 4개 이상")
+        _ok(any(len(x["target"]) == 3 for x in o[:8]), "3음절도 8개 안에 나온다")

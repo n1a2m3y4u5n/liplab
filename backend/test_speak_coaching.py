@@ -235,3 +235,17 @@ def test_dgop_coaching_prompt_has_no_asr_line(monkeypatch):
     assert "음성인식 결과" not in dg and "잘 인식되지 않음" not in dg and "들렸어요" not in dg
     assert '목표: "밥" / 발음 채점 점수 92점(음성인식 아님)' in dg
     assert '음성인식 결과: "밥" / 발음 유사도 92점' in asr and "들렸어요" in asr
+
+
+def test_stage4_endpoint_orders_pool_per_user_and_day(monkeypatch):
+    # AI 문항이 꺼진 배포(dev LIPLAB_AI_ITEMS=0)에서 /api/speak/stage/4가 고정 순서(밥·물·손…) 대신 섞은 순서를 준다
+    import types
+    monkeypatch.setenv("LIPLAB_AI_ITEMS", "0")
+    u1, u2 = types.SimpleNamespace(id=1), types.SimpleNamespace(id=2)
+    a = asyncio.run(main.speak_stage_content(4, current_user=u1))["items"]
+    b = asyncio.run(main.speak_stage_content(4, current_user=u2))["items"]
+    assert a == asyncio.run(main.speak_stage_content(4, current_user=u1))["items"]   # 같은 날 다시 들어와도 같은 순서
+    assert a != b and len(a) == len(b) == len(main._speakcur.SPEAK_STAGES[4]["items"])
+    assert [x["target"] for x in a[:14]] != ["밥", "물", "손", "발", "눈", "코", "입", "귀", "산", "달", "별", "꽃", "집", "차"]
+    s5 = asyncio.run(main.speak_stage_content(5, current_user=u1))["items"]
+    assert s5 == main._speakcur.SPEAK_STAGES[5]["items"]   # 5단계는 그대로

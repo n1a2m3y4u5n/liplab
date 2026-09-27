@@ -3143,6 +3143,10 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="unknown stage")
 
     items = stg["items"]
+    if stg["mode"] == "word":
+        # 고정 풀은 음절 수 층을 섞어 끼운다(처음 3개만 1음절). 프론트는 들어올 때마다 0번부터 시작해, 예전 고정 순서로는 앞 14개가
+        # 모두 1음절이라 다음절 단어 없이 숙달했다. (사용자, 날짜) 시드라 같은 날에는 순서가 같다(speak_curriculum.mixed_order).
+        items = _speakcur.mixed_order(items, f"{current_user.id}:{_kst_today().isoformat()}")
     if os.getenv("LIPLAB_AI_ITEMS", "1") == "1" and stg["mode"] in ("word", "sentence"):
         try:
             import content_gen
@@ -3155,7 +3159,7 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
                 ai_items = await content_gen.generate_sentences(n=8, avoid=base, with_intonation=True)
             if len(ai_items) >= 4:
                 # AI 생성분을 앞에, 기존 풀을 뒤에 섞어 다양성 + 안정성 확보
-                items = ai_items + stg["items"]
+                items = ai_items + items
         except Exception as e:
             print(f"[WARN] speak AI items gen failed (stage {n}): {e}")
 
