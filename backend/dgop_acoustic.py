@@ -391,6 +391,16 @@ def assess_text(audio_bytes: bytes, target_text: str,
     tokens = tokens_for_text(target_text, model_id=aligner_id)
     phones = phone_confidences(waveform, sample_rate, tokens,
                                aligner_id=aligner_id, scorer_id=scorer_id)
+    # ㄶ·ㅀ + 모음에서 라벨에만 남은 ㅎ(표준 발음은 내지 않음)에 표시한다. 문장 점수는 보정이 이 토큰까지 넣고 맞춰져 그대로 두고,
+    # 코칭·음소 칩·시행 기록이 빼 쓴다(jamo_vocab.silent_linking_h).
+    try:
+        import jamo_vocab
+        if list(tokens) == jamo_vocab.text_to_tokens(target_text):
+            for i in jamo_vocab.silent_linking_h(target_text):
+                if i < len(phones):
+                    phones[i]["silent_h"] = True
+    except Exception:
+        pass
     # 정렬에 성공했고 채점 대상인 음소만 문장 점수에 넣는다(어절 경계 제외).
     scored = [p for p in phones if p.get("aligned") and p.get("scorable")]
     if not scored:

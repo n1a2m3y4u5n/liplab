@@ -103,3 +103,24 @@ def test_conversation_turn_retries_when_too_long(monkeypatch):
     assert "자라 이 난이도에 너무 깁니다" in seen[1][-1]["content"]
     assert llm_service.conv_turn_ok("어서오세요!", 1) and not llm_service.conv_turn_ok("Hello 안녕", 3)
     assert llm_service.conv_turn_ok("아주 긴 문장이라도 5단계는 상한이 없습니다", 5)
+
+
+def test_silent_linking_h_is_not_coached():
+    # 많이·않아·괜찮으세요의 ㅎ은 표준 발음에서 내지 않는데 채점 라벨에 남아(자체 모델 학습 라벨과 맞추려 그대로 둠),
+    # 약한 소리로 코칭됐다(538 음성 40개 중 9개). 코칭·칩·기록에서 뺀다
+    import jamo_vocab as J
+    assert J.silent_linking_h("많이") == [3] and J.silent_linking_h("괜찮으세요?") == [6]
+    assert J.silent_linking_h("좋아") == [] and J.silent_linking_h("학교") == []
+    phones = [{"token": "o:ㅁ", "aligned": True, "scorable": True, "dgop": 0.9},
+              {"token": "n:ㅏ", "aligned": True, "scorable": True, "dgop": 0.9},
+              {"token": "c:ㄴ", "aligned": True, "scorable": True, "dgop": 0.8},
+              {"token": "o:ㅎ", "aligned": True, "scorable": True, "dgop": 0.0, "silent_h": True},
+              {"token": "n:ㅣ", "aligned": True, "scorable": True, "dgop": 0.1}]
+    assert [w["label"] for w in main._weak_phones({"phones": phones})] == ["ㅣ"]
+
+
+def test_engine_h_delete_param_keeps_label_path_default():
+    import engine
+    assert engine.to_pronounced_syllables("많이", phonetic=True)[1][0] == "ㅎ"          # 채점 라벨은 그대로
+    assert engine.to_pronounced_syllables("많이", phonetic=True, h_delete=True)[1][0] == "ㄴ"
+    assert engine.to_pronounced_syllables("많이")[1][0] == "ㄴ"                        # 입모양 경로는 탈락

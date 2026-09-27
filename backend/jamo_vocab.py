@@ -17,7 +17,7 @@
 초성 ㅇ은 무음이라 토큰을 만들지 않는다(중성만 남는다).
 """
 import json
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from scoring import to_pronounced_jamos
 
@@ -54,7 +54,7 @@ def is_scorable(token: str) -> bool:
     return token not in SPECIAL
 
 
-def text_to_tokens(text: str) -> List[str]:
+def text_to_tokens(text: str, h_delete: Optional[bool] = None) -> List[str]:
     """
     한국어 텍스트 → 자모 CTC 토큰열. 어절 사이에는 WORD_DELIM을 넣는다.
 
@@ -65,12 +65,26 @@ def text_to_tokens(text: str) -> List[str]:
     for w_i, word in enumerate(text.split()):
         if w_i:
             out.append(WORD_DELIM)
-        for onset, nucleus, coda in to_pronounced_jamos(word, phonetic=True):
+        for onset, nucleus, coda in to_pronounced_jamos(word, phonetic=True, h_delete=h_delete):
             if onset:
                 out.append(_PREFIX["onset"] + onset)
             out.append(_PREFIX["nucleus"] + nucleus)
             if coda:
                 out.append(_PREFIX["coda"] + coda)
+    return out
+
+
+def silent_linking_h(text: str) -> List[int]:
+    """채점 라벨(text_to_tokens)에서 ㄶ·ㅀ + 모음 연결로 남은 첫소리 ㅎ 토큰의 위치. 표준 발음은 이 ㅎ을 내지 않는다(많이[마니]).
+    자체 채점 모델이 이 ㅎ을 남긴 라벨로 학습해 라벨은 그대로 두고(라벨을 바꾸면 옮겨 간 ㄴ이 약하게 잡혀 더 나빴다, STATUS 9/27 밤),
+    코칭·음소 칩·시행 기록에서만 뺀다(예전에는 문장의 약 30%에서 '내지 않는 ㅎ'을 약한 소리로 코칭했다)."""
+    import difflib
+    a, b = text_to_tokens(text), text_to_tokens(text, h_delete=True)
+    h = _PREFIX["onset"] + "ㅎ"
+    out: List[int] = []
+    for tag, i1, i2, _j1, _j2 in difflib.SequenceMatcher(a=a, b=b, autojunk=False).get_opcodes():
+        if tag in ("replace", "delete"):
+            out += [i for i in range(i1, i2) if a[i] == h]
     return out
 
 

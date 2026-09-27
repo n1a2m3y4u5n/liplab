@@ -345,7 +345,7 @@ def extract_jamo_sequence(text: str) -> List[Tuple]:
     return jamo_sequence
 
 
-def to_pronounced_jamos(text: str, phonetic: bool = False) -> List[Tuple]:
+def to_pronounced_jamos(text: str, phonetic: bool = False, h_delete: Optional[bool] = None) -> List[Tuple]:
     """
     텍스트를 '소리 나는 대로'(연음·구개음화·격음화·겹받침·ㅎ탈락) 변환한 뒤
     [초, 중, 종] 튜플 열로 반환한다. 무음 초성 ㅇ은 ''로 남는다.
@@ -358,7 +358,7 @@ def to_pronounced_jamos(text: str, phonetic: bool = False) -> List[Tuple]:
     '실제 소리'에 맞춘다 — 축 A의 CTC 학습 라벨 전용이다(독화 채점은 기본값 그대로).
     """
     out: List[Tuple] = []
-    for syl in to_pronounced_syllables(text, phonetic=phonetic):
+    for syl in to_pronounced_syllables(text, phonetic=phonetic, h_delete=h_delete):
         if isinstance(syl, (list, tuple)) and len(syl) == 3:
             out.append(tuple(syl))
     return out
