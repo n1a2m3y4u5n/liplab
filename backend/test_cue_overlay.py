@@ -69,3 +69,12 @@ def test_cues_follow_actual_pronunciation():
     assert any(c["syllable_index"] == 1 and c["position"] == "initial" and c["cue"] == "tense" for c in mg)
     # 음절 수는 표기와 같아야 화면 위치와 맞는다
     assert max(c["syllable_index"] for c in gm + mg) <= 1
+
+
+def test_no_aspiration_cue_for_silent_linking_h():
+    # 많이[마니]·싫어요[시러요]: ㄶ·ㅀ + 모음의 ㅎ은 내지 않는다 → 기식 기호가 없어야 한다(예전에는 붙었다)
+    import cue_overlay as C
+    assert not any(c["cue"] == "aspirated" for c in C.generate_cues("많이"))
+    assert not any(c["cue"] == "aspirated" for c in C.generate_cues("싫어요"))
+    assert [(c["syllable_index"], c["cue"]) for c in C.generate_cues("많이")] == [(0, "nasal"), (1, "nasal")]
+    assert any(c["cue"] == "aspirated" for c in C.generate_cues("좋다"))   # 좋다[조타]의 거센소리는 그대로
