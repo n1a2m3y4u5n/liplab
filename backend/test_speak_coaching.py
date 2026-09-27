@@ -63,3 +63,20 @@ def test_coaching_prompt_leaves_out_pitch_unless_asked(monkeypatch):
     monkeypatch.setattr(llm_service, "anthropic_client", _Rec)
     asyncio.run(llm_service.generate_speaking_coaching("아", "아", 90, [], {"loudness": 70, "pitch_range": 5}))
     assert "억양 변화 5Hz" not in seen[0] and "25Hz" not in seen[0]
+
+
+def test_fallback_explains_how_to_make_the_confused_sound(monkeypatch):
+    # 'ㅅ이 ㄷ로 들렸어요. 입모양을 더 또렷하게'는 입 안의 차이(마찰/파열)에 맞지 않았다 → 자모별 조음 문장
+    class _Rec:
+        prompts = []
+
+        class messages:
+            @staticmethod
+            async def create(*a, **k):
+                _Rec.prompts.append(k["messages"][0]["content"])
+                raise RuntimeError("no key")
+    monkeypatch.setattr(llm_service, "anthropic_client", _Rec)
+    text = asyncio.run(llm_service.generate_speaking_coaching(
+        "사과", "다과", 60, [{"correct": "ㅅ", "confused_as": "ㄷ"}], {"loudness": 70}))
+    assert "닿지 않게" in text and "입모양을 더 또렷하게" not in text
+    assert "조음 참고" in _Rec.prompts[0] and "닿지 않게" in _Rec.prompts[0]
