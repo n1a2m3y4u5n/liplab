@@ -166,6 +166,8 @@ class StageProgress(Base):
     mastery_score = Column(Float, default=0.0)     # 0-100 (correct/attempts*100)
     attempts = Column(Integer, default=0)
     correct = Column(Integer, default=0)
+    mastered_attempts = Column(Integer, nullable=True)   # 처음 숙달한 순간의 시도 수(학습 효과 리포트의 숙달 도달 시행수)
+    mastered_at = Column(DateTime, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
@@ -395,6 +397,9 @@ async def init_db():
             "ALTER TABLE speak_attempts ADD COLUMN uncertainty FLOAT",
             "ALTER TABLE speak_attempts ADD COLUMN phones JSON",
             "ALTER TABLE speak_attempts ADD COLUMN coaching VARCHAR(600)",
+            # 숙달 도달 시행수(docs/eval-metrics.md)
+            "ALTER TABLE stage_progress ADD COLUMN mastered_attempts INTEGER",
+            "ALTER TABLE stage_progress ADD COLUMN mastered_at TIMESTAMP",
         ):
             try:
                 await conn.exec_driver_sql(ddl)
