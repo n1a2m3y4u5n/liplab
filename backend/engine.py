@@ -5,6 +5,7 @@ g2pk-free version: uses built-in Korean phonological rules
 """
 import unicodedata
 from typing import List, Dict
+from korean_numbers import normalize_numbers
 
 # 한국어 발음 변환 (g2p) — g2pk 없이 자체 구현
 #
@@ -38,6 +39,8 @@ DOUBLE_FINAL_LINK = {
 #   · 코다 ㅎ + 평음 초성 → 초성이 거센소리 (좋다→조타). 성문음 ㅎ(viseme 8) 프레임이 사라진다.
 #   · 코다 평음 + 초성 ㅎ → 코다가 다음 초성으로 거세게 (입학→이팍, 국화→구콰). ㅎ(8)→ㅂ계(1)·ㄱ계(7)로 바뀜.
 ASPIRATE = {'ㄱ': 'ㅋ', 'ㄷ': 'ㅌ', 'ㅂ': 'ㅍ', 'ㅈ': 'ㅊ'}
+# 받침 ㅅ·ㅆ·ㅊ·ㅌ은 ㄷ으로 발음된 뒤 ㅎ과 합쳐 ㅌ이 된다(표준발음법 12항 붙임2: 옷 한 벌[오탄벌], 못하다[모타다]).
+CODA_T_CLASS = {'ㅅ', 'ㅆ', 'ㅊ', 'ㅌ'}
 # 코다 ㅎ을 품은 겹받침(격음화 후 앞 자음이 코다로 남음)
 H_CODA = {'ㅎ': '', 'ㄶ': 'ㄴ', 'ㅀ': 'ㄹ'}
 
@@ -116,6 +119,7 @@ def to_pronounced_syllables(text: str, phonetic: bool = False):
       적용해 '실제 소리'와 일치시킨다. _apply_phonetic_rules 참고.
     """
     tokens = []  # 한글: ['초','중','종'], 그 외: 원문자
+    text = normalize_numbers(text)   # 숫자는 한국어 읽기로(3시→세시, 5,000원→오천원). 예전에는 입모양·채점에서 빠졌다
     for ch in text:
         if '가' <= ch <= '힣':
             ini, med, fin = decompose_hangul(ch)
@@ -139,9 +143,17 @@ def to_pronounced_syllables(text: str, phonetic: bool = False):
             nxt[0] = ASPIRATE[nini]
             cur[2] = H_CODA[fin]
             continue
-        # (b) 코다 평음 + 초성 ㅎ → 코다가 다음 초성으로 거세게, 코다 탈락 (입학→이팍, 국화→구콰)
-        if nini == 'ㅎ' and fin in ASPIRATE:
-            asp = ASPIRATE[fin]
+        # (b) 코다 평음 + 초성 ㅎ → 코다가 다음 초성으로 거세게, 코다 탈락 (입학→이팍, 국화→구콰).
+        #     ㅅ·ㅆ·ㅊ·ㅌ 받침은 ㄷ으로 보고(못하다→모타다, 깨끗하다→깨끄타다), 겹받침은 앞 자음이 남고 뒤 자음이
+        #     거세진다(밝히다→발키다, 넓히다→널피다, 앉히다→안치다). 예전에는 둘 다 빠져 ㅎ 프레임이 남았다.
+        if nini == 'ㅎ' and fin in DOUBLE_FINAL_LINK and DOUBLE_FINAL_LINK[fin][1] in ASPIRATE:
+            keep, move = DOUBLE_FINAL_LINK[fin]
+            cur[2] = keep
+            nxt[0] = ASPIRATE[move]
+            continue
+        base = 'ㄷ' if fin in CODA_T_CLASS else fin
+        if nini == 'ㅎ' and base in ASPIRATE:
+            asp = ASPIRATE[base]
             # ㅎ 매개 구개음화 — ㄷ+히 → 치 (닫히다→다치다, 굳히다→구치다). ㅣ에 한정해 과적용 방지.
             if asp == 'ㅌ' and nxt[1] == 'ㅣ':
                 asp = 'ㅊ'
