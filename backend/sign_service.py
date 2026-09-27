@@ -37,7 +37,7 @@ _SIGN_MODEL = "claude-sonnet-4-6"
 # 블라인드 절단(정규화)과 달리 명시적·감사 가능하며, 알고리즘 오탐 위험이 없다.
 # 값(동의어)은 실제 사전 표제어라야 한다(로드 시 검증).
 _ALIASES = {
-    '밥': '식사', '스마트폰': '휴대폰', '선생님': '교사', '자동차': '차',
+    '밥': '식사', '스마트폰': '휴대폰', '선생님': '교사', '자동차': '승용차',   # '차'는 사전에 마시는 차(9011)뿐이다
     '편의점': '가게', '사용하다': '이용', '고치다': '수리', '도와주다': '돕다',
     '많이': '많다', '열심히': '열심', '천천히': '느리다',
 }
@@ -110,13 +110,21 @@ def lookup_sign(word: str) -> Optional[Dict]:
     entries = index.get(word)
     if not entries:
         return None
-    first = entries[0]
+    first = _prefer_daily(entries)
     return {
         "origin_no": first["origin_no"],
         "description": first["description"],
         "dict_url": DICT_VIEW_URL + first["origin_no"] if first["origin_no"] else None,
         "alt_count": len(entries),   # 동형어(같은 표제어의 다른 수어) 개수
     }
+
+
+def _prefer_daily(entries: List[Dict]) -> Dict:
+    """동형어 가운데 '일상생활 수어' 범주를 먼저 고른다. 사전 순서의 첫 항목이 전문용어 수어인 표제어가 많아(9/27 감사: 나무는
+    불교, 시험·사자·풀은 기독교, 친구는 천주교, 산·가슴·의사는 의학 수어가 먼저), 첫 항목을 그대로 쓰면 일상 뜻의 단어에 다른
+    뜻의 수어를 보였다. 일상생활 항목이 없으면 예전처럼 첫 항목."""
+    daily = [e for e in entries if (e.get("category") or "").startswith("일상생활")]
+    return (daily or entries)[0]
 
 
 def lookup_number_sign(word: str) -> Optional[Dict]:
