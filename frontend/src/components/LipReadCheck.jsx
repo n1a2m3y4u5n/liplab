@@ -3,6 +3,7 @@ import { toBlendshapeMap } from '../lib/mouthScore'
 import { predictLipread, loadLipread, lipreadAvailable } from '../lib/lipreadModel'
 import { resampleFrames } from '../lib/frameRate'
 import { mediaErrorMessage } from '../lib/mediaError'
+import { memoUntilFail } from '../lib/sharedRequest'
 
 /**
  * 축 D — 기계가 내 입모양을 읽어본다(자체 립리딩). 사용자가 목표 단어를 입모양으로 말하면
@@ -17,6 +18,19 @@ const WASM_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERS
 const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
 const REC_MS = 2500  // 녹화(수집) 길이
 const SEQ_HZ = 60    // 모델 입력 속도. 30 fps 카메라면 프레임마다 두 번(벤치에서 검증한 제품 조건 dup2)
+
+// MediaPipe 얼굴 모델은 모듈 전역에 한 번 만들어 문항끼리 나눈다(lipreadModel의 ONNX 세션과 같은 방식).
+// 이 칸은 WordStage 결과 패널 안에 있어 문항마다 언마운트된다. 예전에는 그때 모델을 닫아, 다음 문항에서 카메라를 켤 때마다
+// JS 번들·WASM·모델 로드와 GPU 초기화를 처음부터 다시 했다(문항마다 1회 → 앱을 연 동안 1회). 실패하면 비워 다시 받는다.
+// VIDEO 모드 시각은 performance.now()라 인스턴스를 바꿔 써도 단조 증가한다.
+const loadFaceLandmarker = memoUntilFail(async () => {
+  const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision')
+  const vision = await FilesetResolver.forVisionTasks(WASM_URL)
+  return FaceLandmarker.createFromOptions(vision, {
+    baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
+    outputFaceBlendshapes: true, runningMode: 'VIDEO', numFaces: 1,
+  })
+})
 
 export default function LipReadCheck({ target, candidates = [] }) {
   const videoRef = useRef(null)
@@ -43,16 +57,11 @@ export default function LipReadCheck({ target, candidates = [] }) {
     return () => { cancelled = true }
   }, [])
 
-  // MediaPipe 얼굴 모델은 카메라를 켤 때 한 번 만든다(JS 번들도 그때 불러온다). 화면을 떠나면 정리 함수가 닫는다.
+  // MediaPipe 얼굴 모델은 카메라를 켤 때 받는다(JS 번들도 그때 불러온다). 한 번 만든 모델은 다음 문항도 쓰므로 닫지 않는다.
   const ensureLandmarker = useCallback(async (gen) => {
     if (landmarkerRef.current) return landmarkerRef.current
-    const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision')
-    const vision = await FilesetResolver.forVisionTasks(WASM_URL)
-    const fl = await FaceLandmarker.createFromOptions(vision, {
-      baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
-      outputFaceBlendshapes: true, runningMode: 'VIDEO', numFaces: 1,
-    })
-    if (gen !== camGenRef.current) { fl.close?.(); return null }   // 받는 사이 화면을 떠났다
+    const fl = await loadFaceLandmarker()
+    if (gen !== camGenRef.current) return null   // 받는 사이 화면을 떠났다(모델은 닫지 않고 다음 문항이 쓴다)
     landmarkerRef.current = fl
     return fl
   }, [])
@@ -119,13 +128,12 @@ export default function LipReadCheck({ target, candidates = [] }) {
     }, REC_MS)
   }, [status, candidates])
 
-  // 정리: 카메라·타이머·얼굴 모델
+  // 정리: 카메라·타이머·검출 루프. 얼굴 모델은 모듈 전역(loadFaceLandmarker)이라 닫지 않는다.
   useEffect(() => () => {
     camGenRef.current += 1
     clearTimeout(recTimerRef.current)
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
-    landmarkerRef.current?.close?.()
     landmarkerRef.current = null
   }, [])
 
