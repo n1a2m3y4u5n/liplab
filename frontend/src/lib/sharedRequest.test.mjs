@@ -1,7 +1,7 @@
 // sharedRequest 검사. 실행: npm test (node --test)
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createInflight } from './sharedRequest.js'
+import { createInflight, memoUntilFail } from './sharedRequest.js'
 
 // 부를 때마다 수를 세고, 끝낼 때를 테스트가 정하는 가짜 요청
 function fakeFetch() {
@@ -79,4 +79,23 @@ test('fetcher가 동기로 던져도 거부된 약속을 돌려주고 남기지 
   const p = share('x', () => { throw new Error('boom') })
   await assert.rejects(p, /boom/)
   assert.equal(share.size(), 0)
+})
+
+test('memoUntilFail: 얼굴 모델처럼 한 번 만든 것을 문항이 바뀌어도 다시 만들지 않는다', async () => {
+  let made = 0
+  const load = memoUntilFail(async () => ({ id: ++made }))
+  const [a, b] = await Promise.all([load(), load()])   // 동시에 불러도 하나
+  const c = await load()                               // 끝난 뒤(다음 문항)에도 같은 것
+  assert.equal(made, 1)
+  assert.equal(a, b)
+  assert.equal(a, c)
+})
+
+test('memoUntilFail: 만들다 실패하면 비워, 다음 호출에서 다시 만든다', async () => {
+  let n = 0
+  const load = memoUntilFail(async () => { n += 1; if (n === 1) throw new Error('offline'); return 'ok' })
+  await assert.rejects(load(), /offline/)
+  assert.equal(await load(), 'ok')
+  assert.equal(await load(), 'ok')
+  assert.equal(n, 2)
 })

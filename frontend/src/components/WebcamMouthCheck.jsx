@@ -240,8 +240,11 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   }, [])
 
   if (showCalib) {
+    // 본뜨기는 이 화면의 얼굴 모델을 나눠 쓴다(예전에는 하나를 더 만들어 모델 2개가 동시에 올라갔다). 이 화면 루프는 stop()으로 멈춰 있다.
     return (
       <MouthCalibration
+        landmarkerRef={landmarkerRef}
+        modelStatus={modelStatus}
         onDone={() => { setProfiles(loadCalibration()); setShowCalib(false) }}
         onCancel={() => setShowCalib(false)}
       />
@@ -399,7 +402,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
           </button>
         )}
         <div className="flex items-center gap-3">
-          {/* 본뜨기는 자기 카메라를 따로 연다. 이 화면의 카메라·교정 타이머를 먼저 멈춰, 가려진 채 옛 계수를 보내거나
+          {/* 본뜨기는 자기 카메라를 따로 연다(얼굴 모델은 이 화면 것을 쓴다). 이 화면의 카메라·교정 타이머를 먼저 멈춰, 가려진 채 옛 계수를 보내거나
               돌아왔을 때 검은 화면으로 남지 않게 한다(돌아오면 '카메라 켜기'로 다시 켠다). */}
           <button type="button" onClick={() => { stop(); setShowCalib(true) }}
             className="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-800">
