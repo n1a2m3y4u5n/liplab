@@ -137,3 +137,14 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"  ✗ {t.__name__}: {type(e).__name__}: {e}")
     print(f"\n{passed} passed, {len(tests) - passed} failed")
+
+
+def test_lookup_prefers_daily_life_sign():
+    """9/27 감사: 동형어의 첫 항목이 전문용어 수어여도 일상생활 수어를 고른다."""
+    import sign_service as S
+    idx = S.load_index()
+    for w in ("나무", "불", "시험", "친구", "산", "풀"):
+        got = S.lookup_sign(w)
+        cat = next(e["category"] for e in idx[w] if e["origin_no"] == got["origin_no"])
+        assert cat.startswith("일상생활"), (w, cat)
+    assert S._ALIASES["자동차"] == "승용차" and S.lookup_sign("승용차")["origin_no"] == "6956"
