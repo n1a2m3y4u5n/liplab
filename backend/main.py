@@ -1663,6 +1663,12 @@ class WordAnswer(BaseModel):
     chosen: Optional[str] = Field(None, max_length=50)   # 사용자가 실제로 고른 단어(오답 시 자모 혼동 분석용)
 
 
+def _excluded_training_words() -> set:
+    """훈련·배치·말하기에서 내지 않는 단어: 사전·사후 표준검사 정답(문항 노출 방지, 축 I)과 드문 말(9/27 단어 은행 감사)."""
+    import assessment as _asmt
+    return set(_asmt.test_only_words()) | set(getattr(_curriculum, "STAGE2_EXCLUDED", {}))
+
+
 # 2단계 서빙 풀의 정적 표(난이도·분위·보기 부류). 풀(단어 은행 - 표준검사 단어)이 같으면 재사용한다.
 # 보기 부류는 처음 만들 때 약 1.5초가 들어 스레드에서 만든다(이후 요청은 약 20ms).
 _STAGE2_TABLE = {"key": None, "table": None}
@@ -2568,9 +2574,10 @@ async def assessment_placement(n: int = 8, form: str = None,
         forms = _asmt.frozen_forms(words)
         return {"items": forms.get(form, []), "form": form, "version": forms.get("version")}
     # 배치검사는 사전·사후 문항 단어를 정답·보기에서 모두 뺀다 — 사전검사 전에 문항을 미리 보지 않게(축 I).
-    tw = _asmt.test_only_words()
+    # 드문 말도 뺀다(9/27: 적응형 8문항의 25~44%가 드문 말을 정답·보기로 담았다, 어휘 지식이 점수에 섞인다).
+    skip = _excluded_training_words()
     # n은 1~20으로 맞춘다(0이면 0으로 나눠 500, 아주 크면 단어장 전체를 돌며 몇 초씩 서버를 붙잡았다).
-    items = _asmt.build_placement_items([w for w in words if w not in tw], n=max(1, min(int(n), 20)))
+    items = _asmt.build_placement_items([w for w in words if w not in skip], n=max(1, min(int(n), 20)))
     return {"items": items, "form": "placement"}
 
 
@@ -2587,8 +2594,8 @@ async def assessment_placement_next(data: PlacementNextReq,
     난이도지수(C)에 θ를 맞추고 누적 오답 자질을 표적으로 겨냥한다. 고정 N 도달·문항 소진 시 done.
     동형폼(A/B) 향상도검사는 이 경로를 타지 않아 사전·사후 통제 비교의 불변성을 지킨다."""
     import assessment as _asmt
-    tw = _asmt.test_only_words()   # 사전·사후 문항 단어는 배치검사에 내지 않는다(위 GET과 같은 기준)
-    words = [w["word"] for w in _curriculum.WORD_BANK if w["word"] not in tw]
+    skip = _excluded_training_words()   # 사전·사후 문항 단어와 드문 말은 배치검사에 내지 않는다(위 GET과 같은 기준)
+    words = [w["word"] for w in _curriculum.WORD_BANK if w["word"] not in skip]
     n = max(3, min(20, data.n or 8))
     asked = data.asked or []
     responses = data.responses or {}
@@ -2850,8 +2857,9 @@ async def conversation_multi(speakers: int = 2, turns: int = 6, scene: Optional[
                               "total_attempts": w.total_attempts, "last_error_at": w.last_error_at}
                              for w in rows], k=2)
         targets = set(rec.get("target_visemes") or [])
+        skip = _excluded_training_words()
         focus = [w["word"] for w in _curriculum.WORD_BANK
-                 if targets and set(_crules.word_visemes(w["word"])) & targets][:30]
+                 if targets and w["word"] not in skip and set(_crules.word_visemes(w["word"])) & targets][:30]
         import random as _rnd
         _rnd.shuffle(focus)
         conv = await _conv.generate_multi_conversation(speakers=speakers, turns=turns, scene=scene,
@@ -3063,7 +3071,8 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
             base = [it.get("target") for it in stg["items"]]
             if stg["mode"] == "word":
                 gen = await content_gen.generate_words(n=10, max_syllable=3, avoid=base)
-                ai_items = [{"target": w} for w in gen]
+                skip = _excluded_training_words()   # 표준검사 정답·드문 말은 AI가 만들어도 내지 않는다
+                ai_items = [{"target": w} for w in gen if w not in skip]
             else:
                 ai_items = await content_gen.generate_sentences(n=8, avoid=base, with_intonation=True)
             if len(ai_items) >= 4:
