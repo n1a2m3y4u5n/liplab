@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { toBlendshapeMap } from '../lib/mouthScore'
-import { predictLipread, loadLipread } from '../lib/lipreadModel'
+import { predictLipread, loadLipread, lipreadAvailable } from '../lib/lipreadModel'
 import { resampleFrames } from '../lib/frameRate'
 import { mediaErrorMessage } from '../lib/mediaError'
 
@@ -11,6 +10,7 @@ import { mediaErrorMessage } from '../lib/mediaError'
  * 가까운 단어를 '기계의 읽은 결과'로 보여준다. 영상·계수는 기기 밖으로 나가지 않는다.
  *
  * 정직: 미학습화자 정확도가 낮은 소형 실증 모델이라 '실험적 · 단어 단위 검증'으로 범위를 한정한다.
+ * 모델·MediaPipe는 '카메라 켜기'를 눌렀을 때 받는다(단어 문제마다 이 칸이 뜨므로, 쓰지 않는 학습자가 20MB 넘게 받지 않게).
  */
 const MP_VERSION = '1.0.1'
 const WASM_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/wasm`
@@ -34,47 +34,28 @@ export default function LipReadCheck({ target, candidates = [] }) {
   const [result, setResult] = useState(null)   // {jamo, matched, ranked}
   const [errMsg, setErrMsg] = useState('')
   const [modelOK, setModelOK] = useState(null)  // 립리딩 모델 로드 가능 여부
-  const [mpReady, setMpReady] = useState(false) // MediaPipe 준비 완료(카메라 오류 뒤 다시 켜기 허용 판단)
   const [starting, setStarting] = useState(false) // 카메라를 여는 중(권한 창 대기), 그동안 버튼을 막는다
-  const hidden = modelOK === false
 
-  // 립리딩 모델 미리 로드 시도(없으면 컴포넌트 자체를 숨김)
+  // 모델이 배포돼 있는지만 작은 메타 파일로 확인한다(없으면 칸을 숨김). 모델 자체는 카메라를 켤 때 받는다.
   useEffect(() => {
     let cancelled = false
-    loadLipread().then((r) => { if (!cancelled) setModelOK(!!r) })
+    lipreadAvailable().then((ok) => { if (!cancelled) setModelOK(!!ok) })
     return () => { cancelled = true }
   }, [])
 
-  // MediaPipe 로드: 립리딩 모델 확인(modelOK)과 나란히, 마운트마다 한 번만 만든다. 예전에는 modelOK가
-  // null→true로 바뀔 때 다시 돌아 두 번 만들었고, 먼저 만든 인스턴스가 덮여 닫히지 않았다.
-  // 모델이 없다고 판명되면(hidden) 정리 함수가 닫는다.
-  useEffect(() => {
-    if (hidden) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        setStatus('loading')
-        const vision = await FilesetResolver.forVisionTasks(WASM_URL)
-        const fl = await FaceLandmarker.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
-          outputFaceBlendshapes: true, runningMode: 'VIDEO', numFaces: 1,
-        })
-        if (cancelled) { fl.close?.(); return }
-        landmarkerRef.current?.close?.()
-        landmarkerRef.current = fl
-        setMpReady(true)
-        setStatus('idle')
-      } catch {
-        if (!cancelled) { setStatus('error'); setErrMsg('입모양 모델을 불러오지 못했어요.') }
-      }
-    })()
-    return () => {
-      cancelled = true
-      landmarkerRef.current?.close?.()
-      landmarkerRef.current = null
-      setMpReady(false)
-    }
-  }, [hidden])
+  // MediaPipe 얼굴 모델은 카메라를 켤 때 한 번 만든다(JS 번들도 그때 불러온다). 화면을 떠나면 정리 함수가 닫는다.
+  const ensureLandmarker = useCallback(async (gen) => {
+    if (landmarkerRef.current) return landmarkerRef.current
+    const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision')
+    const vision = await FilesetResolver.forVisionTasks(WASM_URL)
+    const fl = await FaceLandmarker.createFromOptions(vision, {
+      baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
+      outputFaceBlendshapes: true, runningMode: 'VIDEO', numFaces: 1,
+    })
+    if (gen !== camGenRef.current) { fl.close?.(); return null }   // 받는 사이 화면을 떠났다
+    landmarkerRef.current = fl
+    return fl
+  }, [])
 
   const loop = useCallback(() => {
     const fl = landmarkerRef.current, video = videoRef.current
@@ -92,11 +73,15 @@ export default function LipReadCheck({ target, candidates = [] }) {
   }, [])
 
   const startCam = useCallback(async () => {
-    if (!landmarkerRef.current || startingRef.current) return   // 권한 창 대기 중 두 번 눌림 방지
+    if (startingRef.current) return   // 권한 창·모델 받기 대기 중 두 번 눌림 방지
     startingRef.current = true; setStarting(true)
     const gen = camGenRef.current
     let stream = null
     try {
+      setStatus('loading')   // 처음이면 모델을 받는다(이미 받았으면 바로 넘어간다)
+      const [fl, lip] = await Promise.all([ensureLandmarker(gen).catch(() => null), loadLipread()])
+      if (gen !== camGenRef.current) return
+      if (!fl || !lip) { setStatus('error'); setErrMsg('입모양 모델을 불러오지 못했어요. 다시 눌러 보세요.'); return }
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
       // 권한을 기다리는 사이 화면을 떠났다 → 켠 카메라를 바로 끈다
       const video = videoRef.current
@@ -115,7 +100,7 @@ export default function LipReadCheck({ target, candidates = [] }) {
     } finally {
       startingRef.current = false; setStarting(false)
     }
-  }, [loop])
+  }, [loop, ensureLandmarker])
 
   const record = useCallback(() => {
     if (status !== 'ready' && status !== 'done') return
@@ -134,12 +119,14 @@ export default function LipReadCheck({ target, candidates = [] }) {
     }, REC_MS)
   }, [status, candidates])
 
-  // 정리 (landmarker는 MediaPipe 로드 effect가 닫는다)
+  // 정리: 카메라·타이머·얼굴 모델
   useEffect(() => () => {
     camGenRef.current += 1
     clearTimeout(recTimerRef.current)
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
+    landmarkerRef.current?.close?.()
+    landmarkerRef.current = null
   }, [])
 
   if (modelOK === false) return null  // 모델 없으면 조용히 숨김
@@ -189,8 +176,8 @@ export default function LipReadCheck({ target, candidates = [] }) {
 
       <div className="mt-2 flex justify-center gap-2">
         {status === 'idle' || status === 'loading' || status === 'error' ? (
-          // 카메라 오류(권한·장치) 뒤에는 다시 켜 볼 수 있게 둔다. 입모양 모델이 준비되지 않았을 때만 막는다
-          <button type="button" onClick={startCam} disabled={!mpReady || status === 'loading' || starting}
+          // 카메라·모델 오류 뒤에도 다시 켜 볼 수 있다. 받는 중·권한 창 대기 중에만 막는다
+          <button type="button" onClick={startCam} disabled={status === 'loading' || starting}
             className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-bold text-white hover:bg-slate-700 disabled:opacity-40">
             카메라 켜기
           </button>

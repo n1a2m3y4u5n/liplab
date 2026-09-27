@@ -4,11 +4,11 @@
  * 나가지 않는다. 미학습화자 정확도가 낮아 '단어 단위 검증'(폐집합 후보 중 가장 가까운 단어)로
  * 범위를 한정한다(계획서 D). 모델/WASM 로드 실패 시 null(폴백).
  */
-import * as ort from 'onnxruntime-web'
 import { decomposeToJamo } from './ctcScore'
 
-ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/'
-ort.env.logLevel = 'error'
+// onnxruntime-web(번들 452KB + WASM)과 모델(10.8MB)은 사용자가 카메라를 켤 때 불러온다. 예전에는 단어 문제 결과 화면에
+// 이 칸이 뜨기만 해도 모두 받아, 카메라를 쓰지 않는 학습자도 휴대폰 데이터로 한 번에 20MB 넘게 받았다.
+let ort = null
 
 const ONNX_URL = '/models/kr_d_lipread.onnx'
 const META_URL = '/models/kr_d_lipread.meta.json'
@@ -34,17 +34,34 @@ function editDistance(a, b) {
 let session = null
 let meta = null
 let loading = null
+let available = null
+
+/** 모델이 배포돼 있는지만 작은 메타 파일(약 1KB)로 확인한다. 화면에 칸을 보일지 정할 때 쓴다. */
+export function lipreadAvailable() {
+  if (!available) {   // 동시에 여러 번 불러도 한 번만 받는다(약속을 캐시)
+    available = fetch(META_URL)
+      .then(async (r) => { if (r.ok) meta = await r.json(); return r.ok })
+      .catch(() => false)
+  }
+  return available
+}
 
 export async function loadLipread() {
   if (session && meta) return { session, meta }
   if (!loading) {
     loading = (async () => {
       try {
-        const m = await fetch(META_URL).then((r) => r.json())
+        if (!ort) {
+          ort = await import('onnxruntime-web')
+          ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/'
+          ort.env.logLevel = 'error'
+        }
+        const m = meta || await fetch(META_URL).then((r) => r.json())
         const s = await ort.InferenceSession.create(ONNX_URL, { executionProviders: ['wasm'] })
         session = s; meta = m
         return { session, meta }
       } catch {
+        loading = null   // 한 번 실패해도 다시 시도할 수 있게(예전에는 새로고침 전까지 실패가 남았다)
         return null
       }
     })()
