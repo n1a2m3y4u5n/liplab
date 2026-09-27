@@ -4,7 +4,7 @@ Evaluates user responses using articulatory feature-based partial credit
 """
 import unicodedata
 from typing import Dict, List, Optional, Tuple
-from engine import decompose_hangul, VISEME_MAP, get_viseme_feature, to_pronounced_syllables
+from engine import decompose_hangul, VISEME_MAP, DOUBLE_FINAL, get_viseme_feature, to_pronounced_syllables
 
 
 # Phonological similarity matrix (0.0 = completely different, 1.0 = identical)
@@ -443,15 +443,34 @@ VISEME_NAME_KO = {
 }
 
 
+# 입 안쪽에서 조음되는 자음(6 치경·7 연구개·8 성문·10 경구개): viseme는 다르지만 겉모습이 거의 같다
+# (content_rules._INSIDE_CLUSTER와 같은 근거, 보기 생성·동형 폼의 indistinguishable도 이 무리를 하나로 본다).
+_INSIDE_VISEMES = {6, 7, 8, 10}
+_INSIDE_NAME_KO = "입 안쪽 자음(혀·목구멍)"
+# 소리 없는 초성 ㅇ에는 입모양이 없다(content_rules.word_visemes도 뺀다).
+_SILENT_ONSET_NAME_KO = "모음으로 바로 시작하는(첫소리 ㅇ은 소리 없음)"
+
+
 def viseme_confusions(target: str, chosen: str) -> List[Dict]:
     """
     목표 단어 vs 사용자가 고른 오답 단어를 음절·자모 단위로 비교한다.
     '무엇을 무엇으로 읽었는지'와, 두 자모의 입모양(viseme)이 같은지를 돌려준다.
     same_viseme=True 면 입모양이 동일해 시각적으로 구분 불가(독화의 핵심 난점) →
     '입모양만으로는 같아 보인다'는 근거 기반 피드백을 줄 수 있다.
+
+    입 안쪽 무리(_INSIDE_VISEMES)끼리는 same_viseme로 보고 이름도 무리 이름을 쓴다. 예전에는 viseme 번호가 같을 때만
+    같다고 해서 ㄷ과 ㄱ을 헷갈려도 '정답은 치경음 입모양, 그 차이를 눈에 익혀보세요'라고 안내했다(2단계 보기 혼동 설명의 15%).
+    소리 없는 초성 ㅇ은 viseme가 없고(None) 이름은 '모음으로 바로 시작하는'이다. 예전에는 연구개음으로 설명해 '아'를 '바'로
+    읽으면 '정답은 연구개음 입모양'이라고 했다(7.5%). 겹받침은 대표음(engine.DOUBLE_FINAL)의 입모양으로 본다(예전에는 중립).
     """
     out: List[Dict] = []
     pos_ko = ["초성", "중성", "종성"]
+
+    def vis(jamo, j):
+        if not jamo or (j == 0 and jamo == "ㅇ"):
+            return None
+        return VISEME_MAP.get(DOUBLE_FINAL.get(jamo, jamo) if j == 2 else jamo, 15)
+
     for i in range(min(len(target), len(chosen))):
         t = decompose_hangul(target[i])
         c = decompose_hangul(chosen[i])
@@ -460,16 +479,23 @@ def viseme_confusions(target: str, chosen: str) -> List[Dict]:
         for j in range(3):
             tj, cj = t[j], c[j]
             if tj and tj != cj:
-                vt = VISEME_MAP.get(tj, 15)
-                vc = VISEME_MAP.get(cj, 15) if cj else None
+                vt, vc = vis(tj, j), vis(cj, j)
+                exact = vt is not None and vt == vc
+                inside = vt in _INSIDE_VISEMES and vc in _INSIDE_VISEMES
+                if vt is None:
+                    name = _SILENT_ONSET_NAME_KO
+                elif inside and not exact:
+                    name = _INSIDE_NAME_KO
+                else:
+                    name = VISEME_NAME_KO.get(vt, "중립")
                 out.append({
                     "position": pos_ko[j],
                     "target": tj,
                     "read": cj or "∅",
                     "viseme": vt,
-                    "viseme_name": get_viseme_feature(vt),
-                    "viseme_name_ko": VISEME_NAME_KO.get(vt, "중립"),
-                    "same_viseme": (vc is not None and vt == vc),
+                    "viseme_name": get_viseme_feature(vt) if vt is not None else "silent_onset",
+                    "viseme_name_ko": name,
+                    "same_viseme": exact or inside,
                 })
     return out
 

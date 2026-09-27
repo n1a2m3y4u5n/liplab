@@ -113,6 +113,34 @@ def test_viseme_confusions_identical():
     _ok(S.viseme_confusions("사과", "사과") == [], "정답과 같으면 혼동 없음")
 
 
+def test_viseme_confusions_silent_onset_is_not_velar():
+    # 아 vs 바: 초성 ㅇ은 소리가 없어 입모양이 없다. 예전에는 '정답은 연구개음 입모양'이라고 했다
+    cf = S.viseme_confusions("아", "바")[0]
+    _ok(cf["viseme"] is None and "연구개" not in cf["viseme_name_ko"] and "모음" in cf["viseme_name_ko"], cf)
+    _ok(cf["same_viseme"] is False, "없는 자음과 양순음은 다르게 보인다")
+    # 가 vs 아: 정답 ㄱ은 연구개음 그대로, 받침 ㅇ([ŋ])도 연구개음 그대로
+    _ok(S.viseme_confusions("가", "아")[0]["viseme"] == 7, "정답 ㄱ은 연구개")
+    fin = [c for c in S.viseme_confusions("강", "간") if c["position"] == "종성"][0]
+    _ok(fin["viseme"] == 7, "받침 ㅇ은 소리가 있다")
+
+
+def test_viseme_confusions_inside_cluster_is_same():
+    # 달 vs 갈: ㄷ(치경)과 ㄱ(연구개)은 입 안쪽 무리라 겉모습이 같다(보기 생성·동형 폼과 같은 기준)
+    cf = S.viseme_confusions("달", "갈")[0]
+    _ok(cf["same_viseme"] is True and cf["viseme_name_ko"] == S._INSIDE_NAME_KO, cf)
+    # 같은 viseme면 그 이름(ㄷ/ㄴ은 둘 다 치경음)
+    cf2 = S.viseme_confusions("달", "날")[0]
+    _ok(cf2["same_viseme"] is True and cf2["viseme_name_ko"].startswith("치경음"), cf2)
+    # 입 안쪽과 입술은 여전히 다르다
+    _ok(S.viseme_confusions("달", "발")[0]["same_viseme"] is False, "ㄷ/ㅂ은 다르다")
+
+
+def test_viseme_confusions_double_final_uses_representative():
+    # 닭([닥]) vs 달: 겹받침 ㄺ은 대표음 ㄱ(연구개)으로 본다. 예전에는 중립(15)이었다
+    fin = [c for c in S.viseme_confusions("닭", "달") if c["position"] == "종성"][0]
+    _ok(fin["viseme"] == 7 and fin["same_viseme"] is True, fin)
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:

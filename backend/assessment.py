@@ -325,9 +325,11 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
                 conf[(c["target"], c["read"], c["viseme_name_ko"], c["same_viseme"])] += 1
             # 음소 단위 오류: 실제로 잘못 읽은 자모(대조에서 다른 자리)만 센다(I-5). 예전에는 정답 단어의
             # 안 보이는 자모를 모두 세어, 맞게 읽은 자모까지 약점으로 잡혔다. 대조가 안 되면 예전 방식으로 대신한다.
+            # 소리 없는 초성 ㅇ(viseme None)은 놓친 소리가 아니라 없는 자음을 읽은 것이라 세지 않는다('자주 놓친 소리 ㅇ'이 떴다).
             if confs:
                 for c in confs:
-                    perr[c["target"]] += 1
+                    if c["viseme"] is not None:
+                        perr[c["target"]] += 1
             else:
                 for ph in _word_phonemes(it["word"]):
                     perr[ph] += 1
