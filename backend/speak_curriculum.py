@@ -246,7 +246,9 @@ def score_attempt(stage_no: int, target: str, transcript: Optional[str],
     passed = sc >= passf
     note = ""
     if mode == "sentence":
-        exp = next((it.get("intonation") for it in stg["items"] if it["target"] == target), None)
+        # 고정 문항에 없는 문장(AI 생성·복습)은 문장 부호로 기대 억양을 정한다. 예전에는 고정 16문항만 찾아 AI 문장은 억양 판정이
+        # 없었고, 대신 코칭에 목소리 높이에 따라 어려움이 다른 25Hz 규칙이 들어갔다. 의문사 의문문은 None이라 판정하지 않는다.
+        exp = next((it.get("intonation") for it in stg["items"] if it["target"] == target), None) or expected_intonation(target)
         if exp:
             d = sentence_direction(m)
             got = "rise" if d > SENTENCE_DIR_ST else "fall" if d < -SENTENCE_DIR_ST else "flat"

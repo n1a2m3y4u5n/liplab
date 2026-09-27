@@ -165,3 +165,19 @@ def test_sentence_intonation_uses_final_syllable_and_skips_wh_questions():
     assert "평평" in note
     assert sc.expected_intonation("이름이 뭐예요?") is None and sc.expected_intonation("괜찮으세요?") == "rise"
     assert sc.expected_intonation("정말 맛있어요!") == "fall"
+
+
+def test_ai_sentences_get_intonation_verdict():
+    # AI 생성 문장(고정 16문항에 없음)도 문장 부호로 기대 억양을 정해 판정한다. 예전에는 올림·내림 모두 note가 ''였다
+    import speak_curriculum as sc
+    up = {"pitch_ref": 200, "pitch_final": 240}
+    down = {"pitch_ref": 200, "pitch_final": 170}
+    fixed = {it["target"] for it in sc.get_stage(5)["items"]}
+    for t in ("내일 시간 있어요?", "점심 같이 먹을래요?"):
+        assert t not in fixed
+        assert sc.score_attempt(5, t, t, up, sim_score=80)[2] == "억양 방향도 맞았어요!"
+        assert sc.score_attempt(5, t, t, down, sim_score=80)[2] == "억양 방향이 반대예요. 끝을 올려보세요."
+    assert sc.score_attempt(5, "오늘 좀 피곤해요.", "오늘 좀 피곤해요", down, sim_score=80)[2] == "억양 방향도 맞았어요!"
+    assert sc.score_attempt(5, "오늘 좀 피곤해요.", "오늘 좀 피곤해요", up, sim_score=80)[2] == "억양 방향이 반대예요. 끝을 내려보세요."
+    # 의문사 의문문은 끝이 대개 내려가 판정하지 않는다(코칭 쪽 억양 안내로 넘어간다)
+    assert sc.score_attempt(5, "어디 가요?", "어디 가요", up, sim_score=80)[2] == ""
