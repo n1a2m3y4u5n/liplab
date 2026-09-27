@@ -81,3 +81,20 @@ def test_badges_rules():
     assert b["acc90"] and b["streak7"] and b["viseme_master"] and b["free_talk"]
     assert b["review_king"] and b["complete"] and b["level5"]
     assert b["q100"] is False and b["streak30"] is False and b["sign"] is None
+
+
+def test_week_accuracy_is_not_moved_by_item_type_mix():
+    # 실력은 그대로(입모양 90%, 문맥 60%)인데 지난주는 입모양 위주, 이번 주는 문맥 위주 → 합쳐 평균하면 −18%p로 보였다
+    now = datetime(2026, 9, 23, 3, 0)
+    def block(y, m, d, kind, n, n_correct):
+        return [an.Event(datetime(y, m, d, 1, i), "read", 1.0 if i < n_correct else 0.0, kind) for i in range(n)]
+    ev = (block(2026, 9, 14, "viseme", 20, 18) + block(2026, 9, 14, "closure", 5, 3)
+          + block(2026, 9, 22, "viseme", 10, 9) + block(2026, 9, 22, "closure", 40, 24))
+    ov = an.overview(ev, now, KST, **_info())
+    raw = ov["weekly"][-1]["accuracy_raw"] - ov["weekly"][-2]["accuracy_raw"]
+    assert raw < -0.15, raw
+    assert abs(ov["week_accuracy_delta"]) < 0.05, ov["week_accuracy_delta"]
+    assert abs(ov["weekly"][-1]["accuracy"] - ov["weekly"][-2]["accuracy"]) < 0.05
+    # 겹치는 유형이 없으면 지난주 대비를 내지 않는다(유형이 바뀐 것과 실력 변화를 가를 수 없다)
+    ov2 = an.overview(block(2026, 9, 14, "viseme", 10, 9) + block(2026, 9, 22, "closure", 10, 6), now, KST, **_info())
+    assert ov2["week_accuracy_delta"] is None
