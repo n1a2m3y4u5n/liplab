@@ -171,3 +171,27 @@ def test_silent_onset_is_not_a_missed_sound():
     r = A.score_placement(items, {"q1": "바이"})
     assert "ㅇ" not in {e["phoneme"] for e in r["error_phonemes"]}
     assert r["error_confusions"] and r["error_confusions"][0]["target"] == "ㅇ", "오독 방향 기록은 남긴다"
+
+
+def test_lucky_guess_on_hardest_item_does_not_jump_level():
+    # 폼 A 24문항에서 가장 어려운 문항 하나만 맞히고(찍기) 나머지는 틀림 → 예전(맞힌 최고 난이도 0.833)은 수준 4, 문장 단계 추천
+    f = A.frozen_forms(build_if_missing=False)
+    items = f["A"]
+    hardest = max(items, key=lambda it: it["difficulty"])
+    resp = {it["id"]: (it["word"] if it is hardest else next(o for o in it["options"] if o != it["word"])) for it in items}
+    r = A.score_placement(items, resp)
+    _ok(r["level"] <= 2 and r["recommended_start"]["key"] != "sentence", f"찍어 맞힌 한 문항으로 수준이 뛰면 안 된다: {r['level']}")
+    # 쉬운 문항부터 대부분 맞히고 어려운 문항 일부를 틀리면 높은 수준
+    ordered = sorted(items, key=lambda it: it["difficulty"])
+    resp2 = {it["id"]: (it["word"] if i < 21 else next(o for o in it["options"] if o != it["word"])) for i, it in enumerate(ordered)}
+    _ok(A.score_placement(items, resp2)["level"] >= 3, "대부분 맞히면 높은 수준")
+
+
+def test_rescore_log_matches_score():
+    f = A.frozen_forms(build_if_missing=False)
+    items = f["A"]
+    resp = {it["id"]: it["word"] for it in items[:10]}
+    r = A.score_placement(items, resp)
+    again = A.rescore_log(r["item_log"])
+    _ok(again["ability"] == r["ability"] and again["level"] == r["level"], "저장된 문항 기록으로 다시 채점해도 같다")
+    _ok(A.rescore_log([]) is None and A.rescore_log([{"id": "x", "chosen": None, "difficulty": 0.5}]) is None, "답한 문항이 없으면 None")

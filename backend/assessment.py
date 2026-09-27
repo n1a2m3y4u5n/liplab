@@ -12,6 +12,7 @@
 지각공간 임베딩(데이터 기반)이 준비되면 난이도 통제를 정교화한다(Phase 2).
 """
 import json
+import math
 import os
 import random
 from collections import Counter
@@ -222,6 +223,45 @@ def _word_phonemes(word: str) -> List[str]:
     return out
 
 
+# 능력 추정(docs/assessment-design.md 10절). 예전 '맞힌 문항 중 최고 난이도'는 4지선다 우연 정답 하나로 수준이 뛰었다(폼에서
+# 가상 학습자의 20%가 실제 입모양·단어 수준인데 문장 단계를 추천받음). 이제 우연 정답(1/보기 수)을 반영한 사후 평균(EAP):
+# 격자 201점, 사전 N(0.55, 0.25)를 [0, 1]에 자름, 기울기 10. 시드 1 확인에서 시작 단계 일치 폼 50.8 → 80.1%, 적응형 70.5 → 75.1%.
+_EAP_GRID = [i / 200 for i in range(201)]
+_EAP_SLOPE = 10.0
+_EAP_PRIOR = (0.55, 0.25)
+
+
+def ability_eap(answered) -> float:
+    """answered = [(난이도, 정답 여부, 보기 수)]. 답한 문항이 없으면 0."""
+    if not answered:
+        return 0.0
+    m, sd = _EAP_PRIOR
+    logp = [-(g - m) ** 2 / (2 * sd * sd) for g in _EAP_GRID]
+    for d, ok, k in answered:
+        c = 1.0 / max(2, int(k or 4))
+        for j, g in enumerate(_EAP_GRID):
+            p = c + (1 - c) / (1 + math.exp(-_EAP_SLOPE * (g - d)))
+            logp[j] += math.log(p if ok else 1 - p)
+    top = max(logp)
+    w = [math.exp(x - top) for x in logp]
+    return sum(g * wi for g, wi in zip(_EAP_GRID, w)) / sum(w)
+
+
+def level_of(ability: float) -> int:
+    return min(5, max(1, int(ability * 4) + 1))
+
+
+def rescore_log(item_log) -> Optional[Dict]:
+    """저장된 문항 기록(item_log: id·word·chosen·correct·difficulty)을 지금 추정기로 다시 채점한다. 사전·사후 비교에서 채점
+    방식이 섞이지 않게 한다. 답한 문항이 없거나 난이도가 없으면 None. 보기 수는 기록에 없어 4로 본다(폼·적응형 모두 4지선다)."""
+    ans = [(float(it["difficulty"]), bool(it.get("correct")), 4) for it in (item_log or [])
+           if isinstance(it, dict) and it.get("chosen") is not None and isinstance(it.get("difficulty"), (int, float))]
+    if not ans:
+        return None
+    a = ability_eap(ans)
+    return {"ability": round(a, 3), "level": level_of(a)}
+
+
 def _recommended_stage(level: int) -> Dict:
     """추정 수준(1~5)으로 시작 학습 단계 추천(커리큘럼 STAGES)."""
     if level <= 1:
@@ -296,7 +336,7 @@ def select_next_item(asked: List[Dict], responses: Dict[str, str],
 def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
     """
     배치검사 채점. responses: {문항ID: 고른 단어}.
-    능력 = 통과한 문항 중 최고 난이도(어려운 걸 맞출수록 높다). 오류 프로파일 = 틀린 문항의 음소.
+    능력 = 우연 정답을 반영한 사후 평균(ability_eap, 예전에는 통과한 문항 중 최고 난이도). 오류 프로파일 = 틀린 문항의 음소.
     """
     from scoring import viseme_confusions
     n = len(items)
@@ -304,7 +344,6 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
     err = Counter()
     perr = Counter()   # 음소 단위 오류
     conf = Counter()   # 오독 방향: (정답 자모, 읽은 자모, 입모양 이름, 같은 입모양 여부)
-    solved_diff = []
     item_log = []      # 문항 단위 기록 — 신뢰도(KR-20)·문항 분석의 원자료
     for it in items:
         chosen = responses.get(it.get("id"))
@@ -315,7 +354,6 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
             continue
         if ok:
             correct += 1
-            solved_diff.append(it["difficulty"])
         else:
             for v in it["visemes"]:
                 err[v] += 1
@@ -333,8 +371,10 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
             else:
                 for ph in _word_phonemes(it["word"]):
                     perr[ph] += 1
-    ability = max(solved_diff) if solved_diff else 0.0
-    level = min(5, max(1, int(ability * 4) + 1)) if solved_diff else 1
+    answered = [(it["difficulty"], responses.get(it.get("id")) == it["word"], len(it.get("options") or []) or 4)
+                for it in items if responses.get(it.get("id")) is not None]
+    ability = ability_eap(answered)
+    level = level_of(ability) if answered else 1
     return {
         "total": n,
         "correct": correct,

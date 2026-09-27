@@ -2703,6 +2703,16 @@ async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_cur
     return result
 
 
+def _placement_scores(*rows) -> list:
+    """사전·사후 비교용 능력·수준. 모든 검사에 문항 기록(item_log)이 있으면 지금 추정기로 다시 채점해 채점 방식이 섞이지 않게
+    한다(9/27 능력 추정 변경, docs/assessment-design.md 10절). 하나라도 없으면 저장값을 그대로 쓴다."""
+    import assessment as _asmt
+    re_ = [_asmt.rescore_log(getattr(r, "item_log", None)) for r in rows]
+    if all(re_):
+        return re_
+    return [{"ability": r.ability, "level": r.level} for r in rows]
+
+
 @app.get("/api/assessment/history")
 async def assessment_history(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """배치·향상도 검사 이력 — 첫 검사(baseline)와 최근 검사, 그리고 향상도(delta)를 반환.
@@ -2723,6 +2733,9 @@ async def assessment_history(current_user=Depends(get_current_user), db: AsyncSe
     if not rows:
         return {"count": 0, "baseline": None, "latest": None, "delta": None}
     baseline, latest = _row(rows[0]), _row(rows[-1])
+    sb, sl = _placement_scores(rows[0], rows[-1])
+    baseline.update(sb)
+    latest.update(sl)
     delta = _asmt.improvement_delta(baseline, latest) if len(rows) >= 2 else None
     return {"count": len(rows), "baseline": baseline, "latest": latest, "delta": delta}
 
@@ -2811,13 +2824,14 @@ async def assessment_progression(current_user=Depends(get_current_user),
     phonemes = sorted(set(err_a) | set(err_b))
     per_phoneme = [{"phoneme": p, "before": err_a.get(p, 0), "after": err_b.get(p, 0),
                     "delta": err_b.get(p, 0) - err_a.get(p, 0)} for p in phonemes]
+    sa, sb = _placement_scores(a, b)
     return {
         "available": True,
-        "pre": {"form": a.form, "accuracy": a.accuracy, "level": a.level, "ability": a.ability},
-        "post": {"form": b.form, "accuracy": b.accuracy, "level": b.level, "ability": b.ability},
+        "pre": {"form": a.form, "accuracy": a.accuracy, "level": sa["level"], "ability": sa["ability"]},
+        "post": {"form": b.form, "accuracy": b.accuracy, "level": sb["level"], "ability": sb["ability"]},
         "accuracy_delta": round(b.accuracy - a.accuracy, 3),
-        "level_delta": b.level - a.level,
-        "ability_delta": round(b.ability - a.ability, 3),
+        "level_delta": sb["level"] - sa["level"],
+        "ability_delta": round(sb["ability"] - sa["ability"], 3),
         "error_phoneme_change": per_phoneme,
         "homogeneous": {a.form, b.form} == {"A", "B"} and same_version,
         "form_versions": [a.form_version, b.form_version],
@@ -2872,10 +2886,11 @@ async def assessment_report(tz_offset_min: int = -540, current_user=Depends(get_
         "generated_at": now.isoformat() + "Z",
         "issued_on": local_day(now),
         "learner": {"name": current_user.username},
+        # 능력·수준은 문항 기록이 모두 있으면 지금 추정기로 다시 채점한 값(_placement_scores, 검사끼리 채점 방식이 섞이지 않게)
         "tests": [{"date": local_day(t.created_at), "form": t.form,
                    "form_version": t.form_version, "total": t.total, "correct": t.correct,
-                   "accuracy": round(t.accuracy or 0, 3), "ability": round(t.ability or 0, 2), "level": t.level}
-                  for t in tests],
+                   "accuracy": round(t.accuracy or 0, 3), "ability": round(sc["ability"] or 0, 2), "level": sc["level"]}
+                  for t, sc in zip(tests, _placement_scores(*tests) if tests else [])],
         "progression": progression,
         "error_profile": {"visemes": err_vis, "phonemes": err_pho,
                           "from_test": local_day(latest.created_at) if latest else None},
