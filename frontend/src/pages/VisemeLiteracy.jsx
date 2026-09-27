@@ -15,6 +15,7 @@ import { LoadFailed } from '../components/ErrorScreen'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { pickVisemeDistractors } from '../lib/visemeOptions'
+import { visemeCycleSteps } from '../lib/visemeCycle'
 
 // MediaPipe 번들이 커서 펼칠 때만 로드(초기 번들 보호)
 const WebcamMouthCheck = lazy(() => import('../components/WebcamMouthCheck'))
@@ -64,25 +65,30 @@ const lessonLabel = (lesson) => {
 function VisemeAvatar({ visemeId, height = 300, variant = 'learn', className = '' }) {
   const isQuiz = variant === 'quiz'
   const [vid, setVid] = useState(15)
+  const [tm, setTm] = useState({ t: undefined, d: undefined })   // 이번 입모양의 전환·머무는 시간(ms)
   const [xray, setXray] = useState(false)        // 투명 두상: 피부 반투명 → 혀·치아 노출(계획서 F)
   const [showTract, setShowTract] = useState(false)  // 성도 단면(측면) 도식(계획서 E)
   useEffect(() => {
     let on = true
     let t
-    const cycle = (toTarget) => {
+    // 목표 ↔ 중립 반복. 이중모음은 원순 → 개방으로 미끄러지는 움직임(lib/visemeCycle)
+    const steps = visemeCycleSteps(visemeId)
+    const step = (i) => {
       if (!on) return
-      setVid(toTarget ? visemeId : 15)
-      t = setTimeout(() => cycle(!toTarget), toTarget ? 850 : 450)
+      const s = steps[i % steps.length]
+      setVid(s.v)
+      setTm({ t: s.t, d: s.ms })
+      t = setTimeout(() => step(i + 1), s.ms)
     }
     setVid(15)
-    t = setTimeout(() => cycle(true), 250)
+    t = setTimeout(() => step(0), 250)
     return () => { on = false; clearTimeout(t) }
   }, [visemeId])
   return (
     <div className={className}>
       <div className={`relative w-full overflow-hidden ${height == null ? 'h-full' : ''} ${isQuiz ? 'rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900' : 'rounded-2xl shadow-xl bg-gradient-to-b from-slate-800 to-slate-900'}`}
            style={height != null ? { height } : undefined}>
-        <AvatarVRM visemeId={vid} xray={xray} />
+        <AvatarVRM visemeId={vid} xray={xray} transitionMs={tm.t} durationMs={tm.d} />
         {showTract && (
           <div className="absolute bottom-2 right-2 w-36 sm:w-44 bg-slate-900/85 border border-slate-700 rounded-xl p-1 backdrop-blur-sm">
             <VocalTract visemeId={vid} vtl />
