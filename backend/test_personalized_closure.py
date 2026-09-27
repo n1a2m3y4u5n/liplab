@@ -33,6 +33,13 @@ with TestClient(main.app) as c:
     hits = [len(set(cr.word_visemes(it["answer"])) & set(d["target_visemes"])) for it in d["items"]]
     out["hits_sorted"] = hits == sorted(hits, reverse=True)
     out["first_hit"] = hits[0] if hits else 0
+    # 푼 문항은 뒤로(오래전에 푼 것부터). 예전에는 화면이 늘 첫 문항부터 시작해 같은 날 같은 12문항이 다시 나왔다
+    ids = [it["id"] for it in d["items"]]
+    for it in d["items"][:3]:
+        c.post("/api/curriculum/closure-answer", json={"item_id": it["id"], "chosen": it["answer"]}, headers=h)
+    again = [it["id"] for it in c.get("/api/curriculum/closure", headers=h).json()["items"]]
+    out["answered_moved_back"] = again[-3:] == ids[:3] and not set(again[:len(again) - 3]) & set(ids[:3])
+    out["again_same_set"] = sorted(again) == sorted(ids)
     # E-9: 교정 세션 요약 기록 → 전후 오차 요약
     c.post("/api/curriculum/mouth-attempt", json={"viseme_id": 1, "score": 70, "gap_start": 0.4,
                                                   "gap_end": 0.2, "n_samples": 12}, headers=h)
@@ -70,5 +77,6 @@ def test_closure_personalized_and_excludes_test_words():
     assert r["same_twice"], "같은 날 같은 사용자에게는 순서가 같아야 한다(이어 풀기)"
     assert 1 in r["targets"], "틀린 입모양이 표적이 되어야 한다"
     assert r["hits_sorted"] and r["first_hit"] > 0, "표적 입모양을 담은 문항이 앞에 와야 한다"
+    assert r["answered_moved_back"] and r["again_same_set"], "최근에 푼 문항은 뒤로 가야 한다(같은 날 같은 문항 반복 방지)"
     # E-9: 범위를 벗어난 오차는 저장하지 않고, 정상 기록은 전후 변화로 요약된다
     assert r["bad_gap_saved"] is False and r["art_sessions"] == 1 and r["art_change"] == -0.2

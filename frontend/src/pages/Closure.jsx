@@ -22,7 +22,6 @@ const shuffle = (a) => [...a].sort(() => Math.random() - 0.5)
 const QUIZ_LEN = 12
 const INTRO_MS = 1000
 
-const ENDLESS_POS_KEY = 'liplab.closure.endlessPos'
 // 나가기·완료 뒤 돌아갈 곳: 엔드리스 혼합 세션이면 엔드리스 화면, 아니면 연습 탭(완료 화면의 '연습으로 돌아가기'와 같다)
 const hubOf = (endless) => (endless ? '/learn/endless' : '/practice/hub')
 
@@ -56,11 +55,9 @@ function ClosureQuiz({ items }) {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const endless = params.get('endless') === '1'   // 엔드리스 혼합 세션: 끝나면 단어 레슨으로(G-6)
-  // items 안의 위치(레슨이 이어져도 계속 다음 문항). 엔드리스에서는 단어 레슨을 다녀와도 이어지게 탭 세션에 둔다.
-  const [i, setI] = useState(() => {
-    if (!endless) return 0
-    try { return parseInt(sessionStorage.getItem(ENDLESS_POS_KEY) || '0', 10) || 0 } catch { return 0 }
-  })
+  // items 안의 위치(레슨이 이어져도 계속 다음 문항). 서버가 최근에 푼 문항을 뒤로 보내 주므로 화면을 열 때마다 처음부터 간다.
+  // 예전에는 엔드리스에서 위치를 탭 세션에 두었는데, 서버 순서가 바뀐 뒤에도 그 위치로 가면 새 문항을 건너뛴다.
+  const [i, setI] = useState(0)
   const [qNum, setQNum] = useState(1)
   const [frames, setFrames] = useState([])
   const [selected, setSelected] = useState(null)
@@ -122,10 +119,7 @@ function ClosureQuiz({ items }) {
     const accuracy = tally.n ? Math.round((tally.correct / tally.n) * 100) : null
     return (
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
-        onNext={endless ? () => {
-          try { sessionStorage.setItem(ENDLESS_POS_KEY, String(i + 1)) } catch { /* 저장 못 해도 진행 */ }
-          navigate('/learn/word?endless=1')
-        } : restart}
+        onNext={endless ? () => navigate('/learn/word?endless=1') : restart}
         onHome={() => navigate(hubOf(endless))}
         homeLabel={endless ? '엔드리스 학습으로' : '연습으로 돌아가기'} />
     )
