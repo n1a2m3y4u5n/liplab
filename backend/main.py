@@ -2154,8 +2154,10 @@ async def curriculum_next(current_user=Depends(get_current_user), db: AsyncSessi
     # 표준검사 사전·사후 문항 단어는 훈련 추천에서도 뺀다(축 I, 문항 노출 방지).
     import assessment as _asmt
     tw = _asmt.test_only_words()
-    bank = [w for w in _curriculum.WORD_BANK if w["word"] not in tw]
-    pairs = [p for p in _curriculum.MINIMAL_PAIRS if p.get("a") not in tw and p.get("b") not in tw]
+    # 2단계 풀에서 뺀 드문 말·홀로 안 쓰이는 말(9/27 감사)은 추천 단어·짝에도 내지 않는다(대시보드 '다음 학습' 카드에 보인다)
+    skip = set(tw) | set(getattr(_curriculum, "STAGE2_EXCLUDED", {}))
+    bank = [w for w in _curriculum.WORD_BANK if w["word"] not in skip]
+    pairs = [p for p in _curriculum.MINIMAL_PAIRS if p.get("a") not in skip and p.get("b") not in skip]
     # strict=True: 표적 음소 적중 콘텐츠가 충분하면 무적중을 걸러 개인화를 강화(부족하면 자동 정렬 폴백)
     sel = _crules.select_personalized(
         bank, pairs, _training_closures(),
