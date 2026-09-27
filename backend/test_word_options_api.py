@@ -21,7 +21,8 @@ with TestClient(main.app) as c:
 idx = V.VocabIndex([w["word"] for w in d["words"]])
 bad = sum(1 for w in d["words"] if set(w.get("distractors", [])) & set(idx.homophenes(w["word"])))
 print("RESULT " + json.dumps({"n": len(d["words"]), "with_homophene": bad, "level": d.get("option_level"),
-                              "all_three": all(len(w.get("distractors", [])) == 3 for w in d["words"])}))
+                              "all_three": all(len(w.get("distractors", [])) == 3 for w in d["words"]),
+                              "has_pairs": "minimal_pairs" in d}))
 '''
 
 
@@ -36,6 +37,7 @@ def test_word_options_have_no_homophenes():
     assert r["n"] > 400 and r["all_three"], r
     assert r["with_homophene"] == 0, "보기에 동구형이음이 들어갔다"
     assert r["level"] == 2, "숙달 전에는 보기 2단계(보이는 최소대립 1개)"
+    assert not r["has_pairs"], "쓰지 않는 최소대립 짝 목록(127KB)을 싣지 않는다"
 
 
 def test_stage2_pool_skips_rare_and_non_standalone_words():
