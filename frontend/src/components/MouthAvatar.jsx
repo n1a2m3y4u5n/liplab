@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import AvatarVRM from './AvatarVRM'
 import { CueGlyph } from './CueBadges'
 import { curriculumAPI } from '../api'
+import { visemeCycleSteps } from '../lib/visemeCycle'
 
 /**
  * 입모양만 재생하는 경량 아바타 (오버레이·컨트롤 없음 → 퀴즈에서 정답 미노출).
@@ -59,16 +60,18 @@ export default function MouthAvatar({ frames, visemeId, height = 300, className 
       setTiming({ t: 150, d: 300 })
       t = setTimeout(step, 300)
     } else {
-      const target = visemeId ?? 15
-      const cycle = (toTarget) => {
+      // 목표 ↔ 중립 반복. 이중모음은 원순 → 개방으로 미끄러지는 움직임(lib/visemeCycle)
+      const steps = visemeCycleSteps(visemeId ?? 15)
+      const cycle = (i) => {
         if (!on) return
-        setVid(toTarget ? target : 15)
-        setTiming({ t: 220, d: toTarget ? 850 : 450 })
-        t = setTimeout(() => cycle(!toTarget), toTarget ? 850 : 450)
+        const s = steps[i % steps.length]
+        setVid(s.v)
+        setTiming({ t: s.t, d: s.ms })
+        t = setTimeout(() => cycle(i + 1), s.ms)
       }
       setVid(15)
       setTiming({ t: 150, d: 250 })
-      t = setTimeout(() => cycle(true), 250)
+      t = setTimeout(() => cycle(0), 250)
     }
 
     return () => { on = false; clearTimeout(t) }
