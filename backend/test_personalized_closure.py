@@ -60,7 +60,8 @@ def _run():
 
 def test_closure_personalized_and_excludes_test_words():
     r = _run()
-    assert r["n_items"] == r["n_training"] > 100, "훈련용 문맥 문항 전체를 돌려줘야 한다"
+    # 9/27 감사로 결함 문항 45개를 빼 서빙 문항은 91개(docs/content-routine.md 4절)
+    assert r["n_items"] == r["n_training"] >= 80, "훈련용 문맥 문항 전체를 돌려줘야 한다"
     assert r["test_word_leak"] == 0 and r["next_closure_leak"] == 0, "표준검사 문항 단어가 훈련에 나오면 안 된다"
     assert r["same_twice"], "같은 날 같은 사용자에게는 순서가 같아야 한다(이어 풀기)"
     assert 1 in r["targets"], "틀린 입모양이 표적이 되어야 한다"

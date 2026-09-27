@@ -177,7 +177,7 @@ async def build_closures(pairs: List[Dict], max_items: int = 40,
         if not made:
             return None
         display, hint = made
-        ok, item, _ = R.check_closure(display, p["a"], [p["a"]] + distractors)
+        ok, item, _ = R.check_closure(display, p["a"], [p["a"]] + distractors, hint=hint)
         if not ok:
             return None
         item["hint"] = hint or "문맥에 어울리는 쪽을 고르세요."
