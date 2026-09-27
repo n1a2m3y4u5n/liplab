@@ -1340,6 +1340,20 @@ _STAGE4_MASTERY = 60.0
 _STAGE4_PASS = 55.0            # 대화 1턴을 '성공'으로 볼 최소 이해도
 
 
+def _settle_mastery(sp, reached: bool) -> None:
+    """숙달 상태 갱신. 한번 숙달하면 유지한다(정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게).
+    처음 숙달하는 순간의 시도 수·시각을 남긴다(학습 효과 리포트의 숙달 도달 시행수, docs/eval-metrics.md)."""
+    from datetime import datetime as _dt
+    if sp.status == "mastered":
+        return
+    if reached:
+        sp.status = "mastered"
+        sp.mastered_attempts = sp.attempts
+        sp.mastered_at = _dt.utcnow()
+    else:
+        sp.status = "in_progress"
+
+
 async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
                                min_attempts: int, mastery_pct: float, db):
     """단계별 진행률 rolling 갱신(1건 채점 → 시도·정답 누적, 숙달 판정). sp 반환.
@@ -1358,8 +1372,7 @@ async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
     if passed:
         sp.correct += 1
     sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
-    # 한번 숙달하면 유지한다(누적 정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게)
-    sp.status = "mastered" if (sp.status == "mastered" or (sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct)) else "in_progress"
+    _settle_mastery(sp, sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct)
     return sp
 
 from datetime import date as _sr_date, timedelta as _sr_delta
@@ -1578,8 +1591,7 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
         if correct:
             sp.correct += 1
         sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, correct)   # 최근 답에 무게(docs/mastery-ewma.md)
-        # 한번 숙달하면 유지한다(누적 정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게)
-        sp.status = "mastered" if (sp.status == "mastered" or (sp.attempts >= _STAGE1_MIN_ATTEMPTS and sp.mastery_score >= _STAGE1_MASTERY)) else "in_progress"
+        _settle_mastery(sp, sp.attempts >= _STAGE1_MIN_ATTEMPTS and sp.mastery_score >= _STAGE1_MASTERY)
 
         # 취약 입모양 반영 — 기존 분석·적응 로직과 통합
         r2 = await db.execute(select(WeakViseme).where(
@@ -1709,8 +1721,7 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
             if correct:
                 sp.correct += 1
             sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, correct)   # 최근 답에 무게
-            # 한번 숙달하면 유지한다(누적 정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게)
-            sp.status = "mastered" if (sp.status == "mastered" or (sp.attempts >= _STAGE2_MIN_ATTEMPTS and sp.mastery_score >= _STAGE2_MASTERY)) else "in_progress"
+            _settle_mastery(sp, sp.attempts >= _STAGE2_MIN_ATTEMPTS and sp.mastery_score >= _STAGE2_MASTERY)
         # 취약 입모양 반영 — 오답이면 단어의 모든 유명 viseme을 오류로 누적(단어 인식 실패 신호).
         # 예전엔 단어 학습이 개인화(WeakViseme)에 전혀 기여하지 못했다.
         vids, features = await _weak_visemes_for_text(data.word)
@@ -1956,53 +1967,30 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
     향상도를 집계한다. 공모전 평가/효과성 근거용. 데이터가 적으면 각 지표를 null·빈 배열로
     돌려 프론트가 '데이터가 쌓이면 표시' 상태를 그릴 수 있게 한다.
 
-    지표
-    - learning_curve: 선다형 시행(TrialAttempt)을 시간순 8구간으로 나눈 정확도 추이.
-    - baseline_vs_recent: 첫 1/3 vs 마지막 1/3 정확도(통제된 사전/사후는 아니며 '관찰된 향상').
+    지표(계산은 eval_metrics, 근거는 docs/eval-metrics.md)
+    - learning_curve: 선다형 시행(TrialAttempt)을 시간순 8구간으로 나눈 정확도. value는 유형(입모양·단어·문맥)
+      고정효과를 뺀 값, raw는 보정 전. 단계가 바뀌며 유형이 달라지는 것만으로 곡선이 꺾이지 않게 한다.
+    - baseline_vs_recent: 유형마다 처음 1/3 대 최근 1/3 정확도를 시행 수로 가중 평균(통제된 사전/사후는 아님).
+      예전 전체 3등분은 학습 효과가 없어도 시뮬레이션 평균 -19%p로 나왔다.
     - by_item_type: 입모양·단어·문맥추론별 정확도.
-    - trials_to_criterion: 단계별 숙달까지 걸린(또는 현재까지의) 시도수.
+    - trials_to_criterion: 단계별 숙달 도달 시행수(처음 숙달한 순간의 시도 수)와 진행 중인 단계의 진행률.
     - same_viseme_ratio: 오답 중 '입모양이 같아' 헷갈린 비율(시각 혼동성 근거).
-    - sentence_trend: 문장 채점(Progress) 점수의 시간순 추이.
+    - sentence_trend: 문장 채점(Progress) 점수의 시간순 추이(문장 난이도 차이를 뺀 값, raw는 보정 전).
     """
     from database import TrialAttempt, Progress, StageProgress
     from sqlalchemy import select
-
-    def bucketize(items, key, n_bins=8):
-        """시간순 items를 최대 n_bins개 연속 구간으로 나눠 각 구간의 평균(key)·개수를 낸다."""
-        if not items:
-            return []
-        n = len(items)
-        bins = min(n_bins, n)
-        out = []
-        for b in range(bins):
-            lo = (n * b) // bins
-            hi = (n * (b + 1)) // bins
-            seg = items[lo:hi]
-            if not seg:
-                continue
-            out.append({"bin": b + 1, "n": len(seg),
-                        "value": round(sum(key(x) for x in seg) / len(seg), 3)})
-        return out
+    import eval_metrics as _em
 
     # ── 선다형 시행 ──────────────────────────────────────────────
     tr = (await db.execute(
         select(TrialAttempt).where(TrialAttempt.user_id == current_user.id)
-        .order_by(TrialAttempt.created_at.asc()))).scalars().all()
+        .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).scalars().all()
     n_tr = len(tr)
     n_correct = sum(1 for a in tr if a.correct)
+    seq = [(a.item_type, bool(a.correct)) for a in tr]
 
-    learning_curve = bucketize(tr, lambda a: 1.0 if a.correct else 0.0)
-
-    baseline_vs_recent = None
-    if n_tr >= 9:                       # 1/3씩 나누려면 최소 9시행
-        k = n_tr // 3
-        early = tr[:k]; late = tr[-k:]
-        eb = sum(1 for a in early if a.correct) / len(early)
-        lb = sum(1 for a in late if a.correct) / len(late)
-        baseline_vs_recent = {
-            "baseline_acc": round(eb * 100, 1), "recent_acc": round(lb * 100, 1),
-            "delta_pp": round((lb - eb) * 100, 1), "n_each": k,
-            "note": "통제된 사전/사후가 아니라 시행 순서 기준 초기 1/3 vs 최근 1/3 정확도"}
+    learning_curve = _em.type_adjusted_curve(seq)
+    baseline_vs_recent = _em.within_type_change(seq)   # 9시행 이상인 유형이 없으면 None
 
     by_item_type = []
     for it, label in (("viseme", "입모양 인지"), ("word", "단어"), ("closure", "문맥 추론")):
@@ -2025,17 +2013,20 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
         select(StageProgress).where(StageProgress.user_id == current_user.id)
         .order_by(StageProgress.stage.asc()))).scalars().all()
     _STAGE_MIN = {1: _STAGE1_MIN_ATTEMPTS, 2: _STAGE2_MIN_ATTEMPTS, 3: _STAGE3_MIN_ATTEMPTS, 4: _STAGE4_MIN_ATTEMPTS}
+    _STAGE_BAR = {1: _STAGE1_MASTERY, 2: _STAGE2_MASTERY, 3: _STAGE3_MASTERY, 4: _STAGE4_MASTERY}
     _STAGE_NAME = {1: "입모양 인지", 2: "단어", 3: "문장", 4: "대화"}
     # 한 단계에 StageProgress 행이 여러 개일 수 있어(과거 데이터·경쟁 삽입) 단계별로 합산한다.
-    agg = {}  # stage -> {attempts, correct, mastery, mastered}
+    agg = {}  # stage -> {attempts, correct, mastery, mastered, reached}
     for sp in sps:
         if sp.stage not in _STAGE_NAME:
             continue
-        a = agg.setdefault(sp.stage, {"attempts": 0, "correct": 0, "mastery": 0.0, "mastered": False})
+        a = agg.setdefault(sp.stage, {"attempts": 0, "correct": 0, "mastery": 0.0, "mastered": False, "reached": None})
         a["attempts"] += sp.attempts or 0
         a["correct"] += sp.correct or 0
         a["mastery"] = max(a["mastery"], sp.mastery_score or 0.0)
         a["mastered"] = a["mastered"] or (sp.status == "mastered")
+        if sp.mastered_attempts:
+            a["reached"] = min(a["reached"] or sp.mastered_attempts, sp.mastered_attempts)
     trials_to_criterion = []
     for stage in sorted(agg):
         a = agg[stage]
@@ -2044,14 +2035,21 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
             "status": "mastered" if a["mastered"] else ("in_progress" if a["attempts"] else "locked"),
             "attempts": a["attempts"], "correct": a["correct"],
             "mastery_score": round(a["mastery"], 1),
+            "mastery_threshold": _STAGE_BAR.get(stage),
             "criterion_attempts": _STAGE_MIN.get(stage),
+            # 처음 숙달한 순간의 시도 수. 이 기록이 생기기 전(9/27)에 숙달한 단계는 None
+            "trials_to_mastery": a["reached"] if a["mastered"] else None,
+            "progress": _em.criterion_progress(a["mastered"], a["attempts"], a["mastery"],
+                                               _STAGE_BAR.get(stage), _STAGE_MIN.get(stage)),
             "mastered": a["mastered"]})
 
     # ── 문장 채점 추이 ───────────────────────────────────────────
     prog = (await db.execute(
         select(Progress).where(Progress.user_id == current_user.id)
-        .order_by(Progress.created_at.asc()))).scalars().all()
-    sentence_trend = bucketize(prog, lambda p: p.score or 0.0)
+        .order_by(Progress.created_at.asc(), Progress.id.asc()))).scalars().all()
+    # 문장 난이도 차이를 뺀 점수 추이(raw는 보정 전). 경로가 쉬운 문장에서 어려운 문장으로 간다
+    sentence_trend = _em.group_adjusted_curve([(p.difficulty_level or 0, p.score or 0.0) for p in prog],
+                                              lo=0.0, hi=100.0, ndigits=1)
     sentence_avg = round(sum(p.score or 0 for p in prog) / len(prog), 1) if prog else None
 
     return {

@@ -232,7 +232,8 @@ export default function EvalReport() {
               <Metric label="문장 평균점수" value={ov.sentence_avg_score} unit="점" />
             </div>
 
-            <Card title="학습곡선 (선다형 정확도)" hint="시행을 시간순 구간으로 나눈 정확도">
+            {/* 유형(입모양·단어·문맥) 고정효과를 뺀 정확도(docs/eval-metrics.md). 단계가 바뀌어 문항 유형이 달라지는 것만으로 꺾이지 않는다 */}
+            <Card title="학습곡선 (선다형 정확도)" hint="시간순 구간별 · 문항 유형 차이 보정">
               <LineChart series={data.learning_curve} max={1} />
             </Card>
 
@@ -295,9 +296,18 @@ export default function EvalReport() {
                         </span>
                       </div>
                     </div>
+                    {bvr.by_type?.length > 1 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {bvr.by_type.map((t) => (
+                          <span key={t.item_type} className="rounded-full bg-fill px-2 py-0.5 text-[11px] font-semibold tabular-nums text-ink-muted">
+                            {t.label} {t.baseline_acc}→{t.recent_acc}% ({t.delta_pp >= 0 ? '+' : ''}{t.delta_pp}%p)
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">{bvr.note}</p>
                   </div>
-                ) : <EmptyLine>선다형 시행이 9회 이상 쌓이면 향상도가 표시됩니다.</EmptyLine>}
+                ) : <EmptyLine>한 유형(입모양·단어·문맥)을 9회 이상 풀면 향상도가 표시됩니다.</EmptyLine>}
               </Card>
 
               <Card title="유형별 정확도">
@@ -340,7 +350,8 @@ export default function EvalReport() {
               </Card>
             )}
 
-            <Card title="단계별 숙달 도달 시행수" hint="숙달 기준 시도수 대비 현재 시도">
+            {/* 숙달한 단계는 처음 숙달한 시도(9/27 이전 숙달은 기록 없음), 진행 중이면 두 기준(최소 시도·숙달 점수) 중 모자란 쪽의 진행 */}
+            <Card title="단계별 숙달 도달 시행수" hint="숙달까지 걸린 시도 · 진행 중이면 기준까지">
               {data.trials_to_criterion?.length ? (
                 <div className="space-y-1">
                   {data.trials_to_criterion.map((s) => (
@@ -349,11 +360,13 @@ export default function EvalReport() {
                       <div className="flex-1">
                         <div className="h-2 rounded-full bg-fill">
                           <div className={`h-2 rounded-full ${s.mastered ? 'bg-good' : 'bg-primary-500'}`}
-                               style={{ width: `${s.criterion_attempts ? Math.min(100, (s.attempts / s.criterion_attempts) * 100) : 0}%` }} />
+                               style={{ width: `${Math.round((s.progress ?? 0) * 100)}%` }} />
                         </div>
                       </div>
                       <span className="w-28 shrink-0 text-right text-[11px] tabular-nums text-ink-muted">
-                        {s.attempts}/{s.criterion_attempts ?? '—'}회 · 정답 {s.correct}
+                        {s.mastered
+                          ? (s.trials_to_mastery ? `${s.trials_to_mastery}회째 숙달` : `${s.attempts}회 · 정답 ${s.correct}`)
+                          : `점수 ${Math.round(s.mastery_score)}/${s.mastery_threshold ?? '—'} · ${s.attempts}회`}
                       </span>
                       <span className={`w-14 shrink-0 text-right text-[11px] font-bold ${s.mastered ? 'text-good-text' : 'text-ink-faint'}`}>
                         {s.mastered ? '숙달' : s.status === 'in_progress' ? '진행중' : '—'}
@@ -377,7 +390,7 @@ export default function EvalReport() {
                 ) : <EmptyLine>혼동 데이터가 쌓이면 표시됩니다.</EmptyLine>}
               </Card>
 
-              <Card title="문장 점수 추이" hint="문장 채점 점수(시간순 구간)">
+              <Card title="문장 점수 추이" hint="시간순 구간별 · 문장 난이도 차이 보정">
                 <LineChart series={data.sentence_trend} max={100} fmt={(v) => `${Math.round(v)}`} tone="score" />
               </Card>
             </div>
