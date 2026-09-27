@@ -52,6 +52,19 @@ def est_eap(items, slope, prior_sd, prior_m=0.55):
     return float((GRID * w).sum() / w.sum())
 
 
+def boundary_estimate(items):
+    """9/27 밤 전 assessment.estimate_ability의 경계 추정(재현용): 맞힌 최고와 틀린 최저 난이도의 중간."""
+    solved = [d for d, ok, _ in items if ok]
+    failed = [d for d, ok, _ in items if not ok]
+    if solved and failed:
+        return (max(solved) + min(failed)) / 2.0
+    if solved:
+        return min(1.0, max(solved) + 0.12)
+    if failed:
+        return max(0.0, min(failed) - 0.12)
+    return 0.5
+
+
 def estimator(spec):
     if spec == "max":
         return est_max
@@ -95,7 +108,7 @@ def run(seed, specs, n_learners=6000, select="boundary"):
                     avail = list(pool)
                     for q in range(8):
                         # 다음 문항 선택용 진행 추정: boundary(지금 estimate_ability) 또는 eap(최종 추정과 같은 식)
-                        th = (A.estimate_ability(asked, responses)["ability"] if select == "boundary"
+                        th = (boundary_estimate(items) if select == "boundary"
                               else (est_eap(items, 10.0, 0.25) if items else 0.55))
                         j = min(range(len(avail)), key=lambda i: (abs(avail[i] - th), rng.random()))
                         d = avail.pop(j)

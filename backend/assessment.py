@@ -276,33 +276,26 @@ def _recommended_stage(level: int) -> Dict:
 
 def estimate_ability(asked: List[Dict], responses: Dict[str, str]) -> Dict:
     """검사 진행 중 러닝 능력추정. asked=이미 낸 문항들(difficulty·visemes 포함),
-    responses={문항ID: 고른 단어}. θ(ability)는 '통과한 최고 난이도와 실패한 최저 난이도의
-    경계'로 추정하고, 오답 문항의 안 보이는 자질을 누적해 표적(error_visemes)을 만든다.
-    적응형 출제(select_next_item)와 진행 중 표시에 쓰인다(최종 채점은 score_placement가 담당)."""
+    responses={문항ID: 고른 단어}. θ(ability)는 최종 채점과 같은 EAP(ability_eap, 답이 없으면 사전 평균 0.55)이고,
+    오답 문항의 안 보이는 자질을 누적해 표적(error_visemes)을 만든다. 적응형 출제(select_next_item)와 진행 중 표시에 쓰인다.
+    예전 경계 추정('통과한 최고 난이도와 실패한 최저 난이도의 중간')은 우연 정답에 흔들렸다. EAP로 고르면 시드 1 확인에서
+    시작 단계 일치 75.1 → 77.7%, 과소배치 14.2 → 10.8%(docs/assessment-design.md 11절)."""
     by_id = {it["id"]: it for it in asked}
-    solved, failed = [], []
+    answered = []
     err = Counter()
     for iid, chosen in responses.items():
         it = by_id.get(iid)
         if not it:
             continue
-        if chosen == it["word"]:
-            solved.append(it["difficulty"])
-        else:
-            failed.append(it["difficulty"])
+        ok = chosen == it["word"]
+        answered.append((it["difficulty"], ok, len(it.get("options") or []) or 4))
+        if not ok:
             for v in it.get("visemes", []):
                 err[v] += 1
-    if solved and failed:
-        theta = (max(solved) + min(failed)) / 2.0
-    elif solved:
-        theta = min(1.0, max(solved) + 0.12)   # 다 맞음 → 더 어렵게
-    elif failed:
-        theta = max(0.0, min(failed) - 0.12)    # 다 틀림 → 더 쉽게
-    else:
-        theta = 0.5                              # 시작: 중간 난이도
+    theta = ability_eap(answered) if answered else _EAP_PRIOR[0]
     return {"ability": round(theta, 3),
             "error_visemes": [v for v, _ in err.most_common(3)],
-            "answered": len(solved) + len(failed)}
+            "answered": len(answered)}
 
 
 def select_next_item(asked: List[Dict], responses: Dict[str, str],
