@@ -19,6 +19,9 @@ import { curriculumAPI } from '../api'
 export default function MouthAvatar({ frames, visemeId, height = 300, className = '', cueText = null, cueFocus = false, modelUrl }) {
   const [vid, setVid] = useState(15)
   const [syl, setSyl] = useState(null)      // 재생 중 프레임의 음절 번호(text_index)
+  // 이번 입모양의 전환 시간·머무는 시간(ms). AvatarVRM이 이 시간 동안 이징으로 옮긴 뒤 목표에서 멈춘다(lib/visemeTiming, 3D 모션 A·B).
+  // 예전에는 넘기지 않아 고정 비율(시상수 약 45ms)로 따라가, 학습자가 읽는 퀴즈 아바타만 전환이 거칠고 짧은 프레임에서 목표에 덜 닿았다.
+  const [timing, setTiming] = useState({ t: undefined, d: undefined })
   const [cues, setCues] = useState([])
 
   useEffect(() => {
@@ -38,29 +41,33 @@ export default function MouthAvatar({ frames, visemeId, height = 300, className 
       let i = 0
       const step = () => {
         if (!on) return
+        const dur = Math.max(frames[i]?.duration_ms || 180, 120)
         setVid(frames[i]?.viseme ?? 15)
         setSyl(Number.isInteger(frames[i]?.text_index) ? frames[i].text_index : null)
-        const dur = Math.max(frames[i]?.duration_ms || 180, 120)
+        setTiming({ t: frames[i]?.transition_ms, d: dur })
         i += 1
         if (i >= frames.length) {
           // 한 단어 끝 → 잠깐 중립으로 쉬었다가 반복
           i = 0
-          t = setTimeout(() => { setVid(15); setSyl(null); t = setTimeout(step, 500) }, dur)
+          t = setTimeout(() => { setVid(15); setSyl(null); setTiming({ t: 150, d: 500 }); t = setTimeout(step, 500) }, dur)
           return
         }
         t = setTimeout(step, dur)
       }
       setVid(15)
       setSyl(null)
+      setTiming({ t: 150, d: 300 })
       t = setTimeout(step, 300)
     } else {
       const target = visemeId ?? 15
       const cycle = (toTarget) => {
         if (!on) return
         setVid(toTarget ? target : 15)
+        setTiming({ t: 220, d: toTarget ? 850 : 450 })
         t = setTimeout(() => cycle(!toTarget), toTarget ? 850 : 450)
       }
       setVid(15)
+      setTiming({ t: 150, d: 250 })
       t = setTimeout(() => cycle(true), 250)
     }
 
@@ -71,7 +78,7 @@ export default function MouthAvatar({ frames, visemeId, height = 300, className 
   return (
     <div className={`relative w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-slate-800 to-slate-900 [container-type:size] ${className}`}
          style={height != null ? { height } : undefined}>
-      <AvatarVRM visemeId={vid} modelUrl={modelUrl} />
+      <AvatarVRM visemeId={vid} modelUrl={modelUrl} transitionMs={timing.t} durationMs={timing.d} />
       {/* 기호는 오른쪽 입꼬리 옆 — 카메라 세로 화각이 고정이라 입 높이는 캔버스 높이의 약 68%, 입 반폭은 높이의 약 25% */}
       {active.length > 0 && (
         <div className="pointer-events-none absolute left-[calc(50%+30cqh)] top-[68%] flex -translate-y-1/2 gap-1" aria-hidden>
