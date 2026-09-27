@@ -45,19 +45,21 @@ except Exception:
 _STAGE4_WORDS = [w for w in dict.fromkeys(_STAGE4_BASE + [w["word"] for w in _WORD_BANK]) if w not in _SKIP]
 
 
+# mastery는 최근 가중 합격률(편향 보정 이동 평균 a 0.08, main._bump_speak_progress)의 문턱이다. 9/27 밤 누적 합격률 65·70에서
+# 바꿨다: 가상 학습자에서 거짓 숙달과 지연이 모든 단계에서 줄고 숙련 학습자는 최소 시도 수 그대로(docs/mastery-ewma.md 6절).
 SPEAK_STAGES: List[Dict] = [
     {
         "stage": 0, "title": "발성", "icon": "🗣️", "mode": "voicing",
         "desc": "원할 때 목소리 내기 · 길게 유지",
         "guide": "배에 숨을 담고 '아—' 소리를 2초 이상 안정적으로 내보세요. 소리가 곧게 이어지는 게 목표예요.",
-        "min_attempts": 5, "mastery": 70.0,
+        "min_attempts": 5, "mastery": 85.0,
         "items": [{"target": "아"}, {"target": "이"}, {"target": "우"}],
     },
     {
         "stage": 1, "title": "운율 조절", "icon": "🎚️", "mode": "prosody",
         "desc": "크기 · 길이 · 높낮이 바꾸기",
         "guide": "지시대로 목소리의 크기·길이·억양을 바꿔보세요. 아래 곡선으로 바로 확인돼요.",
-        "min_attempts": 10, "mastery": 70.0,
+        "min_attempts": 10, "mastery": 90.0,
         "items": [
             {"target": "아", "drill": "loud", "prompt": "“아”를 크게! (크기 60 이상)"},
             {"target": "아", "drill": "soft", "prompt": "“아”를 작게, 속삭이듯 (크기 15~45)"},
@@ -74,7 +76,7 @@ SPEAK_STAGES: List[Dict] = [
         "guide": "아바타의 입 모양을 따라 모음마다 입 벌림(아는 크게, 이·우·으는 작게)과 입술 모양(오·우는 동그랗게, "
                  "이·으는 옆으로)을 또렷하게 바꿔 보세요. 오/우, 어/으처럼 입 모양이 비슷한 짝은 턱을 벌리는 정도(오·어가 "
                  "더 크게)로 구별해요.",
-        "min_attempts": 8, "mastery": 65.0, "pass": 50.0,
+        "min_attempts": 8, "mastery": 85.0, "pass": 50.0,
         "items": [{"target": v} for v in ["아", "어", "오", "우", "으", "이", "애", "에"]],
     },
     {
@@ -82,7 +84,7 @@ SPEAK_STAGES: List[Dict] = [
         "desc": "입술소리부터 · 최소대립쌍",
         "guide": "같은 자리에서 나는 소리(예: 불/풀, 달/탈)는 입 모양이 같고 숨의 세기가 달라요. 거센소리(ㅍ·ㅌ·ㅋ)는 "
                  "손바닥을 입 앞에 대고 바람이 세게 닿게 내 보세요.",
-        "min_attempts": 8, "mastery": 65.0, "pass": 50.0,
+        "min_attempts": 8, "mastery": 85.0, "pass": 50.0,
         "items": [
             {"target": "마"}, {"target": "바"}, {"target": "파"},
             {"target": "불"}, {"target": "풀"},
@@ -94,14 +96,14 @@ SPEAK_STAGES: List[Dict] = [
         "stage": 4, "title": "음절·단어", "icon": "🔤", "mode": "word",
         "desc": "짧은 단어부터 여러 음절까지",
         "guide": "또박또박, 음절 하나하나 분명하게. 끝소리(받침)까지 살려주세요.",
-        "min_attempts": 8, "mastery": 70.0, "pass": 65.0,
+        "min_attempts": 8, "mastery": 90.0, "pass": 65.0,
         "items": [{"target": w} for w in _STAGE4_WORDS],
     },
     {
         "stage": 5, "title": "문장·억양", "icon": "💬", "mode": "sentence",
         "desc": "문장 억양 — 평서문은 내림, 의문문은 올림",
         "guide": "문장 끝의 억양까지 살려보세요. 평서문(.)은 끝을 내리고, 의문문(?)은 끝을 올려요.",
-        "min_attempts": 6, "mastery": 70.0, "pass": 65.0,
+        "min_attempts": 6, "mastery": 85.0, "pass": 65.0,
         "items": [
             {"target": "밥 먹었어요.", "intonation": "fall"},
             {"target": "밥 먹었어요?", "intonation": "rise"},

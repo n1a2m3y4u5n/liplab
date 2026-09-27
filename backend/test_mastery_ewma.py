@@ -66,7 +66,7 @@ print("RESULT " + json.dumps(out))
 '''
 
 
-def test_stage3_uses_bias_corrected_ewma_and_stage4_stays_cumulative():
+def test_stage3_and_stage4_use_bias_corrected_ewma():
     import json, os, subprocess, sys, tempfile
     import main
     here = os.path.dirname(os.path.abspath(__file__))
@@ -87,5 +87,60 @@ def test_stage3_uses_bias_corrected_ewma_and_stage4_stays_cumulative():
             first = n
     assert main._STAGE3_MASTERY == 80.0 and first is not None
     assert r["s3"][-1][1] == "mastered" and r["s3"][-1][2] == first
-    # 4단계: 누적 합격률(3/4 = 75 ≥ 60, 4번째에 숙달)
-    assert [v[0] for v in r["s4"]] == [100.0, 50.0, round(200 / 3, 4), 75.0] and r["s4"][-1][1] == "mastered"
+    # 4단계도 9/27 밤부터 같은 이동 평균(문턱 75, docs/mastery-ewma.md 6절). 예전 누적 합격률은 100·50·66.7·75였다
+    est, n = 0.0, 0
+    for i, ok in enumerate([True, False, True, True]):
+        est = main._ewma_mastery(est, n, ok)
+        n += 1
+        assert abs(r["s4"][i][0] - round(est, 4)) < 1e-9
+    assert main._STAGE4_MASTERY == 75.0
+    assert (r["s4"][-1][1] == "mastered") == (n >= main._STAGE4_MIN_ATTEMPTS and est >= main._STAGE4_MASTERY)
+
+
+_SPEAK_FLOW = r'''
+import asyncio, json
+from fastapi.testclient import TestClient
+import main, database, speak_curriculum as sc
+with TestClient(main.app) as c:
+    r = c.post("/api/auth/register", json={"email": "sk@example.com", "username": "sku", "password": "pw-123456",
+                                           "agree_terms": True, "age_confirmed": True})
+    h = {"Authorization": f"Bearer {r.json()['access_token']}"}
+    uid = c.get("/api/auth/me", headers=h).json()["id"]
+    stg = sc.get_stage(2)
+
+    async def run(seq):
+        vals = []
+        async with database.AsyncSessionLocal() as db:
+            for ok in seq:
+                sp = await main._bump_speak_progress(uid, 2, ok, stg["min_attempts"], stg["mastery"], db)
+                vals.append([round(sp.mastery_score, 4), sp.status])
+            await db.commit()
+        return vals
+    out = {"vals": asyncio.run(run([False, False, True, True, True, True, True, True, True, True, True, True])),
+           "min": stg["min_attempts"], "thr": stg["mastery"]}
+print("RESULT " + json.dumps(out))
+'''
+
+
+def test_speak_stage_uses_bias_corrected_ewma():
+    # 말하기 단계도 9/27 밤부터 같은 이동 평균(모음 단계 문턱 85, docs/mastery-ewma.md 6절). 예전 누적 합격률은 초반 두 번 실패가
+    # 끝까지 남아 12번째에도 83%였다
+    import json, os, subprocess, sys, tempfile
+    import main
+    here = os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as d:
+        env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", PYTHONDONTWRITEBYTECODE="1")
+        env.pop("ANTHROPIC_API_KEY", None)
+        p = subprocess.run([sys.executable, "-c", _SPEAK_FLOW], cwd=here, env=env, capture_output=True, text=True, timeout=180)
+    line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
+    assert line, f"시나리오 실패:\n{p.stdout[-2000:]}\n{p.stderr[-3000:]}"
+    r = json.loads(line[len("RESULT "):])
+    assert r["thr"] == 85.0
+    est, n, first = 0.0, 0, None
+    for i, ok in enumerate([False, False] + [True] * 10):
+        est = main._ewma_mastery(est, n, ok)
+        n += 1
+        assert abs(r["vals"][i][0] - round(est, 4)) < 1e-9
+        if first is None and n >= r["min"] and est >= r["thr"]:
+            first = n
+    assert first is not None and r["vals"][first - 1][1] == "mastered" and r["vals"][first - 2][1] == "in_progress"
