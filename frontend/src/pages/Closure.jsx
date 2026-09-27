@@ -157,7 +157,7 @@ function ClosureQuiz({ items }) {
 
           {/* 입모양 카드 — 문장 전체를 말한다. 보기는 입모양이 같아 문맥으로 골라야 한다 */}
           <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
-            <MouthAvatar key={item.id} frames={frames} height={null} className="h-full" />
+            <MouthAvatar frames={frames} height={null} className="h-full" />
           </div>
 
           {/* 빈칸 문장 + 힌트 */}

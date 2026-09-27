@@ -147,7 +147,7 @@ function ReviewSession({ items, lessons, bank }) {
           </div>
 
           <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
-            <MouthAvatar key={`${item.kind}-${item.ref}`} height={null} className="h-full"
+            <MouthAvatar height={null} className="h-full"
               frames={isViseme ? undefined : frames} visemeId={isViseme ? parseInt(item.ref, 10) : undefined} />
           </div>
 
