@@ -260,6 +260,9 @@ VISEME_MAP = {
 # 음소 타입별 지속시간 (ms)
 # 자음 프레임이 너무 짧으면 LERP가 목표치에 닿기 전에 다음 프레임으로 넘어가서
 # morph target이 시각적으로 표현되지 않음 → 자음 계열 +30ms 조정
+# 이중모음 → (활음 입모양, 모음 입모양). w계는 원순(4)에서, ㅢ는 ㅡ(5)에서 출발한다. 애니메이션 프레임에만 쓴다.
+DIPHTHONG_GLIDE = {'ㅘ': (4, 2), 'ㅙ': (4, 2), 'ㅚ': (4, 3), 'ㅝ': (4, 5), 'ㅞ': (4, 3), 'ㅟ': (4, 3), 'ㅢ': (5, 3)}
+
 DURATION_MAP = {
     'initial_plain': 110,
     'initial_tense': 130,
@@ -407,12 +410,21 @@ async def text_to_visemes(text: str) -> List[Dict]:
 
         # 중성 프레임
         medial_type = get_phoneme_type(medial, 'medial')
-        viseme_frames.append({
-            "viseme": VISEME_MAP.get(medial, 15),
-            "duration_ms": DURATION_MAP.get(medial_type, 150),
-            "transition_ms": 40 if final else 30,
-            "text_index": i,
-        })
+        glide = DIPHTHONG_GLIDE.get(medial)
+        if glide:
+            # 이중모음은 활음에서 모음으로 미끄러진다(ㅘ: 원순 → 개방, ㅢ: ㅡ → ㅣ). 예전에는 둘 사이의 정지 모양 9 하나라 원순모음과
+            # 헷갈렸다(9/27 밤, 1단계 레슨 '움직이는 것이 단서'). 입모양 열 서명(content_rules.word_visemes)은 그대로 9다.
+            total = DURATION_MAP.get(medial_type, 200)
+            viseme_frames.append({"viseme": glide[0], "duration_ms": 70, "transition_ms": 30, "text_index": i})
+            viseme_frames.append({"viseme": glide[1], "duration_ms": total - 70,
+                                  "transition_ms": 40 if final else 30, "text_index": i})
+        else:
+            viseme_frames.append({
+                "viseme": VISEME_MAP.get(medial, 15),
+                "duration_ms": DURATION_MAP.get(medial_type, 150),
+                "transition_ms": 40 if final else 30,
+                "text_index": i,
+            })
 
         # 종성 프레임
         if final:
