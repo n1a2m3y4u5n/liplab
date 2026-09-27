@@ -7,6 +7,7 @@ import LessonComplete from '../components/LessonComplete'
 import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { pickDistractors } from '../lib/wordOptions'
+import { pickVisemeDistractors } from '../lib/visemeOptions'
 
 /**
  * 오늘의 복습(간격 반복 SRS) — 독화 레슨 공통 템플릿(핸드오프 §4-03, WordStage·Closure와 같은 틀).
@@ -74,7 +75,7 @@ function ReviewSession({ items, lessons, bank }) {
     if (isViseme) {
       const vid = parseInt(item.ref, 10)
       const t = lessons.find((l) => l.viseme_id === vid)
-      const others = shuffle(lessons.filter((l) => l.viseme_id !== vid)).slice(0, 3)
+      const others = pickVisemeDistractors(vid, lessons)   // 화면에서 가를 수 있는 무리만(lib/visemeOptions)
       return { targetKey: String(vid), choices: shuffle([t, ...others].filter(Boolean)).map((l) => ({ key: String(l.viseme_id), label: l.name })) }
     }
     const distractors = pickDistractors(item.ref, bank.byWord, bank.words)

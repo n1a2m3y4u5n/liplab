@@ -14,6 +14,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import { LoadFailed } from '../components/ErrorScreen'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 import useChoiceKeys from '../lib/useChoiceKeys'
+import { pickVisemeDistractors } from '../lib/visemeOptions'
 
 // MediaPipe 번들이 커서 펼칠 때만 로드(초기 번들 보호)
 const WebcamMouthCheck = lazy(() => import('../components/WebcamMouthCheck'))
@@ -355,7 +356,8 @@ function QuizPanel({ data }) {
 
   const newQ = useCallback(() => {
     const target = quizzable[Math.floor(Math.random() * quizzable.length)]
-    const others = shuffle(lessons.filter((l) => l.viseme_id !== target.viseme_id)).slice(0, 3)
+    // 오답은 화면에서 가를 수 있는 무리만(정답이 중설모음이면 입 안쪽 무리 제외, lib/visemeOptions)
+    const others = pickVisemeDistractors(target.viseme_id, lessons)
     const choices = shuffle([target, ...others]).map((l) => ({ viseme_id: l.viseme_id, name: lessonLabel(l) }))
     setQ({ target, choices })
     setSelected(null)
