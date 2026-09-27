@@ -9,8 +9,6 @@ import ratelimit
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from dotenv import load_dotenv
 
@@ -1696,7 +1694,8 @@ async def curriculum_words(current_user=Depends(get_current_user), db: AsyncSess
       약 2/3가 동구형이음이라 문항의 57%가 입모양만으로는 풀 수 없었고, 입모양을 완벽히 읽어도 평균 65%였다.
     priority: 시각 난이도 분위가 목표 위치(2단계에서 답한 수로 쉬운 쪽 0.15에서 0.9까지)에 가까울수록 크고, 약점 비심을
       담으면 1.5배. 예전 tier 가중은 짧고 입모양이 같은 단어가 많은 1음절어(가장 어려움)를 가장 자주 냈다.
-    minimal_pairs는 다른 화면 호환을 위해 그대로 싣는다(보기 구성에는 쓰지 않는다)."""
+    최소대립 짝 목록(127KB)은 보내지 않는다: 이 응답을 쓰는 화면(단어·복습·말하기)은 단어 필드만 읽고, 1단계 짝 미리보기는
+    viseme-lessons의 것을 쓴다."""
     import asyncio as _asyncio
     import random as _random
     import knowledge_tracing as _kt
@@ -1720,11 +1719,7 @@ async def curriculum_words(current_user=Depends(get_current_user), db: AsyncSess
     plan = _vd.stage2_plan(table, n_answers=n_answers, mastered=mastered, weak_visemes=weak, rng=_random.Random())
     meta = {w["word"]: w for w in _curriculum.WORD_BANK}
     words = [{**meta.get(e["word"], {}), **e} for e in plan["words"]]
-    import assessment as _asmt
-    test_words = _asmt.test_only_words()
-    pairs = [p for p in _curriculum.MINIMAL_PAIRS if p.get("a") not in test_words and p.get("b") not in test_words]
-    return {"words": words, "minimal_pairs": pairs,
-            "option_level": plan["option_level"], "target_quantile": plan["target_quantile"]}
+    return {"words": words, "option_level": plan["option_level"], "target_quantile": plan["target_quantile"]}
 
 
 @app.post("/api/curriculum/word-answer")
@@ -3541,35 +3536,13 @@ async def health_check():
 
 # ============================================
 # Static file serving (must be LAST — catch-all would shadow API routes above)
+# 캐시 헤더·조건부 요청(304)·미리 압축한 GLB는 static_serving.py 머리말 참고.
 # ============================================
 frontend_dist = os.path.join(os.path.dirname(__file__), "frontend", "dist")
 
 if os.path.exists(frontend_dist):
-    # Mount static assets
-    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
-
-    # Serve index.html for all non-API routes (SPA routing)
-    @app.get("/{full_path:path}")
-    async def serve_react_app(full_path: str):
-        """Serve React app for all non-API routes"""
-        # Don't serve for API routes
-        if full_path.startswith("api/"):
-            raise HTTPException(status_code=404, detail="API endpoint not found")
-
-        # Check if requesting a specific file — full_path는 사용자 제어이므로 dist 밖으로
-        # 벗어나는 경로(../ 등)는 차단한다(dist 밖 .env·DB 노출 방지).
-        _dist_real = os.path.realpath(frontend_dist)
-        file_path = os.path.realpath(os.path.join(frontend_dist, full_path))
-        _contained = os.path.commonpath([file_path, _dist_real]) == _dist_real
-        if _contained and os.path.isfile(file_path):
-            return FileResponse(file_path)
-
-        # Default to index.html for SPA routing
-        index_path = os.path.join(frontend_dist, "index.html")
-        if os.path.exists(index_path):
-            return FileResponse(index_path)
-
-        raise HTTPException(status_code=404, detail="File not found")
+    import static_serving as _static_serving
+    _static_serving.mount_frontend(app, frontend_dist)
 
 
 if __name__ == "__main__":

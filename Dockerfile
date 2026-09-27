@@ -95,6 +95,9 @@ COPY scripts/pilot_retention.py ./scripts/pilot_retention.py
 
 # Copy built frontend from stage 1
 COPY --from=frontend-builder /frontend/dist ./frontend/dist
+# 아바타 GLB는 fly 프록시가 압축하지 않으므로 미리 gzip해 두고 gzip을 받는 요청에 그것을 보낸다(2.5MB → 1.5MB,
+# backend/static_serving.py).
+RUN python static_serving.py precompress frontend/dist
 
 # Create directory for SQLite database (if used)
 RUN mkdir -p /data
