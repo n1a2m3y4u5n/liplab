@@ -112,9 +112,14 @@ def _jamo_guide(jamo: str, position: str, linked: bool) -> Optional[str]:
 # (예: 비심7 ㄱㄲㅋㅇ 중 받침 ㅇ만 비음, ㄱ은 아님).
 NASAL_JAMO = frozenset({"ㅁ", "ㄴ", "ㅇ"})
 
-def jamo_tip(jamo: str) -> Optional[str]:
-    """자모 하나(첫소리 자음 또는 모음)를 내는 법 한 문장. 말하기 코칭의 규칙 폴백과 LLM 참고용. 모르면 None."""
+def jamo_tip(jamo: str, position: Optional[str] = None) -> Optional[str]:
+    """자모 하나를 내는 법 한 문장. 말하기 코칭의 규칙 폴백과 LLM 참고용. 모르면 None.
+    position이 '종성'이면 받침 문장을 준다. 예전에는 늘 첫소리 문장이라 D-GOP가 약하게 잰 받침 ㅂ·ㄱ·ㄷ에 '떼며 터뜨립니다',
+    받침 ㄹ에 '한 번 튕깁니다'가 나갔다(받침은 불파·설측). D-GOP 받침 토큰(c:)은 연음을 이미 다음 첫소리로 옮긴 뒤라 연음이 아니다."""
     g = _JAMO_GUIDE.get(jamo)
+    if position == "종성":
+        final = _jamo_guide(jamo, "종성", linked=False) if g else None
+        return (final + (" 코로 울림을 함께 냅니다." if jamo in NASAL_JAMO else "")) if final else None
     if g and g[0]:
         return g[0] + (" 코로 울림을 함께 냅니다." if jamo in NASAL_JAMO else "")
     v = engine.VISEME_MAP.get(jamo)

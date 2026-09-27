@@ -181,3 +181,35 @@ def test_ai_sentences_get_intonation_verdict():
     assert sc.score_attempt(5, "오늘 좀 피곤해요.", "오늘 좀 피곤해요", up, sim_score=80)[2] == "억양 방향이 반대예요. 끝을 내려보세요."
     # 의문사 의문문은 끝이 대개 내려가 판정하지 않는다(코칭 쪽 억양 안내로 넘어간다)
     assert sc.score_attempt(5, "어디 가요?", "어디 가요", up, sim_score=80)[2] == ""
+
+
+def test_weak_coda_gets_coda_articulation(monkeypatch):
+    # D-GOP 받침 토큰(c:)이 약하면 받침 조음 문장을 준다. 예전에는 위치를 버려 받침 ㅂ에 '두 입술을 붙였다 떼며 가볍게 터뜨립니다',
+    # 받침 ㄹ에 '한 번 튕깁니다'가 LLM 참고문과 규칙 폴백 양쪽에 나갔다(받침은 불파·설측)
+    import articulation
+    import jamo_vocab as J
+    assert J.text_to_tokens("밥")[-1] == "c:ㅂ"
+    phones = [{"token": "o:ㅂ", "aligned": True, "scorable": True, "dgop": 0.8},
+              {"token": "n:ㅏ", "aligned": True, "scorable": True, "dgop": 0.8},
+              {"token": "c:ㅂ", "aligned": True, "scorable": True, "dgop": 0.05}]
+    weak = main._weak_phones({"phones": phones})
+    assert weak == [{"label": "ㅂ", "dgop": 0.05, "position": "종성"}]
+    assert main._weak_phones({"phones": [{"token": "녕", "aligned": True, "scorable": True, "dgop": 0.01},
+                                         {"token": "안", "aligned": True, "scorable": True, "dgop": 0.9}]})[0]["position"] is None
+    assert "멈춥니다" in articulation.jamo_tip("ㅂ", "종성") and "터뜨립니다." not in articulation.jamo_tip("ㅂ", "종성")
+    assert "흘립니다" in articulation.jamo_tip("ㄹ", "종성") and "튕깁니다" not in articulation.jamo_tip("ㄹ", "종성")
+    assert articulation.jamo_tip("ㅇ", "종성").endswith("코로 울림을 함께 냅니다.")   # 받침 ㅇ도 설명을 받는다(예전 None)
+    assert articulation.jamo_tip("ㅂ") == "두 입술을 붙였다 떼며 가볍게 터뜨립니다."   # 첫소리는 그대로
+
+    seen = []
+
+    class _Rec:
+        class messages:
+            @staticmethod
+            async def create(*a, **k):
+                seen.append(k["messages"][0]["content"])
+                raise RuntimeError("no key")
+    monkeypatch.setattr(llm_service, "anthropic_client", _Rec)
+    text = asyncio.run(llm_service.generate_speaking_coaching("밥", None, 80, [], {"loudness": 70}, weak_phones=weak))
+    assert text.startswith("'받침 ㅂ' 소리가 약하게 났어요.") and "멈춥니다" in text and "떼며" not in text
+    assert "'받침 ㅂ' — 두 입술을 붙인 채 멈춥니다" in seen[0] and "떼며 가볍게 터뜨립니다" not in seen[0]
