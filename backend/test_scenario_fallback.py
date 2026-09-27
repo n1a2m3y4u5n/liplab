@@ -104,3 +104,53 @@ def test_scenario_drops_sentences_too_short_for_level():
     from llm_service import SCENARIO_MIN_WORDS
     assert r.get("fallback") == "static", r
     assert all(len(s.split()) >= SCENARIO_MIN_WORDS[3] for s in r["sentences"]), r["sentences"]
+
+
+_RETRY_FLOW = r'''
+import asyncio, json
+import database, llm_service
+
+class _Msg:
+    def __init__(self, t):
+        self.content = [type("B", (), {"text": t, "type": "text"})()]
+
+calls = []
+good = ["다음 주 월요일에 회의가 있으니까 자료를 미리 준비해 두면 좋겠어요.",
+        "은행에 가서 통장을 새로 만들려면 신분증을 꼭 가지고 가야 해요.",
+        "버스를 타고 가다가 내릴 정류장을 놓쳐서 한 정거장 더 갔어요.",
+        "주말에 친구들이랑 같이 영화를 보고 나서 저녁을 먹기로 했어요."]
+
+class _Fake:
+    class messages:
+        @staticmethod
+        async def create(*a, **k):
+            calls.append(k["messages"])
+            first = ["커피 주세요.", "얼마예요?", "여기서 마실게요.", "카드 되나요?", good[0]]
+            return _Msg(json.dumps({"sentences": first if len(calls) == 1 else good}, ensure_ascii=False))
+
+llm_service.anthropic_client = _Fake
+
+async def main():
+    await database.init_db()
+    async with database.AsyncSessionLocal() as db:
+        r = await llm_service.generate_adaptive_scenario(1, "카페", 3, db)
+    print("RESULT " + json.dumps({"r": r, "n_calls": len(calls), "retry_msg": calls[-1][-1]["content"], "good": good},
+                                 ensure_ascii=False))
+
+asyncio.run(main())
+'''
+
+
+def test_scenario_retries_once_before_fallback():
+    # 통과 문장이 3개보다 적으면 한 번 다시 받는다. 첫 응답의 통과 문장과 합치고 중복은 뺀다(9/27 밤)
+    here = os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as d:
+        env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", PYTHONDONTWRITEBYTECODE="1")
+        p = subprocess.run([sys.executable, "-c", _RETRY_FLOW], cwd=here, env=env, capture_output=True, text=True, timeout=180)
+    line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
+    assert line, f"시나리오 실패:\n{p.stdout[-2000:]}\n{p.stderr[-3000:]}"
+    out = json.loads(line[len("RESULT "):])
+    r = out["r"]
+    assert out["n_calls"] == 2 and "fallback" not in r, r
+    assert r["sentences"] == out["good"], r["sentences"]
+    assert "1개뿐" in out["retry_msg"] and "8개 이상" in out["retry_msg"]

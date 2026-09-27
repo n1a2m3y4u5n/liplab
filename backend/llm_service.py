@@ -333,7 +333,7 @@ async def generate_adaptive_scenario(
         2: "쉬운 수준: 일상 대화 문장, 어절 7~10개(예: '이번 주 토요일에 친구 생일 파티가 있어요.' 7어절). 기본적인 문맥이 있는 자연스러운 표현.",
         3: "중간 수준: 자연스러운 대화, 어절 10~13개(예: '다음 주 월요일에 회의가 있으니까 자료를 미리 준비해 두면 좋겠어요.' 11어절). 약간의 시각적 유사 음소 포함. 상황에 맞는 다양한 표현.",
         4: "어려운 수준: 복잡한 문장 구조, 어절 12~15개(예: '비가 많이 와서 퇴근길 버스가 평소보다 훨씬 붐빌 것 같으니 조금 일찍 출발하세요.' 14어절). 시각적으로 유사한 음소(ㅂ/ㅍ, ㄱ/ㅋ 등) 의도적 포함.",
-        5: "매우 어려운 수준: 문맥 없이는 구별이 어려운 문장, 어절 15개 이상. 동음이의어, 시각적 유사 음소를 다량 포함."
+        5: "매우 어려운 수준: 문맥 없이는 구별이 어려운 문장, 어절 15~20개, 90자 이내(예: '지난주에 맡긴 겨울 외투를 찾으러 왔는데 영수증을 집에 두고 와서 이름으로 확인해 주실 수 있을까요?' 16어절). 동음이의어, 시각적 유사 음소를 다량 포함."
     }
 
     # Build phoneme focus instruction
@@ -399,21 +399,6 @@ async def generate_adaptive_scenario(
     user_prompt = f"상황: {situation}, 난이도 레벨: {level}"
 
     try:
-        # Call Claude API
-        response = await anthropic_client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=1024,
-            temperature=1.0,  # 변주 극대화 — 매번 다른 문장
-            system=system_prompt,
-            messages=[
-                {"role": "user", "content": user_prompt}
-            ]
-        )
-
-        # Parse response — 코드펜스 제거 + 빈 응답 방어(공용 유틸)
-        result = llm_json.extract_json(response)
-        sentences = result.get("sentences", [])
-
         # LLM 출력 검증(§4.9) + 규칙 게이트(축 G) — 지시 이탈·주입·비정상 문장을 걸러
         # 정상 한글 훈련 문장만 클라이언트로 내보낸다. 부족하면 폴백으로 넘어간다.
         from content_rules import check_sentence
@@ -421,8 +406,36 @@ async def generate_adaptive_scenario(
         # 늘 탈락해, 요청한 단계 이름을 단 쉬운 대체 문장이 나갔다.
         max_chars = SCENARIO_MAX_CHARS.get(level, 40)
         min_words = SCENARIO_MIN_WORDS.get(level, 1)
-        sentences = [s for s in sentences if isinstance(s, str) and check_sentence(s, max_chars=max_chars)[0]
-                     and len(s.split()) >= min_words]
+        messages = [{"role": "user", "content": user_prompt}]
+        sentences: List[str] = []
+        # 통과한 문장이 3개보다 적으면 한 번 다시 받는다. 예전에는 바로 대체 문장으로 넘어가, 표본(6상황 × 5단계) 30번 중
+        # 2번(3단계는 6~7어절, 5단계는 90자 넘는 문장)이 상황과 무관한 저장·대체 문장을 받았다(9/27 밤).
+        for attempt in range(2):
+            response = await anthropic_client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=1024,
+                temperature=1.0,  # 변주 극대화 — 매번 다른 문장
+                system=system_prompt,
+                messages=messages,
+            )
+            # Parse response — 코드펜스 제거 + 빈 응답 방어(공용 유틸)
+            try:
+                got = llm_json.extract_json(response).get("sentences", [])
+            except Exception:
+                got = []
+            for s in got:
+                if (isinstance(s, str) and s not in sentences and check_sentence(s, max_chars=max_chars)[0]
+                        and len(s.split()) >= min_words):
+                    sentences.append(s)
+            if len(sentences) >= 3:
+                break
+            messages = messages + [
+                {"role": "assistant", "content": json.dumps({"sentences": got}, ensure_ascii=False)},
+                {"role": "user", "content": f"기준에 맞는 문장이 {len(sentences)}개뿐입니다. 한 문장이 띄어쓰기로 센 어절 "
+                                            f"{min_words}개 이상, {max_chars}자 이내여야 합니다. 같은 상황으로 새 문장 5개를 "
+                                            f"같은 JSON 형식으로 다시 만드세요."},
+            ]
+        sentences = sentences[:5]
 
         if not sentences or len(sentences) < 3:
             raise ValueError("Generated sentences are insufficient")
