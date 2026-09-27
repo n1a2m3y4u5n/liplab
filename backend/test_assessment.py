@@ -163,3 +163,11 @@ def test_error_phonemes_count_only_misread_jamo():
     phs = {e["phoneme"]: e["count"] for e in r["error_phonemes"]}
     assert "ㅏ" not in phs and sum(phs.values()) <= 2
     assert r["error_confusions"], "무엇을 무엇으로 읽었는지도 남아야 한다"
+
+
+def test_silent_onset_is_not_a_missed_sound():
+    # 아이를 바이로 읽었다 → 없는 자음(ㅂ)을 읽은 것이지 ㅇ이라는 소리를 놓친 것이 아니다('자주 놓친 소리 ㅇ'이 뜨던 것)
+    items = [{"id": "q1", "word": "아이", "options": ["아이", "바이", "오이", "마이"], "visemes": [2, 3], "difficulty": 0.5}]
+    r = A.score_placement(items, {"q1": "바이"})
+    assert "ㅇ" not in {e["phoneme"] for e in r["error_phonemes"]}
+    assert r["error_confusions"] and r["error_confusions"][0]["target"] == "ㅇ", "오독 방향 기록은 남긴다"
