@@ -12,7 +12,7 @@ import useFocusTrap from '../hooks/useFocusTrap'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import useBookmark from '../lib/useBookmark'
 import CueBadges, { CueLegend } from '../components/CueBadges'
-import { pickDistractors } from '../lib/wordOptions'
+import { pickDistractors, visualLevel } from '../lib/wordOptions'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
@@ -107,7 +107,9 @@ function WordQuiz({ data, reload }) {
   const [params] = useSearchParams()
   const endless = params.get('endless') === '1'   // 엔드리스 혼합 세션(단어 ↔ 문맥, G-6)
   const words = useMemo(() => data.words.map((w) => w.word), [data])
-  const tierOf = useMemo(() => Object.fromEntries(data.words.map((w) => [w.word, w.tier || 1])), [data])
+  // 입모양 난이도(1~5) — 서버가 준 시각 난이도 분위(visual_difficulty)로 매긴다. 예전에는 빈도 등급(tier)을 '난이도'로 보여 줬는데,
+  // 자주 쓰는 짧은 말(등급 1)이 입모양으로는 가장 어려워 표시가 거꾸로였다(9/27, 등급과 시각 난이도 순위상관 −0.35).
+  const levelOf = useMemo(() => Object.fromEntries(data.words.map((w) => [w.word, visualLevel(w.quantile)])), [data])
   const byWord = useMemo(() => new Map(data.words.map((w) => [w.word, w])), [data])
   const [q, setQ] = useState(null)
   // 문항 북마크 — 서버에 저장돼 복습 탭·저장한 문장에 나온다
@@ -260,7 +262,7 @@ function WordQuiz({ data, reload }) {
                 <div className="rounded-16 border-2 border-line bg-white p-3">
                   <div className="flex items-center gap-2">
                     <CueBadges text={q.target} />
-                    <span className="text-[11px] text-ink-faint">난이도 {tierOf[q.target] || 1}</span>
+                    {levelOf[q.target] && <span className="text-[11px] text-ink-faint">입모양 난이도 {levelOf[q.target]}/5</span>}
                   </div>
                   <div className="mt-1.5"><CueLegend /></div>
                 </div>
