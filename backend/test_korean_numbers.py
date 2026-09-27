@@ -73,3 +73,18 @@ def test_counters_found_in_audit():
     assert normalize_numbers("3그릇 주세요") == "세그릇 주세요"
     assert normalize_numbers("10개 주세요") == "열개 주세요" and normalize_numbers("2달 뒤") == "두달 뒤"
 
+
+
+def test_bun_counts_people_only_with_honorific_endings():
+    # '분'은 시간(한자어)과 사람 높임(고유어)이 같은 글자라, 사람일 때만 붙는 어미·조사로 가른다
+    assert normalize_numbers("2분이시면 안내해 드릴게요.") == "두분이시면 안내해 드릴게요."
+    assert normalize_numbers("3분이세요?") == "세분이세요?"
+    assert normalize_numbers("2분께서 오셨어요.") == "두분께서 오셨어요."
+    assert normalize_numbers("4분이서 오셨네요.") == "네분이서 오셨네요."
+    assert normalize_numbers("2분이 오셨어요.") == "두분이 오셨어요."
+    assert normalize_numbers("3분 손님 자리 있어요.") == "세분 손님 자리 있어요."
+    # 시간은 그대로 한자어
+    assert normalize_numbers("5분 뒤에 나와요.") == "오분 뒤에 나와요."
+    assert normalize_numbers("3분이면 돼요.") == "삼분이면 돼요."
+    assert normalize_numbers("10분이 지났어요.") == "십분이 지났어요."
+    assert normalize_numbers("20분 걸려요.") == "이십분 걸려요."

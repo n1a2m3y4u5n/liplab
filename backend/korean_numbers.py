@@ -25,6 +25,9 @@ _NATIVE_COUNTERS = ("시간", "번째", "사람", "켤레", "그루", "송이", 
 _SINO_BEFORE_NATIVE = ("개월", "달러")
 # '번'은 횟수면 고유어(두 번), 번호면 한자어(3번 출구). 뒤 명사로 번호를 가른다.
 _NUMBERING_AFTER_BEON = ("출구", "버스", "방", "문제", "선", "게이트", "창구", "트랙", "좌석", "홀", "칸", "줄")
+# '분'은 시간이면 한자어(5분 뒤), 사람을 높여 세면 고유어(두 분이세요). 사람일 때만 붙는 높임 어미·조사로 가른다.
+# 예전에는 전부 한자어라 식당 대화 "2분이시면"을 "이분이시면"으로 보여 줬다(9/27 밤)
+_PERSON_AFTER_BUN = ("이시", "이세", "이십", "이셔", "이서", "께", "이 오셨", "이 오시", "이 계시", "이 계셨", "손님")
 
 
 def sino(n: int) -> str:
@@ -73,6 +76,9 @@ def _reading(num: str, after: str) -> str:
     if after.startswith("번") and not after.startswith("번째"):
         rest = after[1:].lstrip()
         return sino(n) if rest.startswith(_NUMBERING_AFTER_BEON) else native(n)
+    if after.startswith("분") and 1 <= n <= 99 and (after[1:].startswith(_PERSON_AFTER_BUN)
+                                                   or after[1:].lstrip().startswith("손님")):
+        return native(n)
     if after.startswith("월"):          # 유월·시월
         return {6: "유", 10: "시"}.get(n, sino(n))
     if 1 <= n <= 99 and after.startswith(_NATIVE_COUNTERS):
