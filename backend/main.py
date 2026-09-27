@@ -2712,7 +2712,11 @@ async def assessment_progression(current_user=Depends(get_current_user),
                 "note": "사전·사후 검사가 2회 이상이면 향상도가 나옵니다."}
     ab = [r for r in rows if r.form in ("A", "B")]
     a = ab[0] if ab else None                                                    # 사전: 먼저 본 동형 폼
-    b = next((r for r in reversed(ab) if a is not None and r.form != a.form), None)  # 사후: 뒤에 본 다른 폼
+    # 사후: 뒤에 본 다른 폼. 사전과 같은 판본을 먼저 찾는다(9/27 v2에서 오답을 바꿔, v1 A와 v2 B는 동형이 아니다)
+    b = next((r for r in reversed(ab) if a is not None and r.form != a.form and r.form_version == a.form_version), None)
+    same_version = b is not None
+    if b is None:
+        b = next((r for r in reversed(ab) if a is not None and r.form != a.form), None)
     if a is None or b is None:
         a, b = rows[0], rows[-1]
     err_a = {e["phoneme"]: e["count"] for e in (a.error_phonemes or []) if isinstance(e, dict)}
@@ -2728,7 +2732,8 @@ async def assessment_progression(current_user=Depends(get_current_user),
         "level_delta": b.level - a.level,
         "ability_delta": round(b.ability - a.ability, 3),
         "error_phoneme_change": per_phoneme,
-        "homogeneous": {a.form, b.form} == {"A", "B"},
+        "homogeneous": {a.form, b.form} == {"A", "B"} and same_version,
+        "form_versions": [a.form_version, b.form_version],
         "order": f"{a.form}→{b.form}",
     }
 

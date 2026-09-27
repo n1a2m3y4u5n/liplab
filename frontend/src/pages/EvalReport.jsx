@@ -9,6 +9,11 @@ import LoadingScreen from '../components/LoadingScreen'
 
 // 동형 폼 비교 문구 — 먼저 본 폼이 사전이다(파일럿에서 B를 먼저 보면 B(사전)·A(사후)).
 const formPairLabel = (prog) => `동형 폼 ${prog.pre?.form || 'A'}(사전)·${prog.post?.form || 'B'}(사후) 비교`
+// 동형이 아닐 때의 비교 설명. 폼은 A·B인데 판본이 다르면(9/27 v2에서 오답을 바꿈) 그 사실을 적는다.
+const nonHomogeneousLabel = (prog) => {
+  const [v1, v2] = prog.form_versions || []
+  return v1 && v2 && v1 !== v2 ? `판본이 다른 검사 비교(${v1}→${v2}, 동형 아님)` : '가장 이른·최근 검사 비교'
+}
 
 function Card({ title, hint, children }) {
   return (
@@ -115,7 +120,7 @@ function PrintReport({ r }) {
       {prog ? (
         <div className="mt-1">
           <p>정확도 {pct(prog.pre.accuracy)} → {pct(prog.post.accuracy)} ({prog.accuracy_delta >= 0 ? '+' : ''}{Math.round(prog.accuracy_delta * 100)}%p),
-            수준 Lv.{prog.pre.level} → Lv.{prog.post.level}{prog.homogeneous ? ` · ${formPairLabel(prog)}` : ' · 가장 이른·최근 검사 비교(동형 폼 아님)'}</p>
+            수준 Lv.{prog.pre.level} → Lv.{prog.post.level}{prog.homogeneous ? ` · ${formPairLabel(prog)}` : ` · ${nonHomogeneousLabel(prog)}`}</p>
           {prog.error_phoneme_change?.some((e) => e.before || e.after) && (
             <p className="mt-1">자모별 오류 수 변화: {prog.error_phoneme_change.filter((e) => e.before || e.after).slice(0, 10)
               .map((e) => `${e.phoneme} ${e.before}→${e.after}`).join(', ')}</p>
@@ -240,7 +245,7 @@ export default function EvalReport() {
             {/* 통제 향상도(축 I) — 동형 폼 사전(A)·사후(B) 비교. 배치검사에서 A/B를 모두 마치면 표시 */}
             {prog?.available && (
               <Card title="통제 향상도 (표준검사 사전·사후)"
-                hint={prog.homogeneous ? formPairLabel(prog) : '가장 이른·최근 검사 비교'}>
+                hint={prog.homogeneous ? formPairLabel(prog) : nonHomogeneousLabel(prog)}>
                 <div className="flex flex-wrap items-end gap-6">
                   <div>
                     <p className="text-[11px] font-bold text-ink-faint">사전 정확도</p>
