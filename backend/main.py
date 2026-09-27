@@ -1331,9 +1331,11 @@ def _ewma_mastery(prev_estimate, prev_attempts, correct: bool, alpha: float = _S
     raw = float(prev_estimate or 0.0) * (1 - (1 - alpha) ** n)
     raw += alpha * ((100.0 if correct else 0.0) - raw)
     return min(100.0, max(0.0, raw / (1 - (1 - alpha) ** (n + 1))))   # 부동소수점 오차로 100을 넘지 않게
-# 3·4단계는 점수(0~100)를 내는 활동이라 'PASS 이상이면 성공 1회'로 환산해 누적한다.
-_STAGE3_MIN_ATTEMPTS = 5       # 문장 연습
-_STAGE3_MASTERY = 65.0
+# 3·4단계는 점수(0~100)를 내는 활동이라 'PASS 이상이면 성공 1회'로 환산한다. 3단계 숙달 점수는 9/27부터 1·2단계와 같은 편향 보정
+# 지수 이동 평균(a 0.08)이고 문턱은 80이다(시뮬레이션 사전 기준 통과: 거짓 숙달 17.1 → 10.9%, 지연 39 → 25번, 숙련 학습자 5번 그대로,
+# docs/mastery-ewma.md 5절). 4단계는 누적 합격률 그대로다.
+_STAGE3_MIN_ATTEMPTS = 5       # 문장 연습·문맥 추론
+_STAGE3_MASTERY = 80.0
 _STAGE3_PASS = 60.0            # 문장 1건을 '성공'으로 볼 최소 점수
 _STAGE4_MIN_ATTEMPTS = 4       # 대화 실전
 _STAGE4_MASTERY = 60.0
@@ -1357,7 +1359,7 @@ def _settle_mastery(sp, reached: bool) -> None:
 async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
                                min_attempts: int, mastery_pct: float, db):
     """단계별 진행률 rolling 갱신(1건 채점 → 시도·정답 누적, 숙달 판정). sp 반환.
-    커밋은 호출부에서 다른 갱신과 함께 처리한다."""
+    숙달 점수는 3단계가 편향 보정 이동 평균(_ewma_mastery), 그 밖은 누적 합격률이다. 커밋은 호출부에서 다른 갱신과 함께 처리한다."""
     from database import StageProgress
     from sqlalchemy import select
     r = await db.execute(select(StageProgress).where(
@@ -1371,7 +1373,10 @@ async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
     sp.attempts += 1
     if passed:
         sp.correct += 1
-    sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
+    if stage == 3:
+        sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, passed)
+    else:
+        sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
     _settle_mastery(sp, sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct)
     return sp
 
