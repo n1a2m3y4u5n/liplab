@@ -58,7 +58,6 @@ const closeContext = (ac) => {
   try { Promise.resolve(ac.close()).catch(() => {}) } catch { /* noop */ }
 }
 
-
 export default function SpeakingPractice() {
   const navigate = useNavigate()
   const location = useLocation()
