@@ -260,7 +260,7 @@ export const speakAPI = {
     const fd = new FormData()
     fd.append('target', target)
     fd.append('audio', blob, 'speech.webm')
-    for (const k of ['loudness', 'pitch_range', 'duration', 'pitch_start', 'pitch_end', 'voiced_duration']) {
+    for (const k of ['loudness', 'pitch_range', 'duration', 'pitch_start', 'pitch_end', 'pitch_ref', 'pitch_final', 'voiced_duration']) {
       if (metrics[k] != null) fd.append(k, String(metrics[k]))
     }
     if (opts.stage != null) fd.append('stage', String(opts.stage))

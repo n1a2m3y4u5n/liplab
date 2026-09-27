@@ -3200,6 +3200,8 @@ async def speak_assess(
     duration: float = Form(0.0),
     pitch_start: float = Form(0.0),
     pitch_end: float = Form(0.0),
+    pitch_ref: float = Form(None),     # 문장 억양: 유성 프레임 전체 중앙값(Hz). 없으면 pitch_start·end로(docs/sentence-intonation.md)
+    pitch_final: float = Form(None),   # 문장 억양: 마지막 3프레임 중앙값(Hz)
     voiced_duration: float = Form(None),   # 가장 길게 이어 낸 소리(초). 없으면(예전 클라이언트) 녹음 길이로 판정
     stage: int = Form(None),
     drill: str = Form(None),
@@ -3216,7 +3218,7 @@ async def speak_assess(
     data = await _read_audio_limited(audio)
 
     metrics = {"loudness": loudness, "pitch_range": pitch_range, "duration": duration,
-               "pitch_start": pitch_start, "pitch_end": pitch_end,
+               "pitch_start": pitch_start, "pitch_end": pitch_end, "pitch_ref": pitch_ref, "pitch_final": pitch_final,
                "voiced_duration": voiced_duration if voiced_duration is not None and voiced_duration >= 0 else None}
     stg = _speakcur.get_stage(stage) if stage is not None else None
     mode = stg["mode"] if stg else "word"

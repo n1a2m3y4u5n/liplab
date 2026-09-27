@@ -10,6 +10,7 @@ import llm_json
 from typing import List
 
 from llm_service import anthropic_client
+import speak_curriculum as _speakcur
 
 _MODEL = "claude-sonnet-4-6"
 
@@ -62,7 +63,8 @@ async def generate_sentences(n: int = 8, avoid: List[str] = None, with_intonatio
     funcs = random.sample(_SENT_FUNCTIONS, k=min(4, len(_SENT_FUNCTIONS)))
     scene = random.choice(_SENT_SCENES)
     kind = (
-        '{"target": "문장", "intonation": "fall|rise"}  (평서문=fall, 의문문=rise)'
+        '{"target": "문장", "intonation": "fall|rise"}  (평서문=fall, 예/아니오 의문문=rise. 뭐·어디·언제·왜·몇·얼마 등을 묻는 '
+        '의문사 의문문은 끝이 내려가 억양 연습에 맞지 않으니 만들지 말 것)'
         if with_intonation else '"문장"'
     )
     system = (
@@ -86,8 +88,12 @@ async def generate_sentences(n: int = 8, avoid: List[str] = None, with_intonatio
             ok, _info, _reason = check_sentence(t)
             if not ok:
                 continue
-            into = it.get("intonation") or ("rise" if t.rstrip().endswith("?") else "fall")
-            out.append({"target": t, "intonation": "rise" if into == "rise" else "fall"})
+            # 기대 억양은 LLM 라벨 대신 문장 부호로 정하고, 의문사 의문문은 뺀다(docs/sentence-intonation.md). 예전에는 LLM이
+            # '의문문=rise' 지시대로 "이름이 뭐예요?"에도 올림을 붙였다
+            into = _speakcur.expected_intonation(t)
+            if into is None:
+                continue
+            out.append({"target": t, "intonation": into})
         return _sort_by_difficulty(out)
     from content_rules import check_sentence
     out = [{"target": t} for t in await _call(system) if check_sentence(t)[0]]

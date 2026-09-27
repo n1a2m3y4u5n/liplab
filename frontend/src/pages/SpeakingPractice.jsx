@@ -12,7 +12,7 @@ import { toBlendshapeMap, scorePercent, loadCalibration } from '../lib/mouthScor
 import { scoreTone, scoreLevel } from '../lib/scoreTone'
 import { VOWEL_IDS } from '../lib/vtlShapes'
 import { mediaErrorMessage } from '../lib/mediaError'
-import { toneDirection, toneMissed } from '../lib/speakTone'
+import { finalTone, toneDirection, toneMissed } from '../lib/speakTone'
 import { longestVoicedRun } from '../lib/voicing'
 import { autoCorrelate } from '../lib/pitch'
 
@@ -384,6 +384,7 @@ export default function SpeakingPractice() {
       const metrics = {
         loudness: s.loudness ?? 0, pitch_range: s.pitchRange ?? 0, duration: s.duration ?? 0,
         pitch_start: s.pitchStart ?? 0, pitch_end: s.pitchEnd ?? 0,
+        pitch_ref: s.pitchRef || null, pitch_final: s.pitchFinal || null,
         voiced_duration: s.voicedDuration ?? null,
       }
       // 복습 세션이면 review=true → 백엔드가 채점/코칭만 하고 단계 숙달·해금은 건드리지 않음
@@ -443,6 +444,7 @@ export default function SpeakingPractice() {
 
     // 억양 판정은 여기서 하지 않는다(연습마다 기준이 달라 lib/speakTone.js가 모드·드릴을 보고 한다)
     let pitchRange = 0, pitchMean = 0, pitchStart = 0, pitchEnd = 0
+    const { ref: pitchRef, final: pitchFinal } = finalTone(ps)   // 문장 끝 억양(5단계, 서버 sentence_direction)
     if (ps.length >= 4) {
       const sorted = [...ps].sort((a, b) => a - b)
       const lo = sorted[Math.floor(sorted.length * 0.1)]
@@ -457,7 +459,7 @@ export default function SpeakingPractice() {
     }
     // 발성 단계·'길게' 연습은 녹음 길이가 아니라 가장 길게 이어 낸 소리로 판정한다(lib/voicing)
     const voicedDuration = longestVoicedRun(traceRef.current)
-    return { micIssue, loudness, volMsg, volOk, pitchRange, pitchMean, pitchStart, pitchEnd, duration: dur, voicedDuration }
+    return { micIssue, loudness, volMsg, volOk, pitchRange, pitchMean, pitchStart, pitchEnd, pitchRef, pitchFinal, duration: dur, voicedDuration }
   }
 
   const loop = () => {
