@@ -1,9 +1,9 @@
-"""약점 입모양 순위 시뮬레이션(/api/statistics·시나리오 표적). 9/27 저녁 측정만 하고 코드 적용 전에 멈췄다(STATUS.md 다음 할 일).
+"""약점 입모양 순위 시뮬레이션(/api/statistics·시나리오 표적). kt 방식을 knowledge_tracing.rank_weak로 넣었다(9/27 밤).
 
     backend/.venv/bin/python scripts/weak_viseme_rank_sim.py [--seed 1]
 
 가상 학습자마다 입모양 1~10의 실제 오답률을 0.05~0.6에서 뽑고, 단어 은행에 나오는 빈도대로 60·150·400번 시도한다.
-old(지금 코드): 오류 횟수 상위 5개를 자른 뒤 오답률로 정렬. kt(제안): 지식추적 숙달도(knowledge_tracing.estimate_mastery,
+old(예전): 오류 횟수 상위 5개를 자른 뒤 오답률로 정렬. kt(지금): 지식추적 숙달도(knowledge_tracing.estimate_mastery,
 베타 사후평균)가 낮은 순 5개. 가장 약한 입모양이 1위인 비율, 목록에 드는 비율, 약한 3개와 겹치는 수를 잰다.
 seed 1 결과: 목록에 드는 비율 old 0.70 → kt 0.90, 약한 3개와 겹치는 수 1.79 → 1.95, 1위 적중 0.38 → 0.38(비슷).
 """

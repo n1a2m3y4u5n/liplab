@@ -112,8 +112,9 @@ export default function AnalysisDetail({ mode = 'activity' }) {
   )
 
   const renderVisemes = () => {
-    // 분석 탭 '전체 통계'와 같은 출처(weak_visemes 실제 오답률)로 순위를 낸다 — 화면끼리 순위가 어긋나지 않게
-    const items = [...(statistics?.weak_visemes || [])].sort((a, b) => (b.error_rate || 0) - (a.error_rate || 0))
+    // 순위는 서버가 정한다(지식추적 숙달도가 낮은 순: 시도가 적으면 오답률을 덜 믿고, 최근 오답에 무게). 오답률 순이 아닐 수
+    // 있어 시도 수를 함께 보인다. 예전에는 오류 횟수 상위 5개를 오답률로 다시 정렬해 적게 나왔지만 자주 틀린 입모양이 빠졌다.
+    const items = statistics?.weak_visemes || []
     const cf = confusion?.jamo_confusions || []
     const confusionCard = cf.length > 0 ? (
       <section className="card-flat">
@@ -150,7 +151,7 @@ export default function AnalysisDetail({ mode = 'activity' }) {
                 </div>
                 <div className="text-right">
                   <strong className="text-2xl font-bold text-bad">오답률 {item.error_rate}%</strong>
-                  <p className="text-xs text-ink-faint">정확도 {acc}%</p>
+                  <p className="text-xs text-ink-faint">정확도 {acc}%{item.attempts ? ` · ${item.attempts}회` : ''}</p>
                 </div>
               </div>
               <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-fill">
