@@ -115,3 +115,13 @@ def test_minimal_pair_labels_agree_with_rule():
            if bool(p.get("same_looking")) != R._visually_confusable(p["a"], p["b"])]
     assert bad == [], bad
     assert R._visually_confusable("달", "닭") and not R._visually_confusable("밥", "발")
+
+
+def test_sentence_gate_reads_numbers_before_ratio_check():
+    # 가격·시각·단위가 든 상황 문장은 읽은 글로 검사한다. 예전에는 원문 기준 한글 비율 미달로 탈락했다(9/27 밤)
+    from content_rules import check_sentence
+    for t in ["10,000원 주세요.", "1,500원이요.", "50% 할인해요.", "3:30에 봐요.", "3km 걸었어요."]:
+        assert check_sentence(t)[0], t
+    # 영문 약어·숫자만인 글은 그대로 거른다
+    assert not check_sentence("3D 영화 봐요")[0]
+    assert not check_sentence("1234 5678 9012")[0]
