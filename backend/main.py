@@ -799,8 +799,9 @@ async def submit_progress(
         time_bonus = max(0, 50 - time_spent // 2)
         award = _award_xp_and_streak(current_user, base_xp, bonus=time_bonus)
 
-        # 3단계(문장 연습) 숙달 갱신: 점수 PASS 이상이면 성공 1회로 누적(4단계 해금 근거). 잠긴 단계면 넣지 않는다
-        if await _stage_open(current_user, 3, db):
+        # 3단계(문장 연습) 숙달 갱신: 점수 PASS 이상이면 성공 1회로 누적(4단계 해금 근거). 잠긴 단계면 넣지 않는다.
+        # 틀린 문장 복습·북마크 연습은 원문을 본 뒤의 답이라 넣지 않는다. 기록(Progress)은 남겨 맞히면 오답 목록에서 빠지게 한다
+        if not _is_review_scenario(submission.scenario_id) and await _stage_open(current_user, 3, db):
             await _bump_stage_progress(
                 current_user.id, 3, scoring_result["score"] >= _STAGE3_PASS,
                 _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db)
@@ -1402,6 +1403,16 @@ def _ewma_mastery(prev_estimate, prev_attempts, correct: bool, alpha: float = _S
 _STAGE3_MIN_ATTEMPTS = 5       # 문장 연습·문맥 추론
 _STAGE3_MASTERY = 80.0
 _STAGE3_PASS = 60.0            # 문장 1건을 '성공'으로 볼 최소 점수
+# 틀린 문장 복습(ReviewLanding)·북마크 연습(Bookmarks) 세션의 scenario_id 접두어. 두 화면은 원문을 목록에 보여 준 뒤 풀게
+# 하므로, 그 답은 3단계 숙달에 넣지 않고(입모양·단어 SRS 복습과 같은 원칙) 추천 난이도 계산에서도 뺀다. 예전에는 넣어서
+# 새 문장 통과율 0.5인 학습자의 20레슨 안 3단계 숙달 확률이 0.227에서 0.676으로 올랐다(모의실험, 복습 답 통과 0.95 가정).
+_REVIEW_SCENARIO_PREFIXES = ("mistake_review_", "bookmark_")
+
+
+def _is_review_scenario(scenario_id) -> bool:
+    return str(scenario_id or "").startswith(_REVIEW_SCENARIO_PREFIXES)
+
+
 _STAGE4_MIN_ATTEMPTS = 4       # 대화 실전
 _STAGE4_MASTERY = 75.0        # 최근 가중 합격률(편향 보정 이동 평균, 9/27 밤 docs/mastery-ewma.md 6절, 예전 누적 60%)
 _STAGE4_PASS = 55.0            # 대화 1턴을 '성공'으로 볼 최소 이해도
@@ -2209,12 +2220,15 @@ async def score_answer(data: ScoreRequest, current_user=Depends(get_current_user
 
 @app.get("/api/curriculum/recommended-level")
 async def recommended_level(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """최근 문장 연습 정확도로 다음 난이도를 추천(적응형)."""
+    """최근 문장 연습 정확도로 다음 난이도를 추천(적응형).
+    틀린 문장 복습·북마크 연습 행은 뺀다. 예전에는 넣어서, 4단계 문장을 풀던 학습자가 복습 3문장(예전 기록 난이도 1, 100점)
+    뒤에 기준 난이도가 1이 되어 2단계를 '올렸다'며 추천받았다."""
     from database import Progress
     from sqlalchemy import select
+    not_review = [~Progress.scenario_id.startswith(p, autoescape=True) for p in _REVIEW_SCENARIO_PREFIXES]
     r = await db.execute(
         select(Progress.score, Progress.difficulty_level)
-        .where(Progress.user_id == current_user.id)
+        .where(Progress.user_id == current_user.id, *not_review)
         .order_by(Progress.created_at.desc()).limit(10))
     rows = r.all()
     if not rows:
