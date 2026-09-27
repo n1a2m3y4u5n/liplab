@@ -80,3 +80,26 @@ def test_fallback_explains_how_to_make_the_confused_sound(monkeypatch):
         "사과", "다과", 60, [{"correct": "ㅅ", "confused_as": "ㄷ"}], {"loudness": 70}))
     assert "닿지 않게" in text and "입모양을 더 또렷하게" not in text
     assert "조음 참고" in _Rec.prompts[0] and "닿지 않게" in _Rec.prompts[0]
+
+
+def test_conversation_turn_retries_when_too_long(monkeypatch):
+    # 1단계 대화 턴은 9자 이하(지시 5~7자에 30% 여유). 넘으면 한 번 다시 받고, 그래도 넘으면 짧은 쪽을 쓴다
+    replies = iter(['{"text": "안녕하세요. 어디가 아프세요?"}', '{"text": "어디 아프세요?"}'])
+    seen = []
+
+    class _Msg:
+        def __init__(self, t):
+            self.content = [type("B", (), {"text": t, "type": "text"})()]
+
+    class _Fake:
+        class messages:
+            @staticmethod
+            async def create(*a, **k):
+                seen.append(k["messages"])
+                return _Msg(next(replies))
+    monkeypatch.setattr(llm_service, "anthropic_client", _Fake)
+    r = asyncio.run(llm_service.generate_conversation_turn("병원", 1, []))
+    assert r["text"] == "어디 아프세요?" and len(seen) == 2
+    assert "자라 이 난이도에 너무 깁니다" in seen[1][-1]["content"]
+    assert llm_service.conv_turn_ok("어서오세요!", 1) and not llm_service.conv_turn_ok("Hello 안녕", 3)
+    assert llm_service.conv_turn_ok("아주 긴 문장이라도 5단계는 상한이 없습니다", 5)

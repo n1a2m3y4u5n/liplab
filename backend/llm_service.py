@@ -2,8 +2,10 @@
 Adaptive Scenario Generation using Claude API
 Generates contextually relevant sentences based on user's weak visemes
 """
+import json
 import os
 import random
+import re
 import llm_json
 from typing import List, Dict
 from datetime import datetime, timedelta
@@ -485,6 +487,19 @@ async def _fallback_scenario(situation: str, level: int, db: AsyncSession) -> Di
             "scenario_id": f"fallback_{ts}", "fallback": "static"}
 
 
+# 대화 턴 길이 상한(공백·문장부호 포함). 아래 level_guide의 글자 수에 30% 여유를 둔 값이다. 지시만 하고 검사하지 않아, 첫 턴 40개
+# 표본에서 1단계 2/8, 2단계 5/8, 3단계 4/8이 지시보다 길었다(9/27 밤). 5단계는 지시에 상한이 없다.
+_CONV_MAX_CHARS = {1: 9, 2: 13, 3: 20, 4: 26}
+
+
+def conv_turn_ok(text: str, level: int) -> bool:
+    """대화 턴이 단계 길이 상한 안이고 영문이 없는가."""
+    if re.search(r"[A-Za-z]", text or ""):
+        return False
+    lim = _CONV_MAX_CHARS.get(level)
+    return lim is None or len(text) <= lim
+
+
 async def generate_conversation_turn(
     situation: str,
     level: int,
@@ -554,26 +569,36 @@ async def generate_conversation_turn(
         ]
 
     try:
-        response = await anthropic_client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=150,
-            temperature=0.9,
-            system=system_prompt,
-            messages=messages_for_api
-        )
+        # 단계 길이 상한(conv_turn_ok)을 넘으면 이유를 알려 한 번 다시 받고, 그래도 넘으면 영문이 없고 짧은 쪽을 쓴다.
+        cands = []
+        msgs = list(messages_for_api)
+        for attempt in range(2):
+            response = await anthropic_client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=150,
+                temperature=0.9,
+                system=system_prompt,
+                messages=msgs
+            )
 
-        result = llm_json.extract_json(response)
-        text = result.get("text", "").strip()
+            result = llm_json.extract_json(response)
+            text = result.get("text", "").strip()
 
-        if not text:
+            # 출력 정규화(§4.9) — 제어문자 제거·길이 상한. 대화 답변은 자유형이라 문장 게이트 대신 경량 필터.
+            text = "".join(ch for ch in text if ch >= " " or ch == "\n")[:300].strip()
+            if text:
+                cands.append(text)
+            if text and conv_turn_ok(text, level):
+                return {"text": text}
+            lim = _CONV_MAX_CHARS.get(level)
+            why = (f"방금 문장은 {len(text)}자라 이 난이도에 너무 깁니다. 같은 뜻을 {lim}자 이하 한국어 한 문장으로 다시 말하세요."
+                   if lim and text and len(text) > lim else "영문 없이 한국어 한 문장으로 다시 말하세요.")
+            msgs = msgs + [{"role": "assistant", "content": json.dumps({"text": text}, ensure_ascii=False)},
+                           {"role": "user", "content": why}]
+
+        if not cands:
             raise ValueError("Empty text")
-
-        # 출력 정규화(§4.9) — 제어문자 제거·길이 상한. 대화 답변은 자유형이라 문장 게이트 대신 경량 필터.
-        text = "".join(ch for ch in text if ch >= " " or ch == "\n")[:300].strip()
-        if not text:
-            raise ValueError("Empty text after sanitize")
-
-        return {"text": text}
+        return {"text": min(cands, key=lambda t: (bool(re.search(r"[A-Za-z]", t)), len(t)))}
 
     except Exception as e:
         print(f"Conversation API error: {e}")
