@@ -120,7 +120,7 @@ def test_no_homophene_distractors():
 
 def test_frozen_forms_v1():
     f = A.frozen_forms(build_if_missing=False)
-    _ok(f is not None and f["version"] == A.FORMS_VERSION, "v1 동결 파일이 있어야 한다")
+    _ok(f is not None and f["version"] == A.FORMS_VERSION, "지금 판본의 동결 파일이 있어야 한다")
     L = A.FORM_LENGTH
     _ok(len(f["A"]) == L and len(f["B"]) == L, "A·B 각 FORM_LENGTH문항")
     da = sum(i["difficulty"] for i in f["A"]) / L
@@ -128,6 +128,22 @@ def test_frozen_forms_v1():
     _ok(abs(da - db) < 0.02, "동형: 평균 난이도 차 < 0.02")
     tw = A.test_only_words()
     _ok(len(tw) == 2 * L and not ({i["word"] for i in f["A"]} & {i["word"] for i in f["B"]}), "A·B 문항 겹침 없음")
+
+
+def test_forms_v2_revision():
+    """v2(9/27): v1과 정답·문항 수가 같고, 입모양으로 가를 수 없는 오답과 드문 말 오답이 없다(docs/assessment-design.md 7절)."""
+    import json, os
+    import curriculum as C
+    v1 = json.load(open(os.path.join(os.path.dirname(A._FORMS_PATH), "forms_v1.json"), encoding="utf-8"))
+    v2 = A.frozen_forms(build_if_missing=False)
+    _ok(v2["version"] == "v2" and v2.get("revised_from") == "v1", "판본 v2, v1에서 개정")
+    words = lambda f: sorted(it["word"] for k in ("A", "B") for it in f[k])   # noqa: E731
+    _ok(words(v1) == words(v2), "정답 48개는 v1과 같다(훈련에서 빼는 단어가 바뀌지 않는다)")
+    bad = [(it["id"], o) for k in ("A", "B") for it in v2[k] for o in it["options"]
+           if o != it["word"] and (A.indistinguishable(it["word"], o) or o in C.STAGE2_EXCLUDED)]
+    _ok(not bad, f"가를 수 없는 오답·드문 말 오답이 없다: {bad}")
+    _ok(all(len(it["options"]) == 4 and it["word"] in it["options"] for k in ("A", "B") for it in v2[k]), "4지선다 유지")
+    _ok(A.indistinguishable("닭", "갓") and not A.indistinguishable("닭", "담"), "입 안쪽 차이가 두 자리여도 가를 수 없다")
 
 
 def test_score_logs_items_and_confusion_direction():

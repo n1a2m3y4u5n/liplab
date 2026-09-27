@@ -22,7 +22,9 @@ import curriculum as _cur
 import perceptual as _perc
 
 # 동형 폼 A/B 판본 동결 파일. 콘텐츠(WORD_BANK)가 바뀌어도 사전·사후가 같은 문항을 쓰게 한다.
-FORMS_VERSION = "v1"
+# v2(9/27): v1의 정답·문항 id는 그대로 두고, 입모양으로 가를 수 없는 오답(준동구형 포함)과 드문 말 오답을 바꿨다
+# (`revise_forms`, docs/assessment-design.md 7절). v1은 B에 가를 수 없는 오답이 6개(A 1개)라 B가 더 어려웠다.
+FORMS_VERSION = "v2"
 # 사전·사후 폼 길이. 합성 응답 시뮬레이션(scripts/assessment_reliability_sim.py)에서 8문항은 KR-20≈0.52,
 # 24문항은 ≈0.76이라 집단 비교 기준(0.7)을 넘기려고 24로 둔다(docs/assessment-design.md). 배치검사는 8문항.
 FORM_LENGTH = 24
@@ -46,6 +48,15 @@ def viseme_distance(a: str, b: str) -> float:
     return prev[-1]
 
 
+def indistinguishable(a: str, b: str) -> bool:
+    """입모양만으로 가를 수 없는가. 입 안쪽 무리({6,7,8,10})를 한 기호로 묶은 입모양 열이 같으면 그렇다(동구형이음과,
+    입 안쪽 차이만 있는 준동구형). 거리로 재면 안쪽 차이가 두 자리일 때 1.0이 되어 가를 수 있는 것처럼 보였다(닭/갓)."""
+    inside = _cr._INSIDE_CLUSTER
+    def g(w):
+        return tuple("C" if v in inside else v for v in _cr.viseme_signature(w))
+    return g(a) == g(b)
+
+
 def _confusable_options(answer: str, pool: List[str], k: int = 3, closeness: float = 0.5,
                         rng: Optional[random.Random] = None) -> List[str]:
     """오답 보기 k개를 입모양 거리로 고른다.
@@ -56,7 +67,8 @@ def _confusable_options(answer: str, pool: List[str], k: int = 3, closeness: flo
     같은 음절 수 후보가 충분하면 그 안에서 고른다."""
     rng = rng or random
     cands = [(viseme_distance(answer, w), w) for w in pool if w != answer]
-    cands = [c for c in cands if c[0] > 0]
+    # 동구형이음과 입 안쪽 무리 차이뿐인 준동구형은 입모양으로 가를 수 없어 뺀다(9/27부터 준동구형도 뺌)
+    cands = [c for c in cands if c[0] > 0 and not indistinguishable(answer, c[1])]
     same_len = [c for c in cands if len(c[1]) == len(answer)]
     base = same_len if len(same_len) >= k * 3 else cands
     if not base:
@@ -116,6 +128,62 @@ def build_progression_forms(words: List[str], n: int = 8, seed: int = 7) -> Dict
             forms[key].append({"id": f"{key}{i + 1}", "word": e["word"], "options": opts,
                                "difficulty": e["difficulty"], "visemes": e["visemes"]})
     return forms
+
+
+def revise_forms(forms: Dict, words: List[str], excluded) -> Dict:
+    """판본 개정(v1 → v2). 정답·문항 id·보기 자리는 그대로 두고, 쓸 수 없는 오답만 바꾼다.
+    쓸 수 없는 오답: 정답과 입모양으로 가를 수 없는 단어(indistinguishable)와 드문 말(excluded, curriculum.STAGE2_EXCLUDED).
+    바꿀 단어: 같은 음절 수, 쓸 수 있는 단어 가운데 원래 오답과 정답 사이의 입모양 거리에 가장 가까운 것(가를 수 없는 오답이면
+    거리 1 이상 중 가장 가까운 것). 거리 차가 같으면 그 폼에서 덜 쓴 단어를 먼저 쓴다. 두 폼의 정답 단어와 이미 있는 보기는
+    쓰지 않는다. 결정론적(거리 차, 폼 안 사용 수, 거리, 단어 순).
+    반환 {"A", "B", "changes": [{id, answer, old, new, old_dist, new_dist, why}]}."""
+    excluded = set(excluded or ())
+    words = [w for w in dict.fromkeys(words) if _cr.is_hangul_word(w) and w not in excluded]
+    answers = {it["word"] for k in ("A", "B") for it in forms.get(k, [])}
+    out = {"A": [], "B": [], "changes": []}
+    for key in ("A", "B"):
+        used: Counter = Counter(o for it in forms.get(key, []) for o in it["options"])   # 한 폼 안에서 같은 오답이 겹치지 않게
+        for it in forms.get(key, []):
+            ans = it["word"]
+            opts = list(it["options"])
+            for i, o in enumerate(opts):
+                if o == ans:
+                    continue
+                d_old = viseme_distance(ans, o)
+                near, rare = indistinguishable(ans, o), o in excluded
+                if not (near or rare):
+                    continue
+                target = max(1.0, d_old)
+                cands = [(viseme_distance(ans, w), w) for w in words
+                         if w not in answers and w not in opts and len(w) == len(ans)]
+                cands = [c for c in cands if c[0] > 0 and not indistinguishable(ans, c[1])]
+                if not cands:
+                    continue
+                d_new, w_new = min(cands, key=lambda c: (abs(c[0] - target), used[c[1]], c[0], c[1]))
+                opts[i] = w_new
+                used[w_new] += 1
+                out["changes"].append({"id": it["id"], "answer": ans, "old": o, "new": w_new,
+                                       "old_dist": d_old, "new_dist": d_new,
+                                       "why": "near" if near else "rare"})
+            out[key].append({**it, "options": opts})
+    return out
+
+
+# v2에서 짝(난이도 인접 A_i·B_i)의 폼을 맞바꾼 번호(1부터). 오답 교체 뒤 가상 학습자(시드 1)로 두 폼 정답률 차를 가장 작게
+# 하는 교환 조합을 두 잡음 모형(균등·입 안쪽 혼동)의 여섯 조건에서 함께 찾았고(0~4쌍 전수), 판정은 시드 3으로 따로 했다
+# (docs/assessment-design.md 7절). 한 모형(균등)만 보고 고른 조합(21, 22)은 다른 모형의 높은 잡음에서 2.2점 차가 남았다.
+V2_PAIR_SWAPS = (14, 17, 19, 24)
+
+
+def swap_pairs(forms: Dict, pairs) -> Dict:
+    """짝 번호(1부터)의 A·B 문항을 맞바꾼다. 문항 id는 자리(A21·B21)를 따른다."""
+    out = {"A": [dict(it) for it in forms["A"]], "B": [dict(it) for it in forms["B"]]}
+    for p in pairs:
+        i = p - 1
+        a, b = out["A"][i], out["B"][i]
+        out["A"][i] = {**b, "id": a["id"]}
+        out["B"][i] = {**a, "id": b["id"]}
+    return out
 
 
 def frozen_forms(words: Optional[List[str]] = None, build_if_missing: bool = True) -> Optional[Dict]:
@@ -301,6 +369,22 @@ if __name__ == "__main__":
     # 지금 단어 은행으로 A/B를 고정 시드로 만들어 data/assessment/forms_<판본>.json에 저장한다.
     # 이미 있으면 덮어쓰지 않는다(판본을 바꾸려면 FORMS_VERSION을 올린다).
     import sys
+    if len(sys.argv) >= 2 and sys.argv[1] == "revise":
+        # python assessment.py revise: forms_v1.json → forms_<FORMS_VERSION>.json(쓸 수 없는 오답만 교체)
+        src = os.path.join(os.path.dirname(_FORMS_PATH), "forms_v1.json")
+        if os.path.exists(_FORMS_PATH) and "--force" not in sys.argv:
+            print(f"이미 있음: {_FORMS_PATH} (덮어쓰려면 --force)")
+            sys.exit(1)
+        with open(src, encoding="utf-8") as f:
+            v1 = json.load(f)
+        rev = revise_forms(v1, [w["word"] for w in _cur.WORD_BANK], getattr(_cur, "STAGE2_EXCLUDED", {}))
+        sw = swap_pairs(rev, V2_PAIR_SWAPS)
+        with open(_FORMS_PATH, "w", encoding="utf-8") as f:
+            json.dump({"version": FORMS_VERSION, "revised_from": v1.get("version"), "n_bank": len(_cur.WORD_BANK),
+                       "pair_swaps": list(V2_PAIR_SWAPS), "A": sw["A"], "B": sw["B"], "changes": rev["changes"]},
+                      f, ensure_ascii=False, indent=1)
+        print(f"개정 {_FORMS_PATH}: 오답 {len(rev['changes'])}개 교체")
+        sys.exit(0)
     if len(sys.argv) >= 2 and sys.argv[1] == "freeze":
         if os.path.exists(_FORMS_PATH) and "--force" not in sys.argv:
             print(f"이미 동결됨: {_FORMS_PATH} (덮어쓰려면 --force)")
@@ -313,4 +397,4 @@ if __name__ == "__main__":
                       f, ensure_ascii=False, indent=1)
         print(f"동결 {_FORMS_PATH}: A {len(forms['A'])}문항, B {len(forms['B'])}문항")
     else:
-        print("사용법: python assessment.py freeze [--force]")
+        print("사용법: python assessment.py freeze|revise [--force]")
