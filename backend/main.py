@@ -1403,7 +1403,7 @@ _STAGE3_MIN_ATTEMPTS = 5       # 문장 연습·문맥 추론
 _STAGE3_MASTERY = 80.0
 _STAGE3_PASS = 60.0            # 문장 1건을 '성공'으로 볼 최소 점수
 _STAGE4_MIN_ATTEMPTS = 4       # 대화 실전
-_STAGE4_MASTERY = 60.0
+_STAGE4_MASTERY = 75.0        # 최근 가중 합격률(편향 보정 이동 평균, 9/27 밤 docs/mastery-ewma.md 6절, 예전 누적 60%)
 _STAGE4_PASS = 55.0            # 대화 1턴을 '성공'으로 볼 최소 이해도
 
 
@@ -1424,7 +1424,7 @@ def _settle_mastery(sp, reached: bool) -> None:
 async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
                                min_attempts: int, mastery_pct: float, db):
     """단계별 진행률 rolling 갱신(1건 채점 → 시도·정답 누적, 숙달 판정). sp 반환.
-    숙달 점수는 3단계가 편향 보정 이동 평균(_ewma_mastery), 그 밖은 누적 합격률이다. 커밋은 호출부에서 다른 갱신과 함께 처리한다."""
+    숙달 점수는 3·4단계가 편향 보정 이동 평균(_ewma_mastery, 1·2단계는 각 채점 경로에서 같은 식). 커밋은 호출부에서 처리한다."""
     from database import StageProgress
     from sqlalchemy import select
     r = await db.execute(select(StageProgress).where(
@@ -1438,7 +1438,7 @@ async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
     sp.attempts += 1
     if passed:
         sp.correct += 1
-    if stage == 3:
+    if stage in (3, 4):
         sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, passed)
     else:
         sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
@@ -3045,7 +3045,9 @@ async def seed_demo(current_user=Depends(get_current_user), db: AsyncSession = D
 
 async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
                                min_attempts: int, mastery_pct: float, db):
-    """발화 단계 진행률 rolling 갱신(읽기 _bump_stage_progress의 발화판). sp 반환."""
+    """발화 단계 진행률 rolling 갱신(읽기 _bump_stage_progress의 발화판). sp 반환.
+    숙달 점수는 편향 보정 이동 평균(_ewma_mastery), 문턱은 speak_curriculum의 단계별 mastery(85·90). 예전 누적 합격률(65·70)은
+    초반 실패가 끝까지 남아 늦었다(가상 학습자 지연 40~51번 → 28~44번, 거짓 숙달도 모든 단계에서 낮음, docs/mastery-ewma.md 6절)."""
     from database import SpeakStageProgress
     from sqlalchemy import select
     r = await db.execute(select(SpeakStageProgress).where(
@@ -3058,7 +3060,7 @@ async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
     sp.attempts += 1
     if passed:
         sp.correct += 1
-    sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
+    sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, passed)
     # 한번 숙달하면 유지한다(누적 정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게)
     sp.status = "mastered" if (sp.status == "mastered" or (sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct)) else "in_progress"
     return sp

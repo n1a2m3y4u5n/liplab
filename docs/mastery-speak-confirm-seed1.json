@@ -1,0 +1,154 @@
+{
+ "seed": 1,
+ "n": 20000,
+ "alpha": 0.08,
+ "stages": [
+  {
+   "stage": "speak0_voicing",
+   "min_attempts": 5,
+   "T": 70,
+   "R0": {
+    "false_rate": 0.0732,
+    "judged": 7197,
+    "delay_median": 51.0,
+    "skilled_median": 5.0
+   },
+   "R1": [
+    {
+     "alpha": 0.08,
+     "thr": 85.0,
+     "false_rate": 0.0591,
+     "judged": 9781,
+     "delay_median": 29.0,
+     "skilled_median": 5.0
+    }
+   ]
+  },
+  {
+   "stage": "speak1_prosody",
+   "min_attempts": 10,
+   "T": 70,
+   "R0": {
+    "false_rate": 0.0409,
+    "judged": 7163,
+    "delay_median": 50.0,
+    "skilled_median": 10.0
+   },
+   "R1": [
+    {
+     "alpha": 0.08,
+     "thr": 90.0,
+     "false_rate": 0.0099,
+     "judged": 7610,
+     "delay_median": 44.0,
+     "skilled_median": 10.0
+    }
+   ]
+  },
+  {
+   "stage": "speak2_vowel",
+   "min_attempts": 8,
+   "T": 65,
+   "R0": {
+    "false_rate": 0.0562,
+    "judged": 8879,
+    "delay_median": 40.0,
+    "skilled_median": 8.0
+   },
+   "R1": [
+    {
+     "alpha": 0.08,
+     "thr": 85.0,
+     "false_rate": 0.018,
+     "judged": 9704,
+     "delay_median": 36.0,
+     "skilled_median": 8.0
+    }
+   ]
+  },
+  {
+   "stage": "speak3_consonant",
+   "min_attempts": 8,
+   "T": 65,
+   "R0": {
+    "false_rate": 0.0503,
+    "judged": 9029,
+    "delay_median": 40.0,
+    "skilled_median": 8.0
+   },
+   "R1": [
+    {
+     "alpha": 0.08,
+     "thr": 85.0,
+     "false_rate": 0.018,
+     "judged": 9800,
+     "delay_median": 36.0,
+     "skilled_median": 8.0
+    }
+   ]
+  },
+  {
+   "stage": "speak4_word",
+   "min_attempts": 8,
+   "T": 70,
+   "R0": {
+    "false_rate": 0.0471,
+    "judged": 7150,
+    "delay_median": 51.0,
+    "skilled_median": 8.0
+   },
+   "R1": [
+    {
+     "alpha": 0.08,
+     "thr": 90.0,
+     "false_rate": 0.0094,
+     "judged": 7536,
+     "delay_median": 44.0,
+     "skilled_median": 8.0
+    }
+   ]
+  },
+  {
+   "stage": "speak5_sentence",
+   "min_attempts": 6,
+   "T": 70,
+   "R0": {
+    "false_rate": 0.0642,
+    "judged": 7277,
+    "delay_median": 49.0,
+    "skilled_median": 6.0
+   },
+   "R1": [
+    {
+     "alpha": 0.08,
+     "thr": 85.0,
+     "false_rate": 0.061,
+     "judged": 9875,
+     "delay_median": 28.0,
+     "skilled_median": 6.0
+    }
+   ]
+  },
+  {
+   "stage": "read4_conversation",
+   "min_attempts": 4,
+   "T": 60,
+   "R0": {
+    "false_rate": 0.1591,
+    "judged": 11150,
+    "delay_median": 30.0,
+    "skilled_median": 4.0
+   },
+   "R1": [
+    {
+     "alpha": 0.08,
+     "thr": 75.0,
+     "false_rate": 0.1142,
+     "judged": 13912,
+     "delay_median": 22.0,
+     "skilled_median": 4.0
+    }
+   ]
+  }
+ ]
+}
