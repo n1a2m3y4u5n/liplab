@@ -179,8 +179,13 @@ def vowel_feedback(y: np.ndarray, vowel: str, sr: int = SR) -> Optional[Dict]:
         msg.append("혀를 조금 더 앞으로 내밀어 보세요.")
     elif front == "back":
         msg.append("혀가 앞에 있어요. 혀를 조금 뒤로 당겨 보세요.")
-    if tgt["round"] and front != "ok":
+    # 입술 둥글림은 F2를 낮춘다. 원순 목표(ㅗ·ㅜ)에서 F2가 높으면 둥글림이 모자란 것일 수 있고, 평순 목표에서 F2가 낮으면
+    # 입술을 오므린 것일 수 있다(ㅡ를 ㅜ처럼, ㅓ를 ㅗ처럼). 예전에는 원순 목표에서 F2가 어느 쪽으로 벗어나도 '동그랗게 모아
+    # 주세요'라고 해서, F2가 이미 목표보다 낮을 때(더 모으면 더 멀어짐)도 같은 말을 했다.
+    if tgt["round"] and front == "back":
         msg.append("입술도 동그랗게 모아 주세요.")
+    elif not tgt["round"] and front == "forward":
+        msg.append("입술은 오므리지 말고 편하게 펴 주세요.")
     if not msg:
         msg.append("혀 위치가 목표 모음에 가까워요.")
     return {"vowel": vowel, "f1": round(est["f1"]), "f2": round(est["f2"]), "f3": round(est["f3"]),

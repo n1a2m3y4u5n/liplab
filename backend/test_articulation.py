@@ -116,3 +116,32 @@ def test_summarize_sessions_start_end_change():
     v1 = next(v for v in s["by_viseme"] if v["viseme_id"] == 1)
     assert v1["sessions"] == 2 and v1["change"] == -0.1
     assert art.summarize_sessions([])["sessions"] == 0
+
+
+def test_guide_is_per_jamo_within_a_viseme_group():
+    # 한 무리 문장을 모든 자모에 붙이던 때: ㅁ도 '터뜨립니다', ㅅ도 '잇몸에 댔다 뗍니다', 받침 ㅂ도 '터뜨립니다'
+    m = _jamo(art.articulation_guide("마"), "마", "ㅁ")
+    assert "터뜨" not in m["guide"] and "코로 울림" in m["guide"]
+    s = _jamo(art.articulation_guide("사"), "사", "ㅅ")
+    assert "닿지 않게" in s["guide"]
+    fin = [j for j in art.articulation_guide("밥")["syllables"][0]["jamo"] if j["position"] == "종성"][0]
+    assert "멈춥니다" in fin["guide"] and "터뜨리지 않" in fin["guide"]
+    r1 = _jamo(art.articulation_guide("라"), "라", "ㄹ")["guide"]
+    r2 = [j for j in art.articulation_guide("달")["syllables"][0]["jamo"] if j["jamo"] == "ㄹ"][0]["guide"]
+    assert "튕" in r1 and "양옆" in r2
+    assert "숨을 세게" in _jamo(art.articulation_guide("파"), "파", "ㅍ")["guide"]
+
+
+def test_guide_linking_moves_final_to_next_onset():
+    # 옷이 → [오시]: 받침 ㅅ이 다음 첫소리로 넘어가 마찰음으로 난다. 좋아 → [조아]: 받침 ㅎ은 소리 나지 않는다
+    s = [j for j in art.articulation_guide("옷이")["syllables"][0]["jamo"] if j["jamo"] == "ㅅ"][0]
+    assert "닿지 않게" in s["guide"]
+    h = [j for j in art.articulation_guide("좋아")["syllables"][0]["jamo"] if j["jamo"] == "ㅎ"][0]
+    assert "소리 나지 않" in h["guide"]
+    assert "ㄷ처럼" in [j for j in art.articulation_guide("옷")["syllables"][0]["jamo"] if j["jamo"] == "ㅅ"][0]["guide"]
+
+
+def test_group_guides_name_member_differences():
+    g1, g6 = art.articulation_target(1)["hidden_guide"], art.articulation_target(6)["hidden_guide"]
+    assert "ㅁ" in g1 and "코로" in g1
+    assert "ㅅ" in g6 and "틈" in g6 and "ㄹ" in g6

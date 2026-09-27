@@ -39,6 +39,15 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
         # D-GOP 원점수는 보정 전 값이라 절대 수치로 말하면 잘 낸 소리도 낮아 보인다 — 문장 안의 상대 비교로만 전한다.
         weak_txt = ("이 발화 안에서 다른 소리보다 약하게 잰 소리(음성인식과 무관한 발음 채점, 상대 비교): "
                     + ", ".join(f"'{w['label']}'" for w in weak_phones[:3]) + "\n")
+    # 다르게 들린 소리·약한 소리의 조음 설명을 참고로 준다(articulation.jamo_tip). 없으면 모델이 조음 설명을 지어낸다.
+    import articulation as _art
+    tips, seen = [], set()
+    for j in [c.get("correct") for c in (confusions or [])[:3]] + [w.get("label") for w in (weak_phones or [])[:3]]:
+        t = _art.jamo_tip(j) if j and j not in seen else None
+        if t:
+            seen.add(j)
+            tips.append(f"'{j}' — {t}")
+    art_txt = ("조음 참고(정확한 설명이니 이것을 바탕으로): " + " / ".join(tips[:3]) + "\n") if tips else ""
     met_txt = ""
     m = metrics or {}
     parts = []
@@ -56,7 +65,7 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
                  else "   - 억양(음높이)은 말하지 않기(이 연습은 소리·발음만 본다).\n")
     prompt = f"""당신은 청각장애인의 발음(구화) 연습을 돕는 따뜻하고 구체적인 코치입니다.
 목표: "{target}" / 음성인식 결과: "{transcript or '(잘 인식되지 않음)'}" / 발음 유사도 {round(score)}점
-{conf_txt}{weak_txt}{met_txt}
+{conf_txt}{weak_txt}{art_txt}{met_txt}
 아래 지침으로 한국어 3~5문장(250자 이내, 번호·머리말 없이 자연스럽게):
 1) 잘한 점을 측정값 근거로 구체적으로({good_axes} 중 좋았던 것을 수치와 함께).
 2) 개선점을 '수치 + 방법'으로 구체적으로:
@@ -80,10 +89,14 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
             bits.append("톤이 평평했어요. 문장 끝을 올리거나 내리며 억양을 넣어보세요.")
         if confusions:
             c = confusions[0]
-            bits.append(f"'{c.get('correct')}' 소리가 '{c.get('confused_as')}'로 들렸어요. 입모양을 더 또렷하게 해보세요.")
+            tip = _art.jamo_tip(c.get("correct"))
+            bits.append(f"'{c.get('correct')}' 소리가 '{c.get('confused_as')}'로 들렸어요. "
+                        + (tip or "입모양을 더 또렷하게 해보세요."))
         elif weak_phones:
             w = weak_phones[0]
-            bits.append(f"'{w['label']}' 소리가 약하게 났어요. 그 음절에서 입을 조금 더 크게, 천천히 움직여 보세요.")
+            tip = _art.jamo_tip(w["label"])
+            bits.append(f"'{w['label']}' 소리가 약하게 났어요. "
+                        + (tip or "그 음절에서 입을 조금 더 크게, 천천히 움직여 보세요."))
         if not bits:
             bits.append("또렷하게 잘 전달됐어요! 이 느낌을 기억하며 다음 단어도 도전해봐요.")
         return " ".join(bits)

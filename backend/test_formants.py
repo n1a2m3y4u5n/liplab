@@ -43,3 +43,14 @@ def test_speaker_scale_for_higher_voice():
     # 성도가 짧아 전 포먼트가 1.2배 높은 화자가 ㅏ를 정확히 말한 경우 → 정규화 후 ok
     fb = F.vowel_feedback(_vowel(780 * 1.2, 1300 * 1.2, 2500 * 1.2, f0=220), "ㅏ")
     assert fb["speaker_scale"] > 1.1 and fb["height"] == "ok" and fb["front"] == "ok"
+
+
+def test_rounding_advice_follows_f2_direction():
+    # 입술 둥글림은 F2를 낮춘다: 원순 목표 ㅜ(330, 830)에서 F2가 높으면 '동그랗게', 이미 낮으면 그 말을 하지 않는다
+    hi = F.vowel_feedback(_vowel(330, 1300, 2400), "ㅜ")
+    assert hi["front"] == "back" and any("동그랗게" in m for m in hi["messages"])
+    lo = F.vowel_feedback(_vowel(330, 600, 2400), "ㅜ")
+    assert lo["front"] == "forward" and not any("동그랗게" in m for m in lo["messages"])
+    # 평순 목표 ㅡ(350, 1500)를 ㅜ처럼(F2 낮게) 내면 입술을 펴라고 한다
+    u = F.vowel_feedback(_vowel(350, 850, 2400), "ㅡ")
+    assert u["front"] == "forward" and any("오므리지" in m for m in u["messages"])
