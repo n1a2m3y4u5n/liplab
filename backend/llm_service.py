@@ -99,6 +99,34 @@ FALLBACK_TURNS = {
 }
 FALLBACK_TURNS_GENERIC = ["안녕하세요.", "무엇을 도와드릴까요?", "네, 알겠습니다.", "잠시만 기다려 주세요."]
 
+# 상황별 문장 생성이 실패하고 같은 상황·단계의 저장 문장도 없을 때 쓰는 단계별 대체 문장(9/27). 예전에는 단계와 상관없이
+# 2~4어절 문장만 나가 5단계 학습자도 "안녕하세요."를 받았다. 어절 수는 단계 지시(level_instructions)에 맞췄다.
+FALLBACK_BY_LEVEL = {
+    1: ["오늘은 날씨가 정말 맑고 좋네요.", "저는 아침마다 공원에서 산책을 해요.", "이 버스는 시청 앞에서 서나요?",
+        "물 한 잔만 가져다주실 수 있나요?", "주말에 가족과 함께 영화를 봤어요.", "내일 아침 아홉 시에 만나요."],
+    2: ["오늘 퇴근하고 나서 같이 저녁 먹으러 갈래요?", "죄송하지만 제가 잘 못 들어서 조금만 천천히 말씀해 주세요.",
+        "이번 주 토요일에 친구 생일 파티가 있어요.", "여기서 지하철역까지 걸어서 가면 시간이 얼마나 걸릴까요?",
+        "비가 올 것 같으니까 우산을 꼭 챙겨 가세요.", "어제 산 신발이 조금 작아서 바꾸고 싶어요."],
+    3: ["다음 주 월요일에 회의가 있으니까 자료를 미리 준비해 두면 좋겠어요.",
+        "제가 지난번에 빌려 간 책을 아직 다 못 읽어서 조금 늦게 돌려드릴게요.",
+        "요즘 날씨가 갑자기 추워져서 주변에 감기에 걸린 사람이 많다고 하네요.",
+        "은행에 가서 통장을 새로 만들려면 신분증을 꼭 가지고 가야 해요.",
+        "주문하신 음식이 주방 사정으로 조금 늦어지고 있어서 정말 죄송합니다, 잠시만 기다려 주세요.",
+        "버스를 타고 가다가 내릴 정류장을 놓쳐서 한 정거장 더 갔어요."],
+    4: ["비가 많이 와서 퇴근길 버스가 평소보다 훨씬 붐빌 것 같으니 조금 일찍 출발하세요.",
+        "병원에서 받은 약은 밥을 먹고 삼십 분 뒤에 물과 함께 드시면 됩니다.",
+        "공항 가는 기차표를 미리 끊어 두지 않으면 주말에는 자리가 금방 없어질 거예요.",
+        "제가 카페에서 커피를 주문하면서 케이크도 하나 같이 포장해 달라고 부탁했는데 깜빡하셨나 봐요.",
+        "이번 달 전기 요금이 지난달보다 두 배나 많이 나와서 관리사무소에 한번 물어보려고 해요.",
+        "오늘은 밖에 바람이 많이 부니까 모자랑 목도리를 꼭 챙기고 따뜻하게 입고 나가세요."],
+    5: ["어제 시장에서 산 배가 너무 달아서 배가 부를 때까지 먹었더니 배를 타고 가는 내내 속이 불편했어요.",
+        "친구와 밤늦게까지 밤을 까먹으면서 이야기하다 보니 말이 많아져서 결국 하고 싶던 말을 다 하지는 못했어요.",
+        "눈이 많이 내린 날 눈이 부셔서 눈을 제대로 뜰 수가 없어 선글라스를 쓰고 천천히 걸어갔어요.",
+        "지난주에 다리를 다쳐서 병원에 가려고 강 위의 다리를 건너는데 바람이 세게 불어서 발걸음을 옮기기가 정말 힘들었어요.",
+        "따뜻한 차를 마시면서 차를 고치는 방법을 찾아봤는데 부품 값이 생각보다 비싸서 결국 정비소에 맡기기로 했어요.",
+        "방금 받은 문자를 보니 모레 오후에 보기로 한 약속이 미뤄져서 다음 주 금요일 저녁에 다시 만나기로 했대요."],
+}
+
 SITUATION_CONTEXTS = {
     "카페": {
         "description": "카페에서 주문하고 대화하는 상황",
@@ -397,45 +425,46 @@ async def generate_adaptive_scenario(
     except Exception as e:
         # Fallback to default sentences if API fails
         print(f"LLM API Error: {e}")
+        return await _fallback_scenario(situation, level, db)
 
-        default_sentences = {
-            "카페": [
-                "아메리카노 한 잔 주세요.",
-                "따뜻한 걸로 할게요.",
-                "여기서 마실게요.",
-                "설탕은 빼주세요.",
-                "영수증 주세요."
-            ],
-            "병원": [
-                "머리가 아파요.",
-                "언제부터 아프셨어요?",
-                "약 처방해 주세요.",
-                "검사 예약하고 싶어요.",
-                "다음 진료 언제예요?"
-            ],
-            "식당": [
-                "메뉴판 좀 주세요.",
-                "이거 맵나요?",
-                "두 명이에요.",
-                "물 좀 주세요.",
-                "계산해 주세요."
-            ]
-        }
 
-        fallback = default_sentences.get(situation, [
-            "안녕하세요.",
-            "감사합니다.",
-            "네, 알겠습니다.",
-            "괜찮습니다.",
-            "다시 한 번 말씀해 주세요."
-        ])
+_SITUATION_DEFAULTS = {
+    "카페": ["아메리카노 한 잔 주세요.", "따뜻한 걸로 할게요.", "여기서 마실게요.", "설탕은 빼주세요.", "영수증 주세요."],
+    "병원": ["머리가 아파요.", "언제부터 아프셨어요?", "약 처방해 주세요.", "검사 예약하고 싶어요.", "다음 진료 언제예요?"],
+    "식당": ["메뉴판 좀 주세요.", "이거 맵나요?", "두 명이에요.", "물 좀 주세요.", "계산해 주세요."],
+}
 
-        return {
-            "situation": situation,
-            "level": level,
-            "sentences": fallback[:5],
-            "scenario_id": f"fallback_{datetime.utcnow().timestamp()}"
-        }
+
+async def _fallback_scenario(situation: str, level: int, db: AsyncSession) -> Dict:
+    """문장 생성이 실패했을 때(키 없음·API 장애·게이트 탈락). 순서
+    1) 같은 상황·단계로 전에 만든 LLM 문장(ScenarioCache, 성공할 때마다 쌓인다)을 지금 게이트로 다시 걸러 3개 이상이면 쓴다.
+       캐시 재사용은 변주를 위해 평소에는 끄지만, 실패했을 때 단계에 맞는 상황 문장을 내는 데는 이것이 가장 낫다.
+    2) 1단계는 상황별 짧은 기본 문장, 2단계 이상(또는 기본 문장이 없는 상황)은 단계별 대체 문장(FALLBACK_BY_LEVEL)."""
+    from content_rules import check_sentence
+    max_chars = SCENARIO_MAX_CHARS.get(level, 40)
+    ts = datetime.utcnow().timestamp()
+    try:
+        await db.rollback()          # 실패한 캐시 쓰기 등으로 트랜잭션이 깨졌으면 정리하고 읽는다
+        rows = (await db.execute(
+            select(ScenarioCache)
+            .where(and_(ScenarioCache.situation == situation, ScenarioCache.difficulty_level == level))
+            .order_by(ScenarioCache.created_at.desc()).limit(20))).scalars().all()
+        rows = list(rows)
+        random.shuffle(rows)
+        for row in rows:
+            ok = [x for x in (row.sentences or []) if isinstance(x, str) and check_sentence(x, max_chars=max_chars)[0]]
+            if len(ok) >= 3:
+                return {"situation": situation, "level": level, "sentences": ok[:5],
+                        "scenario_id": f"cache_{row.id}_{ts}", "fallback": "cache"}
+    except Exception as e:
+        print(f"[WARN] scenario cache fallback failed: {e}")
+    if level <= 1 and situation in _SITUATION_DEFAULTS:
+        sentences = list(_SITUATION_DEFAULTS[situation])
+    else:
+        bank = FALLBACK_BY_LEVEL.get(max(1, min(5, int(level or 1))), FALLBACK_BY_LEVEL[1])
+        sentences = random.sample(bank, k=min(5, len(bank)))
+    return {"situation": situation, "level": level, "sentences": sentences[:5],
+            "scenario_id": f"fallback_{ts}", "fallback": "static"}
 
 
 async def generate_conversation_turn(
