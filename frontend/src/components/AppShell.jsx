@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import useStore from '../store/useStore'
 import { authAPI, reviewAPI, learningAPI } from '../api'
 import Logo from './Logo'
@@ -280,7 +280,7 @@ function MobileTopBar({ pink }) {
   const { xp, streak } = useStats()
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between bg-page px-[18px] pb-[14px] pt-4 lg:hidden">
-      <Logo size={20} pink={pink} />
+      <Link to="/about" aria-label="LIPLAB 소개" className="shrink-0"><Logo size={20} pink={pink} /></Link>
       <div className="flex items-center gap-3">
         <Stat icon="/ui/stat-flame.svg" box={17} value={streak} className="gap-1 text-[14px] text-stat-streak" />
         <Stat icon="/ui/lp-232-48-star.svg" box={15} w={14.27} h={13.57} value={xp.toLocaleString()} className="gap-1 text-[14px] text-stat-xp" />
@@ -329,7 +329,7 @@ export default function AppShell({ children, active, rail = 'default', rightRail
 
       {/* 좌측 사이드바 (데스크톱, 58:12) */}
       <nav className="hidden w-[256px] shrink-0 flex-col gap-2 border-r border-line bg-white px-4 pb-6 pt-7 lg:flex" aria-label="주 메뉴">
-        <Logo size={30} pink={speak} />
+        <Link to="/about" aria-label="LIPLAB 소개" className="self-start"><Logo size={30} pink={speak} /></Link>
         <div className="h-5" />
         {NAV.map((n) => {
           const on = activeKey === n.key

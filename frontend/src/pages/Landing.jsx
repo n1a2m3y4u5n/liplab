@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Button from '../components/Button'
+import useStore from '../store/useStore'
 import Logo from '../components/Logo'
 import TeamAvatar from '../components/TeamAvatar'
 import { TEAM, TEAM_ORG, AWARD, REPO_URL } from '../config/team'
+import TeamMemberModal, { ContactLine } from '../components/TeamMemberDetail'
 
 /**
  * 랜딩 (Figma "02. Landing" 9:12 Landing, Desktop 1440). 로그인하지 않은 사람이 "/"에 오면 보인다(App.jsx AuthGate).
@@ -181,49 +184,69 @@ function TrophyIcon() {
 }
 
 function Developers() {
+  const [open, setOpen] = useState(null)   // 누른 팀원(상세 모달)
+  // 9/28: 수상 배지·제목·연락처와 팀원 카드가 따로 떨어져 서로 다른 개체로 보였다. 한 패널로 묶고, 연락처를 위로 올렸다.
   return (
     <section className="bg-white">
-      <div className="mx-auto flex max-w-[1440px] flex-col gap-9 px-4 py-16 sm:px-8 lg:px-16 lg:py-20 xl:px-[120px]">
-        <div className="flex flex-col items-start gap-4">
-          <p className="inline-flex items-center gap-2 rounded-full bg-primary-100 px-4 py-2 text-[14px] font-bold leading-figma text-primary-700">
-            <TrophyIcon />{AWARD}
-          </p>
-          <h2 className="text-[30px] font-bold leading-[1.35] tracking-[-0.025em] text-primary-500 sm:text-[36px]">만든 사람들</h2>
-          <p className="break-keep text-[16px] leading-[1.7] text-ink-muted xl:text-[18px]">{TEAM_ORG}이 함께 만들었어요.</p>
+      <div className="mx-auto max-w-[1440px] px-4 py-16 sm:px-8 lg:px-16 lg:py-20 xl:px-[120px]">
+        <div className="flex flex-col gap-7 rounded-[28px] border-2 border-line bg-page p-5 sm:p-8 lg:p-10">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-col items-start gap-4">
+              <p className="inline-flex items-center gap-2 rounded-full bg-primary-100 px-4 py-2 text-[14px] font-bold leading-figma text-primary-700">
+                <TrophyIcon />{AWARD}
+              </p>
+              <h2 className="text-[30px] font-bold leading-[1.35] tracking-[-0.025em] text-primary-500 sm:text-[36px]">만든 사람들</h2>
+              <p className="break-keep text-[16px] leading-[1.7] text-ink-muted xl:text-[18px]">{TEAM_ORG}이 함께 만들었어요. 카드를 누르면 자세히 볼 수 있어요.</p>
+            </div>
+            <div className="flex flex-col gap-2 rounded-18 bg-white px-5 py-4 lg:min-w-[300px]">
+              <ContactLine />
+              <p className="flex flex-wrap items-center gap-x-[10px] gap-y-1 font-bold leading-figma">
+                <span className="text-[13px] text-ink-faint">소스 코드</span>
+                <a href={REPO_URL} target="_blank" rel="noreferrer" className="text-[14px] text-primary-500 hover:underline">
+                  {REPO_URL.replace('https://', '')}
+                </a>
+              </p>
+            </div>
+          </div>
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
+            {TEAM.map((m, i) => (
+              <li key={m.name}>
+                <button type="button" onClick={() => setOpen(m)} aria-haspopup="dialog"
+                  className="flex w-full items-center gap-4 rounded-18 border-2 border-line bg-white px-5 py-4 text-left transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-sm">
+                  <TeamAvatar m={m} index={i} />
+                  <div className="flex min-w-0 flex-1 flex-col gap-1 leading-figma">
+                    <p className="text-[17px] font-bold text-ink">{m.name}</p>
+                    <p className="text-[13.5px] text-ink-muted">{m.role}</p>
+                    {m.handle
+                      ? <p className="text-[12.5px] font-bold text-primary-500">{m.handle}</p>
+                      : <p className="text-[12px] text-ink-hint">{m.note}</p>}
+                  </div>
+                  {m.detail?.awards?.length > 0 && (
+                    <span className="shrink-0 rounded-full bg-primary-100 px-2.5 py-1 text-[12px] font-bold text-primary-700">수상 {m.detail.awards.length}</span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
-          {TEAM.map((m) => (
-            <li key={m.name} className="flex items-center gap-4 rounded-18 border-2 border-line bg-white px-5 py-4">
-              <TeamAvatar m={m} />
-              <div className="flex min-w-0 flex-col gap-1 leading-figma">
-                <p className="text-[17px] font-bold text-ink">{m.name}</p>
-                <p className="text-[13.5px] text-ink-muted">{m.role}</p>
-                {m.handle
-                  ? <p className="text-[12.5px] font-bold text-primary-500">{m.handle}</p>
-                  : <p className="text-[12px] text-ink-hint">{m.note}</p>}
-              </div>
-            </li>
-          ))}
-        </ul>
-        <p className="flex flex-wrap items-center gap-x-[10px] gap-y-1 font-bold leading-figma">
-          <span className="text-[13px] text-ink-faint">소스 코드</span>
-          <a href={REPO_URL} target="_blank" rel="noreferrer" className="text-[14px] text-primary-500 hover:underline">
-            {REPO_URL.replace('https://', '')}
-          </a>
-        </p>
       </div>
+      <TeamMemberModal m={open} onClose={() => setOpen(null)} />
     </section>
   )
 }
 
 export default function Landing() {
   const navigate = useNavigate()
-  const buttons = (width) => (
+  const isAuthenticated = useStore((s) => s.isAuthenticated)
+  // 로그인한 채 로고로 들어오면(/about) 가입·로그인 대신 학습으로 돌아가는 버튼
+  const buttons = (width) => (isAuthenticated ? (
+    <Button size="lg" className={width} onClick={() => navigate('/')}>학습으로 돌아가기</Button>
+  ) : (
     <>
       <Button size="lg" className={width} onClick={() => navigate('/signup')}>시작하기</Button>
       <Button variant="secondary" size="lg" accent className={width} onClick={() => navigate('/login')}>계정이 이미 있습니다</Button>
     </>
-  )
+  ))
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-page">

@@ -84,7 +84,8 @@ const CueVideoDemo = lazy(() => import('./pages/CueVideoDemo'))
  * 인증 체계 자체는 유지되므로 진행도·북마크 등은 정상 동작한다.
  */
 // 미인증에서도 접근 가능한 공개 페이지(약관·처리방침) — 회원가입 동의 문구 링크 대상.
-const PUBLIC_PATHS = ['/terms', '/privacy']
+// /about: 랜딩(서비스 소개·만든 사람들). 로그인한 사용자도 앱 로고를 눌러 볼 수 있다(9/28, 로그인하면 '/'는 학습 경로로 간다).
+const PUBLIC_PATHS = ['/terms', '/privacy', '/about']
 function AuthGate({ children }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated)
   const updateUser = useStore((s) => s.updateUser)
@@ -259,6 +260,7 @@ function App() {
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/terms" element={<Legal />} />
         <Route path="/privacy" element={<Legal />} />
+        <Route path="/about" element={<Landing />} />
         <Route path="/" element={<HomeRedirect />} />
         {/* 로그인한 채 /login·/signup에 오면 첫 화면으로(로그인 뒤 이동 경로) */}
         <Route path="/login" element={<Navigate to="/" replace />} />
