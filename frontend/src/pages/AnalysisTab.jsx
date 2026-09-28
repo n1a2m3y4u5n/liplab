@@ -467,19 +467,22 @@ function DetailItem({ it, i, kind }) {
       </div>
     )
   }
-  // 독화(입모양·단어·문맥) — 고른 답과 정오, 문장 연습 — 내 답과 점수
+  // 독화(입모양·단어·문맥) — 고른 답과 정오, 문장 연습 — 내 답과 점수. 단어 주관식(word_typed)은 쓴 답이고,
+  // 입모양이 똑같은 다른 말은 '입모양 맞음'(서버 verdict 'homophene', 숙달 0.5)으로 따로 보인다
   const sentence = kind === 'sentence'
-  const ok = sentence ? scoreLevel(it.score, 'accuracy') : (it.correct ? 'good' : 'bad')
+  const typed = kind === 'word_typed'
+  const homophene = typed && it.verdict === 'homophene'
+  const ok = sentence ? scoreLevel(it.score, 'accuracy') : (it.correct ? 'good' : homophene ? 'warn' : 'bad')
   return (
     <div className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 py-4 leading-figma ${first}`}>
       <p className="w-5 shrink-0 text-[13px] font-bold text-ink-ghost">{i + 1}</p>
       <p className={`${sentence ? 'w-full sm:w-auto sm:flex-1' : 'w-[68px]'} min-w-0 shrink-0 truncate text-[17px] font-bold text-ink`}>{it.target}</p>
       <div className="flex min-w-0 flex-1 items-center gap-[7px] whitespace-nowrap sm:pl-3.5">
-        <span className="text-[12px] text-ink-muted">{sentence ? '내 답' : '고른 답'}</span>
+        <span className="text-[12px] text-ink-muted">{sentence ? '내 답' : typed ? '쓴 답' : '고른 답'}</span>
         <span className="truncate text-[15px] font-bold text-ink">{it.chosen || '–'}</span>
       </div>
-      <p className={`w-[52px] shrink-0 text-right text-[16px] font-bold ${ok === 'good' ? 'text-good-text' : ok === 'warn' ? 'text-warn-text' : 'text-bad-text'}`}>
-        {sentence ? `${Math.round(it.score)}점` : it.correct ? '정답' : '오답'}
+      <p className={`${homophene ? 'text-[14px]' : 'w-[52px] text-[16px]'} shrink-0 text-right font-bold ${ok === 'good' ? 'text-good-text' : ok === 'warn' ? 'text-warn-text' : 'text-bad-text'}`}>
+        {sentence ? `${Math.round(it.score)}점` : it.correct ? '정답' : homophene ? '입모양 맞음' : '오답'}
       </p>
     </div>
   )
