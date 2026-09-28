@@ -1,6 +1,6 @@
 // 말하기 모음·자음 단계(2·3)의 낱말 속 소리 확인(docs/curriculum-roadmap.md 2-5, P9).
-// 따로 낸 음절 점수가 숙달 문턱에 닿으면 서버가 목표 소리가 첫 음절에 든 낱말 4개(probes)를 준다. 화면은 이것을 문항 사이에 끼워 내고,
-// 채점은 단어 규칙(합격 65)으로 하며 최근 4번 중 3번 합격하면 숙달이다(서버 speak_curriculum._PROBE). 확인 낱말은 { target, probe: true, sound } 모양이다.
+// 따로 낸 음절 점수가 숙달 문턱에 닿으면 서버가 목표 소리가 첫 음절에 든 낱말 3개(probes)를 준다. 화면은 이것을 문항 사이에 끼워 내고,
+// 채점은 이 단계 합격선(50)과 첫 음절 목표 소리로 하며 최근 3번 중 2번 합격하면 숙달이다(서버 speak_curriculum.score_probe·_PROBE). 확인 낱말은 { target, probe: true, sound } 모양이다.
 
 export const PROBE_HEADING = '배운 소리를 낱말 속에서도 내 보세요'
 export const PROBE_CATEGORY = '낱말 속 소리 확인'

@@ -1,7 +1,8 @@
 """말하기 모음·자음(2·3단계) 낱말 속 소리 확인(docs/curriculum-roadmap.md 2-5, P9).
 
 - 확인 낱말: 서로 다른 목표 소리, 첫 음절 위치, 1·2음절, 약한 소리 먼저, (사용자, 날짜) seed로 결정적, 애·에는 한 소리.
-- 숙달: 이동 평균 조건 + 최근 4번 중 3번 합격. 확인은 이동 평균·시도 수를 바꾸지 않고, 이미 숙달한 단계는 그대로다.
+- 숙달: 이동 평균 조건 + 최근 3번 중 2번 합격(사전 등록 규칙, 리뷰 뒤 되돌림). 합격은 이 단계 합격선 + 첫 음절 목표 소리.
+  확인은 이동 평균·시도 수를 바꾸지 않고, 이미 숙달한 단계는 그대로다.
 """
 import json
 import os
@@ -55,12 +56,13 @@ def test_probe_words_prefer_short_familiar_words():
 
 def test_probes_ok_window():
     cfg = sc.get_stage(3)["probe"]
-    assert cfg == {"n": 4, "need": 3}
-    assert sc.probes_ok([True, False, True, True], cfg)
-    assert not sc.probes_ok([True, False, False, True], cfg)
-    assert not sc.probes_ok([True, True], cfg)
-    assert sc.probes_ok([False, False, True, True, True], cfg)     # 최근 4번만 본다
-    assert not sc.probes_ok([True, True, True, False, False], cfg)
+    assert cfg == {"n": 3, "need": 2}
+    assert sc.probes_ok([True, False, True], cfg)
+    assert not sc.probes_ok([True, False, False], cfg)
+    assert sc.probes_ok([True, True], cfg)
+    assert not sc.probes_ok([True], cfg)
+    assert sc.probes_ok([False, False, False, True, True], cfg)     # 최근 3번만 본다
+    assert not sc.probes_ok([True, True, False, False, True], cfg)
     assert sc.probes_ok([], None)
 
 
@@ -154,15 +156,15 @@ with TestClient(main.app) as c:
             await db.execute(delete(SpeakAttempt).where(SpeakAttempt.id.in_(ids)))
             await db.commit()
     asyncio.run(drop_extra())   # 아래 창 계산을 단순하게 하려고 방금 세 시도를 지운다
-    # 확인: 합격·불합격·불합격·합격(2/4) → 숙달 아님, 이어서 합격(최근 4번 F F T T 2/4), 합격(F T T T 3/4) → 숙달
+    # 확인: 합격·불합격·불합격(1/3) → 숙달 아님, 이어서 합격(최근 3번 F F T 1/3), 합격(F T T 2/3) → 숙달
     seq = []
-    for ok in (True, False, False, True):
+    for ok in (True, False, False):
         seq.append(assess(w, 3, w if ok else "아", probe=1))
-    out["after_2_of_4"] = asyncio.run(rows(3))
+    out["after_1_of_3"] = asyncio.run(rows(3))
     seq.append(assess(w, 3, w, probe=1))
-    out["after_F_F_T_T"] = asyncio.run(rows(3))
+    out["after_F_F_T"] = asyncio.run(rows(3))
     seq.append(assess(w, 3, w, probe=1))
-    out["after_3_of_4"] = asyncio.run(rows(3))
+    out["after_2_of_3"] = asyncio.run(rows(3))
     out["seq"] = seq
     d2 = c.get("/api/speak/stage/3", headers=h).json()
     out["after_mastered"] = {"carryover": d2["carryover"], "probes": d2["probes"]}
@@ -205,7 +207,7 @@ def test_probe_gate_through_api():
     status, attempts, mastery = r["gate"]
     assert status == "in_progress" and attempts == 8 and mastery >= 85      # 이동 평균만으로는 숙달하지 않는다
     assert r["carryover"] is True and r["same_day_same"]
-    assert len(r["probes"]) == 4 and len({p["sound"] for p in r["probes"]}) == 4
+    assert len(r["probes"]) == 3 and len({p["sound"] for p in r["probes"]}) == 3
     for s in r["seq"]:
         assert s["status"] == 200 and s["probe"] is True and s["counted"] is True
     # 오늘 확인 낱말이 아니면 보통 시도, 소리 없음은 세지 않음, 첫소리가 틀리면 점수가 높아도 불합격
@@ -217,16 +219,16 @@ def test_probe_gate_through_api():
     assert r["after_extra"]["modes"][-3:] == ["phoneme", "probe", "probe"]
     attempts, mastery = r["after_extra"]["attempts"], r["after_extra"]["mastery"]   # 보통 시도 한 번이 더해졌다
     # 합격 = 이 단계 합격선(50) 이상 + 첫 음절 목표 소리: 맞게 들리면 합격, '아'면 불합격
-    assert [s["passed"] for s in r["seq"]] == [True, False, False, True, True, True]
+    assert [s["passed"] for s in r["seq"]] == [True, False, False, True, True]
     assert r["seq"][0]["score"] >= 50 and r["seq"][1]["score"] < 50
-    # 2/4 → 숙달 아님. 확인은 이동 평균·시도 수를 바꾸지 않고 mode 'probe'로 남는다
-    a = r["after_2_of_4"]
+    # 1/3 → 숙달 아님. 확인은 이동 평균·시도 수를 바꾸지 않고 mode 'probe'로 남는다
+    a = r["after_1_of_3"]
     assert a["status"] == "in_progress" and a["attempts"] == attempts and a["mastery"] == mastery
-    assert a["modes"] == ["probe"] * 4
-    assert r["after_F_F_T_T"]["status"] == "in_progress"
-    assert r["seq"][3]["progress"]["probe"] == {"carryover": True, "passed": 2, "tried": 4, "n": 4, "need": 3}
-    # 최근 4번 중 3번 → 숙달
-    m = r["after_3_of_4"]
+    assert a["modes"] == ["probe"] * 3
+    assert r["after_F_F_T"]["status"] == "in_progress"
+    assert r["seq"][2]["progress"]["probe"] == {"carryover": True, "passed": 1, "tried": 3, "n": 3, "need": 2}
+    # 최근 3번 중 2번 → 숙달
+    m = r["after_2_of_3"]
     assert m["status"] == "mastered" and m["attempts"] == attempts and m["mastery"] == mastery
     assert r["seq"][-1]["progress"]["mastered"] is True and r["seq"][-1]["progress"]["probe"]["carryover"] is False
     assert r["after_mastered"] == {"carryover": False, "probes": []}
