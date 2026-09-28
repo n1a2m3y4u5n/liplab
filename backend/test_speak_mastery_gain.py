@@ -57,3 +57,11 @@ print("RESULT " + json.dumps(res))
     assert st[18] == "in_progress"      # 19번째: 시도 부족
     assert st[19] == "mastered"         # 20번째: 처음 10번 40, 최근 10번 60
     assert st[-1] == "mastered"
+
+
+def test_interleaved_order_after_one_pass():
+    items = sc.get_stage(3)["items"]
+    assert sc.interleaved_order(items, len(items) - 1, "u:3:d") == items          # 한 바퀴 전: 원래 순서
+    mixed = sc.interleaved_order(items, len(items), "u:3:d")
+    assert sorted(i["target"] for i in mixed) == sorted(i["target"] for i in items) and mixed != items
+    assert mixed == sc.interleaved_order(items, 50, "u:3:d")                        # 같은 날 같은 순서

@@ -174,6 +174,17 @@ def mixed_order(items: List[Dict], seed: str, lead: int = 3) -> List[Dict]:
     return head + [rest[k][i] for _, k, i in sorted(slots)]
 
 
+def interleaved_order(items: List[Dict], attempts: int, seed: str) -> List[Dict]:
+    """모음·자음 단계(2·3) 순서(docs/curriculum-roadmap.md 2-4). 이 단계를 항목 수만큼 연습하기 전에는 원래 순서(아 어 오 …, 대립 짝끼리
+    붙은 순서)로 한 번씩 익히고, 그 뒤로는 (사용자, 날짜) seed로 섞는다. 같은 항목을 차례로 반복하는 블록 연습은 습득은 빠르지만
+    유지·전이는 섞은 연습이 낫다(운동학습 원리, Maas 외 2008)."""
+    if attempts < len(items):
+        return list(items)
+    out = list(items)
+    random.Random(seed).shuffle(out)
+    return out
+
+
 def weak_sounds(attempts: List[Dict], k: int = 3, min_n: int = 2, rel_max: float = 0.8) -> List[str]:
     """최근 말하기 시도에서 약한 소리(자모) k개. D-GOP가 음소마다 잰 점수(phones: [{label, dgop}])를 시도마다 그 시도 평균으로
     나눠 상대값으로 모으고(문장 난이도·목소리 차이를 지움), min_n번 이상 나왔고 상대 평균이 rel_max 미만인 것을 낮은 순으로 고른다.
