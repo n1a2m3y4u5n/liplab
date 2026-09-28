@@ -104,3 +104,28 @@ def test_clock_units_and_phone_numbers():
     # 연도 범위·영문 약어는 그대로 수로
     assert normalize_numbers("2024-2025") == "이천이십사-이천이십오"
     assert normalize_numbers("3D 영화") == "삼D 영화"
+
+
+def test_dae_counters_ranges_and_leading_one():
+    # 9/28 감사: 나이대 '대'·개국·1만·범위를 실제 읽는 말로. 맞게 읽어 적은 답이 15~46점 깎이던 것
+    assert normalize_numbers("30대 남성") == "삼십대 남성"
+    assert normalize_numbers("20대 초반이에요") == "이십대 초반이에요"
+    assert normalize_numbers("30대예요.") == "삼십대예요."
+    assert normalize_numbers("2대 1로 이겼어요") == "이대 일로 이겼어요"
+    # 셀 대상 명사 뒤의 '대'는 그대로 고유어(10의 배수여도)
+    assert normalize_numbers("차 3대 있어요") == "차 세대 있어요"
+    assert normalize_numbers("차 10대") == "차 열대" and normalize_numbers("자전거 20대가") == "자전거 스무대가"
+    assert normalize_numbers("3개국어 해요") == "삼개국어 해요" and normalize_numbers("5개년 계획") == "오개년 계획"
+    assert normalize_numbers("1만 원이에요") == "만 원이에요" and normalize_numbers("1천 원") == "천 원"
+    assert normalize_numbers("1만 5천 원") == "만 오천 원" and normalize_numbers("1억") == "일억"
+    assert normalize_numbers("21만 원") == "이십일만 원"
+    # 범위: 고유어 이웃 쌍은 붙여 읽고 '~'는 없앤다
+    assert normalize_numbers("1~2개 주세요") == "한두개 주세요"
+    assert normalize_numbers("3~4명이 와요") == "서너명이 와요"
+    assert normalize_numbers("5~6시") == "대여섯시"
+    assert normalize_numbers("3-4명") == "서너명"
+    assert normalize_numbers("2~3일 걸려요") == "이삼일 걸려요"
+    assert normalize_numbers("10~15분") == "십에서 십오분" and normalize_numbers("3~5개") == "셋에서 다섯개"
+    # 단위가 없거나 '-' 뒤가 한자어 단위면 범위로 보지 않는다(연도 범위)
+    assert normalize_numbers("2024-2025년") == "이천이십사-이천이십오년"
+    assert "~" not in normalize_numbers("1~2개") and "~" in normalize_numbers("1~2")
