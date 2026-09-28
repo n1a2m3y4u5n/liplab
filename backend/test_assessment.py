@@ -244,8 +244,11 @@ def test_forms_v2_revision():
     _ok(v2["version"] == "v2" and v2.get("revised_from") == "v1", "판본 v2, v1에서 개정")
     words = lambda f: sorted(it["word"] for k in ("A", "B") for it in f[k])   # noqa: E731
     _ok(words(v1) == words(v2), "정답 48개는 v1과 같다(훈련에서 빼는 단어가 바뀌지 않는다)")
+    # 9/28 콘텐츠 감사가 2단계에서 더 뺀 드문 말 가운데 v2 오답에 이미 든 7개. 폼은 사전·사후 비교를 위해 동결이라 바꾸지 않는다
+    # (docs/content-audit-2026-09-28.md 1절). 다음 판본을 만들 때 revise_forms가 이 오답도 바꾼다.
+    frozen_rare = {"사무", "박", "공무", "공모", "능", "솔", "사부"}
     bad = [(it["id"], o) for k in ("A", "B") for it in v2[k] for o in it["options"]
-           if o != it["word"] and (A.indistinguishable(it["word"], o) or o in C.STAGE2_EXCLUDED)]
+           if o != it["word"] and (A.indistinguishable(it["word"], o) or (o in C.STAGE2_EXCLUDED and o not in frozen_rare))]
     _ok(not bad, f"가를 수 없는 오답·드문 말 오답이 없다: {bad}")
     _ok(all(len(it["options"]) == 4 and it["word"] in it["options"] for k in ("A", "B") for it in v2[k]), "4지선다 유지")
     _ok(A.indistinguishable("닭", "갓") and not A.indistinguishable("닭", "담"), "입 안쪽 차이가 두 자리여도 가를 수 없다")
