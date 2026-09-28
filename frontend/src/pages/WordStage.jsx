@@ -15,6 +15,7 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
 import { pickDistractors, visualLevel } from '../lib/wordOptions'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
 import useSlowWeak from '../hooks/useSlowWeak'
+import MouthCompare from '../components/MouthCompare'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
@@ -120,6 +121,7 @@ function WordQuiz({ data, reload }) {
   const shownFrames = useSlowWeak(frames)   // 약한 입모양은 조금 천천히(연습 화면)
   const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계)
   const [result, setResult] = useState(null)
+  const [compareOpen, setCompareOpen] = useState(false)   // 오답 뒤 정답·고른 말 입모양 나란히 비교(누를 때만 WebGL 둘 추가)
   const [submitting, setSubmitting] = useState(false)
   const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
   const [qNum, setQNum] = useState(1)              // 레슨 내 문항 번호(진행바)
@@ -146,6 +148,7 @@ function WordQuiz({ data, reload }) {
     askedRef.current.add(target)
     const distractors = pickDistractors(target, byWord, words)
     setResult(null)
+    setCompareOpen(false)
     setSelected(null)
     setQ({ target, choices: shuffle([target, ...distractors]) })
     setFrames([])
@@ -268,6 +271,12 @@ function WordQuiz({ data, reload }) {
                     ))}
                   </div>
                 )}
+                {!result.correct && result.chosen && (compareOpen
+                  ? <MouthCompare target={q.target} chosen={result.chosen}
+                      sameLooking={result.confusions?.length > 0 && result.confusions.every((cf) => cf.same_viseme)} />
+                  : <button type="button" onClick={() => setCompareOpen(true)} className="btn-secondary w-full py-2.5 text-[14px] text-track">
+                      「{q.target}」과 「{result.chosen}」 입모양 나란히 비교
+                    </button>)}
                 <div className="rounded-16 border-2 border-line bg-white p-3">
                   <div className="flex items-center gap-2">
                     <CueBadges text={q.target} />
