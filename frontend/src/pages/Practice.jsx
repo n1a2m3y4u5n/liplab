@@ -17,6 +17,7 @@ import useChoiceKeys from '../lib/useChoiceKeys'
 import { sentenceLevel } from '../lib/reviewScenario'
 import useSlowWeak from '../hooks/useSlowWeak'
 import useLessonTalker from '../hooks/useLessonTalker'
+import { effectiveSpeed } from '../lib/visemeTiming'
 
 /**
  * 힌트 시스템: 단계별로 문장 정보를 공개
@@ -218,6 +219,10 @@ export default function Practice() {
   const [visemeError, setVisemeError] = useState(false)      // 입모양을 받지 못함 → 다시 받기 안내
   const visemeReqRef = useRef(0)                             // 입모양 요청 순번(늦게 온 이전 문장의 응답은 버린다)
   const answerShownRef = useRef(false)                       // 이 문장의 정답을 이미 보였는지(채점 결과에 정답이 나온다)
+  // 이 문장을 보는 동안 학습자가 고른 가장 느린 재생 속도(플레이어 onSpeedChange). 4지선다 카드는 속도 조절이 없어 1.0배다.
+  // 답과 함께 유효 속도(학습자 속도 × 적응 감속)를 기록만 한다. 숙달에는 넣지 않는다(시뮬레이션 사전 기준 미달, docs/mastery-ewma.md 9절)
+  const learnerSpeedRef = useRef(Infinity)
+  const onPlayerSpeed = useCallback((s) => { learnerSpeedRef.current = Math.min(learnerSpeedRef.current, s) }, [])
   const closeSign = useCallback(() => setSignOpen(false), [])
   const signRef = useFocusTrap(signOpen, closeSign)          // 수어 모달 포커스 트랩·Esc
 
@@ -293,6 +298,7 @@ export default function Practice() {
     setRevealedTextIndex(-1)
     setStartTime(Date.now())
     answerShownRef.current = false
+    learnerSpeedRef.current = Infinity
     await fetchVisemes()
   }
 
@@ -302,6 +308,8 @@ export default function Practice() {
     // 정답을 이미 본 뒤의 제출(같은 문장 다시 도전)과 힌트 3(발음 자막)으로 문장을 본 뒤의 제출은 연습으로만 채점한다.
     // 서버는 practice_only면 점수만 주고 3단계 숙달·XP에는 넣지 않는다. 이 레슨의 정답률에도 넣지 않는다.
     const practiceOnly = answerShownRef.current || hintLevel >= 3
+    const learnerSpeed = effectiveMode === 'test-multiple' || !Number.isFinite(learnerSpeedRef.current) ? 1 : learnerSpeedRef.current
+    const speed = effectiveSpeed(visemes, shownVisemes, learnerSpeed)
 
     try {
       const response = await learningAPI.submitProgress({
@@ -315,6 +323,7 @@ export default function Practice() {
         ...(practiceOnly ? { practice_only: true } : {}),
         // 4지선다는 보기를 고른 것이라 서버가 채점식 대신 정확 일치(100 또는 0)로 준다(비슷한 오답 보기가 통과하지 않게)
         ...(effectiveMode === 'test-multiple' ? { answer_mode: 'choice' } : {}),
+        ...(Number.isFinite(speed) && speed > 0 ? { speed } : {}),
       })
 
       setResult(response)
@@ -450,7 +459,7 @@ export default function Practice() {
         </div>
       ) : (
         <LipSyncPlayer3D visemes={shownVisemes} isPlaying={isPlaying} onComplete={() => setIsPlaying(false)}
-          talker={lesson.talker} talkerSeed={lesson.seed} {...extra} />
+          talker={lesson.talker} talkerSeed={lesson.seed} onSpeedChange={onPlayerSpeed} {...extra} />
       )}
     </div>
   )

@@ -17,6 +17,7 @@ import { applyTalkerTiming } from '../lib/talkers'
  * 비심 번호·길이('Viseme 12 · 50ms')는 개발용 값이라 학습 화면에 띄우지 않는다(9/24, Figma에 없음, 비심 확인은 /dev-viseme).
  * 레슨 입모양 카드처럼 "무한 반복 재생, 다시 보기 없음"(핸드오프 §3.4)인 자리에서 쓴다. 기본값은 기존 그대로(true).
  * talker·talkerSeed: 가상 화자(lib/talkers, 계획 2-2). 프레임에 화자의 말 속도·흔들림·동시조음을 입히고, 재생 속도 버튼은 그 위에 곱한다.
+ * onSpeedChange(speed): 학습자가 고른 재생 속도를 처음 그릴 때와 바꿀 때마다 알린다(3단계 답의 재생 속도 기록, docs/mastery-ewma.md 9절).
  */
 export default function LipSyncPlayer3D({
   visemes: rawVisemes = [],
@@ -30,6 +31,7 @@ export default function LipSyncPlayer3D({
   stageHeight = 360,   // 아바타 무대 높이(px). 컨트롤을 숨긴 카드에서는 카드 높이에 맞춰 넘긴다.
   talker = null,
   talkerSeed = 0,
+  onSpeedChange = null,
 }) {
   const visemes = useMemo(() => applyTalkerTiming(rawVisemes, talker, talkerSeed), [rawVisemes, talker, talkerSeed])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -54,6 +56,9 @@ export default function LipSyncPlayer3D({
 
   loopRef.current = loop
   onCompleteRef.current = onComplete
+  const onSpeedChangeRef = useRef(onSpeedChange)
+  onSpeedChangeRef.current = onSpeedChange
+  useEffect(() => { onSpeedChangeRef.current?.(speed) }, [speed])
   onFrameChangeRef.current = onFrameChange
 
   // Sync speed ref

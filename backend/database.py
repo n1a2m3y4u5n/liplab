@@ -79,6 +79,7 @@ class Progress(Base):
     # Detailed analytics
     viseme_errors = Column(JSON, default=list)  # List of viseme IDs that were incorrect
     phoneme_accuracy = Column(JSON, default=dict)  # {initial: 0.9, medial: 0.85, final: 0.95}
+    speed = Column(Float, nullable=True)  # 답하기 전에 본 유효 재생 속도(기록만, 숙달에는 넣지 않음. docs/mastery-ewma.md 9절)
 
     user = relationship("User", back_populates="progress_records")
 
@@ -434,6 +435,8 @@ async def init_db():
             # 보여 준 보기(기회로 나눈 혼동률)
             "ALTER TABLE trial_attempts ADD COLUMN options JSON",
             "ALTER TABLE trial_attempts ADD COLUMN probe JSON",
+            # 3단계 문장 답의 유효 재생 속도(기록만)
+            "ALTER TABLE progress ADD COLUMN speed FLOAT",
         ):
             try:
                 await conn.exec_driver_sql(ddl)
