@@ -1889,17 +1889,23 @@ def _stage2_pairs():
 _PAIR_TRIAL_TYPES = ("word", "context", "closure")
 
 
-async def _learner_pair_focus(user_id: int, db) -> list:
-    """학습자의 후보 혼동 짝(앞이 우선). 최근 오답 200행의 자모 혼동에서 눈으로 가를 수 있는 짝을 세어 2번 이상 나온 상위 3개
-    (confusion_pairs.confusion_pairs, 문서 2절 규칙). 탐색 문항이 이 짝부터 확인한다."""
+async def _learner_opportunities(user_id: int, db):
+    """학습자의 짝별 기회·혼동 수(confusion_pairs.OpportunityCounter). 보기 기록(options)이 있는 최근 선다형 200행에서,
+    정답이 아닌 보기마다 정답과 갈린 눈으로 가를 수 있는 자모 짝을 기회로, 고른 보기의 짝을 혼동으로 센다
+    (docs/confusion-pair-serving.md 6.1). 탐색 문항이 이 수로 다음에 볼 짝을 고른다(상한 신뢰 순서, 7절)."""
     import confusion_pairs as _cp
     from database import TrialAttempt
     from sqlalchemy import select
     rows = (await db.execute(
-        select(TrialAttempt.confusions).where(TrialAttempt.user_id == user_id,
-                                              TrialAttempt.item_type.in_(_PAIR_TRIAL_TYPES), _trial_wrong(TrialAttempt))
-        .order_by(TrialAttempt.created_at.desc(), TrialAttempt.id.desc()).limit(_cp.CONFUSION_ROWS))).scalars().all()
-    return _cp.confusion_pairs(rows)
+        select(TrialAttempt.target, TrialAttempt.chosen, TrialAttempt.options)
+        .where(TrialAttempt.user_id == user_id, TrialAttempt.item_type.in_(_PAIR_TRIAL_TYPES),
+               TrialAttempt.options.isnot(None))
+        .order_by(TrialAttempt.created_at.desc(), TrialAttempt.id.desc()).limit(_cp.OPP_ROWS))).all()
+    cnt = _cp.OpportunityCounter()
+    for target, chosen, options in rows:
+        if target and isinstance(options, list) and target in options:
+            cnt.add(target, chosen, [o for o in options if isinstance(o, str)])
+    return cnt
 
 
 @app.get("/api/curriculum/words")
@@ -1937,15 +1943,16 @@ async def curriculum_words(current_user=Depends(get_current_user), db: AsyncSess
     meta = {w["word"]: w for w in _curriculum.WORD_BANK}
     words = [{**meta.get(e["word"], {}), **e} for e in plan["words"]]
     context_items = await _stage2_context_items(current_user.id, db)
-    # 짝 탐색 문항(docs/confusion-pair-serving.md 5.4-2): 레슨 12문항 중 선다형 1문항을 후보 짝의 target 자모 단어 + 대비 단어 보기로.
-    # 후보가 없으면 탐색할 수 있는 짝을 무작위로. 같은 짝의 단어 몇 개를 주고 화면이 레슨에서 아직 안 낸 첫 단어를 쓴다.
+    # 짝 탐색 문항(docs/confusion-pair-serving.md 5.4-2, 7절): 레슨 12문항 중 선다형 1문항을 고른 짝의 target 자모 단어 + 대비 단어
+    # 보기로. 짝은 보기 기록으로 센 기회·혼동 수의 상한 신뢰 순서(기회가 적은 짝, 기회로 나눈 혼동률이 높은 짝 먼저)로 고른다.
+    # 같은 짝의 단어 몇 개를 주고 화면이 레슨에서 아직 안 낸 첫 단어를 쓴다. 겨냥 출제(가중·대비 보기)는 기준 미달로 넣지 않았다.
     probes = []
     try:
         import confusion_pairs as _cp
-        focus = await _learner_pair_focus(current_user.id, db)
+        counter = await _learner_opportunities(current_user.id, db)
         pidx = await _asyncio.to_thread(_stage2_pairs)
-        probes = _cp.probe_items(pidx, focus, {e["word"]: e["priority"] for e in plan["words"]},
-                                 plan["option_level"], table.classes, rng)
+        probes = _cp.probe_items(pidx, (), {e["word"]: e["priority"] for e in plan["words"]},
+                                 plan["option_level"], table.classes, rng, counter=counter)
         probes = [{**meta.get(p["word"], {}), **p} for p in probes]
     except Exception as e:   # 탐색 문항이 없어도 레슨은 된다
         logging.getLogger("liplab").warning("stage2 probe failed: %s", e)

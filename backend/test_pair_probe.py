@@ -1,7 +1,8 @@
 """2단계 짝 탐색 문항(docs/confusion-pair-serving.md 5.4-2).
 
-레슨 12문항 중 선다형 1문항은 후보 혼동 짝의 target 자모가 든 단어 + 그 자리 자모만 바꾼 대비 단어가 든 보기로 낸다.
-후보 짝이 없으면 탐색할 수 있는 짝을 무작위로 고른다. 탐색 문항은 보통 단어 문항처럼 숙달에 들어가고, 시행 기록에 probe가 남는다.
+레슨 12문항 중 선다형 1문항은 고른 짝의 target 자모가 든 단어 + 그 자리 자모만 바꾼 대비 단어가 든 보기로 낸다.
+짝은 보기 기록으로 센 기회·혼동 수의 상한 신뢰 순서로 고른다(7절). 탐색 문항은 보통 단어 문항처럼 숙달에 들어가고,
+시행 기록에 probe가 남는다. 기회로 나눈 혼동률(5.4-3, 6.1)도 여기서 본다.
 """
 import json
 import os
@@ -78,7 +79,7 @@ with TestClient(main.app) as c:
     opts = [p["word"], *p["distractors"]]
     pr = p["probe"]
     post = lambda body: c.post("/api/curriculum/word-answer", json=body, headers=h).json()
-    # 탐색 문항에서 대비 단어를 두 번 고른다 → 그 짝이 후보가 된다
+    # 탐색 문항에서 대비 단어를 두 번 고른다 → 그 짝의 기회로 나눈 혼동률이 높아져 다음 탐색도 그 짝이다
     a1 = post({"word": p["word"], "correct": False, "chosen": pr["contrast"], "options": opts, "probe": pr})
     a2 = post({"word": p["word"], "correct": False, "chosen": pr["contrast"], "options": opts, "probe": pr})
     # 보기와 맞지 않는 탐색 표시는 보통 문항으로 남는다
@@ -89,7 +90,7 @@ rows = db.execute("select item_type, probe from trial_attempts order by id").fet
 sp = db.execute("select attempts from stage_progress where stage = 2").fetchone()
 print("RESULT " + json.dumps({"n_probes": len(probes), "p": p, "a": [a1["attempts"], a2["attempts"], a3["attempts"]],
                               "rows": [[t, json.loads(x) if x else None] for t, x in rows], "sp": sp[0],
-                              "p2": [x["probe"] for x in w2["probes"]], "words_ok": len(w2["words"]) > 400},
+                              "p2": [x["probe"] for x in w2["probes"]], "words_ok": len(w2["words"]) > 300},
                              ensure_ascii=False))
 '''
 
@@ -107,12 +108,53 @@ def test_probe_endpoint_records_and_counts_for_mastery():
     r = json.loads(line[len("RESULT "):])
     assert 1 <= r["n_probes"] <= C.PROBE_OFFER and r["words_ok"]
     pr = r["p"]["probe"]
-    assert pr["source"] == "random"                    # 새 학습자는 후보 짝이 없다
+    assert pr["source"] == "ucb"                       # 새 학습자는 기록이 없어 탐색할 수 있는 짝 가운데 무작위와 같다
     # 보통 단어 문항처럼 숙달 시도에 들어간다
     assert r["a"] == [1, 2, 3] and r["sp"] == 3
     assert [x[0] for x in r["rows"]] == ["word"] * 3
     assert r["rows"][0][1]["contrast"] == pr["contrast"] and r["rows"][1][1] is not None
     assert r["rows"][2][1] is None
-    # 대비 단어를 두 번 고른 짝이 다음 레슨의 탐색 후보가 된다
+    # 대비 단어를 두 번 고른 짝이 다음 레슨의 탐색 짝이 된다(상한 신뢰 순서 첫째)
     key = (pr["position"], pr["target"], pr["read"])
-    assert r["p2"] and all((x["position"], x["target"], x["read"]) == key and x["source"] == "candidate" for x in r["p2"])
+    assert r["p2"] and all((x["position"], x["target"], x["read"]) == key and x["source"] == "ucb" for x in r["p2"])
+
+
+def test_trial_pairs_counts_opportunity_and_choice():
+    # 바다(ㅂ ㅏ / ㄷ ㅏ)의 보기: 마다는 ㅂ→ㅁ(같은 입모양이라 기회 아님), 나다는 초성 ㅂ→ㄴ, 바지는 중성 ㅏ→ㅣ
+    opp, got = C.trial_pairs("바다", "나다", ["바다", "마다", "나다", "바지"])
+    assert ("초성", "ㅂ", "ㄴ") in opp and ("중성", "ㅏ", "ㅣ") in opp
+    assert ("초성", "ㅂ", "ㅁ") not in opp
+    assert got == {("초성", "ㅂ", "ㄴ")}
+    opp2, got2 = C.trial_pairs("바다", "바다", ["바다", "나다"])
+    assert got2 == set() and ("초성", "ㅂ", "ㄴ") in opp2
+
+
+def test_opportunity_rate_uses_shown_options_and_shrinkage():
+    pair = ("중성", "ㅗ", "ㅓ")
+    rows = []
+    # 보기에 대비 단어(고기→거기)가 있을 때 4번 중 3번 골랐다: 기회 4, 혼동 3
+    for chosen in ("거기", "거기", "거기", "고기"):
+        rows.append(("고기", chosen, ["고기", "거기", "사과", "나무"]))
+    # 짝과 관계없는 오답: 사과를 고름(기준율에 들어간다)
+    rows += [("나무", "사과", ["나무", "사과", "바다", "하늘"])] * 2 + [("나무", "나무", ["나무", "사과", "바다", "하늘"])] * 10
+    top = C.opportunity_pairs(rows)
+    assert top and (top[0]["position"], top[0]["target"], top[0]["read"]) == pair
+    assert top[0]["n"] == 4 and top[0]["k"] == 3
+    cnt = C.OpportunityCounter()
+    for t, ch, o in rows:
+        cnt.add(t, ch, o)
+    p0 = cnt.p0()
+    assert abs(p0 - 5 / 48) < 1e-9                        # 오답 5번 / 보인 오답 보기 48개
+    assert abs(cnt.rate(pair) - (3 + 5 * p0) / (4 + 5)) < 1e-9
+    # 기회가 모자라면(3 미만) 후보가 아니다
+    assert C.opportunity_pairs(rows[:2] + rows[4:]) == [] or all(x["n"] >= C.OPP_MIN for x in C.opportunity_pairs(rows[:2] + rows[4:]))
+    # 창을 옮기면(remove) 수가 되돌아간다
+    for t, ch, o in rows:
+        cnt.remove(t, ch, o)
+    assert cnt.shown == 0 and cnt.wrong == 0 and all(v == 0 for v in cnt.n.values())
+    # 상한 신뢰 순서: 기회가 없는 짝보다 혼동이 쌓인 짝이 먼저, 기회가 많은데 혼동이 없는 짝은 뒤로
+    for t, ch, o in rows:
+        cnt.add(t, ch, o)
+    other = ("초성", "ㄴ", "ㅅ")   # 나무→사과는 길이가 같아 기회가 있지만 짝 오답은 아니다
+    order = cnt.ucb([other, ("종성", "ㄱ", "ㄹ"), pair])
+    assert order[0] == pair
