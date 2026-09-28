@@ -22,6 +22,7 @@ import urllib.request
 from typing import List, Dict, Optional
 
 from engine import decompose_hangul, text_to_visemes
+from korean_numbers import native, sino
 
 SLDICT_BASE = "https://sldict.korean.go.kr"
 # 국립국어원 한국수어사전 표제어 상세(영상) 딥링크 베이스
@@ -42,7 +43,7 @@ _ALIASES = {
     '많이': '많다', '열심히': '열심', '천천히': '느리다',
 }
 
-# 아라비아 숫자 → 한국수어 숫자 수어. 1~9는 고유어 수사(하나~아홉), 0은 '영'(零).
+# 한 자리씩 읽는 숫자(0으로 시작하거나 5자리 이상인 번호, number_sign_parts 참고) → 한국수어 숫자 수어. 1~9는 고유어 수사(하나~아홉), 0은 '영'(零).
 # 조회는 lookup_number_sign이 동형어 중 '개념 > 수' 카테고리를 우선 선택하므로,
 # 영(천주교)·셋(기독교) 같은 비숫자 동형어를 피해 숫자 수어만 정확히 고른다.
 _DIGIT_TO_KO = {
@@ -141,6 +142,32 @@ def lookup_number_sign(word: str) -> Optional[Dict]:
         "dict_url": DICT_VIEW_URL + num["origin_no"] if num["origin_no"] else None,
         "alt_count": len(entries),
     }
+
+
+def number_sign_parts(num: str) -> Optional[List[str]]:
+    """숫자 토큰을 사전의 숫자 수어 표제어 조각으로 나눈다. 예전에는 한 자리씩 읽어 12가 하나+둘, 100이 하나+영+영이었다.
+    1~99는 비관형형 고유어(열둘·스물·열하나, 사전 표제어가 이 꼴이다). 사전에 없으면 십 자리+일 자리(스물+다섯).
+    100 이상은 한자어 자리 단위(삼+백+오십). 선두가 1이면 백·천 단독, 사전에 있는 합성(이천·오십)은 그대로 둔다.
+    0으로 시작하거나 5자리 이상(전화·번호)은 None으로, 부르는 쪽이 한 자리씩 읽는다."""
+    if not num.isdigit() or num.startswith('0') or len(num) > 4:
+        return None
+    n = int(num)
+    if n <= 99:
+        whole = native(n, attributive=False)
+        if lookup_number_sign(whole):
+            return [whole]
+        tens, ones = divmod(n, 10)
+        return [native(tens * 10, attributive=False), native(ones, attributive=False)]
+    parts: List[str] = []
+    for word, unit in (('천', 1000), ('백', 100), ('십', 10)):
+        d, n = divmod(n, unit)
+        if d == 1:
+            parts.append(word)
+        elif d > 1:
+            parts += [sino(d) + word] if lookup_number_sign(sino(d) + word) else [sino(d), word]
+    if n:
+        parts.append(sino(n))
+    return parts
 
 
 # ---------------------------------------------------------------------------
@@ -290,11 +317,12 @@ async def translate_to_ksl(text: str) -> Dict:
         if not word:
             continue
 
-        # 숫자: 아라비아 숫자를 자리별로 한국수어 숫자 수어(영상)로 표시. 원 숫자는 남기고
-        # signed_as에 한국어 수사를 넣어 투명 표시("3 → 셋"). 매핑 없는 자리(0)는 지문자.
+        # 숫자: 사전의 숫자 수어(영상)로 표시. 원 숫자는 남기고 signed_as에 실제 보인 수어 표제어를 넣어
+        # 투명 표시("12 → 열둘", "25 → 스물"·"25 → 다섯"). 입모양도 그 표제어로 만든다. 0으로 시작하거나
+        # 5자리 이상(전화·번호)은 한 자리씩(하나~아홉·영). 사전에 없는 조각은 지문자.
         if word.isdigit():
-            for d in word:
-                kw = _DIGIT_TO_KO.get(d)
+            parts = number_sign_parts(word)
+            for d, kw in ([(word, p) for p in parts] if parts else [(d, _DIGIT_TO_KO.get(d)) for d in word]):
                 s = lookup_number_sign(kw) if kw else None
                 try:
                     dv = await text_to_visemes(kw or d)
@@ -310,7 +338,8 @@ async def translate_to_ksl(text: str) -> Dict:
                     })
                 else:
                     fingerspelled += 1
-                    tokens.append({"type": "fingerspell", "word": d, "jamo": [[d]], "visemes": dv})
+                    tokens.append({"type": "fingerspell", "word": d, "jamo": fingerspell(kw) if parts else [[d]],
+                                   "visemes": dv})
             continue
 
         sign = lookup_sign(word)

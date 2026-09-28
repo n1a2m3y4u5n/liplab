@@ -22,7 +22,15 @@ _NATIVE_COUNTERS = ("시간", "번째", "사람", "켤레", "그루", "송이", 
                     "권", "장", "벌", "대", "달", "채", "척", "통", "곡", "판", "줄", "군데", "가지", "배", "살짜리",
                     "정거장", "정류장", "그릇", "봉지", "상자", "접시", "조각", "방울", "모금", "자루", "쌍", "개비")
 # 고유어 단위와 앞글자가 겹치는 한자어 단위(3개월 → 삼 개월, 5달러 → 오 달러). 고유어 단위보다 먼저 본다(9/27 감사).
-_SINO_BEFORE_NATIVE = ("개월", "달러")
+# 개국·개년·개소도 한자어다. 예전에는 '개'에 걸려 "3개국어"를 "세개국어"로 읽었다(9/28 감사).
+_SINO_BEFORE_NATIVE = ("개월", "달러", "개국", "개년", "개소")
+# '대'는 차·기계를 세면 고유어(차 두 대), 나이대·점수면 한자어(이십 대, 이 대 일)다. 예전에는 늘 고유어라 "20대 여성"을
+# "스무대 여성"으로 보여 주고, 맞게 읽어 "이십 대 여성이에요"라고 적은 답이 65.62점, "30대예요"에 "삼십 대예요"는 54.33점
+# (합격선 60 아래)이었다(9/28 감사). 셀 대상 명사 뒤면 고유어, 그 밖에 뒷말이 나이대·비교 표현이거나 10의 배수이거나
+# 뒤에 숫자가 오면(2대 1) 한자어로 읽는다. 10의 배수만으로 가르면 "차 10대"가 "십 대"가 되어 앞 명사를 먼저 본다.
+_DAE_SINO_NEXT = ("초반", "중반", "후반", "남성", "여성", "남자", "여자", "청소년", "직장인", "이상", "이하", "때")
+_DAE_COUNTED = re.compile(r"(?:자동차|차량|차|버스|택시|자전거|오토바이|트럭|비행기|컴퓨터|노트북|기계|휴대폰)"
+                          r"(?:이|가|은|는|을|를|도|만)?$")
 # '번'은 횟수면 고유어(두 번), 번호면 한자어(3번 출구). 뒤 명사로 번호를 가른다.
 _NUMBERING_AFTER_BEON = ("출구", "버스", "방", "문제", "선", "게이트", "창구", "트랙", "좌석", "홀", "칸", "줄")
 # '분'은 시간이면 한자어(5분 뒤), 사람을 높여 세면 고유어(두 분이세요). 사람일 때만 붙는 높임 어미·조사로 가른다.
@@ -64,12 +72,23 @@ def native(n: int, attributive: bool = True) -> str:
     return _NATIVE_TENS[tens] + ones_word
 
 
-def _reading(num: str, after: str) -> str:
+def _dae_is_sino(n: int, after: str, before: str) -> bool:
+    """숫자 뒤 '대'를 한자어로 읽을지. before는 숫자 앞 어절이다."""
+    if _DAE_COUNTED.search(before):
+        return False
+    if after[1:].lstrip().startswith(_DAE_SINO_NEXT) or (10 <= n <= 90 and n % 10 == 0):
+        return True
+    return bool(re.match(r"\s*\d", after[1:]))
+
+
+def _reading(num: str, after: str, before: str = "") -> str:
     if "." in num:
         whole, frac = num.split(".", 1)
         return sino(int(whole or "0")) + "점" + "".join(_SINO_DIGIT[int(d)] or "영" for d in frac)
     n = int(num)
     if after.startswith(_SINO_BEFORE_NATIVE):
+        return sino(n)
+    if after.startswith("대") and _dae_is_sino(n, after, before):
         return sino(n)
     if after.startswith("번째"):
         return "첫" if n == 1 else native(n)     # 1번째 → 첫 번째
@@ -111,6 +130,33 @@ def _phone(m) -> str:
     return " ".join("".join(_DIGIT_READ[int(d)] for d in part) for part in m.group().split("-"))
 
 
+# 범위 1~2개·3-4명. 예전에는 앞 수를 단위 없이 한자어로 읽고 '~'를 남겨 "일~두개", "삼~네명"이 됐고, '~'는 입모양 엔진이
+# 중립 프레임으로 그렸다. "1~2개 주세요"에 "한두 개 주세요"라고 적은 답이 76.67점이었다(9/28 감사). 두 번째 수 바로 뒤에
+# 단위가 올 때만 범위로 보고, 두 수를 그 단위 규칙으로 읽는다. '-'는 고유어 단위일 때만 범위로 본다(2024-2025는 그대로).
+_RANGE = re.compile(r"(?<![\d.,-])(" + _NUM.pattern + r")\s*([~～〜-])\s*(" + _NUM.pattern + r")(?=[가-힣])")
+# 이웃한 두 수를 붙여 읽는 말. 고유어(한두 개, 서너 명)와 한자어(이삼 일, 오륙 층)
+_NATIVE_PAIR = {1: "한두", 2: "두세", 3: "서너", 4: "네다섯", 5: "대여섯", 6: "예닐곱", 7: "일고여덟", 8: "여덟아홉"}
+_SINO_PAIR = {1: "일이", 2: "이삼", 3: "삼사", 4: "사오", 5: "오륙", 6: "육칠", 7: "칠팔", 8: "팔구"}
+
+
+def _range(m) -> str:
+    a, sep, b = m.group(1).replace(",", ""), m.group(2), m.group(3).replace(",", "")
+    after = m.string[m.end():]
+    rb = _reading(b, after)
+    whole = "." not in a + b
+    x, y = (int(a), int(b)) if whole else (0, 0)
+    is_native = whole and 1 <= y <= 99 and rb == native(y) != sino(y)
+    if sep == "-" and not is_native:
+        return m.group()
+    if whole and y == x + 1 and x in _NATIVE_PAIR:
+        if is_native:
+            return _NATIVE_PAIR[x]
+        if rb == sino(y):
+            return _SINO_PAIR[x]
+    ra = native(x, attributive=False) if (is_native and 1 <= x <= 99) else _reading(a, "")
+    return ra + "에서 " + rb
+
+
 def normalize_numbers(text: str) -> str:
     """문장 안의 숫자를 한국어 읽기로 바꾼다. 숫자가 없으면 그대로 돌려준다."""
     if not text or not any(ch.isdigit() for ch in text):
@@ -118,13 +164,21 @@ def normalize_numbers(text: str) -> str:
     text = _PHONE.sub(_phone, text)
     text = _CLOCK.sub(_clock, text)
     text = _UNIT.sub(lambda m: m.group(1) + _UNIT_WORDS[m.group(2)], text)
+    text = _RANGE.sub(_range, text)
     if not any(ch.isdigit() for ch in text):
         return text
     out: List[str] = []
     pos = 0
     for m in _NUM.finditer(text):
         out.append(text[pos:m.start()])
-        out.append(_reading(m.group().replace(",", ""), text[m.end():].lstrip()))
+        num, rest = m.group().replace(",", ""), text[m.end():]
+        before = text[:m.start()].rstrip().split(" ")[-1]
+        # 1만·1천·1백의 1은 읽지 않는다(만 원, 천 원). 예전에는 "일만 원"이라 같은 금액 "10,000원"(만원)과 달랐고,
+        # "1만 원이에요"에 "만 원이에요"라고 적은 답이 84.85점이었다(9/28 감사). 1억은 일억 그대로다.
+        if num == "1" and rest[:1] in ("만", "천", "백"):
+            out.append("")
+        else:
+            out.append(_reading(num, rest.lstrip(), before))
         pos = m.end()
     out.append(text[pos:])
     return "".join(out)

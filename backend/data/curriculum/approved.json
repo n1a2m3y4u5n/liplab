@@ -4,7 +4,7 @@
     "rules_version": 1,
     "counts": {
       "words": 525,
-      "pairs": 917,
+      "pairs": 914,
       "closures": 181
     }
   },
@@ -9793,45 +9793,6 @@
         4,
         6,
         7
-      ],
-      "same_looking": true,
-      "relation": "homophene",
-      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
-    },
-    {
-      "a": "나무",
-      "b": "담요",
-      "visemes": [
-        1,
-        2,
-        4,
-        6
-      ],
-      "same_looking": true,
-      "relation": "homophene",
-      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
-    },
-    {
-      "a": "담요",
-      "b": "사부",
-      "visemes": [
-        1,
-        2,
-        4,
-        6
-      ],
-      "same_looking": true,
-      "relation": "homophene",
-      "note": "입모양 순열이 완전히 같아 구별 불가(동구형이음)"
-    },
-    {
-      "a": "담요",
-      "b": "사무",
-      "visemes": [
-        1,
-        2,
-        4,
-        6
       ],
       "same_looking": true,
       "relation": "homophene",
