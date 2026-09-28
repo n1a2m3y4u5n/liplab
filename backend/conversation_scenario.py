@@ -130,11 +130,20 @@ def closure_turn(turns: List[Dict], lmap: Dict[str, List[str]], rng: random.Rand
     return {"index": i, "display": " ".join(toks), "answer": stem, "options": opts}
 
 
-def enrich(conv: Dict, rng: random.Random) -> Dict:
-    """대화에 턴별 닮은꼴 오답(read_options)과 빈칸 턴(closure)을 붙인다."""
+def enrich(conv: Dict, rng: random.Random, pool: Optional[List[str]] = None) -> Dict:
+    """대화에 턴별 닮은꼴 오답(read_options)과 빈칸 턴(closure)을 붙인다.
+    닮은꼴이 3개가 안 되면 대화 밖 문장 가운데 음절 수가 가까운 것으로 채운다(sentence_options, 3단계 문장 보기와 같은 풀).
+    예전에는 프론트가 같은 대화의 다른 턴 문장으로 채워, 학습자가 이미 본 줄을 지우기만 해도 맞혔다. 대체 대화 300개(1,800턴)에서
+    입을 보지 않고 다른 턴을 지운 뒤 찍는 정답률 0.935(우연 0.25), 대화 밖 오답이 있는 턴 8.6%."""
+    import sentence_options as _so
     lmap = lookalike_map()
+    pool = pool if pool is not None else _so.static_pool()
+    own = [t["text"] for t in conv["turns"]]
     for t in conv["turns"]:
-        t["lookalikes"] = lookalike_variants(t["text"], lmap, rng=rng)
+        alike = lookalike_variants(t["text"], lmap, rng=rng)
+        if len(alike) < 3:
+            alike += _so.pick_options(t["text"], pool, exclude=own + alike, k=3 - len(alike), rng=rng)
+        t["lookalikes"] = alike
     conv["closure"] = closure_turn(conv["turns"], lmap, rng)
     return conv
 
