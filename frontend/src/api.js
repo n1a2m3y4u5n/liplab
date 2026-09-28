@@ -122,6 +122,8 @@ export const learningAPI = {
     const response = await api.post('/conversation', { situation, level, history })
     return response.data
   },
+  // 대화 되묻기 '다른 말로'(docs/curriculum-roadmap.md 1-4). 바꾼 문장이 없으면 { text: null }
+  rephraseTurn: async (text, situation, level) => (await api.post('/conversation/rephrase', { text, situation, level })).data,
 
   // Bookmarks
   getBookmarks: async (domain) => {

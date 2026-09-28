@@ -3810,6 +3810,21 @@ async def conversation_turn(
         raise _server_error(e, "Conversation generation failed")
 
 
+class RephraseRequest(BaseModel):
+    text: str
+    situation: str = ""
+    level: int = 1
+
+
+@app.post("/api/conversation/rephrase", dependencies=[Depends(ratelimit.rate_limit(20, 60, "llm"))])
+async def conversation_rephrase(request: RephraseRequest, current_user = Depends(get_current_user)):
+    """대화 되묻기 '다른 말로'(docs/curriculum-roadmap.md 1-4). 바꾼 문장이 없으면 text None(화면은 '천천히'로 대신한다)."""
+    from llm_service import rephrase_turn
+    level = min(5, max(1, int(request.level or 1)))
+    text = await rephrase_turn(_sanitize_text(request.text, 200), _sanitize_text(request.situation, 80), level)
+    return {"text": text}
+
+
 class SignRequest(BaseModel):
     text: str
 
