@@ -14,7 +14,7 @@ import speak_curriculum as sc
 
 def test_stage_sounds_merge_ae_e():
     assert sc.stage_sounds(2) == ["ㅏ", "ㅓ", "ㅗ", "ㅜ", "ㅡ", "ㅣ", "ㅐ"]     # 애·에는 ㅐ 하나
-    assert sc.stage_sounds(3) == ["ㅁ", "ㅂ", "ㅍ", "ㄷ", "ㅌ", "ㄱ", "ㅋ"]
+    assert sc.stage_sounds(3) == ["ㅁ", "ㅂ", "ㅍ", "ㄷ", "ㅌ", "ㅅ", "ㅈ", "ㅊ", "ㄱ", "ㅋ", "ㅎ"]   # 9/28 마찰·파찰·성문음 추가(1-5)
     assert sc.stage_sounds(4) == [] and sc.probe_words(4, "s") == []
     assert sc.probe_sound(2, "베개") == "ㅐ" and sc.probe_sound(2, "배추") == "ㅐ"
     assert sc.probe_sound(3, "토끼") == "ㅌ" and sc.probe_sound(3, "아기") is None
