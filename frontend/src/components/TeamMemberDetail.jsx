@@ -1,11 +1,11 @@
 import Modal from './Modal'
 import TeamAvatar from './TeamAvatar'
-import { CONTACT_EMAIL, TEAM_ORG } from '../config/team'
+import { CONTACT_EMAIL } from '../config/team'
 
 // 팀원 상세(9/28 사용자 요청: 개발자 프로필을 누르면 상세 정보). 랜딩은 모달(TeamMemberModal), 사용법 가이드 11번 탭은
 // 이미 모달 안이라 겹치지 않게 그 자리에서 펼친다(TeamMemberDetail). 내용은 config/team.js의 detail.
 // 레이아웃(9/28 2차): 전문 프로필(LinkedIn '수상 경력', GitHub 프로필 사이드바)처럼 모든 구역이 같은 왼쪽 기준선에서 시작한다.
-// 소속·연락처는 라벨 칸 폭이 고정된 정의 목록이고, 구역마다 작은 제목 + 구분선, 수상은 제목 한 줄 + 시상 명의 한 줄.
+// 소속·핸들은 라벨 칸 폭이 고정된 정의 목록이고(개인 연락처는 넣지 않고 목록 위 '대표 연락처'만 둔다), 구역마다 작은 제목 + 구분선, 수상은 제목 한 줄 + 시상 명의 한 줄.
 
 function AwardIcon({ school }) {
   return (
@@ -61,8 +61,7 @@ export function TeamMemberDetail({ m }) {
   const external = awards.filter((a) => a.scope !== 'school')
   const school = awards.filter((a) => a.scope === 'school')
   const facts = [
-    ['소속', d.affiliation || TEAM_ORG],
-    ['연락처', <a key="c" href={`mailto:${CONTACT_EMAIL}`} className="font-bold text-primary-500 hover:underline">{CONTACT_EMAIL}</a>],
+    d.affiliation && ['소속', d.affiliation],
     m.handle && ['핸들', m.handle],
   ].filter(Boolean)
   return (
@@ -86,9 +85,6 @@ export function TeamMemberDetail({ m }) {
       )}
       {external.length > 0 && <Section title="수상 · 선발" count={external.length}><AwardList items={external} /></Section>}
       {school.length > 0 && <Section title="교내 수상" count={school.length}><AwardList items={school} school /></Section>}
-      {!d.work?.length && !awards.length && m.note && (
-        <p className="border-t border-line pt-4 text-[14px] text-ink-muted">{m.note}</p>
-      )}
     </div>
   )
 }

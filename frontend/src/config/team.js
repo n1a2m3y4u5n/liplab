@@ -5,13 +5,14 @@
 // 남윤수 수상은 본인이 준 목록(9/28)과 교사추천서 참고자료의 원본 대조 수상표를 맞춘 것이다. 다른 팀원의 상세는 확인된 자료가
 // 없어 비워 두었다(채우면 화면에 바로 나온다).
 const SCHOOL = '충남삼성고등학교장'
+const IT = '충남삼성고등학교 IT 디플로마'   // 소속은 디플로마까지만(9/28 사용자 요청, 팀 이름은 넣지 않음)
 
 export const TEAM = [
   {
     name: '남윤수', role: '팀장 · 개발', handle: '@namyunsu',
     mascot: { palette: 'purple', face: 'grin', motion: 'bob' },
     detail: {
-      affiliation: '충남삼성고등학교 IT 디플로마',
+      affiliation: IT,
       work: ['프로젝트 총괄·설계', '발음 평가(D-GOP)·음성 모델', '학습 알고리즘(출제·숙달·배치검사)', '배포·운영'],
       awards: [
         { title: '2026 K-AI Contents Award B트랙 대상', by: 'KT genie music 사장상' },
@@ -37,13 +38,13 @@ export const TEAM = [
       ],
     },
   },
-  { name: '황성주', role: 'UI 디자인 · 개발', handle: '@JuHana', mascot: { palette: 'rose', face: 'wink', motion: 'tilt' } },
-  { name: '염우진', role: '개발', handle: '@duadnwls', mascot: { palette: 'sky', face: 'laugh', motion: 'bounce' } },
-  { name: '나현빈', role: '개발', handle: '@Devna08', mascot: { palette: 'emerald', face: 'glance', motion: 'wiggle' } },
-  { name: '최윤건', role: '타도마 기능 개발', note: '지금은 빠진 기능이에요', mascot: { palette: 'amber', face: 'surprised', motion: 'float' } },
+  { name: '황성주', role: 'UI 디자인 · 개발', handle: '@JuHana', detail: { affiliation: IT }, mascot: { palette: 'rose', face: 'wink', motion: 'tilt' } },
+  { name: '염우진', role: '개발', handle: '@duadnwls', detail: { affiliation: IT }, mascot: { palette: 'sky', face: 'laugh', motion: 'bounce' } },
+  { name: '나현빈', role: '개발', handle: '@Devna08', detail: { affiliation: IT }, mascot: { palette: 'emerald', face: 'glance', motion: 'wiggle' } },
+  { name: '최윤건', role: '타도마 기능 개발', detail: { affiliation: '충남삼성고등학교 공학 디플로마' }, mascot: { palette: 'amber', face: 'surprised', motion: 'float' } },
 ]
 
-export const TEAM_ORG = '충남삼성고등학교 IT 디플로마 CNSAi 팀'
+export const TEAM_ORG = '충남삼성고등학교 IT·공학 디플로마 학생들'
 export const AWARD = 'K-AI 공모전 B트랙 중고등부 대상 수상작'
 export const REPO_URL = 'https://github.com/n1a2m3y4u5n/liplab'
 // 문의 연락처(9/28 사용자 지정). 바꾸려면 이 한 줄만 고친다.

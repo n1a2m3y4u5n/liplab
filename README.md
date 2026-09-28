@@ -4,7 +4,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB) ![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688) ![React](https://img.shields.io/badge/React-19-61DAFB) ![three.js](https://img.shields.io/badge/three.js-3D%20avatar-000000)
 
-2026 K-AI Contents Award B트랙 대상 수상작 · 충남삼성고등학교 IT 디플로마 CNSAi 팀
+2026 K-AI Contents Award B트랙 대상 수상작 · 충남삼성고등학교 IT·공학 디플로마
 
 LIPLAB은 3D 아바타의 입모양을 보고 한국어를 읽는 **독화 트랙**과, 소리 내어 말하고 음소 단위 점수를 받는 **말하기 트랙**으로
 이루어진다. 입모양 인지에서 대화까지 단계를 밟아 올라가며, 학습 기록으로 시작 단계·출제·복습을 사람마다 맞춘다.
@@ -172,7 +172,7 @@ frontend/src/
 docs/                   설계 근거, 실험 기록, 파일럿 문서
 scripts/                평가·시뮬레이션·데이터 준비 스크립트
 release/                한국어 독화 표준 리소스 공개 묶음
-hardware/               촉각(타도마) 얼굴 모형 펌웨어(현재 앱에서는 뺀 기능)
+hardware/               촉각(타도마) 얼굴 모형 펌웨어
 ```
 
 ## 로컬 실행
@@ -279,7 +279,7 @@ fly deploy -c fly.dev.toml -a liplab-dev --remote-only   # 개발 서버
 
 ## 팀과 문의
 
-충남삼성고등학교 IT 디플로마 CNSAi 팀
+충남삼성고등학교 IT·공학 디플로마
 
 | 이름 | 역할 |
 |---|---|
@@ -287,6 +287,6 @@ fly deploy -c fly.dev.toml -a liplab-dev --remote-only   # 개발 서버
 | 황성주 | UI 디자인 · 개발 |
 | 염우진 | 개발 |
 | 나현빈 | 개발 |
-| 최윤건 | 타도마 기능 개발(현재 통합 브랜치에서는 뺀 기능) |
+| 최윤건 | 타도마 기능 개발 |
 
 문의: namyunsu1001@naver.com · [GitHub Issues](https://github.com/n1a2m3y4u5n/liplab/issues)
