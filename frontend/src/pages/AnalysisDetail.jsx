@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { learningAPI, speakAPI, curriculumAPI } from '../api'
 import AppShell from '../components/AppShell'
 import LoadingScreen from '../components/LoadingScreen'
+import { activityCounts, recentDays } from '../lib/activityDays'
 
 /**
  * 분석 상세(분석 탭 하위 화면) — 활동 · 취약 입모양 · 점수 · 기록. Figma 프레임은 없고, 분석 탭 '전체 통계'
@@ -12,7 +13,7 @@ import LoadingScreen from '../components/LoadingScreen'
 const PAGE_META = {
   activity: { title: '학습 활동', description: '최근 90일 동안 언제, 얼마나 꾸준히 학습했는지 확인합니다.' },
   visemes: { title: '취약 입모양', description: '입모양 유형별 점수와 시도 횟수를 비교해 집중할 항목을 찾습니다.' },
-  scores: { title: '평균 점수', description: '독화·말하기 영역의 현재 점수를 각각 비교합니다.' },
+  scores: { title: '평균 점수', description: '독화는 푼 문항 전체의 정확도, 말하기는 발화 평균 점수를 비교합니다.' },
   history: { title: '학습 기록', description: '날짜별 학습량과 누적 성과를 시간순으로 확인합니다.' },
 }
 
@@ -49,10 +50,14 @@ export default function AnalysisDetail({ mode = 'activity' }) {
   const [calendar, setCalendar] = useState({})
   const [speaking, setSpeaking] = useState(null)
   const [confusion, setConfusion] = useState(null)
+  const [overview, setOverview] = useState(null)
   const meta = PAGE_META[mode] || PAGE_META.activity
 
-  // 독화 학습 횟수·평균 점수는 /api/statistics로 충분하다. /api/analysis는 AI 추천 문구(LLM, 약 4초)를 만든 뒤에야
-  // 응답하는데, 그 문구를 그리던 개요 모드는 /analysis/overview가 분석 탭으로 넘어가 이제 보이지 않는다(9/24).
+  // 활동·기록은 모든 활동(입모양·단어·문맥·문장·말하기·검사)을 현지 날짜로 센 /api/calendar/activities를 쓴다. 예전
+  // /api/calendar는 문장 연습만 UTC 날짜로 세어, 1·2단계와 문맥 추론만 한 학습자(시행 84개)가 '활동 0일'로 나왔고 한국 오전 9시
+  // 전 학습은 전날 칸에 들어갔다. 요약을 못 불러올 때만 /api/calendar로 대신한다(분석 탭과 같다).
+  // 점수의 독화는 분석 개요의 독화 트랙 정확도(선다형 정답·문장 점수)와 문항 수다. 예전 /api/statistics는 문장 연습만 셌다.
+  // 취약 입모양 순위는 /api/statistics의 weak_visemes다. /api/analysis는 AI 추천 문구(LLM, 약 4초)를 만든 뒤에야 응답해 쓰지 않는다.
   // /analysis/* 경로는 이 화면 하나를 다시 쓰므로(탭을 바꿔도 새로 올라오지 않는다), 이전 탭의 늦은 응답이
   // 지금 탭의 화면을 덮거나 로딩을 먼저 끄지 않게 모드가 바뀌면 이전 요청의 결과를 버린다.
   useEffect(() => {
@@ -60,29 +65,26 @@ export default function AnalysisDetail({ mode = 'activity' }) {
     setLoading(true)
     const needsCalendar = ['activity', 'history'].includes(mode)
     Promise.all([
-      learningAPI.getStatistics().catch(() => null),
-      needsCalendar ? learningAPI.getCalendar().catch(() => ({})) : Promise.resolve({}),
+      mode === 'visemes' ? learningAPI.getStatistics().catch(() => null) : Promise.resolve(null),
+      needsCalendar
+        ? learningAPI.getCalendarActivities(90).then(activityCounts)
+          .catch(() => learningAPI.getCalendar().catch(() => ({})))
+        : Promise.resolve({}),
       mode === 'scores' ? speakAPI.getAnalysis().catch(() => null) : Promise.resolve(null),
       mode === 'visemes' ? curriculumAPI.confusionMatrix().catch(() => null) : Promise.resolve(null),
-    ]).then(([stats, activity, speakAnalysis, confusionMatrix]) => {
+      mode === 'scores' ? learningAPI.getAnalysisOverview().catch(() => null) : Promise.resolve(null),
+    ]).then(([stats, activity, speakAnalysis, confusionMatrix, analysisOverview]) => {
       if (!alive) return
       setStatistics(stats)
       setCalendar(activity || {})
       setSpeaking(speakAnalysis)
       setConfusion(confusionMatrix)
+      setOverview(analysisOverview)
     }).finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
   }, [mode])
 
-  const activityDays = useMemo(() => {
-    const today = new Date()
-    return Array.from({ length: 90 }, (_, index) => {
-      const date = new Date(today)
-      date.setDate(today.getDate() - (89 - index))
-      const key = date.toISOString().slice(0, 10)
-      return { key, count: Number(calendar[key]) || 0 }
-    })
-  }, [calendar])
+  const activityDays = useMemo(() => recentDays(calendar, 90), [calendar])
 
   const activeDays = activityDays.filter((day) => day.count > 0)
   const totalActivity = activeDays.reduce((sum, day) => sum + day.count, 0)
@@ -165,17 +167,18 @@ export default function AnalysisDetail({ mode = 'activity' }) {
   }
 
   const renderScores = () => {
-    // 막대 색은 트랙 색(§3.1) — 독화 보라, 말하기 분홍
+    // 막대 색은 트랙 색(§3.1) — 독화 보라, 말하기 분홍. 독화는 정확도(%)라 단위와 설명을 따로 둔다
+    const read = overview?.tracks?.read
     const scores = [
-      { label: '독화', value: Math.round(Number(statistics?.average_score || 0) * 10) / 10, description: `${statistics?.total_sessions || 0}회 학습`, tone: 'bg-primary-500' },
-      { label: '말하기', value: Number(speaking?.avg_score || 0), description: `${speaking?.total || 0}회 발화`, tone: 'bg-speak' },
+      { label: '독화', value: Math.round(Number(read?.accuracy || 0) * 1000) / 10, unit: '%', description: `정확도 · ${read?.questions || 0}문항`, tone: 'bg-primary-500' },
+      { label: '말하기', value: Number(speaking?.avg_score || 0), unit: '점', description: `평균 점수 · ${speaking?.total || 0}회 발화`, tone: 'bg-speak' },
     ]
     return (
       <div className="grid gap-4 lg:grid-cols-2">
         {scores.map((score) => (
           <article key={score.label} className="card-flat">
             <p className="text-sm font-bold text-ink-muted">{score.label}</p>
-            <p className="mt-3 text-4xl font-bold leading-figma text-ink">{score.value}<span className="text-base text-ink-faint">점</span></p>
+            <p className="mt-3 text-4xl font-bold leading-figma text-ink">{score.value}<span className="text-base text-ink-faint">{score.unit}</span></p>
             <p className="mt-1 text-xs text-ink-faint">{score.description}</p>
             <div className="mt-6 h-2 overflow-hidden rounded-full bg-fill">
               <div className={`h-full rounded-full ${score.tone}`} style={{ width: `${Math.min(score.value, 100)}%` }} />

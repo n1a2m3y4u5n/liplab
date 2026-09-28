@@ -98,3 +98,67 @@ def test_week_accuracy_is_not_moved_by_item_type_mix():
     # 겹치는 유형이 없으면 지난주 대비를 내지 않는다(유형이 바뀐 것과 실력 변화를 가를 수 없다)
     ov2 = an.overview(block(2026, 9, 14, "viseme", 10, 9) + block(2026, 9, 22, "closure", 10, 6), now, KST, **_info())
     assert ov2["week_accuracy_delta"] is None
+
+
+def test_read_track_counts_all_graded_read_questions():
+    # 1단계 48문항 + 2단계 36문항만 푼 학습자(문장 연습 0): 분석 상세 '점수'가 /api/statistics(문장 연습만)로 '독화 0점 · 0회'를
+    # 보이던 것. 독화 트랙은 선다형 시행까지 세고, 채점하지 않는 활동(검사 이벤트)은 문항 수에 넣지 않는다
+    now = datetime(2026, 9, 23, 3, 0)
+    ev = [an.Event(datetime(2026, 9, 22, 1, 0) + timedelta(seconds=20 * i), "read", 0.0 if i % 4 == 0 else 1.0,
+                   "viseme" if i < 48 else "word") for i in range(84)]
+    ev += [an.Event(datetime(2026, 9, 22, 2, 0), "test", None), an.Event(datetime(2026, 9, 22, 2, 1), "speak", None, "speak:")]
+    tr = an.overview(ev, now, KST, **_info())["tracks"]
+    assert tr["read"]["questions"] == 84 and abs(tr["read"]["accuracy"] - 0.75) < 1e-9
+    assert tr["speak"]["questions"] == 0 and tr["speak"]["accuracy"] is None
+
+
+def _weekly_linear(events, today, tz, weeks=an.WEEKS):
+    """고치기 전 weekly의 주 찾기(7주를 차례로 비교)를 그대로 옮긴 기준 구현. 새 weekly와 결과를 비교한다."""
+    starts = [today - timedelta(days=7 * k + 6) for k in range(weeks)][::-1]
+    mins = [0.0] * weeks
+    graded = [[] for _ in starts]
+
+    def idx(d):
+        for i, s in enumerate(starts):
+            if s <= d <= s + timedelta(days=6):
+                return i
+        return None
+    for s in an.sessions(events):
+        i = idx(an.to_local(s[0].ts, tz).date())
+        if i is not None:
+            mins[i] += an.session_minutes(s)
+    for e in events:
+        i = idx(an.to_local(e.ts, tz).date())
+        if e.graded is not None and i is not None:
+            graded[i].append(e.graded)
+    return [(s.isoformat(), round(m), len(g)) for s, m, g in zip(starts, mins, graded)]
+
+
+def test_weekly_constant_time_index_matches_linear_search():
+    # PERF-2: 주 번호를 (날짜 − 첫 주 시작일).days // 7로 바꿨다. 창 경계(첫날·마지막 날·하루 전·오늘 뒤)와
+    # 시간대를 섞어도 예전 선형 탐색과 같은 칸에 들어가야 한다
+    import random
+    rnd = random.Random(7)
+    now = datetime(2026, 9, 23, 3, 0)
+    for tz in (KST, 0, 300, -840, 720):
+        today = an.to_local(now, tz).date()
+        ev = [an.Event(now - timedelta(minutes=rnd.randint(0, 60 * 24 * 60)), "read",
+                       rnd.choice([None, 0.0, 1.0, 0.5]), rnd.choice(["viseme", "word"])) for _ in range(400)]
+        for dd in (-1, 0, 6, 7, 48, 49, 50):   # 오늘 뒤·오늘·주 경계·첫날(48)·창 밖(49, 50)
+            ev.append(an.Event(datetime.combine(today - timedelta(days=dd), datetime.min.time()).replace(hour=12)
+                               + timedelta(minutes=tz), "read", 1.0, "word"))
+        got = [(w["start"], w["minutes"], w["n_graded"]) for w in an.weekly(ev, today, tz)]
+        assert got == _weekly_linear(ev, today, tz)
+        # overview가 넘기는 회차·현지 날짜로 계산해도 같다
+        loc = [an.to_local(e.ts, tz).date() for e in ev]
+        assert an.weekly(ev, today, tz, sess=an.sessions(ev), local_dates=loc) == an.weekly(ev, today, tz)
+
+
+def test_badges_same_with_precomputed_sessions_and_local_times():
+    ev = [an.Event(datetime(2026, 9, 22, 18, 0) + timedelta(minutes=i), "read", 1.0, "word") for i in range(12)]
+    kw = _info(reviews_done=1)
+    plain = an.badges(ev, KST, 3, **kw)
+    pre = an.badges(ev, KST, 3, sess=an.sessions(ev), local_times=[an.to_local(e.ts, KST) for e in ev], **kw)
+    assert plain == pre
+    got = {b["key"]: b["earned"] for b in pre}
+    assert got["acc90"] and got["dawn"]   # 한국 03:00 회차 12문항 전부 정답

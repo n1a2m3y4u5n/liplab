@@ -14,6 +14,7 @@ import { ModalClose } from '../components/Modal'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 import useFocusTrap from '../hooks/useFocusTrap'
 import useChoiceKeys from '../lib/useChoiceKeys'
+import { sentenceLevel } from '../lib/reviewScenario'
 
 /**
  * 힌트 시스템: 단계별로 문장 정보를 공개
@@ -305,7 +306,8 @@ export default function Practice() {
         user_answer: userAnswer,
         time_spent_seconds: timeSpent,
         situation: currentScenario.situation,
-        difficulty_level: currentScenario.level,
+        // 틀린 문장 복습은 문장마다 원래 난이도(levels)를 보낸다. 예전에는 세션 난이도 1이 저장돼 추천 난이도가 떨어졌다
+        difficulty_level: sentenceLevel(currentScenario, currentSentenceIndex),
         ...(practiceOnly ? { practice_only: true } : {}),
         // 4지선다는 보기를 고른 것이라 서버가 채점식 대신 정확 일치(100 또는 0)로 준다(비슷한 오답 보기가 통과하지 않게)
         ...(effectiveMode === 'test-multiple' ? { answer_mode: 'choice' } : {}),
@@ -414,7 +416,7 @@ export default function Practice() {
         await learningAPI.removeBookmark(bookmarks[currentSentence])
         setBookmarks((m) => { const n = { ...m }; delete n[currentSentence]; return n })
       } else {
-        const r = await learningAPI.addBookmark(currentSentence, currentScenario.situation, currentScenario.level, 'read')
+        const r = await learningAPI.addBookmark(currentSentence, currentScenario.situation, sentenceLevel(currentScenario, currentSentenceIndex), 'read')
         setBookmarks((m) => ({ ...m, [currentSentence]: r.id }))
       }
     } catch { /* 저장 실패는 조용히 무시 */ }
