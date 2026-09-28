@@ -82,3 +82,17 @@ def test_level_sets_turn_length_in_prompt(monkeypatch):
         assert conv["fallback"] is True
     assert "4~8자" in seen[0] and "14~22자" in seen[1]
     assert "6~14자" in seen[2] and "6~14자" in seen[3]   # 범위 밖 단계도 기본 길이
+
+
+def test_read_distractors_come_from_outside_the_conversation():
+    # 닮은꼴이 모자란 턴을 같은 대화의 다른 턴으로 채우면, 이미 본 줄을 지우기만 해도 맞힌다(예전 0.935, 우연 0.25).
+    # 이제 대화 밖 문장으로 채워 모든 턴에 오답 3개가 있고 대화 안 문장은 오답이 되지 않는다.
+    import random
+    import conversation_scenario as C
+    for seed in range(40):
+        rng = random.Random(seed)
+        conv = C.enrich(C._fallback_conversation(2, 6, rng.choice(C._SCENES), rng), rng)
+        own = {t["text"] for t in conv["turns"]}
+        for t in conv["turns"]:
+            assert len(t["lookalikes"]) >= 3, t
+            assert not (set(t["lookalikes"]) & own), t
