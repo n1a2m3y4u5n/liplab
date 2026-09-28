@@ -781,6 +781,9 @@ async def submit_progress(
     Returns score, XP gained, and adaptive feedback
     """
     try:
+        # 앞뒤 공백은 한 번 떼고 기록·복습 큐·채점에 같은 값을 쓴다. 예전에는 복습 큐 길이 검사만 뗀 값으로 하고 큐에는 원문을 넣어,
+        # 공백이 붙은 100자 문장이 String(100) 칸을 넘었고 Progress.sentence와 큐의 ref가 달라 상황·난이도를 찾지 못할 수 있었다.
+        submission.sentence = (submission.sentence or "").strip()
         # 독화 이해 채점 v2(입모양 기준, docs/scoring-v2.md). 객관식은 정확 일치로 준다.
         scoring_result = await calculate_score(
             correct=submission.sentence,
