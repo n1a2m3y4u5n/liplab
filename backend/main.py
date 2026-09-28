@@ -1826,6 +1826,8 @@ class WordAnswer(BaseModel):
     correct: bool
     chosen: Optional[str] = Field(None, max_length=50)   # 사용자가 실제로 고른 단어(오답 시 자모 혼동 분석용)
     speed: Optional[float] = Field(None, ge=0.1, le=4.0)   # 답하기 전에 본 실제 재생 속도(학습자 선택 × 적응 감속)
+    # 'typed'면 주관식(단어 입력, 커리큘럼 개선 계획 1-2): chosen이 입력한 글이고 서버가 visual_difficulty.typed_word_verdict로 채점한다
+    mode: Optional[str] = Field(None, max_length=10)
 
 
 def _excluded_training_words() -> set:
@@ -1912,31 +1914,46 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
                 db.add(sp)
         # 정답 여부는 서버가 재계산(클라이언트 data.correct를 신뢰하지 않음 — 숙달·해금·평가 조작 방지).
         # chosen이 없는 구버전 호출만 data.correct로 폴백.
-        correct = (data.chosen == data.word) if data.chosen is not None else bool(data.correct)
+        typed = data.mode == "typed"
+        verdict = None
+        if typed:
+            # 주관식: 정답 1, 입모양이 똑같은 다른 말 '입모양은 맞음' 0.5, 그 밖 0. 숙달에는 선다형 정답과 같게 센다
+            import visual_difficulty as _vd
+            verdict = _vd.typed_word_verdict(data.word, data.chosen or "")
+            correct, success = verdict["verdict"] == "correct", verdict["credit"]
+        else:
+            correct = (data.chosen == data.word) if data.chosen is not None else bool(data.correct)
+            success = 1.0 if correct else 0.0
         if open2:
             sp.attempts += 1
             if correct:
                 sp.correct += 1
             # 최근 답에 무게, 감속 재생 정답은 0.5(docs/mastery-ewma.md 7절)
-            sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, _speed_credit(1.0 if correct else 0.0, data.speed))
+            sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, _speed_credit(success, data.speed))
             _settle_mastery(sp, sp.attempts >= _STAGE2_MIN_ATTEMPTS and sp.mastery_score >= _STAGE2_MASTERY)
         # 취약 입모양 반영 — 오답이면 단어의 모든 유명 viseme을 오류로 누적(단어 인식 실패 신호).
         # 예전엔 단어 학습이 개인화(WeakViseme)에 전혀 기여하지 못했다.
         vids, features = await _weak_visemes_for_text(data.word)
+        read_ok = success > 0   # '입모양은 맞음'은 입모양을 바르게 읽은 것이라 약점 입모양 오류로 세지 않는다
         await _bump_weak_visemes(current_user.id, vids,
-                                 vids if not correct else [], features, db)
+                                 vids if not read_ok else [], features, db)
         # 오답이면 '무엇을 무엇으로 읽었는지'를 자모·입모양 단위로 분석(근거 기반 피드백 + 혼동행렬 데이터)
         confusions = []
-        if not correct and data.chosen and data.chosen != data.word:
+        answer = verdict["answer"] if typed else data.chosen
+        if not correct and answer and answer != data.word:
             from scoring import viseme_confusions
-            confusions = viseme_confusions(data.word, data.chosen)
+            try:
+                confusions = viseme_confusions(data.word, answer)
+            except Exception:
+                confusions = []   # 입력한 글은 길이가 달라 분석이 안 될 수 있다(기록만 남긴다)
         from database import TrialAttempt
-        db.add(TrialAttempt(user_id=current_user.id, stage=2, item_type="word",
-                            target=data.word, chosen=data.chosen, correct=correct, confusions=confusions,
-                            speed=data.speed))
+        # 주관식은 유형을 따로 둔다(word_typed). 유형별 학습 곡선이 선다형 단어와 섞이지 않게(eval_metrics)
+        db.add(TrialAttempt(user_id=current_user.id, stage=2, item_type="word_typed" if typed else "word",
+                            target=data.word, chosen=(data.chosen or "")[:50] if typed else data.chosen,
+                            correct=correct, confusions=confusions, speed=data.speed))
         if not correct:
             await _srs_schedule_wrong(current_user.id, "word", data.word, db)
-        award = _award_xp_and_streak(current_user, 15 if correct else 3)
+        award = _award_xp_and_streak(current_user, 15 if correct else (8 if success > 0 else 3))   # '입모양은 맞음'은 8
         await db.commit()
         await db.refresh(sp)
     except HTTPException:
@@ -1947,7 +1964,8 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
     return {"mastery_score": round(sp.mastery_score, 1), "attempts": sp.attempts,
             "mastered": sp.status == "mastered",
             "xp_gained": award["xp_gained"], "streak_count": award["streak_count"],
-            "confusions": confusions}
+            "confusions": confusions, "correct": correct,
+            "verdict": verdict["verdict"] if typed else ("correct" if correct else "wrong")}
 
 
 # ── 간격 반복 복습 (SRS) ──────────────────────────────────────────────────
@@ -2297,7 +2315,7 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
     baseline_vs_recent = _em.within_type_change(seq)   # 9시행 이상인 유형이 없으면 None
 
     by_item_type = []
-    for it, label in (("viseme", "입모양 인지"), ("word", "단어"), ("closure", "문맥 추론")):
+    for it, label in (("viseme", "입모양 인지"), ("word", "단어"), ("word_typed", "단어 주관식"), ("closure", "문맥 추론")):
         seg = [c for t, c in seq if t == it]
         if seg:
             by_item_type.append({"item_type": it, "label": label, "n": len(seg),

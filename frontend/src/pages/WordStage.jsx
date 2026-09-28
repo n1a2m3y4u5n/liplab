@@ -16,6 +16,7 @@ import { pickDistractors, visualLevel } from '../lib/wordOptions'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
 import useSlowWeak from '../hooks/useSlowWeak'
 import { effectiveSpeed, FAST_SPEECH_SPEED } from '../lib/visemeTiming'
+import { typedSlots } from '../lib/openSet'
 import MouthCompare from '../components/MouthCompare'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
@@ -145,8 +146,18 @@ function WordQuiz({ data, reload }) {
   // 이번 레슨에서 이미 낸 단어. 예전에는 가중 복원추출이라 12문항 레슨의 33~39%에서 같은 단어가 다시 나와(앞에서 정답을 봤으니)
   // 기억으로 맞힌 답이 숙달에 들어갔다. 레슨 안에서는 뺀 채 가중 추출한다(새 레슨에서 초기화).
   const askedRef = useRef(new Set())
+  // 숙달한 뒤에는 레슨의 30%를 주관식(단어 입력)으로 낸다(계획 1-2, lib/openSet). 레슨을 시작할 때 자리를 정한다.
+  const masteredRef = useRef(false)
+  masteredRef.current = !!(data.mastered || stat.mastered)
+  const slotRef = useRef({ typed: new Set(), pos: -1 })
+  const [typedText, setTypedText] = useState('')
   const newQ = useCallback(async (fresh = false) => {
-    if (fresh) askedRef.current = new Set()
+    if (fresh) {
+      askedRef.current = new Set()
+      slotRef.current = { typed: typedSlots(QUIZ_LEN, masteredRef.current), pos: -1 }
+    }
+    slotRef.current.pos += 1
+    const kind = slotRef.current.typed.has(slotRef.current.pos) ? 'typed' : 'choice'
     const left = data.words.filter((w) => !askedRef.current.has(w.word))
     const pool = left.length ? left : data.words
     const total = pool.reduce((s, w) => s + (w.priority || 1), 0)
@@ -158,7 +169,8 @@ function WordQuiz({ data, reload }) {
     setResult(null)
     setCompareOpen(false)
     setSelected(null)
-    setQ({ target, choices: shuffle([target, ...distractors]) })
+    setTypedText('')
+    setQ({ target, choices: shuffle([target, ...distractors]), kind })
     setFrames([])
     try { setFrames(await learningAPI.getVisemes(target)) } catch { /* ignore */ }
   }, [data, words, byWord])
@@ -166,20 +178,26 @@ function WordQuiz({ data, reload }) {
   useEffect(() => { newQ(true) }, [newQ])
 
   // 보기 숫자 키 1~4(§4-03) — 채점 중·결과 표시 중·수어 창이 열려 있으면 받지 않는다.
-  useChoiceKeys(q?.choices, (w) => setSelected(w), !!q && !result && !submitting && !signOpen && !done)
+  const typed = q?.kind === 'typed'
+  useChoiceKeys(q?.choices, (w) => setSelected(w), !!q && !typed && !result && !submitting && !signOpen && !done)
 
+  // 주관식은 서버가 채점한다(visual_difficulty.typed_word_verdict): 정답, '입모양은 맞음'(입모양이 똑같은 다른 말, 숙달에 0.5), 오답.
+  const answer = typed ? typedText.trim() : selected
   const confirm = async () => {
-    if (result || submitting || selected == null) return
+    if (result || submitting || !answer) return
     setSubmitting(true)
-    const correct = selected === q.target
+    let correct = typed ? answer.replace(/\s+/g, '') === q.target : answer === q.target
+    let verdict = correct ? 'correct' : 'wrong'
     let confusions = []
     try {
-      const rr = await curriculumAPI.submitWord(q.target, correct, selected, effectiveSpeed(frames, shownFrames, playSpeed))
+      const rr = await curriculumAPI.submitWord(q.target, correct, answer, effectiveSpeed(frames, shownFrames, playSpeed),
+        typed ? 'typed' : undefined)
       setStat({ attempts: rr.attempts, mastery: rr.mastery_score, mastered: rr.mastered })
       confusions = rr.confusions || []
+      if (typed && rr.verdict) { verdict = rr.verdict; correct = verdict === 'correct' }
       setXpEarned((x) => x + (rr.xp_gained || 0))
     } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
-    setResult({ correct, chosen: selected, confusions })
+    setResult({ correct, verdict, chosen: answer, confusions })
     setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
   }
   // 계속하기 — 12번째 문항 뒤에는 완료 뷰로(걸린 시간은 이 순간으로 고정).
@@ -239,8 +257,10 @@ function WordQuiz({ data, reload }) {
         <div className={LESSON_STACK}>
           {/* 질문 + 북마크(91:19 · 328:40 / 모바일 235:42 · 328:64) */}
           <div className="relative flex flex-col gap-1.5 pr-12 leading-figma lg:gap-2 lg:pr-[52px]">
-            <p className="text-[12px] font-bold text-track lg:text-[13px]">단어 독화</p>
-            <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">이 입모양은 어떤 단어일까요?</h1>
+            <p className="text-[12px] font-bold text-track lg:text-[13px]">단어 독화{typed ? ' · 주관식' : ''}</p>
+            <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">
+              {typed ? '이 입모양은 어떤 단어일까요? 직접 적어 보세요' : '이 입모양은 어떤 단어일까요?'}
+            </h1>
             <BookmarkButton active={saved} onToggle={toggleSaved} className="absolute right-0 top-[14px] lg:top-[21px]" />
           </div>
 
@@ -257,7 +277,18 @@ function WordQuiz({ data, reload }) {
             </button>
           )}
 
-          {/* 4지선다(91:28 / 모바일 235:51) — 선택 → 확인 */}
+          {/* 주관식(계획 1-2): 단어를 적고 Enter 또는 확인. 띄어쓰기·문장부호는 채점에서 보지 않는다 */}
+          {typed ? (
+            <form onSubmit={(e) => { e.preventDefault(); confirm() }} className={LESSON_OPTIONS}>
+              <input type="text" value={typedText} onChange={(e) => setTypedText(e.target.value)} disabled={!!result || submitting}
+                maxLength={20} autoComplete="off" aria-label="읽은 단어 입력" placeholder="읽은 단어를 적어 주세요"
+                className={`w-full rounded-14 border-2 px-[18px] py-[15px] text-[18px] font-bold text-ink outline-none lg:rounded-16 lg:px-5 lg:py-4 lg:text-[20px] ${
+                  !result ? 'border-line bg-white focus:border-track'
+                    : result.verdict === 'correct' ? 'border-good bg-good-tint text-good-text'
+                      : result.verdict === 'homophene' ? 'border-warn bg-warn-tint text-warn-text' : 'border-bad bg-bad-tint text-bad-text'}`} />
+            </form>
+          ) : (
+          /* 4지선다(91:28 / 모바일 235:51) — 선택 → 확인 */
           <div className={LESSON_OPTIONS}>
             {q.choices.map((w, i) => (
               <button key={w} type="button" disabled={!!result || submitting} onClick={() => setSelected(w)}
@@ -267,12 +298,20 @@ function WordQuiz({ data, reload }) {
               </button>
             ))}
           </div>
+          )}
 
           {/* 결과 피드백(혼동 진단·큐·수어·립리딩) — 핵심 교육 패널이라 유지, 고정 바 위 스크롤 영역 */}
           <AnimatePresence>
             {result && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-                {!result.correct && result.confusions?.length > 0 && (
+                {result.verdict === 'homophene' && (
+                  <div className="rounded-16 border-2 border-warn/40 bg-warn-tint p-4 text-[13px] leading-snug text-warn-text">
+                    <p className="text-xs font-bold">입모양은 맞았어요</p>
+                    <p className="mt-1">「{result.chosen}」와 「{q.target}」는 입모양이 똑같아요. 입만 보고는 가를 수 없는 차이라 오답으로 보지 않고
+                      절반만 인정해요. 실제 대화에서는 앞뒤 문맥으로 가려요.</p>
+                  </div>
+                )}
+                {!result.correct && result.verdict !== 'homophene' && result.confusions?.length > 0 && (
                   <div className="space-y-1.5 rounded-16 border-2 border-warn/40 bg-warn-tint p-4">
                     <p className="text-xs font-bold text-warn-text">어디서 헷갈렸나요?</p>
                     {result.confusions.map((cf, i) => (
@@ -287,7 +326,7 @@ function WordQuiz({ data, reload }) {
                 )}
                 {!result.correct && result.chosen && (compareOpen
                   ? <MouthCompare target={q.target} chosen={result.chosen}
-                      sameLooking={result.confusions?.length > 0 && result.confusions.every((cf) => cf.same_viseme)} />
+                      sameLooking={result.verdict === 'homophene' || (result.confusions?.length > 0 && result.confusions.every((cf) => cf.same_viseme))} />
                   : <button type="button" onClick={() => setCompareOpen(true)} className="btn-secondary w-full py-2.5 text-[14px] text-track">
                       「{q.target}」과 「{result.chosen}」 입모양 나란히 비교
                     </button>)}
@@ -313,21 +352,25 @@ function WordQuiz({ data, reload }) {
 
       {/* 하단 고정 바 — 문제(130:17) · 정답(94:133) · 오답(94:175). lg 미만(235:68 · 235:105)은 힌트 없이
           메시지 위·전체 폭 버튼 아래로 쌓는다(§4-12 "모바일 레슨의 하단 버튼은 전체 폭"). */}
-      <div className={`fixed inset-x-0 bottom-0 z-40 border-t-2 ${!result ? 'border-line bg-white' : result.correct ? 'border-good bg-good-tint lg:border-good/35' : 'border-bad bg-bad-tint lg:border-bad/35'}`}>
+      <div className={`fixed inset-x-0 bottom-0 z-40 border-t-2 ${!result ? 'border-line bg-white' : result.correct ? 'border-good bg-good-tint lg:border-good/35' : result.verdict === 'homophene' ? 'border-warn bg-warn-tint lg:border-warn/35' : 'border-bad bg-bad-tint lg:border-bad/35'}`}>
         <div className="mx-auto flex max-w-[676px] flex-col items-stretch gap-3 px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-4 lg:h-[110px] lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:py-0">
           {result ? (
             // 정오 피드백은 스크린리더에 알린다(role=status·aria-live) — 잔존청력·저시력 사용자 대상(c92fdc3, 병합 복원)
-            <div role="status" aria-live="polite" className={`flex min-w-0 flex-col gap-[3px] leading-figma lg:gap-1 ${result.correct ? 'text-good-text' : 'text-bad-text'}`}>
-              <p className="text-[19px] font-bold tracking-[-0.38px] lg:text-[22px] lg:tracking-[-0.44px]">{result.correct ? '정답이에요!' : '아쉬워요'}</p>
+            <div role="status" aria-live="polite" className={`flex min-w-0 flex-col gap-[3px] leading-figma lg:gap-1 ${result.correct ? 'text-good-text' : result.verdict === 'homophene' ? 'text-warn-text' : 'text-bad-text'}`}>
+              <p className="text-[19px] font-bold tracking-[-0.38px] lg:text-[22px] lg:tracking-[-0.44px]">
+                {result.correct ? '정답이에요!' : result.verdict === 'homophene' ? '입모양은 맞았어요' : '아쉬워요'}
+              </p>
               <p className="truncate text-[13px] font-bold opacity-80 lg:text-[14px]">정답은 「{q.target}」예요</p>
             </div>
           ) : (
-            <span className="hidden text-[15px] leading-figma text-ink-faint lg:inline">{selected == null ? '보기를 선택해주세요' : '정답을 확인해보세요'}</span>
+            <span className="hidden text-[15px] leading-figma text-ink-faint lg:inline">
+              {typed ? (answer ? '정답을 확인해보세요' : '읽은 단어를 적어 주세요') : selected == null ? '보기를 선택해주세요' : '정답을 확인해보세요'}
+            </span>
           )}
           {result ? (
-            <button type="button" onClick={next} className={`${result.correct ? 'btn-good' : 'btn-bad'} btn-bar ${BAR_BTN}`}>계속하기</button>
+            <button type="button" onClick={next} className={`${result.correct || result.verdict === 'homophene' ? 'btn-good' : 'btn-bad'} btn-bar ${BAR_BTN}`}>계속하기</button>
           ) : (
-            <button type="button" onClick={confirm} disabled={selected == null || submitting} className={`btn-primary btn-bar ${BAR_BTN}`}>확인</button>
+            <button type="button" onClick={confirm} disabled={!answer || submitting} className={`btn-primary btn-bar ${BAR_BTN}`}>확인</button>
           )}
         </div>
       </div>

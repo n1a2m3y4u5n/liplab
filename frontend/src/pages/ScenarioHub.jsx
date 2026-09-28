@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { curriculumAPI, learningAPI } from '../api'
 import useStore from '../store/useStore'
 import AppShell from '../components/AppShell'
+import { sentenceQuestionTypes } from '../lib/openSet'
 
 /**
  * 상황별 시나리오 (Figma 225:183 AI 대화 · 407:140 문장 테스트): 셸 안의 설정 폼 하나 + 시작 버튼 하나.
@@ -19,7 +20,6 @@ import AppShell from '../components/AppShell'
  *  - 회차 히스토리 등에서 ?situation=은행 으로 들어오면 그 상황을 입력칸에 채워 이어서 연습하게 한다.
  *  - ?mode=conversation 이면 연습 방법을 'AI 대화'로 골라 둔다(학습 경로 4단계 '학습 시작하기'가 여기로 온다).
  */
-const QUESTION_TYPES = ['test', 'test-multiple', 'essay']
 const LOCK_HINT = { practice: '단어 학습을 완료하면 문장 학습이 열려요.', conversation: '문장 학습을 완료하면 대화 실전이 열려요.' }
 const MODES = [{ key: 'practice', title: '문장 테스트' }, { key: 'conversation', title: 'AI 대화' }]
 const PARTNERS = [{ key: 'one', label: '1 : 1 대화' }, { key: 'multi', label: '여러 명 대화' }]
@@ -31,11 +31,6 @@ const MODE_ON = 'border-[2.5px] border-primary-500 bg-primary-100 pb-4 pt-[18px]
 const MODE_OFF = 'border-2 border-b-5 border-line bg-white py-4 transition-colors hover:border-primary-300'
 const PEOPLE_ON = 'border-[2.5px] border-primary-500 bg-primary-100 pb-[13px] pt-[15px] text-primary-700'
 const PEOPLE_OFF = 'border-2 border-b-5 border-line bg-white py-[13px] text-ink transition-colors hover:border-primary-300'
-
-function shuffledTypes(length) {
-  return Array.from({ length }, (_, index) => QUESTION_TYPES[index % QUESTION_TYPES.length])
-    .sort(() => Math.random() - 0.5)
-}
 
 const Divider = () => <div className="h-[1.5px] w-full shrink-0 bg-line" />
 
@@ -80,6 +75,7 @@ export default function ScenarioHub() {
   const [situation, setSituation] = useState((searchParams.get('situation') || '').trim())
   const [level, setLevel] = useState(Math.min(user?.current_level || 1, 5))
   const [locks, setLocks] = useState({ practice: false, conversation: false })
+  const [stage3Mastery, setStage3Mastery] = useState(null)   // 3단계 숙달 추정값 → 선다형·주관식 비율(lib/openSet)
   const [mode, setMode] = useState(searchParams.get('mode') === 'conversation' ? 'conversation' : 'practice')
   const [partner, setPartner] = useState('one')
   const [people, setPeople] = useState(2)
@@ -109,6 +105,8 @@ export default function ScenarioHub() {
           return !!stage && ['locked', 'coming_soon'].includes(stage.status)
         }
         setLocks({ practice: locked(3), conversation: locked(4) })
+        const s3 = stages.find((item) => item.stage === 3)
+        setStage3Mastery(Number.isFinite(s3?.mastery_score) ? s3.mastery_score : null)
       })
       .catch(() => {})
   }, [])
@@ -127,7 +125,8 @@ export default function ScenarioHub() {
     setLoading(true)
     try {
       const scenario = await learningAPI.getScenario(text, level)
-      if (mode === 'practice') scenario.qTypes = shuffledTypes(scenario.sentences.length)
+      // 문항 유형: 숙달 추정값 50 미만은 세 유형을 고르게, 50 이상은 선다형을 줄이고, 70 이상은 주관식·서술형만(계획 1-2)
+      if (mode === 'practice') scenario.qTypes = sentenceQuestionTypes(scenario.sentences.length, stage3Mastery)
       setScenario(scenario, 'test')
       navigate(mode === 'practice' ? '/practice' : '/conversation')
     } catch (error) {
