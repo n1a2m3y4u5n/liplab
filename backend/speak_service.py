@@ -39,9 +39,36 @@ async def transcribe(audio_bytes: bytes) -> str:
             beam_size=1,          # 짧은 발화라 빔서치 최소로 속도 우선
             temperature=0.0,
         )
-        return "".join(seg.text for seg in segments).strip()
+        return collapse_repeats("".join(seg.text for seg in segments).strip())
 
     return await asyncio.to_thread(_run)
+
+
+def collapse_repeats(text: str, min_rep: int = 3, max_n: int = 6) -> str:
+    """연속으로 min_rep번 이상 되풀이된 어절 묶음(1~max_n어절)을 한 번으로 접는다. Whisper는 잡음·무음에서 '이 영상은 영상에서
+    영상에서 …'처럼 반복 루프를 지어내고, 실제 발화 끝에도 '통화 통화 통화 …'를 붙인다(538·608 전사 2,100개 중 16개). 채점은 목표를
+    얼마나 말했는지(재현율)만 보므로 긴 루프가 목표 음절을 우연히 채워, 잡음 전사가 5단계 문항에 28% 합격했다. 접으면 0%이고,
+    맞게 말한 문장의 불합격은 538 그대로·608 청각장애 발화 12.8 → 13.3%(360문장 중 2개)다(docs/speak-transcript-scoring.md).
+    구두점은 떼고 비교하며, 두 번 반복('하하 하하', '아니 아니')은 그대로 둔다."""
+    import re
+    toks = (text or "").split()
+    key = [re.sub(r"[^\w]", "", t) for t in toks]
+    out, i = [], 0
+    while i < len(toks):
+        for n in range(1, max_n + 1):
+            if i + n * min_rep > len(toks):
+                out.append(toks[i]); i += 1
+                break
+            unit = key[i:i + n]
+            k = 1
+            while any(unit) and i + (k + 1) * n <= len(toks) and key[i + k * n:i + (k + 1) * n] == unit:
+                k += 1
+            if k >= min_rep:
+                out += toks[i:i + n]; i += k * n
+                break
+        else:
+            out.append(toks[i]); i += 1
+    return " ".join(out)
 
 
 def is_available() -> bool:
