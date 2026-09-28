@@ -36,7 +36,7 @@ def test_word_options_have_no_homophenes():
     line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
     assert line, f"시나리오 실패:\n{p.stdout[-2000:]}\n{p.stderr[-3000:]}"
     r = json.loads(line[len("RESULT "):])
-    assert r["n"] > 400 and r["all_three"], r
+    assert r["n"] >= 380 and r["all_three"], r            # 풀 400(9/28 감사로 드문 말 30개를 더 뺐다)
     assert r["with_homophene"] == 0, "보기에 동구형이음이 들어갔다"
     assert r["level"] == 2, "숙달 전에는 보기 2단계(보이는 최소대립 1개)"
     assert not r["has_pairs"], "쓰지 않는 최소대립 짝 목록(127KB)을 싣지 않는다"
@@ -52,7 +52,7 @@ def test_stage2_pool_skips_rare_and_non_standalone_words():
     assert "공학" not in ex                      # 흔한 말은 남긴다
     t = main._stage2_table()
     pool = set(t.words)
-    assert not (pool & set(ex)) and len(pool) >= 400
+    assert not (pool & set(ex)) and len(pool) >= 380
     for w in list(pool)[:60]:
         assert not (set(t.classes(w).get("distinct", [])) & set(ex))
 

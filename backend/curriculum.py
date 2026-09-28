@@ -115,26 +115,28 @@ VISIBLE_ANCHORS: List[int] = [2, 3, 4]  # 개방·전설·원순 모음
 #   설명)을 말/물로 바꿨다. 1단계 짝 미리보기가 목록 앞쪽을 보여 줘 모든 사용자에게 보이던 짝이다.
 #   same_looking=True  → 입모양이 같아 구별 불가(문맥 필요)를 가르침
 #   same_looking=False → 입모양이 달라 구별 가능함을 가르침
+#   relation: minimal_pair(자모 한 자리만 다름) | homophene(보이는 입모양 열이 완전히 같음, 밥/맘처럼 두 자리 이상 달라도 됨).
+#   9/28 감사: 큐레이션 짝에 relation이 없어 승인 짝(규칙으로 붙음)과 기준이 달랐다. 짝은 둘 중 하나여야 한다(test_content_audit).
 MINIMAL_PAIRS: List[Dict] = [
-    {"a": "밥", "b": "맘", "visemes": [1], "same_looking": True,
+    {"a": "밥", "b": "맘", "visemes": [1], "same_looking": True, "relation": "homophene",
      "note": "ㅂ↔ㅁ 양순음. 입술 닫힘이 똑같아 구별 불가."},
-    {"a": "불", "b": "풀", "visemes": [1], "same_looking": True,
+    {"a": "불", "b": "풀", "visemes": [1], "same_looking": True, "relation": "homophene",
      "note": "ㅂ↔ㅍ 양순음. 숨의 세기만 달라 입모양이 같다."},
-    {"a": "물", "b": "불", "visemes": [1], "same_looking": True,
+    {"a": "물", "b": "불", "visemes": [1], "same_looking": True, "relation": "homophene",
      "note": "ㅁ↔ㅂ 양순음."},
-    {"a": "달", "b": "탈", "visemes": [6], "same_looking": True,
+    {"a": "달", "b": "탈", "visemes": [6], "same_looking": True, "relation": "homophene",
      "note": "ㄷ↔ㅌ 치경음. 입 안쪽이라 겉모습 동일."},
-    {"a": "살", "b": "쌀", "visemes": [6], "same_looking": True,
+    {"a": "살", "b": "쌀", "visemes": [6], "same_looking": True, "relation": "homophene",
      "note": "ㅅ↔ㅆ. 구별 불가."},
-    {"a": "자요", "b": "차요", "visemes": [10], "same_looking": True,
+    {"a": "자요", "b": "차요", "visemes": [10], "same_looking": True, "relation": "homophene",
      "note": "ㅈ↔ㅊ 경구개음."},
-    {"a": "말", "b": "물", "visemes": [2, 4], "same_looking": False,
+    {"a": "말", "b": "물", "visemes": [2, 4], "same_looking": False, "relation": "minimal_pair",
      "note": "크게 벌린 입(말) vs 둥글게 오므린 입(물), 뚜렷이 다르다."},
-    {"a": "우유", "b": "이유", "visemes": [4, 3], "same_looking": False,
-     "note": "둥근 입(우) vs 옆으로 퍼진 입(이) — 정반대."},
-    {"a": "말", "b": "발", "visemes": [1], "same_looking": True,
+    {"a": "우유", "b": "이유", "visemes": [4, 3], "same_looking": False, "relation": "minimal_pair",
+     "note": "둥근 입(우) vs 옆으로 퍼진 입(이), 정반대로 보인다."},
+    {"a": "말", "b": "발", "visemes": [1], "same_looking": True, "relation": "homophene",
      "note": "ㅁ↔ㅂ 양순음."},
-    {"a": "자", "b": "차", "visemes": [10], "same_looking": True,
+    {"a": "자", "b": "차", "visemes": [10], "same_looking": True, "relation": "homophene",
      "note": "ㅈ↔ㅊ 경구개음."},
 ]
 
@@ -198,16 +200,18 @@ def quizzable_lessons() -> List[Dict]:
 
 
 # ── 2단계: 큐레이션 단어(음절·단어) ──────────────────────────────────────────
-# tier 1: 시각적으로 뚜렷이 구별되는 쉬운 단어 / tier 2: 최소대립(비슷하게 보이는)이 섞임
+# tier는 어휘 난이도다(1 누구나 아는 일상어 ~ 3 드문 말, content_rules.tier_of와 같은 뜻). 지식추적 추천(/api/curriculum/next)이
+# 학습자 수준(level) 이하 등급을 먼저 낸다. 입모양 난이도는 따로 잰다(visual_difficulty). 예전 큐레이션 주석은 tier를 '시각 구별
+# 쉬움/최소대립 섞임'으로 적어 승인 단어(빈도 등급)와 뜻이 달랐고, 불·달·말·발 같은 일상어가 2였다(9/28 감사).
 WORD_BANK: List[Dict] = [
     {"word": "밥", "tier": 1}, {"word": "물", "tier": 1}, {"word": "이", "tier": 1},
     {"word": "우유", "tier": 1}, {"word": "사과", "tier": 1}, {"word": "가방", "tier": 1},
     {"word": "하늘", "tier": 1}, {"word": "바다", "tier": 1}, {"word": "나무", "tier": 1},
-    {"word": "오이", "tier": 1}, {"word": "코", "tier": 1}, {"word": "자", "tier": 1},
-    {"word": "맘", "tier": 2}, {"word": "불", "tier": 2}, {"word": "파도", "tier": 2},
-    {"word": "달", "tier": 2}, {"word": "탈", "tier": 2}, {"word": "살", "tier": 2},
-    {"word": "쌀", "tier": 2}, {"word": "말", "tier": 2}, {"word": "발", "tier": 2},
-    {"word": "차", "tier": 2}, {"word": "그림", "tier": 2}, {"word": "서점", "tier": 2},
+    {"word": "오이", "tier": 1}, {"word": "코", "tier": 1}, {"word": "자", "tier": 2},
+    {"word": "맘", "tier": 2}, {"word": "불", "tier": 1}, {"word": "파도", "tier": 2},
+    {"word": "달", "tier": 1}, {"word": "탈", "tier": 2}, {"word": "살", "tier": 1},
+    {"word": "쌀", "tier": 1}, {"word": "말", "tier": 1}, {"word": "발", "tier": 1},
+    {"word": "차", "tier": 1}, {"word": "그림", "tier": 1}, {"word": "서점", "tier": 2},
 ]
 
 _WORDS = {w["word"] for w in WORD_BANK}
@@ -232,11 +236,12 @@ def word_partners(word: str) -> List[str]:
 # options는 입모양이 비슷해 눈으로는 구별이 어렵다 → 문장의 '문맥'으로 답을 골라야 한다.
 # display의 ___에 answer를 넣으면 전체 문장(아바타 애니메이션용).
 CLOSURE_ITEMS = [
-    {"id": "c1", "display": "___을 먹었어요", "answer": "밥", "options": ["밥", "맘", "팝"], "hint": "'먹다'와 어울리는 건?"},
-    {"id": "c2", "display": "___을 마셔요", "answer": "물", "options": ["물", "불", "풀"], "hint": "'마시다'와 어울리는 건?"},
-    {"id": "c3", "display": "___이 밝아요", "answer": "달", "options": ["달", "탈", "살"], "hint": "'밝다'와 어울리는 건?"},
+    # 9/28: c1은 '맘을 먹었어요'(마음먹다)도 맞아 답이 둘이었고, c5는 콩도 던질 수 있는 둥근 것이라 문맥을 좁혔다.
+    {"id": "c1", "display": "배고파서 ___을 먹었어요.", "answer": "밥", "options": ["밥", "맘", "팝"], "hint": "'먹다'와 어울리는 건?"},
+    {"id": "c2", "display": "___을 마셔요.", "answer": "물", "options": ["물", "불", "풀"], "hint": "'마시다'와 어울리는 건?"},
+    {"id": "c3", "display": "___이 밝아요.", "answer": "달", "options": ["달", "탈", "살"], "hint": "'밝다'와 어울리는 건?"},
     {"id": "c4", "display": "___를 마셔요", "answer": "차", "options": ["차", "자", "짜"], "hint": "마시는 것 중 하나."},
-    {"id": "c5", "display": "___을 던져요", "answer": "공", "options": ["공", "콩", "곡"], "hint": "'던지다'와 어울리는 둥근 것?"},
+    {"id": "c5", "display": "운동장에서 ___을 찼어요.", "answer": "공", "options": ["공", "콩", "곡"], "hint": "'차다'와 어울리는 둥근 것?"},
 ]
 
 
@@ -251,6 +256,12 @@ STAGE2_EXCLUDED = {
         "빈", "본", "푼", "노란", "투박", "식상", "타당", "뭇", "풋", "톨", "바", "곱", "이분")},
     **{w: "속어·고어·고유 명사" for w in ("타짜", "깡", "로마", "색시", "뭍", "톳", "놋", "임")},
     **{w: "훈련 어휘로 어색함" for w in ("폭도", "사별")},
+    # 9/28 감사(docs/content-audit-2026-09-28.md 1절): 빈도 등급 1·2에 있던 말 가운데 일상에서 거의 안 쓰는 한자어와, 뜻이 여럿인
+    # 한 음절이라 홀로 들으면 무슨 말인지 정해지지 않는 말. 웹 말뭉치 빈도는 다른 뜻(축하·망하다·단 하나)까지 세어 높게 나왔다.
+    **{w: "드문 한자어·전문어" for w in (
+        "공무", "공모", "사부", "상주", "사면", "사당", "능", "배상", "배당", "부수", "사무", "매상", "문체", "오디", "나리", "노파")},
+    **{w: "뜻이 여럿인 한 음절이라 홀로 드물게 쓰임" for w in ("축", "망", "순", "노", "각", "단", "마", "박", "패", "탐", "솔", "탄")},
+    **{w: "외래어 조각" for w in ("룸", "팝")},
 }
 
 # 서빙에서 뺀 문맥 문항(9/27 문항 감사, docs/content-routine.md 4절). 규칙 게이트(content_rules.check_closure)가
@@ -278,6 +289,12 @@ CLOSURE_EXCLUDED = {
     "g31edde02": "g25와 같은 문장", "ga3b2c93f": "g59와 같은 문장", "gbeeac83d": "g1과 같은 문장",
     "gbc7fe2cb": "g7과 같은 문장", "g56": "g38과 같은 문장", "g2148e5d2": "g55와 같은 틀, 조사로 오답이 지워짐",
     "g16541edb": "gcc426687과 같은 문장",
+    # 9/28 감사(docs/content-audit-2026-09-28.md 3절)
+    "g160a2043": "정답이 드문 말(도기), 오답도 맞음(도끼로 만든 컵)", "g27346a63": "정답이 드문 말(사당)",
+    "g93c85579": "오답도 맞음(밤새 공모했어), g3bb2d643과 같은 문장", "gd33b667f": "어색함(닭살이 탱탱해야), gda95d7d7과 같은 뜻",
+    "g648d50e8": "정답이 조사(만)라 오답은 문법만 보고 지워짐", "g9ddb8924": "정답이 부사(막)라 오답은 문법만 보고 지워짐",
+    "g1ef83cef": "정답이 관형사(순)라 오답은 문법만 보고 지워짐", "g23bea801": "어색함(거울에 볼 비추다가)",
+    "g32": "맞춤법(솥 채로 → 솥째로), 솥 문항이 이미 셋", "g55": "어색함(솔로 이를 닦다, 보통 칫솔)",
 }
 
 # ── 고도화 축 G: 승인된 생성 콘텐츠 병합 ─────────────────────────────────────
