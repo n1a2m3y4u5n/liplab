@@ -15,6 +15,7 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
 import { pickDistractors, visualLevel } from '../lib/wordOptions'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
 import useSlowWeak from '../hooks/useSlowWeak'
+import { effectiveSpeed, FAST_SPEECH_SPEED } from '../lib/visemeTiming'
 import MouthCompare from '../components/MouthCompare'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
@@ -118,12 +119,19 @@ function WordQuiz({ data, reload }) {
   // 문항 북마크 — 서버에 저장돼 복습 탭·저장한 문장에 나온다
   const [saved, toggleSaved] = useBookmark(q?.target, { situation: '단어 독화' })
   const [frames, setFrames] = useState([])
-  const shownFrames = useSlowWeak(frames)   // 약한 입모양은 조금 천천히(연습 화면)
+  const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
+  // 약한 입모양은 조금 천천히(연습 화면). 숙달 추정값이 문턱(서버 natural_speed_gate, 70) 이상이면 감속을 끄고 자연 속도로
+  // 낸다. 감속해 본 정답은 숙달에 0.5만 들어가서, 끄지 않으면 자연 속도로 잘 읽어도 숙달에 닿지 못할 수 있다(docs/mastery-ewma.md 7절).
+  const estimate = stat.attempts > 0 ? stat.mastery : (data.mastery_score ?? 0)
+  const shownFrames = useSlowWeak(frames, estimate < (data.natural_speed_gate ?? 70))
+  // 숙달한 뒤 엔드리스에서는 1.25배 '빠른 말'을 고를 수 있다(1.0배 이상이라 숙달에는 정답 1로 들어간다)
+  const [fast, setFast] = useState(false)
+  const fastOk = endless && (data.mastered || stat.mastered)
+  const playSpeed = fastOk && fast ? FAST_SPEECH_SPEED : 1
   const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계)
   const [result, setResult] = useState(null)
   const [compareOpen, setCompareOpen] = useState(false)   // 오답 뒤 정답·고른 말 입모양 나란히 비교(누를 때만 WebGL 둘 추가)
   const [submitting, setSubmitting] = useState(false)
-  const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
   const [qNum, setQNum] = useState(1)              // 레슨 내 문항 번호(진행바)
   const [tally, setTally] = useState({ n: 0, correct: 0 })   // 이번 레슨에서 푼 문항·정답 수 → 완료 뷰 정답률
   const [done, setDone] = useState(false)          // 12문항을 마치면 완료 뷰(93:12)
@@ -166,7 +174,7 @@ function WordQuiz({ data, reload }) {
     const correct = selected === q.target
     let confusions = []
     try {
-      const rr = await curriculumAPI.submitWord(q.target, correct, selected)
+      const rr = await curriculumAPI.submitWord(q.target, correct, selected, effectiveSpeed(frames, shownFrames, playSpeed))
       setStat({ attempts: rr.attempts, mastery: rr.mastery_score, mastered: rr.mastered })
       confusions = rr.confusions || []
       setXpEarned((x) => x + (rr.xp_gained || 0))
@@ -240,8 +248,14 @@ function WordQuiz({ data, reload }) {
           <div className={LESSON_AVATAR}>
             {/* 시각증강 기호(축 J-3)는 답을 확인한 뒤에만 — 보기가 최소대립 짝이라 문제 중에 보이면 기호만으로 답이 드러난다.
                 확인 뒤에는 약한 표적 입모양 음절에만 입꼬리 옆에 겹쳐 무엇이 달랐는지 보여 준다(숙달되면 흐려짐). */}
-            <MouthAvatar frames={shownFrames} height={null} className="h-full" cueText={result ? q.target : null} cueFocus />
+            <MouthAvatar frames={shownFrames} height={null} className="h-full" cueText={result ? q.target : null} cueFocus speed={playSpeed} />
           </div>
+          {fastOk && (
+            <button type="button" onClick={() => setFast((v) => !v)} aria-pressed={fast}
+              className={`self-center rounded px-3 py-1 text-xs transition-colors ${fast ? 'bg-primary-500 font-semibold text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              빠른 말 {FAST_SPEECH_SPEED}x
+            </button>
+          )}
 
           {/* 4지선다(91:28 / 모바일 235:51) — 선택 → 확인 */}
           <div className={LESSON_OPTIONS}>

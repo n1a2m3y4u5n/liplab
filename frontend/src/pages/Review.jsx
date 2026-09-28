@@ -8,6 +8,7 @@ import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { pickDistractors } from '../lib/wordOptions'
 import { pickVisemeDistractors } from '../lib/visemeOptions'
+import { FAST_SPEECH_SPEED } from '../lib/visemeTiming'
 
 /**
  * 오늘의 복습(간격 반복 SRS) — 독화 레슨 공통 템플릿(핸드오프 §4-03, WordStage·Closure와 같은 틀).
@@ -23,11 +24,14 @@ export default function Review() {
   const [items, setItems] = useState([])
   const [lessons, setLessons] = useState([])
   const [bank, setBank] = useState({ words: [], byWord: new Map() })
+  const [masteredStages, setMasteredStages] = useState(new Set())   // 숙달한 단계(1 입모양, 2 단어) → '빠른 말' 열기
 
   const load = useCallback(() => {
     setState('loading')
-    Promise.all([reviewAPI.getDue(), curriculumAPI.getVisemeLessons(), curriculumAPI.getWords()])
-      .then(([due, vl, wd]) => {
+    const stages = curriculumAPI.getStages().catch(() => null)   // 못 받으면 빠른 말만 닫아 둔다
+    Promise.all([reviewAPI.getDue(), curriculumAPI.getVisemeLessons(), curriculumAPI.getWords(), stages])
+      .then(([due, vl, wd, st]) => {
+        setMasteredStages(new Set((st?.stages || []).filter((x) => x.status === 'mastered').map((x) => x.stage)))
         setLessons(vl.lessons)
         setBank({ words: wd.words.map((w) => w.word), byWord: new Map(wd.words.map((w) => [w.word, w])) })
         if (!due.items.length) { setState('empty'); return }
@@ -51,12 +55,12 @@ export default function Review() {
   }
   return (
     <div className="min-h-[100dvh] bg-page">
-      <ReviewSession items={items} lessons={lessons} bank={bank} />
+      <ReviewSession items={items} lessons={lessons} bank={bank} masteredStages={masteredStages} />
     </div>
   )
 }
 
-function ReviewSession({ items, lessons, bank }) {
+function ReviewSession({ items, lessons, bank, masteredStages }) {
   const navigate = useNavigate()
   const [idx, setIdx] = useState(0)
   const [frames, setFrames] = useState([])
@@ -71,6 +75,9 @@ function ReviewSession({ items, lessons, bank }) {
 
   const item = items[idx]
   const isViseme = item.kind === 'viseme'
+  // 숙달한 단계의 항목은 1.25배 '빠른 말'로 볼 수 있다(docs/curriculum-roadmap.md 1-1). 복습 답은 숙달에 넣지 않는다.
+  const [fast, setFast] = useState(false)
+  const fastOk = masteredStages?.has(isViseme ? 1 : 2)
   const { targetKey, choices } = useMemo(() => {
     if (isViseme) {
       const vid = parseInt(item.ref, 10)
@@ -150,9 +157,15 @@ function ReviewSession({ items, lessons, bank }) {
           </div>
 
           <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
-            <MouthAvatar height={null} className="h-full"
+            <MouthAvatar height={null} className="h-full" speed={fastOk && fast ? FAST_SPEECH_SPEED : 1}
               frames={isViseme ? undefined : frames} visemeId={isViseme ? parseInt(item.ref, 10) : undefined} />
           </div>
+          {fastOk && (
+            <button type="button" onClick={() => setFast((v) => !v)} aria-pressed={fast}
+              className={`self-center rounded px-3 py-1 text-xs transition-colors ${fast ? 'bg-primary-500 font-semibold text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              빠른 말 {FAST_SPEECH_SPEED}x
+            </button>
+          )}
 
           <div className="flex flex-col gap-2.5 lg:gap-3">
             {choices.map((c, k) => (

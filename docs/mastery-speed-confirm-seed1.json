@@ -1,0 +1,77 @@
+{
+ "seed": 1,
+ "results": {
+  "min8_A": {
+   "R": {
+    "false_rate": 0.1056,
+    "judged": 12438,
+    "delay_noslow_median": 27.0,
+    "delay_slow_median": 21.0,
+    "slow_strong_mastered_share": 0.9997
+   },
+   "C2:70": {
+    "false_rate": 0.049,
+    "judged": 10454,
+    "delay_noslow_median": 27.0,
+    "delay_slow_median": 44.0,
+    "slow_strong_mastered_share": 0.9658,
+    "pass": true
+   }
+  },
+  "min8_B": {
+   "R": {
+    "false_rate": 0.1069,
+    "judged": 12345,
+    "delay_noslow_median": 27.0,
+    "delay_slow_median": 24.0,
+    "slow_strong_mastered_share": 0.9997
+   },
+   "C2:70": {
+    "false_rate": 0.0452,
+    "judged": 10991,
+    "delay_noslow_median": 27.0,
+    "delay_slow_median": 34.0,
+    "slow_strong_mastered_share": 0.9979,
+    "pass": true
+   }
+  },
+  "min6_A": {
+   "R": {
+    "false_rate": 0.1233,
+    "judged": 12489,
+    "delay_noslow_median": 27.0,
+    "delay_slow_median": 21.0,
+    "slow_strong_mastered_share": 0.9997
+   },
+   "C2:70": {
+    "false_rate": 0.0623,
+    "judged": 10490,
+    "delay_noslow_median": 27.0,
+    "delay_slow_median": 44.0,
+    "slow_strong_mastered_share": 0.9658,
+    "pass": true
+   }
+  },
+  "min6_B": {
+   "R": {
+    "false_rate": 0.1267,
+    "judged": 12409,
+    "delay_noslow_median": 27.0,
+    "delay_slow_median": 24.0,
+    "slow_strong_mastered_share": 0.9997
+   },
+   "C2:70": {
+    "false_rate": 0.0568,
+    "judged": 11022,
+    "delay_noslow_median": 27.0,
+    "delay_slow_median": 34.0,
+    "slow_strong_mastered_share": 0.9979,
+    "pass": true
+   }
+  }
+ },
+ "passing": [
+  "C2:70"
+ ],
+ "chosen": "C2:70"
+}

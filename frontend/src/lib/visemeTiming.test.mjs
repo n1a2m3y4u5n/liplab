@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { easeInOutCubic, transitionTime, transitionProgress, MIN_TRANSITION_MS, slowWeakFrames, pickSlowVisemes } from './visemeTiming.js'
+import { easeInOutCubic, transitionTime, transitionProgress, MIN_TRANSITION_MS, slowWeakFrames, pickSlowVisemes, effectiveSpeed } from './visemeTiming.js'
 
 test('easeInOutCubic: 끝점 고정, 가운데 0.5, 단조 증가', () => {
   assert.equal(easeInOutCubic(0), 0)
@@ -36,4 +36,14 @@ test('약한 입모양 프레임만 느리게(duration·transition ×1.35), 약�
   const pick = pickSlowVisemes([{ viseme_id: 1, attempts: 9, mastery: 0.4 }, { viseme_id: 2, attempts: 3, mastery: 0.2 },
     { viseme_id: 3, attempts: 8, mastery: 0.9 }, { viseme_id: 4, attempts: 6, mastery: 0.6 }])
   assert.deepEqual([...pick], [1, 4])
+})
+
+test('effectiveSpeed: 적응 감속과 학습자 속도를 곱한 실제 재생 속도', () => {
+  const orig = [{ viseme: 1, duration_ms: 100 }, { viseme: 2, duration_ms: 100 }]
+  assert.equal(effectiveSpeed(orig, orig), 1)
+  const slowed = slowWeakFrames(orig, new Set([1]))
+  assert.ok(effectiveSpeed(orig, slowed) < 1)
+  assert.equal(effectiveSpeed(orig, slowed), Math.round((200 / 235) * 1000) / 1000)
+  assert.equal(effectiveSpeed(orig, orig, 1.25), 1.25)
+  assert.equal(effectiveSpeed([], [], 1), 1)
 })

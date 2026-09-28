@@ -306,6 +306,7 @@ class TrialAttempt(Base):
     phase = Column(String(10), default="practice")  # 'pre' | 'post' | 'practice'
     confusions = Column(JSON, default=list)         # [{position,target,read,viseme,same_viseme}]
     item_id = Column(String(40), nullable=True)     # 문맥 추론 문항 id(정답 단어가 여러 문항에 겹쳐 target으로는 못 가린다)
+    speed = Column(Float, nullable=True)            # 답하기 전에 본 실제 재생 속도(1.0 미만은 감속, docs/mastery-ewma.md 7절)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -421,6 +422,8 @@ async def init_db():
             "ALTER TABLE stage_progress ADD COLUMN mastered_at TIMESTAMP",
             # 문맥 추론 문항 id(최근에 푼 문항을 뒤로 보내기)
             "ALTER TABLE trial_attempts ADD COLUMN item_id VARCHAR(40)",
+            # 답할 때 본 재생 속도(감속 정답은 숙달에 0.5)
+            "ALTER TABLE trial_attempts ADD COLUMN speed FLOAT",
         ):
             try:
                 await conn.exec_driver_sql(ddl)
