@@ -233,7 +233,8 @@ async def _gloss_via_llm(text: str) -> Optional[Dict]:
         return None
     try:
         from anthropic import AsyncAnthropic
-        client = AsyncAnthropic(api_key=api_key, timeout=30.0, max_retries=1)   # llm_service와 같은 제한
+        import llm_budget
+        client = llm_budget.guard(AsyncAnthropic(api_key=api_key, timeout=30.0, max_retries=1))   # llm_service와 같은 제한·하루 한도
         response = await client.messages.create(
             model=_SIGN_MODEL,
             max_tokens=800,

@@ -10,6 +10,7 @@ import llm_json
 from typing import List, Dict
 from datetime import datetime, timedelta
 from anthropic import AsyncAnthropic
+import llm_budget
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +22,8 @@ from engine import get_viseme_feature
 # 기본값(600초, 재시도 2번)이면 느린 응답 하나가 코칭·채점 응답을 붙잡아 화면 제한(60초)을 넘긴다.
 # 이 앱의 호출은 모두 1024토큰 이하라 30초·재시도 1번이면 넉넉하고, 넘으면 각 호출의 대체 경로로 간다.
 anthropic_client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"), timeout=30.0, max_retries=1)
+# 하루 호출 한도(서버 전체·IP별). 넘으면 BudgetExceeded가 나고 호출하는 쪽의 대체 경로로 간다(llm_budget.py)
+llm_budget.guard(anthropic_client)
 
 
 async def generate_speaking_coaching(target: str, transcript: str, score: float,
