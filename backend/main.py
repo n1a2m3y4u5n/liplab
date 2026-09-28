@@ -1994,7 +1994,7 @@ async def curriculum_words(current_user=Depends(get_current_user), db: AsyncSess
         probes = [{**meta.get(p["word"], {}), **p} for p in probes]
     except Exception as e:   # 탐색 문항이 없어도 레슨은 된다
         logging.getLogger("liplab").warning("stage2 probe failed: %s", e)
-    # 빠른 말 속도 단계(speed_ladder): 숙달하면 1.25배, 한 단계에서 최근 12문항 중 10문항을 맞히면 1.6배, 2.0배(실제 말 빠르기)
+    # 빠른 말 속도 단계(speed_ladder): 숙달하면 1.25배, 한 단계에서 최근 12문항 중 10문항을 맞히면 1.6배, 2.0배(538 문장 낭독의 음절 속도 근사)
     ladder = 0
     try:
         import speed_ladder as _sl
