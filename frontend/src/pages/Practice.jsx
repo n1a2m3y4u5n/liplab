@@ -16,6 +16,7 @@ import useFocusTrap from '../hooks/useFocusTrap'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { sentenceLevel } from '../lib/reviewScenario'
 import useSlowWeak from '../hooks/useSlowWeak'
+import useLessonTalker from '../hooks/useLessonTalker'
 
 /**
  * 힌트 시스템: 단계별로 문장 정보를 공개
@@ -196,6 +197,7 @@ export default function Practice() {
 
   const [visemes, setVisemes] = useState([])
   const shownVisemes = useSlowWeak(visemes)   // 약한 입모양은 조금 천천히(연습 화면)
+  const [lesson] = useLessonTalker('sentence')   // 상황(레슨)마다 가상 화자 한 명(계획 2-2)
   const [isPlaying, setIsPlaying] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -447,7 +449,8 @@ export default function Practice() {
           <p className="text-sm text-ink-muted">Viseme 생성 중...</p>
         </div>
       ) : (
-        <LipSyncPlayer3D visemes={shownVisemes} isPlaying={isPlaying} onComplete={() => setIsPlaying(false)} {...extra} />
+        <LipSyncPlayer3D visemes={shownVisemes} isPlaying={isPlaying} onComplete={() => setIsPlaying(false)}
+          talker={lesson.talker} talkerSeed={lesson.seed} {...extra} />
       )}
     </div>
   )
@@ -490,7 +493,8 @@ export default function Practice() {
               <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
                 {/* 시각증강 기호(축 J-3)는 답을 확인한 뒤에만 — 문제 중에 보이면 보기끼리 다른 자질이 기호로 드러나 답이 된다.
                     그 뒤에는 약한 표적 입모양 음절에만 입꼬리 옆에 겹쳐 '왜 헷갈렸는지'를 보여 준다(숙달되면 흐려짐). */}
-                <MouthAvatar frames={shownVisemes} height={null} className="h-full" cueText={result ? currentSentence : null} cueFocus />
+                <MouthAvatar frames={shownVisemes} height={null} className="h-full" cueText={result ? currentSentence : null} cueFocus
+                  talker={lesson.talker} talkerSeed={lesson.seed} />
               </div>
 
               {/* 4지선다(91:28 / 모바일 235:51) — 선택 → 확인 */}

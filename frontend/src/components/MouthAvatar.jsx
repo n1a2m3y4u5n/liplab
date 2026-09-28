@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import AvatarVRM from './AvatarVRM'
+import TalkerChip from './TalkerChip'
 import { CueGlyph } from './CueBadges'
 import { curriculumAPI } from '../api'
 import { visemeCycleSteps } from '../lib/visemeCycle'
+import { applyTalkerTiming, applyTalkerCycle } from '../lib/talkers'
 
 /**
  * 입모양만 재생하는 경량 아바타 (오버레이·컨트롤 없음 → 퀴즈에서 정답 미노출).
@@ -14,11 +16,15 @@ import { visemeCycleSteps } from '../lib/visemeCycle'
  *    기호 세기는 서버(/api/cues)가 숙달도로 낮춘다(페이딩). 글자는 보이지 않아 정답이 드러나지 않는다.
  *  - cueFocus: true면 학습자의 약한 표적 입모양 음절에만 기호를 남긴다(필요한 순간에만 — /api/cues focus).
  *  - speed: 재생 배속(기본 1). 숙달한 단계의 엔드리스·복습에서 1.25배 '빠른 말'로 쓴다(docs/curriculum-roadmap.md 1-1).
+ *  - talker·talkerSeed: 가상 화자(lib/talkers, 계획 2-2). 말 속도·흔들림·동시조음을 프레임에 입히고 입모양 배율을 아바타에 넘긴다.
+ *    speed는 그 위에 곱해진다. showTalker가 true면 왼쪽 위에 화자 이름을 작게 보인다.
  * LipSyncPlayer3D는 'Viseme N' 오버레이가 있어 퀴즈에 부적합해 별도 컴포넌트로 둔다.
  * 문항이 바뀌어도 key로 다시 마운트하지 않는다. frames가 바뀌면 재생을 처음부터 다시 하고, 다시 마운트하면 캔버스·WebGL
  * 컨텍스트·셰이더·모델 버퍼를 새로 만든다(9/27 측정: 문항마다 컨텍스트가 새로 생기고 첫 그리기까지 0.1~1.1초).
  */
-export default function MouthAvatar({ frames, visemeId, height = 300, className = '', cueText = null, cueFocus = false, modelUrl, speed = 1 }) {
+export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300, className = '', cueText = null, cueFocus = false, modelUrl, speed = 1,
+  talker = null, talkerSeed = 0, showTalker = true }) {
+  const frames = useMemo(() => applyTalkerTiming(rawFrames, talker, talkerSeed), [rawFrames, talker, talkerSeed])
   const [vid, setVid] = useState(15)
   const [syl, setSyl] = useState(null)      // 재생 중 프레임의 음절 번호(text_index)
   // 이번 입모양의 전환 시간·머무는 시간(ms). AvatarVRM이 이 시간 동안 이징으로 옮긴 뒤 목표에서 멈춘다(lib/visemeTiming, 3D 모션 A·B).
@@ -64,7 +70,7 @@ export default function MouthAvatar({ frames, visemeId, height = 300, className 
       t = setTimeout(step, 300)
     } else {
       // 목표 ↔ 중립 반복. 이중모음은 원순 → 개방으로 미끄러지는 움직임(lib/visemeCycle)
-      const steps = visemeCycleSteps(visemeId ?? 15)
+      const steps = applyTalkerCycle(visemeCycleSteps(visemeId ?? 15), talker, talkerSeed)
       const cycle = (i) => {
         if (!on) return
         const s = steps[i % steps.length]
@@ -78,13 +84,14 @@ export default function MouthAvatar({ frames, visemeId, height = 300, className 
     }
 
     return () => { on = false; clearTimeout(t) }
-  }, [frames, visemeId, speed])
+  }, [frames, visemeId, speed, talker, talkerSeed])
 
   const active = syl != null ? cues.filter((c) => c.syllable_index === syl && (c.strength ?? 1) > 0.05) : []
   return (
     <div className={`relative w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-slate-800 to-slate-900 [container-type:size] ${className}`}
          style={height != null ? { height } : undefined}>
-      <AvatarVRM visemeId={vid} modelUrl={modelUrl} transitionMs={timing.t} durationMs={timing.d} />
+      <AvatarVRM visemeId={vid} modelUrl={modelUrl} transitionMs={timing.t} durationMs={timing.d} talker={talker} />
+      {showTalker && <TalkerChip talker={talker} />}
       {/* 기호는 오른쪽 입꼬리 옆 — 카메라 세로 화각이 고정이라 입 높이는 캔버스 높이의 약 68%, 입 반폭은 높이의 약 25% */}
       {active.length > 0 && (
         <div className="pointer-events-none absolute left-[calc(50%+30cqh)] top-[68%] flex -translate-y-1/2 gap-1" aria-hidden>
