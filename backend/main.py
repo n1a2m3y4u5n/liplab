@@ -2065,19 +2065,32 @@ async def curriculum_closure_answer(data: ClosureAnswer, current_user=Depends(ge
             "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
 
 
+def _trial_wrong(T):
+    """오답 시행 조건. correct 열은 NULL을 허용하므로(default False) 예전 파이썬 'not a.correct'처럼 NULL도 오답이다."""
+    from sqlalchemy import or_
+    return or_(T.correct.is_(False), T.correct.is_(None))
+
+
 @app.get("/api/curriculum/confusion-matrix")
 async def curriculum_confusion_matrix(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """시행 기록(TrialAttempt)에서 자모 혼동행렬을 집계 — 개인별 헷갈림 리포트·평가자료용.
     '무엇을 무엇으로 읽었나(target→read)'를 빈도순으로, 입모양이 같아 헷갈린 비율도 함께 낸다."""
     from database import TrialAttempt
-    from sqlalchemy import select
-    r = await db.execute(select(TrialAttempt).where(TrialAttempt.user_id == current_user.id))
-    rows = r.scalars().all()
+    from sqlalchemy import select, func
+    # 전체 수는 count로, confusions는 오답 행에서만 읽는다. 시행을 만드는 세 곳(입모양·단어·문맥)이 모두 정답 행에
+    # confusions=[]를 넣어 결과는 같다. 예전에는 전체 행을 ORM 객체(JSON 열 포함)로 읽었다. 시행 2만 행(오답 5,849)
+    # 감사 DB에서 응답 214~350 → 27~44ms(4회 실행, 각 5회 중앙값, JSON 같음). correct가 NULL인 행은 예전 'not a.correct'처럼 오답으로 센다.
+    # 같은 횟수의 혼동 순서가 바뀌지 않게, 예전 쿼리가 (user_id, created_at) 인덱스로 읽던 시간순을 명시한다
+    n_trials = (await db.execute(select(func.count()).select_from(TrialAttempt)
+                                 .where(TrialAttempt.user_id == current_user.id))).scalar_one()
+    wrong_cfs = (await db.execute(select(TrialAttempt.confusions).where(
+        TrialAttempt.user_id == current_user.id, _trial_wrong(TrialAttempt))
+        .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).scalars().all()
     jamo = {}          # (target, read) -> {count, same}
     same_cnt = tot_cf = 0
-    n_wrong = sum(1 for a in rows if not a.correct)
-    for a in rows:
-        for cf in (a.confusions or []):
+    n_wrong = len(wrong_cfs)
+    for confusions in wrong_cfs:
+        for cf in (confusions or []):
             key = (cf.get("target"), cf.get("read"))
             e = jamo.setdefault(key, {"count": 0, "same_viseme": 0})
             e["count"] += 1
@@ -2087,7 +2100,7 @@ async def curriculum_confusion_matrix(current_user=Depends(get_current_user), db
     jamo_list = sorted(
         [{"target": t, "read": rd, "count": v["count"], "same_viseme": v["same_viseme"]}
          for (t, rd), v in jamo.items()], key=lambda x: -x["count"])[:30]
-    return {"trials": len(rows), "wrong": n_wrong, "confusion_count": tot_cf,
+    return {"trials": n_trials, "wrong": n_wrong, "confusion_count": tot_cf,
             "same_viseme_ratio": round(same_cnt / tot_cf, 3) if tot_cf else 0.0,
             "jamo_confusions": jamo_list}
 
@@ -2113,27 +2126,29 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
     import eval_metrics as _em
 
     # ── 선다형 시행 ──────────────────────────────────────────────
-    tr = (await db.execute(
-        select(TrialAttempt).where(TrialAttempt.user_id == current_user.id)
-        .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).scalars().all()
-    n_tr = len(tr)
-    n_correct = sum(1 for a in tr if a.correct)
-    seq = [(a.item_type, bool(a.correct)) for a in tr]
+    # 쓰는 열(유형·정오)만 읽는다. 예전에는 시행 전체를 ORM 객체(confusions JSON 포함)로 읽었다. 시행 2만·문장 2천 행
+    # 감사 DB에서 응답 268~458 → 60~111ms(각 5회 중앙값, JSON 같음). 혼동 비율은 아래에서 오답 행의 confusions만 읽는다
+    seq = [(it, bool(c)) for it, c in (await db.execute(
+        select(TrialAttempt.item_type, TrialAttempt.correct).where(TrialAttempt.user_id == current_user.id)
+        .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).all()]
+    n_tr = len(seq)
+    n_correct = sum(1 for _, c in seq if c)
 
     learning_curve = _em.type_adjusted_curve(seq)
     baseline_vs_recent = _em.within_type_change(seq)   # 9시행 이상인 유형이 없으면 None
 
     by_item_type = []
     for it, label in (("viseme", "입모양 인지"), ("word", "단어"), ("closure", "문맥 추론")):
-        seg = [a for a in tr if a.item_type == it]
+        seg = [c for t, c in seq if t == it]
         if seg:
             by_item_type.append({"item_type": it, "label": label, "n": len(seg),
-                                 "accuracy": round(sum(1 for a in seg if a.correct) / len(seg) * 100, 1)})
+                                 "accuracy": round(sum(1 for c in seg if c) / len(seg) * 100, 1)})
 
-    # 오답 중 같은 입모양 혼동 비율
+    # 오답 중 같은 입모양 혼동 비율(정답 행의 confusions는 늘 비어 있어 오답 행만 읽는다)
     same_cnt = tot_cf = 0
-    for a in tr:
-        for cf in (a.confusions or []):
+    for confusions in (await db.execute(select(TrialAttempt.confusions).where(
+            TrialAttempt.user_id == current_user.id, _trial_wrong(TrialAttempt)))).scalars().all():
+        for cf in (confusions or []):
             tot_cf += 1
             if cf.get("same_viseme"):
                 same_cnt += 1
@@ -2175,13 +2190,14 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
             "mastered": a["mastered"]})
 
     # ── 문장 채점 추이 ───────────────────────────────────────────
+    # 난이도·점수 두 열만 읽는다(예전에는 문장·답·피드백 JSON까지 든 Progress 객체 전체)
     prog = (await db.execute(
-        select(Progress).where(Progress.user_id == current_user.id)
-        .order_by(Progress.created_at.asc(), Progress.id.asc()))).scalars().all()
+        select(Progress.difficulty_level, Progress.score).where(Progress.user_id == current_user.id)
+        .order_by(Progress.created_at.asc(), Progress.id.asc()))).all()
     # 문장 난이도 차이를 뺀 점수 추이(raw는 보정 전). 경로가 쉬운 문장에서 어려운 문장으로 간다
-    sentence_trend = _em.group_adjusted_curve([(p.difficulty_level or 0, p.score or 0.0) for p in prog],
+    sentence_trend = _em.group_adjusted_curve([(lvl or 0, sc or 0.0) for lvl, sc in prog],
                                               lo=0.0, hi=100.0, ndigits=1)
-    sentence_avg = round(sum(p.score or 0 for p in prog) / len(prog), 1) if prog else None
+    sentence_avg = round(sum(sc or 0 for _, sc in prog) / len(prog), 1) if prog else None
 
     return {
         "overview": {
