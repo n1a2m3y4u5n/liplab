@@ -3227,7 +3227,7 @@ async def seed_demo(current_user=Depends(get_current_user), db: AsyncSession = D
 
 
 async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
-                               min_attempts: int, mastery_pct: float, db):
+                               min_attempts: int, mastery_pct: float, db, score=None):
     """발화 단계 진행률 rolling 갱신(읽기 _bump_stage_progress의 발화판). sp 반환.
     숙달 점수는 편향 보정 이동 평균(_ewma_mastery), 문턱은 speak_curriculum의 단계별 mastery(85·90). 예전 누적 합격률(65·70)은
     초반 실패가 끝까지 남아 늦었다(가상 학습자 지연 40~51번 → 28~44번, 거짓 숙달도 모든 단계에서 낮음, docs/mastery-ewma.md 6절)."""
@@ -3245,7 +3245,16 @@ async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
         sp.correct += 1
     sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, passed)
     # 한번 숙달하면 유지한다(누적 정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게)
-    sp.status = "mastered" if (sp.status == "mastered" or (sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct)) else "in_progress"
+    reached = sp.status == "mastered" or (sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct)
+    # 4·5단계 개인 향상 경로(9/28, speak_curriculum.gain_mastered): 채점기가 청각장애 발화를 낮게 보는 몫이 있어 절대 문턱에
+    # 못 닿는 학습자도 자기 처음 점수보다 뚜렷이 늘면 숙달로 본다. 지금 시도는 아직 SpeakAttempt에 없으므로 score를 덧붙인다.
+    gain = (_speakcur.get_stage(stage) or {}).get("gain")
+    if not reached and gain and score is not None and sp.attempts >= int(gain["min_attempts"]):
+        from database import SpeakAttempt
+        rows = await db.execute(select(SpeakAttempt.score).where(
+            SpeakAttempt.user_id == user_id, SpeakAttempt.stage == stage).order_by(SpeakAttempt.id))
+        reached = _speakcur.gain_mastered([x for (x,) in rows.all()] + [score], gain)
+    sp.status = "mastered" if reached else "in_progress"
     return sp
 
 
@@ -3524,7 +3533,7 @@ async def speak_assess(
             sp = None
         else:
             sp = await _bump_speak_progress(current_user.id, stage, bool(passed),
-                                            stg["min_attempts"], stg["mastery"], db)
+                                            stg["min_attempts"], stg["mastery"], db, score=score)
     else:
         score = round(sim or 0.0, 1)
         sp = None
