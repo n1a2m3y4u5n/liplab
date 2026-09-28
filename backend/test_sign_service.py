@@ -99,19 +99,28 @@ def test_alias_substitution_transparent():
 
 
 def test_number_to_sign():
-    # 아라비아 숫자 → 한국수어 숫자 수어(투명 치환). '3'→셋, 자리별 처리.
+    # 아라비아 숫자 → 한국수어 숫자 수어(투명 치환). '3'→셋
     r = asyncio.run(ss.translate_to_ksl("3"))
     t = r["tokens"][0]
     assert t["type"] == "sign" and t["word"] == "3" and t.get("signed_as") == "셋"
-    # 여러 자리: '25' → 둘, 다섯 (2자리 각각 수어)
-    r2 = asyncio.run(ss.translate_to_ksl("25"))
-    assert [tk.get("signed_as") for tk in r2["tokens"]] == ["둘", "다섯"]
+    # 10 이상은 사전의 수 표제어로(9/28 감사 E7). 예전에는 한 자리씩 12→하나+둘, 20→둘+영, 100→하나+영+영이었다
+    for num, want in (("12", ["열둘"]), ("20", ["스물"]), ("25", ["스물", "다섯"]), ("100", ["백"]),
+                      ("350", ["삼", "백", "오십"]), ("2024", ["이천", "이십", "사"])):
+        toks = asyncio.run(ss.translate_to_ksl(num))["tokens"]
+        assert [tk.get("signed_as") for tk in toks] == want, num
+        assert all(tk["type"] == "sign" and tk["word"] == num for tk in toks), num
+    assert asyncio.run(ss.translate_to_ksl("12"))["tokens"][0]["origin_no"] == "10923"
+    # 사전 표제어는 비관형형(열둘·스물)이다. 관형형(열두·스무)은 사전에 없다
+    assert ss.lookup_number_sign("열두") is None and ss.lookup_number_sign("스무") is None
+    # 0으로 시작하거나 5자리 이상(번호)은 한 자리씩
+    assert [tk.get("signed_as") for tk in asyncio.run(ss.translate_to_ksl("010"))["tokens"]] == ["영", "하나", "영"]
+    assert len(asyncio.run(ss.translate_to_ksl("12345"))["tokens"]) == 5
 
 
 def test_zero_is_number_sign():
     # 0도 숫자 수어(영, 개념>수 카테고리 origin 1214)로 나와야 한다(지문자 아님).
-    r = asyncio.run(ss.translate_to_ksl("10"))
-    zero = r["tokens"][1]
+    r = asyncio.run(ss.translate_to_ksl("0"))
+    zero = r["tokens"][0]
     assert zero["type"] == "sign" and zero["word"] == "0" and zero.get("signed_as") == "영"
     assert zero["origin_no"] == "1214"          # 천주교 동형어(17688)가 아닌 숫자 0
     # 동형어 중 '수' 카테고리를 골랐는지 직접 확인
