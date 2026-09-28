@@ -197,8 +197,11 @@ export const curriculumAPI = {
   getSentenceOptions: async (sentence, exclude) => (await api.post('/curriculum/sentence-options', { sentence, exclude })).data,
   // speed: 답하기 전에 본 실제 재생 속도(학습자 선택 × 적응 감속). 1.0 미만 정답은 숙달에 0.5로 들어간다(docs/mastery-ewma.md 7절)
   // mode 'typed': 주관식(chosen = 입력한 글). 서버가 정답·'입모양은 맞음'·오답으로 채점해 verdict로 돌려준다(계획 1-2)
-  submitWord: async (word, correct, chosen, speed, mode, options) =>
-    (await api.post('/curriculum/word-answer', { word, correct, chosen, speed, ...(mode ? { mode } : {}), ...(options ? { options } : {}) })).data,
+  // probe(선택): 짝 탐색 문항이면 /curriculum/words probes[].probe(자리·target·read·대비 단어). 숙달에는 보통 문항과 똑같이 들어간다
+  submitWord: async (word, correct, chosen, speed, mode, options, probe) =>
+    (await api.post('/curriculum/word-answer', {
+      word, correct, chosen, speed, ...(mode ? { mode } : {}), ...(options ? { options } : {}), ...(probe ? { probe } : {}),
+    })).data,
   getClosure: async () => (await api.get('/curriculum/closure')).data,
   submitClosure: async (item_id, chosen, options) =>
     (await api.post('/curriculum/closure-answer', { item_id, chosen, ...(options ? { options } : {}) })).data,

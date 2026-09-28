@@ -17,7 +17,7 @@ import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_OPTIONS, lessonPad } fr
 import useSlowWeak from '../hooks/useSlowWeak'
 import useLessonTalker from '../hooks/useLessonTalker'
 import { effectiveSpeed, FAST_SPEECH_SPEED } from '../lib/visemeTiming'
-import { typedSlots, contextSlots } from '../lib/openSet'
+import { typedSlots, contextSlots, probeSlot, pickProbe } from '../lib/openSet'
 import MouthCompare from '../components/MouthCompare'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
@@ -153,16 +153,20 @@ function WordQuiz({ data, reload }) {
   // 레슨 문항 구성(lib/openSet), 레슨을 시작할 때 자리를 정한다.
   //  - 12문항 중 2문항은 문맥 문항(문장 속 빈칸, 보기는 입모양이 비슷한 단어, 계획 1-3). 이 답은 숙달에 넣지 않는다.
   //  - 숙달한 뒤에는 30%를 주관식(단어 입력)으로 낸다(계획 1-2).
+  //  - 선다형 1문항(첫 문항 제외)은 짝 탐색 문항이다: 서버가 고른 짝의 target 자모 단어 + 대비 단어가 든 보기(혼동 짝 5.4-2).
+  //    보통 단어 문항이라 숙달에 똑같이 들어가고, 시행 기록에 탐색 표시(probe)가 남는다.
   const masteredRef = useRef(false)
   masteredRef.current = !!(data.mastered || stat.mastered)
-  const slotRef = useRef({ typed: new Set(), context: new Set(), pos: -1, ctx: 0 })
+  const slotRef = useRef({ typed: new Set(), context: new Set(), probe: -1, pos: -1, ctx: 0 })
   const [typedText, setTypedText] = useState('')
   const newQ = useCallback(async (fresh = false) => {
     const ctxItems = data.context_items || []
     if (fresh) {
       askedRef.current = new Set()
       const context = contextSlots(QUIZ_LEN, Math.min(2, ctxItems.length))
-      slotRef.current = { typed: typedSlots(QUIZ_LEN, masteredRef.current, Math.random, context), context, pos: -1, ctx: 0 }
+      const typedSet = typedSlots(QUIZ_LEN, masteredRef.current, Math.random, context)
+      const probe = probeSlot(QUIZ_LEN, new Set([...context, ...typedSet]))
+      slotRef.current = { typed: typedSet, context, probe, pos: -1, ctx: 0 }
     }
     slotRef.current.pos += 1
     setResult(null)
@@ -178,6 +182,14 @@ function WordQuiz({ data, reload }) {
       return
     }
     const kind = slotRef.current.typed.has(slotRef.current.pos) ? 'typed' : 'choice'
+    const probe = slotRef.current.pos === slotRef.current.probe ? pickProbe(data.probes, askedRef.current) : null
+    if (probe) {
+      askedRef.current.add(probe.word)
+      setQ({ target: probe.word, choices: shuffle([probe.word, ...probe.distractors.slice(0, 3)]), kind: 'choice', probe: probe.probe })
+      setFrames([])
+      try { setFrames(await learningAPI.getVisemes(probe.word)) } catch { /* ignore */ }
+      return
+    }
     const left = data.words.filter((w) => !askedRef.current.has(w.word))
     const pool = left.length ? left : data.words
     const total = pool.reduce((s, w) => s + (w.priority || 1), 0)
@@ -221,7 +233,7 @@ function WordQuiz({ data, reload }) {
     try {
       // 선다형은 보여 준 보기도 보낸다(시행 기록, 기회로 나눈 혼동률). 주관식은 보기가 없다
       const rr = await curriculumAPI.submitWord(q.target, correct, answer, effectiveSpeed(frames, shownFrames, playSpeed),
-        typed ? 'typed' : undefined, typed ? undefined : q.choices)
+        typed ? 'typed' : undefined, typed ? undefined : q.choices, q.probe)
       setStat({ attempts: rr.attempts, mastery: rr.mastery_score, mastered: rr.mastered })
       confusions = rr.confusions || []
       if (typed && rr.verdict) { verdict = rr.verdict; correct = verdict === 'correct' }

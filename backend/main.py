@@ -1847,6 +1847,8 @@ class WordAnswer(BaseModel):
     # 'typed'면 주관식(단어 입력, 커리큘럼 개선 계획 1-2): chosen이 입력한 글이고 서버가 visual_difficulty.typed_word_verdict로 채점한다
     mode: Optional[str] = Field(None, max_length=10)
     options: Optional[list] = None   # 보여 준 보기(정답 포함, 보인 순서). 주관식은 없음
+    # 짝 탐색 문항이면 /curriculum/words의 probes[].probe를 그대로(자리·target·read·대비 단어). 서버가 보기와 맞는지 확인해 남긴다
+    probe: Optional[dict] = None
 
 
 def _excluded_training_words() -> set:
@@ -1857,7 +1859,7 @@ def _excluded_training_words() -> set:
 
 # 2단계 서빙 풀의 정적 표(난이도·분위·보기 부류). 풀(단어 은행 - 표준검사 단어)이 같으면 재사용한다.
 # 보기 부류는 처음 만들 때 약 1.5초가 들어 스레드에서 만든다(이후 요청은 약 20ms).
-_STAGE2_TABLE = {"key": None, "table": None}
+_STAGE2_TABLE = {"key": None, "table": None, "pairs": None}
 
 
 def _stage2_table():
@@ -1870,8 +1872,34 @@ def _stage2_table():
         table = _vd.Stage2Table(pool)
         for w in table.words:
             table.classes(w)
-        _STAGE2_TABLE["key"], _STAGE2_TABLE["table"] = pool, table
+        _STAGE2_TABLE["key"], _STAGE2_TABLE["table"], _STAGE2_TABLE["pairs"] = pool, table, None
     return _STAGE2_TABLE["table"]
+
+
+def _stage2_pairs():
+    """서빙 풀의 짝별 대비 단어 표(confusion_pairs.PairIndex). 풀이 같으면 재사용한다."""
+    import confusion_pairs as _cp
+    table = _stage2_table()
+    if _STAGE2_TABLE["pairs"] is None or _STAGE2_TABLE["pairs"].index is not table.index:
+        _STAGE2_TABLE["pairs"] = _cp.PairIndex(table)
+    return _STAGE2_TABLE["pairs"]
+
+
+# 혼동 짝을 셀 선다형 시행 유형(자모 혼동이 남는 것). 1단계 입모양 퀴즈는 무리 선다라 자모가 없다.
+_PAIR_TRIAL_TYPES = ("word", "context", "closure")
+
+
+async def _learner_pair_focus(user_id: int, db) -> list:
+    """학습자의 후보 혼동 짝(앞이 우선). 최근 오답 200행의 자모 혼동에서 눈으로 가를 수 있는 짝을 세어 2번 이상 나온 상위 3개
+    (confusion_pairs.confusion_pairs, 문서 2절 규칙). 탐색 문항이 이 짝부터 확인한다."""
+    import confusion_pairs as _cp
+    from database import TrialAttempt
+    from sqlalchemy import select
+    rows = (await db.execute(
+        select(TrialAttempt.confusions).where(TrialAttempt.user_id == user_id,
+                                              TrialAttempt.item_type.in_(_PAIR_TRIAL_TYPES), _trial_wrong(TrialAttempt))
+        .order_by(TrialAttempt.created_at.desc(), TrialAttempt.id.desc()).limit(_cp.CONFUSION_ROWS))).scalars().all()
+    return _cp.confusion_pairs(rows)
 
 
 @app.get("/api/curriculum/words")
@@ -1904,15 +1932,28 @@ async def curriculum_words(current_user=Depends(get_current_user), db: AsyncSess
     mastered = bool(sp and sp.status == "mastered")
     # 표준검사 사전·사후 문항 단어는 훈련 풀에서 뺀다(축 I). 오답 보기도 이 풀 안에서만 고른다.
     table = await _asyncio.to_thread(_stage2_table)
-    plan = _vd.stage2_plan(table, n_answers=n_answers, mastered=mastered, weak_visemes=weak, rng=_random.Random())
+    rng = _random.Random()
+    plan = _vd.stage2_plan(table, n_answers=n_answers, mastered=mastered, weak_visemes=weak, rng=rng)
     meta = {w["word"]: w for w in _curriculum.WORD_BANK}
     words = [{**meta.get(e["word"], {}), **e} for e in plan["words"]]
     context_items = await _stage2_context_items(current_user.id, db)
+    # 짝 탐색 문항(docs/confusion-pair-serving.md 5.4-2): 레슨 12문항 중 선다형 1문항을 후보 짝의 target 자모 단어 + 대비 단어 보기로.
+    # 후보가 없으면 탐색할 수 있는 짝을 무작위로. 같은 짝의 단어 몇 개를 주고 화면이 레슨에서 아직 안 낸 첫 단어를 쓴다.
+    probes = []
+    try:
+        import confusion_pairs as _cp
+        focus = await _learner_pair_focus(current_user.id, db)
+        pidx = await _asyncio.to_thread(_stage2_pairs)
+        probes = _cp.probe_items(pidx, focus, {e["word"]: e["priority"] for e in plan["words"]},
+                                 plan["option_level"], table.classes, rng)
+        probes = [{**meta.get(p["word"], {}), **p} for p in probes]
+    except Exception as e:   # 탐색 문항이 없어도 레슨은 된다
+        logging.getLogger("liplab").warning("stage2 probe failed: %s", e)
     # mastery_score·natural_speed_gate: 화면이 숙달 추정값이 문턱 이상이면 적응 감속을 끈다(자연 속도 확인, docs/mastery-ewma.md 7절).
     # mastered: 숙달했으면 엔드리스에서 1.25배 '빠른 말'을 연다.
     return {"words": words, "option_level": plan["option_level"], "target_quantile": plan["target_quantile"],
             "mastered": mastered, "mastery_score": round(float(sp.mastery_score or 0.0), 1) if sp else 0.0,
-            "natural_speed_gate": _NATURAL_SPEED_GATE, "context_items": context_items}
+            "natural_speed_gate": _NATURAL_SPEED_GATE, "context_items": context_items, "probes": probes}
 
 
 # 2단계 레슨 12문항 중 2문항은 문맥 문항이다(분석·종합 섞기, 커리큘럼 개선 계획 1-3). 한 번에 몇 개를 넉넉히 준다.
@@ -1990,11 +2031,13 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
             except Exception:
                 confusions = []   # 입력한 글은 길이가 달라 분석이 안 될 수 있다(기록만 남긴다)
         from database import TrialAttempt
+        import confusion_pairs as _cp
+        opts = None if typed else _trial_options(data.options, data.word, data.chosen)
         # 주관식은 유형을 따로 둔다(word_typed). 유형별 학습 곡선이 선다형 단어와 섞이지 않게(eval_metrics)
         db.add(TrialAttempt(user_id=current_user.id, stage=2, item_type="word_typed" if typed else "word",
                             target=data.word, chosen=(data.chosen or "")[:50] if typed else data.chosen,
-                            correct=correct, confusions=confusions, speed=data.speed,
-                            options=None if typed else _trial_options(data.options, data.word, data.chosen)))
+                            correct=correct, confusions=confusions, speed=data.speed, options=opts,
+                            probe=_cp.valid_probe(data.probe, data.word, opts) if opts and data.probe else None))
         if not correct:
             await _srs_schedule_wrong(current_user.id, "word", data.word, db)
         award = _award_xp_and_streak(current_user, 15 if correct else (8 if success > 0 else 3))   # '입모양은 맞음'은 8

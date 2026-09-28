@@ -1,7 +1,7 @@
 // openSet 검사. 실행: npm test (node --test)
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { typedSlots, sentenceQuestionTypes, contextSlots } from './openSet.js'
+import { typedSlots, sentenceQuestionTypes, contextSlots, probeSlot, pickProbe } from './openSet.js'
 
 const count = (arr, t) => arr.filter((x) => x === t).length
 
@@ -47,4 +47,26 @@ test('contextSlots: 12문항 중 2문항, 첫 문항은 단어', () => {
   const ctx = contextSlots(12)
   const typed = typedSlots(12, true, Math.random, ctx)
   for (const i of typed) assert.ok(!ctx.has(i))      // 주관식과 문맥 자리는 겹치지 않는다
+})
+
+test('probeSlot: 첫 문항과 문맥·주관식 자리를 빼고 한 자리', () => {
+  for (let k = 0; k < 100; k += 1) {
+    const skip = new Set([2, 5, 7])
+    const p = probeSlot(12, skip)
+    assert.ok(p >= 1 && p < 12 && !skip.has(p), String(p))
+  }
+  assert.equal(probeSlot(1), -1)
+  assert.equal(probeSlot(3, new Set([1, 2])), -1)
+})
+
+test('pickProbe: 레슨에서 아직 안 낸 첫 후보, 없으면 null', () => {
+  const probes = [
+    { word: '곡', distractors: ['강', '집', '폭'], probe: { position: '초성', target: 'ㄱ', read: 'ㅍ', contrast: '폭' } },
+    { word: '개', distractors: ['마', '술', '패'], probe: { position: '초성', target: 'ㄱ', read: 'ㅍ', contrast: '패' } },
+  ]
+  assert.equal(pickProbe(probes).word, '곡')
+  assert.equal(pickProbe(probes, new Set(['곡'])).word, '개')
+  assert.equal(pickProbe(probes, new Set(['곡', '개'])), null)
+  assert.equal(pickProbe(undefined), null)
+  assert.equal(pickProbe([{ word: '곡', distractors: ['강'] }]), null)   // 보기가 모자라면 쓰지 않는다
 })
