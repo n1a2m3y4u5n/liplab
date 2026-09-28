@@ -46,14 +46,14 @@
 ## 3. 연구자에게 넘기는 것(가명 내보내기)
 
 `GET /api/pilot/export?tz_offset_min=-540` — 운영자(`LIPLAB_ADMIN_EMAILS`)만, 파일럿이 켜져 있을 때만. 내보내기 판
-`version: 2`(9/24). 날짜는 모두 `tz_offset_min`(기본 한국 −540) 기준 현지 날짜다. 참여자 한 명당:
+`version: 3`(9/28, 2는 9/24). 날짜는 모두 `tz_offset_min`(기본 한국 −540) 기준 현지 날짜다. 참여자 한 명당:
 
 | 필드 | 내용 |
 |---|---|
 | `pid` | 가명. 가명 비밀키(`LIPLAB_PILOT_SECRET`, 없으면 `JWT_SECRET`)로 만든 HMAC 앞 12자리. 키 없이는 계정으로 되돌릴 수 없다 |
 | `cohort`, `track` | 집단, 학습 트랙 |
 | `joined_on` | 참여 코드를 넣은 날 |
-| `tests` | 표준검사 폼·판본·정확도·수준·날짜, 참여 뒤 검사인지(`after_join`). 동형 폼(A·B)은 `items`에 문항별 id·정오답·고른 보기 |
+| `tests` | 표준검사 폼·판본·정확도·수준·날짜, 참여 뒤 검사인지(`after_join`). 동형 폼(A·B)은 `items`에 문항별 id·정오답·고른 보기. 사후 검사 문항에는 화자 조건 `talker`(`default`·`h1`·`h2`, 판 3부터, `docs/talker-variation.md` 6절) |
 | `trials_by_stage`, `speak`, `active_days` | 계정 전체 기록의 단계별 시행·정답 수, 말하기 시도 수·평균 점수, 학습한 날 수 |
 | `since_join` | 같은 세 집계를 참여 코드를 넣은 뒤 기록만으로 센 값(참여 전 기록이 섞이지 않게) |
 

@@ -285,6 +285,65 @@ def rescore_log(item_log) -> Optional[Dict]:
     return {"ability": round(a, 3), "level": level_of(a)}
 
 
+# ── 전이 조건 사후 검사(커리큘럼 계획 2-3, docs/talker-variation.md 6절) ──
+# 사후 검사 문항의 절반은 기본 얼굴, 나머지 절반은 훈련에 나오지 않는 검사 전용 가상 화자(frontend lib/talkers의 h1·h2)로
+# 1.0배에 낸다. 앱 안의 다른 가상 화자로 옮겨 가는지(근거리 전이)를 보는 것이지 실제 사람 입모양으로의 전이는 아니다.
+DEFAULT_TALKER = "default"
+HELD_OUT_TALKERS = ("h1", "h2")
+
+
+def assign_talker_conditions(items: List[Dict], user_id: int) -> List[Dict]:
+    """문항마다 화자 조건(talker)을 붙인 새 목록(순서 그대로). 난이도 순으로 이웃한 두 문항을 짝지어 한쪽은 기본 얼굴, 다른 쪽은
+    검사 전용 화자로 둬서 두 절반의 난이도를 맞춘다. 어느 쪽이 새 화자인지는 사용자 번호의 홀짝으로 뒤집어(역균형) 문항 효과가
+    조건과 겹치지 않게 하고, 새 화자 둘은 짝마다 번갈아 쓴다. 결정론적이라 같은 사용자는 늘 같은 배정이다."""
+    uid = int(user_id or 0)
+    order = sorted(range(len(items)), key=lambda i: (float(items[i].get("difficulty") or 0), str(items[i].get("id"))))
+    talker = {}
+    for k in range(0, len(order), 2):
+        pair = order[k:k + 2]
+        pk = k // 2
+        held = pair[(pk + uid) % 2] if len(pair) == 2 else None
+        for i in pair:
+            talker[i] = HELD_OUT_TALKERS[(pk + uid // 2) % 2] if i == held else DEFAULT_TALKER
+    return [{**it, "talker": talker[i]} for i, it in enumerate(items)]
+
+
+def has_talker_conditions(item_log) -> bool:
+    """문항 기록에 새 화자 조건 문항이 있는지(2-3 이후의 사후 검사). 옛 기록은 False."""
+    return any(isinstance(it, dict) and it.get("talker") not in (None, DEFAULT_TALKER) for it in (item_log or []))
+
+
+def default_face_log(item_log):
+    """기본 얼굴로 본 문항 기록만. 새 화자 조건이 없는 기록(옛 검사, 사전 검사)은 그대로 돌려준다."""
+    if not has_talker_conditions(item_log):
+        return item_log
+    return [it for it in item_log if isinstance(it, dict) and it.get("talker") in (None, DEFAULT_TALKER)]
+
+
+def log_accuracy(item_log) -> Optional[float]:
+    """문항 기록의 정답률(답하지 않은 문항도 분모에 넣는다, score_placement의 accuracy와 같은 방식). 기록이 없으면 None."""
+    rows = [it for it in (item_log or []) if isinstance(it, dict)]
+    return round(sum(1 for it in rows if it.get("correct")) / len(rows), 3) if rows else None
+
+
+def talker_transfer(item_log) -> Optional[Dict]:
+    """사후 검사의 새 화자 조건 점수: 검사 전용 화자 절반의 정답률 대 기본 얼굴 절반의 정답률. 조건이 없는 기록이면 None."""
+    if not has_talker_conditions(item_log):
+        return None
+    rows = [it for it in item_log if isinstance(it, dict)]
+
+    def part(sel):
+        n = len(sel)
+        c = sum(1 for it in sel if it.get("correct"))
+        return {"n": n, "correct": c, "accuracy": round(c / n, 3) if n else None}
+    new = part([it for it in rows if it.get("talker") not in (None, DEFAULT_TALKER)])
+    dflt = part([it for it in rows if it.get("talker") in (None, DEFAULT_TALKER)])
+    gap = (round(new["accuracy"] - dflt["accuracy"], 3)
+           if new["accuracy"] is not None and dflt["accuracy"] is not None else None)
+    return {"default": dflt, "new_talker": new, "gap": gap,
+            "talkers": sorted({it["talker"] for it in rows if it.get("talker") not in (None, DEFAULT_TALKER)})}
+
+
 def _recommended_stage(level: int) -> Dict:
     """추정 수준(1~5)으로 시작 학습 단계 추천(커리큘럼 STAGES)."""
     if level <= 1:
@@ -378,6 +437,8 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
         ok = chosen == it["word"]
         item_log.append({"id": it.get("id"), "word": it["word"], "chosen": chosen,
                          "correct": bool(ok), "difficulty": it.get("difficulty")})
+        if it.get("talker"):   # 사후 검사의 화자 조건(계획 2-3). 옛 검사 기록에는 없다
+            item_log[-1]["talker"] = it["talker"]
         if chosen is None:
             continue
         if ok:
@@ -406,6 +467,7 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
                              for (t, r, vn, sv), c in conf.most_common(6)],
         "item_log": item_log,
         "recommended_start": _recommended_stage(level),
+        "talker_transfer": talker_transfer(item_log),
     }
 
 
