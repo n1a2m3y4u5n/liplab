@@ -108,3 +108,32 @@ def test_skip_opens_only_the_next_stage_when_gated():
 
 def test_stages_carry_mastery_rules():
     assert _run("0")["rules_ok"]
+
+
+def test_profile_create_race_does_not_500():
+    # 새 계정 첫 화면의 동시 요청 두 개가 학습 프로필을 함께 만들려다 UNIQUE에 걸려 한쪽이 500이던 것(9/28)
+    import asyncio, os, tempfile
+    os.environ.setdefault("JWT_SECRET", "test-only-race-secret")
+    with tempfile.TemporaryDirectory() as d:
+        import subprocess, sys
+        code = r'''
+import asyncio
+import database, main
+from database import User
+async def run():
+    await database.init_db()
+    async with database.AsyncSessionLocal() as db:
+        u = User(email="race@example.com", username="race", hashed_password="x")
+        db.add(u); await db.commit(); await db.refresh(u); uid = u.id
+    async def one():
+        async with database.AsyncSessionLocal() as db:
+            return (await main._get_or_create_profile(uid, db)).id
+    ids = await asyncio.gather(*[one() for _ in range(6)])
+    print("IDS", len(set(ids)))
+asyncio.run(run())
+'''
+        env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db")
+        env.pop("ANTHROPIC_API_KEY", None)
+        p = subprocess.run([sys.executable, "-c", code], cwd=os.path.dirname(os.path.abspath(__file__)), env=env,
+                           capture_output=True, text=True, timeout=120)
+        assert "IDS 1" in p.stdout, p.stdout[-1500:] + p.stderr[-3000:]

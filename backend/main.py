@@ -1566,10 +1566,18 @@ async def _get_or_create_profile(user_id: int, db: AsyncSession):
     r = await db.execute(select(LearningProfile).where(LearningProfile.user_id == user_id))
     prof = r.scalar_one_or_none()
     if prof is None:
+        # 새 계정의 첫 화면은 여러 요청(단계 목록·말하기 커리큘럼 등)이 동시에 와서 둘 다 여기서 만들려다 UNIQUE(user_id)에 걸려
+        # 한쪽이 500이 났다(9/28 로컬 확인). 먼저 만든 쪽이 있으면 되돌리고 그 행을 읽는다.
+        from sqlalchemy.exc import IntegrityError
         prof = LearningProfile(user_id=user_id)
         db.add(prof)
-        await db.commit()
-        await db.refresh(prof)
+        try:
+            await db.commit()
+            await db.refresh(prof)
+        except IntegrityError:
+            await db.rollback()
+            r = await db.execute(select(LearningProfile).where(LearningProfile.user_id == user_id))
+            prof = r.scalar_one()
     return prof
 
 
