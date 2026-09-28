@@ -11,6 +11,8 @@ API 비용이 폭증하고 로그인 무차별 대입에도 노출된다. 프로
 정직: 단일 인스턴스 전제다. 다중 워커/인스턴스에서는 인스턴스별로 카운트되므로 한도가 배가된다.
 분산 배포에서 엄밀한 제한이 필요하면 Redis 등 공유 저장소 기반으로 교체해야 한다(데모/프로토타입 보호용).
 """
+import hmac
+import os
 import time
 from collections import defaultdict, deque
 from fastapi import Request, HTTPException
@@ -20,7 +22,22 @@ _MAX_KEYS = 5000    # 추적 key가 이보다 많아지면 오래된(비활성) 
 _MAX_TTL = 300.0    # 최근 활동이 이보다 오래된 key는 제거(모든 window가 60s 이하라 안전)
 
 
+def origin_ok(request: Request) -> bool:
+    """Cloudflare 앞단 사용 시(LIPLAB_ORIGIN_SECRET 설정) 요청이 Cloudflare를 거쳤는지. Cloudflare 변환 규칙이
+    X-Origin-Auth 헤더에 같은 비밀값을 넣는다. 설정이 없으면 늘 True(지금처럼 fly 주소로 바로 받는다)."""
+    secret = os.getenv("LIPLAB_ORIGIN_SECRET", "")
+    if not secret:
+        return True
+    return hmac.compare_digest(request.headers.get("x-origin-auth", ""), secret)
+
+
 def _client_key(request: Request) -> str:
+    # Cloudflare를 거친 요청이면 Fly-Client-IP는 Cloudflare 서버 주소라, Cloudflare가 넣는 CF-Connecting-IP를 쓴다.
+    # 비밀 헤더로 Cloudflare 경유가 확인될 때만 믿는다(아니면 누구나 위조할 수 있다).
+    if os.getenv("LIPLAB_ORIGIN_SECRET") and origin_ok(request):
+        cf = request.headers.get("cf-connecting-ip")
+        if cf:
+            return cf.strip()
     # Fly.io 등 신뢰 프록시가 세팅하는 실제 클라이언트 IP(엣지가 덮어써 클라이언트가 위조 못 함).
     fly = request.headers.get("fly-client-ip")
     if fly:

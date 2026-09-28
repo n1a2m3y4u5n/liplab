@@ -6,6 +6,7 @@ import os
 import asyncio
 import logging
 import ratelimit
+import llm_budget
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -160,6 +161,11 @@ _MAX_BODY_OTHER = 2 * 1024 * 1024
 
 @app.middleware("http")
 async def _limit_body(request, call_next):
+    # Cloudflare 앞단을 쓰면(LIPLAB_ORIGIN_SECRET) fly 주소로 바로 오는 요청을 막는다. 공격자가 방화벽을 건너뛰지 못하게.
+    # /health는 fly 상태 점검이 기계에 직접 부르므로 뺀다.
+    if request.url.path != "/health" and not ratelimit.origin_ok(request):
+        return _JSONResponse(status_code=403, content={"detail": "forbidden"})
+    llm_budget.current_client.set(ratelimit._client_key(request))   # LLM 하루 한도의 IP별 계수(llm_budget)
     cl = request.headers.get("content-length")
     if cl and cl.isdigit():
         cap = _MAX_BODY_MULTIPART if request.headers.get("content-type", "").startswith("multipart/") else _MAX_BODY_OTHER
@@ -170,7 +176,29 @@ async def _limit_body(request, call_next):
 
 # 서버 추론(발음 채점·음성구동 아바타·전사) 동시 실행 수. 추론 하나가 수백 MB를 더 쓰므로 여러 개가 겹치면 4GB 기계가
 # 멈출 수 있어 차례로 돌린다(요청은 기다렸다 처리된다). LIPLAB_ML_CONCURRENCY로 늘릴 수 있다.
-_ML_SEM = asyncio.Semaphore(max(1, int(os.getenv("LIPLAB_ML_CONCURRENCY", "1") or 1)))
+_ML_CONCURRENCY = max(1, int(os.getenv("LIPLAB_ML_CONCURRENCY", "1") or 1))
+_ML_SEM = asyncio.Semaphore(_ML_CONCURRENCY)
+# 추론 대기열 상한. 예전에는 대기가 무한이라 한 사람이 채점 요청을 계속 밀어 넣으면 다른 사용자가 끝없이 기다렸다.
+# 실행 중 + 대기 중이 동시 실행 수 + LIPLAB_ML_QUEUE_MAX(기본 4)를 넘으면 받기 전에 503으로 돌려보낸다.
+_ML_INFLIGHT = 0
+_ML_QUEUE_MAX = max(0, int(os.getenv("LIPLAB_ML_QUEUE_MAX", "4") or 4))
+
+
+def _ml_admit():
+    if _ML_INFLIGHT >= _ML_CONCURRENCY + _ML_QUEUE_MAX:
+        raise HTTPException(status_code=503, detail="지금 채점 요청이 많아요. 잠시 후 다시 시도해 주세요.",
+                            headers={"Retry-After": "10"})
+
+
+@asynccontextmanager
+async def _ml_slot():
+    global _ML_INFLIGHT
+    _ML_INFLIGHT += 1
+    try:
+        async with _ML_SEM:
+            yield
+    finally:
+        _ML_INFLIGHT -= 1
 
 
 # 업로드 상한(§4.9) — audio.read()로 전체를 메모리에 적재하므로 상한이 없으면 DoS 소지.
@@ -570,8 +598,9 @@ async def avatar_audio2face(audio: UploadFile = File(...), current_user=Depends(
     if not audio2face.is_available():
         raise HTTPException(status_code=503, detail="서버에 음성구동 아바타 모델(A4)이 없습니다.")
     data = await _read_audio_limited(audio)
+    _ml_admit()
     try:
-        async with _ML_SEM:
+        async with _ml_slot():
             result = await asyncio.to_thread(audio2face.blendshapes_from_audio, data)
     except Exception as e:
         logging.getLogger("liplab").exception("audio2face 추론 실패")
@@ -580,7 +609,7 @@ async def avatar_audio2face(audio: UploadFile = File(...), current_user=Depends(
 
 
 @app.get("/api/scenario", response_model=ScenarioResponse,
-         dependencies=[Depends(ratelimit.rate_limit(40, 60, "llm"))])
+         dependencies=[Depends(ratelimit.rate_limit(15, 60, "llm"))])
 async def get_scenario(
     situation: str,
     level: int,
@@ -2911,7 +2940,7 @@ async def assessment_report(tz_offset_min: int = -540, current_user=Depends(get_
     }
 
 
-@app.get("/api/conversation/multi", dependencies=[Depends(ratelimit.rate_limit(30, 60, "llm-multi"))])
+@app.get("/api/conversation/multi", dependencies=[Depends(ratelimit.rate_limit(15, 60, "llm-multi"))])
 async def conversation_multi(speakers: int = 2, turns: int = 6, scene: Optional[str] = None, level: Optional[int] = None,
                              current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """다자 대화 시나리오(축 H) — 여러 화자가 번갈아 말하는 짧은 대화(화자 식별 + 입모양 읽기).
@@ -3133,7 +3162,7 @@ async def speak_skip(req: SpeakSkipReq, current_user=Depends(get_current_user), 
     return {"speak_current_stage": prof.speak_current_stage}
 
 
-@app.get("/api/speak/stage/{n}", dependencies=[Depends(ratelimit.rate_limit(60, 60, "llm-speakstage"))])
+@app.get("/api/speak/stage/{n}", dependencies=[Depends(ratelimit.rate_limit(30, 60, "llm-speakstage"))])
 async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
     """단계 콘텐츠(항목·모드·가이드).
     단어(4)·문장(5) 단계는 매번 AI로 새 문항을 생성해 변주를 준다(실패 시 큐레이션 풀 폴백).
@@ -3230,6 +3259,8 @@ async def speak_assess(
     assessment_method = None
     need_asr = (mode in ("phoneme", "word", "sentence")) or (stage is None)
     if need_asr:
+        _ml_admit()   # 추론 대기열이 차면 받기 전에 503(지표만 쓰는 발성·운율은 추론이 없어 해당하지 않는다)
+    if need_asr:
         # 축 B — 전사 비의존 D-GOP 경로. 아래 환경변수가 설정된 경우에만 시도하고,
         # 실패(모델 미설치·정렬 실패 등)하면 조용히 전사 경로로 폴백한다.
         #
@@ -3254,7 +3285,7 @@ async def speak_assess(
                 import dgop_acoustic
                 if not dgop_acoustic.HAS_ACOUSTIC:
                     raise RuntimeError("torch/torchaudio/transformers 미설치")
-                async with _ML_SEM:
+                async with _ml_slot():
                     result = await asyncio.to_thread(
                         dgop_acoustic.assess_text,
                         data, target, aligner_id=dgop_aligner_id, scorer_id=dgop_scorer_id,
@@ -3279,7 +3310,7 @@ async def speak_assess(
             if not is_available():
                 raise HTTPException(status_code=503, detail="서버에 음성인식 모델(faster-whisper)이 없습니다.")
             try:
-                async with _ML_SEM:
+                async with _ml_slot():
                     transcript = await transcribe(data)
             except Exception as e:
                 raise _server_error(e, "전사 실패")
@@ -3566,7 +3597,7 @@ class ConversationResponse(BaseModel):
 
 
 @app.post("/api/conversation", response_model=ConversationResponse,
-          dependencies=[Depends(ratelimit.rate_limit(40, 60, "llm"))])
+          dependencies=[Depends(ratelimit.rate_limit(20, 60, "llm"))])
 async def conversation_turn(
     request: ConversationRequest,
     current_user = Depends(get_current_user)
@@ -3591,7 +3622,7 @@ class SignRequest(BaseModel):
     text: str
 
 
-@app.post("/api/sign/translate", dependencies=[Depends(ratelimit.rate_limit(40, 60, "llm"))])
+@app.post("/api/sign/translate", dependencies=[Depends(ratelimit.rate_limit(20, 60, "llm"))])
 async def sign_translate(
     request: SignRequest,
     current_user = Depends(get_current_user)
