@@ -37,7 +37,17 @@ export default function A11ySettings() {
   const [isDemo, setIsDemo] = useState(true)  // 확인 전엔 안전하게 데모로 간주(내데이터 숨김)
   const token = useStore((s) => s.token)
   const { pathname } = useLocation()
-  const hideMobile = isLesson(pathname)
+  // 탭 바가 있는 앱 화면(AppShell)에서는 모바일 떠 있는 버튼이 하단 탭 바 위에서 늘 내용을 가려(예: 분석의 '전체 통계' 링크)
+  // 상단 바의 Aa 버튼이 'liplab:a11y-toggle' 이벤트로 연다(9/28). AppShell이 html[data-shell]을 단다.
+  const [inShell, setInShell] = useState(() => typeof document !== 'undefined' && !!document.documentElement.dataset.shell)
+  useEffect(() => {
+    const onToggle = () => setOpen((v) => !v)
+    window.addEventListener('liplab:a11y-toggle', onToggle)
+    const mo = new MutationObserver(() => setInShell(!!document.documentElement.dataset.shell))
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-shell'] })
+    return () => { window.removeEventListener('liplab:a11y-toggle', onToggle); mo.disconnect() }
+  }, [])
+  const hideMobile = isLesson(pathname) || inShell
 
   // 공용 데모 계정이면 개인정보 열람·삭제를 숨긴다(내려받기=방문자간 데이터 노출, 삭제=항상 403).
   // 로그인 전(약관·개인정보 처리방침 공개 페이지)에는 확인할 계정이 없으므로 /auth/me를 부르지 않는다.
@@ -90,7 +100,7 @@ export default function A11ySettings() {
       </button>
       {open && (
         <div role="dialog" aria-label="접근성 설정"
-          className="fixed bottom-[calc(var(--tabbar-h)+64px+env(safe-area-inset-bottom))] left-4 z-40 w-64 rounded-2xl border border-gray-200 bg-white p-3 shadow-xl lg:bottom-16">
+          className={`fixed z-40 w-64 rounded-2xl border border-gray-200 bg-white p-3 shadow-xl lg:bottom-16 lg:left-4 lg:right-auto lg:top-auto ${inShell ? 'right-4 top-[64px]' : 'bottom-[calc(var(--tabbar-h)+64px+env(safe-area-inset-bottom))] left-4'}`}>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-bold text-gray-900">접근성 설정</span>
             <button onClick={() => setOpen(false)} aria-label="닫기" className="text-gray-400 hover:text-gray-700">✕</button>
