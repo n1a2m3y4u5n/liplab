@@ -91,6 +91,7 @@ function normalizeSpeak(stages) {
     key: `speak-${s.stage}`, stage: s.stage, no: i + 1, title: s.title, route: `/learn/speaking?stage=${s.stage}`,
     status: s.status, attempts: s.attempts ?? 0, total: s.min_attempts || 8,
     desc: s.desc || '', guide: s.guide || '', mastery: s.mastery ?? null, pass: s.pass ?? null,
+    probe: s.probe || null, gain: s.gain || null,   // 모음·자음 낱말 속 확인, 4·5단계 개인 향상 경로(speak_curriculum)
   }))
 }
 
@@ -169,7 +170,7 @@ export default function CurriculumPath() {
   const guideContext = view ? {
     tab: guideTab, track, trackLabel: TRACK_LABEL[track], no: view.no, title: view.title, desc: view.desc, guide: view.guide,
     statusLabel: viewLabel, open: viewOpen, progLabel, progPct,
-    minAttempts: view.total, mastery: view.mastery, pass: view.pass,
+    minAttempts: view.total, mastery: view.mastery, pass: view.pass, probe: view.probe, gain: view.gain,
     next: nextStage && {
       no: nextStage.no, title: nextStage.title,
       open: nextSt === 'mastered' || nextSt === 'current', skip: nextSt === 'skip',

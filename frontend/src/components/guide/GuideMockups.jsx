@@ -88,7 +88,8 @@ const LIPS = {
 }
 const MOUTH_CYCLE = ['closed', 'open', 'mid', 'open']
 
-function FaceStage({ mouth = 'open', className = '' }) {
+// talker: 왼쪽 위 가상 화자 이름(앱 TalkerChip과 같은 모양). 독화 레슨에만 붙는다(말하기는 화자를 바꾸지 않는다).
+function FaceStage({ mouth = 'open', className = '', talker = null }) {
   return (
     <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 shadow-xl ${className}`}>
       <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 size-full">
@@ -126,6 +127,9 @@ function FaceStage({ mouth = 'open', className = '' }) {
         {/* 입꼬리 옆 볼 그늘 */}
         <path d="M108 92C104 108 108 124 116 134M212 92C216 108 212 124 204 134" stroke="#b27456" strokeWidth="3" strokeLinecap="round" fill="none" opacity="0.2" />
       </svg>
+      {talker && (
+        <span className="absolute left-2 top-2 rounded-full bg-black/45 px-2 py-0.5 text-[11px] font-bold leading-4 text-white/90">{talker}</span>
+      )}
     </div>
   )
 }
@@ -483,7 +487,7 @@ function ReadMock({ wrong = false, scene, tick, running }) {
     <LessonShell done={shown ? 1 : 0} bar={<div {...area('resultBar')}>{bar}</div>}>
       <Question label="단어 독화" title="이 입모양은 어떤 단어일까요?" />
       <div {...area('stage')} className="h-[158px] w-full rounded-18 border-2 border-line bg-white p-4">
-        <FaceStage mouth={mouthAt(tick, running)} className="h-full" />
+        <FaceStage mouth={mouthAt(tick, running)} className="h-full" talker="화자 2" />
       </div>
       <div {...area('options')} className="flex flex-col gap-2.5">
         <Option n={1} word="나비" state={optState(1)} />
@@ -913,7 +917,7 @@ export const MOCKS = {
   learn: { design: [520, 653], C: LearnMock, areas: ['switch', 'guideBtn', 'nodes', 'arrows', 'sheet'],
     alt: '휴대폰 학습 탭 예시. 독화·발화 전환, 단계 이름과 가이드 버튼, DOKA 단계 노드와 아래 레슨 카드.' },
   readQuestion: { design: [375, 564], C: (p) => <ReadMock {...p} />, areas: ['bookmark', 'stage', 'options'],
-    alt: '단어 독화 문항 예시. 입모양 영상을 보고 보기를 고른 뒤 확인을 누르면 초록 결과 바에 정답이에요가 나온다.' },
+    alt: '단어 독화 문항 예시. 왼쪽 위에 화자 이름이 붙은 입모양 영상을 보고 보기를 고른 뒤 확인을 누르면 초록 결과 바에 정답이에요가 나온다.' },
   readWrong: { design: [375, 564], C: (p) => <ReadMock wrong {...p} />, areas: ['resultBar'],
     alt: '단어 독화 오답 예시. 고른 보기는 빨강, 정답 보기는 초록 테두리, 아래 빨간 결과 바에 정답이 나온다.' },
   speakBefore: { design: [375, 564], C: (p) => <SpeakMock {...p} />, areas: ['stage', 'mic'],
