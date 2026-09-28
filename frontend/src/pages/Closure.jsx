@@ -10,6 +10,7 @@ import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import useBookmark from '../lib/useBookmark'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR_CLOSURE, LESSON_OPTIONS_3, lessonPad } from '../lib/lessonLayout'
+import useSlowWeak from '../hooks/useSlowWeak'
 
 /**
  * 문맥 추론(Closure) — 독화 레슨 공통 템플릿(핸드오프 §4-03, WordStage와 같은 틀).
@@ -61,6 +62,7 @@ function ClosureQuiz({ items }) {
   const [i, setI] = useState(0)
   const [qNum, setQNum] = useState(1)
   const [frames, setFrames] = useState([])
+  const shownFrames = useSlowWeak(frames)   // 약한 입모양은 조금 천천히(연습 화면)
   const [selected, setSelected] = useState(null)
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -158,7 +160,7 @@ function ClosureQuiz({ items }) {
 
           {/* 입모양 카드 — 문장 전체를 말한다. 보기는 입모양이 같아 문맥으로 골라야 한다 */}
           <div className={LESSON_AVATAR_CLOSURE}>
-            <MouthAvatar frames={frames} height={null} className="h-full" />
+            <MouthAvatar frames={shownFrames} height={null} className="h-full" />
           </div>
 
           {/* 빈칸 문장 + 힌트 */}
