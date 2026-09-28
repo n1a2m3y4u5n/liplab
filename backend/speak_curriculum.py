@@ -13,6 +13,7 @@
   sentence — 문장: Whisper 전사 + 문장 억양(pitch 방향) 곁들임
 """
 import math
+import random
 import re
 from typing import Dict, List, Optional, Tuple
 
@@ -64,7 +65,7 @@ SPEAK_STAGES: List[Dict] = [
         "min_attempts": 10, "mastery": 90.0,
         "items": [
             {"target": "아", "drill": "loud", "prompt": "“아”를 크게! (크기 60 이상)"},
-            {"target": "아", "drill": "soft", "prompt": "“아”를 작게, 속삭이듯 (크기 15~45)"},
+            {"target": "아", "drill": "soft", "prompt": "“아”를 작게, 속삭이듯 (크기 12~45)"},
             {"target": "아", "drill": "long", "prompt": "“아—”를 길게 (2초 이상)"},
             {"target": "아", "drill": "rise", "prompt": "“아?”처럼 끝을 올리며 (억양 상승)"},
             {"target": "아", "drill": "fall", "prompt": "“아.”처럼 끝을 내리며 (억양 하강)"},
@@ -128,6 +129,28 @@ SPEAK_STAGES: List[Dict] = [
 ]
 
 _BY_STAGE = {s["stage"]: s for s in SPEAK_STAGES}
+
+
+def _n_syllables(text: str) -> int:
+    return sum(1 for ch in text or "" if "가" <= ch <= "힣")
+
+
+def mixed_order(items: List[Dict], seed: str, lead: int = 3) -> List[Dict]:
+    """4단계 단어 순서. 음절 수 층(1·2·3음절)을 seed로 각각 섞고, 처음 lead개는 1음절로 둔 뒤 층을 크기 비율대로 고르게 끼운다
+    (층마다 (i+0.5)/층 크기 자리에 놓고 합친다). 예전에는 늘 같은 고정 순서라 앞 14개가 모두 1음절(밥·물·손…)이었고, 프론트는
+    들어올 때마다 0번부터 시작해 합격률 0.95 학습자의 93%가 1음절 단어만 말하고 숙달했다(최소 8회, 이동 평균 90).
+    seed는 (사용자, 날짜)라 같은 날에는 순서가 고정되고 날마다 앞 문항이 바뀐다."""
+    rng = random.Random(seed)
+    strata: Dict[int, List[Dict]] = {}
+    for it in items:
+        strata.setdefault(_n_syllables(it.get("target", "")), []).append(it)
+    for k in sorted(strata):
+        rng.shuffle(strata[k])
+    shortest = min(strata) if strata else 0
+    head = strata.get(shortest, [])[:lead]
+    rest = {k: (v[len(head):] if k == shortest else v) for k, v in strata.items()}
+    slots = [((i + 0.5) / len(v), k, i) for k, v in rest.items() for i in range(len(v))]
+    return head + [rest[k][i] for _, k, i in sorted(slots)]
 
 
 def get_stage(n: Optional[int]) -> Optional[Dict]:
@@ -216,10 +239,62 @@ def _score_prosody(drill: str, m: Dict) -> Tuple[float, bool, str]:
     return 0.0, False, ""
 
 
+NO_VOICE_NOTE = "소리가 잡히지 않았어요. 마이크를 확인하고 가까이에서 다시 말해 보세요."
+
+
+def no_voice(m: Dict) -> bool:
+    """녹음에 소리가 없음(프론트 micIssue: 크기 0 또는 이어 낸 소리 0초). 값이 없으면(예전 클라이언트) 판정하지 않는다.
+    이런 녹음도 크기가 500바이트를 넘으면 채점에 와서, Whisper가 무음에서 만든 문장이 합격할 수 있었다
+    ('시청해 주셔서 감사합니다.'이면 2단계 8/8, 3단계 9/9 합격)."""
+    loud, vd = m.get("loudness"), m.get("voiced_duration")
+    return (loud is not None and loud <= 0) or (vd is not None and vd <= 0)
+
+
+# 전사 경로 모음·자음 단계의 초점 자모. 음운 유사도(scoring)는 초성 30·중성 50·종성 20이고 받침이 둘 다 없으면 종성 몫을 줘서,
+# 무음 초성 음절은 모음이 틀려도 50점(합격선 50)이 됐다. 9/27 감사에서 틀린 모음 160/160, 같은 모음의 틀린 첫소리 162/162가
+# 합격했다(아→우 50.15, 풀→불 91.0). 모음 단계는 중성, 자음 단계는 첫소리와 (있으면) 받침이 전사와 같아야 합격이다.
+# ㅐ와 ㅔ는 같은 소리로 본다(합류 여부는 사용자 결정 대기라 여기서 앞지르지 않는다).
+_FOCUS = {2: ("중성",), 3: ("초성", "종성")}
+_SAME_VOWEL = {"ㅔ": "ㅐ"}
+
+
+def focus_miss(stage_no: int, target: str, transcript: str) -> Optional[str]:
+    """모음·자음 단계에서 초점 자모가 전사와 어긋나면 안내 한 문장, 맞거나 대상 단계가 아니면 None.
+    정렬은 채점·혼동 표시와 같은 scoring.align_jamos(소리 나는 대로 바꾼 자모)를 쓴다."""
+    parts = _FOCUS.get(stage_no)
+    if not parts:
+        return None
+    import unicodedata
+    from scoring import align_jamos, to_pronounced_jamos
+    cj = to_pronounced_jamos(unicodedata.normalize("NFC", target or "").replace(" ", ""))
+    uj = to_pronounced_jamos(unicodedata.normalize("NFC", transcript or "").replace(" ", ""))
+    for cs, us in align_jamos(cj, uj):
+        if cs is None:
+            continue
+        if "중성" in parts:
+            want = cs[1]
+            if us is None:
+                return f"목표 모음 '{want}' 소리가 들리지 않았어요."
+            if _SAME_VOWEL.get(us[1], us[1]) != _SAME_VOWEL.get(want, want):
+                return f"목표 모음은 '{want}'인데 '{us[1]}' 소리로 들렸어요."
+        if "초성" in parts and cs[0]:
+            if us is None or not us[0]:
+                return f"목표 첫소리 '{cs[0]}' 소리가 들리지 않았어요."
+            if us[0] != cs[0]:
+                return f"목표 첫소리는 '{cs[0]}'인데 '{us[0]}' 소리로 들렸어요."
+        if "종성" in parts and cs[2]:
+            if us is None or not us[2]:
+                return f"받침 '{cs[2]}' 소리가 들리지 않았어요."
+            if us[2] != cs[2]:
+                return f"목표 받침은 '{cs[2]}'인데 '{us[2]}' 소리로 들렸어요."
+    return None
+
+
 def score_attempt(stage_no: int, target: str, transcript: Optional[str],
                   metrics: Dict, drill: Optional[str] = None,
                   sim_score: Optional[float] = None) -> Tuple[float, bool, str]:
-    """단계 모드에 맞춰 (점수 0~100, 성공 여부, 한 줄 코칭)을 반환."""
+    """단계 모드에 맞춰 (점수 0~100, 성공 여부, 한 줄 코칭)을 반환.
+    transcript는 전사 경로에서만 문자열이다(D-GOP 경로는 None). 소리 없음·초점 자모 판정은 전사 경로에만 적용한다."""
     stg = get_stage(stage_no)
     if not stg:
         return round(sim_score or 0.0, 1), (sim_score or 0) >= 60, ""
@@ -241,12 +316,19 @@ def score_attempt(stage_no: int, target: str, transcript: Optional[str],
         return _score_prosody(drill or "", m)
 
     # phoneme / word / sentence — 음운 유사도 기반
+    if transcript is not None and no_voice(m):
+        return 0.0, False, NO_VOICE_NOTE
     sc = float(sim_score or 0.0)
     passf = float(stg.get("pass", 60.0))
     passed = sc >= passf
     note = ""
+    if mode == "phoneme" and transcript is not None:
+        note = focus_miss(stage_no, target, transcript) or ""
+        passed = passed and not note
     if mode == "sentence":
-        exp = next((it.get("intonation") for it in stg["items"] if it["target"] == target), None)
+        # 고정 문항에 없는 문장(AI 생성·복습)은 문장 부호로 기대 억양을 정한다. 예전에는 고정 16문항만 찾아 AI 문장은 억양 판정이
+        # 없었고, 대신 코칭에 목소리 높이에 따라 어려움이 다른 25Hz 규칙이 들어갔다. 의문사 의문문은 None이라 판정하지 않는다.
+        exp = next((it.get("intonation") for it in stg["items"] if it["target"] == target), None) or expected_intonation(target)
         if exp:
             d = sentence_direction(m)
             got = "rise" if d > SENTENCE_DIR_ST else "fall" if d < -SENTENCE_DIR_ST else "flat"

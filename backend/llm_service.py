@@ -28,30 +28,40 @@ llm_budget.guard(anthropic_client)
 
 async def generate_speaking_coaching(target: str, transcript: str, score: float,
                                      confusions: list = None, metrics: dict = None,
-                                     weak_phones: list = None, intonation: bool = False) -> str:
+                                     weak_phones: list = None, intonation: bool = False, method: str = None) -> str:
     """발화 채점 + 측정값(크기·억양·길이)을 근거로 '수치 기반·구체적' 발음 코칭.
     Whisper 오인식 가능성을 감안해 발음 부분은 단정하지 않고 부드럽게. 실패 시 규칙 폴백.
-    weak_phones: D-GOP가 가장 약하게 잰 소리들 [{label, dgop(0~1)}] — 전사와 무관하게 목표 소리 자리에서
-    잰 값이라, 음성인식이 틀려도 '어느 소리가 약했는지'를 짚을 수 있다(축 B-9).
+    weak_phones: D-GOP가 가장 약하게 잰 소리들 [{label, dgop(0~1), position}] — 전사와 무관하게 목표 소리 자리에서
+    잰 값이라, 음성인식이 틀려도 '어느 소리가 약했는지'를 짚을 수 있다(축 B-9). position이 '종성'이면 '받침 ㅂ'처럼 부르고
+    받침 조음 문장을 준다(예전에는 받침 ㅂ·ㄱ·ㄷ에도 '떼며 터뜨립니다', 받침 ㄹ에 '한 번 튕깁니다'가 나갔다).
     intonation: 억양(음높이 폭)을 코칭에 넣을지. 문장 연습에서 기대 방향 규칙(speak_curriculum.score_attempt)이 따로
     판정하지 않았을 때만 True다. 한 음절·단어는 음높이가 고른 게 자연스러운데, 예전에는 모든 모드에서 폭 25Hz 미만이면
-    '톤이 평평하니 끝을 올리거나 내리라'고 했고, 문장에서는 방향 규칙의 안내('끝을 내려보세요')와 겹쳤다."""
+    '톤이 평평하니 끝을 올리거나 내리라'고 했고, 문장에서는 방향 규칙의 안내('끝을 내려보세요')와 겹쳤다.
+    method: 채점 경로(main.speak_assess의 assessment_method). 'dgop'이면 전사를 하지 않으므로 '음성인식 결과' 줄과 '~로 들렸어요'
+    주의를 빼고 '발음 채점 점수 N점(음성인식 아님)'으로 적는다. 예전에는 transcript None이 '(잘 인식되지 않음)'으로 들어가, 92점으로
+    잘 말한 시도도 모델에게 '인식되지 않았다'는 거짓 입력이 됐다(dev의 2~5단계 코칭 전부)."""
     conf_txt = ""
     if confusions:
         conf_txt = "다르게 들린 소리: " + ", ".join(f"{c.get('correct')}→{c.get('confused_as')}" for c in confusions[:4]) + "\n"
+    def _name(j, pos):   # 받침이면 위치를 붙여 부른다(첫소리 ㅂ과 받침 ㅂ은 내는 법이 다르다)
+        return f"받침 {j}" if pos == "종성" else j
+
     weak_txt = ""
     if weak_phones:
         # D-GOP 원점수는 보정 전 값이라 절대 수치로 말하면 잘 낸 소리도 낮아 보인다 — 문장 안의 상대 비교로만 전한다.
         weak_txt = ("이 발화 안에서 다른 소리보다 약하게 잰 소리(음성인식과 무관한 발음 채점, 상대 비교): "
-                    + ", ".join(f"'{w['label']}'" for w in weak_phones[:3]) + "\n")
+                    + ", ".join(f"'{_name(w['label'], w.get('position'))}'" for w in weak_phones[:3]) + "\n")
     # 다르게 들린 소리·약한 소리의 조음 설명을 참고로 준다(articulation.jamo_tip). 없으면 모델이 조음 설명을 지어낸다.
     import articulation as _art
     tips, seen = [], set()
-    for j in [c.get("correct") for c in (confusions or [])[:3]] + [w.get("label") for w in (weak_phones or [])[:3]]:
-        t = _art.jamo_tip(j) if j and j not in seen else None
+    refs = ([(c.get("correct"), None) for c in (confusions or [])[:3]]
+            + [(w.get("label"), w.get("position")) for w in (weak_phones or [])[:3]])
+    for j, pos in refs:
+        name = _name(j, pos)
+        t = _art.jamo_tip(j, pos) if j and name not in seen else None
         if t:
-            seen.add(j)
-            tips.append(f"'{j}' — {t}")
+            seen.add(name)
+            tips.append(f"'{name}' — {t}")
     art_txt = ("조음 참고(정확한 설명이니 이것을 바탕으로): " + " / ".join(tips[:3]) + "\n") if tips else ""
     met_txt = ""
     m = metrics or {}
@@ -68,17 +78,25 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
     good_axes = "발음 점수·크기·억양" if intonation else "발음 점수·크기"
     tone_rule = ("   - 억양 변화 25Hz 미만이면 톤이 평평하다고 알리고 문장 끝을 올리거나 내리라고.\n" if intonation
                  else "   - 억양(음높이)은 말하지 않기(이 연습은 소리·발음만 본다).\n")
+    dgop = method == "dgop"
+    if dgop:
+        head = f'목표: "{target}" / 발음 채점 점수 {round(score)}점(음성인식 아님)'
+        weak_note, caution = "", ""
+    else:
+        heard = transcript or "(잘 인식되지 않음)"
+        head = f'목표: "{target}" / 음성인식 결과: "{heard}" / 발음 유사도 {round(score)}점'
+        weak_note = "(음성인식 결과와 달라도 이 값을 믿어도 됨)"
+        caution = '\n주의: 음성인식은 완벽하지 않으니 발음 부분은 단정하지 말고 "~로 들렸어요" 식으로 부드럽게.'
     prompt = f"""당신은 청각장애인의 발음(구화) 연습을 돕는 따뜻하고 구체적인 코치입니다.
-목표: "{target}" / 음성인식 결과: "{transcript or '(잘 인식되지 않음)'}" / 발음 유사도 {round(score)}점
+{head}
 {conf_txt}{weak_txt}{art_txt}{met_txt}
 아래 지침으로 한국어 3~5문장(250자 이내, 번호·머리말 없이 자연스럽게):
 1) 잘한 점을 측정값 근거로 구체적으로({good_axes} 중 좋았던 것을 수치와 함께).
 2) 개선점을 '수치 + 방법'으로 구체적으로:
    - 목소리 크기 40/100 미만이면 더 크게 말하라고 강조.
 {tone_rule}   - 다르게 들린 소리가 있으면 그 소리를 입술/혀를 '어떻게' 하는지 구체적으로.
-   - 약하게 잰 소리가 있으면 그중 하나를 골라 입술·혀를 어떻게 하는지 알려 주기(음성인식 결과와 달라도 이 값을 믿어도 됨).
-3) 짧은 격려.
-주의: 음성인식은 완벽하지 않으니 발음 부분은 단정하지 말고 "~로 들렸어요" 식으로 부드럽게."""
+   - 약하게 잰 소리가 있으면 그중 하나를 골라 입술·혀를 어떻게 하는지 알려 주기{weak_note}.
+3) 짧은 격려.{caution}"""
     try:
         resp = await anthropic_client.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -99,8 +117,8 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
                         + (tip or "입모양을 더 또렷하게 해보세요."))
         elif weak_phones:
             w = weak_phones[0]
-            tip = _art.jamo_tip(w["label"])
-            bits.append(f"'{w['label']}' 소리가 약하게 났어요. "
+            tip = _art.jamo_tip(w["label"], w.get("position"))
+            bits.append(f"'{_name(w['label'], w.get('position'))}' 소리가 약하게 났어요. "
                         + (tip or "그 음절에서 입을 조금 더 크게, 천천히 움직여 보세요."))
         if not bits:
             bits.append("또렷하게 잘 전달됐어요! 이 느낌을 기억하며 다음 단어도 도전해봐요.")

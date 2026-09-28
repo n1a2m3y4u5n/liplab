@@ -13,6 +13,7 @@ import { scoreTone, scoreLevel } from '../lib/scoreTone'
 import { VOWEL_IDS } from '../lib/vtlShapes'
 import { mediaErrorMessage } from '../lib/mediaError'
 import { finalTone, toneDirection, toneMissed } from '../lib/speakTone'
+import { SOFT_BAND, loudnessRms, metricVerdict, volumeCurveNote, volumeFeedback } from '../lib/speakFeedback'
 import { longestVoicedRun } from '../lib/voicing'
 import { autoCorrelate } from '../lib/pitch'
 
@@ -436,11 +437,8 @@ export default function SpeakingPractice() {
     const voicedAvg = voiced.length ? voiced.reduce((a, b) => a + b, 0) / voiced.length : 0
     const loudness = Math.max(0, Math.min(100, Math.round(((voicedAvg - 0.01) / 0.13) * 100)))
 
-    let volMsg, volOk, micIssue = false
-    if (peak < 0.008) { volMsg = '마이크 소리가 거의 안 잡혔어요. 권한/연결을 확인하고 가까이서 말해보세요.'; volOk = false; micIssue = true }
-    else if (loudness < 40) { volMsg = `목소리가 작아요(크기 ${loudness}/100). 배에 힘을 주고 더 크게 말해보세요.`; volOk = false }
-    else if (loudness > 92) { volMsg = `조금 컸어요(크기 ${loudness}/100). 편하게 낮춰도 괜찮아요.`; volOk = true }
-    else { volMsg = `볼륨 적당해요(크기 ${loudness}/100). 좋아요!`; volOk = true }
+    // '작게' 연습은 목표 구간(12~45)으로 본다(lib/speakFeedback)
+    const { volMsg, volOk, micIssue } = volumeFeedback(loudness, peak, drill)
 
     // 억양 판정은 여기서 하지 않는다(연습마다 기준이 달라 lib/speakTone.js가 모드·드릴을 보고 한다)
     let pitchRange = 0, pitchMean = 0, pitchStart = 0, pitchEnd = 0
@@ -542,15 +540,18 @@ export default function SpeakingPractice() {
     : !(assessment && !assessment.error) ? '목소리 크기'
       : mode === 'voicing' ? '길이·크기'
         : (PROSODY_SCORE_LABEL[drill] || '운율')
-  const good = assessment && !assessment.error
-    ? (assessment.passed ?? (assessment.score >= 65))
-    : (summary ? (summary.volOk && !toneMissed(summary, toneDirection(mode, drill))) : null)
+  const localGood = summary ? (summary.volOk && !toneMissed(summary, toneDirection(mode, drill))) : null
   const phoneScore = (p) => Math.round((p.dgop ?? 0) * 100)
   const goodCount = phones.filter((p) => scoreLevel(phoneScore(p), 'phone') === 'good').length
-  const fbSub = good
-    ? (phones.length ? `${phones.length}개 중 ${goodCount}개 소리를 정확히 냈어요` : (summary?.volMsg || '잘 전달됐어요'))
-    : '소리가 잘 전달되지 않았어요'
-  const fbTitle = good ? '잘했어요!' : '조금 더 연습해요'
+  // 지표 모드: 서버 판정·note를 쓰고, 응답 전에는 판정하지 않는다(good null = '분석 중')
+  const metricFb = metricMode ? metricVerdict({ assessment, assessing, summary, localGood }) : null
+  const good = metricFb ? metricFb.good
+    : assessment && !assessment.error ? (assessment.passed ?? (assessment.score >= 65)) : localGood
+  const fbSub = metricFb ? metricFb.sub
+    : good ? (phones.length ? `${phones.length}개 중 ${goodCount}개 소리를 정확히 냈어요` : (summary?.volMsg || '잘 전달됐어요'))
+      : '소리가 잘 전달되지 않았어요'
+  const fbTitle = metricFb ? metricFb.title : good ? '잘했어요!' : '조금 더 연습해요'
+  const barTone = good == null ? 'border-line bg-white text-ink-muted' : good ? 'border-good/35 bg-good-tint' : 'border-bad/35 bg-bad-tint'
   // 나가기 → 발화 커리큘럼 경로(?track=speak). /dashboard는 독화 경로로 리다이렉트된다.
   const exit = () => { teardown(); navigate(reviewMode ? '/review/speaking' : '/learn/path?track=speak') }
 
@@ -722,9 +723,9 @@ export default function SpeakingPractice() {
       {/* 하단 바 — 말하기 전/녹음 중: 마이크 바(175:40 / 236:83) · 결과: 피드백 바(176:66 · 186:55 / 237:76) */}
       {!exitError && !reviewEmpty && (
         summary ? (
-          <div className={`sticky bottom-0 w-full border-t-2 ${good ? 'border-good/35 bg-good-tint' : 'border-bad/35 bg-bad-tint'}`}>
+          <div className={`sticky bottom-0 w-full border-t-2 ${barTone}`}>
             <div className="mx-auto flex max-w-[676px] flex-col items-stretch gap-3 px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-4 lg:h-[110px] lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:py-0">
-              <div role="status" aria-live="polite" className={`flex min-w-0 flex-col gap-[3px] font-bold leading-figma lg:gap-1 ${good ? 'text-good-text' : 'text-bad-text'}`}>
+              <div role="status" aria-live="polite" className={`flex min-w-0 flex-col gap-[3px] font-bold leading-figma lg:gap-1 ${good == null ? 'text-ink-muted' : good ? 'text-good-text' : 'text-bad-text'}`}>
                 <p className="text-[19px] tracking-[-0.38px] lg:text-[22px] lg:tracking-[-0.44px]">{assessing && !metricMode ? '분석 중…' : fbTitle}</p>
                 <p className="text-[13px] opacity-80 lg:truncate lg:text-[14px]">{assessing && !metricMode ? '발음을 분석하고 있어요' : fbSub}</p>
               </div>
@@ -862,7 +863,7 @@ export default function SpeakingPractice() {
               {summary.trace && summary.trace.length >= 3 && !summary.micIssue && (
                 <div className="rounded-14 border-1.5 border-fill bg-white p-3">
                   <p className="mb-1 text-xs text-ink-muted">내 목소리 곡선</p>
-                  <PitchEnergyGraph trace={summary.trace} summary={summary} dir={toneDirection(mode, drill)} />
+                  <PitchEnergyGraph trace={summary.trace} summary={summary} dir={toneDirection(mode, drill)} drill={drill} />
                 </div>
               )}
             </>
@@ -905,7 +906,7 @@ function Stat({ label, value }) {
  *  아래 레인: 목소리 크기(에너지 포락선) + '적정' 기준 점선. 자주 아래로 내려가면 너무 작았다는 뜻.
  *  발화 트랙 토큰(--speak)으로 배색.
  */
-function PitchEnergyGraph({ trace, summary, dir }) {
+function PitchEnergyGraph({ trace, summary, dir, drill }) {
   if (!trace || trace.length < 3) return null
   const W = 480, H = 250
   const padL = 40, padR = 12, padT = 16, padB = 22
@@ -952,7 +953,10 @@ function PitchEnergyGraph({ trace, summary, dir }) {
   // 크기: 에너지 포락선(면적) — 이동평균으로 지터 완화 후 부드러운 상단선
   const eMax = 0.14
   const EY = (rms) => eBot - Math.min(1, Math.max(0, rms) / eMax) * (eBot - eTop)
-  const yTh = EY(0.062)   // ≈ 크기 40/100 (적정 기준선)
+  const yTh = EY(loudnessRms(40))   // 크기 40/100 (적정 기준선, RMS 0.062)
+  // '작게' 연습은 적정선 대신 목표 구간(크기 12~45)을 그린다
+  const soft = drill === 'soft'
+  const yBandTop = EY(loudnessRms(SOFT_BAND[1])), yBandBot = EY(loudnessRms(SOFT_BAND[0]))
   const rmsArr = trace.map((s) => s.rms)
   const topPts = trace.map((s, i) => {
     const a = rmsArr[i - 1] ?? rmsArr[i], b = rmsArr[i], c = rmsArr[i + 1] ?? rmsArr[i]
@@ -962,7 +966,7 @@ function PitchEnergyGraph({ trace, summary, dir }) {
   const areaFill = topLine + ` L${X(last.t).toFixed(1)} ${eBot} L${X(trace[0].t).toFixed(1)} ${eBot} Z`
 
   const flat = toneMissed(summary, dir)   // 운율 올리기·내리기에서 끝이 목표 방향으로 움직이지 않음
-  const quiet = summary?.volOk === false && !summary?.micIssue
+  const volNote = volumeCurveNote(summary, drill)
   const midY = (pTop + pBot) / 2
 
   return (
@@ -984,8 +988,19 @@ function PitchEnergyGraph({ trace, summary, dir }) {
         {/* 크기 포락선(면적 + 부드러운 상단선) + 적정 기준선 */}
         <path d={areaFill} fillOpacity="0.16" stroke="none" style={{ fill: 'var(--speak)' }} />
         <path d={topLine} fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ stroke: 'var(--speak)' }} />
-        <line x1={padL} y1={yTh} x2={W - padR} y2={yTh} strokeWidth="1" strokeDasharray="5 4" style={{ stroke: 'var(--warn)' }} />
-        <text x={W - padR} y={yTh - 3} textAnchor="end" fontSize="9" style={{ fill: 'var(--warn-strong)' }}>적정</text>
+        {soft ? (
+          <>
+            <rect x={padL} y={yBandTop} width={innerW} height={yBandBot - yBandTop} fillOpacity="0.12" style={{ fill: 'var(--warn)' }} />
+            <line x1={padL} y1={yBandTop} x2={W - padR} y2={yBandTop} strokeWidth="1" strokeDasharray="5 4" style={{ stroke: 'var(--warn)' }} />
+            <line x1={padL} y1={yBandBot} x2={W - padR} y2={yBandBot} strokeWidth="1" strokeDasharray="5 4" style={{ stroke: 'var(--warn)' }} />
+            <text x={W - padR} y={yBandTop - 3} textAnchor="end" fontSize="9" style={{ fill: 'var(--warn-strong)' }}>목표</text>
+          </>
+        ) : (
+          <>
+            <line x1={padL} y1={yTh} x2={W - padR} y2={yTh} strokeWidth="1" strokeDasharray="5 4" style={{ stroke: 'var(--warn)' }} />
+            <text x={W - padR} y={yTh - 3} textAnchor="end" fontSize="9" style={{ fill: 'var(--warn-strong)' }}>적정</text>
+          </>
+        )}
 
         {/* 레인 라벨 */}
         <text x="4" y={midY - 3} fontSize="10" fontWeight="600" style={{ fill: 'var(--speak)' }}>억양</text>
@@ -1000,12 +1015,12 @@ function PitchEnergyGraph({ trace, summary, dir }) {
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-muted">
         <span className="inline-flex items-center gap-1"><span className="inline-block h-[2px] w-3 bg-speak" /> 억양선</span>
         <span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-3 border border-speak bg-speak-tint" /> 목소리 크기</span>
-        <span className="inline-flex items-center gap-1"><span className="inline-block w-3 border-t border-dashed border-warn" /> 적정 크기</span>
+        <span className="inline-flex items-center gap-1"><span className="inline-block w-3 border-t border-dashed border-warn" /> {soft ? `목표 크기 ${SOFT_BAND[0]}~${SOFT_BAND[1]}` : '적정 크기'}</span>
       </div>
       <div className="mt-1 space-y-0.5">
         {flat && <p className="text-[11px] text-warn-text">억양선 끝이 시작보다 {dir === 'rise' ? '높아지지' : '낮아지지'} 않았어요 → 끝에서 선을 {dir === 'rise' ? '올려' : '내려'}보세요.</p>}
-        {quiet && <p className="text-[11px] text-warn-text">크기 곡선이 적정선 아래로 자주 내려갔어요 → 배에 힘을 주고 더 크게.</p>}
-        {!flat && !quiet && <p className="text-[11px] text-good-text">{dir ? '억양선과 크기 곡선이 잘 살아있어요.' : '크기 곡선이 고르게 잘 유지됐어요.'}</p>}
+        {volNote && <p className="text-[11px] text-warn-text">{volNote}</p>}
+        {!flat && !volNote && <p className="text-[11px] text-good-text">{dir ? '억양선과 크기 곡선이 잘 살아있어요.' : '크기 곡선이 고르게 잘 유지됐어요.'}</p>}
       </div>
     </div>
   )
