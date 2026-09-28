@@ -1888,11 +1888,35 @@ async def curriculum_words(current_user=Depends(get_current_user), db: AsyncSess
     plan = _vd.stage2_plan(table, n_answers=n_answers, mastered=mastered, weak_visemes=weak, rng=_random.Random())
     meta = {w["word"]: w for w in _curriculum.WORD_BANK}
     words = [{**meta.get(e["word"], {}), **e} for e in plan["words"]]
+    context_items = await _stage2_context_items(current_user.id, db)
     # mastery_score·natural_speed_gate: 화면이 숙달 추정값이 문턱 이상이면 적응 감속을 끈다(자연 속도 확인, docs/mastery-ewma.md 7절).
     # mastered: 숙달했으면 엔드리스에서 1.25배 '빠른 말'을 연다.
     return {"words": words, "option_level": plan["option_level"], "target_quantile": plan["target_quantile"],
             "mastered": mastered, "mastery_score": round(float(sp.mastery_score or 0.0), 1) if sp else 0.0,
-            "natural_speed_gate": _NATURAL_SPEED_GATE}
+            "natural_speed_gate": _NATURAL_SPEED_GATE, "context_items": context_items}
+
+
+# 2단계 레슨 12문항 중 2문항은 문맥 문항이다(분석·종합 섞기, 커리큘럼 개선 계획 1-3). 한 번에 몇 개를 넉넉히 준다.
+_STAGE2_CONTEXT_OFFER = 4
+
+
+async def _stage2_context_items(user_id: int, db, k: int = _STAGE2_CONTEXT_OFFER) -> list:
+    """2단계 레슨에 섞을 문맥 문항. 문맥 추론과 같은 문항 풀(_training_closures: 규칙 게이트 통과, 사람이 뺀 문항 제외, 보기 3개
+    이상, 보기는 정답과 입모양이 비슷한 단어)에서 최근 14일 안에 문맥 추론이나 이 자리에서 푼 적 없는 것을 먼저 고른다."""
+    import random
+    from datetime import datetime as _dt, timedelta
+    from database import TrialAttempt
+    from sqlalchemy import select
+    since = _dt.utcnow() - timedelta(days=14)
+    seen = set((await db.execute(
+        select(TrialAttempt.item_id).where(TrialAttempt.user_id == user_id,
+                                           TrialAttempt.item_type.in_(("closure", "context")),
+                                           TrialAttempt.item_id.isnot(None), TrialAttempt.created_at >= since))).scalars().all())
+    pool = _training_closures()
+    fresh = [c for c in pool if c["id"] not in seen] or list(pool)
+    picked = random.sample(fresh, min(k, len(fresh)))
+    return [{"id": c["id"], "display": c["display"], "answer": c["answer"], "options": list(c["options"]),
+             "hint": c.get("hint")} for c in picked]
 
 
 @app.post("/api/curriculum/word-answer")
@@ -2174,7 +2198,7 @@ async def curriculum_closure(current_user=Depends(get_current_user), db: AsyncSe
 
     지식추적 표적 입모양을 정답에 많이 담은 항목부터 준다(축 G). 적중 수가 같은 항목끼리는
     사용자·날짜로 정한 순서로 섞어, 날마다 같은 문항부터 시작하지 않게 한다.
-    최근 14일 안에 푼 문항은 뒤로 보낸다(오래전에 푼 것부터). 예전에는 화면이 늘 첫 문항부터 시작해 같은 날 레슨을 다시
+    최근 14일 안에 푼 문항(2단계 레슨 속 문맥 문항 포함)은 뒤로 보낸다(오래전에 푼 것부터). 예전에는 화면이 늘 첫 문항부터 시작해 같은 날 레슨을 다시
     열면 같은 12문항이 같은 순서로 나왔고, 다시 맞힌 답이 3단계 숙달에 또 들어갔다.
     """
     import random
@@ -2191,7 +2215,7 @@ async def curriculum_closure(current_user=Depends(get_current_user), db: AsyncSe
     since = _dt.utcnow() - timedelta(days=14)
     rows = (await db.execute(
         select(TrialAttempt.item_id, func.max(TrialAttempt.created_at))
-        .where(TrialAttempt.user_id == current_user.id, TrialAttempt.item_type == "closure",
+        .where(TrialAttempt.user_id == current_user.id, TrialAttempt.item_type.in_(("closure", "context")),
                TrialAttempt.item_id.isnot(None), TrialAttempt.created_at >= since)
         .group_by(TrialAttempt.item_id))).all()
     last_seen = {iid: ts for iid, ts in rows}
@@ -2238,6 +2262,41 @@ async def curriculum_closure_answer(data: ClosureAnswer, current_user=Depends(ge
     except Exception as e:
         await db.rollback()
         raise _server_error(e, "closure answer failed")
+    return {"correct": correct, "answer": answer, "confusions": confusions,
+            "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
+
+
+class ContextAnswer(BaseModel):
+    item_id: str = Field(..., max_length=40)   # 문맥 문항 id(정답은 서버가 CLOSURE_ITEMS에서 찾는다)
+    chosen: str = Field(..., max_length=50)
+
+
+@app.post("/api/curriculum/context-answer")
+async def curriculum_context_answer(data: ContextAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """2단계 레슨 속 문맥 문항 채점(분석·종합 섞기, 커리큘럼 개선 계획 1-3). 이 답은 2단계 숙달에도 3단계 숙달에도 넣지 않는다.
+    문맥 추론은 3단계 과제라, 2단계에서 미리 푼 답을 숙달에 넣으면 잠긴 단계의 답을 넣지 않는다는 원칙에 어긋난다.
+    시행 기록(stage 2, item_type 'context')과 취약 입모양(지식추적 입력)에만 남긴다."""
+    item = next((it for it in _curriculum.CLOSURE_ITEMS if it["id"] == data.item_id), None)
+    if item is None:
+        raise HTTPException(status_code=400, detail="unknown context item")
+    answer = item["answer"]
+    correct = data.chosen == answer
+    from scoring import viseme_confusions
+    from database import TrialAttempt
+    try:
+        confusions = [] if correct else viseme_confusions(answer, data.chosen)
+    except Exception:
+        confusions = []
+    try:
+        db.add(TrialAttempt(user_id=current_user.id, stage=2, item_type="context", item_id=item["id"],
+                            target=answer, chosen=data.chosen, correct=correct, confusions=confusions))
+        vids, features = await _weak_visemes_for_text(answer)
+        await _bump_weak_visemes(current_user.id, vids, vids if not correct else [], features, db)
+        award = _award_xp_and_streak(current_user, 15 if correct else 3)
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise _server_error(e, "context answer failed")
     return {"correct": correct, "answer": answer, "confusions": confusions,
             "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
 
@@ -2315,7 +2374,8 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
     baseline_vs_recent = _em.within_type_change(seq)   # 9시행 이상인 유형이 없으면 None
 
     by_item_type = []
-    for it, label in (("viseme", "입모양 인지"), ("word", "단어"), ("word_typed", "단어 주관식"), ("closure", "문맥 추론")):
+    for it, label in (("viseme", "입모양 인지"), ("word", "단어"), ("word_typed", "단어 주관식"),
+                      ("context", "단어 레슨 문맥"), ("closure", "문맥 추론")):
         seg = [c for t, c in seq if t == it]
         if seg:
             by_item_type.append({"item_type": it, "label": label, "n": len(seg),

@@ -16,7 +16,7 @@ import { pickDistractors, visualLevel } from '../lib/wordOptions'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
 import useSlowWeak from '../hooks/useSlowWeak'
 import { effectiveSpeed, FAST_SPEECH_SPEED } from '../lib/visemeTiming'
-import { typedSlots } from '../lib/openSet'
+import { typedSlots, contextSlots } from '../lib/openSet'
 import MouthCompare from '../components/MouthCompare'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
@@ -118,7 +118,7 @@ function WordQuiz({ data, reload }) {
   const byWord = useMemo(() => new Map(data.words.map((w) => [w.word, w])), [data])
   const [q, setQ] = useState(null)
   // 문항 북마크 — 서버에 저장돼 복습 탭·저장한 문장에 나온다
-  const [saved, toggleSaved] = useBookmark(q?.target, { situation: '단어 독화' })
+  const [saved, toggleSaved] = useBookmark(q?.kind === 'context' ? q.full : q?.target, { situation: q?.kind === 'context' ? '문맥 추론' : '단어 독화' })
   const [frames, setFrames] = useState([])
   const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
   // 약한 입모양은 조금 천천히(연습 화면). 숙달 추정값이 문턱(서버 natural_speed_gate, 70) 이상이면 감속을 끄고 자연 속도로
@@ -146,17 +146,33 @@ function WordQuiz({ data, reload }) {
   // 이번 레슨에서 이미 낸 단어. 예전에는 가중 복원추출이라 12문항 레슨의 33~39%에서 같은 단어가 다시 나와(앞에서 정답을 봤으니)
   // 기억으로 맞힌 답이 숙달에 들어갔다. 레슨 안에서는 뺀 채 가중 추출한다(새 레슨에서 초기화).
   const askedRef = useRef(new Set())
-  // 숙달한 뒤에는 레슨의 30%를 주관식(단어 입력)으로 낸다(계획 1-2, lib/openSet). 레슨을 시작할 때 자리를 정한다.
+  // 레슨 문항 구성(lib/openSet), 레슨을 시작할 때 자리를 정한다.
+  //  - 12문항 중 2문항은 문맥 문항(문장 속 빈칸, 보기는 입모양이 비슷한 단어, 계획 1-3). 이 답은 숙달에 넣지 않는다.
+  //  - 숙달한 뒤에는 30%를 주관식(단어 입력)으로 낸다(계획 1-2).
   const masteredRef = useRef(false)
   masteredRef.current = !!(data.mastered || stat.mastered)
-  const slotRef = useRef({ typed: new Set(), pos: -1 })
+  const slotRef = useRef({ typed: new Set(), context: new Set(), pos: -1, ctx: 0 })
   const [typedText, setTypedText] = useState('')
   const newQ = useCallback(async (fresh = false) => {
+    const ctxItems = data.context_items || []
     if (fresh) {
       askedRef.current = new Set()
-      slotRef.current = { typed: typedSlots(QUIZ_LEN, masteredRef.current), pos: -1 }
+      const context = contextSlots(QUIZ_LEN, Math.min(2, ctxItems.length))
+      slotRef.current = { typed: typedSlots(QUIZ_LEN, masteredRef.current, Math.random, context), context, pos: -1, ctx: 0 }
     }
     slotRef.current.pos += 1
+    setResult(null)
+    setCompareOpen(false)
+    setSelected(null)
+    setTypedText('')
+    if (slotRef.current.context.has(slotRef.current.pos) && ctxItems.length) {
+      const item = ctxItems[slotRef.current.ctx++ % ctxItems.length]
+      const full = item.display.replace('___', item.answer)
+      setQ({ kind: 'context', item, full, target: item.answer, choices: shuffle(item.options) })
+      setFrames([])
+      try { setFrames(await learningAPI.getVisemes(full)) } catch { /* ignore */ }
+      return
+    }
     const kind = slotRef.current.typed.has(slotRef.current.pos) ? 'typed' : 'choice'
     const left = data.words.filter((w) => !askedRef.current.has(w.word))
     const pool = left.length ? left : data.words
@@ -166,10 +182,6 @@ function WordQuiz({ data, reload }) {
     for (const w of pool) { r -= (w.priority || 1); if (r <= 0) { target = w.word; break } }
     askedRef.current.add(target)
     const distractors = pickDistractors(target, byWord, words)
-    setResult(null)
-    setCompareOpen(false)
-    setSelected(null)
-    setTypedText('')
     setQ({ target, choices: shuffle([target, ...distractors]), kind })
     setFrames([])
     try { setFrames(await learningAPI.getVisemes(target)) } catch { /* ignore */ }
@@ -179,6 +191,7 @@ function WordQuiz({ data, reload }) {
 
   // 보기 숫자 키 1~4(§4-03) — 채점 중·결과 표시 중·수어 창이 열려 있으면 받지 않는다.
   const typed = q?.kind === 'typed'
+  const isContext = q?.kind === 'context'
   useChoiceKeys(q?.choices, (w) => setSelected(w), !!q && !typed && !result && !submitting && !signOpen && !done)
 
   // 주관식은 서버가 채점한다(visual_difficulty.typed_word_verdict): 정답, '입모양은 맞음'(입모양이 똑같은 다른 말, 숙달에 0.5), 오답.
@@ -189,6 +202,18 @@ function WordQuiz({ data, reload }) {
     let correct = typed ? answer.replace(/\s+/g, '') === q.target : answer === q.target
     let verdict = correct ? 'correct' : 'wrong'
     let confusions = []
+    if (isContext) {
+      // 문맥 문항: 숙달(stat)은 그대로, 시행 기록·취약 입모양에만 남는다(/api/curriculum/context-answer)
+      try {
+        const rc = await curriculumAPI.submitContext(q.item.id, answer)
+        correct = !!rc.correct
+        confusions = rc.confusions || []
+        setXpEarned((x) => x + (rc.xp_gained || 0))
+      } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
+      setResult({ correct, verdict: correct ? 'correct' : 'wrong', chosen: answer, confusions })
+      setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
+      return
+    }
     try {
       const rr = await curriculumAPI.submitWord(q.target, correct, answer, effectiveSpeed(frames, shownFrames, playSpeed),
         typed ? 'typed' : undefined)
@@ -257,10 +282,21 @@ function WordQuiz({ data, reload }) {
         <div className={LESSON_STACK}>
           {/* 질문 + 북마크(91:19 · 328:40 / 모바일 235:42 · 328:64) */}
           <div className="relative flex flex-col gap-1.5 pr-12 leading-figma lg:gap-2 lg:pr-[52px]">
-            <p className="text-[12px] font-bold text-track lg:text-[13px]">단어 독화{typed ? ' · 주관식' : ''}</p>
+            <p className="text-[12px] font-bold text-track lg:text-[13px]">단어 독화{typed ? ' · 주관식' : isContext ? ' · 문맥' : ''}</p>
             <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">
-              {typed ? '이 입모양은 어떤 단어일까요? 직접 적어 보세요' : '이 입모양은 어떤 단어일까요?'}
+              {typed ? '이 입모양은 어떤 단어일까요? 직접 적어 보세요' : isContext ? '빈칸에 들어갈 단어는 무엇일까요?' : '이 입모양은 어떤 단어일까요?'}
             </h1>
+            {/* 문맥 문항: 아바타는 문장 전체를 말하고, 화면에는 빈칸 문장을 보인다. 보기는 입모양이 비슷해 문장 흐름으로 고른다 */}
+            {isContext && (
+              <p className="text-[16px] font-bold text-ink-soft lg:text-[18px]">
+                {q.item.display.split('___').map((part, i, arr) => (
+                  <span key={i}>{part}{i < arr.length - 1 && (
+                    <span className="mx-0.5 inline-block min-w-[2.5em] border-b-2 border-track text-center text-track">
+                      {result ? q.target : '\u00a0'}
+                    </span>)}</span>
+                ))}
+              </p>
+            )}
             <BookmarkButton active={saved} onToggle={toggleSaved} className="absolute right-0 top-[14px] lg:top-[21px]" />
           </div>
 
@@ -268,7 +304,7 @@ function WordQuiz({ data, reload }) {
           <div className={LESSON_AVATAR}>
             {/* 시각증강 기호(축 J-3)는 답을 확인한 뒤에만 — 보기가 최소대립 짝이라 문제 중에 보이면 기호만으로 답이 드러난다.
                 확인 뒤에는 약한 표적 입모양 음절에만 입꼬리 옆에 겹쳐 무엇이 달랐는지 보여 준다(숙달되면 흐려짐). */}
-            <MouthAvatar frames={shownFrames} height={null} className="h-full" cueText={result ? q.target : null} cueFocus speed={playSpeed} />
+            <MouthAvatar frames={shownFrames} height={null} className="h-full" cueText={result && !isContext ? q.target : null} cueFocus speed={playSpeed} />
           </div>
           {fastOk && (
             <button type="button" onClick={() => setFast((v) => !v)} aria-pressed={fast}
@@ -324,12 +360,21 @@ function WordQuiz({ data, reload }) {
                     ))}
                   </div>
                 )}
-                {!result.correct && result.chosen && (compareOpen
+                {isContext && (
+                  <div className="rounded-16 border-2 border-line bg-white p-4 text-[13px] leading-snug text-ink-muted">
+                    <p className="text-xs font-bold text-ink">문장으로 고르는 문항이에요</p>
+                    <p className="mt-1">보기는 모두 입모양이 비슷해서 눈만으로는 가르기 어려워요. 앞뒤 말의 흐름으로 고르는 연습이에요.
+                      이 문항은 단어 단계 숙달에는 들어가지 않아요.</p>
+                    {q.item.hint && <p className="mt-1">힌트: {q.item.hint}</p>}
+                  </div>
+                )}
+                {!isContext && !result.correct && result.chosen && (compareOpen
                   ? <MouthCompare target={q.target} chosen={result.chosen}
                       sameLooking={result.verdict === 'homophene' || (result.confusions?.length > 0 && result.confusions.every((cf) => cf.same_viseme))} />
                   : <button type="button" onClick={() => setCompareOpen(true)} className="btn-secondary w-full py-2.5 text-[14px] text-track">
                       「{q.target}」과 「{result.chosen}」 입모양 나란히 비교
                     </button>)}
+                {!isContext && (<>
                 <div className="rounded-16 border-2 border-line bg-white p-3">
                   <div className="flex items-center gap-2">
                     <CueBadges text={q.target} />
@@ -344,6 +389,7 @@ function WordQuiz({ data, reload }) {
                 <Suspense fallback={null}>
                   <LipReadCheck target={q.target} candidates={q.choices} />
                 </Suspense>
+                </>)}
               </motion.div>
             )}
           </AnimatePresence>
