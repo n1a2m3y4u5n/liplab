@@ -219,7 +219,7 @@ function Developers() {
                     <p className="text-[13.5px] text-ink-muted">{m.role}</p>
                     {m.handle
                       ? <p className="text-[12.5px] font-bold text-primary-500">{m.handle}</p>
-                      : <p className="text-[12px] text-ink-hint">{m.note}</p>}
+                      : null}
                   </div>
                   {m.detail?.awards?.length > 0 && (
                     <span className="shrink-0 rounded-full bg-primary-100 px-2.5 py-1 text-[12px] font-bold text-primary-700">수상 {m.detail.awards.length}</span>

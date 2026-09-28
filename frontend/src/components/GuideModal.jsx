@@ -434,7 +434,7 @@ function Member({ m, open, onToggle, index }) {
         <p className="text-[13.5px] text-ink-muted">{m.role}</p>
         {m.handle
           ? <p className="text-[12.5px] font-bold text-primary-500">{m.handle}</p>
-          : <p className="text-[12px] text-ink-hint">{m.note}</p>}
+          : null}
       </div>
     </button>
   )
