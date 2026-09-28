@@ -366,8 +366,10 @@ function QuizPanel({ data }) {
   const newQ = useCallback((fresh = false) => {
     if (fresh || deckRef.current.i >= deckRef.current.list.length) deckRef.current = { list: balancedTargets(quizzable, QUIZ_LEN), i: 0 }
     const target = deckRef.current.list[deckRef.current.i++] || quizzable[0]
-    // 오답은 화면에서 가를 수 있는 무리만(정답이 중설모음이면 입 안쪽 무리 제외, lib/visemeOptions)
-    const others = pickVisemeDistractors(target.viseme_id, lessons)
+    // 오답은 화면에서 가를 수 있는 무리만(정답이 중설모음이면 입 안쪽 무리 제외, lib/visemeOptions).
+    // 후보는 정답과 같은 모집단(quizzable)으로 한다. 10개 무리 전체에서 뽑으면 정답이 될 수 없는 6·7·8·10이 보기에 섞여,
+    // 입을 보지 않고 보기 구성만으로 맞히는 최적 추측이 0.554였다(지금 0.250 = 4지선다 찬스).
+    const others = pickVisemeDistractors(target.viseme_id, quizzable)
     const choices = shuffle([target, ...others]).map((l) => ({ viseme_id: l.viseme_id, name: lessonLabel(l) }))
     setQ({ target, choices })
     setSelected(null)
