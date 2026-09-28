@@ -62,6 +62,7 @@ export function TeamMemberDetail({ m }) {
   const school = awards.filter((a) => a.scope === 'school')
   const facts = [
     d.affiliation && ['소속', d.affiliation],
+    d.email && ['연락처', <a key="e" href={`mailto:${d.email}`} className="font-bold text-primary-500 hover:underline">{d.email}</a>],
     m.handle && ['핸들', m.handle],
   ].filter(Boolean)
   return (
