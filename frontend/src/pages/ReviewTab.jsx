@@ -5,10 +5,12 @@ import WatermarkCard from '../components/WatermarkCard'
 import ScrollHintList from '../components/ScrollHintList'
 import { reviewAPI, learningAPI } from '../api'
 import { relDay } from '../lib/relDay'
+import { dueCounts, dueStartPath } from '../lib/reviewDue'
 
 /**
  * 복습 탭 (Figma 100:15 · 선택 모드 318:33 · 모바일 239:34 / 318:233) — 오답·북마크 복습 진입 + 복습 항목 리스트.
- * 실데이터: reviewAPI.getDue(예정), learningAPI.getReviewSentences(오답), getBookmarks(북마크 — 독화·발화 모두).
+ * 실데이터: reviewAPI.getDue(예정: 독화 입모양·단어 + 말하기에서 틀린 문항), learningAPI.getReviewSentences(오답),
+ * getBookmarks(북마크, 독화·발화 모두).
  * 각 항목은 트랙 배지(독화=보라 / 발화=핑크) + 단어 + 사유. 클릭 시 해당 복습 흐름으로 이동.
  * 오른쪽 패널은 복습 탭 구성(스탯 + 오늘의 과제 + 이번 주 복습, 100:113).
  * 목록은 최대 높이(데스크톱 419 = 항목 351 + 간격 16 + 안내 52, 모바일 241) 안에서 세로로 스크롤되고, 더 있으면 바닥에
@@ -108,7 +110,7 @@ function EraseButton({ onClick, className = '' }) {
 
 export default function ReviewTab() {
   const navigate = useNavigate()
-  const [due, setDue] = useState(0)
+  const [due, setDue] = useState({ read: 0, speak: 0 })   // 예정 복습: 독화(간격 반복 세션) · 말하기(말하기 복습)
   const [wrong, setWrong] = useState(0)
   const [marks, setMarks] = useState(0)
   const [items, setItems] = useState([])
@@ -125,21 +127,23 @@ export default function ReviewTab() {
       learningAPI.getBookmarks().catch(() => []),
     ]).then(([dueRes, wrongRes, bmRes]) => {
       if (!on) return
-      const dueItems = dueRes.items || []
+      // 말하기 예정(kind 'speak')은 /api/review/due의 speak로 따로 온다. 목록에서는 발화 배지로 보인다
+      const dueItems = [...(dueRes.items || []), ...(dueRes.speak || [])]
       const wrongArr = Array.isArray(wrongRes) ? wrongRes : (wrongRes.items || [])
       const bmArr = Array.isArray(bmRes) ? bmRes : (bmRes.items || [])
-      setDue(dueItems.length)
+      const dc = dueCounts(dueRes)
+      setDue({ read: dc.read, speak: dc.speak })
       setWrong(wrongArr.length)
       setMarks(bmArr.length)
       const meta = (x, kind) => {
         if (kind === 'bookmark') return '북마크를 했어요'
         if (kind === 'wrong') return x.wrong_count ? `${x.wrong_count}회 틀렸어요` : '틀렸어요'
-        return '다시 볼 항목'
+        return x.kind === 'speak' ? '다시 말해 볼 항목' : '다시 볼 항목'
       }
       const norm = (arr, kind) => arr.map((x, i) => ({
         id: `${kind}-${x.id ?? i}`,
-        track: (x.domain === 'speak' || x.track === 'speak') ? '발화' : '독화',
-        // 예정 항목(/api/review/due)은 {kind, ref, name} — 입모양은 레슨 이름, 단어는 ref가 곧 단어
+        track: (x.domain === 'speak' || x.track === 'speak' || (kind === 'due' && x.kind === 'speak')) ? '발화' : '독화',
+        // 예정 항목(/api/review/due)은 {kind, ref, name}: 입모양은 레슨 이름, 단어·말하기는 ref가 곧 단어·문장
         word: x.word || x.sentence || x.text || x.target || x.name || x.ref || '복습 항목',
         meta: meta(x, kind),
         rel: relDay(x.updated_at || x.created_at),
@@ -154,7 +158,7 @@ export default function ReviewTab() {
   const shown = items.filter((it) => filter === 'all' || (filter === 'wrong' ? it.kind !== 'bookmark' : it.kind === 'bookmark'))
   const chips = [
     { key: 'all', label: '전체', n: items.length },
-    { key: 'wrong', label: '오답', n: wrong + due },
+    { key: 'wrong', label: '오답', n: wrong + due.read + due.speak },
     { key: 'bookmark', label: '북마크', n: marks },
   ]
   const deleteShown = selectMode && selected.size > 0
@@ -189,14 +193,16 @@ export default function ReviewTab() {
     }
     setItems((prev) => prev.filter((it) => !selected.has(it.id)))
     setMarks((n) => Math.max(0, n - picked.filter((it) => it.kind === 'bookmark').length))
-    setDue((n) => Math.max(0, n - picked.filter((it) => it.kind === 'due').length))
+    const pickedDue = picked.filter((it) => it.kind === 'due')
+    const pickedSpeak = pickedDue.filter((it) => it.raw?.kind === 'speak').length
+    setDue((d) => ({ read: Math.max(0, d.read - (pickedDue.length - pickedSpeak)), speak: Math.max(0, d.speak - pickedSpeak) }))
     setWrong((n) => Math.max(0, n - picked.filter((it) => it.kind === 'wrong').length))
     exitSelect()
   }
-  // 예정 복습(입모양·단어, /api/review/due)은 간격 반복 세션(/review/scheduled)에서, 틀린 문장은 오답 복습(/review/mistakes)에서 푼다.
-  // 오답 복습 화면에는 틀린 문장만 나와, 예전처럼 예정 항목을 그리로 보내면 풀 방법이 없었다.
+  // 예정 복습 중 입모양·단어는 간격 반복 세션(/review/scheduled)에서, 말하기는 말하기 복습(/review/speaking)에서,
+  // 틀린 문장은 오답 복습(/review/mistakes)에서 푼다. 오답 복습 화면에는 틀린 문장만 나와 예정 항목을 그리로 보내면 풀 방법이 없다.
   const openItem = (it) => {
-    if (it.kind === 'due') return navigate('/review/scheduled')
+    if (it.kind === 'due') return navigate(it.raw?.kind === 'speak' ? '/review/speaking' : '/review/scheduled')
     if (it.kind === 'wrong') return navigate('/review/mistakes')
     // 발화 북마크는 말하기 복습(/api/speak/review가 발화 북마크를 함께 모은다)으로 간다.
     return navigate(it.track === '발화' ? '/review/speaking' : '/review/saved')
@@ -205,9 +211,10 @@ export default function ReviewTab() {
   return (
     <AppShell active="review" title="복습" rail="review">
       <div className="flex w-full gap-2.5 lg:gap-3.5">
-        {/* 오답 수 = 틀린 문장 + 예정 복습. 예정 복습이 남아 있으면 그 세션부터 연다(다 풀면 틀린 문장 복습으로 간다). */}
-        <GradientCta tone="mistake" count={wrong + due} title="복습할 오답" sub="오답 다시보기" subMobile="약 3분이면 끝나요"
-          btn="오답 복습하기" onClick={() => navigate(due > 0 ? '/review/scheduled' : '/review/mistakes')} />
+        {/* 오답 수 = 틀린 문장 + 예정 복습(독화·말하기, 패널 '오답'과 같은 정의). 예정 복습이 남아 있으면 그 세션부터 연다
+            (독화 → 말하기, 다 풀면 틀린 문장 복습으로 간다). */}
+        <GradientCta tone="mistake" count={wrong + due.read + due.speak} title="복습할 오답" sub="오답 다시보기" subMobile="약 3분이면 끝나요"
+          btn="오답 복습하기" onClick={() => navigate(dueStartPath(due, '/review/mistakes'))} />
         <GradientCta tone="bookmark" count={marks} title="복습할 북마크" sub="북마크 다시보기" subMobile="저장해둔 문장이에요"
           btn="북마크 복습하기" onClick={() => navigate('/review/saved')} />
       </div>

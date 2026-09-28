@@ -4,7 +4,7 @@ Supports both SQLite (development) and PostgreSQL (production)
 """
 import os
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, ForeignKey, Boolean, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -311,7 +311,7 @@ class TrialAttempt(Base):
 
 class ReviewItem(Base):
     """간격 반복(SRS) 복습 큐 — 틀린 항목이 due_date에 다시 등장한다.
-    kind: 'viseme'(입모양 그룹, ref=id 문자열) | 'word'(단어, ref=단어)."""
+    kind: 'viseme'(입모양 그룹, ref=id 문자열) | 'word'(단어, ref=단어) | 'speak'(말하기, ref=목표 문장·단어)."""
     __tablename__ = "review_items"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -326,6 +326,20 @@ class ReviewItem(Base):
     lapses = Column(Integer, default=0)              # 누적 실패 횟수(누수·leech 판별용)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class TaskClaim(Base):
+    """과제 보상 수령 기록(과제 탭, daily_tasks.py). 과제마다 기간에 한 번만 XP를 준다.
+    period: 하루 과제는 'YYYY-MM-DD'(KST), 주 과제는 'W' + 그 주 월요일. 신규 테이블이라 create_all이 만든다."""
+    __tablename__ = "task_claims"
+    __table_args__ = (UniqueConstraint("user_id", "task_key", "period", name="ux_task_claims_user_task_period"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    task_key = Column(String(32), nullable=False)
+    period = Column(String(16), nullable=False)
+    xp = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class AssessmentResult(Base):

@@ -2,14 +2,17 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import WatermarkCard from '../components/WatermarkCard'
-import { reviewAPI, learningAPI } from '../api'
+import { reviewAPI, learningAPI, tasksAPI } from '../api'
+import useStore from '../store/useStore'
 import { mergeBadges } from '../lib/badges'
+import { dueCounts, dueStartPath, rewardMessage } from '../lib/reviewDue'
 import useFocusTrap from '../hooks/useFocusTrap'
 
 /**
  * 과제 탭 (Figma 137:17 · 모바일 238:160) — 일일 과제 진행/보상 + 주간 도전 + 배지.
- * 진행도는 실제 기록에서 온다: 복습 수는 reviewAPI, 오늘 회차·독화 활동·이번 주 학습일·배지는
- * GET /api/analysis/overview(backend/analytics.py). 불러오기 전에는 0·미획득으로 보인다.
+ * 과제 목록·목표·보상 XP와 달성 판정은 서버(backend/daily_tasks.py)가 한다. 화면을 열면 POST /api/tasks/claim으로
+ * 달성했지만 받지 않은 보상을 받고(과제마다 하루·한 주에 한 번, KST) 응답의 과제 목록을 그린다. 받은 것이 있으면 토스트를 띄운다.
+ * 배지는 GET /api/analysis/overview(backend/analytics.py). 불러오기 전에는 미획득으로 보인다.
  * 오른쪽 패널은 과제 탭 구성(스탯 + 레벨 진행 + 복습할 항목, 137:151).
  * 크기는 lg 미만이 모바일 프레임 값, lg 이상이 데스크톱 프레임 값이다.
  */
@@ -21,9 +24,11 @@ function hoursLeftToday() {
   return Math.max(1, Math.ceil((midnight - now) / 3600000))
 }
 
-/** 과제 한 줄(139:18 / 238:254) — 완료 원 + 제목·n / n + 진행 막대 + 보상 칩. */
-function TaskRow({ label, cur, total, xp, onClick }) {
+/** 과제 한 줄(139:18 / 238:254): 완료 원 + 제목·n / n + 진행 막대 + 보상 칩.
+ * 달성했는데 아직 못 받은 보상(받기 요청 실패)은 칩을 눌러 다시 받는다(onClaim). */
+function TaskRow({ label, cur, total, xp, claimed, onClick, onClaim }) {
   const done = cur >= total
+  const chip = `shrink-0 rounded-full px-[9px] py-[5px] text-[11px] font-bold leading-figma lg:px-3 lg:py-1.5 lg:text-[12px] ${done ? 'bg-primary-100 text-primary-700' : 'bg-surface-sunken text-ink-faint'}`
   // onClick을 주면(오늘의 복습 정리 → 예정 복습) 같은 모양의 버튼으로 그린다.
   const Row = onClick ? 'button' : 'div'
   return (
@@ -43,7 +48,9 @@ function TaskRow({ label, cur, total, xp, onClick }) {
           <div className="h-full rounded-full bg-primary-500" style={{ width: `${Math.min(100, (cur / total) * 100)}%` }} />
         </div>
       </div>
-      <span className={`shrink-0 rounded-full px-[9px] py-[5px] text-[11px] font-bold leading-figma lg:px-3 lg:py-1.5 lg:text-[12px] ${done ? 'bg-primary-100 text-primary-700' : 'bg-surface-sunken text-ink-faint'}`}>+{xp} XP</span>
+      {done && !claimed && onClaim
+        ? <button type="button" onClick={onClaim} className={`${chip} ring-2 ring-primary-300`}>받기 +{xp} XP</button>
+        : <span className={chip}>+{xp} XP</span>}
     </Row>
   )
 }
@@ -145,17 +152,57 @@ function BadgeDetailModal({ badge, onClose }) {
   )
 }
 
+/** 보상 토스트: 화면 아래(모바일은 하단 탭 바 위)에 잠깐 떴다 사라진다. */
+function RewardToast({ text }) {
+  if (!text) return null
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-24 z-40 flex justify-center px-4 lg:bottom-8">
+      <p role="status" aria-live="polite"
+        className="rounded-full bg-slate-900 px-5 py-3 text-[14px] font-bold leading-figma text-white shadow-lg">{text}</p>
+    </div>
+  )
+}
+
 export default function TasksPage() {
   const navigate = useNavigate()
   const [due, setDue] = useState(null)
   const [ov, setOv] = useState(null)
+  const [tasks, setTasks] = useState(null)
+  const [toast, setToast] = useState('')
   const [selectedBadge, setSelectedBadge] = useState(null)
+
+  // 받은 보상을 화면 스탯(XP·레벨)에 바로 반영하고 토스트를 띄운다
+  const applyClaim = (res) => {
+    setTasks(res)
+    if (!res?.xp_gained) return
+    const st = useStore.getState()
+    const upd = { total_xp: res.total_xp, current_level: res.current_level }
+    st.updateUser(upd)
+    if (st.statistics) st.setStatistics({ ...st.statistics, ...upd })
+    setToast(rewardMessage(res.claimed))
+  }
+  const claim = () => tasksAPI.claim().then(applyClaim)
+
   useEffect(() => {
-    reviewAPI.getDue().then((d) => setDue((d.items || []).length)).catch(() => setDue(null))
-    learningAPI.getAnalysisOverview().then(setOv).catch(() => setOv(null))
+    let on = true
+    reviewAPI.getDue().then((d) => on && setDue(dueCounts(d))).catch(() => on && setDue(null))
+    learningAPI.getAnalysisOverview().then((o) => on && setOv(o)).catch(() => on && setOv(null))
+    // 받기에 실패하면(요청 제한 등) 목록만 읽는다. 못 받은 보상은 칩의 '받기'로 다시 받는다.
+    // 받은 응답은 on과 상관없이 반영한다(개발 모드 StrictMode의 두 번째 요청은 이미 받아 0 XP라 첫 응답을 버리면 토스트가 사라진다)
+    tasksAPI.claim().then(applyClaim)
+      .catch(() => tasksAPI.get().then((t) => on && setTasks(t)).catch(() => {}))
+    return () => { on = false }
   }, [])
-  const reviewDone = due === 0 ? 1 : 0
-  const weekDays = Math.min(5, ov?.week_days ?? 0)
+  useEffect(() => {
+    if (!toast) return undefined
+    const t = setTimeout(() => setToast(''), 3200)
+    return () => clearTimeout(t)
+  }, [toast])
+
+  const daily = tasks?.daily || []
+  const week = tasks?.weekly?.[0]
+  const weekCur = week?.cur ?? 0
+  const weekTotal = week?.total || 5
   const badges = mergeBadges(ov?.badges)
   const earned = badges.filter((b) => b.earned).length
 
@@ -167,11 +214,13 @@ export default function TasksPage() {
           <p className="text-[16px] text-ink lg:text-[17px]">오늘의 과제</p>
           <span className="text-[12px] text-ink-muted lg:text-[13px]">오늘 남은 시간 {hoursLeftToday()}시간</span>
         </div>
-        {/* 예정 복습(입모양·단어, /api/review/due)이 남아 있으면 눌러서 그 복습 세션으로 간다(틀린 문장 목록에는 나오지 않는다) */}
-        <TaskRow label="오늘의 복습 정리" cur={reviewDone} total={1} xp={10}
-          onClick={due > 0 ? () => navigate('/review/scheduled') : undefined} />
-        <TaskRow label="독화 학습 1회" cur={Math.min(1, ov?.today_read ?? 0)} total={1} xp={15} />
-        <TaskRow label="학습 2회 채우기" cur={Math.min(2, ov?.today_sessions ?? 0)} total={2} xp={20} />
+        {/* 오늘의 복습 정리: 예정 복습(독화·말하기, /api/review/due)이 남아 있으면 눌러서 그 복습 세션으로 간다(독화 먼저) */}
+        {daily.map((t) => (
+          <TaskRow key={t.key} label={t.label} cur={t.cur} total={t.total} xp={t.xp} claimed={t.claimed}
+            onClick={t.key === 'review_clear' && !t.done && due?.total > 0 ? () => navigate(dueStartPath(due, '/review')) : undefined}
+            onClaim={() => claim().catch(() => {})} />
+        ))}
+        {!tasks && <p className="py-3 text-center text-[13px] text-ink-muted">과제를 불러오는 중…</p>}
       </section>
 
       {/* 이번 주 도전 (141:18 / 238:285) — 워터마크 DOKA(306:32 / 306:39, -20°, 잘림) */}
@@ -183,13 +232,13 @@ export default function TasksPage() {
         className="h-[132px] w-full rounded-18 border-2 border-b-5 border-primary-600 bg-[linear-gradient(158.74deg,var(--brand-light)_0%,var(--brand)_70.92%)] pl-[18px] pt-[21px] lg:h-[158px] lg:rounded-20 lg:bg-[linear-gradient(167.63deg,var(--brand-light)_0%,var(--brand)_70.92%)] lg:pl-[26px] lg:pt-[26px]">
         <div className="flex w-[250px] max-w-full flex-col gap-[9px] font-bold leading-figma text-white lg:w-[462px] lg:gap-2.5">
           <p className="text-[11px] tracking-[0.22px] opacity-80 lg:text-[13px] lg:tracking-[0.26px]">특별 과제</p>
-          <p className="text-[18px] tracking-[-0.36px] lg:text-[23px] lg:tracking-[-0.46px]">이번 주 5일 학습하기</p>
+          <p className="text-[18px] tracking-[-0.36px] lg:text-[23px] lg:tracking-[-0.46px]">{week?.label ?? '\u00a0'}</p>
           <div className="flex justify-between text-[12px] lg:text-[14px]">
-            <span className="opacity-90">{weekDays} / 5일</span>
-            <span className="opacity-90">+100 XP</span>
+            <span className="opacity-90">{week ? `${weekCur} / ${weekTotal}일` : '…'}</span>
+            <span className="opacity-90">{week ? `${week.claimed ? '받음 ' : ''}+${week.xp} XP` : ''}</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-white/30 lg:h-3">
-            <div className="h-full rounded-full bg-white" style={{ width: `${(weekDays / 5) * 100}%` }} />
+            <div className="h-full rounded-full bg-white" style={{ width: `${Math.min(100, (weekCur / weekTotal) * 100)}%` }} />
           </div>
         </div>
       </WatermarkCard>
@@ -207,6 +256,7 @@ export default function TasksPage() {
       </section>
 
       <BadgeDetailModal badge={selectedBadge} onClose={() => setSelectedBadge(null)} />
+      <RewardToast text={toast} />
     </AppShell>
   )
 }

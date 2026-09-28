@@ -236,6 +236,13 @@ export const reviewAPI = {
   answer: async (kind, ref, correct) => (await api.post('/review/answer', { kind, ref, correct })).data,
 }
 
+// 과제 탭(오늘의 과제·특별 과제): 목록·목표·보상은 서버(daily_tasks.py)가 정하고 판정한다.
+// claim은 달성했지만 받지 않은 보상을 모두 받는다(무엇을 달성했는지 보내지 않는다). 응답에 과제 목록이 함께 온다.
+export const tasksAPI = {
+  get: () => sharedGet('tasks', async () => (await api.get('/tasks')).data),
+  claim: async () => (await api.post('/tasks/claim')).data,
+}
+
 // 축 G 콘텐츠 사람검수(운영자용) — 생성 후보 승인/반려. 서버가 LIPLAB_REVIEW=1일 때만 열림.
 export const contentReviewAPI = {
   candidates: async () => (await api.get('/admin/content/candidates')).data,

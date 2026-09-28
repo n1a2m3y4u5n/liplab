@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import useStore from '../store/useStore'
-import { authAPI, reviewAPI, learningAPI } from '../api'
+import { authAPI, reviewAPI, learningAPI, tasksAPI } from '../api'
+import { dueCounts, dueStartPath, mistakeCount } from '../lib/reviewDue'
 import Logo from './Logo'
 import { levelProgress } from '../lib/level'
 
@@ -22,7 +23,7 @@ import { levelProgress } from '../lib/level'
  *   rail         오른쪽 패널 구성: 'default'(스탯 + 오늘의 과제 + 복습할 항목, 59:12)
  *                | 'tasks'(스탯 + 레벨 진행 + 복습할 항목, 137:151) | 'review'(스탯 + 오늘의 과제 + 이번 주 복습, 100:113)
  *   rightRail    직접 만든 패널 노드(rail보다 우선). 아래 Rail* 조각을 조합해 쓸 수 있다.
- * data: 스탯은 useStore.user(셸이 뜰 때 /auth/me로 새로 고침), 패널 카드는 reviewAPI·learningAPI(분석 요약·활동 날짜).
+ * data: 스탯은 useStore.user(셸이 뜰 때 /auth/me로 새로 고침), 패널 카드는 reviewAPI·learningAPI(틀린 문장·북마크·활동 날짜)·tasksAPI(오늘의 과제).
  */
 const NAV = [
   { key: 'learn', label: '학습', to: '/learn/path', icon: '/ui/nav-learn.svg' },
@@ -130,8 +131,8 @@ function TaskItem({ label, cur, total, onClick }) {
   )
 }
 
-/** 오늘의 과제(59:23) — 진행은 과제 탭과 같은 출처: 복습 대기 수 + /api/analysis/overview(오늘 독화·회차). */
-export function RailTasksCard({ due, overview }) {
+/** 오늘의 과제(59:23). 과제 탭과 같은 출처: 서버가 판정한 과제 목록(GET /api/tasks, backend/daily_tasks.py). */
+export function RailTasksCard({ due, tasks }) {
   const navigate = useNavigate()
   return (
     <div className="card-flat flex flex-col gap-4">
@@ -139,27 +140,29 @@ export function RailTasksCard({ due, overview }) {
         <p className="text-[17px] text-ink">오늘의 과제</p>
         <button type="button" onClick={() => navigate('/tasks')} className="text-[14px] text-track">모두 보기</button>
       </div>
-      {/* 예정 복습(입모양·단어, /api/review/due)이 남아 있으면 눌러서 그 복습 세션으로 간다(틀린 문장 목록에는 나오지 않는다) */}
-      <TaskItem label="오늘의 복습 정리" cur={due === 0 ? 1 : 0} total={1}
-        onClick={due > 0 ? () => navigate('/review/scheduled') : undefined} />
-      <TaskItem label="독화 학습 1회" cur={Math.min(1, overview?.today_read ?? 0)} total={1} />
-      <TaskItem label="학습 2회 채우기" cur={Math.min(2, overview?.today_sessions ?? 0)} total={2} />
+      {/* 오늘의 복습 정리: 예정 복습(독화·말하기, /api/review/due)이 남아 있으면 눌러서 그 복습 세션으로 간다(독화 먼저) */}
+      {(tasks?.daily || []).map((t) => (
+        <TaskItem key={t.key} label={t.label} cur={t.cur} total={t.total}
+          onClick={t.key === 'review_clear' && !t.done && due?.total > 0 ? () => navigate(dueStartPath(due, '/review')) : undefined} />
+      ))}
     </div>
   )
 }
 
-/** 복습할 항목(59:39·296:32) — 오답 N개 │ 북마크 N개(숫자만 크게, 오답 보라·북마크 파랑) + 복습하기 → /review. */
-export function RailReviewCard({ due, marks }) {
+/** 복습할 항목(59:39·296:32): 오답 N개 │ 북마크 N개(숫자만 크게, 오답 보라·북마크 파랑) + 복습하기 → /review.
+ * 오답 수는 복습 탭 '복습할 오답'과 같은 정의(틀린 문장 + 독화 예정 + 말하기 예정, lib/reviewDue). */
+export function RailReviewCard({ due, wrong, marks }) {
   const navigate = useNavigate()
+  const n = due == null || wrong == null ? null : mistakeCount(wrong, due)
   return (
     <div className="card-flat flex flex-col items-center gap-3.5">
       <div className="flex items-baseline gap-3 font-bold leading-figma">
-        <p className="text-[17px] text-ink">오답 <span className="text-[22px] text-primary-500">{due ?? '…'}</span><span className="text-primary-500">개</span></p>
+        <p className="text-[17px] text-ink">오답 <span className="text-[22px] text-primary-500">{n ?? '…'}</span><span className="text-primary-500">개</span></p>
         <span className="h-[18px] w-[1.5px] shrink-0 rounded-[1px] bg-line" />
         <p className="text-[17px] text-ink">북마크 <span className="text-[22px] text-bookmark">{marks ?? '…'}</span><span className="text-bookmark">개</span></p>
       </div>
-      {/* 여기 오답 수는 예정 복습(입모양·단어, /api/review/due)이라, 남아 있으면 그 복습 세션으로 바로 간다. 없으면 복습 탭으로. */}
-      <button type="button" onClick={() => navigate(due > 0 ? '/review/scheduled' : '/review')} className="btn-primary btn-md w-full">복습하기</button>
+      {/* 예정 복습이 남아 있으면 그 세션으로 바로 간다(독화 → 말하기). 없으면 복습 탭으로. */}
+      <button type="button" onClick={() => navigate(dueStartPath(due, '/review'))} className="btn-primary btn-md w-full">복습하기</button>
     </div>
   )
 }
@@ -238,19 +241,23 @@ function railLoad(uid, key, fetcher, set, on, failValue = null) {
 function useRailData(variant) {
   const uid = useStore((st) => st.user?.id ?? 'anon')
   const [due, setDue] = useState(() => railCached(uid, 'due') ?? null)
+  const [wrong, setWrong] = useState(() => railCached(uid, 'wrong') ?? null)
   const [marks, setMarks] = useState(() => railCached(uid, 'marks') ?? null)
-  const [overview, setOverview] = useState(() => railCached(uid, 'overview') ?? null)
+  const [tasks, setTasks] = useState(() => railCached(uid, 'tasks') ?? null)
   const [activeDays, setActiveDays] = useState(() => railCached(uid, 'days') ?? null)
   useEffect(() => {
     let alive = true
     const on = () => alive
-    railLoad(uid, 'due', () => reviewAPI.getDue().then((d) => (d.items || []).length), setDue, on)
+    // 예정 복습 수는 독화·말하기로 나눠 둔다(lib/reviewDue.dueCounts)
+    railLoad(uid, 'due', () => reviewAPI.getDue().then(dueCounts), setDue, on)
     if (variant !== 'review') {
       // 복습 탭 목록과 같게 두 트랙(독화·발화) 북마크를 모두 센다
       railLoad(uid, 'marks', () => learningAPI.getBookmarks().then((b) => (Array.isArray(b) ? b : b.items || []).length), setMarks, on)
+      // 오답 수에 들어가는 틀린 문장 수(복습 탭과 같은 정의)
+      railLoad(uid, 'wrong', () => learningAPI.getReviewSentences().then((w) => (Array.isArray(w) ? w : w.items || []).length), setWrong, on)
     }
     if (variant !== 'tasks') {
-      railLoad(uid, 'overview', () => learningAPI.getAnalysisOverview(), setOverview, on)
+      railLoad(uid, 'tasks', () => tasksAPI.get(), setTasks, on)
     }
     if (variant === 'review') {
       // 이번 주 7일의 유무만 쓴다. 기본값 150일(응답 84,444바이트)을 받던 것을 서버 하한 7일(7,948바이트)로 줄였다.
@@ -259,17 +266,17 @@ function useRailData(variant) {
     }
     return () => { alive = false }
   }, [variant, uid])
-  return { due, marks, overview, activeDays }
+  return { due, wrong, marks, tasks, activeDays }
 }
 
 /** 오른쪽 패널(368px, p24 gap16). */
 function Rail({ variant = 'default' }) {
-  const { due, marks, overview, activeDays } = useRailData(variant)
+  const { due, wrong, marks, tasks, activeDays } = useRailData(variant)
   return (
     <div className="flex h-full w-[368px] shrink-0 flex-col gap-4 bg-white p-6">
       <RailStats />
-      {variant === 'tasks' ? <RailLevelCard /> : <RailTasksCard due={due} overview={overview} />}
-      {variant === 'review' ? <RailWeekCard activeDays={activeDays} /> : <RailReviewCard due={due} marks={marks} />}
+      {variant === 'tasks' ? <RailLevelCard /> : <RailTasksCard due={due} tasks={tasks} />}
+      {variant === 'review' ? <RailWeekCard activeDays={activeDays} /> : <RailReviewCard due={due} wrong={wrong} marks={marks} />}
     </div>
   )
 }
