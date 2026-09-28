@@ -1309,9 +1309,10 @@ async def get_analysis_overview(tz_offset_min: int = -540, current_user=Depends(
     now = dt.datetime.utcnow()
     today_local = _an.to_local(now, tz).date().isoformat()
     reviews = (await db.execute(select(ReviewItem).where(ReviewItem.user_id == uid))).scalars().all()
-    # 복습을 실제로 한 항목: 연속 성공이 있거나 등록 뒤 다시 틀린 항목. 첫 오답으로 등록될 때 lapses가 1이라
-    # 예전 조건(lapses > 0)이면 복습을 한 번도 안 해도 '복습왕' 배지가 나왔다.
-    reviews_done = sum(1 for r in reviews if (r.repetitions or 0) > 0 or (r.lapses or 0) > 1)
+    # 복습을 실제로 한 횟수는 예정된 복습에 답할 때마다 프로필에 쌓은 누적값이다(_srs_apply). 예전에는 남은 항목의
+    # repetitions·lapses로 셌는데, 레슨에서 같은 항목을 두 번 틀리면(lapses 2) 복습 없이 배지가 나왔고,
+    # 복습을 끝까지 해 항목이 졸업(행 삭제)하면 0이 되어 배지가 꺼졌다.
+    reviews_done = prof.reviews_completed or 0
     reviews_overdue = sum(1 for r in reviews if r.due_date and r.due_date < today_local)
 
     return _an.overview(
@@ -1489,6 +1490,10 @@ async def _srs_apply(user_id: int, kind: str, ref, quality: int, db, create: boo
     if quality >= 3 and item.due_date and item.due_date > _kst_today().isoformat():
         return {"removed": False, "due_date": item.due_date, "interval_days": item.interval_days,
                 "found": True, "early": True}
+    # 예정일이 된 항목에 답했으면 복습 1회로 센다('복습왕' 배지). 복습 화면(/api/review/answer)과 말하기 복습(_sr_touch)이
+    # 모두 여기를 지난다. 같은 날 레슨에서 다시 틀린 항목은 예정일이 내일이라 세지 않는다
+    if item.due_date and item.due_date <= _kst_today().isoformat():
+        await _count_review_done(user_id, db)
     s = srs.schedule(quality, ease_factor=item.ease_factor, interval_days=item.interval_days,
                      repetitions=item.repetitions, lapses=item.lapses)
     if s["graduated"] and quality >= 3:
@@ -1500,6 +1505,17 @@ async def _srs_apply(user_id: int, kind: str, ref, quality: int, db, create: boo
     item.lapses = s["lapses"]
     item.due_date = (_kst_today() + _sr_delta(days=s["interval_days"])).isoformat()
     return {"removed": False, "due_date": item.due_date, "interval_days": item.interval_days, "found": True}
+
+
+async def _count_review_done(user_id: int, db) -> None:
+    """학습자 프로필의 누적 복습 횟수를 1 올린다. commit은 호출부(_srs_apply와 같다)."""
+    from database import LearningProfile
+    from sqlalchemy import select
+    prof = (await db.execute(select(LearningProfile).where(LearningProfile.user_id == user_id))).scalars().first()
+    if prof is None:
+        db.add(LearningProfile(user_id=user_id, reviews_completed=1))
+    else:
+        prof.reviews_completed = (prof.reviews_completed or 0) + 1
 
 
 async def _srs_schedule_wrong(user_id: int, kind: str, ref, db: AsyncSession):
