@@ -1,0 +1,146 @@
+[
+ {
+  "seed": 0,
+  "n": 20000,
+  "probe_n": 3,
+  "need": 2,
+  "L": 8,
+  "q_scale": 0.738,
+  "all_mastering": {
+   "learners": 9792,
+   "old_median": 75.0,
+   "new_median": 88.0,
+   "median_increase_pct": 17.3,
+   "added_median": 3.0,
+   "not_mastered_new": 783
+  },
+  "typical": {
+   "learners": 7303,
+   "old_median": 67.0,
+   "new_median": 76.0,
+   "median_increase_pct": 13.4,
+   "added_median": 3.0,
+   "not_mastered_new": 85
+  },
+  "skilled": {
+   "learners": 19987,
+   "old_median": 8.0,
+   "new_median": 13.0,
+   "median_increase_pct": 62.5,
+   "added_median": 3.0,
+   "not_mastered_new": 44
+  },
+  "false_mastery": {
+   "old": 0.0174,
+   "new": 0.008
+  }
+ },
+ {
+  "seed": 1,
+  "n": 20000,
+  "probe_n": 3,
+  "need": 2,
+  "L": 8,
+  "q_scale": 0.738,
+  "all_mastering": {
+   "learners": 9784,
+   "old_median": 74.0,
+   "new_median": 87.0,
+   "median_increase_pct": 17.6,
+   "added_median": 3.0,
+   "not_mastered_new": 755
+  },
+  "typical": {
+   "learners": 7236,
+   "old_median": 65.0,
+   "new_median": 74.0,
+   "median_increase_pct": 13.8,
+   "added_median": 3.0,
+   "not_mastered_new": 70
+  },
+  "skilled": {
+   "learners": 19991,
+   "old_median": 8.0,
+   "new_median": 13.0,
+   "median_increase_pct": 62.5,
+   "added_median": 3.0,
+   "not_mastered_new": 39
+  },
+  "false_mastery": {
+   "old": 0.0175,
+   "new": 0.009
+  }
+ },
+ {
+  "seed": 0,
+  "n": 20000,
+  "probe_n": 3,
+  "need": 2,
+  "L": 8,
+  "q_scale": 0.82,
+  "all_mastering": {
+   "learners": 9792,
+   "old_median": 75.0,
+   "new_median": 84.0,
+   "median_increase_pct": 12.0,
+   "added_median": 3.0,
+   "not_mastered_new": 602
+  },
+  "typical": {
+   "learners": 7303,
+   "old_median": 67.0,
+   "new_median": 74.0,
+   "median_increase_pct": 10.4,
+   "added_median": 3.0,
+   "not_mastered_new": 62
+  },
+  "skilled": {
+   "learners": 19987,
+   "old_median": 8.0,
+   "new_median": 11.0,
+   "median_increase_pct": 37.5,
+   "added_median": 2.0,
+   "not_mastered_new": 26
+  },
+  "false_mastery": {
+   "old": 0.0174,
+   "new": 0.0094
+  }
+ },
+ {
+  "seed": 1,
+  "n": 20000,
+  "probe_n": 3,
+  "need": 2,
+  "L": 8,
+  "q_scale": 0.82,
+  "all_mastering": {
+   "learners": 9784,
+   "old_median": 74.0,
+   "new_median": 83.0,
+   "median_increase_pct": 12.2,
+   "added_median": 3.0,
+   "not_mastered_new": 588
+  },
+  "typical": {
+   "learners": 7236,
+   "old_median": 65.0,
+   "new_median": 72.0,
+   "median_increase_pct": 10.8,
+   "added_median": 3.0,
+   "not_mastered_new": 38
+  },
+  "skilled": {
+   "learners": 19991,
+   "old_median": 8.0,
+   "new_median": 11.0,
+   "median_increase_pct": 37.5,
+   "added_median": 2.0,
+   "not_mastered_new": 16
+  },
+  "false_mastery": {
+   "old": 0.0175,
+   "new": 0.0102
+  }
+ }
+]

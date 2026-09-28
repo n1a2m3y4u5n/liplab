@@ -3574,7 +3574,7 @@ async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
     sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, passed)
     # 한번 숙달하면 유지한다(누적 정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게)
     reached = sp.status == "mastered" or (sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct)
-    # 모음·자음(2·3)은 이동 평균이 문턱에 닿아도 낱말 속 소리 확인(최근 4번 중 3번 합격, speak_curriculum._PROBE)을 넘어야 숙달이다(계획 2-5, _speak_carryover)
+    # 모음·자음(2·3)은 이동 평균이 문턱에 닿아도 낱말 속 소리 확인(최근 3번 중 2번 합격, speak_curriculum._PROBE)을 넘어야 숙달이다(계획 2-5, _speak_carryover)
     probe_cfg = (_speakcur.get_stage(stage) or {}).get("probe")
     if reached and sp.status != "mastered" and probe_cfg:
         reached = _speakcur.probes_ok(await _speak_probe_passes(user_id, stage, int(probe_cfg["n"]), db), probe_cfg)

@@ -27,7 +27,7 @@ test('nextIndex: 끝에서 처음으로 돌고, 숙달 뒤에는 확인 낱말�
 
 test('probeStatusText: 확인 중일 때만 보인다', () => {
   assert.equal(probeStatusText(null), null)
-  assert.equal(probeStatusText({ carryover: false, passed: 4, tried: 4, n: 4, need: 3 }), null)
-  assert.match(probeStatusText({ carryover: true, passed: 2, tried: 4, n: 4, need: 3 }), /4번 중 2번 합격/)
-  assert.match(probeStatusText({ carryover: true, passed: 0, tried: 0, n: 4, need: 3 }), /아직 확인 전/)
+  assert.equal(probeStatusText({ carryover: false, passed: 3, tried: 3, n: 3, need: 2 }), null)
+  assert.match(probeStatusText({ carryover: true, passed: 1, tried: 3, n: 3, need: 2 }), /3번 중 1번 합격/)
+  assert.match(probeStatusText({ carryover: true, passed: 0, tried: 0, n: 3, need: 2 }), /아직 확인 전/)
 })
