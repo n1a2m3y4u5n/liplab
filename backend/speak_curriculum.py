@@ -153,6 +153,53 @@ def mixed_order(items: List[Dict], seed: str, lead: int = 3) -> List[Dict]:
     return head + [rest[k][i] for _, k, i in sorted(slots)]
 
 
+def weak_sounds(attempts: List[Dict], k: int = 3, min_n: int = 2, rel_max: float = 0.8) -> List[str]:
+    """최근 말하기 시도에서 약한 소리(자모) k개. D-GOP가 음소마다 잰 점수(phones: [{label, dgop}])를 시도마다 그 시도 평균으로
+    나눠 상대값으로 모으고(문장 난이도·목소리 차이를 지움), min_n번 이상 나왔고 상대 평균이 rel_max 미만인 것을 낮은 순으로 고른다.
+    전사 경로 시도는 음소 점수가 없으므로 혼동 기록(confusions: [{correct, confused_as}])에서 2번 이상 틀린 소리를 더한다."""
+    rel: Dict[str, List[float]] = {}
+    conf: Dict[str, int] = {}
+    for a in attempts:
+        ph = [p for p in (a.get("phones") or []) if p.get("label") and p.get("dgop") is not None]
+        if len(ph) >= 2:
+            m = sum(float(p["dgop"]) for p in ph) / len(ph)
+            if m > 0:
+                for p in ph:
+                    rel.setdefault(p["label"], []).append(float(p["dgop"]) / m)
+        for c in a.get("confusions") or []:
+            j = (c or {}).get("correct")
+            if j:
+                conf[j] = conf.get(j, 0) + 1
+    ranked = sorted(((sum(v) / len(v), lab) for lab, v in rel.items() if len(v) >= min_n and sum(v) / len(v) < rel_max))
+    out = [lab for _, lab in ranked]
+    out += [j for j, n in sorted(conf.items(), key=lambda x: -x[1]) if n >= 2 and j not in out]
+    return out[:k]
+
+
+def _has_sound(text: str, sounds) -> bool:
+    import jamo_vocab
+    return any(t.split(":", 1)[-1] in sounds for t in jamo_vocab.text_to_tokens(text))
+
+
+def focus_order(items: List[Dict], sounds: List[str], lead: int = 0) -> List[Dict]:
+    """약한 소리가 든 문항을 앞쪽에 고르게 끼운다. 처음 lead개는 그대로 두고, 그 뒤로 두 칸에 한 칸꼴(최대 절반)로 약한 소리 문항을
+    넣는다(나머지 소리 연습이 빠지지 않게). 소리가 없거나 해당 문항이 없으면 그대로. 모음·자음 단계는 lead 0으로 약한 소리부터 낸다."""
+    if not sounds:
+        return items
+    head, rest = items[:lead], items[lead:]
+    hit = [it for it in rest if _has_sound(it.get("target", ""), sounds)]
+    if not hit:
+        return items
+    other = [it for it in rest if not _has_sound(it.get("target", ""), sounds)]
+    out = []
+    while hit or other:
+        if hit:
+            out.append(hit.pop(0))
+        if other:
+            out.append(other.pop(0))
+    return head + out
+
+
 def get_stage(n: Optional[int]) -> Optional[Dict]:
     return _BY_STAGE.get(n) if n is not None else None
 
