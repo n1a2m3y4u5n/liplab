@@ -1,5 +1,4 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { toBlendshapeMap, pickPeakFrame, saveCalibration } from '../lib/mouthScore'
 import { mediaErrorMessage } from '../lib/mediaError'
 
@@ -8,10 +7,11 @@ import { mediaErrorMessage } from '../lib/mediaError'
  * 각 viseme(대표 음절)를 사용자가 직접 지으면 그 순간 blendshape를 모아 평균내 개인
  * 기준 프로파일로 저장한다. 규칙 근사값 대신 '내 얼굴 실측'으로 채점 정확도를 높인다.
  * 영상·계수는 기기 안에서만 처리하고 localStorage에만 저장한다.
+ *
+ * 얼굴 모델은 부모(WebcamMouthCheck)의 useFaceLandmarker 인스턴스(landmarkerRef·modelStatus)를 받아 쓴다. 예전에는 부모 인스턴스가
+ * 살아 있는 채 자기 FaceLandmarker를 하나 더 만들어, 본뜨는 동안 모델이 2개 올라갔다(지금 1개). 부모 검출 루프는 본뜨기를 열 때
+ * stop()으로 멈추고 두 곳 모두 시각이 performance.now()라 VIDEO 모드의 단조 증가 조건을 지킨다. 모델은 부모가 닫는다.
  */
-const MP_VERSION = '1.0.1'
-const WASM_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/wasm`
-const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
 const COLLECT_MS = 1500 // 한 입모양을 본뜨는 수집 시간
 
 const STEPS = [
@@ -22,10 +22,10 @@ const STEPS = [
   { id: 9, syl: '와', name: '이중모음' }, { id: 10, syl: '자', name: '경구개음' },
 ]
 
-export default function MouthCalibration({ onDone, onCancel }) {
+export default function MouthCalibration({ landmarkerRef, modelStatus, onDone, onCancel }) {
   const videoRef = useRef(null)
-  const landmarkerRef = useRef(null)
   const rafRef = useRef(null)
+  const lastVideoTimeRef = useRef(-1)   // 마지막으로 검출한 카메라 프레임 시각(새 프레임만 검출)
   const streamRef = useRef(null)
   const collectRef = useRef(null) // 수집 중이면 프레임 배열
   const capturedRef = useRef({})
@@ -38,7 +38,11 @@ export default function MouthCalibration({ onDone, onCancel }) {
   const loop = useCallback(() => {
     const fl = landmarkerRef.current
     const video = videoRef.current
-    if (fl && video && video.readyState >= 2) {
+    // 새 카메라 프레임일 때만 검출한다(LipReadCheck·WebcamMouthCheck와 같은 방식). 화면 갱신마다 검출하면 30 fps 카메라의
+    // 같은 프레임이 60 Hz 화면에서 2번, 120 Hz 화면에서 4번 들어갔다(초당 60~120회 → 30회). 1.5초 수집은 약 45프레임이라
+    // frames.length >= 5 조건에는 영향이 없다.
+    if (fl && video && video.readyState >= 2 && video.currentTime !== lastVideoTimeRef.current) {
+      lastVideoTimeRef.current = video.currentTime
       try {
         const res = fl.detectForVideo(video, performance.now())
         const bs = toBlendshapeMap(res.faceBlendshapes?.[0])
@@ -46,35 +50,33 @@ export default function MouthCalibration({ onDone, onCancel }) {
       } catch { /* 프레임 스킵 */ }
     }
     rafRef.current = requestAnimationFrame(loop)
-  }, [])
+  }, [landmarkerRef])
 
-  // 모델 로드 + 웹캠 시작
+  // 웹캠 시작. 부모가 모델을 받는 중이면 기다리고('카메라 준비 중…'), 받지 못했으면 모델 오류를 안내한다.
   useEffect(() => {
+    if (modelStatus === 'error') {
+      setStatus('error')
+      setErrMsg('입모양 모델을 불러오지 못했어요. 네트워크를 확인해 주세요.')
+      return undefined
+    }
+    if (modelStatus !== 'ready') return undefined
     let cancelled = false
-    let phase = 'model'   // 어디서 실패했는지(모델·카메라)에 맞춰 안내한다
     ;(async () => {
       try {
-        const vision = await FilesetResolver.forVisionTasks(WASM_URL)
-        const fl = await FaceLandmarker.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
-          outputFaceBlendshapes: true, runningMode: 'VIDEO', numFaces: 1,
-        })
-        if (cancelled) { fl.close?.(); return }
-        landmarkerRef.current = fl
-        phase = 'camera'
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
         if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return }
         streamRef.current = stream
         videoRef.current.srcObject = stream
         await videoRef.current.play()
-        // 재생을 기다리는 사이 닫혔다(스트림은 정리 함수가 이미 멈췄다) → 닫힌 모델로 도는 루프를 시작하지 않는다
+        // 재생을 기다리는 사이 닫혔다(스트림은 정리 함수가 이미 멈췄다) → 루프를 시작하지 않는다
         if (cancelled) return
+        lastVideoTimeRef.current = -1
         setStatus('running')
         rafRef.current = requestAnimationFrame(loop)
       } catch (e) {
         if (!cancelled) {
           setStatus('error')
-          setErrMsg(phase === 'model' ? '입모양 모델을 불러오지 못했어요. 네트워크를 확인해 주세요.' : mediaErrorMessage(e, 'camera'))
+          setErrMsg(mediaErrorMessage(e, 'camera'))
         }
       }
     })()
@@ -83,9 +85,9 @@ export default function MouthCalibration({ onDone, onCancel }) {
       clearTimeout(captureTimerRef.current)   // 본뜨는 중에 닫으면 저장·onDone을 부르지 않는다
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
       if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
-      landmarkerRef.current?.close?.()
+      // 얼굴 모델은 부모(useFaceLandmarker)의 것이라 여기서 닫지 않는다
     }
-  }, [loop])
+  }, [loop, modelStatus])
 
   const capture = useCallback(() => {
     if (collecting || status !== 'running') return

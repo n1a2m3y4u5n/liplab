@@ -1,5 +1,6 @@
 import axios from 'axios'
 import useStore from './store/useStore'
+import { createInflight } from './lib/sharedRequest'
 
 /**
  * Axios instance with JWT token management and interceptors
@@ -12,6 +13,12 @@ const api = axios.create({
   },
 })
 
+// 데스크톱(1280px 이상)에서는 오른쪽 패널(AppShell Rail)과 페이지가 같은 순간 같은 요약을 따로 불러, /analysis·/profile은
+// overview를, /tasks·/review는 due를 두 번 받았다(overview 한 번에 서버 약 0.2초, 이벤트 2.4만 건 합성 DB). 진행 중인 약속만
+// 나눠 2회 → 1회로 줄인다. TTL은 두지 않는다(복습·초기화 직후 오래된 값을 보이지 않게). 키에 토큰을 넣어 계정끼리 섞지 않는다.
+const inflight = createInflight()
+const sharedGet = (name, fetcher) => inflight(`${name}:${useStore.getState().token || ''}`, fetcher)
+
 // Request interceptor: attach JWT token
 api.interceptors.request.use(
   (config) => {
@@ -19,6 +26,8 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    // 기록을 바꾸는 요청이 나가면 진행 중인 약속을 잊는다. 그 뒤에 부른 쪽이 바뀌기 전 응답을 나눠 받지 않게 한다.
+    if ((config.method || 'get').toLowerCase() !== 'get') inflight.clear()
     return config
   },
   (error) => Promise.reject(error)
@@ -147,10 +156,13 @@ export const learningAPI = {
   getActivityDetail: async (day, kind, topic = '') => (await api.get('/analysis/activity-detail', {
     params: { day, kind, topic, tz_offset_min: new Date().getTimezoneOffset() },
   })).data,
-  // 분석 탭 요약·배지(backend/analytics.py). 날짜·연속 학습은 브라우저 시간대 기준.
-  getAnalysisOverview: async () => (await api.get('/analysis/overview', {
-    params: { tz_offset_min: new Date().getTimezoneOffset() },
-  })).data,
+  // 분석 탭 요약·배지(backend/analytics.py). 날짜·연속 학습은 브라우저 시간대 기준. 패널과 페이지가 진행 중인 요청을 나눠 쓴다.
+  getAnalysisOverview: () => {
+    const tz = new Date().getTimezoneOffset()
+    return sharedGet(`overview:${tz}`, async () => (await api.get('/analysis/overview', {
+      params: { tz_offset_min: tz },
+    })).data)
+  },
 
   // Review sentences (wrong answers)
   getReviewSentences: async () => {
@@ -218,7 +230,8 @@ export const evalAPI = {
 }
 
 export const reviewAPI = {
-  getDue: async () => (await api.get('/review/due')).data,
+  // 패널과 페이지(과제·복습)가 진행 중인 요청을 나눠 쓴다(위 sharedGet)
+  getDue: () => sharedGet('due', async () => (await api.get('/review/due')).data),
   removeDue: async (kind, ref) => (await api.delete('/review/item', { params: { kind, ref } })).data,
   answer: async (kind, ref, correct) => (await api.post('/review/answer', { kind, ref, correct })).data,
 }
