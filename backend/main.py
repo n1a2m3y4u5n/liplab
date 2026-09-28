@@ -3616,7 +3616,8 @@ async def _speak_probe_passes(user_id: int, stage: int, n: int, db) -> list:
     from database import SpeakAttempt
     from sqlalchemy import select
     rows = (await db.execute(select(SpeakAttempt.passed).where(
-        SpeakAttempt.user_id == user_id, SpeakAttempt.stage == stage, SpeakAttempt.mode == "probe")
+        SpeakAttempt.user_id == user_id, SpeakAttempt.stage == stage, SpeakAttempt.mode == "probe",
+        SpeakAttempt.passed.is_not(None))   # 세지 않은 확인(정렬 실패·소리 없음)은 뺀다
         .order_by(SpeakAttempt.id.desc()).limit(n))).all()
     return [bool(p) for (p,) in reversed(rows)]
 
@@ -3639,9 +3640,10 @@ async def _speak_probe_status(user_id: int, stage: int, sp, db) -> Optional[dict
             "n": int(cfg["n"]), "need": int(cfg["need"])}
 
 
-async def _settle_speak_probe(user_id: int, stage: int, stg: dict, passed: bool, db):
+async def _settle_speak_probe(user_id: int, stage: int, stg: dict, passed: bool, db, counted: bool = True):
     """낱말 속 소리 확인 한 번을 반영한다. 이동 평균·시도 수는 그대로 두고, 이동 평균 숙달 조건을 채운 상태에서 이번 확인까지 넣어
-    최근 4번 중 3번 합격(_PROBE)이면 숙달로 올린다. 이번 시도는 아직 SpeakAttempt에 없으므로 passed를 덧붙인다. 진행 기록이 없으면 None."""
+    최근 확인 창이 조건(_PROBE)을 채우면 숙달로 올린다. 이번 시도는 아직 SpeakAttempt에 없으므로 passed를 덧붙인다. 세지 않는 확인
+    (counted False)은 창에 넣지 않는다. 진행 기록이 없으면 None."""
     from database import SpeakStageProgress
     from sqlalchemy import select
     sp = (await db.execute(select(SpeakStageProgress).where(
@@ -3649,7 +3651,7 @@ async def _settle_speak_probe(user_id: int, stage: int, stg: dict, passed: bool,
     if sp is None or sp.status == "mastered":
         return sp
     cfg = stg["probe"]
-    if sp.attempts >= stg["min_attempts"] and sp.mastery_score >= stg["mastery"]:
+    if counted and sp.attempts >= stg["min_attempts"] and sp.mastery_score >= stg["mastery"]:
         window = await _speak_probe_passes(user_id, stage, int(cfg["n"]) - 1, db) + [passed]
         if _speakcur.probes_ok(window, cfg):
             sp.status = "mastered"
@@ -3846,9 +3848,21 @@ async def speak_assess(
                "voiced_duration": voiced_duration if voiced_duration is not None and voiced_duration >= 0 else None}
     stg = _speakcur.get_stage(stage) if stage is not None else None
     mode = stg["mode"] if stg else "word"
-    # 낱말 속 소리 확인은 단어 규칙(4단계, 합격 65)으로 채점하고 mode 'probe'로 남긴다. 이동 평균에는 넣지 않고 숙달 확인에만 쓴다.
-    # 복습 세션은 진행도를 건드리지 않으므로 확인으로 세지 않는다.
+    # 낱말 속 소리 확인은 이 단계 합격선과 첫 음절 목표 소리로 채점하고(speak_curriculum.score_probe) mode 'probe'로 남긴다. 이동 평균에는
+    # 넣지 않고 숙달 확인에만 쓴다. 복습 세션은 진행도를 건드리지 않으므로 확인으로 세지 않는다.
     is_probe = bool(probe) and not review and bool((stg or {}).get("probe"))
+    if is_probe:
+        # 리뷰 뒤 고침: 확인 상태(_speak_carryover)이고 target이 이 사용자·단계의 오늘(자정을 넘긴 경우 어제) 확인 낱말일 때만 확인으로 센다.
+        # 아니면 400으로 막지 않고 보통 시도로 채점한다(숙달 직후 화면에 남은 확인 낱말이 와도 오류가 나지 않게, 보통 시도는 늘 보낼 수 있다).
+        from database import SpeakStageProgress
+        from sqlalchemy import select
+        sp_now = (await db.execute(select(SpeakStageProgress).where(
+            SpeakStageProgress.user_id == current_user.id, SpeakStageProgress.stage == stage))).scalars().first()
+        from datetime import timedelta as _dt_timedelta
+        today = _kst_today()
+        is_probe = _speak_carryover(sp_now, stg) and any(
+            _speakcur.is_probe_word(stage, target, f"{current_user.id}:{stage}:{d.isoformat()}")
+            for d in (today, today - _dt_timedelta(days=1)))
 
     transcript = None
     confusions = []
@@ -3941,14 +3955,18 @@ async def speak_assess(
     note = ""
     passed = None
     progress = None
+    probe_counted = False
     if stage is not None and stg is not None:
-        score, passed, note = _speakcur.score_attempt(4 if is_probe else stage, target, transcript, metrics,
-                                                      None if is_probe else drill, sim)
+        if is_probe:
+            score, passed, note, probe_counted = _speakcur.score_probe(stage, target, transcript, metrics, sim,
+                                                                       (dgop_result or {}).get("phones"))
+        else:
+            score, passed, note = _speakcur.score_attempt(stage, target, transcript, metrics, drill, sim)
         # 복습 세션은 채점·코칭만 하고 단계 진행도(숙달/해금)는 건드리지 않는다
         if review:
             sp = None
         elif is_probe:
-            sp = await _settle_speak_probe(current_user.id, stage, stg, bool(passed), db)
+            sp = await _settle_speak_probe(current_user.id, stage, stg, bool(passed), db, counted=probe_counted)
         else:
             sp = await _bump_speak_progress(current_user.id, stage, bool(passed),
                                             stg["min_attempts"], stg["mastery"], db, score=score,
@@ -4004,7 +4022,8 @@ async def speak_assess(
                if p.get("aligned") and p.get("scorable") and p.get("dgop") is not None and not p.get("silent_h")][:40]
     attempt = SpeakAttempt(
         user_id=current_user.id, stage=stage, mode="probe" if is_probe else mode, target=target,
-        transcript=transcript, score=score, passed=passed,
+        # 세지 않은 확인(소리 없음·목표 소리 자리를 못 찾음)은 passed를 비워 확인 창(_speak_probe_passes)에서 뺀다
+        transcript=transcript, score=score, passed=None if is_probe and not probe_counted else passed,
         loudness=loudness, pitch_range=pitch_range, duration=duration,
         pitch_start=pitch_start, pitch_end=pitch_end, confusions=confusions[:6],
         audio_score=None if audio_score is None else round(float(audio_score), 1),
@@ -4096,6 +4115,8 @@ async def speak_assess(
         "vowel_feedback": vowel_fb,   # 축 E: {vowel, f1, f2, target_f1, target_f2, height, front, messages}
         "progress": progress,
         "mode": mode,
+        "probe": is_probe,                 # 낱말 속 소리 확인으로 채점했는가(확인 상태·오늘 확인 낱말일 때만)
+        "probe_counted": probe_counted,    # 확인 창에 셌는가(소리 없음·정렬 실패면 False)
     }
 
 

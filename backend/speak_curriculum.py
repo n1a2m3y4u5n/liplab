@@ -288,19 +288,15 @@ def stage_sounds(stage_no: int) -> List[str]:
     return list(dict.fromkeys(s for s in (probe_sound(stage_no, it["target"]) for it in stg["items"]) if s))
 
 
-def probe_words(stage_no: int, seed: str, weak: Optional[List[str]] = None, pool: Optional[List[str]] = None) -> List[Dict]:
-    """음운 수준 확인 낱말(docs/curriculum-roadmap.md 2-5). 4단계 단어 풀에서 목표 소리가 첫 음절(자음은 첫소리, 모음은 모음)에 든
-    낱말을 소리마다 하나씩, 서로 다른 소리 n개(_PROBE)로 고른다. 약한 소리(weak_sounds)부터 고르고 나머지는 seed로 섞는다. 1·2음절 낱말을
-    먼저 쓰고 없으면 3음절까지, 이 단계 문항과 같은 낱말(달·탈·불 등)은 빼서 따로 낸 음절의 되풀이가 되지 않게 한다.
-    seed는 (사용자, 날짜)라 같은 날에는 같은 낱말이다."""
+def _probe_candidates(stage_no: int, pool: Optional[List[str]] = None) -> Dict[str, List[str]]:
+    """소리마다 확인 낱말 후보(풀 순서, 앞쪽 _PROBE_FAMILIAR개). 4단계 단어 풀에서 한글 음절만으로 된 1~3음절, 이 단계 문항과 같은 낱말은 뺀다.
+    1·2음절이 있으면 그것만 쓴다. 풀은 큐레이션 단어 → 단어 은행 순이고 앞쪽일수록 쉬운 말이라 앞쪽에서만 고른다(전체에서 고르면
+    능·탓·짚·폭로처럼 드문 말이 나와 소리보다 낱말이 낯설어 틀리게 된다)."""
     stg = get_stage(stage_no)
-    cfg = (stg or {}).get("probe")
-    if not cfg:
-        return []
-    rng = random.Random(seed)
-    sounds = stage_sounds(stage_no)
+    if not (stg or {}).get("probe"):
+        return {}
     items = {it["target"] for it in stg["items"]}
-    cands: Dict[str, List[str]] = {s: [] for s in sounds}
+    cands: Dict[str, List[str]] = {s: [] for s in stage_sounds(stage_no)}
     for w in (pool if pool is not None else _STAGE4_WORDS):
         n = _n_syllables(w)
         if w in items or n < 1 or n != len(w) or n > 3:   # 한글 음절만으로 된 1~3음절
@@ -308,22 +304,119 @@ def probe_words(stage_no: int, seed: str, weak: Optional[List[str]] = None, pool
         s = probe_sound(stage_no, w)
         if s in cands:
             cands[s].append(w)
+    return {s: ([w for w in ws if _n_syllables(w) <= 2] or ws)[:_PROBE_FAMILIAR] for s, ws in cands.items()}
+
+
+def _probe_pick(seed: str, sound: str, pick: List[str]) -> str:
+    # 소리마다 따로 seed를 둬서, 어떤 소리를 먼저 낼지(약한 소리)가 바뀌어도 그 소리의 오늘 낱말은 같다(채점 때 서버가 다시 확인한다)
+    return random.Random(f"{seed}:{sound}").choice(pick)
+
+
+def probe_words(stage_no: int, seed: str, weak: Optional[List[str]] = None, pool: Optional[List[str]] = None) -> List[Dict]:
+    """음운 수준 확인 낱말(docs/curriculum-roadmap.md 2-5). 4단계 단어 풀에서 목표 소리가 첫 음절(자음은 첫소리, 모음은 모음)에 든
+    낱말을 소리마다 하나씩, 서로 다른 소리 n개(_PROBE)로 고른다. 약한 소리(weak_sounds)부터 고르고 나머지는 seed로 섞는다. 1·2음절 낱말을
+    먼저 쓰고 없으면 3음절까지, 이 단계 문항과 같은 낱말(달·탈·불 등)은 빼서 따로 낸 음절의 되풀이가 되지 않게 한다.
+    seed는 (사용자, 단계, 날짜)라 같은 날에는 소리마다 같은 낱말이다(is_probe_word)."""
+    cfg = (get_stage(stage_no) or {}).get("probe")
+    if not cfg:
+        return []
+    rng = random.Random(seed)
+    sounds = stage_sounds(stage_no)
+    cands = _probe_candidates(stage_no, pool)
     weak_n = [_SAME_VOWEL.get(x, x) if stage_no == 2 else x for x in (weak or [])]
     first = [s for s in dict.fromkeys(weak_n) if s in cands]
     rest = [s for s in sounds if s not in first]
     rng.shuffle(rest)
     out: List[Dict] = []
     for s in first + rest:
-        ws = cands[s]
-        # 풀은 큐레이션 단어 → 단어 은행 순이고 앞쪽일수록 쉬운 말이라, 소리마다 앞쪽 _PROBE_FAMILIAR개 안에서 고른다.
-        # 전체에서 고르면 능·탓·짚·폭로처럼 드문 말이 나와 소리보다 낱말이 낯설어 틀리게 된다.
-        pick = ([w for w in ws if _n_syllables(w) <= 2] or ws)[:_PROBE_FAMILIAR]
+        pick = cands.get(s) or []
         if not pick:
             continue
-        out.append({"target": rng.choice(pick), "probe": True, "sound": s})
+        out.append({"target": _probe_pick(seed, s, pick), "probe": True, "sound": s})
         if len(out) >= int(cfg["n"]):
             break
     return out
+
+
+def is_probe_word(stage_no: int, target: str, seed: str) -> bool:
+    """target이 이 seed(사용자, 단계, 날짜)로 낼 수 있는 확인 낱말인가. 어떤 소리를 낼지는 약한 소리에 따라 바뀌므로 소리마다의 오늘
+    낱말과 비교한다. 채점 API가 아무 낱말이나 확인으로 보내 숙달하는 것을 막는다."""
+    s = probe_sound(stage_no, target)
+    pick = _probe_candidates(stage_no).get(s) if s else None
+    return bool(pick) and _probe_pick(seed, s, pick) == target
+
+
+# 확인 합격(리뷰 뒤 고침, docs/mastery-ewma.md 8.6): 처음 구현은 확인 낱말을 단어 규칙(4단계, 합격 65)으로만 채점해 목표 소리를 보지 않았다.
+# '물'을 '불'로 말해도 88점으로 합격했다. 지금은 이 단계 합격선(50) 이상이고 첫 음절의 목표 소리가 맞아야 합격이다.
+# 전사 경로는 전사의 정렬된 첫 음절에서 그 소리(자음 단계는 첫소리, 모음 단계는 모음, 애·에는 한 소리)를 본다. D-GOP 경로는 첫 음절의
+# 목표 음소 D-GOP가 PROBE_DGOP_MIN 이상이어야 한다. 538 정상 화자 자음 대치 4,868쌍에서 0.05는 맞게 낸 음소 89.6%, 대치된 음소 3.7%를
+# 넘기고(docs/speak-consonant-check.md), 문장 속 맞게 낸 모음은 538 89.7%·608 청각장애 80.2%가 넘는다(docs/formant-validation.md 자료).
+PROBE_DGOP_MIN = 0.05
+PROBE_UNCOUNTED_NOTE = "목표 소리 자리를 찾지 못해 이번 확인은 세지 않았어요. 한 번 더 말해 보세요."
+
+
+def _probe_heard_transcript(stage_no: int, target: str, transcript: str) -> Tuple[bool, Optional[str]]:
+    """전사 경로: (첫 음절 목표 소리가 전사의 정렬된 첫 음절에 있는가, 그 자리에서 들린 소리). 정렬은 focus_miss와 같다."""
+    import unicodedata
+    from scoring import align_jamos, to_pronounced_jamos
+    want = probe_sound(stage_no, target)
+    cj = to_pronounced_jamos(unicodedata.normalize("NFC", target or "").replace(" ", ""))
+    uj = to_pronounced_jamos(unicodedata.normalize("NFC", transcript or "").replace(" ", ""))
+    for cs, us in align_jamos(cj, uj):
+        if cs is None:
+            continue
+        if us is None:
+            return False, None
+        got = us[0] if stage_no == 3 else _SAME_VOWEL.get(us[1], us[1])
+        return got == want, (got or None)
+    return False, None
+
+
+def _probe_heard_dgop(stage_no: int, target: str, phones) -> Optional[bool]:
+    """D-GOP 경로: 첫 음절 목표 음소의 D-GOP >= PROBE_DGOP_MIN인가. 음소열이 목표 자모 토큰과 맞지 않거나(음절 vocab 모델 등) 그 음소가
+    정렬되지 않았으면 None(판정하지 못함)."""
+    import jamo_vocab
+    want = probe_sound(stage_no, target)
+    toks = jamo_vocab.text_to_tokens(target or "")
+    if not want or not phones or [p.get("token") for p in phones] != toks:
+        return None
+    first_nuc = next((i for i, tk in enumerate(toks) if tk.startswith("n:")), None)
+    if first_nuc is None:
+        return None
+    idx = (0 if first_nuc == 1 else None) if stage_no == 3 else first_nuc
+    if idx is None:
+        return None
+    lab = toks[idx].split(":", 1)[-1]
+    if (lab if stage_no == 3 else _SAME_VOWEL.get(lab, lab)) != want:
+        return None
+    p = phones[idx]
+    if not p.get("aligned") or p.get("dgop") is None:
+        return None
+    return float(p["dgop"]) >= PROBE_DGOP_MIN
+
+
+def score_probe(stage_no: int, target: str, transcript: Optional[str], metrics: Dict,
+                sim_score: Optional[float], phones=None) -> Tuple[float, bool, str, bool]:
+    """낱말 속 소리 확인 채점: (점수, 합격, 안내, 확인 창에 셀지). 합격 = 낱말 점수가 이 단계 합격선 이상 그리고 첫 음절 목표 소리 확인.
+    소리 없는 녹음이나 목표 소리 자리를 찾지 못한 시도(정렬 실패)는 합격이 아니고 창에도 세지 않는다(학습자 탓이 아닌 실패로 깎지 않는다).
+    transcript는 전사 경로에서만 문자열이고, phones는 D-GOP 경로의 음소 목록(dgop_acoustic.assess_text의 phones)이다."""
+    stg = get_stage(stage_no) or {}
+    if no_voice(metrics or {}):
+        return 0.0, False, NO_VOICE_NOTE, False
+    sc = round(float(sim_score or 0.0), 1)
+    passf = float(stg.get("pass", 50.0))
+    want = probe_sound(stage_no, target)
+    kind, topic = ("첫소리", "첫소리는") if stage_no == 3 else ("모음", "모음은")
+    if transcript is not None:
+        ok, got = _probe_heard_transcript(stage_no, target, transcript)
+        note = "" if ok else (f"첫 음절의 목표 {topic} '{want}'인데 '{got}' 소리로 들렸어요." if got
+                              else f"첫 음절의 목표 {kind} '{want}' 소리가 들리지 않았어요.")
+    else:
+        ok = _probe_heard_dgop(stage_no, target, phones)
+        if ok is None:
+            return sc, False, PROBE_UNCOUNTED_NOTE, False
+        note = "" if ok else f"첫 음절의 목표 {kind} '{want}' 소리가 약했어요."
+    return sc, bool(ok) and sc >= passf, note, True
 
 
 def probes_ok(passes: List[Optional[bool]], cfg: Optional[Dict]) -> bool:

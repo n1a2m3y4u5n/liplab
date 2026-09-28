@@ -90,13 +90,20 @@ with TestClient(main.app) as c:
     h = {"Authorization": "Bearer " + r.json()["access_token"]}
     uid = c.get("/api/auth/me", headers=h).json()["id"]
 
-    def assess(target, stage, text, probe=0, review=0):
+    def assess(target, stage, text, probe=0, review=0, loud="50"):
         heard["text"] = text
         res = c.post("/api/speak/assess", headers=h, files={"audio": ("a.webm", b"\x00" * 2048, "audio/webm")},
-                     data={"target": target, "stage": str(stage), "loudness": "50", "duration": "1.0",
+                     data={"target": target, "stage": str(stage), "loudness": loud, "duration": "1.0",
                            "voiced_duration": "0.8", "probe": str(probe), "review": str(review)})
         b = res.json()
-        return {"status": res.status_code, "score": b.get("score"), "passed": b.get("passed"), "progress": b.get("progress")}
+        return {"status": res.status_code, "score": b.get("score"), "passed": b.get("passed"), "progress": b.get("progress"),
+                "probe": b.get("probe"), "counted": b.get("probe_counted"), "note": b.get("note")}
+
+    def swap_onset(word):
+        # 첫 음절 첫소리만 바꾼 말(물 → 불): 낱말 점수는 높지만 목표 소리가 틀렸다
+        code = ord(word[0]) - 0xAC00
+        onset, rest = code // 588, code % 588
+        return chr(0xAC00 + (7 if onset != 7 else 6) * 588 + rest) + word[1:]
 
     async def bump(stage, seq):
         async with database.AsyncSessionLocal() as db:
@@ -113,9 +120,17 @@ with TestClient(main.app) as c:
                 SpeakAttempt.user_id == uid, SpeakAttempt.stage == stage).order_by(SpeakAttempt.id))).all()]
             return {"status": sp.status, "attempts": sp.attempts, "mastery": round(sp.mastery_score, 4), "modes": modes}
 
-    # 처음(이동 평균 전): 확인 낱말 없음
+    # 처음(이동 평균 전): 확인 낱말 없음. 확인 상태가 아닐 때 probe=1은 보통 시도로 채점한다
     d0 = c.get("/api/speak/stage/3", headers=h).json()
     out["before"] = {"carryover": d0["carryover"], "probes": d0["probes"]}
+    out["early_probe"] = assess("마", 3, "마", probe=1)
+    async def wipe3():
+        async with database.AsyncSessionLocal() as db:
+            from sqlalchemy import delete
+            await db.execute(delete(SpeakAttempt).where(SpeakAttempt.user_id == uid))
+            await db.execute(delete(SpeakStageProgress).where(SpeakStageProgress.user_id == uid))
+            await db.commit()
+    asyncio.run(wipe3())
     # 이동 평균 조건을 채움(8번 모두 합격) → 확인 전이라 숙달이 아니다
     out["gate"] = asyncio.run(bump(3, [True] * 8))
     d1 = c.get("/api/speak/stage/3", headers=h).json()
@@ -124,6 +139,21 @@ with TestClient(main.app) as c:
     out["carryover"] = d1["carryover"]
     out["same_day_same"] = d1["probes"] == d1b["probes"]
     w = d1["probes"][0]["target"]
+    # 오늘 확인 낱말이 아닌 말을 probe=1로 보내면 확인으로 세지 않는다(보통 시도로 채점, mode 'phoneme')
+    out["foreign"] = assess("사과" if w != "사과" else "바다", 3, "사과" if w != "사과" else "바다", probe=1)
+    # 소리 없는 확인은 세지 않는다(창에서 빠짐)
+    out["silent"] = assess(w, 3, "", probe=1, loud="0")
+    # 첫 음절 첫소리가 틀린 확인(물 → 불): 낱말 점수는 합격선 위지만 불합격
+    out["swapped"] = assess(w, 3, swap_onset(w), probe=1)
+    out["after_extra"] = asyncio.run(rows(3))
+    async def drop_extra():
+        async with database.AsyncSessionLocal() as db:
+            from sqlalchemy import delete
+            ids = [i for (i,) in (await db.execute(select(SpeakAttempt.id).where(SpeakAttempt.user_id == uid)
+                                                  .order_by(SpeakAttempt.id.desc()).limit(3))).all()]
+            await db.execute(delete(SpeakAttempt).where(SpeakAttempt.id.in_(ids)))
+            await db.commit()
+    asyncio.run(drop_extra())   # 아래 창 계산을 단순하게 하려고 방금 세 시도를 지운다
     # 확인: 합격·불합격·불합격·합격(2/4) → 숙달 아님, 이어서 합격(최근 4번 F F T T 2/4), 합격(F T T T 3/4) → 숙달
     seq = []
     for ok in (True, False, False, True):
@@ -171,15 +201,24 @@ def _run():
 def test_probe_gate_through_api():
     r = _run()
     assert r["before"] == {"carryover": False, "probes": []}
+    assert r["early_probe"]["probe"] is False and r["early_probe"]["passed"] is True   # 확인 상태 전: 보통 시도
     status, attempts, mastery = r["gate"]
     assert status == "in_progress" and attempts == 8 and mastery >= 85      # 이동 평균만으로는 숙달하지 않는다
     assert r["carryover"] is True and r["same_day_same"]
     assert len(r["probes"]) == 4 and len({p["sound"] for p in r["probes"]}) == 4
     for s in r["seq"]:
-        assert s["status"] == 200
-    # 단어 규칙(합격 65)으로 채점: 맞게 들리면 합격, '아'면 불합격
+        assert s["status"] == 200 and s["probe"] is True and s["counted"] is True
+    # 오늘 확인 낱말이 아니면 보통 시도, 소리 없음은 세지 않음, 첫소리가 틀리면 점수가 높아도 불합격
+    assert r["foreign"]["probe"] is False and r["foreign"]["progress"]["attempts"] == attempts + 1
+    assert r["silent"]["probe"] is True and r["silent"]["counted"] is False and r["silent"]["passed"] is False
+    sw = r["swapped"]
+    assert sw["probe"] is True and sw["counted"] is True and sw["passed"] is False and sw["score"] >= 50
+    assert "첫소리" in sw["note"]
+    assert r["after_extra"]["modes"][-3:] == ["phoneme", "probe", "probe"]
+    attempts, mastery = r["after_extra"]["attempts"], r["after_extra"]["mastery"]   # 보통 시도 한 번이 더해졌다
+    # 합격 = 이 단계 합격선(50) 이상 + 첫 음절 목표 소리: 맞게 들리면 합격, '아'면 불합격
     assert [s["passed"] for s in r["seq"]] == [True, False, False, True, True, True]
-    assert r["seq"][0]["score"] >= 65 and r["seq"][1]["score"] < 65
+    assert r["seq"][0]["score"] >= 50 and r["seq"][1]["score"] < 50
     # 2/4 → 숙달 아님. 확인은 이동 평균·시도 수를 바꾸지 않고 mode 'probe'로 남는다
     a = r["after_2_of_4"]
     assert a["status"] == "in_progress" and a["attempts"] == attempts and a["mastery"] == mastery
@@ -197,3 +236,52 @@ def test_probe_gate_through_api():
     # 예전에 숙달한 단계는 확인 없이도, 오답이 이어져도 숙달 유지
     assert r["legacy"][0] == "mastered"
     assert r["legacy_stage"] == {"carryover": False, "probes": []}
+
+
+# 리뷰어 재현 쌍(probe_score.py): 첫 음절 목표 소리가 바뀌면 낱말 점수가 높아도 불합격
+_SWAPS = [("물", "불", 3), ("바다", "마다", 3), ("사과", "다과", 3), ("토기", "도기", 3), ("장갑", "창갑", 3), ("파도", "바도", 3),
+          ("불", "발", 2), ("언니", "안니", 2), ("노래", "누래", 2), ("그림", "기림", 2), ("머리", "모리", 2), ("발", "벌", 2)]
+_VOICED = {"loudness": 30, "voiced_duration": 1.0}
+
+
+def test_score_probe_transcript_checks_target_sound():
+    for target, said, st in _SWAPS:
+        score, passed, note, counted = sc.score_probe(st, target, said, _VOICED, 88.0)
+        assert counted and not passed and note, (target, said)
+        score, passed, note, counted = sc.score_probe(st, target, target, _VOICED, 88.0)
+        assert counted and passed and not note, target
+    assert sc.score_probe(2, "배추", "베추", _VOICED, 80.0)[1]            # 애·에는 한 소리
+    assert not sc.score_probe(3, "물", "물", _VOICED, 45.0)[1]           # 합격선(50) 아래
+    assert sc.score_probe(3, "물", "물", _VOICED, 50.0)[1]
+    assert sc.score_probe(3, "물", "", {"loudness": 0}, 0.0) == (0.0, False, sc.NO_VOICE_NOTE, False)   # 소리 없음은 세지 않음
+
+
+def test_score_probe_dgop_threshold_and_alignment_failure():
+    import jamo_vocab
+    def phones(word, **over):
+        ps = [{"token": tk, "aligned": True, "scorable": True, "dgop": 0.3} for tk in jamo_vocab.text_to_tokens(word)]
+        for i, kv in over.items():
+            ps[int(i[1:])].update(kv)
+        return ps
+    assert sc.PROBE_DGOP_MIN == 0.05
+    assert sc.score_probe(3, "물", None, _VOICED, 70.0, phones("물"))[1:] == (True, "", True)
+    r = sc.score_probe(3, "물", None, _VOICED, 70.0, phones("물", i0={"dgop": 0.04}))
+    assert r[1] is False and r[3] is True                                  # 첫소리 D-GOP 0.05 미만
+    assert sc.score_probe(2, "물", None, _VOICED, 70.0, phones("물", i0={"dgop": 0.01}))[1]   # 모음 단계는 모음만 본다
+    assert not sc.score_probe(2, "물", None, _VOICED, 70.0, phones("물", i1={"dgop": 0.01}))[1]
+    assert not sc.score_probe(3, "물", None, _VOICED, 45.0, phones("물"))[1]                 # 합격선(50) 아래
+    # 목표 음소를 찾지 못하면 합격이 아니고 창에도 세지 않는다
+    for bad in (phones("물", i0={"aligned": False}), phones("불"), [], None,
+                [{"token": "물", "aligned": True, "dgop": 0.9}]):        # 음절 vocab 모델
+        assert sc.score_probe(3, "물", None, _VOICED, 90.0, bad)[1:] == (False, sc.PROBE_UNCOUNTED_NOTE, False)
+
+
+def test_is_probe_word_matches_issued_words_regardless_of_weak_order():
+    seed = "7:3:2026-09-28"
+    issued = {p["target"] for w in (None, ["ㅋ"], ["ㅅ", "ㅎ"], ["ㅁ"]) for p in sc.probe_words(3, seed, weak=w)}
+    assert issued and all(sc.is_probe_word(3, w, seed) for w in issued)
+    assert not sc.is_probe_word(3, "마", seed)                 # 이 단계 문항
+    assert not sc.is_probe_word(3, "아기", seed)               # 목표 소리 없음(무음 첫소리)
+    others = [w for w in sc._STAGE4_WORDS if sc.probe_sound(3, w) and not sc.is_probe_word(3, w, seed)]
+    assert len(others) > 50                                    # 풀의 다른 낱말은 확인이 아니다
+    assert all(sc.is_probe_word(2, p["target"], "7:2:d") for p in sc.probe_words(2, "7:2:d", weak=["ㅔ"]))
