@@ -3210,7 +3210,7 @@ async def speak_skip(req: SpeakSkipReq, current_user=Depends(get_current_user), 
 
 
 @app.get("/api/speak/stage/{n}", dependencies=[Depends(ratelimit.rate_limit(30, 60, "llm-speakstage"))])
-async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
+async def speak_stage_content(n: int, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """단계 콘텐츠(항목·모드·가이드).
     단어(4)·문장(5) 단계는 매번 AI로 새 문항을 생성해 변주를 준다(실패 시 큐레이션 풀 폴백).
     발성·모음·자음(0~3)은 정해진 음소 드릴이라 고정."""
@@ -3223,6 +3223,21 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
         # 고정 풀은 음절 수 층을 섞어 끼운다(처음 3개만 1음절). 프론트는 들어올 때마다 0번부터 시작해, 예전 고정 순서로는 앞 14개가
         # 모두 1음절이라 다음절 단어 없이 숙달했다. (사용자, 날짜) 시드라 같은 날에는 순서가 같다(speak_curriculum.mixed_order).
         items = _speakcur.mixed_order(items, f"{current_user.id}:{_kst_today().isoformat()}")
+    # 약한 소리 위주 출제: 최근 말하기 시도에서 D-GOP가 문장 평균보다 늘 낮게 잰 소리(없으면 전사 경로의 혼동)가 든 문항을 앞쪽에
+    # 끼운다. 예전에는 약점과 상관없이 같은 순서라, 약한 소리가 든 단어가 앞 12문항에 나오는 비율이 풀 비율 그대로였다
+    # (speak_curriculum.weak_sounds·focus_order, scripts/speak_focus_sim.py).
+    focus = []
+    if stg["mode"] in ("phoneme", "word"):
+        try:
+            from database import SpeakAttempt
+            from sqlalchemy import select
+            rows = (await db.execute(select(SpeakAttempt.phones, SpeakAttempt.confusions)
+                                     .where(SpeakAttempt.user_id == current_user.id)
+                                     .order_by(SpeakAttempt.created_at.desc()).limit(40))).all()
+            focus = _speakcur.weak_sounds([{"phones": r[0], "confusions": r[1]} for r in rows])
+            items = _speakcur.focus_order(items, focus, lead=3 if stg["mode"] == "word" else 0)
+        except Exception as e:
+            print(f"[WARN] speak focus failed (stage {n}): {e}")
     if os.getenv("LIPLAB_AI_ITEMS", "1") == "1" and stg["mode"] in ("word", "sentence"):
         try:
             import content_gen
@@ -3242,7 +3257,7 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
     return {
         "stage": stg["stage"], "title": stg["title"], "mode": stg["mode"],
         "desc": stg["desc"], "guide": stg["guide"], "icon": stg.get("icon", ""),
-        "items": items,
+        "items": items, "focus_sounds": focus,
     }
 
 

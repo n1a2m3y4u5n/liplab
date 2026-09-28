@@ -128,3 +128,16 @@ def test_stage4_order_mixes_syllable_lengths():
         _ok(all(len(x["target"]) == 1 for x in o[:3]), "처음 3개는 1음절(짧은 것부터)")
         _ok(sum(len(x["target"]) > 1 for x in o[:8]) >= 4, "최소 시도 수(8) 안에 다음절 단어가 4개 이상")
         _ok(any(len(x["target"]) == 3 for x in o[:8]), "3음절도 8개 안에 나온다")
+
+
+def test_weak_sounds_and_focus_order():
+    # 약한 소리 위주 출제: D-GOP 음소 점수를 시도 평균으로 나눈 상대값이 낮은 소리를 고르고, 그 소리가 든 문항을 앞에 끼운다
+    import speak_curriculum as sc
+    att = [{"phones": [{"label": "ㅂ", "dgop": 0.3}, {"label": "ㅏ", "dgop": 0.9}, {"label": "ㄹ", "dgop": 0.8}]} for _ in range(3)]
+    att += [{"confusions": [{"correct": "ㅋ", "confused_as": "ㄱ"}]} for _ in range(2)]
+    assert sc.weak_sounds(att) == ["ㅂ", "ㅋ"]
+    items = [{"target": w} for w in ["아", "어", "오", "바", "우", "비", "이"]]
+    out = sc.focus_order(items, ["ㅂ"], lead=0)
+    assert [it["target"] for it in out[:4]] == ["바", "아", "비", "어"]
+    assert sorted(it["target"] for it in out) == sorted(it["target"] for it in items)   # 문항은 그대로, 순서만
+    assert sc.focus_order(items, [], lead=0) == items
