@@ -162,8 +162,34 @@ export default function Placement() {
         <h1 className="text-center text-[25px] font-bold leading-figma tracking-[-0.625px] text-ink lg:text-[32px] lg:tracking-[-0.8px]">
           학습 준비가 다 되었어요!
         </h1>
+        {/* 진단 요약(9/28): 예전에는 어디서 시작하는지·무엇이 약한지 보여 주지 않고 버튼만 있었다(가이드 점검). 검사가 5~12문항으로
+            적응형이라 문항 수도 함께 보인다. */}
+        <div className="flex w-full max-w-[640px] flex-col gap-3 rounded-22 border-2 border-line bg-white px-5 py-4 lg:px-6">
+          <div className="flex items-center gap-3">
+            <span className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-primary-500 text-[16px] font-bold text-white">
+              {result.recommended_start?.stage ?? STAGE_NUM[result.recommended_start?.key] ?? 1}
+            </span>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <p className="text-[12px] font-bold text-ink-muted">추천 시작 단계</p>
+              <p className="text-[18px] font-bold tracking-[-0.36px] text-primary-700">{result.recommended_start?.title || '입모양 인지'}</p>
+            </div>
+            <p className="shrink-0 text-right text-[12px] font-bold text-ink-muted">
+              {result.correct}/{result.total}문항 정답<br /><span className="text-primary-600">Lv.{result.level}</span>
+            </p>
+          </div>
+          {result.error_visemes?.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
+              <span className="text-[12px] font-bold text-ink-muted">먼저 익힐 입모양</span>
+              {result.error_visemes.map((v) => (
+                <span key={v} className="rounded-full bg-bad-tint px-3 py-1 text-xs font-bold text-bad-text">{VIS_NAME[v] || v}</span>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="flex w-full max-w-[640px] flex-col gap-2.5 lg:gap-3">
-          <button type="button" onClick={goRecommended} className={`btn-primary btn-lg ${RESULT_BTN}`}>학습하러 가기</button>
+          <button type="button" onClick={goRecommended} className={`btn-primary btn-lg ${RESULT_BTN}`}>
+            {result.recommended_start?.title || '입모양 인지'}부터 시작하기
+          </button>
           <button type="button" onClick={() => start(mode)} className={`btn-secondary btn-lg text-track ${RESULT_BTN}`}>다시 진단하기</button>
         </div>
       </div>
