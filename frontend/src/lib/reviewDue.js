@@ -1,6 +1,6 @@
 /**
  * 예정 복습 수와 진입 경로(복습 탭·오른쪽 패널·과제 탭이 같은 정의를 쓴다).
- * GET /api/review/due: count·items = 독화(입모양·단어) 예정, speak_count·speak = 말하기 예정(말하기에서 틀린 문항).
+ * GET /api/review/due: count·items = 독화(입모양·단어·문장, 문장은 하루 5개까지) 예정, speak_count·speak = 말하기 예정(말하기에서 틀린 문항).
  * 독화 예정은 간격 반복 세션(/review/scheduled), 말하기 예정은 말하기 복습(/review/speaking)에서 푼다.
  */
 export function dueCounts(res) {

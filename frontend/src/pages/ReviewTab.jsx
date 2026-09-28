@@ -9,7 +9,8 @@ import { dueCounts, dueStartPath } from '../lib/reviewDue'
 
 /**
  * 복습 탭 (Figma 100:15 · 선택 모드 318:33 · 모바일 239:34 / 318:233) — 오답·북마크 복습 진입 + 복습 항목 리스트.
- * 실데이터: reviewAPI.getDue(예정: 독화 입모양·단어 + 말하기에서 틀린 문항), learningAPI.getReviewSentences(오답),
+ * 실데이터: reviewAPI.getDue(예정: 독화 입모양·단어·문장 + 말하기에서 틀린 문항), learningAPI.getReviewSentences(오답,
+ * 오늘 예정 복습에 나온 문장은 서버가 뺀다),
  * getBookmarks(북마크, 독화·발화 모두).
  * 각 항목은 트랙 배지(독화=보라 / 발화=핑크) + 단어 + 사유. 클릭 시 해당 복습 흐름으로 이동.
  * 오른쪽 패널은 복습 탭 구성(스탯 + 오늘의 과제 + 이번 주 복습, 100:113).
@@ -138,7 +139,7 @@ export default function ReviewTab() {
       const meta = (x, kind) => {
         if (kind === 'bookmark') return '북마크를 했어요'
         if (kind === 'wrong') return x.wrong_count ? `${x.wrong_count}회 틀렸어요` : '틀렸어요'
-        return x.kind === 'speak' ? '다시 말해 볼 항목' : '다시 볼 항목'
+        return x.kind === 'speak' ? '다시 말해 볼 항목' : x.kind === 'sentence' ? '다시 읽어 볼 문장' : '다시 볼 항목'
       }
       const norm = (arr, kind) => arr.map((x, i) => ({
         id: `${kind}-${x.id ?? i}`,
@@ -199,7 +200,7 @@ export default function ReviewTab() {
     setWrong((n) => Math.max(0, n - picked.filter((it) => it.kind === 'wrong').length))
     exitSelect()
   }
-  // 예정 복습 중 입모양·단어는 간격 반복 세션(/review/scheduled)에서, 말하기는 말하기 복습(/review/speaking)에서,
+  // 예정 복습 중 입모양·단어·문장은 간격 반복 세션(/review/scheduled)에서, 말하기는 말하기 복습(/review/speaking)에서,
   // 틀린 문장은 오답 복습(/review/mistakes)에서 푼다. 오답 복습 화면에는 틀린 문장만 나와 예정 항목을 그리로 보내면 풀 방법이 없다.
   const openItem = (it) => {
     if (it.kind === 'due') return navigate(it.raw?.kind === 'speak' ? '/review/speaking' : '/review/scheduled')

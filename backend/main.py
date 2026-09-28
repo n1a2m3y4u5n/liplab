@@ -840,6 +840,12 @@ async def submit_progress(
                 current_user.id, 3, scoring_result["score"] >= _STAGE3_PASS,
                 _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db)
 
+        # 문장 간격 반복(kind 'sentence'): 레슨에서 합격선 아래면 내일 복습에 넣고, 예정일에 다시 읽으면 점수 등급으로 간격을
+        # 조정한다(말하기 kind 'speak'와 같은 _sr_touch). 틀린 문장 복습·북마크 연습은 원문을 본 뒤의 답이라 일정을 건드리지 않는다
+        if _schedules_sentence(submission.scenario_id, submission.sentence):
+            await _sr_touch(current_user.id, "sentence", submission.sentence,
+                            scoring_result["score"] >= _STAGE3_PASS, db, score=scoring_result["score"])
+
         await db.commit()
 
         return ProgressResponse(
@@ -1375,7 +1381,11 @@ async def get_analysis_overview(tz_offset_min: int = -540, current_user=Depends(
     # repetitions·lapses로 셌는데, 레슨에서 같은 항목을 두 번 틀리면(lapses 2) 복습 없이 배지가 나왔고,
     # 복습을 끝까지 해 항목이 졸업(행 삭제)하면 0이 되어 배지가 꺼졌다.
     reviews_done = prof.reviews_completed or 0
-    reviews_overdue = sum(1 for r in reviews if r.due_date and r.due_date < today_local)
+    # 문장 복습은 하루 상한(_SENTENCE_REVIEW_DAILY)이 있어 오늘 낼 수 있는 것만 센다. 상한에 밀려 기다리는 문장까지 세면
+    # 매일 복습을 다 해도 배지가 꺼진 채로 남는다
+    shown_sentences = {it.id for it in await _due_review_items(uid, db) if it.kind == "sentence"}
+    reviews_overdue = sum(1 for r in reviews if r.due_date and r.due_date < today_local
+                          and (r.kind != "sentence" or r.id in shown_sentences))
 
     return _an.overview(
         events, now, tz,
@@ -1394,9 +1404,12 @@ async def get_review_sentences(current_user=Depends(get_current_user), db: Async
     예전엔 '이력 어디선가 score<60'이면 넣어, 나중에 그 문장을 마스터해도 과거 오답 때문에
     영원히 복습 목록에 남았다. 각 문장의 '가장 최근' 시도만 보고, 최근에도 60 미만일 때만
     복습 대상에 넣어 마스터하면 자연히 졸업하게 한다.
+    오늘의 복습(/api/review/due)에 문장 복습으로 나온 문장은 뺀다. 같은 문장이 오답과 예정 복습에 두 번 세어지지 않게 하고,
+    예정일에 다시 읽는 쪽(원문을 먼저 보지 않는 복습)으로 풀게 한다. 예정일 전이거나 하루 상한에 밀린 문장은 그대로 여기 남는다.
     """
     from database import Progress
     from sqlalchemy import select
+    scheduled = {it.ref for it in await _due_review_items(current_user.id, db) if it.kind == "sentence"}
 
     result = await db.execute(
         select(Progress)
@@ -1416,7 +1429,7 @@ async def get_review_sentences(current_user=Depends(get_current_user), db: Async
         if p.sentence in seen:
             continue
         seen.add(p.sentence)                     # 이 문장의 '가장 최근' 시도만 판단
-        if p.score < 60:                         # 최근에도 틀렸을 때만 복습 대상
+        if p.score < 60 and p.sentence not in scheduled:   # 최근에도 틀렸을 때만 복습 대상
             unique.append({
                 "sentence": p.sentence,
                 "situation": p.situation,
@@ -1487,7 +1500,10 @@ _STAGE3_PASS = 60.0            # 문장 1건을 '성공'으로 볼 최소 점수
 # 틀린 문장 복습(ReviewLanding)·북마크 연습(Bookmarks) 세션의 scenario_id 접두어. 두 화면은 원문을 목록에 보여 준 뒤 풀게
 # 하므로, 그 답은 3단계 숙달에 넣지 않고(입모양·단어 SRS 복습과 같은 원칙) 추천 난이도 계산에서도 뺀다. 예전에는 넣어서
 # 새 문장 통과율 0.5인 학습자의 20레슨 안 3단계 숙달 확률이 0.227에서 0.676으로 올랐다(모의실험, 복습 답 통과 0.95 가정).
-_REVIEW_SCENARIO_PREFIXES = ("mistake_review_", "bookmark_")
+# 문장 간격 반복 복습(오늘의 복습, srs_review_*)도 3단계 숙달·추천 난이도에서 뺀다. 한 번 틀린 문장을 다시 읽는 답이라
+# 처음 보는 문장을 읽는 3단계 숙달의 근거로 쓰지 않는다(같은 문장을 되풀이해 맞히면 숙달에 닿는 것을 막는다).
+_SENTENCE_REVIEW_PREFIX = "srs_review_"
+_REVIEW_SCENARIO_PREFIXES = ("mistake_review_", "bookmark_", _SENTENCE_REVIEW_PREFIX)
 
 
 def _is_review_scenario(scenario_id) -> bool:
@@ -2091,22 +2107,83 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
 
 
 # ── 간격 반복 복습 (SRS) ──────────────────────────────────────────────────
-_REVIEW_DUE_KINDS = ("viseme", "word", "speak")
+_REVIEW_DUE_KINDS = ("viseme", "word", "speak", "sentence")
+# 문장 복습(kind 'sentence')은 하루에 5개까지 낸다. 문장은 입모양·단어보다 한 문항이 길어(끝까지 보고 문장을 입력한다) 오늘의
+# 복습이 몇 분 안에 끝나게 하려는 값이다. 한 레슨에서 여러 문장을 틀려도 다음 날 복습이 문장으로 가득 차지 않고, 넘친 문장은
+# 예정일이 지난 채 다음 날로 밀린다(예정일이 이른 것부터). 오늘 이미 다시 읽은 문장 수를 빼므로 복습을 마친 뒤 목록을 다시 받아도
+# 새 문장이 더 나오지 않는다.
+_SENTENCE_REVIEW_DAILY = 5
+_REVIEW_REF_MAX = 100   # ReviewItem.ref 길이(String(100)). 그보다 긴 문장은 큐에 넣지 않는다(시나리오 문장은 90자 이하)
+
+
+def _schedules_sentence(scenario_id, sentence) -> bool:
+    """이 /api/progress 답이 문장 복습 일정을 건드리는가: 일반 레슨과 문장 복습 세션만. 틀린 문장 복습·북마크 연습은 아니다."""
+    sid = str(scenario_id or "")
+    ok_len = 0 < len((sentence or "").strip()) <= _REVIEW_REF_MAX
+    return ok_len and (sid.startswith(_SENTENCE_REVIEW_PREFIX) or not _is_review_scenario(sid))
+
+
+async def _sentences_reviewed_today(user_id: int, db, today=None) -> int:
+    """오늘(KST) 문장 복습 세션에서 다시 읽은 서로 다른 문장 수. 하루 상한에서 뺀다."""
+    from datetime import datetime as _dtm, time as _tm, timedelta as _td
+    from database import Progress
+    from sqlalchemy import select, func
+    start = _dtm.combine(today or _kst_today(), _tm()) - _td(hours=9)   # KST 0시의 UTC(Progress.created_at은 UTC)
+    n = (await db.execute(select(func.count(func.distinct(Progress.sentence))).where(
+        Progress.user_id == user_id, Progress.created_at >= start,
+        Progress.scenario_id.startswith(_SENTENCE_REVIEW_PREFIX, autoescape=True)))).scalar()
+    return int(n or 0)
+
+
+async def _due_review_items(user_id: int, db, today=None) -> list:
+    """오늘 복습에 낼 ReviewItem(예정일이 이른 순). 문장은 하루 _SENTENCE_REVIEW_DAILY개에서 오늘 이미 다시 읽은 수를 뺀 만큼만.
+    예정 목록(/api/review/due)·과제 탭의 남은 복습·틀린 문장 목록의 중복 제외가 같은 목록을 쓴다."""
+    from database import ReviewItem
+    from sqlalchemy import select
+    today = today or _kst_today()
+    r = await db.execute(select(ReviewItem).where(
+        ReviewItem.user_id == user_id, ReviewItem.due_date <= today.isoformat(),
+        ReviewItem.kind.in_(_REVIEW_DUE_KINDS)).order_by(ReviewItem.due_date, ReviewItem.id))
+    rows = r.scalars().all()
+    left = None
+    out = []
+    for it in rows:
+        if it.kind == "sentence":
+            if left is None:
+                left = _SENTENCE_REVIEW_DAILY - await _sentences_reviewed_today(user_id, db, today)
+            if left <= 0:
+                continue
+            left -= 1
+        out.append(it)
+    return out
+
+
+async def _sentence_meta(user_id: int, sentences, db) -> dict:
+    """문장 → {situation, difficulty_level}: 그 문장의 가장 최근 레슨 기록(복습 세션 행은 빼되, 없으면 그것이라도)."""
+    from database import Progress
+    from sqlalchemy import select
+    if not sentences:
+        return {}
+    rows = (await db.execute(select(Progress.sentence, Progress.situation, Progress.difficulty_level, Progress.scenario_id)
+                             .where(Progress.user_id == user_id, Progress.sentence.in_(list(sentences)))
+                             .order_by(Progress.created_at.desc()))).all()
+    meta, fallback = {}, {}
+    for s, situation, level, sid in rows:
+        slot = fallback if _is_review_scenario(sid) else meta
+        slot.setdefault(s, {"situation": situation, "difficulty_level": level})
+    return {s: meta.get(s) or fallback.get(s) for s in sentences if (meta.get(s) or fallback.get(s))}
 
 
 @app.get("/api/review/due")
 async def review_due(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """오늘까지 복습 예정인 항목. items·count는 독화(입모양/단어)만이다(간격 반복 세션 /review/scheduled가 푸는 것).
+    """오늘까지 복습 예정인 항목. items·count는 독화(입모양/단어/문장)만이다(간격 반복 세션 /review/scheduled가 푸는 것).
+    문장(kind 'sentence', 3단계에서 합격선 아래였던 문장)은 하루 _SENTENCE_REVIEW_DAILY개까지 items 끝에 붙이고 상황·난이도를 싣는다.
     말하기 예정(kind 'speak', 말하기에서 틀린 문항)은 speak·speak_count로 따로 주고, 말하기 복습(/review/speaking)에서 푼다.
     total = 둘의 합(복습 탭·오른쪽 패널의 예정 복습 수)."""
-    from database import ReviewItem
-    from sqlalchemy import select
-    today = _kst_today().isoformat()
-    r = await db.execute(select(ReviewItem).where(
-        ReviewItem.user_id == current_user.id, ReviewItem.due_date <= today,
-        ReviewItem.kind.in_(_REVIEW_DUE_KINDS)).order_by(ReviewItem.due_date))
-    read, speak = [], []
-    for it in r.scalars().all():
+    rows = await _due_review_items(current_user.id, db)
+    meta = await _sentence_meta(current_user.id, [it.ref for it in rows if it.kind == "sentence"], db)
+    read, sentences, speak = [], [], []
+    for it in rows:
         # created_at = 처음 복습 큐에 들어온 시각, updated_at = 마지막으로 다시 푼 시각(목록의 상대 날짜용)
         entry = {"kind": it.kind, "ref": it.ref, "due_date": it.due_date,
                  "created_at": _iso_utc(it.created_at), "updated_at": _iso_utc(it.updated_at)}
@@ -2114,9 +2191,17 @@ async def review_due(current_user=Depends(get_current_user), db: AsyncSession = 
             les = _curriculum.lesson_by_id(int(it.ref))
             if les:
                 entry["name"] = les["name"]
-        (speak if it.kind == "speak" else read).append(entry)
+        if it.kind == "sentence":
+            m = meta.get(it.ref) or {}
+            entry["situation"] = m.get("situation")
+            entry["difficulty_level"] = m.get("difficulty_level")
+            sentences.append(entry)
+        else:
+            (speak if it.kind == "speak" else read).append(entry)
+    read += sentences   # 문장은 한 문항이 길어 입모양·단어 뒤에 낸다
     return {"count": len(read), "items": read, "speak_count": len(speak), "speak": speak,
-            "total": len(read) + len(speak)}
+            "total": len(read) + len(speak), "sentence_count": len(sentences),
+            "sentence_daily_cap": _SENTENCE_REVIEW_DAILY}
 
 
 @app.delete("/api/review/item")
@@ -2155,13 +2240,11 @@ async def review_answer(data: ReviewAnswer, current_user=Depends(get_current_use
 async def _task_board(user, db) -> tuple:
     """(오늘 KST 날짜, 과제 목록). 진행도는 기존 기록(시행·회차·예정 복습)에서 서버가 계산한다."""
     import daily_tasks as _dt
-    from database import ReviewItem, TaskClaim
-    from sqlalchemy import select, func
+    from database import TaskClaim
+    from sqlalchemy import select
     today = _kst_today()
     events = await _activity_events(user.id, db, since=_dt.events_since(today))
-    due_left = (await db.execute(select(func.count(ReviewItem.id)).where(
-        ReviewItem.user_id == user.id, ReviewItem.due_date <= today.isoformat(),
-        ReviewItem.kind.in_(_REVIEW_DUE_KINDS)))).scalar() or 0
+    due_left = len(await _due_review_items(user.id, db, today))   # 예정 목록(/api/review/due)과 같은 정의(문장 하루 상한 포함)
     periods = {_dt.period_of(t, today) for t in _dt.TASKS}
     claimed = (await db.execute(select(TaskClaim.task_key, TaskClaim.period).where(
         TaskClaim.user_id == user.id, TaskClaim.period.in_(periods)))).all()
