@@ -222,10 +222,13 @@ def overview(events: Sequence[Event], now_utc: datetime, tz_offset_min: int, **t
         "session_days": session_days,
         "questions": len([e for e in events if e.graded is not None]),
         "badges": b,
+        # questions는 트랙별 채점된 활동 수. 분석 상세 '점수'가 독화 정확도 옆에 문항 수로 쓴다(예전에는 문장 연습 수만 셌다)
         "tracks": {
             "read": {"accuracy": accuracy(read_ev), "done": len(track_info["read_mastered"]),
-                     "total": track_info["read_total"]},
+                     "total": track_info["read_total"],
+                     "questions": len([e for e in read_ev if e.graded is not None])},
             "speak": {"accuracy": accuracy(speak_ev), "done": len(track_info["speak_mastered"]),
-                      "total": track_info["speak_total"]},
+                      "total": track_info["speak_total"],
+                      "questions": len([e for e in speak_ev if e.graded is not None])},
         },
     }
