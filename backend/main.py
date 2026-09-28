@@ -3440,6 +3440,13 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user), db
         # 고정 풀은 음절 수 층을 섞어 끼운다(처음 3개만 1음절). 프론트는 들어올 때마다 0번부터 시작해, 예전 고정 순서로는 앞 14개가
         # 모두 1음절이라 다음절 단어 없이 숙달했다. (사용자, 날짜) 시드라 같은 날에는 순서가 같다(speak_curriculum.mixed_order).
         items = _speakcur.mixed_order(items, f"{current_user.id}:{_kst_today().isoformat()}")
+    elif stg["mode"] == "phoneme":
+        # 모음·자음: 항목 수만큼 연습한 뒤로는 섞어서 낸다(speak_curriculum.interleaved_order, 계획 2-4)
+        from database import SpeakStageProgress
+        from sqlalchemy import select
+        sp = (await db.execute(select(SpeakStageProgress).where(
+            SpeakStageProgress.user_id == current_user.id, SpeakStageProgress.stage == n))).scalars().first()
+        items = _speakcur.interleaved_order(items, sp.attempts if sp else 0, f"{current_user.id}:{n}:{_kst_today().isoformat()}")
     # 약한 소리 위주 출제: 최근 말하기 시도에서 D-GOP가 문장 평균보다 늘 낮게 잰 소리(없으면 전사 경로의 혼동)가 든 문항을 앞쪽에
     # 끼운다. 예전에는 약점과 상관없이 같은 순서라, 약한 소리가 든 단어가 앞 12문항에 나오는 비율이 풀 비율 그대로였다
     # (speak_curriculum.weak_sounds·focus_order, scripts/speak_focus_sim.py).
