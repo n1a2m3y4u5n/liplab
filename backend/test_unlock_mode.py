@@ -25,6 +25,11 @@ with TestClient(main.app) as c:
     demo = {"Authorization": "Bearer " + c.post("/api/auth/demo").json()["access_token"]}
     for name, h in (("user", user), ("demo", demo)):
         out[name] = {"read": status(c, h, "/api/curriculum/stages"), "speak": status(c, h, "/api/speak/curriculum")}
+    # 숙달 기준(학습 경로·사용법 가이드 표시용)이 main 상수와 같게 실리는가
+    got = {s["stage"]: [s.get("min_attempts"), s.get("mastery"), s.get("pass")]
+           for s in c.get("/api/curriculum/stages", headers=user).json()["stages"]}
+    want = {n: list(r) for n, r in main._STAGE_RULES.items()}
+    out["rules_ok"] = all(got[n] == want[n] for n in want) and got[0] == [None, None, None]
 print("RESULT " + json.dumps(out, ensure_ascii=False))
 '''
 
@@ -99,3 +104,7 @@ def test_skip_opens_only_the_next_stage_when_gated():
     assert r["speak_before"]["1"] == "locked"
     assert r["skip_far"] == 400 and r["skip_1"] == 200                                 # 한 번에 한 단계만
     assert r["speak_after"]["1"] == "unlocked" and r["speak_after"]["2"] == "locked"
+
+
+def test_stages_carry_mastery_rules():
+    assert _run("0")["rules_ok"]

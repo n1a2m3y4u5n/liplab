@@ -148,7 +148,7 @@ DEMO_SYLLABLE: Dict[int, str] = {
 # 단계형 커리큘럼 척추(5단계). 0·1은 신설, 2는 Phase 2 예정, 3·4는 기존 모드에 연결.
 STAGES: List[Dict] = [
     {"stage": 0, "key": "onboarding", "title": "입문·배치", "desc": "독화가 뭔지 + 나에게 맞는 시작점", "kind": "intro"},
-    {"stage": 1, "key": "viseme", "title": "입모양 인지", "desc": "10개 입모양 그룹을 익힌다", "kind": "literacy", "route": "/learn/viseme"},
+    {"stage": 1, "key": "viseme", "title": "입모양 인지", "desc": "10개 입모양 그룹 익히기", "kind": "literacy", "route": "/learn/viseme"},
     {"stage": 2, "key": "word", "title": "음절·단어", "desc": "최소대립쌍으로 단어 독화", "kind": "word", "route": "/learn/word"},
     {"stage": 3, "key": "sentence", "title": "문장 (상황별)", "desc": "상황별 문장 독화 연습", "kind": "sentence", "route": "/practice"},
     {"stage": 4, "key": "conversation", "title": "대화 실전", "desc": "AI와 실전 대화", "kind": "conversation", "route": "/conversation"},

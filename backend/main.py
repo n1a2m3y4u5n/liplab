@@ -1446,6 +1446,13 @@ def _is_review_scenario(scenario_id) -> bool:
 _STAGE4_MIN_ATTEMPTS = 4       # 대화 실전
 _STAGE4_MASTERY = 75.0        # 최근 가중 합격률(편향 보정 이동 평균, 9/27 밤 docs/mastery-ewma.md 6절, 예전 누적 60%)
 _STAGE4_PASS = 55.0            # 대화 1턴을 '성공'으로 볼 최소 이해도
+# 단계별 숙달 기준(최소 시도, 문턱, 합격 점수). /api/curriculum/stages에 실어 학습 경로·사용법 가이드가 같은 숫자를 보인다(9/28).
+_STAGE_RULES = {
+    1: (_STAGE1_MIN_ATTEMPTS, _STAGE1_MASTERY, None),
+    2: (_STAGE2_MIN_ATTEMPTS, _STAGE2_MASTERY, None),
+    3: (_STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, _STAGE3_PASS),
+    4: (_STAGE4_MIN_ATTEMPTS, _STAGE4_MASTERY, _STAGE4_PASS),
+}
 
 
 def _settle_mastery(sp, reached: bool) -> None:
@@ -1579,6 +1586,11 @@ async def _compute_stages(current_user, db):
     for s in _curriculum.STAGES:
         st = dict(s)
         stage = s["stage"]
+        rule = _STAGE_RULES.get(stage)
+        if rule:
+            st["min_attempts"], st["mastery"] = rule[0], rule[1]
+            if rule[2] is not None:
+                st["pass"] = rule[2]
         if s.get("coming_soon"):
             st["status"] = "coming_soon"
         elif stage == 0:
