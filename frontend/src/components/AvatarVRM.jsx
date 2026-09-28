@@ -98,6 +98,19 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
   const invalidate = useThree((st) => st.invalidate)
   useEffect(() => { invalidate() }, [visemeId, xray, transitionMs, durationMs, speed, invalidate])
 
+  // 아이들 모션 D(9/28): 눈 깜빡임. 쉴 때 그리지 않는 원칙(frameloop demand)을 지키려고 호흡처럼 계속 움직이는 모션은 넣지 않고,
+  // 2.5~6초마다 깜빡이는 약 0.19초 동안만 화면을 요청한다. 텍스트 입모양에만 적용(음성구동·거울은 원본 계수를 그대로 쓴다).
+  const blinkRef = useRef({ t: -1, w: 0 })
+  useEffect(() => {
+    if (bsFrameRef || mirrorRef) return undefined
+    let timer
+    const schedule = () => {
+      timer = setTimeout(() => { blinkRef.current.t = 0; invalidate(); schedule() }, 2500 + Math.random() * 3500)
+    }
+    schedule()
+    return () => clearTimeout(timer)
+  }, [bsFrameRef, mirrorRef, invalidate])
+
   useFrame((state, rawDelta) => {
     // 쉬었다 다시 그리는 첫 화면은 경과 시간이 길다(마지막 화면 뒤 전부). 그대로 쓰면 보간이 한 번에 목표로 튀므로 자른다.
     const delta = Math.min(rawDelta, 0.05)
@@ -203,9 +216,26 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
       }
     }
 
+    // 눈 깜빡임: 닫힘 70ms → 잠깐 머묾 20ms → 뜸 100ms. 진행 중이면 다음 화면을 요청한다.
+    const blink = blinkRef.current
+    let blinking = false
+    if (!rawFrame && !mirror && blink.t >= 0) {
+      blink.t += delta * 1000
+      const t = blink.t
+      const w = t < 70 ? t / 70 : t < 90 ? 1 : t < 190 ? 1 - (t - 90) / 100 : 0
+      const eased2 = w * w * (3 - 2 * w)
+      for (const mesh of meshesRef.current) {
+        const d = mesh.morphTargetDictionary
+        if (d?.eyeBlinkLeft !== undefined) mesh.morphTargetInfluences[d.eyeBlinkLeft] = eased2
+        if (d?.eyeBlinkRight !== undefined) mesh.morphTargetInfluences[d.eyeBlinkRight] = eased2
+      }
+      if (t >= 190) blink.t = -1
+      else blinking = true
+    }
+
     // 아직 움직이는 중이면 다음 화면을 요청한다(음성구동·거울은 Canvas가 늘 그리므로 해당 없음).
     if (!rawFrame && !mirror) {
-      let moving = extra.size > 0 || (eased != null && eased < 1)
+      let moving = blinking || extra.size > 0 || (eased != null && eased < 1)
       if (!moving) {
         for (const key of baseKeys) {
           if (Math.abs((currentWeightsRef.current[key] || 0) - (target[key] || 0)) > 1e-3) { moving = true; break }
@@ -222,6 +252,30 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
   })
 
   return <primitive object={scene} />
+}
+
+// 측면 보기 F(9/28 다시 구현): 원순 모음·입술 내밂처럼 정면에서 잘 안 보이는 앞뒤 움직임을 옆에서 본다. 카메라를 얼굴 둘레(반경 그대로)로
+// 옆 70°까지 이징으로 돌리고, 도는 동안만 화면을 요청한다(쉴 때 그리지 않는 원칙). 사용자가 손으로 돌리는 범위도 측면까지 넓힌다.
+const ORBIT_TARGET = new THREE.Vector3(0, 1.652, 0)
+const SIDE_AZIMUTH = (70 * Math.PI) / 180
+
+function CameraRig({ view }) {
+  const camera = useThree((st) => st.camera)
+  const invalidate = useThree((st) => st.invalidate)
+  const goal = useRef(0)
+  useEffect(() => { goal.current = view === 'side' ? SIDE_AZIMUTH : 0; invalidate() }, [view, invalidate])
+  useFrame((state, rawDelta) => {
+    const off = camera.position.clone().sub(ORBIT_TARGET)
+    const r = Math.hypot(off.x, off.z)
+    const az = Math.atan2(off.x, off.z)
+    const d = goal.current - az
+    if (Math.abs(d) < 0.002) return
+    const next = az + d * Math.min(1, Math.min(rawDelta, 0.05) * 7)
+    camera.position.set(ORBIT_TARGET.x + r * Math.sin(next), camera.position.y, ORBIT_TARGET.z + r * Math.cos(next))
+    camera.lookAt(ORBIT_TARGET)
+    state.invalidate()
+  })
+  return null
 }
 
 /** WebGL 지원 여부 감지 (컨텍스트 생성 실패 시 false). 페이지에서 한 번만 재고 시험용 컨텍스트는 바로 놓는다.
@@ -285,7 +339,7 @@ class GLErrorBoundary extends Component {
 
 // modelUrl: 다른 얼굴 GLB(같은 CC 두상 규격 — ARKit 52 + 혀 모프 + CC_Base_JawRoot). 다자 대화가 화자마다 다르게 준다(H-6).
 export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null, modelUrl = MODEL_URL,
-  transitionMs, durationMs, speed }) {
+  transitionMs, durationMs, speed, view = 'front' }) {
   const [webglOK] = useState(detectWebGL)
   const fallback = <MouthFallback2D visemeId={visemeId} />
 
@@ -315,6 +369,7 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
               transitionMs={transitionMs} durationMs={durationMs} speed={speed} />
           </Suspense>
 
+          <CameraRig view={view} />
           <OrbitControls
             target={[0, 1.652, 0]}
             enableZoom={false}
@@ -322,7 +377,7 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
             minPolarAngle={Math.PI / 2.2}
             maxPolarAngle={Math.PI / 1.8}
             minAzimuthAngle={-Math.PI / 6}
-            maxAzimuthAngle={Math.PI / 6}
+            maxAzimuthAngle={SIDE_AZIMUTH + Math.PI / 12}
           />
         </Canvas>
       </div>

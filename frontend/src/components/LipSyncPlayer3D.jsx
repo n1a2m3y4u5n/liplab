@@ -30,6 +30,7 @@ export default function LipSyncPlayer3D({
   const [speed, setSpeed] = useState(1.0)
   const [isPaused, setIsPaused] = useState(false)
   const [xray, setXray] = useState(false)       // 투명 두상(피부 반투명 → 혀·치아 노출)
+  const [side, setSide] = useState(false)       // 측면 보기(입술 내밂·원순을 옆에서, CLAUDE.md 3D 모션 F)
   const [showTract, setShowTract] = useState(false)  // 성도 단면(측면) 도식
   const [cues, setCues] = useState([])          // 축 J: 안 보이는 자질 기호(음절별)
 
@@ -196,6 +197,7 @@ export default function LipSyncPlayer3D({
         <AvatarVRM
           visemeId={currentViseme?.viseme ?? 15}
           xray={xray}
+          view={side ? 'side' : 'front'}
           transitionMs={currentViseme?.transition_ms}
           durationMs={currentViseme?.duration_ms}
           speed={speed}
@@ -323,6 +325,14 @@ export default function LipSyncPlayer3D({
           title="피부를 반투명하게 해 안 보이는 혀·치아를 드러냄"
         >
           투명 두상
+        </button>
+        <button
+          onClick={() => setSide((v) => !v)}
+          aria-pressed={side}
+          className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${side ? 'bg-violet-600 text-white font-semibold' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          title="옆에서 보기: 입술을 내밀거나 둥글게 모으는 움직임이 잘 보여요"
+        >
+          측면 보기
         </button>
         <button
           onClick={() => setShowTract((v) => !v)}
