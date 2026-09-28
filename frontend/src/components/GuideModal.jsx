@@ -4,6 +4,7 @@ import useFocusTrap from '../hooks/useFocusTrap'
 import TeamAvatar from './TeamAvatar'
 import { TEAM, REPO_URL } from '../config/team'
 import { TeamMemberDetail, ContactLine } from './TeamMemberDetail'
+import { ShotSet, useAnnotLink } from './guide/GuideDemo'
 
 /**
  * 사용법 가이드 모달 (Figma "09. 사용법 가이드" 338:57 ~ 342:348).
@@ -18,8 +19,10 @@ import { TeamMemberDetail, ContactLine } from './TeamMemberDetail'
  *  - Guide content pl-36 pr-30 py-30 gap-22 / 제목 26px bold tracking-[-.65px] / 닫기 36px(338:237)
  *  - 내용(Body 766px)은 탭마다 다섯 가지 꼴이다.
  *    · overview(01): 화면 축소본 766×404 + 아래 주석 2열(338:273)
- *    · screens(02·03·04·06~10): 화면 축소본 + 오른쪽 주석(Screen guide). 축소본은 Figma "Mini screen" 노드를
- *      PNG 2배로 내보낸 이미지다(핸드오프 §0-9, public/ui/lp-<노드>-guide-*.png). 03·04는 축소본 2장에 작은 주석.
+ *    · screens(02·03·04·06~10): 화면 축소본 + 오른쪽 주석(Screen guide). 03·04는 축소본 2장에 작은 주석.
+ *      축소본은 9/28부터 PNG 대신 코드로 그린 목업이다(guide/GuideMockups, shots의 mock 키). src를 주면 예전처럼 이미지를 그린다.
+ *  - 주석 셋째 값은 목업 안 영역 키다. 주석을 가리키거나 누르면 그 영역이 강조되고, 목업의 번호 배지를 눌러도 주석이 강조된다.
+ *    demo가 있는 탭(03·04)은 목업이 짧은 시연을 반복한다(guide/GuideDemo, 동작 최소화면 멈춘 마지막 장면).
  *    · tips(05): 번호 + 요령 + 작은 예시, 2열 3행(340:249)
  *    · notes: 사진 없이 주석 2열 + 단계 목록(처음 시작하기·말하기 6단계, 9/28 추가, Figma 프레임 없음)
  *    · team(11): 팀원 5명 + 소스 코드(342:530). 역할 '개1발'(372:121)은 Figma 오타로 보고 '개발'로 쓴다.
@@ -28,24 +31,39 @@ import { TeamMemberDetail, ContactLine } from './TeamMemberDetail'
  */
 
 // 주석(Annot, 345:295) — 점(10×20 에셋) + 소제목 + 설명. small = 03·04 레슨 탭(14px·12px, 간격 9).
-function Annotation({ h, d, small = false }) {
-  return (
-    <div className={`flex items-start ${small ? 'gap-[9px]' : 'gap-[10px]'}`}>
-      <img src="/ui/lp-366-91-guide-dot.svg" alt="" aria-hidden className="h-5 w-[10px] shrink-0" />
-      <div className="flex min-w-0 flex-1 flex-col gap-px">
-        <p className={`font-bold leading-figma text-ink ${small ? 'text-[14px]' : 'text-[14.5px]'}`}>{h}</p>
-        <p className={`break-keep leading-[1.58] text-ink-muted ${small ? 'text-[12px]' : 'text-[12.5px]'}`}>{d}</p>
-      </div>
+// 목업 영역(areaKey)과 이어진 주석은 점 대신 번호를 달고 버튼이 된다. 가리키거나(마우스·키보드 포커스) 누르면 목업의 그 영역이
+// 강조된다. 여백은 음수 마진으로 상쇄해 점 주석과 같은 자리에 놓인다.
+function Annotation({ h, d, small = false, n, areaKey, link }) {
+  const text = (
+    <div className="flex min-w-0 flex-1 flex-col gap-px">
+      <p className={`font-bold leading-figma text-ink ${small ? 'text-[14px]' : 'text-[14.5px]'}`}>{h}</p>
+      <p className={`break-keep leading-[1.58] text-ink-muted ${small ? 'text-[12px]' : 'text-[12.5px]'}`}>{d}</p>
     </div>
+  )
+  const gap = small ? 'gap-[9px]' : 'gap-[10px]'
+  if (!areaKey || !link) {
+    return (
+      <div className={`flex items-start ${gap}`}>
+        <img src="/ui/lp-366-91-guide-dot.svg" alt="" aria-hidden className="h-5 w-[10px] shrink-0" />
+        {text}
+      </div>
+    )
+  }
+  const on = link.active === areaKey
+  return (
+    <button type="button" id={`guide-annot-${areaKey}`} aria-pressed={link.pinned === areaKey}
+      onMouseEnter={() => link.hover(areaKey)} onMouseLeave={() => link.hover(null)}
+      onFocus={() => link.hover(areaKey)} onBlur={() => link.hover(null)} onClick={() => link.pick(areaKey)}
+      className={`-mx-2 -my-1.5 flex items-start rounded-10 px-2 py-1.5 text-left transition-colors duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 ${gap} ${on ? 'bg-primary-50' : ''}`}>
+      <span aria-hidden className={`mt-px flex size-[18px] shrink-0 items-center justify-center rounded-full text-[10.5px] font-bold leading-none transition-colors duration-200 ${
+        on ? 'bg-primary-500 text-white' : 'bg-primary-100 text-primary-600'}`}>{n}</span>
+      {text}
+    </button>
   )
 }
 
-// 화면 축소본 — Figma에서 내보낸 PNG(2배). 너비는 Figma 값, 좁은 화면에서는 칸에 맞춰 줄어든다.
-function Shot({ src, w, h }) {
-  return <img src={src} alt="" width={w} height={h} className="h-auto w-full shrink-0" style={{ maxWidth: w }} />
-}
-
-// 그룹 → 탭. kind: overview | screens | tips | notes | team. annots = [소제목, 설명] (Figma 원문을 9/28 실제 동작에 맞춰 고침).
+// 그룹 → 탭. kind: overview | screens | tips | notes | team. annots = [소제목, 설명, 목업 영역 키] (Figma 원문을 9/28 실제 동작에 맞춰 고침).
+// shots = [{ mock: 목업 키(guide/GuideMockups MOCKS), w, h }], demo = 시연 키(DEMOS).
 // steps = { label, items: [[제목, 설명, 숙달 기준]] }. 숙달 기준 숫자는 backend main.py _STAGE_RULES·speak_curriculum.py SPEAK_STAGES와 같게.
 const GROUPS = [
   {
@@ -73,11 +91,11 @@ const GROUPS = [
       },
       {
         key: 'tour', title: '화면 둘러보기', kind: 'overview',
-        shots: [{ src: '/ui/lp-338-274-guide-overview.png', w: 766, h: 404 }],
+        shots: [{ mock: 'overview', w: 766, h: 404 }],
         annots: [
-          ['내 기록', '불꽃은 연속 학습 일수, 별은 누적 XP, 육각형은 레벨이에요. 연속으로 공부할수록 같은 문제에서 받는 XP가 늘어요(최대 3배). 휴대폰에서는 오른쪽 위 이름 첫 글자를 누르면 프로필로 가요.'],
-          ['오른쪽 패널', '넓은 화면(가로 1280px 이상)에서 오른쪽에 보여요. 오늘의 과제, 오늘 다시 풀 입모양·단어 수, 북마크 수를 보여줘요. 과제 탭에서는 레벨 진행, 복습 탭에서는 이번 주에 학습한 날로 바뀌어요.'],
-          ['로고', '왼쪽 위 LIPLAB 로고를 누르면 서비스 소개 페이지로 가요.'],
+          ['내 기록', '불꽃은 연속 학습 일수, 별은 누적 XP, 육각형은 레벨이에요. 연속으로 공부할수록 같은 문제에서 받는 XP가 늘어요(최대 3배). 휴대폰에서는 오른쪽 위 이름 첫 글자를 누르면 프로필로 가요.', 'stats'],
+          ['오른쪽 패널', '넓은 화면(가로 1280px 이상)에서 오른쪽에 보여요. 오늘의 과제, 오늘 다시 풀 입모양·단어 수, 북마크 수를 보여줘요. 과제 탭에서는 레벨 진행, 복습 탭에서는 이번 주에 학습한 날로 바뀌어요.', 'rail'],
+          ['로고', '왼쪽 위 LIPLAB 로고를 누르면 서비스 소개 페이지로 가요.', 'logo'],
         ],
       },
     ],
@@ -87,23 +105,23 @@ const GROUPS = [
     tabs: [
       {
         key: 'learn', title: '학습 탭', kind: 'screens',
-        shots: [{ src: '/ui/lp-345-147-guide-learn.png', w: 446, h: 560 }],
+        shots: [{ mock: 'learn', w: 446, h: 560 }],
         annots: [
-          ['트랙 전환', '독화 · 발화를 골라요. 트랙마다 경로와 진도가 따로 저장돼요.'],
-          ['가이드', '보고 있는 단계의 설명, 진행률, 숙달 기준과 사용법을 바로 봐요.'],
-          ['단계 노드', 'DOKA 하나가 한 단계예요. 체크가 붙은 DOKA는 숙달한 단계, 링을 두른 큰 DOKA는 지금 단계, 눈을 뜬 연한 DOKA는 건너뛸 수 있는 다음 단계, 잠든 DOKA는 잠긴 단계예요. 열린 DOKA를 누르면 바로 그 단계를 시작해요.'],
-          ['단계 이동', "좌우 화살표로 이전 · 다음 단계를 둘러봐요. 바로 다음 잠긴 단계는 '여기로 건너뛸까요?'를 누르고 한 번 더 확인하면 열려요."],
-          ['레슨 카드', "보고 있는 단계의 진행률이 떠요. 숫자는 숙달 판정에 필요한 최소 시도 수 대비 푼 수예요. 다 채웠는데 정답률이 모자라면 '숙달 중'으로 보여요. 처음이면 학습 시작하기, 이어서라면 이어서 학습하기를 눌러요."],
+          ['트랙 전환', '독화 · 발화를 골라요. 트랙마다 경로와 진도가 따로 저장돼요.', 'switch'],
+          ['가이드', '보고 있는 단계의 설명, 진행률, 숙달 기준과 사용법을 바로 봐요.', 'guideBtn'],
+          ['단계 노드', 'DOKA 하나가 한 단계예요. 체크가 붙은 DOKA는 숙달한 단계, 링을 두른 큰 DOKA는 지금 단계, 눈을 뜬 연한 DOKA는 건너뛸 수 있는 다음 단계, 잠든 DOKA는 잠긴 단계예요. 열린 DOKA를 누르면 바로 그 단계를 시작해요.', 'nodes'],
+          ['단계 이동', "좌우 화살표로 이전 · 다음 단계를 둘러봐요. 바로 다음 잠긴 단계는 '여기로 건너뛸까요?'를 누르고 한 번 더 확인하면 열려요.", 'arrows'],
+          ['레슨 카드', "보고 있는 단계의 진행률이 떠요. 숫자는 숙달 판정에 필요한 최소 시도 수 대비 푼 수예요. 다 채웠는데 정답률이 모자라면 '숙달 중'으로 보여요. 처음이면 학습 시작하기, 이어서라면 이어서 학습하기를 눌러요.", 'sheet'],
         ],
       },
       {
         key: 'reading', title: '독화 레슨', kind: 'screens', small: true,
-        shots: [{ src: '/ui/lp-348-81-guide-read-q.png', w: 238, h: 358 }, { src: '/ui/lp-348-135-guide-read-wrong.png', w: 238, h: 358 }],
+        shots: [{ mock: 'readQuestion', w: 238, h: 358 }, { mock: 'readWrong', w: 238, h: 358 }], demo: 'reading',
         annots: [
-          ['북마크', '다시 보고 싶은 문제를 저장해요.'],
-          ['입모양 영상', '3D 아바타의 입모양이 계속 반복돼요. 알아볼 때까지 보면 돼요.'],
-          ['보기 고르기', '보기를 누르거나 숫자 키 1~4로 고른 뒤 확인을 눌러요. 1단계는 입모양 그룹을, 2단계는 단어를 골라요. 오답 보기는 화면에서 구별되는 것만 나와요. 문맥 추론은 보기가 3개예요.'],
-          ['결과 바', '맞히면 초록, 틀리면 빨강이에요. 틀리면 정답을 알려 주고, 그 입모양·단어는 다음 날 복습에 다시 나와요. 12문항을 마치면 정답률·XP·걸린 시간이 나와요.'],
+          ['북마크', '다시 보고 싶은 문제를 저장해요.', 'bookmark'],
+          ['입모양 영상', '3D 아바타의 입모양이 계속 반복돼요. 알아볼 때까지 보면 돼요.', 'stage'],
+          ['보기 고르기', '보기를 누르거나 숫자 키 1~4로 고른 뒤 확인을 눌러요. 1단계는 입모양 그룹을, 2단계는 단어를 골라요. 오답 보기는 화면에서 구별되는 것만 나와요. 문맥 추론은 보기가 3개예요.', 'options'],
+          ['결과 바', '맞히면 초록, 틀리면 빨강이에요. 틀리면 정답을 알려 주고, 그 입모양·단어는 다음 날 복습에 다시 나와요. 12문항을 마치면 정답률·XP·걸린 시간이 나와요.', 'resultBar'],
         ],
         more: [
           ['결과 아래 설명', '2단계에서 틀리면 어느 소리를 무엇으로 읽었는지, 입모양이 원래 같은 짝인지 알려 줘요. 단어 뜻은 수어 영상으로도 봐요.'],
@@ -115,13 +133,13 @@ const GROUPS = [
       },
       {
         key: 'speaking', title: '발화 레슨', kind: 'screens', small: true,
-        shots: [{ src: '/ui/lp-348-233-guide-speak-before.png', w: 238, h: 358 }, { src: '/ui/lp-348-268-guide-speak-result.png', w: 238, h: 358 }],
+        shots: [{ mock: 'speakBefore', w: 238, h: 358 }, { mock: 'speakResult', w: 238, h: 358 }], demo: 'speaking',
         annots: [
-          ['입모양 따라 하기', '아바타의 입모양을 보고 따라 해요. 발성·운율 단계는 목소리 크기·높낮이 그래프를 보며 연습해요.'],
-          ['마이크', '누르고 말한 뒤 다시 누르면 끝나요.'],
-          ['발음 정확도', '목표 발음에 얼마나 가까웠는지 %로 보여줘요. 발성·운율 단계는 길이·크기나 억양 점수가 나와요.'],
-          ['소리별 결과', '70점 이상은 초록, 45~69점은 주황, 45점 미만은 빨강이에요.'],
-          ['자세히 보기', '이렇게 들렸어요, 음소별 정확도, DOKA의 한마디를 봐요. 웹캠 미러를 켰다면 입모양 점수가 따로 나오고, 모음 단계는 내 혀 위치를 목표와 겹쳐 보여줘요.'],
+          ['입모양 따라 하기', '아바타의 입모양을 보고 따라 해요. 발성·운율 단계는 목소리 크기·높낮이 그래프를 보며 연습해요.', 'stage'],
+          ['마이크', '누르고 말한 뒤 다시 누르면 끝나요.', 'mic'],
+          ['발음 정확도', '목표 발음에 얼마나 가까웠는지 %로 보여줘요. 발성·운율 단계는 길이·크기나 억양 점수가 나와요.', 'score'],
+          ['소리별 결과', '70점 이상은 초록, 45~69점은 주황, 45점 미만은 빨강이에요.', 'chips'],
+          ['자세히 보기', '이렇게 들렸어요, 음소별 정확도, DOKA의 한마디를 봐요. 웹캠 미러를 켰다면 입모양 점수가 따로 나오고, 모음 단계는 내 혀 위치를 목표와 겹쳐 보여줘요.', 'detail'],
         ],
       },
       {
@@ -154,13 +172,13 @@ const GROUPS = [
     tabs: [
       {
         key: 'practice', title: '연습', kind: 'screens',
-        shots: [{ src: '/ui/lp-346-77-guide-practice.png', w: 446, h: 560 }],
+        shots: [{ mock: 'practice', w: 446, h: 560 }],
         annots: [
-          ['자유 발화', '내가 쓴 문장을 입력하면 3D 입모양과 혀 위치 같은 소리 내는 법을 보여줘요.'],
-          ['상황별 시나리오', "'카페에서 음료 주문하기'처럼 상황을 직접 적고 난이도(1~5)를 정해요. 문장 테스트나 AI 대화(1:1 또는 여러 명)로 연습해요. 문장 테스트는 3단계, 1:1 대화는 4단계가 열려야 할 수 있어요."],
-          ['수어 보기', '문장을 입력하면 한국수어 어순으로 옮기고 단어마다 국립국어원 수어 영상을 보여줘요. 사전에 없는 말은 지문자로 보여요. 공식 통역은 아니에요.'],
-          ['엔드리스 학습', '약한 입모양이 든 문제가 더 자주 나오는 단어 레슨과 문맥 추론 레슨이 12문항씩 번갈아 이어져요. 지금 나오는 유형을 숙달도 낮은 순으로 보여 주고, 원할 때 멈추면 돼요.'],
-          ['입모양 교실', '입모양 그룹 10개마다 잘 보이는 정도, 소리 내는 법, 예시 단어를 봐요. 투명 두상을 켜면 혀와 치아가 비쳐 보이고, 성도 단면으로 옆에서 본 혀 위치도 봐요.'],
+          ['자유 발화', '내가 쓴 문장을 입력하면 3D 입모양과 혀 위치 같은 소리 내는 법을 보여줘요.', 'free'],
+          ['상황별 시나리오', "'카페에서 음료 주문하기'처럼 상황을 직접 적고 난이도(1~5)를 정해요. 문장 테스트나 AI 대화(1:1 또는 여러 명)로 연습해요. 문장 테스트는 3단계, 1:1 대화는 4단계가 열려야 할 수 있어요.", 'scenario'],
+          ['수어 보기', '문장을 입력하면 한국수어 어순으로 옮기고 단어마다 국립국어원 수어 영상을 보여줘요. 사전에 없는 말은 지문자로 보여요. 공식 통역은 아니에요.', 'sign'],
+          ['엔드리스 학습', '약한 입모양이 든 문제가 더 자주 나오는 단어 레슨과 문맥 추론 레슨이 12문항씩 번갈아 이어져요. 지금 나오는 유형을 숙달도 낮은 순으로 보여 주고, 원할 때 멈추면 돼요.', 'endless'],
+          ['입모양 교실', '입모양 그룹 10개마다 잘 보이는 정도, 소리 내는 법, 예시 단어를 봐요. 투명 두상을 켜면 혀와 치아가 비쳐 보이고, 성도 단면으로 옆에서 본 혀 위치도 봐요.', 'mouth'],
         ],
         more: [
           ['웹캠으로 내 입모양 확인', '입모양 교실에서 내 입모양을 목표와 비교해 점수와 교정 문구를 바로 보여 주고, 아바타가 내 입을 따라 해요. 영상은 기기 밖으로 나가지 않아요.'],
@@ -171,33 +189,33 @@ const GROUPS = [
       },
       {
         key: 'task', title: '과제', kind: 'screens',
-        shots: [{ src: '/ui/lp-346-291-guide-task.png', w: 470, h: 407 }],
+        shots: [{ mock: 'task', w: 470, h: 407 }],
         annots: [
-          ['오늘의 과제', '오늘의 복습 정리, 독화 학습 1회, 학습 2회 채우기를 매일 새로 세요. 1 / 2처럼 채운 만큼 보여주고, 오늘 남은 시간도 함께 보여요. 복습할 항목이 남아 있으면 첫 줄을 눌러 바로 복습해요.'],
-          ['특별 과제', '이번 주에 학습한 날이 5일이 되면 채워져요.'],
-          ['배지', '조건을 채우면 모여요. 누르면 크게 보고, 전체 학습자 중 몇 %가 가졌는지 알 수 있어요. 회색은 아직 받지 못한 배지예요. 휴대폰에서는 분석 › 전체 통계에서 개수를 봐요.'],
+          ['오늘의 과제', '오늘의 복습 정리, 독화 학습 1회, 학습 2회 채우기를 매일 새로 세요. 1 / 2처럼 채운 만큼 보여주고, 오늘 남은 시간도 함께 보여요. 복습할 항목이 남아 있으면 첫 줄을 눌러 바로 복습해요.', 'today'],
+          ['특별 과제', '이번 주에 학습한 날이 5일이 되면 채워져요.', 'special'],
+          ['배지', '조건을 채우면 모여요. 누르면 크게 보고, 전체 학습자 중 몇 %가 가졌는지 알 수 있어요. 회색은 아직 받지 못한 배지예요. 휴대폰에서는 분석 › 전체 통계에서 개수를 봐요.', 'badges'],
         ],
       },
       {
         key: 'review', title: '복습', kind: 'screens',
-        shots: [{ src: '/ui/lp-346-516-guide-review.png', w: 446, h: 560 }],
+        shots: [{ mock: 'review', w: 446, h: 560 }],
         annots: [
-          ['오답 복습', '입모양·단어 레슨에서 틀린 문제는 다음 날 다시 나와요. 맞힐수록 간격이 1일, 6일처럼 벌어지다 목록에서 빠져요. 문장 연습에서 60점 아래로 끝난 문장도 최근 10개까지 모여요.'],
-          ['북마크 복습', '레슨 중 북마크 버튼으로 저장한 문제예요.'],
-          ['항목', '언제 몇 번 틀렸는지 보여 주고, 누르면 그 종류의 복습을 시작해요.'],
-          ['지우기', '누르면 항목마다 체크박스가 생겨요. 골라서 한 번에 지워요. 전체 선택도 돼요. 틀린 문장은 이 화면에서만 숨겨져요.'],
+          ['오답 복습', '입모양·단어 레슨에서 틀린 문제는 다음 날 다시 나와요. 맞힐수록 간격이 1일, 6일처럼 벌어지다 목록에서 빠져요. 문장 연습에서 60점 아래로 끝난 문장도 최근 10개까지 모여요.', 'ctaWrong'],
+          ['북마크 복습', '레슨 중 북마크 버튼으로 저장한 문제예요.', 'ctaMark'],
+          ['항목', '언제 몇 번 틀렸는지 보여 주고, 누르면 그 종류의 복습을 시작해요.', 'items'],
+          ['지우기', '누르면 항목마다 체크박스가 생겨요. 골라서 한 번에 지워요. 전체 선택도 돼요. 틀린 문장은 이 화면에서만 숨겨져요.', 'erase'],
         ],
       },
       {
         key: 'analysis', title: '분석', kind: 'screens',
-        shots: [{ src: '/ui/lp-347-79-guide-analysis.png', w: 446, h: 560 }],
+        shots: [{ mock: 'analysis', w: 446, h: 560 }],
         annots: [
-          ['맨 위 세 칸', '총 학습 시간 · 평균 정확도 · 연속 학습 일수예요.'],
-          ['학습시간 추이', '최근 7주 동안 주마다 얼마나 공부했는지 막대로 보여줘요.'],
-          ['정확도 추이', '주별 정답률이 어떻게 변했는지 선으로 보여줘요.'],
-          ['활동 캘린더', '공부한 날이 잔디처럼 칠해져요. 진할수록 많이 한 날이에요.'],
-          ['회차 히스토리', '레슨마다 정답률을 보고, 누르면 문제별로 어떻게 들렸는지까지 봐요.'],
-          ['전체 통계', '가입 후 총 학습 회차, 푼 문제, 배지, 트랙별 진도를 모아 봐요.'],
+          ['맨 위 세 칸', '총 학습 시간 · 평균 정확도 · 연속 학습 일수예요.', 'stats'],
+          ['학습시간 추이', '최근 7주 동안 주마다 얼마나 공부했는지 막대로 보여줘요.', 'bars'],
+          ['정확도 추이', '주별 정답률이 어떻게 변했는지 선으로 보여줘요.', 'line'],
+          ['활동 캘린더', '공부한 날이 잔디처럼 칠해져요. 진할수록 많이 한 날이에요.', 'calendar'],
+          ['회차 히스토리', '레슨마다 정답률을 보고, 누르면 문제별로 어떻게 들렸는지까지 봐요.', 'history'],
+          ['전체 통계', '가입 후 총 학습 회차, 푼 문제, 배지, 트랙별 진도를 모아 봐요.', 'fullStats'],
         ],
         more: [
           ['약점 입모양·혼동 지도', '전체 통계 아래 링크로 들어가요. 입모양 유형별 점수와 자주 헷갈린 짝을 보여 주고, 원래 같은 입모양인 짝은 따로 표시해요.'],
@@ -207,12 +225,12 @@ const GROUPS = [
       },
       {
         key: 'profile', title: '프로필', kind: 'screens',
-        shots: [{ src: '/ui/lp-347-294-guide-profile.png', w: 446, h: 560 }],
+        shots: [{ mock: 'profile', w: 446, h: 560 }],
         annots: [
-          ['자가진단 다시 하기', '시작 단계를 새로 추천받아요. 지금까지의 기록은 그대로 남아요.'],
-          ['계정 설정', '이름 · 이메일 · 비밀번호를 바꾸고, 로그아웃과 계정 삭제도 여기서 해요.'],
-          ['학습 초기화', '기록을 모두 지워요. 되돌릴 수 없어서 "초기화"를 직접 입력해야 진행돼요.'],
-          ['접근성 설정', '왼쪽 아래 Aa 버튼에서 글자 크게, 고대비, 모션 줄이기를 켜요. 내 학습 데이터 내려받기도 여기 있어요.'],
+          ['자가진단 다시 하기', '시작 단계를 새로 추천받아요. 지금까지의 기록은 그대로 남아요.', 'placement'],
+          ['계정 설정', '이름 · 이메일 · 비밀번호를 바꾸고, 로그아웃과 계정 삭제도 여기서 해요.', 'account'],
+          ['학습 초기화', '기록을 모두 지워요. 되돌릴 수 없어서 "초기화"를 직접 입력해야 진행돼요.', 'reset'],
+          ['접근성 설정', '왼쪽 아래 Aa 버튼에서 글자 크게, 고대비, 모션 줄이기를 켜요. 내 학습 데이터 내려받기도 여기 있어요.', 'a11y'],
         ],
       },
     ],
@@ -229,12 +247,12 @@ function CloseButton({ onClose }) {
   return <ModalClose onClose={onClose} />
 }
 
-// 주석 2열(overview 아래 주석과 같은 간격 28). 사진 없는 탭과 more가 같이 쓴다.
-function AnnotGrid({ items }) {
+// 주석 2열(overview 아래 주석과 같은 간격 28). 사진 없는 탭과 more가 같이 쓴다. link가 있으면 목업 영역과 잇는다.
+function AnnotGrid({ items, link }) {
   if (!items?.length) return null
   return (
     <div className="grid gap-x-7 gap-y-[13px] sm:grid-cols-2">
-      {items.map(([h, d]) => <Annotation key={h} h={h} d={d} />)}
+      {items.map(([h, d, areaKey], i) => <Annotation key={h} h={h} d={d} n={i + 1} areaKey={areaKey} link={link} />)}
     </div>
   )
 }
@@ -252,10 +270,11 @@ function MoreNotes({ items }) {
 
 // 01 화면 둘러보기(338:273) — 축소본 아래 주석 2열(간격 28)
 function OverviewBody({ tab }) {
+  const link = useAnnotLink()
   return (
     <div className="flex flex-col gap-5">
-      {(tab.shots || []).map((s) => <Shot key={s.src} {...s} />)}
-      <AnnotGrid items={tab.annots} />
+      {tab.shots?.length > 0 && <ShotSet tab={tab} link={link} />}
+      <AnnotGrid items={tab.annots} link={link} />
       <MoreNotes items={tab.more} />
     </div>
   )
@@ -264,18 +283,17 @@ function OverviewBody({ tab }) {
 // 02·03·04·06~10(Screen guide) — 축소본(1~2장) + 오른쪽 주석. 축소본 사이 14, 주석까지 24(2장이면 14, 주석 안쪽 8)
 // 사진이 없으면 주석만 한 열로 그린다(사진을 다시 찍는 동안 칸이 비어도 깨지지 않게).
 function ScreensBody({ tab }) {
+  const link = useAnnotLink()
   const shots = tab.shots || []
   const two = shots.length > 1
   return (
     <div className="flex flex-col">
       <div className={`flex flex-col md:flex-row md:items-start ${two ? 'gap-[14px]' : 'gap-6'}`}>
-        {shots.length > 0 && (
-          <div className={two ? 'grid grid-cols-2 gap-[14px] md:flex md:shrink-0' : 'md:shrink-0'}>
-            {shots.map((s) => <Shot key={s.src} {...s} />)}
-          </div>
-        )}
+        {shots.length > 0 && <ShotSet tab={tab} link={link} two={two} className="md:shrink-0" />}
         <div className={`flex min-w-0 flex-1 flex-col ${tab.small ? 'gap-[11px] md:pl-2' : 'gap-[13px]'}`}>
-          {(tab.annots || []).map(([h, d]) => <Annotation key={h} h={h} d={d} small={tab.small} />)}
+          {(tab.annots || []).map(([h, d, areaKey], i) => (
+            <Annotation key={h} h={h} d={d} small={tab.small} n={i + 1} areaKey={areaKey} link={link} />
+          ))}
         </div>
       </div>
       <MoreNotes items={tab.more} />
@@ -564,7 +582,8 @@ export default function GuideModal({ open, onClose, initialKey, context }) {
 
           <div className="mt-[22px]">
             {context && context.tab === active.key && <StatusCard c={context} />}
-            <Body tab={active} />
+            {/* 탭마다 새로 마운트해 강조·시연 상태를 탭 사이에 넘기지 않는다 */}
+            <Body key={active.key} tab={active} />
           </div>
         </div>
       </div>
