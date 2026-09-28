@@ -1,6 +1,6 @@
 """말하기 모음·자음(2·3단계) 낱말 속 소리 확인이 숙달까지 시도 수를 얼마나 늘리는지(docs/mastery-ewma.md 8절, 커리큘럼 계획 2-5).
 
-    backend/.venv/bin/python scripts/mastery_sim_probe.py --seed 0 [--n 5 --need 4] [--out 결과.json]
+    backend/.venv/bin/python scripts/mastery_sim_probe.py --seed 0 [--n 5 --need 4] [--q-scale 0.82] [--out 결과.json]
 
 학습자와 정답 확률은 scripts/mastery_sim_speak.py와 같다(p(t) = g + (pmax − g)(1 − exp(−t/tau)), 2만 명, t는 음절 문항 시도 수).
 지금 규칙: 최소 8번, 편향 보정 이동 평균(a 0.08) ≥ 85이면 숙달. 새 규칙: 그 조건을 처음 채운 뒤부터 확인 낱말 n개와 음절 문항 L개를
@@ -8,6 +8,8 @@
 need번 이상 합격하면 숙달. 확인 낱말은 이동 평균에 넣지 않는다.
 확인 낱말 합격 확률 q(t) = 0.82 × p(t): 소리를 제대로 낼 확률 p에, 맞게 말한 청각장애 발화가 단어 규칙(65점)을 넘는 비율 0.82
 (docs/speak-transcript-scoring.md 'D-GOP 결과')를 곱한 보수적 값이다. 같은 학습자·같은 음절 답 난수로 두 규칙을 비교한다.
+리뷰 뒤(docs/mastery-ewma.md 8.6) 확인 합격에 첫 음절 목표 소리 확인을 더해, 소리 확인을 맞게 낸 소리의 0.9로 넘는다고 보고
+--q-scale 0.738(= 0.82 × 0.9)로도 돌린다.
 """
 import argparse
 import json
@@ -25,7 +27,7 @@ T_REF = 0.65   # 6절과 같은 기준 합격률(예전 누적 문턱 65): 거�
 Q_SCALE = 0.82
 
 
-def simulate(p_row, correct_row, probe_u, n, need, L):
+def simulate(p_row, correct_row, probe_u, n, need, L, q_scale=Q_SCALE):
     """한 학습자. (지금 규칙 숙달까지 시도 수, 새 규칙 숙달까지 시도 수(확인 포함), 새 규칙 판정 시점의 음절 시도 번호) — 못 하면 None."""
     raw, est = 0.0, 0.0
     old = new = new_t = None
@@ -35,7 +37,7 @@ def simulate(p_row, correct_row, probe_u, n, need, L):
     t = 0
     while t < T_MAX:
         if carry and phase_left > 0:
-            q = Q_SCALE * p_row[max(t - 1, 0)]
+            q = q_scale * p_row[max(t - 1, 0)]
             ok = probe_u[k_probe] < q
             k_probe += 1
             window = (window + [ok])[-n:]
@@ -67,7 +69,7 @@ def simulate(p_row, correct_row, probe_u, n, need, L):
     return old, new, new_t
 
 
-def run(seed, n_probe, need, L=8, n=20000):
+def run(seed, n_probe, need, L=8, n=20000, q_scale=Q_SCALE):
     rng = np.random.default_rng([seed, zlib.crc32(b"speak_probe")])
     g = rng.uniform(0.0, 0.2, n)
     tau = rng.uniform(3, 40, n)
@@ -79,8 +81,8 @@ def run(seed, n_probe, need, L=8, n=20000):
     sp = rng.uniform(T_REF + 0.10, 0.98, n)
     skilled = rng.random((n, T_MAX)) < sp[:, None]
     skilled_p = np.repeat(sp[:, None], T_MAX, axis=1)
-    rows = [simulate(p[i], correct[i], probe_u[i], n_probe, need, L) for i in range(n)]
-    sk = [simulate(skilled_p[i], skilled[i], probe_u[i], n_probe, need, L) for i in range(n)]
+    rows = [simulate(p[i], correct[i], probe_u[i], n_probe, need, L, q_scale) for i in range(n)]
+    sk = [simulate(skilled_p[i], skilled[i], probe_u[i], n_probe, need, L, q_scale) for i in range(n)]
 
     def summary(rs, prow, mask=None):
         idx = [i for i, r in enumerate(rs) if r[0] is not None and (mask is None or mask[i])]
@@ -102,7 +104,7 @@ def run(seed, n_probe, need, L=8, n=20000):
             bad += p[i, tt - 1] < Tp - 0.05
         return round(bad / max(len(judged), 1), 4)
 
-    return {"seed": seed, "n": n, "probe_n": n_probe, "need": need, "L": L, "q_scale": Q_SCALE,
+    return {"seed": seed, "n": n, "probe_n": n_probe, "need": need, "L": L, "q_scale": q_scale,
             "all_mastering": summary(rows, p), "typical": summary(rows, p, typical), "skilled": summary(sk, skilled_p),
             "false_mastery": {"old": false_rate(0), "new": false_rate(1)}}
 
@@ -114,9 +116,10 @@ def main():
     ap.add_argument("--need", type=int, default=4)
     ap.add_argument("--L", type=int, default=8)
     ap.add_argument("--learners", type=int, default=20000)
+    ap.add_argument("--q-scale", type=float, default=Q_SCALE, dest="q_scale")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
-    r = run(a.seed, a.probe_n, a.need, a.L, a.learners)
+    r = run(a.seed, a.probe_n, a.need, a.L, a.learners, a.q_scale)
     print(json.dumps(r, ensure_ascii=False, indent=1))
     if a.out:
         with open(a.out, "w", encoding="utf-8") as f:
