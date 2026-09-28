@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
+import { TRAINING_TALKERS } from '../lib/talkers'
 import AppShell from '../components/AppShell'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 
@@ -247,8 +248,11 @@ export default function MultiConversation() {
             return (
               <div key={s} className={`relative rounded-xl ${answered && speaking ? `ring-2 ${SPK_RING[s]}` : ''}`}>
                 {/* 화자별 아바타는 턴이 바뀌어도 다시 만들지 않는다(WebGL 캔버스 재생성 비용) — frames만 바뀐다 */}
+                {/* 얼굴 모델이 하나뿐이라 화자마다 다른 가상 화자(말 속도·입 벌림·입술 폭, lib/talkers)를 입혀 사람마다 입모양이 다르게
+                    보이게 한다(커리큘럼 계획 2-2). 등록된 얼굴이 있으면 얼굴도 다르다 */}
                 <MouthAvatar frames={speaking ? frames : BACKCHANNEL[s % BACKCHANNEL.length]}
-                  height={null} className="h-[150px] lg:h-[230px]" modelUrl={faces[s]?.url} />
+                  height={null} className="h-[150px] lg:h-[230px]" modelUrl={faces[s]?.url}
+                  talker={TRAINING_TALKERS[s % TRAINING_TALKERS.length]} talkerSeed={s + 1} showTalker={false} />
                 <span className={`absolute left-2 top-2 rounded-md px-2 py-0.5 text-xs font-bold text-white ${SPK_COLOR[s]}`}>
                   {SPK_NAME[s]}
                 </span>
