@@ -12,7 +12,6 @@ export const TEAM = [
     mascot: { palette: 'purple', face: 'grin', motion: 'bob' },
     detail: {
       affiliation: '충남삼성고등학교 IT 디플로마',
-      intro: '사회의 안전과 접근성 문제를 센서와 AI로 푸는 시스템을 만들어요.',
       work: ['프로젝트 총괄·설계', '발음 평가(D-GOP)·음성 모델', '학습 알고리즘(출제·숙달·배치검사)', '배포·운영'],
       awards: [
         { title: '2026 K-AI Contents Award B트랙 대상', by: 'KT genie music 사장상' },

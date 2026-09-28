@@ -38,7 +38,7 @@ function AwardList({ title, items, school }) {
 export function ContactLine({ className = '' }) {
   return (
     <p className={`flex flex-wrap items-center gap-x-[10px] gap-y-1 font-bold leading-figma ${className}`}>
-      <span className="text-[13px] text-ink-faint">문의</span>
+      <span className="text-[13px] text-ink-faint">연락처</span>
       <a href={`mailto:${CONTACT_EMAIL}`} className="text-[14px] text-primary-500 hover:underline">{CONTACT_EMAIL}</a>
     </p>
   )
@@ -52,7 +52,7 @@ export function TeamMemberDetail({ m }) {
   return (
     <div className="flex flex-col gap-5 leading-figma">
       <div className="flex flex-col gap-1.5 rounded-14 bg-primary-50 px-4 py-3">
-        <p className="text-[13px] font-bold text-primary-700">{d.affiliation || TEAM_ORG}</p>
+        <p className="text-[13px] font-bold text-primary-700">소속: {d.affiliation || TEAM_ORG}</p>
         <ContactLine />
       </div>
       {d.intro && <p className="break-keep text-[15px] leading-[1.6] text-ink">{d.intro}</p>}
