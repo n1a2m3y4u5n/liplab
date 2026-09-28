@@ -18,6 +18,10 @@ def test_prosody_soft_band():
     _ok(S._score_prosody("soft", {"loudness": 30})[1] is True, "작게: 12~45 범위면 통과")
     _ok(S._score_prosody("soft", {"loudness": 60})[1] is False, "작게: 너무 크면 실패")
     _ok(S._score_prosody("soft", {"loudness": 5})[1] is False, "작게: 거의 무음도 실패")
+    # 프롬프트에 적는 구간도 채점 기준(12~45)과 같아야 한다(예전 15~45)
+    soft = next(it for st in S.SPEAK_STAGES for it in st["items"] if it.get("drill") == "soft")
+    _ok("12~45" in soft["prompt"], "작게 프롬프트 구간 = 채점 구간")
+    _ok(S._score_prosody("soft", {"loudness": 12})[1] is True and S._score_prosody("soft", {"loudness": 45})[1] is True, "작게: 경계 12·45 통과")
 
 
 def test_prosody_long():

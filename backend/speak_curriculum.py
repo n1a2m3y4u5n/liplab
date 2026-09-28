@@ -65,7 +65,7 @@ SPEAK_STAGES: List[Dict] = [
         "min_attempts": 10, "mastery": 90.0,
         "items": [
             {"target": "아", "drill": "loud", "prompt": "“아”를 크게! (크기 60 이상)"},
-            {"target": "아", "drill": "soft", "prompt": "“아”를 작게, 속삭이듯 (크기 15~45)"},
+            {"target": "아", "drill": "soft", "prompt": "“아”를 작게, 속삭이듯 (크기 12~45)"},
             {"target": "아", "drill": "long", "prompt": "“아—”를 길게 (2초 이상)"},
             {"target": "아", "drill": "rise", "prompt": "“아?”처럼 끝을 올리며 (억양 상승)"},
             {"target": "아", "drill": "fall", "prompt": "“아.”처럼 끝을 내리며 (억양 하강)"},
