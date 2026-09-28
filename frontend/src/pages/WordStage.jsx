@@ -126,10 +126,13 @@ function WordQuiz({ data, reload }) {
   // 낸다. 감속해 본 정답은 숙달에 0.5만 들어가서, 끄지 않으면 자연 속도로 잘 읽어도 숙달에 닿지 못할 수 있다(docs/mastery-ewma.md 7절).
   const estimate = stat.attempts > 0 ? stat.mastery : (data.mastery_score ?? 0)
   const shownFrames = useSlowWeak(frames, estimate < (data.natural_speed_gate ?? 70))
-  // 숙달한 뒤 엔드리스에서는 1.25배 '빠른 말'을 고를 수 있다(1.0배 이상이라 숙달에는 정답 1로 들어간다)
-  const [fast, setFast] = useState(false)
-  const fastOk = endless && (data.mastered || stat.mastered)
-  const playSpeed = fastOk && fast ? FAST_SPEECH_SPEED : 1
+  // 숙달한 뒤 엔드리스에서는 '빠른 말' 속도 단계를 고를 수 있다(1.0배 이상이라 숙달에는 정답 1로 들어간다). 서버가 연 단계
+  // (speed_levels: 1.25 → 1.6 → 2.0배, 한 단계에서 최근 12문항 중 10문항을 맞히면 다음 단계). 엔진 1.0배는 실제 말의 약 절반 빠르기다.
+  const [fast, setFast] = useState(1)
+  const speedLevels = endless && (data.mastered || stat.mastered)
+    ? (data.speed_levels?.length ? data.speed_levels : [FAST_SPEECH_SPEED]) : []
+  const fastOk = speedLevels.length > 0
+  const playSpeed = fastOk && speedLevels.includes(fast) ? fast : 1
   // 레슨마다 가상 화자 한 명(계획 2-2, 엔드리스는 단어·문맥 레슨을 한 줄로 센다). 화자의 말 속도는 숙달에 싣는 재생 속도
   // (effectiveSpeed)에 넣지 않는다. 사람마다 다른 자연 속도라 감속이 아니다(docs/talker-variation.md 3절).
   const [lesson, nextLesson] = useLessonTalker(endless ? 'endless' : 'word')
@@ -326,10 +329,16 @@ function WordQuiz({ data, reload }) {
               talker={lesson.talker} talkerSeed={lesson.seed} />
           </div>
           {fastOk && (
-            <button type="button" onClick={() => setFast((v) => !v)} aria-pressed={fast}
-              className={`self-center rounded px-3 py-1 text-xs transition-colors ${fast ? 'bg-primary-500 font-semibold text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-              빠른 말 {FAST_SPEECH_SPEED}x
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs" role="group" aria-label="빠른 말 속도">
+              <span className="text-ink-faint">빠른 말</span>
+              {[1, ...speedLevels].map((v) => (
+                <button key={v} type="button" onClick={() => setFast(v)} aria-pressed={playSpeed === v}
+                  className={`rounded px-2.5 py-1 transition-colors ${playSpeed === v ? 'bg-primary-500 font-semibold text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  {v === 2 ? '2x·실제' : `${v}x`}
+                </button>
+              ))}
+              {speedLevels.length < 3 && <span className="text-ink-faint">다음 속도: 지금 가장 빠른 속도에서 12문항 중 10개</span>}
+            </div>
           )}
 
           {/* 주관식(계획 1-2): 단어를 적고 Enter 또는 확인. 띄어쓰기·문장부호는 채점에서 보지 않는다 */}

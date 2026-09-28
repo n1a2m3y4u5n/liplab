@@ -1971,9 +1971,22 @@ async def curriculum_words(current_user=Depends(get_current_user), db: AsyncSess
         probes = [{**meta.get(p["word"], {}), **p} for p in probes]
     except Exception as e:   # 탐색 문항이 없어도 레슨은 된다
         logging.getLogger("liplab").warning("stage2 probe failed: %s", e)
+    # 빠른 말 속도 단계(speed_ladder): 숙달하면 1.25배, 한 단계에서 최근 12문항 중 10문항을 맞히면 1.6배, 2.0배(실제 말 빠르기)
+    ladder = 0
+    try:
+        import speed_ladder as _sl
+        from database import TrialAttempt
+        rows = (await db.execute(_select(TrialAttempt.speed, TrialAttempt.correct).where(
+            TrialAttempt.user_id == current_user.id, TrialAttempt.stage == 2, TrialAttempt.speed >= _sl.LEVELS[0] * 0.97,
+            TrialAttempt.item_type.in_(("word", "word_typed"))).order_by(TrialAttempt.id.desc()).limit(200))).all()
+        ladder = _sl.unlocked(mastered, [(r[0], r[1]) for r in rows])
+        ladder_levels = _sl.LEVELS[:ladder]
+    except Exception as e:
+        logging.getLogger("liplab").warning("speed ladder failed: %s", e)
+        ladder_levels = []
     # mastery_score·natural_speed_gate: 화면이 숙달 추정값이 문턱 이상이면 적응 감속을 끈다(자연 속도 확인, docs/mastery-ewma.md 7절).
-    # mastered: 숙달했으면 엔드리스에서 1.25배 '빠른 말'을 연다.
-    return {"words": words, "option_level": plan["option_level"], "target_quantile": plan["target_quantile"],
+    # mastered: 숙달했으면 엔드리스에서 '빠른 말'을 연다(speed_levels = 열린 속도 단계).
+    return {"words": words, "speed_levels": ladder_levels, "option_level": plan["option_level"], "target_quantile": plan["target_quantile"],
             "mastered": mastered, "mastery_score": round(float(sp.mastery_score or 0.0), 1) if sp else 0.0,
             "natural_speed_gate": _NATURAL_SPEED_GATE, "context_items": context_items, "probes": probes}
 
