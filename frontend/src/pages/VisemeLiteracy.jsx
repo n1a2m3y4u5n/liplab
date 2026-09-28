@@ -393,7 +393,7 @@ function QuizPanel({ data }) {
     if (result || submitting || selected == null) return
     setSubmitting(true)
     try {
-      const r = await curriculumAPI.submitRecognition(q.target.viseme_id, selected)
+      const r = await curriculumAPI.submitRecognition(q.target.viseme_id, selected, q.choices.map((c) => c.viseme_id))
       setResult({ ...r, chosenId: selected })
       setStat({ attempts: r.attempts, mastery: r.mastery_score, mastered: r.mastered })
       setXpEarned((x) => x + (r.xp_gained || 0))

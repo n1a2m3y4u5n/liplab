@@ -94,7 +94,7 @@ function ClosureQuiz({ items }) {
     let correct = selected === item.answer
     let confusions = []
     try {
-      const r = await curriculumAPI.submitClosure(item.id, selected)
+      const r = await curriculumAPI.submitClosure(item.id, selected, choices)
       correct = !!r.correct
       confusions = r.confusions || []
       setXpEarned((x) => x + (r.xp_gained || 0))

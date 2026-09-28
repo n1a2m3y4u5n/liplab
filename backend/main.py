@@ -1744,10 +1744,27 @@ async def curriculum_viseme_lessons(current_user=Depends(get_current_user)):
     }
 
 
+# 보기 목록 길이 상한(선다형은 4지, 문맥 문항은 보기 3~5개). 넘거나 모양이 틀리면 채점은 하고 보기만 남기지 않는다
+_OPTIONS_MAX = 8
+
+
 class RecognitionSubmit(BaseModel):
     viseme_id: int   # 제시된(정답) 그룹
     chosen_id: int   # 사용자가 고른 그룹
     speed: Optional[float] = Field(None, ge=0.1, le=4.0)   # 답하기 전에 본 실제 재생 속도(1.0 미만 정답은 숙달에 0.5)
+    options: Optional[list] = None   # 보여 준 보기(입모양 번호, 보인 순서). 없으면 예전 화면
+
+
+def _trial_options(options, target, chosen=None) -> Optional[list]:
+    """시행 기록에 남길 보기 목록(TrialAttempt.options). 문자열로 맞추고, 정답이 없거나 고른 답이 보기 밖이거나 겹치는 보기가 있으면
+    남기지 않는다(None). 보기를 보내지 않는 예전 화면도 그대로 채점된다. 기회로 나눈 혼동률(docs/confusion-pair-serving.md 5.4)이
+    이 목록을 '그 시행에 보인 보기'로 믿으므로, 앞뒤가 맞지 않는 목록은 버린다."""
+    if not options or len(options) > _OPTIONS_MAX or not all(isinstance(o, (str, int)) for o in options):
+        return None
+    out = [str(o).strip()[:50] for o in options]
+    if len(set(out)) != len(out) or str(target) not in out or (chosen is not None and str(chosen) not in out):
+        return None
+    return out
 
 
 @app.post("/api/curriculum/recognition")
@@ -1802,7 +1819,7 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
         from database import TrialAttempt
         db.add(TrialAttempt(user_id=current_user.id, stage=1, item_type="viseme",
                             target=str(data.viseme_id), chosen=str(data.chosen_id), correct=correct, confusions=[],
-                            speed=data.speed))
+                            speed=data.speed, options=_trial_options(data.options, data.viseme_id, data.chosen_id)))
 
         await db.commit()
         await db.refresh(sp)
@@ -1829,6 +1846,7 @@ class WordAnswer(BaseModel):
     speed: Optional[float] = Field(None, ge=0.1, le=4.0)   # 답하기 전에 본 실제 재생 속도(학습자 선택 × 적응 감속)
     # 'typed'면 주관식(단어 입력, 커리큘럼 개선 계획 1-2): chosen이 입력한 글이고 서버가 visual_difficulty.typed_word_verdict로 채점한다
     mode: Optional[str] = Field(None, max_length=10)
+    options: Optional[list] = None   # 보여 준 보기(정답 포함, 보인 순서). 주관식은 없음
 
 
 def _excluded_training_words() -> set:
@@ -1975,7 +1993,8 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
         # 주관식은 유형을 따로 둔다(word_typed). 유형별 학습 곡선이 선다형 단어와 섞이지 않게(eval_metrics)
         db.add(TrialAttempt(user_id=current_user.id, stage=2, item_type="word_typed" if typed else "word",
                             target=data.word, chosen=(data.chosen or "")[:50] if typed else data.chosen,
-                            correct=correct, confusions=confusions, speed=data.speed))
+                            correct=correct, confusions=confusions, speed=data.speed,
+                            options=None if typed else _trial_options(data.options, data.word, data.chosen)))
         if not correct:
             await _srs_schedule_wrong(current_user.id, "word", data.word, db)
         award = _award_xp_and_streak(current_user, 15 if correct else (8 if success > 0 else 3))   # '입모양은 맞음'은 8
@@ -2228,6 +2247,7 @@ async def curriculum_closure(current_user=Depends(get_current_user), db: AsyncSe
 class ClosureAnswer(BaseModel):
     item_id: str       # 문맥 추론 항목 id(정답은 서버가 CLOSURE_ITEMS에서 찾는다)
     chosen: str        # 사용자가 고른 보기
+    options: Optional[list] = None   # 보여 준 보기(보인 순서)
 
 
 @app.post("/api/curriculum/closure-answer")
@@ -2244,7 +2264,8 @@ async def curriculum_closure_answer(data: ClosureAnswer, current_user=Depends(ge
     confusions = [] if correct else viseme_confusions(answer, data.chosen)
     try:
         db.add(TrialAttempt(user_id=current_user.id, stage=3, item_type="closure", item_id=item["id"],
-                            target=answer, chosen=data.chosen, correct=correct, confusions=confusions))
+                            target=answer, chosen=data.chosen, correct=correct, confusions=confusions,
+                            options=_trial_options(data.options, answer, data.chosen)))
         # 3단계(문맥 추론) 숙달: 문장 연습과 같은 트랙에 성공/시도 누적. 문맥 추론 화면은 단계 잠금이 없어,
         # 3단계가 잠긴 동안의 답은 넣지 않는다(예전에는 잠긴 3단계가 미리 숙달돼 2단계를 마치자마자 4단계가 열렸다)
         if await _stage_open(current_user, 3, db):
@@ -2270,6 +2291,7 @@ async def curriculum_closure_answer(data: ClosureAnswer, current_user=Depends(ge
 class ContextAnswer(BaseModel):
     item_id: str = Field(..., max_length=40)   # 문맥 문항 id(정답은 서버가 CLOSURE_ITEMS에서 찾는다)
     chosen: str = Field(..., max_length=50)
+    options: Optional[list] = None   # 보여 준 보기(보인 순서)
 
 
 @app.post("/api/curriculum/context-answer")
@@ -2290,7 +2312,8 @@ async def curriculum_context_answer(data: ContextAnswer, current_user=Depends(ge
         confusions = []
     try:
         db.add(TrialAttempt(user_id=current_user.id, stage=2, item_type="context", item_id=item["id"],
-                            target=answer, chosen=data.chosen, correct=correct, confusions=confusions))
+                            target=answer, chosen=data.chosen, correct=correct, confusions=confusions,
+                            options=_trial_options(data.options, answer, data.chosen)))
         vids, features = await _weak_visemes_for_text(answer)
         await _bump_weak_visemes(current_user.id, vids, vids if not correct else [], features, db)
         award = _award_xp_and_streak(current_user, 15 if correct else 3)
