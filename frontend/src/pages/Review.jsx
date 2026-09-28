@@ -9,6 +9,7 @@ import useChoiceKeys from '../lib/useChoiceKeys'
 import { pickDistractors } from '../lib/wordOptions'
 import { pickVisemeDistractors } from '../lib/visemeOptions'
 import { FAST_SPEECH_SPEED } from '../lib/visemeTiming'
+import useLessonTalker from '../hooks/useLessonTalker'
 
 /**
  * 오늘의 복습(간격 반복 SRS) — 독화 레슨 공통 템플릿(핸드오프 §4-03, WordStage·Closure와 같은 틀).
@@ -77,6 +78,8 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
   const isViseme = item.kind === 'viseme'
   // 숙달한 단계의 항목은 1.25배 '빠른 말'로 볼 수 있다(docs/curriculum-roadmap.md 1-1). 복습 답은 숙달에 넣지 않는다.
   const [fast, setFast] = useState(false)
+  // 복습 한 번에 가상 화자 한 명(커리큘럼 계획 2-2). 복습도 한 얼굴만 보지 않게
+  const [talkerLesson] = useLessonTalker('review')
   const fastOk = masteredStages?.has(isViseme ? 1 : 2)
   const { targetKey, choices } = useMemo(() => {
     if (isViseme) {
@@ -158,6 +161,7 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
 
           <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
             <MouthAvatar height={null} className="h-full" speed={fastOk && fast ? FAST_SPEECH_SPEED : 1}
+              talker={talkerLesson.talker} talkerSeed={talkerLesson.seed}
               frames={isViseme ? undefined : frames} visemeId={isViseme ? parseInt(item.ref, 10) : undefined} />
           </div>
           {fastOk && (
