@@ -6,7 +6,7 @@
  * 나오고, 검사 전용 2명('화자 5'·'화자 6')은 사후 검사(B형)의 새 화자 조건(계획 2-3)에만 나온다.
  *
  * 값은 문헌 보고를 따른 잠정값이다. 실제 화자 입술 통계로 보정해야 하는데, 그 통계를 AI Hub 영상에서 뽑을지는 사용자 결정을
- * 기다리는 중이라 AI Hub 자료는 쓰지 않았다. 입모양 무리 판별 기준(talkers.test.mjs)을 넘지 않게 일부 값은 줄였다(문서 5절).
+ * 기다리는 중이라 AI Hub 자료는 쓰지 않았다. 입모양 무리 판별 기준은 talkers.test.mjs(문서 7절)가 확인한다.
  */
 import { VISEME_BLENDSHAPES } from './visemeShapes.js'
 
@@ -27,15 +27,15 @@ export const DEFAULT_TALKER = Object.freeze({
 })
 
 // 가상 화자 6명. 숫자는 레슨·검사 기록에 남는 id와 화면 표시만 다르다(성별·나이 같은 속성은 붙이지 않는다).
-// 입 벌림(amp)·동시조음(coart)은 판별 기준(docs/talker-variation.md 4절)을 넘지 않게 처음 값에서 줄였다. 기본 목표가 가장 가까운
-// 연구개(7, jawOpen 0.22)·성문(8, 0.26)과 치경·연구개 전환(12, 0.08)·(13, 0.10)이 한계를 정했다. 괄호 안이 처음 값이다.
+// 입 벌림(amp)·동시조음(coart)은 처음 4절 기준에서 한때 ±4~8%로 줄였다가, 앱이 요구하는 구별에 맞춘 기준(7절: 퀴즈 무리는 자기
+// 목표에, 입 안쪽 무리 6·7·8·10은 입 안쪽 무리 안에, 전환 11~13은 자기나 잇는 무리에)으로 바꾼 뒤 지시 범위의 처음 값으로 되돌렸다.
 export const TALKERS = Object.freeze([
-  { id: 't1', label: '화자 1', heldOut: false, rate: 1.10, amp: 1.06, width: 1.10, protrusion: 0.95, coart: 1.06, jitter: 0.10 },   // amp 1.15, coart 1.15
-  { id: 't2', label: '화자 2', heldOut: false, rate: 0.90, amp: 0.955, width: 0.90, protrusion: 1.10, coart: 0.955, jitter: 0.08 }, // amp 0.85, coart 0.85
-  { id: 't3', label: '화자 3', heldOut: false, rate: 1.20, amp: 0.925, width: 1.05, protrusion: 0.90, coart: 1.213, jitter: 0.15 }, // amp 0.90, coart 1.25
-  { id: 't4', label: '화자 4', heldOut: false, rate: 0.95, amp: 1.06, width: 0.88, protrusion: 1.12, coart: 0.85, jitter: 0.12 },   // amp 1.10, coart 0.75
-  { id: 'h1', label: '화자 5', heldOut: true, rate: 1.05, amp: 1.04, width: 0.95, protrusion: 1.15, coart: 1.06, jitter: 0.12 },    // amp 1.20, coart 1.30
-  { id: 'h2', label: '화자 6', heldOut: true, rate: 0.88, amp: 0.96, width: 1.15, protrusion: 0.85, coart: 0.94, jitter: 0.15 },    // amp 0.80, coart 0.70
+  { id: 't1', label: '화자 1', heldOut: false, rate: 1.10, amp: 1.15, width: 1.10, protrusion: 0.95, coart: 1.15, jitter: 0.10 },
+  { id: 't2', label: '화자 2', heldOut: false, rate: 0.90, amp: 0.85, width: 0.90, protrusion: 1.10, coart: 0.85, jitter: 0.08 },
+  { id: 't3', label: '화자 3', heldOut: false, rate: 1.20, amp: 0.90, width: 1.05, protrusion: 0.90, coart: 1.25, jitter: 0.15 },
+  { id: 't4', label: '화자 4', heldOut: false, rate: 0.95, amp: 1.10, width: 0.88, protrusion: 1.12, coart: 0.75, jitter: 0.12 },
+  { id: 'h1', label: '화자 5', heldOut: true, rate: 1.05, amp: 1.20, width: 0.95, protrusion: 1.15, coart: 1.30, jitter: 0.12 },
+  { id: 'h2', label: '화자 6', heldOut: true, rate: 0.88, amp: 0.80, width: 1.15, protrusion: 0.85, coart: 0.70, jitter: 0.15 },
 ].map((t) => Object.freeze(t)))
 
 export const TRAINING_TALKERS = TALKERS.filter((t) => !t.heldOut)

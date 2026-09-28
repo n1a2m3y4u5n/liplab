@@ -7,38 +7,57 @@ import {
   scaleShape, talkerShapes, applyTalkerTiming, applyTalkerCycle, lessonTalker, talkerById, atNaturalRate, unitNoise,
 } from './talkers.js'
 
-// 판별 기준(docs/talker-variation.md 4절): 변이된 목표가 다른 입모양의 기본 목표보다 자기 기본 목표에 더 가까워야 한다.
-// 벡터는 아바타가 얼굴에 쓰는 모프 가중치(jawOpen = 턱 뼈 각도). 14·15는 기본 목표가 같은 빈 자세라 '쉼' 하나로 본다.
+// 판별 기준(docs/talker-variation.md 7절, 5절 결과를 본 뒤 바꾼 기준). 벡터는 아바타가 얼굴에 쓰는 모프 가중치(jawOpen = 턱 뼈 각도),
+// 거리는 유클리드. 14·15는 기본 목표가 같은 빈 자세라 '쉼' 하나로 본다.
+//  (a) 퀴즈 무리 1·2·3·4·5·9: 다른 모든 기본 목표보다 자기 기본 목표에 가깝다.
+//  (b) 입 안쪽 무리 6·7·8·10: 가장 가까운 입 안쪽 무리 기본 목표가 가장 가까운 퀴즈 무리 기본 목표보다 가깝다(서로는 가를 수 없는 무리).
+//  (c) 전환 11·12·13(engine: 받침 1·6·7에서 다음 초성 조음 위치로 가는 사이 모양, 11→1·12→6·13→7): 가장 가까운 기본 목표가 자기거나
+//      잇는 무리 1·6·7. 12·13은 도착 무리 6·7이 (b)에서 서로 가를 수 없는 무리라 서로 가까운 것도 허용한다.
 const CLASSES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+const QUIZ = [1, 2, 3, 4, 5, 9]
+const LOW = [6, 7, 8, 10]
+const ALLOWED = { 11: [11, 1, 6, 7], 12: [12, 13, 1, 6, 7], 13: [13, 12, 1, 6, 7] }
 const vec = (shape) => ACTIVE_MORPH_KEYS.map((k) => shape[k] || 0)
 const dist = (a, b) => Math.hypot(...a.map((x, i) => x - b[i]))
 const DEFAULTS = Object.fromEntries(CLASSES.map((v) => [v, vec(VISEME_BLENDSHAPES[v])]))
 
+function nearest(t, set) {
+  let d = Infinity
+  let who = null
+  for (const u of set) { const x = dist(t, DEFAULTS[u]); if (x < d) { d = x; who = u } }
+  return [d, who]
+}
+
+// 입모양 v마다 {rule, margin, rival}: margin = 허용 밖 기본 목표까지의 최소 거리 − 허용 안 기본 목표까지의 최소 거리
 function margins(talker) {
-  return CLASSES.map((v) => {
+  return CLASSES.filter((v) => v !== 14).map((v) => {
     const t = vec(scaleShape(VISEME_BLENDSHAPES[v], talker, v))
-    const own = dist(t, DEFAULTS[v])
-    let nearest = Infinity
-    let rival = null
-    for (const u of CLASSES) {
-      if (u === v) continue
-      const d = dist(t, DEFAULTS[u])
-      if (d < nearest) { nearest = d; rival = u }
-    }
-    return { v, rival, margin: nearest - own }
+    const ok = QUIZ.includes(v) ? [v] : LOW.includes(v) ? LOW : ALLOWED[v]
+    const bad = LOW.includes(v) ? QUIZ : CLASSES.filter((u) => !ok.includes(u))
+    const [dIn] = nearest(t, ok)
+    const [dOut, rival] = nearest(t, bad)
+    return { v, rule: QUIZ.includes(v) ? 'a' : LOW.includes(v) ? 'b' : 'c', margin: dOut - dIn, rival }
   })
 }
 
-test('판별 기준: 가상 화자 6명 모두, 모든 입모양이 자기 기본 목표에 가장 가깝다', () => {
-  let worst = { margin: Infinity }
+test('판별 기준(7절): 가상 화자 6명 모두 (a)(b)(c)를 만족한다', () => {
+  const worst = {}
   for (const t of TALKERS) {
     for (const m of margins(t)) {
-      assert.ok(m.margin > 0, `${t.label} 입모양 ${m.v}이 ${m.rival}에 더 가깝다(여백 ${m.margin.toFixed(5)})`)
-      if (m.margin < worst.margin) worst = { ...m, talker: t.label }
+      assert.ok(m.margin > 0, `${t.label} 입모양 ${m.v}(${m.rule})이 ${m.rival} 쪽으로 넘어갔다(여백 ${m.margin.toFixed(5)})`)
+      if (!worst[m.rule] || m.margin < worst[m.rule].margin) worst[m.rule] = { ...m, talker: t.label }
     }
   }
-  // 최소 여백 보고(docs/talker-variation.md 5절). jawOpen 0.001 = 턱 0.03°.
-  console.log(`최소 여백 ${worst.margin.toFixed(5)} (${worst.talker}, 입모양 ${worst.v} 대 ${worst.rival})`)
+  // 최소 여백 보고(docs/talker-variation.md 7.3절). jawOpen 0.01 = 턱 0.3°.
+  for (const r of ['a', 'b', 'c']) {
+    const w = worst[r]
+    console.log(`(${r}) 최소 여백 ${w.margin.toFixed(4)} (${w.talker}, 입모양 ${w.v} 대 ${w.rival})`)
+  }
+})
+
+test('판별 기준은 비어 있지 않다: 지시 범위를 크게 넘는 화자는 걸린다', () => {
+  const extreme = { ...DEFAULT_TALKER, id: 'x', amp: 1.6, coart: 1.6, protrusion: 0.3 }
+  assert.ok(margins(extreme).some((m) => m.margin <= 0))
 })
 
 test('매개변수는 지시 범위 안, 훈련 4명·검사 전용 2명, 성별·나이 표시 없음', () => {
