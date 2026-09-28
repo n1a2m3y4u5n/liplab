@@ -3555,7 +3555,7 @@ async def seed_demo(current_user=Depends(get_current_user), db: AsyncSession = D
 
 
 async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
-                               min_attempts: int, mastery_pct: float, db, score=None):
+                               min_attempts: int, mastery_pct: float, db, score=None, voiced: bool = True):
     """발화 단계 진행률 rolling 갱신(읽기 _bump_stage_progress의 발화판). sp 반환.
     숙달 점수는 편향 보정 이동 평균(_ewma_mastery), 문턱은 speak_curriculum의 단계별 mastery(85·90). 예전 누적 합격률(65·70)은
     초반 실패가 끝까지 남아 늦었다(가상 학습자 지연 40~51번 → 28~44번, 거짓 숙달도 모든 단계에서 낮음, docs/mastery-ewma.md 6절)."""
@@ -3580,14 +3580,35 @@ async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
         reached = _speakcur.probes_ok(await _speak_probe_passes(user_id, stage, int(probe_cfg["n"]), db), probe_cfg)
     # 4·5단계 개인 향상 경로(9/28, speak_curriculum.gain_mastered): 채점기가 청각장애 발화를 낮게 보는 몫이 있어 절대 문턱에
     # 못 닿는 학습자도 자기 처음 점수보다 뚜렷이 늘면 숙달로 본다. 지금 시도는 아직 SpeakAttempt에 없으므로 score를 덧붙인다.
-    gain = (_speakcur.get_stage(stage) or {}).get("gain")
-    if not reached and gain and score is not None and sp.attempts >= int(gain["min_attempts"]):
-        from database import SpeakAttempt
-        rows = await db.execute(select(SpeakAttempt.score).where(
-            SpeakAttempt.user_id == user_id, SpeakAttempt.stage == stage).order_by(SpeakAttempt.id))
-        reached = _speakcur.gain_mastered([x for (x,) in rows.all()] + [score], gain)
+    # 복습 세션 시도와 소리 없는 시도는 빼고(리뷰 뒤 고침, 기준선이 0으로 내려가 늘 30점이어도 숙달했다), 소리 없는 이번 시도로는
+    # 판정하지 않는다. 최근 10번 중앙값이 합격선 − 15 이상이어야 한다(speak_curriculum._GAIN floor).
+    stg = _speakcur.get_stage(stage) or {}
+    gain = stg.get("gain")
+    if not reached and gain and score is not None and voiced and sp.attempts >= int(gain["min_attempts"]):
+        scores = await _speak_gain_scores(user_id, stage, gain, db)
+        reached = scores is not None and _speakcur.gain_mastered(scores + [score], gain, stg.get("pass"))
     sp.status = "mastered" if reached else "in_progress"
     return sp
+
+
+async def _speak_gain_scores(user_id: int, stage: int, gain: dict, db) -> Optional[list]:
+    """개인 향상 경로에 쓸 이전 점수(시간순): 복습이 아니고 소리가 잡힌 시도(speak_curriculum.voiced_attempt와 같은 기준)의 처음
+    first개와 최근 recent − 1개(이번 시도를 덧붙이면 recent개). 이번 시도까지 min_attempts에 못 미치면 None.
+    예전에는 이 단계 점수를 시도마다 모두 읽었다."""
+    from database import SpeakAttempt
+    from sqlalchemy import select, func, or_
+    cond = (SpeakAttempt.user_id == user_id, SpeakAttempt.stage == stage,
+            SpeakAttempt.review.is_not(True), SpeakAttempt.score.is_not(None),
+            func.coalesce(SpeakAttempt.loudness, 0) > 0,
+            or_(SpeakAttempt.transcript.is_(None), SpeakAttempt.transcript != "", SpeakAttempt.score > 0))
+    first_n, recent_n = int(gain["first"]), int(gain["recent"])
+    n = (await db.execute(select(func.count(SpeakAttempt.id)).where(*cond))).scalar() or 0
+    if n + 1 < max(int(gain["min_attempts"]), first_n + recent_n):
+        return None
+    first = (await db.execute(select(SpeakAttempt.score).where(*cond).order_by(SpeakAttempt.id).limit(first_n))).all()
+    last = (await db.execute(select(SpeakAttempt.score).where(*cond)
+                             .order_by(SpeakAttempt.id.desc()).limit(recent_n - 1))).all()
+    return [x for (x,) in first] + [x for (x,) in reversed(last)]
 
 
 async def _speak_probe_passes(user_id: int, stage: int, n: int, db) -> list:
@@ -3930,7 +3951,8 @@ async def speak_assess(
             sp = await _settle_speak_probe(current_user.id, stage, stg, bool(passed), db)
         else:
             sp = await _bump_speak_progress(current_user.id, stage, bool(passed),
-                                            stg["min_attempts"], stg["mastery"], db, score=score)
+                                            stg["min_attempts"], stg["mastery"], db, score=score,
+                                            voiced=_speakcur.voiced_attempt(loudness, transcript, score))
     else:
         score = round(sim or 0.0, 1)
         sp = None
@@ -3989,7 +4011,7 @@ async def speak_assess(
         mouth_score=None if vis is None else round(float(vis), 1),
         fused_score=None if av_fusion is None else round(float(av_fusion["score"]), 1),
         uncertainty=None if not dgop_result else round(float(dgop_result.get("uncertainty") or 0), 3),
-        phones=_phones or None,
+        phones=_phones or None, review=bool(review),
     )
     db.add(attempt)
     # SRS 복습 큐 유지 — 발음/단어/문장은 틀리면 예정 등록, 맞으면 간격 확장(세 기둥 공통).
