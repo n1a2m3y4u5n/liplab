@@ -48,9 +48,10 @@ except Exception:
 _STAGE4_WORDS = [w for w in dict.fromkeys(_STAGE4_BASE + [w["word"] for w in _WORD_BANK]) if w not in _SKIP]
 
 
-# D-GOP를 쓰는 4·5단계(합격 65)의 숙달 문턱은 9/28 실제 청각장애 발화 측정으로 90·85 → 77로 내렸다. 608 감음신경성 화자가 대본을
-# 읽은 문장의 65점 합격률은 82.2%(화자 절반 1은 73.1%)라 90·85는 대본대로 읽어도 닿기 어려웠다. 문턱 = 기대 합격률 − 5점
-# (docs/curriculum-roadmap.md 2-1, docs/speak-transcript-scoring.md D-GOP 절). 그래도 문턱 아래에 머무는 학습자를 위해 개인 향상 경로를
+# D-GOP를 쓰는 4·5단계(합격 65)의 숙달 문턱은 9/28 실제 청각장애 발화 측정으로 90·85 → 68로 내렸다. 608 감음신경성 화자가 대본을
+# 읽은 문장의 65점 합격률은 전체 82.2%, 확인용 화자 절반 1에서 73.1%라 90·85는 대본대로 읽어도 닿기 어려웠다. 문턱 = 기대 합격률 − 5점
+# (docs/curriculum-roadmap.md 2-1, docs/speak-transcript-scoring.md D-GOP 절). 처음에는 608 전체로 77(82.2 − 5)을 정했으나 계획은 탐색 절반 0,
+# 확인 절반 1이라 리뷰 뒤 확인 절반 값 68(73.1 − 5)로 고쳤다. 그래도 문턱 아래에 머무는 학습자를 위해 개인 향상 경로를
 # 둔다: 이 단계 시도가 20번 이상이고 최근 10번 점수 중앙값이 처음 10번 중앙값보다 15점 이상 높으면 숙달(gain_mastered).
 # 리뷰 뒤 고침(9/28): 복습 세션 시도와 소리 없는 시도(점수 0)가 처음 창에 섞여 기준선이 내려가, 점수가 늘 30이어도 숙달할 수 있었다.
 # 두 가지를 빼고(main._bump_speak_progress, voiced_attempt), 최근 10번 중앙값이 합격선 − 15(합격 65면 50) 이상이어야 한다는 절대 하한을 더했다.
@@ -151,14 +152,14 @@ SPEAK_STAGES: List[Dict] = [
         "stage": 4, "title": "음절·단어", "icon": "🔤", "mode": "word",
         "desc": "짧은 단어부터 여러 음절까지",
         "guide": "또박또박, 음절 하나하나 분명하게. 끝소리(받침)까지 살려주세요.",
-        "min_attempts": 8, "mastery": 77.0, "pass": 65.0, "gain": _GAIN,
+        "min_attempts": 8, "mastery": 68.0, "pass": 65.0, "gain": _GAIN,
         "items": [{"target": w} for w in _STAGE4_WORDS],
     },
     {
         "stage": 5, "title": "문장·억양", "icon": "💬", "mode": "sentence",
         "desc": "문장 억양: 평서문은 내림, 의문문은 올림",
         "guide": "문장 끝의 억양까지 살려보세요. 평서문(.)은 끝을 내리고, 예/아니오로 답하는 의문문(?)은 마지막 음절을 올려요.",
-        "min_attempts": 6, "mastery": 77.0, "pass": 65.0, "gain": _GAIN,
+        "min_attempts": 6, "mastery": 68.0, "pass": 65.0, "gain": _GAIN,
         "items": [
             {"target": "밥 먹었어요.", "intonation": "fall"},
             {"target": "밥 먹었어요?", "intonation": "rise"},

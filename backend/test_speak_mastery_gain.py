@@ -1,12 +1,12 @@
-"""말하기 4·5단계 숙달 문턱(77)과 개인 향상 경로(9/28, docs/curriculum-roadmap.md 2-1)."""
+"""말하기 4·5단계 숙달 문턱(68)과 개인 향상 경로(9/28, docs/curriculum-roadmap.md 2-1)."""
 import speak_curriculum as sc
 
 
 def test_stage4_5_threshold_reachable_by_hearing_impaired_readers():
-    # 608 청각장애 화자가 대본을 읽은 문장의 65점 합격률 82.2% − 5점 = 77
+    # 608 청각장애 화자가 대본을 읽은 문장의 65점 합격률(확인용 화자 절반 1) 73.1% − 5점 = 68(계획 2-1, 리뷰 뒤 77에서 고침)
     for n in (4, 5):
         stg = sc.get_stage(n)
-        assert stg["mastery"] == 77.0 and stg["pass"] == 65.0 and stg["gain"]
+        assert stg["mastery"] == 68.0 and stg["pass"] == 65.0 and stg["gain"]
 
 
 def test_gain_mastered_needs_enough_attempts_and_clear_improvement():
@@ -57,7 +57,7 @@ with TestClient(main.app) as c:
         async with database.AsyncSessionLocal() as db:
             for i in range(22):
                 sc = 40.0 if i < 10 else 60.0
-                sp = await main._bump_speak_progress(uid, 4, False, 8, 77.0, db, score=sc)
+                sp = await main._bump_speak_progress(uid, 4, False, 8, 68.0, db, score=sc)
                 db.add(SpeakAttempt(user_id=uid, stage=4, mode="word", target="밥", score=sc, passed=False, loudness=50.0))
                 await db.commit()
                 out.append(sp.status)
@@ -108,7 +108,7 @@ with TestClient(main.app) as c:
                 db.add(SpeakAttempt(user_id=uid, stage=4, mode="word", target="밥", passed=False, **kw))
             await db.commit()
             for sc in seq:
-                sp = await main._bump_speak_progress(uid, 4, False, 8, 77.0, db, score=sc)
+                sp = await main._bump_speak_progress(uid, 4, False, 8, 68.0, db, score=sc)
                 db.add(SpeakAttempt(user_id=uid, stage=4, mode="word", target="밥", score=sc, passed=False, loudness=50.0))
                 await db.commit()
                 out.append(sp.status)
