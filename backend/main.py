@@ -1437,13 +1437,31 @@ _STAGE2_MASTERY = 85.0
 _STAGE12_EWMA_ALPHA = 0.08
 
 
-def _ewma_mastery(prev_estimate, prev_attempts, correct: bool, alpha: float = _STAGE12_EWMA_ALPHA) -> float:
+def _ewma_mastery(prev_estimate, prev_attempts, correct, alpha: float = _STAGE12_EWMA_ALPHA) -> float:
     """편향 보정 지수 이동 평균(0~100) 한 번 갱신. 저장된 추정값과 그 전 시도 수로 원래 평균을 되살린다
-    (스키마 변경 없음). 초반에는 누적 평균에 가깝고 뒤로 갈수록 최근 답에 무게가 실린다."""
+    (스키마 변경 없음). 초반에는 누적 평균에 가깝고 뒤로 갈수록 최근 답에 무게가 실린다.
+    correct는 정오(bool) 또는 성공 정도(0~1 실수, 감속 재생 정답 0.5 등, docs/mastery-ewma.md 7절)."""
     n = max(0, int(prev_attempts or 0))
+    success = min(1.0, max(0.0, float(correct)))
     raw = float(prev_estimate or 0.0) * (1 - (1 - alpha) ** n)
-    raw += alpha * ((100.0 if correct else 0.0) - raw)
+    raw += alpha * (100.0 * success - raw)
     return min(100.0, max(0.0, raw / (1 - (1 - alpha) ** (n + 1))))   # 부동소수점 오차로 100을 넘지 않게
+
+
+# 감속 재생(학습자 선택 속도 × 약한 입모양 적응 감속이 1.0배 미만)에서 얻은 1·2단계 정답은 숙달 추정에 성공 0.5로 넣는다.
+# 2단계 화면은 숙달 추정값이 _NATURAL_SPEED_GATE 이상이면 적응 감속을 끄고 자연 속도로 낸다(자연 속도 확인 구간).
+# 가상 학습자 시뮬레이션에서 거짓 숙달 10.6 → 4.9%, 감속 안 하는 학습자 지연 27번 그대로(시드 1 확인, docs/mastery-ewma.md 7절).
+_SLOW_SPEED_CREDIT = 0.5
+_NATURAL_SPEED_GATE = 70.0
+
+
+def _speed_credit(success: float, speed) -> float:
+    """정답 성공 정도에 재생 속도를 반영한다. 속도를 보내지 않은 예전 화면·1단계는 1.0배로 본다."""
+    try:
+        s = float(speed) if speed is not None else 1.0
+    except (TypeError, ValueError):
+        s = 1.0
+    return success * _SLOW_SPEED_CREDIT if s < 0.999 else success
 # 3·4단계는 점수(0~100)를 내는 활동이라 'PASS 이상이면 성공 1회'로 환산한다. 3단계 숙달 점수는 9/27부터 1·2단계와 같은 편향 보정
 # 지수 이동 평균(a 0.08)이고 문턱은 80이다(시뮬레이션 사전 기준 통과: 거짓 숙달 17.1 → 10.9%, 지연 39 → 25번, 숙련 학습자 5번 그대로,
 # docs/mastery-ewma.md 5절). 4단계는 누적 합격률 그대로다.
@@ -1728,6 +1746,7 @@ async def curriculum_viseme_lessons(current_user=Depends(get_current_user)):
 class RecognitionSubmit(BaseModel):
     viseme_id: int   # 제시된(정답) 그룹
     chosen_id: int   # 사용자가 고른 그룹
+    speed: Optional[float] = Field(None, ge=0.1, le=4.0)   # 답하기 전에 본 실제 재생 속도(1.0 미만 정답은 숙달에 0.5)
 
 
 @app.post("/api/curriculum/recognition")
@@ -1757,7 +1776,8 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
         sp.attempts += 1
         if correct:
             sp.correct += 1
-        sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, correct)   # 최근 답에 무게(docs/mastery-ewma.md)
+        # 최근 답에 무게(docs/mastery-ewma.md), 감속 재생 정답은 0.5(7절)
+        sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, _speed_credit(1.0 if correct else 0.0, data.speed))
         _settle_mastery(sp, sp.attempts >= _STAGE1_MIN_ATTEMPTS and sp.mastery_score >= _STAGE1_MASTERY)
 
         # 취약 입모양 반영 — 기존 분석·적응 로직과 통합
@@ -1780,7 +1800,8 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
         # (그룹 선다라 자모 혼동은 없음 → confusions=[])
         from database import TrialAttempt
         db.add(TrialAttempt(user_id=current_user.id, stage=1, item_type="viseme",
-                            target=str(data.viseme_id), chosen=str(data.chosen_id), correct=correct, confusions=[]))
+                            target=str(data.viseme_id), chosen=str(data.chosen_id), correct=correct, confusions=[],
+                            speed=data.speed))
 
         await db.commit()
         await db.refresh(sp)
@@ -1804,6 +1825,7 @@ class WordAnswer(BaseModel):
     word: str = Field(..., max_length=50)
     correct: bool
     chosen: Optional[str] = Field(None, max_length=50)   # 사용자가 실제로 고른 단어(오답 시 자모 혼동 분석용)
+    speed: Optional[float] = Field(None, ge=0.1, le=4.0)   # 답하기 전에 본 실제 재생 속도(학습자 선택 × 적응 감속)
 
 
 def _excluded_training_words() -> set:
@@ -1864,7 +1886,11 @@ async def curriculum_words(current_user=Depends(get_current_user), db: AsyncSess
     plan = _vd.stage2_plan(table, n_answers=n_answers, mastered=mastered, weak_visemes=weak, rng=_random.Random())
     meta = {w["word"]: w for w in _curriculum.WORD_BANK}
     words = [{**meta.get(e["word"], {}), **e} for e in plan["words"]]
-    return {"words": words, "option_level": plan["option_level"], "target_quantile": plan["target_quantile"]}
+    # mastery_score·natural_speed_gate: 화면이 숙달 추정값이 문턱 이상이면 적응 감속을 끈다(자연 속도 확인, docs/mastery-ewma.md 7절).
+    # mastered: 숙달했으면 엔드리스에서 1.25배 '빠른 말'을 연다.
+    return {"words": words, "option_level": plan["option_level"], "target_quantile": plan["target_quantile"],
+            "mastered": mastered, "mastery_score": round(float(sp.mastery_score or 0.0), 1) if sp else 0.0,
+            "natural_speed_gate": _NATURAL_SPEED_GATE}
 
 
 @app.post("/api/curriculum/word-answer")
@@ -1891,7 +1917,8 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
             sp.attempts += 1
             if correct:
                 sp.correct += 1
-            sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, correct)   # 최근 답에 무게
+            # 최근 답에 무게, 감속 재생 정답은 0.5(docs/mastery-ewma.md 7절)
+            sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, _speed_credit(1.0 if correct else 0.0, data.speed))
             _settle_mastery(sp, sp.attempts >= _STAGE2_MIN_ATTEMPTS and sp.mastery_score >= _STAGE2_MASTERY)
         # 취약 입모양 반영 — 오답이면 단어의 모든 유명 viseme을 오류로 누적(단어 인식 실패 신호).
         # 예전엔 단어 학습이 개인화(WeakViseme)에 전혀 기여하지 못했다.
@@ -1905,7 +1932,8 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
             confusions = viseme_confusions(data.word, data.chosen)
         from database import TrialAttempt
         db.add(TrialAttempt(user_id=current_user.id, stage=2, item_type="word",
-                            target=data.word, chosen=data.chosen, correct=correct, confusions=confusions))
+                            target=data.word, chosen=data.chosen, correct=correct, confusions=confusions,
+                            speed=data.speed))
         if not correct:
             await _srs_schedule_wrong(current_user.id, "word", data.word, db)
         award = _award_xp_and_streak(current_user, 15 if correct else 3)

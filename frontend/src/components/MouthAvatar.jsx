@@ -13,11 +13,12 @@ import { visemeCycleSteps } from '../lib/visemeCycle'
  *  - cueText: 주면 재생 중인 음절의 시각증강 기호(축 J — 기식·긴장·비음)를 입 근처에 겹친다(J-3).
  *    기호 세기는 서버(/api/cues)가 숙달도로 낮춘다(페이딩). 글자는 보이지 않아 정답이 드러나지 않는다.
  *  - cueFocus: true면 학습자의 약한 표적 입모양 음절에만 기호를 남긴다(필요한 순간에만 — /api/cues focus).
+ *  - speed: 재생 배속(기본 1). 숙달한 단계의 엔드리스·복습에서 1.25배 '빠른 말'로 쓴다(docs/curriculum-roadmap.md 1-1).
  * LipSyncPlayer3D는 'Viseme N' 오버레이가 있어 퀴즈에 부적합해 별도 컴포넌트로 둔다.
  * 문항이 바뀌어도 key로 다시 마운트하지 않는다. frames가 바뀌면 재생을 처음부터 다시 하고, 다시 마운트하면 캔버스·WebGL
  * 컨텍스트·셰이더·모델 버퍼를 새로 만든다(9/27 측정: 문항마다 컨텍스트가 새로 생기고 첫 그리기까지 0.1~1.1초).
  */
-export default function MouthAvatar({ frames, visemeId, height = 300, className = '', cueText = null, cueFocus = false, modelUrl }) {
+export default function MouthAvatar({ frames, visemeId, height = 300, className = '', cueText = null, cueFocus = false, modelUrl, speed = 1 }) {
   const [vid, setVid] = useState(15)
   const [syl, setSyl] = useState(null)      // 재생 중 프레임의 음절 번호(text_index)
   // 이번 입모양의 전환 시간·머무는 시간(ms). AvatarVRM이 이 시간 동안 이징으로 옮긴 뒤 목표에서 멈춘다(lib/visemeTiming, 3D 모션 A·B).
@@ -37,15 +38,17 @@ export default function MouthAvatar({ frames, visemeId, height = 300, className 
   useEffect(() => {
     let on = true
     let t
+    const k = Number.isFinite(speed) && speed > 0 ? speed : 1   // 배속: 머무는 시간·전환 시간을 k로 나눈다
 
     if (frames && frames.length) {
       let i = 0
       const step = () => {
         if (!on) return
-        const dur = Math.max(frames[i]?.duration_ms || 180, 120)
+        const dur = Math.max(frames[i]?.duration_ms || 180, 120) / k
+        const tr = frames[i]?.transition_ms
         setVid(frames[i]?.viseme ?? 15)
         setSyl(Number.isInteger(frames[i]?.text_index) ? frames[i].text_index : null)
-        setTiming({ t: frames[i]?.transition_ms, d: dur })
+        setTiming({ t: Number.isFinite(tr) ? tr / k : tr, d: dur })
         i += 1
         if (i >= frames.length) {
           // 한 단어 끝 → 잠깐 중립으로 쉬었다가 반복
@@ -66,8 +69,8 @@ export default function MouthAvatar({ frames, visemeId, height = 300, className 
         if (!on) return
         const s = steps[i % steps.length]
         setVid(s.v)
-        setTiming({ t: s.t, d: s.ms })
-        t = setTimeout(() => cycle(i + 1), s.ms)
+        setTiming({ t: Number.isFinite(s.t) ? s.t / k : s.t, d: s.ms / k })
+        t = setTimeout(() => cycle(i + 1), s.ms / k)
       }
       setVid(15)
       setTiming({ t: 150, d: 250 })
@@ -75,7 +78,7 @@ export default function MouthAvatar({ frames, visemeId, height = 300, className 
     }
 
     return () => { on = false; clearTimeout(t) }
-  }, [frames, visemeId])
+  }, [frames, visemeId, speed])
 
   const active = syl != null ? cues.filter((c) => c.syllable_index === syl && (c.strength ?? 1) > 0.05) : []
   return (

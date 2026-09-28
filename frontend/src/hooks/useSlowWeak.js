@@ -13,13 +13,14 @@ function loadWeak() {
   return cached
 }
 
-/** frames를 약한 입모양만 천천히 보이게 바꿔 돌려준다. 약점을 받기 전이나 실패하면 원래 frames. */
-export default function useSlowWeak(frames) {
+/** frames를 약한 입모양만 천천히 보이게 바꿔 돌려준다. 약점을 받기 전이나 실패하면 원래 frames.
+ *  enabled가 false면 늦추지 않는다(2단계 숙달 추정값이 문턱 이상일 때의 자연 속도 확인, docs/mastery-ewma.md 7절). */
+export default function useSlowWeak(frames, enabled = true) {
   const [weak, setWeak] = useState(null)
   useEffect(() => {
     let alive = true
     loadWeak().then((w) => { if (alive) setWeak(w) })
     return () => { alive = false }
   }, [])
-  return useMemo(() => slowWeakFrames(frames, weak), [frames, weak])
+  return useMemo(() => (enabled ? slowWeakFrames(frames, weak) : frames), [frames, weak, enabled])
 }

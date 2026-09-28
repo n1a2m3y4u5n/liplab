@@ -56,3 +56,17 @@ export function pickSlowVisemes(weakVisemes, k = 3) {
     .map((w) => w.viseme_id)
   return new Set(ids)
 }
+
+// 숙달에 싣는 실제 재생 속도(docs/mastery-ewma.md 7절): 학습자가 고른 속도 × 적응 감속으로 늘어난 만큼(원래 길이 합 / 보인 길이 합).
+// 1.0 미만이면 감속해 본 답이라 서버가 숙달 추정에 성공 0.5로 넣는다. 길이를 모르면 학습자 속도만 쓴다.
+export function effectiveSpeed(original, shown, learnerSpeed = 1) {
+  const sum = (fs) => (Array.isArray(fs) ? fs.reduce((s, f) => s + (Number.isFinite(f?.duration_ms) ? f.duration_ms : 0), 0) : 0)
+  const a = sum(original)
+  const b = sum(shown)
+  const ratio = a > 0 && b > 0 ? a / b : 1
+  const s = Number.isFinite(learnerSpeed) && learnerSpeed > 0 ? learnerSpeed : 1
+  return Math.round(s * ratio * 1000) / 1000
+}
+
+// 숙달한 단계의 엔드리스·복습에서 여는 '빠른 말' 배속(docs/curriculum-roadmap.md 1-1)
+export const FAST_SPEECH_SPEED = 1.25
