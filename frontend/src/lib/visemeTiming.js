@@ -30,3 +30,29 @@ export function transitionProgress(elapsedMs, transitionMs, durationMs, speed = 
   if (t == null) return null
   return easeInOutCubic(elapsedMs / t)
 }
+
+// 약점 기반 적응 템포(CLAUDE.md 트랙 2 백로그, 9/28): 학습자가 자주 틀리는 입모양 프레임만 조금 천천히 보여 준다. 말 속도가 느릴수록
+// 독화가 쉬워지므로, 약한 입모양에서만 머무는 시간과 전환 시간을 늘려 그 모양을 눈에 익힐 여유를 준다. 연습 화면에만 쓰고 배치검사·
+// 사전사후 검사(표준 검사)에는 쓰지 않는다.
+export const WEAK_SLOW_FACTOR = 1.35
+
+/** frames 가운데 입모양이 weak(Set)에 든 프레임의 duration_ms·transition_ms를 factor배로 늘린 새 배열. weak가 비면 그대로. */
+export function slowWeakFrames(frames, weak, factor = WEAK_SLOW_FACTOR) {
+  if (!Array.isArray(frames) || !weak || weak.size === 0) return frames
+  return frames.map((f) => {
+    if (!f || !weak.has(f.viseme)) return f
+    const out = { ...f, slowed: true }
+    if (Number.isFinite(f.duration_ms)) out.duration_ms = Math.round(f.duration_ms * factor)
+    if (Number.isFinite(f.transition_ms)) out.transition_ms = Math.round(f.transition_ms * factor)
+    return out
+  })
+}
+
+/** /api/statistics의 weak_visemes(지식추적 순)에서 늦출 입모양: 숙달도 0.7 미만이고 5번 이상 본 것 상위 3개. */
+export function pickSlowVisemes(weakVisemes, k = 3) {
+  const ids = (weakVisemes || [])
+    .filter((w) => Number.isFinite(w?.viseme_id) && (w.attempts ?? 0) >= 5 && (w.mastery ?? 1) < 0.7)
+    .slice(0, k)
+    .map((w) => w.viseme_id)
+  return new Set(ids)
+}

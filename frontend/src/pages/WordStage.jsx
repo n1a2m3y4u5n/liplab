@@ -14,6 +14,7 @@ import useBookmark from '../lib/useBookmark'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 import { pickDistractors, visualLevel } from '../lib/wordOptions'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
+import useSlowWeak from '../hooks/useSlowWeak'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
@@ -116,6 +117,7 @@ function WordQuiz({ data, reload }) {
   // 문항 북마크 — 서버에 저장돼 복습 탭·저장한 문장에 나온다
   const [saved, toggleSaved] = useBookmark(q?.target, { situation: '단어 독화' })
   const [frames, setFrames] = useState([])
+  const shownFrames = useSlowWeak(frames)   // 약한 입모양은 조금 천천히(연습 화면)
   const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계)
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -235,7 +237,7 @@ function WordQuiz({ data, reload }) {
           <div className={LESSON_AVATAR}>
             {/* 시각증강 기호(축 J-3)는 답을 확인한 뒤에만 — 보기가 최소대립 짝이라 문제 중에 보이면 기호만으로 답이 드러난다.
                 확인 뒤에는 약한 표적 입모양 음절에만 입꼬리 옆에 겹쳐 무엇이 달랐는지 보여 준다(숙달되면 흐려짐). */}
-            <MouthAvatar frames={frames} height={null} className="h-full" cueText={result ? q.target : null} cueFocus />
+            <MouthAvatar frames={shownFrames} height={null} className="h-full" cueText={result ? q.target : null} cueFocus />
           </div>
 
           {/* 4지선다(91:28 / 모바일 235:51) — 선택 → 확인 */}

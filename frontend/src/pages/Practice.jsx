@@ -15,6 +15,7 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
 import useFocusTrap from '../hooks/useFocusTrap'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { sentenceLevel } from '../lib/reviewScenario'
+import useSlowWeak from '../hooks/useSlowWeak'
 
 /**
  * 힌트 시스템: 단계별로 문장 정보를 공개
@@ -194,6 +195,7 @@ export default function Practice() {
     : scenarioId.startsWith('bookmark_') ? '/review/saved' : null
 
   const [visemes, setVisemes] = useState([])
+  const shownVisemes = useSlowWeak(visemes)   // 약한 입모양은 조금 천천히(연습 화면)
   const [isPlaying, setIsPlaying] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -445,7 +447,7 @@ export default function Practice() {
           <p className="text-sm text-ink-muted">Viseme 생성 중...</p>
         </div>
       ) : (
-        <LipSyncPlayer3D visemes={visemes} isPlaying={isPlaying} onComplete={() => setIsPlaying(false)} {...extra} />
+        <LipSyncPlayer3D visemes={shownVisemes} isPlaying={isPlaying} onComplete={() => setIsPlaying(false)} {...extra} />
       )}
     </div>
   )
@@ -488,7 +490,7 @@ export default function Practice() {
               <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
                 {/* 시각증강 기호(축 J-3)는 답을 확인한 뒤에만 — 문제 중에 보이면 보기끼리 다른 자질이 기호로 드러나 답이 된다.
                     그 뒤에는 약한 표적 입모양 음절에만 입꼬리 옆에 겹쳐 '왜 헷갈렸는지'를 보여 준다(숙달되면 흐려짐). */}
-                <MouthAvatar frames={visemes} height={null} className="h-full" cueText={result ? currentSentence : null} cueFocus />
+                <MouthAvatar frames={shownVisemes} height={null} className="h-full" cueText={result ? currentSentence : null} cueFocus />
               </div>
 
               {/* 4지선다(91:28 / 모바일 235:51) — 선택 → 확인 */}
