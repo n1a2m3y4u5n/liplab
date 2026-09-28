@@ -107,3 +107,42 @@ def test_diphthong_frames_glide():
     assert [f["viseme"] for f in asyncio.run(text_to_visemes("뭐"))] == [1, 4, 5]
     assert sum(f["duration_ms"] for f in asyncio.run(text_to_visemes("와"))) == 200
     assert cr.word_visemes("와") == [9]
+
+
+def _spoken(text, **kw):
+    """to_pronounced_syllables 결과를 다시 한글 음절 문자열로(비교용)."""
+    cho = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
+    jung = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ"
+    jong = [""] + list("ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ")
+    return "".join(chr(0xAC00 + (cho.index(t[0] or "ㅇ") * 21 + jung.index(t[1])) * 28 + jong.index(t[2]))
+                   if isinstance(t, list) else t for t in to_pronounced_syllables(text, **kw))
+
+
+def test_n_insertion_dictionary():
+    # ㄴ 첨가(29항)는 사전에 든 합성어·파생어에만. 시각 기호 경로(phonetic + n_insert)는 표준 발음 그대로 나온다
+    full = dict(phonetic=True, h_delete=True, n_insert=True)
+    assert _spoken("꽃잎", **full) == "꼰닙" and _spoken("담요", **full) == "담뇨"
+    assert _spoken("색연필", **full) == "생년필" and _spoken("나뭇잎", **full) == "나문닙"
+    assert _spoken("서울역", **full) == "서울력" and _spoken("유럽여행을", **full) == "유럼녀행을"
+    assert _spoken("집안일", **full) == "지반닐" and _spoken("식용유", **full) == "시굥뉴"
+    assert _spoken("해야 할 일이", **full) == "해야 할 리리"
+    # 입모양 경로(기본값)도 켜진다. 비음화는 같은 입모양이라 하지 않는다(꼳닢의 ㄷ·ㄴ은 모두 치경 6)
+    assert _spoken("꽃잎") == "꼳닢" and _spoken("담요") == "담뇨" and _spoken("빨간 꽃잎이") == "빨간 꼳니피"
+    import content_rules as cr
+    assert cr.word_visemes("꽃잎") == [7, 4, 6, 6, 3, 1] and cr.word_visemes("담요") == [6, 2, 1, 6, 4]
+    # 사전에 없는 말은 그대로 연음(뒷요소·받침 조건으로 걸면 틀리던 말들)
+    for w, want in (("필요", "피료"), ("금요일", "그묘일"), ("만약", "마냑"), ("생일", "생일"), ("3일", "사밀"),
+                    ("월요일", "워료일"), ("목욕", "모굑"), ("상담요청", "상다묘청"), ("할 일정", "할 일정")):
+        assert _spoken(w, **full) == want and _spoken(w) == want, w
+    # 채점 라벨 경로(phonetic 기본값, D-GOP·jamo_vocab)는 모델을 학습한 라벨과 맞추려 예전 그대로
+    assert _spoken("꽃잎", phonetic=True) == "꼬칩" and _spoken("담요", phonetic=True) == "다묘"
+
+
+def test_n_insertion_dictionary_is_well_formed():
+    # 사전의 '|' 뒤 음절은 무음 ㅇ + 이·야·여·요·유, 앞 음절은 받침이 있어야 한다
+    from engine import N_INSERT_WORDS, N_INSERT_PHRASES, decompose_hangul
+    for w in N_INSERT_WORDS + N_INSERT_PHRASES:
+        head, tail = w.split("|")
+        ini, med, _ = decompose_hangul(tail[0])
+        assert ini == "ㅇ" and med in ("ㅣ", "ㅑ", "ㅕ", "ㅛ", "ㅠ"), w
+        assert decompose_hangul(head.strip()[-1])[2], w

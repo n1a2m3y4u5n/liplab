@@ -47,6 +47,61 @@ H_CODA = {'ㅎ': '', 'ㄶ': 'ㄴ', 'ㅀ': 'ㄹ'}
 # ㅎ을 남긴 라벨로 학습해, 켜기 전에 D-GOP를 두 라벨로 비교해야 한다(STATUS.md 9/27 밤). 실험 스크립트가 켠다.
 H_DELETE_PHONETIC = False
 
+# ㄴ 첨가(표준발음법 29항). 합성어·파생어에서 앞말이 받침으로 끝나고 뒷말이 이·야·여·요·유로 시작하면 [ㄴ]이 덧난다(꽃잎[꼰닙],
+# 담요[담뇨]). 앞 받침이 ㄹ이면 [ㄹ]이다(서울역[서울력]). 예전에는 늘 연음해 아바타가 꽃잎을 꼬칲(경구개 ㅊ), 담요를 다묘로
+# 보여 줬다. 형태 경계를 알아야 하는 규칙이라 뒷요소와 받침 조건으로 걸면 필요·금요일·만약·생일처럼 ㄴ이 덧나지 않는 말까지
+# 걸려(9/28 감사), 29항이 적용되는 말만 사전으로 둔다. '|'가 ㄴ이 덧나는 자리다. 어절 앞부분이 일치하면 나머지는 조사·어미로
+# 본다(꽃잎이, 설익어서). 입모양 경로와 시각 기호(cue_overlay)만 켜고, 채점 라벨 경로(D-GOP·jamo_vocab)는 모델을 학습한 라벨과
+# 맞추려 끈 채 둔다(n_insert 인자).
+N_INSERT_WORDS = (
+    "꽃|잎", "풀|잎", "나뭇|잎", "깻|잎", "담|요", "색|연필", "솜|이불", "안|약", "물|약", "서울|역", "지하철|역",
+    "배낭|여행", "유럽|여행", "수학|여행", "신혼|여행", "집안|일", "큰|일", "별|일", "잡|일", "설|익", "식용|유", "휘발|유",
+)
+# 띄어 쓴 두 말을 한 마디로 발음하는 경우(29항 붙임 2: 할 일[할릴]). 뒷말 뒤에는 조사만 받는다(할 일정·일본은 제외).
+N_INSERT_PHRASES = ("할 |일",)
+_N_INSERT_JOSA = set("이은을도만로과와에들인까뿐밖")
+_N_INSERT_VOWELS = ('ㅣ', 'ㅑ', 'ㅕ', 'ㅛ', 'ㅠ')
+
+
+def _is_syllable(ch: str) -> bool:
+    return '가' <= ch <= '힣'
+
+
+def _n_insert_positions(text: str) -> List[int]:
+    """ㄴ이 덧나는 음절의 글자 번호(N_INSERT_WORDS·N_INSERT_PHRASES에 걸린 곳)."""
+    out = []
+    for i, ch in enumerate(text):
+        if not _is_syllable(ch):
+            continue
+        if i == 0 or not _is_syllable(text[i - 1]):   # 어절 첫 글자
+            for w in N_INSERT_WORDS:
+                head, tail = w.split('|')
+                if text.startswith(head + tail, i):
+                    out.append(i + len(head))
+                    break
+        for w in N_INSERT_PHRASES:
+            head, tail = w.split('|')
+            end = i + len(head) + len(tail)
+            if text.startswith(head + tail, i) and (end >= len(text) or not _is_syllable(text[end])
+                                                    or text[end] in _N_INSERT_JOSA):
+                out.append(i + len(head))
+    return out
+
+
+def _apply_n_insert(text: str, tokens) -> None:
+    """무음 초성 ㅇ을 ㄴ(앞 받침이 ㄹ이면 ㄹ)으로 바꾼다. 앞 받침은 남기되 사이시옷 ㅅ은 ㄴ으로(나뭇잎[나문닙]). 제자리 수정."""
+    for j in _n_insert_positions(text):
+        p = j - 1
+        while p >= 0 and tokens[p] == ' ':
+            p -= 1
+        prev, cur = (tokens[p] if p >= 0 else None), tokens[j]
+        if not (isinstance(prev, list) and isinstance(cur, list) and prev[2] and cur[0] == 'ㅇ'
+                and cur[1] in _N_INSERT_VOWELS):
+            continue
+        cur[0] = 'ㄹ' if prev[2] == 'ㄹ' else 'ㄴ'
+        if prev[2] == 'ㅅ':
+            prev[2] = 'ㄴ'
+
 
 # ── 이하 phonetic 모드 전용 상수 (표준발음법) ──────────────────────────────
 # 평파열음화(음절 끝소리 규칙, 8항) — 종성은 7개 대표음으로만 발음된다. 옷→옫, 꽃→꼳, 앞→압.
@@ -110,7 +165,8 @@ def _apply_phonetic_rules(tokens):
     return tokens
 
 
-def to_pronounced_syllables(text: str, phonetic: bool = False, h_delete: Optional[bool] = None):
+def to_pronounced_syllables(text: str, phonetic: bool = False, h_delete: Optional[bool] = None,
+                            n_insert: Optional[bool] = None):
     """
     한국어 텍스트를 '소리 나는 대로'의 음절 리스트로 변환.
     한글 음절은 [초성, 중성, 종성] 리스트로(초성 ''는 무음 ㅇ),
@@ -119,6 +175,7 @@ def to_pronounced_syllables(text: str, phonetic: bool = False, h_delete: Optiona
     phonetic=False (기본, viseme 경로) — 입모양을 바꾸는 규칙만: 연음·격음화·구개음화·
       겹받침 단순화·ㅎ탈락·초성 ㅇ 무음화.
     h_delete: ㄶ·ㅀ + 모음의 ㅎ 탈락. None이면 입모양 경로만(채점 라벨은 H_DELETE_PHONETIC을 따른다).
+    n_insert: ㄴ 첨가(29항, N_INSERT_WORDS 사전). None이면 입모양 경로만 켠다(채점 라벨 경로는 끈다).
     phonetic=True (축 A 학습 라벨용) — 위에 더해 평파열음화·유음화·비음화·경음화까지
       적용해 '실제 소리'와 일치시킨다. _apply_phonetic_rules 참고.
     """
@@ -130,6 +187,8 @@ def to_pronounced_syllables(text: str, phonetic: bool = False, h_delete: Optiona
             tokens.append([ini, med, fin])
         else:
             tokens.append(ch)
+    if (not phonetic) if n_insert is None else n_insert:
+        _apply_n_insert(text, tokens)   # 연음보다 먼저(꽃잎이 꼬칲으로 넘어가지 않게)
 
     # 인접 음절 간 규칙 적용 (격음화 / 연음 / ㅎ탈락)
     for i in range(len(tokens) - 1):
