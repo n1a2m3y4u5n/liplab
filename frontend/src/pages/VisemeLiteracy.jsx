@@ -16,6 +16,7 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { pickVisemeDistractors, balancedTargets } from '../lib/visemeOptions'
 import { visemeCycleSteps } from '../lib/visemeCycle'
+import { LESSON_COL, LESSON_STACK, LESSON_AVATAR_VISEME, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
 
 // MediaPipe 번들이 커서 펼칠 때만 로드(초기 번들 보호)
 const WebcamMouthCheck = lazy(() => import('../components/WebcamMouthCheck'))
@@ -435,7 +436,7 @@ function QuizPanel({ data }) {
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-[676px] flex-col px-[18px] pb-[200px] pt-[18px] lg:pb-[150px] lg:pt-7">
+      <div className={`${LESSON_COL} ${lessonPad(!!result)}`}>
         {/* 진행 헤더(91:13 / 모바일 235:35) — 나가기 X + 트랙 + n / 12 */}
         <div className="flex items-center gap-3 lg:gap-[18px]">
           <button type="button" onClick={() => navigate('/learn/path')} aria-label="나가기" className="shrink-0">
@@ -447,7 +448,7 @@ function QuizPanel({ data }) {
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{qNum} / {QUIZ_LEN}</span>
         </div>
 
-        <div className="mt-6 flex flex-col gap-4 lg:mt-5 lg:gap-5">
+        <div className={LESSON_STACK}>
           {/* 질문 + 북마크(91:19 · 328:40 / 모바일 235:42 · 328:64) */}
           <div className="relative flex flex-col gap-1.5 pr-12 leading-figma lg:gap-2 lg:pr-[52px]">
             <p className="text-[12px] font-bold text-track lg:text-[13px]">입모양 인지</p>
@@ -456,12 +457,12 @@ function QuizPanel({ data }) {
           </div>
 
           {/* 입모양 카드(91:22 560×370 / 모바일 235:45 전체 폭×214) — 아바타만, 무한 반복(다시 보기 없음) */}
-          <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
+          <div className={LESSON_AVATAR_VISEME}>
             <VisemeAvatar visemeId={q.target.viseme_id} variant="quiz" height={null} className="h-full" />
           </div>
 
           {/* 4지선다(91:28 / 모바일 235:51) — 선택 → 확인 */}
-          <div className="flex flex-col gap-2.5 lg:gap-3">
+          <div className={LESSON_OPTIONS}>
             {q.choices.map((c, i) => (
               <button key={c.viseme_id} type="button" disabled={!!result || submitting} onClick={() => setSelected(c.viseme_id)}
                 aria-pressed={!result ? selected === c.viseme_id : undefined} className={OPTION_CLASS[optionState(c)]}>

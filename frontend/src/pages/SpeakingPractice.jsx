@@ -571,7 +571,7 @@ export default function SpeakingPractice() {
   return (
     <div data-track="speak" className="flex min-h-[100dvh] flex-col bg-page">
       {/* 진행 헤더(175:22 / 모바일 236:35) — X + 트랙(분홍) 진행바 + n / 전체 */}
-      <div className="mx-auto w-full max-w-[676px] px-[18px] pt-[18px] lg:pt-7">
+      <div className="mx-auto w-full max-w-[676px] px-[18px] pt-[18px] lg:pt-7 lg:[@media(max-height:860px)]:pt-5">
         <div className="flex items-center gap-3 lg:gap-[18px]">
           <button type="button" onClick={exit} aria-label="나가기" className="shrink-0">
             <img src={IC.close} alt="" className="size-8 lg:size-9" />
@@ -583,7 +583,7 @@ export default function SpeakingPractice() {
         </div>
       </div>
 
-      <main className="mx-auto w-full max-w-[676px] flex-1 px-[18px] pb-8 pt-6 lg:pt-5">
+      <main className="mx-auto w-full max-w-[676px] flex-1 px-[18px] pb-8 pt-6 lg:pt-5 lg:[@media(max-height:860px)]:pb-4 lg:[@media(max-height:860px)]:pt-3.5">
           {exitError ? (
             <div className="flex flex-col items-center gap-2 rounded-22 border-2 border-line bg-white px-6 py-16 text-center">
               <p className="text-lg font-bold text-ink">단계를 불러오지 못했어요</p>
@@ -600,7 +600,7 @@ export default function SpeakingPractice() {
               <button type="button" onClick={() => { teardown(); navigate('/review/speaking') }} className="btn-primary px-6 py-2.5 text-sm">목록으로</button>
             </div>
           ) : (
-          <div className="flex flex-col gap-4 lg:gap-5">
+          <div className="flex flex-col gap-4 lg:gap-5 lg:[@media(max-height:860px)]:gap-3.5">
             {/* 질문 + 북마크(175:28 · 328:49 / 모바일 236:71 · 328:70) — 북마크는 트랙과 무관한 브랜드색 */}
             <div className="relative flex flex-col gap-1.5 pr-12 leading-figma lg:gap-2 lg:pr-[52px]">
               <p className="text-[12px] font-bold text-track lg:text-[13px]">{category}</p>
@@ -619,12 +619,13 @@ export default function SpeakingPractice() {
 
             {!summary ? (
               <>
-                {/* 입모양(175:36 560×300 / 모바일 236:79 전체 폭×200) — 3D 아바타 + 안내 */}
+                {/* 입모양(175:36 560×300 / 모바일 236:79 전체 폭×200): 3D 아바타 + 안내.
+                    세로 860px 이하 데스크톱은 위 여백·간격을 줄여 웹캠 버튼까지 하단 바 위에 보이게 한다. */}
                 <div className="mx-auto w-full max-w-[560px] overflow-hidden rounded-18 border-2 border-line bg-white lg:rounded-22">
-                  <div className="px-4 pt-4 lg:pt-6">
+                  <div className="px-4 pt-4 lg:pt-6 lg:[@media(max-height:860px)]:pt-4">
                     <MouthAvatar frames={frames} height={null} className="h-[134px] lg:h-[209px]" />
                   </div>
-                  <p className="pb-5 pt-2.5 text-center text-[13px] font-bold leading-figma text-ink-faint lg:pb-[34px] lg:pt-3 lg:text-[14px]">
+                  <p className="pb-5 pt-2.5 text-center text-[13px] font-bold leading-figma text-ink-faint lg:pb-[34px] lg:pt-3 lg:text-[14px] lg:[@media(max-height:860px)]:pb-4">
                     {metricMode ? '아래 그래프로 목소리 크기·억양을 확인해요' : '입모양을 따라 해보세요'}
                   </p>
                 </div>

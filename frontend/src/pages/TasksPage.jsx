@@ -196,7 +196,7 @@ export default function TasksPage() {
 
       {/* 배지 (313:130) — 데스크톱만. 모바일 238:160에는 이 카드가 없어 lg 미만에서는 숨긴다(9/24 결정).
           모바일에서는 분석 탭 '전체 통계'의 획득 배지 수로 본다. */}
-      <section className="hidden w-full flex-col gap-[18px] rounded-18 border-2 border-line bg-white p-5 lg:flex lg:p-[22px]">
+      <section className="hidden w-full flex-col gap-[18px] rounded-18 border-2 border-line bg-white p-5 lg:flex lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
         <div className="flex items-center justify-between font-bold leading-figma">
           <p className="text-[17px] text-ink">배지</p>
           <span className="text-[13px] text-ink-muted">{earned} / {badges.length}개 획득</span>

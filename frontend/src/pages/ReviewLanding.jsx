@@ -59,6 +59,7 @@ export default function ReviewLanding({ mode = 'today' }) {
   }
 
   if (mode === 'mistakes') {
+    // 모바일은 카드 안쪽 여백을 줄여 오답 네댓 개가 한 화면에 들어오게 한다
     return (
       <AppShell active="review" title="독화 복습" description="독화 테스트에서 놓친 문장만 모아 다시 확인합니다">
         <div className="w-full space-y-5">
@@ -66,7 +67,7 @@ export default function ReviewLanding({ mode = 'today' }) {
             <LoadingScreen variant="inline" />
           ) : mistakes.length ? (
             <>
-              <div className="card flex flex-wrap items-center justify-between gap-3">
+              <div className="card flex flex-wrap items-center justify-between gap-3 max-sm:p-4">
                 <p className="text-sm text-gray-600">틀린 문장 <b className="text-gray-900">{mistakes.length}개</b>를 모아 다시 연습해보세요.</p>
                 <button type="button" onClick={startMistakes} className="btn-primary py-2.5 text-sm">
                   {mistakes.length}문장 복습 시작
@@ -74,12 +75,12 @@ export default function ReviewLanding({ mode = 'today' }) {
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 {mistakes.map((item, index) => (
-                  <article key={`${item.sentence}-${index}`} className="card">
+                  <article key={`${item.sentence}-${index}`} className="card max-sm:p-4">
                     <div className="flex items-start justify-between gap-3">
                       <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">오답 {String(index + 1).padStart(2, '0')}</span>
                       <span className="text-xs text-gray-400">{item.situation || '문장 독화'}</span>
                     </div>
-                    <p className="mt-4 text-lg font-bold leading-relaxed text-gray-900">{item.sentence}</p>
+                    <p className="mt-2 text-lg font-bold leading-relaxed text-gray-900 sm:mt-4">{item.sentence}</p>
                     {item.user_answer && <p className="mt-2 text-sm text-gray-500">내 답: {item.user_answer}</p>}
                   </article>
                 ))}

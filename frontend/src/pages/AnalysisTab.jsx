@@ -29,7 +29,7 @@ const STAT_DECO = {
 function StatCard({ deco, label, value, delta, color }) {
   return (
     <WatermarkCard deco={STAT_DECO[deco]}
-      className="flex min-w-0 flex-1 flex-col gap-1 rounded-14 border-2 border-line bg-white p-3.5 leading-figma lg:gap-[7px] lg:rounded-18 lg:p-5">
+      className="flex min-w-0 flex-1 flex-col gap-1 rounded-14 border-2 border-line bg-white p-3.5 leading-figma lg:gap-[7px] lg:rounded-18 lg:p-5 lg:[@media(max-height:860px)]:p-4">
       <span className="text-[11.5px] font-bold text-ink-faint lg:text-[13px] lg:text-ink-soft">{label}</span>
       <span className={`text-[19px] font-bold tracking-[-0.38px] lg:text-[27px] lg:tracking-[-0.675px] ${color}`}>{value}</span>
       {delta && <span className="hidden text-[12px] font-bold text-ink-faint lg:block">{delta}</span>}
@@ -52,7 +52,7 @@ function fmtDur(m) {
 /** 차트 카드(197:21 / 240:133) — 머리(제목·'최근 7주') + 플롯. */
 function ChartCard({ title, children }) {
   return (
-    <section className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px]">
+    <section className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
       <div className="flex items-center justify-between font-bold leading-figma">
         <p className="text-[16px] text-ink lg:text-[17px]">{title}</p>
         <span className="text-[12px] text-ink-muted lg:text-[13px]">최근 7주</span>
@@ -69,19 +69,20 @@ function GridLines() {
   ))
 }
 
-/** 학습시간 추이 막대 — 데스크톱 150px 플롯(막대 46 · 위 8/아래 2 라운드 · 값은 막대 아래), 모바일 110px(막대 26 · 값·그리드 없음). */
+/** 학습시간 추이 막대. 데스크톱 150px 플롯(막대 46 · 위 8/아래 2 라운드 · 값은 막대 아래), 모바일 96px(막대 26 · 값·그리드 없음).
+ *  모바일 플롯은 Figma 110px에서 줄였다(390×844에서 상세 링크까지 한 화면에 들어오게). */
 function BarChart({ weeks }) {
   const max = Math.max(1, ...weeks.map((w) => w.minutes))
   const fmt = (m) => `${Math.floor(m / 60)}h ${m % 60}m`
   return (
-    <div className="relative h-[110px] w-full lg:h-[150px]">
+    <div className="relative h-[96px] w-full lg:h-[150px]">
       <GridLines />
       <div className="absolute inset-x-0 bottom-4 top-0 flex items-end lg:bottom-[22px]">
         {weeks.map((w, i) => {
           const last = i === weeks.length - 1
           return (
             <div key={i} className="flex flex-1 justify-center">
-              <div className={`h-[calc(var(--r)*76px)] w-[26px] rounded-b-[2px] rounded-t-[6px] lg:h-[calc(var(--r)*114px)] lg:w-[46px] lg:rounded-t-[8px] ${last ? 'bg-primary-500' : 'bg-primary-300'}`}
+              <div className={`h-[calc(var(--r)*66px)] w-[26px] rounded-b-[2px] rounded-t-[6px] lg:h-[calc(var(--r)*114px)] lg:w-[46px] lg:rounded-t-[8px] ${last ? 'bg-primary-500' : 'bg-primary-300'}`}
                 style={{ '--r': w.minutes / max }} />
             </div>
           )
@@ -104,7 +105,7 @@ function BarChart({ weeks }) {
 /**
  * 정확도 추이 선(104:152 / 240:149) — 에메랄드 선(데스크톱 4 · 모바일 3), 흰 테두리 점(11·마지막 16 / 8·마지막 12).
  * 데스크톱은 점마다 위에 수치(198:21~27, 마지막은 크게 강조), 모바일은 수치·그리드가 없다.
- * 가로: 첫 점 중심 10px(모바일 8) ~ 마지막 점 중심 오른쪽에서 6px(4). 세로: 최저값 123px(89) ~ 최고값 30px(32).
+ * 가로: 첫 점 중심 10px(모바일 8) ~ 마지막 점 중심 오른쪽에서 6px(4). 세로: 최저값 123px(모바일 76) ~ 최고값 30px(28), 모바일 플롯 96px.
  * 선은 preserveAspectRatio="none" SVG(가로만 늘어남)라 점은 찌그러지지 않게 HTML로 따로 찍는다.
  * 채점 기록이 없는 주는 점·수치를 두지 않고 선을 끊는다.
  */
@@ -112,7 +113,7 @@ function LineChart({ weeks }) {
   const vals = weeks.map((w) => (w.accuracy == null ? null : Math.round(w.accuracy * 100)))
   const known = vals.filter((v) => v != null)
   if (!known.length) {
-    return <p className="flex h-[110px] items-center justify-center text-[14px] text-ink-muted lg:h-[150px]">아직 채점된 기록이 없어요</p>
+    return <p className="flex h-[96px] items-center justify-center text-[14px] text-ink-muted lg:h-[150px]">아직 채점된 기록이 없어요</p>
   }
   let lo = Math.min(...known)
   let hi = Math.max(...known)
@@ -128,11 +129,11 @@ function LineChart({ weeks }) {
   const posX = (i) => `calc(var(--x0) + ${i} * (100% - var(--xs)) / ${Math.max(1, n - 1)})`
   const posY = (v, off = 0) => `calc(var(--yb) - ${t(v).toFixed(4)} * (var(--yb) - var(--yt)) - ${off}px)`
   return (
-    <div className="relative h-[110px] w-full [--x0:8px] [--xs:12px] [--yb:89px] [--yt:32px] lg:h-[150px] lg:[--x0:10px] lg:[--xs:16px] lg:[--yb:123px] lg:[--yt:30px]">
+    <div className="relative h-[96px] w-full [--x0:8px] [--xs:12px] [--yb:76px] [--yt:28px] lg:h-[150px] lg:[--x0:10px] lg:[--xs:16px] lg:[--yb:123px] lg:[--yt:30px]">
       <GridLines />
       {/* SVG는 대체 요소라 left/right만으로 늘어나지 않는다 — 폭을 점 중심 사이 거리로 직접 준다 */}
-      <svg aria-hidden viewBox={`0 0 ${Math.max(1, n - 1)} 110`} preserveAspectRatio="none" className="absolute left-2 top-0 h-[110px] w-[calc(100%-12px)] overflow-visible lg:hidden">
-        <path d={path(32, 89)} fill="none" className="stroke-chart-accuracy" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <svg aria-hidden viewBox={`0 0 ${Math.max(1, n - 1)} 96`} preserveAspectRatio="none" className="absolute left-2 top-0 h-[96px] w-[calc(100%-12px)] overflow-visible lg:hidden">
+        <path d={path(28, 76)} fill="none" className="stroke-chart-accuracy" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
       <svg aria-hidden viewBox={`0 0 ${Math.max(1, n - 1)} 150`} preserveAspectRatio="none" className="absolute left-2.5 top-0 hidden h-[150px] w-[calc(100%-16px)] overflow-visible lg:block">
         <path d={path(30, 123)} fill="none" className="stroke-chart-accuracy" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
@@ -167,7 +168,7 @@ function Chevron() {
 function DetailLink({ label, onClick }) {
   return (
     <button type="button" onClick={onClick}
-      className="flex flex-1 items-center justify-between rounded-14 border-2 border-b-5 border-line bg-white py-[15px] pl-[18px] pr-4 text-[14.5px] font-bold leading-figma text-ink transition-all active:translate-y-[1px] active:border-b-2 lg:rounded-16 lg:py-[18px] lg:pl-5 lg:pr-[18px] lg:text-[15px]">
+      className="flex flex-1 items-center justify-between rounded-14 border-2 border-b-5 border-line bg-white py-3 pl-[18px] pr-4 text-[14.5px] font-bold leading-figma text-ink transition-all active:translate-y-[1px] active:border-b-2 lg:rounded-16 lg:py-[18px] lg:[@media(max-height:860px)]:py-[15px] lg:pl-5 lg:pr-[18px] lg:text-[15px]">
       {label}
       <Chevron />
     </button>
