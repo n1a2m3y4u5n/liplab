@@ -151,6 +151,8 @@ class LearningProfile(Base):
     pilot_code = Column(String(32), nullable=True)
     cohort = Column(String(16), nullable=True)
     pilot_joined_at = Column(DateTime, nullable=True)   # 참여 코드를 처음 넣은 때(내보내기의 '참여 뒤' 집계 기준)
+    # 예정된 복습에 답한 누적 횟수('복습왕' 배지). 복습 항목은 졸업하면 지워져 항목 수로는 셀 수 없다
+    reviews_completed = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -391,6 +393,8 @@ async def init_db():
             "ALTER TABLE learning_profiles ADD COLUMN pilot_joined_at TIMESTAMP",
             # 발화 트랙 건너뛰기(Figma 78:8·79:5·80:6)
             "ALTER TABLE learning_profiles ADD COLUMN speak_current_stage INTEGER DEFAULT 0",
+            # 누적 복습 횟수('복습왕' 배지)
+            "ALTER TABLE learning_profiles ADD COLUMN reviews_completed INTEGER DEFAULT 0",
             # 말하기 회차 상세(Figma 212:24)
             "ALTER TABLE speak_attempts ADD COLUMN audio_score FLOAT",
             "ALTER TABLE speak_attempts ADD COLUMN mouth_score FLOAT",

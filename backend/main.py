@@ -828,8 +828,9 @@ async def submit_progress(
         time_bonus = max(0, 50 - time_spent // 2)
         award = _award_xp_and_streak(current_user, base_xp, bonus=time_bonus)
 
-        # 3단계(문장 연습) 숙달 갱신: 점수 PASS 이상이면 성공 1회로 누적(4단계 해금 근거). 잠긴 단계면 넣지 않는다
-        if await _stage_open(current_user, 3, db):
+        # 3단계(문장 연습) 숙달 갱신: 점수 PASS 이상이면 성공 1회로 누적(4단계 해금 근거). 잠긴 단계면 넣지 않는다.
+        # 틀린 문장 복습·북마크 연습은 원문을 본 뒤의 답이라 넣지 않는다. 기록(Progress)은 남겨 맞히면 오답 목록에서 빠지게 한다
+        if not _is_review_scenario(submission.scenario_id) and await _stage_open(current_user, 3, db):
             await _bump_stage_progress(
                 current_user.id, 3, scoring_result["score"] >= _STAGE3_PASS,
                 _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db)
@@ -1337,9 +1338,10 @@ async def get_analysis_overview(tz_offset_min: int = -540, current_user=Depends(
     now = dt.datetime.utcnow()
     today_local = _an.to_local(now, tz).date().isoformat()
     reviews = (await db.execute(select(ReviewItem).where(ReviewItem.user_id == uid))).scalars().all()
-    # 복습을 실제로 한 항목: 연속 성공이 있거나 등록 뒤 다시 틀린 항목. 첫 오답으로 등록될 때 lapses가 1이라
-    # 예전 조건(lapses > 0)이면 복습을 한 번도 안 해도 '복습왕' 배지가 나왔다.
-    reviews_done = sum(1 for r in reviews if (r.repetitions or 0) > 0 or (r.lapses or 0) > 1)
+    # 복습을 실제로 한 횟수는 예정된 복습에 답할 때마다 프로필에 쌓은 누적값이다(_srs_apply). 예전에는 남은 항목의
+    # repetitions·lapses로 셌는데, 레슨에서 같은 항목을 두 번 틀리면(lapses 2) 복습 없이 배지가 나왔고,
+    # 복습을 끝까지 해 항목이 졸업(행 삭제)하면 0이 되어 배지가 꺼졌다.
+    reviews_done = prof.reviews_completed or 0
     reviews_overdue = sum(1 for r in reviews if r.due_date and r.due_date < today_local)
 
     return _an.overview(
@@ -1431,6 +1433,16 @@ def _ewma_mastery(prev_estimate, prev_attempts, correct: bool, alpha: float = _S
 _STAGE3_MIN_ATTEMPTS = 5       # 문장 연습·문맥 추론
 _STAGE3_MASTERY = 80.0
 _STAGE3_PASS = 60.0            # 문장 1건을 '성공'으로 볼 최소 점수
+# 틀린 문장 복습(ReviewLanding)·북마크 연습(Bookmarks) 세션의 scenario_id 접두어. 두 화면은 원문을 목록에 보여 준 뒤 풀게
+# 하므로, 그 답은 3단계 숙달에 넣지 않고(입모양·단어 SRS 복습과 같은 원칙) 추천 난이도 계산에서도 뺀다. 예전에는 넣어서
+# 새 문장 통과율 0.5인 학습자의 20레슨 안 3단계 숙달 확률이 0.227에서 0.676으로 올랐다(모의실험, 복습 답 통과 0.95 가정).
+_REVIEW_SCENARIO_PREFIXES = ("mistake_review_", "bookmark_")
+
+
+def _is_review_scenario(scenario_id) -> bool:
+    return str(scenario_id or "").startswith(_REVIEW_SCENARIO_PREFIXES)
+
+
 _STAGE4_MIN_ATTEMPTS = 4       # 대화 실전
 _STAGE4_MASTERY = 75.0        # 최근 가중 합격률(편향 보정 이동 평균, 9/27 밤 docs/mastery-ewma.md 6절, 예전 누적 60%)
 _STAGE4_PASS = 55.0            # 대화 1턴을 '성공'으로 볼 최소 이해도
@@ -1507,6 +1519,10 @@ async def _srs_apply(user_id: int, kind: str, ref, quality: int, db, create: boo
     if quality >= 3 and item.due_date and item.due_date > _kst_today().isoformat():
         return {"removed": False, "due_date": item.due_date, "interval_days": item.interval_days,
                 "found": True, "early": True}
+    # 예정일이 된 항목에 답했으면 복습 1회로 센다('복습왕' 배지). 복습 화면(/api/review/answer)과 말하기 복습(_sr_touch)이
+    # 모두 여기를 지난다. 같은 날 레슨에서 다시 틀린 항목은 예정일이 내일이라 세지 않는다
+    if item.due_date and item.due_date <= _kst_today().isoformat():
+        await _count_review_done(user_id, db)
     s = srs.schedule(quality, ease_factor=item.ease_factor, interval_days=item.interval_days,
                      repetitions=item.repetitions, lapses=item.lapses)
     if s["graduated"] and quality >= 3:
@@ -1518,6 +1534,17 @@ async def _srs_apply(user_id: int, kind: str, ref, quality: int, db, create: boo
     item.lapses = s["lapses"]
     item.due_date = (_kst_today() + _sr_delta(days=s["interval_days"])).isoformat()
     return {"removed": False, "due_date": item.due_date, "interval_days": item.interval_days, "found": True}
+
+
+async def _count_review_done(user_id: int, db) -> None:
+    """학습자 프로필의 누적 복습 횟수를 1 올린다. commit은 호출부(_srs_apply와 같다)."""
+    from database import LearningProfile
+    from sqlalchemy import select
+    prof = (await db.execute(select(LearningProfile).where(LearningProfile.user_id == user_id))).scalars().first()
+    if prof is None:
+        db.add(LearningProfile(user_id=user_id, reviews_completed=1))
+    else:
+        prof.reviews_completed = (prof.reviews_completed or 0) + 1
 
 
 async def _srs_schedule_wrong(user_id: int, kind: str, ref, db: AsyncSession):
@@ -2067,19 +2094,32 @@ async def curriculum_closure_answer(data: ClosureAnswer, current_user=Depends(ge
             "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
 
 
+def _trial_wrong(T):
+    """오답 시행 조건. correct 열은 NULL을 허용하므로(default False) 예전 파이썬 'not a.correct'처럼 NULL도 오답이다."""
+    from sqlalchemy import or_
+    return or_(T.correct.is_(False), T.correct.is_(None))
+
+
 @app.get("/api/curriculum/confusion-matrix")
 async def curriculum_confusion_matrix(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """시행 기록(TrialAttempt)에서 자모 혼동행렬을 집계 — 개인별 헷갈림 리포트·평가자료용.
     '무엇을 무엇으로 읽었나(target→read)'를 빈도순으로, 입모양이 같아 헷갈린 비율도 함께 낸다."""
     from database import TrialAttempt
-    from sqlalchemy import select
-    r = await db.execute(select(TrialAttempt).where(TrialAttempt.user_id == current_user.id))
-    rows = r.scalars().all()
+    from sqlalchemy import select, func
+    # 전체 수는 count로, confusions는 오답 행에서만 읽는다. 시행을 만드는 세 곳(입모양·단어·문맥)이 모두 정답 행에
+    # confusions=[]를 넣어 결과는 같다. 예전에는 전체 행을 ORM 객체(JSON 열 포함)로 읽었다. 시행 2만 행(오답 5,849)
+    # 감사 DB에서 응답 214~350 → 27~44ms(4회 실행, 각 5회 중앙값, JSON 같음). correct가 NULL인 행은 예전 'not a.correct'처럼 오답으로 센다.
+    # 같은 횟수의 혼동 순서가 바뀌지 않게, 예전 쿼리가 (user_id, created_at) 인덱스로 읽던 시간순을 명시한다
+    n_trials = (await db.execute(select(func.count()).select_from(TrialAttempt)
+                                 .where(TrialAttempt.user_id == current_user.id))).scalar_one()
+    wrong_cfs = (await db.execute(select(TrialAttempt.confusions).where(
+        TrialAttempt.user_id == current_user.id, _trial_wrong(TrialAttempt))
+        .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).scalars().all()
     jamo = {}          # (target, read) -> {count, same}
     same_cnt = tot_cf = 0
-    n_wrong = sum(1 for a in rows if not a.correct)
-    for a in rows:
-        for cf in (a.confusions or []):
+    n_wrong = len(wrong_cfs)
+    for confusions in wrong_cfs:
+        for cf in (confusions or []):
             key = (cf.get("target"), cf.get("read"))
             e = jamo.setdefault(key, {"count": 0, "same_viseme": 0})
             e["count"] += 1
@@ -2089,7 +2129,7 @@ async def curriculum_confusion_matrix(current_user=Depends(get_current_user), db
     jamo_list = sorted(
         [{"target": t, "read": rd, "count": v["count"], "same_viseme": v["same_viseme"]}
          for (t, rd), v in jamo.items()], key=lambda x: -x["count"])[:30]
-    return {"trials": len(rows), "wrong": n_wrong, "confusion_count": tot_cf,
+    return {"trials": n_trials, "wrong": n_wrong, "confusion_count": tot_cf,
             "same_viseme_ratio": round(same_cnt / tot_cf, 3) if tot_cf else 0.0,
             "jamo_confusions": jamo_list}
 
@@ -2115,27 +2155,29 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
     import eval_metrics as _em
 
     # ── 선다형 시행 ──────────────────────────────────────────────
-    tr = (await db.execute(
-        select(TrialAttempt).where(TrialAttempt.user_id == current_user.id)
-        .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).scalars().all()
-    n_tr = len(tr)
-    n_correct = sum(1 for a in tr if a.correct)
-    seq = [(a.item_type, bool(a.correct)) for a in tr]
+    # 쓰는 열(유형·정오)만 읽는다. 예전에는 시행 전체를 ORM 객체(confusions JSON 포함)로 읽었다. 시행 2만·문장 2천 행
+    # 감사 DB에서 응답 268~458 → 60~111ms(각 5회 중앙값, JSON 같음). 혼동 비율은 아래에서 오답 행의 confusions만 읽는다
+    seq = [(it, bool(c)) for it, c in (await db.execute(
+        select(TrialAttempt.item_type, TrialAttempt.correct).where(TrialAttempt.user_id == current_user.id)
+        .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).all()]
+    n_tr = len(seq)
+    n_correct = sum(1 for _, c in seq if c)
 
     learning_curve = _em.type_adjusted_curve(seq)
     baseline_vs_recent = _em.within_type_change(seq)   # 9시행 이상인 유형이 없으면 None
 
     by_item_type = []
     for it, label in (("viseme", "입모양 인지"), ("word", "단어"), ("closure", "문맥 추론")):
-        seg = [a for a in tr if a.item_type == it]
+        seg = [c for t, c in seq if t == it]
         if seg:
             by_item_type.append({"item_type": it, "label": label, "n": len(seg),
-                                 "accuracy": round(sum(1 for a in seg if a.correct) / len(seg) * 100, 1)})
+                                 "accuracy": round(sum(1 for c in seg if c) / len(seg) * 100, 1)})
 
-    # 오답 중 같은 입모양 혼동 비율
+    # 오답 중 같은 입모양 혼동 비율(정답 행의 confusions는 늘 비어 있어 오답 행만 읽는다)
     same_cnt = tot_cf = 0
-    for a in tr:
-        for cf in (a.confusions or []):
+    for confusions in (await db.execute(select(TrialAttempt.confusions).where(
+            TrialAttempt.user_id == current_user.id, _trial_wrong(TrialAttempt)))).scalars().all():
+        for cf in (confusions or []):
             tot_cf += 1
             if cf.get("same_viseme"):
                 same_cnt += 1
@@ -2177,13 +2219,14 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
             "mastered": a["mastered"]})
 
     # ── 문장 채점 추이 ───────────────────────────────────────────
+    # 난이도·점수 두 열만 읽는다(예전에는 문장·답·피드백 JSON까지 든 Progress 객체 전체)
     prog = (await db.execute(
-        select(Progress).where(Progress.user_id == current_user.id)
-        .order_by(Progress.created_at.asc(), Progress.id.asc()))).scalars().all()
+        select(Progress.difficulty_level, Progress.score).where(Progress.user_id == current_user.id)
+        .order_by(Progress.created_at.asc(), Progress.id.asc()))).all()
     # 문장 난이도 차이를 뺀 점수 추이(raw는 보정 전). 경로가 쉬운 문장에서 어려운 문장으로 간다
-    sentence_trend = _em.group_adjusted_curve([(p.difficulty_level or 0, p.score or 0.0) for p in prog],
+    sentence_trend = _em.group_adjusted_curve([(lvl or 0, sc or 0.0) for lvl, sc in prog],
                                               lo=0.0, hi=100.0, ndigits=1)
-    sentence_avg = round(sum(p.score or 0 for p in prog) / len(prog), 1) if prog else None
+    sentence_avg = round(sum(sc or 0 for _, sc in prog) / len(prog), 1) if prog else None
 
     return {
         "overview": {
@@ -2238,12 +2281,15 @@ async def score_answer(data: ScoreRequest, current_user=Depends(get_current_user
 
 @app.get("/api/curriculum/recommended-level")
 async def recommended_level(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """최근 문장 연습 정확도로 다음 난이도를 추천(적응형)."""
+    """최근 문장 연습 정확도로 다음 난이도를 추천(적응형).
+    틀린 문장 복습·북마크 연습 행은 뺀다. 예전에는 넣어서, 4단계 문장을 풀던 학습자가 복습 3문장(예전 기록 난이도 1, 100점)
+    뒤에 기준 난이도가 1이 되어 2단계를 '올렸다'며 추천받았다."""
     from database import Progress
     from sqlalchemy import select
+    not_review = [~Progress.scenario_id.startswith(p, autoescape=True) for p in _REVIEW_SCENARIO_PREFIXES]
     r = await db.execute(
         select(Progress.score, Progress.difficulty_level)
-        .where(Progress.user_id == current_user.id)
+        .where(Progress.user_id == current_user.id, *not_review)
         .order_by(Progress.created_at.desc()).limit(10))
     rows = r.all()
     if not rows:
@@ -2770,7 +2816,9 @@ async def assessment_history(current_user=Depends(get_current_user), db: AsyncSe
     sb, sl = _placement_scores(rows[0], rows[-1])
     baseline.update(sb)
     latest.update(sl)
-    delta = _asmt.improvement_delta(baseline, latest) if len(rows) >= 2 else None
+    # 극복·신규 입모양은 두 검사의 문항 기록을 전부 다시 세어 정한다(저장된 상위 3개끼리 비교하면 순위만 밀린 입모양도 극복으로 나왔다)
+    delta = (_asmt.improvement_delta(baseline, latest, getattr(rows[0], "item_log", None),
+                                     getattr(rows[-1], "item_log", None)) if len(rows) >= 2 else None)
     return {"count": len(rows), "baseline": baseline, "latest": latest, "delta": delta}
 
 
@@ -2835,6 +2883,7 @@ async def assessment_progression(current_user=Depends(get_current_user),
     """통제된 향상도(축 I) — 동형 폼 사전·사후 결과를 비교해 델타·음소별 오류 감소를 반환.
     사전은 먼저 본 동형 폼, 사후는 그 뒤에 본 다른 동형 폼이다. 보통 A→B지만, 파일럿에서 순서를 바꿔(역균형)
     B를 먼저 보면 B→A로 비교한다. 동형 폼 두 개가 없으면 가장 이른/최근 검사 회차로 대체 비교한다."""
+    import assessment as _asmt
     from database import PlacementResult
     from sqlalchemy import select
     rows = (await db.execute(
@@ -2853,11 +2902,9 @@ async def assessment_progression(current_user=Depends(get_current_user),
         b = next((r for r in reversed(ab) if a is not None and r.form != a.form), None)
     if a is None or b is None:
         a, b = rows[0], rows[-1]
-    err_a = {e["phoneme"]: e["count"] for e in (a.error_phonemes or []) if isinstance(e, dict)}
-    err_b = {e["phoneme"]: e["count"] for e in (b.error_phonemes or []) if isinstance(e, dict)}
-    phonemes = sorted(set(err_a) | set(err_b))
-    per_phoneme = [{"phoneme": p, "before": err_a.get(p, 0), "after": err_b.get(p, 0),
-                    "delta": err_b.get(p, 0) - err_a.get(p, 0)} for p in phonemes]
+    # 자모별 오류 변화는 두 검사의 문항 기록을 전부 다시 센 값끼리 비교한다. 예전에는 저장된 상위 6개끼리라, 6위 밖으로 밀린
+    # 자모가 'n→0'으로 나왔다. 문항 기록이 없는 옛 검사가 끼면 비운다(assessment.phoneme_change)
+    per_phoneme = _asmt.phoneme_change(getattr(a, "item_log", None), getattr(b, "item_log", None))
     sa, sb = _placement_scores(a, b)
     return {
         "available": True,
