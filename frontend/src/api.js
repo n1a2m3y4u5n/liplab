@@ -199,6 +199,8 @@ export const curriculumAPI = {
     (await api.post('/curriculum/word-answer', { word, correct, chosen, speed, ...(mode ? { mode } : {}) })).data,
   getClosure: async () => (await api.get('/curriculum/closure')).data,
   submitClosure: async (item_id, chosen) => (await api.post('/curriculum/closure-answer', { item_id, chosen })).data,
+  // 2단계 레슨 속 문맥 문항(계획 1-3). 숙달에는 넣지 않고 시행 기록·취약 입모양에만 남는다
+  submitContext: async (item_id, chosen) => (await api.post('/curriculum/context-answer', { item_id, chosen })).data,
   confusionMatrix: async () => (await api.get('/curriculum/confusion-matrix')).data,
   getRecommendedLevel: async () => (await api.get('/curriculum/recommended-level')).data,
   getNext: async () => (await api.get('/curriculum/next')).data,

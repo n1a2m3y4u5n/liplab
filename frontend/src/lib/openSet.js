@@ -1,4 +1,18 @@
-// 개방형(주관식) 문항 비율(docs/curriculum-roadmap.md 1-2, P3). 폐쇄형(선다형)만으로 훈련하면 개방형 이해로 옮겨 가기 어렵다.
+// 2·3단계 레슨의 문항 구성. 개방형(주관식) 문항 비율(docs/curriculum-roadmap.md 1-2, P3)과 2단계 문맥 문항 자리(1-3, P2).
+// 폐쇄형(선다형)만으로 훈련하면 개방형 이해로 옮겨 가기 어렵고, 분석(단어)만 하다가 종합(문맥)으로 넘어가면 둘이 따로 논다.
+
+// 2단계 레슨의 문맥 문항 수(분석·종합 섞기, 계획 1-3). 12문항 중 2문항을 문장 속 빈칸 고르기로 바꾼다.
+export const STAGE2_CONTEXT_COUNT = 2
+
+/** 한 레슨에서 문맥 문항으로 낼 번호 집합. 첫 문항은 단어로 두고(레슨을 단어로 시작), 나머지에서 n개를 고른다. */
+export function contextSlots(length, n = STAGE2_CONTEXT_COUNT, rand = Math.random) {
+  const free = Array.from({ length: Math.max(0, length - 1) }, (_, i) => i + 1)
+  for (let i = free.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1))
+    ;[free[i], free[j]] = [free[j], free[i]]
+  }
+  return new Set(free.slice(0, Math.max(0, Math.min(n, free.length))))
+}
 
 // 2단계: 숙달한 뒤 레슨(12문항)의 30%를 단어 입력으로 낸다(12문항이면 4문항).
 export const STAGE2_TYPED_SHARE = 0.3

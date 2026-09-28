@@ -1,7 +1,7 @@
 // openSet 검사. 실행: npm test (node --test)
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { typedSlots, sentenceQuestionTypes } from './openSet.js'
+import { typedSlots, sentenceQuestionTypes, contextSlots } from './openSet.js'
 
 const count = (arr, t) => arr.filter((x) => x === t).length
 
@@ -34,4 +34,17 @@ test('sentenceQuestionTypes: 숙달 추정값이 오를수록 선다형이 준�
   assert.equal(count(high, 'test') + count(high, 'essay'), 6)
   assert.equal(count(sentenceQuestionTypes(5, 69.9), 'test-multiple'), 1)
   assert.equal(count(sentenceQuestionTypes(5, 70), 'test-multiple'), 0)
+})
+
+test('contextSlots: 12문항 중 2문항, 첫 문항은 단어', () => {
+  for (let k = 0; k < 50; k += 1) {
+    const s = contextSlots(12)
+    assert.equal(s.size, 2)
+    assert.ok(!s.has(0))
+    for (const i of s) assert.ok(i >= 1 && i < 12)
+  }
+  assert.equal(contextSlots(12, 0).size, 0)          // 문맥 문항을 못 받으면 모두 단어
+  const ctx = contextSlots(12)
+  const typed = typedSlots(12, true, Math.random, ctx)
+  for (const i of typed) assert.ok(!ctx.has(i))      // 주관식과 문맥 자리는 겹치지 않는다
 })
