@@ -98,3 +98,15 @@ def test_week_accuracy_is_not_moved_by_item_type_mix():
     # 겹치는 유형이 없으면 지난주 대비를 내지 않는다(유형이 바뀐 것과 실력 변화를 가를 수 없다)
     ov2 = an.overview(block(2026, 9, 14, "viseme", 10, 9) + block(2026, 9, 22, "closure", 10, 6), now, KST, **_info())
     assert ov2["week_accuracy_delta"] is None
+
+
+def test_read_track_counts_all_graded_read_questions():
+    # 1단계 48문항 + 2단계 36문항만 푼 학습자(문장 연습 0): 분석 상세 '점수'가 /api/statistics(문장 연습만)로 '독화 0점 · 0회'를
+    # 보이던 것. 독화 트랙은 선다형 시행까지 세고, 채점하지 않는 활동(검사 이벤트)은 문항 수에 넣지 않는다
+    now = datetime(2026, 9, 23, 3, 0)
+    ev = [an.Event(datetime(2026, 9, 22, 1, 0) + timedelta(seconds=20 * i), "read", 0.0 if i % 4 == 0 else 1.0,
+                   "viseme" if i < 48 else "word") for i in range(84)]
+    ev += [an.Event(datetime(2026, 9, 22, 2, 0), "test", None), an.Event(datetime(2026, 9, 22, 2, 1), "speak", None, "speak:")]
+    tr = an.overview(ev, now, KST, **_info())["tracks"]
+    assert tr["read"]["questions"] == 84 and abs(tr["read"]["accuracy"] - 0.75) < 1e-9
+    assert tr["speak"]["questions"] == 0 and tr["speak"]["accuracy"] is None
