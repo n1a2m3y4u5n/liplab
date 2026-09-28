@@ -28,7 +28,7 @@ class Event:
     ts: datetime                 # UTC(naive, DB 저장 형식)
     track: str                   # 'read' | 'speak' | 'test'
     graded: Optional[float]      # 0~1 정오답·점수. 채점하지 않는 활동은 None
-    kind: str = ""               # 문항 유형(viseme·word·closure·sentence·speak:<모드>). 주별 정확도 보정에 쓴다
+    kind: str = ""               # 문항 유형(viseme·word·word_typed·context·closure·sentence·speak:<모드>). 주별 정확도 보정에 쓴다
 
 
 def to_local(ts: datetime, tz_offset_min: int) -> datetime:

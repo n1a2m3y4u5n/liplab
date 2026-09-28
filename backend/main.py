@@ -1122,6 +1122,10 @@ async def get_calendar(current_user=Depends(get_current_user), db: AsyncSession 
     return {row.day: row.cnt for row in result.all()}
 
 
+# 시행 기록(TrialAttempt.item_type)의 유형. 회차 히스토리가 유형마다 한 행을 만든다
+_TRIAL_KINDS = ("viseme", "word", "word_typed", "context", "closure")
+
+
 @app.get("/api/calendar/activities")
 async def get_calendar_activities(days_back: int = 140, tz_offset_min: int = -540,
                                   current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
@@ -1164,7 +1168,7 @@ async def get_calendar_activities(days_back: int = 140, tz_offset_min: int = -54
     for ts, item_type, correct in (await db.execute(
             select(TrialAttempt.created_at, TrialAttempt.item_type, TrialAttempt.correct)
             .where(TrialAttempt.user_id == uid, TrialAttempt.created_at >= cutoff))).all():
-        add(ts, item_type or "trial", "", 1.0 if correct else 0.0)
+        add(ts, item_type if item_type in _TRIAL_KINDS else "trial", "", 1.0 if correct else 0.0)
     # 말하기 연습 — 모드별(통과 여부가 있으면 그것, 없으면 점수)
     for ts, mode, passed, score in (await db.execute(
             select(SpeakAttempt.created_at, SpeakAttempt.mode, SpeakAttempt.passed, SpeakAttempt.score)
@@ -1177,17 +1181,19 @@ async def get_calendar_activities(days_back: int = 140, tz_offset_min: int = -54
             .where(PlacementResult.user_id == uid, PlacementResult.created_at >= cutoff))).all():
         add(ts, "assessment", form or "placement", acc)
 
-    KIND_LABEL = {"viseme": "입모양 인지", "word": "단어", "closure": "문맥 추론", "trial": "인지 훈련"}
+    # 2단계 주관식(word_typed)과 단어 레슨 속 문맥 문항(context)도 따로 한 행이다. 예전에는 ORDER에 없어 그날 기록에서 빠졌다
+    KIND_LABEL = {"viseme": "입모양 인지", "word": "단어", "word_typed": "단어 주관식", "context": "단어 레슨 문맥",
+                  "closure": "문맥 추론", "trial": "인지 훈련"}
     SPEAK_LABEL = {"voicing": "발성", "prosody": "억양", "phoneme": "음소", "word": "단어", "sentence": "문장",
                    "probe": "낱말 속 소리"}
     FORM_LABEL = {"placement": "배치검사", "A": "사전검사", "B": "사후검사"}
-    TYPE_LABEL = {"assessment": "검사", "viseme": "독화", "word": "독화", "closure": "독화", "trial": "독화",
-                  "sentence": "문장 연습", "speak": "말하기"}
+    TYPE_LABEL = {"assessment": "검사", "viseme": "독화", "word": "독화", "word_typed": "독화", "context": "독화",
+                  "closure": "독화", "trial": "독화", "sentence": "문장 연습", "speak": "말하기"}
     # 블록 클릭 시 이동할 학습 화면. 말하기 모드는 speak_curriculum의 단계 번호로 연결한다.
     SPEAK_STAGE = {"voicing": 0, "prosody": 1, "phoneme": 2, "word": 4, "sentence": 5}
     KIND_ROUTE = {"assessment": "/learn/placement", "viseme": "/learn/viseme", "word": "/learn/word",
-                  "closure": "/learn/closure", "trial": "/learn/viseme"}
-    ORDER = ["assessment", "viseme", "word", "closure", "trial", "sentence", "speak"]
+                  "word_typed": "/learn/word", "context": "/learn/word", "closure": "/learn/closure", "trial": "/learn/viseme"}
+    ORDER = ["assessment", "viseme", "word", "word_typed", "context", "closure", "trial", "sentence", "speak"]
 
     # 주제가 다르면 같은 날이라도 각자 한 행 — 문장 연습은 상황별, 말하기는 모드별, 검사는 폼별로 나눈다.
     out = {}
@@ -1267,13 +1273,22 @@ async def analysis_activity_detail(day: str, kind: str, topic: str = "", tz_offs
                    "score": mean([r.score for r in rows]),
                    "pass_rate": round(sum(1 for r in rows if r.passed) / len(rows), 3) if rows and any(r.passed is not None for r in rows) else None}
         coaching = None if demo else next((r.coaching for r in reversed(rows) if r.coaching), None)
-    elif kind in ("viseme", "word", "closure", "trial"):
+    elif kind in _TRIAL_KINDS or kind == "trial":
         q = select(TrialAttempt).where(TrialAttempt.user_id == uid, TrialAttempt.created_at >= lo,
                                        TrialAttempt.created_at < hi)
-        q = q.where(TrialAttempt.item_type == kind) if kind != "trial" else q
+        # 'trial'은 유형을 모르는 예전 행(목록 밖 유형 포함)
+        q = q.where(TrialAttempt.item_type == kind) if kind != "trial" else q.where(
+            (TrialAttempt.item_type.is_(None)) | (TrialAttempt.item_type.notin_(_TRIAL_KINDS)))
         rows = (await db.execute(q.order_by(TrialAttempt.created_at))).scalars().all()
         items = [{"time": hm(r.created_at), "target": r.target, "chosen": r.chosen, "correct": bool(r.correct),
                   "confusions": r.confusions or []} for r in rows]
+        if kind == "word_typed":
+            # 주관식은 직접 쓴 답이라 공용 데모 계정에서는 빼고, '입모양은 맞음'(정답 아님, 숙달 0.5)을 따로 알려 준다
+            import visual_difficulty as _vd
+            for it in items:
+                it["verdict"] = _vd.typed_word_verdict(it["target"], it["chosen"] or "")["verdict"]
+                if demo:
+                    it["chosen"] = None
         summary = {"n": len(rows), "accuracy": round(sum(1 for r in rows if r.correct) / len(rows), 3) if rows else None}
     elif kind == "sentence":
         q = select(Progress).where(Progress.user_id == uid, Progress.created_at >= lo, Progress.created_at < hi,
