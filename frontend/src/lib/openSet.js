@@ -14,6 +14,20 @@ export function contextSlots(length, n = STAGE2_CONTEXT_COUNT, rand = Math.rando
   return new Set(free.slice(0, Math.max(0, Math.min(n, free.length))))
 }
 
+/**
+ * 2단계 레슨에서 짝 탐색 문항으로 낼 번호(docs/confusion-pair-serving.md 5.4-2). 12문항 중 선다형 1문항이다.
+ * 첫 문항과 skip(문맥 문항·주관식 자리)은 고르지 않는다. 고를 자리가 없으면 -1.
+ */
+export function probeSlot(length, skip = new Set(), rand = Math.random) {
+  const free = Array.from({ length: Math.max(0, length - 1) }, (_, i) => i + 1).filter((i) => !skip.has(i))
+  return free.length ? free[Math.floor(rand() * free.length)] : -1
+}
+
+/** 탐색 문항 후보(서버 probes) 가운데 이번 레슨에서 아직 안 낸 첫 단어. 없으면 null(보통 문항으로 낸다). */
+export function pickProbe(probes, asked = new Set()) {
+  return (probes || []).find((p) => p?.word && Array.isArray(p.distractors) && p.distractors.length >= 3 && !asked.has(p.word)) || null
+}
+
 // 2단계: 숙달한 뒤 레슨(12문항)의 30%를 단어 입력으로 낸다(12문항이면 4문항).
 export const STAGE2_TYPED_SHARE = 0.3
 

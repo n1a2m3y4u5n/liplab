@@ -310,6 +310,9 @@ class TrialAttempt(Base):
     # 화면에 보여 준 보기(정답 포함, 보인 순서). 1단계는 입모양 번호 문자열. 주관식이나 예전 기록은 NULL.
     # 보기에 무엇이 있었는지 알아야 '그 보기가 있었을 때 고른 비율'로 혼동을 잴 수 있다(docs/confusion-pair-serving.md 5.4)
     options = Column(JSON, nullable=True)
+    # 짝 탐색 문항이면 {position, target, read, contrast, source}(보기에 대비 단어를 넣은 2단계 단어 문항, 5.4-2). 보통 문항은 NULL.
+    # item_type은 'word' 그대로라 숙달·학습 곡선에 똑같이 들어가고, 분석은 이 열로 탐색 문항을 가를 수 있다
+    probe = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -429,6 +432,7 @@ async def init_db():
             "ALTER TABLE trial_attempts ADD COLUMN speed FLOAT",
             # 보여 준 보기(기회로 나눈 혼동률)
             "ALTER TABLE trial_attempts ADD COLUMN options JSON",
+            "ALTER TABLE trial_attempts ADD COLUMN probe JSON",
         ):
             try:
                 await conn.exec_driver_sql(ddl)
