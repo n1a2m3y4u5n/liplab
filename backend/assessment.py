@@ -292,6 +292,12 @@ DEFAULT_TALKER = "default"
 HELD_OUT_TALKERS = ("h1", "h2")
 
 
+def clean_talker(talker) -> str:
+    """클라이언트가 채점 요청에 실어 보낸 화자 조건을 정해진 값(default·h1·h2)으로만 남긴다. 그 밖의 값은 기본 얼굴로 본다.
+    문항 기록에 임의 문자열이 들어가면 새 화자 조건 집계(talker_transfer)의 화자 목록과 두 절반 나누기가 흔들린다."""
+    return talker if talker in (DEFAULT_TALKER,) + HELD_OUT_TALKERS else DEFAULT_TALKER
+
+
 def assign_talker_conditions(items: List[Dict], user_id: int) -> List[Dict]:
     """문항마다 화자 조건(talker)을 붙인 새 목록(순서 그대로). 난이도 순으로 이웃한 두 문항을 짝지어 한쪽은 기본 얼굴, 다른 쪽은
     검사 전용 화자로 둬서 두 절반의 난이도를 맞춘다. 어느 쪽이 새 화자인지는 사용자 번호의 홀짝으로 뒤집어(역균형) 문항 효과가
@@ -438,7 +444,7 @@ def score_placement(items: List[Dict], responses: Dict[str, str]) -> Dict:
         item_log.append({"id": it.get("id"), "word": it["word"], "chosen": chosen,
                          "correct": bool(ok), "difficulty": it.get("difficulty")})
         if it.get("talker"):   # 사후 검사의 화자 조건(계획 2-3). 옛 검사 기록에는 없다
-            item_log[-1]["talker"] = it["talker"]
+            item_log[-1]["talker"] = clean_talker(it["talker"])
         if chosen is None:
             continue
         if ok:

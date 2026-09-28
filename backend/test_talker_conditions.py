@@ -51,6 +51,18 @@ def test_scoring_records_condition_and_transfer():
     assert A.rescore_log(face)["ability"] > A.rescore_log(r["item_log"])["ability"]
 
 
+def test_client_talker_values_are_whitelisted():
+    # 채점 요청의 talker는 클라이언트가 보낸다. 정해진 값(default·h1·h2) 밖은 기본 얼굴로 남긴다(리뷰 뒤 고침)
+    items = A.assign_talker_conditions(_form("B"), 1)
+    bad = ["<script>", "h3", "H1", 7, {"x": 1}]
+    items = [{**it, "talker": bad[i % len(bad)]} if i < 10 else it for i, it in enumerate(items)]
+    r = A.score_placement(items, {it["id"]: it["word"] for it in items})
+    assert {e["talker"] for e in r["item_log"][:10]} == {"default"}
+    assert all(e["talker"] in ("default", "h1", "h2") for e in r["item_log"])
+    assert set(r["talker_transfer"]["talkers"]) <= {"h1", "h2"}
+    assert A.clean_talker("h2") == "h2" and A.clean_talker("default") == "default" and A.clean_talker(None) == "default"
+
+
 def test_old_logs_unchanged():
     items = _form("A")
     r = A.score_placement(items, {it["id"]: it["word"] for it in items})
