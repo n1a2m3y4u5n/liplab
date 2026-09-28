@@ -408,6 +408,36 @@ def distractor_kind(target, candidate) -> str:
     return "close" if viseme_distance(s, t) < 2 else "distinct"
 
 
+# ── 2단계 주관식(단어 입력) 채점(커리큘럼 개선 계획 1-2) ─────────────────────────
+TYPED_CREDIT = {"correct": 1.0, "homophene": 0.5, "wrong": 0.0, "empty": 0.0}
+
+
+def normalize_typed(text: str) -> str:
+    """입력 정리: NFC로 맞추고 한글 음절만 남긴다. 띄어쓰기('바 다')와 문장부호('바다.')는 채점에서 보지 않는다."""
+    return "".join(ch for ch in _nfc(text) if _is_syllable(ch))
+
+
+def typed_word_verdict(target: str, typed: str) -> Dict:
+    """주관식 단어 답 채점. verdict와 숙달에 넣을 성공 정도(credit)를 돌려준다.
+      correct    정리한 입력이 정답과 같다(1)
+      homophene  다른 말이지만 보이는 입모양 순열이 정답과 똑같다: '입모양은 맞음'(0.5). 입만 보고는 원리적으로 못 가르는
+                 차이라 오답으로 보지 않는다. 받침 오타도 입모양이 같으면(값/갑, 갓/갇, 국물/궁물) 여기에 든다. 단어 은행에 있는
+                 말인지는 따지지 않는다(입모양을 바르게 읽었는지를 본다).
+      wrong      입모양이 다르다(받침 오타라도 밥/반처럼 입모양이 바뀌면 오답)(0)
+      empty      한글 음절이 없다(0)"""
+    ans = normalize_typed(typed)
+    tgt = normalize_typed(target)
+    if not ans:
+        verdict = "empty"
+    elif ans == tgt:
+        verdict = "correct"
+    elif viseme_sequence(ans) == viseme_sequence(tgt):
+        verdict = "homophene"
+    else:
+        verdict = "wrong"
+    return {"verdict": verdict, "credit": TYPED_CREDIT[verdict], "answer": ans}
+
+
 # 보기 단계별 구성: (보이는 최소대립 수, 뚜렷이 다른 단어 수)
 OPTION_MIX = {1: (0, 3), 2: (1, 2), 3: (3, 0)}
 
