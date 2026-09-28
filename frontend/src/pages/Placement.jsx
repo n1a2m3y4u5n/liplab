@@ -6,6 +6,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
+import { talkerById, atNaturalRate, hashSeed } from '../lib/talkers'
 
 /**
  * 디지털 독화 배치검사(축 I) — 난이도가 통제된 입모양→단어 4지선다로 현재 수준을 진단한다.
@@ -27,6 +28,10 @@ const MODE_LABEL = { placement: '배치검사', A: '사전검사', B: '사후검
 const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }   // 마스코트 SVG 그림자 여백(Figma inset)
 // 결과 버튼 — 데스크톱 75:23(btn-lg), lg 미만 244:129(r14·b5, py16, 16px)
 const RESULT_BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]'
+
+// 사후 검사의 새 화자 조건(커리큘럼 계획 2-3): 서버가 문항 절반에 검사 전용 가상 화자(talker: h1·h2)를 붙여 준다. 1.0배(말 속도만
+// 기본으로 되돌림)로 내고, 흔들림 씨앗은 문항 id로 고정한다. 화자 표시는 검사에서 띄우지 않는다. 나머지 문항과 사전 검사는 기본 얼굴.
+const itemTalker = (it) => (it?.talker && it.talker !== 'default' ? atNaturalRate(talkerById(it.talker)) : null)
 
 // 사전·사후 동형검사는 /learn/placement?form=A|B 로 들어온다(학습 효과 리포트의 시작 버튼).
 // 문항 화면의 모드 전환기는 Figma 385:82에 맞춰 없앴으므로 진입은 주소로만 한다(핸드오프 §4-01).
@@ -253,6 +258,21 @@ export default function Placement() {
               </>
             )}
 
+            {/* 사후 검사의 새 화자 조건(계획 2-3) — 문항 절반을 앱 안의 다른 가상 화자로 봤을 때의 정답률 */}
+            {result.talker_transfer && (
+              <>
+                <div className="h-[1.5px] w-full bg-line" />
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-[13px] font-bold text-ink-muted">새 화자 조건</p>
+                  <p className="text-sm text-ink">
+                    기본 얼굴 {result.talker_transfer.default.correct}/{result.talker_transfer.default.n} ·
+                    새 가상 화자 {result.talker_transfer.new_talker.correct}/{result.talker_transfer.new_talker.n}
+                  </p>
+                  <p className="text-xs text-ink-muted">앱 안의 다른 가상 화자로 옮겨 가는지를 봐요. 실제 사람 입모양으로의 전이는 아니에요.</p>
+                </div>
+              </>
+            )}
+
             {/* 지난 첫 검사 대비 향상도 (aa28c05) — 검사가 2회 이상일 때만 */}
             {delta && (
               <>
@@ -325,7 +345,8 @@ export default function Placement() {
 
           {/* 입모양 카드(385:93 560×370 / 모바일 385:132 전체 폭×214) */}
           <div className={LESSON_AVATAR}>
-            <MouthAvatar frames={frames} height={null} className="h-full" />
+            <MouthAvatar frames={frames} height={null} className="h-full"
+              talker={itemTalker(it)} talkerSeed={hashSeed(it.id)} showTalker={false} />
           </div>
 
           {/* 4지선다(385:96 / 모바일 385:135) — 선택(로컬) → 다음 확정 */}

@@ -136,14 +136,17 @@ def test_counterbalanced_order_and_export_v2():
     prog = r["progression"]
     assert prog["available"] and prog["homogeneous"] and prog["order"] == "B→A", prog
     ex = r["export_v2"]
-    assert ex["version"] == 2
+    assert ex["version"] == 3
     row = ex["row"]
     assert row["joined_on"] and len(row["joined_on"]) == 10
     forms = [t["form"] for t in row["tests"]]
     assert forms == ["B", "A"]
     for t in row["tests"]:
         assert t["after_join"] is True
-        assert t["items"] and all(set(i) == {"id", "correct", "chosen"} for i in t["items"])
+        # 역균형 순서에서는 나중에 본 A가 사후 검사라 문항마다 화자 조건(talker)이 붙는다(계획 2-3). 먼저 본 B는 예전 형식.
+        keys = {"id", "correct", "chosen"} | ({"talker"} if t["form"] == "A" else set())
+        assert t["items"] and all(set(i) == keys for i in t["items"])
+    assert sum(i["talker"] != "default" for i in row["tests"][1]["items"]) == 12
     assert row["since_join"] is not None and row["since_join"]["trials_by_stage"]["3"] == {"n": 1, "correct": 1}
 
 

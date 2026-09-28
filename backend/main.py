@@ -2764,7 +2764,7 @@ def _pilot_admin_gate(user):
         raise HTTPException(status_code=403, detail="운영자 계정만 파일럿 자료를 내보낼 수 있습니다.")
 
 
-PILOT_EXPORT_VERSION = 2   # 2(9/24): 참여일·참여 뒤 집계·동형 폼 문항 기록·현지 날짜 추가
+PILOT_EXPORT_VERSION = 3   # 2(9/24): 참여일·참여 뒤 집계·동형 폼 문항 기록·현지 날짜 추가. 3(9/28): 사후 문항의 화자 조건(talker)
 
 
 @app.get("/api/pilot/export")
@@ -2816,7 +2816,9 @@ async def pilot_export(tz_offset_min: int = -540, current_user=Depends(get_curre
                        "level": t.level, "date": day(t.created_at),
                        "after_join": bool(pf.pilot_joined_at and t.created_at and t.created_at >= pf.pilot_joined_at),
                        # 동형 폼만 문항 기록을 싣는다(신뢰도 KR-20·문항 분석용). 고른 보기는 검사 단어라 개인정보가 아니다.
-                       "items": ([{"id": i.get("id"), "correct": bool(i.get("correct")), "chosen": i.get("chosen")}
+                       # 사후 검사 문항에는 화자 조건(talker: default·h1·h2, 계획 2-3)을 싣는다. 조건이 없는 검사는 예전 형식 그대로.
+                       "items": ([{"id": i.get("id"), "correct": bool(i.get("correct")), "chosen": i.get("chosen"),
+                                   **({"talker": i["talker"]} if i.get("talker") else {})}
                                   for i in (t.item_log or []) if isinstance(i, dict)] if t.form in ("A", "B") else None)}
                       for t in tests],
             # 예전 형식과 같은 자리(계정 전체)
@@ -2907,7 +2909,7 @@ class PlacementScoreReq(BaseModel):
 
 @app.get("/api/assessment/placement")
 async def assessment_placement(n: int = 8, form: str = None,
-                               current_user=Depends(get_current_user)):
+                               current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """디지털 독화 배치검사 문항(축 I) — 지각 난이도로 통제한 입모양 단어 4지선다.
     오답 보기는 정답과 시각적으로 혼동되는(동구형이음·최소대립) 단어를 우선 배치한다.
     form='A'/'B'를 주면 향상도검사용 동형(난이도 매칭) 사전/사후 폼을 반환한다."""
@@ -2916,7 +2918,17 @@ async def assessment_placement(n: int = 8, form: str = None,
     if form in ("A", "B"):
         # 사전·사후는 동결된 판본(data/assessment/forms_v1.json)을 쓴다 — 콘텐츠가 바뀌어도 같은 문항.
         forms = _asmt.frozen_forms(words)
-        return {"items": forms.get(form, []), "form": form, "version": forms.get("version")}
+        items = forms.get(form, [])
+        # 전이 조건(커리큘럼 계획 2-3): 다른 동형 폼을 이미 본 사용자에게 이 폼은 사후 검사다. 문항 절반을 검사 전용 가상 화자로
+        # 낸다(문항마다 talker, 채점 때 item_log에 남는다). 보통 B지만 파일럿 역균형(B 먼저)이면 A가 사후라 A에 붙는다.
+        from database import PlacementResult
+        from sqlalchemy import select
+        other = "B" if form == "A" else "A"
+        post = (await db.execute(select(PlacementResult.id).where(
+            PlacementResult.user_id == current_user.id, PlacementResult.form == other).limit(1))).first() is not None
+        if post:
+            items = _asmt.assign_talker_conditions(items, current_user.id)
+        return {"items": items, "form": form, "version": forms.get("version"), "post": post}
     # 배치검사는 사전·사후 문항 단어를 정답·보기에서 모두 뺀다 — 사전검사 전에 문항을 미리 보지 않게(축 I).
     # 드문 말도 뺀다(9/27: 적응형 8문항의 25~44%가 드문 말을 정답·보기로 담았다, 어휘 지식이 점수에 섞인다).
     skip = _excluded_training_words()
@@ -2994,12 +3006,24 @@ async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_cur
 
 def _placement_scores(*rows) -> list:
     """사전·사후 비교용 능력·수준. 모든 검사에 문항 기록(item_log)이 있으면 지금 추정기로 다시 채점해 채점 방식이 섞이지 않게
-    한다(9/27 능력 추정 변경, docs/assessment-design.md 10절). 하나라도 없으면 저장값을 그대로 쓴다."""
+    한다(9/27 능력 추정 변경, docs/assessment-design.md 10절). 하나라도 없으면 저장값을 그대로 쓴다.
+    새 화자 조건이 있는 사후 검사(계획 2-3)는 기본 얼굴 문항만으로 채점한다(기본 얼굴 향상도)."""
     import assessment as _asmt
-    re_ = [_asmt.rescore_log(getattr(r, "item_log", None)) for r in rows]
+    re_ = [_asmt.rescore_log(_asmt.default_face_log(getattr(r, "item_log", None))) for r in rows]
     if all(re_):
         return re_
     return [{"ability": r.ability, "level": r.level} for r in rows]
+
+
+def _face_accuracy(row) -> float:
+    """기본 얼굴 정답률. 새 화자 조건이 있는 검사(계획 2-3)는 기본 얼굴 절반의 정답률, 그 밖은 저장값."""
+    import assessment as _asmt
+    log = getattr(row, "item_log", None)
+    if _asmt.has_talker_conditions(log):
+        acc = _asmt.log_accuracy(_asmt.default_face_log(log))
+        if acc is not None:
+            return acc
+    return row.accuracy
 
 
 @app.get("/api/assessment/history")
@@ -3016,7 +3040,7 @@ async def assessment_history(current_user=Depends(get_current_user), db: AsyncSe
     rows = r.scalars().all()
 
     def _row(x):
-        return {"accuracy": x.accuracy, "ability": x.ability, "level": x.level,
+        return {"accuracy": _face_accuracy(x), "ability": x.ability, "level": x.level,
                 "error_visemes": x.error_visemes or [],
                 "at": x.created_at.isoformat() if x.created_at else None}
     if not rows:
@@ -3113,13 +3137,22 @@ async def assessment_progression(current_user=Depends(get_current_user),
         a, b = rows[0], rows[-1]
     # 자모별 오류 변화는 두 검사의 문항 기록을 전부 다시 센 값끼리 비교한다. 예전에는 저장된 상위 6개끼리라, 6위 밖으로 밀린
     # 자모가 'n→0'으로 나왔다. 문항 기록이 없는 옛 검사가 끼면 비운다(assessment.phoneme_change)
+    # 자모 변화는 사후 검사 24문항을 모두 센다(기본 얼굴 절반만 세면 문항 수가 반이라 오류 수가 저절로 준다). 새 화자 문항이
+    # 섞여 있어 사후 오류는 조금 많게 나올 수 있다(보수적).
     per_phoneme = _asmt.phoneme_change(getattr(a, "item_log", None), getattr(b, "item_log", None))
     sa, sb = _placement_scores(a, b)
+    # 기본 얼굴 향상도(계획 2-3): 사후 검사에 새 화자 조건이 있으면 사후 정확도·수준은 기본 얼굴 절반으로 잰다. 새 화자 조건 점수는
+    # talker_transfer에 따로 준다(앱 안 근거리 전이, 실제 사람 전이 아님). 조건이 없는 옛 검사는 예전 값 그대로다.
+    acc_a, acc_b = _face_accuracy(a), _face_accuracy(b)
+    transfer = _asmt.talker_transfer(getattr(b, "item_log", None))
     return {
         "available": True,
-        "pre": {"form": a.form, "accuracy": a.accuracy, "level": sa["level"], "ability": sa["ability"]},
-        "post": {"form": b.form, "accuracy": b.accuracy, "level": sb["level"], "ability": sb["ability"]},
-        "accuracy_delta": round(b.accuracy - a.accuracy, 3),
+        "pre": {"form": a.form, "accuracy": acc_a, "level": sa["level"], "ability": sa["ability"]},
+        "post": {"form": b.form, "accuracy": acc_b, "level": sb["level"], "ability": sb["ability"],
+                 "accuracy_all": b.accuracy,
+                 "n_default": transfer["default"]["n"] if transfer else None},
+        "talker_transfer": transfer,
+        "accuracy_delta": round(acc_b - acc_a, 3),
         "level_delta": sb["level"] - sa["level"],
         "ability_delta": round(sb["ability"] - sa["ability"], 3),
         "error_phoneme_change": per_phoneme,
