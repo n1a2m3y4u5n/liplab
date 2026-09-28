@@ -42,6 +42,9 @@ def sino(n: int) -> str:
     """한자어 수 읽기(일, 십, 백이십삼, 만 오천 -> 만오천)."""
     if n == 0:
         return "영"
+    if n >= 10 ** 16:
+        # 경(10^16) 이상은 단위가 없어 예전에는 IndexError로 채점 전체가 죽었다(Whisper가 긴 숫자열을 전사한 경우, 9/28). 한 자리씩 읽는다
+        return "".join(_SINO_DIGIT[int(d)] or "영" for d in str(n))
     out = ""
     for word, unit in _SINO_BIG:
         if n >= unit:

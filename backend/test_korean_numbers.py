@@ -129,3 +129,9 @@ def test_dae_counters_ranges_and_leading_one():
     # 단위가 없거나 '-' 뒤가 한자어 단위면 범위로 보지 않는다(연도 범위)
     assert normalize_numbers("2024-2025년") == "이천이십사-이천이십오년"
     assert "~" not in normalize_numbers("1~2개") and "~" in normalize_numbers("1~2")
+
+
+def test_huge_numbers_do_not_crash():
+    # Whisper가 긴 숫자열을 전사하면 경(10^16) 이상에서 IndexError로 채점이 500이던 것(9/28)
+    assert normalize_numbers("12345678901234567890") == "일이삼사오육칠팔구영일이삼사오육칠팔구영"
+    assert normalize_numbers("1조") == "일조"
