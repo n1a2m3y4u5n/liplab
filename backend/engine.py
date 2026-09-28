@@ -285,6 +285,10 @@ def to_pronounced_syllables(text: str, phonetic: bool = False, h_delete: Optiona
         # 무음 초성 ㅇ → '' (입모양 프레임 없음). 종성 ㅇ[ŋ]은 그대로 둔다.
         if tok[0] == 'ㅇ':
             tok[0] = ''
+        # 자음 뒤 ㅢ는 [ㅣ]로 난다(표준 발음법 5항, 흰색[힌색]·희망[히망]·무늬[무니]). 예전에는 이중모음(9) 입모양이 나왔다.
+        # 채점 라벨 경로(phonetic)는 자체 채점 모델을 학습한 라벨과 맞추려 그대로 둔다(9/28 콘텐츠 감사 6절).
+        if not phonetic and tok[0] and tok[1] == 'ㅢ':
+            tok[1] = 'ㅣ'
 
     # 겹받침이 대표음으로 줄어든 뒤라야 평파열음화·비음화가 올바로 걸린다.
     if phonetic:

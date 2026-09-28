@@ -110,3 +110,12 @@ def test_new_rare_words_leave_stage2_and_speaking_pools():
     pool = {it["target"] for it in S._BY_STAGE[4]["items"]}
     for w in ("공무", "사당", "축", "룸", "팝", "탄"):
         assert w in C.STAGE2_EXCLUDED and w not in pool, w
+
+
+def test_consonant_plus_ui_reads_as_i_in_viseme_path():
+    # 표준 발음법 5항: 자음 뒤 ㅢ는 [ㅣ](흰색[힌색]). 입모양 경로만 바꾸고 채점 라벨 경로(phonetic)는 그대로다.
+    import engine
+    assert engine.to_pronounced_syllables("흰색")[0] == ["ㅎ", "ㅣ", "ㄴ"]
+    assert engine.to_pronounced_syllables("무늬")[1] == ["ㄴ", "ㅣ", ""]
+    assert engine.to_pronounced_syllables("의사")[0] == ["", "ㅢ", ""]          # 첫소리 없는 '의'는 그대로
+    assert engine.to_pronounced_syllables("흰색", phonetic=True)[0][1] == "ㅢ"
