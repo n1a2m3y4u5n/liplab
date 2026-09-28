@@ -28,3 +28,19 @@ function clampLevel(value) {
   const n = Math.round(Number(value))
   return Number.isFinite(n) && n >= 1 ? Math.min(n, 5) : 1
 }
+
+/**
+ * 오늘의 복습 문장 문항(/api/review/due의 kind 'sentence')을 /api/progress 제출 본문으로 바꾼다. scenario_id가 srs_review_로
+ * 시작해 서버가 3단계 숙달·추천 난이도에는 넣지 않고 복습 간격만 조정한다(main._SENTENCE_REVIEW_PREFIX). 상황·난이도는 서버가
+ * 그 문장의 레슨 기록에서 실어 준 값이고, 없으면 '문장 복습'·1로 보낸다.
+ */
+export function sentenceReviewSubmission(item, answer, seconds, sessionId) {
+  return {
+    scenario_id: String(sessionId || '').startsWith('srs_review_') ? sessionId : `srs_review_${sessionId || Date.now()}`,
+    sentence: item?.ref || '',
+    user_answer: String(answer || '').trim(),
+    time_spent_seconds: Math.max(0, Math.round(Number(seconds) || 0)),
+    situation: item?.situation || '문장 복습',
+    difficulty_level: clampLevel(item?.difficulty_level),
+  }
+}

@@ -10,12 +10,15 @@ import { pickDistractors } from '../lib/wordOptions'
 import { pickVisemeDistractors } from '../lib/visemeOptions'
 import { FAST_SPEECH_SPEED } from '../lib/visemeTiming'
 import useLessonTalker from '../hooks/useLessonTalker'
+import { sentenceReviewSubmission } from '../lib/reviewScenario'
 
 /**
  * 오늘의 복습(간격 반복 SRS) — 독화 레슨 공통 템플릿(핸드오프 §4-03, WordStage·Closure와 같은 틀).
  * 틀렸던 항목(입모양 그룹·단어)이 예정일에 다시 나온다. 정답이면 다음 등장이 더 멀어지고(SM-2),
  * 오답이면 내일 다시 만난다(/api/review/answer). 진행바 분모는 오늘 예정 항목 수다.
  * 단어 보기는 최소대립 짝을 먼저 넣는다(단어 레슨과 같은 규칙) — 입모양이 비슷한 단어끼리 다시 가려 보게.
+ * 문장(kind 'sentence', 3단계에서 합격선 아래였던 문장, 하루 5개까지)은 입모양을 보고 문장을 입력한다. 채점은 3단계와 같은
+ * /api/progress(srs_review_ 세션)라 점수 등급으로 다음 등장일이 정해지고, 3단계 숙달에는 들어가지 않는다.
  */
 const shuffle = (a) => [...a].sort(() => Math.random() - 0.5)
 
@@ -49,7 +52,7 @@ export default function Review() {
     return (
       <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-page px-6 text-center">
         <h1 className="text-[24px] font-bold leading-figma text-ink">오늘 복습할 항목이 없어요</h1>
-        <p className="text-[15px] text-ink-muted">틀린 입모양·단어는 다음 날부터 여기서 다시 만나요.</p>
+        <p className="text-[15px] text-ink-muted">틀린 입모양·단어·문장은 다음 날부터 여기서 다시 만나요.</p>
         <button type="button" onClick={() => navigate('/review')} className="btn-primary px-6 py-3 text-[15px]">복습으로 돌아가기</button>
       </div>
     )
@@ -73,15 +76,20 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
   const [done, setDone] = useState(false)
   const startRef = useRef(Date.now())
   const [elapsedSec, setElapsedSec] = useState(0)
+  const sessionRef = useRef(`srs_review_${Date.now()}`)   // 문장 복습 답의 scenario_id(숙달 제외 표시)
+  const [typed, setTyped] = useState('')                   // 문장 문항에 입력한 답
+  const itemStartRef = useRef(Date.now())
 
   const item = items[idx]
   const isViseme = item.kind === 'viseme'
+  const isSentence = item.kind === 'sentence'
   // 숙달한 단계의 항목은 1.25배 '빠른 말'로 볼 수 있다(docs/curriculum-roadmap.md 1-1). 복습 답은 숙달에 넣지 않는다.
   const [fast, setFast] = useState(false)
   // 복습 한 번에 가상 화자 한 명(커리큘럼 계획 2-2). 복습도 한 얼굴만 보지 않게
   const [talkerLesson] = useLessonTalker('review')
-  const fastOk = masteredStages?.has(isViseme ? 1 : 2)
+  const fastOk = masteredStages?.has(isViseme ? 1 : isSentence ? 3 : 2)
   const { targetKey, choices } = useMemo(() => {
+    if (isSentence) return { targetKey: item.ref, choices: [] }   // 문장은 보기 없이 입력한다
     if (isViseme) {
       const vid = parseInt(item.ref, 10)
       const t = lessons.find((l) => l.viseme_id === vid)
@@ -92,16 +100,36 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
     }
     const distractors = pickDistractors(item.ref, bank.byWord, bank.words)
     return { targetKey: item.ref, choices: shuffle([item.ref, ...distractors]).map((w) => ({ key: w, label: w })) }
-  }, [item, lessons, bank, isViseme])
+  }, [item, lessons, bank, isViseme, isSentence])
 
   useEffect(() => {
-    setResult(null); setSelected(null); setFrames([])
+    setResult(null); setSelected(null); setFrames([]); setTyped('')
+    itemStartRef.current = Date.now()
     if (!isViseme) learningAPI.getVisemes(item.ref).then(setFrames).catch(() => {})
   }, [item, isViseme])
 
   useChoiceKeys(choices, (c) => setSelected(c.key), !result && !submitting && !done)
 
+  // 문장: 3단계와 같은 채점(/api/progress). 합격(60점 이상)이면 다음 등장이 멀어지고, 아니면 내일 다시 나온다(서버 _sr_touch)
+  const confirmSentence = async () => {
+    const answer = typed.trim()
+    if (result || submitting || !answer) return
+    setSubmitting(true)
+    let res
+    try {
+      const secs = (Date.now() - itemStartRef.current) / 1000
+      const r = await learningAPI.submitProgress(sentenceReviewSubmission(item, answer, secs, sessionRef.current))
+      setXpEarned((x) => x + (r?.xp_gained || 0))
+      res = { correct: r?.passed ?? (r?.score ?? 0) >= 60, score: Math.round(r?.score ?? 0), chosen: answer }
+    } catch {
+      res = { correct: false, score: null, chosen: answer, failed: true }   // 채점을 못 받음: 집계에서 빼고 넘어가게 한다
+    } finally { setSubmitting(false) }
+    setResult(res)
+    if (!res.failed) setTally((t) => ({ n: t.n + 1, correct: t.correct + (res.correct ? 1 : 0) }))
+  }
+
   const confirm = async () => {
+    if (isSentence) return confirmSentence()
     if (result || submitting || selected == null) return
     setSubmitting(true)
     const correct = selected === targetKey
@@ -153,9 +181,11 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
 
         <div className="mt-6 flex flex-col gap-4 lg:mt-5 lg:gap-5">
           <div className="flex flex-col gap-1.5 leading-figma lg:gap-2">
-            <p className="text-[12px] font-bold text-track lg:text-[13px]">오늘의 복습 · {isViseme ? '입모양' : '단어'}</p>
+            <p className="text-[12px] font-bold text-track lg:text-[13px]">
+              오늘의 복습 · {isViseme ? '입모양' : isSentence ? `문장${item.situation ? ` · ${item.situation}` : ''}` : '단어'}
+            </p>
             <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">
-              {isViseme ? '이 입모양은 어느 그룹일까요?' : '이 입모양은 어떤 단어일까요?'}
+              {isViseme ? '이 입모양은 어느 그룹일까요?' : isSentence ? '무슨 말인가요?' : '이 입모양은 어떤 단어일까요?'}
             </h1>
           </div>
 
@@ -171,15 +201,24 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
             </button>
           )}
 
-          <div className="flex flex-col gap-2.5 lg:gap-3">
-            {choices.map((c, k) => (
-              <button key={c.key} type="button" disabled={!!result || submitting} onClick={() => setSelected(c.key)}
-                aria-pressed={!result ? selected === c.key : undefined} className={OPTION_CLASS[optionState(c.key)]}>
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold leading-figma text-ink-muted lg:size-7 lg:rounded-lg lg:text-[13px]">{k + 1}</span>
-                <span className="flex-1 text-[18px] font-bold leading-figma lg:text-[20px]">{c.label}</span>
-              </button>
-            ))}
-          </div>
+          {isSentence ? (
+            <form onSubmit={(e) => { e.preventDefault(); confirm() }} className="flex flex-col gap-2">
+              <label htmlFor="review-sentence" className="text-[13px] font-bold text-ink-muted">입모양을 보고 문장을 입력하세요</label>
+              <input id="review-sentence" type="text" value={typed} onChange={(e) => setTyped(e.target.value)}
+                disabled={!!result || submitting} autoComplete="off" placeholder="여기에 읽은 문장을 입력하세요"
+                className="w-full rounded-14 border-2 border-line bg-white px-4 py-3.5 text-[17px] font-bold text-ink outline-none focus:border-track disabled:bg-surface-muted" />
+            </form>
+          ) : (
+            <div className="flex flex-col gap-2.5 lg:gap-3">
+              {choices.map((c, k) => (
+                <button key={c.key} type="button" disabled={!!result || submitting} onClick={() => setSelected(c.key)}
+                  aria-pressed={!result ? selected === c.key : undefined} className={OPTION_CLASS[optionState(c.key)]}>
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold leading-figma text-ink-muted lg:size-7 lg:rounded-lg lg:text-[13px]">{k + 1}</span>
+                  <span className="flex-1 text-[18px] font-bold leading-figma lg:text-[20px]">{c.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -187,18 +226,24 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
         <div className="mx-auto flex max-w-[676px] flex-col items-stretch gap-3 px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-4 lg:h-[110px] lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:py-0">
           {result ? (
             <div role="status" aria-live="polite" className={`flex min-w-0 flex-col gap-[3px] leading-figma lg:gap-1 ${result.correct ? 'text-good-text' : 'text-bad-text'}`}>
-              <p className="text-[19px] font-bold tracking-[-0.38px] lg:text-[22px] lg:tracking-[-0.44px]">{result.correct ? '정답이에요!' : '아쉬워요'}</p>
-              <p className="truncate text-[13px] font-bold opacity-80 lg:text-[14px]">
-                {result.correct ? '다음 복습은 더 나중에 나와요' : `정답은 「${targetLabel}」 · 내일 다시 만나요`}
+              <p className="text-[19px] font-bold tracking-[-0.38px] lg:text-[22px] lg:tracking-[-0.44px]">
+                {result.failed ? '채점하지 못했어요' : result.correct ? '정답이에요!' : '아쉬워요'}{result.score != null ? ` · ${result.score}점` : ''}
+              </p>
+              <p className={`${isSentence ? 'line-clamp-2' : 'truncate'} text-[13px] font-bold opacity-80 lg:text-[14px]`}>
+                {result.failed ? `정답은 「${targetLabel}」 · 연결을 확인해 주세요`
+                  : result.correct ? `${isSentence ? `정답은 「${targetLabel}」 · ` : ''}다음 복습은 더 나중에 나와요`
+                    : `정답은 「${targetLabel}」 · 내일 다시 만나요`}
               </p>
             </div>
           ) : (
-            <span className="hidden text-[15px] leading-figma text-ink-faint lg:inline">{selected == null ? '보기를 선택해주세요' : '정답을 확인해보세요'}</span>
+            <span className="hidden text-[15px] leading-figma text-ink-faint lg:inline">
+              {isSentence ? (typed.trim() ? '정답을 확인해보세요' : '읽은 문장을 입력해주세요') : selected == null ? '보기를 선택해주세요' : '정답을 확인해보세요'}
+            </span>
           )}
           {result ? (
             <button type="button" onClick={next} className={`${result.correct ? 'btn-good' : 'btn-bad'} btn-bar ${BAR_BTN}`}>계속하기</button>
           ) : (
-            <button type="button" onClick={confirm} disabled={selected == null || submitting} className={`btn-primary btn-bar ${BAR_BTN}`}>확인</button>
+            <button type="button" onClick={confirm} disabled={(isSentence ? !typed.trim() : selected == null) || submitting} className={`btn-primary btn-bar ${BAR_BTN}`}>확인</button>
           )}
         </div>
       </div>

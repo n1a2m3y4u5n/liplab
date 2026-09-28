@@ -318,12 +318,13 @@ class TrialAttempt(Base):
 
 class ReviewItem(Base):
     """간격 반복(SRS) 복습 큐 — 틀린 항목이 due_date에 다시 등장한다.
-    kind: 'viseme'(입모양 그룹, ref=id 문자열) | 'word'(단어, ref=단어) | 'speak'(말하기, ref=목표 문장·단어)."""
+    kind: 'viseme'(입모양 그룹, ref=id 문자열) | 'word'(단어, ref=단어) | 'speak'(말하기, ref=목표 문장·단어)
+    | 'sentence'(3단계 문장, ref=문장. 상황·난이도는 그 문장의 최근 Progress 기록에서 가져온다)."""
     __tablename__ = "review_items"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    kind = Column(String(20), nullable=False)       # 'viseme' | 'word'
+    kind = Column(String(20), nullable=False)       # 'viseme' | 'word' | 'speak' | 'sentence'
     ref = Column(String(100), nullable=False)       # viseme_id(str) 또는 단어
     due_date = Column(String(10), nullable=False)   # 'YYYY-MM-DD'
     interval_days = Column(Integer, default=1)

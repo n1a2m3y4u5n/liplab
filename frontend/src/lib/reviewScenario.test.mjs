@@ -1,7 +1,7 @@
 // reviewScenario 검사. 실행: npm test (node --test)
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mistakeReviewScenario, sentenceLevel } from './reviewScenario.js'
+import { mistakeReviewScenario, sentenceLevel, sentenceReviewSubmission } from './reviewScenario.js'
 
 const items = [
   { sentence: '따뜻한 아메리카노 한 잔 주세요', situation: '카페', difficulty_level: 4 },
@@ -25,4 +25,17 @@ test('sentenceLevel: 복습은 문장별 난이도, 일반 레슨·북마크는 
   assert.equal(sentenceLevel({ level: 2, levels: [], sentences: ['a'] }, 0), 2)
   assert.equal(sentenceLevel({ level: 9 }, 0), 5)
   assert.equal(sentenceLevel(null, 0), 1)
+})
+
+test('sentenceReviewSubmission: srs_review_ 세션 id, 레슨 기록의 상황·난이도, 없으면 기본값', () => {
+  const item = { kind: 'sentence', ref: '창가 자리에 앉을게요', situation: '카페', difficulty_level: 4 }
+  assert.deepEqual(sentenceReviewSubmission(item, '  창가 자리  ', 12.4, 'srs_review_77'), {
+    scenario_id: 'srs_review_77', sentence: '창가 자리에 앉을게요', user_answer: '창가 자리',
+    time_spent_seconds: 12, situation: '카페', difficulty_level: 4,
+  })
+  const bare = sentenceReviewSubmission({ ref: '내일 봐요' }, '내일', -3, 5)
+  assert.equal(bare.scenario_id, 'srs_review_5')
+  assert.equal(bare.situation, '문장 복습')
+  assert.equal(bare.difficulty_level, 1)
+  assert.equal(bare.time_spent_seconds, 0)
 })

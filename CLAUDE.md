@@ -147,6 +147,8 @@ frontend/src/
 
 `_bump_stage_progress(user_id, stage, passed, min_attempts, mastery_pct, db)` 헬퍼가
 시도·정답 누적과 숙달 판정을 공통 처리한다. 오답은 SRS 복습 큐(`ReviewItem`)에 예약된다.
+3단계 문장도 합격선(60) 아래면 kind 'sentence'로 예약되고(9/28), 오늘의 복습(`/review/scheduled`)에 하루 5개까지 나온다
+(`main._SENTENCE_REVIEW_DAILY`). 그 답은 `srs_review_` 세션으로 채점돼 간격만 조정하고 3단계 숙달에는 넣지 않는다.
 
 ---
 
