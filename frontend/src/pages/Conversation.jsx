@@ -196,7 +196,8 @@ export default function Conversation() {
   }
 
   const handleSendAnswer = async () => {
-    if (!userInput.trim()) return
+    // '다른 말로'를 기다리는 동안은 보내지 않는다: 늦게 온 바꾼 문장이 다음 턴을 덮어쓰고 엉뚱한 문장으로 채점하던 것(9/28 검토)
+    if (!userInput.trim() || repairBusy) return
 
     const answer = userInput.trim()
     setUserInput('')
@@ -319,6 +320,7 @@ export default function Conversation() {
             <button
               type="button"
               onClick={handleRevealText}
+              disabled={repairBusy}
               className="w-full rounded-14 bg-warn-tint py-2 text-sm font-bold text-warn-text transition hover:brightness-95"
             >
               무슨 말인지 보기
@@ -418,7 +420,7 @@ export default function Conversation() {
                 <button
                   type="button"
                   onClick={handleSendAnswer}
-                  disabled={!userInput.trim()}
+                  disabled={!userInput.trim() || repairBusy}
                   className="btn-primary px-5"
                 >
                   전송

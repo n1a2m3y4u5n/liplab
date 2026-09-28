@@ -105,7 +105,9 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
   useEffect(() => {
     setResult(null); setSelected(null); setFrames([]); setTyped('')
     itemStartRef.current = Date.now()
-    if (!isViseme) learningAPI.getVisemes(item.ref).then(setFrames).catch(() => {})
+    let alive = true   // 이전 항목의 늦은 입모양 응답이 다음 항목 화면을 덮지 않게(9/28 검토)
+    if (!isViseme) learningAPI.getVisemes(item.ref).then((f) => { if (alive) setFrames(f) }).catch(() => {})
+    return () => { alive = false }
   }, [item, isViseme])
 
   useChoiceKeys(choices, (c) => setSelected(c.key), !result && !submitting && !done)

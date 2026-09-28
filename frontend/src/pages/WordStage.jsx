@@ -121,11 +121,11 @@ function WordQuiz({ data, reload }) {
   // 문항 북마크 — 서버에 저장돼 복습 탭·저장한 문장에 나온다
   const [saved, toggleSaved] = useBookmark(q?.kind === 'context' ? q.full : q?.target, { situation: q?.kind === 'context' ? '문맥 추론' : '단어 독화' })
   const [frames, setFrames] = useState([])
+  const visemeSeqRef = useRef(0)   // 입모양 요청 순번: 이전 문항의 늦은 응답이 새 문항 화면을 덮지 않게
   const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
   // 약한 입모양은 조금 천천히(연습 화면). 숙달 추정값이 문턱(서버 natural_speed_gate, 70) 이상이면 감속을 끄고 자연 속도로
   // 낸다. 감속해 본 정답은 숙달에 0.5만 들어가서, 끄지 않으면 자연 속도로 잘 읽어도 숙달에 닿지 못할 수 있다(docs/mastery-ewma.md 7절).
   const estimate = stat.attempts > 0 ? stat.mastery : (data.mastery_score ?? 0)
-  const shownFrames = useSlowWeak(frames, estimate < (data.natural_speed_gate ?? 70))
   // 숙달한 뒤 엔드리스에서는 '빠른 말' 속도 단계를 고를 수 있다(1.0배 이상이라 숙달에는 정답 1로 들어간다). 서버가 연 단계
   // (speed_levels: 1.25 → 1.6 → 2.0배, 한 단계에서 최근 12문항 중 10문항을 맞히면 다음 단계). 엔진 1.0배는 실제 말의 약 절반 빠르기다.
   const [fast, setFast] = useState(1)
@@ -133,6 +133,8 @@ function WordQuiz({ data, reload }) {
     ? (data.speed_levels?.length ? data.speed_levels : [FAST_SPEECH_SPEED]) : []
   const fastOk = speedLevels.length > 0
   const playSpeed = fastOk && speedLevels.includes(fast) ? fast : 1
+  // 빠른 말을 고른 동안은 약점 감속을 끈다(켜 두면 고른 속도보다 느리게 보이고 기록돼 속도 단계에 세지 않았다, 9/28 검토)
+  const shownFrames = useSlowWeak(frames, estimate < (data.natural_speed_gate ?? 70) && playSpeed <= 1)
   // 레슨마다 가상 화자 한 명(계획 2-2, 엔드리스는 단어·문맥 레슨을 한 줄로 센다). 화자의 말 속도는 숙달에 싣는 재생 속도
   // (effectiveSpeed)에 넣지 않는다. 사람마다 다른 자연 속도라 감속이 아니다(docs/talker-variation.md 3절).
   const [lesson, nextLesson] = useLessonTalker(endless ? 'endless' : 'word')
@@ -181,7 +183,8 @@ function WordQuiz({ data, reload }) {
       const full = item.display.replace('___', item.answer)
       setQ({ kind: 'context', item, full, target: item.answer, choices: shuffle(item.options) })
       setFrames([])
-      try { setFrames(await learningAPI.getVisemes(full)) } catch { /* ignore */ }
+      const seq = ++visemeSeqRef.current
+      try { const f = await learningAPI.getVisemes(full); if (seq === visemeSeqRef.current) setFrames(f) } catch { /* ignore */ }
       return
     }
     const kind = slotRef.current.typed.has(slotRef.current.pos) ? 'typed' : 'choice'
@@ -190,7 +193,8 @@ function WordQuiz({ data, reload }) {
       askedRef.current.add(probe.word)
       setQ({ target: probe.word, choices: shuffle([probe.word, ...probe.distractors.slice(0, 3)]), kind: 'choice', probe: probe.probe })
       setFrames([])
-      try { setFrames(await learningAPI.getVisemes(probe.word)) } catch { /* ignore */ }
+      const seq = ++visemeSeqRef.current
+      try { const f = await learningAPI.getVisemes(probe.word); if (seq === visemeSeqRef.current) setFrames(f) } catch { /* ignore */ }
       return
     }
     const left = data.words.filter((w) => !askedRef.current.has(w.word))
@@ -203,7 +207,8 @@ function WordQuiz({ data, reload }) {
     const distractors = pickDistractors(target, byWord, words)
     setQ({ target, choices: shuffle([target, ...distractors]), kind })
     setFrames([])
-    try { setFrames(await learningAPI.getVisemes(target)) } catch { /* ignore */ }
+    const seq = ++visemeSeqRef.current
+    try { const f = await learningAPI.getVisemes(target); if (seq === visemeSeqRef.current) setFrames(f) } catch { /* ignore */ }
   }, [data, words, byWord])
 
   useEffect(() => { newQ(true) }, [newQ])
@@ -333,7 +338,7 @@ function WordQuiz({ data, reload }) {
               <span className="text-ink-faint">빠른 말</span>
               {[1, ...speedLevels].map((v) => (
                 <button key={v} type="button" onClick={() => setFast(v)} aria-pressed={playSpeed === v}
-                  className={`rounded px-2.5 py-1 transition-colors ${playSpeed === v ? 'bg-primary-500 font-semibold text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  className={`min-h-[36px] rounded-lg border px-3 py-1.5 transition-colors ${playSpeed === v ? 'border-primary-500 bg-primary-500 font-semibold text-white' : 'border-line bg-white text-ink hover:bg-fill'}`}>
                   {v === 2 ? '2x·실제' : `${v}x`}
                 </button>
               ))}
