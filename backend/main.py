@@ -1178,7 +1178,8 @@ async def get_calendar_activities(days_back: int = 140, tz_offset_min: int = -54
         add(ts, "assessment", form or "placement", acc)
 
     KIND_LABEL = {"viseme": "입모양 인지", "word": "단어", "closure": "문맥 추론", "trial": "인지 훈련"}
-    SPEAK_LABEL = {"voicing": "발성", "prosody": "억양", "phoneme": "음소", "word": "단어", "sentence": "문장"}
+    SPEAK_LABEL = {"voicing": "발성", "prosody": "억양", "phoneme": "음소", "word": "단어", "sentence": "문장",
+                   "probe": "낱말 속 소리"}
     FORM_LABEL = {"placement": "배치검사", "A": "사전검사", "B": "사후검사"}
     TYPE_LABEL = {"assessment": "검사", "viseme": "독화", "word": "독화", "closure": "독화", "trial": "독화",
                   "sentence": "문장 연습", "speak": "말하기"}
@@ -3352,6 +3353,10 @@ async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
     sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, passed)
     # 한번 숙달하면 유지한다(누적 정확도가 조금 떨어졌다고 다음 단계를 다시 잠그지 않게)
     reached = sp.status == "mastered" or (sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct)
+    # 모음·자음(2·3)은 이동 평균이 문턱에 닿아도 낱말 속 소리 확인(최근 4번 중 3번 합격, speak_curriculum._PROBE)을 넘어야 숙달이다(계획 2-5, _speak_carryover)
+    probe_cfg = (_speakcur.get_stage(stage) or {}).get("probe")
+    if reached and sp.status != "mastered" and probe_cfg:
+        reached = _speakcur.probes_ok(await _speak_probe_passes(user_id, stage, int(probe_cfg["n"]), db), probe_cfg)
     # 4·5단계 개인 향상 경로(9/28, speak_curriculum.gain_mastered): 채점기가 청각장애 발화를 낮게 보는 몫이 있어 절대 문턱에
     # 못 닿는 학습자도 자기 처음 점수보다 뚜렷이 늘면 숙달로 본다. 지금 시도는 아직 SpeakAttempt에 없으므로 score를 덧붙인다.
     gain = (_speakcur.get_stage(stage) or {}).get("gain")
@@ -3361,6 +3366,51 @@ async def _bump_speak_progress(user_id: int, stage: int, passed: bool,
             SpeakAttempt.user_id == user_id, SpeakAttempt.stage == stage).order_by(SpeakAttempt.id))
         reached = _speakcur.gain_mastered([x for (x,) in rows.all()] + [score], gain)
     sp.status = "mastered" if reached else "in_progress"
+    return sp
+
+
+async def _speak_probe_passes(user_id: int, stage: int, n: int, db) -> list:
+    """낱말 속 소리 확인(SpeakAttempt mode 'probe')의 최근 n번 합격 여부, 시간순."""
+    from database import SpeakAttempt
+    from sqlalchemy import select
+    rows = (await db.execute(select(SpeakAttempt.passed).where(
+        SpeakAttempt.user_id == user_id, SpeakAttempt.stage == stage, SpeakAttempt.mode == "probe")
+        .order_by(SpeakAttempt.id.desc()).limit(n))).all()
+    return [bool(p) for (p,) in reversed(rows)]
+
+
+def _speak_carryover(sp, stg) -> bool:
+    """낱말 속 소리 확인 중인가: 모음·자음 단계에서 이동 평균 숙달 조건은 채웠지만 아직 숙달하지 않은 상태(계획 2-5, P9).
+    따로 낸 음절 점수(Ling의 음성 수준)만으로 숙달하지 않고, 배운 소리를 뜻 있는 낱말 속에서도 내는지(음운 수준) 본다."""
+    return bool(sp is not None and (stg or {}).get("probe") and sp.status != "mastered"
+                and sp.attempts >= stg["min_attempts"] and sp.mastery_score >= stg["mastery"])
+
+
+async def _speak_probe_status(user_id: int, stage: int, sp, db) -> Optional[dict]:
+    """진행 응답에 붙일 확인 상태 {carryover, passed, tried, n, need}. 확인이 없는 단계면 None."""
+    stg = _speakcur.get_stage(stage) or {}
+    cfg = stg.get("probe")
+    if not cfg:
+        return None
+    window = await _speak_probe_passes(user_id, stage, int(cfg["n"]), db)
+    return {"carryover": _speak_carryover(sp, stg), "passed": sum(window), "tried": len(window),
+            "n": int(cfg["n"]), "need": int(cfg["need"])}
+
+
+async def _settle_speak_probe(user_id: int, stage: int, stg: dict, passed: bool, db):
+    """낱말 속 소리 확인 한 번을 반영한다. 이동 평균·시도 수는 그대로 두고, 이동 평균 숙달 조건을 채운 상태에서 이번 확인까지 넣어
+    최근 4번 중 3번 합격(_PROBE)이면 숙달로 올린다. 이번 시도는 아직 SpeakAttempt에 없으므로 passed를 덧붙인다. 진행 기록이 없으면 None."""
+    from database import SpeakStageProgress
+    from sqlalchemy import select
+    sp = (await db.execute(select(SpeakStageProgress).where(
+        SpeakStageProgress.user_id == user_id, SpeakStageProgress.stage == stage))).scalars().first()
+    if sp is None or sp.status == "mastered":
+        return sp
+    cfg = stg["probe"]
+    if sp.attempts >= stg["min_attempts"] and sp.mastery_score >= stg["mastery"]:
+        window = await _speak_probe_passes(user_id, stage, int(cfg["n"]) - 1, db) + [passed]
+        if _speakcur.probes_ok(window, cfg):
+            sp.status = "mastered"
     return sp
 
 
@@ -3436,6 +3486,7 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user), db
         raise HTTPException(status_code=404, detail="unknown stage")
 
     items = stg["items"]
+    sp = None
     if stg["mode"] == "word":
         # 고정 풀은 음절 수 층을 섞어 끼운다(처음 3개만 1음절). 프론트는 들어올 때마다 0번부터 시작해, 예전 고정 순서로는 앞 14개가
         # 모두 1음절이라 다음절 단어 없이 숙달했다. (사용자, 날짜) 시드라 같은 날에는 순서가 같다(speak_curriculum.mixed_order).
@@ -3462,6 +3513,10 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user), db
             items = _speakcur.focus_order(items, focus, lead=3 if stg["mode"] == "word" else 0)
         except Exception as e:
             print(f"[WARN] speak focus failed (stage {n}): {e}")
+    # 낱말 속 소리 확인(계획 2-5): 모음·자음 이동 평균이 문턱에 닿았는데 아직 숙달하지 않았으면 4단계 단어 풀에서 목표 소리가 첫 음절에
+    # 든 낱말 4개를 따로 준다(약한 소리부터, (사용자, 날짜) seed). 화면은 이것을 먼저 내고, 채점은 단어 규칙(합격 65)으로 한다.
+    carryover = _speak_carryover(sp, stg)
+    probes = _speakcur.probe_words(n, f"{current_user.id}:{n}:{_kst_today().isoformat()}", weak=focus) if carryover else []
     if os.getenv("LIPLAB_AI_ITEMS", "1") == "1" and stg["mode"] in ("word", "sentence"):
         try:
             import content_gen
@@ -3482,6 +3537,7 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user), db
         "stage": stg["stage"], "title": stg["title"], "mode": stg["mode"],
         "desc": stg["desc"], "guide": stg["guide"], "icon": stg.get("icon", ""),
         "items": items, "focus_sounds": focus,
+        "carryover": carryover, "probes": probes, "probe_rule": stg.get("probe"),
     }
 
 
@@ -3531,6 +3587,7 @@ async def speak_assess(
     stage: int = Form(None),
     drill: str = Form(None),
     review: int = Form(0),
+    probe: int = Form(0),              # 모음·자음 단계의 낱말 속 소리 확인 문항(계획 2-5)
     mouth_confidence: float = Form(None),
     mouth_track: str = Form(None),   # 녹음 중 입모양 타임라인(B-6) — {"visemes":[...], "frames":[[t, s…], …]}
     current_user=Depends(get_current_user),
@@ -3547,6 +3604,9 @@ async def speak_assess(
                "voiced_duration": voiced_duration if voiced_duration is not None and voiced_duration >= 0 else None}
     stg = _speakcur.get_stage(stage) if stage is not None else None
     mode = stg["mode"] if stg else "word"
+    # 낱말 속 소리 확인은 단어 규칙(4단계, 합격 65)으로 채점하고 mode 'probe'로 남긴다. 이동 평균에는 넣지 않고 숙달 확인에만 쓴다.
+    # 복습 세션은 진행도를 건드리지 않으므로 확인으로 세지 않는다.
+    is_probe = bool(probe) and not review and bool((stg or {}).get("probe"))
 
     transcript = None
     confusions = []
@@ -3640,10 +3700,13 @@ async def speak_assess(
     passed = None
     progress = None
     if stage is not None and stg is not None:
-        score, passed, note = _speakcur.score_attempt(stage, target, transcript, metrics, drill, sim)
+        score, passed, note = _speakcur.score_attempt(4 if is_probe else stage, target, transcript, metrics,
+                                                      None if is_probe else drill, sim)
         # 복습 세션은 채점·코칭만 하고 단계 진행도(숙달/해금)는 건드리지 않는다
         if review:
             sp = None
+        elif is_probe:
+            sp = await _settle_speak_probe(current_user.id, stage, stg, bool(passed), db)
         else:
             sp = await _bump_speak_progress(current_user.id, stage, bool(passed),
                                             stg["min_attempts"], stg["mastery"], db, score=score)
@@ -3697,7 +3760,7 @@ async def speak_assess(
                for p in ((dgop_result or {}).get("phones") or [])
                if p.get("aligned") and p.get("scorable") and p.get("dgop") is not None and not p.get("silent_h")][:40]
     attempt = SpeakAttempt(
-        user_id=current_user.id, stage=stage, mode=mode, target=target,
+        user_id=current_user.id, stage=stage, mode="probe" if is_probe else mode, target=target,
         transcript=transcript, score=score, passed=passed,
         loudness=loudness, pitch_range=pitch_range, duration=duration,
         pitch_start=pitch_start, pitch_end=pitch_end, confusions=confusions[:6],
@@ -3710,18 +3773,22 @@ async def speak_assess(
     db.add(attempt)
     # SRS 복습 큐 유지 — 발음/단어/문장은 틀리면 예정 등록, 맞으면 간격 확장(세 기둥 공통).
     # 말하기는 0~100 점수가 있으므로 이진 대신 점수 등급으로 복습 간격을 조절한다(SM-2).
-    if mode in ("phoneme", "word", "sentence") and passed is not None:
+    # 낱말 속 소리 확인은 숙달 확인용이라 복습 큐에 넣지 않는다(그 낱말은 4단계에서 따로 연습한다).
+    if mode in ("phoneme", "word", "sentence") and passed is not None and not is_probe:
         await _sr_touch(current_user.id, "speak", target, bool(passed), db, score=score)
     await db.commit()
     if sp is not None:
         progress = {"stage": stage, "attempts": sp.attempts,
                     "mastery_score": round(sp.mastery_score, 1),
                     "mastered": sp.status == "mastered"}
+        pst = await _speak_probe_status(current_user.id, stage, sp, db)
+        if pst is not None:
+            progress["probe"] = pst
 
     # 축 E — 모음 단계에서 목표가 단모음 음절('아'·'이' 등)이면 녹음의 포먼트(F1·F2)로 혀 높낮이·앞뒤
     # 교정 방향을 만든다(formants.py). 웹캠이 못 보는 혀 위치를 소리로 짚어 주는 경로다.
     vowel_fb = None
-    if mode == "phoneme" and not no_voice:   # 소리 없는 녹음은 포먼트를 재지 않는다
+    if mode == "phoneme" and not no_voice and not is_probe:   # 소리 없는 녹음은 포먼트를 재지 않는다
         import formants as _fm
         _v = _fm.target_vowel(target)
         if _v:

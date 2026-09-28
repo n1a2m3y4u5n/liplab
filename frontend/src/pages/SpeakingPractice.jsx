@@ -16,6 +16,7 @@ import { finalTone, toneDirection, toneMissed } from '../lib/speakTone'
 import { SOFT_BAND, loudnessRms, metricVerdict, volumeCurveNote, volumeFeedback } from '../lib/speakFeedback'
 import { longestVoicedRun } from '../lib/voicing'
 import { autoCorrelate } from '../lib/pitch'
+import { PROBE_CATEGORY, PROBE_HEADING, hasProbes, nextIndex, probeStatusText, withProbes } from '../lib/speakProbe'
 
 // 혀 위치 성도 단면(E-6) — 모음 결과를 열 때만 받는다(그림 코드와 윤곽 자료 모두 지연 로드)
 const VocalTractVTL = lazy(() => import('../components/VocalTractVTL'))
@@ -94,6 +95,7 @@ export default function SpeakingPractice() {
   const assessStage = reviewMode ? (curItem?.stage ?? null) : stageNo   // 채점에 보낼 단계
   const drill = reviewMode ? null : (curItem?.drill || null)
   const prompt = reviewMode ? null : (curItem?.prompt || null)
+  const isProbe = !reviewMode && !!curItem?.probe   // 모음·자음 단계의 낱말 속 소리 확인 문항(계획 2-5)
   const metricMode = mode === 'voicing' || mode === 'prosody'   // 지표 기반(전사 없음)
   const reviewEmpty = reviewMode && Array.isArray(reviewItems) && reviewItems.length === 0
 
@@ -248,8 +250,10 @@ export default function SpeakingPractice() {
       speakAPI.getStage(stageNo)
         .then((d) => {
           if (cancelled) return
-          setStageInfo(d)
-          applyItem(d.items, 0)
+          // 숙달 점수에 이미 닿은 상태(낱말 속 소리 확인 중)면 확인 낱말부터 낸다
+          const its = d.carryover && d.probes?.length ? withProbes(d.items, d.probes) : d.items
+          setStageInfo({ ...d, items: its })
+          applyItem(its, 0)
         })
         .catch(() => { if (!cancelled) setErr('단계를 불러오지 못했어요.') })
     } else {
@@ -297,10 +301,27 @@ export default function SpeakingPractice() {
     loadFrames(list[Math.floor(Math.random() * list.length)])
   }
 
-  // 다음 항목(단계·복습) 또는 다음 단어(자유)
+  // 다음 항목(단계·복습) 또는 다음 단어(자유). 숙달한 뒤에는 남은 낱말 속 소리 확인 문항을 건너뛴다.
   const nextItem = () => {
-    if ((reviewMode || stageNo != null) && items.length) applyItem(items, (itemIdx + 1) % items.length)
+    if ((reviewMode || stageNo != null) && items.length) applyItem(items, nextIndex(items, itemIdx, !!progress?.mastered))
     else pickWord()
+  }
+
+  // 레슨 중에 숙달 점수에 닿으면(낱말 속 소리 확인 시작) 확인 낱말을 받아 지금 문항 바로 뒤에 끼운다
+  const probeFetchRef = useRef(false)
+  const maybeAddProbes = (prog, at) => {
+    if (reviewMode || stageNo == null || !prog?.probe?.carryover || prog.mastered) return
+    if (probeFetchRef.current || hasProbes(stageInfo?.items)) return
+    probeFetchRef.current = true
+    const forStage = stageNo
+    speakAPI.getStage(forStage)
+      .then((d) => {
+        // 그사이 다른 단계로 옮겼으면 버린다
+        if (!d.probes?.length) return
+        setStageInfo((s) => (s && s.stage === forStage && !hasProbes(s.items) ? { ...s, items: withProbes(s.items, d.probes, at) } : s))
+      })
+      .catch(() => { /* 확인 낱말을 못 받으면 다음에 단계에 들어올 때 받는다 */ })
+      .finally(() => { probeFetchRef.current = false })
   }
 
   // 다시 말하기: 채점 중이던 이전 시도의 결과는 버린다(시도 번호를 올린다)
@@ -389,7 +410,7 @@ export default function SpeakingPractice() {
         voiced_duration: s.voicedDuration ?? null,
       }
       // 복습 세션이면 review=true → 백엔드가 채점/코칭만 하고 단계 숙달·해금은 건드리지 않음
-      const opts = assessStage != null ? { stage: assessStage, drill, review: reviewMode } : {}
+      const opts = assessStage != null ? { stage: assessStage, drill, review: reviewMode, probe: isProbe } : {}
       // 축 B: 웹캠 미러로 버퍼된 입모양이 있으면 함께 보낸다. 서버는 입모양 점수를 소리 점수와 따로 돌려준다.
       const mc = computeMouthConfidence()
       if (mc != null) {
@@ -403,7 +424,7 @@ export default function SpeakingPractice() {
         const res = await speakAPI.assess(target, blob, metrics, opts)
         if (attempt !== attemptRef.current) return
         setAssessment(res)
-        if (res.progress) setProgress(res.progress)
+        if (res.progress) { setProgress(res.progress); maybeAddProbes(res.progress, itemIdx) }
       } catch (e) {
         if (attempt !== attemptRef.current) return
         setAssessment({ error: e?.response?.data?.detail || '발음 분석에 실패했어요. 잠시 후 다시 시도해 주세요.' })
@@ -528,8 +549,10 @@ export default function SpeakingPractice() {
 
   const category = reviewMode
     ? '말하기 복습'
-    : (drill || stageInfo?.title || selectedStageMenuItem?.label || '발음 연습')
-  const heading = prompt || '이 단어를 소리 내어 말해보세요'
+    : isProbe ? PROBE_CATEGORY
+      : (drill || stageInfo?.title || selectedStageMenuItem?.label || '발음 연습')
+  const heading = isProbe ? PROBE_HEADING : (prompt || '이 단어를 소리 내어 말해보세요')
+  const probeLine = progress?.mastered ? null : probeStatusText(progress?.probe)
 
   // 결과 점수·판정
   const phones = (!metricMode && assessment && !assessment.error && assessment.acoustic_dgop?.phones) || []
@@ -675,6 +698,7 @@ export default function SpeakingPractice() {
                       <div className="h-full bg-track transition-[width]" style={{ width: `${Math.min(progress.mastery_score, 100)}%` }} />
                     </div>
                     {progress.mastered && <p className="mt-1 text-xs font-bold text-good-text">이 단계를 숙달했어요! 다음 단계가 열렸어요.</p>}
+                    {probeLine && <p className="mt-1 text-xs text-ink-muted">{probeLine}</p>}
                   </div>
                 )}
               </>

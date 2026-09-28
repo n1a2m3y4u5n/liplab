@@ -69,6 +69,15 @@ def gain_mastered(scores: List[float], gain: Optional[Dict]) -> bool:
     return med(xs[-int(gain["recent"]):]) - med(xs[:int(gain["first"])]) >= float(gain["delta"])
 
 
+# 모음·자음(2·3) 음운 수준 확인(docs/curriculum-roadmap.md 2-5, P9). 따로 낸 음절 점수만으로는 그 소리를 뜻 있는 낱말 속에서도
+# 내는지(Ling의 음운 수준) 알 수 없어, 이동 평균이 문턱에 닿으면 4단계 단어 풀에서 목표 소리가 첫 음절에 든 낱말 n개를 내고
+# 최근 n번 중 need번 이상 합격(4단계 규칙, 합격 65)해야 숙달로 본다. 처음 설계는 5개 중 4개였지만 가상 학습자에서 숙달까지 시도가
+# 27% 늘어(기준 20%) 4개 중 3개로 줄였다(20%, 시드 1 확인). 맞게 말한 청각장애 발화의 65점 합격률 82%에서 한 번에 넘을 확률은
+# 4개 중 3개 85%, 5개 중 4개 78%다(docs/mastery-ewma.md 8절).
+_PROBE = {"n": 4, "need": 3}
+_PROBE_FAMILIAR = 4   # 소리마다 풀 앞쪽 몇 개 안에서 고를지(probe_words)
+
+
 # mastery는 최근 가중 합격률(편향 보정 이동 평균 a 0.08, main._bump_speak_progress)의 문턱이다. 9/27 밤 누적 합격률 65·70에서
 # 바꿨다: 가상 학습자에서 거짓 숙달과 지연이 모든 단계에서 줄고 숙련 학습자는 최소 시도 수 그대로(docs/mastery-ewma.md 6절).
 SPEAK_STAGES: List[Dict] = [
@@ -100,7 +109,7 @@ SPEAK_STAGES: List[Dict] = [
         "guide": "아바타의 입 모양을 따라 모음마다 입 벌림(아는 크게, 이·우·으는 작게)과 입술 모양(오·우는 동그랗게, "
                  "이·으는 옆으로)을 또렷하게 바꿔 보세요. 오/우, 어/으처럼 입 모양이 비슷한 짝은 턱을 벌리는 정도(오·어가 "
                  "더 크게)로 구별해요.",
-        "min_attempts": 8, "mastery": 85.0, "pass": 50.0,
+        "min_attempts": 8, "mastery": 85.0, "pass": 50.0, "probe": _PROBE,
         "items": [{"target": v} for v in ["아", "어", "오", "우", "으", "이", "애", "에"]],
     },
     {
@@ -108,7 +117,7 @@ SPEAK_STAGES: List[Dict] = [
         "desc": "입술소리부터 · 최소대립쌍",
         "guide": "같은 자리에서 나는 소리(예: 불/풀, 달/탈)는 입 모양이 같고 숨의 세기가 달라요. 거센소리(ㅍ·ㅌ·ㅋ)는 "
                  "손바닥을 입 앞에 대고 바람이 세게 닿게 내 보세요.",
-        "min_attempts": 8, "mastery": 85.0, "pass": 50.0,
+        "min_attempts": 8, "mastery": 85.0, "pass": 50.0, "probe": _PROBE,
         "items": [
             {"target": "마"}, {"target": "바"}, {"target": "파"},
             {"target": "불"}, {"target": "풀"},
@@ -230,6 +239,79 @@ def focus_order(items: List[Dict], sounds: List[str], lead: int = 0) -> List[Dic
         if other:
             out.append(other.pop(0))
     return head + out
+
+
+def _first_syllable(word: str) -> Optional[Tuple[str, str, str]]:
+    from scoring import to_pronounced_jamos
+    js = to_pronounced_jamos(word or "")
+    return js[0] if js else None
+
+
+def probe_sound(stage_no: int, word: str) -> Optional[str]:
+    """음운 수준 확인에서 이 낱말이 가리키는 목표 소리. 자음 단계(3)는 첫 음절 첫소리, 모음 단계(2)는 첫 음절 모음(ㅔ는 ㅐ로 본다).
+    첫 음절 첫소리·모음은 소리 나는 대로 바꿔도 달라지지 않아 채점 위치가 분명하다. 대상 단계가 아니면 None."""
+    j = _first_syllable(word)
+    if not j:
+        return None
+    if stage_no == 3:
+        return j[0] or None
+    if stage_no == 2:
+        return _SAME_VOWEL.get(j[1], j[1])
+    return None
+
+
+def stage_sounds(stage_no: int) -> List[str]:
+    """모음·자음 단계의 목표 소리(문항 순서, 중복 없이). 모음은 애·에를 한 소리(ㅐ)로 센다."""
+    stg = get_stage(stage_no)
+    if not stg or not stg.get("probe"):
+        return []
+    return list(dict.fromkeys(s for s in (probe_sound(stage_no, it["target"]) for it in stg["items"]) if s))
+
+
+def probe_words(stage_no: int, seed: str, weak: Optional[List[str]] = None, pool: Optional[List[str]] = None) -> List[Dict]:
+    """음운 수준 확인 낱말(docs/curriculum-roadmap.md 2-5). 4단계 단어 풀에서 목표 소리가 첫 음절(자음은 첫소리, 모음은 모음)에 든
+    낱말을 소리마다 하나씩, 서로 다른 소리 n개(_PROBE)로 고른다. 약한 소리(weak_sounds)부터 고르고 나머지는 seed로 섞는다. 1·2음절 낱말을
+    먼저 쓰고 없으면 3음절까지, 이 단계 문항과 같은 낱말(달·탈·불 등)은 빼서 따로 낸 음절의 되풀이가 되지 않게 한다.
+    seed는 (사용자, 날짜)라 같은 날에는 같은 낱말이다."""
+    stg = get_stage(stage_no)
+    cfg = (stg or {}).get("probe")
+    if not cfg:
+        return []
+    rng = random.Random(seed)
+    sounds = stage_sounds(stage_no)
+    items = {it["target"] for it in stg["items"]}
+    cands: Dict[str, List[str]] = {s: [] for s in sounds}
+    for w in (pool if pool is not None else _STAGE4_WORDS):
+        n = _n_syllables(w)
+        if w in items or n < 1 or n != len(w) or n > 3:   # 한글 음절만으로 된 1~3음절
+            continue
+        s = probe_sound(stage_no, w)
+        if s in cands:
+            cands[s].append(w)
+    weak_n = [_SAME_VOWEL.get(x, x) if stage_no == 2 else x for x in (weak or [])]
+    first = [s for s in dict.fromkeys(weak_n) if s in cands]
+    rest = [s for s in sounds if s not in first]
+    rng.shuffle(rest)
+    out: List[Dict] = []
+    for s in first + rest:
+        ws = cands[s]
+        # 풀은 큐레이션 단어 → 단어 은행 순이고 앞쪽일수록 쉬운 말이라, 소리마다 앞쪽 _PROBE_FAMILIAR개 안에서 고른다.
+        # 전체에서 고르면 능·탓·짚·폭로처럼 드문 말이 나와 소리보다 낱말이 낯설어 틀리게 된다.
+        pick = ([w for w in ws if _n_syllables(w) <= 2] or ws)[:_PROBE_FAMILIAR]
+        if not pick:
+            continue
+        out.append({"target": rng.choice(pick), "probe": True, "sound": s})
+        if len(out) >= int(cfg["n"]):
+            break
+    return out
+
+
+def probes_ok(passes: List[Optional[bool]], cfg: Optional[Dict]) -> bool:
+    """음운 수준 확인 통과: 시간순 합격 기록의 최근 n번 중 need번 이상 합격. 순수 함수."""
+    if not cfg:
+        return True
+    window = [bool(p) for p in passes][-int(cfg["n"]):]
+    return sum(window) >= int(cfg["need"])
 
 
 def get_stage(n: Optional[int]) -> Optional[Dict]:

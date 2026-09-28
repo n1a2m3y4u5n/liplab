@@ -106,18 +106,19 @@ with TestClient(main.app) as c:
                                            "agree_terms": True, "age_confirmed": True})
     h = {"Authorization": f"Bearer {r.json()['access_token']}"}
     uid = c.get("/api/auth/me", headers=h).json()["id"]
-    stg = sc.get_stage(2)
 
-    async def run(seq):
+    async def run(stage, seq):
+        stg = sc.get_stage(stage)
         vals = []
         async with database.AsyncSessionLocal() as db:
             for ok in seq:
-                sp = await main._bump_speak_progress(uid, 2, ok, stg["min_attempts"], stg["mastery"], db)
+                sp = await main._bump_speak_progress(uid, stage, ok, stg["min_attempts"], stg["mastery"], db)
                 vals.append([round(sp.mastery_score, 4), sp.status])
             await db.commit()
         return vals
-    out = {"vals": asyncio.run(run([False, False, True, True, True, True, True, True, True, True, True, True])),
-           "min": stg["min_attempts"], "thr": stg["mastery"]}
+    seq = [False, False, True, True, True, True, True, True, True, True, True, True]
+    out = {"vals": asyncio.run(run(2, seq)), "min": sc.get_stage(2)["min_attempts"], "thr": sc.get_stage(2)["mastery"],
+           "vals0": asyncio.run(run(0, seq)), "min0": sc.get_stage(0)["min_attempts"], "thr0": sc.get_stage(0)["mastery"]}
 print("RESULT " + json.dumps(out))
 '''
 
@@ -143,4 +144,15 @@ def test_speak_stage_uses_bias_corrected_ewma():
         assert abs(r["vals"][i][0] - round(est, 4)) < 1e-9
         if first is None and n >= r["min"] and est >= r["thr"]:
             first = n
-    assert first is not None and r["vals"][first - 1][1] == "mastered" and r["vals"][first - 2][1] == "in_progress"
+    # 모음 단계는 이동 평균이 문턱에 닿아도 낱말 속 소리 확인(계획 2-5, test_speak_probe.py) 전에는 숙달하지 않는다
+    assert first is not None and all(v[1] == "in_progress" for v in r["vals"])
+    # 확인이 없는 발성 단계(문턱 85)는 이동 평균만으로 처음 문턱에 닿은 시도에서 숙달한다
+    est, n, first = 0.0, 0, None
+    for i, ok in enumerate([False, False] + [True] * 10):
+        est = main._ewma_mastery(est, n, ok)
+        n += 1
+        assert abs(r["vals0"][i][0] - round(est, 4)) < 1e-9
+        if first is None and n >= r["min0"] and est >= r["thr0"]:
+            first = n
+    assert r["thr0"] == 85.0
+    assert first is not None and r["vals0"][first - 1][1] == "mastered" and r["vals0"][first - 2][1] == "in_progress"

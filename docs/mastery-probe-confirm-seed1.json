@@ -1,0 +1,36 @@
+{
+ "seed": 1,
+ "n": 20000,
+ "probe_n": 4,
+ "need": 3,
+ "L": 8,
+ "q_scale": 0.82,
+ "all_mastering": {
+  "learners": 9784,
+  "old_median": 74.0,
+  "new_median": 90.0,
+  "median_increase_pct": 21.6,
+  "added_median": 4.0,
+  "not_mastered_new": 999
+ },
+ "typical": {
+  "learners": 7236,
+  "old_median": 65.0,
+  "new_median": 78.0,
+  "median_increase_pct": 20.0,
+  "added_median": 4.0,
+  "not_mastered_new": 112
+ },
+ "skilled": {
+  "learners": 19991,
+  "old_median": 8.0,
+  "new_median": 15.0,
+  "median_increase_pct": 87.5,
+  "added_median": 4.0,
+  "not_mastered_new": 46
+ },
+ "false_mastery": {
+  "old": 0.0175,
+  "new": 0.0066
+ }
+}
