@@ -284,6 +284,10 @@ function MobileTopBar({ pink }) {
       <div className="flex items-center gap-3">
         <Stat icon="/ui/stat-flame.svg" box={17} value={streak} className="gap-1 text-[14px] text-stat-streak" />
         <Stat icon="/ui/lp-232-48-star.svg" box={15} w={14.27} h={13.57} value={xp.toLocaleString()} className="gap-1 text-[14px] text-stat-xp" />
+        <button type="button" onClick={() => window.dispatchEvent(new Event('liplab:a11y-toggle'))} aria-label="접근성 설정"
+          className="grid size-[30px] shrink-0 place-items-center rounded-full bg-slate-900 text-[12px] font-bold tracking-tight text-white">
+          Aa
+        </button>
         <button type="button" onClick={() => navigate('/profile')} aria-label="프로필" className="shrink-0 rounded-full">
           <Avatar className="size-[30px] text-[13px]" />
         </button>
@@ -319,6 +323,11 @@ export default function AppShell({ children, active, rail = 'default', rightRail
   const speak = useSpeakLearn()
   const showRail = useMinWidth(1280)
   useUserSync()
+  // 셸 안에서는 모바일 접근성 버튼을 상단 바로 옮긴다(A11ySettings가 이 표시를 본다)
+  useEffect(() => {
+    document.documentElement.dataset.shell = '1'
+    return () => { delete document.documentElement.dataset.shell }
+  }, [])
   const activeKey = active || NAV.find((n) => location.pathname.startsWith(n.to))?.key
 
   return (
