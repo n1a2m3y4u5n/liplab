@@ -6,6 +6,7 @@ import { learningAPI, scoreAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
 import LoadingScreen from '../components/LoadingScreen'
 import useSlowWeak from '../hooks/useSlowWeak'
+import useLessonTalker from '../hooks/useLessonTalker'
 
 /**
  * 4단계 · 대화 실전 — AI와 자연스러운 대화를 나누며 독화 능력 향상.
@@ -40,6 +41,8 @@ export default function Conversation() {
   const [messages, setMessages] = useState([]) // {role: 'ai'|'user', text: string, visemes: []}
   const [currentAIVisemes, setCurrentAIVisemes] = useState([])
   const shownAIVisemes = useSlowWeak(currentAIVisemes)   // 약한 입모양은 조금 천천히(연습 화면)
+  // 대화 한 번 = 상대 한 사람: 대화마다 가상 화자 한 명(커리큘럼 계획 2-2, 다섯 번째 대화마다 기본 얼굴)
+  const [talkerLesson] = useLessonTalker('conversation')
   const [currentAIText, setCurrentAIText] = useState('')
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -261,6 +264,8 @@ export default function Conversation() {
                 isPlaying={isPlaying}
                 onComplete={handlePlaybackDone}
                 loop={false}
+                talker={talkerLesson.talker}
+                talkerSeed={talkerLesson.seed}
               />
             )}
           </div>
