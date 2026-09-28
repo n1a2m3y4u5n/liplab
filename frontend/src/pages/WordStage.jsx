@@ -209,7 +209,7 @@ function WordQuiz({ data, reload }) {
     if (isContext) {
       // 문맥 문항: 숙달(stat)은 그대로, 시행 기록·취약 입모양에만 남는다(/api/curriculum/context-answer)
       try {
-        const rc = await curriculumAPI.submitContext(q.item.id, answer)
+        const rc = await curriculumAPI.submitContext(q.item.id, answer, q.choices)
         correct = !!rc.correct
         confusions = rc.confusions || []
         setXpEarned((x) => x + (rc.xp_gained || 0))
@@ -219,8 +219,9 @@ function WordQuiz({ data, reload }) {
       return
     }
     try {
+      // 선다형은 보여 준 보기도 보낸다(시행 기록, 기회로 나눈 혼동률). 주관식은 보기가 없다
       const rr = await curriculumAPI.submitWord(q.target, correct, answer, effectiveSpeed(frames, shownFrames, playSpeed),
-        typed ? 'typed' : undefined)
+        typed ? 'typed' : undefined, typed ? undefined : q.choices)
       setStat({ attempts: rr.attempts, mastery: rr.mastery_score, mastered: rr.mastered })
       confusions = rr.confusions || []
       if (typed && rr.verdict) { verdict = rr.verdict; correct = verdict === 'correct' }

@@ -299,7 +299,7 @@ class TrialAttempt(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     stage = Column(Integer, nullable=True)          # 1..3
-    item_type = Column(String(12), nullable=False)  # 'viseme' | 'word' | 'closure'
+    item_type = Column(String(12), nullable=False)  # 'viseme' | 'word' | 'word_typed' | 'closure' | 'context'
     target = Column(String(200), nullable=False)
     chosen = Column(String(200), nullable=True)
     correct = Column(Boolean, default=False)
@@ -307,6 +307,9 @@ class TrialAttempt(Base):
     confusions = Column(JSON, default=list)         # [{position,target,read,viseme,same_viseme}]
     item_id = Column(String(40), nullable=True)     # 문맥 추론 문항 id(정답 단어가 여러 문항에 겹쳐 target으로는 못 가린다)
     speed = Column(Float, nullable=True)            # 답하기 전에 본 실제 재생 속도(1.0 미만은 감속, docs/mastery-ewma.md 7절)
+    # 화면에 보여 준 보기(정답 포함, 보인 순서). 1단계는 입모양 번호 문자열. 주관식이나 예전 기록은 NULL.
+    # 보기에 무엇이 있었는지 알아야 '그 보기가 있었을 때 고른 비율'로 혼동을 잴 수 있다(docs/confusion-pair-serving.md 5.4)
+    options = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -424,6 +427,8 @@ async def init_db():
             "ALTER TABLE trial_attempts ADD COLUMN item_id VARCHAR(40)",
             # 답할 때 본 재생 속도(감속 정답은 숙달에 0.5)
             "ALTER TABLE trial_attempts ADD COLUMN speed FLOAT",
+            # 보여 준 보기(기회로 나눈 혼동률)
+            "ALTER TABLE trial_attempts ADD COLUMN options JSON",
         ):
             try:
                 await conn.exec_driver_sql(ddl)

@@ -188,19 +188,23 @@ export const curriculumAPI = {
   setTrack: async (track, start_stage) => (await api.post('/curriculum/track', { track, start_stage })).data,
   resetTrack: async () => (await api.post('/curriculum/track/reset')).data,
   getVisemeLessons: async () => (await api.get('/curriculum/viseme-lessons')).data,
-  submitRecognition: async (viseme_id, chosen_id) =>
-    (await api.post('/curriculum/recognition', { viseme_id, chosen_id })).data,
+  // options(선택): 화면에 보여 준 보기를 보인 순서대로. 서버가 시행 기록(TrialAttempt.options)에 남겨 '그 보기가 있었을 때 고른 비율'로
+  // 혼동을 잰다(docs/confusion-pair-serving.md 5.4). 보내지 않아도 채점은 같다.
+  submitRecognition: async (viseme_id, chosen_id, options) =>
+    (await api.post('/curriculum/recognition', { viseme_id, chosen_id, ...(options ? { options } : {}) })).data,
   getWords: async () => (await api.get('/curriculum/words')).data,
   // 3단계 문장 4지선다 오답 보기(레슨 밖·음절 수가 가까운 문장). exclude = 이번 레슨 문장들
   getSentenceOptions: async (sentence, exclude) => (await api.post('/curriculum/sentence-options', { sentence, exclude })).data,
   // speed: 답하기 전에 본 실제 재생 속도(학습자 선택 × 적응 감속). 1.0 미만 정답은 숙달에 0.5로 들어간다(docs/mastery-ewma.md 7절)
   // mode 'typed': 주관식(chosen = 입력한 글). 서버가 정답·'입모양은 맞음'·오답으로 채점해 verdict로 돌려준다(계획 1-2)
-  submitWord: async (word, correct, chosen, speed, mode) =>
-    (await api.post('/curriculum/word-answer', { word, correct, chosen, speed, ...(mode ? { mode } : {}) })).data,
+  submitWord: async (word, correct, chosen, speed, mode, options) =>
+    (await api.post('/curriculum/word-answer', { word, correct, chosen, speed, ...(mode ? { mode } : {}), ...(options ? { options } : {}) })).data,
   getClosure: async () => (await api.get('/curriculum/closure')).data,
-  submitClosure: async (item_id, chosen) => (await api.post('/curriculum/closure-answer', { item_id, chosen })).data,
+  submitClosure: async (item_id, chosen, options) =>
+    (await api.post('/curriculum/closure-answer', { item_id, chosen, ...(options ? { options } : {}) })).data,
   // 2단계 레슨 속 문맥 문항(계획 1-3). 숙달에는 넣지 않고 시행 기록·취약 입모양에만 남는다
-  submitContext: async (item_id, chosen) => (await api.post('/curriculum/context-answer', { item_id, chosen })).data,
+  submitContext: async (item_id, chosen, options) =>
+    (await api.post('/curriculum/context-answer', { item_id, chosen, ...(options ? { options } : {}) })).data,
   confusionMatrix: async () => (await api.get('/curriculum/confusion-matrix')).data,
   getRecommendedLevel: async () => (await api.get('/curriculum/recommended-level')).data,
   getNext: async () => (await api.get('/curriculum/next')).data,
