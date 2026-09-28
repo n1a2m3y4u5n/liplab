@@ -92,3 +92,15 @@ def test_transcript_path_verdicts():
     assert r["wrong_onset"]["passed"] is False and r["wrong_onset"]["score"] == 91.0 and "'ㅍ'" in r["wrong_onset"]["note"]
     assert r["wrong_vowel"]["note"] in r["wrong_vowel"]["coaching"]
     assert r["right_vowel"]["passed"] is True and r["right_vowel"]["note"] == "" and r["right_vowel"]["asr"] == 1
+
+
+def test_collapse_whisper_repetition_loops():
+    # Whisper가 잡음·발화 끝에 지어내는 반복 루프를 한 번으로 접는다(잡음 전사 5단계 합격 28% → 0%, 9/28)
+    from speak_service import collapse_repeats as c
+    assert c("이 영상은 영상에서 영상에서 영상에서 영상에서") == "이 영상은 영상에서"
+    assert c("수 있습니다. 고기, 고기, 고기, 고기,") == "수 있습니다. 고기,"
+    assert c("나무에는 3마리가 쪘고 2마리가 쪘고, 2마리가 쪘고, 2마리가 쪘고,") == "나무에는 3마리가 쪘고 2마리가 쪘고,"
+    # 두 번 반복과 보통 문장은 그대로
+    assert c("하하 하하 좋아") == "하하 하하 좋아"
+    assert c("아니 아니 아니야") == "아니 아니 아니야"
+    assert c("밥 먹었어요") == "밥 먹었어요" and c("") == ""

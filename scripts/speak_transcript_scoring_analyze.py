@@ -21,6 +21,9 @@ import speak_curriculum as sc  # noqa: E402
 
 out_dir, half = sys.argv[1], sys.argv[2]
 key = "vad" if "--vad" in sys.argv else "novad"
+COLLAPSE = "--collapse" in sys.argv
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from collapse import collapse_repeats
 asr = json.load(open(f"{out_dir}/asr.json"))
 cuts = json.load(open(f"{out_dir}/cuts608.json"))
 
@@ -30,6 +33,8 @@ def clean(s):
 
 
 def scores(target, trans):
+    if COLLAPSE:
+        trans = collapse_repeats(trans or "")
     c, u = to_pronounced_jamos(clean(target)), to_pronounced_jamos(clean(trans))
     if not c or not u:
         return 0.0, 0.0
@@ -99,4 +104,4 @@ if noise_scores:
     for thr in (50, 65):
         print(f"noise vs stage5 thr {thr}: R0 pass {rate(noise_scores, 0, thr):.3f} R1 pass {rate(noise_scores, 1, thr):.3f}")
 json.dump({k: {"n": v["n"], "same": v["same"], "diff": v["diff"]} for k, v in res.items()} | {"noise": noise},
-          open(f"{out_dir}/scores_{key}_{half}.json", "w"), ensure_ascii=False)
+          open(f"{out_dir}/scores_{key}{'_c' if COLLAPSE else ''}_{half}.json", "w"), ensure_ascii=False)
