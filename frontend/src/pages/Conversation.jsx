@@ -18,6 +18,10 @@ const MAX_TURNS = 6
 // 되묻기(docs/curriculum-roadmap.md 1-4): 실제 대화에서 못 알아들었을 때 쓰는 요청을 연습한다. 한 턴에 두 번까지이고 이해도 점수에서
 // 빼지 않는다. '천천히'는 입모양 길이를 1/0.7배로 늘리고, '다른 말로'는 같은 뜻의 다른 문장(LLM, 실패하면 '천천히'로 대신)을 보인다.
 const MAX_REPAIRS = 2
+// 대화 중 난이도 조정: 최근 두 턴 이해도가 모두 40 미만이면 한 단계 내리고, 모두 85 이상이면 한 단계 올린다(1~5). 너무 쉽거나
+// 어려운 대화가 끝까지 이어지지 않게 해 학습자가 맞히며 조금씩 어려워지는 구간에 머물게 한다. 바꾼 뒤에는 두 턴을 새로 센다.
+const LEVEL_DOWN = 40
+const LEVEL_UP = 85
 const SLOW_RATE = 0.7
 const slowFrames = (frames) => frames.map((f) => ({
   ...f,
@@ -59,6 +63,9 @@ export default function Conversation() {
   const [totalRepairs, setTotalRepairs] = useState(0)
   const [repairBusy, setRepairBusy] = useState(false)
   const [showTips, setShowTips] = useState(true)
+  const [level, setLevel] = useState(() => currentScenario?.level || 1)   // 대화 중 조정되는 난이도
+  const recentRef = useRef([])                                          // 난이도 조정용 최근 턴 이해도
+  const levelRef = useRef(currentScenario?.level || 1)
 
   const chatBoxRef = useRef(null)    // 대화 기록 칸(자체 스크롤)
   const startedRef = useRef(false)   // 최초 AI 말풍선 중복 생성 방지(StrictMode)
@@ -112,7 +119,7 @@ export default function Conversation() {
     try {
       const response = await learningAPI.getConversationTurn(
         currentScenario.situation,
-        currentScenario.level,
+        levelRef.current,
         history
       )
 
@@ -164,7 +171,7 @@ export default function Conversation() {
     if (kind === 'slow') return replayWith(slowFrames(baseFrames))
     setRepairBusy(true)
     try {
-      const r = await learningAPI.rephraseTurn(currentAIText, currentScenario.situation, currentScenario.level)
+      const r = await learningAPI.rephraseTurn(currentAIText, currentScenario.situation, levelRef.current)
       const frames = r?.text ? await learningAPI.getVisemes(r.text).catch(() => []) : []
       if (r?.text && frames.length) {
         // 바꾼 문장이 이번 턴의 정답이 된다(채점·말풍선). 원문은 말풍선에 함께 남긴다.
@@ -205,7 +212,20 @@ export default function Conversation() {
     } catch { /* 채점 실패해도 대화는 진행 */ }
 
     setMessages((prev) => [...prev, { role: 'user', text: answer, score: turnScore }])
-    if (turnScore != null && !practiceOnly) setScores((prev) => [...prev, turnScore])
+    if (turnScore != null && !practiceOnly) {
+      setScores((prev) => [...prev, turnScore])
+      const recent = [...recentRef.current, turnScore].slice(-2)
+      recentRef.current = recent
+      const cur = levelRef.current
+      const next = recent.length === 2 && recent.every((x) => x < LEVEL_DOWN) ? Math.max(1, cur - 1)
+        : recent.length === 2 && recent.every((x) => x >= LEVEL_UP) ? Math.min(5, cur + 1) : cur
+      if (next !== cur) {
+        levelRef.current = next
+        setLevel(next)
+        recentRef.current = []
+        setMessages((prev) => [...prev, { role: 'system', text: next < cur ? `조금 더 짧고 쉬운 말로 바꿀게요 (난이도 ${next})` : `잘 읽고 있어요. 조금 더 긴 말로 해 볼게요 (난이도 ${next})` }])
+      }
+    }
 
     const newTurn = turnCount + 1
     setTurnCount(newTurn)
@@ -217,7 +237,7 @@ export default function Conversation() {
 
     // Build history for next AI turn
     const history = [
-      ...messages,
+      ...messages.filter((m) => m.role !== 'system'),
       { role: 'user', text: answer }
     ].map((m) => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.text }))
 
@@ -252,7 +272,7 @@ export default function Conversation() {
         {/* Left: Avatar player — 모바일에선 위로 쌓이고, lg 이상에서만 좌측 고정폭 */}
         <div className="w-full lg:w-80 shrink-0 flex flex-col gap-3">
           <div className="card flex-1">
-            <p className="mb-2 text-xs font-bold text-ink-muted">입모양 읽기 · {currentScenario.situation}</p>
+            <p className="mb-2 text-xs font-bold text-ink-muted">입모양 읽기 · {currentScenario.situation} · 난이도 {level}</p>
             {isLoading ? (
               <div className="flex flex-col items-center justify-center gap-2 py-12">
                 <div className="spinner size-8 rounded-full border-4 border-primary-200 border-t-primary-600" />
@@ -341,7 +361,9 @@ export default function Conversation() {
             <p className="mb-3 text-xs font-bold text-ink-faint">대화 기록</p>
             <div className="space-y-3">
               <AnimatePresence>
-                {messages.map((msg, i) => (
+                {messages.map((msg, i) => msg.role === 'system' ? (
+                  <p key={i} className="text-center text-[12px] font-bold text-ink-faint">{msg.text}</p>
+                ) : (
                   <motion.div
                     key={i}
                     initial={{ opacity: 0, y: 8 }}
