@@ -646,6 +646,13 @@ def _kst_today():
     return (_dtm.utcnow() + _td(hours=9)).date()
 
 
+def _add_xp(user, xp: int) -> None:
+    """XP를 더하고 레벨을 올린다(level = floor(sqrt(xp/100))+1, 내려가지 않음). 커밋은 호출부."""
+    user.total_xp = (user.total_xp or 0) + int(xp)
+    new_level = int((user.total_xp / 100) ** 0.5) + 1
+    user.current_level = max(user.current_level or 1, new_level)
+
+
 def _award_xp_and_streak(user, base_xp: int, bonus: int = 0) -> dict:
     """스트릭(하루 1회 갱신·idempotent) + XP + 레벨업을 계산해 user에 반영. 커밋은 호출부.
     base_xp는 활동별 기본 XP(스트릭 배수 적용 전), bonus는 배수 미적용 가산점(예: 시간 보너스)."""
@@ -663,9 +670,7 @@ def _award_xp_and_streak(user, base_xp: int, bonus: int = 0) -> dict:
     streak_multiplier = min(1.0 + user.streak_count * 0.1, 3.0)
     xp_gained = int(base_xp * streak_multiplier) + bonus
     old_level = user.current_level
-    user.total_xp += xp_gained
-    new_level = int((user.total_xp / 100) ** 0.5) + 1        # level = floor(sqrt(xp/100))+1
-    user.current_level = max(user.current_level, new_level)
+    _add_xp(user, xp_gained)
     return {
         "xp_gained": xp_gained,
         "streak_count": user.streak_count,
@@ -1289,6 +1294,36 @@ async def analysis_activity_detail(day: str, kind: str, topic: str = "", tz_offs
     return {"day": day, "kind": kind, "topic": topic, "summary": summary, "items": items, "coaching": coaching}
 
 
+async def _activity_events(uid: int, db, since=None) -> list:
+    """활동 기록 네 표(문장·독화 시행·말하기·검사) → analytics.Event 목록. 분석 요약과 과제 탭이 같은 정의로 센다.
+    since(UTC)를 주면 그 뒤 기록만 읽는다."""
+    import analytics as _an
+    from database import Progress, TrialAttempt, SpeakAttempt, PlacementResult
+    from sqlalchemy import select
+
+    def q(stmt, M):
+        stmt = stmt.where(M.user_id == uid)
+        return stmt.where(M.created_at >= since) if since is not None else stmt
+
+    events = []
+    # kind(문항 유형)는 주별 정확도를 유형 구성과 떼어 보는 데 쓴다(analytics 머리말). 문장은 난이도 단계까지 나눈다.
+    for ts, score, lvl in (await db.execute(q(select(Progress.created_at, Progress.score, Progress.difficulty_level),
+                                              Progress))).all():
+        events.append(_an.Event(ts, "read", None if score is None else max(0.0, min(1.0, score / 100.0)),
+                                f"sentence:{lvl or 0}"))
+    for ts, correct, itype in (await db.execute(q(select(TrialAttempt.created_at, TrialAttempt.correct,
+                                                         TrialAttempt.item_type), TrialAttempt))).all():
+        events.append(_an.Event(ts, "read", 1.0 if correct else 0.0, itype or ""))
+    for ts, passed, score, smode in (await db.execute(q(
+            select(SpeakAttempt.created_at, SpeakAttempt.passed, SpeakAttempt.score, SpeakAttempt.mode),
+            SpeakAttempt))).all():
+        g = (1.0 if passed else 0.0) if passed is not None else (None if score is None else max(0.0, min(1.0, score / 100.0)))
+        events.append(_an.Event(ts, "speak", g, f"speak:{smode or ''}"))
+    for (ts,) in (await db.execute(q(select(PlacementResult.created_at), PlacementResult))).all():
+        events.append(_an.Event(ts, "test", None))
+    return [e for e in events if e.ts is not None]
+
+
 @app.get("/api/analysis/overview")
 async def get_analysis_overview(tz_offset_min: int = -540, current_user=Depends(get_current_user),
                                 db: AsyncSession = Depends(get_db)):
@@ -1301,30 +1336,12 @@ async def get_analysis_overview(tz_offset_min: int = -540, current_user=Depends(
     """
     import datetime as dt
     import analytics as _an
-    from database import (Progress, TrialAttempt, SpeakAttempt, PlacementResult,
-                          StageProgress, SpeakStageProgress, ReviewItem)
+    from database import StageProgress, SpeakStageProgress, ReviewItem
     from sqlalchemy import select
 
     tz = max(-840, min(720, int(tz_offset_min)))
     uid = current_user.id
-    events = []
-    # kind(문항 유형)는 주별 정확도를 유형 구성과 떼어 보는 데 쓴다(analytics 머리말). 문장은 난이도 단계까지 나눈다.
-    for ts, score, lvl in (await db.execute(select(Progress.created_at, Progress.score, Progress.difficulty_level)
-                                            .where(Progress.user_id == uid))).all():
-        events.append(_an.Event(ts, "read", None if score is None else max(0.0, min(1.0, score / 100.0)),
-                                f"sentence:{lvl or 0}"))
-    for ts, correct, itype in (await db.execute(select(TrialAttempt.created_at, TrialAttempt.correct, TrialAttempt.item_type)
-                                                .where(TrialAttempt.user_id == uid))).all():
-        events.append(_an.Event(ts, "read", 1.0 if correct else 0.0, itype or ""))
-    for ts, passed, score, smode in (await db.execute(
-            select(SpeakAttempt.created_at, SpeakAttempt.passed, SpeakAttempt.score, SpeakAttempt.mode)
-            .where(SpeakAttempt.user_id == uid))).all():
-        g = (1.0 if passed else 0.0) if passed is not None else (None if score is None else max(0.0, min(1.0, score / 100.0)))
-        events.append(_an.Event(ts, "speak", g, f"speak:{smode or ''}"))
-    for (ts,) in (await db.execute(select(PlacementResult.created_at)
-                                   .where(PlacementResult.user_id == uid))).all():
-        events.append(_an.Event(ts, "test", None))
-    events = [e for e in events if e.ts is not None]
+    events = await _activity_events(uid, db)
 
     prof = await _get_or_create_profile(uid, db)
     read_rows = (await db.execute(select(StageProgress).where(StageProgress.user_id == uid))).scalars().all()
@@ -1906,18 +1923,22 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
 
 
 # ── 간격 반복 복습 (SRS) ──────────────────────────────────────────────────
+_REVIEW_DUE_KINDS = ("viseme", "word", "speak")
+
+
 @app.get("/api/review/due")
 async def review_due(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """오늘까지 복습 예정인 독화 항목(입모양/단어)만. 말하기 예정은 /api/speak/review가 별도 반환."""
+    """오늘까지 복습 예정인 항목. items·count는 독화(입모양/단어)만이다(간격 반복 세션 /review/scheduled가 푸는 것).
+    말하기 예정(kind 'speak', 말하기에서 틀린 문항)은 speak·speak_count로 따로 주고, 말하기 복습(/review/speaking)에서 푼다.
+    total = 둘의 합(복습 탭·오른쪽 패널의 예정 복습 수)."""
     from database import ReviewItem
     from sqlalchemy import select
     today = _kst_today().isoformat()
     r = await db.execute(select(ReviewItem).where(
         ReviewItem.user_id == current_user.id, ReviewItem.due_date <= today,
-        ReviewItem.kind.in_(["viseme", "word"])).order_by(ReviewItem.due_date))
-    items = r.scalars().all()
-    out = []
-    for it in items:
+        ReviewItem.kind.in_(_REVIEW_DUE_KINDS)).order_by(ReviewItem.due_date))
+    read, speak = [], []
+    for it in r.scalars().all():
         # created_at = 처음 복습 큐에 들어온 시각, updated_at = 마지막으로 다시 푼 시각(목록의 상대 날짜용)
         entry = {"kind": it.kind, "ref": it.ref, "due_date": it.due_date,
                  "created_at": _iso_utc(it.created_at), "updated_at": _iso_utc(it.updated_at)}
@@ -1925,8 +1946,9 @@ async def review_due(current_user=Depends(get_current_user), db: AsyncSession = 
             les = _curriculum.lesson_by_id(int(it.ref))
             if les:
                 entry["name"] = les["name"]
-        out.append(entry)
-    return {"count": len(out), "items": out}
+        (speak if it.kind == "speak" else read).append(entry)
+    return {"count": len(read), "items": read, "speak_count": len(speak), "speak": speak,
+            "total": len(read) + len(speak)}
 
 
 @app.delete("/api/review/item")
@@ -1959,6 +1981,66 @@ async def review_answer(data: ReviewAnswer, current_user=Depends(get_current_use
     await db.commit()
     return {"ok": True, "removed": res["removed"], "next_due": res["due_date"],
             "interval_days": res["interval_days"], **reward}
+
+
+# ── 과제 탭(오늘의 과제·특별 과제) 보상: 정의·판정은 daily_tasks.py, 여기서는 기록을 모으고 XP를 준다 ──
+async def _task_board(user, db) -> tuple:
+    """(오늘 KST 날짜, 과제 목록). 진행도는 기존 기록(시행·회차·예정 복습)에서 서버가 계산한다."""
+    import daily_tasks as _dt
+    from database import ReviewItem, TaskClaim
+    from sqlalchemy import select, func
+    today = _kst_today()
+    events = await _activity_events(user.id, db, since=_dt.events_since(today))
+    due_left = (await db.execute(select(func.count(ReviewItem.id)).where(
+        ReviewItem.user_id == user.id, ReviewItem.due_date <= today.isoformat(),
+        ReviewItem.kind.in_(_REVIEW_DUE_KINDS)))).scalar() or 0
+    periods = {_dt.period_of(t, today) for t in _dt.TASKS}
+    claimed = (await db.execute(select(TaskClaim.task_key, TaskClaim.period).where(
+        TaskClaim.user_id == user.id, TaskClaim.period.in_(periods)))).all()
+    return today, _dt.board(_dt.stats(events, today, due_left), today, [tuple(c) for c in claimed])
+
+
+def _task_payload(today, rows) -> dict:
+    import daily_tasks as _dt
+    public = [{k: r[k] for k in ("key", "label", "total", "xp", "period", "cur", "done", "claimed")} for r in rows]
+    return {"day": today.isoformat(), "week_start": _dt.week_start(today).isoformat(),
+            "daily": [r for r in public if r["period"] == "day"],
+            "weekly": [r for r in public if r["period"] == "week"],
+            "unclaimed_xp": sum(r["xp"] for r in _dt.claimable(rows))}
+
+
+@app.get("/api/tasks")
+async def tasks_get(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """과제 탭·오른쪽 패널이 그리는 과제 목록(진행·보상 XP·받았는지). 읽기만 하고 XP는 주지 않는다."""
+    today, rows = await _task_board(current_user, db)
+    return _task_payload(today, rows)
+
+
+@app.post("/api/tasks/claim", dependencies=[Depends(ratelimit.rate_limit(20, 60, "tasks-claim"))])
+async def tasks_claim(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """달성했지만 아직 받지 않은 과제 보상을 모두 준다. 클라이언트는 무엇을 달성했는지 보내지 않고 서버가 기록으로 판정한다.
+    과제마다 기간(하루·한 주, KST)에 한 번만 준다: task_claims의 고유 인덱스가 동시 요청의 중복 지급도 막는다.
+    공용 데모 계정도 같은 규칙이다(방문자 모두 한 계정이라 그날 처음 받은 한 번만 들어간다)."""
+    from database import TaskClaim
+    from sqlalchemy.exc import IntegrityError
+    import daily_tasks as _dt
+    today, rows = await _task_board(current_user, db)
+    todo = _dt.claimable(rows)
+    got = []
+    if todo:
+        for r in todo:
+            db.add(TaskClaim(user_id=current_user.id, task_key=r["key"], period=r["period_key"], xp=r["xp"]))
+        _add_xp(current_user, sum(r["xp"] for r in todo))
+        db.add(current_user)
+        try:
+            await db.commit()
+            got = [{"key": r["key"], "label": r["label"], "xp": r["xp"]} for r in todo]
+        except IntegrityError:
+            await db.rollback()   # 다른 요청이 먼저 받았다: 이번에는 주지 않는다
+        await db.refresh(current_user)
+        today, rows = await _task_board(current_user, db)
+    return {**_task_payload(today, rows), "claimed": got, "xp_gained": sum(g["xp"] for g in got),
+            "total_xp": current_user.total_xp, "current_level": current_user.current_level}
 
 
 # ── 공용 복습 유틸 — 두 기둥(독화·말하기)이 동일 구조(예정/틀림/북마크)를 쓰도록 ──

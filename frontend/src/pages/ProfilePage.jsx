@@ -7,6 +7,7 @@ import useStore, { clearUserLocalData } from '../store/useStore'
 import { accountAPI, learningAPI, reviewAPI } from '../api'
 import { levelProgress } from '../lib/level'
 import { mergeBadges } from '../lib/badges'
+import { dueCounts } from '../lib/reviewDue'
 
 /**
  * 프로필 탭 (Figma 107:16 · 모바일 241:34) — 내 프로필(그라데이션 3D 카드) + 통계 3열 + 설정 리스트.
@@ -107,7 +108,8 @@ export default function ProfilePage() {
       learningAPI.getBookmarks().catch(() => null),
     ]).then(([ov, dueRes, wrongRes, bmRes]) => {
       const len = (r) => (r == null ? null : (Array.isArray(r) ? r : r.items || []).length)
-      const due = len(dueRes)
+      // 오답 = 틀린 문장 + 예정 복습(독화·말하기), 복습 탭 '복습할 오답'과 같은 정의(lib/reviewDue)
+      const due = dueRes == null ? null : dueCounts(dueRes).total
       const wrongN = len(wrongRes)
       setLost({
         ov,
