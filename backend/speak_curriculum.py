@@ -52,11 +52,23 @@ _STAGE4_WORDS = [w for w in dict.fromkeys(_STAGE4_BASE + [w["word"] for w in _WO
 # 읽은 문장의 65점 합격률은 82.2%(화자 절반 1은 73.1%)라 90·85는 대본대로 읽어도 닿기 어려웠다. 문턱 = 기대 합격률 − 5점
 # (docs/curriculum-roadmap.md 2-1, docs/speak-transcript-scoring.md D-GOP 절). 그래도 문턱 아래에 머무는 학습자를 위해 개인 향상 경로를
 # 둔다: 이 단계 시도가 20번 이상이고 최근 10번 점수 중앙값이 처음 10번 중앙값보다 15점 이상 높으면 숙달(gain_mastered).
-_GAIN = {"first": 10, "recent": 10, "delta": 15.0, "min_attempts": 20}
+# 리뷰 뒤 고침(9/28): 복습 세션 시도와 소리 없는 시도(점수 0)가 처음 창에 섞여 기준선이 내려가, 점수가 늘 30이어도 숙달할 수 있었다.
+# 두 가지를 빼고(main._bump_speak_progress, voiced_attempt), 최근 10번 중앙값이 합격선 − 15(합격 65면 50) 이상이어야 한다는 절대 하한을 더했다.
+_GAIN = {"first": 10, "recent": 10, "delta": 15.0, "min_attempts": 20, "floor": 15.0}
 
 
-def gain_mastered(scores: List[float], gain: Optional[Dict]) -> bool:
-    """개인 향상 경로 숙달: 시간순 점수에서 최근 창 중앙값 − 처음 창 중앙값 >= delta. 순수 함수."""
+def voiced_attempt(loudness: Optional[float], transcript: Optional[str], score: Optional[float]) -> bool:
+    """개인 향상 경로에 넣을 시도인가: 소리가 잡힌 시도만. 크기 0(프론트 micIssue, 예전 클라이언트가 크기를 안 보낸 경우 포함)이거나
+    전사가 빈 문자열이고 점수가 0이면(전사 경로의 소리 없음, Whisper가 아무것도 못 들음) 뺀다. D-GOP 경로는 전사가 None이라 크기로만 본다.
+    main._bump_speak_progress의 SQL 조건과 같은 기준이다."""
+    if (loudness or 0) <= 0:
+        return False
+    return not (transcript == "" and (score or 0) <= 0)
+
+
+def gain_mastered(scores: List[float], gain: Optional[Dict], pass_score: Optional[float] = None) -> bool:
+    """개인 향상 경로 숙달: 시간순 점수에서 최근 창 중앙값 − 처음 창 중앙값 >= delta, 그리고 pass_score가 오면 최근 창 중앙값 >=
+    pass_score − floor(절대 하한). 순수 함수. scores는 복습·소리 없는 시도를 뺀 값이어야 한다(voiced_attempt)."""
     if not gain:
         return False
     xs = [float(x) for x in scores if x is not None]
@@ -66,7 +78,10 @@ def gain_mastered(scores: List[float], gain: Optional[Dict]) -> bool:
         v = sorted(v)
         n = len(v)
         return v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2
-    return med(xs[-int(gain["recent"]):]) - med(xs[:int(gain["first"])]) >= float(gain["delta"])
+    recent = med(xs[-int(gain["recent"]):])
+    if pass_score is not None and gain.get("floor") is not None and recent < float(pass_score) - float(gain["floor"]):
+        return False
+    return recent - med(xs[:int(gain["first"])]) >= float(gain["delta"])
 
 
 # 모음·자음(2·3) 음운 수준 확인(docs/curriculum-roadmap.md 2-5, P9). 따로 낸 음절 점수만으로는 그 소리를 뜻 있는 낱말 속에서도

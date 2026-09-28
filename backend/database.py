@@ -249,6 +249,8 @@ class SpeakAttempt(Base):
     uncertainty = Column(Float, nullable=True)
     phones = Column(JSON, nullable=True)            # [{label, dgop}] 정렬·채점 대상 음소만(최대 40)
     coaching = Column(String(600), nullable=True)
+    # 복습 세션 시도인가(9/28). 진행도를 건드리지 않는 시도라 개인 향상 경로(4·5단계) 기준선에서 뺀다. 예전 행은 None
+    review = Column(Boolean, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -419,6 +421,8 @@ _ADD_COLUMNS = (
     ("speak_attempts", "uncertainty", "FLOAT"),
     ("speak_attempts", "phones", "JSON"),
     ("speak_attempts", "coaching", "VARCHAR(600)"),
+    # 복습 세션 시도 표시(개인 향상 경로에서 뺀다)
+    ("speak_attempts", "review", "BOOLEAN"),
     # 숙달 도달 시행수(docs/eval-metrics.md)
     ("stage_progress", "mastered_attempts", "INTEGER"),
     ("stage_progress", "mastered_at", "TIMESTAMP"),
