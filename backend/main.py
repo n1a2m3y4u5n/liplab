@@ -541,6 +541,9 @@ class ProgressSubmission(BaseModel):
     difficulty_level: int        # 처리부에서 1~5로 맞춘다
     practice_only: bool = False  # 정답을 본 뒤의 다시 풀기·자막 힌트 뒤 제출: 점수만 돌려주고 기록·숙달·XP에는 넣지 않는다
     answer_mode: Optional[str] = Field(None, max_length=10)   # 'choice'면 보기를 고른 답: 정확 일치(100 또는 0)로 채점
+    # 답하기 전에 본 유효 재생 속도(학습자가 고른 가장 느린 속도 × 적응 감속). 기록만 하고 숙달에는 넣지 않는다: 1.0배 미만 합격을
+    # 0.5로 세는 규칙들이 시뮬레이션 사전 기준을 넘지 못했다(docs/mastery-ewma.md 9절). 실제 기록이 쌓이면 다시 본다
+    speed: Optional[float] = Field(None, ge=0.1, le=4.0)
 
 
 class ProgressResponse(BaseModel):
@@ -813,7 +816,8 @@ async def submit_progress(
             difficulty_level=difficulty,
             situation=submission.situation,
             viseme_errors=scoring_result.get("viseme_errors", []),
-            phoneme_accuracy=scoring_result.get("phoneme_accuracy", {})
+            phoneme_accuracy=scoring_result.get("phoneme_accuracy", {}),
+            speed=submission.speed,
         )
         db.add(progress)
 
