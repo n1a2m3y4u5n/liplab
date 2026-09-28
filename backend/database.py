@@ -389,61 +389,99 @@ class ConsentRecord(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+# 경량 마이그레이션: create_all은 기존 표에 컬럼을 더하지 않으므로, 나중에 생긴 컬럼을 (표, 컬럼, 형) 목록으로 두고 켜질 때 없는 것만 더한다.
+# 예전에는 ALTER를 모두 한 트랜잭션에서 돌리고 실패를 try/except pass로 넘겼다. SQLite에서는 '이미 있음' 실패가 트랜잭션을 깨지 않아
+# 괜찮았지만 PostgreSQL은 한 문장이 실패하면 그 트랜잭션의 뒤 문장이 모두 실패해(current transaction is aborted), 첫 ALTER가 '이미 있음'으로
+# 실패하면 뒤에 새로 더한 컬럼이 조용히 빠졌다. 지금은 있는 컬럼을 먼저 읽어 없는 것만 ALTER하고, 문장마다 SAVEPOINT로 실패를 가둔다.
+_ADD_COLUMNS = (
+    ("bookmarks", "domain", "VARCHAR(12) DEFAULT 'read'"),
+    # SM-2 경량 스케줄링 컬럼
+    ("review_items", "ease_factor", "FLOAT DEFAULT 2.5"),
+    ("review_items", "repetitions", "INTEGER DEFAULT 0"),
+    ("review_items", "lapses", "INTEGER DEFAULT 0"),
+    # 토큰 무효화(비밀번호 변경 시)
+    ("users", "token_version", "INTEGER DEFAULT 0"),
+    # 표준검사 판본·문항 기록(축 I)
+    ("placement_results", "form_version", "VARCHAR(16)"),
+    ("placement_results", "item_log", "JSON"),
+    # 파일럿 참여 코드·집단(§4.7)
+    ("learning_profiles", "pilot_code", "VARCHAR(32)"),
+    ("learning_profiles", "cohort", "VARCHAR(16)"),
+    ("learning_profiles", "pilot_joined_at", "TIMESTAMP"),
+    # 발화 트랙 건너뛰기(Figma 78:8·79:5·80:6)
+    ("learning_profiles", "speak_current_stage", "INTEGER DEFAULT 0"),
+    # 누적 복습 횟수('복습왕' 배지)
+    ("learning_profiles", "reviews_completed", "INTEGER DEFAULT 0"),
+    # 말하기 회차 상세(Figma 212:24)
+    ("speak_attempts", "audio_score", "FLOAT"),
+    ("speak_attempts", "mouth_score", "FLOAT"),
+    ("speak_attempts", "fused_score", "FLOAT"),
+    ("speak_attempts", "uncertainty", "FLOAT"),
+    ("speak_attempts", "phones", "JSON"),
+    ("speak_attempts", "coaching", "VARCHAR(600)"),
+    # 숙달 도달 시행수(docs/eval-metrics.md)
+    ("stage_progress", "mastered_attempts", "INTEGER"),
+    ("stage_progress", "mastered_at", "TIMESTAMP"),
+    # 문맥 추론 문항 id(최근에 푼 문항을 뒤로 보내기)
+    ("trial_attempts", "item_id", "VARCHAR(40)"),
+    # 답할 때 본 재생 속도(감속 정답은 숙달에 0.5)
+    ("trial_attempts", "speed", "FLOAT"),
+    # 보여 준 보기(기회로 나눈 혼동률)
+    ("trial_attempts", "options", "JSON"),
+    ("trial_attempts", "probe", "JSON"),
+    # 3단계 문장 답의 유효 재생 속도(기록만)
+    ("progress", "speed", "FLOAT"),
+)
+
+
 async def init_db():
     """Initialize database tables"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        # 경량 마이그레이션 — create_all은 기존 테이블에 컬럼을 추가하지 않으므로
-        # 나중에 생긴 bookmarks.domain 컬럼을 있으면 무시, 없으면 추가한다(SQLite).
-        try:
-            await conn.exec_driver_sql(
-                "ALTER TABLE bookmarks ADD COLUMN domain VARCHAR(12) DEFAULT 'read'")
-        except Exception:
-            pass  # 이미 존재
-        # SM-2 경량 스케줄링 컬럼 — 기존 review_items에 없으면 추가
-        for ddl in (
-            "ALTER TABLE review_items ADD COLUMN ease_factor FLOAT DEFAULT 2.5",
-            "ALTER TABLE review_items ADD COLUMN repetitions INTEGER DEFAULT 0",
-            "ALTER TABLE review_items ADD COLUMN lapses INTEGER DEFAULT 0",
-            # 토큰 무효화(비밀번호 변경 시) — 기존 users에 없으면 추가
-            "ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 0",
-            # 표준검사 판본·문항 기록(축 I)
-            "ALTER TABLE placement_results ADD COLUMN form_version VARCHAR(16)",
-            "ALTER TABLE placement_results ADD COLUMN item_log JSON",
-            # 파일럿 참여 코드·집단(§4.7)
-            "ALTER TABLE learning_profiles ADD COLUMN pilot_code VARCHAR(32)",
-            "ALTER TABLE learning_profiles ADD COLUMN cohort VARCHAR(16)",
-            "ALTER TABLE learning_profiles ADD COLUMN pilot_joined_at TIMESTAMP",
-            # 발화 트랙 건너뛰기(Figma 78:8·79:5·80:6)
-            "ALTER TABLE learning_profiles ADD COLUMN speak_current_stage INTEGER DEFAULT 0",
-            # 누적 복습 횟수('복습왕' 배지)
-            "ALTER TABLE learning_profiles ADD COLUMN reviews_completed INTEGER DEFAULT 0",
-            # 말하기 회차 상세(Figma 212:24)
-            "ALTER TABLE speak_attempts ADD COLUMN audio_score FLOAT",
-            "ALTER TABLE speak_attempts ADD COLUMN mouth_score FLOAT",
-            "ALTER TABLE speak_attempts ADD COLUMN fused_score FLOAT",
-            "ALTER TABLE speak_attempts ADD COLUMN uncertainty FLOAT",
-            "ALTER TABLE speak_attempts ADD COLUMN phones JSON",
-            "ALTER TABLE speak_attempts ADD COLUMN coaching VARCHAR(600)",
-            # 숙달 도달 시행수(docs/eval-metrics.md)
-            "ALTER TABLE stage_progress ADD COLUMN mastered_attempts INTEGER",
-            "ALTER TABLE stage_progress ADD COLUMN mastered_at TIMESTAMP",
-            # 문맥 추론 문항 id(최근에 푼 문항을 뒤로 보내기)
-            "ALTER TABLE trial_attempts ADD COLUMN item_id VARCHAR(40)",
-            # 답할 때 본 재생 속도(감속 정답은 숙달에 0.5)
-            "ALTER TABLE trial_attempts ADD COLUMN speed FLOAT",
-            # 보여 준 보기(기회로 나눈 혼동률)
-            "ALTER TABLE trial_attempts ADD COLUMN options JSON",
-            "ALTER TABLE trial_attempts ADD COLUMN probe JSON",
-            # 3단계 문장 답의 유효 재생 속도(기록만)
-            "ALTER TABLE progress ADD COLUMN speed FLOAT",
-        ):
-            try:
-                await conn.exec_driver_sql(ddl)
-            except Exception:
-                pass  # 이미 존재
+        await _add_missing_columns(conn)
         await _dedupe_and_index(conn)
         await _user_indexes(conn)
+
+
+def _existing_columns(sync_conn) -> dict:
+    """{표: 컬럼 이름 집합}. run_sync로 부른다."""
+    from sqlalchemy import inspect
+    insp = inspect(sync_conn)
+    return {t: {c["name"] for c in insp.get_columns(t)} for t in insp.get_table_names()}
+
+
+class _Isolated:
+    """문장 하나의 실패를 그 문장에 가둔다. PostgreSQL 등은 SAVEPOINT(begin_nested)로 되돌리고, SQLite는 실패한 문장이 트랜잭션을
+    깨지 않으므로 그대로 둔다(pysqlite는 SAVEPOINT 처리가 불안정해 예전 동작을 유지한다)."""
+
+    def __init__(self, conn):
+        self._tx = None if conn.dialect.name == "sqlite" else conn.begin_nested()
+
+    async def __aenter__(self):
+        if self._tx is not None:
+            await self._tx.__aenter__()
+        return self
+
+    async def __aexit__(self, *exc):
+        if self._tx is not None:
+            return await self._tx.__aexit__(*exc)
+        return False
+
+
+async def _add_missing_columns(conn, columns=_ADD_COLUMNS) -> list:
+    """없는 컬럼만 ALTER TABLE로 더한다. 표가 아직 없으면(create_all이 새로 만든 표에는 이미 있다) 건너뛴다. 더한 (표, 컬럼) 목록."""
+    have = await conn.run_sync(_existing_columns)
+    added = []
+    for table, col, ddl_type in columns:
+        if table not in have or col in have[table]:
+            continue
+        try:
+            async with _Isolated(conn):
+                await conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {col} {ddl_type}")
+            added.append((table, col))
+        except Exception as e:   # 켜지는 것을 막지 않는다. 다만 조용히 넘기지 않는다
+            print(f"[WARN] {table}.{col} 컬럼 추가 실패: {e}")
+    return added
 
 
 # 사용자별로 한 행이어야 하는 표. 예전에는 고유 제약이 없어(조회 뒤 없으면 넣기) 동시 첫 제출이나 데모 재시드로
@@ -465,13 +503,18 @@ async def _dedupe_and_index(conn) -> None:
     for table, key, order in _UNIQUE_KEYS:
         name = "ux_" + table + "_" + key.replace(", ", "_")
         try:
-            await conn.exec_driver_sql(
-                f"DELETE FROM {table} WHERE id IN (SELECT id FROM ("
-                f"SELECT id, ROW_NUMBER() OVER (PARTITION BY {key} ORDER BY {order}) AS rn FROM {table}"
-                f") AS ranked WHERE rn > 1)")
-            await conn.exec_driver_sql(f"CREATE UNIQUE INDEX IF NOT EXISTS {name} ON {table} ({key})")
+            async with _Isolated(conn):
+                await _dedupe_one(conn, table, key, order, name)
         except Exception as e:   # 켜지는 것을 막지 않는다(조회 쪽도 여러 행에서 첫 행을 쓴다)
             print(f"[WARN] {table} 중복 정리·고유 인덱스 실패: {e}")
+
+
+async def _dedupe_one(conn, table: str, key: str, order: str, name: str) -> None:
+    await conn.exec_driver_sql(
+        f"DELETE FROM {table} WHERE id IN (SELECT id FROM ("
+        f"SELECT id, ROW_NUMBER() OVER (PARTITION BY {key} ORDER BY {order}) AS rn FROM {table}"
+        f") AS ranked WHERE rn > 1)")
+    await conn.exec_driver_sql(f"CREATE UNIQUE INDEX IF NOT EXISTS {name} ON {table} ({key})")
 
 
 # 사용자별 기록 표는 늘 user_id로(대개 시간순까지) 읽는다(분석 탭·학습 효과 리포트·말하기 분석·문맥 추론 순서·배치검사 비교).
@@ -493,7 +536,8 @@ async def _user_indexes(conn) -> None:
     for table, cols in _USER_INDEXES:
         name = "ix_" + table + "_" + cols.replace(", ", "_")
         try:
-            await conn.exec_driver_sql(f"CREATE INDEX IF NOT EXISTS {name} ON {table} ({cols})")
+            async with _Isolated(conn):
+                await conn.exec_driver_sql(f"CREATE INDEX IF NOT EXISTS {name} ON {table} ({cols})")
         except Exception as e:   # 켜지는 것을 막지 않는다
             print(f"[WARN] {table} 인덱스 실패: {e}")
 
