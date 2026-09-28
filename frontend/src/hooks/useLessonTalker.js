@@ -6,11 +6,13 @@ import { lessonTalker, lessonSeed } from '../lib/talkers'
 // 그 번호로 화자와 흔들림 씨앗을 정한다(lib/talkers.lessonTalker). 저장소가 막혀 있으면 이 창에서만 센다.
 const KEY = 'liplab_talker_lessons'
 const memory = {}
+let memoryOnly = false   // 쓰기가 한 번 막히면(할당량 초과·사설 모드) 이후 읽기도 메모리 값을 쓴다. 안 그러면 늘 0번 레슨(기본 화자)이 됐다
 function readCounts() {
+  if (memoryOnly) return memory
   try { return JSON.parse(localStorage.getItem(KEY)) || {} } catch { return memory }
 }
 function writeCounts(m) {
-  try { localStorage.setItem(KEY, JSON.stringify(m)) } catch { Object.assign(memory, m) }
+  try { localStorage.setItem(KEY, JSON.stringify(m)) } catch { Object.assign(memory, m); memoryOnly = true }
 }
 
 // 개발 모드(StrictMode)는 초기화 함수를 두 번 부른다. 같은 단계의 레슨 시작이 1초 안에 다시 오면 앞 결과를 그대로 돌려줘
@@ -28,7 +30,7 @@ export function startLesson(userKey, stage) {
   return lesson
 }
 
-/** [{index, talker, seed}, 다음 레슨 시작 함수]. stage: 'viseme' | 'word' | 'closure' | 'sentence' | 'endless' */
+/** [{index, talker, seed}, 다음 레슨 시작 함수]. stage: 'viseme' | 'word' | 'closure' | 'sentence' | 'endless' | 'conversation' | 'review' */
 export default function useLessonTalker(stage) {
   const uid = useStore((s) => s.user?.id ?? 'guest')
   const [lesson, setLesson] = useState(() => startLesson(uid, stage))
