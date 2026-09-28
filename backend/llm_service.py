@@ -7,7 +7,7 @@ import os
 import random
 import re
 import llm_json
-from typing import List, Dict
+from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 from anthropic import AsyncAnthropic
 import llm_budget
@@ -544,6 +544,38 @@ def conv_turn_ok(text: str, level: int) -> bool:
         return False
     lim = _CONV_MAX_CHARS.get(level)
     return lim is None or len(text) <= lim
+
+
+async def rephrase_turn(text: str, situation: str, level: int) -> Optional[str]:
+    """대화 되묻기 '다른 말로 해 주세요'(docs/curriculum-roadmap.md 1-4): 같은 뜻을 다른 낱말·구조의 한 문장으로 바꾼다.
+    실제 대화에서 못 알아들은 말을 다시 물으면 상대가 바꿔 말해 주는 상황을 연습한다. 실패·한도 초과·원문과 같으면 None이고,
+    화면은 '천천히'로 대신한다. 하루 한도(llm_budget)는 다른 호출과 함께 센다."""
+    src = (text or "").strip()[:200]
+    if not src:
+        return None
+    lim = _CONV_MAX_CHARS.get(level)
+    system_prompt = (
+        "당신은 청각장애인의 독화 훈련 대화 상대입니다. 학습자가 방금 문장을 입모양으로 알아보지 못해 다른 말로 해 달라고 했습니다. "
+        "같은 뜻을 다른 낱말이나 문장 구조로 바꾼 자연스러운 한국어 한 문장만 말하세요. 원문을 그대로 되풀이하지 마세요"
+        + (f" {lim}자 이하로 쓰세요." if lim else ".")
+        + ' 반드시 JSON 형식으로만 응답: {"text": "문장 내용"}'
+    )
+    try:
+        response = await anthropic_client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=120,
+            temperature=0.7,
+            system=system_prompt,
+            messages=[{"role": "user", "content": f"상황: {situation}\n원문: {src}"}],
+        )
+        out = str(llm_json.extract_json(response).get("text", "")).strip()
+    except Exception as e:
+        print(f"Rephrase API error: {e}")
+        return None
+    out = "".join(ch for ch in out if ch >= " ")[:300].strip()
+    if not out or re.search(r"[A-Za-z]", out) or _norm_turn(out) == _norm_turn(src) or not conv_turn_ok(out, level):
+        return None
+    return out
 
 
 async def generate_conversation_turn(

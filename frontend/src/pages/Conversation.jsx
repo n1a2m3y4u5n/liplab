@@ -14,6 +14,21 @@ import useSlowWeak from '../hooks/useSlowWeak'
  */
 
 const MAX_TURNS = 6
+// 되묻기(docs/curriculum-roadmap.md 1-4): 실제 대화에서 못 알아들었을 때 쓰는 요청을 연습한다. 한 턴에 두 번까지이고 이해도 점수에서
+// 빼지 않는다. '천천히'는 입모양 길이를 1/0.7배로 늘리고, '다른 말로'는 같은 뜻의 다른 문장(LLM, 실패하면 '천천히'로 대신)을 보인다.
+const MAX_REPAIRS = 2
+const SLOW_RATE = 0.7
+const slowFrames = (frames) => frames.map((f) => ({
+  ...f,
+  duration_ms: Math.round((f.duration_ms || 0) / SLOW_RATE),
+  ...(f.transition_ms != null ? { transition_ms: Math.round(f.transition_ms / SLOW_RATE) } : {}),
+}))
+// 대화 전 전략 카드(청각 재활 프로그램의 의사소통 전략 훈련)
+const STRATEGIES = [
+  ['되묻기', '못 알아들으면 "다시", "천천히", "다른 말로"를 부탁해요. 실제 대화에서도 그대로 쓸 수 있어요.'],
+  ['자리와 빛', '상대 얼굴이 밝게 보이는 쪽에 앉고, 창을 등진 사람은 피해요.'],
+  ['먼저 알리기', '"입을 보고 알아들어요. 저를 보고 말해 주세요."라고 미리 말해 두면 편해요.'],
+]
 // 레슨 시작 전 트랙 로딩을 최소 이만큼은 보인다 — 첫 응답이 빨리 와도 한 번 번쩍이고 끝나지 않게.
 const INTRO_MS = 1000
 
@@ -36,6 +51,11 @@ export default function Conversation() {
 
   const [introDone, setIntroDone] = useState(false)
   const [notice, setNotice] = useState('')   // 입모양을 받지 못해 재생 없이 답하게 됐을 때의 안내
+  const [baseFrames, setBaseFrames] = useState([])   // 이번 턴 원래 속도 입모양(되묻기 '천천히'의 기준)
+  const [repairs, setRepairs] = useState(0)          // 이번 턴 되묻기 횟수
+  const [totalRepairs, setTotalRepairs] = useState(0)
+  const [repairBusy, setRepairBusy] = useState(false)
+  const [showTips, setShowTips] = useState(true)
 
   const chatBoxRef = useRef(null)    // 대화 기록 칸(자체 스크롤)
   const startedRef = useRef(false)   // 최초 AI 말풍선 중복 생성 방지(StrictMode)
@@ -69,6 +89,8 @@ export default function Conversation() {
   // 오지 않아 '재생이 끝나면 답변할 수 있습니다'에 멈추므로, 바로 답하는 단계로 넘기고 안내를 띄운다.
   const startTurn = (text, frames) => {
     const ok = Array.isArray(frames) && frames.length > 0
+    setBaseFrames(ok ? frames : [])
+    setRepairs(0)
     setCurrentAIVisemes(ok ? frames : [])
     setCurrentAIText(text)
     setIsPlaying(ok)
@@ -121,6 +143,38 @@ export default function Conversation() {
   const handlePlaybackDone = () => {
     setIsPlaying(false)
     setPhase('answering')
+  }
+
+  // 되묻기 — 다시 재생되는 동안은 답하는 칸을 닫는다(보는 중 표시)
+  const replayWith = (frames, text) => {
+    setRepairs((n) => n + 1)
+    setTotalRepairs((n) => n + 1)
+    setNotice('')
+    if (text) setCurrentAIText(text)
+    setCurrentAIVisemes(frames)
+    setPhase('watching')
+    setIsPlaying(true)
+  }
+  const handleRepair = async (kind) => {
+    if (repairs >= MAX_REPAIRS || repairBusy || !baseFrames.length) return
+    if (kind === 'again') return replayWith(baseFrames)
+    if (kind === 'slow') return replayWith(slowFrames(baseFrames))
+    setRepairBusy(true)
+    try {
+      const r = await learningAPI.rephraseTurn(currentAIText, currentScenario.situation, currentScenario.level)
+      const frames = r?.text ? await learningAPI.getVisemes(r.text).catch(() => []) : []
+      if (r?.text && frames.length) {
+        // 바꾼 문장이 이번 턴의 정답이 된다(채점·말풍선). 원문은 말풍선에 함께 남긴다.
+        setBaseFrames(frames)
+        setMessages((prev) => prev.map((m, i) => (i === prev.length - 1 && m.role === 'ai' ? { ...m, text: r.text, orig: m.orig || m.text } : m)))
+        replayWith(frames, r.text)
+      } else {
+        replayWith(slowFrames(baseFrames))
+        setNotice('다른 말로 바꾸지 못해 천천히 다시 보여 드려요.')
+      }
+    } finally {
+      setRepairBusy(false)
+    }
   }
 
   const handleRevealText = () => {
@@ -217,6 +271,24 @@ export default function Conversation() {
             </div>
           )}
 
+          {/* 되묻기: 답하기 전에 한 턴 두 번까지 */}
+          {phase === 'answering' && !revealedText && baseFrames.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-3 gap-2">
+                {[['again', '다시'], ['slow', '천천히'], ['other', '다른 말로']].map(([k, label]) => (
+                  <button key={k} type="button" onClick={() => handleRepair(k)}
+                    disabled={repairs >= MAX_REPAIRS || repairBusy}
+                    className="rounded-14 border-2 border-line bg-white py-2 text-[13.5px] font-bold text-ink transition hover:bg-fill disabled:opacity-40">
+                    {k === 'other' && repairBusy ? '바꾸는 중…' : label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[12px] leading-snug text-ink-faint">
+                {repairs >= MAX_REPAIRS ? '이번 말은 되묻기를 다 썼어요.' : `못 알아들었으면 부탁해 보세요. 점수는 그대로예요 (${MAX_REPAIRS - repairs}번 남음).`}
+              </p>
+            </div>
+          )}
+
           {/* Reveal text button */}
           {phase === 'answering' && !revealedText && (
             <button
@@ -241,6 +313,24 @@ export default function Conversation() {
 
         {/* Right: Chat history + input */}
         <div className="flex-1 flex flex-col gap-3">
+          {/* 대화 전 전략 카드 — 첫 턴에만, 닫을 수 있다 */}
+          {showTips && turnCount === 0 && (
+            <div className="card space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[13px] font-bold text-ink">대화할 때 쓰는 요령</p>
+                <button type="button" onClick={() => setShowTips(false)} className="text-[12px] font-bold text-ink-faint hover:text-ink">닫기</button>
+              </div>
+              <dl className="grid grid-cols-[64px_1fr] gap-x-3 gap-y-1.5 text-[13px] leading-snug">
+                {STRATEGIES.map(([k, v]) => (
+                  <div key={k} className="contents">
+                    <dt className="font-bold text-primary-600">{k}</dt>
+                    <dd className="text-ink-muted">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+
           {/* Chat messages */}
           <div ref={chatBoxRef} className="flex-1 card overflow-y-auto" style={{ maxHeight: '400px' }}>
             <p className="mb-3 text-xs font-bold text-ink-faint">대화 기록</p>
@@ -265,6 +355,9 @@ export default function Conversation() {
                       {msg.role === 'ai' && !msg.revealed
                         ? '(입모양을 보고 맞춰보세요)'
                         : msg.text}
+                      {msg.role === 'ai' && msg.revealed && msg.orig && (
+                        <span className="block mt-0.5 text-[11px] text-ink-faint">처음 한 말: {msg.orig}</span>
+                      )}
                       {msg.role === 'user' && msg.score != null && (
                         <span className="block mt-0.5 text-[10px] opacity-80">이해도 {msg.score}점</span>
                       )}
@@ -327,6 +420,7 @@ export default function Conversation() {
               )}
               <p className="mb-4 text-ink-muted">
                 {MAX_TURNS}번의 대화를 완료했습니다!
+                {totalRepairs > 0 && <span className="block text-[13px]">되묻기 {totalRepairs}번. 실제 대화에서도 편하게 부탁해 보세요.</span>}
               </p>
               <button type="button" onClick={handleFinish} className="btn-primary">
                 나가기
