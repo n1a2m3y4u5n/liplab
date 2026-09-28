@@ -26,6 +26,7 @@ import { curriculumAPI, speakAPI } from '../api'
 // 대화 단계는 연습 방법을 'AI 대화'로 골라 둔다.
 const READ_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/learn/scenario', conversation: '/learn/scenario?mode=conversation' }
 // 단계별 숙달 최소 시도수 — 진행률 표시의 분모(backend/main.py _STAGE1~4_MIN_ATTEMPTS = 8·6·5·4와 같게).
+// 9/28부터 서버가 단계마다 min_attempts·mastery(·pass)를 실어 보내므로 이 표는 응답에 없을 때만 쓴다.
 const READ_TOTAL = { viseme: 8, word: 6, sentence: 5, conversation: 4 }
 const TRACK_LABEL = { read: '독화', speak: '발화' }
 
@@ -74,11 +75,13 @@ function TailLeft({ className = '', edgeClass = '' }) {
   )
 }
 
-/** 두 트랙의 단계 목록을 같은 모양으로 정규화 — { key, stage, no, title, route, status, attempts, total } */
+/** 두 트랙의 단계 목록을 같은 모양으로 정규화: { key, stage, no, title, route, status, attempts, total }
+ *  + 사용법 가이드 '지금 내 상태' 카드용 desc·guide·mastery·pass(서버가 보내는 값을 버리지 않고 싣는다). */
 function normalizeRead(stages) {
   return (stages || []).filter((s) => s.stage >= 1 && READ_ROUTE[s.key]).map((s) => ({
     key: s.key, stage: s.stage, no: s.stage, title: s.title, route: READ_ROUTE[s.key],
-    status: s.status, attempts: s.attempts ?? 0, total: READ_TOTAL[s.key] || 8,
+    status: s.status, attempts: s.attempts ?? 0, total: s.min_attempts || READ_TOTAL[s.key] || 8,
+    desc: s.desc || '', mastery: s.mastery ?? null, pass: s.pass ?? null,
   }))
 }
 // 발화는 0단계(발성)부터 싣는다 — 백엔드가 0단계를 항상 열고 N단계는 N-1 숙달 시 해금하므로
@@ -87,6 +90,7 @@ function normalizeSpeak(stages) {
   return (stages || []).map((s, i) => ({
     key: `speak-${s.stage}`, stage: s.stage, no: i + 1, title: s.title, route: `/learn/speaking?stage=${s.stage}`,
     status: s.status, attempts: s.attempts ?? 0, total: s.min_attempts || 8,
+    desc: s.desc || '', guide: s.guide || '', mastery: s.mastery ?? null, pass: s.pass ?? null,
   }))
 }
 
@@ -153,6 +157,24 @@ export default function CurriculumPath() {
   const loadFailed = list.length === 0 && failed[track]   // 단계를 못 받아 빈 경로 → 안내와 다시 불러오기
   const startLabel = (view?.attempts ?? 0) === 0 ? '학습 시작하기' : '이어서 학습하기'   // 80:6 / 58:11
   const skipStage = list.find((s) => s.key === skipTarget) || null
+
+  // 사용법 가이드는 지금 트랙의 레슨 탭으로 열고, 그 탭 맨 위에 보고 있는 단계의 상태를 보여 준다(가이드 점검 4절 A안).
+  const guideTab = track === 'speak' ? 'speaking' : 'reading'
+  const nextIdx = vIdx + 1
+  const nextStage = list[nextIdx] || null
+  const nextSt = nextStage ? nodeStatus(nextStage, nextIdx) : null
+  const viewLabel = viewStatus === 'mastered' ? (view?.status === 'mastered' ? '숙달' : '지나온 단계')
+    : viewStatus === 'current' ? (progPending ? '숙달 중' : (view?.attempts ?? 0) === 0 ? '시작 전' : '진행 중')
+      : viewStatus === 'skip' ? '건너뛸 수 있음' : '잠김'
+  const guideContext = view ? {
+    tab: guideTab, track, trackLabel: TRACK_LABEL[track], no: view.no, title: view.title, desc: view.desc, guide: view.guide,
+    statusLabel: viewLabel, open: viewOpen, progLabel, progPct,
+    minAttempts: view.total, mastery: view.mastery, pass: view.pass,
+    next: nextStage && {
+      no: nextStage.no, title: nextStage.title,
+      open: nextSt === 'mastered' || nextSt === 'current', skip: nextSt === 'skip',
+    },
+  } : null
 
   const switchTrack = (k) => setSearchParams(k === 'speak' ? { track: 'speak' } : {}, { replace: true })
   const doSkip = async (s) => {
@@ -302,7 +324,7 @@ export default function CurriculumPath() {
         )}
       </div>
 
-      <GuideModal open={guideOpen} onClose={closeGuide} />
+      <GuideModal open={guideOpen} onClose={closeGuide} initialKey={guideTab} context={guideContext} />
     </AppShell>
   )
 }
