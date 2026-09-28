@@ -3,42 +3,53 @@ import TeamAvatar from './TeamAvatar'
 import { CONTACT_EMAIL, TEAM_ORG } from '../config/team'
 
 // 팀원 상세(9/28 사용자 요청: 개발자 프로필을 누르면 상세 정보). 랜딩은 모달(TeamMemberModal), 사용법 가이드 11번 탭은
-// 이미 모달 안이라 겹치지 않게 그 자리에서 펼친다(TeamMemberDetail). 내용은 config/team.js의 detail. 연락처는 맨 위에 둔다.
+// 이미 모달 안이라 겹치지 않게 그 자리에서 펼친다(TeamMemberDetail). 내용은 config/team.js의 detail.
+// 레이아웃(9/28 2차): 전문 프로필(LinkedIn '수상 경력', GitHub 프로필 사이드바)처럼 모든 구역이 같은 왼쪽 기준선에서 시작한다.
+// 소속·연락처는 라벨 칸 폭이 고정된 정의 목록이고, 구역마다 작은 제목 + 구분선, 수상은 제목 한 줄 + 시상 명의 한 줄.
 
 function AwardIcon({ school }) {
   return (
-    <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      className={`mt-[3px] size-[15px] shrink-0 ${school ? 'text-ink-faint' : 'text-primary-500'}`}>
-      <circle cx="12" cy="9" r="6" />
-      <path d="M8.5 14.5 7 22l5-3 5 3-1.5-7.5" />
-    </svg>
+    <span aria-hidden className={`mt-[1px] flex size-7 shrink-0 items-center justify-center rounded-full ${school ? 'bg-fill text-ink-faint' : 'bg-primary-100 text-primary-600'}`}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-[15px]">
+        <circle cx="12" cy="9" r="5.5" />
+        <path d="M8.8 14 7.5 21l4.5-2.6 4.5 2.6-1.3-7" />
+      </svg>
+    </span>
   )
 }
 
-function AwardList({ title, items, school }) {
-  if (!items.length) return null
+function Section({ title, count, children }) {
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-[13px] font-bold text-ink-faint">{title} <span className="font-normal">({items.length})</span></p>
-      <ul className="flex flex-col gap-2.5">
-        {items.map((a) => (
-          <li key={a.title} className="flex gap-2">
-            <AwardIcon school={school} />
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <p className="break-keep text-[14px] font-bold leading-[1.45] text-ink">{a.title}</p>
-              {a.by && <p className="break-keep text-[12.5px] text-ink-muted">{a.by}</p>}
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <section className="flex flex-col gap-3 border-t border-line pt-4">
+      <h3 className="flex items-baseline gap-1.5 text-[13px] font-bold tracking-[-0.01em] text-ink">
+        {title}{count != null && <span className="text-[12px] font-medium text-ink-faint">{count}</span>}
+      </h3>
+      {children}
+    </section>
   )
 }
 
-export function ContactLine({ className = '' }) {
+function AwardList({ items, school }) {
+  return (
+    <ul className="flex flex-col gap-3">
+      {items.map((a) => (
+        <li key={a.title} className="flex gap-3">
+          <AwardIcon school={school} />
+          <div className="flex min-w-0 flex-col gap-0.5 pt-[3px]">
+            <p className="break-keep text-[14px] font-bold leading-[1.45] text-ink">{a.title}</p>
+            {a.by && <p className="break-keep text-[12.5px] leading-[1.4] text-ink-muted">{a.by}</p>}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/** 연락처 한 줄. 목록 위(랜딩 패널·가이드 개발자 소개)는 '대표 연락처', 개인 상세 안은 정의 목록을 쓴다. */
+export function ContactLine({ className = '', label = '대표 연락처' }) {
   return (
     <p className={`flex flex-wrap items-center gap-x-[10px] gap-y-1 font-bold leading-figma ${className}`}>
-      <span className="text-[13px] text-ink-faint">연락처</span>
+      <span className="text-[13px] text-ink-faint">{label}</span>
       <a href={`mailto:${CONTACT_EMAIL}`} className="text-[14px] text-primary-500 hover:underline">{CONTACT_EMAIL}</a>
     </p>
   )
@@ -49,27 +60,34 @@ export function TeamMemberDetail({ m }) {
   const awards = d.awards || []
   const external = awards.filter((a) => a.scope !== 'school')
   const school = awards.filter((a) => a.scope === 'school')
+  const facts = [
+    ['소속', d.affiliation || TEAM_ORG],
+    ['연락처', <a key="c" href={`mailto:${CONTACT_EMAIL}`} className="font-bold text-primary-500 hover:underline">{CONTACT_EMAIL}</a>],
+    m.handle && ['핸들', m.handle],
+  ].filter(Boolean)
   return (
-    <div className="flex flex-col gap-5 leading-figma">
-      <div className="flex flex-col gap-1.5 rounded-14 bg-primary-50 px-4 py-3">
-        <p className="text-[13px] font-bold text-primary-700">소속: {d.affiliation || TEAM_ORG}</p>
-        <ContactLine />
-      </div>
-      {d.intro && <p className="break-keep text-[15px] leading-[1.6] text-ink">{d.intro}</p>}
+    <div className="flex flex-col gap-4 leading-figma">
+      <dl className="grid grid-cols-[56px_1fr] items-baseline gap-x-4 gap-y-2">
+        {facts.map(([k, v]) => (
+          <div key={k} className="contents">
+            <dt className="text-[13px] font-medium text-ink-faint">{k}</dt>
+            <dd className="min-w-0 break-keep text-[14px] font-medium text-ink">{v}</dd>
+          </div>
+        ))}
+      </dl>
       {d.work?.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <p className="text-[13px] font-bold text-ink-faint">맡은 일</p>
+        <Section title="맡은 일">
           <ul className="flex flex-wrap gap-2">
             {d.work.map((w) => (
-              <li key={w} className="rounded-full bg-primary-100 px-3 py-1 text-[13px] font-bold text-primary-700">{w}</li>
+              <li key={w} className="rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-[13px] font-bold text-primary-700">{w}</li>
             ))}
           </ul>
-        </div>
+        </Section>
       )}
-      <AwardList title="수상 · 선발" items={external} />
-      <AwardList title="교내 수상" items={school} school />
-      {!d.intro && !d.work?.length && !awards.length && (
-        <p className="text-[14px] text-ink-muted">{m.note || '자세한 소개는 준비 중이에요.'}</p>
+      {external.length > 0 && <Section title="수상 · 선발" count={external.length}><AwardList items={external} /></Section>}
+      {school.length > 0 && <Section title="교내 수상" count={school.length}><AwardList items={school} school /></Section>}
+      {!d.work?.length && !awards.length && m.note && (
+        <p className="border-t border-line pt-4 text-[14px] text-ink-muted">{m.note}</p>
       )}
     </div>
   )
@@ -83,9 +101,7 @@ export default function TeamMemberModal({ m, onClose }) {
           <TeamAvatar m={m} size={72} />
           <span className="flex flex-col gap-1">
             <span>{m.name}</span>
-            <span className="text-[13.5px] font-normal tracking-normal text-ink-muted">
-              {m.role}{m.handle && <span className="ml-2 font-bold text-primary-500">{m.handle}</span>}
-            </span>
+            <span className="text-[13.5px] font-medium tracking-normal text-ink-muted">{m.role}</span>
           </span>
         </span>
       )}>
