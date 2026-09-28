@@ -16,6 +16,9 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { pickVisemeDistractors, balancedTargets } from '../lib/visemeOptions'
 import { visemeCycleSteps } from '../lib/visemeCycle'
+import { applyTalkerCycle } from '../lib/talkers'
+import TalkerChip from '../components/TalkerChip'
+import useLessonTalker from '../hooks/useLessonTalker'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR_VISEME, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
 
 // MediaPipe 번들이 커서 펼칠 때만 로드(초기 번들 보호)
@@ -63,7 +66,8 @@ const lessonLabel = (lesson) => {
 // neutral(15) ↔ target 반복 → 입모양이 '만들어지는' 움직임을 보여준다.
 // 정적보다 인지가 쉽고, 정답 숫자를 노출하지 않는다.
 // height=null이면 부모 카드 높이를 채운다(className="h-full") — 레슨 입모양 카드(모바일 214 / lg 370).
-function VisemeAvatar({ visemeId, height = 300, variant = 'learn', className = '' }) {
+// talker·talkerSeed: 퀴즈 레슨의 가상 화자(lib/talkers, 계획 2-2). 반복 속도와 입모양 배율에 쓰고 왼쪽 위에 화자 이름을 작게 보인다.
+function VisemeAvatar({ visemeId, height = 300, variant = 'learn', className = '', talker = null, talkerSeed = 0 }) {
   const isQuiz = variant === 'quiz'
   const [vid, setVid] = useState(15)
   const [tm, setTm] = useState({ t: undefined, d: undefined })   // 이번 입모양의 전환·머무는 시간(ms)
@@ -73,7 +77,7 @@ function VisemeAvatar({ visemeId, height = 300, variant = 'learn', className = '
     let on = true
     let t
     // 목표 ↔ 중립 반복. 이중모음은 원순 → 개방으로 미끄러지는 움직임(lib/visemeCycle)
-    const steps = visemeCycleSteps(visemeId)
+    const steps = applyTalkerCycle(visemeCycleSteps(visemeId), talker, talkerSeed)
     const step = (i) => {
       if (!on) return
       const s = steps[i % steps.length]
@@ -84,12 +88,13 @@ function VisemeAvatar({ visemeId, height = 300, variant = 'learn', className = '
     setVid(15)
     t = setTimeout(() => step(0), 250)
     return () => { on = false; clearTimeout(t) }
-  }, [visemeId])
+  }, [visemeId, talker, talkerSeed])
   return (
     <div className={className}>
       <div className={`relative w-full overflow-hidden ${height == null ? 'h-full' : ''} ${isQuiz ? 'rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900' : 'rounded-2xl shadow-xl bg-gradient-to-b from-slate-800 to-slate-900'}`}
            style={height != null ? { height } : undefined}>
-        <AvatarVRM visemeId={vid} xray={xray} transitionMs={tm.t} durationMs={tm.d} />
+        <AvatarVRM visemeId={vid} xray={xray} transitionMs={tm.t} durationMs={tm.d} talker={talker} />
+        <TalkerChip talker={talker} />
         {showTract && (
           <div className="absolute bottom-2 right-2 w-36 sm:w-44 bg-slate-900/85 border border-slate-700 rounded-xl p-1 backdrop-blur-sm">
             <VocalTract visemeId={vid} vtl />
@@ -360,6 +365,8 @@ function QuizPanel({ data }) {
     { situation: q ? `입모양 · ${q.target.name}` : '' })
   const startRef = useRef(Date.now())              // 레슨 시작 시각 → 걸린 시간
   const [elapsedSec, setElapsedSec] = useState(0)
+  // 레슨마다 가상 화자 한 명(계획 2-2). 다섯 레슨마다 첫 레슨은 기본 화자다.
+  const [lesson, nextLesson] = useLessonTalker('viseme')
 
   // 레슨(12문항)의 정답 무리 순서: 무리마다 두 번씩, 연달아 같은 무리 없이(lib/visemeOptions.balancedTargets).
   // 예전 매 문항 무작위는 한 레슨에서 무리 하나 이상이 빠질 확률이 56%였다.
@@ -411,6 +418,7 @@ function QuizPanel({ data }) {
   const restart = () => {
     setDone(false); setQNum(1); setTally({ n: 0, correct: 0 }); setXpEarned(0)
     startRef.current = Date.now()
+    nextLesson()
     newQ(true)
   }
 
@@ -458,7 +466,8 @@ function QuizPanel({ data }) {
 
           {/* 입모양 카드(91:22 560×370 / 모바일 235:45 전체 폭×214) — 아바타만, 무한 반복(다시 보기 없음) */}
           <div className={LESSON_AVATAR_VISEME}>
-            <VisemeAvatar visemeId={q.target.viseme_id} variant="quiz" height={null} className="h-full" />
+            <VisemeAvatar visemeId={q.target.viseme_id} variant="quiz" height={null} className="h-full"
+              talker={lesson.talker} talkerSeed={lesson.seed} />
           </div>
 
           {/* 4지선다(91:28 / 모바일 235:51) — 선택 → 확인 */}

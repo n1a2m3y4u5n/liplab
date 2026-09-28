@@ -11,6 +11,7 @@ import useChoiceKeys from '../lib/useChoiceKeys'
 import useBookmark from '../lib/useBookmark'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR_CLOSURE, LESSON_OPTIONS_3, lessonPad } from '../lib/lessonLayout'
 import useSlowWeak from '../hooks/useSlowWeak'
+import useLessonTalker from '../hooks/useLessonTalker'
 
 /**
  * 문맥 추론(Closure) — 독화 레슨 공통 템플릿(핸드오프 §4-03, WordStage와 같은 틀).
@@ -63,6 +64,7 @@ function ClosureQuiz({ items }) {
   const [qNum, setQNum] = useState(1)
   const [frames, setFrames] = useState([])
   const shownFrames = useSlowWeak(frames)   // 약한 입모양은 조금 천천히(연습 화면)
+  const [lesson, nextLesson] = useLessonTalker(endless ? 'endless' : 'closure')   // 레슨마다 가상 화자 한 명(계획 2-2)
   const [selected, setSelected] = useState(null)
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -112,6 +114,7 @@ function ClosureQuiz({ items }) {
   const restart = () => {
     setDone(false); setQNum(1); setTally({ n: 0, correct: 0 }); setXpEarned(0)
     startRef.current = Date.now()
+    nextLesson()
     setI((k) => k + 1)
   }
   // 나가기: 정해진 곳으로 간다. 예전에는 뒤로 가기(navigate(-1))라, 엔드리스에서는 방금 끝낸 단어 레슨이 다시 열리고
@@ -160,7 +163,7 @@ function ClosureQuiz({ items }) {
 
           {/* 입모양 카드 — 문장 전체를 말한다. 보기는 입모양이 같아 문맥으로 골라야 한다 */}
           <div className={LESSON_AVATAR_CLOSURE}>
-            <MouthAvatar frames={shownFrames} height={null} className="h-full" />
+            <MouthAvatar frames={shownFrames} height={null} className="h-full" talker={lesson.talker} talkerSeed={lesson.seed} />
           </div>
 
           {/* 빈칸 문장 + 힌트 */}

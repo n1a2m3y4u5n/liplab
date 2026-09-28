@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import AvatarVRM from './AvatarVRM'
+import TalkerChip from './TalkerChip'
 import VocalTract from './VocalTract'
 import { CueGlyph } from './CueBadges'
 import { curriculumAPI } from '../api'
+import { applyTalkerTiming } from '../lib/talkers'
 
 /**
  * 3D LipSync Player - VRM-based avatar with full playback controls
@@ -14,9 +16,10 @@ import { curriculumAPI } from '../api'
  * showControls=false면 아바타 무대만 남긴다(상태 배지·진행바·재생/프레임/속도·조음 토글 숨김).
  * 비심 번호·길이('Viseme 12 · 50ms')는 개발용 값이라 학습 화면에 띄우지 않는다(9/24, Figma에 없음, 비심 확인은 /dev-viseme).
  * 레슨 입모양 카드처럼 "무한 반복 재생, 다시 보기 없음"(핸드오프 §3.4)인 자리에서 쓴다. 기본값은 기존 그대로(true).
+ * talker·talkerSeed: 가상 화자(lib/talkers, 계획 2-2). 프레임에 화자의 말 속도·흔들림·동시조음을 입히고, 재생 속도 버튼은 그 위에 곱한다.
  */
 export default function LipSyncPlayer3D({
-  visemes = [],
+  visemes: rawVisemes = [],
   isPlaying = false,
   onComplete = () => {},
   onFrameChange = () => {},
@@ -25,7 +28,10 @@ export default function LipSyncPlayer3D({
   cueText = null,   // 주면 재생 중 현재 음절의 시각증강 기호(축 J)를 입 근처에 겹쳐 표시
   showControls = true,
   stageHeight = 360,   // 아바타 무대 높이(px). 컨트롤을 숨긴 카드에서는 카드 높이에 맞춰 넘긴다.
+  talker = null,
+  talkerSeed = 0,
 }) {
+  const visemes = useMemo(() => applyTalkerTiming(rawVisemes, talker, talkerSeed), [rawVisemes, talker, talkerSeed])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [speed, setSpeed] = useState(1.0)
   const [isPaused, setIsPaused] = useState(false)
@@ -201,7 +207,9 @@ export default function LipSyncPlayer3D({
           transitionMs={currentViseme?.transition_ms}
           durationMs={currentViseme?.duration_ms}
           speed={speed}
+          talker={talker}
         />
+        <TalkerChip talker={talker} />
 
         {/* 시각증강 기호(축 J) — 현재 음절의 안 보이는 자질(기식·긴장·비음)을 입 근처에 겹쳐 표시 */}
         {activeCues.length > 0 && (
