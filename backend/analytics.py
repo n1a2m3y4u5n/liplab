@@ -101,27 +101,34 @@ def within_kind_delta(recent: Sequence[Event], before: Sequence[Event]) -> Optio
     return sum(w[k] * (sum(a[k]) / len(a[k]) - sum(b[k]) / len(b[k])) for k in shared) / sum(w.values())
 
 
-def weekly(events: Sequence[Event], today: date, tz_offset_min: int, weeks: int = WEEKS) -> List[Dict]:
+def weekly(events: Sequence[Event], today: date, tz_offset_min: int, weeks: int = WEEKS, *,
+           sess: Optional[List[List[Event]]] = None, local_dates: Optional[Sequence[date]] = None) -> List[Dict]:
     """최근 weeks주(오늘로 끝나는 7일 창, 오래된 순)의 학습 분·정확도.
-    회차 시간은 회차 시작일이 속한 주에 넣는다. accuracy는 유형 고정효과 보정값, accuracy_raw는 보정 전."""
-    starts = [today - timedelta(days=7 * k + 6) for k in range(weeks)][::-1]
+    회차 시간은 회차 시작일이 속한 주에 넣는다. accuracy는 유형 고정효과 보정값, accuracy_raw는 보정 전.
+    sess(sessions(events))·local_dates(이벤트마다 현지 날짜, events와 같은 순서)는 overview가 한 번 계산해 넘긴다.
+    없으면 여기서 계산한다(결과는 같다)."""
+    first = today - timedelta(days=7 * (weeks - 1) + 6)
+    starts = [first + timedelta(days=7 * k) for k in range(weeks)]
     buckets = [{"minutes": 0.0, "graded": [], "adjusted": []} for _ in starts]
     adj = _kind_adjusted(events)
+    if sess is None:
+        sess = sessions(events)
+    if local_dates is None:
+        local_dates = [to_local(e.ts, tz_offset_min).date() for e in events]
 
+    # 주 번호는 첫 주 시작일과의 일수 차 // 7. 예전에는 이벤트마다 7주를 차례로 비교해 이벤트 2만 개에서 0.05초였다
     def idx(d: date) -> Optional[int]:
-        for i, s in enumerate(starts):
-            if s <= d <= s + timedelta(days=6):
-                return i
-        return None
+        k = (d - first).days
+        return k // 7 if 0 <= k < 7 * weeks else None
 
-    for sess in sessions(events):
-        i = idx(to_local(sess[0].ts, tz_offset_min).date())
+    for s in sess:
+        i = idx(to_local(s[0].ts, tz_offset_min).date())
         if i is not None:
-            buckets[i]["minutes"] += session_minutes(sess)
-    for e in events:
+            buckets[i]["minutes"] += session_minutes(s)
+    for e, d in zip(events, local_dates):
         if e.graded is None:
             continue
-        i = idx(to_local(e.ts, tz_offset_min).date())
+        i = idx(d)
         if i is not None:
             buckets[i]["graded"].append(e.graded)
             buckets[i]["adjusted"].append(adj[id(e)])
@@ -146,13 +153,19 @@ BADGES = [
 def badges(events: Sequence[Event], tz_offset_min: int, best_streak: int, *,
            read_mastered: Set[int], read_total: int, speak_mastered: Set[int], speak_total: int,
            conversation_attempts: int, reviews_done: int, reviews_overdue: int,
-           level: int) -> List[Dict]:
-    """배지별 획득 여부. 판정 근거가 없는 배지는 earned=None(브라우저 판정 또는 미표시)."""
+           level: int, sess: Optional[List[List[Event]]] = None,
+           local_times: Optional[Sequence[datetime]] = None) -> List[Dict]:
+    """배지별 획득 여부. 판정 근거가 없는 배지는 earned=None(브라우저 판정 또는 미표시).
+    sess·local_times(이벤트마다 현지 시각)는 overview가 한 번 계산해 넘긴다. 없으면 여기서 계산한다."""
     graded = [e for e in events if e.graded is not None]
+    if sess is None:
+        sess = sessions(events)
+    if local_times is None:
+        local_times = [to_local(e.ts, tz_offset_min) for e in events]
     lesson90 = any(
         len([e for e in s if e.graded is not None]) >= 10 and (accuracy(s) or 0) >= 0.9
-        for s in sessions(events))
-    dawn = any(0 <= to_local(e.ts, tz_offset_min).hour < 6 for e in events)
+        for s in sess)
+    dawn = any(0 <= t.hour < 6 for t in local_times)
     earned = {
         "first_step": len(events) > 0,
         "streak7": best_streak >= 7,
@@ -175,15 +188,19 @@ def overview(events: Sequence[Event], now_utc: datetime, tz_offset_min: int, **t
     """분석 탭 요약. track_info: read_mastered·read_total·speak_mastered·speak_total·
     conversation_attempts·reviews_done·reviews_overdue·level."""
     today = to_local(now_utc, tz_offset_min).date()
-    days = {to_local(e.ts, tz_offset_min).date() for e in events}
-    cur, best = streaks(days, today)
-    week = weekly(events, today, tz_offset_min)
+    # 회차 나누기(정렬)와 현지 시각 변환은 한 번만 하고 weekly·badges가 다시 쓴다. 예전에는 sessions가 세 번,
+    # to_local이 이벤트마다 네다섯 번 불렸다. 합성 이벤트 2만 개에서 130 → 53ms, 5천 개 30 → 13ms(결과 JSON 같음)
     sess = sessions(events)
+    local_times = [to_local(e.ts, tz_offset_min) for e in events]
+    local_dates = [t.date() for t in local_times]
+    days = set(local_dates)
+    cur, best = streaks(days, today)
+    week = weekly(events, today, tz_offset_min, sess=sess, local_dates=local_dates)
     read_ev = [e for e in events if e.track == "read"]
     speak_ev = [e for e in events if e.track == "speak"]
     this_w, prev_w = week[-1], week[-2]
     # 지난주 대비: weekly의 마지막 두 창(오늘로 끝나는 7일, 그 앞 7일)과 같은 구간에서 유형 안 차이
-    loc = [(to_local(e.ts, tz_offset_min).date(), e) for e in events]
+    loc = list(zip(local_dates, events))
     this_ev = [e for d0, e in loc if today - timedelta(days=6) <= d0 <= today]
     prev_ev = [e for d0, e in loc if today - timedelta(days=13) <= d0 <= today - timedelta(days=7)]
     d = within_kind_delta(this_ev, prev_ev)
@@ -193,7 +210,7 @@ def overview(events: Sequence[Event], now_utc: datetime, tz_offset_min: int, **t
                speak_mastered=track_info["speak_mastered"], speak_total=track_info["speak_total"],
                conversation_attempts=track_info["conversation_attempts"],
                reviews_done=track_info["reviews_done"], reviews_overdue=track_info["reviews_overdue"],
-               level=track_info["level"])
+               level=track_info["level"], sess=sess, local_times=local_times)
     acc_all = accuracy(events)
     # 과제 탭: 오늘 회차·오늘 독화 활동 수, 이번 주(월요일 시작) 학습한 날 수
     today_sess = [s for s in sess if to_local(s[0].ts, tz_offset_min).date() == today]
@@ -207,7 +224,7 @@ def overview(events: Sequence[Event], now_utc: datetime, tz_offset_min: int, **t
     return {
         "has_data": bool(events),
         "today_sessions": len(today_sess),
-        "today_read": len([e for e in read_ev if to_local(e.ts, tz_offset_min).date() == today]),
+        "today_read": sum(1 for d0, e in loc if d0 == today and e.track == "read"),
         "week_days": len({d for d in days if monday <= d <= today}),
         "total_minutes": round(sum(session_minutes(s) for s in sess)),
         "week_minutes": this_w["minutes"],
