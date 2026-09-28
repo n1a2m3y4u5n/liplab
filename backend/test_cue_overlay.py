@@ -78,3 +78,12 @@ def test_no_aspiration_cue_for_silent_linking_h():
     assert not any(c["cue"] == "aspirated" for c in C.generate_cues("싫어요"))
     assert [(c["syllable_index"], c["cue"]) for c in C.generate_cues("많이")] == [(0, "nasal"), (1, "nasal")]
     assert any(c["cue"] == "aspirated" for c in C.generate_cues("좋다"))   # 좋다[조타]의 거센소리는 그대로
+
+
+def test_n_insertion_cues():
+    # 꽃잎[꼰닙]: 예전에는 꼬칲으로 연음해 '기식(ㅊ)' 기호가 붙었다. 이제 받침·초성 ㄴ에 '울림'
+    got = [(c["syllable_index"], c["position"], c["phoneme"], c["cue"]) for c in CU.generate_cues("꽃잎")]
+    assert got == [(0, "initial", "ㄲ", "tense"), (0, "final", "ㄴ", "nasal"), (1, "initial", "ㄴ", "nasal")]
+    assert [(c["syllable_index"], c["phoneme"]) for c in CU.generate_cues("담요")] == [(0, "ㅁ"), (1, "ㄴ")]
+    # 사전에 없는 말(만약[마냑])은 그대로
+    assert [(c["syllable_index"], c["phoneme"]) for c in CU.generate_cues("만약")] == [(0, "ㅁ"), (1, "ㄴ")]
