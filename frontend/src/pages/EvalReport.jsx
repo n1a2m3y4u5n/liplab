@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { evalAPI, curriculumAPI } from '../api'
 import AppShell from '../components/AppShell'
 import LoadingScreen from '../components/LoadingScreen'
+import { TRANSFER_NOISE_NOTE } from '../lib/talkers'
 
 // 학습 효과 리포트 — 개인별 시행 기록으로 학습곡선·단계 도달 시행수·초기 대비 최근 향상도를
 // 시각화한다. 공모전 평가/효과성 근거용. 데이터가 적으면 각 카드가 '쌓이면 표시' 상태를 그린다.
@@ -15,8 +16,9 @@ const nonHomogeneousLabel = (prog) => {
   return v1 && v2 && v1 !== v2 ? `판본이 다른 검사 비교(${v1}→${v2}, 동형 아님)` : '가장 이른·최근 검사 비교'
 }
 
-// 새 화자 조건(커리큘럼 계획 2-3): 사후 검사 문항 절반을 훈련에 없던 가상 화자로 봤을 때의 정답률. 한 얼굴 안에서 말 속도·입 벌림·
-// 입술을 바꾼 앱 안의 근거리 전이 지표이고, 실제 사람 입모양으로의 전이(계획 3-3)는 아니다.
+// 새 가상 화자 조건(커리큘럼 계획 2-3): 사후 검사 문항 절반을 훈련에 없던 가상 화자로 봤을 때의 정답률. 한 얼굴 안에서 말 속도·입 벌림·
+// 입술을 바꾼 앱 안의 근거리 전이 지표이고, 실제 사람 입모양으로의 전이(계획 3-3)는 아니다. 사후 검사 한 번 안의 차이라 향상도가 아니다.
+// 문항 12개씩이라 한 사람의 차이는 잡음이 커서 색으로 좋고 나쁨을 매기지 않는다(9/29, 예전에는 −5%p 경계로 색을 바꿨다).
 const TRANSFER_NOTE = '같은 얼굴이 말하는 방식만 바꾼 앱 안의 가상 화자예요. 실제 사람 입모양으로 옮겨 가는지는 아직 재지 않았어요.'
 const signedPp = (x) => `${x >= 0 ? '+' : ''}${Math.round(x * 100)}%p`
 
@@ -25,7 +27,7 @@ function TalkerTransfer({ t }) {
   const n = t.new_talker
   return (
     <div className="mt-4 border-t border-line pt-3">
-      <p className="mb-2 text-[11px] font-bold text-ink-faint">새 화자 조건 (사후 검사)</p>
+      <p className="mb-2 text-[11px] font-bold text-ink-faint">새 가상 화자 조건 (사후 검사)</p>
       <div className="flex flex-wrap items-end gap-6">
         <div>
           <p className="text-[11px] font-bold text-ink-faint">기본 얼굴 {d.n}문항</p>
@@ -37,13 +39,11 @@ function TalkerTransfer({ t }) {
         </div>
         {t.gap != null && (
           <div className="pb-1">
-            <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${t.gap >= -0.05 ? 'bg-good-tint text-good-text' : 'bg-warn-tint text-warn-text'}`}>
-              {signedPp(t.gap)}
-            </span>
+            <span className="text-xs font-bold text-ink-muted">차이 {signedPp(t.gap)}</span>
           </div>
         )}
       </div>
-      <p className="mt-2 text-xs text-ink-muted">{TRANSFER_NOTE}</p>
+      <p className="mt-2 text-xs text-ink-muted">{TRANSFER_NOISE_NOTE} {TRANSFER_NOTE}</p>
     </div>
   )
 }
@@ -156,8 +156,8 @@ function PrintReport({ r }) {
             수준 Lv.{prog.pre.level} → Lv.{prog.post.level}{prog.homogeneous ? ` · ${formPairLabel(prog)}` : ` · ${nonHomogeneousLabel(prog)}`}
             {prog.talker_transfer ? ` · 사후는 기본 얼굴 ${prog.talker_transfer.default.n}문항` : ''}</p>
           {prog.talker_transfer && (
-            <p className="mt-1">새 화자 조건(사후): 기본 얼굴 {pct(prog.talker_transfer.default.accuracy)}, 새 가상 화자 {pct(prog.talker_transfer.new_talker.accuracy)}
-              {prog.talker_transfer.gap != null ? ` (${signedPp(prog.talker_transfer.gap)})` : ''}. {TRANSFER_NOTE}</p>
+            <p className="mt-1">새 가상 화자 조건(사후): 기본 얼굴 {pct(prog.talker_transfer.default.accuracy)}, 새 가상 화자 {pct(prog.talker_transfer.new_talker.accuracy)}
+              {prog.talker_transfer.gap != null ? ` (${signedPp(prog.talker_transfer.gap)})` : ''}. {TRANSFER_NOISE_NOTE} {TRANSFER_NOTE}</p>
           )}
           {prog.error_phoneme_change?.some((e) => e.before || e.after) && (
             <p className="mt-1">자모별 오류 수 변화: {prog.error_phoneme_change.filter((e) => e.before || e.after).slice(0, 10)
@@ -303,7 +303,7 @@ export default function EvalReport() {
                     수준 Lv.{prog.pre.level} → Lv.{prog.post.level}
                   </div>
                 </div>
-                {/* 사후 검사에 새 화자 조건이 있으면 위 비교는 기본 얼굴 문항끼리다(계획 2-3). 옛 검사는 전 문항 그대로 */}
+                {/* 사후 검사에 새 가상 화자 조건이 있으면 위 비교는 기본 얼굴 문항끼리다(계획 2-3). 옛 검사는 전 문항 그대로 */}
                 {prog.talker_transfer && (
                   <p className="mt-2 text-[11px] text-ink-faint">
                     기본 얼굴 문항끼리 비교: 사후는 {prog.talker_transfer.default.n}문항(전체 {prog.talker_transfer.default.n + prog.talker_transfer.new_talker.n}문항 정확도 {Math.round((prog.post.accuracy_all ?? 0) * 100)}%)

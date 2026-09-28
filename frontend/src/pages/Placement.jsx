@@ -6,7 +6,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
-import { talkerById, atNaturalRate, hashSeed } from '../lib/talkers'
+import { talkerById, atNaturalRate, hashSeed, TRANSFER_NOISE_NOTE } from '../lib/talkers'
 
 /**
  * 디지털 독화 배치검사(축 I) — 난이도가 통제된 입모양→단어 4지선다로 현재 수준을 진단한다.
@@ -29,7 +29,7 @@ const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }   /
 // 결과 버튼 — 데스크톱 75:23(btn-lg), lg 미만 244:129(r14·b5, py16, 16px)
 const RESULT_BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]'
 
-// 사후 검사의 새 화자 조건(커리큘럼 계획 2-3): 서버가 문항 절반에 검사 전용 가상 화자(talker: h1·h2)를 붙여 준다. 1.0배(말 속도만
+// 사후 검사의 새 가상 화자 조건(커리큘럼 계획 2-3): 서버가 문항 절반에 검사 전용 가상 화자(talker: h1·h2)를 붙여 준다. 1.0배(말 속도만
 // 기본으로 되돌림)로 내고, 흔들림 씨앗은 문항 id로 고정한다. 화자 표시는 검사에서 띄우지 않는다. 나머지 문항과 사전 검사는 기본 얼굴.
 const itemTalker = (it) => (it?.talker && it.talker !== 'default' ? atNaturalRate(talkerById(it.talker)) : null)
 
@@ -258,17 +258,17 @@ export default function Placement() {
               </>
             )}
 
-            {/* 사후 검사의 새 화자 조건(계획 2-3) — 문항 절반을 앱 안의 다른 가상 화자로 봤을 때의 정답률 */}
+            {/* 사후 검사의 새 가상 화자 조건(계획 2-3) — 문항 절반을 앱 안의 다른 가상 화자로 봤을 때의 정답률 */}
             {result.talker_transfer && (
               <>
                 <div className="h-[1.5px] w-full bg-line" />
                 <div className="flex flex-col gap-1.5">
-                  <p className="text-[13px] font-bold text-ink-muted">새 화자 조건</p>
+                  <p className="text-[13px] font-bold text-ink-muted">새 가상 화자 조건</p>
                   <p className="text-sm text-ink">
                     기본 얼굴 {result.talker_transfer.default.correct}/{result.talker_transfer.default.n} ·
                     새 가상 화자 {result.talker_transfer.new_talker.correct}/{result.talker_transfer.new_talker.n}
                   </p>
-                  <p className="text-xs text-ink-muted">앱 안의 다른 가상 화자로 옮겨 가는지를 봐요. 실제 사람 입모양으로의 전이는 아니에요.</p>
+                  <p className="text-xs text-ink-muted">앱 안의 다른 가상 화자로 옮겨 가는지를 봐요. 실제 사람 입모양으로의 전이는 아니에요. {TRANSFER_NOISE_NOTE}</p>
                 </div>
               </>
             )}

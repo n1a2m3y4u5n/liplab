@@ -3,12 +3,16 @@
  *
  * 같은 화자 한 명만 보고 익힌 입모양은 새 화자로 잘 옮겨 가지 않는다(고변이 훈련). 얼굴을 더 만들 수 없어서, 말 속도·입 벌림·
  * 입술 폭·입술 돌출·동시조음 강도·타이밍 흔들림을 묶은 가상 화자 6명을 둔다. 훈련용 4명('화자 1'~'화자 4')은 레슨마다 돌아가며
- * 나오고, 검사 전용 2명('화자 5'·'화자 6')은 사후 검사(B형)의 새 화자 조건(계획 2-3)에만 나온다.
+ * 나오고, 검사 전용 2명('화자 5'·'화자 6')은 사후 검사(B형)의 새 가상 화자 조건(계획 2-3)에만 나온다.
  *
  * 값은 문헌 보고를 따른 잠정값이다. 실제 화자 입술 통계로 보정해야 하는데, 그 통계를 AI Hub 영상에서 뽑을지는 사용자 결정을
  * 기다리는 중이라 AI Hub 자료는 쓰지 않았다. 입모양 무리 판별 기준은 talkers.test.mjs(문서 7절)가 확인한다.
  */
 import { VISEME_BLENDSHAPES } from './visemeShapes.js'
+
+// 새 가상 화자 조건 점수 옆에 보이는 안내(9/29). 문항 12개씩이라 개인 차이는 판정하지 않고 집단 평균으로 읽는다
+// (docs/talker-variation.md 6절). 학습 효과 리포트·인쇄 결과지·검사 결과 화면이 같은 문구를 쓴다.
+export const TRANSFER_NOISE_NOTE = '문항 12개씩이라 한 사람 점수 차는 잡음이 커요. 여러 사람의 평균으로 읽어요.'
 
 // 매개변수별로 곱하는 모프. 입을 닫는 모프(mouthClose·Press·Roll)와 혀는 바꾸지 않는다(양순 폐쇄는 화자와 무관하게 보여야 한다).
 export const AMP_KEYS = ['jawOpen', 'mouthLowerDownLeft', 'mouthLowerDownRight', 'mouthUpperUpLeft', 'mouthUpperUpRight']
@@ -50,7 +54,7 @@ export function talkerById(id) {
 const isDefault = (t) => !t || t === DEFAULT_TALKER ||
   (t.amp === 1 && t.width === 1 && t.protrusion === 1 && t.coart === 1 && t.rate === 1 && !t.jitter)
 
-// 사후 검사의 새 화자 조건은 1.0배로 낸다(계획 2-3): 말 속도만 기본으로 되돌린 같은 화자. 객체를 한 번만 만들어 모양 표 캐시가 맞게 한다.
+// 사후 검사의 새 가상 화자 조건은 1.0배로 낸다(계획 2-3): 말 속도만 기본으로 되돌린 같은 화자. 객체를 한 번만 만들어 모양 표 캐시가 맞게 한다.
 const NATURAL = new Map()
 export function atNaturalRate(talker) {
   if (!talker || talker.rate === 1) return talker || DEFAULT_TALKER
