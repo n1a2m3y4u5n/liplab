@@ -146,3 +146,17 @@ def test_n_insertion_dictionary_is_well_formed():
         ini, med, _ = decompose_hangul(tail[0])
         assert ini == "ㅇ" and med in ("ㅣ", "ㅑ", "ㅕ", "ㅛ", "ㅠ"), w
         assert decompose_hangul(head.strip()[-1])[2], w
+
+
+def test_l_tensify_after_adnominal_l():
+    # -ㄹ 뒤 된소리(27항과 붙임)는 시각 기호 경로(l_tensify)에서만. 굳은 구문·어미에 한정한다
+    kw = dict(phonetic=True, h_delete=True, n_insert=True, l_tensify=True)
+    for t, want in (("제가 할게요.", "제가 할께요."), ("할걸요!", "할꺼료!"), ("할 수 있어요.", "할 쑤 이써요."),
+                    ("갈수록", "갈쑤록"), ("갈 거예요", "갈 꺼예요"), ("올 것 같아", "올 껃 가타"),
+                    ("할 줄 알아", "할 쭐 아라"), ("먹을 게 있어", "머글 께 이써"), ("갈 데가 없어", "갈 떼가 업써")):
+        assert _spoken(t, **kw) == want, t
+    # 부사형·사동 -게, 명사 뒤, 다른 말 앞은 그대로
+    for t in ("길게 말해요", "알게 됐어요.", "물 데워 주세요", "잘 지냈어", "발걸음", "힘들게 하지 마"):
+        assert _spoken(t, **kw) == _spoken(t, phonetic=True, h_delete=True, n_insert=True), t
+    # 기본값은 끈다(채점 라벨·입모양 경로는 예전 그대로)
+    assert _spoken("할게요", phonetic=True) == "할게요" and _spoken("할 수 있어") == "할 수 이써"

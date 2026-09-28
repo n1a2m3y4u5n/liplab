@@ -87,3 +87,11 @@ def test_n_insertion_cues():
     assert [(c["syllable_index"], c["phoneme"]) for c in CU.generate_cues("담요")] == [(0, "ㅁ"), (1, "ㄴ")]
     # 사전에 없는 말(만약[마냑])은 그대로
     assert [(c["syllable_index"], c["phoneme"]) for c in CU.generate_cues("만약")] == [(0, "ㅁ"), (1, "ㄴ")]
+
+
+def test_l_tensification_cues():
+    # 할게요[할께요]·할 수[할쑤]: 예전에는 게·수에 '긴장' 기호가 없었다(27항)
+    assert (4, "ㄲ", "tense") in [(c["syllable_index"], c["phoneme"], c["cue"]) for c in CU.generate_cues("제가 할게요.")]
+    assert (2, "ㅆ", "tense") in [(c["syllable_index"], c["phoneme"], c["cue"]) for c in CU.generate_cues("할 수 있어요.")]
+    # 부사형 -게(길게 말해요)에는 붙이지 않는다
+    assert not any(c["cue"] == "tense" for c in CU.generate_cues("길게 말해요"))
