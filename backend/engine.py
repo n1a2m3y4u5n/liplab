@@ -3,6 +3,7 @@ Advanced Viseme Engine for Korean Speechreading
 Converts Korean text to 15 fine-grained visemes with co-articulation modeling
 g2pk-free version: uses built-in Korean phonological rules
 """
+import re
 import unicodedata
 from typing import List, Dict, Optional
 from korean_numbers import normalize_numbers
@@ -117,6 +118,25 @@ L_NASALIZE_AFTER = {'ㅁ', 'ㅇ', 'ㄱ', 'ㅂ'}
 TENSIFY = {'ㄱ': 'ㄲ', 'ㄷ': 'ㄸ', 'ㅂ': 'ㅃ', 'ㅅ': 'ㅆ', 'ㅈ': 'ㅉ'}
 PLAIN_CODA = {'ㄱ', 'ㄷ', 'ㅂ'}
 
+# 관형사형 -ㄹ 뒤 된소리(27항: 할 수[할쑤], 갈 거야[갈꺼야]). 형태를 알아야 하는 규칙이라 굳은 구문만 둔다. '물 데워'처럼
+# 명사 뒤나 '잘 지냈어'에 걸리지 않게 의존명사 뒤 말까지 맞춘다. 시각 기호(cue_overlay) 전용이다(l_tensify 인자).
+_L_TENSE_PHRASE = re.compile(r"(?<=[가-힣]) (?=수[도가는]? (?:있|없)|거(?:야|예요|에요|다|라| ?같)|것(?: ?같|이다)"
+                             r"|줄 (?:알|몰)|게 (?:있|없|많)|데[가는] (?:있|없))")
+# 어미 -ㄹ게·-ㄹ걸(27항 붙임: 할게요[할께요])은 뒤에 '요'가 붙거나 말거나 문장부호·문장 끝이 올 때만. 부사형·사동 -게
+# (길게 말해, 알게 됐어)는 뒤에 공백과 서술어가 와서 갈린다. -ㄹ수록(갈수록[갈쑤록])은 어디서나.
+_L_TENSE_ENDING = re.compile(r"(?<=[가-힣])(?:[게걸](?=요?\s*(?:[^\s가-힣]|$))|수(?=록))")
+
+
+def _apply_l_tensify(text: str, tokens) -> None:
+    """받침 ㄹ 음절 뒤 굳은 구문·어미의 첫 평음(ㄱ·ㄷ·ㅅ·ㅈ)을 된소리로. 제자리 수정."""
+    hits = [m.start() + 1 for m in _L_TENSE_PHRASE.finditer(text)]
+    hits += [m.start() for m in _L_TENSE_ENDING.finditer(text)]
+    for j in hits:
+        prev = decompose_hangul(text[j - 1] if text[j - 1] != ' ' else text[j - 2])
+        tok = tokens[j]
+        if prev[2] == 'ㄹ' and isinstance(tok, list) and tok[0] in TENSIFY:
+            tok[0] = TENSIFY[tok[0]]
+
 
 def _apply_phonetic_rules(tokens):
     """
@@ -166,7 +186,7 @@ def _apply_phonetic_rules(tokens):
 
 
 def to_pronounced_syllables(text: str, phonetic: bool = False, h_delete: Optional[bool] = None,
-                            n_insert: Optional[bool] = None):
+                            n_insert: Optional[bool] = None, l_tensify: bool = False):
     """
     한국어 텍스트를 '소리 나는 대로'의 음절 리스트로 변환.
     한글 음절은 [초성, 중성, 종성] 리스트로(초성 ''는 무음 ㅇ),
@@ -176,6 +196,7 @@ def to_pronounced_syllables(text: str, phonetic: bool = False, h_delete: Optiona
       겹받침 단순화·ㅎ탈락·초성 ㅇ 무음화.
     h_delete: ㄶ·ㅀ + 모음의 ㅎ 탈락. None이면 입모양 경로만(채점 라벨은 H_DELETE_PHONETIC을 따른다).
     n_insert: ㄴ 첨가(29항, N_INSERT_WORDS 사전). None이면 입모양 경로만 켠다(채점 라벨 경로는 끈다).
+    l_tensify: -ㄹ 뒤 된소리(27항, 굳은 구문·어미만). 시각 기호 경로만 켠다.
     phonetic=True (축 A 학습 라벨용) — 위에 더해 평파열음화·유음화·비음화·경음화까지
       적용해 '실제 소리'와 일치시킨다. _apply_phonetic_rules 참고.
     """
@@ -268,6 +289,8 @@ def to_pronounced_syllables(text: str, phonetic: bool = False, h_delete: Optiona
     # 겹받침이 대표음으로 줄어든 뒤라야 평파열음화·비음화가 올바로 걸린다.
     if phonetic:
         _apply_phonetic_rules(tokens)
+    if l_tensify:
+        _apply_l_tensify(text, tokens)
 
     return tokens
 
