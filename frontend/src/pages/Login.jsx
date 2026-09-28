@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import useStore from '../store/useStore'
 import { authAPI, seedAPI } from '../api'
 import Logo from '../components/Logo'
@@ -140,8 +140,10 @@ export default function Login({ initialMode = 'login' }) {
             </span>
           )}
           {/* 로고(모바일 243:44 24px / 데스크톱 227:51 28px) */}
-          <Logo size={24} className="lg:hidden" />
-          <Logo size={28} className="hidden lg:inline-block" />
+          <Link to="/about" aria-label="LIPLAB 소개" className="self-start">
+            <Logo size={24} className="lg:hidden" />
+            <Logo size={28} className="hidden lg:inline-block" />
+          </Link>
 
           <h1 className="text-center text-[24px] font-bold leading-figma tracking-[-0.6px] text-ink lg:text-left lg:text-[30px] lg:tracking-[-0.75px]">
             {signup ? '학습할 준비 되셨나요?' : (

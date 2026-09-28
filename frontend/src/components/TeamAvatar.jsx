@@ -1,13 +1,8 @@
-// 팀원 아바타 60px. 사진이 있으면 사진, 없으면 연보라 원 안의 DOKA(Figma 372:98). 가이드 11번 탭과 랜딩이 함께 쓴다.
-const MASCOT_OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }
+import MascotAvatar from './MascotAvatar'
 
-export default function TeamAvatar({ m }) {
-  if (m.photo) return <img src={m.photo} alt="" className="size-[60px] shrink-0 rounded-full object-cover" />
-  return (
-    <span aria-hidden className="relative size-[60px] shrink-0 overflow-hidden rounded-full bg-primary-100">
-      <span className="absolute left-[9px] top-[10px] size-[42px]">
-        <img src="/ui/lp-372-98-guide-mascot.svg" alt="" className="absolute max-w-none" style={MASCOT_OVERFLOW} />
-      </span>
-    </span>
-  )
+// 팀원 아바타. 9/28부터 사진 대신 마스코트(사람마다 색·표정·모션, config/team.js의 mascot). 가이드 11번 탭과 랜딩이 함께 쓴다.
+// 순서대로 모션 시작을 조금씩 늦춰(delay) 여러 명이 나란히 있어도 똑같이 움직이지 않게 한다.
+export default function TeamAvatar({ m, size = 60, index = 0 }) {
+  const c = m.mascot || {}
+  return <MascotAvatar palette={c.palette} face={c.face} motion={c.motion} size={size} delay={index * 0.37} />
 }

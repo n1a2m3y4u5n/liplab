@@ -3,6 +3,7 @@ import { ModalClose } from './Modal'
 import useFocusTrap from '../hooks/useFocusTrap'
 import TeamAvatar from './TeamAvatar'
 import { TEAM, REPO_URL } from '../config/team'
+import { TeamMemberDetail, ContactLine } from './TeamMemberDetail'
 
 /**
  * 사용법 가이드 모달 (Figma "09. 사용법 가이드" 338:57 ~ 342:348).
@@ -247,10 +248,12 @@ function TipsBody() {
 }
 
 // 11 개발자 소개(342:530) — 사진(또는 DOKA) 60 + 이름 17 · 역할 13.5 · 핸들 12.5. 팀 정보는 config/team.js(랜딩과 같이 씀).
-function Member({ m }) {
+// 누르면 그 줄 아래에 상세가 펼쳐진다(9/28, 가이드 자체가 모달이라 모달을 겹치지 않는다).
+function Member({ m, open, onToggle, index }) {
   return (
-    <div className="flex items-center gap-4 md:w-[361px] md:shrink-0">
-      <TeamAvatar m={m} />
+    <button type="button" onClick={onToggle} aria-expanded={open}
+      className={`flex items-center gap-4 rounded-14 p-1 text-left transition hover:bg-primary-50 md:w-[361px] md:shrink-0 ${open ? 'bg-primary-50' : ''}`}>
+      <TeamAvatar m={m} index={index} />
       <div className="flex min-w-0 flex-col gap-1 whitespace-nowrap leading-figma">
         <p className="text-[17px] font-bold text-ink">{m.name}</p>
         <p className="text-[13.5px] text-ink-muted">{m.role}</p>
@@ -258,20 +261,28 @@ function Member({ m }) {
           ? <p className="text-[12.5px] font-bold text-primary-500">{m.handle}</p>
           : <p className="text-[12px] text-ink-hint">{m.note}</p>}
       </div>
-    </div>
+    </button>
   )
 }
 
 function TeamBody() {
+  const [open, setOpen] = useState(null)
   const rows = [TEAM.slice(0, 2), TEAM.slice(2, 4), TEAM.slice(4)]
   return (
     <div className="flex flex-col">
-      <p className="pb-[22px] text-[15px] leading-[1.6] text-ink-muted">LIPLAB을 함께 만든 사람들이에요.</p>
-      {rows.map((row, i) => (
-        <div key={row[0].name} className={`flex flex-col gap-5 md:flex-row md:gap-11 ${i === 0 ? 'pb-5 pt-1' : 'border-t border-fill py-5'}`}>
-          {row.map((m) => <Member key={m.name} m={m} />)}
-        </div>
-      ))}
+      <p className="pb-2 text-[15px] leading-[1.6] text-ink-muted">LIPLAB을 함께 만든 사람들이에요. 이름을 누르면 자세히 볼 수 있어요.</p>
+      <ContactLine className="pb-[22px]" />
+      {rows.map((row, i) => {
+        const shown = row.find((m) => m.name === open)
+        return (
+          <div key={row[0].name} className={`flex flex-col gap-4 ${i === 0 ? 'pb-5 pt-1' : 'border-t border-fill py-5'}`}>
+            <div className="flex flex-col gap-5 md:flex-row md:gap-11">
+              {row.map((m) => <Member key={m.name} m={m} index={TEAM.indexOf(m)} open={open === m.name} onToggle={() => setOpen(open === m.name ? null : m.name)} />)}
+            </div>
+            {shown && <div className="rounded-14 bg-primary-50 px-4 py-4"><TeamMemberDetail m={shown} /></div>}
+          </div>
+        )
+      })}
       <p className="flex items-center gap-[10px] whitespace-nowrap border-t border-fill pt-5 font-bold leading-figma">
         <span className="text-[13px] text-ink-faint">소스 코드</span>
         <a href={REPO_URL} target="_blank" rel="noreferrer" className="text-[14px] text-primary-500 hover:underline">
