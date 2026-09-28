@@ -42,6 +42,7 @@ with TestClient(main.app) as c:
 db = sqlite3.connect(os.environ["T_DB"])
 rows = db.execute("select item_type, target, chosen, options from trial_attempts order by id").fetchall()
 out["rows"] = [[t, tg, ch, json.loads(o) if o else None] for t, tg, ch, o in rows]
+out["sql_null"] = db.execute("select count(*) from trial_attempts where options is null").fetchone()[0]
 out["opts"], out["word"], out["ctx_opts"] = opts, word, item["options"]
 print("RESULT " + json.dumps(out, ensure_ascii=False))
 '''
@@ -90,6 +91,7 @@ def test_shown_options_are_recorded():
     assert rows[4][3] is None               # 문자열·숫자가 아닌 보기
     assert rows[5][3] == ["3", "1", "2", "4"] and rows[6][3] is None   # 1단계는 입모양 번호 문자열
     assert rows[7][3] == r["ctx_opts"] and rows[8][3] == r["ctx_opts"]
+    assert r["sql_null"] == 5               # 남기지 않은 보기는 JSON 'null'이 아니라 SQL NULL(IS NOT NULL로 거른다)
 
 
 def test_old_db_gets_options_column():

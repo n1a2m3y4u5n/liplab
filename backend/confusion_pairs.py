@@ -4,9 +4,12 @@
 없어 대상이 아니다(visible_jamo_pair). 대비 단어는 단어의 target 자모를 같은 자리에서 read 자모로 바꾼 실재 단어다(서빙 풀 안,
 동구형이음·준동구형 아님).
 
-탐색 문항(5.4-2): 2단계 레슨 12문항 가운데 선다형 1문항을, 후보 짝의 target 자모가 든 단어 + 그 대비 단어가 든 보기로 낸다.
-후보 짝이 아직 없으면 풀에서 탐색할 수 있는 짝을 무작위로 골라 기록이 쌓이게 한다. 탐색 문항도 보통 단어 문항이라 숙달에 똑같이
-들어간다(보기만 정해져 있다).
+탐색 문항(5.4-2): 2단계 레슨 12문항 가운데 선다형 1문항을, 고른 짝의 target 자모가 든 단어 + 그 대비 단어가 든 보기로 낸다.
+짝은 보기 기록으로 센 기회·혼동 수의 상한 신뢰 순서로 고른다(기회가 적은 짝과 혼동률이 높은 짝 먼저, 7절에서 정함). 탐색 문항도
+보통 단어 문항이라 숙달에 똑같이 들어간다(보기만 정해져 있다).
+
+짝 뽑기(5.4-3): 보기 기록이 있으면 기회로 나눈 혼동률(OpportunityCounter)로 후보를 고른다. 시뮬레이션에서 재현율은 8~9%로 예전
+규칙(5~8%)보다 조금 나을 뿐이라, 이 후보로 출제를 겨냥하는 것은 채택하지 않았다(docs/confusion-pair-serving.md 7절).
 
 DB·네트워크 의존 없는 순수 함수. scripts/confusion_pair_sim.py도 이 규칙을 그대로 쓴다.
 """
@@ -209,15 +212,21 @@ class PairIndex:
 
 
 def probe_items(pidx: PairIndex, focus: Sequence[Dict], priority: Dict[str, float], level: int,
-                classes_fn, rng: Optional[random.Random] = None, k: int = PROBE_OFFER) -> List[Dict]:
-    """탐색 문항 후보 k개(같은 짝, 서로 다른 단어). focus(후보 짝, 앞이 우선) 가운데 탐색할 수 있는 첫 짝을 쓰고,
-    없으면 pidx.probe_pairs에서 무작위로 고른다(후보가 아직 없을 때도 기록이 쌓이게).
+                classes_fn, rng: Optional[random.Random] = None, k: int = PROBE_OFFER,
+                counter: Optional["OpportunityCounter"] = None) -> List[Dict]:
+    """탐색 문항 후보 k개(같은 짝, 서로 다른 단어). 짝 고르기는 두 가지다.
+      counter를 주면(서버, 6·7절): 탐색할 수 있는 짝을 상한 신뢰 순서(OpportunityCounter.ucb, 같으면 무작위)로 보고 첫 짝.
+        기회가 적은 짝과 기회로 나눈 혼동률이 높은 짝이 먼저 온다. source 'ucb'.
+      counter가 없으면: focus(후보 짝, 앞이 우선) 가운데 탐색할 수 있는 첫 짝(source 'candidate'), 없으면 pidx.probe_pairs에서
+        무작위(source 'random').
     단어는 그 짝의 target 자모가 대비 단어가 있는 자리에 든 단어에서 priority(레슨 출제 가중)로 뽑고, 보기는 보통 규칙
     (pick_distractors, 같은 보기 단계)으로 고른 뒤 한 자리를 대비 단어로 둔다(place_contrast).
-    반환: [{word, distractors, probe: {position, target, read, contrast, source}}], source는 'candidate' 또는 'random'."""
+    반환: [{word, distractors, probe: {position, target, read, contrast, source}}]."""
     rng = rng or random.Random()
     pair, source = None, "random"
-    for f in focus or ():
+    if counter is not None and pidx.probe_pairs:
+        pair, source = counter.ucb(rng.sample(pidx.probe_pairs, len(pidx.probe_pairs)))[0], "ucb"
+    for f in (focus or ()) if pair is None else ():
         key = (f.get("position"), f.get("target"), f.get("read"))
         if pidx.contrast.get(key):
             pair, source = key, "candidate"
@@ -261,4 +270,97 @@ def valid_probe(probe, word: str, options: Optional[Sequence[str]]) -> Optional[
         return None
     src = probe.get("source")
     return {"position": p, "target": t, "read": r, "contrast": c,
-            "source": src if src in ("candidate", "random") else None}
+            "source": src if src in ("candidate", "random", "ucb") else None}
+
+
+# ── 기회로 나눈 혼동률(5.4-3, 6절) ─────────────────────────────────────────────────
+# 짝 (자리, a, b)의 혼동률 = (그 자리에 b를 가진 보기를 고른 시행 수) / (그런 보기가 보인 시행 수).
+# 보기 기록(TrialAttempt.options)이 있는 시행만 센다. 보인 적이 없는 짝은 오답 기록이 없어도 '안 헷갈린다'고 볼 수 없어서,
+# 기회가 적은 짝은 학습자 기준율 쪽으로 당긴다(수축). 기준율 p0 = 오답 시행 수 / 보인 오답 보기 수(보기 하나를 고를 평균 확률).
+OPP_ROWS = 200       # 최근 선다형 시행(보기 기록이 있는 것) 수
+OPP_MIN = 3          # 후보가 되려면 이만큼 기회가 있어야 한다
+OPP_PRIOR = 5.0      # 수축 강도: 기준율로 된 가상 기회 수
+OPP_LIFT = 2.0       # 후보: 수축한 혼동률이 기준율의 이 배 이상
+OPP_P0_RANGE = (0.02, 0.5)
+
+
+def trial_pairs(target: str, chosen: Optional[str], options: Sequence[str]) -> Tuple[set, set]:
+    """한 시행의 (기회 짝 집합, 고른 짝 집합). 정답이 아닌 보기마다 정답과 자모가 갈린 자리 가운데 눈으로 가를 수 있는 짝이
+    기회이고, 고른 보기의 짝이 혼동이다. 한 시행에서 같은 짝은 한 번만 센다."""
+    opp: set = set()
+    got: set = set()
+    for o in options or ():
+        if not o or o == target:
+            continue
+        ps = {k for k in jamo_diffs(target, o) if visible_jamo_pair(*k)}
+        opp |= ps
+        if o == chosen:
+            got |= ps
+    return opp, got
+
+
+class OpportunityCounter:
+    """짝별 기회·혼동 수와 기준율. add/remove로 창을 옮길 수 있다(시뮬레이션), 서버는 행들을 한 번에 넣는다."""
+
+    def __init__(self):
+        self.n: Dict[Pair, int] = collections.defaultdict(int)
+        self.k: Dict[Pair, int] = collections.defaultdict(int)
+        self.wrong = 0       # 오답 시행 수
+        self.shown = 0       # 보인 오답 보기 수
+
+    def _apply(self, target, chosen, options, sign, pairs=None):
+        opp, got = pairs if pairs is not None else trial_pairs(target, chosen, options)
+        for p in opp:
+            self.n[p] += sign
+        for p in got:
+            self.k[p] += sign
+        self.shown += sign * sum(1 for o in options if o and o != target)
+        self.wrong += sign * (1 if chosen != target else 0)
+
+    def add(self, target, chosen, options, pairs=None):
+        self._apply(target, chosen, options, 1, pairs)
+
+    def remove(self, target, chosen, options, pairs=None):
+        self._apply(target, chosen, options, -1, pairs)
+
+    def p0(self) -> float:
+        lo, hi = OPP_P0_RANGE
+        return min(hi, max(lo, self.wrong / self.shown)) if self.shown else lo
+
+    def rate(self, pair: Pair, prior: float = OPP_PRIOR) -> float:
+        """수축한 혼동률 (k + prior·p0) / (n + prior)."""
+        return (self.k.get(pair, 0) + prior * self.p0()) / (self.n.get(pair, 0) + prior)
+
+    def top(self, top: int = CONFUSION_TOP, min_opp: int = OPP_MIN, prior: float = OPP_PRIOR,
+            lift: float = OPP_LIFT) -> List[Dict]:
+        """후보 짝(수축한 혼동률순): 기회 min_opp 이상, 수축한 혼동률이 기준율의 lift배 이상.
+        반환: [{position, target, read, n, k, rate}]"""
+        p0 = self.p0()
+        rows = []
+        for pair, n in self.n.items():
+            if n < min_opp:
+                continue
+            r = (self.k.get(pair, 0) + prior * p0) / (n + prior)
+            if r >= lift * p0:
+                rows.append((r, n, pair))
+        rows.sort(key=lambda x: (-x[0], -x[1], x[2]))
+        return [{"position": p[0], "target": p[1], "read": p[2], "n": n, "k": self.k.get(p, 0), "rate": round(r, 4)}
+                for r, n, p in rows[:top]]
+
+    def ucb(self, pairs: Sequence[Pair], z: float = 1.0, prior: float = OPP_PRIOR) -> List[Pair]:
+        """탐색 순서(상한 신뢰): 수축한 혼동률 + z·표준오차가 큰 짝부터. 기회가 적은 짝과 혼동률이 높은 짝이 앞에 온다."""
+        p0 = self.p0()
+        def score(p):
+            n = self.n.get(p, 0)
+            r = (self.k.get(p, 0) + prior * p0) / (n + prior)
+            return r + z * (r * (1 - r) / (n + prior)) ** 0.5
+        return sorted(pairs, key=lambda p: -score(p))
+
+
+def opportunity_pairs(rows: Iterable, **kw) -> List[Dict]:
+    """시행 행들 [(정답, 고른 답, 보기 목록)]에서 기회로 나눈 혼동률로 후보 짝을 고른다(OpportunityCounter.top)."""
+    cnt = OpportunityCounter()
+    for target, chosen, options in rows:
+        if target and isinstance(options, (list, tuple)) and target in options:
+            cnt.add(target, chosen, [o for o in options if isinstance(o, str)])
+    return cnt.top(**kw)

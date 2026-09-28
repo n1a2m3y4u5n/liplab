@@ -1,13 +1,18 @@
-"""2단계 출제: 개인 혼동 짝 겨냥 시뮬레이션(docs/confusion-pair-serving.md 3~4절).
+"""2단계 출제: 개인 혼동 짝 겨냥 시뮬레이션(docs/confusion-pair-serving.md 3~4절, 새 짝 뽑기는 6절).
 
     backend/.venv/bin/python scripts/confusion_pair_sim.py --seed 0 --explore [--out 결과.json]
     backend/.venv/bin/python scripts/confusion_pair_sim.py --seed 1 --det rate --m 3 --e 2 [--kappas 1,1.5,2,3] [--out 결과.json]
+    # 6절: 보기 기록 + 탐색 문항 + 기회로 나눈 혼동률
+    backend/.venv/bin/python scripts/confusion_pair_sim.py --seed 0 --explore2 [--out 결과.json]
+    backend/.venv/bin/python scripts/confusion_pair_sim.py --seed 1 --det opp --probe top --m 3 --e 2 [--kappas 1,1.5,2,3]
 
 A(지금: 약점 입모양 가중 + 일반 보기)와 B(혼동 짝 target 자모 단어 가중 + 대비 단어 보기)를 가상 학습자로 비교한다.
 단어 풀·보기·혼동 기록은 실제 백엔드 함수(visual_difficulty, scoring.viseme_confusions, knowledge_tracing)를 쓴다.
 --det: count(지정 규칙, 횟수순) · rate(목표 자모 시행 수로 나눈 비율순) · single·single_rate(한 자모만 다른 오답만, 사후 진단)
-· oracle(실제 혼동 짝을 안다고 가정, 진단용).
-numpy + 순수 파이썬, 시드 고정. 맥에서 조합 하나(학습자 300명 × 480문항)에 약 5~10초. 결과: docs/confusion-pair-serving.md 5절.
+· oracle(실제 혼동 짝을 안다고 가정, 진단용) · opp(보기 기록으로 기회로 나눈 혼동률, 6절).
+--probe: 레슨 12문항 중 1문항(첫 문항 제외)을 짝 탐색 문항으로. top(후보 짝 첫째, 없으면 무작위) · ucb(상한 신뢰 순서).
+6절 비교는 P(지금 앱: 보기 기록 + 탐색 문항)를 기준으로 B(P + 겨냥 출제)를 잰다.
+numpy + 순수 파이썬, 시드 고정. 맥에서 조합 하나(학습자 300명 × 480문항)에 약 5~10초. 결과: docs/confusion-pair-serving.md 5절, 7절.
 """
 import argparse
 import collections
@@ -38,129 +43,10 @@ LESSON = 12
 KINDS_W = {"minimal_pair": 3.0, "close": 2.0, "distinct": 1.0}
 
 
-# ── 혼동 짝 도구: B 출제가 쓰는 규칙(서버 구현 후보였으나 기준 미달로 넣지 않음) ──────────────
-JAMO_POS = ("초성", "중성", "종성")   # scoring.viseme_confusions의 position 값
-_JAMO_LISTS = (tuple("ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"),
-               tuple("ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ"),
-               ("",) + tuple("ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ"))
-CONFUSION_TOP = 3        # 겨냥할 짝 수
-CONFUSION_MIN_COUNT = 2  # 이만큼 나온 짝만
-CONFUSION_ROWS = 200     # 최근 오답 행 수
-
-
-def decompose_syllable(ch: str) -> Optional[Tuple[str, str, str]]:
-    """한글 음절 → (초성, 중성, 종성). 받침 없으면 종성은 ''. 음절이 아니면 None."""
-    if not V._is_syllable(ch):
-        return None
-    c = ord(ch) - 0xAC00
-    return _JAMO_LISTS[0][c // 588], _JAMO_LISTS[1][(c % 588) // 28], _JAMO_LISTS[2][c % 28]
-
-
-def jamo_slots(word: str) -> List[Tuple[int, str, str]]:
-    """단어의 자모 자리 목록 [(음절 번호, 자리 이름, 자모)]. 받침 없는 종성은 넣지 않는다."""
-    out = []
-    for i, ch in enumerate(V._nfc(word)):
-        d = decompose_syllable(ch)
-        if d:
-            out += [(i, JAMO_POS[j], d[j]) for j in range(3) if d[j]]
-    return out
-
-
-def jamo_viseme(jamo: str, j: int) -> Optional[int]:
-    """자모의 입모양 번호(scoring.viseme_confusions와 같은 규칙). 없음(∅)·소리 없는 초성 ㅇ은 None."""
-    from engine import DOUBLE_FINAL, VISEME_MAP
-    if not jamo or jamo == "∅" or (j == 0 and jamo == "ㅇ"):
-        return None
-    return VISEME_MAP.get(DOUBLE_FINAL.get(jamo, jamo) if j == 2 else jamo, 15)
-
-
-def visible_jamo_pair(position: str, target: str, read: str) -> bool:
-    """두 자모를 눈으로 가를 수 있나. 입모양이 같거나 둘 다 입 안쪽 무리면 False(same_viseme와 같은 판정).
-    기록된 same_viseme는 규칙이 바뀌기 전 값일 수 있어 지금 규칙으로 다시 본다."""
-    if position not in JAMO_POS or not target or target == read:
-        return False
-    j = JAMO_POS.index(position)
-    vt, vr = jamo_viseme(target, j), jamo_viseme(read, j)
-    if vt == vr:
-        return False
-    return not (vt in V.INSIDE_CLUSTER and vr in V.INSIDE_CLUSTER)
-
-
-def confusion_pairs(rows: Iterable, top: int = CONFUSION_TOP, min_count: int = CONFUSION_MIN_COUNT,
-                    trial_targets: Optional[Sequence[str]] = None) -> List[Dict]:
-    """오답 행들의 confusions(최신순)에서 눈으로 가를 수 있는 (자리, target, read) 짝을 세어 min_count번 이상인 상위 top개.
-    기본은 횟수순(같으면 먼저, 즉 최근에 나온 짝이 앞). trial_targets(같은 기간 전체 시행의 정답 단어)를 주면
-    횟수 / 그 자리에 target 자모가 든 시행 수(비율)순으로 고른다. 반환: [{position, target, read, count}]"""
-    cnt: Dict[Tuple[str, str, str], int] = {}
-    for confusions in rows:
-        for cf in (confusions or []):
-            if not isinstance(cf, dict) or cf.get("same_viseme"):
-                continue
-            key = (cf.get("position"), cf.get("target"), cf.get("read"))
-            if visible_jamo_pair(*key):
-                cnt[key] = cnt.get(key, 0) + 1
-    order = {k: i for i, k in enumerate(cnt)}
-    keys = [k for k, c in cnt.items() if c >= min_count]
-    if trial_targets is not None:
-        seen: Dict[Tuple[str, str], int] = {}
-        for w in trial_targets:
-            for pt in {(p, j) for _, p, j in jamo_slots(w or "")}:
-                seen[pt] = seen.get(pt, 0) + 1
-        rate = {k: cnt[k] / max(1, seen.get(k[:2], 0), cnt[k]) for k in keys}
-        best = sorted(keys, key=lambda k: (-rate[k], -cnt[k], order[k]))[:top]
-    else:
-        best = sorted(keys, key=lambda k: (-cnt[k], order[k]))[:top]
-    return [{"position": p, "target": t, "read": r, "count": cnt[(p, t, r)]} for p, t, r in best]
-
-
-def swap_jamo(word: str, i: int, position: str, read: str) -> Optional[str]:
-    """word의 i번째 음절 position 자리를 read 자모로 바꾼 말. 받침 '∅'은 받침을 뺀다. 만들 수 없으면 None."""
-    word = V._nfc(word)
-    j = JAMO_POS.index(position) if position in JAMO_POS else -1
-    d = decompose_syllable(word[i]) if 0 <= i < len(word) else None
-    r = "" if read == "∅" else read
-    if j < 0 or d is None or r not in _JAMO_LISTS[j] or (j < 2 and not r):
-        return None
-    parts = list(d)
-    parts[j] = r
-    code = (_JAMO_LISTS[0].index(parts[0]) * 588 + _JAMO_LISTS[1].index(parts[1]) * 28
-            + _JAMO_LISTS[2].index(parts[2]))
-    return word[:i] + chr(0xAC00 + code) + word[i + 1:]
-
-
-def contrast_words(word: str, position: str, target: str, read: str, index: "V.VocabIndex") -> List[str]:
-    """대비 단어: word의 target 자모(같은 자리)를 read 자모로 바꾼 실재 단어(index 안). 동구형이음·준동구형은 뺀다."""
-    out: List[str] = []
-    for i, p, jm in jamo_slots(word):
-        if p != position or jm != target:
-            continue
-        nw = swap_jamo(word, i, position, read)
-        if nw and nw != word and nw in index and nw not in out \
-                and V.distractor_kind(index._seq_of(word), index._seq_of(nw)) not in ("homophene", "near_homophene"):
-            out.append(nw)
-    return out
-
-
-def place_contrast(word: str, distractors: List[str], focus: Sequence[Dict], index: "V.VocabIndex",
-                   rng=None, contrast_fn=None) -> List[str]:
-    """보기 한 자리를 대비 단어로 둔다. focus 순서대로 word에 대비 단어가 있는 첫 짝을 쓴다. 이미 보기에 있으면 그대로,
-    없으면 마지막 자리(숙달 전에는 뚜렷이 다른 단어 자리)를 바꾼다. 대비 단어가 없으면 보기를 바꾸지 않는다."""
-    rng = rng or random.Random()
-    fn = contrast_fn or (lambda w, p, t, r: contrast_words(w, p, t, r, index))
-    for f in focus or ():
-        cands = [c for c in fn(word, f["position"], f["target"], f["read"]) if c != word]
-        if not cands:
-            continue
-        if set(cands) & set(distractors):
-            return list(distractors)
-        out = list(distractors)
-        pick = rng.choice(cands)
-        if out:
-            out[-1] = pick
-        else:
-            out.append(pick)
-        return out
-    return list(distractors)
+# ── 혼동 짝 도구: 서버와 같은 규칙(backend/confusion_pairs.py) ────────────────────────
+from confusion_pairs import (  # noqa: E402
+    CONFUSION_ROWS, CONFUSION_TOP, JAMO_POS, OPP_ROWS, OpportunityCounter, PairIndex, confusion_pairs,
+    contrast_words, decompose_syllable, jamo_slots, jamo_viseme, place_contrast, trial_pairs, visible_jamo_pair)
 
 
 # ── 풀과 단어별 정적 정보 ──────────────────────────────────────────────────────
@@ -191,6 +77,8 @@ class Pool:
             cls = table.classes(w)
             self.kind[w] = {x: k for k in ("minimal_pair", "close", "distinct") for x in cls[k]}
         self.slots = {w: jamo_slots(w) for w in self.words}
+        self.pidx = PairIndex(table)
+        self._vdiff = {}
         self._tmask = {}
         self._contrast = {}
         self._cmask = {}
@@ -210,6 +98,13 @@ class Pool:
             self._contrast[k] = contrast_words(w, pos, t, r, self.t.index)
         return self._contrast[k]
 
+    def vdiff(self, w, o):
+        """정답 w와 보기 o가 갈린 눈으로 가를 수 있는 짝 집합(confusion_pairs.trial_pairs와 같은 규칙)."""
+        k = (w, o)
+        if k not in self._vdiff:
+            self._vdiff[k] = frozenset(trial_pairs(w, None, [o])[0])
+        return self._vdiff[k]
+
     def cmask(self, pos, t, r):
         k = (pos, t, r)
         if k not in self._cmask:
@@ -218,23 +113,10 @@ class Pool:
 
 
 def candidate_pairs(P):
-    """가상 학습자 혼동 짝 후보: 같은 자리, 눈으로 가를 수 있음, target·read 자모가 그 자리에서 풀의 10단어 이상에 나옴
-    (받침 없음 ∅은 받침 없는 음절이 있는 단어 수). read 자모가 드물면 4지선다 보기에 거의 안 나와 기록으로 드러날 수 없다."""
-    freq = collections.Counter()
-    for w in P.words:
-        s = {(p, j) for _, p, j in P.slots[w]}
-        if any(decompose_syllable(ch) and not decompose_syllable(ch)[2] for ch in w):
-            s.add(("종성", "∅"))
-        freq.update(s)
-    common = {k for k, c in freq.items() if c >= 10}
-    out = []
-    for (p, t) in common:
-        if t == "∅":
-            continue
-        for (p2, r) in common:
-            if p2 == p and r != t and visible_jamo_pair(p, t, r):
-                out.append((p, t, r))
-    return sorted(out)
+    """가상 학습자 혼동 짝 후보(= 서버 PairIndex.candidates): 같은 자리, 눈으로 가를 수 있음, target·read 자모가 그 자리에서
+    풀의 10단어 이상에 나옴(받침 없음 ∅은 받침 없는 음절이 있는 단어 수). read 자모가 드물면 4지선다 보기에 거의 안 나와
+    기록으로 드러날 수 없다."""
+    return list(P.pidx.candidates)
 
 
 def make_learners(P, n, seed):
@@ -290,12 +172,27 @@ def read_slot_has(o, slots_ij, r):
 
 
 # ── 한 학습자 ─────────────────────────────────────────────────────────────────
+def pick_probe_pair(P, policy, opp, opp_focus, rng):
+    """탐색 문항 짝. top: 기회로 나눈 혼동률 후보 가운데 대비 단어가 있는 첫 짝, 없으면 탐색 가능한 짝 무작위(서버 probe_items와 같다).
+    ucb: 탐색 가능한 짝을 상한 신뢰 순서로(같으면 무작위)."""
+    if policy == "top":
+        for f in opp_focus:
+            key = (f["position"], f["target"], f["read"])
+            if P.pidx.contrast.get(key):
+                return key, True
+        return rng.choice(P.pidx.probe_pairs), False
+    pp = list(P.pidx.probe_pairs)
+    rng.shuffle(pp)
+    return opp.ucb(pp)[0], None
+
+
 def run_learner(P, L, cond, kappa, seed, T):
-    """cond: {'B': bool, 'm', 'e'}. 반환: 짝 도달 시도 수들, 다른 입모양 도달 시도 수들, 정답 수, 초점 정밀도."""
+    """cond: {'B': bool, 'm', 'e', 'det', 'probe'}. 반환: 짝 도달 시도 수들, 다른 입모양 도달 시도 수들, 정답 수, 초점 정밀도."""
     rng = random.Random(seed)
     nrng = np.random.default_rng(seed)
     s = dict(L["s"])
     pairs = [dict(p) for p in L["pairs"]]
+    truth = {(p["pos"], p["t"], p["r"]) for p in pairs}
     involved = set()
     for p in pairs:
         j = JAMO_POS.index(p["pos"])
@@ -312,6 +209,16 @@ def run_learner(P, L, cond, kappa, seed, T):
     rows200 = collections.deque(maxlen=200)   # 최근 시행 (정답 단어, 오답이면 confusions)
     n_correct = 0
     prec, rec = [], []
+    # 6절: 보기 기록으로 기회로 나눈 혼동률(서버 confusion_pairs.OpportunityCounter와 같은 규칙), 탐색 문항
+    probe_pol = cond.get("probe")
+    n_probes = cond.get("probes", 1)              # 레슨당 탐색 문항 수(사전 기준은 1, 2 이상은 사후 진단이며 ucb 순서)
+    opp_window = cond.get("opp_rows", OPP_ROWS)   # 기회 창(사전 기준 200, 사후 진단에서 늘려 본다)
+    use_opp = cond.get("det") == "opp" or probe_pol is not None
+    opp = OpportunityCounter() if use_opp else None
+    opp_rows = collections.deque()
+    opp_rec_all, opp_prec, opp_rec = [], [], []
+    detected = set()
+    n_probe = n_probe_true = n_probe_cand = 0
     t = 0
     while t < T:
         recs = [{"viseme_id": v, "error_count": err[v], "total_attempts": att[v],
@@ -320,9 +227,19 @@ def run_learner(P, L, cond, kappa, seed, T):
         # 방금 틀린 기록이라 최근 오답 감쇠 최대(× 0.75)
         mast = {v: m * (1 - KT._RECENCY_WEIGHT) if err[v] else m for v, m in mast.items()}
         weak = {v for v, m in mast.items() if m < 0.7}
+        opp_focus = opp.top() if opp is not None else []
+        if opp is not None:
+            got = {(f["position"], f["target"], f["read"]) for f in opp_focus}
+            detected |= got & truth
+            opp_rec_all.append(len(got & truth) / len(truth))
+            if got:
+                opp_prec.append(len(got & truth) / len(got))
+                opp_rec.append(len(got & truth) / len(truth))
         focus = []
         if cond.get("det") == "oracle":   # 진단용: 실제 혼동 짝을 안다고 가정(서버는 알 수 없음)
             focus = [{"position": p["pos"], "target": p["t"], "read": p["r"], "count": 2} for p in L["pairs"]]
+        elif cond["B"] and cond.get("det") == "opp":
+            focus = opp_focus
         elif cond["B"]:
             wrong = [cf for _, cf in rows200 if cf is not None]
             if cond.get("det") in ("single", "single_rate"):   # 사후 진단: 한 자모만 다른 오답만 센다
@@ -332,20 +249,51 @@ def run_learner(P, L, cond, kappa, seed, T):
             else:
                 focus = confusion_pairs(wrong[:200])
         if focus:
-            truth = {(p["pos"], p["t"], p["r"]) for p in pairs}
             got = {(f["position"], f["target"], f["read"]) for f in focus}
             prec.append(len(got & truth) / len(got))
             rec.append(len(got & truth) / len(truth))
         pri = lesson_priorities(P, sp_n, weak, focus, cond.get("m", 1), cond.get("e", 1))
         idxs = nrng.choice(P.n, size=LESSON, replace=False, p=pri / pri.sum())
         level = V.option_level(mastered)
-        for ii in idxs:
+        probe_slot, probe_pair = -1, None
+        probe_at = {}   # 사후 진단(--probes 2 이상): 자리 → 짝
+        if probe_pol and n_probes > 1:
+            order = opp.ucb(rng.sample(P.pidx.probe_pairs, len(P.pidx.probe_pairs)))
+            idxs = list(idxs)
+            for j, slot in enumerate(rng.sample(range(1, LESSON), min(n_probes, LESSON - 1))):
+                pp = order[j]
+                used = {P.words[i] for k, i in enumerate(idxs) if k != slot}
+                ws = [w for w in P.pidx.contrast[pp] if w not in used]
+                if ws:
+                    idxs[slot] = P.pos[rng.choices(ws, weights=[float(pri[P.pos[w]]) for w in ws])[0]]
+                    probe_at[slot] = pp
+                    n_probe += 1
+                    n_probe_true += pp in truth
+        elif probe_pol:
+            probe_pair, from_cand = pick_probe_pair(P, probe_pol, opp, opp_focus, rng)
+            probe_slot = rng.randint(1, LESSON - 1)
+            lesson_words = {P.words[i] for k, i in enumerate(idxs) if k != probe_slot}
+            ws = [w for w in P.pidx.contrast[probe_pair] if w not in lesson_words]
+            if ws:
+                pw = rng.choices(ws, weights=[float(pri[P.pos[w]]) for w in ws])[0]
+                idxs = list(idxs)
+                idxs[probe_slot] = P.pos[pw]
+                n_probe += 1
+                n_probe_true += probe_pair in truth
+                n_probe_cand += bool(from_cand)
+            else:
+                probe_slot = -1
+        for si, ii in enumerate(idxs):
             if t >= T:
                 break
             t += 1
             w = P.words[ii]
             dis = V.pick_distractors(w, P.t.index, level, rng, classes=P.t.classes(w))
-            if focus:
+            if si == probe_slot or si in probe_at:
+                pp = probe_at.get(si, probe_pair)
+                pf = [{"position": pp[0], "target": pp[1], "read": pp[2]}]
+                dis = place_contrast(w, dis, pf, P.t.index, rng, contrast_fn=P.contrast)
+            elif focus:
                 dis = place_contrast(w, dis, focus, P.t.index, rng, contrast_fn=P.contrast)
             # 오독
             here = [k for k, p in enumerate(pairs) if P.has_target(w, p["pos"], p["t"])]
@@ -405,17 +353,40 @@ def run_learner(P, L, cond, kappa, seed, T):
             if sp_n >= 6 and sp_est >= 85:
                 mastered = True
             rows200.appendleft((w, None if correct else viseme_confusions(w, chosen)))
+            if opp is not None:   # 보기 기록(TrialAttempt.options) → 최근 OPP_ROWS 시행 창
+                o_set = frozenset().union(*(P.vdiff(w, o) for o in dis))
+                row = (w, chosen, [w, *dis], (o_set, P.vdiff(w, chosen) if not correct else frozenset()))
+                opp.add(row[0], row[1], row[2], row[3])
+                opp_rows.append(row)
+                if len(opp_rows) > opp_window:
+                    old = opp_rows.popleft()
+                    opp.remove(old[0], old[1], old[2], old[3])
     return {"pair": [x if x is not None else T for x in p_reach],
             "pair_contrast": [bool(P.cmask(p["pos"], p["t"], p["r"]).any()) for p in L["pairs"]],
             "other": [v_reach.get(v, T) for v in others],
             "correct": n_correct, "n": t,
-            "prec": st.mean(prec) if prec else None, "rec": st.mean(rec) if rec else None}
+            "prec": st.mean(prec) if prec else None, "rec": st.mean(rec) if rec else None,
+            "opp_prec": st.mean(opp_prec) if opp_prec else None, "opp_rec": st.mean(opp_rec) if opp_rec else None,
+            "opp_rec_all": st.mean(opp_rec_all) if opp_rec_all else None,
+            "detected": len(detected), "n_true": len(truth),
+            "n_probe": n_probe, "n_probe_true": n_probe_true, "n_probe_cand": n_probe_cand}
 
 
 def run(P, learners, cond, kappa, seed, T):
     pair, pc, other, corr, n, prec, rec = [], [], [], 0, 0, [], []
+    oprec, orec, orec_all, det, ntrue, npr, nprt, nprc = [], [], [], 0, 0, 0, 0, 0
     for li, L in enumerate(learners):
         r = run_learner(P, L, cond, kappa, seed * 100003 + li, T)
+        if r["opp_rec_all"] is not None:
+            orec_all.append(r["opp_rec_all"])
+            det += r["detected"]
+            ntrue += r["n_true"]
+        if r["opp_prec"] is not None:
+            oprec.append(r["opp_prec"])
+            orec.append(r["opp_rec"])
+        npr += r["n_probe"]
+        nprt += r["n_probe_true"]
+        nprc += r["n_probe_cand"]
         pair += r["pair"]
         pc += r["pair_contrast"]
         other += r["other"]
@@ -434,7 +405,14 @@ def run(P, learners, cond, kappa, seed, T):
             "other_median": st.median(other), "other_mean": round(st.mean(other), 1),
             "accuracy": round(corr / n, 4),
             "focus_precision": round(st.mean(prec), 3) if prec else None,
-            "focus_recall": round(st.mean(rec), 3) if rec else None}
+            "focus_recall": round(st.mean(rec), 3) if rec else None,
+            # 6절: 기회로 나눈 혼동률 후보(서빙에 쓰든 안 쓰든 잰다). recall_all은 후보가 빈 레슨을 0으로 넣은 평균
+            "opp_precision": round(st.mean(oprec), 3) if oprec else None,
+            "opp_recall": round(st.mean(orec), 3) if orec else None,
+            "opp_recall_all": round(st.mean(orec_all), 3) if orec_all else None,
+            "opp_detected": round(det / ntrue, 3) if ntrue else None,
+            "probe_true_share": round(nprt / npr, 3) if npr else None,
+            "probe_candidate_share": round(nprc / npr, 3) if npr else None}
 
 
 def compare(a, b):
@@ -453,9 +431,13 @@ def main():
     ap.add_argument("--n", type=int, default=300)
     ap.add_argument("--T", type=int, default=480)
     ap.add_argument("--explore", action="store_true", help="m·e 여섯 조합을 κ 1.5에서")
+    ap.add_argument("--explore2", action="store_true", help="6절 탐색: A, P(top·ucb), B opp m·e 여섯 조합(κ 1.5)")
+    ap.add_argument("--probe", default="none", choices=("none", "top", "ucb"))
+    ap.add_argument("--probes", type=int, default=1, help="레슨당 탐색 문항 수(사후 진단, 2 이상은 ucb 순서)")
+    ap.add_argument("--opp-rows", type=int, default=OPP_ROWS, help="기회 창(사후 진단)")
     ap.add_argument("--m", type=float, default=2.0)
     ap.add_argument("--e", type=float, default=1.0)
-    ap.add_argument("--det", default="count", choices=("count", "rate", "oracle", "single", "single_rate"))
+    ap.add_argument("--det", default="count", choices=("count", "rate", "oracle", "single", "single_rate", "opp"))
     ap.add_argument("--kappas", default="1,1.5,2,3")
     ap.add_argument("--out")
     args = ap.parse_args()
@@ -464,7 +446,54 @@ def main():
     learners, cands = make_learners(P, args.n, args.seed)
     res = {"seed": args.seed, "n": args.n, "T": args.T, "pool": P.n, "candidate_pairs": len(cands),
            "candidate_pairs_with_contrast": sum(bool(P.cmask(*c).any()) for c in cands), "rows": []}
-    if args.explore:
+    probe = None if args.probe == "none" else args.probe
+    if args.explore2:
+        kappa = 1.5
+        a = run(P, learners, {"B": False}, kappa, args.seed, args.T)
+        res["rows"].append({"cond": "A", "kappa": kappa, **a})
+        print(f"A: {a}  ({time.time() - t0:.0f}s)", flush=True)
+        lg = run(P, learners, {"B": False, "det": "opp"}, kappa, args.seed, args.T)   # 보기 기록만(탐색 문항 없음)
+        res["rows"].append({"cond": "L", "kappa": kappa, **lg})
+        print(f"L: {lg}  ({time.time() - t0:.0f}s)", flush=True)
+        base = {}
+        for pol in ("top", "ucb"):
+            b = run(P, learners, {"B": False, "probe": pol}, kappa, args.seed, args.T)
+            base[pol] = b
+            c = compare(a, b)
+            res["rows"].append({"cond": f"P {pol}", "kappa": kappa, **b, **{f"vsA_{k}": v for k, v in c.items()}})
+            print(f"P {pol}: {b} vsA {c}  ({time.time() - t0:.0f}s)", flush=True)
+        # 사전 기준(6.3): 기회로 나눈 후보의 재현율(opp_recall_all)이 높은 탐색 정책 하나로 B를 잰다. 같으면 top(지정 규칙)
+        pol = "ucb" if base["ucb"]["opp_recall_all"] > base["top"]["opp_recall_all"] else "top"
+        res["probe_policy"] = pol
+        for m in (1.5, 2.0, 3.0):
+            for e in (1.0, 2.0):
+                b = run(P, learners, {"B": True, "m": m, "e": e, "det": "opp", "probe": pol}, kappa, args.seed, args.T)
+                c = compare(base[pol], b)
+                ca = compare(a, b)
+                name = f"B opp {pol} m={m} e={e}"
+                res["rows"].append({"cond": name, "kappa": kappa, **b, **c, "pass": passes(c),
+                                    **{f"vsA_{k}": v for k, v in ca.items()}})
+                print(f"{name}: {b} vsP {c} pass={passes(c)} vsA {ca}  ({time.time() - t0:.0f}s)", flush=True)
+        o = run(P, learners, {"B": True, "m": 3.0, "e": 2.0, "det": "oracle", "probe": pol}, kappa, args.seed, args.T)
+        c = compare(base[pol], o)
+        res["rows"].append({"cond": f"O oracle {pol} m=3.0 e=2.0", "kappa": kappa, **o, **c})
+        print(f"oracle: {o} vsP {c}  ({time.time() - t0:.0f}s)", flush=True)
+    elif args.det == "opp" or probe:
+        for kappa in [float(x) for x in args.kappas.split(",")]:
+            a = run(P, learners, {"B": False}, kappa, args.seed, args.T)
+            extra = {"probes": args.probes, "opp_rows": args.opp_rows}
+            base = run(P, learners, {"B": False, "probe": probe, **extra}, kappa, args.seed, args.T)
+            b = run(P, learners, {"B": True, "m": args.m, "e": args.e, "det": args.det, "probe": probe, **extra},
+                    kappa, args.seed, args.T)
+            c = compare(base, b)
+            ca = compare(a, b)
+            res["rows"].append({"cond": "A", "kappa": kappa, **a})
+            res["rows"].append({"cond": f"P {probe} probes={args.probes} rows={args.opp_rows}", "kappa": kappa, **base})
+            res["rows"].append({"cond": f"B {args.det} {probe} m={args.m} e={args.e}", "kappa": kappa, **b, **c,
+                                "pass": passes(c), **{f"vsA_{k}": v for k, v in ca.items()}})
+            print(f"κ={kappa} A: {a}\n        P: {base}\n        B: {b} vsP {c} pass={passes(c)} vsA {ca}"
+                  f"  ({time.time() - t0:.0f}s)", flush=True)
+    elif args.explore:
         kappa = 1.5
         a = run(P, learners, {"B": False}, kappa, args.seed, args.T)
         res["rows"].append({"cond": "A", "kappa": kappa, **a})

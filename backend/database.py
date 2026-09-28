@@ -309,10 +309,10 @@ class TrialAttempt(Base):
     speed = Column(Float, nullable=True)            # 답하기 전에 본 실제 재생 속도(1.0 미만은 감속, docs/mastery-ewma.md 7절)
     # 화면에 보여 준 보기(정답 포함, 보인 순서). 1단계는 입모양 번호 문자열. 주관식이나 예전 기록은 NULL.
     # 보기에 무엇이 있었는지 알아야 '그 보기가 있었을 때 고른 비율'로 혼동을 잴 수 있다(docs/confusion-pair-serving.md 5.4)
-    options = Column(JSON, nullable=True)
+    options = Column(JSON(none_as_null=True), nullable=True)   # None은 SQL NULL(IS NOT NULL로 거른다)
     # 짝 탐색 문항이면 {position, target, read, contrast, source}(보기에 대비 단어를 넣은 2단계 단어 문항, 5.4-2). 보통 문항은 NULL.
     # item_type은 'word' 그대로라 숙달·학습 곡선에 똑같이 들어가고, 분석은 이 열로 탐색 문항을 가를 수 있다
-    probe = Column(JSON, nullable=True)
+    probe = Column(JSON(none_as_null=True), nullable=True)   # None은 SQL NULL(IS NOT NULL로 거른다)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
