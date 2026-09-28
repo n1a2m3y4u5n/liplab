@@ -165,3 +165,87 @@ def test_sentence_intonation_uses_final_syllable_and_skips_wh_questions():
     assert "평평" in note
     assert sc.expected_intonation("이름이 뭐예요?") is None and sc.expected_intonation("괜찮으세요?") == "rise"
     assert sc.expected_intonation("정말 맛있어요!") == "fall"
+
+
+def test_ai_sentences_get_intonation_verdict():
+    # AI 생성 문장(고정 16문항에 없음)도 문장 부호로 기대 억양을 정해 판정한다. 예전에는 올림·내림 모두 note가 ''였다
+    import speak_curriculum as sc
+    up = {"pitch_ref": 200, "pitch_final": 240}
+    down = {"pitch_ref": 200, "pitch_final": 170}
+    fixed = {it["target"] for it in sc.get_stage(5)["items"]}
+    for t in ("내일 시간 있어요?", "점심 같이 먹을래요?"):
+        assert t not in fixed
+        assert sc.score_attempt(5, t, t, up, sim_score=80)[2] == "억양 방향도 맞았어요!"
+        assert sc.score_attempt(5, t, t, down, sim_score=80)[2] == "억양 방향이 반대예요. 끝을 올려보세요."
+    assert sc.score_attempt(5, "오늘 좀 피곤해요.", "오늘 좀 피곤해요", down, sim_score=80)[2] == "억양 방향도 맞았어요!"
+    assert sc.score_attempt(5, "오늘 좀 피곤해요.", "오늘 좀 피곤해요", up, sim_score=80)[2] == "억양 방향이 반대예요. 끝을 내려보세요."
+    # 의문사 의문문은 끝이 대개 내려가 판정하지 않는다(코칭 쪽 억양 안내로 넘어간다)
+    assert sc.score_attempt(5, "어디 가요?", "어디 가요", up, sim_score=80)[2] == ""
+
+
+def test_weak_coda_gets_coda_articulation(monkeypatch):
+    # D-GOP 받침 토큰(c:)이 약하면 받침 조음 문장을 준다. 예전에는 위치를 버려 받침 ㅂ에 '두 입술을 붙였다 떼며 가볍게 터뜨립니다',
+    # 받침 ㄹ에 '한 번 튕깁니다'가 LLM 참고문과 규칙 폴백 양쪽에 나갔다(받침은 불파·설측)
+    import articulation
+    import jamo_vocab as J
+    assert J.text_to_tokens("밥")[-1] == "c:ㅂ"
+    phones = [{"token": "o:ㅂ", "aligned": True, "scorable": True, "dgop": 0.8},
+              {"token": "n:ㅏ", "aligned": True, "scorable": True, "dgop": 0.8},
+              {"token": "c:ㅂ", "aligned": True, "scorable": True, "dgop": 0.05}]
+    weak = main._weak_phones({"phones": phones})
+    assert weak == [{"label": "ㅂ", "dgop": 0.05, "position": "종성"}]
+    assert main._weak_phones({"phones": [{"token": "녕", "aligned": True, "scorable": True, "dgop": 0.01},
+                                         {"token": "안", "aligned": True, "scorable": True, "dgop": 0.9}]})[0]["position"] is None
+    assert "멈춥니다" in articulation.jamo_tip("ㅂ", "종성") and "터뜨립니다." not in articulation.jamo_tip("ㅂ", "종성")
+    assert "흘립니다" in articulation.jamo_tip("ㄹ", "종성") and "튕깁니다" not in articulation.jamo_tip("ㄹ", "종성")
+    assert articulation.jamo_tip("ㅇ", "종성").endswith("코로 울림을 함께 냅니다.")   # 받침 ㅇ도 설명을 받는다(예전 None)
+    assert articulation.jamo_tip("ㅂ") == "두 입술을 붙였다 떼며 가볍게 터뜨립니다."   # 첫소리는 그대로
+
+    seen = []
+
+    class _Rec:
+        class messages:
+            @staticmethod
+            async def create(*a, **k):
+                seen.append(k["messages"][0]["content"])
+                raise RuntimeError("no key")
+    monkeypatch.setattr(llm_service, "anthropic_client", _Rec)
+    text = asyncio.run(llm_service.generate_speaking_coaching("밥", None, 80, [], {"loudness": 70}, weak_phones=weak))
+    assert text.startswith("'받침 ㅂ' 소리가 약하게 났어요.") and "멈춥니다" in text and "떼며" not in text
+    assert "'받침 ㅂ' — 두 입술을 붙인 채 멈춥니다" in seen[0] and "떼며 가볍게 터뜨립니다" not in seen[0]
+
+
+def test_dgop_coaching_prompt_has_no_asr_line(monkeypatch):
+    # D-GOP 경로는 전사를 하지 않아 transcript가 None이다. 예전 프롬프트는 '음성인식 결과: "(잘 인식되지 않음)"'과
+    # '~로 들렸어요' 주의를 넣어 92점 시도도 '인식되지 않았다'는 거짓 입력이 됐다. 전사 경로 프롬프트는 그대로다
+    seen = []
+
+    class _Rec:
+        class messages:
+            @staticmethod
+            async def create(*a, **k):
+                seen.append(k["messages"][0]["content"])
+                raise RuntimeError("stop")
+    monkeypatch.setattr(llm_service, "anthropic_client", _Rec)
+    m = {"loudness": 55, "pitch_range": 30, "duration": 1.4}
+    asyncio.run(llm_service.generate_speaking_coaching("밥", None, 92.0, [], m, method="dgop",
+                                                       weak_phones=[{"label": "ㅂ", "dgop": 0.21, "position": "종성"}]))
+    asyncio.run(llm_service.generate_speaking_coaching("밥", "밥", 92.0, [], m, method="asr_transcript"))
+    dg, asr = seen
+    assert "음성인식 결과" not in dg and "잘 인식되지 않음" not in dg and "들렸어요" not in dg
+    assert '목표: "밥" / 발음 채점 점수 92점(음성인식 아님)' in dg
+    assert '음성인식 결과: "밥" / 발음 유사도 92점' in asr and "들렸어요" in asr
+
+
+def test_stage4_endpoint_orders_pool_per_user_and_day(monkeypatch):
+    # AI 문항이 꺼진 배포(dev LIPLAB_AI_ITEMS=0)에서 /api/speak/stage/4가 고정 순서(밥·물·손…) 대신 섞은 순서를 준다
+    import types
+    monkeypatch.setenv("LIPLAB_AI_ITEMS", "0")
+    u1, u2 = types.SimpleNamespace(id=1), types.SimpleNamespace(id=2)
+    a = asyncio.run(main.speak_stage_content(4, current_user=u1))["items"]
+    b = asyncio.run(main.speak_stage_content(4, current_user=u2))["items"]
+    assert a == asyncio.run(main.speak_stage_content(4, current_user=u1))["items"]   # 같은 날 다시 들어와도 같은 순서
+    assert a != b and len(a) == len(b) == len(main._speakcur.SPEAK_STAGES[4]["items"])
+    assert [x["target"] for x in a[:14]] != ["밥", "물", "손", "발", "눈", "코", "입", "귀", "산", "달", "별", "꽃", "집", "차"]
+    s5 = asyncio.run(main.speak_stage_content(5, current_user=u1))["items"]
+    assert s5 == main._speakcur.SPEAK_STAGES[5]["items"]   # 5단계는 그대로

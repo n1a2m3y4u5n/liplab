@@ -3172,6 +3172,10 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="unknown stage")
 
     items = stg["items"]
+    if stg["mode"] == "word":
+        # 고정 풀은 음절 수 층을 섞어 끼운다(처음 3개만 1음절). 프론트는 들어올 때마다 0번부터 시작해, 예전 고정 순서로는 앞 14개가
+        # 모두 1음절이라 다음절 단어 없이 숙달했다. (사용자, 날짜) 시드라 같은 날에는 순서가 같다(speak_curriculum.mixed_order).
+        items = _speakcur.mixed_order(items, f"{current_user.id}:{_kst_today().isoformat()}")
     if os.getenv("LIPLAB_AI_ITEMS", "1") == "1" and stg["mode"] in ("word", "sentence"):
         try:
             import content_gen
@@ -3184,7 +3188,7 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
                 ai_items = await content_gen.generate_sentences(n=8, avoid=base, with_intonation=True)
             if len(ai_items) >= 4:
                 # AI 생성분을 앞에, 기존 풀을 뒤에 섞어 다양성 + 안정성 확보
-                items = ai_items + stg["items"]
+                items = ai_items + items
         except Exception as e:
             print(f"[WARN] speak AI items gen failed (stage {n}): {e}")
 
@@ -3197,9 +3201,13 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user)):
 
 # ── 발화(말하기) 채점 — 단계 모드별 채점 + 진행률 + 코칭 ──────────────────────
 
+_JAMO_POSITION = {"o": "초성", "n": "중성", "c": "종성"}   # jamo_vocab 자모 토큰의 위치 접두
+
+
 def _weak_phones(dgop_result, k: int = 3) -> list:
-    """D-GOP 음소 중 가장 약한 소리 k개 [{label, dgop}] — 문장 평균의 60% 미만인 것만(축 B-9 코칭 근거).
-    자모 토큰의 위치 접두(o:·n:·c:)와 어절 경계는 뗀다. D-GOP가 꺼져 있으면 빈 목록."""
+    """D-GOP 음소 중 가장 약한 소리 k개 [{label, dgop, position}] — 문장 평균의 60% 미만인 것만(축 B-9 코칭 근거).
+    자모 토큰의 위치 접두(o:·n:·c:)와 어절 경계는 label에서 떼고, 위치는 position(초성·중성·종성, 음절 토큰이면 None)으로 넘긴다.
+    예전에는 위치를 버려 받침이 약해도 코칭이 첫소리 조음(터뜨림·튕김)을 설명했다. D-GOP가 꺼져 있으면 빈 목록."""
     # silent_h: ㄶ·ㅀ + 모음에서 라벨에만 남은 ㅎ(많이[마니]) — 내지 않는 소리라 코칭하지 않는다(jamo_vocab.silent_linking_h)
     phones = [p for p in ((dgop_result or {}).get("phones") or [])
               if p.get("aligned") and p.get("scorable") and p.get("dgop") is not None and not p.get("silent_h")]
@@ -3208,9 +3216,11 @@ def _weak_phones(dgop_result, k: int = 3) -> list:
     mean = sum(p["dgop"] for p in phones) / len(phones)
     out = []
     for p in sorted(phones, key=lambda x: x["dgop"]):
-        label = (p.get("token") or "").split(":", 1)[-1].replace("|", " ").strip()
+        tok = p.get("token") or ""
+        label = tok.split(":", 1)[-1].replace("|", " ").strip()
         if label and p["dgop"] < max(0.05, 0.6 * mean):
-            out.append({"label": label, "dgop": round(float(p["dgop"]), 3)})
+            pos = _JAMO_POSITION.get(tok.split(":", 1)[0]) if ":" in tok else None
+            out.append({"label": label, "dgop": round(float(p["dgop"]), 3), "position": pos})
         if len(out) >= k:
             break
     return out
@@ -3257,6 +3267,7 @@ async def speak_assess(
     sim = None
     dgop_result = None
     assessment_method = None
+    no_voice = False   # 전사 경로에서 소리 없는 녹음이라 전사를 건너뜀
     need_asr = (mode in ("phoneme", "word", "sentence")) or (stage is None)
     if need_asr:
         _ml_admit()   # 추론 대기열이 차면 받기 전에 503(지표만 쓰는 발성·운율은 추론이 없어 해당하지 않는다)
@@ -3305,7 +3316,12 @@ async def speak_assess(
                       f"(aligner={dgop_aligner_id}): {type(e).__name__}: {e}")
                 dgop_result = None
 
-        if assessment_method != "dgop":
+        if assessment_method != "dgop" and _speakcur.no_voice(metrics):
+            # 소리가 없는 녹음(프론트 micIssue)은 전사하지 않고 불합격이다. Whisper가 무음에서 만든 문장이 채점되어 합격할 수
+            # 있었다(speak_curriculum.no_voice). D-GOP 경로는 그대로 둔다.
+            transcript, sim, no_voice = "", 0.0, True
+            assessment_method = "asr_transcript"
+        elif assessment_method != "dgop":
             from speak_service import transcribe, is_available
             if not is_available():
                 raise HTTPException(status_code=503, detail="서버에 음성인식 모델(faster-whisper)이 없습니다.")
@@ -3419,7 +3435,7 @@ async def speak_assess(
     # 축 E — 모음 단계에서 목표가 단모음 음절('아'·'이' 등)이면 녹음의 포먼트(F1·F2)로 혀 높낮이·앞뒤
     # 교정 방향을 만든다(formants.py). 웹캠이 못 보는 혀 위치를 소리로 짚어 주는 경로다.
     vowel_fb = None
-    if mode == "phoneme":
+    if mode == "phoneme" and not no_voice:   # 소리 없는 녹음은 포먼트를 재지 않는다
         import formants as _fm
         _v = _fm.target_vowel(target)
         if _v:
@@ -3432,12 +3448,15 @@ async def speak_assess(
     # 발성·운율은 규칙 기반 note가 곧 구체 코칭, 모음~문장은 Claude 코칭(+억양 note)
     if mode in ("voicing", "prosody"):
         coaching = note
+    elif no_voice:
+        coaching = note or _speakcur.NO_VOICE_NOTE   # 들은 것이 없으니 LLM 코칭을 부르지 않는다
     else:
         from llm_service import generate_speaking_coaching
         # 억양은 문장에서만, 그것도 기대 방향 규칙(note)이 판정하지 않았을 때만 코칭에 넣는다(음절·단어는 음높이가 고른 게 자연스럽다)
         coaching = await generate_speaking_coaching(target, transcript, score, confusions, metrics,
                                                     weak_phones=_weak_phones(dgop_result),
-                                                    intonation=(mode == "sentence" and not note))
+                                                    intonation=(mode == "sentence" and not note),
+                                                    method=assessment_method)   # D-GOP면 '음성인식 결과' 줄을 뺀다
         if note:
             coaching = f"{coaching} {note}"
     if vowel_fb and vowel_fb.get("messages"):
