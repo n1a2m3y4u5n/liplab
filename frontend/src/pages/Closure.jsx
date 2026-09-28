@@ -9,6 +9,7 @@ import LessonComplete from '../components/LessonComplete'
 import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import useBookmark from '../lib/useBookmark'
+import { LESSON_COL, LESSON_STACK, LESSON_AVATAR_CLOSURE, LESSON_OPTIONS_3, lessonPad } from '../lib/lessonLayout'
 
 /**
  * 문맥 추론(Closure) — 독화 레슨 공통 템플릿(핸드오프 §4-03, WordStage와 같은 틀).
@@ -136,7 +137,7 @@ function ClosureQuiz({ items }) {
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-[676px] flex-col px-[18px] pb-[200px] pt-[18px] lg:pb-[150px] lg:pt-7">
+      <div className={`${LESSON_COL} ${lessonPad(!!result)}`}>
         {/* 진행 헤더 — 나가기 X + 트랙 + n / 12 */}
         <div className="flex items-center gap-3 lg:gap-[18px]">
           <button type="button" onClick={exit} aria-label="나가기" className="shrink-0">
@@ -148,7 +149,7 @@ function ClosureQuiz({ items }) {
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{qNum} / {QUIZ_LEN}</span>
         </div>
 
-        <div className="mt-6 flex flex-col gap-4 lg:mt-5 lg:gap-5">
+        <div className={LESSON_STACK}>
           <div className="relative flex flex-col gap-1.5 pr-12 leading-figma lg:gap-2 lg:pr-[52px]">
             <p className="text-[12px] font-bold text-track lg:text-[13px]">문맥 추론</p>
             <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">빈칸에 들어갈 말은?</h1>
@@ -156,7 +157,7 @@ function ClosureQuiz({ items }) {
           </div>
 
           {/* 입모양 카드 — 문장 전체를 말한다. 보기는 입모양이 같아 문맥으로 골라야 한다 */}
-          <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
+          <div className={LESSON_AVATAR_CLOSURE}>
             <MouthAvatar frames={frames} height={null} className="h-full" />
           </div>
 
@@ -173,7 +174,7 @@ function ClosureQuiz({ items }) {
           </div>
 
           {/* 3지선다 — 선택 → 확인 */}
-          <div className="flex flex-col gap-2.5 lg:gap-3">
+          <div className={LESSON_OPTIONS_3}>
             {choices.map((w, k) => (
               <button key={w} type="button" disabled={!!result || submitting} onClick={() => setSelected(w)}
                 aria-pressed={!result ? selected === w : undefined} className={OPTION_CLASS[optionState(w)]}>

@@ -13,6 +13,7 @@ import useChoiceKeys from '../lib/useChoiceKeys'
 import useBookmark from '../lib/useBookmark'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 import { pickDistractors, visualLevel } from '../lib/wordOptions'
+import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
@@ -210,7 +211,7 @@ function WordQuiz({ data, reload }) {
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-[676px] flex-col px-[18px] pb-[200px] pt-[18px] lg:pb-[150px] lg:pt-7">
+      <div className={`${LESSON_COL} ${lessonPad(!!result)}`}>
         {/* 진행 헤더(91:13 / 모바일 235:35) — 나가기 X + 트랙 + n / 12 */}
         <div className="flex items-center gap-3 lg:gap-[18px]">
           <button type="button" onClick={() => navigate(endless ? '/learn/endless' : '/learn/path')} aria-label="나가기" className="shrink-0">
@@ -222,7 +223,7 @@ function WordQuiz({ data, reload }) {
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{qNum} / {QUIZ_LEN}</span>
         </div>
 
-        <div className="mt-6 flex flex-col gap-4 lg:mt-5 lg:gap-5">
+        <div className={LESSON_STACK}>
           {/* 질문 + 북마크(91:19 · 328:40 / 모바일 235:42 · 328:64) */}
           <div className="relative flex flex-col gap-1.5 pr-12 leading-figma lg:gap-2 lg:pr-[52px]">
             <p className="text-[12px] font-bold text-track lg:text-[13px]">단어 독화</p>
@@ -231,14 +232,14 @@ function WordQuiz({ data, reload }) {
           </div>
 
           {/* 입모양 카드(91:22 560×370 / 모바일 235:45 전체 폭×214) — 아바타만, 무한 반복(다시 보기 없음) */}
-          <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
+          <div className={LESSON_AVATAR}>
             {/* 시각증강 기호(축 J-3)는 답을 확인한 뒤에만 — 보기가 최소대립 짝이라 문제 중에 보이면 기호만으로 답이 드러난다.
                 확인 뒤에는 약한 표적 입모양 음절에만 입꼬리 옆에 겹쳐 무엇이 달랐는지 보여 준다(숙달되면 흐려짐). */}
             <MouthAvatar frames={frames} height={null} className="h-full" cueText={result ? q.target : null} cueFocus />
           </div>
 
           {/* 4지선다(91:28 / 모바일 235:51) — 선택 → 확인 */}
-          <div className="flex flex-col gap-2.5 lg:gap-3">
+          <div className={LESSON_OPTIONS}>
             {q.choices.map((w, i) => (
               <button key={w} type="button" disabled={!!result || submitting} onClick={() => setSelected(w)}
                 aria-pressed={!result ? selected === w : undefined} className={OPTION_CLASS[optionState(w)]}>

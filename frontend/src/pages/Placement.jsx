@@ -5,6 +5,7 @@ import MouthAvatar from '../components/MouthAvatar'
 import LoadingScreen from '../components/LoadingScreen'
 import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
+import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
 
 /**
  * 디지털 독화 배치검사(축 I) — 난이도가 통제된 입모양→단어 4지선다로 현재 수준을 진단한다.
@@ -277,7 +278,7 @@ export default function Placement() {
   const total = mode === 'placement' ? n : items.length
   return (
     <div className="min-h-[100dvh] bg-page">
-      <div className="mx-auto flex w-full max-w-[676px] flex-col px-[18px] pb-[160px] pt-[18px] lg:pb-[150px] lg:pt-7">
+      <div className={`${LESSON_COL} ${lessonPad(!!submitError)}`}>
         {/* 진행 헤더(385:83 / 모바일 385:121) — 나가기 X + 트랙 + n / 전체(채움 = 현재 문항까지) */}
         <div className="flex items-center gap-3 lg:gap-[18px]">
           <button type="button" onClick={() => navigate('/learn/path')} aria-label="나가기" className="shrink-0">
@@ -289,7 +290,7 @@ export default function Placement() {
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{idx + 1} / {mode === 'placement' ? `최대 ${total}` : total}</span>
         </div>
 
-        <div className="mt-6 flex flex-col gap-4 lg:mt-5 lg:gap-5">
+        <div className={LESSON_STACK}>
           {/* 질문(385:89 / 모바일 385:128) — 북마크 없음 */}
           <div className="flex flex-col gap-1.5 font-bold leading-figma lg:gap-2">
             <p className="text-[12px] text-track lg:text-[13px]">자가진단</p>
@@ -297,12 +298,12 @@ export default function Placement() {
           </div>
 
           {/* 입모양 카드(385:93 560×370 / 모바일 385:132 전체 폭×214) */}
-          <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
+          <div className={LESSON_AVATAR}>
             <MouthAvatar frames={frames} height={null} className="h-full" />
           </div>
 
           {/* 4지선다(385:96 / 모바일 385:135) — 선택(로컬) → 다음 확정 */}
-          <div className="flex flex-col gap-2.5 lg:gap-3">
+          <div className={LESSON_OPTIONS}>
             {it.options.map((w, i) => {
               const on = selected === w
               return (
