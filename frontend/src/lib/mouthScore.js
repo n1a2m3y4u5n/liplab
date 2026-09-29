@@ -46,10 +46,17 @@ export function toBlendshapeMap(categories) {
 // 사람마다 얼굴이 달라 규칙 기준값과 오차가 있다. 사용자가 각 입모양을 직접 '본뜨면'
 // 그 실측 blendshape 평균을 개인 기준으로 저장한다. localStorage에만 두어 기기 밖으로
 // 나가지 않는다(프라이버시). 저장이 없으면 규칙 기준값(VISEME_PROFILES)으로 폴백한다.
-const CALIB_KEY = 'liplab_mouth_calibration_v1'
+// v1은 자음 음절(마·다·가·하·자)에서도 활성도 정점을 뽑아 자음 기준이 모두 ㅏ 벌림으로 저장됐다. 그 기준으로는
+// 입술을 닫은 얼굴이 양순음 5점, 입을 벌린 얼굴이 100점이 되어 채점이 뒤집혔다. v2부터 자음 자세를 따로 뽑고(pickCalibrationFrame)
+// v1 저장값은 읽지 않고 지운다. 사용자는 다시 본떠야 개인 기준이 적용된다.
+const CALIB_KEY = 'liplab_mouth_calibration_v2'
+const OLD_CALIB_KEYS = ['liplab_mouth_calibration_v1']
 
 export function loadCalibration() {
-  try { return JSON.parse(localStorage.getItem(CALIB_KEY)) || null } catch { return null }
+  try {
+    for (const k of OLD_CALIB_KEYS) localStorage.removeItem(k)
+    return JSON.parse(localStorage.getItem(CALIB_KEY)) || null
+  } catch { return null }
 }
 export function saveCalibration(profiles) {
   try { localStorage.setItem(CALIB_KEY, JSON.stringify(profiles)); return true } catch { return false }
@@ -80,7 +87,8 @@ function mouthActivity(f) {
 /**
  * 발음하는 동안 모은 프레임에서 '정점(peak)'을 뽑는다. 마지막 정지 모습이 아니라
  * 입이 가장 크게 벌어진/닫힌 순간(활성도 상위 30%)을 평균내 노이즈를 줄인다.
- * 발음은 움직임이라, 정점이 그 음소의 대표 입모양이다.
+ * 모음 음절(아·이·우·어·와)은 정점이 그 음소의 대표 입모양이다. 자음+ㅏ 음절에서는 정점이 ㅏ라서
+ * 자음 기준에는 쓰지 않는다(pickCalibrationFrame).
  */
 export function pickPeakFrame(frames) {
   if (!frames || !frames.length) return {}
@@ -88,6 +96,71 @@ export function pickPeakFrame(frames) {
   scored.sort((a, b) => b.act - a.act)
   const topN = Math.max(1, Math.ceil(scored.length * 0.3))
   return averageBlendshapes(scored.slice(0, topN).map((x) => x.f))
+}
+
+// 자음 비심. 본뜨기 음절이 자음+ㅏ(마·다·가·하·자)라 활성도 정점은 늘 뒤따르는 ㅏ 벌림이다. 자음 기준은 정점이 아니라
+// 자음 자세에서 뽑는다(pickCalibrationFrame).
+export const CONSONANT_VISEMES = new Set([1, 6, 7, 8, 10])
+const CLOSURE_TOP = 0.1      // 양순음: 입술 닫힘 정도 상위 10% 프레임을 평균
+const VOWEL_RISE = 0.2       // 턱 벌림이 이만큼 올라가야 모음(ㅏ)을 발음한 것으로 본다. 못 미치면 자음 자세를 멈춘 채 둔 것
+const PRE_VOWEL_FRAMES = 6   // 모음이 열리기 직전 창(30 fps 카메라에서 약 0.2초)
+
+/** 프레임별 입 관련 blendshape의 차원별 중앙값. 자세를 멈춘 채 둔 구간에서 깜박임·흔들림 같은 튀는 값을 무시한다. */
+export function medianBlendshapes(frames) {
+  const out = {}
+  const n = frames.length
+  for (const k of MOUTH_KEYS) {
+    if (!n) { out[k] = 0; continue }
+    const v = frames.map((f) => f[k] || 0).sort((a, b) => a - b)
+    const m = n % 2 ? v[(n - 1) / 2] : (v[n / 2 - 1] + v[n / 2]) / 2
+    out[k] = Number(m.toFixed(3))
+  }
+  return out
+}
+
+/**
+ * 양순음(ㅁㅂㅍ) 기준: 입술이 가장 꽉 닫힌 순간. 닫힘 정도는 mouthClose에서 jawOpen을 뺀 값으로 잰다(ㅏ로 턱이 내려간
+ * 프레임은 뒤로 밀린다). 상위 10%를 평균내 한 프레임의 노이즈를 줄인다.
+ */
+export function pickClosureFrame(frames) {
+  if (!frames || !frames.length) return {}
+  const scored = frames.map((f) => ({ f, c: (f.mouthClose || 0) - (f.jawOpen || 0) }))
+  scored.sort((a, b) => b.c - a.c)
+  const topN = Math.max(1, Math.ceil(scored.length * CLOSURE_TOP))
+  return averageBlendshapes(scored.slice(0, topN).map((x) => x.f))
+}
+
+/**
+ * 양순음 밖의 자음(ㄷ·ㄱ·ㅎ·ㅈ) 기준: 모음이 열리기 직전의 자세.
+ * 턱 벌림(jawOpen)이 가장 큰 프레임을 모음 정점으로 보고, 정점 앞에서 턱이 정점까지 오르는 폭의 절반에 아직 못 미친
+ * 마지막 프레임을 개방 시작으로 잡는다. 그 프레임까지의 직전 창(약 0.2초)을 평균낸다.
+ * 턱이 크게 오르지 않았으면(모음 없이 자음 자세를 멈춘 채 둔 경우) 전체 구간의 중앙값을 쓴다.
+ */
+export function pickConsonantFrame(frames) {
+  if (!frames || !frames.length) return {}
+  const jaw = frames.map((f) => f.jawOpen || 0)
+  let p = 0
+  for (let i = 1; i < jaw.length; i++) if (jaw[i] > jaw[p]) p = i
+  let base = jaw[p]
+  for (let i = 0; i <= p; i++) if (jaw[i] < base) base = jaw[i]
+  const rise = jaw[p] - base
+  if (rise < VOWEL_RISE) return medianBlendshapes(frames)
+  const thr = base + rise / 2
+  let onset = p - 1
+  while (onset >= 0 && jaw[onset] >= thr) onset--
+  if (onset < 0) {
+    // 벌린 채로 수집이 시작됐다. 정점 앞에 자음 구간이 없으니 턱이 절반 아래인 프레임(모음 뒤 닫힘)으로 대신한다
+    const low = frames.filter((f, i) => jaw[i] < thr)
+    return medianBlendshapes(low.length ? low : frames)
+  }
+  return averageBlendshapes(frames.slice(Math.max(0, onset - PRE_VOWEL_FRAMES + 1), onset + 1))
+}
+
+/** 본뜨기 한 번의 궤적에서 viseme에 맞는 기준 자세를 뽑는다. 모음은 정점, 자음은 자음 자세. */
+export function pickCalibrationFrame(frames, visemeId) {
+  if (visemeId === 1) return pickClosureFrame(frames)
+  if (CONSONANT_VISEMES.has(visemeId)) return pickConsonantFrame(frames)
+  return pickPeakFrame(frames)
 }
 
 /** 목표 viseme 대비 코사인 유사도(0~1). profiles로 개인 캘리브레이션을 넘길 수 있다(null 허용). */
