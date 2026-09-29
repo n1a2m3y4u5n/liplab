@@ -1,11 +1,11 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { toBlendshapeMap, pickPeakFrame, saveCalibration } from '../lib/mouthScore'
+import { toBlendshapeMap, pickCalibrationFrame, saveCalibration } from '../lib/mouthScore'
 import { mediaErrorMessage } from '../lib/mediaError'
 
 /**
  * 입모양 본뜨기(개인 캘리브레이션, 축 D 보정).
  * 각 viseme(대표 음절)를 사용자가 직접 지으면 그 순간 blendshape를 모아 평균내 개인
- * 기준 프로파일로 저장한다. 규칙 근사값 대신 '내 얼굴 실측'으로 채점 정확도를 높인다.
+ * 기준 프로파일로 저장한다. 자음 음절은 ㅏ가 붙어 있어 정점 대신 자음 자세를 뽑는다. 규칙 근사값 대신 '내 얼굴 실측'으로 채점 정확도를 높인다.
  * 영상·계수는 기기 안에서만 처리하고 localStorage에만 저장한다.
  *
  * 얼굴 모델은 부모(WebcamMouthCheck)의 useFaceLandmarker 인스턴스(landmarkerRef·modelStatus)를 받아 쓴다. 예전에는 부모 인스턴스가
@@ -14,13 +14,21 @@ import { mediaErrorMessage } from '../lib/mediaError'
  */
 const COLLECT_MS = 1500 // 한 입모양을 본뜨는 수집 시간
 
+// cons가 있는 단계는 자음 기준이다. 자음+ㅏ 음절이라 궤적의 정점은 ㅏ이므로, 자음 자세(양순음은 입술이 닫힌 순간,
+// 나머지는 모음이 열리기 직전)를 뽑는다(lib/mouthScore.js pickCalibrationFrame).
 const STEPS = [
-  { id: 1, syl: '마', name: '양순음' }, { id: 2, syl: '아', name: '개방모음' },
+  { id: 1, syl: '마', name: '양순음', cons: 'ㅁ' }, { id: 2, syl: '아', name: '개방모음' },
   { id: 3, syl: '이', name: '전설모음' }, { id: 4, syl: '우', name: '원순모음' },
-  { id: 5, syl: '어', name: '중설모음' }, { id: 6, syl: '다', name: '치경음' },
-  { id: 7, syl: '가', name: '연구개음' }, { id: 8, syl: '하', name: '성문음' },
-  { id: 9, syl: '와', name: '이중모음' }, { id: 10, syl: '자', name: '경구개음' },
+  { id: 5, syl: '어', name: '중설모음' }, { id: 6, syl: '다', name: '치경음', cons: 'ㄷ' },
+  { id: 7, syl: '가', name: '연구개음', cons: 'ㄱ' }, { id: 8, syl: '하', name: '성문음', cons: 'ㅎ' },
+  { id: 9, syl: '와', name: '이중모음' }, { id: 10, syl: '자', name: '경구개음', cons: 'ㅈ' },
 ]
+
+function stepGuide(step) {
+  if (step.id === 1) return `버튼을 누르고 「${step.syl}」를 한 번 발음하세요. 입술이 붙는 순간을 본떠요`
+  if (step.cons) return `버튼을 누르고 「${step.syl}」를 한 번 발음하세요. ㅏ로 벌어지기 직전의 「${step.cons}」 입모양을 본떠요`
+  return `「${step.syl}」를 발음하는 입모양을 만들고 버튼을 누르세요`
+}
 
 export default function MouthCalibration({ landmarkerRef, modelStatus, onDone, onCancel }) {
   const videoRef = useRef(null)
@@ -99,8 +107,8 @@ export default function MouthCalibration({ landmarkerRef, modelStatus, onDone, o
       setCollecting(false)
       const step = STEPS[stepIdx]
       if (frames.length >= 5) {
-        // 발음하는 동안의 궤적에서 정점(peak)을 대표 입모양으로 삼는다
-        capturedRef.current[step.id] = pickPeakFrame(frames)
+        // 모음은 궤적의 정점, 자음은 자음 자세(ㅏ 벌림 이전)를 대표 입모양으로 삼는다
+        capturedRef.current[step.id] = pickCalibrationFrame(frames, step.id)
       }
       if (stepIdx + 1 < STEPS.length) {
         setStepIdx(stepIdx + 1)
@@ -141,7 +149,7 @@ export default function MouthCalibration({ landmarkerRef, modelStatus, onDone, o
       </div>
       {status === 'running' && (
         <div className="mt-2 flex flex-col items-center gap-1">
-          <p className="text-center text-xs text-gray-500">「{step.syl}」를 발음하는 입모양을 만들고 버튼을 누르세요</p>
+          <p className="text-center text-xs text-gray-500">{stepGuide(step)}</p>
           <button type="button" onClick={capture} disabled={collecting}
             className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-bold text-white hover:bg-slate-700 disabled:opacity-40">
             이 입모양 본뜨기
