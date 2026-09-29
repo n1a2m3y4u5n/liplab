@@ -489,10 +489,21 @@ def _sustained(m: Dict) -> float:
     return float(v) if v is not None else float(m.get("duration", 0) or 0)
 
 
+# 운율 올리기·내리기의 시작·끝 음높이는 프론트 lib/speakTone.riseFallTone이 5프레임 중앙값 필터로 옥타브 튐을 거르고, 마지막 약 100ms를
+# 빼고, 앞 30% 중앙값과 마지막 3프레임 중앙값으로 낸다. 예전 앞·뒤 30% 평균은 평평한 200Hz 끝의 옥타브 튐 한 프레임으로 '올리기'
+# 100점이 됐다. 그때 쓴 유성 프레임 수(pitch_frames)가 이보다 적으면 방향을 판정하지 않는다(프론트 TONE_MIN_FRAMES와 같다).
+TONE_MIN_FRAMES = 6
+PITCH_MISSING_NOTE = "음높이가 충분히 잡히지 않았어요. 소리를 조금 더 길게 이어 내며 다시 해 보세요."
+
+
 def _score_prosody(drill: str, m: Dict) -> Tuple[float, bool, str]:
     loud = m.get("loudness", 0) or 0
     dur = _sustained(m)
     d = semitones(m.get("pitch_start", 0) or 0, m.get("pitch_end", 0) or 0)   # 시작 → 끝(반음)
+    if drill in ("rise", "fall"):
+        nf = m.get("pitch_frames")
+        if (nf is not None and nf < TONE_MIN_FRAMES) or not (m.get("pitch_start") or 0) > 0 or not (m.get("pitch_end") or 0) > 0:
+            return 0.0, False, PITCH_MISSING_NOTE
     if drill == "loud":
         passed = loud >= 60
         return round(min(100, loud / 60 * 100), 1), passed, (

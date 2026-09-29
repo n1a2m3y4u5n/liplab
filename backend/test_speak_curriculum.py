@@ -55,6 +55,17 @@ def test_unknown_stage_falls_back_to_sim():
     _ok(score == 80.0 and passed is True, "미지 단계는 sim_score로 폴백")
 
 
+def test_rise_fall_needs_enough_pitch_frames():
+    # 시작·끝 음높이에 쓴 유성 프레임이 모자라면(프론트 riseFallTone이 0을 보냄) 방향을 판정하지 않고 음높이 안내를 준다
+    m = {"pitch_start": 200, "pitch_end": 240}
+    _ok(S._score_prosody("rise", {**m, "pitch_frames": 12})[1] is True, "프레임이 충분한 진짜 올림은 통과")
+    _ok(S._score_prosody("fall", {"pitch_start": 240, "pitch_end": 200, "pitch_frames": 12})[1] is True, "진짜 내림도 통과")
+    sc, ok, note = S._score_prosody("rise", {**m, "pitch_frames": S.TONE_MIN_FRAMES - 1})
+    _ok(ok is False and sc == 0 and note == S.PITCH_MISSING_NOTE, "유성 프레임이 모자라면 불합격, 음높이 안내")
+    _ok(S._score_prosody("fall", {"pitch_start": 0, "pitch_end": 0, "pitch_frames": 3})[2] == S.PITCH_MISSING_NOTE, "내림도 같다")
+    _ok(S._score_prosody("rise", m)[1] is True, "예전 클라이언트(프레임 수 없음)는 예전처럼 판정")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:

@@ -12,7 +12,7 @@ import { toBlendshapeMap, scorePercent, loadCalibration } from '../lib/mouthScor
 import { scoreTone, scoreLevel } from '../lib/scoreTone'
 import { VOWEL_IDS } from '../lib/vtlShapes'
 import { mediaErrorMessage } from '../lib/mediaError'
-import { finalTone, toneDirection, toneMissed } from '../lib/speakTone'
+import { finalTone, riseFallTone, toneDirection, toneMissed } from '../lib/speakTone'
 import { SOFT_BAND, loudnessRms, metricVerdict, volumeCurveNote, volumeFeedback } from '../lib/speakFeedback'
 import { longestVoicedRun } from '../lib/voicing'
 import { autoCorrelate } from '../lib/pitch'
@@ -405,7 +405,7 @@ export default function SpeakingPractice() {
       const s = summaryRef.current || {}
       const metrics = {
         loudness: s.loudness ?? 0, pitch_range: s.pitchRange ?? 0, duration: s.duration ?? 0,
-        pitch_start: s.pitchStart ?? 0, pitch_end: s.pitchEnd ?? 0,
+        pitch_start: s.pitchStart ?? 0, pitch_end: s.pitchEnd ?? 0, pitch_frames: s.pitchFrames ?? null,
         pitch_ref: s.pitchRef || null, pitch_final: s.pitchFinal || null,
         voiced_duration: s.voicedDuration ?? null,
       }
@@ -462,23 +462,20 @@ export default function SpeakingPractice() {
     const { volMsg, volOk, micIssue } = volumeFeedback(loudness, peak, drill)
 
     // 억양 판정은 여기서 하지 않는다(연습마다 기준이 달라 lib/speakTone.js가 모드·드릴을 보고 한다)
-    let pitchRange = 0, pitchMean = 0, pitchStart = 0, pitchEnd = 0
+    let pitchRange = 0, pitchMean = 0
     const { ref: pitchRef, final: pitchFinal } = finalTone(ps)   // 문장 끝 억양(5단계, 서버 sentence_direction)
+    // 운율 올리기·내리기용 시작·끝 음높이(튐 제거·끝 100ms 제외, 유성 프레임이 모자라면 0)
+    const { start: pitchStart, end: pitchEnd, n: pitchFrames } = riseFallTone(traceRef.current)
     if (ps.length >= 4) {
       const sorted = [...ps].sort((a, b) => a - b)
       const lo = sorted[Math.floor(sorted.length * 0.1)]
       const hi = sorted[Math.floor(sorted.length * 0.9)]
       pitchRange = Math.round(hi - lo)
       pitchMean = Math.round(ps.reduce((a, b) => a + b, 0) / ps.length)
-      // 억양 방향 판정용: 앞 30% vs 뒤 30% 평균
-      const head = ps.slice(0, Math.max(1, Math.round(ps.length * 0.3)))
-      const tail = ps.slice(Math.floor(ps.length * 0.7))
-      pitchStart = Math.round(head.reduce((a, b) => a + b, 0) / head.length)
-      pitchEnd = Math.round(tail.reduce((a, b) => a + b, 0) / tail.length)
     }
     // 발성 단계·'길게' 연습은 녹음 길이가 아니라 가장 길게 이어 낸 소리로 판정한다(lib/voicing)
     const voicedDuration = longestVoicedRun(traceRef.current)
-    return { micIssue, loudness, volMsg, volOk, pitchRange, pitchMean, pitchStart, pitchEnd, pitchRef, pitchFinal, duration: dur, voicedDuration }
+    return { micIssue, loudness, volMsg, volOk, pitchRange, pitchMean, pitchStart, pitchEnd, pitchFrames, pitchRef, pitchFinal, duration: dur, voicedDuration }
   }
 
   const loop = () => {
