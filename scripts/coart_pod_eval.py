@@ -38,7 +38,8 @@ MIN_SAMPLES = 15
 MIN_FACE_RATIO = 0.8
 DELTA_R_MIN = 0.05                      # 판정: 둥글림 상관이 이만큼 올라야 한다
 GUARD_DROP = 0.02                       # 판정: 벌림·당김 상관이 이보다 더 떨어지면 안 된다
-VIEW_RE = re.compile(r"_C\d+_([A-Z])_\d+")
+# 장면 번호가 C·E로 시작하는 두 계열이 있다(E 계열 정면 15명 450개가 빠지던 것, 9/29 파드 실행에서 발견)
+VIEW_RE = re.compile(r"_[CE]\d+_([A-Z])_\d+")
 
 
 # ── 입모양 표·동시조음 규칙(frontend/src/lib/coarticulation.js 이식, 표는 JSON 하나를 같이 쓴다) ──────────────────────
