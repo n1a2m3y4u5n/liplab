@@ -6,6 +6,7 @@ import {
   TALKERS, TRAINING_TALKERS, HELD_OUT_TALKERS, DEFAULT_TALKER, RANGES, TALKER_BLOCK,
   scaleShape, talkerShapes, applyTalkerTiming, applyTalkerCycle, lessonTalker, talkerById, atNaturalRate, unitNoise,
 } from './talkers.js'
+import { COART_TARGETS, LIP_KEYS, coartShape, coartWeight } from './coarticulation.js'
 
 // 판별 기준(docs/talker-variation.md 7절, 5절 결과를 본 뒤 바꾼 기준). 벡터는 아바타가 얼굴에 쓰는 모프 가중치(jawOpen = 턱 뼈 각도),
 // 거리는 유클리드. 14·15는 기본 목표가 같은 빈 자세라 '쉼' 하나로 본다.
@@ -53,6 +54,55 @@ test('판별 기준(7절): 가상 화자 6명 모두 (a)(b)(c)를 만족한다',
     const w = worst[r]
     console.log(`(${r}) 최소 여백 ${w.margin.toFixed(4)} (${w.talker}, 입모양 ${w.v} 대 ${w.rival})`)
   }
+})
+
+// (d) 선행 동시조음(docs/coarticulation-e.md 4절, 플래그 VITE_COART_E를 켰을 때). 입 안쪽 자음·전환 c(6·7·8·10·12·13)의 입술만 모음 V
+// 쪽으로 섞은 모양 B(c, V)는 모음 쪽으로 가는 것이 목적이라 (b)(c)를 그대로 쓰지 않는다. 대신 가장 가까운 기본 목표가 입 안쪽 무리
+// 6·7·8·10(전환 12·13은 ALLOWED도)이거나, 섞은 모음 V거나, V와 같은 원순 무리(4·9)여야 한다. 문맥에 없는 제3의 퀴즈 입모양처럼
+// 보이면 실제 화자에게 없는 단서를 가르친다. 전환 12·13은 입 안쪽 자음으로 가는 사이 모양이고 입 안쪽 무리는 (b)에서 서로 가를 수
+// 없는 한 무리라 무리 전체를 허용한다. V는 엔진이 내는 모음 2·3·4·5다(정지 모양 9는 엔진이 내지 않고, 들어와도 4로 섞는다).
+// 여백은 (a)~(c)와 같게 잰다.
+const ROUND = [4, 9]
+const COART_V = [2, 3, 4, 5]
+// 비교용: 자음 자기 입술 모양까지 모음 쪽으로 그냥 섞는 방식(쓰지 않는다)
+const plainBlend = (table, c, V, w) => {
+  const out = { ...table[c] }
+  for (const k of LIP_KEYS) out[k] = (1 - w) * (table[c][k] || 0) + w * (table[V][k] || 0)
+  return out
+}
+function coartMargins(talker, shapeOf = coartShape) {
+  const table = talkerShapes(talker)
+  const w = coartWeight(talker)
+  const out = []
+  for (const c of COART_TARGETS) {
+    for (const V of COART_V) {
+      const t = vec(shapeOf(table, c, V, w))
+      const ok = [...new Set([...LOW, ...(ALLOWED[c] || []), V, ...(ROUND.includes(V) ? ROUND : [])])]
+      const bad = CLASSES.filter((u) => !ok.includes(u))
+      const [dIn] = nearest(t, ok)
+      const [dOut, rival] = nearest(t, bad)
+      out.push({ v: `${c}←${V}`, margin: dOut - dIn, rival })
+    }
+  }
+  return out
+}
+
+test('판별 기준(d): 선행 동시조음을 켜도 섞은 자음이 문맥에 없는 퀴즈 입모양으로 넘어가지 않는다(기본 화자와 가상 화자 6명)', () => {
+  let worst = null
+  for (const t of [DEFAULT_TALKER, ...TALKERS]) {
+    for (const m of coartMargins(t)) {
+      assert.ok(m.margin > 0, `${t.label} ${m.v}가 ${m.rival} 쪽으로 넘어갔다(여백 ${m.margin.toFixed(5)})`)
+      if (!worst || m.margin < worst.margin) worst = { ...m, talker: t.label }
+    }
+  }
+  console.log(`(d) 최소 여백 ${worst.margin.toFixed(4)} (${worst.talker}, ${worst.v} 대 ${worst.rival})`)
+  // (a)(b)(c)는 기본 목표만 보므로 켜고 꺼도 같다: 섞기는 입모양 표를 바꾸지 않는다
+  assert.equal(coartShape(VISEME_BLENDSHAPES, 6, null), VISEME_BLENDSHAPES[6])
+})
+
+test('판별 기준(d)는 비어 있지 않다: 자음 입술 모양까지 그냥 섞으면 자(10←2)가 중설모음(5)으로 넘어간다', () => {
+  const bad = coartMargins(DEFAULT_TALKER, plainBlend).filter((m) => m.margin <= 0)
+  assert.ok(bad.some((m) => m.v === '10←2' && m.rival === 5), JSON.stringify(bad))
 })
 
 test('판별 기준은 비어 있지 않다: 지시 범위를 크게 넘는 화자는 걸린다', () => {
