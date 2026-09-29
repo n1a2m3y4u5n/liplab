@@ -15,6 +15,7 @@ import { LoadFailed } from '../components/ErrorScreen'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { pickVisemeDistractors, balancedTargets } from '../lib/visemeOptions'
+import { plainVisemeLabel, lessonPlainLabel } from '../lib/visemeLabels'
 import { visemeCycleSteps } from '../lib/visemeCycle'
 import { applyTalkerCycle } from '../lib/talkers'
 import TalkerChip from '../components/TalkerChip'
@@ -227,6 +228,8 @@ function LearnPanel({ data }) {
               <span className="text-xs px-2 py-0.5 rounded-full bg-primary-100 text-primary-700">닻(뚜렷)</span>
             )}
           </div>
+          {/* 퀴즈 보기에 쓰는 쉬운 이름(lib/visemeLabels). 위 전문 이름과 아래 음소 목록은 학습 자료에서만 보인다 */}
+          {plainVisemeLabel(sel.viseme_id) && <p className="text-sm font-bold text-ink">{plainVisemeLabel(sel.viseme_id)}</p>}
           <p className="text-sm text-ink-muted">{sel.phonemes.join('  ·  ')}</p>
           <div className="p-3 bg-surface-muted rounded-lg text-sm text-ink"><b>입모양</b> — {sel.look}</div>
           <div className="p-3 bg-warn-tint border border-warn/30 rounded-lg text-sm text-warn-text"><b>독화 포인트</b> — {sel.teach}</div>
@@ -378,7 +381,8 @@ function QuizPanel({ data }) {
     // 후보는 정답과 같은 모집단(quizzable)으로 한다. 10개 무리 전체에서 뽑으면 정답이 될 수 없는 6·7·8·10이 보기에 섞여,
     // 입을 보지 않고 보기 구성만으로 맞히는 최적 추측이 0.554였다(지금 0.250 = 4지선다 찬스).
     const others = pickVisemeDistractors(target.viseme_id, quizzable)
-    const choices = shuffle([target, ...others]).map((l) => ({ viseme_id: l.viseme_id, name: lessonLabel(l) }))
+    // 보기는 쉬운 이름('입술 닫힘 (바·마)', lib/visemeLabels). 예전 '양순음(ㅂ, ㅃ, ㅍ, ㅁ)'은 이름표를 외우고 긴 글을 읽어야 했다
+    const choices = shuffle([target, ...others]).map((l) => ({ viseme_id: l.viseme_id, name: lessonPlainLabel(l) }))
     setQ({ target, choices })
     setSelected(null)
     setResult(null)
@@ -505,7 +509,7 @@ function QuizPanel({ data }) {
             // 정오 피드백은 스크린리더에 알린다(role=status·aria-live) — 잔존청력·저시력 사용자 대상(c92fdc3, 병합 복원)
             <div role="status" aria-live="polite" className={`flex min-w-0 flex-col gap-[3px] leading-figma lg:gap-1 ${result.correct ? 'text-good-text' : 'text-bad-text'}`}>
               <p className="text-[19px] font-bold tracking-[-0.38px] lg:text-[22px] lg:tracking-[-0.44px]">{result.correct ? '정답이에요!' : '아쉬워요'}</p>
-              <p className="line-clamp-2 text-[13px] font-bold opacity-80 lg:text-[14px]">{result.correct ? result.target.teach : `정답은 「${lessonLabel(q.target)}」예요`}</p>
+              <p className="line-clamp-2 text-[13px] font-bold opacity-80 lg:text-[14px]">{result.correct ? result.target.teach : `정답은 「${lessonPlainLabel(q.target)}」예요`}</p>
             </div>
           ) : (
             <span className="hidden text-[15px] leading-figma text-ink-faint lg:inline">{selected == null ? '보기를 선택해주세요' : '정답을 확인해보세요'}</span>

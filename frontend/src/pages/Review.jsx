@@ -8,6 +8,7 @@ import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { pickDistractors } from '../lib/wordOptions'
 import { pickVisemeDistractors } from '../lib/visemeOptions'
+import { lessonPlainLabel } from '../lib/visemeLabels'
 import { FAST_SPEECH_SPEED } from '../lib/visemeTiming'
 import useLessonTalker from '../hooks/useLessonTalker'
 import { sentenceReviewSubmission } from '../lib/reviewScenario'
@@ -98,7 +99,8 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
       // 화면에서 가를 수 있는 무리만(lib/visemeOptions). 후보는 1단계 퀴즈와 같이 정답 모집단(quizzable)만 쓴다.
       // 전체 10개에서 뽑으면 정답이 될 수 없는 무리가 보기에 섞여 보기 구성만으로 답이 좁혀졌다(최적 추측 0.554 → 0.250).
       const others = pickVisemeDistractors(vid, lessons.filter((l) => l.quizzable))
-      return { targetKey: String(vid), choices: shuffle([t, ...others].filter(Boolean)).map((l) => ({ key: String(l.viseme_id), label: l.name })) }
+      // 보기 이름은 1단계 퀴즈와 같은 쉬운 이름(lib/visemeLabels, '입술 닫힘 (바·마)')
+      return { targetKey: String(vid), choices: shuffle([t, ...others].filter(Boolean)).map((l) => ({ key: String(l.viseme_id), label: lessonPlainLabel(l) })) }
     }
     const distractors = pickDistractors(item.ref, bank.byWord, bank.words)
     return { targetKey: item.ref, choices: shuffle([item.ref, ...distractors]).map((w) => ({ key: w, label: w })) }
