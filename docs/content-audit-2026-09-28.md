@@ -175,3 +175,10 @@ python scripts/content_audit.py --strict   # 불변 조건 위반이 있으면 �
 맞는 틀'이 서빙 문항에 없음, 뺀 문항이 서빙되지 않음, 대체 대사가 단계 길이 안이고 다 쓰기 전에 되풀이하지 않음, 닮은꼴 사전에
 드문 말·검사 정답 없음, 등급 1이 일상어, 새로 뺀 말이 2단계·말하기 풀에 없음. 풀이 400이 되어
 `test_word_options_api`의 풀 크기 하한을 400에서 380으로 낮췄다.
+
+## 8. 문맥 문항 확장(9/29 덧붙임)
+
+서빙 문맥 문항 81개로는 3단계 12문항과 2단계 레슨의 문맥 문항이 일곱 레슨쯤부터 되풀이됐다. 유료 API 없이 새 문항 141개를
+써서 서빙 문항이 222개가 됐다(처음 쓴 141 가운데 규칙 점검에서 2, 자체 검토에서 1을 빼고 3을 더 씀). 사람 검수 전이라
+`approved.json`이 아닌 `backend/data/curriculum/unreviewed.json`에 두고 서빙할 때 `review: "pending"`을 붙인다. 방법·검토 기록은
+`docs/closure-expansion-2026-09-29.md`, 검수 목록은 `docs/closure-expansion-2026-09-29-review.tsv`. 감사 스크립트 위반 0건.

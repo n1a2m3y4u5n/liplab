@@ -21,6 +21,8 @@ from typing import Dict, List, Optional, Tuple
 _DIR = os.path.join(os.path.dirname(__file__), "data", "curriculum")
 _APPROVED = os.path.join(_DIR, "approved.json")
 _REJECTED = os.path.join(_DIR, "rejected.json")
+# 사람 검수 전에도 서빙하는 문맥 문항(9/29, curriculum._merge_unreviewed_closures). 대기 목록에 후보와 함께 보인다.
+_UNREVIEWED = os.path.join(_DIR, "unreviewed.json")
 _EMPTY = {"words": [], "pairs": [], "closures": []}
 
 
@@ -61,6 +63,9 @@ def _keyset(items: List[Dict], kind: str) -> set:
 def pending() -> Dict:
     """승인·반려되지 않은 대기 후보 + 요약. 종류별 목록·건수."""
     cand = _latest_candidates()
+    have = _keyset(cand.get("closures", []), "closures")
+    cand["closures"] = list(cand.get("closures", [])) + [
+        it for it in _load(_UNREVIEWED).get("closures", []) if _key("closures", it) not in have]
     appr = _load(_APPROVED)
     rej = _load(_REJECTED)
     out: Dict[str, List[Dict]] = {}
