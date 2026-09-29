@@ -112,9 +112,60 @@ def test_number_to_sign():
     assert asyncio.run(ss.translate_to_ksl("12"))["tokens"][0]["origin_no"] == "10923"
     # 사전 표제어는 비관형형(열둘·스물)이다. 관형형(열두·스무)은 사전에 없다
     assert ss.lookup_number_sign("열두") is None and ss.lookup_number_sign("스무") is None
-    # 0으로 시작하거나 5자리 이상(번호)은 한 자리씩
+    # 0으로 시작하거나 17자리 이상(번호)은 한 자리씩
     assert [tk.get("signed_as") for tk in asyncio.run(ss.translate_to_ksl("010"))["tokens"]] == ["영", "하나", "영"]
-    assert len(asyncio.run(ss.translate_to_ksl("12345"))["tokens"]) == 5
+    assert len(asyncio.run(ss.translate_to_ksl("1" * 17))["tokens"]) == 17
+
+
+def _signed(text):
+    return [tk.get("signed_as") for tk in asyncio.run(ss.translate_to_ksl(text))["tokens"]]
+
+
+def test_large_numbers_use_unit_signs():
+    # 9/29: 5자리 이상 금액은 한 자리씩(10000 → 하나·영·영·영·영) 읽혀 전체 재생에서 같은 영상이 네 번 이어졌다.
+    # 만·억·조 단위 수어로 읽고, 사전에 있는 합성(십만·백만)은 한 수어로 보인다.
+    for num, want in (("10000", ["만"]), ("10,000", ["만"]), ("50000", ["오", "만"]),
+                      ("12345", ["만", "이천", "삼", "백", "사십", "오"]), ("100000", ["십만"]),
+                      ("1000000", ["백만"]), ("10000000", ["천", "만"]), ("2500000", ["이", "백", "오십", "만"]),
+                      ("100000000", ["억"]), ("300000000", ["삼", "억"]), ("10025", ["만", "이십", "오"])):
+        toks = asyncio.run(ss.translate_to_ksl(num))["tokens"]
+        assert [tk.get("signed_as") for tk in toks] == want, num
+        assert all(tk["type"] == "sign" and tk["word"] == num for tk in toks), num
+    assert asyncio.run(ss.translate_to_ksl("10000"))["tokens"][0]["origin_no"] == "10398"   # 개념 > 수 '만'
+
+
+def test_number_compounds_only_from_number_category():
+    # '오만'(교만)·'구조'처럼 숫자와 소리가 같은 다른 뜻 표제어를 합성 수어로 고르면 안 된다
+    assert ss.number_sign_parts("50000") == ["오", "만"]
+    assert ss._is_number_headword("오십") and not ss._is_number_headword("오만")
+
+
+def test_decimal_point():
+    # 9/29: 규칙 경로가 마침표를 지워 3.5가 35(서른다섯)였다. 소수는 정수 부분 + 소수점 수어 + 한 자리씩
+    assert _signed("3.5") == ["삼", "점", "오"]
+    assert _signed("0.25") == ["영", "점", "이", "오"]
+    assert _signed("12.5") == ["십", "이", "점", "오"]
+    toks = asyncio.run(ss.translate_to_ksl("3.5"))["tokens"]
+    assert all(t["type"] == "sign" and t["word"] == "3.5" for t in toks)
+    assert toks[1]["origin_no"] == "2211"          # 소수점 수어(가게 뜻의 '점' 4908이 아님)
+    # 문장 끝 마침표는 예전처럼 지운다
+    assert _signed("학교.") == [None]
+
+
+def test_unicode_digits_do_not_crash():
+    # 9/29: '3²'·'①'은 str.isdigit이 참이라 int()에서 500이 났다. 원문자는 숫자로, 위첨자는 제곱으로 읽는다
+    r = asyncio.run(ss.translate_to_ksl("3²"))
+    assert [(t["word"], t["type"], t.get("signed_as")) for t in r["tokens"]] == [("3", "sign", "셋"), ("²", "fingerspell", "제곱")]
+    assert r["tokens"][1]["jamo"] == ss.fingerspell("제곱")
+    assert _signed("①") == ["하나"]
+    assert _signed("⑩") == ["열"]
+    assert _signed("１２") == ["열둘"]
+    # 규칙 경로에서 숫자로 시작하는 어절은 숫자와 나머지로 나눈다
+    assert [(t["word"], t["type"]) for t in asyncio.run(ss.translate_to_ksl("3시에"))["tokens"]][0] == ("3", "sign")
+    # 숫자 비슷한 다른 글자는 500 없이 지문자(글자 그대로)로
+    for text in ("x⁴", "❶", "⑴", "٣", "²", "3.5.1", "1,2", "10,000원", "𝟑"):
+        r = asyncio.run(ss.translate_to_ksl(text))
+        assert r["coverage"]["total"] == len(r["tokens"]) > 0, text
 
 
 def test_zero_is_number_sign():
