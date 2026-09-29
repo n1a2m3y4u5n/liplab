@@ -8,6 +8,18 @@
 
 **순수 함수** — DB·현재시각 같은 부수효과가 없어 결정론적이고 단위테스트가 쉽다.
 간격(일수)만 돌려주고, 실제 due_date 계산·저장·삭제는 호출부(main.py)가 맡는다.
+
+찍기·감속 보정(9/29, `quality_for_answer`): 복습 답(/api/review/answer)은 예전에 정오만 받아 정답이면 모두 품질 4였다.
+4지선다는 몰라도 25%를 맞히고, 느리게(1.0배 미만) 본 정답은 자연 속도에서 읽는다는 근거가 약한데 간격은 똑같이 늘었다.
+이제 답 방식(answer_mode)과 재생 속도(speed)를 받아, 보기를 고른 정답과 1.0배 미만에서 얻은 정답은 품질 3(어렵게 맞힘),
+자연 속도(1.0배 이상)에서 직접 입력한 정답만 4로 둔다. 오답은 그대로 1이다. 품질 3은 반복 간격을 끊지 않고 ease만
+0.14 내린다. 첫 실패로 등록된 항목(ease 2.3)이 연달아 맞히면 간격이 4는 1·6·14·32·74일(다섯 번째에 졸업, 그 전까지 53일),
+3은 1·6·12·23·40·64일(여섯 번째에 졸업, 82일)이다.
+이 값은 자료 없이 정한 원칙적인 작은 변경이다. 시뮬레이션이나 실측으로 고른 값이 아니다. 복습 기록이 쌓이면 다음 예정일에
+다시 맞힌 비율(답 방식·속도별 다음 복습 통과율)로 품질 3·4가 기억 유지를 제대로 가르는지 다시 본다.
+문장 레슨(/api/progress)에서 예정된 문장을 다시 만난 답은 점수 등급을 쓰되, 4지선다 합격(정확 일치 100점)은 같은 이유로
+품질 3을 넘지 않게 한다(main._sr_touch max_quality). 레슨 문장의 속도는 적용하지 않는다. 약한 입모양 적응 감속이 거의
+모든 문장에 걸려(docs/mastery-ewma.md 9절) 속도로 가르면 사실상 모든 문장이 품질 3이 되기 때문이다.
 """
 from typing import Dict, Optional
 
@@ -34,6 +46,20 @@ def quality_from_score(score: float) -> int:
 def quality_from_correct(correct: bool) -> int:
     """이진 정오답(복습 큐 등)을 품질등급으로. 정답=4(무난한 성공), 오답=1(실패)."""
     return 4 if correct else 1
+
+
+def quality_for_answer(correct: bool, answer_mode: Optional[str] = None, speed: Optional[float] = None) -> int:
+    """복습 답의 품질등급. 오답 1, 보기를 고른 정답·1.0배 미만 정답 3, 자연 속도에서 직접 입력한 정답 4(머리말 참고).
+    answer_mode·speed를 보내지 않은 옛 화면은 예전처럼 정답 4다."""
+    if not correct:
+        return quality_from_correct(False)
+    if answer_mode == "choice":
+        return 3
+    try:
+        slowed = speed is not None and float(speed) < 0.999
+    except (TypeError, ValueError):
+        slowed = False
+    return 3 if slowed else quality_from_correct(True)
 
 
 def schedule(

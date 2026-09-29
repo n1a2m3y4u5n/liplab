@@ -854,8 +854,10 @@ async def submit_progress(
         # 문장 간격 반복(kind 'sentence'): 레슨에서 합격선 아래면 내일 복습에 넣고, 예정일에 다시 읽으면 점수 등급으로 간격을
         # 조정한다(말하기 kind 'speak'와 같은 _sr_touch). 틀린 문장 복습·북마크 연습은 원문을 본 뒤의 답이라 일정을 건드리지 않는다
         if _schedules_sentence(submission.scenario_id, submission.sentence):
+            # 4지선다 합격은 정확 일치 100점이라 점수 등급으로는 품질 5가 된다. 찍어도 25%는 맞으므로 3을 넘지 않게 한다
             await _sr_touch(current_user.id, "sentence", submission.sentence,
-                            scoring_result["score"] >= _STAGE3_PASS, db, score=scoring_result["score"])
+                            scoring_result["score"] >= _STAGE3_PASS, db, score=scoring_result["score"],
+                            max_quality=3 if submission.answer_mode == "choice" else None)
 
         await db.commit()
 
@@ -2253,6 +2255,10 @@ class ReviewAnswer(BaseModel):
     kind: str = Field(..., max_length=20)
     ref: str = Field(..., max_length=100)
     correct: bool
+    # 'choice'(보기를 고름)·'typed'(직접 입력)와 답하기 전에 본 재생 속도. 보기를 고른 정답과 1.0배 미만 정답은 품질 3,
+    # 자연 속도에서 직접 입력한 정답만 4(srs.quality_for_answer). 보내지 않은 옛 화면은 예전처럼 정답 4다
+    answer_mode: Optional[str] = Field(None, max_length=10)
+    speed: Optional[float] = Field(None, ge=0.1, le=4.0)
 
 
 @app.post("/api/review/answer")
@@ -2260,7 +2266,7 @@ async def review_answer(data: ReviewAnswer, current_user=Depends(get_current_use
     """복습 결과로 다음 등장일 재조정(SM-2). ease·반복에 따라 간격이 늘고, 충분히 커지면 졸업(제거)."""
     import srs
     res = await _srs_apply(current_user.id, data.kind, data.ref,
-                           srs.quality_from_correct(data.correct), db, create=False)
+                           srs.quality_for_answer(data.correct, data.answer_mode, data.speed), db, create=False)
     # 공용 보상: 복습도 XP·스트릭에 기여(복습만 한 날 스트릭이 끊기던 문제 해결). 큐에 없는 항목은 XP 없음
     award = _award_xp_and_streak(current_user, (10 if data.correct else 3) if res.get("found") else 0)
     reward = {"xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
@@ -2328,11 +2334,14 @@ async def tasks_claim(current_user=Depends(get_current_user), db: AsyncSession =
 
 
 # ── 공용 복습 유틸 — 두 기둥(독화·말하기)이 동일 구조(예정/틀림/북마크)를 쓰도록 ──
-async def _sr_touch(user_id: int, kind: str, ref: str, correct: bool, db, score: float = None):
+async def _sr_touch(user_id: int, kind: str, ref: str, correct: bool, db, score: float = None, max_quality: int = None):
     """SRS 큐 유지(SM-2) — 틀리면 내일 재등장(신규면 등록), 맞으면 ease·반복에 따라 간격을 늘려
     충분히 커지면 졸업. 점수(score 0~100)가 오면 이진 대신 등급(quality)으로 반영한다.
-    커밋은 호출부에서. review/answer와 동일한 규칙."""
-    await _srs_apply(user_id, kind, ref, _review_quality(score, correct), db, create=True)
+    max_quality가 오면 성공 등급을 그 값으로 누른다(4지선다 합격은 3, srs 머리말). 커밋은 호출부에서. review/answer와 동일한 규칙."""
+    quality = _review_quality(score, correct)
+    if max_quality is not None and quality >= 3:
+        quality = max(3, min(quality, max_quality))
+    await _srs_apply(user_id, kind, ref, quality, db, create=True)
 
 
 def _review_quality(score, correct: bool) -> int:
