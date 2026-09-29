@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { learningAPI } from '../api'
-import { fingerspellImage } from '../lib/fingerspell'
+import { fingerspellShapes } from '../lib/fingerspell'
+import { stageKey, nextIndex } from '../lib/signPlayback'
 
 // 입모양(three)은 필요할 때만 로드 → 수어 영상만 볼 땐 three 안 받음.
 //  - 기본형: "입모양 함께" 토글을 켤 때 LipSyncPlayer3D
@@ -66,6 +67,7 @@ export default function SignPanel({ text, variant = 'default' }) {
   const [current, setCurrent] = useState(0)
   const [playingAll, setPlayingAll] = useState(false)
   const [showMouth, setShowMouth] = useState(false)
+  const [run, setRun] = useState(0)   // 전체 재생 차례. 다시 누르면 첫 영상도 처음부터
   const fsTimer = useRef(null)
 
   useEffect(() => {
@@ -85,8 +87,10 @@ export default function SignPanel({ text, variant = 'default' }) {
 
   const clearFs = () => { if (fsTimer.current) { clearTimeout(fsTimer.current); fsTimer.current = null } }
   const advance = useCallback(() => {
-    setCurrent((i) => { if (i < tokens.length - 1) return i + 1; setPlayingAll(false); return i })
+    setCurrent((i) => { const n = nextIndex(i, tokens.length); if (n.done) setPlayingAll(false); return n.index })
   }, [tokens.length])
+  const playAll = () => { setCurrent(0); setRun((r) => r + 1); setPlayingAll(true) }
+  const vKey = stageKey(run, current, token)
 
   // 전체재생: 영상 토큰은 <video onEnded>로, 지문자/영상없음 토큰은 타이머로 진행
   useEffect(() => {
@@ -100,9 +104,9 @@ export default function SignPanel({ text, variant = 'default' }) {
   if (variant === 'split' || variant === 'single') {
     return (
       <SplitView single={variant === 'single'} text={text} loading={loading} error={error} result={result} tokens={tokens} token={token}
-        current={current} playingAll={playingAll} advance={advance}
+        current={current} playingAll={playingAll} advance={advance} vKey={vKey}
         onPick={(i) => { setPlayingAll(false); setCurrent(i) }}
-        onPlayAll={() => { setCurrent(0); setPlayingAll(true) }} />
+        onPlayAll={playAll} />
     )
   }
 
@@ -121,7 +125,7 @@ export default function SignPanel({ text, variant = 'default' }) {
             <input type="checkbox" checked={showMouth} onChange={(e) => setShowMouth(e.target.checked)} />
             입모양 함께
           </label>
-          <button onClick={() => { setCurrent(0); setPlayingAll(true) }}
+          <button onClick={playAll}
             className="text-xs px-3 py-1.5 rounded-lg bg-primary-500 text-white hover:bg-primary-600 font-medium">
             전체 재생
           </button>
@@ -145,7 +149,7 @@ export default function SignPanel({ text, variant = 'default' }) {
           <div className="relative rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center" style={{ minHeight: 300 }}>
             {token.type === 'sign' && token.video_url ? (
               <video
-                key={token.video_url}
+                key={vKey}   // 같은 영상이 이어져도 새 요소로 처음부터 재생해 onEnded가 온다(signPlayback.js)
                 src={token.video_url}
                 autoPlay muted playsInline
                 loop={!playingAll}
@@ -164,23 +168,25 @@ export default function SignPanel({ text, variant = 'default' }) {
                 )}
               </div>
             ) : (
-              // 지문자(지화) — 자모별 손모양 이미지(없으면 글자 폴백)
+              // 지문자(지화) — 자모별 손모양 이미지. 된소리·w 이중모음·겹받침은 있는 손모양 조각으로(ㄲ = ㄱ 두 번), 숫자·기호는 글자 폴백
               <div className="p-4 text-center w-full">
                 <p className="text-xs text-slate-400 mb-3">지문자 (지화) — 한 글자씩 손모양으로</p>
                 <div className="flex flex-wrap gap-3 justify-center items-end">
                   {token.jamo.map((group, gi) => (
                     <div key={gi} className="flex gap-1 items-end p-1.5 rounded-lg bg-white/5">
                       {group.map((jamo, ji) => {
-                        const img = fingerspellImage(jamo)
+                        const { parts, note } = fingerspellShapes(jamo)
                         return (
-                          <div key={ji} className="flex flex-col items-center">
-                            {img ? (
-                              <img src={img} alt={`지문자 ${jamo}`} loading="lazy"
-                                className="h-24 w-auto rounded bg-white object-contain" />
-                            ) : (
-                              <div className="h-24 w-14 rounded bg-white/90 flex items-center justify-center text-slate-800 text-2xl font-bold">{jamo}</div>
-                            )}
-                            <span className="mt-1 text-xs text-slate-200">{jamo}</span>
+                          <div key={ji} className="flex flex-col items-center" title={note || undefined}>
+                            <div className="flex gap-0.5">
+                              {parts.map((p, pi) => p.src ? (
+                                <img key={pi} src={p.src} alt={`지문자 ${p.jamo}`} loading="lazy"
+                                  className="h-24 w-auto rounded bg-white object-contain" />
+                              ) : (
+                                <div key={pi} className="h-24 w-14 rounded bg-white/90 flex items-center justify-center text-slate-800 text-2xl font-bold">{p.jamo}</div>
+                              ))}
+                            </div>
+                            <span className="mt-1 text-xs text-slate-200">{jamo}{parts.length > 1 && <span className="text-slate-400"> = {parts.map((p) => p.jamo).join('+')}</span>}</span>
                           </div>
                         )
                       })}
@@ -203,7 +209,7 @@ export default function SignPanel({ text, variant = 'default' }) {
           {token.type === 'sign' && (
             <div className="mt-1.5">
               {token.signed_as && (
-                /^\d+$/.test(String(token.word)) ? (
+                /^[\d.,]+$/.test(String(token.word)) ? (
                   <p className="text-[11px] text-slate-500 mb-0.5">
                     숫자 ‘{token.word}’ → 수어 ‘{token.signed_as}’
                   </p>
@@ -276,7 +282,7 @@ function Attribution({ className = '' }) {
  * 수어 칸: 영상(반복, 전체 재생 중엔 끝나면 다음 단어) · 영상이 없으면 수형 설명 · 사전 미등재어는 지문자 그림.
  * 입모양 칸: 현재 단어의 입모양 프레임을 MouthAvatar가 반복 재생(컨트롤·오버레이 없음).
  */
-function SplitView({ single = false, text, loading, error, result, tokens, token, current, playingAll, advance, onPick, onPlayAll }) {
+function SplitView({ single = false, text, loading, error, result, tokens, token, current, playingAll, advance, vKey, onPick, onPlayAll }) {
   const ready = !!(text && !loading && !error && result && tokens.length && token)
   let signStage
   if (!text) {
@@ -290,7 +296,7 @@ function SplitView({ single = false, text, loading, error, result, tokens, token
   } else if (token.type === 'sign' && token.video_url) {
     signStage = (
       <video
-        key={token.video_url}
+        key={vKey}   // 같은 영상이 이어져도 새 요소로 처음부터 재생해 onEnded가 온다(signPlayback.js)
         src={token.video_url}
         autoPlay muted playsInline
         loop={!playingAll}
@@ -309,21 +315,23 @@ function SplitView({ single = false, text, loading, error, result, tokens, token
       </div>
     )
   } else {
-    // 지문자(지화) — 자모별 손모양 이미지(없으면 글자 폴백)
+    // 지문자(지화) — 자모별 손모양 이미지. 된소리·w 이중모음·겹받침은 있는 손모양 조각으로(ㄲ = ㄱ 두 번), 숫자·기호는 글자 폴백
     signStage = (
       <div className="flex max-h-full flex-wrap items-end justify-center gap-2 overflow-y-auto p-3">
         {token.jamo.map((group, gi) => (
           <div key={gi} className="flex items-end gap-1">
             {group.map((jamo, ji) => {
-              const img = fingerspellImage(jamo)
+              const { parts, note } = fingerspellShapes(jamo)
               return (
-                <div key={ji} className="flex flex-col items-center">
-                  {img ? (
-                    <img src={img} alt={`지문자 ${jamo}`} loading="lazy" className="h-20 w-auto rounded bg-white object-contain" />
-                  ) : (
-                    <div className="flex h-20 w-12 items-center justify-center rounded bg-white text-2xl font-bold text-ink">{jamo}</div>
-                  )}
-                  <span className="mt-1 text-[11px] font-bold text-ink-muted">{jamo}</span>
+                <div key={ji} className="flex flex-col items-center" title={note || undefined}>
+                  <div className="flex gap-0.5">
+                    {parts.map((p, pi) => p.src ? (
+                      <img key={pi} src={p.src} alt={`지문자 ${p.jamo}`} loading="lazy" className="h-20 w-auto rounded bg-white object-contain" />
+                    ) : (
+                      <div key={pi} className="flex h-20 w-12 items-center justify-center rounded bg-white text-2xl font-bold text-ink">{p.jamo}</div>
+                    ))}
+                  </div>
+                  <span className="mt-1 text-[11px] font-bold text-ink-muted">{jamo}{parts.length > 1 && <span className="font-normal"> = {parts.map((p) => p.jamo).join('+')}</span>}</span>
                 </div>
               )
             })}
@@ -375,7 +383,7 @@ function SplitView({ single = false, text, loading, error, result, tokens, token
           {/* 근접 수어 안내 — 사전에 없는 단어를 다른 수어로 보일 때만. Figma 226:156 밖이지만, 보이는 영상이
               입력한 단어가 아니라는 사실은 숨기지 않는다(맨 위 설명 참고). */}
           {token.type === 'sign' && token.signed_as && (
-            /^\d+$/.test(String(token.word))
+            /^[\d.,]+$/.test(String(token.word))
               ? <p className="text-[12px] leading-relaxed text-ink-muted">숫자 ‘{token.word}’ → 수어 ‘{token.signed_as}’</p>
               : <p className="text-[12px] leading-relaxed text-warn-text">‘{token.word}’은 사전에 없어 근접 수어 ‘{token.signed_as}’로 표시합니다.</p>
           )}
