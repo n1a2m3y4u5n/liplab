@@ -275,6 +275,9 @@ class PlacementResult(Base):
     # 신뢰도(KR-20)·문항 분석을 하려면 필요하다(docs/assessment-design.md).
     form_version = Column(String(16), nullable=True)
     item_log = Column(JSON, default=list)            # [{id, word, chosen, correct, difficulty}]
+    # 채점 때까지 한 독화 연습 시행 수(선다형 + 문장, 9/29). 사전 검사를 연습 뒤에 봤는지 표시한다(assessment.PRETEST_TRIALS_FLAG).
+    # 학습 초기화로 시행 기록이 지워져도 검사 당시 값이 남는다. 그 전 검사는 NULL
+    trials_before = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -407,6 +410,8 @@ _ADD_COLUMNS = (
     # 표준검사 판본·문항 기록(축 I)
     ("placement_results", "form_version", "VARCHAR(16)"),
     ("placement_results", "item_log", "JSON"),
+    # 검사 전 독화 연습 시행 수(연습 뒤 사전 검사 표시, docs/eval-metrics.md 9절)
+    ("placement_results", "trials_before", "INTEGER"),
     # 파일럿 참여 코드·집단(§4.7)
     ("learning_profiles", "pilot_code", "VARCHAR(32)"),
     ("learning_profiles", "cohort", "VARCHAR(16)"),

@@ -4,6 +4,7 @@ import { evalAPI, curriculumAPI } from '../api'
 import AppShell from '../components/AppShell'
 import LoadingScreen from '../components/LoadingScreen'
 import { TRANSFER_NOISE_NOTE } from '../lib/talkers'
+import { changeTone, ciText, CHANGE_NOISE_NOTE } from '../lib/changeTone'
 
 // 학습 효과 리포트 — 개인별 시행 기록으로 학습곡선·단계 도달 시행수·초기 대비 최근 향상도를
 // 시각화한다. 공모전 평가/효과성 근거용. 데이터가 적으면 각 카드가 '쌓이면 표시' 상태를 그린다.
@@ -21,6 +22,9 @@ const nonHomogeneousLabel = (prog) => {
 // 문항 12개씩이라 한 사람의 차이는 잡음이 커서 색으로 좋고 나쁨을 매기지 않는다(9/29, 예전에는 −5%p 경계로 색을 바꿨다).
 const TRANSFER_NOTE = '같은 얼굴이 말하는 방식만 바꾼 앱 안의 가상 화자예요. 실제 사람 입모양으로 옮겨 가는지는 아직 재지 않았어요.'
 const signedPp = (x) => `${x >= 0 ? '+' : ''}${Math.round(x * 100)}%p`
+// 사전 검사를 연습을 꽤 한 뒤에 봤으면(서버 기준 PRETEST_TRIALS_FLAG, 9/29) 향상도가 작게 나올 수 있다고 알린다
+const afterTrainingNote = (pre) => (pre?.after_training
+  ? `사전 검사를 독화 연습 ${pre.trials_before}회 뒤에 봤어요. 연습 효과가 사전 점수에 들어가 향상도가 작게 나올 수 있어요.` : '')
 
 function TalkerTransfer({ t }) {
   const d = t.default
@@ -152,7 +156,8 @@ function PrintReport({ r }) {
       <h2 className="mt-5 text-[12.5pt] font-bold">2. 사전·사후 비교</h2>
       {prog ? (
         <div className="mt-1">
-          <p>정확도 {pct(prog.pre.accuracy)} → {pct(prog.post.accuracy)} ({prog.accuracy_delta >= 0 ? '+' : ''}{Math.round(prog.accuracy_delta * 100)}%p),
+          <p>정확도 {pct(prog.pre.accuracy)} → {pct(prog.post.accuracy)} ({prog.accuracy_delta >= 0 ? '+' : ''}{Math.round(prog.accuracy_delta * 100)}%p
+            {prog.accuracy_delta_ci95 ? `, ${ciText(prog.accuracy_delta_ci95)}` : ''}),
             수준 Lv.{prog.pre.level} → Lv.{prog.post.level}{prog.homogeneous ? ` · ${formPairLabel(prog)}` : ` · ${nonHomogeneousLabel(prog)}`}
             {prog.talker_transfer ? ` · 사후는 기본 얼굴 ${prog.talker_transfer.default.n}문항` : ''}</p>
           {prog.talker_transfer && (
@@ -197,6 +202,7 @@ export default function EvalReport() {
   const [art, setArt] = useState(null)     // 웹캠 조음 교정 전후 오차(축 E-9)
   const [report, setReport] = useState(null)  // 교사·언어재활사용 결과지(I-9) — 인쇄 버튼을 누를 때 받는다
   const [printing, setPrinting] = useState(false)
+  const [hist, setHist] = useState(null)   // 검사 이력 — 사전 검사(A)를 아직 안 봤는지(권유 문구)
 
   // 축 C 공개 표준 자원(동구형이음 사전·난이도지수·지각공간·평가셋)을 판본과 함께 JSON으로 내려받는다.
   const downloadResources = async () => {
@@ -229,11 +235,15 @@ export default function EvalReport() {
     evalAPI.summary().then(setData).catch(() => setData(null)).finally(() => setLoading(false))
     evalAPI.progression().then(setProg).catch(() => setProg(null))
     curriculumAPI.getArticulationTrend().then(setArt).catch(() => setArt(null))
+    curriculumAPI.getAssessmentHistory().then(setHist).catch(() => setHist(null))
   }, [])
 
   const ov = data?.overview
   const bvr = data?.baseline_vs_recent
   const noData = ov && ov.total_trials === 0 && ov.total_sentences === 0
+  // 사전 검사를 아직 안 봤는데 연습이 쌓였으면 부드럽게 알린다(막지 않는다). 기준은 서버의 연습 뒤 사전 표시와 같은 20회
+  const practiced = (ov?.total_trials || 0) + (ov?.total_sentences || 0)
+  const latePretest = hist && !hist.pretest_taken && practiced >= 20
 
   return (
     <>
@@ -248,6 +258,11 @@ export default function EvalReport() {
           <div className="flex-1">
             <p className="text-sm font-bold text-ink">표준검사 사전·사후</p>
             <p className="mt-0.5 text-xs text-ink-muted">훈련 전에 사전(A), 훈련 뒤에 사후(B)를 한 번씩 보면 향상도를 비교해요. 각 24문항, 5분 안팎.</p>
+            {latePretest && (
+              <p className="mt-1 text-xs text-ink-muted">
+                이미 독화 연습을 {practiced}회 했어요. 지금 사전 검사를 봐도 되지만, 결과에 '연습 뒤 사전'으로 표시돼요.
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => navigate('/learn/placement?form=A')} className="btn-secondary whitespace-nowrap !py-2.5 px-4 text-[14px]">사전 검사(A)</button>
@@ -294,8 +309,9 @@ export default function EvalReport() {
                     <p className="text-[11px] font-bold text-ink-faint">사후 정확도</p>
                     <p className="text-2xl font-bold text-primary-700">{Math.round(prog.post.accuracy * 100)}%</p>
                   </div>
+                  {/* 색은 Newcombe 95% 구간이 0을 벗어날 때만(docs/eval-metrics.md 6절) */}
                   <div className="pb-1">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${prog.accuracy_delta >= 0 ? 'bg-good-tint text-good-text' : 'bg-bad-tint text-bad-text'}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${changeTone(prog.accuracy_delta_clear, prog.accuracy_delta)}`}>
                       {prog.accuracy_delta >= 0 ? '+' : ''}{Math.round(prog.accuracy_delta * 100)}%p
                     </span>
                   </div>
@@ -303,6 +319,12 @@ export default function EvalReport() {
                     수준 Lv.{prog.pre.level} → Lv.{prog.post.level}
                   </div>
                 </div>
+                {!prog.accuracy_delta_clear && (
+                  <p className="mt-2 text-[11px] text-ink-faint">
+                    {prog.accuracy_delta_ci95 ? `${ciText(prog.accuracy_delta_ci95)}. ` : ''}{CHANGE_NOISE_NOTE}
+                  </p>
+                )}
+                {prog.pre?.after_training && <p className="mt-1 text-[11px] text-ink-faint">{afterTrainingNote(prog.pre)}</p>}
                 {/* 사후 검사에 새 가상 화자 조건이 있으면 위 비교는 기본 얼굴 문항끼리다(계획 2-3). 옛 검사는 전 문항 그대로 */}
                 {prog.talker_transfer && (
                   <p className="mt-2 text-[11px] text-ink-faint">
@@ -314,8 +336,9 @@ export default function EvalReport() {
                     <p className="mb-1 text-[11px] font-bold text-ink-faint">음소별 오류 변화 (사전→사후)</p>
                     <div className="flex flex-wrap gap-1.5">
                       {prog.error_phoneme_change.filter((e) => e.before || e.after).slice(0, 8).map((e) => (
+                        // 자모마다 오류가 몇 개뿐이라 개인 증감은 잡음이 커서 색을 매기지 않는다(9/29)
                         <span key={e.phoneme}
-                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${e.delta < 0 ? 'bg-good-tint text-good-text' : e.delta > 0 ? 'bg-bad-tint text-bad-text' : 'bg-fill text-ink-muted'}`}>
+                          className="rounded-full bg-fill px-2 py-0.5 text-xs font-semibold text-ink-muted">
                           {e.phoneme} {e.before}→{e.after}
                         </span>
                       ))}
@@ -341,7 +364,7 @@ export default function EvalReport() {
                         <p className="text-2xl font-bold text-primary-700">{bvr.recent_acc}%</p>
                       </div>
                       <div className="pb-1">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${bvr.delta_pp >= 0 ? 'bg-good-tint text-good-text' : 'bg-bad-tint text-bad-text'}`}>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${changeTone(bvr.clear, bvr.delta_pp)}`}>
                           {bvr.delta_pp >= 0 ? '+' : ''}{bvr.delta_pp}%p
                         </span>
                       </div>
@@ -354,6 +377,11 @@ export default function EvalReport() {
                           </span>
                         ))}
                       </div>
+                    )}
+                    {!bvr.clear && (
+                      <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">
+                        {bvr.ci95_pp ? `${ciText(bvr.ci95_pp, 1)}. ` : ''}{CHANGE_NOISE_NOTE}
+                      </p>
                     )}
                     <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">{bvr.note}</p>
                   </div>

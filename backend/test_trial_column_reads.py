@@ -89,6 +89,9 @@ async def reference(uid):
               "sentence_trend": _em.group_adjusted_curve([(p.difficulty_level or 0, p.score or 0.0) for p in prog],
                                                          lo=0.0, hi=100.0, ndigits=1)}
         n_null = sum(1 for a in rows if a.correct is None)
+        # 속도 기록·짝 탐색 문항이 없는 자료라 걸러지는 시행이 없다(9/29 필터, docs/eval-metrics.md 7절)
+        if ev["baseline_vs_recent"] is not None:
+            ev["baseline_vs_recent"]["excluded"] = {"speed": 0, "probe": 0}
     return cm, ev, n_null
 
 out = {}
