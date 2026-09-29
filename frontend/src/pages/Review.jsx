@@ -15,7 +15,8 @@ import { sentenceReviewSubmission } from '../lib/reviewScenario'
 /**
  * 오늘의 복습(간격 반복 SRS) — 독화 레슨 공통 템플릿(핸드오프 §4-03, WordStage·Closure와 같은 틀).
  * 틀렸던 항목(입모양 그룹·단어)이 예정일에 다시 나온다. 정답이면 다음 등장이 더 멀어지고(SM-2),
- * 오답이면 내일 다시 만난다(/api/review/answer). 진행바 분모는 오늘 예정 항목 수다.
+ * 오답이면 내일 다시 만난다(/api/review/answer). 입모양·단어는 4지선다라 답 방식 'choice'와 재생 배속을 함께 보내고, 서버는
+ * 그 정답을 품질 3(어렵게 맞힘)으로 센다(backend/srs.py 머리말). 진행바 분모는 오늘 예정 항목 수다.
  * 단어 보기는 최소대립 짝을 먼저 넣는다(단어 레슨과 같은 규칙) — 입모양이 비슷한 단어끼리 다시 가려 보게.
  * 문장(kind 'sentence', 3단계에서 합격선 아래였던 문장, 하루 5개까지)은 입모양을 보고 문장을 입력한다. 채점은 3단계와 같은
  * /api/progress(srs_review_ 세션)라 점수 등급으로 다음 등장일이 정해지고, 3단계 숙달에는 들어가지 않는다.
@@ -88,6 +89,7 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
   // 복습 한 번에 가상 화자 한 명(커리큘럼 계획 2-2). 복습도 한 얼굴만 보지 않게
   const [talkerLesson] = useLessonTalker('review')
   const fastOk = masteredStages?.has(isViseme ? 1 : isSentence ? 3 : 2)
+  const playSpeed = fastOk && fast ? FAST_SPEECH_SPEED : 1   // 아바타 재생 배속. 복습 답과 함께 보낸다(1.0배 미만 정답은 품질 3)
   const { targetKey, choices } = useMemo(() => {
     if (isSentence) return { targetKey: item.ref, choices: [] }   // 문장은 보기 없이 입력한다
     if (isViseme) {
@@ -120,7 +122,7 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
     let res
     try {
       const secs = (Date.now() - itemStartRef.current) / 1000
-      const r = await learningAPI.submitProgress(sentenceReviewSubmission(item, answer, secs, sessionRef.current))
+      const r = await learningAPI.submitProgress(sentenceReviewSubmission(item, answer, secs, sessionRef.current, playSpeed))
       setXpEarned((x) => x + (r?.xp_gained || 0))
       res = { correct: r?.passed ?? (r?.score ?? 0) >= 60, score: Math.round(r?.score ?? 0), chosen: answer }
     } catch {
@@ -136,7 +138,8 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
     setSubmitting(true)
     const correct = selected === targetKey
     try {
-      const r = await reviewAPI.answer(item.kind, item.ref, correct)
+      // 입모양·단어 복습은 4지선다라 answer_mode 'choice'(정답이면 서버가 품질 3, 오답은 그대로 1). 속도도 함께 보낸다
+      const r = await reviewAPI.answer(item.kind, item.ref, correct, { answer_mode: 'choice', speed: playSpeed })
       setXpEarned((x) => x + (r?.xp_gained || 0))
     } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
     setResult({ correct, chosen: selected })
@@ -192,7 +195,7 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
           </div>
 
           <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
-            <MouthAvatar height={null} className="h-full" speed={fastOk && fast ? FAST_SPEECH_SPEED : 1}
+            <MouthAvatar height={null} className="h-full" speed={playSpeed}
               talker={talkerLesson.talker} talkerSeed={talkerLesson.seed}
               frames={isViseme ? undefined : frames} visemeId={isViseme ? parseInt(item.ref, 10) : undefined} />
           </div>

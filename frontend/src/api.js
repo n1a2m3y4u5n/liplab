@@ -247,7 +247,8 @@ export const reviewAPI = {
   // 패널과 페이지(과제·복습)가 진행 중인 요청을 나눠 쓴다(위 sharedGet)
   getDue: () => sharedGet('due', async () => (await api.get('/review/due')).data),
   removeDue: async (kind, ref) => (await api.delete('/review/item', { params: { kind, ref } })).data,
-  answer: async (kind, ref, correct) => (await api.post('/review/answer', { kind, ref, correct })).data,
+  // extra: { answer_mode: 'choice'|'typed', speed }. 보기를 고른 정답·1.0배 미만 정답은 서버가 품질 3으로 센다(backend/srs.py 머리말)
+  answer: async (kind, ref, correct, extra = {}) => (await api.post('/review/answer', { kind, ref, correct, ...extra })).data,
 }
 
 // 과제 탭(오늘의 과제·특별 과제): 목록·목표·보상은 서버(daily_tasks.py)가 정하고 판정한다.

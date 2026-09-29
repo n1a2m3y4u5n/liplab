@@ -32,9 +32,10 @@ function clampLevel(value) {
 /**
  * 오늘의 복습 문장 문항(/api/review/due의 kind 'sentence')을 /api/progress 제출 본문으로 바꾼다. scenario_id가 srs_review_로
  * 시작해 서버가 3단계 숙달·추천 난이도에는 넣지 않고 복습 간격만 조정한다(main._SENTENCE_REVIEW_PREFIX). 상황·난이도는 서버가
- * 그 문장의 레슨 기록에서 실어 준 값이고, 없으면 '문장 복습'·1로 보낸다.
+ * 그 문장의 레슨 기록에서 실어 준 값이고, 없으면 '문장 복습'·1로 보낸다. 문장 복습은 입력형이라 answer_mode는 'typed'이고,
+ * speed(재생 배속, 빠른 말 1.25 등)가 유효한 값이면 함께 보낸다(progress.speed 기록).
  */
-export function sentenceReviewSubmission(item, answer, seconds, sessionId) {
+export function sentenceReviewSubmission(item, answer, seconds, sessionId, speed) {
   return {
     scenario_id: String(sessionId || '').startsWith('srs_review_') ? sessionId : `srs_review_${sessionId || Date.now()}`,
     sentence: item?.ref || '',
@@ -42,5 +43,7 @@ export function sentenceReviewSubmission(item, answer, seconds, sessionId) {
     time_spent_seconds: Math.max(0, Math.round(Number(seconds) || 0)),
     situation: item?.situation || '문장 복습',
     difficulty_level: clampLevel(item?.difficulty_level),
+    answer_mode: 'typed',
+    ...(Number.isFinite(speed) && speed > 0 ? { speed } : {}),
   }
 }

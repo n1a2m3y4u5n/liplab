@@ -31,8 +31,10 @@ test('sentenceReviewSubmission: srs_review_ 세션 id, 레슨 기록의 상황·
   const item = { kind: 'sentence', ref: '창가 자리에 앉을게요', situation: '카페', difficulty_level: 4 }
   assert.deepEqual(sentenceReviewSubmission(item, '  창가 자리  ', 12.4, 'srs_review_77'), {
     scenario_id: 'srs_review_77', sentence: '창가 자리에 앉을게요', user_answer: '창가 자리',
-    time_spent_seconds: 12, situation: '카페', difficulty_level: 4,
+    time_spent_seconds: 12, situation: '카페', difficulty_level: 4, answer_mode: 'typed',
   })
+  assert.equal(sentenceReviewSubmission(item, '창가', 3, 'srs_review_77', 1.25).speed, 1.25)
+  assert.equal('speed' in sentenceReviewSubmission(item, '창가', 3, 'srs_review_77', NaN), false)
   const bare = sentenceReviewSubmission({ ref: '내일 봐요' }, '내일', -3, 5)
   assert.equal(bare.scenario_id, 'srs_review_5')
   assert.equal(bare.situation, '문장 복습')
