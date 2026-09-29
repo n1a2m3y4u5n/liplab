@@ -8,6 +8,11 @@
 - 같은 폼을 다시 푼 기록, 계획과 순서가 다른 참여자, 사전·사후 form_version이 다른 참여자는 빼고 건수를 보고한다.
 - 자가진단(placement) 기록은 쓰지 않는다. 동의를 철회한 참여자(--withdrawn)는 모든 분석에서 뺀다.
 - 사후 검사가 없는 참여자는 변화 분석에서 빼고 집단별 인원만 보고한다(값을 채워 넣지 않는다).
+- 점수는 기본 얼굴 문항의 정답률을 24문항으로 환산한 값이다(9/29). 사후 검사 문항 절반은 검사 전용 가상 화자(talker h1·h2)라
+  사전(모두 기본 얼굴)과 조건이 다르다. 주분석은 앱 리포트와 같이 기본 얼굴 문항끼리 비교하고, 새 가상 화자 조건은 따로 보고한다.
+  화자 조건이 없는 기록(판 2 이전, 사전 검사)은 24문항 그대로라 예전 정답 수와 같다.
+- 사전 검사 전 연습 시행 수(tests[].trials_before, 판 4)가 PRETEST_TRIALS_FLAG 이상이면 '연습 뒤 사전'으로 표시하고,
+  주분석에는 넣되 그 참여자를 뺀 민감도 분석을 함께 낸다.
 가설 검정은 하지 않는다(6.2). 평균 변화의 95% 신뢰구간(t 분포)과 효과크기(d_av, Hedges g_av)만 낸다.
 
   python scripts/pilot_analysis.py export.json --out pilot_report \\
@@ -30,6 +35,8 @@ FORM_LENGTH = 24           # backend/assessment.py FORM_LENGTH(동형 폼 문항
 CHANCE = FORM_LENGTH / 4   # 보기 네 개 중 하나
 FLOOR_MAX = 8              # 우연 수준 근처로 표시할 정답 수 상한(6 ± 약 2)
 CEIL_MIN = 22              # 천장 근처로 표시할 정답 수 하한
+PRETEST_TRIALS_FLAG = 20   # backend/assessment.py PRETEST_TRIALS_FLAG(이 값 이상 연습한 뒤 본 사전 검사는 표시, 6.1)
+HELD_OUT = ("h1", "h2")    # backend/assessment.py HELD_OUT_TALKERS(검사 전용 가상 화자)
 
 
 # ───────────────────────── 통계 보조(외부 의존 없음) ─────────────────────────
@@ -162,11 +169,40 @@ def _pearson(x, y):
 
 
 # ───────────────────────── 분석 규칙(6.1) ─────────────────────────
+def _is_new_talker(i):
+    return (i.get("talker") or "default") != "default"
+
+
 def correct_count(test):
+    """주분석 점수: 기본 얼굴 문항 정답률 × 24(24문항 환산 정답 수). 새 가상 화자 문항(talker h1·h2)은 빼고 센다.
+    화자 조건이 없는 기록은 24문항 정답 수 그대로다. 예전에는 사후 24문항을 모두 세어, 새 가상 화자 문항이 어려우면 학습 효과가
+    없어도 변화가 음수로 나왔다(모의실험: 새 화자 정답률이 10%p 낮으면 −1.2개)."""
     items = test.get("items")
     if items:
-        return sum(1 for i in items if i.get("correct"))
+        face = [i for i in items if not _is_new_talker(i)]
+        if not face:
+            return None
+        c = sum(1 for i in face if i.get("correct"))
+        return c if len(face) == FORM_LENGTH else c * FORM_LENGTH / len(face)
     return round((test.get("accuracy") or 0) * FORM_LENGTH)
+
+
+def talker_condition(test):
+    """사후 검사의 새 가상 화자 조건: 기본 얼굴·새 가상 화자 절반의 정답률과 차이(새 − 기본). 조건이 없는 기록이면 None."""
+    items = test.get("items") or []
+    new = [i for i in items if _is_new_talker(i)]
+    face = [i for i in items if not _is_new_talker(i)]
+    if not new or not face:
+        return None
+    a_new = sum(1 for i in new if i.get("correct")) / len(new)
+    a_face = sum(1 for i in face if i.get("correct")) / len(face)
+    return {"n_default": len(face), "n_new": len(new), "default_acc": a_face, "new_acc": a_new, "gap": a_new - a_face}
+
+
+def pretest_after_training(test):
+    """사전 검사 전 연습 시행 수가 기준 이상인지. 기록이 없으면(판 4 이전) None."""
+    tb = test.get("trials_before")
+    return None if tb is None else tb >= PRETEST_TRIALS_FLAG
 
 
 def select_pair(p, counterbalanced=False):
@@ -209,10 +245,15 @@ def analyze(export, learning=(), control=(), test_only=(), nocue=(), counterbala
         if reason is not None:
             continue
         a, b = correct_count(pre), correct_count(post)
+        tc = talker_condition(post)
         rows.append({"pid": p["pid"], "cohort": cohort, "order": f"{pre['form']}→{post['form']}",
                      "form_version": pre.get("form_version"), "pre": a, "post": b, "change": b - a,
                      "pre_date": pre.get("date"), "post_date": post.get("date"), "pre_after_join": pre.get("after_join"),
                      "floor": a <= FLOOR_MAX or b <= FLOOR_MAX, "ceiling": a >= CEIL_MIN or b >= CEIL_MIN,
+                     "pre_trials_before": pre.get("trials_before"), "pre_after_training": pretest_after_training(pre),
+                     "post_n_default": tc["n_default"] if tc else None,
+                     "talker_default_acc": tc["default_acc"] if tc else None,
+                     "talker_new_acc": tc["new_acc"] if tc else None, "talker_gap": tc["gap"] if tc else None,
                      **learning_amount(p)})
 
     def group_stats(rs):
@@ -270,10 +311,30 @@ def analyze(export, learning=(), control=(), test_only=(), nocue=(), counterbala
                       "by_cohort": {c: group_stats([r for r in cr if r["cohort"] == c])
                                     for c in sorted({r["cohort"] for r in cr})}}
 
+    # 새 가상 화자 조건(사후 검사 한 번 안의 차이, 향상도 아님). 개인 값은 12문항씩이라 판정하지 않고 집단 평균만 본다
+    def talker_stats(rs):
+        rs = [r for r in rs if r["talker_gap"] is not None]
+        gaps = [r["talker_gap"] for r in rs]
+        return {"n": len(rs), "default_acc": describe([r["talker_default_acc"] for r in rs]),
+                "new_acc": describe([r["talker_new_acc"] for r in rs]), "gap": describe(gaps), "gap_ci95": mean_ci(gaps)}
+    talker = {"all": talker_stats(rows),
+              "by_cohort": {c: talker_stats(rs) for c, rs in sorted(by_cohort.items())}}
+
+    # 연습 뒤에 본 사전 검사(6.1): 주분석에 넣고, 뺀 결과를 민감도 분석으로 나란히 둔다
+    flagged = [r for r in rows if r["pre_after_training"]]
+    unknown = [r for r in rows if r["pre_after_training"] is None]
+    clean = [r for r in rows if not r["pre_after_training"]]
+    pretest_training = {"threshold": PRETEST_TRIALS_FLAG, "n_flagged": len(flagged), "n_unknown": len(unknown),
+                        "flagged_pids": [r["pid"] for r in flagged],
+                        "without_flagged": {c: group_stats([r for r in clean if r["cohort"] == c])
+                                            for c in sorted({r["cohort"] for r in clean})} if flagged else None}
+
     items = item_analysis(parts, rows)
     return {"version": export.get("version"), "exported_at": export.get("exported_at"),
             "rules": {"counterbalanced": counterbalanced, "form_length": FORM_LENGTH,
-                      "floor_max": FLOOR_MAX, "ceiling_min": CEIL_MIN},
+                      "floor_max": FLOOR_MAX, "ceiling_min": CEIL_MIN, "score": "default_face_x24",
+                      "pretest_trials_flag": PRETEST_TRIALS_FLAG},
+            "talker_condition": talker, "pretest_training": pretest_training,
             "n_participants": len(parts), "n_withdrawn_excluded": n_withdrawn, "n_analyzed": len(rows),
             "excluded": {c: dict(v) for c, v in excluded.items()},
             "groups": groups, "roles": roles, "comparisons": comparisons, "completers": completers,
@@ -330,7 +391,8 @@ def report_md(res):
     L = ["# 파일럿 분석 결과", "",
          f"가명 내보내기 {res['exported_at']}(판 {res['version']}), 참여자 {res['n_participants']}명 중 분석 {res['n_analyzed']}명. "
          f"동의 철회로 뺀 참여자 {res['n_withdrawn_excluded']}명. 규칙은 `docs/pilot/protocol.md` 6.1절"
-         f"({'역균형' if res['rules']['counterbalanced'] else 'A→B 고정'}). 정답 수는 {FORM_LENGTH}문항 기준이다.", "",
+         f"({'역균형' if res['rules']['counterbalanced'] else 'A→B 고정'}). 점수는 기본 얼굴 문항 정답률을 {FORM_LENGTH}문항으로 환산한 "
+         "정답 수다(사후 검사의 새 가상 화자 문항은 주분석에서 빼고 7절에 따로 적는다).", "",
          "가설 검정은 하지 않았다. 신뢰구간은 인원이 적어 넓다.", "", "## 1. 뺀 기록(6.1·6.4)", "",
          "| 집단 | 사유 | 수 |", "|---|---|---|"]
     for c, v in sorted(res["excluded"].items()):
@@ -380,10 +442,30 @@ def report_md(res):
         neg = [i for i in it["items"] if i["r_it_corrected"] is not None and i["r_it_corrected"] < 0]
         if neg:
             L.append("  - 교정 점이연 상관이 음수인 문항(판본 v2 교체 후보): " + ", ".join(str(i["id"]) for i in neg))
+    if any(r["talker_gap"] is not None for r in res["rows"]):
+        L.append("- 사후 폼의 KR-20·문항 정답률에는 새 가상 화자로 본 문항이 섞여 있다(문항마다 조건이 참여자에 따라 바뀐다).")
     flagged = [r for r in res["rows"] if r["floor"] or r["ceiling"]]
     L += ["", "## 5. 참여자별(표 전체는 participants.csv)", "",
           f"우연 수준 근처(정답 {FLOOR_MAX}개 이하) 또는 천장 근처({CEIL_MIN}개 이상)인 참여자 {len(flagged)}명은 표에 표시했다. "
           "개인 변화의 의미는 판정하지 않는다(6.2).", ""]
+    pt = res.get("pretest_training") or {}
+    L += ["## 6. 연습 뒤에 본 사전 검사(6.1)", "",
+          f"사전 검사 전 독화 연습(선다형 + 문장)이 {pt.get('threshold')}회 이상인 참여자 {pt.get('n_flagged', 0)}명, "
+          f"기록이 없는 참여자(내보내기 판 4 이전 검사) {pt.get('n_unknown', 0)}명. 표시된 참여자는 주분석에 넣었다."]
+    if pt.get("without_flagged"):
+        L += ["", "표시된 참여자를 뺀 민감도 분석:", "", "| 집단 | n | 변화 평균 [95% CI] | g_av |", "|---|---|---|---|"]
+        for c, g in pt["without_flagged"].items():
+            if g.get("n"):
+                L.append(f"| {c} | {g['n']} | {_f(g['change']['mean'])} {_f(g['change_ci95'])} | {_f(g.get('g_av'))} |")
+    tc = res.get("talker_condition") or {}
+    L += ["", "## 7. 새 가상 화자 조건(사후 검사 안, 참고)", "",
+          "사후 검사 문항 절반을 훈련에 없던 가상 화자(같은 얼굴에서 말 속도·입 벌림·입술을 바꾼 것)로 냈다. 사후 검사 한 번 안의 "
+          "정답률 차이(새 가상 화자 − 기본 얼굴)라 향상도가 아니고, 실제 사람 입모양으로의 전이도 아니다. 개인 값은 문항 12개씩이라 "
+          "판정하지 않는다.", "", "| 집단 | n | 기본 얼굴 평균 | 새 가상 화자 평균 | 차이 평균 [95% CI] |", "|---|---|---|---|---|"]
+    for c, g in list((tc.get("by_cohort") or {}).items()) + [("전체", tc.get("all") or {})]:
+        if g.get("n"):
+            L.append(f"| {c} | {g['n']} | {_f(g['default_acc']['mean'])} | {_f(g['new_acc']['mean'])} | "
+                     f"{_f(g['gap']['mean'])} {_f(g['gap_ci95'])} |")
     return "\n".join(L) + "\n"
 
 
@@ -394,7 +476,8 @@ def write_outputs(res, out_dir, plots=False):
     with open(os.path.join(out_dir, "results.json"), "w", encoding="utf-8") as f:
         json.dump(res, f, ensure_ascii=False, indent=1)
     cols = ["pid", "cohort", "order", "form_version", "pre", "post", "change", "floor", "ceiling",
-            "pre_date", "post_date", "pre_after_join", "active_days", "trials", "speak_n"]
+            "pre_date", "post_date", "pre_after_join", "pre_trials_before", "pre_after_training",
+            "post_n_default", "talker_default_acc", "talker_new_acc", "talker_gap", "active_days", "trials", "speak_n"]
     with open(os.path.join(out_dir, "participants.csv"), "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
         w.writeheader()
@@ -441,8 +524,12 @@ def main(argv=None):
     a = ap.parse_args(argv)
     with open(a.export, encoding="utf-8") as f:
         export = json.load(f)
-    if export.get("version") != 2:
-        print(f"[WARN] 내보내기 판이 2가 아니다({export.get('version')}). 문항 기록이 없으면 KR-20을 계산하지 못한다.",
+    v = export.get("version") or 0
+    if v < 2:
+        print(f"[WARN] 내보내기 판이 2보다 낮다({export.get('version')}). 문항 기록이 없으면 KR-20을 계산하지 못한다.",
+              file=sys.stderr)
+    elif v < 4:
+        print(f"[WARN] 내보내기 판 {v}에는 사전 검사 전 연습 시행 수(trials_before)가 없어 연습 뒤 사전 표시를 하지 못한다.",
               file=sys.stderr)
     res = analyze(export, _list(a.learning), _list(a.control), _list(a.test_only), _list(a.nocue),
                   a.counterbalanced, _list(a.withdrawn), a.min_active_days)

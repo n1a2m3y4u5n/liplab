@@ -394,6 +394,8 @@ async def account_learning_reset(confirm: bool = False, current_user=Depends(get
     # 학습 프로필은 지우지 않고 배치만 처음으로 — 파일럿 참여(코드·집단)는 학습 기록이 아니라 그대로 둔다
     prof.track, prof.current_stage, prof.placed = None, 0, False
     prof.speak_current_stage = 0
+    from datetime import datetime as _dt
+    prof.learning_reset_at = _dt.utcnow()   # 파일럿 내보내기의 learning_reset_on(초기화로 줄어든 학습량을 분석에서 알 수 있게)
     current_user.total_xp = 0
     current_user.streak_count = 0
     current_user.last_practice_date = None   # 다시 시작한 날부터 연속 학습 1일로 센다
@@ -3014,16 +3016,19 @@ def _pilot_admin_gate(user):
         raise HTTPException(status_code=403, detail="운영자 계정만 파일럿 자료를 내보낼 수 있습니다.")
 
 
-PILOT_EXPORT_VERSION = 3   # 2(9/24): 참여일·참여 뒤 집계·동형 폼 문항 기록·현지 날짜 추가. 3(9/28): 사후 문항의 화자 조건(talker)
+PILOT_EXPORT_VERSION = 4   # 2(9/24): 참여일·참여 뒤 집계·동형 폼 문항 기록·현지 날짜 추가. 3(9/28): 사후 문항의 화자 조건(talker)
+# 4(9/29): 검사 전 연습 시행 수(trials_before)·연습 뒤 사전 표시, 학습 초기화 날(learning_reset_on), 시행 단위 기록(trials=true일 때만)
 
 
 @app.get("/api/pilot/export")
-async def pilot_export(tz_offset_min: int = -540, current_user=Depends(get_current_user),
+async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_user=Depends(get_current_user),
                        db: AsyncSession = Depends(get_db)):
     """파일럿 참여자 가명 자료(운영자 전용). 이메일·이름·전사문·입력 문장은 넣지 않는다.
     참여자별로 가명, 집단, 참여일, 표준검사 결과(동형 폼 A·B는 문항별 정오답 기록 포함), 단계별 시행·정답 수,
     말하기 시도·평균 점수, 학습한 날 수를 준다(최소 수집, §4.7). 계정의 모든 기록(all)과 참여 코드를 넣은 뒤의
-    기록(since_join)을 따로 센다. 날짜는 tz_offset_min(한국 −540) 기준 현지 날짜다."""
+    기록(since_join)을 따로 센다. 날짜는 tz_offset_min(한국 −540) 기준 현지 날짜다.
+    trials=true면 선다형 시행 단위 기록(trial_log: 순번·날짜·단계·유형·정오답·재생 속도·짝 탐색 여부)을 더한다. 시각·응답 시간·
+    훈련 화자·힌트 사용은 앱이 기록하지 않아 없다(docs/pilot-data-spec.md 3절). 동의서의 '연구진이 받는 것'을 고친 뒤에만 쓴다."""
     _pilot_admin_gate(current_user)
     import analytics as _an
     from sqlalchemy import select, func, cast, Integer
@@ -3038,9 +3043,9 @@ async def pilot_export(tz_offset_min: int = -540, current_user=Depends(get_curre
         def w(M):
             q = M.user_id == uid
             return q if since is None else (q & (M.created_at >= since))
-        trials = (await db.execute(select(TrialAttempt.stage, func.count(TrialAttempt.id),
-                                          func.sum(cast(TrialAttempt.correct, Integer)))
-                                   .where(w(TrialAttempt)).group_by(TrialAttempt.stage))).all()
+        by_stage = (await db.execute(select(TrialAttempt.stage, func.count(TrialAttempt.id),
+                                            func.sum(cast(TrialAttempt.correct, Integer)))
+                                     .where(w(TrialAttempt)).group_by(TrialAttempt.stage))).all()
         sp = (await db.execute(select(func.count(SpeakAttempt.id), func.avg(SpeakAttempt.score))
                                .where(w(SpeakAttempt)))).one()
         days = set()
@@ -3048,10 +3053,20 @@ async def pilot_export(tz_offset_min: int = -540, current_user=Depends(get_curre
             for (ts,) in (await db.execute(select(M.created_at).where(w(M)))).all():
                 if ts:
                     days.add(day(ts))
-        return {"trials_by_stage": {str(st or 0): {"n": n, "correct": int(c or 0)} for st, n, c in trials},
+        return {"trials_by_stage": {str(st or 0): {"n": n, "correct": int(c or 0)} for st, n, c in by_stage},
                 "speak": {"n": sp[0] or 0, "mean_score": round(float(sp[1]), 2) if sp[1] is not None else None},
                 "active_days": len(days)}
 
+    async def trial_log(uid):
+        # 선다형 시행 단위 기록. 시각 대신 순번과 현지 날짜만 준다(시각 단위 기록은 넣지 않는다). 주관식 답(입력 글)은 넣지 않는다
+        q = (await db.execute(select(TrialAttempt.stage, TrialAttempt.item_type, TrialAttempt.correct, TrialAttempt.speed,
+                                     TrialAttempt.probe.is_not(None), TrialAttempt.created_at)
+                              .where(TrialAttempt.user_id == uid)
+                              .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).all()
+        return [{"seq": i + 1, "day": day(ts), "stage": st, "item_type": it, "correct": bool(c),
+                 "speed": spd, "probe": bool(pr)} for i, (st, it, c, spd, pr, ts) in enumerate(q)]
+
+    import assessment as _asmt
     profs = (await db.execute(select(LearningProfile).where(LearningProfile.pilot_code.is_not(None)))).scalars().all()
     rows = []
     for pf in profs:
@@ -3062,8 +3077,13 @@ async def pilot_export(tz_offset_min: int = -540, current_user=Depends(get_curre
         rows.append({
             "pid": _pseudonym(uid), "cohort": pf.cohort, "track": pf.track,
             "joined_on": day(pf.pilot_joined_at),
+            # 마지막 학습 초기화 날. 초기화하면 시행 기록이 지워져 그 전 학습량이 집계에서 빠진다(검사의 trials_before는 남는다)
+            "learning_reset_on": day(getattr(pf, "learning_reset_at", None)),
             "tests": [{"form": t.form, "form_version": t.form_version, "accuracy": round(t.accuracy or 0, 4),
                        "level": t.level, "date": day(t.created_at),
+                       # 채점 때까지 한 독화 연습 시행 수(선다형 + 문장). 9/29 이전 검사는 None
+                       "trials_before": getattr(t, "trials_before", None),
+                       "after_training": _asmt.pretest_after_training(getattr(t, "trials_before", None)),
                        "after_join": bool(pf.pilot_joined_at and t.created_at and t.created_at >= pf.pilot_joined_at),
                        # 동형 폼만 문항 기록을 싣는다(신뢰도 KR-20·문항 분석용). 고른 보기는 검사 단어라 개인정보가 아니다.
                        # 사후 검사 문항에는 화자 조건(talker: default·h1·h2, 계획 2-3)을 싣는다. 조건이 없는 검사는 예전 형식 그대로.
@@ -3074,9 +3094,11 @@ async def pilot_export(tz_offset_min: int = -540, current_user=Depends(get_curre
             # 예전 형식과 같은 자리(계정 전체)
             **everything,
             "since_join": (await activity(uid, pf.pilot_joined_at)) if pf.pilot_joined_at else None,
+            **({"trial_log": await trial_log(uid)} if trials else {}),
         })
     return {"exported_at": _dt.utcnow().replace(microsecond=0).isoformat() + "Z", "version": PILOT_EXPORT_VERSION,
             "tz_offset_min": tz, "n": len(rows), "participants": rows,
+            "pretest_trials_flag": _asmt.PRETEST_TRIALS_FLAG,
             "note": "가명(pid)은 가명 비밀키(LIPLAB_PILOT_SECRET) HMAC이라 운영자도 자료만으로는 계정을 알 수 없다. "
                     "참여 코드를 넣기 전 기록은 all 집계에만 들어가고 since_join에는 빠진다."}
 

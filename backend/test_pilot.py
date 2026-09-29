@@ -51,7 +51,11 @@ with TestClient(main.app) as c:
     take("B"); take("A")
     out["progression"] = c.get("/api/assessment/progression", headers=p1).json()
     ex2 = c.get("/api/pilot/export", headers=op).json()
-    out["export_v2"] = {"version": ex2.get("version"), "row": ex2["participants"][0]}
+    out["export_v2"] = {"version": ex2.get("version"), "row": ex2["participants"][0],
+                        "flag": ex2.get("pretest_trials_flag")}
+    # 시행 단위 기록은 trials=true일 때만(판 4)
+    ex3 = c.get("/api/pilot/export", params={"trials": True}, headers=op).json()
+    out["trial_log"] = ex3["participants"][0].get("trial_log")
 
     # 학습 초기화 뒤에도 파일럿 참여와 사전·사후(A·B) 결과는 남는다
     rr = c.post("/api/account/learning-reset", params={"confirm": True}, headers=p1)
@@ -61,6 +65,8 @@ with TestClient(main.app) as c:
     after = c.get("/api/pilot/export", headers=op).json()
     out["after_reset_n"] = after["n"]
     out["after_reset_forms"] = [t["form"] for t in after["participants"][0]["tests"]]
+    out["after_reset_on"] = after["participants"][0]["learning_reset_on"]
+    out["after_reset_trials_before"] = [t["trials_before"] for t in after["participants"][0]["tests"]]
 
     # 파일럿이 아닌 사람은 초기화하면 검사 기록도 지워진다(원래 범위)
     p2 = reg("p2@example.com", "notpilot")
@@ -136,8 +142,14 @@ def test_counterbalanced_order_and_export_v2():
     prog = r["progression"]
     assert prog["available"] and prog["homogeneous"] and prog["order"] == "B→A", prog
     ex = r["export_v2"]
-    assert ex["version"] == 3
+    assert ex["version"] == 4 and ex["flag"] == 20
     row = ex["row"]
+    # 검사 전 연습 시행 수(문맥 추론 1회)와 연습 뒤 사전 표시(기준 20회 미만이라 False), 초기화 전이라 초기화 날 없음
+    assert [t["trials_before"] for t in row["tests"]] == [1, 1]
+    assert [t["after_training"] for t in row["tests"]] == [False, False]
+    assert row["learning_reset_on"] is None and "trial_log" not in row
+    assert r["trial_log"] == [{"seq": 1, "day": r["trial_log"][0]["day"], "stage": 3, "item_type": "closure",
+                               "correct": True, "speed": None, "probe": False}]
     assert row["joined_on"] and len(row["joined_on"]) == 10
     forms = [t["form"] for t in row["tests"]]
     assert forms == ["B", "A"]
@@ -154,6 +166,8 @@ def test_reset_keeps_pilot_tests_and_placement_hides_test_words():
     r = _run()
     assert r["reset"] == 200 and r["after_reset_joined"] is True and r["after_reset_n"] == 1
     assert r["reset_kept"] == {"placement_results_ab": 2} and r["after_reset_forms"] == ["B", "A"]
+    # 초기화하면 시행 기록은 지워지지만 초기화 날과 검사 당시의 연습 시행 수는 남는다
+    assert r["after_reset_on"] and len(r["after_reset_on"]) == 10 and r["after_reset_trials_before"] == [1, 1]
     assert r["nonpilot_removed_tests"] == 1
     assert r["placement_seen"] > 20 and r["placement_test_word_leak"] == []
 
