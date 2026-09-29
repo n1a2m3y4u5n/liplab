@@ -529,10 +529,12 @@ async def text_to_visemes(text: str) -> List[Dict]:
                     "text_index": i,
                 })
 
-    # 너무 짧은 프레임 보정
+    # 너무 짧은 프레임 보정. 55ms면 2.0배(빠른 말 마지막 단계)에서도 전환(20ms → 10ms)이 끝난 뒤 목표 입모양이 60Hz 화면 한 장
+    # (16.7ms) 이상 남는다. 예전 50ms는 15ms만 남아 전환 프레임(538 검증 프레임의 4.5%)이 그려지지 않을 수 있었다
+    # (docs/engine-duration-check.md 6절, 9/29).
     for frame in viseme_frames:
-        if frame["duration_ms"] < 50:
-            frame["duration_ms"] = 50
+        if frame["duration_ms"] < 55:
+            frame["duration_ms"] = 55
 
     return viseme_frames
 
