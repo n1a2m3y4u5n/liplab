@@ -1,0 +1,13 @@
+{
+  "name": "liplab-glb-slim",
+  "private": true,
+  "type": "module",
+  "description": "3D 얼굴 GLB의 GPU 메모리 줄이기(slim_face_glb.mjs 참고). 앱 빌드와 무관한 일회성 도구",
+  "dependencies": {
+    "@gltf-transform/core": "4.5.0",
+    "@gltf-transform/extensions": "4.5.0",
+    "@gltf-transform/functions": "4.5.0",
+    "meshoptimizer": "1.2.0",
+    "sharp": "0.35.4"
+  }
+}
