@@ -321,8 +321,10 @@ export default function Practice() {
         // 틀린 문장 복습은 문장마다 원래 난이도(levels)를 보낸다. 예전에는 세션 난이도 1이 저장돼 추천 난이도가 떨어졌다
         difficulty_level: sentenceLevel(currentScenario, currentSentenceIndex),
         ...(practiceOnly ? { practice_only: true } : {}),
-        // 4지선다는 보기를 고른 것이라 서버가 채점식 대신 정확 일치(100 또는 0)로 준다(비슷한 오답 보기가 통과하지 않게)
-        ...(effectiveMode === 'test-multiple' ? { answer_mode: 'choice' } : {}),
+        // 4지선다는 보기를 고른 것이라 서버가 채점식 대신 정확 일치(100 또는 0)로 준다(비슷한 오답 보기가 통과하지 않게).
+        // 주관식·서술형은 'typed'. 서버는 답 방식을 progress.answer_mode에 남기고, 4지선다는 3단계 숙달에 우연 보정(정답 1,
+        // 오답 −1/3)으로 넣는다(docs/mastery-ewma.md 10절)
+        answer_mode: effectiveMode === 'test-multiple' ? 'choice' : 'typed',
         ...(Number.isFinite(speed) && speed > 0 ? { speed } : {}),
       })
 

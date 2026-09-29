@@ -1,0 +1,48 @@
+{
+ "seed": 1,
+ "N": 20000,
+ "results": {
+  "L": {
+   "R": {
+    "false_rate": 0.1262,
+    "judged": 12520,
+    "delay_median": 21.0,
+    "strong_mastered_share": 0.9999,
+    "choice_answers_mean": 38.5,
+    "skilled_median": 5.0
+   },
+   "CC": {
+    "false_rate": 0.1095,
+    "judged": 12253,
+    "delay_median": 23.0,
+    "strong_mastered_share": 0.9996,
+    "choice_answers_mean": 40.9,
+    "skilled_median": 5.0,
+    "pass": true
+   }
+  },
+  "H": {
+   "R": {
+    "false_rate": 0.1637,
+    "judged": 12952,
+    "delay_median": 19.0,
+    "strong_mastered_share": 1.0,
+    "choice_answers_mean": 36.11,
+    "skilled_median": 5.0
+   },
+   "CC": {
+    "false_rate": 0.1501,
+    "judged": 12739,
+    "delay_median": 21.0,
+    "strong_mastered_share": 0.9999,
+    "choice_answers_mean": 37.88,
+    "skilled_median": 5.0,
+    "pass": true
+   }
+  }
+ },
+ "passing": [
+  "CC"
+ ],
+ "chosen": "CC"
+}

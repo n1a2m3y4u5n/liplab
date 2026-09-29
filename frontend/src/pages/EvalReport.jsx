@@ -442,6 +442,20 @@ export default function EvalReport() {
 
               <Card title="문장 점수 추이" hint="시간순 구간별 · 문장 난이도 차이 보정">
                 <LineChart series={data.sentence_trend} max={100} fmt={(v) => `${Math.round(v)}`} tone="score" />
+                {/* 답 방식별: 4지선다는 찍어도 25%가 맞고 100 또는 0점이라, 직접 입력(부분 점수)과 섞으면 어느 쪽 실력인지 알 수 없다 */}
+                {data.sentence_by_mode?.length > 0 && (
+                  <div className="mt-3 space-y-1 border-t border-line pt-3">
+                    {data.sentence_by_mode.map((m) => (
+                      <div key={m.mode} className="flex items-center justify-between gap-3 text-[11px]">
+                        <span className="font-semibold text-ink">{m.label}</span>
+                        <span className="tabular-nums text-ink-muted">{m.n}회 · 평균 {Math.round(m.avg_score)}점 · 합격 {Math.round(m.pass_rate)}%</span>
+                      </div>
+                    ))}
+                    <p className="pt-1 text-[11px] leading-relaxed text-ink-faint">
+                      보기 고름은 몰라도 네 번에 한 번은 맞아요. 직접 입력한 문장의 합격률이 실제 읽기 실력에 더 가깝습니다.
+                    </p>
+                  </div>
+                )}
               </Card>
             </div>
           </>
