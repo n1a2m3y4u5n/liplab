@@ -17,6 +17,7 @@ const JAW_OPEN_MAX_RAD = THREE.MathUtils.degToRad(30)
 import { VISEME_BLENDSHAPES, ACTIVE_MORPH_KEYS, VISEME_TONGUE, ACTIVE_TONGUE_KEYS } from '../lib/visemeShapes'
 import { MIRROR_KEYS } from '../lib/mouthMirror'
 import MouthFallback2D from './MouthFallback2D'
+import { markContextLost } from '../lib/gpuBudget'
 import { transitionProgress } from '../lib/visemeTiming'
 import { talkerShapes } from '../lib/talkers'
 import { coartShape, coartWeight } from '../lib/coarticulation'
@@ -351,12 +352,22 @@ class GLErrorBoundary extends Component {
 // modelUrl: 다른 얼굴 GLB(같은 CC 두상 규격 — ARKit 52 + 혀 모프 + CC_Base_JawRoot). 다자 대화가 화자마다 다르게 준다(H-6).
 // talker: 가상 화자(lib/talkers). 텍스트 입모양에만 쓰고 음성구동·거울 프레임은 그대로 둔다.
 // lipVowel: 선행 동시조음(lib/coarticulation)에서 이 프레임이 입술을 섞을 모음 입모양(프레임의 coart_v). 없으면 섞지 않는다.
+// flat: true면 캔버스를 만들지 않고 2D 입모양만 그린다(여러 명 대화의 저사양 모드, lib/gpuBudget).
 export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null, modelUrl = MODEL_URL,
-  transitionMs, durationMs, speed, view = 'front', talker = null, lipVowel = null }) {
+  transitionMs, durationMs, speed, view = 'front', talker = null, lipVowel = null, flat = false }) {
   const [webglOK] = useState(detectWebGL)
+  // GPU 메모리가 모자라 브라우저가 컨텍스트를 거두면 캔버스가 까맣게 멈춘다. 그때는 이 아바타를 2D로 바꾸고
+  // (캔버스를 내려 남은 GPU 메모리도 돌려준다) 여러 캔버스를 띄우는 화면이 2D로 가도록 알린다.
+  const [ctxLost, setCtxLost] = useState(false)
+  const onCreated = ({ gl }) => {
+    gl.domElement.addEventListener('webglcontextlost', () => {
+      setCtxLost(true)
+      markContextLost()
+    }, { once: true })
+  }
   const fallback = <MouthFallback2D visemeId={visemeId} />
 
-  if (!webglOK) return <div className="w-full h-full">{fallback}</div>
+  if (!webglOK || ctxLost || flat) return <div className="w-full h-full">{fallback}</div>
 
   return (
     <GLErrorBoundary url={modelUrl} fallback={<div className="w-full h-full">{fallback}</div>}>
@@ -371,8 +382,9 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
           휴대폰에서 아바타 위에서 시작한 스와이프가 페이지를 스크롤하지 못했다. !important 클래스로 pan-y를
           앞세워 세로 스와이프는 페이지 스크롤, 가로 드래그와 마우스 드래그는 그대로 회전이 되게 한다.
         */}
-        <Canvas className="![touch-action:pan-y]" camera={{ position: [0, 1.68, 0.45], fov: 16 }}
-          frameloop={mirrorRef || bsFrameRef ? 'always' : 'demand'}>
+        {/* dpr 상한 1.5: 레티나(2~3배)에서 그리기 버퍼가 4~9배로 커지는데, 입 클로즈업은 1.5배로도 차이가 거의 없다 */}
+        <Canvas className="![touch-action:pan-y]" camera={{ position: [0, 1.68, 0.45], fov: 16 }} dpr={[1, 1.5]}
+          onCreated={onCreated} frameloop={mirrorRef || bsFrameRef ? 'always' : 'demand'}>
           <ambientLight intensity={1.2} />
           <directionalLight position={[1, 2, 2]} intensity={1.0} />
           <directionalLight position={[-1, 0, 1]} intensity={0.4} />

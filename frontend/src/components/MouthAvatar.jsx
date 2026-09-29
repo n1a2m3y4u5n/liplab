@@ -19,13 +19,14 @@ import { applyCoarticulation } from '../lib/coarticulation'
  *  - speed: 재생 배속(기본 1). 숙달한 단계의 엔드리스·복습에서 1.25배 '빠른 말'로 쓴다(docs/curriculum-roadmap.md 1-1).
  *  - talker·talkerSeed: 가상 화자(lib/talkers, 계획 2-2). 말 속도·흔들림·동시조음을 프레임에 입히고 입모양 배율을 아바타에 넘긴다.
  *    speed는 그 위에 곱해진다. showTalker가 true면 왼쪽 위에 화자 이름을 작게 보인다.
+ *  - flat: true면 3D 캔버스 없이 2D 입모양으로 그린다(여러 명 대화의 저사양 모드, lib/gpuBudget).
  *  - 선행 동시조음(lib/coarticulation, 플래그 VITE_COART_E): 켜져 있으면 입 안쪽 자음 프레임이 입술을 섞을 모음(coart_v)을 아바타에 넘긴다.
  * LipSyncPlayer3D는 'Viseme N' 오버레이가 있어 퀴즈에 부적합해 별도 컴포넌트로 둔다.
  * 문항이 바뀌어도 key로 다시 마운트하지 않는다. frames가 바뀌면 재생을 처음부터 다시 하고, 다시 마운트하면 캔버스·WebGL
  * 컨텍스트·셰이더·모델 버퍼를 새로 만든다(9/27 측정: 문항마다 컨텍스트가 새로 생기고 첫 그리기까지 0.1~1.1초).
  */
 export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300, className = '', cueText = null, cueFocus = false, modelUrl, speed = 1,
-  talker = null, talkerSeed = 0, showTalker = true }) {
+  talker = null, talkerSeed = 0, showTalker = true, flat = false }) {
   const frames = useMemo(() => applyCoarticulation(applyTalkerTiming(rawFrames, talker, talkerSeed)), [rawFrames, talker, talkerSeed])
   const [vid, setVid] = useState(15)
   const [syl, setSyl] = useState(null)      // 재생 중 프레임의 음절 번호(text_index)
@@ -92,7 +93,7 @@ export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300,
   return (
     <div className={`relative w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-slate-800 to-slate-900 [container-type:size] ${className}`}
          style={height != null ? { height } : undefined}>
-      <AvatarVRM visemeId={vid} modelUrl={modelUrl} transitionMs={timing.t} durationMs={timing.d} talker={talker} lipVowel={timing.lv} />
+      <AvatarVRM visemeId={vid} modelUrl={modelUrl} flat={flat} transitionMs={timing.t} durationMs={timing.d} talker={talker} lipVowel={timing.lv} />
       {showTalker && <TalkerChip talker={talker} />}
       {/* 기호는 오른쪽 입꼬리 옆 — 카메라 세로 화각이 고정이라 입 높이는 캔버스 높이의 약 68%, 입 반폭은 높이의 약 25% */}
       {active.length > 0 && (

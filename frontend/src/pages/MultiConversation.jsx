@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { curriculumAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import { TRAINING_TALKERS } from '../lib/talkers'
+import { useGpuConstrained } from '../lib/gpuBudget'
 import AppShell from '../components/AppShell'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 
@@ -48,6 +49,10 @@ export default function MultiConversation() {
   const [loading, setLoading] = useState(true)
   const [spkChoice, setSpkChoice] = useState([])     // 턴별로 고른 화자
   const [readChoice, setReadChoice] = useState([])   // 턴별로 고른 문장(빈칸 턴은 null)
+  // 3D 얼굴은 캔버스 하나에 GPU 메모리 약 130MB라 4명이면 500MB를 넘는다. 약한 기기이거나 컨텍스트를 한 번 잃었으면
+  // 모든 화자를 2D 입모양으로 그린다. 말하는 사람만 3D로 두면 입체 여부만 보고 화자를 고를 수 있어(H-2 방해 자극 무력화)
+  // 화자 전원을 같은 방식으로 그리고, 듣는 사람의 맞장구도 2D에서 그대로 움직인다.
+  const flat = useGpuConstrained()
   const [closureChoice, setClosureChoice] = useState(null)
   // 상황별 시나리오의 'AI 대화 · 여러 명'에서 들어오면 ?speakers=2~4 &level=1~5 &situation=적은 상황(225:183). 없으면 2명·임의 장면.
   const [params] = useSearchParams()
@@ -252,7 +257,7 @@ export default function MultiConversation() {
                     보이게 한다(커리큘럼 계획 2-2). 등록된 얼굴이 있으면 얼굴도 다르다 */}
                 <MouthAvatar frames={speaking ? frames : BACKCHANNEL[s % BACKCHANNEL.length]}
                   height={null} className="h-[150px] lg:h-[230px]" modelUrl={faces[s]?.url}
-                  talker={TRAINING_TALKERS[s % TRAINING_TALKERS.length]} talkerSeed={s + 1} showTalker={false} />
+                  talker={TRAINING_TALKERS[s % TRAINING_TALKERS.length]} talkerSeed={s + 1} showTalker={false} flat={flat} />
                 <span className={`absolute left-2 top-2 rounded-md px-2 py-0.5 text-xs font-bold text-white ${SPK_COLOR[s]}`}>
                   {SPK_NAME[s]}
                 </span>
