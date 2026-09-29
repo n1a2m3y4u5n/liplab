@@ -16,10 +16,11 @@ LIPLAB 내부 "학습·이해 보조(베타)" 모듈. 통역 서비스가 아니
 import os
 import re
 import csv
+import unicodedata
 import json
 import asyncio
 import urllib.request
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 
 from engine import decompose_hangul, text_to_visemes
 from korean_numbers import native, sino
@@ -43,13 +44,23 @@ _ALIASES = {
     '많이': '많다', '열심히': '열심', '천천히': '느리다',
 }
 
-# 한 자리씩 읽는 숫자(0으로 시작하거나 5자리 이상인 번호, number_sign_parts 참고) → 한국수어 숫자 수어. 1~9는 고유어 수사(하나~아홉), 0은 '영'(零).
+# 한 자리씩 읽는 숫자(0으로 시작하거나 17자리 이상인 번호, number_sign_parts 참고) → 한국수어 숫자 수어. 1~9는 고유어 수사(하나~아홉), 0은 '영'(零).
 # 조회는 lookup_number_sign이 동형어 중 '개념 > 수' 카테고리를 우선 선택하므로,
 # 영(천주교)·셋(기독교) 같은 비숫자 동형어를 피해 숫자 수어만 정확히 고른다.
 _DIGIT_TO_KO = {
     '0': '영', '1': '하나', '2': '둘', '3': '셋', '4': '넷', '5': '다섯',
     '6': '여섯', '7': '일곱', '8': '여덟', '9': '아홉',
 }
+
+# 숫자 수어로 보일 표제어 가운데 '개념 > 수' 동형어가 없는 것. 소수점은 사전의 '점' 동형어 중 '소수점'과 같은 수어(2211,
+# 검지를 짧게 내민다)다. '점'의 첫 항목(4908)은 가게를 뜻하는 수어라 그대로 찾으면 틀린 수어를 보인다.
+_NUMBER_HEADWORD = {'점': '소수점'}
+
+# 숫자 토큰: 정수(쉼표 천 단위 허용)와 소수. 아라비아 숫자만 본다(str.isdigit은 ²·①도 참이라 int()에서 500이 났다).
+_NUM_RE = re.compile(r"[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?")
+# 위첨자 숫자는 거듭제곱(3² → 셋 + 제곱). NFKC로 바꾸면 3²가 32가 되어 따로 읽는다.
+_POW_RE = re.compile(r"[⁰¹²³⁴⁵⁶⁷⁸⁹]+")
+_POW_DIGITS = str.maketrans('⁰¹²³⁴⁵⁶⁷⁸⁹', '0123456789')
 
 # ---------------------------------------------------------------------------
 # 사전 인덱스: 정제된 한국어 표제어 → [ {origin_no, description, word, category} ]
@@ -144,30 +155,108 @@ def lookup_number_sign(word: str) -> Optional[Dict]:
     }
 
 
-def number_sign_parts(num: str) -> Optional[List[str]]:
-    """숫자 토큰을 사전의 숫자 수어 표제어 조각으로 나눈다. 예전에는 한 자리씩 읽어 12가 하나+둘, 100이 하나+영+영이었다.
-    1~99는 비관형형 고유어(열둘·스물·열하나, 사전 표제어가 이 꼴이다). 사전에 없으면 십 자리+일 자리(스물+다섯).
-    100 이상은 한자어 자리 단위(삼+백+오십). 선두가 1이면 백·천 단독, 사전에 있는 합성(이천·오십)은 그대로 둔다.
-    0으로 시작하거나 5자리 이상(전화·번호)은 None으로, 부르는 쪽이 한 자리씩 읽는다."""
-    if not num.isdigit() or num.startswith('0') or len(num) > 4:
-        return None
-    n = int(num)
-    if n <= 99:
-        whole = native(n, attributive=False)
-        if lookup_number_sign(whole):
-            return [whole]
-        tens, ones = divmod(n, 10)
-        return [native(tens * 10, attributive=False), native(ones, attributive=False)]
+def _is_number_headword(word: str) -> bool:
+    """사전에 '개념 > 수' 범주로 실린 표제어인지. 합성어(오십·십만)를 한 수어로 쓸지 가를 때 본다. 존재만 보면
+    오만(교만)·구조 같은 다른 뜻 표제어를 숫자로 잘못 골랐다."""
+    return any(e.get("category", "").split(">")[-1].strip() == "수" for e in load_index().get(word, []))
+
+
+def _sino_parts(n: int) -> List[str]:
+    """1~9999를 한자어 자리 단위 조각으로(삼+백+오십, 이천+이십+사). 선두가 1이면 천·백·십 단독."""
     parts: List[str] = []
     for word, unit in (('천', 1000), ('백', 100), ('십', 10)):
         d, n = divmod(n, unit)
         if d == 1:
             parts.append(word)
         elif d > 1:
-            parts += [sino(d) + word] if lookup_number_sign(sino(d) + word) else [sino(d), word]
+            parts += [sino(d) + word] if _is_number_headword(sino(d) + word) else [sino(d), word]
     if n:
         parts.append(sino(n))
     return parts
+
+
+def number_sign_parts(num: str, sino_small: bool = False) -> Optional[List[str]]:
+    """숫자 토큰을 사전의 숫자 수어 표제어 조각으로 나눈다. 예전에는 한 자리씩 읽어 12가 하나+둘, 100이 하나+영+영이었다.
+    1~99는 비관형형 고유어(열둘·스물·열하나, 사전 표제어가 이 꼴이다). 사전에 없으면 십 자리+일 자리(스물+다섯).
+    100 이상은 한자어 자리 단위(삼+백+오십). 선두가 1이면 백·천 단독, 사전에 있는 합성(이천·오십)은 그대로 둔다.
+    10000 이상은 네 자리마다 만·억·조를 붙인다(12345 → 만+이천+삼+백+사십+오, 100000 → 십만). 예전에는 5자리부터
+    한 자리씩 읽어 10000이 하나+영+영+영+영이었다. 앞자리가 1이면 만·억·조 단독(만 원), 사전에 있는 합성(십만·백만)은 한 수어.
+    sino_small이면 1~99도 한자어(소수의 정수 부분, 3.5 → 삼 점 오). 0으로 시작하거나 17자리 이상(전화·카드 번호)은
+    None으로, 부르는 쪽이 한 자리씩 읽는다."""
+    if not num.isascii() or not num.isdigit():
+        return None
+    if sino_small and num == '0':
+        return ['영']
+    if num.startswith('0') or len(num) > 16:
+        return None
+    n = int(num)
+    if n <= 99 and not sino_small:
+        whole = native(n, attributive=False)
+        if lookup_number_sign(whole):
+            return [whole]
+        tens, ones = divmod(n, 10)
+        return [native(tens * 10, attributive=False), native(ones, attributive=False)]
+    parts: List[str] = []
+    for word, unit in (('조', 10 ** 12), ('억', 10 ** 8), ('만', 10 ** 4)):
+        g, n = divmod(n, unit)
+        if g == 1:
+            parts.append(word)
+        elif g > 1:
+            head = _sino_parts(g)
+            parts += [head[0] + word] if len(head) == 1 and _is_number_headword(head[0] + word) else head + [word]
+    if n:
+        parts += _sino_parts(n)
+    return parts
+
+
+def number_sign_words(num: str) -> List[str]:
+    """숫자 토큰(10,000·3.5 허용)을 차례로 보일 숫자 수어 표제어 목록으로. 소수는 정수 부분을 한자어로 읽고 '점' 뒤
+    자리를 한 자리씩 읽는다(3.5 → 삼+점+오, 0.25 → 영+점+이+오). 예전에는 규칙 경로가 마침표를 지워 3.5가 35(서른다섯)였다."""
+    whole, _, frac = num.replace(',', '').partition('.')
+    words = number_sign_parts(whole, sino_small=bool(frac)) or [_DIGIT_TO_KO[d] for d in whole]
+    if frac:
+        words += ['점'] + [sino(int(d)) for d in frac]
+    return words
+
+
+def _normalize_digits(word: str) -> str:
+    """원문자(①)·전각(３)·수학 글꼴(𝟑) 숫자를 아라비아 숫자로 바꾼다. 위첨자는 거듭제곱이라 그대로 두고, 그 밖의
+    숫자 비슷한 글자(❶·⑴·아랍 숫자)는 바꾸지 않아 일반 단어로 지문자 처리된다(예전에는 ①·3²에서 500)."""
+    out = []
+    for ch in word:
+        if unicodedata.decomposition(ch).startswith(('<circle>', '<wide>', '<font>')):
+            norm = unicodedata.normalize('NFKC', ch)
+            if norm.isascii() and norm.isdigit():
+                out.append(norm)
+                continue
+        out.append(ch)
+    return ''.join(out)
+
+
+def _pow_reading(sup: str) -> str:
+    """위첨자 지수의 한국어 읽기. ²는 제곱, ³은 세제곱, 그 밖은 한자어(⁴ → 사제곱)."""
+    e = int(sup.translate(_POW_DIGITS))
+    return {2: '제곱', 3: '세제곱'}.get(e, sino(e) + '제곱')
+
+
+def split_numeric(word: str) -> List[Tuple[str, str]]:
+    """gloss 단어 앞의 숫자·지수를 떼어 (종류, 글자) 조각으로 나눈다. 종류는 num(3·10,000·3.5), pow(²), word(나머지).
+    숫자로 시작하지 않으면 원래 단어 하나. 예) '3²' → [('num','3'),('pow','²')], '3시에' → [('num','3'),('word','시에')]"""
+    w = _normalize_digits(word)
+    pieces: List[Tuple[str, str]] = []
+    m = _NUM_RE.match(w)
+    if m:
+        pieces.append(('num', m.group()))
+        w = w[m.end():]
+    p = _POW_RE.match(w)
+    if p:
+        pieces.append(('pow', p.group()))
+        w = w[p.end():]
+    if not pieces:
+        return [('word', word)]
+    if w:
+        pieces.append(('word', w))
+    return pieces
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +374,8 @@ def _gloss_via_rule(text: str) -> Dict:
     조사 제거·용언 원형화는 오탐 위험이 커 하지 않는다 → 기본형 변환은 LLM 경로가 담당."""
     gloss = []
     for eojeol in text.split():
-        token = re.sub(r"[.,!?~…\"'()]", "", eojeol).strip()
+        # 마침표·쉼표는 숫자 사이(3.5, 10,000)면 남긴다. 예전에는 모두 지워 3.5가 35로 읽혔다
+        token = re.sub(r"[!?~…\"'()]|(?<![0-9])[.,]|[.,](?![0-9])", "", eojeol).strip()
         if token:
             gloss.append({"word": token})
     return {"gloss": gloss, "nonmanual": [], "notes": "규칙기반 근사(원어절, LLM 미사용). 미등재 어절은 지문자."}
@@ -294,6 +384,68 @@ def _gloss_via_rule(text: str) -> Dict:
 # ---------------------------------------------------------------------------
 # 조립 — gloss → 재생 토큰(수어 영상 / 지문자) + 입모양
 # ---------------------------------------------------------------------------
+async def _visemes(text: str) -> List:
+    try:
+        return await text_to_visemes(text)
+    except Exception:
+        return []
+
+
+async def _number_tokens(num: str) -> List[Dict]:
+    """숫자 토큰 → 사전의 숫자 수어 토큰들. 원 숫자는 word에 남기고 signed_as에 실제 보인 수어 표제어를 넣어
+    투명 표시("12 → 열둘", "25 → 스물"·"25 → 다섯", "3.5 → 점"). 입모양도 그 표제어로 만든다. 0으로 시작하거나
+    17자리 이상(전화·번호)은 한 자리씩(하나~아홉·영). 사전에 없는 조각은 지문자."""
+    out: List[Dict] = []
+    for kw in number_sign_words(num):
+        s = lookup_number_sign(_NUMBER_HEADWORD.get(kw, kw))
+        dv = await _visemes(kw)
+        if s:
+            out.append({
+                "type": "sign", "word": num, "signed_as": kw,
+                "origin_no": s["origin_no"], "description": s["description"],
+                "dict_url": s["dict_url"], "alt_count": s["alt_count"],
+                "negate": False, "visemes": dv,
+            })
+        else:
+            out.append({"type": "fingerspell", "word": num, "signed_as": kw, "jamo": fingerspell(kw), "visemes": dv})
+    return out
+
+
+async def _word_token(word: str, negate: bool = False, read: Optional[str] = None) -> Dict:
+    """일반 단어 → 수어 토큰(사전 완전일치, 없으면 별칭표의 근접 동의어) 또는 지문자 토큰.
+    read는 기호의 한국어 읽기(² → 제곱)로, 주면 조회·지문자·입모양을 그 읽기로 하고 signed_as로 투명 표시한다."""
+    key = read or word
+    sign = lookup_sign(key)
+    # 완전일치 실패 시 별칭표로 근접 동의어를 시도(투명 치환)
+    signed_as = read
+    if not sign:
+        alias = _ALIASES.get(key)
+        if alias:
+            a_sign = lookup_sign(alias)
+            if a_sign:
+                sign, signed_as = a_sign, alias
+    # 입모양(mouthing)은 사용자가 입력한 원어 기준(밥을 배우는 중이므로 '밥')
+    visemes = await _visemes(key)
+    if not sign:
+        token = {"type": "fingerspell", "word": word, "jamo": fingerspell(key), "visemes": visemes}
+        if read:
+            token["signed_as"] = read
+        return token
+    token = {
+        "type": "sign",
+        "word": word,                 # 원어(사용자 입력)
+        "origin_no": sign["origin_no"],
+        "description": sign["description"],
+        "dict_url": sign["dict_url"],
+        "alt_count": sign["alt_count"],
+        "negate": negate,
+        "visemes": visemes,
+    }
+    if signed_as:
+        token["signed_as"] = signed_as   # 실제 표시된 수어 표제어(근접 동의어)
+    return token
+
+
 async def translate_to_ksl(text: str) -> Dict:
     """한국어 문장을 KSL 학습 보조 토큰 시퀀스로 변환."""
     text = (text or "").strip()
@@ -308,7 +460,6 @@ async def translate_to_ksl(text: str) -> Dict:
         method, parsed = "rule", _gloss_via_rule(text)
 
     tokens: List[Dict] = []
-    matched = fingerspelled = 0
     gloss = parsed.get("gloss") if isinstance(parsed, dict) else None
     for item in gloss if isinstance(gloss, list) else []:
         if not isinstance(item, dict):   # 모델이 문자열·숫자 항목을 내면 건너뛴다(예전에는 500)
@@ -316,69 +467,16 @@ async def translate_to_ksl(text: str) -> Dict:
         word = str(item.get("word") or "").strip()
         if not word:
             continue
-
-        # 숫자: 사전의 숫자 수어(영상)로 표시. 원 숫자는 남기고 signed_as에 실제 보인 수어 표제어를 넣어
-        # 투명 표시("12 → 열둘", "25 → 스물"·"25 → 다섯"). 입모양도 그 표제어로 만든다. 0으로 시작하거나
-        # 5자리 이상(전화·번호)은 한 자리씩(하나~아홉·영). 사전에 없는 조각은 지문자.
-        if word.isdigit():
-            parts = number_sign_parts(word)
-            for d, kw in ([(word, p) for p in parts] if parts else [(d, _DIGIT_TO_KO.get(d)) for d in word]):
-                s = lookup_number_sign(kw) if kw else None
-                try:
-                    dv = await text_to_visemes(kw or d)
-                except Exception:
-                    dv = []
-                if s:
-                    matched += 1
-                    tokens.append({
-                        "type": "sign", "word": d, "signed_as": kw,
-                        "origin_no": s["origin_no"], "description": s["description"],
-                        "dict_url": s["dict_url"], "alt_count": s["alt_count"],
-                        "negate": False, "visemes": dv,
-                    })
-                else:
-                    fingerspelled += 1
-                    tokens.append({"type": "fingerspell", "word": d, "jamo": fingerspell(kw) if parts else [[d]],
-                                   "visemes": dv})
-            continue
-
-        sign = lookup_sign(word)
-        # 완전일치 실패 시 별칭표로 근접 동의어를 시도(투명 치환)
-        signed_as = None
-        if not sign:
-            alias = _ALIASES.get(word)
-            if alias:
-                a_sign = lookup_sign(alias)
-                if a_sign:
-                    sign, signed_as = a_sign, alias
-        # 입모양(mouthing)은 사용자가 입력한 원어 기준(밥을 배우는 중이므로 '밥')
-        try:
-            visemes = await text_to_visemes(word)
-        except Exception:
-            visemes = []
-        if sign:
-            matched += 1
-            token = {
-                "type": "sign",
-                "word": word,                 # 원어(사용자 입력)
-                "origin_no": sign["origin_no"],
-                "description": sign["description"],
-                "dict_url": sign["dict_url"],
-                "alt_count": sign["alt_count"],
-                "negate": bool(item.get("negate")),
-                "visemes": visemes,
-            }
-            if signed_as:
-                token["signed_as"] = signed_as   # 실제 표시된 수어 표제어(근접 동의어)
-            tokens.append(token)
-        else:
-            fingerspelled += 1
-            tokens.append({
-                "type": "fingerspell",
-                "word": word,
-                "jamo": fingerspell(word),
-                "visemes": visemes,
-            })
+        # 숫자로 시작하는 단어는 숫자·지수·나머지로 나눈다(3² → 셋 + 제곱, 규칙 경로의 3시에 → 셋 + 시에).
+        for kind, piece in split_numeric(word):
+            if kind == 'num':
+                tokens += await _number_tokens(piece)
+            elif kind == 'pow':
+                tokens.append(await _word_token(piece, read=_pow_reading(piece)))
+            else:
+                tokens.append(await _word_token(piece, negate=bool(item.get("negate"))))
+    matched = sum(t["type"] == "sign" for t in tokens)
+    fingerspelled = len(tokens) - matched
 
     # 수어 토큰의 실제 영상 URL을 병렬로 해석해 인라인 재생에 쓴다(캐시됨).
     sign_tokens = [t for t in tokens if t["type"] == "sign" and t.get("origin_no")]
