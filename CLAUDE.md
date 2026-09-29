@@ -191,6 +191,8 @@ frontend/src/
   ARKit 52종 + CC 혀 모프), ARKit 블렌드셰이프를 `useFrame`에서 **고정 속도**(`delta*22`)로 lerp.
   이 모델은 `jawOpen` 모프가 피부를 안 움직여 **턱 뼈(`CC_Base_JawRoot`) 회전**으로 벌림을 만든다.
   카메라는 입 클로즈업 정면 고정.
+  9/29부터 코드가 안 쓰는 CC 전용 모프를 지우고 입 클로즈업에서 안 보이는 텍스처(몸·팔·속눈썹·눈)를 512로 줄인 판이다
+  (GPU 약 120MB → 70MB, `scripts/glb-slim`, 원본은 git 9f08043). 모델을 바꾸면 이 스크립트를 다시 돌리고 sw.js CACHE를 올린다.
 - `LipSyncPlayer3D.jsx`: `setTimeout`으로 프레임 스테핑(속도·프레임 이동·리플레이 지원).
 
 ### 트랙 1: 3D 모션 개선 (구현 순서 **A → B → F → D**)
