@@ -192,6 +192,10 @@ export const curriculumAPI = {
   // 혼동을 잰다(docs/confusion-pair-serving.md 5.4). 보내지 않아도 채점은 같다.
   submitRecognition: async (viseme_id, chosen_id, options) =>
     (await api.post('/curriculum/recognition', { viseme_id, chosen_id, ...(options ? { options } : {}) })).data,
+  // 1단계 '같은지 다른지'(AX) 문항: 먼저·나중 음절과 고른 답('same' | 'different'). 정답은 서버가 입모양 무리로 정하고,
+  // 이 답은 시행 기록·XP에만 남고 1단계 숙달에는 들어가지 않는다(docs/mastery-ewma.md 11.9절)
+  submitRecognitionAx: async (a, b, chosen, options) =>
+    (await api.post('/curriculum/recognition-ax', { a, b, chosen, ...(options ? { options } : {}) })).data,
   getWords: async () => (await api.get('/curriculum/words')).data,
   // 3단계 문장 4지선다 오답 보기(레슨 밖·음절 수가 가까운 문장). exclude = 이번 레슨 문장들
   getSentenceOptions: async (sentence, exclude) => (await api.post('/curriculum/sentence-options', { sentence, exclude })).data,

@@ -22,8 +22,8 @@ from typing import Dict, List, Optional, Sequence, Tuple
 Trial = Tuple[str, bool]      # (item_type, correct), 시간순
 
 MIN_PER_TYPE = 9              # 한 유형을 1/3씩(3시행 이상) 나누려면 9시행
-TYPE_LABELS = {"viseme": "입모양 인지", "word": "단어", "word_typed": "단어 주관식", "context": "단어 레슨 문맥",
-               "closure": "문맥 추론"}
+TYPE_LABELS = {"viseme": "입모양 인지", "viseme_ax": "입모양 같은지 다른지", "word": "단어", "word_typed": "단어 주관식",
+               "context": "단어 레슨 문맥", "closure": "문맥 추론"}
 
 
 Z95 = 1.959963984540054
