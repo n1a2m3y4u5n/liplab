@@ -153,6 +153,8 @@ class LearningProfile(Base):
     pilot_code = Column(String(32), nullable=True)
     cohort = Column(String(16), nullable=True)
     pilot_joined_at = Column(DateTime, nullable=True)   # 참여 코드를 처음 넣은 때(내보내기의 '참여 뒤' 집계 기준)
+    # 마지막으로 학습 초기화한 때. 초기화하면 시행 기록이 지워져 내보내기의 학습량이 줄어드는 것을 분석에서 알 수 있게 한다
+    learning_reset_at = Column(DateTime, nullable=True)
     # 예정된 복습에 답한 누적 횟수('복습왕' 배지). 복습 항목은 졸업하면 지워져 항목 수로는 셀 수 없다
     reviews_completed = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -416,6 +418,7 @@ _ADD_COLUMNS = (
     ("learning_profiles", "pilot_code", "VARCHAR(32)"),
     ("learning_profiles", "cohort", "VARCHAR(16)"),
     ("learning_profiles", "pilot_joined_at", "TIMESTAMP"),
+    ("learning_profiles", "learning_reset_at", "TIMESTAMP"),
     # 발화 트랙 건너뛰기(Figma 78:8·79:5·80:6)
     ("learning_profiles", "speak_current_stage", "INTEGER DEFAULT 0"),
     # 누적 복습 횟수('복습왕' 배지)
