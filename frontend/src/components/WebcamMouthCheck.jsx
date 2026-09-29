@@ -4,6 +4,7 @@ import { faceSignals, FACE_SIGNAL_LABELS } from '../lib/faceCues'
 import { lipGeometry, LIP_GEOMETRY_LABELS } from '../lib/lipGeometry'
 import { predictK, K_FACE_KEYS, K_WIN } from '../lib/kModel'
 import { errorEnds } from '../lib/correctionTrend'
+import { attemptScore, pushAttemptSample, pruneAttempt, MIN_FACE_FRAMES } from '../lib/mouthAttempt'
 
 // 입술 너머 얼굴 신호(축 K)는 연구 빌드(VITE_LIPLAB_RESEARCH=1)에서만 보인다. 화자 영상 200클립에서 K 비음 확률이
 // 비음 음절과 같은 입모양 파열음 음절을 가르지 못해(음절 AUC 0.49, docs/cue-video-demo.md) 학습자 화면에서는
@@ -21,6 +22,7 @@ import VocalTract from './VocalTract'
  * MediaPipe Face Landmarker로 얼굴 blendshape를 브라우저에서 추출해 목표 비심과 비교한다.
  * 영상과 blendshape 원본은 기기 밖으로 나가지 않는다. 서버에는 조음 교정용 관찰 계수 3개(개구·원순·폐쇄)를
  * 0.8초마다 보내 교정 문구를 받고(저장하지 않음), '익힘 기록' 때 점수와 세션 처음·끝 오차 요약만 저장한다.
+ * 기록 점수는 최근 5초 동안 얼굴을 잡은 프레임의 상위 k개 중앙값이고, 얼굴을 충분히 잡기 전에는 기록하지 않는다.
  *
  * 모델 로딩은 useFaceLandmarker 훅이 담당한다(축 F 거울 모드와 공용).
  */
@@ -55,7 +57,10 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   const [kPred, setKPred] = useState(null)     // 학습된 K 분류기 예측(유성/비음) — 연구 빌드에서만
   const kWinRef = useRef([])                    // 최근 K_WIN 프레임의 얼굴 8차원 버퍼
   const kBusyRef = useRef(false)
-  const bestRef = useRef(0)
+  // 익힘 기록용 표본 창(최근 5초, 얼굴을 잡은 프레임만). 기록 점수는 한 프레임 최고점이 아니라 상위 k개 중앙값(lib/mouthAttempt.js)
+  const attemptRef = useRef([])
+  const faceReadyRef = useRef(false)
+  const [faceReady, setFaceReady] = useState(false) // 얼굴을 잡은 프레임이 충분해야 기록 버튼을 연다
   const [profiles, setProfiles] = useState(() => loadCalibration())
   const [showCalib, setShowCalib] = useState(false)
   const calibrated = !!profiles
@@ -75,11 +80,16 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   const errRef = useRef([])                          // 축 E-9: 교정 표본별 평균 |목표−관찰| (세션 처음·끝 비교용)
   const [errTrend, setErrTrend] = useState(null)     // { start, now } — 표본 4개 이상일 때만
 
-  // 목표 viseme이 바뀌면 최고점·기록·점수창·교정 표본 초기화
+  // 목표 viseme이 바뀌면 기록 표본·기록·점수창·교정 표본 초기화
   useEffect(() => {
-    bestRef.current = 0; winRef.current = []; errRef.current = []
-    setRecorded(false); setErrTrend(null)
+    attemptRef.current = []; faceReadyRef.current = false; winRef.current = []; errRef.current = []
+    setRecorded(false); setErrTrend(null); setFaceReady(false)
   }, [visemeId])
+
+  const syncFaceReady = () => {
+    const ready = attemptRef.current.length >= MIN_FACE_FRAMES
+    if (ready !== faceReadyRef.current) { faceReadyRef.current = ready; setFaceReady(ready) }
+  }
 
   // 화면 표시용 통합 상태 — 카메라가 우선, 그다음 모델 로딩/오류.
   const status = camStatus === 'running' ? 'running'
@@ -121,7 +131,8 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
         let s = 0 // 최근 창의 최고점(발음 정점을 잡아 안정적으로 표시)
         for (const w of win) if (w.s > s) s = w.s
         setScore(s)
-        if (s > bestRef.current) bestRef.current = s
+        pushAttemptSample(attemptRef.current, now, inst)
+        syncFaceReady()
         setHint(coachHint(bs, curViseme, curProfiles))
         setGeo(lipGeometry(res.faceLandmarks?.[0])) // 입술 기하 지표(그림8) — 좌표 기반 결정론적 보조
         if (K_RESEARCH) {
@@ -139,6 +150,8 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
         }
       } else {
         liveBsRef.current = null
+        pruneAttempt(attemptRef.current, now)   // 얼굴을 놓친 동안 옛 표본이 창에 남지 않게
+        syncFaceReady()
         setScore(null)
         setHint('얼굴이 화면에 잘 보이게 해주세요')
         setFaceSig(null)
@@ -188,6 +201,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
     }
     liveBsRef.current = null
     kWinRef.current = []
+    attemptRef.current = []; faceReadyRef.current = false; setFaceReady(false)
     setCamStatus('idle')
     setScore(null)
     setHint('')
@@ -196,10 +210,13 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
 
   const record = useCallback(async () => {
     // 축 E-9: 이번 세션의 처음·끝 오차 요약만 보낸다(관찰 계수 원본은 보내지 않는다)
+    // 얼굴을 충분히 잡지 못했으면 기록하지 않는다(예전에는 얼굴을 잡기 전에 누르면 0점이 오답으로 쌓였다)
+    const sc = attemptScore(pruneAttempt(attemptRef.current, performance.now()))
+    if (sc == null) { syncFaceReady(); return }
     const ends = errorEnds(errRef.current)
     const session = ends ? { gap_start: ends.start, gap_end: ends.end, n_samples: errRef.current.length } : {}
     try {
-      await curriculumAPI.recordMouth(visemeId, bestRef.current, session)
+      await curriculumAPI.recordMouth(visemeId, sc, session)
       setRecorded(true)
     } catch { /* 기록 실패는 조용히 무시 */ }
   }, [visemeId])
@@ -388,9 +405,9 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       <div className="mt-2 flex flex-col items-center gap-1.5">
         {status === 'running' ? (
           <div className="flex gap-2">
-            <button type="button" onClick={record} disabled={recorded}
+            <button type="button" onClick={record} disabled={recorded || !faceReady}
               className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
-              {recorded ? '기록됨 ✓' : '익힘 기록'}
+              {recorded ? '기록됨 ✓' : faceReady ? '익힘 기록' : '얼굴 인식 중…'}
             </button>
             <button type="button" onClick={stop} className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm font-bold text-gray-700 hover:bg-gray-50">멈추기</button>
           </div>

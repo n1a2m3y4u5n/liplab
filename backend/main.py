@@ -2802,7 +2802,13 @@ async def curriculum_mouth_attempt(data: MouthAttempt, current_user=Depends(get_
     from sqlalchemy import select
     from engine import get_viseme_feature
     from datetime import datetime
+    import math
 
+    # 웹캠 채점 대상은 입모양 그룹 1~10뿐이다. 범위 밖 번호나 0~100 밖 점수가 WeakViseme에 쌓이면 취약 입모양 집계가 오염된다
+    if not (1 <= data.viseme_id <= 10):
+        raise HTTPException(status_code=400, detail="invalid viseme_id")
+    if not math.isfinite(data.score) or not (0 <= data.score <= 100):
+        raise HTTPException(status_code=400, detail="score는 0~100")
     passed = data.score >= 60
     r = await db.execute(select(WeakViseme).where(
         WeakViseme.user_id == current_user.id, WeakViseme.viseme_id == data.viseme_id))
