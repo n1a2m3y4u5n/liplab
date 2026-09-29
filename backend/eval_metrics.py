@@ -13,7 +13,10 @@
 - 숙달 도달 시행수: 처음 숙달한 순간의 시도 수(StageProgress.mastered_attempts)를 쓴다.
 - 문장 점수 추이: 같은 방법으로 문장 난이도(difficulty_level) 차이를 뺀다. 경로가 쉬운 문장에서 어려운 문장으로 가므로
   보정 전 점수는 실력이 늘어도 내려갈 수 있다.
+- 개인 전후 차이의 색(9/29): 두 정답률 차이의 Newcombe 95% 구간(Wilson 점수 구간 결합)이 0을 벗어날 때만 좋아짐·나빠짐으로
+  칠한다. 예전에는 부호만 보고 칠해 학습 효과가 없어도 사전·사후 비교의 35~46%가 빨강이었다(docs/eval-metrics.md 6절).
 """
+import math
 from typing import Dict, List, Optional, Sequence, Tuple
 
 Trial = Tuple[str, bool]      # (item_type, correct), 시간순
@@ -21,6 +24,51 @@ Trial = Tuple[str, bool]      # (item_type, correct), 시간순
 MIN_PER_TYPE = 9              # 한 유형을 1/3씩(3시행 이상) 나누려면 9시행
 TYPE_LABELS = {"viseme": "입모양 인지", "word": "단어", "word_typed": "단어 주관식", "context": "단어 레슨 문맥",
                "closure": "문맥 추론"}
+
+
+Z95 = 1.959963984540054
+
+
+def wilson_interval(x: float, n: float, z: float = Z95) -> Optional[Tuple[float, float]]:
+    """정답률 x/n의 Wilson 점수 구간. n이 0이면 None."""
+    if not n:
+        return None
+    p = x / n
+    den = 1 + z * z / n
+    mid = (p + z * z / (2 * n)) / den
+    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den
+    return max(0.0, mid - half), min(1.0, mid + half)
+
+
+def newcombe_diff(x1: float, n1: float, x2: float, n2: float, z: float = Z95) -> Optional[Dict]:
+    """두 독립 정답률의 차이 p2 − p1과 Newcombe(1998) 방법 10의 95% 구간(두 Wilson 구간 결합).
+    clear는 구간이 0을 벗어났는지다. 화면은 clear일 때만 좋아짐·나빠짐 색을 쓰고, 아니면 중립으로 둔다.
+    문항 난이도가 서로 달라 실제 분산은 이항보다 작으므로 이 구간은 보수적이다."""
+    w1, w2 = wilson_interval(x1, n1, z), wilson_interval(x2, n2, z)
+    if w1 is None or w2 is None:
+        return None
+    p1, p2 = x1 / n1, x2 / n2
+    d = p2 - p1
+    lo = d - math.sqrt((p2 - w2[0]) ** 2 + (w1[1] - p1) ** 2)
+    hi = d + math.sqrt((w2[1] - p2) ** 2 + (p1 - w1[0]) ** 2)
+    return {"diff": round(d, 3), "ci95": [round(lo, 3), round(hi, 3)], "clear": lo > 0 or hi < 0}
+
+
+NATURAL_SPEED_TOL = 0.01
+
+
+def is_natural_trial(speed, is_probe) -> bool:
+    """초기 대비 최근·학습곡선에 넣는 시행: 1.0배(속도 기록 없음 포함)로 본 보통 문항. 빠른 말(1.25~2배)은 숙달 뒤에만 나와
+    뒤 1/3에 몰려 실력이 그대로여도 떨어져 보이고, 감속(0.75배) 정답은 앞쪽에 몰려 앞을 올린다. 짝 탐색 문항(probe)은 헷갈리는
+    대비 단어를 일부러 보기에 넣은 문항이라 보통 문항과 난이도가 다르다(docs/eval-metrics.md 7절)."""
+    if is_probe:
+        return False
+    if speed is None:
+        return True
+    try:
+        return abs(float(speed) - 1.0) <= NATURAL_SPEED_TOL
+    except (TypeError, ValueError):
+        return True
 
 
 def _bins(n: int, n_bins: int) -> List[Tuple[int, int]]:
@@ -58,15 +106,19 @@ def within_type_change(trials: Sequence[Trial], min_n: int = MIN_PER_TYPE) -> Op
     rec = sum(k * l for _, _, k, _, l in parts) / w
     order = list(TYPE_LABELS)
     parts.sort(key=lambda p: order.index(p[0]) if p[0] in order else len(order))
+    # 가중 평균은 앞·뒤 1/3의 정답 수를 합친 것과 같다(k·e가 정수). 두 묶음을 독립 표본으로 보고 Newcombe 구간을 낸다
+    nc = newcombe_diff(base * w, w, rec * w, w)
     return {
         "baseline_acc": round(base * 100, 1), "recent_acc": round(rec * 100, 1),
         "delta_pp": round((rec - base) * 100, 1), "n_each": w,
+        "ci95_pp": [round(nc["ci95"][0] * 100, 1), round(nc["ci95"][1] * 100, 1)], "clear": nc["clear"],
         "by_type": [{"item_type": t, "label": TYPE_LABELS.get(t, t), "n": n, "n_each": k,
                      "baseline_acc": round(e * 100, 1), "recent_acc": round(l * 100, 1),
                      "delta_pp": round((l - e) * 100, 1)} for t, n, k, e, l in parts],
         "method": "within_type",
         "note": "유형(입모양·단어·문맥)마다 그 유형의 처음 1/3과 최근 1/3을 비교해 시행 수로 가중 평균했습니다. "
-                "단계가 바뀌며 문항 유형이 달라지는 효과는 빠지지만, 통제된 사전·사후 검사는 아닙니다.",
+                "단계가 바뀌며 문항 유형이 달라지는 효과는 빠지지만, 통제된 사전·사후 검사는 아닙니다. "
+                "빠른 말·느린 재생과 헷갈리는 짝 문항은 난이도가 달라 세지 않습니다.",
     }
 
 

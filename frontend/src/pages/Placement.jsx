@@ -7,6 +7,7 @@ import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
 import { talkerById, atNaturalRate, hashSeed, TRANSFER_NOISE_NOTE } from '../lib/talkers'
+import { changeTone, ciText, CHANGE_NOISE_NOTE } from '../lib/changeTone'
 
 /**
  * 디지털 독화 배치검사(축 I) — 난이도가 통제된 입모양→단어 4지선다로 현재 수준을 진단한다.
@@ -47,22 +48,24 @@ export default function Placement() {
   const [responses, setResponses] = useState({})
   const [frames, setFrames] = useState([])
   const [result, setResult] = useState(null)
-  const [delta, setDelta] = useState(null)  // 첫 검사(baseline) 대비 향상도 — 2회차부터(aa28c05, 병합 복원)
+  const [delta, setDelta] = useState(null)  // 같은 종류의 앞선 검사 대비 향상도 — 짝이 있을 때만(aa28c05, 9/29 같은 종류끼리)
+  const [hist, setHist] = useState(null)    // 비교 종류(comparison)·사전 검사를 봤는지(pretest_taken)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [mode] = useState(initialMode)  // placement | A(사전) | B(사후) — 향상도검사(축 I)
+  const [mode, setMode] = useState(initialMode)  // placement | A(사전) | B(사후) — 향상도검사(축 I)
   const [n, setN] = useState(12)  // 최대 문항 수(적응형 배치검사). 시작 단계가 분명해지면 서버가 일찍 끝낸다
   const [selected, setSelected] = useState(null)  // 현재 문항에서 고른 보기(다음 눌러 확정)
   const [loadError, setLoadError] = useState(false)      // 문항을 받지 못함(첫 문항·다시 진단) → 다시 시도·나가기
   const [submitError, setSubmitError] = useState(false)  // 답을 보내지 못함 → 하단 바에 안내, 다음으로 다시 보낸다
 
-  // 방금 결과가 서버에 저장됐으니, 첫 검사 대비 향상도(/api/assessment/history의 delta)를 받아 함께 보여준다.
+  // 방금 결과가 서버에 저장됐으니, 같은 종류의 앞선 검사 대비 향상도(/api/assessment/history의 delta)를 받아 함께 보여준다.
+  // 서버는 동형 폼끼리, 자가진단(적응형)끼리만 비교한다(9/29). 자가진단 뒤 동형 폼처럼 종류가 다르면 delta가 없다.
   const loadDelta = () => {
-    curriculumAPI.getAssessmentHistory().then((h) => setDelta(h?.delta || null)).catch(() => {})
+    curriculumAPI.getAssessmentHistory().then((h) => { setHist(h || null); setDelta(h?.delta || null) }).catch(() => {})
   }
 
   const start = useCallback(async (m = mode) => {
-    setLoading(true); setResult(null); setDelta(null); setResponses({}); setIdx(0); setSelected(null)
+    setLoading(true); setResult(null); setDelta(null); setHist(null); setResponses({}); setIdx(0); setSelected(null)
     setLoadError(false); setSubmitError(false)
     try {
       if (m === 'placement') {
@@ -191,6 +194,18 @@ export default function Placement() {
             </div>
           )}
         </div>
+        {/* 사전 검사 권유(9/29): 사전(A)은 학습 효과 리포트 안에서 언제든 볼 수 있어 연습을 한참 한 뒤에 보는 경우가 있었다.
+            자가진단 바로 뒤가 연습 전이라 여기서 권한다. 막지 않고 건너뛰어도 된다 */}
+        {hist && !hist.pretest_taken && (
+          <div className="flex w-full max-w-[640px] flex-col gap-2 rounded-22 border-2 border-line bg-white px-5 py-4 sm:flex-row sm:items-center lg:px-6">
+            <p className="flex-1 text-[13px] leading-relaxed text-ink-muted">
+              학습 효과를 재고 싶다면 연습을 시작하기 전에 사전 검사(A)를 봐 두세요. 24문항, 5분 안팎이에요.
+              나중에 분석의 학습 효과 리포트에서도 볼 수 있어요.
+            </p>
+            <button type="button" onClick={() => { navigate('/learn/placement?form=A', { replace: true }); setMode('A'); start('A') }}
+              className="btn-secondary shrink-0 whitespace-nowrap !py-2.5 px-4 text-[14px]">사전 검사(A) 보기</button>
+          </div>
+        )}
         <div className="flex w-full max-w-[640px] flex-col gap-2.5 lg:gap-3">
           <button type="button" onClick={goRecommended} className={`btn-primary btn-lg ${RESULT_BTN}`}>
             {result.recommended_start?.title || '입모양 인지'}부터 시작하기
@@ -273,20 +288,35 @@ export default function Placement() {
               </>
             )}
 
-            {/* 지난 첫 검사 대비 향상도 (aa28c05) — 검사가 2회 이상일 때만 */}
+            {/* 연습을 기준(서버 PRETEST_TRIALS_FLAG) 이상 한 뒤에 본 사전 검사 — 막지 않고 알리기만 한다(9/29) */}
+            {result.pretest?.after_training && (
+              <p className="rounded-13 bg-fill px-4 py-3 text-xs leading-relaxed text-ink-muted">
+                독화 연습을 {result.pretest.trials_before}회 한 뒤에 본 사전 검사예요. 연습 효과가 사전 점수에 들어가 향상도가
+                작게 나올 수 있어서, 학습 효과 리포트와 결과지에 함께 표시돼요.
+              </p>
+            )}
+
+            {/* 앞선 검사 대비 향상도(aa28c05) — 같은 종류의 앞선 검사가 있을 때만(9/29: 동형 폼끼리, 자가진단끼리).
+                색은 Newcombe 95% 구간이 0을 벗어날 때만, 수준 칸은 문항이 적어 늘 중립이다 */}
             {delta && (
               <>
                 <div className="h-[1.5px] w-full bg-line" />
                 <div className="flex flex-col gap-3">
-                  <p className="text-[13px] font-bold text-ink-muted">지난 첫 검사 대비 향상도</p>
+                  <p className="text-[13px] font-bold text-ink-muted">지난 검사 대비 향상도</p>
+                  {hist?.comparison?.label && <p className="-mt-2 text-xs text-ink-faint">{hist.comparison.label}</p>}
                   <div className="flex flex-wrap gap-2">
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${delta.accuracy >= 0 ? 'bg-good-tint text-good-text' : 'bg-bad-tint text-bad-text'}`}>
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${changeTone(delta.accuracy_clear, delta.accuracy)}`}>
                       정확도 {delta.accuracy >= 0 ? '+' : ''}{Math.round(delta.accuracy * 100)}%p
                     </span>
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${delta.level >= 0 ? 'bg-good-tint text-good-text' : 'bg-bad-tint text-bad-text'}`}>
+                    <span className="rounded-full bg-fill px-3 py-1 text-xs font-bold text-ink-muted">
                       수준 {delta.level >= 0 ? '+' : ''}{delta.level}
                     </span>
                   </div>
+                  {!delta.accuracy_clear && (
+                    <p className="text-xs text-ink-muted">
+                      {delta.accuracy_ci95 ? `${ciText(delta.accuracy_ci95)}. ` : ''}{CHANGE_NOISE_NOTE}
+                    </p>
+                  )}
                   {delta.resolved_visemes?.length > 0 && (
                     <p className="text-xs text-good-text">
                       이제 안 틀리는 입모양: {delta.resolved_visemes.map((v) => VIS_NAME[v] || v).join(', ')}

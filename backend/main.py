@@ -2578,11 +2578,12 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
     - learning_curve: 선다형 시행(TrialAttempt)을 시간순 8구간으로 나눈 정확도. value는 유형(입모양·단어·문맥)
       고정효과를 뺀 값, raw는 보정 전. 단계가 바뀌며 유형이 달라지는 것만으로 곡선이 꺾이지 않게 한다.
     - baseline_vs_recent: 유형마다 처음 1/3 대 최근 1/3 정확도를 시행 수로 가중 평균(통제된 사전/사후는 아님).
-      예전 전체 3등분은 학습 효과가 없어도 시뮬레이션 평균 -19%p로 나왔다.
+      예전 전체 3등분은 학습 효과가 없어도 시뮬레이션 평균 -19%p로 나왔다. 학습곡선과 함께 1.0배로 본 보통 문항만 쓴다
+      (빠른 말·감속 재생·짝 탐색 문항 제외, excluded에 건수). ci95_pp·clear는 Newcombe 95% 구간과 그 구간이 0을 벗어났는지.
     - by_item_type: 입모양·단어·문맥추론별 정확도.
     - trials_to_criterion: 단계별 숙달 도달 시행수(처음 숙달한 순간의 시도 수)와 진행 중인 단계의 진행률.
     - same_viseme_ratio: 오답 중 '입모양이 같아' 헷갈린 비율(시각 혼동성 근거).
-    - sentence_trend: 문장 채점(Progress) 점수의 시간순 추이(문장 난이도 차이를 뺀 값, raw는 보정 전).
+    - sentence_trend: 문장 채점(Progress) 점수의 시간순 추이(문장 난이도 차이를 뺀 값, raw는 보정 전). 복습 행은 뺀다.
     - sentence_by_mode: 문장 점수를 답 방식(보기 고름·직접 입력·기록 없음)별로 나눈 횟수·평균·합격률(60점 이상).
     """
     from database import TrialAttempt, Progress, StageProgress
@@ -2592,14 +2593,23 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
     # ── 선다형 시행 ──────────────────────────────────────────────
     # 쓰는 열(유형·정오)만 읽는다. 예전에는 시행 전체를 ORM 객체(confusions JSON 포함)로 읽었다. 시행 2만·문장 2천 행
     # 감사 DB에서 응답 268~458 → 60~111ms(각 5회 중앙값, JSON 같음). 혼동 비율은 아래에서 오답 행의 confusions만 읽는다
-    seq = [(it, bool(c)) for it, c in (await db.execute(
-        select(TrialAttempt.item_type, TrialAttempt.correct).where(TrialAttempt.user_id == current_user.id)
-        .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).all()]
+    rows_tr = (await db.execute(
+        select(TrialAttempt.item_type, TrialAttempt.correct, TrialAttempt.speed,
+               TrialAttempt.probe.is_not(None)).where(TrialAttempt.user_id == current_user.id)
+        .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).all()
+    seq = [(it, bool(c)) for it, c, _, _ in rows_tr]
     n_tr = len(seq)
     n_correct = sum(1 for _, c in seq if c)
 
-    learning_curve = _em.type_adjusted_curve(seq)
-    baseline_vs_recent = _em.within_type_change(seq)   # 9시행 이상인 유형이 없으면 None
+    # 학습곡선·초기 대비 최근은 1.0배로 본 보통 문항만 쓴다(docs/eval-metrics.md 7절). 빠른 말(1.25~2배)은 숙달 뒤 뒤쪽에 몰려
+    # 실력이 그대로여도 최근을 깎고(모의실험: 단어 45회 중 마지막 12회가 빠른 말이면 −11.9%p, 걸러 내면 +0.1%p), 감속 정답은
+    # 앞쪽에 몰려 처음을 올린다(−9.9 → +0.2%p). 짝 탐색 문항은 헷갈리는 대비 단어를 일부러 보기에 넣은 문항이다.
+    natural = [(it, bool(c)) for it, c, spd, probe in rows_tr if _em.is_natural_trial(spd, probe)]
+    n_probe = sum(1 for *_, probe in rows_tr if probe)
+    learning_curve = _em.type_adjusted_curve(natural)
+    baseline_vs_recent = _em.within_type_change(natural)   # 9시행 이상인 유형이 없으면 None
+    if baseline_vs_recent is not None:
+        baseline_vs_recent["excluded"] = {"speed": n_tr - len(natural) - n_probe, "probe": n_probe}
 
     by_item_type = []
     for it, label in (("viseme", "입모양 인지"), ("word", "단어"), ("word_typed", "단어 주관식"),
@@ -2656,15 +2666,19 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
 
     # ── 문장 채점 추이 ───────────────────────────────────────────
     # 난이도·점수 두 열만 읽는다(예전에는 문장·답·피드백 JSON까지 든 Progress 객체 전체)
-    prog = (await db.execute(
-        select(Progress.difficulty_level, Progress.score, Progress.answer_mode).where(Progress.user_id == current_user.id)
-        .order_by(Progress.created_at.asc(), Progress.id.asc()))).all()
+    prog = [(lvl, sc, mode, sid) for lvl, sc, mode, sid in (await db.execute(
+        select(Progress.difficulty_level, Progress.score, Progress.answer_mode, Progress.scenario_id)
+        .where(Progress.user_id == current_user.id)
+        .order_by(Progress.created_at.asc(), Progress.id.asc()))).all()]
+    # 추이와 답 방식별 집계는 복습 행(틀린 문장 복습·북마크·문장 간격 반복)을 뺀다. 복습은 원문이나 정답을 본 뒤 다시 푸는 답이라
+    # 점수가 높고 뒤쪽에 몰려, 실력이 그대로여도 추이가 오른다(모의실험: 뒤 2구간 − 앞 2구간 +0.1 → +8.0점). 개요의 횟수·평균은 전체
+    fresh = [r for r in prog if not _is_review_scenario(r[3])]
     # 문장 난이도 차이를 뺀 점수 추이(raw는 보정 전). 경로가 쉬운 문장에서 어려운 문장으로 간다
-    sentence_trend = _em.group_adjusted_curve([(lvl or 0, sc or 0.0) for lvl, sc, _ in prog],
+    sentence_trend = _em.group_adjusted_curve([(lvl or 0, sc or 0.0) for lvl, sc, _, _ in fresh],
                                               lo=0.0, hi=100.0, ndigits=1)
-    sentence_avg = round(sum(sc or 0 for _, sc, _ in prog) / len(prog), 1) if prog else None
+    sentence_avg = round(sum(sc or 0 for _, sc, _, _ in prog) / len(prog), 1) if prog else None
     # 4지선다(찍어도 25%, 100 또는 0점)와 직접 입력(부분 점수)을 나눠 보인다. 추이는 두 방식이 섞인 값이다
-    sentence_by_mode = _em.by_answer_mode([(mode, sc) for _, sc, mode in prog], _STAGE3_PASS)
+    sentence_by_mode = _em.by_answer_mode([(mode, sc) for _, sc, mode, _ in fresh], _STAGE3_PASS)
 
     return {
         "overview": {
@@ -3215,13 +3229,24 @@ async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_cur
         version = (_asmt.frozen_forms(build_if_missing=False) or {}).get("version") or "unfrozen"
     try:
         from database import PlacementResult
+        trials_before = await _practice_trial_count(current_user.id, db)
+        if form in ("A", "B"):
+            result["trials_before"] = trials_before
+            # 처음 보는 동형 폼이면 사전 검사다. 연습을 기준 이상 한 뒤라면 결과 화면이 부드럽게 알린다(막지 않는다)
+            from sqlalchemy import select as _sel
+            seen = (await db.execute(_sel(PlacementResult.id).where(
+                PlacementResult.user_id == current_user.id, PlacementResult.form.in_(("A", "B"))).limit(1))).first()
+            if seen is None:
+                result["pretest"] = {"trials_before": trials_before,
+                                     "after_training": _asmt.pretest_after_training(trials_before),
+                                     "flag_threshold": _asmt.PRETEST_TRIALS_FLAG}
         db.add(PlacementResult(
             user_id=current_user.id, form=form,
             total=result["total"], correct=result["correct"], accuracy=result["accuracy"],
             ability=result["ability"], level=result["level"],
             error_visemes=result.get("error_visemes", []),
             error_phonemes=result.get("error_phonemes", []),
-            form_version=version, item_log=result.get("item_log", []),
+            form_version=version, item_log=result.get("item_log", []), trials_before=trials_before,
         ))
         # 검사 → 학습 순환(축 I-10): 문항의 입모양별 정오답을 취약 입모양 통계에 넣어, 첫 검사 결과가
         # 곧바로 개인화(지식추적·약점 출제)의 초기값이 되게 한다.
@@ -3251,6 +3276,43 @@ def _placement_scores(*rows) -> list:
     return [{"ability": r.ability, "level": r.level} for r in rows]
 
 
+async def _practice_trial_count(user_id, db) -> int:
+    """지금까지의 독화 연습 시행 수: 선다형 시행(TrialAttempt) + 문장 채점(Progress). 자가진단·표준검사·말하기는 넣지 않는다.
+    검사 결과에 trials_before로 남겨 연습 뒤에 본 사전 검사를 표시한다(assessment.PRETEST_TRIALS_FLAG)."""
+    from sqlalchemy import select, func
+    from database import TrialAttempt, Progress
+    n = 0
+    for M in (TrialAttempt, Progress):
+        n += (await db.execute(select(func.count(M.id)).where(M.user_id == user_id))).scalar() or 0
+    return int(n)
+
+
+def _face_counts(row):
+    """(정답 수, 문항 수). 새 화자 조건이 있는 검사는 기본 얼굴 절반만 센다(_face_accuracy와 같은 기준). 문항 기록이 없으면 저장값."""
+    import assessment as _asmt
+    log = _asmt.default_face_log(getattr(row, "item_log", None))
+    rows = [it for it in (log or []) if isinstance(it, dict)]
+    if rows:
+        return sum(1 for it in rows if it.get("correct")), len(rows)
+    return (row.correct or 0), (row.total or 0)
+
+
+def _accuracy_change(a, b):
+    """사전 a → 사후 b 정답률 차이의 Newcombe 95% 구간(두 검사는 서로 다른 문항이라 독립 표본으로 본다). 문항 수가 0이면 None."""
+    import eval_metrics as _em
+    xa, na = _face_counts(a)
+    xb, nb = _face_counts(b)
+    return _em.newcombe_diff(xa, na, xb, nb)
+
+
+def _pretest_flag(row) -> dict:
+    """사전 검사 전 연습량과 '연습 뒤 사전' 표시(기준 assessment.PRETEST_TRIALS_FLAG). 9/29 이전 검사는 값이 없다."""
+    import assessment as _asmt
+    tb = getattr(row, "trials_before", None)
+    return {"trials_before": tb, "after_training": _asmt.pretest_after_training(tb),
+            "flag_threshold": _asmt.PRETEST_TRIALS_FLAG}
+
+
 def _face_accuracy(row) -> float:
     """기본 얼굴 정답률. 새 화자 조건이 있는 검사(계획 2-3)는 기본 얼굴 절반의 정답률, 그 밖은 저장값."""
     import assessment as _asmt
@@ -3264,10 +3326,13 @@ def _face_accuracy(row) -> float:
 
 @app.get("/api/assessment/history")
 async def assessment_history(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """배치·향상도 검사 이력 — 첫 검사(baseline)와 최근 검사, 그리고 향상도(delta)를 반환.
-    검사가 2회 이상이면 정답률·능력·수준의 증감과 극복한 취약 입모양을 함께 준다.
-    (병합 메모: 저장 테이블이 AssessmentResult → PlacementResult로 통일됐다. 폼(A/B) 구분 없는
-    단순 첫/최근 비교는 이 엔드포인트, 동형 폼 통제 비교는 /api/assessment/progression.)"""
+    """배치·향상도 검사 이력 — 최근 검사와 같은 종류의 앞선 검사(baseline), 그리고 향상도(delta)를 반환.
+    같은 종류끼리만 비교한다(assessment.comparable_pair): 동형 폼(같은 판본의 A·B)끼리, 또는 자가진단(적응형)끼리. 예전에는
+    종류와 상관없이 첫 검사와 비교해, 적응형 자가진단(정답률이 능력과 무관하게 절반 안팎) 뒤 동형 폼을 본 학습자에게 학습 효과가
+    없어도 θ 0.3에서 −18%p가 나왔다. 짝이 없으면 delta는 None이다. comparison에 비교 종류와 문구를 준다.
+    delta.accuracy_ci95·accuracy_clear는 Newcombe 95% 구간과 그 구간이 0을 벗어났는지(화면은 clear일 때만 색을 쓴다).
+    pretest_taken은 동형 폼(A·B)을 한 번이라도 봤는지다(자가진단 뒤 사전 검사 권유에 쓴다).
+    (동형 폼 통제 비교는 /api/assessment/progression.)"""
     import assessment as _asmt
     from database import PlacementResult
     from sqlalchemy import select
@@ -3280,15 +3345,31 @@ async def assessment_history(current_user=Depends(get_current_user), db: AsyncSe
                 "error_visemes": x.error_visemes or [],
                 "at": x.created_at.isoformat() if x.created_at else None}
     if not rows:
-        return {"count": 0, "baseline": None, "latest": None, "delta": None}
-    baseline, latest = _row(rows[0]), _row(rows[-1])
-    sb, sl = _placement_scores(rows[0], rows[-1])
+        return {"count": 0, "baseline": None, "latest": None, "delta": None, "comparison": None,
+                "pretest_taken": False}
+    pretest_taken = any(x.form in _asmt.FIXED_FORMS for x in rows)
+    pair = _asmt.comparable_pair(rows)
+    latest_row = rows[-1]
+    base_row = pair["base"] if pair else None
+    latest = _row(latest_row)
+    if base_row is None:
+        latest.update(_placement_scores(latest_row)[0])
+        return {"count": len(rows), "baseline": None, "latest": latest, "delta": None, "comparison": None,
+                "pretest_taken": pretest_taken}
+    baseline = _row(base_row)
+    sb, sl = _placement_scores(base_row, latest_row)
     baseline.update(sb)
     latest.update(sl)
     # 극복·신규 입모양은 두 검사의 문항 기록을 전부 다시 세어 정한다(저장된 상위 3개끼리 비교하면 순위만 밀린 입모양도 극복으로 나왔다)
-    delta = (_asmt.improvement_delta(baseline, latest, getattr(rows[0], "item_log", None),
-                                     getattr(rows[-1], "item_log", None)) if len(rows) >= 2 else None)
-    return {"count": len(rows), "baseline": baseline, "latest": latest, "delta": delta}
+    delta = _asmt.improvement_delta(baseline, latest, getattr(base_row, "item_log", None),
+                                    getattr(latest_row, "item_log", None))
+    nc = _accuracy_change(base_row, latest_row)
+    delta["accuracy_ci95"] = nc["ci95"] if nc else None
+    delta["accuracy_clear"] = bool(nc and nc["clear"])
+    return {"count": len(rows), "baseline": baseline, "latest": latest, "delta": delta,
+            "comparison": {"kind": pair["kind"], "label": pair["label"],
+                           "baseline_form": base_row.form, "latest_form": latest_row.form},
+            "pretest_taken": pretest_taken}
 
 
 @app.get("/api/assessment/benchmark")
@@ -3381,14 +3462,19 @@ async def assessment_progression(current_user=Depends(get_current_user),
     # talker_transfer에 따로 준다(앱 안 근거리 전이, 실제 사람 전이 아님). 조건이 없는 옛 검사는 예전 값 그대로다.
     acc_a, acc_b = _face_accuracy(a), _face_accuracy(b)
     transfer = _asmt.talker_transfer(getattr(b, "item_log", None))
+    # 개인 차이의 색은 Newcombe 95% 구간이 0을 벗어날 때만(docs/eval-metrics.md 6절). 사전 24문항·사후 기본 얼굴 12문항이라
+    # 구간이 넓고, 학습 효과가 없을 때 예전(부호만 보고 색)에는 35~46%가 빨강이었다
+    nc = _accuracy_change(a, b)
     return {
         "available": True,
-        "pre": {"form": a.form, "accuracy": acc_a, "level": sa["level"], "ability": sa["ability"]},
+        "pre": {"form": a.form, "accuracy": acc_a, "level": sa["level"], "ability": sa["ability"], **_pretest_flag(a)},
         "post": {"form": b.form, "accuracy": acc_b, "level": sb["level"], "ability": sb["ability"],
                  "accuracy_all": b.accuracy,
                  "n_default": transfer["default"]["n"] if transfer else None},
         "talker_transfer": transfer,
         "accuracy_delta": round(acc_b - acc_a, 3),
+        "accuracy_delta_ci95": nc["ci95"] if nc else None,
+        "accuracy_delta_clear": bool(nc and nc["clear"]),
         "level_delta": sb["level"] - sa["level"],
         "ability_delta": round(sb["ability"] - sa["ability"], 3),
         "error_phoneme_change": per_phoneme,
@@ -3448,7 +3534,8 @@ async def assessment_report(tz_offset_min: int = -540, current_user=Depends(get_
         # 능력·수준은 문항 기록이 모두 있으면 지금 추정기로 다시 채점한 값(_placement_scores, 검사끼리 채점 방식이 섞이지 않게)
         "tests": [{"date": local_day(t.created_at), "form": t.form,
                    "form_version": t.form_version, "total": t.total, "correct": t.correct,
-                   "accuracy": round(t.accuracy or 0, 3), "ability": round(sc["ability"] or 0, 2), "level": sc["level"]}
+                   "accuracy": round(t.accuracy or 0, 3), "ability": round(sc["ability"] or 0, 2), "level": sc["level"],
+                   "trials_before": getattr(t, "trials_before", None)}
                   for t, sc in zip(tests, _placement_scores(*tests) if tests else [])],
         "progression": progression,
         "error_profile": {"visemes": err_vis, "phonemes": err_pho,
@@ -3461,7 +3548,11 @@ async def assessment_report(tz_offset_min: int = -540, current_user=Depends(get_
         "articulation": art,
         "notes": ["이 검사는 규준(연령·청력 집단별 기준 점수)이 아직 없어 다른 학습자와 비교하는 점수가 아닙니다.",
                   "동형 폼 A·B의 신뢰도(KR-20 약 0.76)는 모의실험 값이며, 실제 학습자 자료로 확인하고 있습니다.",
-                  "사전·사후 비교는 같은 학습자의 변화를 보는 용도로 씁니다."],
+                  "사전·사후 비교는 같은 학습자의 변화를 보는 용도로 씁니다. 사전 24문항·사후 기본 얼굴 12문항이라 한 사람의 "
+                  "차이는 잡음이 커서, 95% 구간이 0을 벗어난 경우만 좋아짐·나빠짐으로 읽습니다."]
+                 + ([f"사전 검사를 독화 연습 {progression['pre']['trials_before']}회 뒤에 봤습니다. 연습 효과가 사전 점수에 "
+                     "들어가 향상도가 작게 나올 수 있습니다."]
+                    if progression.get("available") and progression["pre"].get("after_training") else []),
     }
 
 

@@ -515,6 +515,56 @@ def phoneme_change(base_log, late_log) -> List[Dict]:
              "delta": eb["phonemes"][p] - ea["phonemes"][p]} for p in phonemes]
 
 
+# ── 재검사 비교 짝(/api/assessment/history, 9/29) ──
+# 예전에는 첫 검사와 최근 검사를 종류와 상관없이 비교했다. 첫 검사는 대개 적응형 자가진단이라 정답률이 능력과 상관없이 절반
+# 안팎으로 모이고, 동형 폼은 고정 문항이라 능력에 따라 오르내린다. 학습 효과가 없어도 θ 0.3인 학습자에게 −18%p가 나왔다.
+# 이제 같은 종류끼리만 비교한다: 동형 폼(A·B, 같은 판본)끼리, 또는 자가진단(적응형)끼리.
+FIXED_FORMS = ("A", "B")
+
+
+def comparable_pair(rows) -> Optional[Dict]:
+    """rows(시간순, .form·.form_version을 가진 검사 기록)에서 최근 검사와 비교할 앞선 검사를 고른다.
+    최근이 동형 폼이면 같은 판본의 다른 폼 중 가장 이른 것(없으면 같은 폼 중 가장 이른 것, 문항을 기억했을 수 있음),
+    자가진단이면 가장 이른 자가진단. 짝이 없으면 None. 돌려주는 값: {base, latest, kind, label}."""
+    rows = list(rows or [])
+    if len(rows) < 2:
+        return None
+    last = rows[-1]
+    prev = rows[:-1]
+    lf = getattr(last, "form", None) or "placement"
+    if lf in FIXED_FORMS:
+        same_ver = [r for r in prev if getattr(r, "form", None) in FIXED_FORMS
+                    and getattr(r, "form_version", None) == getattr(last, "form_version", None)]
+        other = [r for r in same_ver if r.form != lf]
+        if other:
+            return {"base": other[0], "latest": last, "kind": "fixed_forms",
+                    "label": f"동형 폼 {other[0].form}→{lf} 비교"}
+        same = [r for r in same_ver if r.form == lf]
+        if same:
+            return {"base": same[0], "latest": last, "kind": "same_form",
+                    "label": f"같은 폼 {lf}를 다시 본 비교(문항을 기억했을 수 있어요)"}
+        return None
+    adaptive = [r for r in prev if (getattr(r, "form", None) or "placement") not in FIXED_FORMS]
+    if adaptive:
+        return {"base": adaptive[0], "latest": last, "kind": "adaptive", "label": "자가진단(적응형)끼리 비교"}
+    return None
+
+
+# ── 사전 검사 전 연습량(9/29) ──
+# 사전 검사(A)는 학습 효과 리포트 안에서 언제든 볼 수 있어, 연습을 많이 한 뒤에 본 '사전'이 섞일 수 있다. 채점할 때 그때까지의
+# 독화 연습 시행 수(선다형 TrialAttempt + 문장 Progress, 자가진단·말하기 제외)를 trials_before로 남기고, 이 값이 기준 이상인 사전
+# 검사는 '연습 뒤 사전'으로 표시한다. 기준 20회는 1단계 레슨 하나(12문항)를 넘고 두 번째 레슨 중간쯤이다. 1단계는 첫 레슨
+# 안에서 숙달되는 경우가 많아(모의실험 p=0.9에서 88%) 이 정도면 사전 점수에 연습 효과가 들어갈 수 있다. 막지는 않는다.
+PRETEST_TRIALS_FLAG = 20
+
+
+def pretest_after_training(trials_before) -> Optional[bool]:
+    """사전 검사가 연습 뒤에 치러졌는지. 기록이 없으면(9/29 이전 검사) None."""
+    if trials_before is None:
+        return None
+    return int(trials_before) >= PRETEST_TRIALS_FLAG
+
+
 def improvement_delta(baseline: Dict, latest: Dict, base_log=None, late_log=None) -> Dict:
     """첫 검사(baseline)와 최근 검사(latest)의 향상도 — 각 지표의 증감과 극복/신규 취약 입모양.
     훈련 전/후를 같은 척도로 비교해 '실제로 나아졌는지'를 객관 수치로 준다. 순수 함수.
