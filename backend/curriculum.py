@@ -181,14 +181,6 @@ def homophene_cluster_of(viseme_id: int) -> Optional[Dict]:
     return None
 
 
-def same_homophene_cluster(a: int, b: int) -> bool:
-    """두 viseme가 '서로 비슷하게 보이는' 같은 무리인지."""
-    if a == b:
-        return True
-    ca = homophene_cluster_of(a)
-    return ca is not None and b in ca["viseme_ids"]
-
-
 def all_viseme_ids() -> List[int]:
     """가르치는 viseme 그룹 id 목록(1~10)."""
     return [l["viseme_id"] for l in VISEME_LESSONS]
@@ -198,6 +190,88 @@ def quizzable_lessons() -> List[Dict]:
     """겉으로 구별 가능한 그룹만(인지퀴즈 대상). 입 안쪽 자음(visibility='low')은
     애초에 입모양만으로 구별 불가라 퀴즈에서 제외하고 '문맥 필요'로 가르친다."""
     return [l for l in VISEME_LESSONS if l["visibility"] != "low"]
+
+
+# ── 1단계 '같은지 다른지'(AX) 문항(docs/mastery-ewma.md 11절, A0(2)) ──
+# 아바타가 받침 없는 음절 둘을 차례로 말하고 학습자는 '같아요'·'달라요'를 누른다. 짝은 한 자리만 다르다(자음 짝은 모음 ㅏ·ㅣ·ㅗ를
+# 같게, 모음 짝은 초성 ㅇ·ㅂ을 같게). 정답은 바뀐 자리 두 무리의 '보이는 부류'가 같은지로 정한다: 입술 닫힘(1), 입 안쪽(6·7·8·10),
+# 첫소리 없음(ㅇ), 모음 2·3·4·5 각각. 화면(frontend/src/lib/visemeAx.js)이 같은 규칙으로 짝을 고르고, 서버는 화면이 보낸 정답을 믿지
+# 않고 여기서 다시 정한다. 이 답은 1단계 숙달에 넣지 않는다(11.9절, 시행 기록과 XP에만).
+# 자리별 (입모양 무리, 엔진 프레임 길이 ms). 길이는 engine.DURATION_MAP 값이고 test_viseme_ax가 엔진 출력과 맞는지 확인한다.
+AX_ONSETS: Dict[str, tuple] = {
+    'ㅇ': (None, 0), 'ㅂ': (1, 110), 'ㅁ': (1, 120), 'ㅍ': (1, 150),
+    'ㄷ': (6, 110), 'ㄴ': (6, 120), 'ㅅ': (6, 110), 'ㅌ': (6, 150),
+    'ㄱ': (7, 110), 'ㅋ': (7, 150), 'ㅎ': (8, 150), 'ㅈ': (10, 110), 'ㅊ': (10, 150),
+}
+AX_VOWELS: Dict[str, tuple] = {
+    'ㅏ': (2, 180), 'ㅐ': (2, 150), 'ㅣ': (3, 150), 'ㅔ': (3, 150),
+    'ㅗ': (4, 180), 'ㅜ': (4, 180), 'ㅓ': (5, 150), 'ㅡ': (5, 150),
+}
+AX_CONSONANT_CONTEXT = ('ㅏ', 'ㅣ', 'ㅗ')   # 자음 짝의 공통 모음
+AX_VOWEL_CONTEXT = ('ㅇ', 'ㅂ')            # 모음 짝의 공통 초성
+AX_INSIDE = frozenset({6, 7, 8, 10})
+# 아바타에서 애매해 내지 않는 무리 짝(None = 첫소리 없음). 아바타 얼굴 모프 가중치 공간의 거리를 기본 화자와 가상 화자 6명에서 재,
+# 같은 부류인데 한 화자라도 0.2 이상(경구개 10 대 6·7·8)이거나 다른 부류인데 한 화자라도 0.3 미만(입 안쪽 대 첫소리 없음, 모음 2 대 5)인
+# 짝이다. visemeAx.test.mjs가 화자별 거리로 이 목록을 다시 계산해 맞는지 보고, test_viseme_ax가 두 목록이 같은지 본다.
+AX_EXCLUDED_GROUP_PAIRS = frozenset(frozenset(p) for p in [
+    (6, 10), (7, 10), (8, 10), (None, 6), (None, 7), (None, 8), (None, 10), (2, 5),
+])
+AX_SAME_MAX_MS_DIFF = 10   # '같음' 짝은 바뀐 자리의 엔진 길이 차가 이 이하(모양이 아니라 길이로 가를 수 없게)
+
+_CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'
+_JUNG = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ'
+
+
+def _ax_split(syl: str) -> Optional[tuple]:
+    """받침 없는 한 글자 → (초성, 중성). 아니면 None."""
+    if not isinstance(syl, str) or len(syl) != 1 or not ('가' <= syl <= '힣'):
+        return None
+    c = ord(syl) - 0xAC00
+    if c % 28:
+        return None
+    return _CHO[c // 588], _JUNG[(c % 588) // 28]
+
+
+def _ax_class(group) -> str:
+    if group is None:
+        return "none"
+    return "inside" if group in AX_INSIDE else str(group)
+
+
+def ax_pair(a: str, b: str) -> Optional[Dict]:
+    """AX 짝 판정. 내지 않는 짝(목록 밖 자모, 두 자리 이상 다름, 같은 글자, 애매한 무리 짝, 길이로 갈리는 '같음')이면 None.
+    반환 {same, inside, slot('onset'|'vowel'), groups: [a쪽, b쪽]}."""
+    sa, sb = _ax_split(a), _ax_split(b)
+    if sa is None or sb is None or sa == sb:
+        return None
+    (oa, va), (ob, vb) = sa, sb
+    if oa not in AX_ONSETS or ob not in AX_ONSETS or va not in AX_VOWELS or vb not in AX_VOWELS:
+        return None
+    if va == vb and va in AX_CONSONANT_CONTEXT:
+        slot, (ga, ma), (gb, mb) = "onset", AX_ONSETS[oa], AX_ONSETS[ob]
+    elif oa == ob and oa in AX_VOWEL_CONTEXT:
+        slot, (ga, ma), (gb, mb) = "vowel", AX_VOWELS[va], AX_VOWELS[vb]
+    else:
+        return None
+    if ga != gb and frozenset({ga, gb}) in AX_EXCLUDED_GROUP_PAIRS:
+        return None
+    same = _ax_class(ga) == _ax_class(gb)
+    if same and abs(ma - mb) > AX_SAME_MAX_MS_DIFF:
+        return None
+    return {"same": same, "inside": ga in AX_INSIDE or gb in AX_INSIDE, "slot": slot, "groups": [ga, gb]}
+
+
+def ax_candidates() -> List[tuple]:
+    """자리 규칙으로 만들 수 있는 모든 짝(제외 전). 음절은 초성·모음 목록 순서로 앞선 쪽이 a."""
+    def compose(o, v):
+        return chr(0xAC00 + _CHO.index(o) * 588 + _JUNG.index(v) * 28)
+    ons, vows = list(AX_ONSETS), list(AX_VOWELS)
+    out = []
+    for v in AX_CONSONANT_CONTEXT:
+        out += [(compose(ons[i], v), compose(ons[j], v)) for i in range(len(ons)) for j in range(i + 1, len(ons))]
+    for o in AX_VOWEL_CONTEXT:
+        out += [(compose(o, vows[i]), compose(o, vows[j])) for i in range(len(vows)) for j in range(i + 1, len(vows))]
+    return out
 
 
 # ── 2단계: 큐레이션 단어(음절·단어) ──────────────────────────────────────────

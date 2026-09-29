@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { curriculumAPI } from '../api'
+import { curriculumAPI, learningAPI } from '../api'
 import AvatarVRM from '../components/AvatarVRM'
+import MouthAvatar from '../components/MouthAvatar'
 import VocalTract from '../components/VocalTract'
 import VocalTractSimulator from '../components/VocalTractSimulator'
 import VocalTractVTL from '../components/VocalTractVTL'
@@ -16,6 +17,7 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { pickVisemeDistractors, balancedTargets } from '../lib/visemeOptions'
 import { plainVisemeLabel, lessonPlainLabel } from '../lib/visemeLabels'
+import { pickAxItems, axSlots, axExplain, axFrames } from '../lib/visemeAx'
 import { visemeCycleSteps } from '../lib/visemeCycle'
 import { applyTalkerCycle } from '../lib/talkers'
 import TalkerChip from '../components/TalkerChip'
@@ -38,7 +40,9 @@ const WebcamMouthCheck = lazy(() => import('../components/WebcamMouthCheck'))
  * /learn/viseme?tab=learn (또는 ?v=그룹번호)로 연다 — 연습 탭의 '입모양 교실' 카드가 이리로 온다.
  *
  * 퀴즈는 LipSyncPlayer3D를 쓰지 않는다 — 그 컴포넌트는 하단에 'Viseme N'을 노출해
- * 정답이 새기 때문. 대신 AvatarVRM을 직접 써서 오버레이 없이 입모양만 보여준다.
+ * 정답이 새기 때문. 대신 MouthAvatar로 오버레이 없이 입모양만 보여준다. 고르기 문항은 입모양 하나를 되풀이하고,
+ * 7~12번 가운데 두 자리의 '같은지 다른지'(AX) 문항은 음절 둘을 차례로 말한다(lib/visemeAx). 한 아바타를 계속 써서
+ * 문항 유형이 바뀌어도 WebGL 컨텍스트를 다시 만들지 않는다.
  */
 
 // 보임 정도 배지 — 의미색 토큰(잘 보임=good · 보통=warn · 거의 안 보임=회색)
@@ -64,12 +68,9 @@ const lessonLabel = (lesson) => {
   return phonemes ? `${lesson.name}(${phonemes})` : lesson?.name || ''
 }
 
-// neutral(15) ↔ target 반복 → 입모양이 '만들어지는' 움직임을 보여준다.
-// 정적보다 인지가 쉽고, 정답 숫자를 노출하지 않는다.
-// height=null이면 부모 카드 높이를 채운다(className="h-full") — 레슨 입모양 카드(모바일 214 / lg 370).
-// talker·talkerSeed: 퀴즈 레슨의 가상 화자(lib/talkers, 계획 2-2). 반복 속도와 입모양 배율에 쓰고 왼쪽 위에 화자 이름을 작게 보인다.
-function VisemeAvatar({ visemeId, height = 300, variant = 'learn', className = '', talker = null, talkerSeed = 0 }) {
-  const isQuiz = variant === 'quiz'
+// neutral(15) ↔ target 반복 → 입모양이 '만들어지는' 움직임을 보여준다(학습 자료). 투명 두상·성도 단면 토글이 붙는다.
+// 퀴즈는 MouthAvatar를 쓴다(QuizPanel).
+function VisemeAvatar({ visemeId, height = 300, className = '', talker = null, talkerSeed = 0 }) {
   const [vid, setVid] = useState(15)
   const [tm, setTm] = useState({ t: undefined, d: undefined })   // 이번 입모양의 전환·머무는 시간(ms)
   const [xray, setXray] = useState(false)        // 투명 두상: 피부 반투명 → 혀·치아 노출(계획서 F)
@@ -92,7 +93,7 @@ function VisemeAvatar({ visemeId, height = 300, variant = 'learn', className = '
   }, [visemeId, talker, talkerSeed])
   return (
     <div className={className}>
-      <div className={`relative w-full overflow-hidden ${height == null ? 'h-full' : ''} ${isQuiz ? 'rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900' : 'rounded-2xl shadow-xl bg-gradient-to-b from-slate-800 to-slate-900'}`}
+      <div className={`relative w-full overflow-hidden rounded-2xl shadow-xl bg-gradient-to-b from-slate-800 to-slate-900 ${height == null ? 'h-full' : ''}`}
            style={height != null ? { height } : undefined}>
         <AvatarVRM visemeId={vid} xray={xray} transitionMs={tm.t} durationMs={tm.d} talker={talker} />
         <TalkerChip talker={talker} />
@@ -102,17 +103,15 @@ function VisemeAvatar({ visemeId, height = 300, variant = 'learn', className = '
           </div>
         )}
       </div>
-      {/* 안 보이는 조음(혀·치아) 시각화 토글 — 독화 교육 핵심 (학습 자료에서만) */}
-      {!isQuiz && (
-        <div className="mt-2 flex gap-2">
-          <button onClick={() => setXray((v) => !v)}
-            className={`flex-1 py-1.5 text-xs rounded-lg font-bold transition-colors ${xray ? 'bg-primary-500 text-white' : 'bg-surface-sunken text-ink-muted hover:bg-surface-hover'}`}
-            title="피부를 반투명하게 해 안 보이는 혀·치아를 드러냄">투명 두상</button>
-          <button onClick={() => setShowTract((v) => !v)}
-            className={`flex-1 py-1.5 text-xs rounded-lg font-bold transition-colors ${showTract ? 'bg-primary-500 text-white' : 'bg-surface-sunken text-ink-muted hover:bg-surface-hover'}`}
-            title="측면 성도 단면으로 혀·입술·턱 조음 보기">성도 단면</button>
-        </div>
-      )}
+      {/* 안 보이는 조음(혀·치아) 시각화 토글 — 독화 교육 핵심 */}
+      <div className="mt-2 flex gap-2">
+        <button onClick={() => setXray((v) => !v)}
+          className={`flex-1 py-1.5 text-xs rounded-lg font-bold transition-colors ${xray ? 'bg-primary-500 text-white' : 'bg-surface-sunken text-ink-muted hover:bg-surface-hover'}`}
+          title="피부를 반투명하게 해 안 보이는 혀·치아를 드러냄">투명 두상</button>
+        <button onClick={() => setShowTract((v) => !v)}
+          className={`flex-1 py-1.5 text-xs rounded-lg font-bold transition-colors ${showTract ? 'bg-primary-500 text-white' : 'bg-surface-sunken text-ink-muted hover:bg-surface-hover'}`}
+          title="측면 성도 단면으로 혀·입술·턱 조음 보기">성도 단면</button>
+      </div>
     </div>
   )
 }
@@ -350,12 +349,18 @@ function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome }) {
   )
 }
 
+// '같은지 다른지'(AX) 답 버튼 둘(lib/visemeAx). 글을 읽지 않아도 되게 크게 기호(= / ≠)를 보이고, 숫자 키 1·2로도 누른다.
+const AX_CHOICES = [
+  { key: 'same', mark: '=', label: '같아요' },
+  { key: 'different', mark: '≠', label: '달라요' },
+]
+
 function QuizPanel({ data }) {
   const navigate = useNavigate()
   const { lessons } = data
   const quizzable = useMemo(() => lessons.filter((l) => l.quizzable), [lessons])
-  const [q, setQ] = useState(null)
-  const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계)
+  const [q, setQ] = useState(null)                 // 고르기 {kind:'pick', target, choices} | AX {kind:'ax', pair, frames}
+  const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계, 고르기 문항)
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
@@ -363,9 +368,11 @@ function QuizPanel({ data }) {
   const [tally, setTally] = useState({ n: 0, correct: 0 })   // 이번 레슨에서 푼 문항·정답 수 → 완료 뷰 정답률
   const [done, setDone] = useState(false)          // 12문항을 마치면 완료 뷰(93:12)
   const [xpEarned, setXpEarned] = useState(0)      // 레슨 동안 서버가 준 XP 합(응답 xp_gained) → 완료 뷰
+  const isAx = q?.kind === 'ax'
   // 문항 북마크 — 입모양 그룹의 대표 음절(없으면 이름)을 저장한다. 저장한 문장 화면에서 그 음절 입모양을 다시 본다.
-  const [saved, toggleSaved] = useBookmark(q ? (q.target.demo_syllable || lessonLabel(q.target)) : null,
-    { situation: q ? `입모양 · ${q.target.name}` : '' })
+  // AX 문항은 저장하지 않는다.
+  const [saved, toggleSaved] = useBookmark(q && !isAx ? (q.target.demo_syllable || lessonLabel(q.target)) : null,
+    { situation: q && !isAx ? `입모양 · ${q.target.name}` : '' })
   const startRef = useRef(Date.now())              // 레슨 시작 시각 → 걸린 시간
   const [elapsedSec, setElapsedSec] = useState(0)
   // 레슨마다 가상 화자 한 명(계획 2-2). 다섯 레슨마다 첫 레슨은 기본 화자다.
@@ -373,9 +380,10 @@ function QuizPanel({ data }) {
 
   // 레슨(12문항)의 정답 무리 순서: 무리마다 두 번씩, 연달아 같은 무리 없이(lib/visemeOptions.balancedTargets).
   // 예전 매 문항 무작위는 한 레슨에서 무리 하나 이상이 빠질 확률이 56%였다.
-  const deckRef = useRef({ list: [], i: 0 })
-  const newQ = useCallback((fresh = false) => {
-    if (fresh || deckRef.current.i >= deckRef.current.list.length) deckRef.current = { list: balancedTargets(quizzable, QUIZ_LEN), i: 0 }
+  // 첫 바퀴(1~6번, 무리 여섯이 한 번씩) 뒤 7~12번 가운데 두 자리는 AX 문항(입 안쪽 짝 1, 보이는 짝 1)이다. AX 답은 1단계 숙달에
+  // 넣지 않는다(docs/mastery-ewma.md 11.9절: 오답 −1로 넣는 설계는 거짓 숙달을 늘려 탈락, 숙달에서 뺀 설계가 확인을 통과).
+  const deckRef = useRef({ list: [], i: 0, axAt: new Set(), axItems: [], axI: 0 })
+  const pickQ = useCallback(() => {
     const target = deckRef.current.list[deckRef.current.i++] || quizzable[0]
     // 오답은 화면에서 가를 수 있는 무리만(정답이 중설모음이면 입 안쪽 무리 제외, lib/visemeOptions).
     // 후보는 정답과 같은 모집단(quizzable)으로 한다. 10개 무리 전체에서 뽑으면 정답이 될 수 없는 6·7·8·10이 보기에 섞여,
@@ -383,18 +391,52 @@ function QuizPanel({ data }) {
     const others = pickVisemeDistractors(target.viseme_id, quizzable)
     // 보기는 쉬운 이름('입술 닫힘 (바·마)', lib/visemeLabels). 예전 '양순음(ㅂ, ㅃ, ㅍ, ㅁ)'은 이름표를 외우고 긴 글을 읽어야 했다
     const choices = shuffle([target, ...others]).map((l) => ({ viseme_id: l.viseme_id, name: lessonPlainLabel(l) }))
-    setQ({ target, choices })
+    return { kind: 'pick', target, choices }
+  }, [quizzable])
+  const newQ = useCallback((fresh = false, n = 1) => {
+    if (fresh || deckRef.current.i >= deckRef.current.list.length) {
+      deckRef.current = { list: balancedTargets(quizzable, QUIZ_LEN), i: 0, axAt: axSlots(QUIZ_LEN, quizzable.length),
+        axItems: pickAxItems(), axI: 0 }
+    }
     setSelected(null)
     setResult(null)
-  }, [lessons, quizzable])
+    const deck = deckRef.current
+    if (!deck.axAt.has(n) || deck.axI >= deck.axItems.length) {
+      setQ(pickQ())
+      return
+    }
+    const pair = deck.axItems[deck.axI++]
+    const axQ = { kind: 'ax', pair, frames: null }
+    setQ(axQ)
+    // 두 음절의 입모양 프레임은 엔진(/api/viseme)에서 받는다. 받지 못하면 이 자리는 고르기 문항으로 낸다
+    Promise.all([learningAPI.getVisemes(pair.a), learningAPI.getVisemes(pair.b)])
+      .then(([fa, fb]) => setQ((cur) => (cur === axQ ? { ...axQ, frames: axFrames(fa, fb) } : cur)))
+      .catch(() => setQ((cur) => (cur === axQ ? pickQ() : cur)))
+  }, [quizzable, pickQ])
 
   useEffect(() => { newQ(true) }, [newQ])
 
-  // 보기 숫자 키 1~4(§4-03) — 채점 중·결과 표시 중에는 받지 않는다.
-  useChoiceKeys(q?.choices, (c) => setSelected(c.viseme_id), !!q && !result && !submitting && !done)
+  const answerAx = async (choice) => {
+    if (!isAx || !q.frames || result || submitting) return
+    setSubmitting(true)
+    try {
+      const r = await curriculumAPI.submitRecognitionAx(q.pair.a, q.pair.b, choice, AX_CHOICES.map((c) => c.key))
+      setResult({ ...r, chosenKey: choice })
+      setXpEarned((x) => x + (r.xp_gained || 0))
+      setTally((t) => ({ n: t.n + 1, correct: t.correct + (r.correct ? 1 : 0) }))
+    } catch {
+      /* 네트워크 실패는 조용히 무시 — 다시 시도 가능 */
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // 보기 숫자 키 1~4(§4-03), AX는 1·2. 채점 중·결과 표시 중에는 받지 않는다.
+  useChoiceKeys(isAx ? AX_CHOICES : q?.choices, (c) => (isAx ? answerAx(c.key) : setSelected(c.viseme_id)),
+    !!q && !result && !submitting && !done && (!isAx || !!q.frames))
 
   const confirm = async () => {
-    if (result || submitting || selected == null) return
+    if (result || submitting || selected == null || isAx) return
     setSubmitting(true)
     try {
       const r = await curriculumAPI.submitRecognition(q.target.viseme_id, selected, q.choices.map((c) => c.viseme_id))
@@ -415,15 +457,15 @@ function QuizPanel({ data }) {
       setDone(true)
       return
     }
-    setQNum((n) => n + 1)
-    newQ()
+    setQNum(qNum + 1)
+    newQ(false, qNum + 1)
   }
   // 새 레슨(12문항) — 단계를 아직 숙달하지 못했을 때 '다음 레슨으로'가 같은 단계의 다음 세트를 연다.
   const restart = () => {
     setDone(false); setQNum(1); setTally({ n: 0, correct: 0 }); setXpEarned(0)
     startRef.current = Date.now()
     nextLesson()
-    newQ(true)
+    newQ(true, 1)
   }
 
   if (!q) return null
@@ -445,6 +487,13 @@ function QuizPanel({ data }) {
     if (c.viseme_id === q.target.viseme_id) return result.chosenId === c.viseme_id ? 'correct' : 'target'
     return result.chosenId === c.viseme_id ? 'wrong' : 'idle'
   }
+  const axState = (c) => {
+    if (!result) return 'idle'
+    if (c.key === result.answer) return result.chosenKey === c.key ? 'correct' : 'target'
+    return result.chosenKey === c.key ? 'wrong' : 'idle'
+  }
+  // AX 결과 설명. 입 안쪽 '같음' 짝은 1단계가 가르치는 '같아 보이는 무리'를 짚는 안내라 경고색으로 강조한다
+  const axSameLooking = isAx && q.pair.inside && q.pair.same
 
   return (
     <>
@@ -464,37 +513,57 @@ function QuizPanel({ data }) {
           {/* 질문 + 북마크(91:19 · 328:40 / 모바일 235:42 · 328:64) */}
           <div className="relative flex flex-col gap-1.5 pr-12 leading-figma lg:gap-2 lg:pr-[52px]">
             <p className="text-[12px] font-bold text-track lg:text-[13px]">입모양 인지</p>
-            <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">이 입모양은 어느 그룹일까요?</h1>
-            <BookmarkButton active={saved} onToggle={toggleSaved} className="absolute right-0 top-[14px] lg:top-[21px]" />
+            <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">
+              {isAx ? '두 입모양이 같을까요?' : '이 입모양은 어느 그룹일까요?'}
+            </h1>
+            {!isAx && <BookmarkButton active={saved} onToggle={toggleSaved} className="absolute right-0 top-[14px] lg:top-[21px]" />}
           </div>
 
-          {/* 입모양 카드(91:22 560×370 / 모바일 235:45 전체 폭×214) — 아바타만, 무한 반복(다시 보기 없음) */}
+          {/* 입모양 카드(91:22 560×370 / 모바일 235:45 전체 폭×214) — 아바타만, 무한 반복(다시 보기 없음).
+              고르기는 입모양 하나를 되풀이하고, AX는 음절 둘을 쉼을 두고 차례로 되풀이한다(프레임을 받기 전에는 중립) */}
           <div className={LESSON_AVATAR_VISEME}>
-            <VisemeAvatar visemeId={q.target.viseme_id} variant="quiz" height={null} className="h-full"
-              talker={lesson.talker} talkerSeed={lesson.seed} />
+            <MouthAvatar frames={isAx ? q.frames : null} visemeId={isAx ? (q.frames ? null : 15) : q.target.viseme_id}
+              height={null} className="h-full" talker={lesson.talker} talkerSeed={lesson.seed} />
           </div>
 
-          {/* 4지선다(91:28 / 모바일 235:51) — 선택 → 확인 */}
-          <div className={LESSON_OPTIONS}>
-            {q.choices.map((c, i) => (
-              <button key={c.viseme_id} type="button" disabled={!!result || submitting} onClick={() => setSelected(c.viseme_id)}
-                aria-pressed={!result ? selected === c.viseme_id : undefined} className={OPTION_CLASS[optionState(c)]}>
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold leading-figma text-ink-muted lg:size-7 lg:rounded-lg lg:text-[13px]">{i + 1}</span>
-                <span className="flex-1 text-[18px] font-bold leading-figma lg:text-[20px]">{c.name}</span>
-              </button>
-            ))}
-          </div>
+          {isAx ? (
+            // AX(같은지 다른지): 큰 버튼 둘, 누르면 바로 채점
+            <div className="grid grid-cols-2 gap-2.5 lg:gap-3">
+              {AX_CHOICES.map((c, i) => (
+                <button key={c.key} type="button" disabled={!!result || submitting || !q.frames} onClick={() => answerAx(c.key)}
+                  aria-label={c.label} className={`${AX_BTN_CLASS[axState(c)]} disabled:cursor-default`}>
+                  <span className="text-[44px] font-bold leading-none lg:text-[52px]" aria-hidden>{c.mark}</span>
+                  <span className="text-[17px] font-bold leading-figma lg:text-[19px]">{c.label}</span>
+                  <span className="absolute left-3 top-3 flex size-6 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold text-ink-muted" aria-hidden>{i + 1}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            // 4지선다(91:28 / 모바일 235:51) — 선택 → 확인
+            <div className={LESSON_OPTIONS}>
+              {q.choices.map((c, i) => (
+                <button key={c.viseme_id} type="button" disabled={!!result || submitting} onClick={() => setSelected(c.viseme_id)}
+                  aria-pressed={!result ? selected === c.viseme_id : undefined} className={OPTION_CLASS[optionState(c)]}>
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold leading-figma text-ink-muted lg:size-7 lg:rounded-lg lg:text-[13px]">{i + 1}</span>
+                  <span className="flex-1 text-[18px] font-bold leading-figma lg:text-[20px]">{c.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
-          {/* 결과 상세(문맥 힌트 · 독화 포인트) — 핵심 교육 패널이라 유지, 고정 바 위 스크롤 영역 */}
+          {/* 결과 상세(독화 포인트 · 같아 보이는 무리 안내) — 핵심 교육 패널이라 유지, 고정 바 위 스크롤 영역 */}
           <AnimatePresence>
             {result && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-                {!result.correct && result.same_cluster && (
-                  <div className="rounded-16 border-2 border-warn/40 bg-warn-tint px-4 py-3 text-[13px] text-warn-text">
-                    헷갈릴 만해요! 이 둘은 <b>같아 보이는 무리</b>라 입모양만으론 구별이 어렵습니다. 실제로는 문맥으로 판단해요.
+                {isAx ? (
+                  <div className={axSameLooking
+                    ? 'rounded-16 border-2 border-warn/40 bg-warn-tint px-4 py-3 text-[13px] text-warn-text'
+                    : 'rounded-16 border-2 border-line bg-white p-3 text-[13px] text-ink-muted'}>
+                    <b>「{q.pair.a}」·「{q.pair.b}」</b> {axExplain(q.pair)}
                   </div>
+                ) : (
+                  <div className="rounded-16 border-2 border-line bg-white p-3 text-[13px] text-ink-muted">{result.target.teach}</div>
                 )}
-                <div className="rounded-16 border-2 border-line bg-white p-3 text-[13px] text-ink-muted">{result.target.teach}</div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -502,21 +571,26 @@ function QuizPanel({ data }) {
       </div>
 
       {/* 하단 고정 바 — 문제(130:17) · 정답(94:133) · 오답(94:175). lg 미만(235:68 · 235:105)은 힌트 없이
-          메시지 위·전체 폭 버튼 아래로 쌓는다(§4-12 "모바일 레슨의 하단 버튼은 전체 폭"). */}
+          메시지 위·전체 폭 버튼 아래로 쌓는다(§4-12 "모바일 레슨의 하단 버튼은 전체 폭"). AX는 버튼을 누르면 바로 채점해 확인 버튼이 없다. */}
       <div className={`fixed inset-x-0 bottom-0 z-40 border-t-2 ${!result ? 'border-line bg-white' : result.correct ? 'border-good bg-good-tint lg:border-good/35' : 'border-bad bg-bad-tint lg:border-bad/35'}`}>
         <div className="mx-auto flex max-w-[676px] flex-col items-stretch gap-3 px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-4 lg:h-[110px] lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:py-0">
           {result ? (
             // 정오 피드백은 스크린리더에 알린다(role=status·aria-live) — 잔존청력·저시력 사용자 대상(c92fdc3, 병합 복원)
             <div role="status" aria-live="polite" className={`flex min-w-0 flex-col gap-[3px] leading-figma lg:gap-1 ${result.correct ? 'text-good-text' : 'text-bad-text'}`}>
               <p className="text-[19px] font-bold tracking-[-0.38px] lg:text-[22px] lg:tracking-[-0.44px]">{result.correct ? '정답이에요!' : '아쉬워요'}</p>
-              <p className="line-clamp-2 text-[13px] font-bold opacity-80 lg:text-[14px]">{result.correct ? result.target.teach : `정답은 「${lessonPlainLabel(q.target)}」예요`}</p>
+              <p className="line-clamp-2 text-[13px] font-bold opacity-80 lg:text-[14px]">
+                {isAx ? `두 입모양은 ${result.answer === 'same' ? '같아요' : '달라요'}`
+                  : result.correct ? result.target.teach : `정답은 「${lessonPlainLabel(q.target)}」예요`}
+              </p>
             </div>
+          ) : isAx ? (
+            <span className="text-[15px] leading-figma text-ink-faint">{q.frames ? '같으면 =, 다르면 ≠' : '입모양을 불러오는 중'}</span>
           ) : (
             <span className="hidden text-[15px] leading-figma text-ink-faint lg:inline">{selected == null ? '보기를 선택해주세요' : '정답을 확인해보세요'}</span>
           )}
           {result ? (
             <button type="button" onClick={next} className={`${result.correct ? 'btn-good' : 'btn-bad'} btn-bar ${BAR_BTN}`}>계속하기</button>
-          ) : (
+          ) : !isAx && (
             <button type="button" onClick={confirm} disabled={selected == null || submitting} className={`btn-primary btn-bar ${BAR_BTN}`}>확인</button>
           )}
         </div>
@@ -537,4 +611,13 @@ const OPTION_CLASS = {
   correct: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-good-tint text-good-text`,   // 고른 답이 정답
   target: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-white text-ink`,              // 오답일 때 정답 표시
   wrong: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-bad bg-bad-tint text-bad-text`,        // 고른 오답
+}
+
+// AX 답 버튼(같아요 · 달라요). 보기와 같은 3D 하단테두리·공개 색을 쓰고, 글 대신 큰 기호가 눈에 먼저 들어오게 세로로 쌓는다.
+const AX_BTN_BASE = 'relative flex h-[112px] w-full flex-col items-center justify-center gap-1.5 rounded-16 transition-colors lg:h-[132px]'
+const AX_BTN_CLASS = {
+  idle: `${AX_BTN_BASE} border-2 border-b-5 border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
+  correct: `${AX_BTN_BASE} border-[2.5px] border-good bg-good-tint text-good-text`,
+  target: `${AX_BTN_BASE} border-[2.5px] border-good bg-white text-ink`,
+  wrong: `${AX_BTN_BASE} border-[2.5px] border-bad bg-bad-tint text-bad-text`,
 }

@@ -1144,7 +1144,7 @@ async def get_calendar(current_user=Depends(get_current_user), db: AsyncSession 
 
 
 # 시행 기록(TrialAttempt.item_type)의 유형. 회차 히스토리가 유형마다 한 행을 만든다
-_TRIAL_KINDS = ("viseme", "word", "word_typed", "context", "closure")
+_TRIAL_KINDS = ("viseme", "viseme_ax", "word", "word_typed", "context", "closure")
 
 
 @app.get("/api/calendar/activities")
@@ -1203,18 +1203,18 @@ async def get_calendar_activities(days_back: int = 140, tz_offset_min: int = -54
         add(ts, "assessment", form or "placement", acc)
 
     # 2단계 주관식(word_typed)과 단어 레슨 속 문맥 문항(context)도 따로 한 행이다. 예전에는 ORDER에 없어 그날 기록에서 빠졌다
-    KIND_LABEL = {"viseme": "입모양 인지", "word": "단어", "word_typed": "단어 주관식", "context": "단어 레슨 문맥",
+    KIND_LABEL = {"viseme": "입모양 인지", "viseme_ax": "입모양 같은지 다른지", "word": "단어", "word_typed": "단어 주관식", "context": "단어 레슨 문맥",
                   "closure": "문맥 추론", "trial": "인지 훈련"}
     SPEAK_LABEL = {"voicing": "발성", "prosody": "억양", "phoneme": "음소", "word": "단어", "sentence": "문장",
                    "probe": "낱말 속 소리"}
     FORM_LABEL = {"placement": "배치검사", "A": "사전검사", "B": "사후검사"}
-    TYPE_LABEL = {"assessment": "검사", "viseme": "독화", "word": "독화", "word_typed": "독화", "context": "독화",
+    TYPE_LABEL = {"assessment": "검사", "viseme": "독화", "viseme_ax": "독화", "word": "독화", "word_typed": "독화", "context": "독화",
                   "closure": "독화", "trial": "독화", "sentence": "문장 연습", "speak": "말하기"}
     # 블록 클릭 시 이동할 학습 화면. 말하기 모드는 speak_curriculum의 단계 번호로 연결한다.
     SPEAK_STAGE = {"voicing": 0, "prosody": 1, "phoneme": 2, "word": 4, "sentence": 5}
-    KIND_ROUTE = {"assessment": "/learn/placement", "viseme": "/learn/viseme", "word": "/learn/word",
+    KIND_ROUTE = {"assessment": "/learn/placement", "viseme": "/learn/viseme", "viseme_ax": "/learn/viseme", "word": "/learn/word",
                   "word_typed": "/learn/word", "context": "/learn/word", "closure": "/learn/closure", "trial": "/learn/viseme"}
-    ORDER = ["assessment", "viseme", "word", "word_typed", "context", "closure", "trial", "sentence", "speak"]
+    ORDER = ["assessment", "viseme", "viseme_ax", "word", "word_typed", "context", "closure", "trial", "sentence", "speak"]
 
     # 주제가 다르면 같은 날이라도 각자 한 행 — 문장 연습은 상황별, 말하기는 모드별, 검사는 폼별로 나눈다.
     out = {}
@@ -1846,8 +1846,6 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
     if target is None:
         raise HTTPException(status_code=400, detail="invalid viseme_id")
     correct = (data.viseme_id == data.chosen_id)
-    # '같아 보이는 무리'로 틀렸는지 — 동구형이음 학습 취지의 피드백용
-    same_cluster = _curriculum.same_homophene_cluster(data.viseme_id, data.chosen_id)
 
     try:
         # 1단계 진행/숙달 갱신
@@ -1897,7 +1895,6 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
 
     return {
         "correct": correct,
-        "same_cluster": same_cluster,
         "target": {"viseme_id": data.viseme_id, "name": target["name"], "teach": target["teach"]},
         "mastery_score": round(sp.mastery_score, 1),
         "attempts": sp.attempts,
@@ -1905,6 +1902,46 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
         "xp_gained": award["xp_gained"],
         "streak_count": award["streak_count"],
     }
+
+
+# 1단계 '같은지 다른지'(AX) 문항(docs/mastery-ewma.md 11절, A0(2)). 아바타가 음절 둘을 차례로 말하고 학습자가 같음·다름을 고른다.
+# 사전 등록한 설계(오답 −1로 숙달에 반영)는 거짓 숙달을 늘려 탈락했고, 숙달에서 뺀 A0(2)가 사후 탐색 뒤 시드 1 확인을 통과했다.
+# 그래서 이 답은 1단계 숙달(시도 수·추정값)에 넣지 않고 시행 기록(item_type 'viseme_ax')과 XP에만 남긴다.
+_AX_CHOICES = ("same", "different")
+
+
+class RecognitionAxSubmit(BaseModel):
+    a: str = Field(..., max_length=2)   # 먼저 보인 음절
+    b: str = Field(..., max_length=2)   # 나중에 보인 음절
+    chosen: str                         # 'same' | 'different'
+    options: Optional[list] = None      # 보인 버튼 순서(['same', 'different']). 없으면 예전 화면
+
+
+@app.post("/api/curriculum/recognition-ax")
+async def curriculum_recognition_ax(data: RecognitionAxSubmit, current_user=Depends(get_current_user),
+                                    db: AsyncSession = Depends(get_db)):
+    """1단계 AX 문항 채점. 정답은 화면이 아니라 curriculum.ax_pair(두 음절의 입모양 무리 소속)로 정하고, 아바타에서 애매한 짝은
+    400으로 거절한다. 1단계 숙달·취약 입모양·복습 큐는 건드리지 않는다."""
+    from database import TrialAttempt
+    pair = _curriculum.ax_pair(data.a, data.b)
+    if pair is None:
+        raise HTTPException(status_code=400, detail="invalid ax pair")
+    if data.chosen not in _AX_CHOICES:
+        raise HTTPException(status_code=400, detail="chosen must be same or different")
+    key = "same" if pair["same"] else "different"
+    correct = data.chosen == key
+    opts = data.options if isinstance(data.options, list) and sorted(map(str, data.options)) == sorted(_AX_CHOICES) else None
+    try:
+        db.add(TrialAttempt(user_id=current_user.id, stage=1, item_type="viseme_ax", target=f"{data.a}/{data.b}",
+                            chosen=data.chosen, correct=correct, confusions=[],
+                            options=[str(o) for o in opts] if opts else None))
+        award = _award_xp_and_streak(current_user, 15 if correct else 3)
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise _server_error(e, "recognition ax submit failed")
+    return {"correct": correct, "answer": key, "same": pair["same"], "inside": pair["inside"],
+            "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
 
 
 class WordAnswer(BaseModel):
@@ -2614,7 +2651,7 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
         baseline_vs_recent["excluded"] = {"speed": n_tr - len(natural) - n_probe, "probe": n_probe}
 
     by_item_type = []
-    for it, label in (("viseme", "입모양 인지"), ("word", "단어"), ("word_typed", "단어 주관식"),
+    for it, label in (("viseme", "입모양 인지"), ("viseme_ax", "입모양 같은지 다른지"), ("word", "단어"), ("word_typed", "단어 주관식"),
                       ("context", "단어 레슨 문맥"), ("closure", "문맥 추론")):
         seg = [c for t, c in seq if t == it]
         if seg:
