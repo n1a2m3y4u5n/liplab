@@ -1,0 +1,64 @@
+{
+ "seed": 1,
+ "N": 20000,
+ "results": {
+  "S": {
+   "R": {
+    "false_rate": 0.0749,
+    "judged": 11756,
+    "delay_median": 27.0,
+    "delay_median_excl_early": 28.0,
+    "strong_mastered_share": 0.9993,
+    "inside_share": 0.0,
+    "mastered_attempts_median": 68.0,
+    "skilled_median": 8.0,
+    "skilled_within_first_lesson": 0.9013,
+    "skilled_inside_share": 0.0
+   },
+   "A0(2)": {
+    "false_rate": 0.0667,
+    "judged": 11443,
+    "delay_median": 31.0,
+    "delay_median_excl_early": 32.0,
+    "strong_mastered_share": 0.9988,
+    "inside_share": 0.9326,
+    "mastered_attempts_median": 72.0,
+    "skilled_median": 8.0,
+    "skilled_within_first_lesson": 0.8604,
+    "skilled_inside_share": 0.0432,
+    "pass": true
+   }
+  },
+  "H": {
+   "R": {
+    "false_rate": 0.0749,
+    "judged": 11756,
+    "delay_median": 27.0,
+    "delay_median_excl_early": 28.0,
+    "strong_mastered_share": 0.9993,
+    "inside_share": 0.0,
+    "mastered_attempts_median": 68.0,
+    "skilled_median": 8.0,
+    "skilled_within_first_lesson": 0.9013,
+    "skilled_inside_share": 0.0
+   },
+   "A0(2)": {
+    "false_rate": 0.0667,
+    "judged": 11443,
+    "delay_median": 31.0,
+    "delay_median_excl_early": 32.0,
+    "strong_mastered_share": 0.9988,
+    "inside_share": 0.9326,
+    "mastered_attempts_median": 72.0,
+    "skilled_median": 8.0,
+    "skilled_within_first_lesson": 0.8604,
+    "skilled_inside_share": 0.0432,
+    "pass": true
+   }
+  }
+ },
+ "passing": [
+  "A0(2)"
+ ],
+ "chosen": "A0(2)"
+}
