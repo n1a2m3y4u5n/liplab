@@ -111,3 +111,25 @@ def criterion_progress(mastered: bool, attempts: int, mastery: float, threshold:
     if not threshold or not min_attempts:
         return 0.0
     return round(max(0.0, min(1.0, (mastery or 0.0) / threshold, (attempts or 0) / min_attempts)), 3)
+
+
+ANSWER_MODE_LABELS = {"choice": "보기 고름(4지선다)", "typed": "직접 입력(주관식·서술형)", "unknown": "기록 없음"}
+
+
+def by_answer_mode(rows: Sequence[Tuple[Optional[str], float]], pass_score: float) -> List[Dict]:
+    """문장 점수를 답 방식별로 나눈다. rows는 (answer_mode, score). 4지선다는 정확 일치(100 또는 0)라 몰라도 25%가 합격하고,
+    직접 입력은 부분 점수라 두 방식의 평균·합격률을 한 값으로 섞으면 어느 쪽 실력인지 알 수 없다(docs/eval-metrics.md 4절).
+    answer_mode가 없는 행(9/29 전 기록·옛 화면)은 'unknown'으로 따로 둔다. 행이 있는 방식만 choice·typed·unknown 순서로 돌려준다."""
+    groups: Dict[str, List[float]] = {}
+    for mode, score in rows:
+        key = mode if mode in ("choice", "typed") else "unknown"
+        groups.setdefault(key, []).append(float(score or 0.0))
+    out = []
+    for key in ("choice", "typed", "unknown"):
+        seg = groups.get(key)
+        if not seg:
+            continue
+        out.append({"mode": key, "label": ANSWER_MODE_LABELS[key], "n": len(seg),
+                    "avg_score": round(sum(seg) / len(seg), 1),
+                    "pass_rate": round(sum(1 for s in seg if s >= pass_score) / len(seg) * 100, 1)})
+    return out

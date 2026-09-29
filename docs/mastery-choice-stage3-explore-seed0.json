@@ -1,0 +1,102 @@
+{
+ "seed": 0,
+ "N": 20000,
+ "results": {
+  "L": {
+   "R": {
+    "false_rate": 0.1271,
+    "judged": 12420,
+    "delay_median": 22.0,
+    "strong_mastered_share": 0.9999,
+    "choice_answers_mean": 38.61,
+    "skilled_median": 5.0
+   },
+   "C:0.5": {
+    "false_rate": 0.017,
+    "judged": 9821,
+    "delay_median": 39.0,
+    "strong_mastered_share": 0.9928,
+    "choice_answers_mean": 49.29,
+    "skilled_median": 6.0,
+    "pass": false
+   },
+   "C:0.67": {
+    "false_rate": 0.038,
+    "judged": 10676,
+    "delay_median": 32.0,
+    "strong_mastered_share": 0.9979,
+    "choice_answers_mean": 45.34,
+    "skilled_median": 5.0,
+    "pass": false
+   },
+   "C:0.75": {
+    "false_rate": 0.0517,
+    "judged": 11100,
+    "delay_median": 29.0,
+    "strong_mastered_share": 0.9989,
+    "choice_answers_mean": 43.59,
+    "skilled_median": 5.0,
+    "pass": false
+   },
+   "CC": {
+    "false_rate": 0.1107,
+    "judged": 12151,
+    "delay_median": 23.0,
+    "strong_mastered_share": 0.9997,
+    "choice_answers_mean": 41.03,
+    "skilled_median": 5.0,
+    "pass": true
+   }
+  },
+  "H": {
+   "R": {
+    "false_rate": 0.1634,
+    "judged": 12823,
+    "delay_median": 20.0,
+    "strong_mastered_share": 0.9999,
+    "choice_answers_mean": 36.22,
+    "skilled_median": 5.0
+   },
+   "C:0.5": {
+    "false_rate": 0.0205,
+    "judged": 10010,
+    "delay_median": 37.0,
+    "strong_mastered_share": 0.9941,
+    "choice_answers_mean": 47.96,
+    "skilled_median": 6.0,
+    "pass": false
+   },
+   "C:0.67": {
+    "false_rate": 0.049,
+    "judged": 10951,
+    "delay_median": 30.0,
+    "strong_mastered_share": 0.9984,
+    "choice_answers_mean": 43.58,
+    "skilled_median": 5.0,
+    "pass": false
+   },
+   "C:0.75": {
+    "false_rate": 0.0657,
+    "judged": 11400,
+    "delay_median": 27.0,
+    "strong_mastered_share": 0.9992,
+    "choice_answers_mean": 41.65,
+    "skilled_median": 5.0,
+    "pass": false
+   },
+   "CC": {
+    "false_rate": 0.1513,
+    "judged": 12654,
+    "delay_median": 21.0,
+    "strong_mastered_share": 0.9999,
+    "choice_answers_mean": 37.99,
+    "skilled_median": 5.0,
+    "pass": true
+   }
+  }
+ },
+ "passing": [
+  "CC"
+ ],
+ "chosen": "CC"
+}

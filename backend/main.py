@@ -540,7 +540,9 @@ class ProgressSubmission(BaseModel):
     situation: str = Field(..., max_length=200)
     difficulty_level: int        # 처리부에서 1~5로 맞춘다
     practice_only: bool = False  # 정답을 본 뒤의 다시 풀기·자막 힌트 뒤 제출: 점수만 돌려주고 기록·숙달·XP에는 넣지 않는다
-    answer_mode: Optional[str] = Field(None, max_length=10)   # 'choice'면 보기를 고른 답: 정확 일치(100 또는 0)로 채점
+    # 'choice'면 보기를 고른 답: 정확 일치(100 또는 0)로 채점하고, 3단계 숙달에는 우연 보정(정답 1, 오답 −1/3)으로 넣는다
+    # (docs/mastery-ewma.md 10절). 'typed'는 주관식·서술형. progress.answer_mode에 남기고 그 밖의 값은 비워 둔다
+    answer_mode: Optional[str] = Field(None, max_length=10)
     # 답하기 전에 본 유효 재생 속도(학습자가 고른 가장 느린 속도 × 적응 감속). 기록만 하고 숙달에는 넣지 않는다: 1.0배 미만 합격을
     # 0.5로 세는 규칙들이 시뮬레이션 사전 기준을 넘지 못했다(docs/mastery-ewma.md 9절). 실제 기록이 쌓이면 다시 본다
     speed: Optional[float] = Field(None, ge=0.1, le=4.0)
@@ -821,6 +823,7 @@ async def submit_progress(
             viseme_errors=scoring_result.get("viseme_errors", []),
             phoneme_accuracy=scoring_result.get("phoneme_accuracy", {}),
             speed=submission.speed,
+            answer_mode=_answer_mode(submission.answer_mode),
         )
         db.add(progress)
 
@@ -843,9 +846,10 @@ async def submit_progress(
         # 3단계(문장 연습) 숙달 갱신: 점수 PASS 이상이면 성공 1회로 누적(4단계 해금 근거). 잠긴 단계면 넣지 않는다.
         # 틀린 문장 복습·북마크 연습은 원문을 본 뒤의 답이라 넣지 않는다. 기록(Progress)은 남겨 맞히면 오답 목록에서 빠지게 한다
         if not _is_review_scenario(submission.scenario_id) and await _stage_open(current_user, 3, db):
+            passed3 = scoring_result["score"] >= _STAGE3_PASS
             await _bump_stage_progress(
-                current_user.id, 3, scoring_result["score"] >= _STAGE3_PASS,
-                _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db)
+                current_user.id, 3, passed3, _STAGE3_MIN_ATTEMPTS, _STAGE3_MASTERY, db,
+                credit=_stage3_credit(passed3, submission.answer_mode))
 
         # 문장 간격 반복(kind 'sentence'): 레슨에서 합격선 아래면 내일 복습에 넣고, 예정일에 다시 읽으면 점수 등급으로 간격을
         # 조정한다(말하기 kind 'speak'와 같은 _sr_touch). 틀린 문장 복습·북마크 연습은 원문을 본 뒤의 답이라 일정을 건드리지 않는다
@@ -1476,9 +1480,10 @@ _STAGE12_EWMA_ALPHA = 0.08
 def _ewma_mastery(prev_estimate, prev_attempts, correct, alpha: float = _STAGE12_EWMA_ALPHA) -> float:
     """편향 보정 지수 이동 평균(0~100) 한 번 갱신. 저장된 추정값과 그 전 시도 수로 원래 평균을 되살린다
     (스키마 변경 없음). 초반에는 누적 평균에 가깝고 뒤로 갈수록 최근 답에 무게가 실린다.
-    correct는 정오(bool) 또는 성공 정도(0~1 실수, 감속 재생 정답 0.5 등, docs/mastery-ewma.md 7절)."""
+    correct는 정오(bool) 또는 성공 정도(0~1 실수, 감속 재생 정답 0.5 등, docs/mastery-ewma.md 7절). 3단계 4지선다 오답의 우연 보정
+    값 −1/3(10절)처럼 음수도 받는다. 결과는 0~100으로 잘라 저장하므로 음수는 추정값을 더 빨리 내릴 뿐이다."""
     n = max(0, int(prev_attempts or 0))
-    success = min(1.0, max(0.0, float(correct)))
+    success = min(1.0, max(-1.0, float(correct)))
     raw = float(prev_estimate or 0.0) * (1 - (1 - alpha) ** n)
     raw += alpha * (100.0 * success - raw)
     return min(100.0, max(0.0, raw / (1 - (1 - alpha) ** (n + 1))))   # 부동소수점 오차로 100을 넘지 않게
@@ -1517,6 +1522,26 @@ def _is_review_scenario(scenario_id) -> bool:
     return str(scenario_id or "").startswith(_REVIEW_SCENARIO_PREFIXES)
 
 
+# 3단계 4지선다(answer_mode 'choice')는 몰라도 25%를 맞힌다. 숙달 이동 평균에는 우연 보정으로 정답 1, 오답 −1/3을 넣는다(한 답의
+# 기댓값이 '알아본 확률'이 된다). 주관식·서술형은 합격 1, 불합격 0 그대로다. 가상 학습자 시뮬레이션에서 거짓 숙달 12.6 → 11.0%,
+# 지연 21 → 23번, 200번 안 숙달 비율 99.99 → 99.96%(시드 1 확인, 재인 가정 L; H도 통과, docs/mastery-ewma.md 10절).
+# 4지선다 정답을 0.5·0.67·0.75로 깎는 후보는 거짓 숙달을 더 줄였지만 지연이 5~17번 늘어 기준을 넘지 못했다.
+_CHOICE_WRONG_CREDIT = -1.0 / 3
+_ANSWER_MODES = ("choice", "typed")
+
+
+def _answer_mode(value):
+    """저장할 답 방식. 'choice'·'typed'만 남기고 나머지(옛 화면이 보내지 않음 등)는 None."""
+    return value if value in _ANSWER_MODES else None
+
+
+def _stage3_credit(passed: bool, answer_mode) -> float:
+    """3단계 숙달 이동 평균에 넣을 성공 정도."""
+    if answer_mode == "choice":
+        return 1.0 if passed else _CHOICE_WRONG_CREDIT
+    return 1.0 if passed else 0.0
+
+
 _STAGE4_MIN_ATTEMPTS = 4       # 대화 실전
 _STAGE4_MASTERY = 75.0        # 최근 가중 합격률(편향 보정 이동 평균, 9/27 밤 docs/mastery-ewma.md 6절, 예전 누적 60%)
 _STAGE4_PASS = 55.0            # 대화 1턴을 '성공'으로 볼 최소 이해도
@@ -1544,9 +1569,10 @@ def _settle_mastery(sp, reached: bool) -> None:
 
 
 async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
-                               min_attempts: int, mastery_pct: float, db):
+                               min_attempts: int, mastery_pct: float, db, credit: float = None):
     """단계별 진행률 rolling 갱신(1건 채점 → 시도·정답 누적, 숙달 판정). sp 반환.
-    숙달 점수는 3·4단계가 편향 보정 이동 평균(_ewma_mastery, 1·2단계는 각 채점 경로에서 같은 식). 커밋은 호출부에서 처리한다."""
+    숙달 점수는 3·4단계가 편향 보정 이동 평균(_ewma_mastery, 1·2단계는 각 채점 경로에서 같은 식). 커밋은 호출부에서 처리한다.
+    credit이 오면 이동 평균에는 passed 대신 그 성공 정도를 넣는다(3단계 4지선다의 우연 보정, _stage3_credit). 정답 수는 passed로 센다."""
     from database import StageProgress
     from sqlalchemy import select
     r = await db.execute(select(StageProgress).where(
@@ -1561,7 +1587,7 @@ async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
     if passed:
         sp.correct += 1
     if stage in (3, 4):
-        sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, passed)
+        sp.mastery_score = _ewma_mastery(sp.mastery_score, sp.attempts - 1, passed if credit is None else credit)
     else:
         sp.mastery_score = (sp.correct / sp.attempts * 100) if sp.attempts else 0.0
     _settle_mastery(sp, sp.attempts >= min_attempts and sp.mastery_score >= mastery_pct)
@@ -2548,6 +2574,7 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
     - trials_to_criterion: 단계별 숙달 도달 시행수(처음 숙달한 순간의 시도 수)와 진행 중인 단계의 진행률.
     - same_viseme_ratio: 오답 중 '입모양이 같아' 헷갈린 비율(시각 혼동성 근거).
     - sentence_trend: 문장 채점(Progress) 점수의 시간순 추이(문장 난이도 차이를 뺀 값, raw는 보정 전).
+    - sentence_by_mode: 문장 점수를 답 방식(보기 고름·직접 입력·기록 없음)별로 나눈 횟수·평균·합격률(60점 이상).
     """
     from database import TrialAttempt, Progress, StageProgress
     from sqlalchemy import select
@@ -2621,12 +2648,14 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
     # ── 문장 채점 추이 ───────────────────────────────────────────
     # 난이도·점수 두 열만 읽는다(예전에는 문장·답·피드백 JSON까지 든 Progress 객체 전체)
     prog = (await db.execute(
-        select(Progress.difficulty_level, Progress.score).where(Progress.user_id == current_user.id)
+        select(Progress.difficulty_level, Progress.score, Progress.answer_mode).where(Progress.user_id == current_user.id)
         .order_by(Progress.created_at.asc(), Progress.id.asc()))).all()
     # 문장 난이도 차이를 뺀 점수 추이(raw는 보정 전). 경로가 쉬운 문장에서 어려운 문장으로 간다
-    sentence_trend = _em.group_adjusted_curve([(lvl or 0, sc or 0.0) for lvl, sc in prog],
+    sentence_trend = _em.group_adjusted_curve([(lvl or 0, sc or 0.0) for lvl, sc, _ in prog],
                                               lo=0.0, hi=100.0, ndigits=1)
-    sentence_avg = round(sum(sc or 0 for _, sc in prog) / len(prog), 1) if prog else None
+    sentence_avg = round(sum(sc or 0 for _, sc, _ in prog) / len(prog), 1) if prog else None
+    # 4지선다(찍어도 25%, 100 또는 0점)와 직접 입력(부분 점수)을 나눠 보인다. 추이는 두 방식이 섞인 값이다
+    sentence_by_mode = _em.by_answer_mode([(mode, sc) for _, sc, mode in prog], _STAGE3_PASS)
 
     return {
         "overview": {
@@ -2641,6 +2670,7 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
         "same_viseme_ratio": same_viseme_ratio,
         "trials_to_criterion": trials_to_criterion,
         "sentence_trend": sentence_trend,
+        "sentence_by_mode": sentence_by_mode,
     }
 
 

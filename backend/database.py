@@ -80,6 +80,7 @@ class Progress(Base):
     viseme_errors = Column(JSON, default=list)  # List of viseme IDs that were incorrect
     phoneme_accuracy = Column(JSON, default=dict)  # {initial: 0.9, medial: 0.85, final: 0.95}
     speed = Column(Float, nullable=True)  # 답하기 전에 본 유효 재생 속도(기록만, 숙달에는 넣지 않음. docs/mastery-ewma.md 9절)
+    answer_mode = Column(String(10), nullable=True)  # 'choice'(4지선다 보기를 고름)·'typed'(주관식·서술형). 9/29 전 기록과 옛 화면은 비어 있다
 
     user = relationship("User", back_populates="progress_records")
 
@@ -435,6 +436,8 @@ _ADD_COLUMNS = (
     ("trial_attempts", "probe", "JSON"),
     # 3단계 문장 답의 유효 재생 속도(기록만)
     ("progress", "speed", "FLOAT"),
+    # 3단계 문장 답 방식(보기 고름·직접 입력, docs/mastery-ewma.md 10절)
+    ("progress", "answer_mode", "VARCHAR(10)"),
 )
 
 
