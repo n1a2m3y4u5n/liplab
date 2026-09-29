@@ -359,6 +359,42 @@ def _merge_approved_content() -> Dict[str, int]:
 
 CONTENT_MERGE_STATS = _merge_approved_content()
 
+# ── 사람 검수 전 문맥 문항(9/29, docs/closure-expansion-2026-09-29.md) ──────────────────────
+# 서빙 문항이 81개뿐이라 3단계 문맥 추론 12문항과 2단계 레슨의 문맥 문항이 같은 풀을 돌려 쓰면 일곱 레슨쯤부터 되풀이됐고,
+# 외운 답이 3단계 숙달을 부풀렸다. 유료 API 없이 새로 쓴 문항은 unreviewed.json에 두고 사람 검수 전에도 서빙하되, 문항마다
+# review='pending'으로 표시한다. 검수에서 승인하면 approved.json에 같은 id로 들어가 위에서 먼저 병합되고(여기서는 중복으로 건너뜀),
+# 반려하면 rejected.json에 들어가 여기서 빠진다. 서빙 전 규칙 게이트·제외 목록은 다른 문항과 같다(main._training_closures).
+_UNREVIEWED_PATH = _os.path.join(_os.path.dirname(__file__), "data", "curriculum", "unreviewed.json")
+_REJECTED_PATH = _os.path.join(_os.path.dirname(__file__), "data", "curriculum", "rejected.json")
+
+
+def _merge_unreviewed_closures() -> int:
+    """unreviewed.json의 문맥 문항을 review='pending'으로 CLOSURE_ITEMS에 더한다. 반려된 것과 이미 있는 내용은 건너뛴다."""
+    def _read(path):
+        try:
+            with open(path, encoding="utf-8") as f:
+                return _json.load(f)
+        except (FileNotFoundError, _json.JSONDecodeError):
+            return {}
+    rejected = {(c.get("display", ""), c.get("answer", "")) for c in _read(_REJECTED_PATH).get("closures", []) if c}
+    seen_ids = {c["id"] for c in CLOSURE_ITEMS}
+    seen = {(c.get("display", ""), c.get("answer", "")) for c in CLOSURE_ITEMS}
+    n = 0
+    for c in _read(_UNREVIEWED_PATH).get("closures", []):
+        if not c or not c.get("answer") or not c.get("id"):
+            continue
+        content = (c.get("display", ""), c.get("answer", ""))
+        if content in seen or content in rejected or c["id"] in seen_ids:
+            continue
+        CLOSURE_ITEMS.append(dict(c, review="pending"))
+        seen.add(content)
+        seen_ids.add(c["id"])
+        n += 1
+    return n
+
+
+CONTENT_MERGE_STATS["closures_unreviewed"] = _merge_unreviewed_closures()
+
 # 파생 인덱스는 병합 뒤에 (재)계산해야 확장분이 반영된다.
 # (앞에서 계산한 _WORDS·_PAIR_PARTNER를 최종값으로 덮어쓴다.)
 _WORDS = {w["word"] for w in WORD_BANK}
