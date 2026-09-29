@@ -19,6 +19,7 @@ import { MIRROR_KEYS } from '../lib/mouthMirror'
 import MouthFallback2D from './MouthFallback2D'
 import { transitionProgress } from '../lib/visemeTiming'
 import { talkerShapes } from '../lib/talkers'
+import { coartShape, coartWeight } from '../lib/coarticulation'
 
 const EMPTY = {}
 const ACTIVE_KEY_SET = new Set(ACTIVE_MORPH_KEYS)
@@ -42,7 +43,7 @@ const GLB_RETRY_MAX = 2
  *  깨진 머지로 파일에 두 벌 복제돼 빌드가 깨져 있었다 → 두 기능을 모두 살려 단일화.)
  */
 function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null, modelUrl = MODEL_URL,
-  transitionMs, durationMs, speed = 1, talker = null }) {
+  transitionMs, durationMs, speed = 1, talker = null, lipVowel = null }) {
   const { scene: shared } = useGLTF(modelUrl, false, false, withMeshopt)
   // useGLTF는 캐시된 같은 scene 객체를 돌려준다. three.js 객체는 부모를 하나만 가질 수 있어, 그대로
   // <primitive>로 쓰면 한 화면에 아바타가 둘 이상일 때(다자 대화·웹캠 거울) 마지막 것만 보였다.
@@ -69,6 +70,12 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
   // 가상 화자(lib/talkers, 계획 2-2): 입 벌림·입술 폭·돌출·동시조음 배율을 곱한 목표 표. 화자마다 한 번 만들어 두고 화면마다 읽기만 한다.
   const shapesRef = useRef(VISEME_BLENDSHAPES)
   shapesRef.current = talkerShapes(talker)
+  // 선행 동시조음(lib/coarticulation, 3D 모션 E): 입 안쪽 자음 프레임이면 입술 모프만 섞을 모음(lipVowel) 쪽으로 섞은 목표.
+  // 입모양이 바뀔 때(렌더) 한 번 캐시에서 읽고, 화면마다는 이 목표를 읽기만 한다. lipVowel이 없으면 표의 모양 그대로다.
+  const textTargetRef = useRef(EMPTY)
+  textTargetRef.current = coartShape(shapesRef.current, visemeId, lipVowel, coartWeight(talker)) || EMPTY
+  // 전환 출발점을 다시 잡는 기준: 같은 입모양이라도 섞을 모음이 바뀌면 목표가 달라진다.
+  const shapeKey = lipVowel == null ? visemeId : `${visemeId}|${lipVowel}`
   const skinMatsRef = useRef([])   // 투명(X-ray) 모드에서 반투명화할 피부 재질
   const xrayAppliedRef = useRef(null)
 
@@ -100,7 +107,7 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
   // 텍스트 입모양은 쉴 때 그리지 않는다(Canvas frameloop="demand"). 입모양·시간·투명 모드가 바뀌면 여기서 깨우고, 전환이 끝나
   // 모든 가중치가 목표에 닿으면 useFrame이 다음 화면을 더 요청하지 않는다. 예전에는 멈춰 있어도 초당 60번 다시 그렸다.
   const invalidate = useThree((st) => st.invalidate)
-  useEffect(() => { invalidate() }, [visemeId, xray, transitionMs, durationMs, speed, talker, invalidate])
+  useEffect(() => { invalidate() }, [visemeId, lipVowel, xray, transitionMs, durationMs, speed, talker, invalidate])
 
   // 아이들 모션 D(9/28): 눈 깜빡임. 쉴 때 그리지 않는 원칙(frameloop demand)을 지키려고 호흡처럼 계속 움직이는 모션은 넣지 않고,
   // 2.5~6초마다 깜빡이는 약 0.19초 동안만 화면을 요청한다. 텍스트 입모양에만 적용(음성구동·거울은 원본 계수를 그대로 쓴다).
@@ -132,18 +139,18 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
     // 목표 블렌드셰이프의 우선순위(병합 메모):
     //   ① 음성구동(A4) 프레임 bsFrameRef — 원본 52 블렌드셰이프를 직접 적용
     //   ② 웹캠 거울(축 F) mirrorRef — 사용자 입모양 계수가 목표
-    //   ③ 텍스트→비심 매핑 VISEME_BLENDSHAPES(가상 화자면 그 배율을 곱한 표)
+    //   ③ 텍스트→비심 매핑 VISEME_BLENDSHAPES(가상 화자면 그 배율을 곱한 표, 동시조음이 켜져 있으면 입술을 섞은 모양)
     const rawFrame = bsFrameRef?.current || null
     const mirror = !rawFrame ? (mirrorRef?.current || null) : null
-    const target = rawFrame || mirror || shapesRef.current[visemeId] || EMPTY
+    const target = rawFrame || mirror || textTargetRef.current
     // A4 프레임은 이미 30fps 시퀀스라 빠르게 따라가고, 나머지는 부드럽게 전환(~45ms).
     const LERP = Math.min(1, delta * (rawFrame ? 34 : 22))
     // 텍스트 입모양(음성구동·거울이 아닐 때)은 프레임의 전환 시간으로 옮긴다: 입모양이 바뀌면 지금 가중치를 출발점으로 잡고,
     // transition_ms(프레임 길이의 60% 이하, 재생 속도 반영) 동안 이징으로 목표까지 간 뒤 멈춘다. 시간이 없으면 예전 방식.
     let eased = null
     if (!rawFrame && !mirror) {
-      if (lastVisemeRef.current !== visemeId) {
-        lastVisemeRef.current = visemeId
+      if (lastVisemeRef.current !== shapeKey) {
+        lastVisemeRef.current = shapeKey
         fromWeightsRef.current = { ...currentWeightsRef.current }
         elapsedRef.current = 0
       } else {
@@ -343,8 +350,9 @@ class GLErrorBoundary extends Component {
 
 // modelUrl: 다른 얼굴 GLB(같은 CC 두상 규격 — ARKit 52 + 혀 모프 + CC_Base_JawRoot). 다자 대화가 화자마다 다르게 준다(H-6).
 // talker: 가상 화자(lib/talkers). 텍스트 입모양에만 쓰고 음성구동·거울 프레임은 그대로 둔다.
+// lipVowel: 선행 동시조음(lib/coarticulation)에서 이 프레임이 입술을 섞을 모음 입모양(프레임의 coart_v). 없으면 섞지 않는다.
 export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null, modelUrl = MODEL_URL,
-  transitionMs, durationMs, speed, view = 'front', talker = null }) {
+  transitionMs, durationMs, speed, view = 'front', talker = null, lipVowel = null }) {
   const [webglOK] = useState(detectWebGL)
   const fallback = <MouthFallback2D visemeId={visemeId} />
 
@@ -371,7 +379,7 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
 
           <Suspense fallback={null}>
             <RealisticFace visemeId={visemeId} xray={xray} bsFrameRef={bsFrameRef} mirrorRef={mirrorRef} modelUrl={modelUrl}
-              transitionMs={transitionMs} durationMs={durationMs} speed={speed} talker={talker} />
+              transitionMs={transitionMs} durationMs={durationMs} speed={speed} talker={talker} lipVowel={lipVowel} />
           </Suspense>
 
           <CameraRig view={view} />

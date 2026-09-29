@@ -6,6 +6,7 @@ import VocalTract from './VocalTract'
 import { CueGlyph } from './CueBadges'
 import { curriculumAPI } from '../api'
 import { applyTalkerTiming } from '../lib/talkers'
+import { applyCoarticulation } from '../lib/coarticulation'
 
 /**
  * 3D LipSync Player - VRM-based avatar with full playback controls
@@ -33,7 +34,8 @@ export default function LipSyncPlayer3D({
   talkerSeed = 0,
   onSpeedChange = null,
 }) {
-  const visemes = useMemo(() => applyTalkerTiming(rawVisemes, talker, talkerSeed), [rawVisemes, talker, talkerSeed])
+  // 선행 동시조음(lib/coarticulation, 플래그 VITE_COART_E)은 입 안쪽 자음 프레임에 섞을 모음(coart_v)만 붙인다. 꺼져 있으면 그대로다.
+  const visemes = useMemo(() => applyCoarticulation(applyTalkerTiming(rawVisemes, talker, talkerSeed)), [rawVisemes, talker, talkerSeed])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [speed, setSpeed] = useState(1.0)
   const [isPaused, setIsPaused] = useState(false)
@@ -213,6 +215,7 @@ export default function LipSyncPlayer3D({
           durationMs={currentViseme?.duration_ms}
           speed={speed}
           talker={talker}
+          lipVowel={currentViseme?.coart_v}
         />
         <TalkerChip talker={talker} />
 
