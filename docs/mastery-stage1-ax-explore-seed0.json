@@ -1,0 +1,88 @@
+{
+ "seed": 0,
+ "N": 20000,
+ "results": {
+  "S": {
+   "R": {
+    "false_rate": 0.0703,
+    "judged": 11771,
+    "delay_median": 27.0,
+    "delay_median_excl_early": 27.0,
+    "strong_mastered_share": 0.9996,
+    "inside_share": 0.0,
+    "mastered_attempts_median": 68.0,
+    "skilled_median": 8.0,
+    "skilled_within_first_lesson": 0.8984,
+    "skilled_inside_share": 0.0
+   },
+   "A1": {
+    "false_rate": 0.1004,
+    "judged": 11997,
+    "delay_median": 28.0,
+    "delay_median_excl_early": 29.0,
+    "strong_mastered_share": 0.9985,
+    "inside_share": 0.9718,
+    "mastered_attempts_median": 69.0,
+    "skilled_median": 8.0,
+    "skilled_within_first_lesson": 0.8774,
+    "skilled_inside_share": 0.2241,
+    "pass": false
+   },
+   "A2": {
+    "false_rate": 0.0918,
+    "judged": 11959,
+    "delay_median": 28.0,
+    "delay_median_excl_early": 29.0,
+    "strong_mastered_share": 0.9985,
+    "inside_share": 1.0,
+    "mastered_attempts_median": 70.0,
+    "skilled_median": 11.0,
+    "skilled_within_first_lesson": 0.7807,
+    "skilled_inside_share": 1.0,
+    "pass": false
+   }
+  },
+  "H": {
+   "R": {
+    "false_rate": 0.0703,
+    "judged": 11771,
+    "delay_median": 27.0,
+    "delay_median_excl_early": 27.0,
+    "strong_mastered_share": 0.9996,
+    "inside_share": 0.0,
+    "mastered_attempts_median": 68.0,
+    "skilled_median": 8.0,
+    "skilled_within_first_lesson": 0.8984,
+    "skilled_inside_share": 0.0
+   },
+   "A1": {
+    "false_rate": 0.0947,
+    "judged": 11184,
+    "delay_median": 35.0,
+    "delay_median_excl_early": 36.0,
+    "strong_mastered_share": 0.99,
+    "inside_share": 0.9693,
+    "mastered_attempts_median": 75.0,
+    "skilled_median": 8.0,
+    "skilled_within_first_lesson": 0.7561,
+    "skilled_inside_share": 0.3096,
+    "pass": false
+   },
+   "A2": {
+    "false_rate": 0.0844,
+    "judged": 11138,
+    "delay_median": 35.0,
+    "delay_median_excl_early": 36.0,
+    "strong_mastered_share": 0.99,
+    "inside_share": 1.0,
+    "mastered_attempts_median": 76.0,
+    "skilled_median": 12.0,
+    "skilled_within_first_lesson": 0.5017,
+    "skilled_inside_share": 1.0,
+    "pass": false
+   }
+  }
+ },
+ "passing": [],
+ "chosen": null
+}

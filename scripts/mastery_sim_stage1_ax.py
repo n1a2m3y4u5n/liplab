@@ -60,35 +60,52 @@ def draw(seed, case, n=N):
     return main, skilled
 
 
-def item_kinds(d, i):
-    """i번째 답(0부터)의 종류: 0 고르기, 1 보이는 짝 AX, 2 입 안쪽 짝 AX."""
+def item_kinds(d, i, n_ax=N_AX):
+    """i번째 답(0부터)의 종류: 0 고르기, 1 보이는 짝 AX, 2 입 안쪽 짝 AX. AX n_ax개 중 절반이 입 안쪽 짝."""
     pos = i % LESSON
     if pos < FIRST_PASS:
         return np.zeros(d["p"].shape[0], dtype=int)
     r = d["rank"][:, i // LESSON, pos - FIRST_PASS]
-    return np.where(r < N_INSIDE, 2, np.where(r < N_AX, 1, 0))
+    return np.where(r < n_ax // 2, 2, np.where(r < n_ax, 1, 0))
+
+
+# 후보 매개변수. ax: 레슨당 AX 수(0이면 R), gate: 입 안쪽 짝 답 수 관문, count: AX 답을 숙달 추정에 넣는가, right·wrong: AX 성공 정도.
+# A0(2)·A1(2)·A1(0.5)는 11.8절 사후 탐색 후보다(사전 등록 11.4절 밖, --posthoc).
+RULES = {
+    "R": dict(ax=0),
+    "A1": dict(ax=N_AX),
+    "A2": dict(ax=N_AX, gate=True),
+    "A1(2)": dict(ax=2),
+    "A0(4)": dict(ax=N_AX, count=False),
+    "A0(2)": dict(ax=2, count=False),
+    "A1(0.5)": dict(ax=N_AX, right=0.5),
+}
 
 
 def simulate(d, rule):
-    """rule: 'R' | 'A1' | 'A2'. 숙달 판정 시점(1부터, 없으면 0)과 그때까지 입 안쪽 짝 AX 답 수."""
+    """rule: RULES의 이름. 숙달 판정 시점(1부터, 없으면 0)과 그때까지 입 안쪽 짝 AX 답 수."""
+    cfg = {"ax": 0, "gate": False, "count": True, "right": 1.0, "wrong": -1.0, **RULES[rule]}
     p, u = d["p"], d["u_ans"]
     n = p.shape[0]
     est = np.zeros(n)
+    used = np.zeros(n, dtype=int)          # 숙달 추정에 들어간 답 수(편향 보정의 n)
     mastered_at = np.zeros(n, dtype=int)
     inside_seen = np.zeros(n, dtype=int)
     inside_at = np.zeros(n, dtype=int)
     for i in range(T_MAX):
-        kind = item_kinds(d, i) if rule != "R" else np.zeros(n, dtype=int)
+        kind = item_kinds(d, i, cfg["ax"]) if cfg["ax"] else np.zeros(n, dtype=int)
         k = (p[:, i] - G) / (1 - G)
         k_ax = np.where(kind == 2, d["c"] * k, k + d["e"] * (1 - k))
         pc = np.where(kind == 0, p[:, i], k_ax + (1 - k_ax) / 2)
         ok = u[:, i] < pc
-        val = np.where(ok, 1.0, np.where(kind == 0, 0.0, -1.0))
-        raw = est * (1 - (1 - ALPHA) ** i)
+        val = np.where(kind == 0, np.where(ok, 1.0, 0.0), np.where(ok, cfg["right"], cfg["wrong"]))
+        upd = (kind == 0) | cfg["count"]
+        raw = est * (1 - (1 - ALPHA) ** used)
         raw = raw + ALPHA * (100.0 * val - raw)
-        est = np.clip(raw / (1 - (1 - ALPHA) ** (i + 1)), 0, 100)
+        est = np.where(upd, np.clip(raw / (1 - (1 - ALPHA) ** (used + 1)), 0, 100), est)
+        used = used + upd
         inside_seen += (kind == 2)
-        gate = inside_seen >= N_INSIDE_SEEN if rule == "A2" else True
+        gate = inside_seen >= N_INSIDE_SEEN if cfg["gate"] else True
         hit = (mastered_at == 0) & (i + 1 >= MIN_ATT) & (est >= THR) & gate
         mastered_at[hit] = i + 1
         inside_at[hit] = inside_seen[hit]
@@ -140,12 +157,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--only", default=None, help="후보 하나만(확인용), 예: A1")
+    ap.add_argument("--posthoc", action="store_true", help="11.8절 사후 탐색 후보(A1(2)·A0(4)·A0(2)·A1(0.5))")
     ap.add_argument("--out", default=None)
     ap.add_argument("--smoke", action="store_true", help="N 200, 시드 12345로 돌아가는지만 확인(수치 출력 없음)")
     a = ap.parse_args()
     n = 200 if a.smoke else N
     seed = 12345 if a.smoke else a.seed
-    names = ["R"] + ([a.only] if a.only else ["A1", "A2"])
+    names = ["R"] + ([a.only] if a.only else (["A1(2)", "A0(4)", "A0(2)", "A1(0.5)"] if a.posthoc else ["A1", "A2"]))
     out = {"seed": seed, "N": n, "results": {}}
     for case in ("S", "H"):
         d, sk = draw(seed, case, n)
@@ -161,8 +179,8 @@ def main():
         return
     passing = [nm for nm in names[1:] if all(out["results"][k][nm]["pass"] for k in out["results"])]
     out["passing"] = passing
-    # 11.4절: 둘 다 통과하면 규칙이 더 단순한 A1(숙달 관문 없음)
-    out["chosen"] = ("A1" if "A1" in passing else passing[0]) if passing else None
+    # 11.4절: 둘 다 통과하면 규칙이 더 단순한 A1(숙달 관문 없음). 사후 탐색은 고르지 않고 결과만 낸다
+    out["chosen"] = None if a.posthoc else (("A1" if "A1" in passing else passing[0]) if passing else None)
     print(json.dumps(out, ensure_ascii=False, indent=1))
     if a.out:
         with open(a.out, "w", encoding="utf-8") as f:
