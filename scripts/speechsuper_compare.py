@@ -6,7 +6,7 @@
 
     python scripts/speechsuper_compare.py <목록.tsv> <결과.jsonl> [--core sent.eval.kr] [--limit N]
 
-목록.tsv: 음성 경로<TAB>목표 문장(또는 단어). 결과는 저장소 밖 경로에 둔다(한 줄에 {path, text, core, status, result}).
+목록.tsv: 음성 경로<TAB>목표 문장<TAB>(선택) 꼬리표. word.eval.kr은 한 글자(음절)만 받는다. 결과는 저장소 밖 경로에 둔다(한 줄에 {path, text, core, status, result}).
 이미 결과에 있는 경로는 건너뛴다(이어 돌리기). 호출 사이 0.3초 쉰다.
 """
 import argparse
@@ -65,16 +65,23 @@ def main():
         sys.exit("SPEECHSUPER_APP_KEY·SPEECHSUPER_SECRET_KEY 환경 변수가 없습니다.")
     done = set()
     if os.path.exists(a.out):
-        done = {json.loads(l)["path"] for l in open(a.out, encoding="utf-8") if l.strip()}
+        done = {(j["path"], j["text"]) for j in map(json.loads, (l for l in open(a.out, encoding="utf-8") if l.strip()))
+                if j.get("status") == "ok"}
     rows = [l.rstrip("\n").split("\t") for l in open(a.tsv, encoding="utf-8") if l.strip()]
-    rows = [r for r in rows if len(r) >= 2 and r[0] not in done]
+    rows = [r for r in rows if len(r) >= 2 and (r[0], r[1]) not in done]   # 같은 음성을 다른 목표에 대는 짝도 있어 (경로, 문장)으로 가린다
     if a.limit:
         rows = rows[:a.limit]
     with open(a.out, "a", encoding="utf-8") as f:
-        for i, (path, text, *_) in enumerate(rows):
+        for i, row in enumerate(rows):
+            path, text = row[0], row[1]
             try:
                 res = assess(path, text, a.core, app_key, secret)
-                rec = {"path": path, "text": text, "core": a.core, "status": "ok", "result": res}
+                # 응답이 200이어도 본문에 error가 올 수 있다(예: word.eval.kr에 두 글자 이상을 보냄, errId 53001)
+                ok = isinstance(res, dict) and "error" not in res and "result" in res
+                rec = {"path": path, "text": text, "core": a.core, "status": "ok" if ok else "error",
+                       **({"result": res["result"]} if ok else {"error": str(res.get("error") if isinstance(res, dict) else res)[:200]})}
+                if len(row) > 2:
+                    rec["tag"] = row[2]
             except Exception as e:   # 한 건 실패로 전체를 멈추지 않는다. 키가 섞이지 않게 예외 종류만 남긴다
                 rec = {"path": path, "text": text, "core": a.core, "status": "error", "error": type(e).__name__}
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
