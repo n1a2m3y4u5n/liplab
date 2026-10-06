@@ -12,6 +12,8 @@ import WatermarkCard from '../components/WatermarkCard'
 import LoadingScreen from '../components/LoadingScreen'
 import { ModalClose } from '../components/Modal'
 import CueBadges, { CueLegend } from '../components/CueBadges'
+import ConsonantFeedback from '../components/ConsonantFeedback'
+import { sentenceSkeleton } from '../lib/consonantSkeleton'
 import useFocusTrap from '../hooks/useFocusTrap'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { sentenceLevel } from '../lib/reviewScenario'
@@ -23,7 +25,8 @@ import { effectiveSpeed } from '../lib/visemeTiming'
  * 힌트 시스템: 단계별로 문장 정보를 공개
  * Level 0: 힌트 없음
  * Level 1: 음절 수 (● ● ● ●)
- * Level 2: 첫 글자 공개 (안● ● ●)
+ * Level 2: 자음 골격 — 음절마다 첫 자음만 (ㅇ ㄴ ㅎ ㅅ ㅇ). 예전 '첫 글자'는 낱말 첫 음절을 통째로 보여 입모양 대신 글자로
+ *          맞히게 했다. 자음 골격은 모음·받침을 입모양으로 읽게 남긴다(계획 C10, idea-sweep 다2)
  * Level 3: 발음 타이밍에 맞춰 전체 공개
  */
 function HintDisplay({ sentence, hintLevel, revealedTextIndex = -1 }) {
@@ -56,20 +59,16 @@ function HintDisplay({ sentence, hintLevel, revealedTextIndex = -1 }) {
   }
 
   if (hintLevel === 2) {
-    // 첫 글자 + 나머지 빈칸
+    // 자음 골격: 음절마다 첫 자음만, 모음·받침은 입모양으로 읽는다
     return (
       <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-xs text-blue-600 font-medium mb-1">힌트 2 — 첫 글자</p>
+        <p className="text-xs text-blue-600 font-medium mb-1">힌트 2 — 첫 자음</p>
         <div className="flex flex-wrap gap-2">
-          {words.map((word, wi) => (
+          {sentenceSkeleton(sentence).map((word, wi) => (
             <div key={wi} className="flex gap-1">
-              {word.split('').map((char, ci) => (
-                <span key={ci} className={`w-7 h-7 rounded border-2 flex items-center justify-center text-sm font-bold ${
-                  ci === 0
-                    ? 'bg-blue-100 border-blue-400 text-blue-800'
-                    : 'bg-white border-gray-300 text-gray-400'
-                }`}>
-                  {ci === 0 ? char : '_'}
+              {word.map((ch, ci) => (
+                <span key={ci} className="w-7 h-7 rounded border-2 flex items-center justify-center text-sm font-bold bg-blue-100 border-blue-400 text-blue-800">
+                  {ch}
                 </span>
               ))}
             </div>
@@ -219,6 +218,9 @@ export default function Practice() {
   const [visemeError, setVisemeError] = useState(false)      // 입모양을 받지 못함 → 다시 받기 안내
   const visemeReqRef = useRef(0)                             // 입모양 요청 순번(늦게 온 이전 문장의 응답은 버린다)
   const answerShownRef = useRef(false)                       // 이 문장의 정답을 이미 보였는지(채점 결과에 정답이 나온다)
+  // 자음 피드백 단계(계획 C9): 주관식 첫 답이 합격선 아래면 정답 대신 낱말별 단서를 보이고 한 번 더 답하게 한다.
+  // { feedback, first }: 서버 word_feedback과 첫 답의 채점 결과. 두 번째 답은 연습(practice_only)으로만 채점한다
+  const [retry, setRetry] = useState(null)
   // 이 문장을 보는 동안 학습자가 고른 가장 느린 재생 속도(플레이어 onSpeedChange). 4지선다 카드는 속도 조절이 없어 1.0배다.
   // 답과 함께 유효 속도(학습자 속도 × 적응 감속)를 기록만 한다. 숙달에는 넣지 않는다(시뮬레이션 사전 기준 미달, docs/mastery-ewma.md 9절)
   const learnerSpeedRef = useRef(Infinity)
@@ -294,6 +296,7 @@ export default function Practice() {
     }
 
     setResult(null)
+    setRetry(null)
     setHintLevel(0)
     setRevealedTextIndex(-1)
     setStartTime(Date.now())
@@ -307,7 +310,8 @@ export default function Practice() {
     const timeSpent = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0
     // 정답을 이미 본 뒤의 제출(같은 문장 다시 도전)과 힌트 3(발음 자막)으로 문장을 본 뒤의 제출은 연습으로만 채점한다.
     // 서버는 practice_only면 점수만 주고 3단계 숙달·XP에는 넣지 않는다. 이 레슨의 정답률에도 넣지 않는다.
-    const practiceOnly = answerShownRef.current || hintLevel >= 3
+    // 자음 피드백 뒤의 두 번째 답도 연습으로만 채점한다(숙달에는 첫 답만)
+    const practiceOnly = answerShownRef.current || hintLevel >= 3 || !!retry
     const learnerSpeed = effectiveMode === 'test-multiple' || !Number.isFinite(learnerSpeedRef.current) ? 1 : learnerSpeedRef.current
     const speed = effectiveSpeed(visemes, shownVisemes, learnerSpeed)
 
@@ -328,9 +332,20 @@ export default function Practice() {
         ...(Number.isFinite(speed) && speed > 0 ? { speed } : {}),
       })
 
-      setResult(response)
-      answerShownRef.current = true   // 채점 결과와 함께 정답 문장이 보인다
-      setIsPlaying(false)
+      // 주관식 첫 답이 합격선 아래이고 틀린 낱말이 있으면, 정답 문장을 보이지 않고 자음 단서를 보인 뒤 입모양을 다시 재생한다
+      const wf = response.word_feedback
+      const needsRetry = effectiveMode !== 'test-multiple' && !practiceOnly && response.passed === false
+        && Array.isArray(wf?.words) && wf.words.some((w) => !w.correct)
+      if (needsRetry) {
+        setRetry({ feedback: wf, first: response })
+        setIsPlaying(true)
+        setStartTime(Date.now())
+      } else {
+        setRetry(null)
+        setResult(response)
+        answerShownRef.current = true   // 채점 결과와 함께 정답 문장이 보인다
+        setIsPlaying(false)
+      }
       // 4지선다는 answer_mode 'choice'로 보내 서버도 같은 문장인지(정확 일치)로 채점한다(화면의 정오와 같다).
       // 레슨 집계의 맞힘은 서버의 합격 판정(3단계 합격선, response.passed)을 따른다. 예전에는 80점 기준이라 숙달(60점)과
       // 오답 목록(60점 미만)과 어긋났다. 옛 서버 응답에 passed가 없으면 예전 기준으로 둔다.
@@ -355,6 +370,7 @@ export default function Practice() {
     if (isLastSentence) setElapsedSec(Math.floor((Date.now() - lessonStartRef.current) / 1000))
     nextSentence()
     setResult(null)
+    setRetry(null)
     setSelectedChoice(null)
     setHintLevel(0)
     setRevealedTextIndex(-1)
@@ -362,11 +378,21 @@ export default function Practice() {
 
   const handleRetry = () => {
     setResult(null)
+    setRetry(null)
     setHintLevel(0)
     setRevealedTextIndex(-1)
     setSelectedChoice(null)
     setIsPlaying(true)
     setStartTime(Date.now())
+  }
+
+  // 자음 단서를 보고도 모르겠으면 첫 답의 결과와 정답 문장을 보인다(두 번째 답 없이)
+  const revealAfterRetry = () => {
+    if (!retry) return
+    setResult(retry.first)
+    setRetry(null)
+    answerShownRef.current = true
+    setIsPlaying(false)
   }
 
   const handleFinish = () => {
@@ -561,6 +587,12 @@ export default function Practice() {
                   </button>
                 )}
 
+                {retry && !result && (
+                  <div className="mb-3">
+                    <ConsonantFeedback feedback={retry.feedback} />
+                  </div>
+                )}
+
                 <AnimatePresence>
                   {hintLevel > 0 && (
                     <motion.div key={hintLevel} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
@@ -571,20 +603,28 @@ export default function Practice() {
 
                 <div className="mt-4">
                   <QuizForm
-                    key={currentSentenceIndex}
+                    key={`${currentSentenceIndex}-${retry ? 'retry' : 'first'}`}
                     onSubmit={handleSubmitAnswer}
                     onRetry={handleRetry}
                     loading={submitting}
                     result={result}
                     correctAnswer={currentSentence}
-                    label={effectiveMode === 'essay'
-                      ? '입모양을 보고 문장 전체를 서술해서 입력하세요'
-                      : '입모양을 보고 문장을 입력하세요'}
+                    label={retry ? '단서를 보고 문장을 한 번 더 입력하세요'
+                      : effectiveMode === 'essay'
+                        ? '입모양을 보고 문장 전체를 서술해서 입력하세요'
+                        : '입모양을 보고 문장을 입력하세요'}
                     placeholder={effectiveMode === 'essay'
                       ? '읽은 내용을 문장으로 자세히 적어보세요...'
                       : '여기에 읽은 문장을 입력하세요...'}
                   />
                 </div>
+
+                {retry && !result && (
+                  <button type="button" onClick={revealAfterRetry}
+                    className="mt-2 w-full rounded-14 py-2 text-[13.5px] font-bold text-ink-muted underline">
+                    모르겠어요, 정답 보기
+                  </button>
+                )}
 
                 {result && (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-4">

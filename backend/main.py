@@ -561,6 +561,9 @@ class ProgressResponse(BaseModel):
     feedback: dict
     phoneme_accuracy: dict
     passed: Optional[bool] = None   # 3단계 합격선(_STAGE3_PASS) 이상인가. 화면의 레슨 집계·표시가 이 값을 쓴다
+    # 주관식·서술형(typed)의 낱말별 자음 피드백(계획 C9, sentence_feedback.py). 화면은 합격선 아래인 첫 답에서 정답 문장 대신
+    # 이것을 보이고 한 번 더 답하게 한다. 4지선다에는 없다
+    word_feedback: Optional[dict] = None
 
 
 @app.get("/api/viseme", response_model=List[VisemeFrame])
@@ -799,6 +802,10 @@ async def submit_progress(
             scoring_result = _choice_result(submission.sentence, submission.user_answer, scoring_result)
         time_spent = max(0, min(int(submission.time_spent_seconds), 3600))
         difficulty = max(1, min(int(submission.difficulty_level), 5))
+        word_feedback = None
+        if submission.answer_mode != "choice":
+            from sentence_feedback import consonant_feedback
+            word_feedback = consonant_feedback(submission.sentence, submission.user_answer)
         if submission.practice_only:
             # 정답을 이미 본 제출은 숙달(해금)·XP·연습 기록에 넣지 않는다(다시 풀기 네 번이면 3단계가 숙달되던 문제)
             award = _award_xp_and_streak(current_user, 0)
@@ -808,7 +815,7 @@ async def submit_progress(
                 old_level=award["old_level"], xp_gained=0, streak_count=award["streak_count"],
                 streak_multiplier=award["streak_multiplier"], feedback=scoring_result.get("feedback", {}),
                 phoneme_accuracy=scoring_result.get("phoneme_accuracy", {}),
-                passed=scoring_result["score"] >= _STAGE3_PASS)
+                passed=scoring_result["score"] >= _STAGE3_PASS, word_feedback=word_feedback)
 
         # Save progress to database
         from database import Progress
@@ -874,6 +881,7 @@ async def submit_progress(
             feedback=scoring_result.get("feedback", {}),
             phoneme_accuracy=scoring_result.get("phoneme_accuracy", {}),
             passed=scoring_result["score"] >= _STAGE3_PASS,
+            word_feedback=word_feedback,
         )
 
     except Exception as e:
