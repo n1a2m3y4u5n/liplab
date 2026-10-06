@@ -567,11 +567,16 @@ export default function SpeakingPractice() {
   const metricFb = metricMode ? metricVerdict({ assessment, assessing, summary, localGood }) : null
   const good = metricFb ? metricFb.good
     : assessment && !assessment.error ? (assessment.passed ?? (assessment.score >= 65)) : localGood
+  // 판정 보류(S9): 점수가 합격선 ± 1 SEM(재검사 오차) 안이면 한 번으로는 판단하기 어렵다고 알리고 한 번 더 말하기를 권한다.
+  // 숙달 계산은 서버의 passed 그대로다(docs/scoring-analyses-2026-10.md S14)
+  const hold = !metricFb && !!(assessment && !assessment.error && assessment.hold)
   const fbSub = metricFb ? metricFb.sub
-    : good ? (phones.length ? `${phones.length}개 중 ${goodCount}개 소리를 정확히 냈어요` : (summary?.volMsg || '잘 전달됐어요'))
-      : '소리가 잘 전달되지 않았어요'
-  const fbTitle = metricFb ? metricFb.title : good ? '잘했어요!' : '조금 더 연습해요'
-  const barTone = good == null ? 'border-line bg-white text-ink-muted' : good ? 'border-good/35 bg-good-tint' : 'border-bad/35 bg-bad-tint'
+    : hold ? '점수가 합격선 근처예요. 한 번 더 말하면 더 정확히 알 수 있어요'
+      : good ? (phones.length ? `${phones.length}개 중 ${goodCount}개 소리를 정확히 냈어요` : (summary?.volMsg || '잘 전달됐어요'))
+        : '소리가 잘 전달되지 않았어요'
+  const fbTitle = metricFb ? metricFb.title : hold ? '한 번 더 말해 볼까요?' : good ? '잘했어요!' : '조금 더 연습해요'
+  const barTone = good == null ? 'border-line bg-white text-ink-muted' : hold ? 'border-warn/35 bg-warn-tint'
+    : good ? 'border-good/35 bg-good-tint' : 'border-bad/35 bg-bad-tint'
   // 나가기 → 발화 커리큘럼 경로(?track=speak). /dashboard는 독화 경로로 리다이렉트된다.
   const exit = () => { teardown(); navigate(reviewMode ? '/review/speaking' : '/learn/path?track=speak') }
 
@@ -723,6 +728,10 @@ export default function SpeakingPractice() {
                     })}
                   </div>
                 )}
+                {/* 소리별 색은 재검사 일치도가 낮아(카파 0.39) 참고로만 보인다(docs/scoring-analyses-2026-10.md S14) */}
+                {phones.length > 0 && (
+                  <p className="text-center text-[11.5px] leading-relaxed text-ink-faint lg:mt-3">소리별 색은 참고용이에요. 같은 말을 다시 해도 색이 바뀔 수 있어요.</p>
+                )}
 
                 {assessing && !metricMode && (
                   <div className="flex items-center gap-2 text-sm text-track-dark lg:mt-6">
@@ -747,13 +756,18 @@ export default function SpeakingPractice() {
         summary ? (
           <div className={`sticky bottom-0 w-full border-t-2 ${barTone}`}>
             <div className="mx-auto flex max-w-[676px] flex-col items-stretch gap-3 px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-4 lg:h-[110px] lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:py-0">
-              <div role="status" aria-live="polite" className={`flex min-w-0 flex-col gap-[3px] font-bold leading-figma lg:gap-1 ${good == null ? 'text-ink-muted' : good ? 'text-good-text' : 'text-bad-text'}`}>
+              <div role="status" aria-live="polite" className={`flex min-w-0 flex-col gap-[3px] font-bold leading-figma lg:gap-1 ${good == null ? 'text-ink-muted' : hold ? 'text-warn-text' : good ? 'text-good-text' : 'text-bad-text'}`}>
                 <p className="text-[19px] tracking-[-0.38px] lg:text-[22px] lg:tracking-[-0.44px]">{assessing && !metricMode ? '분석 중…' : fbTitle}</p>
                 <p className="text-[13px] opacity-80 lg:truncate lg:text-[14px]">{assessing && !metricMode ? '발음을 분석하고 있어요' : fbSub}</p>
               </div>
               {/* 버튼: 통과 = 다시 말하기 / 계속하기, 아쉬움 = 넘어가기 / 다시 말하기(§4-04). lg 미만은 반반 폭. */}
               <div className="flex w-full gap-2.5 lg:w-auto lg:shrink-0">
-                {good ? (
+                {hold ? (
+                  <>
+                    <button type="button" onClick={nextItem} className={`btn-secondary ${RESULT_BTN}`}>{good ? '계속하기' : '넘어가기'}</button>
+                    <button type="button" onClick={resetAttempt} className={`btn-primary ${RESULT_BTN}`}>한 번 더 말하기</button>
+                  </>
+                ) : good ? (
                   <>
                     <button type="button" onClick={resetAttempt} className={`btn-secondary border-good-line text-good-text ${RESULT_BTN}`}>다시 말하기</button>
                     <button type="button" onClick={nextItem} className={`btn-good ${RESULT_BTN}`}>{reviewMode || stageNo != null ? '계속하기' : '다음 단어'}</button>
@@ -807,7 +821,7 @@ export default function SpeakingPractice() {
                 {/* 음소별 발음 정확도(182:88) */}
                 {phones.length > 0 && (
                   <div className="flex flex-col items-center gap-2.5 rounded-14 border-1.5 border-fill bg-surface-muted px-4 py-3.5">
-                    <p className="text-[13px] font-bold leading-figma text-ink-muted">소리별 발음 정확도</p>
+                    <p className="text-[13px] font-bold leading-figma text-ink-muted">소리별 발음 정확도(참고)</p>
                     <div className="flex flex-wrap justify-center gap-2">
                       {phones.map((p, i) => {
                         const v = phoneScore(p)

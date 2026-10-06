@@ -1522,6 +1522,15 @@ def _speed_credit(success: float, speed) -> float:
 _STAGE3_MIN_ATTEMPTS = 5       # 문장 연습·문맥 추론
 _STAGE3_MASTERY = 80.0
 _STAGE3_PASS = 60.0            # 문장 1건을 '성공'으로 볼 최소 점수
+# 말하기 D-GOP 문장 점수의 재검사 측정 오차(608 반복 세션 22개, ICC 0.684, docs/scoring-analyses-2026-10.md S14). 판정 보류 폭에 쓴다
+_SPEAK_SEM = 7.5
+
+
+def speak_hold(score, stage_pass, mode, passed, is_probe=False) -> bool:
+    """판정 보류인가: 낱말·문장 단계(D-GOP 점수, SEM을 잰 조건)에서 점수가 합격선 ± 1 SEM 안. 확인 낱말·지표 단계는 해당 없음."""
+    if stage_pass is None or passed is None or score is None or is_probe or mode not in ("word", "sentence"):
+        return False
+    return abs(float(score) - float(stage_pass)) < _SPEAK_SEM
 # 틀린 문장 복습(ReviewLanding)·북마크 연습(Bookmarks) 세션의 scenario_id 접두어. 두 화면은 원문을 목록에 보여 준 뒤 풀게
 # 하므로, 그 답은 3단계 숙달에 넣지 않고(입모양·단어 SRS 복습과 같은 원칙) 추천 난이도 계산에서도 뺀다. 예전에는 넣어서
 # 새 문장 통과율 0.5인 학습자의 20레슨 안 3단계 숙달 확률이 0.227에서 0.676으로 올랐다(모의실험, 복습 답 통과 0.95 가정).
@@ -4632,10 +4641,16 @@ async def speak_assess(
                        if p.get("aligned") and p.get("scorable") and not p.get("silent_h")],   # 내지 않는 ㅎ은 칩에서 뺀다
         }
 
+    # 판정 보류(S9, docs/scoring-analyses-2026-10.md S14): 문장 하나의 D-GOP 재검사 오차(SEM)가 7.5점이라, 점수가 합격선 ± 1 SEM
+    # 안이면 한 번으로는 합격·불합격을 믿기 어렵다. 화면은 '한 번 더 말해 보기'를 권한다. 숙달 계산(passed)은 바꾸지 않는다
+    stage_pass = (stg or {}).get("pass") if stg else None
+    hold = speak_hold(score, stage_pass, (stg or {}).get("mode"), passed, is_probe)
     return {
         "transcript": transcript,
         "score": score,
         "passed": passed,
+        "pass_score": stage_pass,
+        "hold": hold,
         "note": note,
         "confusions": confusions[:6],
         "coaching": coaching,
