@@ -1,0 +1,71 @@
+"""3단계 자음 피드백(sentence_feedback) 테스트."""
+from sentence_feedback import consonant_feedback, skeleton
+
+
+def test_skeleton_shows_onsets_only():
+    assert skeleton("바로곡") == ["ㅂ", "ㄹ", "ㄱ"]
+    assert skeleton("아이") == ["ㅇ", "ㅇ"]
+    assert skeleton("주세요?") == ["ㅈ", "ㅅ", "ㅇ"]   # 문장 부호는 뺀다
+    assert skeleton("3시") == ["3", "ㅅ"]
+
+
+def test_all_correct_and_spacing_free_punctuation():
+    r = consonant_feedback("물 좀 주세요.", "물 좀 주세요")
+    assert r["correct_words"] == r["total_words"] == 3
+    assert all(w["correct"] and w["text"] for w in r["words"])
+
+
+def test_wrong_words_hide_text_and_show_skeleton():
+    r = consonant_feedback("물 좀 주세요", "불 좀 주세요")
+    first = r["words"][0]
+    assert first == {"text": None, "correct": False, "skeleton": ["ㅁ"]}
+    assert r["correct_words"] == 2 and r["total_words"] == 3
+
+
+def test_same_pronunciation_counts_as_correct():
+    # 표기는 달라도 소리 나는 대로 같으면 맞힌 것(같이 → [가치])
+    r = consonant_feedback("같이 가요", "가치 가요")
+    assert r["correct_words"] == 2
+
+
+def test_order_kept_and_empty_answer():
+    r = consonant_feedback("오늘 날씨 좋네요", "좋네요 오늘")
+    assert r["correct_words"] == 1   # 순서가 바뀐 낱말은 한쪽만 맞힌 것으로
+    e = consonant_feedback("오늘 날씨 좋네요", "")
+    assert e["correct_words"] == 0 and all(w["skeleton"] for w in e["words"])
+
+
+# API: 주관식 응답에 word_feedback이 붙고, 4지선다에는 없다(임시 DB, 별도 프로세스)
+_FLOW = r'''
+import json
+from fastapi.testclient import TestClient
+import main
+out = {}
+with TestClient(main.app) as c:
+    r = c.post("/api/auth/register", json={"email": "wf@example.com", "username": "wf1", "password": "pw-123456",
+                                           "agree_terms": True, "age_confirmed": True})
+    h = {"Authorization": f"Bearer {r.json()['access_token']}"}
+    body = {"scenario_id": "t", "sentence": "물 좀 주세요.", "time_spent_seconds": 5, "situation": "식당", "difficulty_level": 1}
+    out["typed"] = c.post("/api/progress", json={**body, "user_answer": "불 좀 주세요", "answer_mode": "typed"}, headers=h).json()
+    out["retry"] = c.post("/api/progress", json={**body, "user_answer": "물 좀 주세요", "answer_mode": "typed",
+                                                 "practice_only": True}, headers=h).json()
+    out["choice"] = c.post("/api/progress", json={**body, "user_answer": "물 좀 주세요.", "answer_mode": "choice"}, headers=h).json()
+print("RESULT " + json.dumps(out, ensure_ascii=False))
+'''
+
+
+def test_progress_returns_word_feedback_for_typed_only():
+    import json, os, subprocess, sys, tempfile
+    here = os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as d:
+        env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", PYTHONDONTWRITEBYTECODE="1")
+        env.pop("ANTHROPIC_API_KEY", None)
+        p = subprocess.run([sys.executable, "-c", _FLOW], cwd=here, env=env, capture_output=True, text=True, timeout=180)
+    line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
+    assert line, f"시나리오 실패:\n{p.stdout[-2000:]}\n{p.stderr[-3000:]}"
+    r = json.loads(line[len("RESULT "):])
+    wf = r["typed"]["word_feedback"]
+    assert wf["total_words"] == 3 and wf["correct_words"] == 2
+    assert wf["words"][0] == {"text": None, "correct": False, "skeleton": ["ㅁ"]}
+    assert r["retry"]["status"] == "practice_only" and r["retry"]["word_feedback"]["correct_words"] == 3
+    assert r["choice"].get("word_feedback") is None
