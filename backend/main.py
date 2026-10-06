@@ -560,6 +560,8 @@ class ProgressSubmission(BaseModel):
     talker: Optional[str] = Field(None, max_length=16)
     hint_level: Optional[int] = Field(None, ge=0, le=3)
     options: Optional[List[str]] = Field(None, max_length=6)
+    # 연습 답(practice_only)의 사유. 화면이 보낸다. 'consonant_retry' | 'hint3' | 'answer_shown'(그 밖의 값은 비운다)
+    practice_reason: Optional[str] = Field(None, max_length=16)
 
 
 def _sentence_options(options, sentence: str) -> Optional[list]:
@@ -827,7 +829,15 @@ async def submit_progress(
             from sentence_feedback import consonant_feedback
             word_feedback = consonant_feedback(submission.sentence, submission.user_answer)
         if submission.practice_only:
-            # 정답을 이미 본 제출은 숙달(해금)·XP·연습 기록에 넣지 않는다(다시 풀기 네 번이면 3단계가 숙달되던 문제)
+            # 정답을 이미 본 제출은 숙달(해금)·XP·연습 기록에 넣지 않는다(다시 풀기 네 번이면 3단계가 숙달되던 문제).
+            # 분석용으로만 sentence_practice_logs에 남긴다(자음 피드백 뒤 두 번째 답의 효과, 힌트 3 사용)
+            from database import SentencePracticeLog
+            reason = submission.practice_reason if submission.practice_reason in ("consonant_retry", "hint3", "answer_shown") else None
+            db.add(SentencePracticeLog(
+                user_id=current_user.id, scenario_id=(submission.scenario_id or "")[:200], sentence=submission.sentence[:200],
+                user_answer=(submission.user_answer or "")[:200], reason=reason, score=scoring_result["score"],
+                hint_level=submission.hint_level, rt_from_onset_ms=submission.rt_from_onset_ms,
+                words_correct=(word_feedback or {}).get("correct_words"), words_total=(word_feedback or {}).get("total_words")))
             award = _award_xp_and_streak(current_user, 0)
             await db.commit()
             return ProgressResponse(
@@ -3476,7 +3486,8 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
     from sqlalchemy import select, func, cast, Integer
     from datetime import datetime as _dt
     from database import (LearningProfile, PlacementResult, TrialAttempt, SpeakAttempt, Progress, ReviewLog, MasteryProbe,
-                          RetentionResult, LessonEffort, P3TestSession, P3ClosedResponse, P3OpenResponse)
+                          RetentionResult, LessonEffort, P3TestSession, P3ClosedResponse, P3OpenResponse,
+                          SentencePracticeLog)
     tz = max(-840, min(720, int(tz_offset_min)))
 
     def day(ts):
@@ -3527,6 +3538,8 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
         rr = (await db.execute(select(RetentionResult).where(RetentionResult.user_id == uid)
                                .order_by(RetentionResult.id))).scalars().all()
         le = (await db.execute(select(LessonEffort).where(LessonEffort.user_id == uid).order_by(LessonEffort.id))).scalars().all()
+        sp = (await db.execute(select(SentencePracticeLog).where(SentencePracticeLog.user_id == uid)
+                               .order_by(SentencePracticeLog.id))).scalars().all()
         return {
             "review_logs": [{"kind": r.kind, "ref": r.ref, "source": r.source, "reviewed_on": r.reviewed_on,
                              "elapsed_days": r.elapsed_days, "quality": r.quality, "grade": r.grade, "passed": r.passed,
@@ -3546,6 +3559,10 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
             "lesson_efforts": [{"day": day(r.created_at), "lesson_kind": r.lesson_kind, "stage": r.stage, "rating": r.rating,
                                 "response": r.response, "n_items": r.n_items, "accuracy": r.accuracy,
                                 "render_log": r.render_log} for r in le],
+            # 3단계 연습 답(자음 피드백 뒤 두 번째 답 등). 문장·답 원문은 싣지 않고 점수·사유·낱말 판정만
+            "sentence_practice_logs": [{"day": day(r.created_at), "reason": r.reason, "score": r.score,
+                                        "hint_level": r.hint_level, "rt_from_onset_ms": r.rt_from_onset_ms,
+                                        "words_correct": r.words_correct, "words_total": r.words_total} for r in sp],
         }
 
     async def battery(uid):

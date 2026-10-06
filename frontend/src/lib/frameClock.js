@@ -26,10 +26,35 @@ export function recordLateness(lateMs) {
   if (v > 50) stats.over50 += 1
 }
 
+// 화면 주사율 추정: 보이는 동안 requestAnimationFrame 간격 30개의 중앙값. 숨은 탭은 브라우저가 늦추므로 보일 때만 잰다.
+let screenHzEst = null
+export function hzFromIntervals(intervals) {
+  const d = (intervals || []).filter((x) => x > 0 && x < 1000).sort((a, b) => a - b)
+  if (d.length < 10) return null
+  const med = d[Math.floor(d.length / 2)]
+  return Math.round(1000 / med)
+}
+function startScreenHzEstimate() {
+  if (typeof window === 'undefined' || typeof requestAnimationFrame !== 'function' || screenHzEst != null) return
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+    document.addEventListener('visibilitychange', startScreenHzEstimate, { once: true })
+    return
+  }
+  const t = []
+  const step = (now) => {
+    t.push(now)
+    if (t.length < 31) requestAnimationFrame(step)
+    else screenHzEst = hzFromIntervals(t.slice(1).map((x, i) => x - t[i]))
+  }
+  requestAnimationFrame(step)
+}
+startScreenHzEstimate()
+
 /** 지금까지의 요약. 파일럿 기기 점검(V20)과 끊김 진단에 쓴다. */
 export function renderTimingSummary() {
   const { n, sumMs, maxMs, over20, over50 } = stats
   return {
+    screenHzEst,
     frames: n,
     meanLateMs: n ? Math.round((sumMs / n) * 10) / 10 : 0,
     maxLateMs: Math.round(maxMs),
