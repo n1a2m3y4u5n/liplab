@@ -396,7 +396,7 @@ function WordQuiz({ data, reload }) {
                 {isContext && (
                   <div className="rounded-16 border-2 border-line bg-white p-4 text-[13px] leading-snug text-ink-muted">
                     <p className="text-xs font-bold text-ink">문장으로 고르는 문항이에요</p>
-                    <p className="mt-1">보기는 모두 입모양이 비슷해서 눈만으로는 가르기 어려워요. 앞뒤 말의 흐름으로 고르는 연습이에요.
+                    <p className="mt-1">보기는 모두 입모양이 비슷해서 눈만으로는 고르기 어려워요. 앞뒤 말의 흐름으로 고르는 연습이에요.
                       이 문항은 단어 단계 숙달에는 들어가지 않아요.</p>
                     {q.item.hint && <p className="mt-1">힌트: {q.item.hint}</p>}
                   </div>

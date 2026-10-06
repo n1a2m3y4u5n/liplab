@@ -311,11 +311,11 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       {showMirror && (
         <div className="mt-2 grid grid-cols-2 gap-2">
           <div className="rounded-lg border border-gray-200 bg-slate-900/95 p-1">
-            <p className="px-1 pb-0.5 text-[10px] text-slate-300">내 조음(성도 추정)</p>
+            <p className="px-1 pb-0.5 text-[10px] text-slate-300">내 입 안 모양(추정)</p>
             <div className="h-24"><VocalTract visemeId={visemeId} articulationRef={artRef} /></div>
           </div>
           <div className="rounded-lg border border-gray-200 bg-slate-900/95 p-1">
-            <p className="px-1 pb-0.5 text-[10px] text-slate-300">목표 조음</p>
+            <p className="px-1 pb-0.5 text-[10px] text-slate-300">목표 입 안 모양</p>
             <div className="h-24"><VocalTract visemeId={visemeId} /></div>
           </div>
         </div>
@@ -325,19 +325,19 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       )}
       {articulationGuide && (
         <p className="mt-1 text-center text-xs text-sky-700">
-          <b>안 보이는 조음</b> — {articulationGuide}
+          <b>밖에서 안 보이는 혀 움직임</b> — {articulationGuide}
         </p>
       )}
       {/* 축 E: 조음 교정 — 관찰 계수(개구·원순·폐쇄)를 목표와 비교해 방향을 제시하고 계수를 노출한다 */}
       {status === 'running' && correction && (
         <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50/60 p-2">
-          <p className="mb-1 text-center text-[10px] text-sky-600">조음 교정 · 관찰 계수 (축 E)</p>
+          <p className="mb-1 text-center text-[10px] text-sky-600">입모양 맞추기 · 내 입 수치</p>
           <p className="text-center text-sm font-semibold text-sky-900">
-            {correction.ok ? '조음이 목표에 가까워요' : correction.primary}
+            {correction.ok ? '입모양이 목표에 가까워요' : correction.primary}
           </p>
           {obs && (
             <div className="mt-1.5 grid grid-cols-3 gap-2">
-              {[['jaw', '개구'], ['round', '원순'], ['close', '폐쇄']].map(([k, label]) => (
+              {[['jaw', '입 벌림'], ['round', '입술 둥글림'], ['close', '입술 닫힘']].map(([k, label]) => (
                 <div key={k} className="text-center">
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-sky-100">
                     <div className="h-full rounded-full bg-sky-500 transition-all" style={{ width: `${Math.round((obs[k] || 0) * 100)}%` }} />
@@ -376,7 +376,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       )}
       {status === 'running' && geo && (
         <div className="mt-2">
-          <p className="mb-1 text-center text-[10px] text-gray-400">입술 기하 지표 (좌표 기반·양안거리 정규화)</p>
+          <p className="mb-1 text-center text-[10px] text-gray-400">입술 모양 수치 (두 눈 사이 거리로 크기를 맞춘 값)</p>
           <div className="grid grid-cols-5 gap-1.5">
             {Object.entries(LIP_GEOMETRY_LABELS).map(([k, label]) => (
               <div key={k} className="rounded-md bg-slate-50 py-1 text-center">

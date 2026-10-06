@@ -110,7 +110,7 @@ function VisemeAvatar({ visemeId, height = 300, className = '', talker = null, t
           title="피부를 반투명하게 해 안 보이는 혀·치아를 드러냄">투명 두상</button>
         <button onClick={() => setShowTract((v) => !v)}
           className={`flex-1 py-1.5 text-xs rounded-lg font-bold transition-colors ${showTract ? 'bg-primary-500 text-white' : 'bg-surface-sunken text-ink-muted hover:bg-surface-hover'}`}
-          title="측면 성도 단면으로 혀·입술·턱 조음 보기">성도 단면</button>
+          title="옆에서 자른 입 안 그림으로 혀·입술·턱 움직임 보기">성도 단면</button>
       </div>
     </div>
   )
@@ -240,7 +240,7 @@ function LearnPanel({ data }) {
                 <span className="text-[11px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700">{sel.articulation.manner}</span>
                 {sel.articulation.nasal && <span className="text-[11px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700">비음</span>}
               </div>
-              <span className="text-sky-800">밖에서 안 보이는 혀·조음 — {sel.articulation.guide}</span>
+              <span className="text-sky-800">밖에서 안 보이는 혀 움직임 — {sel.articulation.guide}</span>
             </div>
           )}
           {VISEME_GROUP_VTL[sel.viseme_id] && <GroupTract group={VISEME_GROUP_VTL[sel.viseme_id]} />}
@@ -291,7 +291,7 @@ function LearnPanel({ data }) {
           ))}
         </div>
         <div className="mt-4">
-          <p className="text-xs text-ink-faint mb-1.5">최소대립쌍 예시 — 같아 보이는(●) / 다르게 보이는(○) 쌍</p>
+          <p className="text-xs text-ink-faint mb-1.5">한 소리만 다른 단어 짝 — 같아 보이는(●) / 다르게 보이는(○) 짝</p>
           <div className="flex flex-wrap gap-2">
             {pairPreview.map((m, i) => (
               <span key={i} title={m.note}

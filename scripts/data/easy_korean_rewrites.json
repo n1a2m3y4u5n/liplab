@@ -1,0 +1,1003 @@
+{
+ "note": "쉬운 한국어 감사(C15) 고쳐 쓰기 제안과 반영 기록. scripts/easy_korean_audit.py --doc이 읽는다.",
+ "proposals": [
+  {
+   "rank": 1,
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 63,
+   "before": "수집 항목 — 이메일, 표시 이름, 비밀번호(복호화할 수 없는 해시로 저장), 가입 동의 기록(동의한 약관·처리방침 판본, 동의 시각, 연령 확인 여부), 학습 기록(문항별 정오답, 문장 채점 점수, 말하기 연습의 전사문·점수·음성 지표[크기·음높이 범위·길이·억양 시작과 끝]·소리별 점수·코칭 문장, 소리·입모양·융합 점수, 입모양 연습의 점수와 교정 세션 처음·끝 오차), 파일럿 연구에 참여한 경우 참여 코드와 집단.",
+   "after": "모으는 정보: 이메일, 화면에 보일 이름, 비밀번호(되돌릴 수 없게 바꿔 저장), 가입 동의 기록(동의한 약관 판, 동의한 때, 나이 확인 여부). 학습 기록: 문제마다 맞고 틀림, 문장 점수, 말하기 녹음을 글로 옮긴 것과 점수, 소리 크기·높낮이·길이·억양 값, 소리별 점수, 코칭 문장, 입모양 연습 점수. 연구에 참여하면 참여 코드와 집단.",
+   "applied": false,
+   "note": "법적 고지(법무 검토 필요)"
+  },
+  {
+   "rank": 2,
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 65,
+   "before": "웹캠 — 웹캠 영상은 기기 안에서만 처리하며 서버로 보내지 않습니다. 입모양 연습 중에는 기기에서 계산한 입모양 수치(턱 벌림·입술 둥글림·입술 다물기)와 점수를 교정 안내와 약점 분석을 위해 서버로 보냅니다. 입모양 수치의 원본(프레임마다의 값)은 저장하지 않고, 연습마다의 점수와 교정 세션의 처음·끝 오차(목표와의 평균 차이), 그리고 점수에서 나온 약점 정보만 학습 기록에 남습니다.",
+   "after": "웹캠: 영상은 기기 안에서만 처리하고 서버로 보내지 않아요. 입모양 연습 때는 기기에서 계산한 입모양 수치(턱 벌림, 입술 둥글림, 입술 다물기)와 점수를 서버로 보내요. 입모양 안내와 약점 분석에 써요. 프레임마다의 원래 수치는 저장하지 않아요. 연습마다의 점수, 연습 처음과 끝의 차이, 약점 정보만 학습 기록에 남아요.",
+   "applied": false,
+   "note": "법적 고지(법무 검토 필요)"
+  },
+  {
+   "rank": 3,
+   "file": "frontend/src/components/SignPanel.jsx",
+   "line": 271,
+   "before": "수어 영상·데이터 출처: 국립국어원 「한국수어사전」(sldict.korean.go.kr) — CC BY-NC-ND 2.0 KR.\n지문자 손모양(한글): “Korean manual alphabet” © Kwamikagami / Wikimedia Commons — CC BY-SA 3.0.\n영문 지문자(A–Z)는 국제(미국식) 지문자 — “Sign language A–Z”, Wikimedia Commons, Public Domain.\n학습·이해 보조(베타)용이며 공식 통역이 아닙니다.",
+   "after": "(출처·저작권 줄은 그대로) 마지막 줄: 공부를 돕는 시험판(베타)이에요. 공식 통역이 아니에요.",
+   "applied": false,
+   "note": "출처·저작권 표기는 원문 유지"
+  },
+  {
+   "rank": 4,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 222,
+   "before": "학습곡선, 숙달까지 걸린 시도 수, 처음 대비 향상도를 봐요. 사전·사후 검사(각 24문항)는 같은 난이도로 전후를 비교하고, 사후 문항 절반은 검사 전용 화자로 내서 새 가상 화자 조건 점수를 따로 보여줘요. 검사 이력·오류 프로파일·학습량은 흑백 한 장으로 인쇄해 교사나 언어재활사와 나눠요.",
+   "after": "학습곡선, 숙달까지 걸린 시도 수, 처음보다 얼마나 늘었는지를 봐요. 사전·사후 검사(각 24문항)는 난이도가 같아서 앞뒤를 비교할 수 있어요. 사후 문항 절반은 검사에만 나오는 화자가 말하고, 그 점수를 '새 가상 화자'로 따로 보여 줘요. 검사 기록, 자주 틀린 것(오류 프로파일), 학습량은 흑백 한 장으로 인쇄해 교사나 언어재활사와 나눠요.",
+   "applied": true
+  },
+  {
+   "rank": 5,
+   "file": "backend/main.py",
+   "line": 359,
+   "before": "웹캠 영상은 기기 안에서만 처리되고, 원음성은 채점하는 동안 서버 메모리에서만 처리한 뒤 저장하지 않으므로 이 내보내기에 포함되지 않습니다. 전사문·음성 지표·입모양 계수 기반 점수는 학습 기록으로 저장되어 아래 data에 들어 있습니다.",
+   "after": "웹캠 영상은 기기 안에서만 처리됩니다. 목소리 녹음은 채점하는 동안만 서버 메모리에 두고 저장하지 않아, 이 파일에 없습니다. 녹음을 글로 옮긴 것(전사문), 소리 수치, 입모양 점수는 학습 기록으로 저장되어 아래 data에 있습니다.",
+   "applied": true
+  },
+  {
+   "rank": 6,
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 69,
+   "before": "보관·파기 — 학습 기록과 가입 동의 기록은 계정 유지 동안 보관하며, 회원 탈퇴 시 지체 없이 파기합니다. 당사자 파일럿 연구에 참여한 경우 그 자료는 별도 연구 동의서에 적힌 기간 동안 보관한 뒤 파기합니다.",
+   "after": "보관과 삭제: 학습 기록과 가입 동의 기록은 계정이 있는 동안 보관해요. 탈퇴하면 바로 지워요. 연구에 참여했다면 그 자료는 연구 동의서에 적힌 기간 동안 보관한 뒤 지워요.",
+   "applied": false,
+   "note": "법적 고지(법무 검토 필요)"
+  },
+  {
+   "rank": 7,
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 67,
+   "before": "처리 위탁·국외 이전 — ① Fly.io, Inc.(미국): 서비스 호스팅과 데이터 저장. 서버는 일본 도쿄 리전에 있습니다. ② Anthropic, PBC(미국): 학습 문장·대화·코칭 문구 생성. 학습 문장과 채점에 필요한 전사문만 보내며 이메일·이름 등 이용자를 식별하는 정보는 보내지 않습니다. 두 경우 모두 서비스 이용 중 네트워크로 전송됩니다.",
+   "after": "다른 회사에 맡기는 일과 해외로 보내는 정보: ① Fly.io, Inc.(미국)가 서비스를 운영하고 데이터를 저장해요. 서버는 일본 도쿄에 있어요. ② Anthropic, PBC(미국)가 학습 문장, 대화, 코칭 문장을 만들어요. 학습 문장과 채점에 필요한 글만 보내요. 이메일·이름처럼 누구인지 알 수 있는 정보는 보내지 않아요. 두 경우 모두 서비스를 쓰는 동안 인터넷으로 보내져요.",
+   "applied": false,
+   "note": "법적 고지(법무 검토 필요)"
+  },
+  {
+   "rank": 8,
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 495,
+   "before": "한국어 독화에는 표준 자원이 거의 없습니다. LIPLAB은 동구형이음 사전·독화 난이도 지수·자음\n시각 지각공간·표준 평가셋을 판본과 함께 공개합니다. 앱 밖 연구·교육에서도 활용할 수 있어요.",
+   "after": "한국어 독화에는 함께 쓸 수 있는 기본 자료가 거의 없어요. LIPLAB은 입모양이 같은 단어 사전, 독화 난이도 점수, 자음끼리 얼마나 닮아 보이는지 나타낸 지도, 표준 평가 문제를 판 번호와 함께 공개해요. 앱 밖 연구와 교육에도 쓸 수 있어요.",
+   "applied": true
+  },
+  {
+   "rank": 9,
+   "file": "frontend/src/components/Audio2FaceAvatar.jsx",
+   "line": 300,
+   "before": "직접 녹음한 음성은 화자 불변 음성특징(WavLM, 20화자 학습) 모델이 입모양을 예측합니다. 처음 듣는 화자의\n입 벌림 상관은 r≈0.66인데, 평가 화자로 학습 시점을 고른 값이라 실제보다 높게 나왔을 수 있어요.\n미리 준비한 예시 5개는 합성 음성(TTS)이고, 입모양은 같은 모델로 미리 계산해 둔 결과입니다.",
+   "after": "직접 녹음한 목소리는 말하는 사람이 바뀌어도 같은 특징을 뽑는 모델(WavLM, 20명으로 학습)이 입모양을 예측해요. 처음 듣는 사람의 입 벌림 상관은 r≈0.66이에요. 다만 평가한 사람들로 학습을 멈출 때를 골라서, 실제보다 높게 나왔을 수 있어요. 미리 준비한 예시 5개는 합성 음성(TTS)이고, 입모양은 같은 모델로 미리 계산해 둔 결과예요.",
+   "applied": true
+  },
+  {
+   "rank": 10,
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 70,
+   "before": "이용자의 권리 — 프로필 → 계정 설정에서 정정·삭제를, 접근성 설정의 '내 데이터'에서 열람(내려받기)을 할 수 있습니다. 계정 삭제와 이메일 변경은 현재 비밀번호를 다시 확인합니다.",
+   "after": "내 권리: 프로필 → 계정 설정에서 정보를 고치거나 지울 수 있어요. 접근성 설정의 '내 데이터'에서 내 정보를 내려받을 수 있어요. 계정을 지우거나 이메일을 바꿀 때는 지금 비밀번호를 다시 확인해요.",
+   "applied": false,
+   "note": "법적 고지(법무 검토 필요)"
+  },
+  {
+   "rank": 11,
+   "file": "backend/curriculum.py",
+   "line": 107,
+   "before": "치경·연구개·성문·경구개음은 혀·목 안쪽 조음이라 겉모습이 거의 같다. 독화로 가장 어려운 무리.",
+   "after": "잇몸·여린입천장·목청·센입천장소리는 혀와 목 안쪽에서 만들어져 겉모습이 거의 같다. 독화로 가장 어려운 무리.",
+   "applied": true
+  },
+  {
+   "rank": 12,
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 75,
+   "before": "만 14세 미만 아동은 개인정보 수집·이용에 법정대리인(보호자)의 동의가 필요합니다. 회원가입 때 '만 14세 이상이거나 보호자 동의를 받았다'는 확인을 받고, 확인하지 않으면 가입할 수 없습니다. 확인 사실과 시각은 가입 동의 기록으로 서버에 남습니다.",
+   "after": "만 14세가 안 된 어린이는 개인정보를 모으고 쓰는 데 보호자 동의가 필요해요. 가입할 때 '만 14세 이상이거나 보호자 동의를 받았다'를 확인해요. 확인하지 않으면 가입할 수 없어요. 확인한 사실과 시간은 가입 동의 기록으로 서버에 남아요.",
+   "applied": false,
+   "note": "법적 고지(법무 검토 필요)"
+  },
+  {
+   "rank": 13,
+   "file": "frontend/src/components/A11ySettings.jsx",
+   "line": 136,
+   "before": "웹캠 영상은 기기 안에서만 처리돼요. 음성은 채점할 때만 서버로 보내 메모리에서 처리하고 저장하지 않으며, 전사문·음성 지표는 학습 기록으로 저장돼요.",
+   "after": "웹캠 영상은 기기 안에서만 처리돼요. 목소리 녹음은 채점할 때만 서버로 보내 메모리에서 처리하고, 저장하지 않아요. 녹음을 글로 옮긴 것과 소리 수치는 학습 기록으로 저장돼요.",
+   "applied": true
+  },
+  {
+   "rank": 14,
+   "file": "frontend/src/components/guide/GuideMockups.jsx",
+   "line": 934,
+   "before": "분석 탭 예시. 총 학습·평균 정확도·연속 학습 세 칸, 학습시간·정확도 추이 그래프, 활동 캘린더·회차 히스토리·전체 통계 링크.",
+   "after": "분석 탭 예시. 맨 위에 총 학습, 평균 정확도, 연속 학습 세 칸. 가운데에 학습시간과 정확도 추이 그래프. 아래에 활동 캘린더, 회차 히스토리, 전체 통계 링크.",
+   "applied": true
+  },
+  {
+   "rank": 15,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 123,
+   "before": "보기를 누르거나 숫자 키 1~4로 고른 뒤 확인을 눌러요. 1단계는 입모양 그룹을, 2단계는 단어를 골라요. 단어 오답 보기는 화면에서 구별되는 것만 나와요. 2단계 레슨의 2문항과 문맥 추론은 문장 속 빈칸을 보기 3개 중에서 채워요.",
+   "after": "보기를 누르거나 숫자 키 1~4로 고르고 확인을 눌러요. 1단계는 입모양 그룹을, 2단계는 단어를 골라요. 단어의 틀린 보기는 화면에서 구별되는 것만 나와요. 2단계 레슨의 2문항과 문맥 추론은 문장 속 빈칸을 보기 3개 중에서 채워요.",
+   "applied": true
+  },
+  {
+   "rank": 16,
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 66,
+   "before": "음성 — 말하기 채점을 할 때 녹음한 음성을 서버로 보내 메모리에서만 처리하고 저장하지 않습니다. 채점 결과인 전사문과 음성 지표는 학습 기록으로 저장합니다.",
+   "after": "목소리: 말하기 채점 때 녹음한 목소리를 서버로 보내요. 서버 메모리에서만 처리하고 저장하지 않아요. 채점 결과인 글(전사문)과 소리 수치는 학습 기록으로 저장해요.",
+   "applied": false,
+   "note": "법적 고지(법무 검토 필요)"
+  },
+  {
+   "rank": 17,
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 57,
+   "before": "LIPLAB(이하 서비스)은 청각장애 학습자를 위한 한국어 독화·발화 훈련 학습 도구입니다. 이용자는 학습 목적에 한하여 서비스를 이용하며, 타인의 계정을 도용하거나 서비스 운영을 방해하는 행위를 하지 않습니다.",
+   "after": "LIPLAB(아래에서 '서비스')은 청각장애 학습자가 한국어 입모양 읽기와 말하기를 연습하는 도구예요. 학습할 때만 써 주세요. 다른 사람의 계정을 쓰거나 서비스 운영을 방해하면 안 돼요.",
+   "applied": false,
+   "note": "법적 고지(법무 검토 필요)"
+  },
+  {
+   "rank": 18,
+   "file": "backend/articulation.py",
+   "line": 42,
+   "before": "혀끝을 윗니 뒤 잇몸 쪽으로 올립니다. ㄷ·ㄸ·ㅌ은 댔다 떼며 터뜨리고(ㅌ은 숨을 세게), ㄴ은 댄 채 코로 울리고, ㅅ·ㅆ은 닿지 않게 좁은 틈으로 바람을 내보내고, ㄹ은 가볍게 한 번 튕깁니다(받침 ㄹ은 댄 채 혀 양옆으로 소리를 흘립니다).",
+   "after": "혀끝을 윗니 뒤 잇몸 쪽으로 올립니다. ㄷ·ㄸ·ㅌ은 댔다 떼며 터뜨립니다(ㅌ은 숨을 세게). ㄴ은 댄 채 코로 울립니다. ㅅ·ㅆ은 닿지 않게 좁은 틈으로 바람을 내보냅니다. ㄹ은 가볍게 한 번 튕깁니다. 받침 ㄹ은 댄 채 혀 양옆으로 소리를 흘립니다.",
+   "applied": true
+  },
+  {
+   "rank": 19,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 180,
+   "before": "약한 입모양이 든 문제가 더 자주 나오는 단어 레슨과, 입모양이 같은 단어 중 문장에 맞는 것을 고르는 문맥 추론 레슨이 12문항씩 번갈아 이어져요. 지금 나오는 유형을 숙달도 낮은 순으로 보여 주고, 원할 때 멈추면 돼요.",
+   "after": "두 레슨이 12문항씩 번갈아 나와요. 단어 레슨은 약한 입모양이 든 문제가 더 자주 나와요. 문맥 추론 레슨은 입모양이 같은 단어 중 문장에 맞는 것을 골라요. 지금 나오는 유형을 숙달도가 낮은 순서로 보여 줘요. 원할 때 멈추면 돼요.",
+   "applied": true
+  },
+  {
+   "rank": 20,
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 463,
+   "before": "틀린 답 중 이만큼이 입모양이 같아 헷갈린 경우입니다. 독화에서 본질적으로\n구분이 어려운 지점을 가리키며, 이 비율이 높을수록 청각·문맥 단서 보완이 필요합니다.",
+   "after": "틀린 답 가운데 이만큼은 입모양이 같아 헷갈린 경우예요. 입모양만으로는 원래 구별하기 어려운 부분이에요. 이 비율이 높으면 소리나 문맥 같은 다른 단서를 함께 써야 해요.",
+   "applied": true
+  },
+  {
+   "rank": 21,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 112,
+   "before": "DOKA 하나가 한 단계예요. 체크가 붙은 DOKA는 숙달한 단계, 링을 두른 큰 DOKA는 지금 단계, 눈을 뜬 연한 DOKA는 건너뛸 수 있는 다음 단계, 잠든 DOKA는 잠긴 단계예요. 열린 DOKA를 누르면 바로 그 단계를 시작해요.",
+   "after": "DOKA 하나가 한 단계예요. 체크가 붙은 DOKA는 숙달한 단계예요. 링을 두른 큰 DOKA는 지금 단계예요. 눈을 뜬 연한 DOKA는 건너뛸 수 있는 다음 단계, 잠든 DOKA는 잠긴 단계예요. 열린 DOKA를 누르면 그 단계를 바로 시작해요.",
+   "applied": true
+  },
+  {
+   "rank": 22,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 143,
+   "before": "이렇게 들렸어요, 음소별 정확도, DOKA의 한마디를 봐요. 웹캠 미러를 켰다면 입모양 점수가 따로 나오고, 모음 단계는 내 혀 위치를 목표와 겹쳐 보여줘요.",
+   "after": "이렇게 들렸어요, 소리별 정확도, DOKA의 한마디를 봐요. 웹캠 미러를 켰다면 입모양 점수가 따로 나와요. 모음 단계는 내 혀 위치를 목표와 겹쳐 보여 줘요.",
+   "applied": true
+  },
+  {
+   "rank": 23,
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 76,
+   "before": "미성년 이용자의 정보는 학습 목적에 한해 최소한으로 수집하며, 보호자는 자녀의 정보에 대한 열람·정정·삭제를 요청할 수 있습니다.",
+   "after": "미성년 이용자의 정보는 학습에 필요한 만큼만 모아요. 보호자는 자녀의 정보를 보거나, 고치거나, 지워 달라고 요청할 수 있어요.",
+   "applied": false,
+   "note": "법적 고지(법무 검토 필요)"
+  },
+  {
+   "rank": 24,
+   "file": "backend/curriculum.py",
+   "line": 48,
+   "before": "둥글게 내미는 모양이 뚜렷해 좋은 닻. 좌우로 퍼지는 전설모음과 확실히 다르다. 오는 턱이 조금 더 벌어지고 우는 더 좁게 오므리지만(말하기에서 연습하는 차이), 보는 쪽에서는 거의 같아 문맥으로 가른다.",
+   "after": "둥글게 내미는 모양이 뚜렷해 좋은 닻(기준점). 좌우로 퍼지는 '이'와 확실히 다르다. 오는 턱이 조금 더 벌어지고 우는 더 좁게 오므린다(말하기에서 연습하는 차이). 하지만 보는 쪽에서는 거의 같아 문맥으로 가른다.",
+   "applied": true
+  },
+  {
+   "rank": 25,
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 253,
+   "before": "시행 기록으로 학습곡선과 단계별 도달 시행수, 초기 대비 최근 향상도를 확인합니다.",
+   "after": "문제를 푼 기록으로 학습곡선, 단계마다 숙달까지 걸린 시도 수, 처음보다 최근에 얼마나 늘었는지를 봐요.",
+   "applied": true
+  },
+  {
+   "rank": 26,
+   "file": "backend/curriculum.py",
+   "line": 56,
+   "before": "특징이 옅어 개방모음·원순모음보다 읽기 어렵다. 앞뒤 소리로 보완.",
+   "after": "특징이 옅어 크게 벌리는 '아'나 둥근 '오·우'보다 읽기 어렵다. 앞뒤 소리로 채운다.",
+   "applied": true
+  },
+  {
+   "rank": 27,
+   "file": "frontend/src/components/guide/GuideMockups.jsx",
+   "line": 936,
+   "before": "프로필 탭 예시. 이름과 레벨 카드, 자가진단 다시 하기·계정 설정·학습 초기화 메뉴, 왼쪽 아래 접근성 설정 Aa 버튼.",
+   "after": "프로필 탭 예시. 이름과 레벨 카드. 자가진단 다시 하기, 계정 설정, 학습 초기화 메뉴. 왼쪽 아래 접근성 설정 Aa 버튼.",
+   "applied": true
+  },
+  {
+   "rank": 28,
+   "file": "frontend/src/components/VocalTractSimulator.jsx",
+   "line": 246,
+   "before": "성도 조음 조작판. 화살표키로 혀 위치, 대괄호로 입술 원순, 스페이스로 발성. 지금 소리 ○, F1 ○ F2 ○ 헤르츠.",
+   "after": "입 안 모양 조작판. 화살표 키로 혀 위치, 대괄호 키로 입술 둥글림, 스페이스 키로 소리 내기. 지금 소리 ○, F1 ○ F2 ○ 헤르츠.",
+   "applied": true
+  },
+  {
+   "rank": 29,
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 402,
+   "before": "조음 교정 전후 오차 (웹캠)",
+   "after": "웹캠 입모양 연습 전후 차이",
+   "applied": true
+  },
+  {
+   "rank": 30,
+   "file": "backend/curriculum.py",
+   "line": 41,
+   "before": "좌우로 퍼지는 '이' 계열. 둥근 원순모음과 정반대라 구별이 쉽다.",
+   "after": "좌우로 퍼지는 '이' 계열. 둥글게 내미는 '오·우'와 정반대라 구별이 쉽다.",
+   "applied": true
+  },
+  {
+   "rank": 31,
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 187,
+   "before": "교정 세션 ○회, 목표 대비 평균 오차 ○ → ○ (세션 처음 → 끝, 0에 가까울수록 목표와 가까움)",
+   "after": "입모양 연습 ○회, 목표와의 평균 차이 ○ → ○ (연습 처음 → 끝, 0에 가까울수록 목표와 가까움)",
+   "applied": true
+  },
+  {
+   "rank": 32,
+   "file": "frontend/src/components/WebcamMouthCheck.jsx",
+   "line": 334,
+   "before": "조음 교정 · 관찰 계수 (축 E)",
+   "after": "입모양 맞추기 · 내 입 수치",
+   "applied": true
+  },
+  {
+   "rank": 33,
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 58,
+   "before": "서비스는 연구·교육용 프로토타입으로 제공되며, 학습 콘텐츠와 채점 결과의 정확성을 보증하지 않습니다. 서비스는 사전 고지 후 기능을 변경하거나 종료할 수 있습니다.",
+   "after": "이 서비스는 연구·교육용 시제품이에요. 학습 내용과 채점 결과가 늘 정확하다고 약속하지 않아요. 미리 알린 뒤 기능을 바꾸거나 서비스를 끝낼 수 있어요.",
+   "applied": false,
+   "note": "법적 고지(법무 검토 필요)"
+  },
+  {
+   "rank": 34,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 96,
+   "before": "불꽃은 연속 학습 일수, 별은 누적 XP, 육각형은 레벨이에요. 연속으로 공부할수록 같은 문제에서 받는 XP가 늘어요(최대 3배). 휴대폰에서는 오른쪽 위 이름 첫 글자를 누르면 프로필로 가요.",
+   "after": "불꽃은 연속 학습 일수, 별은 모은 XP, 육각형은 레벨이에요. 며칠 이어서 공부할수록 같은 문제에서 받는 XP가 늘어요(최대 3배). 휴대폰에서는 오른쪽 위 이름 첫 글자를 누르면 프로필로 가요.",
+   "applied": true
+  },
+  {
+   "rank": 35,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 114,
+   "before": "보고 있는 단계의 진행률이 떠요. 숫자는 숙달 판정에 필요한 최소 시도 수 대비 푼 수예요. 다 채웠는데 정답률이 모자라면 '숙달 중'으로 보여요. 처음이면 학습 시작하기, 이어서라면 이어서 학습하기를 눌러요.",
+   "after": "보고 있는 단계의 진행률이 떠요. 숫자는 숙달 판정에 필요한 최소 시도 수 가운데 푼 수예요. 다 채웠는데 정답률이 모자라면 '숙달 중'으로 보여요. 처음이면 학습 시작하기를, 이어서 할 때는 이어서 학습하기를 눌러요.",
+   "applied": true
+  },
+  {
+   "rank": 36,
+   "file": "frontend/src/components/VocalTractSimulator.jsx",
+   "line": 326,
+   "before": "ㅗ·ㅜ는 입술 원순을 함께 올려야 제 소리가 나요. 발성 소리는 공명(F1·F2)만 흉내 낸 근사 합성이고,\n성도 단면과 합성음은 VocalTractLab으로 미리 계산했어요. 같은 소리를 내는 혀 모양은 여러 가지라 단면의 혀는 한 가지 예시예요.",
+   "after": "ㅗ·ㅜ는 입술 둥글림도 함께 올려야 제 소리가 나요. 소리 내기 버튼의 소리는 공명(F1·F2)만 흉내 낸 간단한 합성음이에요. 단면 그림과 합성음은 VocalTractLab으로 미리 계산했어요. 같은 소리를 내는 혀 모양은 여러 가지라, 그림의 혀는 한 가지 예시예요.",
+   "applied": true
+  },
+  {
+   "rank": 37,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 184,
+   "before": "입모양 교실에서 내 입모양을 목표와 비교해 점수와 교정 문구를 바로 보여 주고, 아바타가 내 입을 따라 해요. 영상은 기기 밖으로 나가지 않아요.",
+   "after": "입모양 교실에서 내 입모양을 목표와 비교해 점수와 맞추는 방법을 바로 보여 줘요. 아바타도 내 입을 따라 해요. 영상은 기기 밖으로 나가지 않아요.",
+   "applied": true
+  },
+  {
+   "rank": 38,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 132,
+   "before": "3·4단계 아바타 아래에서 재생 속도를 바꾸고 투명 두상, 측면 보기, 성도 단면을 켜요. 측면 보기에서는 입술을 내밀고 모으는 움직임이 잘 보여요.",
+   "after": "3·4단계 아바타 아래에서 재생 속도를 바꿔요. 투명 두상, 측면 보기, 성도 단면(옆에서 자른 입 안 그림)도 켜요. 측면 보기에서는 입술을 내밀고 모으는 움직임이 잘 보여요.",
+   "applied": true
+  },
+  {
+   "rank": 39,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 186,
+   "before": "단어 단계를 숙달하면 엔드리스 단어를 1.25배, 1.6배, 2배(문장 낭독의 음절 속도에 가까움)로 봐요. 가장 빠른 속도에서 최근 12문항 중 10개를 맞히면 다음 속도예요. 복습은 숙달한 단계만 1.25배예요.",
+   "after": "단어 단계를 숙달하면 엔드리스 단어를 1.25배, 1.6배, 2배 속도로 봐요. 2배는 문장을 소리 내 읽는 빠르기에 가까워요. 가장 빠른 속도에서 최근 12문항 중 10개를 맞히면 다음 속도예요. 복습은 숙달한 단계만 1.25배예요.",
+   "applied": true
+  },
+  {
+   "rank": 40,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 127,
+   "before": "틀리면 어느 소리를 무엇으로 읽었는지, 원래 같은 입모양 짝인지 알려 주고 뜻은 수어로도 봐요. 입 옆 기호는 바람이 거센소리, 채운 마름모가 된소리, 물결이 콧소리이고 숙달할수록 흐려져요.",
+   "after": "틀리면 어느 소리를 무엇으로 읽었는지, 원래 같은 입모양 짝인지 알려 줘요. 뜻은 수어로도 봐요. 입 옆 기호는 바람이 거센소리, 채운 마름모가 된소리, 물결이 콧소리예요. 숙달할수록 기호가 흐려져요.",
+   "applied": true
+  },
+  {
+   "rank": 41,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 221,
+   "before": "전체 통계 아래 링크로 들어가요. 입모양 유형별 점수와 자주 헷갈린 짝을 보여 주고, 원래 같은 입모양인 짝은 따로 표시해요.",
+   "after": "전체 통계 아래 링크로 들어가요. 입모양 종류별 점수와 자주 헷갈린 짝을 보여 줘요. 원래 같은 입모양인 짝은 따로 표시해요.",
+   "applied": true
+  },
+  {
+   "rank": 42,
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 185,
+   "before": "5. 웹캠 조음 교정",
+   "after": "5. 웹캠 입모양 연습",
+   "applied": true
+  },
+  {
+   "rank": 43,
+   "file": "frontend/src/components/guide/GuideMockups.jsx",
+   "line": 918,
+   "before": "휴대폰 학습 탭 예시. 독화·발화 전환, 단계 이름과 가이드 버튼, DOKA 단계 노드와 아래 레슨 카드.",
+   "after": "휴대폰 학습 탭 예시. 독화·발화 전환, 단계 이름과 가이드 버튼. DOKA 단계 노드와 그 아래 레슨 카드.",
+   "applied": false,
+   "note": "화면 이름을 그대로 읽어 주는 대체 글이라 이름표와 함께 바꿔야 함"
+  },
+  {
+   "rank": 44,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 88,
+   "before": "단계마다 정한 횟수 이상 풀고 최근 정답률이 기준을 넘으면 숙달이에요. 문장은 60점, 대화는 55점 이상을 맞힌 것으로 세요. 숙달하면 다음 단계가 열리고, 한 번 숙달한 단계는 다시 잠기지 않아요.",
+   "after": "단계마다 정한 횟수 이상 풀고 최근 정답률이 기준을 넘으면 숙달이에요. 문장은 60점, 대화는 55점 이상이면 맞힌 것으로 세요. 숙달하면 다음 단계가 열려요. 한 번 숙달한 단계는 다시 잠기지 않아요.",
+   "applied": true
+  },
+  {
+   "rank": 45,
+   "file": "frontend/src/components/guide/GuideMockups.jsx",
+   "line": 922,
+   "before": "단어 독화 오답 예시. 고른 보기는 빨강, 정답 보기는 초록 테두리, 아래 빨간 결과 바에 정답이 나온다.",
+   "after": "단어 독화 오답 예시. 고른 보기는 빨강, 정답 보기는 초록 테두리. 아래 빨간 결과 바에 정답이 나온다.",
+   "applied": true
+  },
+  {
+   "rank": 46,
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 424,
+   "before": "입을 벌린 정도·입술 오므림·입술 닫힘을 목표와 비교한 평균 차이(0~100)입니다. 혀처럼 밖에서 안 보이는\n조음은 포함되지 않아요. 영상은 기기 밖으로 나가지 않고 요약 수치만 저장됩니다.",
+   "after": "입을 벌린 정도, 입술 오므림, 입술 닫힘을 목표와 비교한 평균 차이(0~100)예요. 혀처럼 밖에서 안 보이는 움직임은 들어가지 않아요. 영상은 기기 밖으로 나가지 않고, 요약 수치만 저장돼요.",
+   "applied": true
+  },
+  {
+   "rank": 47,
+   "file": "frontend/src/components/WebcamMouthCheck.jsx",
+   "line": 379,
+   "before": "입술 기하 지표 (좌표 기반·양안거리 정규화)",
+   "after": "입술 모양 수치 (두 눈 사이 거리로 크기를 맞춘 값)",
+   "applied": true
+  },
+  {
+   "rank": 48,
+   "file": "frontend/src/pages/VisemeLiteracy.jsx",
+   "line": 294,
+   "before": "최소대립쌍 예시 — 같아 보이는(●) / 다르게 보이는(○) 쌍",
+   "after": "한 소리만 다른 단어 짝 — 같아 보이는(●) / 다르게 보이는(○) 짝",
+   "applied": true
+  },
+  {
+   "rank": 49,
+   "file": "backend/speak_curriculum.py",
+   "line": 127,
+   "before": "아바타의 입 모양을 따라 모음마다 입 벌림(아는 크게, 이·우·으는 작게)과 입술 모양(오·우는 동그랗게, 이·으는 옆으로)을 또렷하게 바꿔 보세요. 오/우, 어/으처럼 입 모양이 비슷한 짝은 턱을 벌리는 정도(오·어가 더 크게)로 구별해요.",
+   "after": "아바타의 입 모양을 따라 해 보세요. 아는 크게, 이·우·으는 작게 벌려요. 오·우는 동그랗게, 이·으는 옆으로 당겨요. 오/우, 어/으처럼 입 모양이 비슷한 짝은 턱을 벌리는 정도로 구별해요(오·어가 더 크게).",
+   "applied": true
+  },
+  {
+   "rank": 50,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 76,
+   "before": "자가진단을 건너뛰면 1단계부터 시작해요. 프로필의 자가진단 다시 하기로 언제든 받을 수 있어요.",
+   "after": "자가진단을 건너뛰면 1단계부터 시작해요. 프로필의 '자가진단 다시 하기'로 언제든 다시 볼 수 있어요.",
+   "applied": true
+  },
+  {
+   "rank": 51,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 179,
+   "before": "문장을 입력하면 한국수어 어순으로 옮기고 단어마다 국립국어원 수어 영상을 보여줘요. 사전에 없는 말은 지문자로 보여요. 공식 통역은 아니에요.",
+   "after": "문장을 입력하면 한국수어 순서로 바꾸고, 단어마다 국립국어원 수어 영상을 보여 줘요. 사전에 없는 말은 지문자(손가락 글자)로 보여요. 공식 통역은 아니에요.",
+   "applied": true
+  },
+  {
+   "rank": 52,
+   "file": "frontend/src/components/guide/GuideMockups.jsx",
+   "line": 924,
+   "before": "발화 문항 예시. 말할 단어와 아바타 입모양, 아래 마이크 버튼. 녹음 중에는 파형이 움직인다.",
+   "after": "발화 문항 예시. 말할 단어와 아바타 입모양. 아래에 마이크 버튼. 녹음하는 동안 소리 물결이 움직인다.",
+   "applied": false,
+   "note": "화면 이름을 그대로 읽어 주는 대체 글이라 이름표와 함께 바꿔야 함"
+  },
+  {
+   "rank": 53,
+   "file": "backend/speak_curriculum.py",
+   "line": 135,
+   "before": "입술소리부터 · 최소대립쌍 · 마찰음",
+   "after": "입술소리부터 · 한 소리만 다른 단어 짝 · ㅅ·ㅎ 소리",
+   "applied": true
+  },
+  {
+   "rank": 54,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 139,
+   "before": "아바타의 입모양을 보고 따라 해요. 발성·운율 단계는 목소리 크기·높낮이 그래프를 보며 연습해요.",
+   "after": "아바타의 입모양을 보고 따라 해요. 발성·운율 단계는 목소리 크기와 높낮이 그래프를 보며 연습해요.",
+   "applied": false,
+   "note": "단계 이름(발성·운율)이 화면 이름이라 그대로 둠"
+  },
+  {
+   "rank": 55,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 148,
+   "before": "앞 단계를 숙달하면 다음 단계가 열려요. 오른쪽 숫자는 숙달에 필요한 최소 횟수와 최근 통과율이에요.",
+   "after": "앞 단계를 숙달하면 다음 단계가 열려요. 오른쪽 숫자는 숙달에 필요한 가장 적은 횟수와 최근 통과율이에요.",
+   "applied": false,
+   "note": "핵심 말(단계·숙달) 말고는 바꿀 낱말이 적어 효과가 작음"
+  },
+  {
+   "rank": 56,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 155,
+   "before": "입술소리부터 13개 소리를 최소대립쌍으로 연습해요. 불/풀, 달/탈처럼 입모양이 같은 짝은 숨의 세기가 달라요. 거센소리는 손바닥을 입 앞에 대고 바람이 세게 닿게 내 보세요. 사·자·차·하처럼 입 안이나 목에서 나는 소리도 연습해요.",
+   "after": "입술소리부터 13개 소리를 한 소리만 다른 단어 짝으로 연습해요. 불/풀, 달/탈처럼 입모양이 같은 짝은 숨의 세기가 달라요. 거센소리는 손바닥을 입 앞에 대고, 바람이 세게 닿게 내 보세요. 사·자·차·하처럼 입 안이나 목에서 나는 소리도 연습해요.",
+   "applied": true
+  },
+  {
+   "rank": 57,
+   "file": "frontend/src/components/guide/GuideMockups.jsx",
+   "line": 920,
+   "before": "단어 독화 문항 예시. 왼쪽 위에 화자 이름이 붙은 입모양 영상을 보고 보기를 고른 뒤 확인을 누르면 초록 결과 바에 정답이에요가 나온다.",
+   "after": "단어 독화 문항 예시. 왼쪽 위에 화자 이름이 붙은 입모양 영상이 있다. 보기를 고르고 확인을 누르면 초록 결과 바에 '정답이에요'가 나온다.",
+   "applied": true
+  },
+  {
+   "rank": 58,
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 260,
+   "before": "훈련 전에 사전(A), 훈련 뒤에 사후(B)를 한 번씩 보면 향상도를 비교해요. 각 24문항, 5분 안팎.",
+   "after": "훈련 전에 사전 검사(A), 훈련 뒤에 사후 검사(B)를 한 번씩 보면 얼마나 늘었는지 비교해요. 각 24문항, 5분쯤 걸려요.",
+   "applied": true
+  },
+  {
+   "rank": 59,
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 64,
+   "before": "이용 목적 — 계정 식별, 학습 진행 관리, 약점에 맞춘 문항 추천, 학습 효과 분석.",
+   "after": "쓰는 곳: 계정 확인, 학습 진도 관리, 약점에 맞춘 문제 추천, 학습 효과 분석.",
+   "applied": false,
+   "note": "법적 고지(법무 검토 필요)"
+  },
+  {
+   "rank": 60,
+   "file": "frontend/src/pages/ProfilePage.jsx",
+   "line": 241,
+   "before": "안내받은 참여 코드를 입력해 주세요. 학습 기록은 이름·이메일 없이 가명으로만 연구에 쓰여요.",
+   "after": "안내받은 참여 코드를 입력해 주세요. 학습 기록은 이름과 이메일 없이, 가짜 이름(가명)으로만 연구에 쓰여요.",
+   "applied": true
+  },
+  {
+   "rank": 61,
+   "file": "backend/curriculum.py",
+   "line": 155,
+   "before": "최소대립쌍으로 단어 독화",
+   "after": "한 소리만 다른 단어 짝으로 단어 독화",
+   "applied": true
+  },
+  {
+   "rank": 62,
+   "file": "frontend/src/pages/ProfilePage.jsx",
+   "line": 354,
+   "before": "파일럿에 참여 중이라 사전·사후 검사 기록은 남아요. 참여를 그만두거나 자료 삭제를 원하면 연구진에게 알려 주세요.",
+   "after": "파일럿 연구에 참여 중이라 사전·사후 검사 기록은 남아요. 참여를 그만두거나 자료를 지우고 싶으면 연구진에게 알려 주세요.",
+   "applied": true
+  },
+  {
+   "rank": 63,
+   "file": "frontend/src/components/A11ySettings.jsx",
+   "line": 132,
+   "before": "계정·데이터 삭제 (프로필 → 계정 설정)",
+   "after": "계정·데이터 지우기 (프로필 → 계정 설정)",
+   "applied": false,
+   "note": "메뉴 경로 이름과 함께 바꿔야 함"
+  },
+  {
+   "rank": 64,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 162,
+   "before": "최근 통과율과 시도 수가 문항 아래에 보여요. 모음·자음은 그 소리가 든 낱말도 최근 3번 중 2번 합격해야 숙달이에요.",
+   "after": "최근 통과율과 시도 수가 문제 아래에 보여요. 모음·자음은 그 소리가 든 단어도 최근 3번 중 2번 합격해야 숙달이에요.",
+   "applied": false,
+   "note": "'문항'을 앱 전체에서 '문제'로 바꿀 때 함께"
+  },
+  {
+   "rank": 65,
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 402,
+   "before": "교정 세션 ○회 · 0에 가까울수록 목표 입모양",
+   "after": "입모양 연습 ○회 · 0에 가까울수록 목표 입모양",
+   "applied": true
+  },
+  {
+   "rank": 66,
+   "file": "backend/curriculum.py",
+   "line": 93,
+   "before": "치경음과 겉모습이 비슷해 헷갈린다. 살짝 내미는 느낌이 유일한 힌트.",
+   "after": "잇몸소리(ㄷ·ㄴ)와 겉모습이 비슷해 헷갈린다. 입술을 살짝 내미는 느낌이 유일한 힌트.",
+   "applied": true
+  },
+  {
+   "rank": 67,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 110,
+   "before": "독화 · 발화를 골라요. 트랙마다 경로와 진도가 따로 저장돼요.",
+   "after": "독화와 발화 가운데 골라요. 트랙마다 경로와 진도가 따로 저장돼요.",
+   "applied": false,
+   "note": "트랙 이름이 화면 이름이라 그대로 둠"
+  },
+  {
+   "rank": 68,
+   "file": "frontend/src/components/LipSyncPlayer3D.jsx",
+   "line": 356,
+   "before": "측면 성도 단면으로 혀·입술·턱 조음 보기",
+   "after": "옆에서 자른 입 안 그림으로 혀·입술·턱 움직임 보기",
+   "applied": true
+  },
+  {
+   "rank": 69,
+   "file": "frontend/src/features/dashboard/Dashboard.jsx",
+   "line": 29,
+   "before": "자음·모음 입모양부터 상황별 문장·대화까지 단계로 익혀요.",
+   "after": "자음·모음 입모양부터 상황별 문장과 대화까지 차례로 배워요.",
+   "applied": false,
+   "note": "효과 작음(핵심 말이 대부분)"
+  },
+  {
+   "rank": 70,
+   "file": "frontend/src/pages/VisemeLiteracy.jsx",
+   "line": 113,
+   "before": "측면 성도 단면으로 혀·입술·턱 조음 보기",
+   "after": "옆에서 자른 입 안 그림으로 혀·입술·턱 움직임 보기",
+   "applied": true
+  },
+  {
+   "rank": 71,
+   "file": "backend/curriculum.py",
+   "line": 63,
+   "before": "조음이 입 안쪽이라 ㄷ·ㄴ·ㄹ·ㅅ… 서로 거의 구별 불가. 문맥으로 판단.",
+   "after": "혀가 입 안쪽에서 움직여 ㄷ·ㄴ·ㄹ·ㅅ… 서로 거의 구별할 수 없다. 문맥으로 판단.",
+   "applied": true
+  },
+  {
+   "rank": 72,
+   "file": "frontend/src/components/CueBadges.jsx",
+   "line": 137,
+   "before": "아직 약한 음소에만 기호를 남깁니다(개인 학습기록 기반).",
+   "after": "아직 약한 소리에만 기호를 남겨요(내 학습 기록에 따라).",
+   "applied": true
+  },
+  {
+   "rank": 73,
+   "file": "frontend/src/pages/WordStage.jsx",
+   "line": 399,
+   "before": "보기는 모두 입모양이 비슷해서 눈만으로는 가르기 어려워요. 앞뒤 말의 흐름으로 고르는 연습이에요.\n이 문항은 단어 단계 숙달에는 들어가지 않아요.",
+   "after": "보기는 모두 입모양이 비슷해서 눈만으로는 고르기 어려워요. 앞뒤 말의 흐름으로 고르는 연습이에요. 이 문항은 단어 단계 숙달에는 들어가지 않아요.",
+   "applied": true
+  },
+  {
+   "rank": 74,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 122,
+   "before": "입모양이 계속 반복돼요. 사람마다 입 움직임이 달라서 왼쪽 위 화자 1~4가 레슨마다 바뀌고, 다섯 레슨에 한 번은 기본 화자예요. 대화·복습도 같아요.",
+   "after": "입모양이 계속 반복돼요. 사람마다 입 움직임이 달라서 왼쪽 위 화자 1~4가 레슨마다 바뀌어요. 다섯 레슨에 한 번은 기본 화자예요. 대화·복습도 같아요.",
+   "applied": true
+  },
+  {
+   "rank": 75,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 230,
+   "before": "이름 · 이메일 · 비밀번호를 바꾸고, 로그아웃과 계정 삭제도 여기서 해요.",
+   "after": "이름, 이메일, 비밀번호를 바꾸고, 로그아웃과 계정 지우기도 여기서 해요.",
+   "applied": false,
+   "note": "메뉴 이름(계정 삭제)과 함께 바꿔야 함"
+  },
+  {
+   "rank": 76,
+   "file": "frontend/src/pages/AnalysisDetail.jsx",
+   "line": 16,
+   "before": "독화는 푼 문항 전체의 정확도, 말하기는 발화 평균 점수를 비교합니다.",
+   "after": "독화는 푼 문제 전체의 정확도, 말하기는 평균 발음 점수를 비교해요.",
+   "applied": true
+  },
+  {
+   "rank": 77,
+   "file": "frontend/src/pages/EndlessPractice.jsx",
+   "line": 42,
+   "before": "숙달도가 낮은 음소가 계속 출제돼요. 원할 때 멈출 수 있어요.",
+   "after": "숙달도가 낮은 소리가 자주 나와요. 원할 때 멈출 수 있어요.",
+   "applied": true
+  },
+  {
+   "rank": 78,
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 97,
+   "before": "넓은 화면(가로 1280px 이상)에서 오른쪽에 보여요. 오늘의 과제, 다시 풀 오답 수(틀린 문장·말하기 포함), 북마크 수를 보여줘요. 과제 탭에서는 레벨 진행, 복습 탭에서는 이번 주에 학습한 날로 바뀌어요.",
+   "after": "넓은 화면(가로 1280px 이상)에서 오른쪽에 보여요. 오늘의 과제, 다시 풀 오답 수(틀린 문장·말하기 포함), 북마크 수를 보여 줘요. 과제 탭에서는 레벨 진행으로 바뀌어요. 복습 탭에서는 이번 주에 학습한 날로 바뀌어요.",
+   "applied": true
+  },
+  {
+   "rank": 79,
+   "file": "frontend/src/components/WebcamMouthCheck.jsx",
+   "line": 393,
+   "before": "입술 너머 자질 추정 · 학습모델(연구용, 음절 수준 검증 실패)",
+   "after": "입술 밖 신호로 코울림 추정 · 연구용 모델(음절 단위 검증 실패)",
+   "applied": false,
+   "note": "연구 빌드(K_RESEARCH)에서만 보임"
+  },
+  {
+   "rank": 80,
+   "file": "frontend/src/config/tracks.js",
+   "line": 44,
+   "before": "내 발음을 눈으로 보며 다듬는 훈련이에요. 마이크로 녹음하면 AI가 전사·채점하고 코칭해줘요.",
+   "after": "내 발음을 눈으로 보며 다듬는 훈련이에요. 마이크로 녹음하면 AI가 글로 옮기고 점수를 매겨 코칭해 줘요.",
+   "applied": true
+  },
+  {
+   "file": "frontend/src/pages/Practice.jsx",
+   "line": 592,
+   "before": "○일째 연속 학습 중! +○% 보너스 XP",
+   "after": "○일째 이어서 공부 중! XP를 ○% 더 받아요",
+   "applied": false,
+   "note": "다른 작업이 맡은 파일"
+  },
+  {
+   "file": "frontend/src/pages/Practice.jsx",
+   "line": 105,
+   "before": "입모양 재생에 맞춰 자막이 나타납니다.",
+   "after": "입모양이 움직이는 대로 글자가 나와요.",
+   "applied": false,
+   "note": "다른 작업이 맡은 파일"
+  },
+  {
+   "file": "frontend/src/pages/Practice.jsx",
+   "line": 581,
+   "before": "입모양을 보고 문장 전체를 서술해서 입력하세요",
+   "after": "입모양을 보고 문장 전체를 써 주세요",
+   "applied": false,
+   "note": "다른 작업이 맡은 파일"
+  },
+  {
+   "file": "frontend/src/pages/Practice.jsx",
+   "line": 582,
+   "before": "입모양을 보고 문장을 입력하세요",
+   "after": "입모양을 보고 문장을 써 주세요",
+   "applied": false,
+   "note": "다른 작업이 맡은 파일"
+  },
+  {
+   "file": "frontend/src/pages/Practice.jsx",
+   "line": 135,
+   "before": "레슨 완료!",
+   "after": "레슨 끝!",
+   "applied": false,
+   "note": "다른 작업이 맡은 파일"
+  },
+  {
+   "file": "frontend/src/pages/Practice.jsx",
+   "line": 143,
+   "before": "획득 XP",
+   "after": "받은 XP",
+   "applied": false,
+   "note": "다른 작업이 맡은 파일"
+  },
+  {
+   "file": "frontend/src/pages/Practice.jsx",
+   "line": 460,
+   "before": "Viseme 생성 중...",
+   "after": "입모양 만드는 중...",
+   "applied": false,
+   "note": "다른 작업이 맡은 파일"
+  },
+  {
+   "file": "frontend/src/pages/Practice.jsx",
+   "line": 495,
+   "before": "입모양을 불러오지 못했어요.",
+   "after": "입모양을 가져오지 못했어요.",
+   "applied": false,
+   "note": "다른 작업이 맡은 파일"
+  },
+  {
+   "file": "frontend/src/pages/Practice.jsx",
+   "line": 446,
+   "before": "학습 모드 — 문장 보기",
+   "after": "공부 모드 — 문장 보기",
+   "applied": false,
+   "note": "다른 작업이 맡은 파일"
+  },
+  {
+   "file": "frontend/src/pages/Practice.jsx",
+   "line": 543,
+   "before": "1. 위 문장을 읽으면서 입모양 애니메이션을 반복해서 보세요.",
+   "after": "1. 위 문장을 읽으면서 입모양 움직임을 여러 번 보세요.",
+   "applied": false,
+   "note": "다른 작업이 맡은 파일"
+  },
+  {
+   "file": "frontend/src/pages/Practice.jsx",
+   "line": 544,
+   "before": "2. 각 음절이 어떤 입모양인지 연결해보세요.",
+   "after": "2. 글자 하나하나가 어떤 입모양인지 이어 보세요.",
+   "applied": false,
+   "note": "다른 작업이 맡은 파일"
+  },
+  {
+   "file": "frontend/src/pages/Practice.jsx",
+   "line": 88,
+   "before": "힌트 3 — 발음 자막",
+   "after": "힌트 3 — 소리 나는 대로 쓴 글자(GuideModal의 '발음 자막'과 함께 바꿈)",
+   "applied": false,
+   "note": "다른 작업이 맡은 파일"
+  },
+  {
+   "file": "frontend/src/pages/SpeakingPractice.jsx",
+   "line": null,
+   "before": "음소별 발음 정확도",
+   "after": "소리별 발음 정확도",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/components/QuizForm.jsx",
+   "line": null,
+   "before": "음소별 정확도",
+   "after": "소리별 정확도",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": null,
+   "before": "교정 세션 기록이 없습니다.",
+   "after": "입모양 연습 기록이 없습니다.",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": null,
+   "before": "공개 표준 독화 자원 (축 C)",
+   "after": "공개 표준 독화 자원",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": null,
+   "before": "음소별 오류 변화 (사전→사후)",
+   "after": "소리별 오류 변화 (사전→사후)",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/components/WebcamMouthCheck.jsx",
+   "line": null,
+   "before": "내 조음(성도 추정)",
+   "after": "내 입 안 모양(추정)",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/components/WebcamMouthCheck.jsx",
+   "line": null,
+   "before": "목표 조음",
+   "after": "목표 입 안 모양",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/components/WebcamMouthCheck.jsx",
+   "line": null,
+   "before": "안 보이는 조음 — ○",
+   "after": "밖에서 안 보이는 혀 움직임 — ○",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/components/WebcamMouthCheck.jsx",
+   "line": null,
+   "before": "조음이 목표에 가까워요",
+   "after": "입모양이 목표에 가까워요",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/components/WebcamMouthCheck.jsx",
+   "line": null,
+   "before": "개구 · 원순 · 폐쇄",
+   "after": "입 벌림 · 입술 둥글림 · 입술 닫힘",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/pages/VisemeLiteracy.jsx",
+   "line": null,
+   "before": "밖에서 안 보이는 혀·조음 — ○",
+   "after": "밖에서 안 보이는 혀 움직임 — ○",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/components/VocalTract.jsx",
+   "line": null,
+   "before": "양순 폐쇄·원순·혀끝(치경)·혀뒤(연구개)·경구개·개방·중설·성문·전설",
+   "after": "입술 닫힘·입술 둥글게·혀끝(잇몸)·혀뒤(여린입천장)·센입천장·입 크게·입 조금·목청·입 옆으로",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/components/CueBadges.jsx",
+   "line": null,
+   "before": "표적 음소 집중",
+   "after": "약한 소리만 표시",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/pages/EndlessPractice.jsx",
+   "line": null,
+   "before": "입모양 무리 이름 10개: 양순음·개방모음·전설모음·원순모음·중설모음·치경음·연구개음·성문음·이중모음·경구개음",
+   "after": "1단계 보기와 같은 쉬운 이름: 입술 닫힘 (바·마)·입 크게 벌림 (아)·입 옆으로 당김 (이)·입술 둥글게 (오·우)·… (lib/visemeLabels)",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/pages/Placement.jsx",
+   "line": null,
+   "before": "입모양 무리 이름 10개: 양순음·개방모음·전설모음·원순모음·중설모음·치경음·연구개음·성문음·이중모음·경구개음",
+   "after": "1단계 보기와 같은 쉬운 이름: 입술 닫힘 (바·마)·입 크게 벌림 (아)·입 옆으로 당김 (이)·입술 둥글게 (오·우)·… (lib/visemeLabels)",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/pages/Placement.jsx",
+   "line": null,
+   "before": "자주 놓친 소리(음소)",
+   "after": "자주 놓친 소리",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/components/MouthCalibration.jsx",
+   "line": null,
+   "before": "「○」 입모양 — 양순음(무리 이름)",
+   "after": "「○」 입모양 — 입술 닫힘(쉬운 이름)",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "frontend/src/config/speakingNavigation.js",
+   "line": null,
+   "before": "입술소리부터 · 최소대립쌍",
+   "after": "입술소리부터 · 한 소리만 다른 단어 짝",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "backend/speak_curriculum.py",
+   "line": null,
+   "before": "같은 자리에서 나는 소리(예: 불/풀, 달/탈)는 입 모양이 같고 숨의 세기가 달라요. 거센소리(ㅍ·ㅌ·ㅋ·ㅊ)는 손바닥을 입 앞에 대고 바람이 세게 닿게 내 보세요. ㅅ은 혀끝을 윗잇몸 가까이 두고 좁은 틈으로 바람을 길게, ㅈ은 혀끝으로 막았다가 살짝 떼며, ㅎ은 목에서 숨을 내쉬듯 내요.",
+   "after": "같은 자리에서 나는 소리(예: 불/풀, 달/탈)는 입 모양이 같고 숨의 세기가 달라요. 거센소리(ㅍ·ㅌ·ㅋ·ㅊ)는 손바닥을 입 앞에 대고, 바람이 세게 닿게 내 보세요. ㅅ은 혀끝을 윗잇몸 가까이 두고 좁은 틈으로 바람을 길게 내요. ㅈ은 혀끝으로 막았다가 살짝 떼며 내요. ㅎ은 목에서 숨을 내쉬듯 내요.",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "backend/curriculum.py",
+   "line": null,
+   "before": "ㅎ은 겉으로 표시가 약하다. 종종 뒤 모음의 입모양에 묻힌다.",
+   "after": "ㅎ은 겉으로 잘 드러나지 않는다. 뒤 모음의 입모양에 묻힐 때가 많다.",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "backend/curriculum.py",
+   "line": null,
+   "before": "ㅂ↔ㅁ 양순음. 입술 닫힘이 똑같아 구별 불가.",
+   "after": "ㅂ↔ㅁ 입술소리. 입술 닫힘이 똑같아 구별할 수 없다.",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "backend/curriculum.py",
+   "line": null,
+   "before": "ㅂ↔ㅍ 양순음. 숨의 세기만 달라 입모양이 같다.",
+   "after": "ㅂ↔ㅍ 입술소리. 숨의 세기만 달라 입모양이 같다.",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "backend/curriculum.py",
+   "line": null,
+   "before": "ㄷ↔ㅌ 치경음. 입 안쪽이라 겉모습 동일.",
+   "after": "ㄷ↔ㅌ 잇몸소리. 입 안쪽이라 겉모습이 같다.",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "backend/curriculum.py",
+   "line": null,
+   "before": "ㅁ↔ㅂ 양순음.",
+   "after": "ㅁ↔ㅂ 입술소리.",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "backend/curriculum.py",
+   "line": null,
+   "before": "ㅈ↔ㅊ 경구개음.",
+   "after": "ㅈ↔ㅊ 센입천장소리.",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "backend/articulation.py",
+   "line": null,
+   "before": "혀 뒤를 입천장 안쪽(연구개)에 붙입니다. ㄱ·ㄲ·ㅋ은 떼면서 터뜨리고(ㅋ은 숨을 세게), 받침 ㅇ은 붙인 채 코로 울립니다. 첫소리 ㅇ은 소리가 없어 모음부터 냅니다.",
+   "after": "혀 뒤를 입천장 안쪽(여린입천장)에 붙입니다. ㄱ·ㄲ·ㅋ은 떼면서 터뜨립니다(ㅋ은 숨을 세게). 받침 ㅇ은 붙인 채 코로 울립니다. 첫소리 ㅇ은 소리가 없어 모음부터 냅니다.",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "backend/articulation.py",
+   "line": null,
+   "before": "혓바닥 앞쪽을 센입천장(경구개) 앞에 붙였다 떼며 바람을 스치듯 냅니다. ㅊ은 숨을 세게, ㅉ은 목에 힘을 주고 짧고 단단하게 냅니다.",
+   "after": "혓바닥 앞쪽을 센입천장 앞에 붙였다 떼며 바람을 스치듯 냅니다. ㅊ은 숨을 세게 냅니다. ㅉ은 목에 힘을 주고 짧고 단단하게 냅니다.",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "backend/articulation.py",
+   "line": null,
+   "before": "두 입술을 붙입니다(양순).",
+   "after": "두 입술을 붙입니다.",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "backend/articulation.py",
+   "line": null,
+   "before": "혀끝을 윗잇몸에 댑니다(치경).",
+   "after": "혀끝을 윗잇몸에 댑니다.",
+   "applied": true,
+   "extra": true
+  },
+  {
+   "file": "backend/articulation.py",
+   "line": null,
+   "before": "혀 뒤를 연구개에 붙입니다.",
+   "after": "혀 뒤를 입천장 안쪽에 붙입니다.",
+   "applied": true,
+   "extra": true
+  }
+ ]
+}

@@ -356,9 +356,9 @@ async def account_export(current_user=Depends(get_current_user), db: AsyncSessio
         r = await db.execute(_select(M).where(M.user_id == current_user.id))
         data[M.__tablename__] = [_row_to_dict(x) for x in r.scalars().all()]
     return {"exported_at": _dt.utcnow().isoformat(), "user": user, "data": data,
-            "note": ("웹캠 영상은 기기 안에서만 처리되고, 원음성은 채점하는 동안 서버 메모리에서만 처리한 뒤 "
-                     "저장하지 않으므로 이 내보내기에 포함되지 않습니다. 전사문·음성 지표·입모양 계수 기반 점수는 "
-                     "학습 기록으로 저장되어 아래 data에 들어 있습니다.")}
+            "note": ("웹캠 영상은 기기 안에서만 처리됩니다. 목소리 녹음은 채점하는 동안만 서버 메모리에 두고 저장하지 "
+                     "않아, 이 파일에 없습니다. 녹음을 글로 옮긴 것(전사문), 소리 수치, 입모양 점수는 학습 기록으로 "
+                     "저장되어 아래 data에 있습니다.")}
 
 
 @app.post("/api/account/learning-reset", dependencies=[Depends(ratelimit.rate_limit(5, 60, "account-reset"))])

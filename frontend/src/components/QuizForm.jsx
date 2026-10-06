@@ -118,7 +118,7 @@ export default function QuizForm({
               {result.phoneme_accuracy && (
                 <div className="mt-6 space-y-2">
                   <h4 className="font-semibold text-gray-700 text-sm">
-                    음소별 정확도
+                    소리별 정확도
                   </h4>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="bg-white rounded-lg p-3 text-center">
