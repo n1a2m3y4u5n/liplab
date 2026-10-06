@@ -547,7 +547,7 @@ class P3ClosedResponse(Base):
 class P3OpenResponse(Base):
     """P3 열린 응답(개방형 문장, 소음 속 문장, SNR 계단 시행) 한 문항. 타이핑 원문(answer_text, NFC)과 그때의 앱 점수(app_score,
     scoring.calculate_score visual)를 남기고, 엄격 음소 정답률(auto_phoneme_acc)은 phoneme_accuracy 모듈이 있을 때만 채운다
-    (없으면 NULL로 두고 scripts/pilot_battery_rescore.py로 나중에 계산한다)."""
+    (0~1, 맞힌·목표 음소 수와 함께. 채점하지 못했으면 NULL로 두고 scripts/pilot_battery_rescore.py로 나중에 계산한다)."""
     __tablename__ = "p3_open_responses"
     __table_args__ = (UniqueConstraint("session_id", "item_id", name="ux_p3_open_session_item"),)
 
@@ -565,8 +565,10 @@ class P3OpenResponse(Base):
     app_phoneme_accuracy = Column(JSON(none_as_null=True), nullable=True)
     auto_phoneme_acc = Column(Float, nullable=True)
     auto_word_acc = Column(Float, nullable=True)
+    n_matched_phonemes = Column(Integer, nullable=True)  # 엄격 채점의 맞힌 음소 수(회차 점수 = 합 / 합)
+    n_target_phonemes = Column(Integer, nullable=True)   # 엄격 채점의 목표 음소 수
     strict_result = Column(JSON(none_as_null=True), nullable=True)
-    scorer_version = Column(String(40), nullable=True)
+    scorer_version = Column(String(40), nullable=True)   # 엄격 채점 판본(예: 'strict-v1'). 채점하지 못했으면 NULL
     rt_ms = Column(Integer, nullable=True)
     rt_from_onset_ms = Column(Integer, nullable=True)
     plays = Column(Integer, nullable=True)

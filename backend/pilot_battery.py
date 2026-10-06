@@ -301,57 +301,41 @@ def item_ready(layer: str, modality: str, item: Dict, media_ok: bool, noise_ok: 
     return True, None
 
 
-# ── 무의미 낱말 생성 ──────────────────────────────────
-NONSENSE_C1 = ["ㅂ", "ㅍ", "ㅁ", "ㄷ", "ㅌ", "ㄴ", "ㅅ", "ㅈ", "ㅊ", "ㄱ", "ㅋ", "ㅎ"]   # 어두 ㄹ·무음 ㅇ·된소리는 뺀다
-NONSENSE_C2 = ["ㅂ", "ㅍ", "ㅁ", "ㄷ", "ㅌ", "ㄴ", "ㄹ", "ㅅ", "ㅈ", "ㅊ", "ㄱ", "ㅋ"]   # 모음 사이 ㅎ은 약해져 뺀다
-NONSENSE_C3 = ["ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅇ"]                               # 대표 받침 7개
-NONSENSE_V = ["ㅏ", "ㅓ", "ㅗ", "ㅜ", "ㅣ"]
+# ── 무의미 낱말(C10 생성기의 남겨 둔 목록) ─────────────────
+# 폼 C를 만들 때 사람이 보고 더 뺀 실제 낱말(사전 목록에 없던 한자어). 앞 두 목록에 없는 말이라 더해도 앞 목록은 그대로다(아래에서 확인)
+NONSENSE_EXTRA_EXCLUDED = frozenset({"주산", "주곡"})   # 주산(珠算), 주곡(主穀)
 
 
-def _balanced(pool: List[str], n_forms: int, per_form: int, rng: random.Random) -> List[List[str]]:
-    """폼마다 per_form칸. 각 폼에 목록 전체가 먼저 한 번씩 들어가고, 남는 칸은
-    폼을 가로질러 고르게 돌려 채운다. 전체 빈도는 많아야 1 차이다."""
-    if len(pool) > per_form:
-        raise ValueError("자음 목록이 폼 칸보다 길다")
-    n_extra = per_form - len(pool)
-    extras: List[str] = []
-    while len(extras) < n_forms * n_extra:
-        block = list(pool)
-        rng.shuffle(block)
-        extras += block
+def nonsense_forms() -> List[List[Dict]]:
+    """무의미 낱말 층의 폼 A·B·C. 짝 맞추기 학습(C10, nonsense_words.py)이 학습에 쓰지 않으려고 남겨 둔 두 목록(2 × 16)을 폼 A·B로
+    쓰고, A-A-B에 필요한 폼 C는 같은 생성기로 남겨 둔 목록을 하나 더 만든 것(같은 시드에서 세 번째 목록, 앞 두 목록은 그대로)이다.
+    그래서 세 폼 모두 학습 목록 48낱말과 겹치지 않고 자음 골격도 학습 목록에 없다. 목록 파일을 만들 때만 부른다(wordfreq 없이
+    nonsense_words.json에 얼려 둔 사전 제외 목록을 쓴다)."""
+    import nonsense_words as _nw
+    data = _nw.load()
+    excluded = _nw.repo_real_words() | set(data["excluded_by_wordfreq"]) | set(NONSENSE_EXTRA_EXCLUDED)
+    keep = _nw.HELDOUT_LISTS
+    try:
+        _nw.HELDOUT_LISTS = len(FORMS)
+        out = _nw.generate(excluded, data["seed"])
+    finally:
+        _nw.HELDOUT_LISTS = keep
+    if out["heldout"][:keep] != data["heldout"] or out["sets"] != data["sets"]:
+        raise RuntimeError("nonsense_words.json과 생성기가 맞지 않는다(남겨 둔 목록이 다시 만든 것과 다름)")
     forms = []
-    for i in range(n_forms):
-        f = list(pool) + extras[i * n_extra:(i + 1) * n_extra]
-        rng.shuffle(f)
-        forms.append(f)
-    return forms
-
-
-def generate_nonsense(seed: int, n_forms: int = 3, per_form: int = 16, avoid: Iterable[str] = ()) -> List[List[Dict]]:
-    """CVCVC 무의미 낱말 목록(폼별). 같은 seed면 같은 목록이다(목록 파일에 동결하고 테스트가 다시 만들어 대조한다).
-    자리마다 자음 빈도를 폼 사이에서 고르게 맞추고, 실제 낱말(avoid)과 겹치거나 폼 안에서 같은 낱말이 나오면 모음만 다시 뽑는다."""
-    rng = random.Random(int(seed))
-    avoid = set(avoid)
-    c1 = _balanced(NONSENSE_C1, n_forms, per_form, rng)
-    c2 = _balanced(NONSENSE_C2, n_forms, per_form, rng)
-    c3 = _balanced(NONSENSE_C3, n_forms, per_form, rng)
-    used = set()
-    forms = []
-    for f in range(n_forms):
+    for f, lst in zip(FORMS, out["heldout"]):
         items = []
-        for i in range(per_form):
-            for _ in range(200):
-                v1, v2 = rng.choice(NONSENSE_V), rng.choice(NONSENSE_V)
-                text = compose(c1[f][i], v1) + compose(c2[f][i], v2, c3[f][i])
-                if text not in avoid and text not in used:
-                    break
-            else:
-                raise RuntimeError("무의미 낱말을 만들지 못했다")
-            used.add(text)
-            items.append({"id": f"N{FORMS[f]}{i + 1:02d}", "text": text, "consonants": [c1[f][i], c2[f][i], c3[f][i]],
-                          "vowels": [v1, v2]})
+        for i, w in enumerate(lst):
+            c1, v1, c2, v2, c3 = _nw.parts(w)
+            items.append({"id": f"N{f}{i + 1:02d}", "text": w, "consonants": [c1, c2, c3], "vowels": [v1, v2]})
         forms.append(items)
     return forms
+
+
+def nonsense_consonant_sets() -> Dict[str, List[str]]:
+    """자리별 응답 목록(생성기의 자음 목록 그대로): 첫 자음·가운데 자음은 첫소리 13개, 받침은 대표 받침 6개."""
+    import nonsense_words as _nw
+    return {"C1": list(_nw._ONSETS), "C2": list(_nw._ONSETS), "C3": list(_nw._CODAS)}
 
 
 # ── 채점 ──────────────────────────────────────────────
@@ -376,8 +360,9 @@ STRICT_HOOK = "phoneme_accuracy.strict_phoneme_accuracy"
 
 
 def strict_score(target: str, answer: str) -> Optional[Dict]:
-    """엄격 음소 정답률 연결 지점. backend/phoneme_accuracy.py의 strict_phoneme_accuracy(target, answer) -> dict를 부른다.
-    모듈이 아직 없거나 오류가 나면 None을 돌려 저장 열을 비워 두고, 분석 때 scripts/pilot_battery_rescore.py로 다시 계산한다."""
+    """엄격 음소 정답률 연결 지점. backend/phoneme_accuracy.py의 strict_phoneme_accuracy(target, answer) -> dict를 기본 설정
+    (낱자 버림, 발음 규칙 없음)으로 부른다. 모듈을 불러오지 못하거나 오류가 나면 None을 돌려 저장 열을 비워 두고, 분석 때
+    scripts/pilot_battery_rescore.py로 다시 계산한다."""
     try:
         from phoneme_accuracy import strict_phoneme_accuracy   # noqa: WPS433 (선택 모듈)
     except ImportError:
@@ -391,14 +376,16 @@ def strict_score(target: str, answer: str) -> Optional[Dict]:
 
 
 def strict_fields(r: Optional[Dict]) -> Dict:
-    """엄격 채점 결과에서 저장 열을 꺼낸다. 키 이름이 정해지기 전이라 흔한 이름 몇 가지를 받는다."""
+    """엄격 채점 결과(phoneme_accuracy.strict_phoneme_accuracy)에서 저장 열을 꺼낸다. 비율은 0~1이다. 회차 점수는 문장 비율의
+    평균이 아니라 맞힌 음소 수 합 / 목표 음소 수 합으로 내므로 두 수(n_matched_phonemes, n_target_phonemes)를 함께 남긴다."""
     if not r:
-        return {"auto_phoneme_acc": None, "auto_word_acc": None, "strict_version": None}
-    pa = next((r[k] for k in ("phoneme_accuracy", "accuracy", "phoneme_acc") if isinstance(r.get(k), (int, float))), None)
-    wa = next((r[k] for k in ("word_accuracy", "word_acc") if isinstance(r.get(k), (int, float))), None)
-    ver = r.get("version") or r.get("scorer_version")
-    return {"auto_phoneme_acc": float(pa) if pa is not None else None,
-            "auto_word_acc": float(wa) if wa is not None else None,
+        return {"auto_phoneme_acc": None, "auto_word_acc": None, "n_matched_phonemes": None, "n_target_phonemes": None,
+                "strict_version": None}
+    num = lambda k: float(r[k]) if isinstance(r.get(k), (int, float)) and not isinstance(r.get(k), bool) else None   # noqa: E731
+    cnt = lambda k: int(r[k]) if isinstance(r.get(k), int) and not isinstance(r.get(k), bool) else None   # noqa: E731
+    ver = r.get("scorer_version") or r.get("version")
+    return {"auto_phoneme_acc": num("phoneme_accuracy"), "auto_word_acc": num("word_accuracy"),
+            "n_matched_phonemes": cnt("n_matched_phonemes"), "n_target_phonemes": cnt("n_target_phonemes"),
             "strict_version": str(ver)[:24] if ver else None}
 
 

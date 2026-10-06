@@ -3,6 +3,32 @@
 > master-plan 2판 P0 "로그 사양 점검"의 결과다. 코드는 바꾸지 않았다. 빠진 필드는 이름과 형식을 제안만 하고, 넣을지와 동의서 수정은
 > 사용자가 정한다. 기준 코드는 통합 브랜치 `integrate/2026-09-23`(c924554)이다.
 
+## 0. 구현 현황(2026-10-06 저녁, P3 검사 묶음 작업)
+
+아래 1~7절은 점검 당시(c924554) 그대로 두고, 그 뒤에 구현한 것을 여기에 적는다. 설계와 리허설 방법은 `battery.md`. 이름은 이 문서의
+제안을 따랐고, 다르게 정한 것은 '바꾼 점'에 적었다. 표시: **구현**(기록하고 내보낸다), **일부**, **남음**.
+
+| 제안(절) | 상태 | 구현한 곳 | 바꾼 점 |
+|---|---|---|---|
+| P3 검사 화면과 표 `p3_test_sessions`·`p3_closed_responses`·`p3_open_responses`(4.1) | 구현 | `backend/pilot_battery.py`, `/api/pilot/battery/*`, `/pilot/battery` | 회차 행은 제안대로 사람 × 회차 × 층. `device_id → render_log` 대신 회차 행에 `render_log` JSON을 바로 둔다. 미완료 층도 행이 남는다 |
+| 폼 C, `session_label`(A1·A2·B·R), `planned_order`(3절 폼과 순서) | 구현 | 목록 파일 `forms`·`orders`, `learning_profiles.pilot_seq`·`pilot_order` | 유지 검사 이름은 `R`(제안 `R4`). 표준검사(placement_results)의 A·B 폼은 그대로 두었다 |
+| 실제 얼굴 4지선다: 문항 id, 화자, 보기, 고른 답, 정오, `rt_ms`, `plays`(4.1) | 구현(영상 생기면) | `p3_closed_responses` | 영상이 없는 문항은 행이 없고 회차 행 `missing`에 센다 |
+| 무의미 낱말 자음 식별: `target_consonants`, 고른 자음(4.1) | 구현 | `p3_closed_responses.target_consonants`·`chosen_consonants`·`consonant_hits` | 자극은 아바타. 문항은 C10 남겨 둔 목록(`battery.md` 2절) |
+| 개방형 답 원문 `answer_text`, 자동 점수, `scorer_version`(4.1) | 구현 | `p3_open_responses.answer_text`·`app_score`·`auto_phoneme_acc`·`auto_word_acc`·`n_matched_phonemes`·`n_target_phonemes`·`scorer_version` | 앱 점수(`app_score`, 0~100)와 엄격 음소 정답률(0~1, `strict-v1`)을 함께 남긴다 |
+| 소음 속 시청각: `modality`, `snr_db`, `noise_type`, `headphone_check`, `volume_fixed`, `snr_calibrated_db`(4.2) | 구현(구조만) | `p3_open_responses`, `p3_test_sessions` | SNR 계단 시행도 같은 표(`layer='snr'`, `criterion_met`). 문장·음성·잡음 파일은 촬영 뒤 |
+| `rt_ms`·`rt_from_onset_ms`(3절 반응 시간) | 구현 | 검사: 둘 다. 학습 시행 `trial_attempts`·`progress`: `rt_from_onset_ms`만 | 학습 화면은 재생 끝 시각을 받지 않아 문항 표시(입모양 재생 시작)부터만 잰다 |
+| `trial_attempts.talker`, `progress.talker`(3절 화자) | 구현 | 1·2단계, 문맥, 문맥 추론, 문장, 뜻 없는 말 짝 맞추기 | 레슨 가상 화자 id(`default`, `t1`~`t4`) |
+| `trial_attempts.hint_used`, `progress.hint_level`(3절 힌트) | 구현 | 문맥 추론 '힌트 보기', 짝 맞추기 골격 블록, 문장 힌트 단계 0~3 | `progress.practice_only` 행 저장(힌트 3 뒤 제출)은 **남음**. 숙달 판정을 건드려 이번에는 하지 않았다 |
+| `progress.options`(3절 보인 보기) | 구현 | 3단계 4지선다 보기(보인 순서) | |
+| `probe_kind`(3절 탐침) | 일부 | `trial_attempts.probe_kind='contrast'`(짝 탐색) | 지연 탐침은 `mastery_probes`(C16), 실제 얼굴 탐침(C8)은 기능이 없다 |
+| `render_log`(5절 V20) | 일부 | 검사 회차 행, 레슨 노력 문항 행(`lesson_efforts.render_log`) | 프레임 지연(`frameClock.renderTimingSummary`, 레슨 시작마다 다시 셈), 화면·창 크기, 화소 비율, 기기 분류, OS·브라우저 계열, WebGL 여부, 영상 누락(`getVideoPlaybackQuality`). `screen_hz_est`, `interval_err_p95_ms`, `stimulus_ms_*`는 **남음**. GPU 문자열·사용자 에이전트 원문은 받지 않는다 |
+| 노력 문항 `effort_ratings`(3절) | 구현(10/6 낮) | `lesson_efforts`(C14) | 표 이름이 다르다 |
+| 내보내기 판 5(6절) | 구현 | `PILOT_EXPORT_VERSION = 5` | `battery`, `join_seq`·`planned_order`·`b_completed_seq`, `trial_log` 확장(`target`·`options`·`chosen`(주관식은 비움)·`item_id`·`phase`·`talker`·`rt_from_onset_ms`·`hint_used`·`probe_kind`), `progress_log`(원문 제외), 10/6 표 `review_logs`·`mastery_probes`·`retention_results`·`lesson_efforts` |
+| 학습 초기화 때 연구 자료(2절 5) | 일부 | 파일럿 참여자의 P3 세 표는 지우지 않는다(표준검사 A·B, 유지 검사와 같은 규칙) | 학습 시행 기록은 여전히 지워진다. P3 기간 초기화 금지나 `reset_epoch`는 결정 대기 |
+| `mrt_decisions`, `covariate_tests`, `lesson_sessions`, `cues_shown`, C9 첫·둘째 답 열 | 남음 | | 기능이 아직 없다 |
+
+동의서 5-3과 `docs/pilot-data-spec.md` 3절은 고치지 않았다. 판 5는 검사 문항의 답 원문을 실으므로 문구를 고친 뒤에 쓴다.
+
 ## 1. 읽은 것
 
 | 대상 | 위치 |

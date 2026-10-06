@@ -30,8 +30,9 @@ def rescore(export: dict, redo_all: bool = False) -> dict:
                     n["unavailable"] += 1
                     continue
                 f = pb.strict_fields(res)
-                r["auto_phoneme_acc"], r["auto_word_acc"] = f["auto_phoneme_acc"], f["auto_word_acc"]
-                r["scorer_version"] = ("app-visual+strict" + (f":{f['strict_version']}" if f["strict_version"] else ""))[:40]
+                for k in ("auto_phoneme_acc", "auto_word_acc", "n_matched_phonemes", "n_target_phonemes"):
+                    r[k] = f[k]
+                r["scorer_version"] = f["strict_version"] or "strict"
                 n["filled"] += 1
     return n
 

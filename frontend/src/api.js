@@ -200,8 +200,8 @@ export const curriculumAPI = {
   // 뜻 없는 말 짝 맞추기(C10, docs/nonsense-pairing.md): 지금 목록·블록, 답 제출. 시행 기록에만 남고 단계 숙달·복습·XP에는 들어가지 않는다.
   // options = 보인 도형 자리(낱말로, 보인 순서). 오늘 분량을 넘거나 블록이 맞지 않으면 409
   getNonsenseSession: async () => (await api.get('/nonsense/session')).data,
-  submitNonsense: async (set_id, block, word, chosen, options) =>
-    (await api.post('/nonsense/answer', { set_id, block, word, chosen, ...(options ? { options } : {}) })).data,
+  submitNonsense: async (set_id, block, word, chosen, options, meta) =>
+    (await api.post('/nonsense/answer', { set_id, block, word, chosen, ...(options ? { options } : {}), ...(meta || {}) })).data,
   getWords: async () => (await api.get('/curriculum/words')).data,
   // 3단계 문장 4지선다 오답 보기(레슨 밖·음절 수가 가까운 문장). exclude = 이번 레슨 문장들
   getSentenceOptions: async (sentence, exclude) => (await api.post('/curriculum/sentence-options', { sentence, exclude })).data,
