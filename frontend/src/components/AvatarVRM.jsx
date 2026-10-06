@@ -18,6 +18,7 @@ import { VISEME_BLENDSHAPES, ACTIVE_MORPH_KEYS, VISEME_TONGUE, ACTIVE_TONGUE_KEY
 import { MIRROR_KEYS } from '../lib/mouthMirror'
 import MouthFallback2D from './MouthFallback2D'
 import { markContextLost } from '../lib/gpuBudget'
+import { guardRendererFactory } from '../lib/safeRenderer'
 import { transitionProgress } from '../lib/visemeTiming'
 import { talkerShapes } from '../lib/talkers'
 import { coartShape, coartWeight } from '../lib/coarticulation'
@@ -359,6 +360,13 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
   // GPU 메모리가 모자라 브라우저가 컨텍스트를 거두면 캔버스가 까맣게 멈춘다. 그때는 이 아바타를 2D로 바꾸고
   // (캔버스를 내려 남은 GPU 메모리도 돌려준다) 여러 캔버스를 띄우는 화면이 2D로 가도록 알린다.
   const [ctxLost, setCtxLost] = useState(false)
+  // 시험용 컨텍스트는 됐는데 실제 렌더러(WebGL 컨텍스트) 생성이 실패하면 R3F가 오류 경계로 넘기지 않아 검은 상자만 남았다.
+  // 생성기를 감싸 실패를 받으면 2D로 바꾸고, 이 페이지의 다음 아바타는 처음부터 2D로 그린다(lib/safeRenderer).
+  const [glFailed, setGlFailed] = useState(false)
+  const glFactory = useMemo(() => guardRendererFactory(
+    (props) => new THREE.WebGLRenderer(props),
+    () => { webglSupported = false; setGlFailed(true); markContextLost() },
+  ), [])
   const onCreated = ({ gl }) => {
     gl.domElement.addEventListener('webglcontextlost', () => {
       setCtxLost(true)
@@ -367,7 +375,7 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
   }
   const fallback = <MouthFallback2D visemeId={visemeId} />
 
-  if (!webglOK || ctxLost || flat) return <div className="w-full h-full">{fallback}</div>
+  if (!webglOK || ctxLost || glFailed || flat) return <div className="w-full h-full">{fallback}</div>
 
   return (
     <GLErrorBoundary url={modelUrl} fallback={<div className="w-full h-full">{fallback}</div>}>
@@ -383,7 +391,7 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
           앞세워 세로 스와이프는 페이지 스크롤, 가로 드래그와 마우스 드래그는 그대로 회전이 되게 한다.
         */}
         {/* dpr 상한 1.5: 레티나(2~3배)에서 그리기 버퍼가 4~9배로 커지는데, 입 클로즈업은 1.5배로도 차이가 거의 없다 */}
-        <Canvas className="![touch-action:pan-y]" camera={{ position: [0, 1.68, 0.45], fov: 16 }} dpr={[1, 1.5]}
+        <Canvas className="![touch-action:pan-y]" camera={{ position: [0, 1.68, 0.45], fov: 16 }} dpr={[1, 1.5]} gl={glFactory}
           onCreated={onCreated} frameloop={mirrorRef || bsFrameRef ? 'always' : 'demand'}>
           <ambientLight intensity={1.2} />
           <directionalLight position={[1, 2, 2]} intensity={1.0} />
