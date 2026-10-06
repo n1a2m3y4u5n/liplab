@@ -17,6 +17,7 @@ import { SOFT_BAND, loudnessRms, metricVerdict, volumeCurveNote, volumeFeedback 
 import { longestVoicedRun } from '../lib/voicing'
 import { autoCorrelate } from '../lib/pitch'
 import { PROBE_CATEGORY, PROBE_HEADING, hasProbes, nextIndex, probeStatusText, withProbes } from '../lib/speakProbe'
+import { rateCueView } from '../lib/speakCue'
 
 // 혀 위치 성도 단면(E-6) — 모음 결과를 열 때만 받는다(그림 코드와 윤곽 자료 모두 지연 로드)
 const VocalTractVTL = lazy(() => import('../components/VocalTractVTL'))
@@ -587,6 +588,7 @@ export default function SpeakingPractice() {
   const mouthRes = assessment && !assessment.error ? assessment.mouth : null
   const fusion = assessment && !assessment.error ? assessment.av_fusion : null
   const vowelFb = assessment && !assessment.error ? assessment.vowel_feedback : null   // 모음 포먼트 교정(축 E)
+  const rateCue = assessment && !assessment.error ? rateCueView(assessment.sound_cue) : null   // 문장 말 빠르기(S7, 참고)
   const fusionAudio = fusion ? (fusion.audio_score ?? assessment.audio_score ?? assessment.dgop?.score_calibrated ?? null) : null
 
   // 레슨 시작 전 = 발화 트랙 로딩(223:50 / 모바일 243:101) — 첫 문항·복습 목록을 받는 동안 + 최소 표시 시간.
@@ -885,6 +887,24 @@ export default function SpeakingPractice() {
                   목소리 공명(F1 {vowelFb.f1}Hz · F2 {vowelFb.f2}Hz)으로 추정한 한 가지 예시예요. 같은 소리를 내는 혀 모양은 여럿일 수 있어요.
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* 말 빠르기(S7, docs/speak-visual-cues.md). 문장 단계에서 서버가 정렬로 잰 초당 음절 하나만 보인다. 색 띠는 538 정상 화자 문장의
+              10~90백분위다. 사람 유창성 평가와의 상관은 아직 재지 않아 '참고'를 붙이고, 느린 쪽일 때만 안내 한 줄을 띄운다. */}
+          {rateCue && (
+            <div className="flex flex-col gap-2 rounded-14 border-1.5 border-fill bg-surface-muted px-4 py-3.5">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-[13px] font-bold leading-figma text-ink-muted">{rateCue.title}</p>
+                <p className={`text-[15px] font-bold leading-figma ${rateCue.slow ? 'text-warn-text' : 'text-ink'}`}>{rateCue.valueText}</p>
+              </div>
+              <div className="relative h-2.5 w-full rounded-full bg-white" role="img" aria-label={`${rateCue.valueText}, ${rateCue.note}`}>
+                <div className="absolute inset-y-0 rounded-full bg-good-line" style={{ left: `${rateCue.bandLeftPct}%`, width: `${rateCue.bandWidthPct}%` }} />
+                <div className={`absolute -top-1 h-[18px] w-1 -translate-x-1/2 rounded-full ${rateCue.slow ? 'bg-warn' : 'bg-track-dark'}`}
+                  style={{ left: `${rateCue.markerPct}%` }} />
+              </div>
+              {rateCue.message && <p className="text-[14px] leading-[1.6] text-ink">{rateCue.message}</p>}
+              <p className="text-[11px] leading-relaxed text-ink-faint">{rateCue.note}</p>
             </div>
           )}
 

@@ -407,6 +407,13 @@ def assess_text(audio_bytes: bytes, target_text: str,
         return {"score": None, "raw_score": None, "uncertainty": 1.0, "phones": phones}
     result = {**_dgop.sentence_dgop(scored), "phones": phones}
     result["raw_score"] = result["score"]
+    # S7 말 빠르기·쉼(docs/speak-visual-cues.md): 같은 파형과 정렬에서 바로 잰다. 점수에는 넣지 않고, 문장 단계 화면의 지표 하나로만 쓴다.
+    try:
+        import speak_cues
+        result["rate"] = speak_cues.rate_pause(waveform, phones, sample_rate)
+    except Exception as e:   # 단서 계산 실패는 채점과 무관
+        print(f"[WARN] rate_pause 실패: {type(e).__name__}: {e}")
+        result["rate"] = None
     if calibrate:
         cal = load_calibration(calibration_path_for(scorer_id or aligner_id))
         result["score"] = _dgop.calibrate_score(result["raw_score"], cal)
