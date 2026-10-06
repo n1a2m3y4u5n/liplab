@@ -100,3 +100,38 @@ def test_probe_report_compares_with_simulation():
     assert g3["decision"].startswith("숙달 규칙 재검토")
     assert g3["waves"][1]["learners"] == 0 and g3["waves"][1]["share_below"] is None
     assert g12["sim_prediction"] == 0.065 and g3["sim_prediction"] == 0.109
+
+
+
+_FLOW_WAVES = r'''
+import asyncio, json
+import database, main
+async def run():
+    await database.init_db()
+    async with database.AsyncSessionLocal() as db:
+        w1 = await main._probe_items(7, 1, 1, db)
+        for i, it in enumerate(w1):
+            db.add(database.MasteryProbe(user_id=7, stage=1, wave=1, seq=i, item_kind="viseme", stimulus=it["stimulus"],
+                                         target=str(it["target"]), options=[], due_on="2026-10-01"))
+        db.add(database.TrialAttempt(user_id=7, stage=1, item_type="viseme_ax", target="파/피", chosen="same", correct=True))
+        await db.commit()
+        w7 = await main._probe_items(7, 1, 7, db)
+        return [x["stimulus"] for x in w1], [x["stimulus"] for x in w7]
+a, b = asyncio.run(run())
+print("RESULT " + json.dumps({"w1": a, "w7": b}, ensure_ascii=False))
+'''
+
+
+def test_probe_items_skip_earlier_wave_and_ax_syllables():
+    # 검토 결함 5: 7일 회차는 1일 회차에 낸 자극과 같은지 다른지(AX)에서 본 음절을 다시 내지 않는다
+    import json, os, subprocess, sys, tempfile
+    here = os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as d:
+        env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", PYTHONDONTWRITEBYTECODE="1")
+        env.pop("ANTHROPIC_API_KEY", None)
+        p = subprocess.run([sys.executable, "-c", _FLOW_WAVES], cwd=here, env=env, capture_output=True, text=True, timeout=180)
+    line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
+    assert line, f"시나리오 실패:\n{p.stdout[-2000:]}\n{p.stderr[-3000:]}"
+    r = json.loads(line[len("RESULT "):])
+    assert r["w7"] and not (set(r["w1"]) & set(r["w7"]))
+    assert "파" not in r["w7"] and "피" not in r["w7"]

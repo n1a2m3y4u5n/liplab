@@ -390,18 +390,22 @@ def strict_fields(r: Optional[Dict]) -> Dict:
 
 
 def word_proportion(target: str, answer: str) -> float:
-    """낱말 단위 일치 비율(문장부호를 지운 띄어쓰기 낱말이 답에 그대로 있는 비율). SNR 계단의 '맞음' 판정에만 쓴다."""
-    norm = lambda s: re.sub(r"[^\w\s]", "", unicodedata.normalize("NFC", s or "")).split()   # noqa: E731
-    t, a = norm(target), norm(answer)
-    if not t:
+    """낱말 단위 일치 비율. SNR 계단의 '맞음' 판정에만 쓴다. 정답 낱말마다 철자(음절열)가 답(공백·문장 부호를 뗀 음절열) 안에
+    순서대로 그대로 들어 있으면 맞힌 것이다. 띄어쓰기를 빼먹거나 잘못 띄어도 결과가 같고(예전에는 공백으로만 나눠 '감기에걸렸어요'가
+    0점이었다), 낱말 안에 음절이 끼면(먹었어요 ≠ 먹어요) 틀린다."""
+    def jamo(t: str) -> str:   # 음절 단위(NFC) 철자열. 자모로 풀면 '각' 안에서 '가'가 맞아 버린다
+        return re.sub(r"[^\w]", "", unicodedata.normalize("NFC", t or ""))
+    words = [w for w in (jamo(x) for x in unicodedata.normalize("NFC", target or "").split()) if w]
+    if not words:
         return 0.0
-    pool = list(a)
-    hit = 0
-    for w in t:
-        if w in pool:
-            pool.remove(w)
+    ans = jamo(answer)
+    pos, hit = 0, 0
+    for w in words:
+        k = ans.find(w, pos)
+        if k >= 0:
             hit += 1
-    return hit / len(t)
+            pos = k + len(w)
+    return hit / len(words)
 
 
 # ── 적응 계단(SNR) ────────────────────────────────────

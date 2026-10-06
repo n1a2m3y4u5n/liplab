@@ -468,7 +468,8 @@ export default function Practice() {
     const accuracy = tally.n ? Math.round((tally.correct / tally.n) * 100) : null
     return (
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
-        effort={{ lessonKind: reviewReturn ? 'review' : 'sentence', stage: 3, nItems: tally.n, accuracy }}
+        effort={{ lessonKind: reviewReturn ? 'review' : 'sentence', stage: 3, nItems: tally.n,
+          accuracy: tally.n ? tally.correct / tally.n : null }}   // 노력 문항은 정답률을 0~1로 받는다(화면 표시는 백분율)
         onNext={() => { resetPractice(); navigate(reviewReturn || '/learn/scenario') }}
         onHome={() => { resetPractice(); navigate('/learn/path') }} />
     )
