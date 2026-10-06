@@ -19,3 +19,19 @@ export function wordSkeleton(word) {
 export function sentenceSkeleton(sentence) {
   return String(sentence || '').split(/\s+/).map(wordSkeleton).filter((w) => w.length > 0)
 }
+
+// 받침까지 보이는 자음 골격: 모음 자리를 '_'로 둔다(바록 → ㅂ_ㄹ_ㄱ). 뜻 없는 말 짝 맞추기(C10)가 시행 전에 보여 준다.
+// 첫소리 ㅇ은 소리가 없어 적지 않는다. 서버 backend/nonsense_words.py skeleton과 같은 규칙(nonsensePairing.test.mjs가 확인).
+const JONG = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ',
+  'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+
+/** 낱말의 자음 골격 문자열(한글 음절이 아닌 글자는 뺀다). */
+export function consonantFrame(word) {
+  return Array.from(word || '').map((ch) => {
+    const c = ch.charCodeAt(0)
+    if (c < 0xac00 || c > 0xd7a3) return ''
+    const k = c - 0xac00
+    const cho = CHO[Math.floor(k / 588)]
+    return (cho === 'ㅇ' ? '' : cho) + '_' + JONG[k % 28]
+  }).join('')
+}
