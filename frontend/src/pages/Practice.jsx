@@ -221,6 +221,7 @@ export default function Practice() {
   // 자음 피드백 단계(계획 C9): 주관식 첫 답이 합격선 아래면 정답 대신 낱말별 단서를 보이고 한 번 더 답하게 한다.
   // { feedback, first }: 서버 word_feedback과 첫 답의 채점 결과. 두 번째 답은 연습(practice_only)으로만 채점한다
   const [retry, setRetry] = useState(null)
+  const [revealedAnswer, setRevealedAnswer] = useState(null)   // '정답 보기'로 끝낸 경우 결과 화면에 보일 첫 답
   // 이 문장을 보는 동안 학습자가 고른 가장 느린 재생 속도(플레이어 onSpeedChange). 4지선다 카드는 속도 조절이 없어 1.0배다.
   // 답과 함께 유효 속도(학습자 속도 × 적응 감속)를 기록만 한다. 숙달에는 넣지 않는다(시뮬레이션 사전 기준 미달, docs/mastery-ewma.md 9절)
   const learnerSpeedRef = useRef(Infinity)
@@ -297,6 +298,7 @@ export default function Practice() {
 
     setResult(null)
     setRetry(null)
+    setRevealedAnswer(null)
     setHintLevel(0)
     setRevealedTextIndex(-1)
     setStartTime(Date.now())
@@ -337,7 +339,7 @@ export default function Practice() {
       const needsRetry = effectiveMode !== 'test-multiple' && !practiceOnly && response.passed === false
         && Array.isArray(wf?.words) && wf.words.some((w) => !w.correct)
       if (needsRetry) {
-        setRetry({ feedback: wf, first: response })
+        setRetry({ feedback: wf, first: response, answer: userAnswer })
         setIsPlaying(true)
         setStartTime(Date.now())
       } else {
@@ -371,6 +373,7 @@ export default function Practice() {
     nextSentence()
     setResult(null)
     setRetry(null)
+    setRevealedAnswer(null)
     setSelectedChoice(null)
     setHintLevel(0)
     setRevealedTextIndex(-1)
@@ -379,6 +382,7 @@ export default function Practice() {
   const handleRetry = () => {
     setResult(null)
     setRetry(null)
+    setRevealedAnswer(null)
     setHintLevel(0)
     setRevealedTextIndex(-1)
     setSelectedChoice(null)
@@ -390,6 +394,7 @@ export default function Practice() {
   const revealAfterRetry = () => {
     if (!retry) return
     setResult(retry.first)
+    setRevealedAnswer(retry.answer || '')
     setRetry(null)
     answerShownRef.current = true
     setIsPlaying(false)
@@ -603,7 +608,8 @@ export default function Practice() {
 
                 <div className="mt-4">
                   <QuizForm
-                    key={`${currentSentenceIndex}-${retry ? 'retry' : 'first'}`}
+                    key={`${currentSentenceIndex}-${retry ? 'retry' : revealedAnswer != null ? 'reveal' : 'first'}`}
+                    initialAnswer={revealedAnswer || ''}
                     onSubmit={handleSubmitAnswer}
                     onRetry={handleRetry}
                     loading={submitting}
