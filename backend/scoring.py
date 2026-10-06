@@ -2,6 +2,7 @@
 Advanced Scoring Algorithm with Phonological Similarity Weighting
 Evaluates user responses using articulatory feature-based partial credit
 """
+import re
 import unicodedata
 from typing import Dict, List, Optional, Tuple
 from engine import decompose_hangul, VISEME_MAP, DOUBLE_FINAL, get_viseme_feature, to_pronounced_syllables
@@ -500,6 +501,14 @@ def viseme_confusions(target: str, chosen: str) -> List[Dict]:
     return out
 
 
+_SEPARATORS = re.compile(r"[\s\W_]+")
+
+
+def _strip_separators(text: str) -> str:
+    """채점용: 모든 공백(전각·줄 바꿈 없는 공백·탭 포함)과 문장 부호를 뗀다. 한글·숫자·영문 글자는 남긴다."""
+    return _SEPARATORS.sub("", text or "")
+
+
 async def calculate_score(correct: str, user_answer: str, db=None, mode: str = "phonological") -> Dict:
     """
     Main scoring function with phonological similarity weighting
@@ -522,8 +531,10 @@ async def calculate_score(correct: str, user_answer: str, db=None, mode: str = "
     correct = unicodedata.normalize("NFC", correct or "")
     user_answer = unicodedata.normalize("NFC", user_answer or "")
     # Normalize inputs
-    correct_clean = correct.strip().replace(" ", "")
-    user_clean = user_answer.strip().replace(" ", "")
+    # 공백과 문장 부호는 모두 뗀다. 예전에는 보통 공백만 떼서, 전각 공백·줄 바꿈 없는 공백·탭·쉼표가 낱말 사이에 있으면 연음이 막혀
+    # 맞는 답이 감점됐다("옷 입어"에 "옷　입어" 69.4점, docs/pilot/typed-scoring-check.md)
+    correct_clean = _strip_separators(correct)
+    user_clean = _strip_separators(user_answer)
 
     # Handle empty answers
     if not user_clean:

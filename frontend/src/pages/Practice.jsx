@@ -13,6 +13,9 @@ import LoadingScreen from '../components/LoadingScreen'
 import { ModalClose } from '../components/Modal'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 import ConsonantFeedback from '../components/ConsonantFeedback'
+import MasteryProbeBlock from '../components/MasteryProbeBlock'
+import EffortCheck from '../components/EffortCheck'
+import useMasteryProbes from '../hooks/useMasteryProbes'
 import { sentenceSkeleton } from '../lib/consonantSkeleton'
 import useFocusTrap from '../hooks/useFocusTrap'
 import useChoiceKeys from '../lib/useChoiceKeys'
@@ -125,7 +128,7 @@ const STAT_VALUE = 'text-[20px] font-bold leading-figma tracking-[-0.5px] lg:tex
 const DONE_BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]'
 
 // Figma "Lesson / 4. 완료"(93:12) — 마지막 문장 뒤 레슨 컴포넌트의 마지막 상태.
-function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome }) {
+function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, effort }) {
   return (
     <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center gap-[26px] bg-page px-[18px] py-12">
       <span className="relative size-[140px] shrink-0">
@@ -147,6 +150,9 @@ function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome }) {
           <p className={`${STAT_VALUE} text-stat-level`}>{fmtDuration(elapsedSec)}</p>
         </WatermarkCard>
       </div>
+
+      {/* 레슨별 정신적 노력 한 문항(계획 C14, 건너뛸 수 있음, 기록만) */}
+      {effort && <EffortCheck {...effort} />}
 
       <div className="flex w-full max-w-[640px] flex-col gap-2.5 lg:gap-3">
         <button type="button" onClick={onNext} className={`btn-primary btn-lg ${DONE_BTN}`}>다음 레슨으로</button>
@@ -198,6 +204,8 @@ export default function Practice() {
   const [visemes, setVisemes] = useState([])
   const shownVisemes = useSlowWeak(visemes)   // 약한 입모양은 조금 천천히(연습 화면)
   const [lesson] = useLessonTalker('sentence')   // 상황(레슨)마다 가상 화자 한 명(계획 2-2)
+  // 숙달 지연 탐침(계획 C16): 레슨 가운데 문장 뒤에 한 번 끼운다. 틀린 문장 복습·북마크 연습 세션에는 내지 않는다(길이 0)
+  const probes = useMasteryProbes(reviewReturn ? 0 : (currentScenario?.sentences?.length || 0))
   const [isPlaying, setIsPlaying] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -368,7 +376,7 @@ export default function Practice() {
   }
 
   // 다음 문장 — 마지막 문장 뒤에는 currentSentence가 비어 레슨 완료(93:12)가 뜬다(걸린 시간은 이 순간으로 고정).
-  const handleNext = () => {
+  const advance = () => {
     if (isLastSentence) setElapsedSec(Math.floor((Date.now() - lessonStartRef.current) / 1000))
     nextSentence()
     setResult(null)
@@ -378,6 +386,9 @@ export default function Practice() {
     setHintLevel(0)
     setRevealedTextIndex(-1)
   }
+
+  // 다음 문장: 가운데 문장을 마친 뒤 탐침이 있으면 먼저 연다(탐침을 마치면 advance)
+  const handleNext = () => { if (!probes.take(currentSentenceIndex + 1)) advance() }
 
   const handleRetry = () => {
     setResult(null)
@@ -443,11 +454,14 @@ export default function Practice() {
   // 레슨 시작 전 = 독화 트랙 로딩(223:30 / 모바일 243:81)
   if (!booted || !introDone) return <LoadingScreen variant="brand" track="perception" />
 
+  if (probes.open) return <MasteryProbeBlock items={probes.items} onDone={() => { probes.finish(); advance() }} />
+
   // 마지막 문장까지 마치면 레슨 완료(93:12). 다음 레슨 = 다른 상황 고르기(복습 세션이면 복습 목록).
   if (!currentSentence) {
     const accuracy = tally.n ? Math.round((tally.correct / tally.n) * 100) : null
     return (
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
+        effort={{ lessonKind: reviewReturn ? 'review' : 'sentence', stage: 3, nItems: tally.n, accuracy }}
         onNext={() => { resetPractice(); navigate(reviewReturn || '/learn/scenario') }}
         onHome={() => { resetPractice(); navigate('/learn/path') }} />
     )
