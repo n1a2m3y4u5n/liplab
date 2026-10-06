@@ -10,7 +10,7 @@ import random
 import llm_json
 from typing import Dict, List, Optional
 
-from llm_service import anthropic_client
+from llm_service import anthropic_client, PLAIN_KO_WORDS
 
 _MODEL = "claude-sonnet-4-6"
 _SCENES = ["카페", "병원 대기실", "학교 교실", "가족 저녁 식사", "가게 계산대", "친구 모임"]
@@ -209,6 +209,7 @@ async def generate_multi_conversation(speakers: int = 2, turns: int = 6,
         f"너는 청각장애인 독화 훈련용 '다자 대화' 출제기다.\n"
         f"- {speakers}명이 '{scene}'에서 나누는 자연스러운 일상 대화를 만든다.\n"
         f"- 각 턴은 {length}의 짧은 구어체 한 문장.\n"
+        f"- {PLAIN_KO_WORDS}\n"
         "- 화자 순서를 규칙적으로 번갈지 말 것. 같은 사람이 연달아 두 번 말하는 경우를 한 번 이상 넣는다.\n"
         f"- 화자 번호는 0~{speakers - 1}.\n"
         f"{focus_line}"

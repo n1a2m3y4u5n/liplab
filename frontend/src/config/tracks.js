@@ -41,7 +41,7 @@ export const TRACKS = {
     id: 'speaking',
     label: '말하기',
     hubTitle: '소리 내어 말해요',
-    description: '내 발음을 눈으로 보며 다듬는 훈련이에요. 마이크로 녹음하면 AI가 전사·채점하고 코칭해줘요.',
+    description: '내 발음을 눈으로 보며 다듬는 훈련이에요. 마이크로 녹음하면 AI가 글로 옮기고 점수를 매겨 코칭해 줘요.',
     icon: '🗣️',
     accent: 'speaking',
     basePath: '/learn/speaking',

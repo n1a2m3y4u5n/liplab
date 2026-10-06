@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import { curriculumAPI } from '../api'
 import LoadingScreen from '../components/LoadingScreen'
+import { VISEME_PLAIN, plainVisemeLabel } from '../lib/visemeLabels'
 
 /**
  * 엔드리스 학습 (Figma 리디자인 09 연습기능) — 약한 유형만 골라 무한 연습.
@@ -12,10 +13,8 @@ import LoadingScreen from '../components/LoadingScreen'
  * Figma의 "지금 출제되는 유형" 진행바(숙달도 낮은 순)로 보여준다.
  * 9/26 Figma(226:175): 제목 아래 부제가 빠지고 제목 줄 오른쪽에 나가기 X(연습 탭으로).
  */
-const VIS_NAME = {
-  1: '양순음', 2: '개방모음', 3: '전설모음', 4: '원순모음', 5: '중설모음',
-  6: '치경음', 7: '연구개음', 8: '성문음', 9: '이중모음', 10: '경구개음',
-}
+// 입모양 무리 이름은 1단계 보기와 같은 쉬운 이름(lib/visemeLabels, 쉬운 한국어 감사 docs/easy-korean-audit.md)
+const VIS_NAME = Object.fromEntries(Object.keys(VISEME_PLAIN).map((v) => [v, plainVisemeLabel(Number(v))]))
 
 export default function EndlessPractice() {
   const navigate = useNavigate()
@@ -39,7 +38,7 @@ export default function EndlessPractice() {
         <div className="flex items-center justify-between gap-5">
           <div className="flex flex-col items-start gap-[18px] text-white">
             <p className="text-[24px] font-bold leading-tight tracking-[-0.48px]">약한 유형만 골라서 무한 연습</p>
-            <p className="text-[14px] leading-relaxed opacity-85">숙달도가 낮은 음소가 계속 출제돼요. 원할 때 멈출 수 있어요.</p>
+            <p className="text-[14px] leading-relaxed opacity-85">숙달도가 낮은 소리가 자주 나와요. 원할 때 멈출 수 있어요.</p>
             <button type="button" onClick={() => navigate('/learn/word?endless=1')}
               className="inline-flex items-center rounded-[13px] border-2 border-b-4 border-endless-line bg-white px-[30px] py-[14px] text-[16px] font-bold text-endless-dark transition active:translate-y-[1px] active:border-b-2">
               시작하기 →

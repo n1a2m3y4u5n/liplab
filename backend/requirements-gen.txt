@@ -7,3 +7,5 @@
 #       MeCab(형태소 분석기) 없이 동작한다.
 wordfreq>=3.0.0
 numpy>=1.24.0
+# 쉬운 한국어 감사(scripts/easy_korean_audit.py)의 형태소 분석. 국립국어원 어휘 목록과 원형으로 대조한다.
+kiwipiepy>=0.18.0
