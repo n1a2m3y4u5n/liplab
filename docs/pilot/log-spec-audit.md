@@ -18,7 +18,7 @@
 
 ## 2. 요약
 
-1. **P3 주결과와 보조 결과를 재는 검사 자체가 앱에 없다.** 실제 얼굴 낱말 4지선다, 개방형 문장 타이핑, 무의미 낱말 자음 식별,
+1. **P3 주결과와 보조 결과를 측정하는 검사 자체가 앱에 없다.** 실제 얼굴 낱말 4지선다, 개방형 문장 타이핑, 무의미 낱말 자음 식별,
    소음 속 시청각 문장, 아바타 대 실제 동등성(나8) 검사는 화면도 저장 표도 없다. 지금 있는 표준검사는 아바타 4지선다 A·B 두 폼
    (`placement_results`)뿐이다. 그래서 아래 3절 표의 P3 줄 대부분은 '새 검사 모듈과 표가 필요'로 나온다.
 2. **A-A-B에 필요한 폼 C, 회차 이름(A1·A2·B·유지), 배정한 순서가 없다.** 지금은 폼 A·B 두 개와 생성 시각만 있어 같은 폼을 두 번
@@ -38,7 +38,7 @@
 | 재생 속도 | `speed`(실제 재생 속도, 9/29~) | `speed`(9/29~) | 없음. 검사 화면이 속도 조절·다시 보기를 허용하는지도 기록 없음 | `trial_log[].speed`만 | 부분 | `item_log[].speed`, `item_log[].plays`(본 횟수). 검사에서 속도·재생을 고정하면 결과 행에 `playback_policy`(예: "1.0x, 2회")를 남긴다. 내보내기 `progress_log[].speed` |
 | 답 방식 | `item_type`('word'·'word_typed' 등) | `answer_mode`('choice'·'typed', 9/29~) | 4지선다 고정이라 불필요 | `trial_log[].item_type`만, `progress`는 없음 | 부분 | 내보내기에 `progress_log[].answer_mode`. 새 검사 모듈은 `response_mode`('choice'·'typed') |
 | 보인 보기 | `options`(JSON, 보인 순서, 주관식은 NULL) | 없음(문장 4지선다 보기를 저장하지 않음) | 없음. 단 동결 폼 파일(`forms_v1.json` 등)과 `id`·`form_version`으로 복원 가능 | 없음 | 부분 | `trial_log[].options`, `progress.options`(JSON) 열 추가, 검사 결과에는 복원 근거로 폼 파일 해시 `forms_sha` |
-| 반응 시간 | 없음 | `time_spent_seconds`(정수 초, 0~3600으로 자름, 힌트 시간 포함, 내보내지 않음) | 없음 | 없음 | 없음 | 모든 응답 행에 `rt_ms`(첫 재생이 끝난 때부터 답 확정까지 ms, 정수). 첫 재생 시작부터 재는 `rt_from_onset_ms`를 함께 두면 자극 길이 차이를 분리할 수 있다 |
+| 반응 시간 | 없음 | `time_spent_seconds`(정수 초, 0~3600으로 자름, 힌트 시간 포함, 내보내지 않음) | 없음 | 없음 | 없음 | 모든 응답 행에 `rt_ms`(첫 재생이 끝난 때부터 답 확정까지 ms, 정수). 첫 재생 시작부터 측정하는 `rt_from_onset_ms`를 함께 두면 자극 길이 차이를 분리할 수 있다 |
 | 화자 id | 없음(레슨 화자 '화자 1~4'는 화면 `useLessonTalker`에서만 정함) | 없음 | 사후 검사 문항만 `talker`('default'·'h1'·'h2') | `tests[].items[].talker` | 부분 | `trial_attempts.talker`, `progress.talker`('t1'~'t4'·'default'). 실제 얼굴 검사는 `talker`('T1'~'T4') |
 | 힌트 사용 | 없음(문맥 '힌트 보기' 기록 없음) | 없음. 힌트 3(문장 보기) 뒤 제출은 `practice_only`라 **행 자체를 저장하지 않는다**(`main.py` 802행) | 해당 없음 | 없음 | 없음 | `trial_attempts.hint_used`(bool), `progress.hint_level`(0~3), `progress.practice_only`(bool)로 저장은 하되 숙달·추이에서는 지금처럼 뺀다 |
 | 탐침 표시 | `probe`(짝 탐색 JSON, 5.4-2) | 없음 | 없음 | `trial_log[].probe`(참·거짓만) | 부분 | 탐침 종류를 가르는 `probe_kind`('contrast'·'real_face'(C8)·'delayed_mastery'(C16)), 지연 탐침은 `days_since_mastery` |
