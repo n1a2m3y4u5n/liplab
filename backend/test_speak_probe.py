@@ -67,7 +67,7 @@ def test_probes_ok_window():
 
 
 _SCENARIO = r'''
-import asyncio, json
+import asyncio, datetime, json
 from fastapi.testclient import TestClient
 import database, llm_service, main, speak_service
 from database import SpeakAttempt, SpeakStageProgress
@@ -142,7 +142,12 @@ with TestClient(main.app) as c:
     out["same_day_same"] = d1["probes"] == d1b["probes"]
     w = d1["probes"][0]["target"]
     # 오늘 확인 낱말이 아닌 말을 probe=1로 보내면 확인으로 세지 않는다(보통 시도로 채점, mode 'phoneme')
-    out["foreign"] = assess("사과" if w != "사과" else "바다", 3, "사과" if w != "사과" else "바다", probe=1)
+    # 고른 말이 날짜에 따라 오늘·어제의 확인 낱말과 겹치지 않게, 서버와 같은 seed로 확인 낱말이 아닌 말을 고른다
+    import speak_curriculum as _sc
+    _t = main._kst_today()
+    fw = next(x for x in ["사과", "바다", "나무", "우유", "모자", "아기", "구두", "포도"]
+              if not any(_sc.is_probe_word(3, x, f"{uid}:3:{d.isoformat()}") for d in (_t, _t - datetime.timedelta(days=1))))
+    out["foreign"] = assess(fw, 3, fw, probe=1)
     # 소리 없는 확인은 세지 않는다(창에서 빠짐)
     out["silent"] = assess(w, 3, "", probe=1, loud="0")
     # 첫 음절 첫소리가 틀린 확인(물 → 불): 낱말 점수는 합격선 위지만 불합격
