@@ -18,6 +18,7 @@ const toneOf = (score) => TONE[score >= 80 ? 'good' : score >= 60 ? 'warn' : 'ba
  * - loading: Boolean indicating submission is in progress
  * - result: Scoring result object or null
  * - correctAnswer: The correct sentence (revealed after submission)
+ * - initialAnswer: 처음 칸에 넣어 둘 답(자음 피드백 뒤 '정답 보기'로 첫 답을 결과와 함께 보일 때)
  */
 export default function QuizForm({
   onSubmit,
@@ -27,8 +28,9 @@ export default function QuizForm({
   correctAnswer = '',
   label = '입모양을 보고 문장을 입력하세요',
   placeholder = '여기에 읽은 문장을 입력하세요...',
+  initialAnswer = '',
 }) {
-  const [answer, setAnswer] = useState('')
+  const [answer, setAnswer] = useState(initialAnswer)
 
   const handleSubmit = (e) => {
     e.preventDefault()
