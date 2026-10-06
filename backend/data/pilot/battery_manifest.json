@@ -1,0 +1,2859 @@
+{
+ "schema": "liplab-pilot-battery/1",
+ "version": "draft-2026-10-06",
+ "status": "draft",
+ "note": "촬영 전 초안. 문장·폼 C 낱말·무의미 낱말은 사람이 검토해 동결한다. 영상·음성 파일은 저장소에 넣지 않고 LIPLAB_PILOT_MEDIA_DIR(기본 backend/data/pilot/media) 아래 media_pattern 경로에 둔다. docs/pilot/battery.md",
+ "forms": [
+  "A",
+  "B",
+  "C"
+ ],
+ "orders": [
+  "ABC",
+  "BCA",
+  "CAB"
+ ],
+ "label_slot": {
+  "A1": 0,
+  "A2": 1,
+  "B": 2,
+  "R": 2
+ },
+ "layers_by_label": {
+  "A1": [
+   "nonsense",
+   "word",
+   "sentence",
+   "snr",
+   "av"
+  ],
+  "A2": [
+   "nonsense",
+   "word",
+   "sentence",
+   "av"
+  ],
+  "B": [
+   "nonsense",
+   "word",
+   "sentence",
+   "av"
+  ],
+  "R": [
+   "nonsense",
+   "word",
+   "sentence"
+  ]
+ },
+ "playback": {
+  "speed": 1.0,
+  "max_plays": 2
+ },
+ "talkers": {
+  "word": [
+   "T1",
+   "T2",
+   "T3",
+   "T4"
+  ],
+  "sentence": [
+   "T1",
+   "T2"
+  ],
+  "av": [
+   "T1",
+   "T2"
+  ],
+  "snr": [
+   "T1",
+   "T2"
+  ]
+ },
+ "noise": {
+  "babble": {
+   "file": "noise/babble.wav",
+   "note": "여러 사람 말소리를 섞은 잡담 잡음(8명 이상 권장), 모노 48kHz"
+  }
+ },
+ "layers": {
+  "word": {
+   "title": "실제 얼굴 낱말",
+   "response": "choice4",
+   "modality": "real",
+   "n_per_form": 24,
+   "media_pattern": "words/{talker}/{id}.mp4",
+   "source": "폼 A·B = 표준검사 forms_v2(촬영 키트 48낱말), 폼 C = build_word_form_c(seed 20261006) 초안",
+   "word_c_seed": 20261006,
+   "items": {
+    "A": [
+     {
+      "id": "A1",
+      "word": "이",
+      "options": [
+       "소",
+       "짐",
+       "이",
+       "자"
+      ],
+      "difficulty": 0.3
+     },
+     {
+      "id": "A2",
+      "word": "호피",
+      "options": [
+       "냄비",
+       "호피",
+       "도서",
+       "사무"
+      ],
+      "difficulty": 0.39
+     },
+     {
+      "id": "A3",
+      "word": "기쁨",
+      "options": [
+       "나무",
+       "가망",
+       "기쁨",
+       "이틀"
+      ],
+      "difficulty": 0.45
+     },
+     {
+      "id": "A4",
+      "word": "무지개",
+      "options": [
+       "무지개",
+       "주전자",
+       "호랑이",
+       "지우개"
+      ],
+      "difficulty": 0.467
+     },
+     {
+      "id": "A5",
+      "word": "지붕",
+      "options": [
+       "거울",
+       "호박",
+       "칠판",
+       "지붕"
+      ],
+      "difficulty": 0.5
+     },
+     {
+      "id": "A6",
+      "word": "포차",
+      "options": [
+       "도끼",
+       "고기",
+       "포차",
+       "기자"
+      ],
+      "difficulty": 0.505
+     },
+     {
+      "id": "A7",
+      "word": "가방",
+      "options": [
+       "도랑",
+       "계산",
+       "냄비",
+       "가방"
+      ],
+      "difficulty": 0.54
+     },
+     {
+      "id": "A8",
+      "word": "복",
+      "options": [
+       "막",
+       "박",
+       "몸",
+       "복"
+      ],
+      "difficulty": 0.546
+     },
+     {
+      "id": "A9",
+      "word": "연못",
+      "options": [
+       "보드",
+       "보도",
+       "연못",
+       "라면"
+      ],
+      "difficulty": 0.55
+     },
+     {
+      "id": "A10",
+      "word": "삼촌",
+      "options": [
+       "두부",
+       "가방",
+       "삼촌",
+       "램프"
+      ],
+      "difficulty": 0.55
+     },
+     {
+      "id": "A11",
+      "word": "동무",
+      "options": [
+       "동무",
+       "숙제",
+       "골목",
+       "수업"
+      ],
+      "difficulty": 0.58
+     },
+     {
+      "id": "A12",
+      "word": "세탁기",
+      "options": [
+       "세탁기",
+       "지렁이",
+       "시금치",
+       "호랑이"
+      ],
+      "difficulty": 0.585
+     },
+     {
+      "id": "A13",
+      "word": "빨간",
+      "options": [
+       "사상",
+       "밥솥",
+       "빨간",
+       "당근"
+      ],
+      "difficulty": 0.59
+     },
+     {
+      "id": "A14",
+      "word": "기린",
+      "options": [
+       "사리",
+       "수레",
+       "금식",
+       "기린"
+      ],
+      "difficulty": 0.6
+     },
+     {
+      "id": "A15",
+      "word": "가지",
+      "options": [
+       "가위",
+       "가지",
+       "망치",
+       "방지"
+      ],
+      "difficulty": 0.63
+     },
+     {
+      "id": "A16",
+      "word": "책상",
+      "options": [
+       "약사",
+       "흰색",
+       "책상",
+       "경찰"
+      ],
+      "difficulty": 0.633
+     },
+     {
+      "id": "A17",
+      "word": "공원",
+      "options": [
+       "그릇",
+       "공원",
+       "농부",
+       "계단"
+      ],
+      "difficulty": 0.65
+     },
+     {
+      "id": "A18",
+      "word": "문",
+      "options": [
+       "문",
+       "봄",
+       "무",
+       "말"
+      ],
+      "difficulty": 0.667
+     },
+     {
+      "id": "A19",
+      "word": "짐",
+      "options": [
+       "답",
+       "남",
+       "짐",
+       "납"
+      ],
+      "difficulty": 0.667
+     },
+     {
+      "id": "A20",
+      "word": "장문",
+      "options": [
+       "공모",
+       "공무",
+       "사무",
+       "장문"
+      ],
+      "difficulty": 0.67
+     },
+     {
+      "id": "A21",
+      "word": "계란",
+      "options": [
+       "계란",
+       "교사",
+       "사랑",
+       "우산"
+      ],
+      "difficulty": 0.68
+     },
+     {
+      "id": "A22",
+      "word": "폭소",
+      "options": [
+       "폭소",
+       "물체",
+       "동부",
+       "보트"
+      ],
+      "difficulty": 0.7
+     },
+     {
+      "id": "A23",
+      "word": "칸",
+      "options": [
+       "개",
+       "귤",
+       "깨",
+       "칸"
+      ],
+      "difficulty": 0.753
+     },
+     {
+      "id": "A24",
+      "word": "딸",
+      "options": [
+       "논",
+       "돌",
+       "눈",
+       "딸"
+      ],
+      "difficulty": 0.833
+     }
+    ],
+    "B": [
+     {
+      "id": "B1",
+      "word": "우유",
+      "options": [
+       "우유",
+       "바위",
+       "복도",
+       "사무"
+      ],
+      "difficulty": 0.3
+     },
+     {
+      "id": "B2",
+      "word": "볶음밥",
+      "options": [
+       "볶음밥",
+       "무서움",
+       "두꺼비",
+       "목소리"
+      ],
+      "difficulty": 0.394
+     },
+     {
+      "id": "B3",
+      "word": "외로움",
+      "options": [
+       "요리사",
+       "개구리",
+       "저고리",
+       "외로움"
+      ],
+      "difficulty": 0.45
+     },
+     {
+      "id": "B4",
+      "word": "빗물",
+      "options": [
+       "보도",
+       "빗물",
+       "선발",
+       "빨간"
+      ],
+      "difficulty": 0.467
+     },
+     {
+      "id": "B5",
+      "word": "입술",
+      "options": [
+       "세수",
+       "입술",
+       "거울",
+       "빗물"
+      ],
+      "difficulty": 0.5
+     },
+     {
+      "id": "B6",
+      "word": "파치",
+      "options": [
+       "도끼",
+       "마당",
+       "파치",
+       "딸기"
+      ],
+      "difficulty": 0.505
+     },
+     {
+      "id": "B7",
+      "word": "수박",
+      "options": [
+       "라면",
+       "수박",
+       "거북",
+       "나물"
+      ],
+      "difficulty": 0.54
+     },
+     {
+      "id": "B8",
+      "word": "숨",
+      "options": [
+       "숨",
+       "삼",
+       "도",
+       "땀"
+      ],
+      "difficulty": 0.546
+     },
+     {
+      "id": "B9",
+      "word": "칠판",
+      "options": [
+       "햇살",
+       "노랑",
+       "골목",
+       "칠판"
+      ],
+      "difficulty": 0.55
+     },
+     {
+      "id": "B10",
+      "word": "눈물",
+      "options": [
+       "도랑",
+       "교실",
+       "냉면",
+       "눈물"
+      ],
+      "difficulty": 0.55
+     },
+     {
+      "id": "B11",
+      "word": "문제",
+      "options": [
+       "만두",
+       "폭소",
+       "문제",
+       "고기"
+      ],
+      "difficulty": 0.58
+     },
+     {
+      "id": "B12",
+      "word": "하늘",
+      "options": [
+       "교실",
+       "다리",
+       "계란",
+       "하늘"
+      ],
+      "difficulty": 0.59
+     },
+     {
+      "id": "B13",
+      "word": "발간",
+      "options": [
+       "발간",
+       "장갑",
+       "사탕",
+       "당근"
+      ],
+      "difficulty": 0.59
+     },
+     {
+      "id": "B14",
+      "word": "국자",
+      "options": [
+       "농부",
+       "교실",
+       "구름",
+       "국자"
+      ],
+      "difficulty": 0.6
+     },
+     {
+      "id": "B15",
+      "word": "가치",
+      "options": [
+       "딸기",
+       "가치",
+       "망치",
+       "가위"
+      ],
+      "difficulty": 0.63
+     },
+     {
+      "id": "B16",
+      "word": "닭",
+      "options": [
+       "남",
+       "닭",
+       "능",
+       "담"
+      ],
+      "difficulty": 0.633
+     },
+     {
+      "id": "B17",
+      "word": "수건",
+      "options": [
+       "그릇",
+       "낙엽",
+       "동무",
+       "수건"
+      ],
+      "difficulty": 0.65
+     },
+     {
+      "id": "B18",
+      "word": "반",
+      "options": [
+       "반",
+       "낫",
+       "달",
+       "맘"
+      ],
+      "difficulty": 0.667
+     },
+     {
+      "id": "B19",
+      "word": "삼",
+      "options": [
+       "숲",
+       "뺨",
+       "삼",
+       "맘"
+      ],
+      "difficulty": 0.667
+     },
+     {
+      "id": "B20",
+      "word": "토",
+      "options": [
+       "숲",
+       "솔",
+       "토",
+       "숨"
+      ],
+      "difficulty": 0.67
+     },
+     {
+      "id": "B21",
+      "word": "계산",
+      "options": [
+       "식당",
+       "교사",
+       "계산",
+       "우산"
+      ],
+      "difficulty": 0.68
+     },
+     {
+      "id": "B22",
+      "word": "라면",
+      "options": [
+       "강물",
+       "기쁨",
+       "사부",
+       "라면"
+      ],
+      "difficulty": 0.71
+     },
+     {
+      "id": "B23",
+      "word": "간",
+      "options": [
+       "간",
+       "개",
+       "귤",
+       "깨"
+      ],
+      "difficulty": 0.753
+     },
+     {
+      "id": "B24",
+      "word": "돈",
+      "options": [
+       "돈",
+       "날",
+       "딸",
+       "도"
+      ],
+      "difficulty": 0.833
+     }
+    ],
+    "C": [
+     {
+      "id": "C1",
+      "word": "무",
+      "options": [
+       "분",
+       "코",
+       "무",
+       "비"
+      ],
+      "difficulty": 0.3
+     },
+     {
+      "id": "C2",
+      "word": "호미",
+      "options": [
+       "다리",
+       "서리",
+       "호미",
+       "사리"
+      ],
+      "difficulty": 0.39
+     },
+     {
+      "id": "C3",
+      "word": "램프",
+      "options": [
+       "매미",
+       "램프",
+       "딸기",
+       "사탕"
+      ],
+      "difficulty": 0.45
+     },
+     {
+      "id": "C4",
+      "word": "바가지",
+      "options": [
+       "바나나",
+       "소나기",
+       "바가지",
+       "호랑이"
+      ],
+      "difficulty": 0.467
+     },
+     {
+      "id": "C5",
+      "word": "감자",
+      "options": [
+       "사무",
+       "감자",
+       "소파",
+       "사물"
+      ],
+      "difficulty": 0.5
+     },
+     {
+      "id": "C6",
+      "word": "나무",
+      "options": [
+       "파도",
+       "상주",
+       "삼촌",
+       "나무"
+      ],
+      "difficulty": 0.505
+     },
+     {
+      "id": "C7",
+      "word": "가망",
+      "options": [
+       "계란",
+       "노랑",
+       "나비",
+       "가망"
+      ],
+      "difficulty": 0.54
+     },
+     {
+      "id": "C8",
+      "word": "목",
+      "options": [
+       "빵",
+       "밖",
+       "축",
+       "목"
+      ],
+      "difficulty": 0.546
+     },
+     {
+      "id": "C9",
+      "word": "가위",
+      "options": [
+       "가슴",
+       "거울",
+       "가위",
+       "기사"
+      ],
+      "difficulty": 0.55
+     },
+     {
+      "id": "C10",
+      "word": "강물",
+      "options": [
+       "상추",
+       "사별",
+       "사무",
+       "강물"
+      ],
+      "difficulty": 0.55
+     },
+     {
+      "id": "C11",
+      "word": "농부",
+      "options": [
+       "숙제",
+       "강물",
+       "농부",
+       "호두"
+      ],
+      "difficulty": 0.58
+     },
+     {
+      "id": "C12",
+      "word": "도시락",
+      "options": [
+       "요리사",
+       "도시락",
+       "눈보라",
+       "소나기"
+      ],
+      "difficulty": 0.585
+     },
+     {
+      "id": "C13",
+      "word": "가늠",
+      "options": [
+       "사당",
+       "가늠",
+       "사리",
+       "사탕"
+      ],
+      "difficulty": 0.59
+     },
+     {
+      "id": "C14",
+      "word": "국수",
+      "options": [
+       "장고",
+       "보도",
+       "부두",
+       "국수"
+      ],
+      "difficulty": 0.6
+     },
+     {
+      "id": "C15",
+      "word": "까치",
+      "options": [
+       "서리",
+       "사과",
+       "까치",
+       "수세"
+      ],
+      "difficulty": 0.63
+     },
+     {
+      "id": "C16",
+      "word": "공책",
+      "options": [
+       "가방",
+       "공책",
+       "흰색",
+       "계단"
+      ],
+      "difficulty": 0.633
+     },
+     {
+      "id": "C17",
+      "word": "손녀",
+      "options": [
+       "단추",
+       "손녀",
+       "국자",
+       "구름"
+      ],
+      "difficulty": 0.65
+     },
+     {
+      "id": "C18",
+      "word": "남",
+      "options": [
+       "룸",
+       "밤",
+       "살",
+       "남"
+      ],
+      "difficulty": 0.667
+     },
+     {
+      "id": "C19",
+      "word": "납",
+      "options": [
+       "산",
+       "맘",
+       "탈",
+       "납"
+      ],
+      "difficulty": 0.667
+     },
+     {
+      "id": "C20",
+      "word": "작문",
+      "options": [
+       "작문",
+       "삼촌",
+       "사멸",
+       "동부"
+      ],
+      "difficulty": 0.67
+     },
+     {
+      "id": "C21",
+      "word": "계단",
+      "options": [
+       "이틀",
+       "사탕",
+       "우산",
+       "계단"
+      ],
+      "difficulty": 0.68
+     },
+     {
+      "id": "C22",
+      "word": "그릇",
+      "options": [
+       "그릇",
+       "거북",
+       "도서",
+       "노란"
+      ],
+      "difficulty": 0.7
+     },
+     {
+      "id": "C23",
+      "word": "갓",
+      "options": [
+       "발",
+       "갓",
+       "팥",
+       "맛"
+      ],
+      "difficulty": 0.753
+     },
+     {
+      "id": "C24",
+      "word": "날",
+      "options": [
+       "답",
+       "맛",
+       "돌",
+       "날"
+      ],
+      "difficulty": 0.833
+     }
+    ]
+   }
+  },
+  "sentence": {
+   "title": "개방형 문장",
+   "response": "typed",
+   "modality": "avatar",
+   "allowed_modalities": [
+    "real",
+    "avatar"
+   ],
+   "n_per_form": 40,
+   "syllable_range": [
+    6,
+    10
+   ],
+   "media_pattern": "sentences/{talker}/{id}.mp4",
+   "items": {
+    "A": [
+     {
+      "id": "SA01",
+      "text": "감기에 걸렸어요",
+      "syllables": 7,
+      "phonemes": 14
+     },
+     {
+      "id": "SA02",
+      "text": "많이 기다렸지요",
+      "syllables": 7,
+      "phonemes": 14
+     },
+     {
+      "id": "SA03",
+      "text": "시계가 멈췄어요",
+      "syllables": 7,
+      "phonemes": 14
+     },
+     {
+      "id": "SA04",
+      "text": "무슨 일이 있었어요",
+      "syllables": 8,
+      "phonemes": 14
+     },
+     {
+      "id": "SA05",
+      "text": "물이 너무 뜨거워요",
+      "syllables": 8,
+      "phonemes": 14
+     },
+     {
+      "id": "SA06",
+      "text": "눈이 펑펑 내려요",
+      "syllables": 7,
+      "phonemes": 15
+     },
+     {
+      "id": "SA07",
+      "text": "선물을 받았어요",
+      "syllables": 7,
+      "phonemes": 15
+     },
+     {
+      "id": "SA08",
+      "text": "매일 걸어서 다녀요",
+      "syllables": 8,
+      "phonemes": 15
+     },
+     {
+      "id": "SA09",
+      "text": "머리가 조금 아파요",
+      "syllables": 8,
+      "phonemes": 15
+     },
+     {
+      "id": "SA10",
+      "text": "창밖이 시끄러워요",
+      "syllables": 8,
+      "phonemes": 15
+     },
+     {
+      "id": "SA11",
+      "text": "잘 먹겠습니다",
+      "syllables": 6,
+      "phonemes": 16
+     },
+     {
+      "id": "SA12",
+      "text": "글씨가 너무 작아요",
+      "syllables": 8,
+      "phonemes": 16
+     },
+     {
+      "id": "SA13",
+      "text": "꽃이 활짝 피었어요",
+      "syllables": 8,
+      "phonemes": 16
+     },
+     {
+      "id": "SA14",
+      "text": "사진을 보내 주세요",
+      "syllables": 8,
+      "phonemes": 16
+     },
+     {
+      "id": "SA15",
+      "text": "열쇠를 찾고 있어요",
+      "syllables": 8,
+      "phonemes": 16
+     },
+     {
+      "id": "SA16",
+      "text": "여기 앉아도 괜찮아요",
+      "syllables": 9,
+      "phonemes": 16
+     },
+     {
+      "id": "SA17",
+      "text": "옷이 너무 작아졌어요",
+      "syllables": 9,
+      "phonemes": 16
+     },
+     {
+      "id": "SA18",
+      "text": "생선을 좋아하나요",
+      "syllables": 8,
+      "phonemes": 17
+     },
+     {
+      "id": "SA19",
+      "text": "소리가 잘 안 들려요",
+      "syllables": 8,
+      "phonemes": 17
+     },
+     {
+      "id": "SA20",
+      "text": "고기를 구워 먹었어요",
+      "syllables": 9,
+      "phonemes": 17
+     },
+     {
+      "id": "SA21",
+      "text": "그림을 그리고 있어요",
+      "syllables": 9,
+      "phonemes": 17
+     },
+     {
+      "id": "SA22",
+      "text": "아빠가 차를 고쳤어요",
+      "syllables": 9,
+      "phonemes": 17
+     },
+     {
+      "id": "SA23",
+      "text": "아침을 거르지 마세요",
+      "syllables": 9,
+      "phonemes": 17
+     },
+     {
+      "id": "SA24",
+      "text": "공을 멀리 던졌어요",
+      "syllables": 8,
+      "phonemes": 18
+     },
+     {
+      "id": "SA25",
+      "text": "기차가 곧 출발해요",
+      "syllables": 8,
+      "phonemes": 18
+     },
+     {
+      "id": "SA26",
+      "text": "냉장고에 넣어 두세요",
+      "syllables": 9,
+      "phonemes": 18
+     },
+     {
+      "id": "SA27",
+      "text": "노래를 부르고 싶어요",
+      "syllables": 9,
+      "phonemes": 18
+     },
+     {
+      "id": "SA28",
+      "text": "어제 늦게 잠들었어요",
+      "syllables": 9,
+      "phonemes": 18
+     },
+     {
+      "id": "SA29",
+      "text": "엄마랑 시장에 갔어요",
+      "syllables": 9,
+      "phonemes": 18
+     },
+     {
+      "id": "SA30",
+      "text": "내일 다시 연락할게요",
+      "syllables": 9,
+      "phonemes": 19
+     },
+     {
+      "id": "SA31",
+      "text": "늦어서 정말 미안해요",
+      "syllables": 9,
+      "phonemes": 19
+     },
+     {
+      "id": "SA32",
+      "text": "거울을 깨끗이 닦았어요",
+      "syllables": 10,
+      "phonemes": 19
+     },
+     {
+      "id": "SA33",
+      "text": "바다에 놀러 가고 싶어요",
+      "syllables": 10,
+      "phonemes": 19
+     },
+     {
+      "id": "SA34",
+      "text": "머리를 짧게 잘랐어요",
+      "syllables": 9,
+      "phonemes": 20
+     },
+     {
+      "id": "SA35",
+      "text": "설거지는 제가 할게요",
+      "syllables": 9,
+      "phonemes": 20
+     },
+     {
+      "id": "SA36",
+      "text": "저도 그렇게 생각해요",
+      "syllables": 9,
+      "phonemes": 20
+     },
+     {
+      "id": "SA37",
+      "text": "내일 아침에 일찍 만나요",
+      "syllables": 10,
+      "phonemes": 20
+     },
+     {
+      "id": "SA38",
+      "text": "현관 앞에 상자가 있어요",
+      "syllables": 10,
+      "phonemes": 20
+     },
+     {
+      "id": "SA39",
+      "text": "동생이 감기에 걸렸어요",
+      "syllables": 10,
+      "phonemes": 21
+     },
+     {
+      "id": "SA40",
+      "text": "별이 반짝반짝 빛나요",
+      "syllables": 9,
+      "phonemes": 22
+     }
+    ],
+    "B": [
+     {
+      "id": "SB01",
+      "text": "같이 사진 찍어요",
+      "syllables": 7,
+      "phonemes": 14
+     },
+     {
+      "id": "SB02",
+      "text": "만나서 반가워요",
+      "syllables": 7,
+      "phonemes": 14
+     },
+     {
+      "id": "SB03",
+      "text": "책을 빌려 왔어요",
+      "syllables": 7,
+      "phonemes": 14
+     },
+     {
+      "id": "SB04",
+      "text": "기분이 아주 좋아요",
+      "syllables": 8,
+      "phonemes": 14
+     },
+     {
+      "id": "SB05",
+      "text": "화장실이 어디예요",
+      "syllables": 8,
+      "phonemes": 14
+     },
+     {
+      "id": "SB06",
+      "text": "금방 돌아올게요",
+      "syllables": 7,
+      "phonemes": 15
+     },
+     {
+      "id": "SB07",
+      "text": "고양이가 잠을 자요",
+      "syllables": 8,
+      "phonemes": 15
+     },
+     {
+      "id": "SB08",
+      "text": "다음 주에 또 만나요",
+      "syllables": 8,
+      "phonemes": 15
+     },
+     {
+      "id": "SB09",
+      "text": "바람이 많이 불어요",
+      "syllables": 8,
+      "phonemes": 15
+     },
+     {
+      "id": "SB10",
+      "text": "집에 손님이 왔어요",
+      "syllables": 8,
+      "phonemes": 15
+     },
+     {
+      "id": "SB11",
+      "text": "내 말 잘 들리세요",
+      "syllables": 7,
+      "phonemes": 16
+     },
+     {
+      "id": "SB12",
+      "text": "그 사람을 잘 알아요",
+      "syllables": 8,
+      "phonemes": 16
+     },
+     {
+      "id": "SB13",
+      "text": "맛있게 많이 드세요",
+      "syllables": 8,
+      "phonemes": 16
+     },
+     {
+      "id": "SB14",
+      "text": "사전을 찾아봤어요",
+      "syllables": 8,
+      "phonemes": 16
+     },
+     {
+      "id": "SB15",
+      "text": "우산을 챙겨 가세요",
+      "syllables": 8,
+      "phonemes": 16
+     },
+     {
+      "id": "SB16",
+      "text": "병원에 가 봐야겠어요",
+      "syllables": 9,
+      "phonemes": 16
+     },
+     {
+      "id": "SB17",
+      "text": "왜 그렇게 웃고 있어요",
+      "syllables": 9,
+      "phonemes": 16
+     },
+     {
+      "id": "SB18",
+      "text": "비가 그칠 것 같아요",
+      "syllables": 8,
+      "phonemes": 17
+     },
+     {
+      "id": "SB19",
+      "text": "신발을 새로 샀어요",
+      "syllables": 8,
+      "phonemes": 17
+     },
+     {
+      "id": "SB20",
+      "text": "축구를 하러 나가요",
+      "syllables": 8,
+      "phonemes": 17
+     },
+     {
+      "id": "SB21",
+      "text": "길을 잃어서 헤맸어요",
+      "syllables": 9,
+      "phonemes": 17
+     },
+     {
+      "id": "SB22",
+      "text": "아기가 방긋 웃었어요",
+      "syllables": 9,
+      "phonemes": 17
+     },
+     {
+      "id": "SB23",
+      "text": "안경을 잃어버렸어요",
+      "syllables": 9,
+      "phonemes": 17
+     },
+     {
+      "id": "SB24",
+      "text": "해가 벌써 지고 있어요",
+      "syllables": 9,
+      "phonemes": 17
+     },
+     {
+      "id": "SB25",
+      "text": "문자를 보내 줄게요",
+      "syllables": 8,
+      "phonemes": 18
+     },
+     {
+      "id": "SB26",
+      "text": "전화가 잘 안 들려요",
+      "syllables": 8,
+      "phonemes": 18
+     },
+     {
+      "id": "SB27",
+      "text": "방이 생각보다 추워요",
+      "syllables": 9,
+      "phonemes": 18
+     },
+     {
+      "id": "SB28",
+      "text": "수업이 일찍 끝났어요",
+      "syllables": 9,
+      "phonemes": 18
+     },
+     {
+      "id": "SB29",
+      "text": "자전거를 타고 왔어요",
+      "syllables": 9,
+      "phonemes": 18
+     },
+     {
+      "id": "SB30",
+      "text": "일이 아직 많이 남았어요",
+      "syllables": 10,
+      "phonemes": 18
+     },
+     {
+      "id": "SB31",
+      "text": "동생과 같이 놀았어요",
+      "syllables": 9,
+      "phonemes": 19
+     },
+     {
+      "id": "SB32",
+      "text": "점심 먹으러 같이 가요",
+      "syllables": 9,
+      "phonemes": 19
+     },
+     {
+      "id": "SB33",
+      "text": "주말에 산에 올라갔어요",
+      "syllables": 10,
+      "phonemes": 19
+     },
+     {
+      "id": "SB34",
+      "text": "국이 조금 짠 것 같아요",
+      "syllables": 9,
+      "phonemes": 20
+     },
+     {
+      "id": "SB35",
+      "text": "시간이 정말 빨리 가요",
+      "syllables": 9,
+      "phonemes": 20
+     },
+     {
+      "id": "SB36",
+      "text": "잠깐만 기다려 주세요",
+      "syllables": 9,
+      "phonemes": 20
+     },
+     {
+      "id": "SB37",
+      "text": "방을 깨끗하게 치웠어요",
+      "syllables": 10,
+      "phonemes": 20
+     },
+     {
+      "id": "SB38",
+      "text": "학교 앞에서 기다릴게요",
+      "syllables": 10,
+      "phonemes": 20
+     },
+     {
+      "id": "SB39",
+      "text": "연필을 빌려줄 수 있어요",
+      "syllables": 10,
+      "phonemes": 21
+     },
+     {
+      "id": "SB40",
+      "text": "친구에게 편지를 썼어요",
+      "syllables": 10,
+      "phonemes": 21
+     }
+    ],
+    "C": [
+     {
+      "id": "SC01",
+      "text": "괜찮아질 거예요",
+      "syllables": 7,
+      "phonemes": 14
+     },
+     {
+      "id": "SC02",
+      "text": "길이 많이 막혀요",
+      "syllables": 7,
+      "phonemes": 14
+     },
+     {
+      "id": "SC03",
+      "text": "가을이 벌써 왔어요",
+      "syllables": 8,
+      "phonemes": 14
+     },
+     {
+      "id": "SC04",
+      "text": "겨울에는 눈이 와요",
+      "syllables": 8,
+      "phonemes": 14
+     },
+     {
+      "id": "SC05",
+      "text": "회의가 길어졌어요",
+      "syllables": 8,
+      "phonemes": 14
+     },
+     {
+      "id": "SC06",
+      "text": "걱정하지 마세요",
+      "syllables": 7,
+      "phonemes": 15
+     },
+     {
+      "id": "SC07",
+      "text": "너무 피곤해 보여요",
+      "syllables": 8,
+      "phonemes": 15
+     },
+     {
+      "id": "SC08",
+      "text": "다리가 조금 아파요",
+      "syllables": 8,
+      "phonemes": 15
+     },
+     {
+      "id": "SC09",
+      "text": "아침에 운동을 해요",
+      "syllables": 8,
+      "phonemes": 15
+     },
+     {
+      "id": "SC10",
+      "text": "지갑을 두고 왔어요",
+      "syllables": 8,
+      "phonemes": 15
+     },
+     {
+      "id": "SC11",
+      "text": "편지를 써 볼게요",
+      "syllables": 7,
+      "phonemes": 16
+     },
+     {
+      "id": "SC12",
+      "text": "과일을 깎아 줄게요",
+      "syllables": 8,
+      "phonemes": 16
+     },
+     {
+      "id": "SC13",
+      "text": "모자를 쓰고 나가요",
+      "syllables": 8,
+      "phonemes": 16
+     },
+     {
+      "id": "SC14",
+      "text": "빨래를 널어야 해요",
+      "syllables": 8,
+      "phonemes": 16
+     },
+     {
+      "id": "SC15",
+      "text": "조심히 들어가세요",
+      "syllables": 8,
+      "phonemes": 16
+     },
+     {
+      "id": "SC16",
+      "text": "바둑을 배우고 있어요",
+      "syllables": 9,
+      "phonemes": 16
+     },
+     {
+      "id": "SC17",
+      "text": "그 노래 정말 좋아요",
+      "syllables": 8,
+      "phonemes": 17
+     },
+     {
+      "id": "SC18",
+      "text": "목도리가 따뜻해요",
+      "syllables": 8,
+      "phonemes": 17
+     },
+     {
+      "id": "SC19",
+      "text": "약을 먹고 푹 쉬세요",
+      "syllables": 8,
+      "phonemes": 17
+     },
+     {
+      "id": "SC20",
+      "text": "창문 좀 열어 주세요",
+      "syllables": 8,
+      "phonemes": 17
+     },
+     {
+      "id": "SC21",
+      "text": "김치가 아주 맛있어요",
+      "syllables": 9,
+      "phonemes": 17
+     },
+     {
+      "id": "SC22",
+      "text": "동생이 많이 울었어요",
+      "syllables": 9,
+      "phonemes": 17
+     },
+     {
+      "id": "SC23",
+      "text": "오늘은 쉬는 날이에요",
+      "syllables": 9,
+      "phonemes": 17
+     },
+     {
+      "id": "SC24",
+      "text": "조용히 해 주시겠어요",
+      "syllables": 9,
+      "phonemes": 17
+     },
+     {
+      "id": "SC25",
+      "text": "밥을 천천히 먹어요",
+      "syllables": 8,
+      "phonemes": 18
+     },
+     {
+      "id": "SC26",
+      "text": "숙제를 다 끝냈어요",
+      "syllables": 8,
+      "phonemes": 18
+     },
+     {
+      "id": "SC27",
+      "text": "버섯을 볶아 먹었어요",
+      "syllables": 9,
+      "phonemes": 18
+     },
+     {
+      "id": "SC28",
+      "text": "손을 깨끗이 씻으세요",
+      "syllables": 9,
+      "phonemes": 18
+     },
+     {
+      "id": "SC29",
+      "text": "옆자리에 앉아도 될까요",
+      "syllables": 10,
+      "phonemes": 18
+     },
+     {
+      "id": "SC30",
+      "text": "옆집 아저씨가 오셨어요",
+      "syllables": 10,
+      "phonemes": 18
+     },
+     {
+      "id": "SC31",
+      "text": "선생님께 여쭤봤어요",
+      "syllables": 9,
+      "phonemes": 19
+     },
+     {
+      "id": "SC32",
+      "text": "장갑을 끼고 나가세요",
+      "syllables": 9,
+      "phonemes": 19
+     },
+     {
+      "id": "SC33",
+      "text": "지하철에 사람이 많아요",
+      "syllables": 10,
+      "phonemes": 19
+     },
+     {
+      "id": "SC34",
+      "text": "할머니 댁에 다녀왔어요",
+      "syllables": 10,
+      "phonemes": 19
+     },
+     {
+      "id": "SC35",
+      "text": "오늘 날씨가 참 좋네요",
+      "syllables": 9,
+      "phonemes": 20
+     },
+     {
+      "id": "SC36",
+      "text": "은행에 들렀다 갈게요",
+      "syllables": 9,
+      "phonemes": 20
+     },
+     {
+      "id": "SC37",
+      "text": "시장에서 사과를 샀어요",
+      "syllables": 10,
+      "phonemes": 20
+     },
+     {
+      "id": "SC38",
+      "text": "엄마가 저녁을 차렸어요",
+      "syllables": 10,
+      "phonemes": 20
+     },
+     {
+      "id": "SC39",
+      "text": "열이 조금 있는 것 같아요",
+      "syllables": 10,
+      "phonemes": 21
+     },
+     {
+      "id": "SC40",
+      "text": "오늘 저녁은 뭐 먹을까요",
+      "syllables": 10,
+      "phonemes": 21
+     }
+    ]
+   },
+   "reserve": [
+    {
+     "id": "SR01",
+     "text": "이불을 덮고 자요",
+     "syllables": 7,
+     "phonemes": 14
+    },
+    {
+     "id": "SR02",
+     "text": "손이 너무 차가워요",
+     "syllables": 8,
+     "phonemes": 14
+    },
+    {
+     "id": "SR03",
+     "text": "시험을 잘 봤어요",
+     "syllables": 7,
+     "phonemes": 15
+    },
+    {
+     "id": "SR04",
+     "text": "밤에 잠이 잘 안 와요",
+     "syllables": 8,
+     "phonemes": 15
+    },
+    {
+     "id": "SR05",
+     "text": "줄넘기를 했어요",
+     "syllables": 7,
+     "phonemes": 16
+    },
+    {
+     "id": "SR06",
+     "text": "모래성을 쌓았어요",
+     "syllables": 8,
+     "phonemes": 16
+    },
+    {
+     "id": "SR07",
+     "text": "화분에 물을 줬어요",
+     "syllables": 8,
+     "phonemes": 16
+    },
+    {
+     "id": "SR08",
+     "text": "그건 잘 모르겠어요",
+     "syllables": 8,
+     "phonemes": 17
+    },
+    {
+     "id": "SR09",
+     "text": "오늘은 일찍 잘게요",
+     "syllables": 8,
+     "phonemes": 17
+    },
+    {
+     "id": "SR10",
+     "text": "떡볶이가 너무 매워요",
+     "syllables": 9,
+     "phonemes": 17
+    },
+    {
+     "id": "SR11",
+     "text": "표를 미리 사 두었어요",
+     "syllables": 9,
+     "phonemes": 17
+    },
+    {
+     "id": "SR12",
+     "text": "저녁에 산책할까요",
+     "syllables": 8,
+     "phonemes": 18
+    }
+   ]
+  },
+  "nonsense": {
+   "title": "무의미 낱말 자음",
+   "response": "consonant3",
+   "modality": "avatar",
+   "n_per_form": 16,
+   "seed": 20261006,
+   "consonant_sets": {
+    "C1": [
+     "ㅂ",
+     "ㅍ",
+     "ㅁ",
+     "ㄷ",
+     "ㅌ",
+     "ㄴ",
+     "ㅅ",
+     "ㅈ",
+     "ㅊ",
+     "ㄱ",
+     "ㅋ",
+     "ㅎ"
+    ],
+    "C2": [
+     "ㅂ",
+     "ㅍ",
+     "ㅁ",
+     "ㄷ",
+     "ㅌ",
+     "ㄴ",
+     "ㄹ",
+     "ㅅ",
+     "ㅈ",
+     "ㅊ",
+     "ㄱ",
+     "ㅋ"
+    ],
+    "C3": [
+     "ㄱ",
+     "ㄴ",
+     "ㄷ",
+     "ㄹ",
+     "ㅁ",
+     "ㅂ",
+     "ㅇ"
+    ]
+   },
+   "vowels": [
+    "ㅏ",
+    "ㅓ",
+    "ㅗ",
+    "ㅜ",
+    "ㅣ"
+   ],
+   "items": {
+    "A": [
+     {
+      "id": "NA01",
+      "text": "무잡",
+      "consonants": [
+       "ㅁ",
+       "ㅈ",
+       "ㅂ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅏ"
+      ]
+     },
+     {
+      "id": "NA02",
+      "text": "너둑",
+      "consonants": [
+       "ㄴ",
+       "ㄷ",
+       "ㄱ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅜ"
+      ]
+     },
+     {
+      "id": "NA03",
+      "text": "디롱",
+      "consonants": [
+       "ㄷ",
+       "ㄹ",
+       "ㅇ"
+      ],
+      "vowels": [
+       "ㅣ",
+       "ㅗ"
+      ]
+     },
+     {
+      "id": "NA04",
+      "text": "추넝",
+      "consonants": [
+       "ㅊ",
+       "ㄴ",
+       "ㅇ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅓ"
+      ]
+     },
+     {
+      "id": "NA05",
+      "text": "쿠팜",
+      "consonants": [
+       "ㅋ",
+       "ㅍ",
+       "ㅁ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅏ"
+      ]
+     },
+     {
+      "id": "NA06",
+      "text": "비촉",
+      "consonants": [
+       "ㅂ",
+       "ㅊ",
+       "ㄱ"
+      ],
+      "vowels": [
+       "ㅣ",
+       "ㅗ"
+      ]
+     },
+     {
+      "id": "NA07",
+      "text": "머쿡",
+      "consonants": [
+       "ㅁ",
+       "ㅋ",
+       "ㄱ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅜ"
+      ]
+     },
+     {
+      "id": "NA08",
+      "text": "너깅",
+      "consonants": [
+       "ㄴ",
+       "ㄱ",
+       "ㅇ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅣ"
+      ]
+     },
+     {
+      "id": "NA09",
+      "text": "수짇",
+      "consonants": [
+       "ㅅ",
+       "ㅈ",
+       "ㄷ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅣ"
+      ]
+     },
+     {
+      "id": "NA10",
+      "text": "구멀",
+      "consonants": [
+       "ㄱ",
+       "ㅁ",
+       "ㄹ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅓ"
+      ]
+     },
+     {
+      "id": "NA11",
+      "text": "버솜",
+      "consonants": [
+       "ㅂ",
+       "ㅅ",
+       "ㅁ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅗ"
+      ]
+     },
+     {
+      "id": "NA12",
+      "text": "투팝",
+      "consonants": [
+       "ㅌ",
+       "ㅍ",
+       "ㅂ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅏ"
+      ]
+     },
+     {
+      "id": "NA13",
+      "text": "호틴",
+      "consonants": [
+       "ㅎ",
+       "ㅌ",
+       "ㄴ"
+      ],
+      "vowels": [
+       "ㅗ",
+       "ㅣ"
+      ]
+     },
+     {
+      "id": "NA14",
+      "text": "후본",
+      "consonants": [
+       "ㅎ",
+       "ㅂ",
+       "ㄴ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅗ"
+      ]
+     },
+     {
+      "id": "NA15",
+      "text": "파출",
+      "consonants": [
+       "ㅍ",
+       "ㅊ",
+       "ㄹ"
+      ],
+      "vowels": [
+       "ㅏ",
+       "ㅜ"
+      ]
+     },
+     {
+      "id": "NA16",
+      "text": "조굳",
+      "consonants": [
+       "ㅈ",
+       "ㄱ",
+       "ㄷ"
+      ],
+      "vowels": [
+       "ㅗ",
+       "ㅜ"
+      ]
+     }
+    ],
+    "B": [
+     {
+      "id": "NB01",
+      "text": "차칩",
+      "consonants": [
+       "ㅊ",
+       "ㅊ",
+       "ㅂ"
+      ],
+      "vowels": [
+       "ㅏ",
+       "ㅣ"
+      ]
+     },
+     {
+      "id": "NB02",
+      "text": "터놈",
+      "consonants": [
+       "ㅌ",
+       "ㄴ",
+       "ㅁ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅗ"
+      ]
+     },
+     {
+      "id": "NB03",
+      "text": "디컹",
+      "consonants": [
+       "ㄷ",
+       "ㅋ",
+       "ㅇ"
+      ],
+      "vowels": [
+       "ㅣ",
+       "ㅓ"
+      ]
+     },
+     {
+      "id": "NB04",
+      "text": "키넌",
+      "consonants": [
+       "ㅋ",
+       "ㄴ",
+       "ㄴ"
+      ],
+      "vowels": [
+       "ㅣ",
+       "ㅓ"
+      ]
+     },
+     {
+      "id": "NB05",
+      "text": "처틸",
+      "consonants": [
+       "ㅊ",
+       "ㅌ",
+       "ㄹ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅣ"
+      ]
+     },
+     {
+      "id": "NB06",
+      "text": "더룯",
+      "consonants": [
+       "ㄷ",
+       "ㄹ",
+       "ㄷ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅜ"
+      ]
+     },
+     {
+      "id": "NB07",
+      "text": "노벌",
+      "consonants": [
+       "ㄴ",
+       "ㅂ",
+       "ㄹ"
+      ],
+      "vowels": [
+       "ㅗ",
+       "ㅓ"
+      ]
+     },
+     {
+      "id": "NB08",
+      "text": "푸펀",
+      "consonants": [
+       "ㅍ",
+       "ㅍ",
+       "ㄴ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅓ"
+      ]
+     },
+     {
+      "id": "NB09",
+      "text": "기정",
+      "consonants": [
+       "ㄱ",
+       "ㅈ",
+       "ㅇ"
+      ],
+      "vowels": [
+       "ㅣ",
+       "ㅓ"
+      ]
+     },
+     {
+      "id": "NB10",
+      "text": "부뭅",
+      "consonants": [
+       "ㅂ",
+       "ㅁ",
+       "ㅂ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅜ"
+      ]
+     },
+     {
+      "id": "NB11",
+      "text": "자탑",
+      "consonants": [
+       "ㅈ",
+       "ㅌ",
+       "ㅂ"
+      ],
+      "vowels": [
+       "ㅏ",
+       "ㅏ"
+      ]
+     },
+     {
+      "id": "NB12",
+      "text": "쿠단",
+      "consonants": [
+       "ㅋ",
+       "ㄷ",
+       "ㄴ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅏ"
+      ]
+     },
+     {
+      "id": "NB13",
+      "text": "후컥",
+      "consonants": [
+       "ㅎ",
+       "ㅋ",
+       "ㄱ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅓ"
+      ]
+     },
+     {
+      "id": "NB14",
+      "text": "사곰",
+      "consonants": [
+       "ㅅ",
+       "ㄱ",
+       "ㅁ"
+      ],
+      "vowels": [
+       "ㅏ",
+       "ㅗ"
+      ]
+     },
+     {
+      "id": "NB15",
+      "text": "무싣",
+      "consonants": [
+       "ㅁ",
+       "ㅅ",
+       "ㄷ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅣ"
+      ]
+     },
+     {
+      "id": "NB16",
+      "text": "사닫",
+      "consonants": [
+       "ㅅ",
+       "ㄷ",
+       "ㄷ"
+      ],
+      "vowels": [
+       "ㅏ",
+       "ㅏ"
+      ]
+     }
+    ],
+    "C": [
+     {
+      "id": "NC01",
+      "text": "커멉",
+      "consonants": [
+       "ㅋ",
+       "ㅁ",
+       "ㅂ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅓ"
+      ]
+     },
+     {
+      "id": "NC02",
+      "text": "지살",
+      "consonants": [
+       "ㅈ",
+       "ㅅ",
+       "ㄹ"
+      ],
+      "vowels": [
+       "ㅣ",
+       "ㅏ"
+      ]
+     },
+     {
+      "id": "NC03",
+      "text": "서싣",
+      "consonants": [
+       "ㅅ",
+       "ㅅ",
+       "ㄷ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅣ"
+      ]
+     },
+     {
+      "id": "NC04",
+      "text": "터돌",
+      "consonants": [
+       "ㅌ",
+       "ㄷ",
+       "ㄹ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅗ"
+      ]
+     },
+     {
+      "id": "NC05",
+      "text": "푸번",
+      "consonants": [
+       "ㅍ",
+       "ㅂ",
+       "ㄴ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅓ"
+      ]
+     },
+     {
+      "id": "NC06",
+      "text": "허굼",
+      "consonants": [
+       "ㅎ",
+       "ㄱ",
+       "ㅁ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅜ"
+      ]
+     },
+     {
+      "id": "NC07",
+      "text": "가난",
+      "consonants": [
+       "ㄱ",
+       "ㄴ",
+       "ㄴ"
+      ],
+      "vowels": [
+       "ㅏ",
+       "ㅏ"
+      ]
+     },
+     {
+      "id": "NC08",
+      "text": "피벌",
+      "consonants": [
+       "ㅍ",
+       "ㅂ",
+       "ㄹ"
+      ],
+      "vowels": [
+       "ㅣ",
+       "ㅓ"
+      ]
+     },
+     {
+      "id": "NC09",
+      "text": "처맘",
+      "consonants": [
+       "ㅊ",
+       "ㅁ",
+       "ㅁ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅏ"
+      ]
+     },
+     {
+      "id": "NC10",
+      "text": "바쿰",
+      "consonants": [
+       "ㅂ",
+       "ㅋ",
+       "ㅁ"
+      ],
+      "vowels": [
+       "ㅏ",
+       "ㅜ"
+      ]
+     },
+     {
+      "id": "NC11",
+      "text": "타징",
+      "consonants": [
+       "ㅌ",
+       "ㅈ",
+       "ㅇ"
+      ],
+      "vowels": [
+       "ㅏ",
+       "ㅣ"
+      ]
+     },
+     {
+      "id": "NC12",
+      "text": "누렁",
+      "consonants": [
+       "ㄴ",
+       "ㄹ",
+       "ㅇ"
+      ],
+      "vowels": [
+       "ㅜ",
+       "ㅓ"
+      ]
+     },
+     {
+      "id": "NC13",
+      "text": "머픽",
+      "consonants": [
+       "ㅁ",
+       "ㅍ",
+       "ㄱ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅣ"
+      ]
+     },
+     {
+      "id": "NC14",
+      "text": "다툭",
+      "consonants": [
+       "ㄷ",
+       "ㅌ",
+       "ㄱ"
+      ],
+      "vowels": [
+       "ㅏ",
+       "ㅜ"
+      ]
+     },
+     {
+      "id": "NC15",
+      "text": "저촏",
+      "consonants": [
+       "ㅈ",
+       "ㅊ",
+       "ㄷ"
+      ],
+      "vowels": [
+       "ㅓ",
+       "ㅗ"
+      ]
+     },
+     {
+      "id": "NC16",
+      "text": "기릭",
+      "consonants": [
+       "ㄱ",
+       "ㄹ",
+       "ㄱ"
+      ],
+      "vowels": [
+       "ㅣ",
+       "ㅣ"
+      ]
+     }
+    ]
+   }
+  },
+  "av": {
+   "title": "소음 속 문장",
+   "response": "typed",
+   "modality": "real",
+   "n_per_form": 20,
+   "syllable_range": [
+    6,
+    10
+   ],
+   "media_pattern": "av/{talker}/{id}.mp4",
+   "noise": "babble",
+   "blocks": [
+    "A",
+    "AV"
+   ],
+   "items": {
+    "A": [
+     {
+      "id": "VA01",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA02",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA03",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA04",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA05",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA06",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA07",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA08",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA09",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA10",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA11",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA12",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA13",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA14",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA15",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA16",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA17",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA18",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA19",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VA20",
+      "text": null,
+      "speech_rms_dbfs": null
+     }
+    ],
+    "B": [
+     {
+      "id": "VB01",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB02",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB03",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB04",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB05",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB06",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB07",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB08",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB09",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB10",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB11",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB12",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB13",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB14",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB15",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB16",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB17",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB18",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB19",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VB20",
+      "text": null,
+      "speech_rms_dbfs": null
+     }
+    ],
+    "C": [
+     {
+      "id": "VC01",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC02",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC03",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC04",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC05",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC06",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC07",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC08",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC09",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC10",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC11",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC12",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC13",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC14",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC15",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC16",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC17",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC18",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC19",
+      "text": null,
+      "speech_rms_dbfs": null
+     },
+     {
+      "id": "VC20",
+      "text": null,
+      "speech_rms_dbfs": null
+     }
+    ]
+   }
+  },
+  "snr": {
+   "title": "SNR 맞추기",
+   "response": "typed",
+   "modality": "audio",
+   "syllable_range": [
+    6,
+    10
+   ],
+   "media_pattern": "av/{talker}/{id}.mp4",
+   "noise": "babble",
+   "staircase": {
+    "start_db": 0,
+    "step_down_db": 3,
+    "step_up_db": 2,
+    "min_db": -20,
+    "max_db": 10,
+    "reversals": 8,
+    "use_last": 6,
+    "max_trials": 24,
+    "criterion": 0.5
+   },
+   "items": [
+    {
+     "id": "VK01",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK02",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK03",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK04",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK05",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK06",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK07",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK08",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK09",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK10",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK11",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK12",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK13",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK14",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK15",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK16",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK17",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK18",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK19",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK20",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK21",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK22",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK23",
+     "text": null,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VK24",
+     "text": null,
+     "speech_rms_dbfs": null
+    }
+   ]
+  }
+ }
+}

@@ -2,7 +2,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  probeInsertAfter, shouldOpenProbes, probeOptionLabel, newSessionId, EFFORT_POINTS, EFFORT_ANCHORS,
+  probeInsertAfter, shouldOpenProbes, probeOptionLabel, newSessionId, EFFORT_POINTS, EFFORT_ANCHORS, trialMeta,
   retentionPromptVisible, localDay,
 } from './measurement.js'
 
@@ -48,4 +48,12 @@ test('retentionPromptVisible: 볼 때만, 오늘 미룬 날은 숨김', () => {
 
 test('localDay: YYYY-MM-DD', () => {
   assert.equal(localDay(new Date(2026, 9, 6)), '2026-10-06')
+})
+
+test('trialMeta: 반응 시간·화자·힌트(없는 값은 보내지 않음)', () => {
+  assert.deepEqual(trialMeta({ onsetAt: 1000, now: 3500.6, talker: { id: 't2' }, hintUsed: true }),
+    { rt_from_onset_ms: 2501, talker: 't2', hint_used: true })
+  assert.deepEqual(trialMeta({ onsetAt: null, talker: 'default' }), { talker: 'default' })
+  assert.deepEqual(trialMeta({ onsetAt: 5000, now: 1000, talker: 'bad id!' }), { rt_from_onset_ms: 0 })
+  assert.deepEqual(trialMeta(), {})
 })

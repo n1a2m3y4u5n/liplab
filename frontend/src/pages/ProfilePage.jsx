@@ -243,7 +243,13 @@ export default function ProfilePage() {
       {/* 파일럿 참여(§4.7) — 운영자가 나눠 준 코드로 집단을 정한다. 내보내기는 가명으로만 한다. */}
       <Modal open={modal === 'pilot'} onClose={() => setModal(null)} title="파일럿 참여" gap="gap-[14px]" maxW="max-w-[480px]">
         {pilot?.joined ? (
-          <p className="text-[14px] leading-[1.6] text-ink">파일럿에 참여 중이에요. 학습 기록은 이름·이메일 없이 가명으로만 연구에 쓰여요.</p>
+          <>
+            <p className="text-[14px] leading-[1.6] text-ink">파일럿에 참여 중이에요. 학습 기록은 이름·이메일 없이 가명으로만 연구에 쓰여요.</p>
+            {/* P3 검사 회차(A1·A2·B·유지)는 연구진이 안내하는 날 함께 연다(docs/pilot/battery.md) */}
+            <button type="button" onClick={() => { setModal(null); navigate('/pilot/battery') }} className="btn-secondary w-full py-3 text-[15px]">
+              검사 회차 열기(연구진 안내 때)
+            </button>
+          </>
         ) : (
           <>
             <p className="text-[14px] leading-[1.6] text-ink-muted">안내받은 참여 코드를 입력해 주세요. 학습 기록은 이름과 이메일 없이, 가짜 이름(가명)으로만 연구에 쓰여요.</p>

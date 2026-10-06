@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { curriculumAPI } from '../api'
 import { EFFORT_POINTS, EFFORT_ANCHORS, newSessionId } from '../lib/measurement'
+import { buildRenderLog, hasWebGL } from '../lib/pilotBattery'
 
 /**
  * 레슨 끝 정신적 노력 한 문항(C14, Paas 9점) — 레슨 완료 화면에 붙인다. 답하지 않아도 된다.
@@ -16,7 +17,9 @@ export default function EffortCheck({ lessonKind, stage = null, nItems = null, a
   const [state, setState] = useState('ask')   // ask | answered | skipped
   const doneRef = useRef(false)
   const metaRef = useRef({})
-  metaRef.current = { session_id: sessionId, lesson_kind: lessonKind, stage, n_items: nItems, accuracy }
+  // 그 레슨의 기기·렌더링 요약(V20): 레슨 시작부터의 프레임 지연과 화면 크기·화소 비율 등(GPU 이름·사용자 에이전트 원문은 보내지 않음)
+  const [renderLog] = useState(() => buildRenderLog({ scope: 'lesson', webgl: hasWebGL() }))
+  metaRef.current = { session_id: sessionId, lesson_kind: lessonKind, stage, n_items: nItems, accuracy, render_log: renderLog }
 
   // 답하지 않고 떠나면 'left'로 남긴다(응답률 분모). 서버는 answered를 left로 덮지 않는다.
   useEffect(() => () => {

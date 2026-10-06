@@ -52,6 +52,7 @@ const Practice = lazy(() => import('./pages/Practice'))
 const Conversation = lazy(() => import('./pages/Conversation'))
 const MultiConversation = lazy(() => import('./pages/MultiConversation'))
 const Placement = lazy(() => import('./pages/Placement'))
+const PilotBattery = lazy(() => import('./pages/PilotBattery'))   // 청인 예비 파일럿(P3) 검사 — 파일럿 참여자만(서버가 막음)
 const Bookmarks = lazy(() => import('./pages/Bookmarks'))
 const DevViseme = lazy(() => import('./pages/DevViseme'))
 const Sign = lazy(() => import('./pages/Sign'))
@@ -225,6 +226,7 @@ function App() {
         <Route path="/learn/word" element={<StageGate stage={2}><WordStage /></StageGate>} />
         <Route path="/learn/conversation-multi" element={<MultiConversation />} />
         <Route path="/learn/placement" element={<Placement />} />
+        <Route path="/pilot/battery" element={<PilotBattery />} />
         <Route path="/learn/scenario" element={<ScenarioHub />} />
         <Route path="/learn/speaking" element={<SpeakingPractice />} />
         <Route path="/learn/sign" element={<Sign />} />

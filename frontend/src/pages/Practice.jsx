@@ -22,6 +22,7 @@ import useChoiceKeys from '../lib/useChoiceKeys'
 import { sentenceLevel } from '../lib/reviewScenario'
 import useSlowWeak from '../hooks/useSlowWeak'
 import useLessonTalker from '../hooks/useLessonTalker'
+import { trialMeta } from '../lib/measurement'
 import { effectiveSpeed } from '../lib/visemeTiming'
 
 /**
@@ -340,6 +341,10 @@ export default function Practice() {
         // 오답 −1/3)으로 넣는다(docs/mastery-ewma.md 10절)
         answer_mode: effectiveMode === 'test-multiple' ? 'choice' : 'typed',
         ...(Number.isFinite(speed) && speed > 0 ? { speed } : {}),
+        // 파일럿 로그(P0, 기록만): 문장을 연 때부터 답까지 ms, 레슨 가상 화자, 연 힌트 단계(0~3), 4지선다 보기(보인 순서)
+        ...trialMeta({ onsetAt: startTime, talker: lesson.talker || 'default' }),
+        hint_level: hintLevel,
+        ...(effectiveMode === 'test-multiple' && choices.length ? { options: choices } : {}),
       })
 
       // 주관식 첫 답이 합격선 아래이고 틀린 낱말이 있으면, 정답 문장을 보이지 않고 자음 단서를 보인 뒤 입모양을 다시 재생한다

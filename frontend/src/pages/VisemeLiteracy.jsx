@@ -29,6 +29,7 @@ import useMasteryProbes from '../hooks/useMasteryProbes'
 import MasteryProbeBlock from '../components/MasteryProbeBlock'
 import EffortCheck from '../components/EffortCheck'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR_VISEME, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
+import { trialMeta } from '../lib/measurement'
 
 // MediaPipe 번들이 커서 펼칠 때만 로드(초기 번들 보호)
 const WebcamMouthCheck = lazy(() => import('../components/WebcamMouthCheck'))
@@ -369,6 +370,9 @@ function QuizPanel({ data }) {
   const { lessons } = data
   const quizzable = useMemo(() => lessons.filter((l) => l.quizzable), [lessons])
   const [q, setQ] = useState(null)                 // 고르기 {kind:'pick', target, choices} | AX {kind:'ax', pair, frames}
+  // 반응 시간 기준(파일럿 로그 P0): 문항을 보인 때(AX는 두 음절 입모양을 받은 때 다시 잰다)
+  const onsetRef = useRef(null)
+  useEffect(() => { onsetRef.current = q ? Date.now() : null }, [q])
   const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계, 고르기 문항)
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -432,7 +436,8 @@ function QuizPanel({ data }) {
     if (!isAx || !q.frames || result || submitting) return
     setSubmitting(true)
     try {
-      const r = await curriculumAPI.submitRecognitionAx(q.pair.a, q.pair.b, choice, AX_CHOICES.map((c) => c.key))
+      const r = await curriculumAPI.submitRecognitionAx(q.pair.a, q.pair.b, choice, AX_CHOICES.map((c) => c.key),
+        trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default' }))
       setResult({ ...r, chosenKey: choice })
       setXpEarned((x) => x + (r.xp_gained || 0))
       setTally((t) => ({ n: t.n + 1, correct: t.correct + (r.correct ? 1 : 0) }))
@@ -451,7 +456,8 @@ function QuizPanel({ data }) {
     if (result || submitting || selected == null || isAx) return
     setSubmitting(true)
     try {
-      const r = await curriculumAPI.submitRecognition(q.target.viseme_id, selected, q.choices.map((c) => c.viseme_id))
+      const r = await curriculumAPI.submitRecognition(q.target.viseme_id, selected, q.choices.map((c) => c.viseme_id),
+        trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default' }))
       setResult({ ...r, chosenId: selected })
       setStat({ attempts: r.attempts, mastery: r.mastery_score, mastered: r.mastered })
       setXpEarned((x) => x + (r.xp_gained || 0))

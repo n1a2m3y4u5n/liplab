@@ -142,14 +142,20 @@ def test_counterbalanced_order_and_export_v2():
     prog = r["progression"]
     assert prog["available"] and prog["homogeneous"] and prog["order"] == "B→A", prog
     ex = r["export_v2"]
-    assert ex["version"] == 4 and ex["flag"] == 20
+    assert ex["version"] == 5 and ex["flag"] == 20
     row = ex["row"]
     # 검사 전 연습 시행 수(문맥 추론 1회)와 연습 뒤 사전 표시(기준 20회 미만이라 False), 초기화 전이라 초기화 날 없음
     assert [t["trials_before"] for t in row["tests"]] == [1, 1]
     assert [t["after_training"] for t in row["tests"]] == [False, False]
     assert row["learning_reset_on"] is None and "trial_log" not in row
-    assert r["trial_log"] == [{"seq": 1, "day": r["trial_log"][0]["day"], "stage": 3, "item_type": "closure",
-                               "correct": True, "speed": None, "probe": False}]
+    # 판 5: 목표·보기·고른 답·문항 id·단계 구분·화자·반응 시간·힌트·탐침 종류가 더해졌다(이 시행은 화면 측정 값을 보내지 않았다)
+    tl = r["trial_log"][0]
+    assert len(r["trial_log"]) == 1 and tl["day"]
+    assert {k: tl[k] for k in ("seq", "stage", "item_type", "correct", "speed", "probe", "chosen", "phase", "talker",
+                               "rt_from_onset_ms", "hint_used", "probe_kind")} == {
+        "seq": 1, "stage": 3, "item_type": "closure", "correct": True, "speed": None, "probe": False, "chosen": tl["target"],
+        "phase": "practice", "talker": None, "rt_from_onset_ms": None, "hint_used": None, "probe_kind": None}
+    assert tl["item_id"] and "options" in tl
     assert row["joined_on"] and len(row["joined_on"]) == 10
     forms = [t["form"] for t in row["tests"]]
     assert forms == ["B", "A"]

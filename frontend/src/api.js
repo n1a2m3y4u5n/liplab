@@ -190,28 +190,30 @@ export const curriculumAPI = {
   getVisemeLessons: async () => (await api.get('/curriculum/viseme-lessons')).data,
   // options(선택): 화면에 보여 준 보기를 보인 순서대로. 서버가 시행 기록(TrialAttempt.options)에 남겨 '그 보기가 있었을 때 고른 비율'로
   // 혼동을 잰다(docs/confusion-pair-serving.md 5.4). 보내지 않아도 채점은 같다.
-  submitRecognition: async (viseme_id, chosen_id, options) =>
-    (await api.post('/curriculum/recognition', { viseme_id, chosen_id, ...(options ? { options } : {}) })).data,
+  // meta(선택, 파일럿 로그 P0): { rt_from_onset_ms, talker, hint_used } — lib/trialMeta. 기록만 하고 채점에는 쓰지 않는다
+  submitRecognition: async (viseme_id, chosen_id, options, meta) =>
+    (await api.post('/curriculum/recognition', { viseme_id, chosen_id, ...(options ? { options } : {}), ...(meta || {}) })).data,
   // 1단계 '같은지 다른지'(AX) 문항: 먼저·나중 음절과 고른 답('same' | 'different'). 정답은 서버가 입모양 무리로 정하고,
   // 이 답은 시행 기록·XP에만 남고 1단계 숙달에는 들어가지 않는다(docs/mastery-ewma.md 11.9절)
-  submitRecognitionAx: async (a, b, chosen, options) =>
-    (await api.post('/curriculum/recognition-ax', { a, b, chosen, ...(options ? { options } : {}) })).data,
+  submitRecognitionAx: async (a, b, chosen, options, meta) =>
+    (await api.post('/curriculum/recognition-ax', { a, b, chosen, ...(options ? { options } : {}), ...(meta || {}) })).data,
   getWords: async () => (await api.get('/curriculum/words')).data,
   // 3단계 문장 4지선다 오답 보기(레슨 밖·음절 수가 가까운 문장). exclude = 이번 레슨 문장들
   getSentenceOptions: async (sentence, exclude) => (await api.post('/curriculum/sentence-options', { sentence, exclude })).data,
   // speed: 답하기 전에 본 실제 재생 속도(학습자 선택 × 적응 감속). 1.0 미만 정답은 숙달에 0.5로 들어간다(docs/mastery-ewma.md 7절)
   // mode 'typed': 주관식(chosen = 입력한 글). 서버가 정답·'입모양은 맞음'·오답으로 채점해 verdict로 돌려준다(계획 1-2)
   // probe(선택): 짝 탐색 문항이면 /curriculum/words probes[].probe(자리·target·read·대비 단어). 숙달에는 보통 문항과 똑같이 들어간다
-  submitWord: async (word, correct, chosen, speed, mode, options, probe) =>
+  submitWord: async (word, correct, chosen, speed, mode, options, probe, meta) =>
     (await api.post('/curriculum/word-answer', {
       word, correct, chosen, speed, ...(mode ? { mode } : {}), ...(options ? { options } : {}), ...(probe ? { probe } : {}),
+      ...(meta || {}),
     })).data,
   getClosure: async () => (await api.get('/curriculum/closure')).data,
-  submitClosure: async (item_id, chosen, options) =>
-    (await api.post('/curriculum/closure-answer', { item_id, chosen, ...(options ? { options } : {}) })).data,
+  submitClosure: async (item_id, chosen, options, meta) =>
+    (await api.post('/curriculum/closure-answer', { item_id, chosen, ...(options ? { options } : {}), ...(meta || {}) })).data,
   // 2단계 레슨 속 문맥 문항(계획 1-3). 숙달에는 넣지 않고 시행 기록·취약 입모양에만 남는다
-  submitContext: async (item_id, chosen, options) =>
-    (await api.post('/curriculum/context-answer', { item_id, chosen, ...(options ? { options } : {}) })).data,
+  submitContext: async (item_id, chosen, options, meta) =>
+    (await api.post('/curriculum/context-answer', { item_id, chosen, ...(options ? { options } : {}), ...(meta || {}) })).data,
   confusionMatrix: async () => (await api.get('/curriculum/confusion-matrix')).data,
   getRecommendedLevel: async () => (await api.get('/curriculum/recommended-level')).data,
   getNext: async () => (await api.get('/curriculum/next')).data,
@@ -295,6 +297,16 @@ export const accountAPI = {
   // 파일럿(§4.7) — 진행 중일 때만 참여 코드 입력(운영자가 LIPLAB_PILOT=1로 켠다)
   pilotStatus: async () => (await api.get('/pilot/status')).data,
   pilotJoin: async (code) => (await api.post('/pilot/join', { code })).data,
+}
+
+// 청인 예비 파일럿(P3) 검사 묶음 — 파일럿 참여자만(서버가 403으로 막는다). docs/pilot/battery.md
+export const batteryAPI = {
+  status: async () => (await api.get('/pilot/battery/status')).data,
+  start: async (label, layer) => (await api.post('/pilot/battery/start', { label, layer })).data,
+  answer: async (payload) => (await api.post('/pilot/battery/answer', payload)).data,
+  finish: async (payload) => (await api.post('/pilot/battery/finish', payload)).data,
+  // 영상·음성은 로그인 머리글이 필요해 blob으로 받아 주소를 만든다(path는 서버가 준 '/pilot/battery/...')
+  blob: async (path) => (await api.get(path, { responseType: 'blob', timeout: 60000 })).data,
 }
 
 // 발화(말하기) — 커리큘럼 6단계 + 녹음 채점·코칭.
