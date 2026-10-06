@@ -7,6 +7,7 @@ import { CueGlyph } from './CueBadges'
 import { curriculumAPI } from '../api'
 import { applyTalkerTiming } from '../lib/talkers'
 import { applyCoarticulation } from '../lib/coarticulation'
+import { nextDelay, recordLateness } from '../lib/frameClock'
 
 /**
  * 3D LipSync Player - VRM-based avatar with full playback controls
@@ -53,6 +54,7 @@ export default function LipSyncPlayer3D({
   const onCompleteRef = useRef(onComplete)
   const onFrameChangeRef = useRef(onFrameChange)
   const previousRestartKeyRef = useRef(restartKey)
+  const dueRef = useRef(undefined)   // 지금 프레임이 시작했어야 할 시각(performance.now, lib/frameClock)
 
   const currentViseme = visemes[currentIndex] || null
 
@@ -124,16 +126,22 @@ export default function LipSyncPlayer3D({
     setCurrentIndex(index)
     emitFrameChange(index)
 
+    // 다음 프레임은 '이 프레임이 시작했어야 할 시각 + 길이'에 맞춘다(늦은 만큼이 쌓이지 않게, 늦은 정도는 기록)
+    const now = performance.now()
+    if (Number.isFinite(dueRef.current)) recordLateness(now - dueRef.current)
+    const { delay, nextDue } = nextDelay({ dueAt: dueRef.current, durationMs: frame.duration_ms, speed: speedRef.current, now })
+    dueRef.current = nextDue
     timeoutRef.current = setTimeout(() => {
       if (!isPlayingRef.current) return
       scheduleNext(index + 1)
-    }, frame.duration_ms / speedRef.current)
+    }, delay)
   }, [visemes, emitFrameChange])
 
   const startFromIndex = useCallback((fromIndex = 0) => {
     clearTimer()
     isPlayingRef.current = true
     setIsPaused(false)
+    dueRef.current = undefined   // 새로 시작하면 지금부터
     indexRef.current = fromIndex
     setCurrentIndex(fromIndex)
     scheduleNext(fromIndex)
