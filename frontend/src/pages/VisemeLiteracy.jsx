@@ -16,6 +16,9 @@ import { LoadFailed } from '../components/ErrorScreen'
 import CueBadges, { CueLegend } from '../components/CueBadges'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { pickVisemeDistractors, balancedTargets } from '../lib/visemeOptions'
+import ShortText from '../components/ShortText'
+import useLearnerInfo from '../hooks/useLearnerInfo'
+import { splitFirstSentence } from '../lib/learnerProfile'
 import { plainVisemeLabel, lessonPlainLabel } from '../lib/visemeLabels'
 import { pickAxItems, axSlots, axExplain, axFrames } from '../lib/visemeAx'
 import { visemeCycleSteps } from '../lib/visemeCycle'
@@ -377,6 +380,7 @@ function QuizPanel({ data }) {
   const [elapsedSec, setElapsedSec] = useState(0)
   // 레슨마다 가상 화자 한 명(계획 2-2). 다섯 레슨마다 첫 레슨은 기본 화자다.
   const [lesson, nextLesson] = useLessonTalker('viseme')
+  const { defaults: learner } = useLearnerInfo()   // 짧은 힌트(계획 2-6): 독화 포인트를 첫 문장만 먼저
 
   // 레슨(12문항)의 정답 무리 순서: 무리마다 두 번씩, 연달아 같은 무리 없이(lib/visemeOptions.balancedTargets).
   // 예전 매 문항 무작위는 한 레슨에서 무리 하나 이상이 빠질 확률이 56%였다.
@@ -562,7 +566,9 @@ function QuizPanel({ data }) {
                     <b>「{q.pair.a}」·「{q.pair.b}」</b> {axExplain(q.pair)}
                   </div>
                 ) : (
-                  <div className="rounded-16 border-2 border-line bg-white p-3 text-[13px] text-ink-muted">{result.target.teach}</div>
+                  <div className="rounded-16 border-2 border-line bg-white p-3 text-[13px] text-ink-muted">
+                    <ShortText key={result.target.viseme_id} text={result.target.teach} short={learner.shortHints} />
+                  </div>
                 )}
               </motion.div>
             )}
@@ -580,7 +586,8 @@ function QuizPanel({ data }) {
               <p className="text-[19px] font-bold tracking-[-0.38px] lg:text-[22px] lg:tracking-[-0.44px]">{result.correct ? '정답이에요!' : '아쉬워요'}</p>
               <p className="line-clamp-2 text-[13px] font-bold opacity-80 lg:text-[14px]">
                 {isAx ? `두 입모양은 ${result.answer === 'same' ? '같아요' : '달라요'}`
-                  : result.correct ? result.target.teach : `정답은 「${lessonPlainLabel(q.target)}」예요`}
+                  : result.correct ? (learner.shortHints ? splitFirstSentence(result.target.teach).first : result.target.teach)
+                  : `정답은 「${lessonPlainLabel(q.target)}」예요`}
               </p>
             </div>
           ) : isAx ? (

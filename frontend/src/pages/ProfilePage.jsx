@@ -8,6 +8,9 @@ import { accountAPI, learningAPI, reviewAPI } from '../api'
 import { levelProgress } from '../lib/level'
 import { mergeBadges } from '../lib/badges'
 import { dueCounts } from '../lib/reviewDue'
+import LearnerInfoForm from '../components/LearnerInfoForm'
+import useLearnerInfo from '../hooks/useLearnerInfo'
+import { hasAnswers } from '../lib/learnerProfile'
 
 /**
  * 프로필 탭 (Figma 107:16 · 모바일 241:34) — 내 프로필(그라데이션 3D 카드) + 통계 3열 + 설정 리스트.
@@ -64,7 +67,9 @@ export default function ProfilePage() {
   const logout = useStore((s) => s.logout)
   const updateUser = useStore((s) => s.updateUser)
   const resetPractice = useStore((s) => s.resetPractice)
-  const [modal, setModal] = useState(null)     // 'account' | 'reset'
+  const [modal, setModal] = useState(null)     // 'account' | 'reset' | 'pilot' | 'learner'
+  // 학습자 정보(계획 2-6) — 이 기기에만 계정별로 저장. 여기서 바꾸거나 지운다(민감정보라 서버에 두지 않는다)
+  const learnerInfo = useLearnerInfo()
   const [guideOpen, setGuideOpen] = useState(false)  // 사용법 가이드 모달
   // 가이드 닫기는 한 번만 만든다. 렌더마다 새 함수를 넘기면 가이드가 보던 탭을 첫 탭으로 되돌렸다.
   const closeGuide = useCallback(() => setGuideOpen(false), [])
@@ -164,6 +169,7 @@ export default function ProfilePage() {
     setBusy(true); setMsg('')
     try {
       await accountAPI.deleteAccount(form.delPw)
+      learnerInfo.clear()   // 이 기기에 남은 학습자 정보도 함께 지운다
       logout(); navigate('/learn/path')
     } catch (e) { setMsg(e?.response?.data?.detail || '삭제하지 못했어요.') } finally { setBusy(false) }
   }
@@ -226,6 +232,8 @@ export default function ProfilePage() {
         <MenuRow first title="사용법 가이드" sub="처음이라면 여기부터" onClick={() => setGuideOpen(true)} />
         <MenuRow title="자가진단 다시 하기" sub="지금 수준으로 단계 재추천" onClick={() => navigate('/learn/placement')} />
         <MenuRow title="계정 설정" sub="이름 · 이메일 · 비밀번호 · 로그아웃" onClick={openAccount} />
+        <MenuRow title="나에게 맞춘 안내" sub={hasAnswers(learnerInfo.answers) ? '답한 내용으로 맞춰 두었어요 · 이 기기에만 저장' : '선택 질문 3개 · 이 기기에만 저장'}
+          onClick={() => setModal('learner')} />
         {pilot?.enabled && (
           <MenuRow title="파일럿 참여" sub={pilot.joined ? '참여 중이에요' : '받은 참여 코드를 입력해요'} onClick={() => { setPilotMsg(''); setModal('pilot') }} />
         )}
@@ -245,6 +253,16 @@ export default function ProfilePage() {
           </>
         )}
         {pilotMsg && <p role="status" className="text-center text-[13px] font-bold text-ink-muted">{pilotMsg}</p>}
+      </Modal>
+
+      {/* 나에게 맞춘 안내(계획 2-6) — 온보딩과 같은 선택 질문. 답은 이 기기에만 둔다 */}
+      <Modal open={modal === 'learner'} onClose={() => setModal(null)} title="나에게 맞춘 안내" gap="gap-[14px]" maxW="max-w-[480px]">
+        <LearnerInfoForm key={modal === 'learner' ? 'open' : 'closed'} initial={learnerInfo.answers} saveLabel="저장"
+          onSave={(a) => { learnerInfo.save(a); setModal(null) }} />
+        {learnerInfo.answers && (
+          <button type="button" onClick={() => { learnerInfo.clear(); setModal(null) }}
+            className="btn-secondary w-full border-bad-line py-3 text-[14px] text-bad-text">이 기기에서 답 지우기</button>
+        )}
       </Modal>
 
       {/* 계정 설정 모달(220:164) */}
