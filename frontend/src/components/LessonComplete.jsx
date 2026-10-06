@@ -1,9 +1,11 @@
 import WatermarkCard from './WatermarkCard'
+import EffortCheck from './EffortCheck'
 
 /**
  * 레슨 완료(Figma "Lesson / 4. 완료" 93:12) — DOKA + 워터마크 스탯 3칸(정답률·획득 XP·걸린 시간) + 버튼 2개.
  * 문맥 추론 레슨에서 쓴다. (단어·입모양·문장 레슨에는 같은 모양의 사본이 각 페이지에 있다.)
  * 모바일은 카드 폭이 좁아 여백·값 글자를 줄인다(모바일 프레임 없음).
+ * effort({lessonKind, stage, nItems, accuracy})를 주면 레슨별 정신적 노력 한 문항(C14, EffortCheck)을 스탯 아래에 붙인다.
  */
 const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }   // 마스코트 SVG 그림자 여백(Figma inset)
 const STAT_CARD = 'flex min-w-0 flex-1 flex-col gap-2 rounded-18 border-2 border-line bg-white p-3.5 lg:p-5'
@@ -13,7 +15,7 @@ const STAT_VALUE = 'text-[20px] font-bold leading-figma tracking-[-0.5px] lg:tex
 const DONE_BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]'
 const fmtDuration = (sec) => `${Math.floor(sec / 60)}분 ${sec % 60}초`
 
-export default function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, homeLabel = '커리큘럼으로 돌아가기' }) {
+export default function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, homeLabel = '커리큘럼으로 돌아가기', effort }) {
   return (
     <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center gap-[26px] bg-page px-[18px] py-12">
       <span className="relative size-[140px] shrink-0">
@@ -35,6 +37,9 @@ export default function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHom
           <p className={`${STAT_VALUE} text-stat-level`}>{fmtDuration(elapsedSec)}</p>
         </WatermarkCard>
       </div>
+
+      {/* 레슨별 정신적 노력 한 문항(C14, Paas 9점) — 답하지 않아도 된다. 기록만 하고 다음 레슨에는 쓰지 않는다 */}
+      {effort && <EffortCheck {...effort} />}
 
       <div className="flex w-full max-w-[640px] flex-col gap-2.5 lg:gap-3">
         <button type="button" onClick={onNext} className={`btn-primary btn-lg ${DONE_BTN}`}>다음 레슨으로</button>
