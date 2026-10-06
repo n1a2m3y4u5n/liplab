@@ -5348,6 +5348,13 @@ async def speak_assess(
     # 안이면 한 번으로는 합격·불합격을 믿기 어렵다. 화면은 '한 번 더 말해 보기'를 권한다. 숙달 계산(passed)은 바꾸지 않는다
     stage_pass = (stg or {}).get("pass") if stg else None
     hold = speak_hold(score, stage_pass, (stg or {}).get("mode"), passed, is_probe)
+    # S7 말 빠르기(docs/speak-visual-cues.md): 문장 단계에서 D-GOP 정렬이 있을 때만 지표 하나를 싣는다. 608 감음신경성 대 538 정상
+    # AUC 0.863으로 기준을 넘었지만 사람 유창성 평가와의 상관은 아직 재지 않아 화면에 '참고'를 붙인다. 점수·합격에는 섞지 않는다.
+    # S5(마찰)·S6(기식)은 같은 측정에서 기준에 못 미쳐 내지 않는다.
+    sound_cue = None
+    if mode == "sentence" and dgop_result and not no_voice and not is_probe:
+        import speak_cues as _cues
+        sound_cue = _cues.rate_cue(dgop_result.get("rate"))
     return {
         "transcript": transcript,
         "score": score,
@@ -5365,6 +5372,7 @@ async def speak_assess(
         "audio_score": None if audio_score is None else round(float(audio_score), 1),   # 입모양을 섞지 않은 음향 점수
         "acoustic_dgop": acoustic_dgop,
         "vowel_feedback": vowel_fb,   # 축 E: {vowel, f1, f2, target_f1, target_f2, height, front, messages}
+        "sound_cue": sound_cue,       # S7: {kind, label, value, unit, range, typical, slow, message, reference}. 문장 단계만
         "progress": progress,
         "mode": mode,
         "probe": is_probe,                 # 낱말 속 소리 확인으로 채점했는가(확인 상태·오늘 확인 낱말일 때만)
