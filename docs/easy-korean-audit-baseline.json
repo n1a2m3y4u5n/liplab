@@ -1,0 +1,2640 @@
+{
+ "summary": {
+  "strings": 2237,
+  "by_source": {
+   "프론트엔드": 2021,
+   "백엔드": 216
+  },
+  "pass": 714,
+  "pass_rate": 0.3192,
+  "pass_core": 947,
+  "pass_rate_core": 0.4233,
+  "fail_length": 55,
+  "fail_vocab": 1522,
+  "with_jargon": 108,
+  "with_deficit": 9,
+  "target": 0.95
+ },
+ "worst": [
+  {
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 63,
+   "kind": "jsx",
+   "text": "수집 항목 — 이메일, 표시 이름, 비밀번호(복호화할 수 없는 해시로 저장), 가입 동의 기록(동의한 약관·처리방침 판본, 동의 시각, 연령 확인 여부), 학습 기록(문항별 정오답, 문장 채점 점수, 말하기 연습의 전사문·점수·음성 지표[크기·음높이 범위·길이·억양 시작과 끝]·소리별 점수·코칭 문장, 소리·입모양·융합 점수, 입모양 연습의 점수와 교정 세션 처음·끝 오차), 파일럿 연구에 참여한 경우 참여 코드와 집단.",
+   "severity": 47.5,
+   "max_syl": 154,
+   "long": [
+    "수집 항목 — 이메일, 표시 이름, 비밀번호(복호화할 수 없는 해시로 저장), 가입 동의 기록(동의한 약관·처리방침 판본, 동의 시각, 연령 확인 여부), 학습 기록(문항별 정오답, 문장 채점 점수, 말하기 연습의 전사문·점수·음성 지표[크기·음높이 범위·길이·억양 시작과 끝]·소리별 점수·코칭 문장, 소리·입모양·융합 점수, 입모양 연습의 점수와 교정 세션 처음·끝 오차), 파일럿 연구에 참여한 경우 참여 코드와 집단."
+   ],
+   "hard": [
+    "수집",
+    "항목",
+    "이메일",
+    "표시",
+    "비밀번호",
+    "저장",
+    "가입",
+    "동의",
+    "기록",
+    "동",
+    "약관",
+    "처리",
+    "방침",
+    "판",
+    "본",
+    "동",
+    "시각",
+    "연령",
+    "여부",
+    "기록",
+    "문항",
+    "오답",
+    "채점",
+    "말하기",
+    "전사",
+    "음성",
+    "지표",
+    "범위",
+    "억양",
+    "입모양",
+    "융합",
+    "입모양",
+    "교정",
+    "세션",
+    "오차",
+    "파일럿",
+    "참여",
+    "참여",
+    "코드",
+    "집단"
+   ],
+   "hard_ratio": 0.58,
+   "jargon": [],
+   "deficit": [
+    "교정"
+   ],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 69
+  },
+  {
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 65,
+   "kind": "jsx",
+   "text": "웹캠 — 웹캠 영상은 기기 안에서만 처리하며 서버로 보내지 않습니다. 입모양 연습 중에는 기기에서 계산한 입모양 수치(턱 벌림·입술 둥글림·입술 다물기)와 점수를 교정 안내와 약점 분석을 위해 서버로 보냅니다. 입모양 수치의 원본(프레임마다의 값)은 저장하지 않고, 연습마다의 점수와 교정 세션의 처음·끝 오차(목표와의 평균 차이), 그리고 점수에서 나온 약점 정보만 학습 기록에 남습니다.",
+   "severity": 30.4,
+   "max_syl": 71,
+   "long": [
+    "입모양 연습 중에는 기기에서 계산한 입모양 수치(턱 벌림·입술 둥글림·입술 다물기)와 점수를 교정 안내와 약점 분석을 위해 서버로 보냅니다.",
+    "입모양 수치의 원본(프레임마다의 값)은 저장하지 않고, 연습마다의 점수와 교정 세션의 처음·끝 오차(목표와의 평균 차이), 그리고 점수에서 나온 약점 정보만 학습 기록에 남습니다."
+   ],
+   "hard": [
+    "웹캠",
+    "웹캠",
+    "기기",
+    "처리",
+    "서버",
+    "입모양",
+    "기기",
+    "입모양",
+    "수치",
+    "둥글리다",
+    "다물다",
+    "교정",
+    "안내",
+    "약점",
+    "분석",
+    "서버",
+    "입모양",
+    "수치",
+    "원본",
+    "프레임",
+    "저장",
+    "교정",
+    "세션",
+    "오차",
+    "평균",
+    "약점",
+    "기록"
+   ],
+   "hard_ratio": 0.509,
+   "jargon": [],
+   "deficit": [
+    "교정"
+   ],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 53
+  },
+  {
+   "file": "frontend/src/components/SignPanel.jsx",
+   "line": 271,
+   "kind": "jsx",
+   "text": "수어 영상·데이터 출처: 국립국어원 「한국수어사전」(sldict.korean.go.kr) — CC BY-NC-ND 2.0 KR.\n지문자 손모양(한글): “Korean manual alphabet” © Kwamikagami / Wikimedia Commons — CC BY-SA 3.0.\n영문 지문자(A–Z)는 국제(미국식) 지문자 — “Sign language A–Z”, Wikimedia Commons, Public Domain.\n학습·이해 보조(베타)용이며 공식 통역이 아닙니다.",
+   "severity": 28.1,
+   "max_syl": 20,
+   "long": [],
+   "hard": [
+    "수어",
+    "데이터",
+    "출처",
+    "국어원",
+    "수어",
+    "sldict",
+    "orean.go.kr",
+    "CC",
+    "BY",
+    "NC",
+    "ND",
+    "KR.",
+    "Korean",
+    "manual",
+    "alphabet",
+    "Kwamikagami",
+    "Wikimedia",
+    "Commons",
+    "CC",
+    "BY",
+    "SA",
+    "영문",
+    "Sign",
+    "language",
+    "Wikimedia",
+    "Commons",
+    "Public",
+    "omain.",
+    "보조",
+    "베타",
+    "공식",
+    "통역"
+   ],
+   "hard_ratio": 0.821,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 39
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 222,
+   "kind": "string",
+   "text": "학습곡선, 숙달까지 걸린 시도 수, 처음 대비 향상도를 봐요. 사전·사후 검사(각 24문항)는 같은 난이도로 전후를 비교하고, 사후 문항 절반은 검사 전용 화자로 내서 새 가상 화자 조건 점수를 따로 보여줘요. 검사 이력·오류 프로파일·학습량은 흑백 한 장으로 인쇄해 교사나 언어재활사와 나눠요.",
+   "severity": 21.4,
+   "max_syl": 55,
+   "long": [
+    "사전·사후 검사(각 24문항)는 같은 난이도로 전후를 비교하고, 사후 문항 절반은 검사 전용 화자로 내서 새 가상 화자 조건 점수를 따로 보여줘요.",
+    "검사 이력·오류 프로파일·학습량은 흑백 한 장으로 인쇄해 교사나 언어재활사와 나눠요."
+   ],
+   "hard": [
+    "곡선",
+    "숙달",
+    "대비",
+    "향상",
+    "도",
+    "사후",
+    "문항",
+    "난이도",
+    "전후",
+    "사후",
+    "문항",
+    "전용",
+    "화자",
+    "가상",
+    "화자",
+    "이력",
+    "오류",
+    "학습량",
+    "흑백",
+    "인쇄",
+    "교사",
+    "언어",
+    "재활"
+   ],
+   "hard_ratio": 0.5,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 46
+  },
+  {
+   "file": "backend/main.py",
+   "line": 359,
+   "kind": "dict:note",
+   "text": "웹캠 영상은 기기 안에서만 처리되고, 원음성은 채점하는 동안 서버 메모리에서만 처리한 뒤 저장하지 않으므로 이 내보내기에 포함되지 않습니다. 전사문·음성 지표·입모양 계수 기반 점수는 학습 기록으로 저장되어 아래 data에 들어 있습니다.",
+   "severity": 17.5,
+   "max_syl": 59,
+   "long": [
+    "웹캠 영상은 기기 안에서만 처리되고, 원음성은 채점하는 동안 서버 메모리에서만 처리한 뒤 저장하지 않으므로 이 내보내기에 포함되지 않습니다.",
+    "전사문·음성 지표·입모양 계수 기반 점수는 학습 기록으로 저장되어 아래 data에 들어 있습니다."
+   ],
+   "hard": [
+    "웹캠",
+    "기기",
+    "처리",
+    "채점",
+    "서버",
+    "메모리",
+    "처리",
+    "저장",
+    "내보내다",
+    "음성",
+    "지표",
+    "입모양",
+    "계수",
+    "기반",
+    "기록",
+    "저장",
+    "data"
+   ],
+   "hard_ratio": 0.567,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 30
+  },
+  {
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 69,
+   "kind": "jsx",
+   "text": "보관·파기 — 학습 기록과 가입 동의 기록은 계정 유지 동안 보관하며, 회원 탈퇴 시 지체 없이 파기합니다. 당사자 파일럿 연구에 참여한 경우 그 자료는 별도 연구 동의서에 적힌 기간 동안 보관한 뒤 파기합니다.",
+   "severity": 16.9,
+   "max_syl": 41,
+   "long": [
+    "보관·파기 — 학습 기록과 가입 동의 기록은 계정 유지 동안 보관하며, 회원 탈퇴 시 지체 없이 파기합니다.",
+    "당사자 파일럿 연구에 참여한 경우 그 자료는 별도 연구 동의서에 적힌 기간 동안 보관한 뒤 파기합니다."
+   ],
+   "hard": [
+    "보관",
+    "파다",
+    "기록",
+    "가입",
+    "동의",
+    "기록",
+    "계정",
+    "유지",
+    "탈퇴",
+    "지체",
+    "파기",
+    "당사자",
+    "파일럿",
+    "참여",
+    "별도",
+    "동의서",
+    "적히다",
+    "파기"
+   ],
+   "hard_ratio": 0.562,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 32
+  },
+  {
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 67,
+   "kind": "jsx",
+   "text": "처리 위탁·국외 이전 — ① Fly.io, Inc.(미국): 서비스 호스팅과 데이터 저장. 서버는 일본 도쿄 리전에 있습니다. ② Anthropic, PBC(미국): 학습 문장·대화·코칭 문구 생성. 학습 문장과 채점에 필요한 전사문만 보내며 이메일·이름 등 이용자를 식별하는 정보는 보내지 않습니다. 두 경우 모두 서비스 이용 중 네트워크로 전송됩니다.",
+   "severity": 16.4,
+   "max_syl": 42,
+   "long": [
+    "학습 문장과 채점에 필요한 전사문만 보내며 이메일·이름 등 이용자를 식별하는 정보는 보내지 않습니다."
+   ],
+   "hard": [
+    "처리",
+    "위탁",
+    "국외",
+    "Fly.io",
+    "Inc.",
+    "데이터",
+    "저장",
+    "서버",
+    "Anthropic",
+    "PBC",
+    "문구",
+    "생성",
+    "채점",
+    "전사문",
+    "이메일",
+    "이용자",
+    "식별",
+    "네트워크",
+    "전송"
+   ],
+   "hard_ratio": 0.5,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 38
+  },
+  {
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 495,
+   "kind": "jsx",
+   "text": "한국어 독화에는 표준 자원이 거의 없습니다. LIPLAB은 동구형이음 사전·독화 난이도 지수·자음\n시각 지각공간·표준 평가셋을 판본과 함께 공개합니다. 앱 밖 연구·교육에서도 활용할 수 있어요.",
+   "severity": 15.6,
+   "max_syl": 22,
+   "long": [],
+   "hard": [
+    "독화",
+    "표준",
+    "자원",
+    "이음",
+    "독화",
+    "난이도",
+    "지수",
+    "자음",
+    "시각",
+    "지각",
+    "표준",
+    "평가",
+    "판본",
+    "공개"
+   ],
+   "hard_ratio": 0.583,
+   "jargon": [
+    "동구형이음",
+    "지각공간"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 24
+  },
+  {
+   "file": "frontend/src/components/Audio2FaceAvatar.jsx",
+   "line": 300,
+   "kind": "jsx",
+   "text": "직접 녹음한 음성은 화자 불변 음성특징(WavLM, 20화자 학습) 모델이 입모양을 예측합니다. 처음 듣는 화자의\n입 벌림 상관은 r≈0.66인데, 평가 화자로 학습 시점을 고른 값이라 실제보다 높게 나왔을 수 있어요.\n미리 준비한 예시 5개는 합성 음성(TTS)이고, 입모양은 같은 모델로 미리 계산해 둔 결과입니다.",
+   "severity": 15.1,
+   "max_syl": 36,
+   "long": [
+    "직접 녹음한 음성은 화자 불변 음성특징(WavLM, 20화자 학습) 모델이 입모양을 예측합니다.",
+    "입 벌림 상관은 r≈0.66인데, 평가 화자로 학습 시점을 고른 값이라 실제보다 높게 나왔을 수 있어요.",
+    "미리 준비한 예시 5개는 합성 음성(TTS)이고, 입모양은 같은 모델로 미리 계산해 둔 결과입니다."
+   ],
+   "hard": [
+    "음성",
+    "화자",
+    "불변",
+    "음성",
+    "WavLM",
+    "화자",
+    "입모양",
+    "예측",
+    "화자",
+    "상관",
+    "평가",
+    "화자",
+    "시점",
+    "예시",
+    "합성",
+    "음성",
+    "TTS",
+    "입모양"
+   ],
+   "hard_ratio": 0.429,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 42
+  },
+  {
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 70,
+   "kind": "jsx",
+   "text": "이용자의 권리 — 프로필 → 계정 설정에서 정정·삭제를, 접근성 설정의 '내 데이터'에서 열람(내려받기)을 할 수 있습니다. 계정 삭제와 이메일 변경은 현재 비밀번호를 다시 확인합니다.",
+   "severity": 15.1,
+   "max_syl": 45,
+   "long": [
+    "이용자의 권리 — 프로필 → 계정 설정에서 정정·삭제를, 접근성 설정의 '내 데이터'에서 열람(내려받기)을 할 수 있습니다."
+   ],
+   "hard": [
+    "이용자",
+    "권리",
+    "프로필",
+    "계정",
+    "설정",
+    "정정",
+    "삭제",
+    "접근",
+    "설정",
+    "데이터",
+    "열람",
+    "내려받다",
+    "계정",
+    "삭제",
+    "이메일",
+    "변경"
+   ],
+   "hard_ratio": 0.667,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 24
+  },
+  {
+   "file": "backend/curriculum.py",
+   "line": 107,
+   "kind": "dict:note",
+   "text": "치경·연구개·성문·경구개음은 혀·목 안쪽 조음이라 겉모습이 거의 같다. 독화로 가장 어려운 무리.",
+   "severity": 14.6,
+   "max_syl": 28,
+   "long": [],
+   "hard": [
+    "연구개",
+    "성문",
+    "조음",
+    "겉모습",
+    "독화",
+    "무리"
+   ],
+   "hard_ratio": 0.429,
+   "jargon": [
+    "경구개음",
+    "조음",
+    "연구개",
+    "치경",
+    "성문"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 14
+  },
+  {
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 75,
+   "kind": "jsx",
+   "text": "만 14세 미만 아동은 개인정보 수집·이용에 법정대리인(보호자)의 동의가 필요합니다. 회원가입 때 '만 14세 이상이거나 보호자 동의를 받았다'는 확인을 받고, 확인하지 않으면 가입할 수 없습니다. 확인 사실과 시각은 가입 동의 기록으로 서버에 남습니다.",
+   "severity": 14.1,
+   "max_syl": 42,
+   "long": [
+    "만 14세 미만 아동은 개인정보 수집·이용에 법정대리인(보호자)의 동의가 필요합니다.",
+    "회원가입 때 '만 14세 이상이거나 보호자 동의를 받았다'는 확인을 받고, 확인하지 않으면 가입할 수 없습니다."
+   ],
+   "hard": [
+    "미만",
+    "아동",
+    "수집",
+    "법정",
+    "대리인",
+    "보호자",
+    "동의",
+    "가입",
+    "보호자",
+    "동의",
+    "가입",
+    "시각",
+    "가입",
+    "동의",
+    "기록",
+    "서버"
+   ],
+   "hard_ratio": 0.471,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 34
+  },
+  {
+   "file": "frontend/src/components/A11ySettings.jsx",
+   "line": 136,
+   "kind": "jsx",
+   "text": "웹캠 영상은 기기 안에서만 처리돼요. 음성은 채점할 때만 서버로 보내 메모리에서 처리하고 저장하지 않으며, 전사문·음성 지표는 학습 기록으로 저장돼요.",
+   "severity": 13.6,
+   "max_syl": 47,
+   "long": [
+    "음성은 채점할 때만 서버로 보내 메모리에서 처리하고 저장하지 않으며, 전사문·음성 지표는 학습 기록으로 저장돼요."
+   ],
+   "hard": [
+    "웹캠",
+    "기기",
+    "처리",
+    "음성",
+    "채점",
+    "서버",
+    "메모리",
+    "처리",
+    "저장",
+    "전사",
+    "음성",
+    "지표",
+    "기록",
+    "저장"
+   ],
+   "hard_ratio": 0.667,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 21
+  },
+  {
+   "file": "frontend/src/components/guide/GuideMockups.jsx",
+   "line": 934,
+   "kind": "string",
+   "text": "분석 탭 예시. 총 학습·평균 정확도·연속 학습 세 칸, 학습시간·정확도 추이 그래프, 활동 캘린더·회차 히스토리·전체 통계 링크.",
+   "severity": 13.2,
+   "max_syl": 43,
+   "long": [
+    "총 학습·평균 정확도·연속 학습 세 칸, 학습시간·정확도 추이 그래프, 활동 캘린더·회차 히스토리·전체 통계 링크."
+   ],
+   "hard": [
+    "분석",
+    "예시",
+    "총",
+    "평균",
+    "정확도",
+    "연속",
+    "칸",
+    "정확도",
+    "추이",
+    "그래프",
+    "캘린더",
+    "회차",
+    "통계",
+    "링크"
+   ],
+   "hard_ratio": 0.667,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 21
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 123,
+   "kind": "string",
+   "text": "보기를 누르거나 숫자 키 1~4로 고른 뒤 확인을 눌러요. 1단계는 입모양 그룹을, 2단계는 단어를 골라요. 단어 오답 보기는 화면에서 구별되는 것만 나와요. 2단계 레슨의 2문항과 문맥 추론은 문장 속 빈칸을 보기 3개 중에서 채워요.",
+   "severity": 12.9,
+   "max_syl": 28,
+   "long": [],
+   "hard": [
+    "보기",
+    "단계",
+    "입모양",
+    "단계",
+    "오답",
+    "보기",
+    "화면",
+    "구별",
+    "단계",
+    "레슨",
+    "문항",
+    "문맥",
+    "추론",
+    "비다",
+    "칸",
+    "보기"
+   ],
+   "hard_ratio": 0.516,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 31
+  },
+  {
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 66,
+   "kind": "jsx",
+   "text": "음성 — 말하기 채점을 할 때 녹음한 음성을 서버로 보내 메모리에서만 처리하고 저장하지 않습니다. 채점 결과인 전사문과 음성 지표는 학습 기록으로 저장합니다.",
+   "severity": 12.8,
+   "max_syl": 39,
+   "long": [
+    "음성 — 말하기 채점을 할 때 녹음한 음성을 서버로 보내 메모리에서만 처리하고 저장하지 않습니다."
+   ],
+   "hard": [
+    "음성",
+    "말하기",
+    "채점",
+    "음성",
+    "서버",
+    "메모리",
+    "처리",
+    "저장",
+    "채점",
+    "전사문",
+    "음성",
+    "지표",
+    "기록",
+    "저장"
+   ],
+   "hard_ratio": 0.667,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 21
+  },
+  {
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 57,
+   "kind": "jsx",
+   "text": "LIPLAB(이하 서비스)은 청각장애 학습자를 위한 한국어 독화·발화 훈련 학습 도구입니다. 이용자는 학습 목적에 한하여 서비스를 이용하며, 타인의 계정을 도용하거나 서비스 운영을 방해하는 행위를 하지 않습니다.",
+   "severity": 12.6,
+   "max_syl": 50,
+   "long": [
+    "LIPLAB(이하 서비스)은 청각장애 학습자를 위한 한국어 독화·발화 훈련 학습 도구입니다.",
+    "이용자는 학습 목적에 한하여 서비스를 이용하며, 타인의 계정을 도용하거나 서비스 운영을 방해하는 행위를 하지 않습니다."
+   ],
+   "hard": [
+    "청각",
+    "장애",
+    "독화",
+    "발화",
+    "훈련",
+    "이용자",
+    "한하다",
+    "타인",
+    "계정",
+    "도용",
+    "운영",
+    "방해",
+    "행위"
+   ],
+   "hard_ratio": 0.5,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 26
+  },
+  {
+   "file": "backend/articulation.py",
+   "line": 42,
+   "kind": "dict:guide",
+   "text": "혀끝을 윗니 뒤 잇몸 쪽으로 올립니다. ㄷ·ㄸ·ㅌ은 댔다 떼며 터뜨리고(ㅌ은 숨을 세게), ㄴ은 댄 채 코로 울리고, ㅅ·ㅆ은 닿지 않게 좁은 틈으로 바람을 내보내고, ㄹ은 가볍게 한 번 튕깁니다(받침 ㄹ은 댄 채 혀 양옆으로 소리를 흘립니다).",
+   "severity": 11.8,
+   "max_syl": 66,
+   "long": [
+    "ㄷ·ㄸ·ㅌ은 댔다 떼며 터뜨리고(ㅌ은 숨을 세게), ㄴ은 댄 채 코로 울리고, ㅅ·ㅆ은 닿지 않게 좁은 틈으로 바람을 내보내고, ㄹ은 가볍게 한 번 튕깁니다(받침 ㄹ은 댄 채 혀 양옆으로 소리를 흘립니다)."
+   ],
+   "hard": [
+    "혀끝",
+    "윗니",
+    "잇몸",
+    "올리다",
+    "대다",
+    "대다",
+    "틈",
+    "내보내다",
+    "튕기다",
+    "대다",
+    "양옆"
+   ],
+   "hard_ratio": 0.393,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 28
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 180,
+   "kind": "string",
+   "text": "약한 입모양이 든 문제가 더 자주 나오는 단어 레슨과, 입모양이 같은 단어 중 문장에 맞는 것을 고르는 문맥 추론 레슨이 12문항씩 번갈아 이어져요. 지금 나오는 유형을 숙달도 낮은 순으로 보여 주고, 원할 때 멈추면 돼요.",
+   "severity": 10.4,
+   "max_syl": 57,
+   "long": [
+    "약한 입모양이 든 문제가 더 자주 나오는 단어 레슨과, 입모양이 같은 단어 중 문장에 맞는 것을 고르는 문맥 추론 레슨이 12문항씩 번갈아 이어져요."
+   ],
+   "hard": [
+    "입모양",
+    "레슨",
+    "입모양",
+    "문맥",
+    "추론",
+    "레슨",
+    "문항",
+    "번갈다",
+    "이어지다",
+    "유형",
+    "숙달"
+   ],
+   "hard_ratio": 0.333,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 33
+  },
+  {
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 463,
+   "kind": "jsx",
+   "text": "틀린 답 중 이만큼이 입모양이 같아 헷갈린 경우입니다. 독화에서 본질적으로\n구분이 어려운 지점을 가리키며, 이 비율이 높을수록 청각·문맥 단서 보완이 필요합니다.",
+   "severity": 10.3,
+   "max_syl": 35,
+   "long": [
+    "구분이 어려운 지점을 가리키며, 이 비율이 높을수록 청각·문맥 단서 보완이 필요합니다."
+   ],
+   "hard": [
+    "답",
+    "이만큼",
+    "입모양",
+    "헷갈리다",
+    "독화",
+    "본질",
+    "구분",
+    "비율",
+    "청각",
+    "문맥",
+    "단서",
+    "보완"
+   ],
+   "hard_ratio": 0.545,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 22
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 112,
+   "kind": "string",
+   "text": "DOKA 하나가 한 단계예요. 체크가 붙은 DOKA는 숙달한 단계, 링을 두른 큰 DOKA는 지금 단계, 눈을 뜬 연한 DOKA는 건너뛸 수 있는 다음 단계, 잠든 DOKA는 잠긴 단계예요. 열린 DOKA를 누르면 바로 그 단계를 시작해요.",
+   "severity": 10.0,
+   "max_syl": 46,
+   "long": [
+    "체크가 붙은 DOKA는 숙달한 단계, 링을 두른 큰 DOKA는 지금 단계, 눈을 뜬 연한 DOKA는 건너뛸 수 있는 다음 단계, 잠든 DOKA는 잠긴 단계예요."
+   ],
+   "hard": [
+    "단계",
+    "체크",
+    "숙달",
+    "단계",
+    "두르다",
+    "단계",
+    "건너뛰다",
+    "단계",
+    "잠기다",
+    "단계",
+    "단계"
+   ],
+   "hard_ratio": 0.423,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 26
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 143,
+   "kind": "string",
+   "text": "이렇게 들렸어요, 음소별 정확도, DOKA의 한마디를 봐요. 웹캠 미러를 켰다면 입모양 점수가 따로 나오고, 모음 단계는 내 혀 위치를 목표와 겹쳐 보여줘요.",
+   "severity": 9.6,
+   "max_syl": 38,
+   "long": [
+    "웹캠 미러를 켰다면 입모양 점수가 따로 나오고, 모음 단계는 내 혀 위치를 목표와 겹쳐 보여줘요."
+   ],
+   "hard": [
+    "음소",
+    "정확도",
+    "한마디",
+    "웹캠",
+    "미러",
+    "입모양",
+    "모음",
+    "단계",
+    "겹치다"
+   ],
+   "hard_ratio": 0.409,
+   "jargon": [
+    "음소"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 22
+  },
+  {
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 76,
+   "kind": "jsx",
+   "text": "미성년 이용자의 정보는 학습 목적에 한해 최소한으로 수집하며, 보호자는 자녀의 정보에 대한 열람·정정·삭제를 요청할 수 있습니다.",
+   "severity": 9.6,
+   "max_syl": 53,
+   "long": [
+    "미성년 이용자의 정보는 학습 목적에 한해 최소한으로 수집하며, 보호자는 자녀의 정보에 대한 열람·정정·삭제를 요청할 수 있습니다."
+   ],
+   "hard": [
+    "성년",
+    "이용자",
+    "한하다",
+    "수집",
+    "보호자",
+    "자녀",
+    "열람",
+    "정정",
+    "삭제"
+   ],
+   "hard_ratio": 0.529,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 17
+  },
+  {
+   "file": "backend/curriculum.py",
+   "line": 48,
+   "kind": "dict:teach",
+   "text": "둥글게 내미는 모양이 뚜렷해 좋은 닻. 좌우로 퍼지는 전설모음과 확실히 다르다. 오는 턱이 조금 더 벌어지고 우는 더 좁게 오므리지만(말하기에서 연습하는 차이), 보는 쪽에서는 거의 같아 문맥으로 가른다.",
+   "severity": 9.3,
+   "max_syl": 49,
+   "long": [
+    "오는 턱이 조금 더 벌어지고 우는 더 좁게 오므리지만(말하기에서 연습하는 차이), 보는 쪽에서는 거의 같아 문맥으로 가른다."
+   ],
+   "hard": [
+    "뚜렷",
+    "좌우",
+    "퍼지다",
+    "전설모음",
+    "오므리다",
+    "말하기",
+    "문맥",
+    "가르다"
+   ],
+   "hard_ratio": 0.308,
+   "jargon": [
+    "전설모음"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 26
+  },
+  {
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 253,
+   "kind": "attr",
+   "text": "시행 기록으로 학습곡선과 단계별 도달 시행수, 초기 대비 최근 향상도를 확인합니다.",
+   "severity": 9.1,
+   "max_syl": 34,
+   "long": [
+    "시행 기록으로 학습곡선과 단계별 도달 시행수, 초기 대비 최근 향상도를 확인합니다."
+   ],
+   "hard": [
+    "시행",
+    "기록",
+    "곡선",
+    "단계",
+    "도달",
+    "행수",
+    "초기",
+    "대비",
+    "향상",
+    "도"
+   ],
+   "hard_ratio": 0.769,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 13
+  },
+  {
+   "file": "backend/curriculum.py",
+   "line": 56,
+   "kind": "dict:teach",
+   "text": "특징이 옅어 개방모음·원순모음보다 읽기 어렵다. 앞뒤 소리로 보완.",
+   "severity": 8.9,
+   "max_syl": 20,
+   "long": [],
+   "hard": [
+    "옅다",
+    "개방",
+    "모음",
+    "원순",
+    "모음",
+    "보완"
+   ],
+   "hard_ratio": 0.545,
+   "jargon": [
+    "원순모음",
+    "개방모음"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 11
+  },
+  {
+   "file": "frontend/src/components/guide/GuideMockups.jsx",
+   "line": 936,
+   "kind": "string",
+   "text": "프로필 탭 예시. 이름과 레벨 카드, 자가진단 다시 하기·계정 설정·학습 초기화 메뉴, 왼쪽 아래 접근성 설정 Aa 버튼.",
+   "severity": 8.8,
+   "max_syl": 37,
+   "long": [
+    "이름과 레벨 카드, 자가진단 다시 하기·계정 설정·학습 초기화 메뉴, 왼쪽 아래 접근성 설정 Aa 버튼."
+   ],
+   "hard": [
+    "프로필",
+    "예시",
+    "레벨",
+    "자가",
+    "진단",
+    "계정",
+    "설정",
+    "초기",
+    "접근",
+    "설정"
+   ],
+   "hard_ratio": 0.526,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 19
+  },
+  {
+   "file": "frontend/src/components/VocalTractSimulator.jsx",
+   "line": 246,
+   "kind": "attr",
+   "text": "성도 조음 조작판. 화살표키로 혀 위치, 대괄호로 입술 원순, 스페이스로 발성. 지금 소리 ○, F1 ○ F2 ○ 헤르츠.",
+   "severity": 8.6,
+   "max_syl": 23,
+   "long": [],
+   "hard": [
+    "조음",
+    "조작",
+    "판",
+    "화살표",
+    "혀다",
+    "괄호",
+    "스페이스",
+    "발성"
+   ],
+   "hard_ratio": 0.571,
+   "jargon": [
+    "조음"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 14
+  },
+  {
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 402,
+   "kind": "attr",
+   "text": "조음 교정 전후 오차 (웹캠)",
+   "severity": 8.5,
+   "max_syl": 10,
+   "long": [],
+   "hard": [
+    "조음",
+    "교정",
+    "전후",
+    "오차",
+    "웹캠"
+   ],
+   "hard_ratio": 1.0,
+   "jargon": [
+    "조음"
+   ],
+   "deficit": [
+    "교정"
+   ],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 5
+  },
+  {
+   "file": "backend/curriculum.py",
+   "line": 41,
+   "kind": "dict:teach",
+   "text": "좌우로 퍼지는 '이' 계열. 둥근 원순모음과 정반대라 구별이 쉽다.",
+   "severity": 8.0,
+   "max_syl": 16,
+   "long": [],
+   "hard": [
+    "좌우",
+    "퍼지다",
+    "계열",
+    "원순",
+    "모음",
+    "정반대",
+    "구별"
+   ],
+   "hard_ratio": 0.7,
+   "jargon": [
+    "원순모음"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 10
+  },
+  {
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 187,
+   "kind": "jsx",
+   "text": "교정 세션 ○회, 목표 대비 평균 오차 ○ → ○ (세션 처음 → 끝, 0에 가까울수록 목표와 가까움)",
+   "severity": 7.7,
+   "max_syl": 30,
+   "long": [],
+   "hard": [
+    "교정",
+    "세션",
+    "회",
+    "대비",
+    "평균",
+    "오차",
+    "세션"
+   ],
+   "hard_ratio": 0.538,
+   "jargon": [],
+   "deficit": [
+    "교정"
+   ],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 13
+  },
+  {
+   "file": "frontend/src/components/WebcamMouthCheck.jsx",
+   "line": 334,
+   "kind": "jsx",
+   "text": "조음 교정 · 관찰 계수 (축 E)",
+   "severity": 7.6,
+   "max_syl": 9,
+   "long": [],
+   "hard": [
+    "조음",
+    "교정",
+    "관찰",
+    "계수"
+   ],
+   "hard_ratio": 1.0,
+   "jargon": [
+    "조음"
+   ],
+   "deficit": [
+    "교정"
+   ],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 4
+  },
+  {
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 58,
+   "kind": "jsx",
+   "text": "서비스는 연구·교육용 프로토타입으로 제공되며, 학습 콘텐츠와 채점 결과의 정확성을 보증하지 않습니다. 서비스는 사전 고지 후 기능을 변경하거나 종료할 수 있습니다.",
+   "severity": 7.4,
+   "max_syl": 43,
+   "long": [
+    "서비스는 연구·교육용 프로토타입으로 제공되며, 학습 콘텐츠와 채점 결과의 정확성을 보증하지 않습니다."
+   ],
+   "hard": [
+    "콘텐츠",
+    "채점",
+    "정확",
+    "보증",
+    "고지",
+    "기능",
+    "변경",
+    "종료"
+   ],
+   "hard_ratio": 0.421,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 19
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 96,
+   "kind": "string",
+   "text": "불꽃은 연속 학습 일수, 별은 누적 XP, 육각형은 레벨이에요. 연속으로 공부할수록 같은 문제에서 받는 XP가 늘어요(최대 3배). 휴대폰에서는 오른쪽 위 이름 첫 글자를 누르면 프로필로 가요.",
+   "severity": 7.3,
+   "max_syl": 25,
+   "long": [],
+   "hard": [
+    "연속",
+    "일수",
+    "누적",
+    "XP",
+    "육각",
+    "레벨",
+    "연속",
+    "XP",
+    "휴대폰",
+    "프로필"
+   ],
+   "hard_ratio": 0.37,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 27
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 114,
+   "kind": "string",
+   "text": "보고 있는 단계의 진행률이 떠요. 숫자는 숙달 판정에 필요한 최소 시도 수 대비 푼 수예요. 다 채웠는데 정답률이 모자라면 '숙달 중'으로 보여요. 처음이면 학습 시작하기, 이어서라면 이어서 학습하기를 눌러요.",
+   "severity": 7.2,
+   "max_syl": 26,
+   "long": [],
+   "hard": [
+    "단계",
+    "진행",
+    "숙달",
+    "판정",
+    "최소",
+    "시도",
+    "대비",
+    "숙달",
+    "이어서",
+    "잇다"
+   ],
+   "hard_ratio": 0.357,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 28
+  },
+  {
+   "file": "frontend/src/components/VocalTractSimulator.jsx",
+   "line": 326,
+   "kind": "jsx",
+   "text": "ㅗ·ㅜ는 입술 원순을 함께 올려야 제 소리가 나요. 발성 소리는 공명(F1·F2)만 흉내 낸 근사 합성이고,\n성도 단면과 합성음은 VocalTractLab으로 미리 계산했어요. 같은 소리를 내는 혀 모양은 여러 가지라 단면의 혀는 한 가지 예시예요.",
+   "severity": 7.2,
+   "max_syl": 28,
+   "long": [],
+   "hard": [
+    "원순",
+    "올리다",
+    "발성",
+    "공명",
+    "흉내",
+    "근사",
+    "단면",
+    "VocalTractLab",
+    "단면",
+    "예시"
+   ],
+   "hard_ratio": 0.357,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 28
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 184,
+   "kind": "string",
+   "text": "입모양 교실에서 내 입모양을 목표와 비교해 점수와 교정 문구를 바로 보여 주고, 아바타가 내 입을 따라 해요. 영상은 기기 밖으로 나가지 않아요.",
+   "severity": 7.1,
+   "max_syl": 43,
+   "long": [
+    "입모양 교실에서 내 입모양을 목표와 비교해 점수와 교정 문구를 바로 보여 주고, 아바타가 내 입을 따라 해요."
+   ],
+   "hard": [
+    "입모양",
+    "입모양",
+    "교정",
+    "문구",
+    "아바타",
+    "기기"
+   ],
+   "hard_ratio": 0.273,
+   "jargon": [],
+   "deficit": [
+    "교정"
+   ],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 22
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 132,
+   "kind": "string",
+   "text": "3·4단계 아바타 아래에서 재생 속도를 바꾸고 투명 두상, 측면 보기, 성도 단면을 켜요. 측면 보기에서는 입술을 내밀고 모으는 움직임이 잘 보여요.",
+   "severity": 7.0,
+   "max_syl": 32,
+   "long": [
+    "3·4단계 아바타 아래에서 재생 속도를 바꾸고 투명 두상, 측면 보기, 성도 단면을 켜요."
+   ],
+   "hard": [
+    "단계",
+    "아바타",
+    "재생",
+    "투명",
+    "측면",
+    "면",
+    "측면",
+    "보기",
+    "움직임"
+   ],
+   "hard_ratio": 0.409,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 22
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 186,
+   "kind": "string",
+   "text": "단어 단계를 숙달하면 엔드리스 단어를 1.25배, 1.6배, 2배(문장 낭독의 음절 속도에 가까움)로 봐요. 가장 빠른 속도에서 최근 12문항 중 10개를 맞히면 다음 속도예요. 복습은 숙달한 단계만 1.25배예요.",
+   "severity": 6.9,
+   "max_syl": 35,
+   "long": [
+    "단어 단계를 숙달하면 엔드리스 단어를 1.25배, 1.6배, 2배(문장 낭독의 음절 속도에 가까움)로 봐요."
+   ],
+   "hard": [
+    "단계",
+    "숙달",
+    "엔드리스",
+    "낭독",
+    "음절",
+    "문항",
+    "맞히다",
+    "숙달",
+    "단계"
+   ],
+   "hard_ratio": 0.346,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 26
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 127,
+   "kind": "string",
+   "text": "틀리면 어느 소리를 무엇으로 읽었는지, 원래 같은 입모양 짝인지 알려 주고 뜻은 수어로도 봐요. 입 옆 기호는 바람이 거센소리, 채운 마름모가 된소리, 물결이 콧소리이고 숙달할수록 흐려져요.",
+   "severity": 6.8,
+   "max_syl": 38,
+   "long": [
+    "틀리면 어느 소리를 무엇으로 읽었는지, 원래 같은 입모양 짝인지 알려 주고 뜻은 수어로도 봐요.",
+    "입 옆 기호는 바람이 거센소리, 채운 마름모가 된소리, 물결이 콧소리이고 숙달할수록 흐려져요."
+   ],
+   "hard": [
+    "입모양",
+    "짝",
+    "수어",
+    "거세다",
+    "마름모",
+    "물결",
+    "콧소리",
+    "숙달"
+   ],
+   "hard_ratio": 0.286,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 28
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 221,
+   "kind": "string",
+   "text": "전체 통계 아래 링크로 들어가요. 입모양 유형별 점수와 자주 헷갈린 짝을 보여 주고, 원래 같은 입모양인 짝은 따로 표시해요.",
+   "severity": 6.7,
+   "max_syl": 36,
+   "long": [
+    "입모양 유형별 점수와 자주 헷갈린 짝을 보여 주고, 원래 같은 입모양인 짝은 따로 표시해요."
+   ],
+   "hard": [
+    "통계",
+    "링크",
+    "입모양",
+    "유형",
+    "헷갈리다",
+    "짝",
+    "입모양",
+    "짝"
+   ],
+   "hard_ratio": 0.421,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 19
+  },
+  {
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 185,
+   "kind": "jsx",
+   "text": "5. 웹캠 조음 교정",
+   "severity": 6.7,
+   "max_syl": 6,
+   "long": [],
+   "hard": [
+    "웹캠",
+    "조음",
+    "교정"
+   ],
+   "hard_ratio": 1.0,
+   "jargon": [
+    "조음"
+   ],
+   "deficit": [
+    "교정"
+   ],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 3
+  },
+  {
+   "file": "frontend/src/components/guide/GuideMockups.jsx",
+   "line": 918,
+   "kind": "string",
+   "text": "휴대폰 학습 탭 예시. 독화·발화 전환, 단계 이름과 가이드 버튼, DOKA 단계 노드와 아래 레슨 카드.",
+   "severity": 6.6,
+   "max_syl": 27,
+   "long": [],
+   "hard": [
+    "휴대폰",
+    "예시",
+    "독화",
+    "발화",
+    "전환",
+    "단계",
+    "단계",
+    "레슨"
+   ],
+   "hard_ratio": 0.571,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 14
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 88,
+   "kind": "string",
+   "text": "단계마다 정한 횟수 이상 풀고 최근 정답률이 기준을 넘으면 숙달이에요. 문장은 60점, 대화는 55점 이상을 맞힌 것으로 세요. 숙달하면 다음 단계가 열리고, 한 번 숙달한 단계는 다시 잠기지 않아요.",
+   "severity": 6.5,
+   "max_syl": 29,
+   "long": [],
+   "hard": [
+    "단계",
+    "횟수",
+    "숙달",
+    "맞히다",
+    "숙달",
+    "단계",
+    "숙달",
+    "단계",
+    "잠기다"
+   ],
+   "hard_ratio": 0.36,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 25
+  },
+  {
+   "file": "frontend/src/components/guide/GuideMockups.jsx",
+   "line": 922,
+   "kind": "string",
+   "text": "단어 독화 오답 예시. 고른 보기는 빨강, 정답 보기는 초록 테두리, 아래 빨간 결과 바에 정답이 나온다.",
+   "severity": 6.5,
+   "max_syl": 31,
+   "long": [
+    "고른 보기는 빨강, 정답 보기는 초록 테두리, 아래 빨간 결과 바에 정답이 나온다."
+   ],
+   "hard": [
+    "독화",
+    "오답",
+    "예시",
+    "보기",
+    "빨강",
+    "보기",
+    "초록",
+    "테두리"
+   ],
+   "hard_ratio": 0.5,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 16
+  },
+  {
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 424,
+   "kind": "jsx",
+   "text": "입을 벌린 정도·입술 오므림·입술 닫힘을 목표와 비교한 평균 차이(0~100)입니다. 혀처럼 밖에서 안 보이는\n조음은 포함되지 않아요. 영상은 기기 밖으로 나가지 않고 요약 수치만 저장됩니다.",
+   "severity": 6.4,
+   "max_syl": 29,
+   "long": [],
+   "hard": [
+    "오므리다",
+    "평균",
+    "조음",
+    "기기",
+    "요약",
+    "수치",
+    "저장"
+   ],
+   "hard_ratio": 0.269,
+   "jargon": [
+    "조음"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 26
+  },
+  {
+   "file": "frontend/src/components/WebcamMouthCheck.jsx",
+   "line": 379,
+   "kind": "jsx",
+   "text": "입술 기하 지표 (좌표 기반·양안거리 정규화)",
+   "severity": 6.3,
+   "max_syl": 17,
+   "long": [],
+   "hard": [
+    "기하",
+    "지표",
+    "좌표",
+    "기반",
+    "양안"
+   ],
+   "hard_ratio": 0.714,
+   "jargon": [
+    "정규화"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 7
+  },
+  {
+   "file": "frontend/src/pages/VisemeLiteracy.jsx",
+   "line": 294,
+   "kind": "jsx",
+   "text": "최소대립쌍 예시 — 같아 보이는(●) / 다르게 보이는(○) 쌍",
+   "severity": 6.1,
+   "max_syl": 19,
+   "long": [],
+   "hard": [
+    "최소",
+    "대립",
+    "쌍",
+    "예시",
+    "쌍"
+   ],
+   "hard_ratio": 0.556,
+   "jargon": [
+    "최소대립쌍"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 9
+  },
+  {
+   "file": "backend/speak_curriculum.py",
+   "line": 127,
+   "kind": "dict:guide",
+   "text": "아바타의 입 모양을 따라 모음마다 입 벌림(아는 크게, 이·우·으는 작게)과 입술 모양(오·우는 동그랗게, 이·으는 옆으로)을 또렷하게 바꿔 보세요. 오/우, 어/으처럼 입 모양이 비슷한 짝은 턱을 벌리는 정도(오·어가 더 크게)로 구별해요.",
+   "severity": 5.7,
+   "max_syl": 55,
+   "long": [
+    "아바타의 입 모양을 따라 모음마다 입 벌림(아는 크게, 이·우·으는 작게)과 입술 모양(오·우는 동그랗게, 이·으는 옆으로)을 또렷하게 바꿔 보세요.",
+    "오/우, 어/으처럼 입 모양이 비슷한 짝은 턱을 벌리는 정도(오·어가 더 크게)로 구별해요."
+   ],
+   "hard": [
+    "아바타",
+    "모음",
+    "동그랗다",
+    "또렷하다",
+    "짝",
+    "구별"
+   ],
+   "hard_ratio": 0.194,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 31
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 76,
+   "kind": "string",
+   "text": "자가진단을 건너뛰면 1단계부터 시작해요. 프로필의 자가진단 다시 하기로 언제든 받을 수 있어요.",
+   "severity": 5.7,
+   "max_syl": 22,
+   "long": [],
+   "hard": [
+    "자가",
+    "진단",
+    "건너뛰다",
+    "단계",
+    "프로필",
+    "자가",
+    "진단"
+   ],
+   "hard_ratio": 0.538,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 13
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 179,
+   "kind": "string",
+   "text": "문장을 입력하면 한국수어 어순으로 옮기고 단어마다 국립국어원 수어 영상을 보여줘요. 사전에 없는 말은 지문자로 보여요. 공식 통역은 아니에요.",
+   "severity": 5.7,
+   "max_syl": 36,
+   "long": [
+    "문장을 입력하면 한국수어 어순으로 옮기고 단어마다 국립국어원 수어 영상을 보여줘요."
+   ],
+   "hard": [
+    "입력",
+    "수어",
+    "국어원",
+    "수어",
+    "지문",
+    "공식",
+    "통역"
+   ],
+   "hard_ratio": 0.368,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 19
+  },
+  {
+   "file": "frontend/src/components/guide/GuideMockups.jsx",
+   "line": 924,
+   "kind": "string",
+   "text": "발화 문항 예시. 말할 단어와 아바타 입모양, 아래 마이크 버튼. 녹음 중에는 파형이 움직인다.",
+   "severity": 5.7,
+   "max_syl": 18,
+   "long": [],
+   "hard": [
+    "발화",
+    "문항",
+    "예시",
+    "아바타",
+    "입모양",
+    "마이크",
+    "파형"
+   ],
+   "hard_ratio": 0.538,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 13
+  },
+  {
+   "file": "backend/speak_curriculum.py",
+   "line": 135,
+   "kind": "dict:desc",
+   "text": "입술소리부터 · 최소대립쌍 · 마찰음",
+   "severity": 5.6,
+   "max_syl": 14,
+   "long": [],
+   "hard": [
+    "최소",
+    "대립",
+    "쌍",
+    "마찰음"
+   ],
+   "hard_ratio": 1.0,
+   "jargon": [
+    "최소대립쌍"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 4
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 139,
+   "kind": "string",
+   "text": "아바타의 입모양을 보고 따라 해요. 발성·운율 단계는 목소리 크기·높낮이 그래프를 보며 연습해요.",
+   "severity": 5.6,
+   "max_syl": 25,
+   "long": [],
+   "hard": [
+    "아바타",
+    "입모양",
+    "발성",
+    "운율",
+    "단계",
+    "높낮이",
+    "그래프"
+   ],
+   "hard_ratio": 0.5,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 14
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 148,
+   "kind": "string",
+   "text": "앞 단계를 숙달하면 다음 단계가 열려요. 오른쪽 숫자는 숙달에 필요한 최소 횟수와 최근 통과율이에요.",
+   "severity": 5.6,
+   "max_syl": 25,
+   "long": [],
+   "hard": [
+    "단계",
+    "숙달",
+    "단계",
+    "숙달",
+    "최소",
+    "횟수",
+    "통과"
+   ],
+   "hard_ratio": 0.5,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 14
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 155,
+   "kind": "string",
+   "text": "입술소리부터 13개 소리를 최소대립쌍으로 연습해요. 불/풀, 달/탈처럼 입모양이 같은 짝은 숨의 세기가 달라요. 거센소리는 손바닥을 입 앞에 대고 바람이 세게 닿게 내 보세요. 사·자·차·하처럼 입 안이나 목에서 나는 소리도 연습해요.",
+   "severity": 5.6,
+   "max_syl": 25,
+   "long": [],
+   "hard": [
+    "최소",
+    "대립",
+    "쌍",
+    "입모양",
+    "짝",
+    "거세다",
+    "대다"
+   ],
+   "hard_ratio": 0.206,
+   "jargon": [
+    "최소대립쌍"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 34
+  },
+  {
+   "file": "frontend/src/components/guide/GuideMockups.jsx",
+   "line": 920,
+   "kind": "string",
+   "text": "단어 독화 문항 예시. 왼쪽 위에 화자 이름이 붙은 입모양 영상을 보고 보기를 고른 뒤 확인을 누르면 초록 결과 바에 정답이에요가 나온다.",
+   "severity": 5.6,
+   "max_syl": 46,
+   "long": [
+    "왼쪽 위에 화자 이름이 붙은 입모양 영상을 보고 보기를 고른 뒤 확인을 누르면 초록 결과 바에 정답이에요가 나온다."
+   ],
+   "hard": [
+    "독화",
+    "문항",
+    "예시",
+    "화자",
+    "입모양",
+    "초록"
+   ],
+   "hard_ratio": 0.3,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 20
+  },
+  {
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 260,
+   "kind": "jsx",
+   "text": "훈련 전에 사전(A), 훈련 뒤에 사후(B)를 한 번씩 보면 향상도를 비교해요. 각 24문항, 5분 안팎.",
+   "severity": 5.6,
+   "max_syl": 26,
+   "long": [],
+   "hard": [
+    "훈련",
+    "훈련",
+    "사후",
+    "향상",
+    "도",
+    "문항",
+    "안팎"
+   ],
+   "hard_ratio": 0.5,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 14
+  },
+  {
+   "file": "frontend/src/pages/Legal.jsx",
+   "line": 64,
+   "kind": "jsx",
+   "text": "이용 목적 — 계정 식별, 학습 진행 관리, 약점에 맞춘 문항 추천, 학습 효과 분석.",
+   "severity": 5.6,
+   "max_syl": 29,
+   "long": [],
+   "hard": [
+    "계정",
+    "식별",
+    "진행",
+    "약점",
+    "문항",
+    "추천",
+    "분석"
+   ],
+   "hard_ratio": 0.5,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 14
+  },
+  {
+   "file": "frontend/src/pages/ProfilePage.jsx",
+   "line": 241,
+   "kind": "jsx",
+   "text": "안내받은 참여 코드를 입력해 주세요. 학습 기록은 이름·이메일 없이 가명으로만 연구에 쓰여요.",
+   "severity": 5.6,
+   "max_syl": 23,
+   "long": [],
+   "hard": [
+    "안내",
+    "참여",
+    "코드",
+    "입력",
+    "기록",
+    "이메일",
+    "가명"
+   ],
+   "hard_ratio": 0.5,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 14
+  },
+  {
+   "file": "backend/curriculum.py",
+   "line": 155,
+   "kind": "dict:desc",
+   "text": "최소대립쌍으로 단어 독화",
+   "severity": 5.5,
+   "max_syl": 11,
+   "long": [],
+   "hard": [
+    "최소",
+    "대립",
+    "쌍",
+    "독화"
+   ],
+   "hard_ratio": 0.8,
+   "jargon": [
+    "최소대립쌍"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 5
+  },
+  {
+   "file": "frontend/src/pages/ProfilePage.jsx",
+   "line": 354,
+   "kind": "jsx",
+   "text": "파일럿에 참여 중이라 사전·사후 검사 기록은 남아요. 참여를 그만두거나 자료 삭제를 원하면 연구진에게 알려 주세요.",
+   "severity": 5.5,
+   "max_syl": 26,
+   "long": [],
+   "hard": [
+    "파일럿",
+    "참여",
+    "사후",
+    "기록",
+    "참여",
+    "삭제",
+    "연구진"
+   ],
+   "hard_ratio": 0.467,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 15
+  },
+  {
+   "file": "frontend/src/components/A11ySettings.jsx",
+   "line": 132,
+   "kind": "jsx",
+   "text": "계정·데이터 삭제 (프로필 → 계정 설정)",
+   "severity": 5.4,
+   "max_syl": 14,
+   "long": [],
+   "hard": [
+    "계정",
+    "데이터",
+    "삭제",
+    "프로필",
+    "계정",
+    "설정"
+   ],
+   "hard_ratio": 1.0,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 6
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 162,
+   "kind": "string",
+   "text": "최근 통과율과 시도 수가 문항 아래에 보여요. 모음·자음은 그 소리가 든 낱말도 최근 3번 중 2번 합격해야 숙달이에요.",
+   "severity": 5.4,
+   "max_syl": 27,
+   "long": [],
+   "hard": [
+    "통과",
+    "시도",
+    "문항",
+    "모음",
+    "자음",
+    "낱말",
+    "숙달"
+   ],
+   "hard_ratio": 0.438,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 16
+  },
+  {
+   "file": "frontend/src/pages/EvalReport.jsx",
+   "line": 402,
+   "kind": "attr",
+   "text": "교정 세션 ○회 · 0에 가까울수록 목표 입모양",
+   "severity": 5.4,
+   "max_syl": 16,
+   "long": [],
+   "hard": [
+    "교정",
+    "세션",
+    "회",
+    "입모양"
+   ],
+   "hard_ratio": 0.667,
+   "jargon": [],
+   "deficit": [
+    "교정"
+   ],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 6
+  },
+  {
+   "file": "backend/curriculum.py",
+   "line": 93,
+   "kind": "dict:teach",
+   "text": "치경음과 겉모습이 비슷해 헷갈린다. 살짝 내미는 느낌이 유일한 힌트.",
+   "severity": 5.2,
+   "max_syl": 15,
+   "long": [],
+   "hard": [
+    "겉모습",
+    "헷갈리다",
+    "유일",
+    "힌트"
+   ],
+   "hard_ratio": 0.5,
+   "jargon": [
+    "치경음"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 8
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 110,
+   "kind": "string",
+   "text": "독화 · 발화를 골라요. 트랙마다 경로와 진도가 따로 저장돼요.",
+   "severity": 5.2,
+   "max_syl": 16,
+   "long": [],
+   "hard": [
+    "독화",
+    "발화",
+    "트랙",
+    "경로",
+    "진도",
+    "저장"
+   ],
+   "hard_ratio": 0.75,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 8
+  },
+  {
+   "file": "frontend/src/components/LipSyncPlayer3D.jsx",
+   "line": 356,
+   "kind": "attr",
+   "text": "측면 성도 단면으로 혀·입술·턱 조음 보기",
+   "severity": 5.2,
+   "max_syl": 16,
+   "long": [],
+   "hard": [
+    "측면",
+    "단면",
+    "조음",
+    "보기"
+   ],
+   "hard_ratio": 0.5,
+   "jargon": [
+    "조음"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 8
+  },
+  {
+   "file": "frontend/src/features/dashboard/Dashboard.jsx",
+   "line": 29,
+   "kind": "string",
+   "text": "자음·모음 입모양부터 상황별 문장·대화까지 단계로 익혀요.",
+   "severity": 5.2,
+   "max_syl": 24,
+   "long": [],
+   "hard": [
+    "자음",
+    "모음",
+    "입모양",
+    "상황",
+    "단계",
+    "익히다"
+   ],
+   "hard_ratio": 0.75,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 8
+  },
+  {
+   "file": "frontend/src/pages/VisemeLiteracy.jsx",
+   "line": 113,
+   "kind": "attr",
+   "text": "측면 성도 단면으로 혀·입술·턱 조음 보기",
+   "severity": 5.2,
+   "max_syl": 16,
+   "long": [],
+   "hard": [
+    "측면",
+    "단면",
+    "조음",
+    "보기"
+   ],
+   "hard_ratio": 0.5,
+   "jargon": [
+    "조음"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 8
+  },
+  {
+   "file": "backend/curriculum.py",
+   "line": 63,
+   "kind": "dict:teach",
+   "text": "조음이 입 안쪽이라 ㄷ·ㄴ·ㄹ·ㅅ… 서로 거의 구별 불가. 문맥으로 판단.",
+   "severity": 5.1,
+   "max_syl": 8,
+   "long": [],
+   "hard": [
+    "조음",
+    "구별",
+    "불가",
+    "문맥"
+   ],
+   "hard_ratio": 0.444,
+   "jargon": [
+    "조음"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 9
+  },
+  {
+   "file": "frontend/src/components/CueBadges.jsx",
+   "line": 137,
+   "kind": "attr",
+   "text": "아직 약한 음소에만 기호를 남깁니다(개인 학습기록 기반).",
+   "severity": 5.1,
+   "max_syl": 23,
+   "long": [],
+   "hard": [
+    "음소",
+    "기호",
+    "기록",
+    "기반"
+   ],
+   "hard_ratio": 0.444,
+   "jargon": [
+    "음소"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 9
+  },
+  {
+   "file": "frontend/src/pages/WordStage.jsx",
+   "line": 399,
+   "kind": "jsx",
+   "text": "보기는 모두 입모양이 비슷해서 눈만으로는 가르기 어려워요. 앞뒤 말의 흐름으로 고르는 연습이에요.\n이 문항은 단어 단계 숙달에는 들어가지 않아요.",
+   "severity": 5.1,
+   "max_syl": 25,
+   "long": [],
+   "hard": [
+    "보기",
+    "입모양",
+    "가르다",
+    "흐름",
+    "문항",
+    "단계",
+    "숙달"
+   ],
+   "hard_ratio": 0.368,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 19
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 122,
+   "kind": "string",
+   "text": "입모양이 계속 반복돼요. 사람마다 입 움직임이 달라서 왼쪽 위 화자 1~4가 레슨마다 바뀌고, 다섯 레슨에 한 번은 기본 화자예요. 대화·복습도 같아요.",
+   "severity": 5.0,
+   "max_syl": 39,
+   "long": [
+    "사람마다 입 움직임이 달라서 왼쪽 위 화자 1~4가 레슨마다 바뀌고, 다섯 레슨에 한 번은 기본 화자예요."
+   ],
+   "hard": [
+    "입모양",
+    "움직임",
+    "화자",
+    "레슨",
+    "레슨",
+    "화자"
+   ],
+   "hard_ratio": 0.316,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": false,
+   "n_words": 19
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 230,
+   "kind": "string",
+   "text": "이름 · 이메일 · 비밀번호를 바꾸고, 로그아웃과 계정 삭제도 여기서 해요.",
+   "severity": 5.0,
+   "max_syl": 28,
+   "long": [],
+   "hard": [
+    "이메일",
+    "비밀번호",
+    "로그",
+    "아웃",
+    "계정",
+    "삭제"
+   ],
+   "hard_ratio": 0.6,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 10
+  },
+  {
+   "file": "frontend/src/pages/AnalysisDetail.jsx",
+   "line": 16,
+   "kind": "string",
+   "text": "독화는 푼 문항 전체의 정확도, 말하기는 발화 평균 점수를 비교합니다.",
+   "severity": 5.0,
+   "max_syl": 28,
+   "long": [],
+   "hard": [
+    "독화",
+    "문항",
+    "정확도",
+    "말하기",
+    "발화",
+    "평균"
+   ],
+   "hard_ratio": 0.6,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 10
+  },
+  {
+   "file": "frontend/src/pages/EndlessPractice.jsx",
+   "line": 42,
+   "kind": "jsx",
+   "text": "숙달도가 낮은 음소가 계속 출제돼요. 원할 때 멈출 수 있어요.",
+   "severity": 5.0,
+   "max_syl": 15,
+   "long": [],
+   "hard": [
+    "숙달",
+    "도",
+    "음소",
+    "출제"
+   ],
+   "hard_ratio": 0.4,
+   "jargon": [
+    "음소"
+   ],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 10
+  },
+  {
+   "file": "frontend/src/components/GuideModal.jsx",
+   "line": 97,
+   "kind": "string",
+   "text": "넓은 화면(가로 1280px 이상)에서 오른쪽에 보여요. 오늘의 과제, 다시 풀 오답 수(틀린 문장·말하기 포함), 북마크 수를 보여줘요. 과제 탭에서는 레벨 진행, 복습 탭에서는 이번 주에 학습한 날로 바뀌어요.",
+   "severity": 4.9,
+   "max_syl": 29,
+   "long": [],
+   "hard": [
+    "화면",
+    "px",
+    "오답",
+    "말하기",
+    "포함",
+    "마크",
+    "레벨",
+    "진행"
+   ],
+   "hard_ratio": 0.258,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 31
+  },
+  {
+   "file": "frontend/src/components/WebcamMouthCheck.jsx",
+   "line": 393,
+   "kind": "jsx",
+   "text": "입술 너머 자질 추정 · 학습모델(연구용, 음절 수준 검증 실패)",
+   "severity": 4.9,
+   "max_syl": 23,
+   "long": [],
+   "hard": [
+    "자질",
+    "추정",
+    "연구용",
+    "음절",
+    "수준",
+    "검증"
+   ],
+   "hard_ratio": 0.545,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 11
+  },
+  {
+   "file": "frontend/src/config/tracks.js",
+   "line": 44,
+   "kind": "string",
+   "text": "내 발음을 눈으로 보며 다듬는 훈련이에요. 마이크로 녹음하면 AI가 전사·채점하고 코칭해줘요.",
+   "severity": 4.9,
+   "max_syl": 20,
+   "long": [],
+   "hard": [
+    "내",
+    "다듬다",
+    "훈련",
+    "마이크",
+    "전사",
+    "채점"
+   ],
+   "hard_ratio": 0.545,
+   "jargon": [],
+   "deficit": [],
+   "vocab_ok": false,
+   "len_ok": true,
+   "n_words": 11
+  }
+ ],
+ "top_unlisted": [
+  {
+   "word": "입모양",
+   "count": 195,
+   "grade": "목록 없음",
+   "zipf": 0.0
+  },
+  {
+   "word": "단계",
+   "count": 91,
+   "grade": "C",
+   "zipf": 4.95
+  },
+  {
+   "word": "독화",
+   "count": 66,
+   "grade": "목록 없음",
+   "zipf": 0.0
+  },
+  {
+   "word": "모음",
+   "count": 60,
+   "grade": "목록 없음",
+   "zipf": 4.45
+  },
+  {
+   "word": "수어",
+   "count": 45,
+   "grade": "목록 없음",
+   "zipf": 3.25
+  },
+  {
+   "word": "기록",
+   "count": 44,
+   "grade": "C",
+   "zipf": 5.37
+  },
+  {
+   "word": "숙달",
+   "count": 42,
+   "grade": "목록 없음",
+   "zipf": 0.0
+  },
+  {
+   "word": "문항",
+   "count": 41,
+   "grade": "목록 없음",
+   "zipf": 3.51
+  },
+  {
+   "word": "말하기",
+   "count": 37,
+   "grade": "목록 없음",
+   "zipf": 0.0
+  },
+  {
+   "word": "정확도",
+   "count": 36,
+   "grade": "목록 없음",
+   "zipf": 0.0
+  },
+  {
+   "word": "입력",
+   "count": 34,
+   "grade": "C",
+   "zipf": 4.45
+  },
+  {
+   "word": "발화",
+   "count": 33,
+   "grade": "목록 없음",
+   "zipf": 3.49
+  },
+  {
+   "word": "레슨",
+   "count": 32,
+   "grade": "목록 없음",
+   "zipf": 3.58
+  },
+  {
+   "word": "완료",
+   "count": 31,
+   "grade": "목록 없음",
+   "zipf": 4.79
+  },
+  {
+   "word": "화자",
+   "count": 30,
+   "grade": "목록 없음",
+   "zipf": 3.51
+  },
+  {
+   "word": "불러오다",
+   "count": 29,
+   "grade": "목록 없음",
+   "zipf": 0.0
+  },
+  {
+   "word": "계정",
+   "count": 28,
+   "grade": "목록 없음",
+   "zipf": 4.51
+  },
+  {
+   "word": "마크",
+   "count": 28,
+   "grade": "C",
+   "zipf": 4.88
+  },
+  {
+   "word": "문맥",
+   "count": 27,
+   "grade": "목록 없음",
+   "zipf": 3.48
+  },
+  {
+   "word": "아바타",
+   "count": 26,
+   "grade": "목록 없음",
+   "zipf": 3.74
+  },
+  {
+   "word": "억양",
+   "count": 26,
+   "grade": "목록 없음",
+   "zipf": 3.42
+  },
+  {
+   "word": "항목",
+   "count": 26,
+   "grade": "목록 없음",
+   "zipf": 4.57
+  },
+  {
+   "word": "저장",
+   "count": 24,
+   "grade": "목록 없음",
+   "zipf": 4.78
+  },
+  {
+   "word": "분석",
+   "count": 24,
+   "grade": "C",
+   "zipf": 5.04
+  },
+  {
+   "word": "상황",
+   "count": 23,
+   "grade": "C",
+   "zipf": 5.39
+  },
+  {
+   "word": "음절",
+   "count": 23,
+   "grade": "목록 없음",
+   "zipf": 3.16
+  },
+  {
+   "word": "보기",
+   "count": 23,
+   "grade": "목록 없음",
+   "zipf": 0.0
+  },
+  {
+   "word": "오답",
+   "count": 22,
+   "grade": "목록 없음",
+   "zipf": 0.0
+  },
+  {
+   "word": "처리",
+   "count": 21,
+   "grade": "C",
+   "zipf": 5.11
+  },
+  {
+   "word": "음성",
+   "count": 21,
+   "grade": "C",
+   "zipf": 4.54
+  },
+  {
+   "word": "이메일",
+   "count": 21,
+   "grade": "목록 없음",
+   "zipf": 4.39
+  },
+  {
+   "word": "사후",
+   "count": 20,
+   "grade": "목록 없음",
+   "zipf": 4.18
+  },
+  {
+   "word": "설정",
+   "count": 19,
+   "grade": "목록 없음",
+   "zipf": 4.96
+  },
+  {
+   "word": "진행",
+   "count": 19,
+   "grade": "C",
+   "zipf": 5.47
+  },
+  {
+   "word": "예시",
+   "count": 19,
+   "grade": "목록 없음",
+   "zipf": 4.1
+  },
+  {
+   "word": "웹캠",
+   "count": 18,
+   "grade": "목록 없음",
+   "zipf": 0.0
+  },
+  {
+   "word": "건너뛰다",
+   "count": 17,
+   "grade": "목록 없음",
+   "zipf": 0.0
+  },
+  {
+   "word": "XP",
+   "count": 17,
+   "grade": "목록 없음",
+   "zipf": 0.0
+  },
+  {
+   "word": "연속",
+   "count": 17,
+   "grade": "C",
+   "zipf": 4.76
+  },
+  {
+   "word": "평균",
+   "count": 17,
+   "grade": "C",
+   "zipf": 4.8
+  },
+  {
+   "word": "참여",
+   "count": 17,
+   "grade": "C",
+   "zipf": 5.5
+  },
+  {
+   "word": "초기",
+   "count": 16,
+   "grade": "C",
+   "zipf": 4.79
+  },
+  {
+   "word": "혀끝",
+   "count": 16,
+   "grade": "목록 없음",
+   "zipf": 0.0
+  },
+  {
+   "word": "레벨",
+   "count": 15,
+   "grade": "목록 없음",
+   "zipf": 4.51
+  },
+  {
+   "word": "자음",
+   "count": 15,
+   "grade": "목록 없음",
+   "zipf": 3.55
+  },
+  {
+   "word": "조음",
+   "count": 15,
+   "grade": "목록 없음",
+   "zipf": 3.33
+  },
+  {
+   "word": "삭제",
+   "count": 14,
+   "grade": "목록 없음",
+   "zipf": 4.66
+  },
+  {
+   "word": "올리다",
+   "count": 14,
+   "grade": "C",
+   "zipf": 0.0
+  },
+  {
+   "word": "재생",
+   "count": 14,
+   "grade": "C",
+   "zipf": 4.42
+  },
+  {
+   "word": "곡선",
+   "count": 14,
+   "grade": "목록 없음",
+   "zipf": 3.89
+  },
+  {
+   "word": "단면",
+   "count": 14,
+   "grade": "목록 없음",
+   "zipf": 3.71
+  },
+  {
+   "word": "채점",
+   "count": 13,
+   "grade": "C",
+   "zipf": 3.3
+  },
+  {
+   "word": "실전",
+   "count": 13,
+   "grade": "목록 없음",
+   "zipf": 4.26
+  },
+  {
+   "word": "구별",
+   "count": 13,
+   "grade": "C",
+   "zipf": 4.17
+  },
+  {
+   "word": "트랙",
+   "count": 13,
+   "grade": "목록 없음",
+   "zipf": 4.34
+  },
+  {
+   "word": "잇몸",
+   "count": 13,
+   "grade": "목록 없음",
+   "zipf": 3.32
+  },
+  {
+   "word": "프로필",
+   "count": 12,
+   "grade": "목록 없음",
+   "zipf": 4.33
+  },
+  {
+   "word": "기기",
+   "count": 12,
+   "grade": "C",
+   "zipf": 4.42
+  },
+  {
+   "word": "대다",
+   "count": 12,
+   "grade": "C",
+   "zipf": 0.0
+  },
+  {
+   "word": "유형",
+   "count": 12,
+   "grade": "C",
+   "zipf": 4.59
+  }
+ ]
+}

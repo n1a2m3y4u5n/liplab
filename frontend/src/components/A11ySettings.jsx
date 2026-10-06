@@ -133,7 +133,7 @@ export default function A11ySettings() {
               className="flex w-full items-center gap-2 rounded-lg border border-rose-200 px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50">
               계정·데이터 삭제 <span className="text-[11px] text-rose-400">(프로필 → 계정 설정)</span>
             </button>
-            <p className="mt-1.5 text-[11px] leading-snug text-gray-400">웹캠 영상은 기기 안에서만 처리돼요. 음성은 채점할 때만 서버로 보내 메모리에서 처리하고 저장하지 않으며, 전사문·음성 지표는 학습 기록으로 저장돼요.</p>
+            <p className="mt-1.5 text-[11px] leading-snug text-gray-400">웹캠 영상은 기기 안에서만 처리돼요. 목소리 녹음은 채점할 때만 서버로 보내 메모리에서 처리하고, 저장하지 않아요. 녹음을 글로 옮긴 것과 소리 수치는 학습 기록으로 저장돼요.</p>
           </div>
           )}
         </div>

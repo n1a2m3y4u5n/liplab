@@ -96,7 +96,8 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
    - 목소리 크기 40/100 미만이면 더 크게 말하라고 강조.
 {tone_rule}   - 다르게 들린 소리가 있으면 그 소리를 입술/혀를 '어떻게' 하는지 구체적으로.
    - 약하게 잰 소리가 있으면 그중 하나를 골라 입술·혀를 어떻게 하는지 알려 주기{weak_note}.
-3) 짧은 격려.{caution}"""
+3) 짧은 격려.{caution}
+{PLAIN_KO_STYLE}"""
     try:
         resp = await anthropic_client.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -124,6 +125,12 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
             bits.append("또렷하게 잘 전달됐어요! 이 느낌을 기억하며 다음 단어도 도전해봐요.")
         return " ".join(bits)
 
+
+# 학습자가 읽는 글의 문체 규칙(쉬운 한국어 감사 C15, docs/easy-korean-audit.md). 선천·조기 청력 손실 학습자에게 한국어 글은
+# 제2언어이거나 읽기 수준이 낮을 수 있다. 길이·형식 같은 로직은 각 프롬프트의 기존 지시를 따르고, 낱말과 문장 끊기만 더한다.
+PLAIN_KO_STYLE = ("문체: 학습자에게 한국어 글은 제2언어일 수 있습니다. 일상에서 흔히 쓰는 쉬운 낱말로 쓰고, 한 문장은 짧게(30자 안팎) "
+                  "끊으세요. 음소·조음·포먼트 같은 전문 용어는 쓰지 마세요.")
+PLAIN_KO_WORDS = "일상에서 흔히 쓰는 쉬운 낱말을 쓰고, 전문 용어나 어려운 한자어는 피하세요(문장 길이는 위 기준을 따릅니다)."
 
 # Situation-based context prompts
 # 상황별 시나리오 문장의 글자 수 상한(난이도별 어절 수 지시에 맞춤: 1단계 5~8어절부터 5단계 15어절 이상까지)
@@ -582,6 +589,7 @@ async def rephrase_turn(text: str, situation: str, level: int) -> Optional[str]:
         "당신은 청각장애인의 독화 훈련 대화 상대입니다. 학습자가 방금 문장을 입모양으로 알아보지 못해 다른 말로 해 달라고 했습니다. "
         "같은 뜻을 다른 낱말이나 문장 구조로 바꾼 자연스러운 한국어 한 문장만 말하세요. 원문을 그대로 되풀이하지 마세요"
         + (f" {lim}자 이하로 쓰세요." if lim else ".")
+        + " " + PLAIN_KO_WORDS
         + ' 반드시 JSON 형식으로만 응답: {"text": "문장 내용"}'
     )
     try:
@@ -642,7 +650,8 @@ async def generate_conversation_turn(
 3. 이전 대화 흐름에 자연스럽게 이어지도록 하세요.
 4. 처음 맡은 한 역할(예: 직원·의사)을 끝까지 유지하세요. 사용자 메시지는 대답이 아니라 학습자가 당신의 직전 문장을 입모양으로
    읽고 적은 글입니다. 상대가 자연스럽게 대답했다고 가정하고 대화를 앞으로 진행하세요. 앞에서 한 문장은 되풀이하지 마세요.
-5. 반드시 JSON 형식으로만 응답: {{"text": "문장 내용"}}"""
+5. {PLAIN_KO_WORDS}
+6. 반드시 JSON 형식으로만 응답: {{"text": "문장 내용"}}"""
 
     if not history:
         messages_for_api = [{"role": "user", "content": f"대화를 시작해주세요. 상황: {situation}"}]

@@ -8,6 +8,7 @@ import useChoiceKeys from '../lib/useChoiceKeys'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
 import { talkerById, atNaturalRate, hashSeed, TRANSFER_NOISE_NOTE } from '../lib/talkers'
 import { changeTone, ciText, CHANGE_NOISE_NOTE } from '../lib/changeTone'
+import { VISEME_PLAIN, plainVisemeLabel } from '../lib/visemeLabels'
 
 /**
  * 디지털 독화 배치검사(축 I) — 난이도가 통제된 입모양→단어 4지선다로 현재 수준을 진단한다.
@@ -16,10 +17,8 @@ import { changeTone, ciText, CHANGE_NOISE_NOTE } from '../lib/changeTone'
  *       결과(배치 모드) 85:9(모바일 244:99) — 마스코트 + "학습 준비가 다 되었어요!" + 버튼 2개.
  *       사전·사후 평가(A/B)의 결과 리포트는 §4-01에 따라 예전 리포트를 유지한다.
  */
-const VIS_NAME = {
-  1: '양순음', 2: '개방모음', 3: '전설모음', 4: '원순모음', 5: '중설모음',
-  6: '치경음', 7: '연구개음', 8: '성문음', 9: '이중모음', 10: '경구개음',
-}
+// 입모양 무리 이름은 1단계 보기와 같은 쉬운 이름(lib/visemeLabels, 쉬운 한국어 감사 docs/easy-korean-audit.md)
+const VIS_NAME = Object.fromEntries(Object.keys(VISEME_PLAIN).map((v) => [v, plainVisemeLabel(Number(v))]))
 
 // 문장 단계는 시나리오 선택(ScenarioHub)을 거쳐 currentScenario를 세팅한 뒤 /practice로 진입한다.
 const STAGE_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/learn/scenario' }
@@ -261,7 +260,7 @@ export default function Placement() {
                   )}
                   {result.error_phonemes?.length > 0 && (
                     <div>
-                      <p className="mb-1.5 text-xs text-ink-muted">자주 놓친 소리(음소)</p>
+                      <p className="mb-1.5 text-xs text-ink-muted">자주 놓친 소리</p>
                       <div className="flex flex-wrap gap-2">
                         {result.error_phonemes.map((e) => (
                           <span key={e.phoneme} className="rounded-full bg-warn-tint px-3 py-1 text-xs font-bold text-warn-text">{e.phoneme} ×{e.count}</span>

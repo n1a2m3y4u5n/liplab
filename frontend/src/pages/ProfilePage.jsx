@@ -238,7 +238,7 @@ export default function ProfilePage() {
           <p className="text-[14px] leading-[1.6] text-ink">파일럿에 참여 중이에요. 학습 기록은 이름·이메일 없이 가명으로만 연구에 쓰여요.</p>
         ) : (
           <>
-            <p className="text-[14px] leading-[1.6] text-ink-muted">안내받은 참여 코드를 입력해 주세요. 학습 기록은 이름·이메일 없이 가명으로만 연구에 쓰여요.</p>
+            <p className="text-[14px] leading-[1.6] text-ink-muted">안내받은 참여 코드를 입력해 주세요. 학습 기록은 이름과 이메일 없이, 가짜 이름(가명)으로만 연구에 쓰여요.</p>
             <input value={pilotCode} onChange={(e) => setPilotCode(e.target.value)} maxLength={32} placeholder="참여 코드"
               className="w-full rounded-13 border-2 border-line px-4 py-3 text-[15px] outline-none focus:border-primary-400" />
             <button type="button" disabled={busy || !pilotCode.trim()} onClick={joinPilot} className="btn-primary w-full py-3 text-[15px]">참여하기</button>
@@ -352,7 +352,7 @@ export default function ProfilePage() {
         </div>
         {pilot?.joined && (
           <p className="w-full text-[13px] leading-[1.6] text-ink-muted">
-            파일럿에 참여 중이라 사전·사후 검사 기록은 남아요. 참여를 그만두거나 자료 삭제를 원하면 연구진에게 알려 주세요.
+            파일럿 연구에 참여 중이라 사전·사후 검사 기록은 남아요. 참여를 그만두거나 자료를 지우고 싶으면 연구진에게 알려 주세요.
           </p>
         )}
         <div className="flex w-full flex-col gap-2">

@@ -243,7 +243,7 @@ export default function VocalTractSimulator() {
         {/* 모음 사각도(vowel chart): 위=고모음, 왼쪽=전설 */}
         <div ref={padRef} onPointerDown={onDown} onKeyDown={onKey}
           tabIndex={0} role="application"
-          aria-label={`성도 조음 조작판. 화살표키로 혀 위치, 대괄호로 입술 원순, 스페이스로 발성. 지금 소리 ${nearest ? nearest.ko : '모음 사이'}, F1 ${Math.round(f1)} F2 ${Math.round(f2)} 헤르츠.`}
+          aria-label={`입 안 모양 조작판. 화살표 키로 혀 위치, 대괄호 키로 입술 둥글림, 스페이스 키로 소리 내기. 지금 소리 ${nearest ? nearest.ko : '모음 사이'}, F1 ${Math.round(f1)} F2 ${Math.round(f2)} 헤르츠.`}
           className="relative w-full rounded-lg border border-line bg-surface-muted cursor-crosshair select-none touch-none focus:outline-none focus:ring-2 focus:ring-primary-300"
           style={{ aspectRatio: '4 / 3' }}>
           {/* 축 라벨 */}
@@ -324,8 +324,8 @@ export default function VocalTractSimulator() {
         </div>
       </div>
       <p className="mt-1.5 text-[11px] leading-snug text-gray-400">
-        ㅗ·ㅜ는 입술 원순을 함께 올려야 제 소리가 나요. 발성 소리는 공명(F1·F2)만 흉내 낸 근사 합성이고,
-        성도 단면과 합성음은 VocalTractLab으로 미리 계산했어요. 같은 소리를 내는 혀 모양은 여러 가지라 단면의 혀는 한 가지 예시예요.
+        ㅗ·ㅜ는 입술 둥글림도 함께 올려야 제 소리가 나요. 소리 내기 버튼의 소리는 공명(F1·F2)만 흉내 낸 간단한 합성음이에요.
+        단면 그림과 합성음은 VocalTractLab으로 미리 계산했어요. 같은 소리를 내는 혀 모양은 여러 가지라, 그림의 혀는 한 가지 예시예요.
       </p>
     </div>
   )

@@ -353,7 +353,7 @@ export default function LipSyncPlayer3D({
         <button
           onClick={() => setShowTract((v) => !v)}
           className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${showTract ? 'bg-violet-600 text-white font-semibold' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          title="측면 성도 단면으로 혀·입술·턱 조음 보기"
+          title="옆에서 자른 입 안 그림으로 혀·입술·턱 움직임 보기"
         >
           성도 단면
         </button>
