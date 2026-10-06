@@ -3001,10 +3001,12 @@ async def curriculum_confusion_matrix(current_user=Depends(get_current_user), db
     # confusions=[]를 넣어 결과는 같다. 예전에는 전체 행을 ORM 객체(JSON 열 포함)로 읽었다. 시행 2만 행(오답 5,849)
     # 감사 DB에서 응답 214~350 → 27~44ms(4회 실행, 각 5회 중앙값, JSON 같음). correct가 NULL인 행은 예전 'not a.correct'처럼 오답으로 센다.
     # 같은 횟수의 혼동 순서가 바뀌지 않게, 예전 쿼리가 (user_id, created_at) 인덱스로 읽던 시간순을 명시한다
+    # 뜻 없는 말 짝 맞추기(C10, item_type 'nonsense')는 실제 낱말 독화가 아니라 혼동행렬에 넣지 않는다
     n_trials = (await db.execute(select(func.count()).select_from(TrialAttempt)
-                                 .where(TrialAttempt.user_id == current_user.id))).scalar_one()
+                                 .where(TrialAttempt.user_id == current_user.id,
+                                        TrialAttempt.item_type != "nonsense"))).scalar_one()
     wrong_cfs = (await db.execute(select(TrialAttempt.confusions).where(
-        TrialAttempt.user_id == current_user.id, _trial_wrong(TrialAttempt))
+        TrialAttempt.user_id == current_user.id, _trial_wrong(TrialAttempt), TrialAttempt.item_type != "nonsense")
         .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).scalars().all()
     jamo = {}          # (target, read) -> {count, same}
     same_cnt = tot_cf = 0
@@ -3083,7 +3085,8 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
     # 오답 중 같은 입모양 혼동 비율(정답 행의 confusions는 늘 비어 있어 오답 행만 읽는다)
     same_cnt = tot_cf = 0
     for confusions in (await db.execute(select(TrialAttempt.confusions).where(
-            TrialAttempt.user_id == current_user.id, _trial_wrong(TrialAttempt)))).scalars().all():
+            TrialAttempt.user_id == current_user.id, _trial_wrong(TrialAttempt),
+            TrialAttempt.item_type != "nonsense"))).scalars().all():   # 뜻 없는 말 짝 맞추기는 빼고
         for cf in (confusions or []):
             tot_cf += 1
             if cf.get("same_viseme"):
@@ -4362,11 +4365,20 @@ async def assessment_retention_score(data: RetentionScoreReq, current_user=Depen
     items = _retention_items(post, current_user.id)
     responses = {str(k): v for k, v in (data.responses or {}).items() if isinstance(v, str)}
     result = _asmt.score_placement(items, responses)
-    db.add(RetentionResult(
-        user_id=current_user.id, form=post.form, form_version=post.form_version, post_result_id=post.id,
-        days_after_post=ctx["status"].get("days_since_post"), total=result["total"], correct=result["correct"],
-        accuracy=result["accuracy"], ability=result["ability"], level=result["level"], item_log=result.get("item_log", [])))
-    await db.commit()
+    from sqlalchemy import select as _select
+    from sqlalchemy.exc import IntegrityError as _IntegrityError
+    # 두 번 눌러 같은 사후 검사의 유지 검사가 두 행 생기지 않게 한다(고유 인덱스 ux_retention_results_user_post와 같은 기준)
+    prior = (await db.execute(_select(RetentionResult.id).where(
+        RetentionResult.user_id == current_user.id, RetentionResult.post_result_id == post.id))).scalars().first()
+    if prior is None:
+        db.add(RetentionResult(
+            user_id=current_user.id, form=post.form, form_version=post.form_version, post_result_id=post.id,
+            days_after_post=ctx["status"].get("days_since_post"), total=result["total"], correct=result["correct"],
+            accuracy=result["accuracy"], ability=result["ability"], level=result["level"], item_log=result.get("item_log", [])))
+        try:
+            await db.commit()
+        except _IntegrityError:
+            await db.rollback()   # 같은 순간 들어온 다른 요청이 먼저 저장했다
     return {**result, "form": post.form, "post_accuracy": post.accuracy,
             "days_after_post": ctx["status"].get("days_since_post")}
 

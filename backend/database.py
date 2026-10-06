@@ -768,6 +768,12 @@ async def _pilot_seq_index(conn) -> None:
                 "CREATE UNIQUE INDEX IF NOT EXISTS ux_learning_profiles_pilot_seq ON learning_profiles (pilot_seq)")
     except Exception as e:
         print(f"[WARN] learning_profiles.pilot_seq 고유 인덱스 실패(겹친 순번 확인 필요): {e}")
+    try:   # 유지 검사(C7)는 사후 검사 하나에 한 행(두 번 눌러 두 행이 생기던 것)
+        async with _Isolated(conn):
+            await conn.exec_driver_sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_retention_results_user_post ON retention_results (user_id, post_result_id)")
+    except Exception as e:
+        print(f"[WARN] retention_results 고유 인덱스 실패(겹친 행 확인 필요): {e}")
 
 
 async def _dedupe_and_index(conn) -> None:
