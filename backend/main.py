@@ -1177,7 +1177,7 @@ async def get_calendar(current_user=Depends(get_current_user), db: AsyncSession 
 
 
 # 시행 기록(TrialAttempt.item_type)의 유형. 회차 히스토리가 유형마다 한 행을 만든다
-_TRIAL_KINDS = ("viseme", "viseme_ax", "word", "word_typed", "context", "closure")
+_TRIAL_KINDS = ("viseme", "viseme_ax", "word", "word_typed", "context", "closure", "nonsense")
 
 
 @app.get("/api/calendar/activities")
@@ -1237,17 +1237,18 @@ async def get_calendar_activities(days_back: int = 140, tz_offset_min: int = -54
 
     # 2단계 주관식(word_typed)과 단어 레슨 속 문맥 문항(context)도 따로 한 행이다. 예전에는 ORDER에 없어 그날 기록에서 빠졌다
     KIND_LABEL = {"viseme": "입모양 인지", "viseme_ax": "입모양 같은지 다른지", "word": "단어", "word_typed": "단어 주관식", "context": "단어 레슨 문맥",
-                  "closure": "문맥 추론", "trial": "인지 훈련"}
+                  "closure": "문맥 추론", "nonsense": "뜻 없는 말 짝 맞추기", "trial": "인지 훈련"}
     SPEAK_LABEL = {"voicing": "발성", "prosody": "억양", "phoneme": "음소", "word": "단어", "sentence": "문장",
                    "probe": "낱말 속 소리"}
     FORM_LABEL = {"placement": "배치검사", "A": "사전검사", "B": "사후검사"}
     TYPE_LABEL = {"assessment": "검사", "viseme": "독화", "viseme_ax": "독화", "word": "독화", "word_typed": "독화", "context": "독화",
-                  "closure": "독화", "trial": "독화", "sentence": "문장 연습", "speak": "말하기"}
+                  "closure": "독화", "nonsense": "독화", "trial": "독화", "sentence": "문장 연습", "speak": "말하기"}
     # 블록 클릭 시 이동할 학습 화면. 말하기 모드는 speak_curriculum의 단계 번호로 연결한다.
     SPEAK_STAGE = {"voicing": 0, "prosody": 1, "phoneme": 2, "word": 4, "sentence": 5}
     KIND_ROUTE = {"assessment": "/learn/placement", "viseme": "/learn/viseme", "viseme_ax": "/learn/viseme", "word": "/learn/word",
-                  "word_typed": "/learn/word", "context": "/learn/word", "closure": "/learn/closure", "trial": "/learn/viseme"}
-    ORDER = ["assessment", "viseme", "viseme_ax", "word", "word_typed", "context", "closure", "trial", "sentence", "speak"]
+                  "word_typed": "/learn/word", "context": "/learn/word", "closure": "/learn/closure", "nonsense": "/learn/nonsense",
+                  "trial": "/learn/viseme"}
+    ORDER = ["assessment", "viseme", "viseme_ax", "nonsense", "word", "word_typed", "context", "closure", "trial", "sentence", "speak"]
 
     # 주제가 다르면 같은 날이라도 각자 한 행 — 문장 연습은 상황별, 말하기는 모드별, 검사는 폼별로 나눈다.
     out = {}
@@ -2066,6 +2067,91 @@ async def curriculum_recognition_ax(data: RecognitionAxSubmit, current_user=Depe
         raise _server_error(e, "recognition ax submit failed")
     return {"correct": correct, "answer": key, "same": pair["same"], "inside": pair["inside"],
             "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
+
+
+# 뜻 없는 말 짝 맞추기(C10, idea-sweep 다2, docs/nonsense-pairing.md). 1·2단계 사이의 하루 10분 이하 과제다.
+# 아바타가 무의미 낱말을 말하고 학습자는 짝지은 도형을 고른다. 목록·블록·기준은 nonsense_words가 정하고, 답은 시행 기록
+# (item_type 'nonsense', stage NULL)에만 남긴다. 단계 숙달·취약 입모양·복습 큐·XP는 건드리지 않는다.
+class NonsenseAnswer(BaseModel):
+    set_id: str = Field(..., max_length=8)
+    block: int = Field(..., ge=1, le=999)
+    word: str = Field(..., max_length=4)      # 아바타가 말한 낱말
+    chosen: str = Field(..., max_length=4)    # 고른 도형과 짝인 낱말
+    options: Optional[list] = None            # 보인 도형 순서(낱말로). 없으면 예전 화면
+
+
+async def _nonsense_rows(user_id: int, db) -> tuple:
+    """(이 학습자의 nonsense 시행 (item_id, target, correct) 시간순, 오늘(KST) 시행 수)."""
+    from database import TrialAttempt
+    from sqlalchemy import select
+    import nonsense_words as _nw
+    from datetime import datetime as _dtm, time as _tm, timedelta as _td
+    rows = (await db.execute(select(TrialAttempt.item_id, TrialAttempt.target, TrialAttempt.correct, TrialAttempt.created_at)
+                             .where(TrialAttempt.user_id == user_id, TrialAttempt.item_type == _nw.ITEM_TYPE)
+                             .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).all()
+    start = _dtm.combine(_kst_today(), _tm()) - _td(hours=9)   # KST 0시의 UTC
+    today_n = sum(1 for *_, ts in rows if ts is not None and ts >= start)
+    return [(iid, t, bool(c)) for iid, t, c, _ in rows], today_n
+
+
+def _nonsense_view(state: dict) -> dict:
+    """화면에 줄 회차 상태. 목록 낱말·골격·도형과 이번 블록에서 남은 낱말."""
+    s, prog = state["set"], state["progress"]
+    return {
+        "finished": state["finished"], "sets_done": state["sets_done"], "n_sets": state["n_sets"], "today": state["today"],
+        "set": None if s is None else {"id": s["id"], "index": state["set_index"] + 1, "words": s["words"]},
+        "block": None if prog is None else {"index": prog["next_block"], "hint": prog["hint"], "remaining": prog["remaining"],
+                                            "started": prog["n"] > 0, "history": prog["blocks"]},
+    }
+
+
+@app.get("/api/nonsense/session")
+async def nonsense_session(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """지금 학습할 목록·블록과 오늘 남은 분량."""
+    import nonsense_words as _nw
+    rows, today_n = await _nonsense_rows(current_user.id, db)
+    return _nonsense_view(_nw.session_state(_nw.training_sets(), rows, today_n))
+
+
+@app.post("/api/nonsense/answer")
+async def nonsense_answer(data: NonsenseAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """짝 맞추기 답 채점과 기록. 지금 목록·블록의 아직 안 본 낱말만 받는다(같은 시행을 두 번 넣거나 블록을 건너뛰지 못하게).
+    정답은 화면이 아니라 낱말 대 낱말로 정한다. 오늘 분량을 넘으면 409."""
+    import nonsense_words as _nw
+    from database import TrialAttempt
+    rows, today_n = await _nonsense_rows(current_user.id, db)
+    state = _nw.session_state(_nw.training_sets(), rows, today_n)
+    if state["today"]["done"]:
+        raise HTTPException(status_code=409, detail="오늘 분량을 마쳤어요")
+    if state["finished"] or state["set"]["id"] != data.set_id or state["progress"]["next_block"] != data.block:
+        raise HTTPException(status_code=409, detail="지금 목록·블록이 아니에요")
+    words = [w["word"] for w in state["set"]["words"]]
+    if data.word not in state["progress"]["remaining"] or data.chosen not in words:
+        raise HTTPException(status_code=400, detail="invalid word")
+    correct = data.chosen == data.word
+    confusions = []
+    if not correct:
+        from scoring import viseme_confusions
+        confusions = viseme_confusions(data.word, data.chosen)
+    opts = _trial_options(data.options, data.word, data.chosen)
+    if opts is not None and sorted(opts) != sorted(words):
+        opts = None
+    iid = _nw.item_id(data.set_id, data.block)
+    try:
+        db.add(TrialAttempt(user_id=current_user.id, stage=None, item_type=_nw.ITEM_TYPE, target=data.word, chosen=data.chosen,
+                            correct=correct, confusions=confusions, item_id=iid, options=opts))
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise _server_error(e, "nonsense answer failed")
+    rows.append((iid, data.word, correct))
+    after = _nw.session_state(_nw.training_sets(), rows, today_n + 1)
+    prog = _nw.set_progress(state["set"], rows)
+    seen, right = prog["blocks"].get(data.block, [0, 0])
+    shape = next(w["shape"] for w in state["set"]["words"] if w["word"] == data.word)
+    return {"correct": correct, "answer": data.word, "answer_shape": shape, "confusions": confusions,
+            "block_done": seen >= len(words), "block_correct": right, "block_size": len(words),
+            "set_done": prog["met"], **_nonsense_view(after)}
 
 
 class WordAnswer(TrialMeta):
@@ -2954,16 +3040,20 @@ async def eval_summary(current_user=Depends(get_current_user), db: AsyncSession 
     # 학습곡선·초기 대비 최근은 1.0배로 본 보통 문항만 쓴다(docs/eval-metrics.md 7절). 빠른 말(1.25~2배)은 숙달 뒤 뒤쪽에 몰려
     # 실력이 그대로여도 최근을 깎고(모의실험: 단어 45회 중 마지막 12회가 빠른 말이면 −11.9%p, 걸러 내면 +0.1%p), 감속 정답은
     # 앞쪽에 몰려 처음을 올린다(−9.9 → +0.2%p). 짝 탐색 문항은 헷갈리는 대비 단어를 일부러 보기에 넣은 문항이다.
-    natural = [(it, bool(c)) for it, c, spd, probe in rows_tr if _em.is_natural_trial(spd, probe)]
-    n_probe = sum(1 for *_, probe in rows_tr if probe)
+    # 뜻 없는 말 짝 맞추기(C10)는 같은 목록을 기준까지 되풀이해 외우는 과제라, 정답률이 오르는 것은 짝을 외운 효과가 크다.
+    # 학습곡선·초기 대비 최근에는 넣지 않고 유형별 정확도에만 보인다.
+    n_ns = sum(1 for it, *_ in rows_tr if it == "nonsense")
+    natural = [(it, bool(c)) for it, c, spd, probe in rows_tr if it != "nonsense" and _em.is_natural_trial(spd, probe)]
+    n_probe = sum(1 for it, *_, probe in rows_tr if probe and it != "nonsense")
     learning_curve = _em.type_adjusted_curve(natural)
     baseline_vs_recent = _em.within_type_change(natural)   # 9시행 이상인 유형이 없으면 None
     if baseline_vs_recent is not None:
-        baseline_vs_recent["excluded"] = {"speed": n_tr - len(natural) - n_probe, "probe": n_probe}
+        baseline_vs_recent["excluded"] = {"speed": n_tr - n_ns - len(natural) - n_probe, "probe": n_probe,
+                                          **({"nonsense": n_ns} if n_ns else {})}
 
     by_item_type = []
     for it, label in (("viseme", "입모양 인지"), ("viseme_ax", "입모양 같은지 다른지"), ("word", "단어"), ("word_typed", "단어 주관식"),
-                      ("context", "단어 레슨 문맥"), ("closure", "문맥 추론")):
+                      ("context", "단어 레슨 문맥"), ("closure", "문맥 추론"), ("nonsense", "뜻 없는 말 짝 맞추기")):
         seg = [c for t, c in seq if t == it]
         if seg:
             by_item_type.append({"item_type": it, "label": label, "n": len(seg),
