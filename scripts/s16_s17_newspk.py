@@ -182,6 +182,8 @@ def s538(recs):
 
 def s608(recs):
     rs = [r for r in recs if r["set"] == "608" and "fail" not in r and "true" in r.get("u", {})]
+    if not rs:
+        return {"n_clip": 0, "n_spk": 0, "ff_true": {}, "dir": {}}
     spks = sorted({r["spk"] for r in rs})
     boot = Boot(spks, BOOT)
     out = {"n_clip": len(rs), "n_spk": len(spks), "n_spk_P28": sum(1 for s in spks if s.startswith("28-")),
@@ -225,27 +227,32 @@ def s608(recs):
 
 
 def verdicts(a538, a608):
+    """기준마다 True/False, 자료가 없으면 None(미측정). 608이 없으면 538 기준만 판정하고 전체 판정은 보류한다."""
     c, m = a538["clean"], a538["mod"]
     valid538 = len(a538["speakers"]) >= MIN_538_SPK and c["n_swap"] >= MIN_538_SWAP
-    dir_ok = all(a608["dir"][p]["sf"]["n"] >= MIN_DIR_N for p in JUDGE_PAIRS)
+    has608 = a608["n_clip"] > 0
+    dir_ok = has608 and all(a608["dir"][p]["sf"]["n"] >= MIN_DIR_N for p in JUDGE_PAIRS)
+    r538 = c["rules"]["G16"]["ff_true"]["est"]
     s17 = {"C1_clean_onset_loc_top1_SF>=0.93": c["onset_loc_top1_SF"]["est"] >= 0.93,
            "C2_mod_hit3_SF3-B3>=+0.03_and_CIlo>0": (m["d_hit3_SF3_minus_B3"]["est"] >= 0.03 and m["d_hit3_SF3_minus_B3"]["ci"][0] > 0),
-           "C3_608_auc_SF>=0.80(ㅋ>ㄱ,ㅍ>ㅂ)": all(a608["dir"][p]["sf"]["auc"] >= 0.80 for p in JUDGE_PAIRS),
+           "C3_608_auc_SF>=0.80(ㅋ>ㄱ,ㅍ>ㅂ)": (all(a608["dir"][p]["sf"]["auc"] >= 0.80 for p in JUDGE_PAIRS) if dir_ok else None),
            "C4_538_clean_true_SFR_per_sentence<=1": c["rules"]["SFR"]["ff_true"]["est"] <= 1.0}
-    r538 = c["rules"]["G16"]["ff_true"]["est"]
     s16 = {"C1_538_clean_true_G16_per_sentence<=1": r538 <= 1.0,
            "C2_538_clean_detect_G16>=0.80_CIlo>=0.70": (c["rules"]["G16"]["hit"]["est"] >= 0.80 and c["rules"]["G16"]["hit"]["ci"][0] >= 0.70),
            "C3_onset_b_detect>0": c["onset_b_detect_G16"]["flagged"] > 0,
-           "C4_608_false_red<=2x538": a608["ff_true"]["G16"]["est"] <= 2 * max(r538, 0.01),
-           "C5_608_gate_auc_drop<=0.03(ㅋ>ㄱ,ㅍ>ㅂ)": all(a608["dir"][p]["gate_minus_dg"] >= -0.03 for p in JUDGE_PAIRS)}
+           "C4_608_false_red<=2x538": (a608["ff_true"]["G16"]["est"] <= 2 * max(r538, 0.01) if has608 else None),
+           "C5_608_gate_auc_drop<=0.03(ㅋ>ㄱ,ㅍ>ㅂ)": (all(a608["dir"][p]["gate_minus_dg"] >= -0.03 for p in JUDGE_PAIRS) if dir_ok else None)}
 
-    def v(c_, valid):
-        if not valid:
-            return "판정 불가(표본 부족)"
-        return "통과" if all(c_.values()) else "실패"
-    return {"S17": {"criteria": s17, "verdict": v(s17, valid538 and dir_ok)},
-            "S16": {"criteria": s16, "verdict": v(s16, valid538 and dir_ok)},
-            "valid": {"538": valid538, "dir_n": dir_ok}}
+    def v(c_):
+        if not valid538:
+            return "판정 불가(538 표본 부족)"
+        if any(x is False for x in c_.values()):
+            return "실패"
+        if any(x is None for x in c_.values()):
+            return "보류(608 기준 미측정, 538 기준은 모두 통과)"
+        return "통과"
+    return {"S17": {"criteria": s17, "verdict": v(s17)}, "S16": {"criteria": s16, "verdict": v(s16)},
+            "valid": {"538": valid538, "608_present": has608, "dir_n": dir_ok}}
 
 
 def main():
