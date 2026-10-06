@@ -9,6 +9,7 @@ import { consonantFrame } from '../lib/consonantSkeleton'
 import { SHAPES } from '../lib/nonsenseShapes'
 import { HINT_MS, trialOrder, gridOrder, usedToday, saveUsedToday, timeUp, blockSummary } from '../lib/nonsensePairing'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, lessonPad } from '../lib/lessonLayout'
+import { trialMeta } from '../lib/measurement'
 
 /**
  * 뜻 없는 말 짝 맞추기(/learn/nonsense, 계획 C10, docs/nonsense-pairing.md). 1·2단계 사이의 하루 10분 이하 과제다.
@@ -113,13 +114,17 @@ export default function NonsensePairing() {
   useEffect(() => { load() }, [load])
 
   const cur = order[step] || null
+  // 반응 시간 기준(파일럿 로그 P0): 골격 보기가 끝나고 이 시행의 낱말 재생을 시작한 때
+  const onsetRef = useRef(null)
+  useEffect(() => { onsetRef.current = cur && phase === 'trial' && !hinting ? Date.now() : null }, [cur, phase, hinting])
   const shapeOf = useMemo(() => Object.fromEntries((view?.set?.words || []).map((w) => [w.word, w.shape])), [view])
 
   const pick = async (chosen) => {
     if (phase !== 'trial' || hinting || result || submitting || !cur) return
     setSubmitting(true)
     try {
-      const r = await curriculumAPI.submitNonsense(view.set.id, view.block.index, cur, chosen, grid)
+      const r = await curriculumAPI.submitNonsense(view.set.id, view.block.index, cur, chosen, grid,
+        trialMeta({ onsetAt: onsetRef.current, talker: 'default', hintUsed: !!view.block.hint }))
       setResult({ ...r, chosen })
       saveTime()
     } catch (e) {

@@ -67,27 +67,29 @@ def test_validate_manifest_catches_errors():
         assert frag in errs, (frag, errs)
 
 
-def test_nonsense_generation_is_deterministic_balanced_and_frozen():
+def test_nonsense_forms_use_c10_heldout_lists_and_never_trained_words():
+    import nonsense_words as nw
     m = pb.load_manifest()
     L = m["layers"]["nonsense"]
-    import curriculum as cur
-    words = {w["word"] for w in cur.WORD_BANK}
-    regen = pb.generate_nonsense(L["seed"], avoid=words | {it["word"] for f in pb.FORMS for it in m["layers"]["word"]["items"][f]})
-    assert [regen[i] for i in range(3)] == [L["items"][f] for f in pb.FORMS], "목록 파일의 무의미 낱말이 seed로 다시 만든 것과 다르다"
-    assert pb.generate_nonsense(L["seed"]) == pb.generate_nonsense(L["seed"])
-    allitems = [it for f in regen for it in f]
-    texts = [it["text"] for it in allitems]
-    assert len(set(texts)) == 48 and not (set(texts) & words)
-    for pos, pool in ((0, pb.NONSENSE_C1), (1, pb.NONSENSE_C2), (2, pb.NONSENSE_C3)):
-        c = Counter(it["consonants"][pos] for it in allitems)
-        assert set(c) == set(pool) and max(c.values()) - min(c.values()) <= 1
-    # C1·C2는 폼마다 12개 자음이 모두 나온다(16칸)
-    for f in regen:
-        assert {it["consonants"][0] for it in f} == set(pb.NONSENSE_C1)
-        assert {it["consonants"][1] for it in f} == set(pb.NONSENSE_C2)
-        for it in f:
-            assert it["text"] == pb.compose(it["consonants"][0], it["vowels"][0]) + pb.compose(
-                it["consonants"][1], it["vowels"][1], it["consonants"][2])
+    data = nw.load()
+    forms = [[it["text"] for it in L["items"][f]] for f in pb.FORMS]
+    # 폼 A·B는 짝 맞추기 학습이 남겨 둔 두 목록 그대로, 폼 C는 같은 생성기의 세 번째 남겨 둔 목록(다시 만들면 같다)
+    assert forms[0] == data["heldout"][0] and forms[1] == data["heldout"][1]
+    assert [[it["text"] for it in f] for f in pb.nonsense_forms()] == forms
+    trained = {w["word"] for s in data["sets"] for w in s["words"]}
+    trained_skel = {nw.skeleton(w) for w in trained}
+    allw = [w for f in forms for w in f]
+    assert len(trained) == 48 and len(set(allw)) == 48
+    assert not (set(allw) & trained) and not ({nw.skeleton(w) for w in allw} & trained_skel)
+    assert not (set(allw) & (nw.repo_real_words() | set(data["excluded_by_wordfreq"]) | nw.MANUAL_EXCLUDED
+                             | pb.NONSENSE_EXTRA_EXCLUDED))
+    assert L["consonant_sets"] == pb.nonsense_consonant_sets()
+    for f in pb.FORMS:
+        for it in L["items"][f]:
+            c1, v1, c2, v2, c3 = nw.parts(it["text"])
+            assert it["consonants"] == [c1, c2, c3] and it["vowels"] == [v1, v2]
+    # 목록 파일(data/pilot)이 짝 맞추기 생성기의 '실제 낱말' 자료에 들어가지 않는다(넣으면 남겨 둔 목록이 스스로를 뺀다)
+    assert "처슴" not in nw.repo_real_words()
 
 
 def test_word_form_c_matches_difficulty_and_avoids_test_words():
@@ -159,12 +161,14 @@ def test_scoring_helpers():
 def test_strict_hook_absent_and_present(monkeypatch):
     monkeypatch.setitem(sys.modules, "phoneme_accuracy", None)   # 모듈이 없을 때(import가 실패)
     assert pb.strict_score("밥", "밥") is None
-    assert pb.strict_fields(None) == {"auto_phoneme_acc": None, "auto_word_acc": None, "strict_version": None}
+    assert pb.strict_fields(None) == {"auto_phoneme_acc": None, "auto_word_acc": None, "n_matched_phonemes": None,
+                                      "n_target_phonemes": None, "strict_version": None}
     fake = types.ModuleType("phoneme_accuracy")
     fake.strict_phoneme_accuracy = lambda t, a: {"phoneme_accuracy": 0.75, "word_accuracy": 0.5, "version": "s1"}
     monkeypatch.setitem(sys.modules, "phoneme_accuracy", fake)
     r = pb.strict_score("밥 먹어요", "밥 먹어")
-    assert pb.strict_fields(r) == {"auto_phoneme_acc": 0.75, "auto_word_acc": 0.5, "strict_version": "s1"}
+    assert pb.strict_fields(r) == {"auto_phoneme_acc": 0.75, "auto_word_acc": 0.5, "n_matched_phonemes": None,
+                                   "n_target_phonemes": None, "strict_version": "s1"}
     fake.strict_phoneme_accuracy = lambda t, a: 1 / 0
     assert pb.strict_score("밥", "밥") is None
 
@@ -432,9 +436,11 @@ def test_battery_open_responses_snr_and_av():
     assert r["sentence"] == {"modality": "avatar", "ready": 40, "leak": False}
     first, second = r["bat_sentence"]
     assert first["answer_text"] == r["sentence_targets"][0] and first["app_score"] == 100.0
-    assert first["auto_phoneme_acc"] is None and first["scorer_version"] == "app-visual"
+    # 엄격 음소 정답률(phoneme_accuracy.py, 0~1)과 회차 합산용 음소 수
+    assert first["auto_phoneme_acc"] == 1.0 and first["scorer_version"] == "strict-v1"
+    assert first["n_target_phonemes"] > 0 and first["n_matched_phonemes"] == first["n_target_phonemes"]
     assert first["rt_ms"] == 4000 and first["rt_from_onset_ms"] == 6000 and first["modality"] == "avatar"
-    assert second["answer_text"] == "" and second["app_score"] == 0.0
+    assert second["answer_text"] == "" and second["app_score"] == 0.0 and second["n_matched_phonemes"] == 0
     assert r["snr_not_ready"] == {"media": 24}
     assert r["snr_no_noise"] == {"noise": 24}
     assert r["snr_start"] == {"ready": 24, "next": 0, "noise": True} and r["noise_get"] == 200
@@ -493,3 +499,10 @@ def test_rescore_script_fills_missing_strict_scores(monkeypatch):
     e2 = json.loads(json.dumps(ex))
     assert rs.rescore(e2) == {"filled": 1, "skipped": 1, "unavailable": 0}
     assert e2["participants"][0]["battery"][0]["open"][0]["auto_phoneme_acc"] == 0.8
+
+
+def test_strict_hook_with_real_module():
+    r = pb.strict_score("밥 먹어요", "밥 먹어")
+    f = pb.strict_fields(r)
+    assert f["strict_version"] == "strict-v1" and 0 < f["auto_phoneme_acc"] < 1
+    assert f["n_target_phonemes"] >= f["n_matched_phonemes"] > 0

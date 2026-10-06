@@ -2072,7 +2072,7 @@ async def curriculum_recognition_ax(data: RecognitionAxSubmit, current_user=Depe
 # 뜻 없는 말 짝 맞추기(C10, idea-sweep 다2, docs/nonsense-pairing.md). 1·2단계 사이의 하루 10분 이하 과제다.
 # 아바타가 무의미 낱말을 말하고 학습자는 짝지은 도형을 고른다. 목록·블록·기준은 nonsense_words가 정하고, 답은 시행 기록
 # (item_type 'nonsense', stage NULL)에만 남긴다. 단계 숙달·취약 입모양·복습 큐·XP는 건드리지 않는다.
-class NonsenseAnswer(BaseModel):
+class NonsenseAnswer(TrialMeta):
     set_id: str = Field(..., max_length=8)
     block: int = Field(..., ge=1, le=999)
     word: str = Field(..., max_length=4)      # 아바타가 말한 낱말
@@ -2139,7 +2139,7 @@ async def nonsense_answer(data: NonsenseAnswer, current_user=Depends(get_current
     iid = _nw.item_id(data.set_id, data.block)
     try:
         db.add(TrialAttempt(user_id=current_user.id, stage=None, item_type=_nw.ITEM_TYPE, target=data.word, chosen=data.chosen,
-                            correct=correct, confusions=confusions, item_id=iid, options=opts))
+                            correct=correct, confusions=confusions, item_id=iid, options=opts, **_trial_meta(data)))
         await db.commit()
     except Exception as e:
         await db.rollback()
@@ -3565,7 +3565,8 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
                        "plays": r.plays, "speed": r.speed} for r in cl if r.session_id == s_.id]
             opened = [{"seq": r.seq, "item_id": r.item_id, "talker": r.talker, "modality": r.modality, "target": r.target,
                        "answer_text": r.answer_text, "app_score": r.app_score, "auto_phoneme_acc": r.auto_phoneme_acc,
-                       "auto_word_acc": r.auto_word_acc, "scorer_version": r.scorer_version, "rt_ms": r.rt_ms,
+                       "auto_word_acc": r.auto_word_acc, "n_matched_phonemes": r.n_matched_phonemes,
+                       "n_target_phonemes": r.n_target_phonemes, "scorer_version": r.scorer_version, "rt_ms": r.rt_ms,
                        "rt_from_onset_ms": r.rt_from_onset_ms, "plays": r.plays, "speed": r.speed, "snr_db": r.snr_db,
                        "noise_type": r.noise_type, "criterion_met": r.criterion_met} for r in op if r.session_id == s_.id]
             out.append({"session_label": s_.session_label, "layer": s_.layer, "form": s_.form, "form_version": s_.form_version,
@@ -4010,9 +4011,9 @@ async def pilot_battery_answer(req: BatteryAnswerReq, current_user=Depends(get_c
             snr_db = st["next_db"]
             crit = _pb.word_proportion(target, answer) >= float(m["layers"]["snr"]["staircase"].get("criterion", 0.5))
         db.add(P3OpenResponse(**common, target=target, answer_text=answer, app_score=app_score, app_phoneme_accuracy=app_acc,
-                              auto_phoneme_acc=sf["auto_phoneme_acc"], auto_word_acc=sf["auto_word_acc"], strict_result=strict,
-                              scorer_version=("app-visual" + (f"+strict:{sf['strict_version']}" if sf["strict_version"]
-                                                              else ("+strict" if strict else "")))[:40],
+                              auto_phoneme_acc=sf["auto_phoneme_acc"], auto_word_acc=sf["auto_word_acc"],
+                              n_matched_phonemes=sf["n_matched_phonemes"], n_target_phonemes=sf["n_target_phonemes"],
+                              strict_result=strict, scorer_version=sf["strict_version"] or ("strict" if strict else None),
                               snr_db=snr_db, noise_type="babble" if layer in ("av", "snr") else None, criterion_met=crit))
     try:
         await db.commit()

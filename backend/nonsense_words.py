@@ -132,6 +132,10 @@ def repo_real_words() -> Set[str]:
     out.update(_runs(list(_asmt.test_only_words())))
     data_dir = os.path.join(_HERE, "data")
     for root, _, files in os.walk(data_dir):
+        # P3 검사 목록(data/pilot)은 이 모듈이 만든 무의미 낱말을 옮겨 담은 것이라 실제 낱말 자료가 아니다. 넣으면 다시 만들 때
+        # 남겨 둔 목록이 자기 자신을 실제 낱말로 보고 빠진다
+        if os.path.relpath(root, data_dir).split(os.sep)[0] == "pilot":
+            continue
         for name in sorted(files):
             if not name.endswith(".json") or name == os.path.basename(DATA_PATH):
                 continue

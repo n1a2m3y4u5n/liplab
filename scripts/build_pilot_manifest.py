@@ -6,7 +6,8 @@ backend/data/pilot/battery_manifest.json을 만든다. 이미 있으면 덮어�
 - 실제 얼굴 낱말: 폼 A·B는 동결 표준검사 v2(촬영 키트 48낱말) 그대로, 폼 C는 난이도를 맞춰 새로 고른다(pilot_battery.build_word_form_c).
 - 개방형 문장: 아래 후보 문장(초안)에서 조건(6~10음절, 채점 음소 14~26, 숫자·외래어 없음, 훈련 문장·검사 낱말과 겹치지 않음)을
   통과한 것을 음소 수가 고르게 세 폼으로 나누고 남는 것은 예비로 둔다. 문장은 촬영 전에 사람이 검토해 동결한다.
-- 무의미 낱말: seed로 만든다(pilot_battery.generate_nonsense). 같은 seed면 같은 목록이다.
+- 무의미 낱말: 짝 맞추기 학습(C10, backend/nonsense_words.py)이 남겨 둔 두 목록을 폼 A·B로, 같은 생성기로 하나 더 만든 목록을
+  폼 C로 쓴다(pilot_battery.nonsense_forms). 학습 목록 48낱말과 겹치지 않는다.
 - 소음 속 문장·SNR 계단 문장: 문장과 음성이 촬영 뒤에 정해지므로 자리만 만든다(text, speech_rms_dbfs가 null).
 
     python3 scripts/build_pilot_manifest.py            # 만들기(있으면 멈춤)
@@ -24,7 +25,6 @@ sys.path.insert(0, BACKEND)
 
 import pilot_battery as pb  # noqa: E402
 
-NONSENSE_SEED = 20261006
 WORD_C_SEED = 20261006
 N_SENTENCE = 40
 N_RESERVE = 12
@@ -300,7 +300,6 @@ def split_forms(sentences, n_per: int, n_reserve: int):
 
 def build():
     import assessment as _asmt
-    import curriculum as _cur
     ff = _asmt.frozen_forms(build_if_missing=False)
     word_forms = {"A": ff["A"], "B": ff["B"], "C": pb.build_word_form_c(WORD_C_SEED)}
     words = _test_words(word_forms)
@@ -311,8 +310,7 @@ def build():
     def sent_item(prefix, i, s):
         return {"id": f"{prefix}{i + 1:02d}", "text": s, "syllables": len(pb.syllables(s)), "phonemes": pb.phoneme_count(s)}
 
-    avoid = {w["word"] for w in _cur.WORD_BANK} | words
-    nforms = pb.generate_nonsense(NONSENSE_SEED, avoid=avoid)
+    nforms = pb.nonsense_forms()
     word_items = {f: [{k: it[k] for k in ("id", "word", "options", "difficulty")} for it in word_forms[f]] for f in pb.FORMS}
 
     m = {
@@ -350,9 +348,8 @@ def build():
             },
             "nonsense": {
                 "title": "무의미 낱말 자음", "response": "consonant3", "modality": "avatar", "n_per_form": 16,
-                "seed": NONSENSE_SEED,
-                "consonant_sets": {"C1": pb.NONSENSE_C1, "C2": pb.NONSENSE_C2, "C3": pb.NONSENSE_C3},
-                "vowels": pb.NONSENSE_V,
+                "source": "nonsense_words.json 남겨 둔 목록 1·2 = 폼 A·B, 같은 생성기의 세 번째 남겨 둔 목록 = 폼 C",
+                "consonant_sets": pb.nonsense_consonant_sets(),
                 "items": {f: nforms[i] for i, f in enumerate(pb.FORMS)},
             },
             "av": {
