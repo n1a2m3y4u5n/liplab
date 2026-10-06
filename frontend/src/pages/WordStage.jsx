@@ -22,6 +22,8 @@ import EffortCheck from '../components/EffortCheck'
 import { effectiveSpeed, FAST_SPEECH_SPEED } from '../lib/visemeTiming'
 import { typedSlots, contextSlots, probeSlot, pickProbe } from '../lib/openSet'
 import MouthCompare from '../components/MouthCompare'
+import ShortText from '../components/ShortText'
+import useLearnerInfo from '../hooks/useLearnerInfo'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
@@ -146,6 +148,8 @@ function WordQuiz({ data, reload }) {
   const [lesson, nextLesson] = useLessonTalker(endless ? 'endless' : 'word')
   // 숙달 지연 탐침(C16): 숙달한 단계가 있으면 레슨 가운데에 확인 문항을 끼운다(비율 상한은 서버, 숙달·XP에는 들어가지 않음)
   const probes = useMasteryProbes(QUIZ_LEN)
+  // 학습자 정보 기본값(계획 2-6, 이 기기에만 저장): 짧은 힌트는 설명을 첫 문장만 먼저, 수어 보기는 틀린 단어의 수어 뜻을 바로 펼친다
+  const { defaults: learner } = useLearnerInfo()
   const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계)
   const [result, setResult] = useState(null)
   const [compareOpen, setCompareOpen] = useState(false)   // 오답 뒤 정답·고른 말 입모양 나란히 비교(누를 때만 WebGL 둘 추가)
@@ -390,8 +394,8 @@ function WordQuiz({ data, reload }) {
                 {result.verdict === 'homophene' && (
                   <div className="rounded-16 border-2 border-warn/40 bg-warn-tint p-4 text-[13px] leading-snug text-warn-text">
                     <p className="text-xs font-bold">입모양은 맞았어요</p>
-                    <p className="mt-1">「{result.chosen}」와 「{q.target}」는 입모양이 똑같아요. 입만 보고는 가를 수 없는 차이라 오답으로 보지 않고
-                      절반만 인정해요. 실제 대화에서는 앞뒤 문맥으로 가려요.</p>
+                    <p className="mt-1"><ShortText key={q.target} short={learner.shortHints}
+                      text={`「${result.chosen}」와 「${q.target}」는 입모양이 똑같아요. 입만 보고는 가를 수 없는 차이라 오답으로 보지 않고 절반만 인정해요. 실제 대화에서는 앞뒤 문맥으로 가려요.`} /></p>
                   </div>
                 )}
                 {!result.correct && result.verdict !== 'homophene' && result.confusions?.length > 0 && (
@@ -410,8 +414,8 @@ function WordQuiz({ data, reload }) {
                 {isContext && (
                   <div className="rounded-16 border-2 border-line bg-white p-4 text-[13px] leading-snug text-ink-muted">
                     <p className="text-xs font-bold text-ink">문장으로 고르는 문항이에요</p>
-                    <p className="mt-1">보기는 모두 입모양이 비슷해서 눈만으로는 가르기 어려워요. 앞뒤 말의 흐름으로 고르는 연습이에요.
-                      이 문항은 단어 단계 숙달에는 들어가지 않아요.</p>
+                    <p className="mt-1"><ShortText key={q.target} short={learner.shortHints}
+                      text="보기는 모두 입모양이 비슷해서 눈만으로는 고르기 어려워요. 앞뒤 말의 흐름으로 고르는 연습이에요. 이 문항은 단어 단계 숙달에는 들어가지 않아요." /></p>
                     {q.item.hint && <p className="mt-1">힌트: {q.item.hint}</p>}
                   </div>
                 )}
@@ -429,10 +433,17 @@ function WordQuiz({ data, reload }) {
                   </div>
                   <div className="mt-1.5"><CueLegend /></div>
                 </div>
-                <button type="button" onClick={() => setSignOpen(true)}
-                  className="btn-secondary w-full py-2.5 text-[14px] text-track">
-                  "{q.target}" 수어로 뜻 보기
-                </button>
+                {learner.signView && !result.correct ? (
+                  <div className="rounded-16 border-2 border-line bg-white p-3">
+                    <p className="mb-2 text-xs font-bold text-ink">"{q.target}" 수어 뜻</p>
+                    <Suspense fallback={null}><SignPanel key={q.target} text={q.target} /></Suspense>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setSignOpen(true)}
+                    className="btn-secondary w-full py-2.5 text-[14px] text-track">
+                    "{q.target}" 수어로 뜻 보기
+                  </button>
+                )}
                 <Suspense fallback={null}>
                   <LipReadCheck target={q.target} candidates={q.choices} />
                 </Suspense>

@@ -38,29 +38,29 @@ VISEME_LESSONS: List[Dict] = [
         "viseme_id": 3, "name": "전설모음", "kind": "vowel",
         "phonemes": ["ㅣ", "ㅔ", "ㅖ"], "visibility": "high",
         "look": "입술을 좌우로 길게 당긴다(옆으로 웃는 모양). 윗니가 살짝 보인다.",
-        "teach": "좌우로 퍼지는 '이' 계열. 둥근 원순모음과 정반대라 구별이 쉽다.",
+        "teach": "좌우로 퍼지는 '이' 계열. 둥글게 내미는 '오·우'와 정반대라 구별이 쉽다.",
         "example_words": ["이", "시계", "비", "기린"],
     },
     {
         "viseme_id": 4, "name": "원순모음", "kind": "vowel",
         "phonemes": ["ㅗ", "ㅛ", "ㅜ", "ㅠ"], "visibility": "high",
         "look": "입술을 둥글게 오므려 앞으로 내민다('오/우' 모양).",
-        "teach": "둥글게 내미는 모양이 뚜렷해 좋은 닻. 좌우로 퍼지는 전설모음과 확실히 다르다. "
-                 "오는 턱이 조금 더 벌어지고 우는 더 좁게 오므리지만(말하기에서 연습하는 차이), 보는 쪽에서는 거의 같아 문맥으로 가른다.",
+        "teach": "둥글게 내미는 모양이 뚜렷해 좋은 닻(기준점). 좌우로 퍼지는 '이'와 확실히 다르다. "
+                 "오는 턱이 조금 더 벌어지고 우는 더 좁게 오므린다(말하기에서 연습하는 차이). 하지만 보는 쪽에서는 거의 같아 문맥으로 가른다.",
         "example_words": ["오이", "우유", "소", "우산"],
     },
     {
         "viseme_id": 5, "name": "중설모음", "kind": "vowel",
         "phonemes": ["ㅓ", "ㅕ", "ㅡ"], "visibility": "medium",
         "look": "크게 벌리지도 둥글지도 않은 중립에 가깝게 살짝 벌린다.",
-        "teach": "특징이 옅어 개방모음·원순모음보다 읽기 어렵다. 앞뒤 소리로 보완.",
+        "teach": "특징이 옅어 크게 벌리는 '아'나 둥근 '오·우'보다 읽기 어렵다. 앞뒤 소리로 채운다.",
         "example_words": ["어머니", "그림", "서점", "느낌"],
     },
     {
         "viseme_id": 6, "name": "치경음", "kind": "consonant",
         "phonemes": ["ㄷ", "ㄸ", "ㅌ", "ㄴ", "ㄹ", "ㅅ", "ㅆ"], "visibility": "low",
         "look": "혀끝을 윗잇몸 쪽으로 올리지만(ㅅ·ㅆ은 닿지 않게 틈을 둔다), 밖에서는 입이 살짝 벌어진 정도만 보인다.",
-        "teach": "조음이 입 안쪽이라 ㄷ·ㄴ·ㄹ·ㅅ… 서로 거의 구별 불가. 문맥으로 판단.",
+        "teach": "혀가 입 안쪽에서 움직여 ㄷ·ㄴ·ㄹ·ㅅ… 서로 거의 구별할 수 없다. 문맥으로 판단.",
         "example_words": ["다리", "나무", "라디오", "사자"],
     },
     {
@@ -76,7 +76,7 @@ VISEME_LESSONS: List[Dict] = [
         "viseme_id": 8, "name": "성문음", "kind": "consonant",
         "phonemes": ["ㅎ"], "visibility": "low",
         "look": "목에서 숨을 내쉬며 입을 살짝 연다. 고유한 입모양이 거의 없다.",
-        "teach": "ㅎ은 겉으로 표시가 약하다. 종종 뒤 모음의 입모양에 묻힌다.",
+        "teach": "ㅎ은 겉으로 잘 드러나지 않는다. 뒤 모음의 입모양에 묻힐 때가 많다.",
         "example_words": ["하늘", "학교", "해", "호수"],
     },
     {
@@ -90,7 +90,7 @@ VISEME_LESSONS: List[Dict] = [
         "viseme_id": 10, "name": "경구개음", "kind": "consonant",
         "phonemes": ["ㅈ", "ㅉ", "ㅊ"], "visibility": "low",
         "look": "입술을 살짝 앞으로 내밀며 옆으로 조금 당긴다.",
-        "teach": "치경음과 겉모습이 비슷해 헷갈린다. 살짝 내미는 느낌이 유일한 힌트.",
+        "teach": "잇몸소리(ㄷ·ㄴ)와 겉모습이 비슷해 헷갈린다. 입술을 살짝 내미는 느낌이 유일한 힌트.",
         "example_words": ["자전거", "차", "주스", "축구"],
     },
 ]
@@ -104,7 +104,7 @@ HOMOPHENE_CLUSTERS: List[Dict] = [
     },
     {
         "id": "inside", "name": "입 안쪽 자음", "viseme_ids": [6, 7, 8, 10],
-        "note": "치경·연구개·성문·경구개음은 혀·목 안쪽 조음이라 겉모습이 거의 같다. 독화로 가장 어려운 무리.",
+        "note": "잇몸·여린입천장·목청·센입천장소리는 혀와 목 안쪽에서 만들어져 겉모습이 거의 같다. 독화로 가장 어려운 무리.",
     },
 ]
 
@@ -120,25 +120,25 @@ VISIBLE_ANCHORS: List[int] = [2, 3, 4]  # 개방·전설·원순 모음
 #   9/28 감사: 큐레이션 짝에 relation이 없어 승인 짝(규칙으로 붙음)과 기준이 달랐다. 짝은 둘 중 하나여야 한다(test_content_audit).
 MINIMAL_PAIRS: List[Dict] = [
     {"a": "밥", "b": "맘", "visemes": [1], "same_looking": True, "relation": "homophene",
-     "note": "ㅂ↔ㅁ 양순음. 입술 닫힘이 똑같아 구별 불가."},
+     "note": "ㅂ↔ㅁ 입술소리. 입술 닫힘이 똑같아 구별할 수 없다."},
     {"a": "불", "b": "풀", "visemes": [1], "same_looking": True, "relation": "homophene",
-     "note": "ㅂ↔ㅍ 양순음. 숨의 세기만 달라 입모양이 같다."},
+     "note": "ㅂ↔ㅍ 입술소리. 숨의 세기만 달라 입모양이 같다."},
     {"a": "물", "b": "불", "visemes": [1], "same_looking": True, "relation": "homophene",
-     "note": "ㅁ↔ㅂ 양순음."},
+     "note": "ㅁ↔ㅂ 입술소리."},
     {"a": "달", "b": "탈", "visemes": [6], "same_looking": True, "relation": "homophene",
-     "note": "ㄷ↔ㅌ 치경음. 입 안쪽이라 겉모습 동일."},
+     "note": "ㄷ↔ㅌ 잇몸소리. 입 안쪽이라 겉모습이 같다."},
     {"a": "살", "b": "쌀", "visemes": [6], "same_looking": True, "relation": "homophene",
      "note": "ㅅ↔ㅆ. 구별 불가."},
     {"a": "자요", "b": "차요", "visemes": [10], "same_looking": True, "relation": "homophene",
-     "note": "ㅈ↔ㅊ 경구개음."},
+     "note": "ㅈ↔ㅊ 센입천장소리."},
     {"a": "말", "b": "물", "visemes": [2, 4], "same_looking": False, "relation": "minimal_pair",
      "note": "크게 벌린 입(말) vs 둥글게 오므린 입(물), 뚜렷이 다르다."},
     {"a": "우유", "b": "이유", "visemes": [4, 3], "same_looking": False, "relation": "minimal_pair",
      "note": "둥근 입(우) vs 옆으로 퍼진 입(이), 정반대로 보인다."},
     {"a": "말", "b": "발", "visemes": [1], "same_looking": True, "relation": "homophene",
-     "note": "ㅁ↔ㅂ 양순음."},
+     "note": "ㅁ↔ㅂ 입술소리."},
     {"a": "자", "b": "차", "visemes": [10], "same_looking": True, "relation": "homophene",
-     "note": "ㅈ↔ㅊ 경구개음."},
+     "note": "ㅈ↔ㅊ 센입천장소리."},
 ]
 
 # 각 그룹의 대표 음절 — 아바타로 그 입모양 하나를 명확히 보여줄 때 사용.
@@ -152,7 +152,7 @@ DEMO_SYLLABLE: Dict[int, str] = {
 STAGES: List[Dict] = [
     {"stage": 0, "key": "onboarding", "title": "입문·배치", "desc": "독화가 뭔지 + 나에게 맞는 시작점", "kind": "intro"},
     {"stage": 1, "key": "viseme", "title": "입모양 인지", "desc": "10개 입모양 그룹 익히기", "kind": "literacy", "route": "/learn/viseme"},
-    {"stage": 2, "key": "word", "title": "음절·단어", "desc": "최소대립쌍으로 단어 독화", "kind": "word", "route": "/learn/word"},
+    {"stage": 2, "key": "word", "title": "음절·단어", "desc": "한 소리만 다른 단어 짝으로 단어 독화", "kind": "word", "route": "/learn/word"},
     {"stage": 3, "key": "sentence", "title": "문장 (상황별)", "desc": "상황별 문장 독화 연습", "kind": "sentence", "route": "/practice"},
     {"stage": 4, "key": "conversation", "title": "대화 실전", "desc": "AI와 실전 대화", "kind": "conversation", "route": "/conversation"},
 ]

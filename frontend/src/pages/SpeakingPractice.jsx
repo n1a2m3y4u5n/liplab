@@ -807,7 +807,7 @@ export default function SpeakingPractice() {
                 {/* 음소별 발음 정확도(182:88) */}
                 {phones.length > 0 && (
                   <div className="flex flex-col items-center gap-2.5 rounded-14 border-1.5 border-fill bg-surface-muted px-4 py-3.5">
-                    <p className="text-[13px] font-bold leading-figma text-ink-muted">음소별 발음 정확도</p>
+                    <p className="text-[13px] font-bold leading-figma text-ink-muted">소리별 발음 정확도</p>
                     <div className="flex flex-wrap justify-center gap-2">
                       {phones.map((p, i) => {
                         const v = phoneScore(p)

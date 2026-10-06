@@ -182,10 +182,10 @@ function PrintReport({ r }) {
       )}
       <p>말하기 연습 {act.speak?.n ?? 0}회{act.speak?.mean_score != null ? `, 평균 ${act.speak.mean_score}점` : ''}</p>
 
-      <h2 className="mt-5 text-[12.5pt] font-bold">5. 웹캠 조음 교정</h2>
+      <h2 className="mt-5 text-[12.5pt] font-bold">5. 웹캠 입모양 연습</h2>
       {art ? (
-        <p className="mt-1">교정 세션 {art.sessions}회, 목표 대비 평균 오차 {art.gap_start} → {art.gap_end} (세션 처음 → 끝, 0에 가까울수록 목표와 가까움)</p>
-      ) : <p className="mt-1">교정 세션 기록이 없습니다.</p>}
+        <p className="mt-1">입모양 연습 {art.sessions}회, 목표와의 평균 차이 {art.gap_start} → {art.gap_end} (연습 처음 → 끝, 0에 가까울수록 목표와 가까움)</p>
+      ) : <p className="mt-1">입모양 연습 기록이 없습니다.</p>}
 
       <h2 className="mt-5 text-[12.5pt] font-bold">해석 주의</h2>
       <ul className="mt-1 list-disc pl-5">{(r.notes || []).map((n, i) => <li key={i}>{n}</li>)}</ul>
@@ -250,14 +250,14 @@ export default function EvalReport() {
       {report && <PrintReport r={report} />}
       <div className="print:hidden">
       <AppShell active="analysis" title="학습 효과 리포트"
-        description="시행 기록으로 학습곡선과 단계별 도달 시행수, 초기 대비 최근 향상도를 확인합니다.">
+        description="문제를 푼 기록으로 학습곡선, 단계마다 숙달까지 걸린 시도 수, 처음보다 최근에 얼마나 늘었는지를 봐요.">
       <div className="flex w-full flex-col gap-5">
         {/* 표준검사 진입(축 I) — 난이도를 맞춘 동형 폼 A(사전)·B(사후). 훈련 전 A, 훈련 뒤 B를 보면
             아래 '통제 향상도'에 변화가 나온다. 배치검사 화면에는 모드 전환기가 없으므로 여기서 연다. */}
         <div className="flex flex-col gap-3 rounded-18 border-2 border-line bg-white p-5 sm:flex-row sm:items-center">
           <div className="flex-1">
             <p className="text-sm font-bold text-ink">표준검사 사전·사후</p>
-            <p className="mt-0.5 text-xs text-ink-muted">훈련 전에 사전(A), 훈련 뒤에 사후(B)를 한 번씩 보면 향상도를 비교해요. 각 24문항, 5분 안팎.</p>
+            <p className="mt-0.5 text-xs text-ink-muted">훈련 전에 사전 검사(A), 훈련 뒤에 사후 검사(B)를 한 번씩 보면 얼마나 늘었는지 비교해요. 각 24문항, 5분쯤 걸려요.</p>
             {latePretest && (
               <p className="mt-1 text-xs text-ink-muted">
                 이미 독화 연습을 {practiced}회 했어요. 지금 사전 검사를 봐도 되지만, 결과에 '연습 뒤 사전'으로 표시돼요.
@@ -333,7 +333,7 @@ export default function EvalReport() {
                 )}
                 {prog.error_phoneme_change?.some((e) => e.before || e.after) && (
                   <div className="mt-3">
-                    <p className="mb-1 text-[11px] font-bold text-ink-faint">음소별 오류 변화 (사전→사후)</p>
+                    <p className="mb-1 text-[11px] font-bold text-ink-faint">소리별 오류 변화 (사전→사후)</p>
                     <div className="flex flex-wrap gap-1.5">
                       {prog.error_phoneme_change.filter((e) => e.before || e.after).slice(0, 8).map((e) => (
                         // 자모마다 오류가 몇 개뿐이라 개인 증감은 잡음이 커서 색을 매기지 않는다(9/29)
@@ -399,7 +399,7 @@ export default function EvalReport() {
 
             {/* 조음 교정 전후 오차(축 E-9) — 웹캠 교정 세션의 처음·끝에서 잰 관찰 차원(개구·원순·폐쇄) 평균 |목표−관찰| */}
             {art?.sessions > 0 && (
-              <Card title="조음 교정 전후 오차 (웹캠)" hint={`교정 세션 ${art.sessions}회 · 0에 가까울수록 목표 입모양`}>
+              <Card title="웹캠 입모양 연습 전후 차이" hint={`입모양 연습 ${art.sessions}회 · 0에 가까울수록 목표 입모양`}>
                 <div className="flex flex-wrap items-end gap-6">
                   <div>
                     <p className="text-[11px] font-bold text-ink-faint">세션 처음</p>
@@ -422,8 +422,8 @@ export default function EvalReport() {
                   )}
                 </div>
                 <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">
-                  입을 벌린 정도·입술 오므림·입술 닫힘을 목표와 비교한 평균 차이(0~100)입니다. 혀처럼 밖에서 안 보이는
-                  조음은 포함되지 않아요. 영상은 기기 밖으로 나가지 않고 요약 수치만 저장됩니다.
+                  입을 벌린 정도, 입술 오므림, 입술 닫힘을 목표와 비교한 평균 차이(0~100)예요. 혀처럼 밖에서 안 보이는
+                  움직임은 들어가지 않아요. 영상은 기기 밖으로 나가지 않고, 요약 수치만 저장돼요.
                 </p>
               </Card>
             )}
@@ -461,8 +461,8 @@ export default function EvalReport() {
                   <div className="flex items-center gap-4">
                     <p className="text-3xl font-bold text-bad">{Math.round(data.same_viseme_ratio * 100)}%</p>
                     <p className="text-[11px] leading-relaxed text-ink-muted">
-                      틀린 답 중 이만큼이 <b>입모양이 같아</b> 헷갈린 경우입니다. 독화에서 본질적으로
-                      구분이 어려운 지점을 가리키며, 이 비율이 높을수록 청각·문맥 단서 보완이 필요합니다.
+                      틀린 답 가운데 이만큼은 <b>입모양이 같아</b> 헷갈린 경우예요. 입모양만으로는 원래 구별하기
+                      어려운 부분이에요. 이 비율이 높으면 소리나 문맥 같은 다른 단서를 함께 써야 해요.
                     </p>
                   </div>
                 ) : <EmptyLine>혼동 데이터가 쌓이면 표시됩니다.</EmptyLine>}
@@ -491,10 +491,10 @@ export default function EvalReport() {
 
         {/* 축 C — 공개 표준 독화 자원 내려받기(연구·교육 활용). 개인 학습 기록과 무관하게 항상 제공 */}
         {!loading && (
-          <Card title="공개 표준 독화 자원 (축 C)" hint="연구·교육 활용 · CC BY 4.0">
+          <Card title="공개 표준 독화 자원" hint="연구·교육 활용 · CC BY 4.0">
             <p className="mb-3 text-[11px] leading-relaxed text-ink-muted">
-              한국어 독화에는 표준 자원이 거의 없습니다. LIPLAB은 동구형이음 사전·독화 난이도 지수·자음
-              시각 지각공간·표준 평가셋을 판본과 함께 공개합니다. 앱 밖 연구·교육에서도 활용할 수 있어요.
+              한국어 독화에는 함께 쓸 수 있는 기본 자료가 거의 없어요. LIPLAB은 입모양이 같은 단어 사전, 독화 난이도 점수,
+              자음끼리 얼마나 닮아 보이는지 나타낸 지도, 표준 평가 문제를 판 번호와 함께 공개해요. 앱 밖 연구와 교육에도 쓸 수 있어요.
             </p>
             <button type="button" onClick={downloadResources} disabled={dl}
               className="btn-secondary !py-2.5 px-4 text-[14px] disabled:opacity-50">

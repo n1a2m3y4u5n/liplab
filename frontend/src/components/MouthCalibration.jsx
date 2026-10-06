@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { toBlendshapeMap, pickCalibrationFrame, saveCalibration } from '../lib/mouthScore'
 import { mediaErrorMessage } from '../lib/mediaError'
+import { VISEME_PLAIN } from '../lib/visemeLabels'
 
 /**
  * 입모양 본뜨기(개인 캘리브레이션, 축 D 보정).
@@ -134,7 +135,7 @@ export default function MouthCalibration({ landmarkerRef, modelStatus, onDone, o
         {status === 'running' && (
           <div className="absolute inset-x-0 top-2 text-center">
             <span className="rounded-full bg-black/55 px-3 py-1 text-sm font-bold text-white backdrop-blur-sm">
-              「{step.syl}」 입모양 — {step.name}
+              「{step.syl}」 입모양 — {VISEME_PLAIN[step.id]?.look || step.name}
             </span>
           </div>
         )}

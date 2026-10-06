@@ -917,9 +917,9 @@ export const MOCKS = {
   learn: { design: [520, 653], C: LearnMock, areas: ['switch', 'guideBtn', 'nodes', 'arrows', 'sheet'],
     alt: '휴대폰 학습 탭 예시. 독화·발화 전환, 단계 이름과 가이드 버튼, DOKA 단계 노드와 아래 레슨 카드.' },
   readQuestion: { design: [375, 564], C: (p) => <ReadMock {...p} />, areas: ['bookmark', 'stage', 'options'],
-    alt: '단어 독화 문항 예시. 왼쪽 위에 화자 이름이 붙은 입모양 영상을 보고 보기를 고른 뒤 확인을 누르면 초록 결과 바에 정답이에요가 나온다.' },
+    alt: '단어 독화 문항 예시. 왼쪽 위에 화자 이름이 붙은 입모양 영상이 있다. 보기를 고르고 확인을 누르면 초록 결과 바에 \'정답이에요\'가 나온다.' },
   readWrong: { design: [375, 564], C: (p) => <ReadMock wrong {...p} />, areas: ['resultBar'],
-    alt: '단어 독화 오답 예시. 고른 보기는 빨강, 정답 보기는 초록 테두리, 아래 빨간 결과 바에 정답이 나온다.' },
+    alt: '단어 독화 오답 예시. 고른 보기는 빨강, 정답 보기는 초록 테두리. 아래 빨간 결과 바에 정답이 나온다.' },
   speakBefore: { design: [375, 564], C: (p) => <SpeakMock {...p} />, areas: ['stage', 'mic'],
     alt: '발화 문항 예시. 말할 단어와 아바타 입모양, 아래 마이크 버튼. 녹음 중에는 파형이 움직인다.' },
   speakResult: { design: [375, 564], C: (p) => <SpeakMock result {...p} />, areas: ['score', 'chips', 'detail'],
@@ -931,9 +931,9 @@ export const MOCKS = {
   review: { design: [520, 653], C: ReviewMock, areas: ['ctaWrong', 'ctaMark', 'items', 'erase'],
     alt: '복습 탭 예시. 오답·북마크 복습 카드와 복습할 항목 목록, 지우기 버튼.' },
   analysis: { design: [640, 804], C: AnalysisMock, areas: ['stats', 'bars', 'line', 'calendar', 'history', 'fullStats'],
-    alt: '분석 탭 예시. 총 학습·평균 정확도·연속 학습 세 칸, 학습시간·정확도 추이 그래프, 활동 캘린더·회차 히스토리·전체 통계 링크.' },
+    alt: '분석 탭 예시. 맨 위에 총 학습, 평균 정확도, 연속 학습 세 칸. 가운데에 학습시간과 정확도 추이 그래프. 아래에 활동 캘린더, 회차 히스토리, 전체 통계 링크.' },
   profile: { design: [520, 653], C: ProfileMock, areas: ['placement', 'account', 'reset', 'a11y'],
-    alt: '프로필 탭 예시. 이름과 레벨 카드, 자가진단 다시 하기·계정 설정·학습 초기화 메뉴, 왼쪽 아래 접근성 설정 Aa 버튼.' },
+    alt: '프로필 탭 예시. 이름과 레벨 카드. 자가진단 다시 하기, 계정 설정, 학습 초기화 메뉴. 왼쪽 아래 접근성 설정 Aa 버튼.' },
 }
 
 /**

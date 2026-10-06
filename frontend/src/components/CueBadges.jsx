@@ -134,9 +134,9 @@ export default function CueBadges({ text, showControls = false }) {
     <span className="inline-flex flex-col gap-1.5">
       {badges}
       <span className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-[11px] text-gray-500">
-        <label className="inline-flex cursor-pointer items-center gap-1.5" title="아직 약한 음소에만 기호를 남깁니다(개인 학습기록 기반).">
+        <label className="inline-flex cursor-pointer items-center gap-1.5" title="아직 약한 소리에만 기호를 남겨요(내 학습 기록에 따라).">
           <input type="checkbox" checked={focus} onChange={(e) => setFocus(e.target.checked)} className="h-3 w-3 accent-violet-600" />
-          표적 음소 집중
+          약한 소리만 표시
         </label>
         <label className="inline-flex items-center gap-1.5" title="화면에 동시에 뜨는 기호 수를 제한해 과다를 막습니다.">
           최대 기호
