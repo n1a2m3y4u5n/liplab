@@ -341,6 +341,10 @@ class ReviewItem(Base):
     ease_factor = Column(Float, default=2.5)         # 클수록 간격이 빨리 늘어남(잘 맞히는 항목)
     repetitions = Column(Integer, default=0)         # 연속 성공 횟수(실패 시 0으로 리셋)
     lapses = Column(Integer, default=0)              # 누적 실패 횟수(누수·leech 판별용)
+    # FSRS 그림자 모드(C11, fsrs_shadow.py) — 간격은 SM-2가 정하고, 이 값들은 회상 확률 예측에만 쓴다. 예전 항목은 NULL
+    fsrs_stability = Column(Float, nullable=True)    # 안정도(일)
+    fsrs_difficulty = Column(Float, nullable=True)   # 난이도(1~10)
+    last_review_on = Column(String(10), nullable=True)   # 마지막으로 반영한 날(KST 'YYYY-MM-DD'). NULL이면 updated_at으로 어림
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -371,6 +375,100 @@ class AssessmentResult(Base):
     level = Column(Integer, default=1)               # 추정 수준 1~5
     error_visemes = Column(JSON, default=list)       # 자주 틀린 입모양 id 목록
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+
+class ReviewLog(Base):
+    """복습 한 번의 결과와 그때의 회상 확률 예측(C11 FSRS 그림자 모드, fsrs_shadow.py). 예정일이 된 항목에 답한 복습만 남긴다.
+    예측은 기록만 하고 간격은 SM-2(srs.py)가 정한다. p_*는 관측 척도(4지선다는 0.25 + 0.75·R)이고 r_fsrs는 회상 확률 그대로다.
+    신규 테이블이라 create_all이 만든다."""
+    __tablename__ = "review_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    kind = Column(String(20), nullable=False)
+    ref = Column(String(100), nullable=False)
+    source = Column(String(16), nullable=True)       # 'review'(복습 화면) | 'sentence'(문장 레슨·복습) | 'speak'(말하기)
+    reviewed_on = Column(String(10), nullable=False) # KST 'YYYY-MM-DD'
+    elapsed_days = Column(Integer, nullable=True)    # 마지막 반영 뒤 지난 날수
+    quality = Column(Integer, nullable=False)        # SM-2 품질(0~5, 3 이상 합격)
+    grade = Column(Integer, nullable=False)          # FSRS 등급(1 Again ~ 4 Easy)
+    passed = Column(Boolean, nullable=False)
+    answer_mode = Column(String(10), nullable=True)
+    speed = Column(Float, nullable=True)
+    guess = Column(Float, default=0.0)               # 찍기 확률(4지선다 0.25)
+    r_fsrs = Column(Float, nullable=True)            # FSRS 회상 확률(상태가 없던 예전 항목은 NULL)
+    p_fsrs = Column(Float, nullable=True)            # FSRS 관측 정답 확률
+    p_sm2 = Column(Float, nullable=True)             # SM-2 대리 예측(0.9^(t/간격))의 관측 정답 확률
+    sm2_interval = Column(Integer, nullable=True)    # 이 복습 전 SM-2 간격
+    fsrs_stability = Column(Float, nullable=True)    # 이 복습 전 FSRS 상태
+    fsrs_difficulty = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class MasteryProbe(Base):
+    """숙달 지연 탐침(C16, mastery_probe.py) — 읽기 1~3단계를 처음 숙달하고 1일·7일 뒤에 낸 처음 보는 문항과 답.
+    숙달·복습·시행 기록(TrialAttempt)·XP에는 넣지 않는다. 회차를 처음 낼 때 문항을 만들어 두고(chosen NULL), 답하면 채운다.
+    신규 테이블이라 create_all이 만든다."""
+    __tablename__ = "mastery_probes"
+    __table_args__ = (UniqueConstraint("user_id", "stage", "wave", "seq", name="ux_mastery_probes_user_stage_wave_seq"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    stage = Column(Integer, nullable=False)          # 1..3
+    wave = Column(Integer, nullable=False)           # 1 | 7 (숙달 뒤 일수)
+    seq = Column(Integer, nullable=False)            # 회차 안 순번
+    item_kind = Column(String(12), nullable=False)   # 'viseme' | 'word' | 'sentence'
+    stimulus = Column(String(200), nullable=False)   # 아바타가 말하는 글
+    target = Column(String(200), nullable=False)     # 정답(1단계는 입모양 무리 번호)
+    options = Column(JSON, default=list)             # [{value, label}] 보인 순서
+    mastered_on = Column(String(10), nullable=True)  # 숙달한 날(KST)
+    due_on = Column(String(10), nullable=False)      # 회차 첫날(KST)
+    chosen = Column(String(200), nullable=True)
+    correct = Column(Boolean, nullable=True)         # 아직 안 풀었으면 NULL
+    delay_days = Column(Integer, nullable=True)      # 숙달 뒤 실제로 푼 날까지의 날수
+    speed = Column(Float, nullable=True)             # 재생 속도(늘 1.0, 보조 없음)
+    answered_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RetentionResult(Base):
+    """지연 유지 검사(C7, retention.py) 결과 — 사후 검사와 같은 동형 폼을 정해진 날수 뒤에 다시 본 기록.
+    사전·사후 비교(placement_results)에 섞이지 않게 따로 둔다. 신규 테이블이라 create_all이 만든다."""
+    __tablename__ = "retention_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    form = Column(String(16), nullable=False)        # 다시 본 동형 폼(사후 검사의 폼)
+    form_version = Column(String(16), nullable=True)
+    post_result_id = Column(Integer, nullable=True)  # 짝이 되는 사후 검사(placement_results.id)
+    days_after_post = Column(Integer, nullable=True)
+    total = Column(Integer, default=0)
+    correct = Column(Integer, default=0)
+    accuracy = Column(Float, default=0.0)
+    ability = Column(Float, default=0.0)
+    level = Column(Integer, default=1)
+    item_log = Column(JSON, default=list)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class LessonEffort(Base):
+    """레슨별 정신적 노력 한 문항(C14, mental_effort.py, Paas 9점). 레슨 세션(화면이 만든 id)마다 한 행.
+    response: 'answered' | 'skipped' | 'left'. 적응 규칙 없이 기록만 한다. 신규 테이블이라 create_all이 만든다."""
+    __tablename__ = "lesson_efforts"
+    __table_args__ = (UniqueConstraint("user_id", "session_id", name="ux_lesson_efforts_user_session"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    session_id = Column(String(40), nullable=False)
+    lesson_kind = Column(String(16), nullable=True)  # 'viseme' | 'word' | 'sentence' | 'closure' | 'review'
+    stage = Column(Integer, nullable=True)           # 읽기 단계(복습은 NULL)
+    rating = Column(Integer, nullable=True)          # 1~9, 답하지 않았으면 NULL
+    response = Column(String(10), nullable=False)
+    n_items = Column(Integer, nullable=True)         # 그 레슨에서 푼 문항 수
+    accuracy = Column(Float, nullable=True)          # 그 레슨 정답률(0~1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 # Dependency for getting DB session
@@ -446,6 +544,10 @@ _ADD_COLUMNS = (
     ("progress", "speed", "FLOAT"),
     # 3단계 문장 답 방식(보기 고름·직접 입력, docs/mastery-ewma.md 10절)
     ("progress", "answer_mode", "VARCHAR(10)"),
+    # FSRS 그림자 모드 상태(C11, 간격은 바꾸지 않음)
+    ("review_items", "fsrs_stability", "FLOAT"),
+    ("review_items", "fsrs_difficulty", "FLOAT"),
+    ("review_items", "last_review_on", "VARCHAR(10)"),
 )
 
 
@@ -544,6 +646,9 @@ _USER_INDEXES = (
     ("assessment_results", "user_id, created_at"),
     ("bookmarks", "user_id"),
     ("consent_records", "user_id"),
+    ("review_logs", "user_id, created_at"),
+    ("mastery_probes", "user_id, created_at"),
+    ("retention_results", "user_id, created_at"),
 )
 
 

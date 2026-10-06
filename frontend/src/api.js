@@ -227,6 +227,15 @@ export const curriculumAPI = {
   scorePlacement: async (items, responses, form = 'placement') => (await api.post('/assessment/score', { items, responses, form })).data,
   nextPlacementItem: async (asked, responses, n = 12) => (await api.post('/assessment/placement/next', { asked, responses, n })).data,
   getAssessmentHistory: async () => (await api.get('/assessment/history')).data,
+  // 지연 유지 검사(C7): 상태(state none|waiting|due|done)·문항(볼 때만)·채점. 사전·사후 비교에는 섞이지 않는다
+  getRetention: async () => (await api.get('/assessment/retention')).data,
+  getRetentionItems: async () => (await api.get('/assessment/retention/items')).data,
+  scoreRetention: async (responses) => (await api.post('/assessment/retention/score', { responses })).data,
+  // 숙달 지연 탐침(C16): 이 레슨에 섞을 탐침(정답 없음, 서버가 비율 상한을 적용)과 답 기록. 숙달·복습·XP에는 들어가지 않는다
+  getMasteryProbes: async (lessonLen, used = 0) => (await api.get('/curriculum/mastery-probes', { params: { lesson_len: lessonLen, used } })).data,
+  answerMasteryProbe: async (id, chosen) => (await api.post('/curriculum/mastery-probe-answer', { id, chosen })).data,
+  // 레슨별 정신적 노력(C14): { session_id, lesson_kind, stage, rating?, response?, n_items, accuracy }
+  lessonEffort: async (payload) => (await api.post('/lesson/effort', payload)).data,
 }
 
 export const scoreAPI = {

@@ -12,6 +12,8 @@ import useBookmark from '../lib/useBookmark'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR_CLOSURE, LESSON_OPTIONS_3, lessonPad } from '../lib/lessonLayout'
 import useSlowWeak from '../hooks/useSlowWeak'
 import useLessonTalker from '../hooks/useLessonTalker'
+import useMasteryProbes from '../hooks/useMasteryProbes'
+import MasteryProbeBlock from '../components/MasteryProbeBlock'
 
 /**
  * 문맥 추론(Closure) — 독화 레슨 공통 템플릿(핸드오프 §4-03, WordStage와 같은 틀).
@@ -65,6 +67,7 @@ function ClosureQuiz({ items }) {
   const [frames, setFrames] = useState([])
   const shownFrames = useSlowWeak(frames)   // 약한 입모양은 조금 천천히(연습 화면)
   const [lesson, nextLesson] = useLessonTalker(endless ? 'endless' : 'closure')   // 레슨마다 가상 화자 한 명(계획 2-2)
+  const probes = useMasteryProbes(QUIZ_LEN)   // 숙달 지연 탐침(C16): 레슨 가운데 문항 뒤에 끼운다(숙달·XP에는 들어가지 않음)
   const [selected, setSelected] = useState(null)
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -102,7 +105,7 @@ function ClosureQuiz({ items }) {
     setResult({ correct, chosen: selected, confusions })
     setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
   }
-  const next = () => {
+  const advance = () => {
     if (qNum >= QUIZ_LEN) {
       setElapsedSec(Math.floor((Date.now() - startRef.current) / 1000))
       setDone(true)
@@ -111,15 +114,19 @@ function ClosureQuiz({ items }) {
     setQNum((n) => n + 1)
     setI((k) => k + 1)
   }
+  const next = () => { if (!probes.take(qNum)) advance() }
   const restart = () => {
     setDone(false); setQNum(1); setTally({ n: 0, correct: 0 }); setXpEarned(0)
     startRef.current = Date.now()
     nextLesson()
+    probes.reload()
     setI((k) => k + 1)
   }
   // 나가기: 정해진 곳으로 간다. 예전에는 뒤로 가기(navigate(-1))라, 엔드리스에서는 방금 끝낸 단어 레슨이 다시 열리고
   // 다른 사이트에서 바로 들어왔으면 앱을 떠났다.
   const exit = () => navigate(hubOf(endless))
+
+  if (probes.open) return <MasteryProbeBlock items={probes.items} onDone={() => { probes.finish(); advance() }} />
 
   if (done) {
     const accuracy = tally.n ? Math.round((tally.correct / tally.n) * 100) : null
@@ -127,7 +134,8 @@ function ClosureQuiz({ items }) {
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
         onNext={endless ? () => navigate('/learn/word?endless=1') : restart}
         onHome={() => navigate(hubOf(endless))}
-        homeLabel={endless ? '엔드리스 학습으로' : '연습으로 돌아가기'} />
+        homeLabel={endless ? '엔드리스 학습으로' : '연습으로 돌아가기'}
+        effort={{ lessonKind: 'closure', stage: 3, nItems: tally.n, accuracy: tally.n ? tally.correct / tally.n : null }} />
     )
   }
 

@@ -15,6 +15,8 @@ import { changeTone, ciText, CHANGE_NOISE_NOTE } from '../lib/changeTone'
  * 화면: 문항 385:82(모바일 385:120) — 독화 레슨 템플릿과 같은 틀, 북마크 없음.
  *       결과(배치 모드) 85:9(모바일 244:99) — 마스코트 + "학습 준비가 다 되었어요!" + 버튼 2개.
  *       사전·사후 평가(A/B)의 결과 리포트는 §4-01에 따라 예전 리포트를 유지한다.
+ * 지연 유지 검사(C7, ?form=R): 사후 검사 뒤 정해진 날수가 지나면 사후 검사와 같은 동형 폼을 다시 본다. 문항·채점은 서버의
+ *       /assessment/retention/*가 맡고 결과는 사전·사후 비교에 섞이지 않는다. 배치·A/B 흐름은 그대로다.
  */
 const VIS_NAME = {
   1: '양순음', 2: '개방모음', 3: '전설모음', 4: '원순모음', 5: '중설모음',
@@ -25,7 +27,7 @@ const VIS_NAME = {
 const STAGE_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/learn/scenario' }
 const STAGE_NUM = { viseme: 1, word: 2, sentence: 3, conversation: 4 }  // 추천 단계 배지 숫자
 
-const MODE_LABEL = { placement: '배치검사', A: '사전검사', B: '사후검사' }
+const MODE_LABEL = { placement: '배치검사', A: '사전검사', B: '사후검사', R: '유지 검사' }
 const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }   // 마스코트 SVG 그림자 여백(Figma inset)
 // 결과 버튼 — 데스크톱 75:23(btn-lg), lg 미만 244:129(r14·b5, py16, 16px)
 const RESULT_BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]'
@@ -34,11 +36,11 @@ const RESULT_BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-l
 // 기본으로 되돌림)로 내고, 흔들림 씨앗은 문항 id로 고정한다. 화자 표시는 검사에서 띄우지 않는다. 나머지 문항과 사전 검사는 기본 얼굴.
 const itemTalker = (it) => (it?.talker && it.talker !== 'default' ? atNaturalRate(talkerById(it.talker)) : null)
 
-// 사전·사후 동형검사는 /learn/placement?form=A|B 로 들어온다(학습 효과 리포트의 시작 버튼).
+// 사전·사후 동형검사는 /learn/placement?form=A|B 로 들어온다(학습 효과 리포트의 시작 버튼). 유지 검사는 ?form=R(학습 경로의 안내).
 // 문항 화면의 모드 전환기는 Figma 385:82에 맞춰 없앴으므로 진입은 주소로만 한다(핸드오프 §4-01).
 function initialMode() {
   const f = new URLSearchParams(window.location.search).get('form')
-  return f === 'A' || f === 'B' ? f : 'placement'
+  return f === 'A' || f === 'B' || f === 'R' ? f : 'placement'
 }
 
 export default function Placement() {
@@ -73,6 +75,10 @@ export default function Placement() {
         const d = await curriculumAPI.nextPlacementItem([], {}, 12)
         setN(d.n || 12)
         setItems(d.item ? [d.item] : [])
+      } else if (m === 'R') {
+        // 유지 검사: 사후 검사와 같은 폼·화자 배정을 서버가 다시 만든다(볼 때가 아니면 409 → 불러오기 실패 화면)
+        const d = await curriculumAPI.getRetentionItems()
+        setItems(d.items)
       } else {
         // 향상도 동형폼(A 사전 / B 사후)은 통제 비교를 위해 고정 배치 유지.
         const d = await curriculumAPI.getPlacement(8, m)
@@ -123,6 +129,10 @@ export default function Placement() {
     }
     setSubmitting(true)
     try {
+      if (mode === 'R') {
+        setResult(await curriculumAPI.scoreRetention(next))   // 유지 검사는 앞선 검사 대비 향상도(history)를 보이지 않는다
+        return true
+      }
       const r = await curriculumAPI.scorePlacement(items, next, mode)
       setResult(r)
       loadDelta()
@@ -211,6 +221,36 @@ export default function Placement() {
             {result.recommended_start?.title || '입모양 인지'}부터 시작하기
           </button>
           <button type="button" onClick={() => start(mode)} className={`btn-secondary btn-lg text-track ${RESULT_BTN}`}>다시 진단하기</button>
+        </div>
+      </div>
+    )
+  }
+
+  if (result && mode === 'R') {
+    // 유지 검사 결과 — 사후 검사 정답률과 지금 정답률만 담담하게 보인다(같은 문항이라 기억 효과가 섞일 수 있음을 함께 적는다)
+    const pct = (x) => (x == null ? '-' : `${Math.round(x * 100)}%`)
+    return (
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-[18px] bg-page px-[18px] py-10 lg:gap-6">
+        <span className="relative size-[84px] shrink-0 lg:size-24">
+          <img src="/ui/lp-84-7-mascot.svg" alt="" className="absolute max-w-none" style={OVERFLOW} />
+        </span>
+        <h1 className="text-center text-[25px] font-bold leading-figma tracking-[-0.625px] text-ink lg:text-[32px] lg:tracking-[-0.8px]">
+          유지 검사를 마쳤어요
+        </h1>
+        <div className="flex w-full max-w-[640px] flex-col gap-3 rounded-22 border-2 border-line bg-white px-5 py-4 lg:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[13px] font-bold text-ink-muted">사후 검사</p>
+            <p className="text-[18px] font-bold text-ink">{pct(result.post_accuracy)}</p>
+          </div>
+          <div className="flex items-center justify-between gap-3 border-t border-line pt-3">
+            <p className="text-[13px] font-bold text-ink-muted">유지 검사{result.days_after_post != null ? ` (${result.days_after_post}일 뒤)` : ''}</p>
+            <p className="text-[18px] font-bold text-primary-700">{pct(result.accuracy)} <span className="text-[13px] text-ink-muted">({result.correct}/{result.total})</span></p>
+          </div>
+          <p className="text-xs leading-relaxed text-ink-muted">사후 검사와 같은 문항이라 기억 효과가 조금 섞일 수 있어요. 이 결과는 사전·사후 향상도에는 들어가지 않아요.</p>
+        </div>
+        <div className="flex w-full max-w-[640px] flex-col gap-2.5 lg:gap-3">
+          <button type="button" onClick={() => navigate('/learn/path')} className={`btn-primary btn-lg ${RESULT_BTN}`}>학습 경로로</button>
+          <button type="button" onClick={() => navigate('/analysis/eval')} className={`btn-secondary btn-lg text-track ${RESULT_BTN}`}>학습 효과 리포트 보기</button>
         </div>
       </div>
     )
@@ -369,7 +409,7 @@ export default function Placement() {
         <div className={LESSON_STACK}>
           {/* 질문(385:89 / 모바일 385:128) — 북마크 없음 */}
           <div className="flex flex-col gap-1.5 font-bold leading-figma lg:gap-2">
-            <p className="text-[12px] text-track lg:text-[13px]">자가진단</p>
+            <p className="text-[12px] text-track lg:text-[13px]">{mode === 'R' ? '유지 검사' : '자가진단'}</p>
             <h1 className="text-[21px] tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">이 입모양은 어떤 단어일까요?</h1>
           </div>
 

@@ -374,13 +374,13 @@ async def account_learning_reset(confirm: bool = False, current_user=Depends(get
     if (current_user.email or "").lower() == _DEMO_EMAIL:
         raise HTTPException(status_code=403, detail="공용 데모 계정은 초기화할 수 없어요.")
     from sqlalchemy import delete as _delete
-    from database import ConsentRecord, LearningProfile, PlacementResult
+    from database import ConsentRecord, LearningProfile, PlacementResult, RetentionResult
     prof = await _get_or_create_profile(current_user.id, db)
     in_pilot = bool(prof.pilot_code)
     removed, kept = {}, {}
     for M in _user_data_models():
-        if M in (ConsentRecord, LearningProfile):
-            continue
+        if M in (ConsentRecord, LearningProfile) or (in_pilot and M is RetentionResult):
+            continue   # 파일럿 참여 중이면 유지 검사 결과(C7)도 사전·사후처럼 연구 자료로 남긴다
         q = _delete(M).where(M.user_id == current_user.id)
         if in_pilot and M is PlacementResult:
             from sqlalchemy import or_ as _or
@@ -859,7 +859,8 @@ async def submit_progress(
             # 4지선다 합격은 정확 일치 100점이라 점수 등급으로는 품질 5가 된다. 찍어도 25%는 맞으므로 3을 넘지 않게 한다
             await _sr_touch(current_user.id, "sentence", submission.sentence,
                             scoring_result["score"] >= _STAGE3_PASS, db, score=scoring_result["score"],
-                            max_quality=3 if submission.answer_mode == "choice" else None)
+                            max_quality=3 if submission.answer_mode == "choice" else None,
+                            answer_mode=submission.answer_mode)
 
         await db.commit()
 
@@ -1600,10 +1601,14 @@ async def _bump_stage_progress(user_id: int, stage: int, passed: bool,
 from datetime import date as _sr_date, timedelta as _sr_delta
 
 
-async def _srs_apply(user_id: int, kind: str, ref, quality: int, db, create: bool = True) -> dict:
+async def _srs_apply(user_id: int, kind: str, ref, quality: int, db, create: bool = True, log: dict = None) -> dict:
     """SM-2 경량 스케줄러(srs.schedule)를 한 복습 항목에 적용. 항목의 ease/간격/반복/누수를
     갱신하고 due_date를 다시 잡는다. 간격이 충분히 커지면(졸업) 큐에서 제거한다.
     항목이 없을 때 quality<3(실패)이고 create면 새로 등록한다. commit은 호출부.
+    FSRS 그림자 모드(C11, fsrs_shadow.py): SM-2가 항목을 갱신할 때마다 FSRS 상태도 함께 갱신하고, log({source, answer_mode, speed})가
+    오면 예정일이 된 항목의 답을 회상 확률 예측과 함께 review_logs에 남긴다. 간격·졸업은 SM-2 그대로다.
+    log는 정답·오답을 모두 보내는 경로(복습 화면, 문장·말하기의 _sr_touch)만 준다. 레슨 오답만 오는 경로(_srs_schedule_wrong)까지
+    남기면 맞힌 답이 빠져 통과율이 낮게 기록되기 때문이다.
     반환: {removed, due_date, interval_days}."""
     import srs
     from database import ReviewItem
@@ -1620,9 +1625,12 @@ async def _srs_apply(user_id: int, kind: str, ref, quality: int, db, create: boo
             return {"removed": False, "due_date": None, "interval_days": None, "found": False}
         s = srs.schedule(quality)  # 첫 실패 → 내일 재등장
         due = (_kst_today() + _sr_delta(days=s["interval_days"])).isoformat()
+        fs = _fsrs_first(quality, log)
         db.add(ReviewItem(user_id=user_id, kind=kind, ref=ref, due_date=due,
                           interval_days=s["interval_days"], ease_factor=s["ease_factor"],
-                          repetitions=s["repetitions"], lapses=s["lapses"]))
+                          repetitions=s["repetitions"], lapses=s["lapses"],
+                          fsrs_stability=fs.get("stability"), fsrs_difficulty=fs.get("difficulty"),
+                          last_review_on=_kst_today().isoformat() if fs else None))
         return {"removed": False, "due_date": due, "interval_days": s["interval_days"]}
 
     # 아직 복습일이 아닌 항목은 맞혀도 간격을 늘리지 않는다(예전에는 '다시 말하기'로 한자리에서 다섯 번 맞히면
@@ -1632,8 +1640,10 @@ async def _srs_apply(user_id: int, kind: str, ref, quality: int, db, create: boo
                 "found": True, "early": True}
     # 예정일이 된 항목에 답했으면 복습 1회로 센다('복습왕' 배지). 복습 화면(/api/review/answer)과 말하기 복습(_sr_touch)이
     # 모두 여기를 지난다. 같은 날 레슨에서 다시 틀린 항목은 예정일이 내일이라 세지 않는다
-    if item.due_date and item.due_date <= _kst_today().isoformat():
+    due_now = bool(item.due_date and item.due_date <= _kst_today().isoformat())
+    if due_now:
         await _count_review_done(user_id, db)
+    _fsrs_shadow(user_id, item, quality, db, log if due_now else None)   # SM-2 갱신 전 상태(간격)로 예측한다
     s = srs.schedule(quality, ease_factor=item.ease_factor, interval_days=item.interval_days,
                      repetitions=item.repetitions, lapses=item.lapses)
     if s["graduated"] and quality >= 3:
@@ -1645,6 +1655,56 @@ async def _srs_apply(user_id: int, kind: str, ref, quality: int, db, create: boo
     item.lapses = s["lapses"]
     item.due_date = (_kst_today() + _sr_delta(days=s["interval_days"])).isoformat()
     return {"removed": False, "due_date": item.due_date, "interval_days": item.interval_days, "found": True}
+
+
+def _fsrs_first(quality: int, log: dict = None) -> dict:
+    """새 복습 항목의 FSRS 첫 상태(처음 본 답의 등급으로). 실패해도 SM-2 등록은 막지 않는다."""
+    try:
+        import fsrs_shadow as _fs
+        lg = log or {}
+        return _fs.step(None, _fs.grade_for(quality, lg.get("answer_mode"), lg.get("speed")), None)
+    except Exception as e:   # 그림자 모드라 간격 계산을 막지 않는다
+        print(f"[WARN] fsrs first state failed: {e}")
+        return {}
+
+
+def _fsrs_shadow(user_id: int, item, quality: int, db, log: dict = None) -> None:
+    """FSRS 상태를 한 걸음 옮기고(item에 저장), log가 오면 이번 답과 예측을 review_logs에 남긴다. 간격은 건드리지 않는다.
+    상태가 없던 예전 항목은 이번 답으로 첫 상태를 만들고 예측(r_fsrs·p_fsrs)은 NULL로 남긴다. 실패해도 SM-2는 그대로 진행한다."""
+    try:
+        import fsrs_shadow as _fs
+        from datetime import date as _date, timedelta as _td
+        from database import ReviewLog
+        lg = log or {}
+        today = _kst_today()
+        last = None
+        if item.last_review_on:
+            try:
+                last = _date.fromisoformat(item.last_review_on)
+            except ValueError:
+                last = None
+        if last is None:
+            ts = item.updated_at or item.created_at   # 예전 항목: SM-2가 마지막으로 갱신한 시각(UTC)을 KST 날짜로
+            last = (ts + _td(hours=9)).date() if ts else None
+        elapsed = max(0, (today - last).days) if last else None
+        mode, speed = lg.get("answer_mode"), lg.get("speed")
+        grade = _fs.grade_for(quality, mode, speed)
+        prev = ({"stability": item.fsrs_stability, "difficulty": item.fsrs_difficulty}
+                if item.fsrs_stability is not None and item.fsrs_difficulty is not None else None)
+        st = _fs.step(prev, grade, elapsed)
+        if log is not None:
+            guess = _fs.guess_rate(mode)
+            db.add(ReviewLog(
+                user_id=user_id, kind=item.kind, ref=item.ref, source=lg.get("source"), reviewed_on=today.isoformat(),
+                elapsed_days=elapsed, quality=int(quality), grade=grade, passed=quality >= 3, answer_mode=mode,
+                speed=speed, guess=guess, r_fsrs=st["r"], p_fsrs=_fs.observed_probability(st["r"], guess),
+                p_sm2=_fs.observed_probability(_fs.sm2_proxy(elapsed, item.interval_days), guess),
+                sm2_interval=item.interval_days, fsrs_stability=item.fsrs_stability, fsrs_difficulty=item.fsrs_difficulty))
+        item.fsrs_stability = st["stability"]
+        item.fsrs_difficulty = st["difficulty"]
+        item.last_review_on = today.isoformat()
+    except Exception as e:   # 그림자 모드라 간격 계산을 막지 않는다
+        print(f"[WARN] fsrs shadow failed: {e}")
 
 
 async def _count_review_done(user_id: int, db) -> None:
@@ -2305,7 +2365,8 @@ async def review_answer(data: ReviewAnswer, current_user=Depends(get_current_use
     """복습 결과로 다음 등장일 재조정(SM-2). ease·반복에 따라 간격이 늘고, 충분히 커지면 졸업(제거)."""
     import srs
     res = await _srs_apply(current_user.id, data.kind, data.ref,
-                           srs.quality_for_answer(data.correct, data.answer_mode, data.speed), db, create=False)
+                           srs.quality_for_answer(data.correct, data.answer_mode, data.speed), db, create=False,
+                           log={"source": "review", "answer_mode": _answer_mode(data.answer_mode), "speed": data.speed})
     # 공용 보상: 복습도 XP·스트릭에 기여(복습만 한 날 스트릭이 끊기던 문제 해결). 큐에 없는 항목은 XP 없음
     award = _award_xp_and_streak(current_user, (10 if data.correct else 3) if res.get("found") else 0)
     reward = {"xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
@@ -2373,14 +2434,18 @@ async def tasks_claim(current_user=Depends(get_current_user), db: AsyncSession =
 
 
 # ── 공용 복습 유틸 — 두 기둥(독화·말하기)이 동일 구조(예정/틀림/북마크)를 쓰도록 ──
-async def _sr_touch(user_id: int, kind: str, ref: str, correct: bool, db, score: float = None, max_quality: int = None):
+async def _sr_touch(user_id: int, kind: str, ref: str, correct: bool, db, score: float = None, max_quality: int = None,
+                    answer_mode: str = None):
     """SRS 큐 유지(SM-2) — 틀리면 내일 재등장(신규면 등록), 맞으면 ease·반복에 따라 간격을 늘려
     충분히 커지면 졸업. 점수(score 0~100)가 오면 이진 대신 등급(quality)으로 반영한다.
-    max_quality가 오면 성공 등급을 그 값으로 누른다(4지선다 합격은 3, srs 머리말). 커밋은 호출부에서. review/answer와 동일한 규칙."""
+    max_quality가 오면 성공 등급을 그 값으로 누른다(4지선다 합격은 3, srs 머리말). 커밋은 호출부에서. review/answer와 동일한 규칙.
+    정답·오답이 모두 오는 경로라 예정일이 된 항목의 답은 FSRS 그림자 기록(review_logs)에 남긴다. answer_mode는 문장 답 방식이다
+    (4지선다면 관측 확률에 찍기 0.25를 반영한다)."""
     quality = _review_quality(score, correct)
     if max_quality is not None and quality >= 3:
         quality = max(3, min(quality, max_quality))
-    await _srs_apply(user_id, kind, ref, quality, db, create=True)
+    await _srs_apply(user_id, kind, ref, quality, db, create=True,
+                     log={"source": kind, "answer_mode": _answer_mode(answer_mode), "speed": None})
 
 
 def _review_quality(score, correct: bool) -> int:
@@ -2572,6 +2637,181 @@ def _trial_wrong(T):
     from sqlalchemy import or_
     return or_(T.correct.is_(False), T.correct.is_(None))
 
+
+# ── 숙달 지연 탐침(C16, mastery_probe.py) ──
+# 읽기 1~3단계를 처음 숙달한 날(KST)부터 1일·7일 뒤에 처음 보는 문항 6개를 보조 없이 낸다. 일정은 숙달 날짜에서 계산하고, 회차를 처음 낼
+# 때 문항을 만들어 mastery_probes에 둔다. 답은 그 표에만 남고 숙달·복습·시행 기록·XP에는 들어가지 않는다(숙달을 취소하지도 않는다).
+# 한 레슨에 낼 수 있는 수는 mastery_probe.lesson_quota(레슨 문항 수, 이미 낸 다른 탐침 수)로 실제 얼굴 탐침(C8)과 상한을 함께 쓴다.
+
+def _kst_date(ts):
+    """UTC 시각 → KST 날짜(없으면 None)."""
+    from datetime import timedelta as _td
+    return (ts + _td(hours=9)).date() if ts else None
+
+
+async def _probe_items(user_id: int, stage: int, wave: int, db) -> list:
+    """한 회차의 탐침 문항(mastery_probe 머리말). 학습자가 본 낱말·문장은 뺀다. 씨앗이 고정이라 같은 회차는 같은 문항이다."""
+    import random as _random
+    import mastery_probe as _mp
+    from sqlalchemy import select
+    rng = _random.Random(_mp.seed_for(user_id, stage, wave))
+    if stage == 1:
+        seen = set(_curriculum.DEMO_SYLLABLE.values())
+        seen |= {w[0] for l in _curriculum.VISEME_LESSONS for w in (l.get("example_words") or []) if w}
+        return _mp.stage1_items(_curriculum.VISEME_LESSONS, seen, rng)
+    if stage == 2:
+        import assessment as _asmt
+        from database import TrialAttempt
+        skip = _excluded_training_words()
+        pool = [w["word"] for w in _curriculum.WORD_BANK if w["word"] not in skip]
+        seen = set((await db.execute(select(TrialAttempt.target).where(TrialAttempt.user_id == user_id))).scalars().all())
+        seen |= set((await db.execute(select(TrialAttempt.chosen).where(TrialAttempt.user_id == user_id))).scalars().all())
+        return _mp.text_items("word", pool, seen, rng,
+                              lambda w, used: _asmt._confusable_options(w, [x for x in pool if x not in used], k=3,
+                                                                         closeness=0.5, rng=rng))
+    import sentence_options as _so
+    from database import Progress
+    seen = set((await db.execute(select(Progress.sentence).where(Progress.user_id == user_id))).scalars().all())
+    opt_pool = await _sentence_option_pool(db)
+    return _mp.text_items("sentence", _so.static_pool(), seen, rng,
+                          lambda s, used: _so.pick_options(s, opt_pool, exclude=used, rng=rng))
+
+
+async def _due_probe_waves(user_id: int, db, today=None) -> list:
+    """오늘 낼 수 있는 (단계, 회차, 숙달일, 회차 첫날) 목록."""
+    import mastery_probe as _mp
+    from database import StageProgress
+    from sqlalchemy import select
+    today = today or _kst_today()
+    rows = (await db.execute(select(StageProgress.stage, StageProgress.mastered_at).where(
+        StageProgress.user_id == user_id, StageProgress.stage.in_(_mp.PROBE_STAGES),
+        StageProgress.mastered_at.isnot(None)))).all()
+    out = []
+    for stage, at in rows:
+        mon = _kst_date(at)
+        for w in _mp.due_waves(mon, today):
+            out.append((int(stage), w["wave"], mon, w["due_on"]))
+    return sorted(out)
+
+
+@app.get("/api/curriculum/mastery-probes")
+async def mastery_probes_today(lesson_len: int = 12, used: int = 0, current_user=Depends(get_current_user),
+                               db: AsyncSession = Depends(get_db)):
+    """오늘 이 레슨에 섞을 지연 탐침(정답은 싣지 않는다). lesson_len = 레슨 문항 수, used = 이 레슨에서 이미 낸 다른 탐침 수.
+    낼 회차가 처음이면 문항을 만들어 둔다. 탐침이 없으면 items가 빈 목록이다."""
+    import mastery_probe as _mp
+    from database import MasteryProbe
+    from sqlalchemy import select, func
+    from sqlalchemy.exc import IntegrityError
+    waves = await _due_probe_waves(current_user.id, db)
+    for stage, wave, mon, due_on in waves:
+        have = (await db.execute(select(func.count(MasteryProbe.id)).where(
+            MasteryProbe.user_id == current_user.id, MasteryProbe.stage == stage, MasteryProbe.wave == wave))).scalar()
+        if have:
+            continue
+        try:
+            items = await _probe_items(current_user.id, stage, wave, db)
+            for seq, it in enumerate(items):
+                db.add(MasteryProbe(user_id=current_user.id, stage=stage, wave=wave, seq=seq, item_kind=it["kind"],
+                                    stimulus=it["stimulus"][:200], target=it["target"][:200], options=it["options"],
+                                    mastered_on=mon.isoformat(), due_on=due_on, speed=1.0))
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()   # 동시에 온 다른 요청이 먼저 만들었다
+        except Exception as e:   # 탐침 실패가 레슨을 막지 않게
+            await db.rollback()
+            print(f"[WARN] mastery probe build failed: {e}")
+    quota = _mp.lesson_quota(max(1, min(int(lesson_len), 40)), max(0, int(used)))
+    pending = []
+    for stage, wave, _mon, _due in waves:
+        pending += (await db.execute(select(MasteryProbe).where(
+            MasteryProbe.user_id == current_user.id, MasteryProbe.stage == stage, MasteryProbe.wave == wave,
+            MasteryProbe.correct.is_(None)).order_by(MasteryProbe.seq))).scalars().all()
+    return {"items": [{"id": p.id, "stage": p.stage, "wave": p.wave, "kind": p.item_kind, "stimulus": p.stimulus,
+                       "options": p.options or [], "speed": 1.0} for p in pending[:quota]],
+            "quota": quota, "pending": len(pending), "cap": _mp.PROBE_SHARE_CAP}
+
+
+class ProbeAnswer(BaseModel):
+    id: int
+    chosen: str = Field(..., max_length=200)
+
+
+@app.post("/api/curriculum/mastery-probe-answer", dependencies=[Depends(ratelimit.rate_limit(60, 60, "mastery-probe"))])
+async def mastery_probe_answer(data: ProbeAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """탐침 답을 기록한다. 정답 여부는 돌려주지 않는다(탐침은 정답을 공개하지 않는다). 숙달·복습·XP는 건드리지 않는다."""
+    from datetime import date as _date, datetime as _dt
+    from database import MasteryProbe
+    from sqlalchemy import select
+    p = (await db.execute(select(MasteryProbe).where(
+        MasteryProbe.id == data.id, MasteryProbe.user_id == current_user.id))).scalars().first()
+    if p is None:
+        raise HTTPException(status_code=404, detail="probe not found")
+    if p.correct is not None:
+        return {"recorded": False, "already": True}
+    values = [str(o.get("value")) for o in (p.options or []) if isinstance(o, dict)]
+    if data.chosen not in values:
+        raise HTTPException(status_code=400, detail="chosen must be one of the options")
+    p.chosen = data.chosen
+    p.correct = data.chosen == p.target
+    p.answered_at = _dt.utcnow()
+    try:
+        p.delay_days = (_kst_today() - _date.fromisoformat(p.mastered_on)).days if p.mastered_on else None
+    except ValueError:
+        p.delay_days = None
+    await db.commit()
+    return {"recorded": True}
+
+
+# ── 레슨별 정신적 노력 한 문항(C14, mental_effort.py) ──
+_SESSION_ID_RE = r"^[A-Za-z0-9_-]{6,40}$"
+
+
+class EffortReq(BaseModel):
+    session_id: str = Field(..., pattern=_SESSION_ID_RE)     # 화면이 레슨마다 만든 id
+    lesson_kind: Optional[str] = Field(None, max_length=16)  # viseme | word | sentence | closure | review
+    stage: Optional[int] = Field(None, ge=0, le=6)
+    rating: Optional[int] = None                             # 1~9, 답하지 않았으면 없음
+    response: Optional[str] = Field(None, max_length=10)     # answered | skipped | left
+    n_items: Optional[int] = Field(None, ge=0, le=200)
+    accuracy: Optional[float] = Field(None, ge=0, le=1)
+
+
+@app.post("/api/lesson/effort", dependencies=[Depends(ratelimit.rate_limit(30, 60, "lesson-effort"))])
+async def lesson_effort(data: EffortReq, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """레슨 끝 정신적 노력 답(Paas 9점)을 세션마다 한 행으로 남긴다. 같은 세션이 다시 오면 answered > skipped > left 순으로 남긴다.
+    적응 규칙은 없다(기록만)."""
+    import mental_effort as _me
+    from database import LessonEffort
+    from sqlalchemy import select
+    from sqlalchemy.exc import IntegrityError
+    rating = _me.clean_rating(data.rating) if data.rating is not None else None
+    response = _me.clean_response(data.response, rating)
+    kind = data.lesson_kind if data.lesson_kind in _me.LESSON_KINDS else None
+
+    async def upsert():
+        row = (await db.execute(select(LessonEffort).where(
+            LessonEffort.user_id == current_user.id, LessonEffort.session_id == data.session_id))).scalars().first()
+        if row is None:
+            db.add(LessonEffort(user_id=current_user.id, session_id=data.session_id, lesson_kind=kind, stage=data.stage,
+                                rating=rating, response=response, n_items=data.n_items, accuracy=data.accuracy))
+            return response
+        if _me.merge(row.response, response):
+            row.rating, row.response = rating, response
+        row.lesson_kind = row.lesson_kind or kind
+        row.stage = row.stage if row.stage is not None else data.stage
+        if data.n_items is not None:
+            row.n_items, row.accuracy = data.n_items, data.accuracy
+        return row.response
+
+    saved = await upsert()
+    try:
+        await db.commit()
+    except IntegrityError:   # 같은 세션의 다른 요청이 먼저 넣었다: 다시 읽어 합친다
+        await db.rollback()
+        saved = await upsert()
+        await db.commit()
+    return {"ok": True, "response": saved}
 
 @app.get("/api/curriculum/confusion-matrix")
 async def curriculum_confusion_matrix(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
@@ -3323,6 +3563,92 @@ async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_cur
         print(f"[WARN] placement result save failed: {e}")
     return result
 
+
+# ── 지연 유지 검사(C7, retention.py) ──
+# 사후 검사 뒤 LIPLAB_RETENTION_DAYS일(기본 28, 14~28)이 지나면 같은 동형 폼을 다시 보게 권한다. 사전·사후 흐름(위 placement·score·
+# history·progression)은 그대로 두고, 예약은 검사 기록에서 계산하며 결과는 retention_results에 따로 남긴다.
+
+async def _retention_context(user_id: int, db) -> dict:
+    """{pp: {pre, post} 또는 None, done: 사후 뒤 최근 유지 검사 또는 None, status: retention.status}."""
+    import os as _os
+    import retention as _ret
+    from database import PlacementResult, RetentionResult
+    from sqlalchemy import select
+    rows = (await db.execute(select(PlacementResult).where(PlacementResult.user_id == user_id)
+                             .order_by(PlacementResult.created_at, PlacementResult.id))).scalars().all()
+    pp = _ret.post_test(rows)
+    done = None
+    if pp:
+        done = (await db.execute(select(RetentionResult).where(
+            RetentionResult.user_id == user_id, RetentionResult.post_result_id == pp["post"].id)
+            .order_by(RetentionResult.created_at.desc()))).scalars().first()
+    st = _ret.status(_kst_date(pp["post"].created_at) if pp else None, _kst_date(done.created_at) if done else None,
+                     _kst_today(), _ret.retention_days(_os.getenv("LIPLAB_RETENTION_DAYS")))
+    return {"pp": pp, "done": done, "status": st}
+
+
+def _retention_items(post, user_id: int) -> list:
+    """유지 검사 문항: 사후 검사와 같은 동형 폼·같은 화자 조건 배정(assign_talker_conditions는 사용자별로 결정론적이다)."""
+    import assessment as _asmt
+    forms = _asmt.frozen_forms([w["word"] for w in _curriculum.WORD_BANK])
+    items = list(forms.get(post.form, []))
+    if _asmt.has_talker_conditions(getattr(post, "item_log", None)):
+        items = _asmt.assign_talker_conditions(items, user_id)
+    return items
+
+
+@app.get("/api/assessment/retention")
+async def assessment_retention(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """유지 검사 상태: state = none(사후 검사 없음) | waiting | due(볼 때) | done. due_on·days_left와, 봤으면 사후·유지 정답률."""
+    ctx = await _retention_context(current_user.id, db)
+    out = dict(ctx["status"])
+    if ctx["pp"]:
+        post = ctx["pp"]["post"]
+        out["form"] = post.form
+        out["post_accuracy"] = post.accuracy
+    if ctx["done"]:
+        out["retention_accuracy"] = ctx["done"].accuracy
+        out["note"] = "사후 검사와 같은 문항이라 기억 효과가 조금 섞일 수 있어요."
+    return out
+
+
+@app.get("/api/assessment/retention/items")
+async def assessment_retention_items(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """유지 검사 문항(볼 때가 된 경우만)."""
+    import assessment as _asmt
+    ctx = await _retention_context(current_user.id, db)
+    if ctx["status"]["state"] != "due":
+        raise HTTPException(status_code=409, detail="지금은 유지 검사를 볼 때가 아니에요.")
+    post = ctx["pp"]["post"]
+    return {"items": _retention_items(post, current_user.id), "form": post.form,
+            "version": (_asmt.frozen_forms(build_if_missing=False) or {}).get("version")}
+
+
+class RetentionScoreReq(BaseModel):
+    responses: dict
+
+
+@app.post("/api/assessment/retention/score")
+async def assessment_retention_score(data: RetentionScoreReq, current_user=Depends(get_current_user),
+                                     db: AsyncSession = Depends(get_db)):
+    """유지 검사 채점. 문항은 서버가 다시 만든다(사후 검사와 같은 폼). 결과는 retention_results에만 남기고 사전·사후 비교·취약 입모양·
+    숙달에는 넣지 않는다."""
+    import assessment as _asmt
+    from database import RetentionResult
+    ctx = await _retention_context(current_user.id, db)
+    if ctx["status"]["state"] != "due":
+        raise HTTPException(status_code=409, detail="지금은 유지 검사를 볼 때가 아니에요.")
+    post = ctx["pp"]["post"]
+    items = _retention_items(post, current_user.id)
+    responses = {str(k): v for k, v in (data.responses or {}).items() if isinstance(v, str)}
+    result = _asmt.score_placement(items, responses)
+    db.add(RetentionResult(
+        user_id=current_user.id, form=post.form, form_version=post.form_version, post_result_id=post.id,
+        days_after_post=ctx["status"].get("days_since_post"), total=result["total"], correct=result["correct"],
+        accuracy=result["accuracy"], ability=result["ability"], level=result["level"], item_log=result.get("item_log", [])))
+    await db.commit()
+    return {**result, "form": post.form, "post_accuracy": post.accuracy,
+            "days_after_post": ctx["status"].get("days_since_post")}
 
 def _placement_scores(*rows) -> list:
     """사전·사후 비교용 능력·수준. 모든 검사에 문항 기록(item_log)이 있으면 지금 추정기로 다시 채점해 채점 방식이 섞이지 않게
