@@ -57,6 +57,7 @@ const DevViseme = lazy(() => import('./pages/DevViseme'))
 const Sign = lazy(() => import('./pages/Sign'))
 const VisemeLiteracy = lazy(() => import('./pages/VisemeLiteracy'))
 const WordStage = lazy(() => import('./pages/WordStage'))
+const NonsensePairing = lazy(() => import('./pages/NonsensePairing'))
 const Review = lazy(() => import('./pages/Review'))
 const Closure = lazy(() => import('./pages/Closure'))
 const SpeakingPractice = lazy(() => import('./pages/SpeakingPractice'))
@@ -223,6 +224,8 @@ function App() {
         <Route path="/sign" element={<Sign />} />
         <Route path="/learn/viseme" element={<VisemeLiteracy />} />
         <Route path="/learn/word" element={<StageGate stage={2}><WordStage /></StageGate>} />
+        {/* 뜻 없는 말 짝 맞추기(C10): 1·2단계 사이 과제라 1단계를 숙달해야(2단계가 열려야) 연다 */}
+        <Route path="/learn/nonsense" element={<StageGate stage={2}><NonsensePairing /></StageGate>} />
         <Route path="/learn/conversation-multi" element={<MultiConversation />} />
         <Route path="/learn/placement" element={<Placement />} />
         <Route path="/learn/scenario" element={<ScenarioHub />} />
