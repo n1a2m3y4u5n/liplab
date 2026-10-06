@@ -16,6 +16,9 @@ import { pickDistractors, visualLevel } from '../lib/wordOptions'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
 import useSlowWeak from '../hooks/useSlowWeak'
 import useLessonTalker from '../hooks/useLessonTalker'
+import useMasteryProbes from '../hooks/useMasteryProbes'
+import MasteryProbeBlock from '../components/MasteryProbeBlock'
+import EffortCheck from '../components/EffortCheck'
 import { effectiveSpeed, FAST_SPEECH_SPEED } from '../lib/visemeTiming'
 import { typedSlots, contextSlots, probeSlot, pickProbe } from '../lib/openSet'
 import MouthCompare from '../components/MouthCompare'
@@ -48,7 +51,7 @@ const STAT_VALUE = 'text-[20px] font-bold leading-figma tracking-[-0.5px] lg:tex
 const DONE_BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]'
 
 // Figma "Lesson / 4. 완료"(93:12) — 레슨 컴포넌트의 마지막 상태. DOKA + 워터마크 스탯 3칸 + 버튼 2개.
-function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, homeLabel = '커리큘럼으로 돌아가기' }) {
+function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, homeLabel = '커리큘럼으로 돌아가기', effort }) {
   return (
     <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center gap-[26px] bg-page px-[18px] py-12">
       <span className="relative size-[140px] shrink-0">
@@ -70,6 +73,9 @@ function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, homeLabel = 
           <p className={`${STAT_VALUE} text-stat-level`}>{fmtDuration(elapsedSec)}</p>
         </WatermarkCard>
       </div>
+
+      {/* 레슨별 정신적 노력 한 문항(C14, Paas 9점) — 답하지 않아도 된다. 기록만 하고 다음 레슨에는 쓰지 않는다 */}
+      {effort && <EffortCheck {...effort} />}
 
       <div className="flex w-full max-w-[640px] flex-col gap-2.5 lg:gap-3">
         <button type="button" onClick={onNext} className={`btn-primary btn-lg ${DONE_BTN}`}>다음 레슨으로</button>
@@ -138,6 +144,8 @@ function WordQuiz({ data, reload }) {
   // 레슨마다 가상 화자 한 명(계획 2-2, 엔드리스는 단어·문맥 레슨을 한 줄로 센다). 화자의 말 속도는 숙달에 싣는 재생 속도
   // (effectiveSpeed)에 넣지 않는다. 사람마다 다른 자연 속도라 감속이 아니다(docs/talker-variation.md 3절).
   const [lesson, nextLesson] = useLessonTalker(endless ? 'endless' : 'word')
+  // 숙달 지연 탐침(C16): 숙달한 단계가 있으면 레슨 가운데에 확인 문항을 끼운다(비율 상한은 서버, 숙달·XP에는 들어가지 않음)
+  const probes = useMasteryProbes(QUIZ_LEN)
   const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계)
   const [result, setResult] = useState(null)
   const [compareOpen, setCompareOpen] = useState(false)   // 오답 뒤 정답·고른 말 입모양 나란히 비교(누를 때만 WebGL 둘 추가)
@@ -251,7 +259,7 @@ function WordQuiz({ data, reload }) {
     setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
   }
   // 계속하기 — 12번째 문항 뒤에는 완료 뷰로(걸린 시간은 이 순간으로 고정).
-  const next = () => {
+  const advance = () => {
     if (qNum >= QUIZ_LEN) {
       setElapsedSec(Math.floor((Date.now() - startRef.current) / 1000))
       setDone(true)
@@ -260,15 +268,20 @@ function WordQuiz({ data, reload }) {
     setQNum((n) => n + 1)
     newQ()
   }
+  // 레슨 가운데 문항 뒤에는 오늘 낼 지연 탐침이 있으면 먼저 낸다(끝나면 advance로 이어 간다)
+  const next = () => { if (!probes.take(qNum)) advance() }
   // 새 레슨(12문항) — 단계를 아직 숙달하지 못했을 때 '다음 레슨으로'가 같은 단계의 다음 세트를 연다.
   const restart = () => {
     setDone(false); setQNum(1); setTally({ n: 0, correct: 0 }); setXpEarned(0)
     startRef.current = Date.now()
     nextLesson()
+    probes.reload()
     newQ(true)
   }
 
   if (!q) return null
+
+  if (probes.open) return <MasteryProbeBlock items={probes.items} onDone={() => { probes.finish(); advance() }} />
 
   if (done) {
     const accuracy = tally.n ? Math.round((tally.correct / tally.n) * 100) : 0
@@ -278,7 +291,8 @@ function WordQuiz({ data, reload }) {
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
         onNext={() => (endless ? navigate('/learn/closure?endless=1') : stat.mastered ? navigate('/learn/scenario') : (reload ? reload() : restart()))}
         onHome={() => navigate(endless ? '/learn/endless' : '/learn/path')}
-        homeLabel={endless ? '엔드리스 학습으로' : undefined} />
+        homeLabel={endless ? '엔드리스 학습으로' : undefined}
+        effort={{ lessonKind: 'word', stage: 2, nItems: tally.n, accuracy: tally.n ? tally.correct / tally.n : null }} />
     )
   }
 

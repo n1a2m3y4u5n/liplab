@@ -4,6 +4,7 @@ import AppShell from '../components/AppShell'
 import DokaNode, { DokaConnector } from '../components/DokaNode'
 import GuideModal from '../components/GuideModal'
 import LoadingScreen from '../components/LoadingScreen'
+import RetentionPrompt from '../components/RetentionPrompt'
 import { curriculumAPI, speakAPI } from '../api'
 
 /**
@@ -214,6 +215,9 @@ export default function CurriculumPath() {
             가이드
           </button>
         </div>
+
+        {/* 지연 유지 검사(C7): 사후 검사 뒤 정해진 날수가 지났을 때만 조용히 권한다(막지 않음, 볼 때가 아니면 그리지 않음) */}
+        <RetentionPrompt />
 
         {/* 단계를 불러오지 못했으면 빈 경로 대신 안내와 다시 불러오기(여러 명 대화의 실패 카드와 같은 모양) */}
         {loadFailed && (
