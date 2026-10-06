@@ -1,5 +1,22 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
+> **2026-10-06: 측정 기록 네 가지(종합 계획 C11·C16·C7·C14, 배포 안 함).** 숙달·간격 규칙은 바꾸지 않고 기록과 분석 함수만 더했다.
+> 백엔드 537·프론트 203 통과, 빌드 통과. 요약 보고는 `scripts/measurement_report.py`(앱과 같은 DATABASE_URL로 실행).
+> - **C11 FSRS 그림자 모드**(`backend/fsrs_shadow.py`, FSRS-5 기본 매개변수 19개를 직접 옮김): SM-2가 복습 항목을 갱신할 때 FSRS 상태도
+>   갱신하고(`review_items.fsrs_stability`·`fsrs_difficulty`·`last_review_on`, 새 열), 예정일이 된 복습 답을 회상 확률 예측과 함께 `review_logs`
+>   (새 표)에 남긴다. 4지선다는 관측 확률 0.25 + 0.75·R, 감속 정답은 Hard. 레슨 오답만 오는 경로(`_srs_schedule_wrong`)는 맞힌 답이 빠지므로
+>   기록하지 않는다. `fsrs_shadow.compare`가 학습자 단위 시간순 분할로 FSRS·상수·SM-2 대리(0.9^(t/간격))의 log loss와 보정표를 낸다. 교체는
+>   복습 300건 뒤 사람이 결정한다.
+> - **C16 숙달 지연 탐침**(`backend/mastery_probe.py`): 읽기 1~3단계를 처음 숙달한 날(KST)부터 1~6일·7~13일 창에 처음 보는 4지선다 6문항씩,
+>   1.0배·기본 얼굴·힌트 없음·정답 공개 없음. 한 레슨에 전체의 20% 이하(12문항 레슨이면 3개, 실제 얼굴 탐침 C8과 `lesson_quota`를 함께 씀).
+>   `mastery_probes`(새 표)에만 남고 숙달·복습·시행 기록·XP에는 안 들어간다. 화면은 1·2단계와 문맥 추론 레슨 가운데 문항 뒤에 끼운다
+>   (`MasteryProbeBlock`·`useMasteryProbes`). **3단계 문장 레슨(Practice.jsx)에는 아직 안 붙였다**(다른 작업 중이라 손대지 않음).
+>   `probe_report`가 거짓 숙달 선(1·2단계 0.65, 3단계 0.60) 아래 비율을 시뮬레이션 예측(6.5%·10.9%) + 10%p와 비교한다.
+> - **C7 지연 유지 검사**(`backend/retention.py`): 사후 검사 뒤 `LIPLAB_RETENTION_DAYS`일(기본 28, 14~28)이 지나면 학습 경로에 안내
+>   (`RetentionPrompt`), `/learn/placement?form=R`로 사후 검사와 같은 폼을 다시 본다. 결과는 `retention_results`(새 표)에만, 사전·사후 흐름은 그대로.
+> - **C14 정신적 노력**(`backend/mental_effort.py`): 레슨 완료 화면에 Paas 9점 한 문항(쉬운 말·막대 척도, 건너뛰기 가능, `EffortCheck`),
+>   `lesson_efforts`(새 표)에 세션마다 한 행(answered > skipped > left). 적응 규칙 없음. Practice.jsx 완료 화면에는 아직 안 붙였다.
+>
 > **2026-09-30~10-06: 상용 대조군 비교, 9월 중간보고서 제출, 10~12월 계획 문서, 테스트 수정(배포 안 함).** 커밋 d8d9645~c924554와 O5 정리.
 > 9/29 liplab-dev v13(1742e47) 뒤로 배포는 없다. 10/4 이후 계획의 코드 작업은 O5 말고는 시작하지 않았다.
 > - 9/30 SpeechSuper 대조(cf07332, 1,678짝 모두 응답, 오류 0, `docs/speak-transcript-scoring.md` 상용 비교 절): 608 청각장애 맞게 말함 대
