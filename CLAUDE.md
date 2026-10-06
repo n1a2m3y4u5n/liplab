@@ -190,7 +190,8 @@ frontend/src/
 - 프론트 `AvatarVRM.jsx`: 단일 GLB(`/models/realistic_face.glb` — 2026-09-21부터 Character Creator 두상,
   ARKit 52종 + CC 혀 모프), ARKit 블렌드셰이프를 `useFrame`에서 **고정 속도**(`delta*22`)로 lerp.
   이 모델은 `jawOpen` 모프가 피부를 안 움직여 **턱 뼈(`CC_Base_JawRoot`) 회전**으로 벌림을 만든다.
-  카메라는 입 클로즈업 정면 고정.
+  카메라는 입 클로즈업 정면이 기본이고, `view='side'`면 `CameraRig`가 얼굴 둘레로 옆 70°까지 이징 회전한다(문장 플레이어의
+  '측면 보기' 버튼, 손으로 돌리는 범위도 측면까지).
   9/29부터 코드가 안 쓰는 CC 전용 모프를 지우고 입 클로즈업에서 안 보이는 텍스처(몸·팔·속눈썹·눈)를 512로 줄인 판이다
   (GPU 약 120MB → 70MB, `scripts/glb-slim`, 원본은 git 9f08043). 모델을 바꾸면 이 스크립트를 다시 돌리고 sw.js CACHE를 올린다.
 - `LipSyncPlayer3D.jsx`: `setTimeout`으로 프레임 스테핑(속도·프레임 이동·리플레이 지원).
@@ -201,22 +202,26 @@ frontend/src/
 |------|------|------|------|
 | **A** | `transition_ms` 실제 반영 | 프레임별 `transition_ms`(+재생 속도)로 보간 속도 결정. `LipSyncPlayer3D`→`AvatarVRM`→`RealisticFace`로 전달 | 완료(9/27 dd8bbf6 재구현, 퀴즈 아바타 `MouthAvatar`까지 9ee48ad) |
 | **B** | 이징 + 피크 도달 보장 | 시간추적 ease-in-out 보간, 전환은 프레임 길이의 60% 내 완료→목표 도달 후 유지(`durationMs` 전달) | 완료(9/27 dd8bbf6·9ee48ad, `lib/visemeTiming.js`) |
-| **F** | 측면(프로필) 뷰 토글 | `AvatarVRM`에 `view`('front'/'side') + `CameraRig`·`VIEW_CONFIG`. 플레이어 좌상단 정면/측면 버튼 | 빠짐(7/14 d3605d3 병합에서 코드가 사라짐, 다시 구현 필요) |
-| **D** | 아이들 모션 | `RealisticFace` useFrame에 눈 깜빡임(`eyeBlinkLeft/Right`)·미세 머리 흔들림·호흡. 입모양 모프와 독립 | 빠짐(7/14 d3605d3 병합에서 코드가 사라짐, 다시 구현 필요) |
-| **E** | 선행 동시조음 | 원순음 등에서 다음 viseme을 미리 블렌딩(anticipatory) | 백로그 |
+| **F** | 측면(프로필) 뷰 토글 | `AvatarVRM`에 `view`('front'/'side') + `CameraRig`(`SIDE_AZIMUTH` 70°, 도는 동안만 그림). `LipSyncPlayer3D`의 '측면 보기' 버튼 | 완료(9/28 37190ae 재구현) |
+| **D** | 아이들 모션 | `RealisticFace` useFrame에 눈 깜빡임(`eyeBlinkLeft/Right`, 2.5~6초마다, 깜빡이는 동안만 그림). 텍스트 입모양에만(음성구동·거울 제외). 쉴 때 그리지 않는 원칙 때문에 머리 흔들림·호흡은 넣지 않았다 | 완료(9/28 37190ae, 눈 깜빡임만) |
+| **E** | 선행 동시조음 | 원순음 등에서 다음 viseme을 미리 블렌딩(anticipatory). `lib/coarticulation.js`, 빌드 플래그 `VITE_COART_E=1`일 때만 | 구현했으나 사전 기준 미달로 기본 끔(9/29 파드 확인 Δ_R +0.044 < +0.05, `docs/coarticulation-e.md` 6절) |
 
 > A~D는 7/13(ee5366f)에 `AvatarVRM.jsx`·`LipSyncPlayer3D.jsx`에 들어갔다가 7/14 병합 정합(d3605d3)에서 빠졌다.
-> A·B는 9/27 다시 넣었다(dd8bbf6, 퀴즈 아바타 9ee48ad). 측면 보기(F)·눈 깜빡임(D)은 아직 없다. 다시 넣을 때 두 파일을 고친다
-> (프론트 전용이라 백엔드 재시작 불필요).
+> A·B는 9/27 다시 넣었고(dd8bbf6, 퀴즈 아바타 9ee48ad), 측면 보기(F)·눈 깜빡임(D)은 9/28 다시 넣었다(37190ae). 모두 프론트 전용이라
+> 백엔드 재시작이 필요 없다. E는 켜면 둥글림 상관이 꾸준히 오르지만(구간이 0을 넘음) 사전 기준 크기에 못 닿아 꺼 두었다.
 
 ### 트랙 2: 기능 추가 (백로그, 우선순위 미정)
 
 - ~~웹캠 미러 모드~~ — 구현됨: `components/WebcamMouthCheck.jsx`(MediaPipe 실시간 채점 + 아바타 미러
   `AvatarVRM mirrorRef/bsFrameRef` + K 분류기·조음 교정), 자체 립리딩 ONNX `lib/lipreadModel.js`.
-- **최소대립쌍 A/B 아바타** — `MINIMAL_PAIRS` 재활용, 밥 vs 맘을 두 아바타로 동시 비교(2단계 강화).
+- ~~최소대립쌍 A/B 아바타~~ — 구현됨(9/28 937c0c6): `components/MouthCompare.jsx`. 2단계 단어 문항을 틀리면 정답과 고른 말의
+  입모양을 두 아바타로 나란히 재생한다(누를 때만 열고, 입모양이 같은 무리면 입만으로는 못 가른다고 알림).
 - ~~혼동 매트릭스 분석~~ — 구현됨: `AnalysisDetail.jsx`(비심 혼동행렬 카드) + `EvalReport.jsx`(학습 효과 리포트).
-- **약점 기반 적응 템포** — 취약 viseme 프레임 자동 감속.
-- **내 문장 연습(Custom phrase)** — 실생활 문구 입력 → 즉시 드릴.
+- ~~약점 기반 적응 템포~~ — 구현됨(9/28 f56c36a): `lib/visemeTiming.js`의 `slowWeakFrames`·`pickSlowVisemes`와 `hooks/useSlowWeak.js`.
+  자주 틀리는 입모양(숙달도 0.7 미만, 5번 이상 본 것 상위 3개) 프레임만 1.35배 천천히, 연습 화면(단어·문장·대화·문맥)에만 쓴다.
+  감속 정답은 숙달에 0.5로 들어가고 숙달 추정 70 이상이면 감속을 끈다(`docs/curriculum-roadmap.md` 1-1, `docs/mastery-ewma.md` 7절).
+- **내 문장 연습(Custom phrase)** — 실생활 문구 입력 → 즉시 드릴. 입력 문장의 입모양을 보는 것까지는 있다(`/pronounce`
+  '내 문장 발음 보기', `pages/FreeSpeak.jsx`). 그 문장으로 읽기 문제를 내는 드릴은 없다.
 - **실제 화자 영상 라이브러리** — 음소별 실제 입 영상 토글(아바타 ↔ 실제).
 - **TTS 오디오 동기화** — 잔존 청력 대상 멀티모달(입+소리+자막).
-- **일일 챌린지/배지/스트릭 강화**, **PWA 오프라인 모드**.
+- **일일 챌린지/배지/스트릭 강화**, **PWA 오프라인 모드**(설치와 앱 셸 오프라인은 `public/sw.js`에 있고, API·학습 데이터는 캐시하지 않는다).
