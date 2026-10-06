@@ -19,6 +19,7 @@ import useLessonTalker from '../hooks/useLessonTalker'
 import useMasteryProbes from '../hooks/useMasteryProbes'
 import MasteryProbeBlock from '../components/MasteryProbeBlock'
 import EffortCheck from '../components/EffortCheck'
+import { trialMeta } from '../lib/measurement'
 import { effectiveSpeed, FAST_SPEECH_SPEED } from '../lib/visemeTiming'
 import { typedSlots, contextSlots, probeSlot, pickProbe } from '../lib/openSet'
 import MouthCompare from '../components/MouthCompare'
@@ -129,6 +130,9 @@ function WordQuiz({ data, reload }) {
   // 문항 북마크 — 서버에 저장돼 복습 탭·저장한 문장에 나온다
   const [saved, toggleSaved] = useBookmark(q?.kind === 'context' ? q.full : q?.target, { situation: q?.kind === 'context' ? '문맥 추론' : '단어 독화' })
   const [frames, setFrames] = useState([])
+  // 반응 시간 기준(파일럿 로그 P0): 이 문항의 입모양을 받아 재생을 시작한 때. 새 문항은 frames를 비웠다가 채운다
+  const onsetRef = useRef(null)
+  useEffect(() => { onsetRef.current = frames?.length ? Date.now() : null }, [frames])
   const visemeSeqRef = useRef(0)   // 입모양 요청 순번: 이전 문항의 늦은 응답이 새 문항 화면을 덮지 않게
   const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
   // 약한 입모양은 조금 천천히(연습 화면). 숙달 추정값이 문턱(서버 natural_speed_gate, 70) 이상이면 감속을 끄고 자연 속도로
@@ -241,7 +245,8 @@ function WordQuiz({ data, reload }) {
     if (isContext) {
       // 문맥 문항: 숙달(stat)은 그대로, 시행 기록·취약 입모양에만 남는다(/api/curriculum/context-answer)
       try {
-        const rc = await curriculumAPI.submitContext(q.item.id, answer, q.choices)
+        const rc = await curriculumAPI.submitContext(q.item.id, answer, q.choices,
+          trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default' }))
         correct = !!rc.correct
         confusions = rc.confusions || []
         setXpEarned((x) => x + (rc.xp_gained || 0))
@@ -253,7 +258,8 @@ function WordQuiz({ data, reload }) {
     try {
       // 선다형은 보여 준 보기도 보낸다(시행 기록, 기회로 나눈 혼동률). 주관식은 보기가 없다
       const rr = await curriculumAPI.submitWord(q.target, correct, answer, effectiveSpeed(frames, shownFrames, playSpeed),
-        typed ? 'typed' : undefined, typed ? undefined : q.choices, q.probe)
+        typed ? 'typed' : undefined, typed ? undefined : q.choices, q.probe,
+        trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default' }))
       setStat({ attempts: rr.attempts, mastery: rr.mastery_score, mastered: rr.mastered })
       confusions = rr.confusions || []
       if (typed && rr.verdict) { verdict = rr.verdict; correct = verdict === 'correct' }

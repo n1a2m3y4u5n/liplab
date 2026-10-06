@@ -368,19 +368,22 @@ async def account_learning_reset(confirm: bool = False, current_user=Depends(get
     XP·연속 학습·레벨·배치를 처음 상태로 되돌린다. 프로필 화면의 '사라지는 기록' 목록과 같은 범위다.
     가입 동의 기록(ConsentRecord)은 법적 기록이라 남긴다. 공용 데모 계정은 방문자 모두의 화면이라 막는다.
     파일럿 참여 중이면 표준검사 사전·사후(A·B) 결과는 남긴다 — 연구 자료이고, 지우면 사전검사를 다시 볼 수 없다.
+    같은 까닭으로 유지 검사(C7)와 P3 검사 묶음(p3_test_sessions·p3_closed_responses·p3_open_responses)도 남긴다.
     참여 철회와 자료 삭제는 연구진을 통해 한다(docs/pilot-data-spec.md §5)."""
     if not confirm:
         raise HTTPException(status_code=400, detail="초기화를 확인하려면 confirm=true가 필요합니다.")
     if (current_user.email or "").lower() == _DEMO_EMAIL:
         raise HTTPException(status_code=403, detail="공용 데모 계정은 초기화할 수 없어요.")
     from sqlalchemy import delete as _delete
-    from database import ConsentRecord, LearningProfile, PlacementResult, RetentionResult
+    from database import (ConsentRecord, LearningProfile, PlacementResult, RetentionResult, P3TestSession,
+                          P3ClosedResponse, P3OpenResponse)
     prof = await _get_or_create_profile(current_user.id, db)
     in_pilot = bool(prof.pilot_code)
     removed, kept = {}, {}
+    pilot_tests = (RetentionResult, P3TestSession, P3ClosedResponse, P3OpenResponse)
     for M in _user_data_models():
-        if M in (ConsentRecord, LearningProfile) or (in_pilot and M is RetentionResult):
-            continue   # 파일럿 참여 중이면 유지 검사 결과(C7)도 사전·사후처럼 연구 자료로 남긴다
+        if M in (ConsentRecord, LearningProfile) or (in_pilot and M in pilot_tests):
+            continue   # 파일럿 참여 중이면 유지 검사 결과(C7)와 P3 검사 기록도 사전·사후처럼 연구 자료로 남긴다
         q = _delete(M).where(M.user_id == current_user.id)
         if in_pilot and M is PlacementResult:
             from sqlalchemy import or_ as _or
@@ -391,6 +394,10 @@ async def account_learning_reset(confirm: bool = False, current_user=Depends(get
         from sqlalchemy import select as _select, func as _func
         kept["placement_results_ab"] = (await db.execute(
             _select(_func.count(PlacementResult.id)).where(PlacementResult.user_id == current_user.id))).scalar() or 0
+        n_p3 = (await db.execute(
+            _select(_func.count(P3TestSession.id)).where(P3TestSession.user_id == current_user.id))).scalar() or 0
+        if n_p3:
+            kept["p3_test_sessions"] = n_p3
     # 학습 프로필은 지우지 않고 배치만 처음으로 — 파일럿 참여(코드·집단)는 학습 기록이 아니라 그대로 둔다
     prof.track, prof.current_stage, prof.placed = None, 0, False
     prof.speak_current_stage = 0
@@ -548,6 +555,19 @@ class ProgressSubmission(BaseModel):
     # 답하기 전에 본 유효 재생 속도(학습자가 고른 가장 느린 속도 × 적응 감속). 기록만 하고 숙달에는 넣지 않는다: 1.0배 미만 합격을
     # 0.5로 세는 규칙들이 시뮬레이션 사전 기준을 넘지 못했다(docs/mastery-ewma.md 9절). 실제 기록이 쌓이면 다시 본다
     speed: Optional[float] = Field(None, ge=0.1, le=4.0)
+    # 파일럿 로그(P0): 문장 표시부터 답까지 ms, 레슨 가상 화자, 연 힌트 단계(0~3), 4지선다 보기(보인 순서). 모두 기록만 한다
+    rt_from_onset_ms: Optional[int] = Field(None, ge=0, le=3_600_000)
+    talker: Optional[str] = Field(None, max_length=16)
+    hint_level: Optional[int] = Field(None, ge=0, le=3)
+    options: Optional[List[str]] = Field(None, max_length=6)
+
+
+def _sentence_options(options, sentence: str) -> Optional[list]:
+    """문장 4지선다 보기(보인 순서). 정답 문장이 없거나 겹치는 보기가 있으면 남기지 않는다(_trial_options와 같은 원칙, 길이만 문장용)."""
+    if not options or not all(isinstance(o, str) for o in options):
+        return None
+    out = [o.strip()[:_TEXT_MAX] for o in options]
+    return out if len(set(out)) == len(out) and (sentence or "").strip() in out else None
 
 
 class ProgressResponse(BaseModel):
@@ -833,6 +853,10 @@ async def submit_progress(
             phoneme_accuracy=scoring_result.get("phoneme_accuracy", {}),
             speed=submission.speed,
             answer_mode=_answer_mode(submission.answer_mode),
+            rt_from_onset_ms=submission.rt_from_onset_ms,
+            talker=_clean_talker(submission.talker),
+            hint_level=submission.hint_level,
+            options=_sentence_options(submission.options, submission.sentence) if submission.answer_mode == "choice" else None,
         )
         db.add(progress)
 
@@ -1893,7 +1917,29 @@ async def curriculum_viseme_lessons(current_user=Depends(get_current_user)):
 _OPTIONS_MAX = 8
 
 
-class RecognitionSubmit(BaseModel):
+class TrialMeta(BaseModel):
+    """학습 시행에 함께 오는 측정 필드(파일럿 로그 사양 점검 P0, docs/pilot/log-spec-audit.md). 모두 선택이라 예전 화면도 그대로 채점된다.
+    rt_from_onset_ms: 문항 표시(자극 재생 시작)부터 답 확정까지 ms. talker: 레슨 가상 화자 id(lib/talkers). hint_used: 힌트를 봤는지."""
+    rt_from_onset_ms: Optional[int] = Field(None, ge=0, le=3_600_000)
+    talker: Optional[str] = Field(None, max_length=16)
+    hint_used: Optional[bool] = None
+
+
+import re as _re_talker
+_TALKER_ID_RE = _re_talker.compile(r"^[A-Za-z0-9_-]{1,16}$")
+
+
+def _clean_talker(t) -> Optional[str]:
+    return t if isinstance(t, str) and _TALKER_ID_RE.match(t) else None
+
+
+def _trial_meta(data) -> dict:
+    """TrialAttempt에 넣을 측정 열. 학습 화면이 보내지 않은 값은 NULL로 둔다."""
+    return {"rt_from_onset_ms": getattr(data, "rt_from_onset_ms", None), "talker": _clean_talker(getattr(data, "talker", None)),
+            "hint_used": getattr(data, "hint_used", None)}
+
+
+class RecognitionSubmit(TrialMeta):
     viseme_id: int   # 제시된(정답) 그룹
     chosen_id: int   # 사용자가 고른 그룹
     speed: Optional[float] = Field(None, ge=0.1, le=4.0)   # 답하기 전에 본 실제 재생 속도(1.0 미만 정답은 숙달에 0.5)
@@ -1962,7 +2008,8 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
         from database import TrialAttempt
         db.add(TrialAttempt(user_id=current_user.id, stage=1, item_type="viseme",
                             target=str(data.viseme_id), chosen=str(data.chosen_id), correct=correct, confusions=[],
-                            speed=data.speed, options=_trial_options(data.options, data.viseme_id, data.chosen_id)))
+                            speed=data.speed, options=_trial_options(data.options, data.viseme_id, data.chosen_id),
+                            **_trial_meta(data)))
 
         await db.commit()
         await db.refresh(sp)
@@ -1987,7 +2034,7 @@ async def curriculum_recognition(data: RecognitionSubmit, current_user=Depends(g
 _AX_CHOICES = ("same", "different")
 
 
-class RecognitionAxSubmit(BaseModel):
+class RecognitionAxSubmit(TrialMeta):
     a: str = Field(..., max_length=2)   # 먼저 보인 음절
     b: str = Field(..., max_length=2)   # 나중에 보인 음절
     chosen: str                         # 'same' | 'different'
@@ -2011,7 +2058,7 @@ async def curriculum_recognition_ax(data: RecognitionAxSubmit, current_user=Depe
     try:
         db.add(TrialAttempt(user_id=current_user.id, stage=1, item_type="viseme_ax", target=f"{data.a}/{data.b}",
                             chosen=data.chosen, correct=correct, confusions=[],
-                            options=[str(o) for o in opts] if opts else None))
+                            options=[str(o) for o in opts] if opts else None, **_trial_meta(data)))
         award = _award_xp_and_streak(current_user, 15 if correct else 3)
         await db.commit()
     except Exception as e:
@@ -2021,7 +2068,7 @@ async def curriculum_recognition_ax(data: RecognitionAxSubmit, current_user=Depe
             "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
 
 
-class WordAnswer(BaseModel):
+class WordAnswer(TrialMeta):
     word: str = Field(..., max_length=50)
     correct: bool
     chosen: Optional[str] = Field(None, max_length=50)   # 사용자가 실제로 고른 단어(오답 시 자모 혼동 분석용)
@@ -2236,10 +2283,11 @@ async def curriculum_word_answer(data: WordAnswer, current_user=Depends(get_curr
         import confusion_pairs as _cp
         opts = None if typed else _trial_options(data.options, data.word, data.chosen)
         # 주관식은 유형을 따로 둔다(word_typed). 유형별 학습 곡선이 선다형 단어와 섞이지 않게(eval_metrics)
+        probe = _cp.valid_probe(data.probe, data.word, opts) if opts and data.probe else None
         db.add(TrialAttempt(user_id=current_user.id, stage=2, item_type="word_typed" if typed else "word",
                             target=data.word, chosen=(data.chosen or "")[:50] if typed else data.chosen,
                             correct=correct, confusions=confusions, speed=data.speed, options=opts,
-                            probe=_cp.valid_probe(data.probe, data.word, opts) if opts and data.probe else None))
+                            probe=probe, probe_kind="contrast" if probe else None, **_trial_meta(data)))
         if not correct:
             await _srs_schedule_wrong(current_user.id, "word", data.word, db)
         award = _award_xp_and_streak(current_user, 15 if correct else (8 if success > 0 else 3))   # '입모양은 맞음'은 8
@@ -2568,7 +2616,7 @@ async def curriculum_closure(current_user=Depends(get_current_user), db: AsyncSe
     return {"items": fresh + seen, "target_visemes": rec["target_visemes"]}
 
 
-class ClosureAnswer(BaseModel):
+class ClosureAnswer(TrialMeta):
     item_id: str       # 문맥 추론 항목 id(정답은 서버가 CLOSURE_ITEMS에서 찾는다)
     chosen: str        # 사용자가 고른 보기
     options: Optional[list] = None   # 보여 준 보기(보인 순서)
@@ -2589,7 +2637,7 @@ async def curriculum_closure_answer(data: ClosureAnswer, current_user=Depends(ge
     try:
         db.add(TrialAttempt(user_id=current_user.id, stage=3, item_type="closure", item_id=item["id"],
                             target=answer, chosen=data.chosen, correct=correct, confusions=confusions,
-                            options=_trial_options(data.options, answer, data.chosen)))
+                            options=_trial_options(data.options, answer, data.chosen), **_trial_meta(data)))
         # 3단계(문맥 추론) 숙달: 문장 연습과 같은 트랙에 성공/시도 누적. 문맥 추론 화면은 단계 잠금이 없어,
         # 3단계가 잠긴 동안의 답은 넣지 않는다(예전에는 잠긴 3단계가 미리 숙달돼 2단계를 마치자마자 4단계가 열렸다)
         if await _stage_open(current_user, 3, db):
@@ -2612,7 +2660,7 @@ async def curriculum_closure_answer(data: ClosureAnswer, current_user=Depends(ge
             "xp_gained": award["xp_gained"], "streak_count": award["streak_count"]}
 
 
-class ContextAnswer(BaseModel):
+class ContextAnswer(TrialMeta):
     item_id: str = Field(..., max_length=40)   # 문맥 문항 id(정답은 서버가 CLOSURE_ITEMS에서 찾는다)
     chosen: str = Field(..., max_length=50)
     options: Optional[list] = None   # 보여 준 보기(보인 순서)
@@ -2637,7 +2685,7 @@ async def curriculum_context_answer(data: ContextAnswer, current_user=Depends(ge
     try:
         db.add(TrialAttempt(user_id=current_user.id, stage=2, item_type="context", item_id=item["id"],
                             target=answer, chosen=data.chosen, correct=correct, confusions=confusions,
-                            options=_trial_options(data.options, answer, data.chosen)))
+                            options=_trial_options(data.options, answer, data.chosen), **_trial_meta(data)))
         vids, features = await _weak_visemes_for_text(answer)
         await _bump_weak_visemes(current_user.id, vids, vids if not correct else [], features, db)
         award = _award_xp_and_streak(current_user, 15 if correct else 3)
@@ -2792,6 +2840,7 @@ class EffortReq(BaseModel):
     response: Optional[str] = Field(None, max_length=10)     # answered | skipped | left
     n_items: Optional[int] = Field(None, ge=0, le=200)
     accuracy: Optional[float] = Field(None, ge=0, le=1)
+    render_log: Optional[dict] = None                        # 그 레슨의 기기·렌더링 요약(V20). 정해진 키만 남긴다
 
 
 @app.post("/api/lesson/effort", dependencies=[Depends(ratelimit.rate_limit(30, 60, "lesson-effort"))])
@@ -2805,13 +2854,16 @@ async def lesson_effort(data: EffortReq, current_user=Depends(get_current_user),
     rating = _me.clean_rating(data.rating) if data.rating is not None else None
     response = _me.clean_response(data.response, rating)
     kind = data.lesson_kind if data.lesson_kind in _me.LESSON_KINDS else None
+    import pilot_battery as _pbat
+    render = _pbat.clean_render_log(data.render_log)
 
     async def upsert():
         row = (await db.execute(select(LessonEffort).where(
             LessonEffort.user_id == current_user.id, LessonEffort.session_id == data.session_id))).scalars().first()
         if row is None:
             db.add(LessonEffort(user_id=current_user.id, session_id=data.session_id, lesson_kind=kind, stage=data.stage,
-                                rating=rating, response=response, n_items=data.n_items, accuracy=data.accuracy))
+                                rating=rating, response=response, n_items=data.n_items, accuracy=data.accuracy,
+                                render_log=render))
             return response
         if _me.merge(row.response, response):
             row.rating, row.response = rating, response
@@ -2819,6 +2871,8 @@ async def lesson_effort(data: EffortReq, current_user=Depends(get_current_user),
         row.stage = row.stage if row.stage is not None else data.stage
         if data.n_items is not None:
             row.n_items, row.accuracy = data.n_items, data.accuracy
+        if render and not row.render_log:
+            row.render_log = render
         return row.response
 
     saved = await upsert()
@@ -3310,8 +3364,11 @@ def _pilot_admin_gate(user):
         raise HTTPException(status_code=403, detail="운영자 계정만 파일럿 자료를 내보낼 수 있습니다.")
 
 
-PILOT_EXPORT_VERSION = 4   # 2(9/24): 참여일·참여 뒤 집계·동형 폼 문항 기록·현지 날짜 추가. 3(9/28): 사후 문항의 화자 조건(talker)
+PILOT_EXPORT_VERSION = 5   # 2(9/24): 참여일·참여 뒤 집계·동형 폼 문항 기록·현지 날짜 추가. 3(9/28): 사후 문항의 화자 조건(talker)
 # 4(9/29): 검사 전 연습 시행 수(trials_before)·연습 뒤 사전 표시, 학습 초기화 날(learning_reset_on), 시행 단위 기록(trials=true일 때만)
+# 5(10/6): P3 검사 묶음(battery: 회차·층·폼·순서·문항 응답, 개방형 답 원문 포함), 참여 순번(join_seq)·폼 순서(planned_order)·
+#   B 완료 순번(b_completed_seq), 10/6 측정 표(review_logs·mastery_probes·retention_results·lesson_efforts), trial_log 확장
+#   (목표·보기·고른 답·문항 id·단계 구분·화자·반응 시간·힌트·탐침 종류), progress_log(문장 원문 제외, trials=true일 때만)
 
 
 @app.get("/api/pilot/export")
@@ -3321,13 +3378,15 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
     참여자별로 가명, 집단, 참여일, 표준검사 결과(동형 폼 A·B는 문항별 정오답 기록 포함), 단계별 시행·정답 수,
     말하기 시도·평균 점수, 학습한 날 수를 준다(최소 수집, §4.7). 계정의 모든 기록(all)과 참여 코드를 넣은 뒤의
     기록(since_join)을 따로 센다. 날짜는 tz_offset_min(한국 −540) 기준 현지 날짜다.
-    trials=true면 선다형 시행 단위 기록(trial_log: 순번·날짜·단계·유형·정오답·재생 속도·짝 탐색 여부)을 더한다. 시각·응답 시간·
-    훈련 화자·힌트 사용은 앱이 기록하지 않아 없다(docs/pilot-data-spec.md 3절). 동의서의 '연구진이 받는 것'을 고친 뒤에만 쓴다."""
+    trials=true면 선다형 시행 단위 기록(trial_log)과 문장 연습 기록(progress_log, 문장·답 원문 제외)을 더한다. 시각 대신 순번과 날짜만 준다.
+    판 5부터 P3 검사 묶음(battery)이 들어가고, 개방형 검사 문항에 한해 타이핑 답 원문(answer_text)을 싣는다(학습 중 입력 문장은 넣지
+    않는다). 동의서의 '연구진이 받는 것'(5-3)과 docs/pilot-data-spec.md 3절을 고친 뒤에만 쓴다."""
     _pilot_admin_gate(current_user)
     import analytics as _an
     from sqlalchemy import select, func, cast, Integer
     from datetime import datetime as _dt
-    from database import LearningProfile, PlacementResult, TrialAttempt, SpeakAttempt, Progress
+    from database import (LearningProfile, PlacementResult, TrialAttempt, SpeakAttempt, Progress, ReviewLog, MasteryProbe,
+                          RetentionResult, LessonEffort, P3TestSession, P3ClosedResponse, P3OpenResponse)
     tz = max(-840, min(720, int(tz_offset_min)))
 
     def day(ts):
@@ -3352,13 +3411,92 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
                 "active_days": len(days)}
 
     async def trial_log(uid):
-        # 선다형 시행 단위 기록. 시각 대신 순번과 현지 날짜만 준다(시각 단위 기록은 넣지 않는다). 주관식 답(입력 글)은 넣지 않는다
-        q = (await db.execute(select(TrialAttempt.stage, TrialAttempt.item_type, TrialAttempt.correct, TrialAttempt.speed,
-                                     TrialAttempt.probe.is_not(None), TrialAttempt.created_at)
-                              .where(TrialAttempt.user_id == uid)
-                              .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).all()
-        return [{"seq": i + 1, "day": day(ts), "stage": st, "item_type": it, "correct": bool(c),
-                 "speed": spd, "probe": bool(pr)} for i, (st, it, c, spd, pr, ts) in enumerate(q)]
+        # 선다형 시행 단위 기록. 시각 대신 순번과 현지 날짜만 준다(시각 단위 기록은 넣지 않는다). 주관식 답(입력 글)은 넣지 않는다:
+        # word_typed의 chosen은 비운다. 목표·보기·고른 보기는 검사·학습 단어라 개인정보가 아니다(log-spec-audit.md 4.3)
+        q = (await db.execute(select(TrialAttempt).where(TrialAttempt.user_id == uid)
+                              .order_by(TrialAttempt.created_at.asc(), TrialAttempt.id.asc()))).scalars().all()
+        return [{"seq": i + 1, "day": day(t.created_at), "stage": t.stage, "item_type": t.item_type, "correct": bool(t.correct),
+                 "speed": t.speed, "probe": t.probe is not None, "target": t.target,
+                 "options": t.options, "chosen": None if t.item_type == "word_typed" else t.chosen, "item_id": t.item_id,
+                 "phase": t.phase, "talker": t.talker, "rt_from_onset_ms": t.rt_from_onset_ms, "hint_used": t.hint_used,
+                 "probe_kind": t.probe_kind or ("contrast" if t.probe is not None else None)} for i, t in enumerate(q)]
+
+    async def progress_log(uid):
+        # 문장 연습 기록. 문장·답 원문은 넣지 않는다(학습 중 입력, 명세 3절)
+        q = (await db.execute(select(Progress).where(Progress.user_id == uid)
+                              .order_by(Progress.created_at.asc(), Progress.id.asc()))).scalars().all()
+        return [{"seq": i + 1, "day": day(r.created_at), "difficulty_level": r.difficulty_level, "answer_mode": r.answer_mode,
+                 "speed": r.speed, "score": r.score, "hint_level": r.hint_level, "talker": r.talker,
+                 "rt_from_onset_ms": r.rt_from_onset_ms, "n_options": len(r.options) if r.options else None}
+                for i, r in enumerate(q)]
+
+    async def measurement(uid):
+        # 10/6 측정 표(C11·C16·C7·C14). 시각 대신 날짜만 준다
+        rl = (await db.execute(select(ReviewLog).where(ReviewLog.user_id == uid).order_by(ReviewLog.id))).scalars().all()
+        mp = (await db.execute(select(MasteryProbe).where(MasteryProbe.user_id == uid).order_by(MasteryProbe.id))).scalars().all()
+        rr = (await db.execute(select(RetentionResult).where(RetentionResult.user_id == uid)
+                               .order_by(RetentionResult.id))).scalars().all()
+        le = (await db.execute(select(LessonEffort).where(LessonEffort.user_id == uid).order_by(LessonEffort.id))).scalars().all()
+        return {
+            "review_logs": [{"kind": r.kind, "ref": r.ref, "source": r.source, "reviewed_on": r.reviewed_on,
+                             "elapsed_days": r.elapsed_days, "quality": r.quality, "grade": r.grade, "passed": r.passed,
+                             "answer_mode": r.answer_mode, "speed": r.speed, "guess": r.guess, "r_fsrs": r.r_fsrs,
+                             "p_fsrs": r.p_fsrs, "p_sm2": r.p_sm2, "sm2_interval": r.sm2_interval,
+                             "fsrs_stability": r.fsrs_stability, "fsrs_difficulty": r.fsrs_difficulty} for r in rl],
+            "mastery_probes": [{"stage": r.stage, "wave": r.wave, "seq": r.seq, "item_kind": r.item_kind, "target": r.target,
+                                "options": [o.get("value") if isinstance(o, dict) else o for o in (r.options or [])],
+                                "chosen": r.chosen, "correct": r.correct, "mastered_on": r.mastered_on, "due_on": r.due_on,
+                                "answered_on": day(r.answered_at), "delay_days": r.delay_days, "speed": r.speed} for r in mp],
+            "retention_results": [{"form": r.form, "form_version": r.form_version, "days_after_post": r.days_after_post,
+                                   "total": r.total, "correct": r.correct, "accuracy": r.accuracy, "level": r.level,
+                                   "date": day(r.created_at),
+                                   "items": [{"id": i.get("id"), "correct": bool(i.get("correct")), "chosen": i.get("chosen"),
+                                              **({"talker": i["talker"]} if i.get("talker") else {})}
+                                             for i in (r.item_log or []) if isinstance(i, dict)]} for r in rr],
+            "lesson_efforts": [{"day": day(r.created_at), "lesson_kind": r.lesson_kind, "stage": r.stage, "rating": r.rating,
+                                "response": r.response, "n_items": r.n_items, "accuracy": r.accuracy,
+                                "render_log": r.render_log} for r in le],
+        }
+
+    async def battery(uid):
+        # P3 검사 묶음. 회차 × 층마다 한 행, 끝내지 못한 층도 싣는다(ITT). 개방형 답 원문은 검사 문항이라 싣는다
+        ss = (await db.execute(select(P3TestSession).where(P3TestSession.user_id == uid)
+                               .order_by(P3TestSession.started_at, P3TestSession.id))).scalars().all()
+        cl = (await db.execute(select(P3ClosedResponse).where(P3ClosedResponse.user_id == uid)
+                               .order_by(P3ClosedResponse.id))).scalars().all()
+        op = (await db.execute(select(P3OpenResponse).where(P3OpenResponse.user_id == uid)
+                               .order_by(P3OpenResponse.id))).scalars().all()
+        out = []
+        for s_ in ss:
+            closed = [{"seq": r.seq, "item_id": r.item_id, "talker": r.talker, "modality": r.modality, "target": r.target,
+                       "options": r.options, "chosen": r.chosen, "correct": r.correct,
+                       "target_consonants": r.target_consonants, "chosen_consonants": r.chosen_consonants,
+                       "consonant_hits": r.consonant_hits, "rt_ms": r.rt_ms, "rt_from_onset_ms": r.rt_from_onset_ms,
+                       "plays": r.plays, "speed": r.speed} for r in cl if r.session_id == s_.id]
+            opened = [{"seq": r.seq, "item_id": r.item_id, "talker": r.talker, "modality": r.modality, "target": r.target,
+                       "answer_text": r.answer_text, "app_score": r.app_score, "auto_phoneme_acc": r.auto_phoneme_acc,
+                       "auto_word_acc": r.auto_word_acc, "scorer_version": r.scorer_version, "rt_ms": r.rt_ms,
+                       "rt_from_onset_ms": r.rt_from_onset_ms, "plays": r.plays, "speed": r.speed, "snr_db": r.snr_db,
+                       "noise_type": r.noise_type, "criterion_met": r.criterion_met} for r in op if r.session_id == s_.id]
+            out.append({"session_label": s_.session_label, "layer": s_.layer, "form": s_.form, "form_version": s_.form_version,
+                        "manifest_sha": s_.manifest_sha, "planned_order": s_.planned_order, "modality": s_.modality,
+                        "talker": s_.talker, "started_on": day(s_.started_at), "completed_on": day(s_.completed_at),
+                        "completed": bool(s_.completed), "n_items": s_.n_items, "n_ready": s_.n_ready, "missing": s_.missing,
+                        "snr_calibrated_db": s_.snr_calibrated_db, "headphone_check": s_.headphone_check,
+                        "volume_fixed": s_.volume_fixed, "render_log": s_.render_log,
+                        "closed": closed if s_.layer in ("word", "nonsense") else None,
+                        "open": opened if s_.layer in ("sentence", "av", "snr") else None})
+        return out
+
+    # B 완료 순번(순차 멈춤 규칙은 이 순서로 5명씩 묶는다). 문장 층(주결과)을 끝낸 시각 순, 없으면 B의 다른 층
+    b_done = (await db.execute(select(P3TestSession.user_id, P3TestSession.layer, P3TestSession.completed_at)
+                               .where(P3TestSession.session_label == "B", P3TestSession.completed.is_(True)))).all()
+    b_first = {}
+    for u, lay, ts in b_done:
+        k = (0 if lay == "sentence" else 1, ts)
+        if ts and (u not in b_first or k < b_first[u]):
+            b_first[u] = k
+    b_seq = {u: i + 1 for i, (u, _) in enumerate(sorted(b_first.items(), key=lambda kv: kv[1]))}
 
     import assessment as _asmt
     profs = (await db.execute(select(LearningProfile).where(LearningProfile.pilot_code.is_not(None)))).scalars().all()
@@ -3373,6 +3511,8 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
             "joined_on": day(pf.pilot_joined_at),
             # 마지막 학습 초기화 날. 초기화하면 시행 기록이 지워져 그 전 학습량이 집계에서 빠진다(검사의 trials_before는 남는다)
             "learning_reset_on": day(getattr(pf, "learning_reset_at", None)),
+            # P3 검사 참여 순번·폼 순서(pilot_battery.assign_order)와 B 완료 순번. 검사를 시작하지 않았으면 None
+            "join_seq": pf.pilot_seq, "planned_order": pf.pilot_order, "b_completed_seq": b_seq.get(uid),
             "tests": [{"form": t.form, "form_version": t.form_version, "accuracy": round(t.accuracy or 0, 4),
                        "level": t.level, "date": day(t.created_at),
                        # 채점 때까지 한 독화 연습 시행 수(선다형 + 문장). 9/29 이전 검사는 None
@@ -3388,7 +3528,9 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
             # 예전 형식과 같은 자리(계정 전체)
             **everything,
             "since_join": (await activity(uid, pf.pilot_joined_at)) if pf.pilot_joined_at else None,
-            **({"trial_log": await trial_log(uid)} if trials else {}),
+            **({"trial_log": await trial_log(uid), "progress_log": await progress_log(uid)} if trials else {}),
+            "battery": await battery(uid),
+            **(await measurement(uid)),
         })
     return {"exported_at": _dt.utcnow().replace(microsecond=0).isoformat() + "Z", "version": PILOT_EXPORT_VERSION,
             "tz_offset_min": tz, "n": len(rows), "participants": rows,
@@ -3415,6 +3557,423 @@ async def pilot_lookup(req: PilotLookupReq, current_user=Depends(get_current_use
     prof = (await db.execute(select(LearningProfile).where(LearningProfile.user_id == user.id))).scalars().first()
     return {"pid": _pseudonym(user.id), "joined": bool(prof and prof.pilot_code),
             "cohort": prof.cohort if prof and prof.pilot_code else None}
+
+
+# ── 청인 예비 파일럿(P3) 검사 묶음(pilot_battery.py, docs/pilot/battery.md) ─────────────────
+# 파일럿 참여자(LIPLAB_PILOT=1이고 참여 코드를 넣은 계정)만 쓴다. 문항·배정은 목록 파일(data/pilot/battery_manifest.json,
+# LIPLAB_PILOT_MANIFEST로 바꿀 수 있음)에서 오고, 영상·음성은 LIPLAB_PILOT_MEDIA_DIR 아래에서 읽는다. 파일이 없는 문항은 '준비 전'으로
+# 내지도 세지도 않는다. 검사 중에는 정답을 알려 주지 않는다(채점은 저장만).
+_BATTERY_CACHE = {"key": None, "manifest": None, "errors": None, "sha": None}
+
+
+def _battery_manifest():
+    """(목록, 점검 문제 목록, 해시). 파일이 바뀌면 다시 읽는다."""
+    import pilot_battery as _pb
+    path = os.getenv("LIPLAB_PILOT_MANIFEST") or _pb.MANIFEST_PATH
+    try:
+        key = (path, os.path.getmtime(path))
+    except OSError:
+        raise HTTPException(status_code=503, detail="검사 목록 파일이 없습니다.")
+    if _BATTERY_CACHE["key"] != key:
+        m = _pb.load_manifest(path)
+        _BATTERY_CACHE.update(key=key, manifest=m, errors=_pb.validate_manifest(m), sha=_pb.manifest_sha(m))
+    return _BATTERY_CACHE["manifest"], _BATTERY_CACHE["errors"], _BATTERY_CACHE["sha"]
+
+
+async def _battery_gate(user, db):
+    """P3 검사는 파일럿 참여자만 본다. 일반 학습자와 공용 데모 계정에는 기능 자체가 없다(403)."""
+    if os.getenv("LIPLAB_PILOT") != "1":
+        raise HTTPException(status_code=403, detail="지금은 파일럿을 진행하지 않아요.")
+    if (user.email or "").lower() == _DEMO_EMAIL:
+        raise HTTPException(status_code=403, detail="공용 데모 계정은 파일럿 검사를 볼 수 없어요.")
+    prof = await _get_or_create_profile(user.id, db)
+    if not prof.pilot_code:
+        raise HTTPException(status_code=403, detail="파일럿 참여자만 볼 수 있어요.")
+    return prof
+
+
+async def _battery_assign(prof, db, manifest) -> tuple:
+    """검사 참여 순번과 폼 순서. 처음 검사 상태를 볼 때 순번을 매기고(지금까지 가장 큰 순번 + 1) 순서를 정해 프로필에 둔다."""
+    import pilot_battery as _pb
+    from database import LearningProfile
+    from sqlalchemy import select, func
+    if prof.pilot_seq is None:
+        mx = (await db.execute(select(func.max(LearningProfile.pilot_seq)))).scalar() or 0
+        prof.pilot_seq = int(mx) + 1
+        prof.pilot_order = _pb.assign_order(prof.pilot_seq, manifest.get("orders") or _pb.ORDERS)
+        await db.commit()
+    return prof.pilot_seq, prof.pilot_order
+
+
+def _battery_items(manifest: dict, label: str, layer: str, seq: int, order: str, snr_db=None) -> list:
+    """이 참여자·회차·층에 낼 문항(제시 순서). 각 문항: 목록 원본(item), 순번(position), 화자, 매체 상대 경로, 준비 여부와 까닭."""
+    import pilot_battery as _pb
+    L = (manifest.get("layers") or {}).get(layer) or {}
+    talkers = (manifest.get("talkers") or {}).get(layer) or []
+    modality = L.get("modality") or ("audio" if layer == "snr" else "real")
+    if layer == "snr":
+        base = list(L.get("items") or [])
+    else:
+        base = list((L.get("items") or {}).get(_pb.form_for(order, label)) or [])
+    if layer == "av":
+        ordered = _pb.av_blocks(base, seq)
+    else:
+        ordered = _pb.presentation_order(base, seq, label, layer)
+    noise_ok = True
+    if layer in ("av", "snr"):
+        noise_ok = _pb.media_exists(_pb.noise_relpath(manifest, L.get("noise") or "babble"))
+    out = []
+    for pos, it in enumerate(ordered, start=1):
+        if layer == "word":
+            talker = _pb.word_talker(seq, label, pos - 1, talkers) if talkers else None
+        elif layer == "nonsense" or (layer == "sentence" and modality == "avatar"):
+            talker = "avatar"
+        else:
+            talker = _pb.sentence_talker(seq, talkers) if talkers else None
+        rel = _pb.media_relpath(L, it, talker) if talker and talker != "avatar" else None
+        media_ok = _pb.media_exists(rel) if rel else False
+        ready, why = _pb.item_ready(layer, modality, it, media_ok, noise_ok, snr_db)
+        out.append({"item": it, "position": pos, "talker": talker, "rel": rel, "ready": ready, "reason": why,
+                    "modality": it.get("block") or modality})
+    return out
+
+
+def _battery_counts(items: list) -> dict:
+    missing = {}
+    for x in items:
+        if not x["ready"]:
+            missing[x["reason"]] = missing.get(x["reason"], 0) + 1
+    return {"n_items": len(items), "n_ready": sum(1 for x in items if x["ready"]), "missing": missing}
+
+
+async def _battery_rows(user_id: int, db) -> dict:
+    from database import P3TestSession
+    from sqlalchemy import select
+    rows = (await db.execute(select(P3TestSession).where(P3TestSession.user_id == user_id))).scalars().all()
+    return {(r.session_label, r.layer): r for r in rows}
+
+
+def _battery_snr(rows: dict):
+    r = rows.get(("A1", "snr"))
+    return r.snr_calibrated_db if r is not None and r.completed else None
+
+
+def _battery_label_done(manifest, rows, label, seq, order) -> bool:
+    """회차를 마쳤는가: 그 회차의 층마다 끝냈거나, 낼 수 있는 문항이 하나도 없던 층이다."""
+    snr = _battery_snr(rows)
+    for layer in (manifest.get("layers_by_label") or {}).get(label, []):
+        r = rows.get((label, layer))
+        if r is not None and r.completed:
+            continue
+        if _battery_counts(_battery_items(manifest, label, layer, seq, order, snr))["n_ready"] == 0:
+            continue
+        return False
+    return True
+
+
+async def _battery_snr_state(session_id: int, manifest: dict, db) -> dict:
+    """SNR 계단의 지금 상태(저장된 시행 판정을 시간순으로 다시 돌린다)."""
+    import pilot_battery as _pb
+    from database import P3OpenResponse
+    from sqlalchemy import select
+    outs = (await db.execute(select(P3OpenResponse.criterion_met).where(P3OpenResponse.session_id == session_id)
+                             .order_by(P3OpenResponse.id))).scalars().all()
+    return _pb.staircase_run(manifest["layers"]["snr"]["staircase"], [bool(o) for o in outs])
+
+
+@app.get("/api/pilot/battery/status")
+async def pilot_battery_status(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """내 P3 검사 순서·회차별 층 상태. 상태: done | in_progress | todo. available은 앞 회차를 마쳤는지."""
+    import pilot_battery as _pb
+    prof = await _battery_gate(current_user, db)
+    m, errs, sha = _battery_manifest()
+    seq, order = await _battery_assign(prof, db, m)
+    rows = await _battery_rows(current_user.id, db)
+    snr = _battery_snr(rows)
+    labels, next_label = [], None
+    for label in _pb.LABELS:
+        prev = _pb.LABEL_PREV[label]
+        available = prev is None or _battery_label_done(m, rows, prev, seq, order)
+        layers = []
+        for layer in (m.get("layers_by_label") or {}).get(label, []):
+            r = rows.get((label, layer))
+            cnt = _battery_counts(_battery_items(m, label, layer, seq, order, snr))
+            layers.append({"layer": layer, "title": ((m.get("layers") or {}).get(layer) or {}).get("title") or layer,
+                           "state": "done" if r is not None and r.completed else ("in_progress" if r is not None else "todo"),
+                           **cnt})
+        done = _battery_label_done(m, rows, label, seq, order)
+        if next_label is None and available and not done:
+            next_label = label
+        labels.append({"label": label, "form": _pb.form_for(order, label), "available": available, "done": done,
+                       "layers": layers})
+    return {"seq": seq, "order": order, "manifest": {"version": m.get("version"), "status": m.get("status"), "sha": sha,
+                                                      "errors": errs[:20], "n_errors": len(errs)},
+            "snr_calibrated_db": snr, "labels": labels, "next_label": next_label,
+            "playback": m.get("playback")}
+
+
+class BatteryStartReq(BaseModel):
+    label: str = Field(..., max_length=4)
+    layer: str = Field(..., max_length=12)
+
+
+@app.post("/api/pilot/battery/start", dependencies=[Depends(ratelimit.rate_limit(30, 60, "pilot-battery"))])
+async def pilot_battery_start(req: BatteryStartReq, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """층 하나를 시작(또는 이어서)한다. 회차 행을 만들고 낼 문항을 준다. 정답 글은 주지 않는다: 아바타 문항은 서버가 만든 입모양
+    프레임만, 영상 문항은 매체 주소만 준다."""
+    import pilot_battery as _pb
+    from database import P3TestSession, P3ClosedResponse, P3OpenResponse
+    from sqlalchemy import select
+    from sqlalchemy.exc import IntegrityError
+    prof = await _battery_gate(current_user, db)
+    m, errs, sha = _battery_manifest()
+    if errs:
+        raise HTTPException(status_code=503, detail="검사 목록 파일에 문제가 있어 시작할 수 없습니다: " + "; ".join(errs[:3]))
+    label, layer = req.label, req.layer
+    if label not in _pb.LABELS or layer not in (m.get("layers_by_label") or {}).get(label, []):
+        raise HTTPException(status_code=400, detail="이 회차에 없는 검사입니다.")
+    seq, order = await _battery_assign(prof, db, m)
+    rows = await _battery_rows(current_user.id, db)
+    prev = _pb.LABEL_PREV[label]
+    if prev and not _battery_label_done(m, rows, prev, seq, order):
+        raise HTTPException(status_code=409, detail=f"{prev} 회차를 먼저 마쳐 주세요.")
+    snr = _battery_snr(rows)
+    L = m["layers"][layer]
+    row = rows.get((label, layer))
+    if row is None:
+        talkers = (m.get("talkers") or {}).get(layer) or []
+        row = P3TestSession(user_id=current_user.id, session_label=label, layer=layer, form=_pb.form_for(order, label),
+                            form_version=str(m.get("version"))[:32], manifest_sha=sha, planned_order=order, join_seq=seq,
+                            modality="mixed" if layer == "av" else (L.get("modality") or ("audio" if layer == "snr" else "real")),
+                            talker=(_pb.sentence_talker(seq, talkers) if layer in ("sentence", "av", "snr") and talkers
+                                    and L.get("modality") != "avatar" else None),
+                            snr_calibrated_db=snr if layer == "av" else None)
+        db.add(row)
+        try:
+            await db.commit()
+        except IntegrityError:   # 같은 층을 두 번 눌러 동시에 만들었다: 먼저 만든 행을 쓴다
+            await db.rollback()
+            row = (await db.execute(select(P3TestSession).where(
+                P3TestSession.user_id == current_user.id, P3TestSession.session_label == label,
+                P3TestSession.layer == layer))).scalars().first()
+    if row.completed:
+        raise HTTPException(status_code=409, detail="이미 마친 검사입니다.")
+    items = _battery_items(m, label, layer, seq, order, row.snr_calibrated_db if layer == "av" else snr)
+    R = P3ClosedResponse if layer in _pb.CLOSED_LAYERS else P3OpenResponse
+    answered = set((await db.execute(select(R.item_id).where(R.session_id == row.id))).scalars().all())
+    out = []
+    for x in items:
+        it = x["item"]
+        o = {"id": it["id"], "position": x["position"], "ready": x["ready"], "reason": x["reason"],
+             "answered": it["id"] in answered, "modality": x["modality"]}
+        if x["ready"]:
+            if layer == "word":
+                o["options"] = it.get("options")
+            if layer == "nonsense":
+                o["vowels"] = it.get("vowels")
+            if layer in ("av", "snr"):
+                o["speech_rms_dbfs"] = it.get("speech_rms_dbfs")
+            if x["talker"] == "avatar":
+                o["frames"] = await text_to_visemes(it["text"])
+            else:
+                o["media"] = f"/pilot/battery/media/{row.id}/{it['id']}"
+        out.append(o)
+    payload = {"session_id": row.id, "label": label, "layer": layer, "form": row.form, "modality": row.modality,
+               "title": L.get("title"), "response": L.get("response"), "playback": m.get("playback"),
+               "items": out, **_battery_counts(items)}
+    if layer == "nonsense":
+        payload["consonant_sets"] = L.get("consonant_sets")
+    if layer in ("av", "snr"):
+        payload["noise"] = f"/pilot/battery/noise/{row.id}"
+        payload["snr_db"] = row.snr_calibrated_db
+    if layer == "snr":
+        payload["staircase"] = await _battery_snr_state(row.id, m, db)
+    return payload
+
+
+async def _battery_session(session_id: int, user_id: int, db):
+    from database import P3TestSession
+    from sqlalchemy import select
+    row = (await db.execute(select(P3TestSession).where(P3TestSession.id == session_id,
+                                                        P3TestSession.user_id == user_id))).scalars().first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="검사 회차가 없습니다.")
+    return row
+
+
+def _battery_media_type(path: str) -> str:
+    ext = os.path.splitext(path)[1].lower()
+    return {".mp4": "video/mp4", ".webm": "video/webm", ".mov": "video/quicktime", ".wav": "audio/wav",
+            ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".ogg": "audio/ogg"}.get(ext, "application/octet-stream")
+
+
+@app.get("/api/pilot/battery/media/{session_id}/{item_id}")
+async def pilot_battery_media(session_id: int, item_id: str, current_user=Depends(get_current_user),
+                              db: AsyncSession = Depends(get_db)):
+    """검사 문항의 영상·음성 파일(그 회차를 가진 참여자만). 파일은 저장소가 아니라 매체 폴더에 있다."""
+    import pilot_battery as _pb
+    from fastapi.responses import FileResponse
+    prof = await _battery_gate(current_user, db)
+    m, _, _ = _battery_manifest()
+    row = await _battery_session(session_id, current_user.id, db)
+    items = _battery_items(m, row.session_label, row.layer, prof.pilot_seq or row.join_seq or 1, row.planned_order,
+                           row.snr_calibrated_db)
+    x = next((x for x in items if x["item"].get("id") == item_id), None)
+    path = _pb.media_path(x["rel"]) if x and x["rel"] else None
+    if not path or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="영상 준비 전입니다.")
+    return FileResponse(path, media_type=_battery_media_type(path), headers={"Cache-Control": "private, max-age=3600"})
+
+
+@app.get("/api/pilot/battery/noise/{session_id}")
+async def pilot_battery_noise(session_id: int, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """소음 층의 잡담 잡음 파일."""
+    import pilot_battery as _pb
+    from fastapi.responses import FileResponse
+    await _battery_gate(current_user, db)
+    m, _, _ = _battery_manifest()
+    row = await _battery_session(session_id, current_user.id, db)
+    if row.layer not in ("av", "snr"):
+        raise HTTPException(status_code=404, detail="잡음이 없는 검사입니다.")
+    path = _pb.media_path(_pb.noise_relpath(m, (m["layers"][row.layer].get("noise") or "babble")))
+    if not path or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="잡음 파일 준비 전입니다.")
+    return FileResponse(path, media_type=_battery_media_type(path), headers={"Cache-Control": "private, max-age=3600"})
+
+
+class BatteryAnswerReq(BaseModel):
+    session_id: int
+    item_id: str = Field(..., max_length=40)
+    chosen: Optional[str] = Field(None, max_length=100)                     # 낱말 4지선다에서 고른 보기
+    chosen_consonants: Optional[List[Optional[str]]] = Field(None, max_length=3)   # 무의미 낱말: 자리별로 고른 자음
+    answer_text: Optional[str] = Field(None, max_length=_TEXT_MAX)          # 타이핑 답 원문
+    rt_ms: Optional[int] = Field(None, ge=0, le=3_600_000)                  # 첫 재생이 끝난 때부터 답 확정까지
+    rt_from_onset_ms: Optional[int] = Field(None, ge=0, le=3_600_000)       # 첫 재생이 시작한 때부터 답 확정까지
+    plays: Optional[int] = Field(None, ge=0, le=20)
+
+
+@app.post("/api/pilot/battery/answer", dependencies=[Depends(ratelimit.rate_limit(240, 60, "pilot-battery-answer"))])
+async def pilot_battery_answer(req: BatteryAnswerReq, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """문항 하나의 답을 저장한다. 정오는 알려 주지 않는다(검사). SNR 층만 다음 시행의 SNR과 끝났는지를 돌려준다.
+    준비되지 않은 문항은 받지 않고(세지 않음), 같은 문항의 두 번째 답은 무시한다."""
+    import pilot_battery as _pb
+    from database import P3ClosedResponse, P3OpenResponse
+    from sqlalchemy import select
+    from sqlalchemy.exc import IntegrityError
+    prof = await _battery_gate(current_user, db)
+    m, _, _ = _battery_manifest()
+    row = await _battery_session(req.session_id, current_user.id, db)
+    if row.completed:
+        raise HTTPException(status_code=409, detail="이미 마친 검사입니다.")
+    layer = row.layer
+    items = _battery_items(m, row.session_label, layer, prof.pilot_seq or row.join_seq or 1, row.planned_order,
+                           row.snr_calibrated_db)
+    x = next((x for x in items if x["item"].get("id") == req.item_id), None)
+    if x is None:
+        raise HTTPException(status_code=400, detail="이 검사에 없는 문항입니다.")
+    if not x["ready"]:
+        raise HTTPException(status_code=409, detail="준비되지 않은 문항은 세지 않습니다.")
+    it = x["item"]
+    speed = float((m.get("playback") or {}).get("speed") or 1.0)
+    common = dict(user_id=current_user.id, session_id=row.id, layer=layer, item_id=it["id"], seq=x["position"],
+                  talker=x["talker"], modality=x["modality"], rt_ms=req.rt_ms, rt_from_onset_ms=req.rt_from_onset_ms,
+                  plays=req.plays, speed=speed)
+    R = P3ClosedResponse if layer in _pb.CLOSED_LAYERS else P3OpenResponse
+    if (await db.execute(select(R.id).where(R.session_id == row.id, R.item_id == it["id"]))).first():
+        return {"recorded": False, "duplicate": True}
+    extra = {}
+    if layer == "word":
+        if req.chosen not in (it.get("options") or []):
+            raise HTTPException(status_code=400, detail="보기에 없는 답입니다.")
+        db.add(P3ClosedResponse(**common, target=it["word"], options=it.get("options"), chosen=req.chosen,
+                                correct=_pb.score_choice(it, req.chosen)))
+    elif layer == "nonsense":
+        sets = m["layers"]["nonsense"].get("consonant_sets") or {}
+        ch = list(req.chosen_consonants or [])[:3]
+        ch += [None] * (3 - len(ch))
+        if any(c is not None and c not in (sets.get(pos) or []) for c, pos in zip(ch, ("C1", "C2", "C3"))):
+            raise HTTPException(status_code=400, detail="자음 목록에 없는 답입니다.")
+        sc = _pb.score_nonsense(it, ch)
+        db.add(P3ClosedResponse(**common, target=it["text"], options=sets, chosen=",".join(c or "" for c in ch),
+                                correct=sc["correct"], target_consonants=sc["target"], chosen_consonants=sc["chosen"],
+                                consonant_hits=sc["hits"]))
+    else:
+        answer = _pb.clean_answer(req.answer_text)
+        target = it["text"]
+        app_score, app_acc = 0.0, None
+        if answer:
+            try:
+                sr = await calculate_score(correct=target, user_answer=answer, db=db, mode="visual")
+                app_score, app_acc = float(sr.get("score") or 0.0), sr.get("phoneme_accuracy")
+            except Exception as e:   # 앱 점수 실패는 원문 저장을 막지 않는다(원문으로 다시 채점할 수 있다)
+                print(f"[WARN] battery app score failed: {e}")
+                app_score = None
+        strict = _pb.strict_score(target, answer)
+        sf = _pb.strict_fields(strict)
+        snr_db, crit = None, None
+        if layer == "av":
+            snr_db = row.snr_calibrated_db
+        if layer == "snr":
+            st = await _battery_snr_state(row.id, m, db)
+            if st["done"]:
+                raise HTTPException(status_code=409, detail="SNR 맞추기가 이미 끝났습니다. 마침을 눌러 주세요.")
+            snr_db = st["next_db"]
+            crit = _pb.word_proportion(target, answer) >= float(m["layers"]["snr"]["staircase"].get("criterion", 0.5))
+        db.add(P3OpenResponse(**common, target=target, answer_text=answer, app_score=app_score, app_phoneme_accuracy=app_acc,
+                              auto_phoneme_acc=sf["auto_phoneme_acc"], auto_word_acc=sf["auto_word_acc"], strict_result=strict,
+                              scorer_version=("app-visual" + (f"+strict:{sf['strict_version']}" if sf["strict_version"]
+                                                              else ("+strict" if strict else "")))[:40],
+                              snr_db=snr_db, noise_type="babble" if layer in ("av", "snr") else None, criterion_met=crit))
+    try:
+        await db.commit()
+    except IntegrityError:   # 같은 문항의 답이 동시에 두 번 왔다
+        await db.rollback()
+        return {"recorded": False, "duplicate": True}
+    if layer == "snr":
+        st = await _battery_snr_state(row.id, m, db)
+        extra = {"staircase": {k: st[k] for k in ("next_db", "done", "reversals", "n_trials", "estimate_db", "estimate_kind")}}
+    return {"recorded": True, **extra}
+
+
+class BatteryFinishReq(BaseModel):
+    session_id: int
+    render_log: Optional[dict] = None
+    headphone_check: Optional[bool] = None
+    volume_fixed: Optional[bool] = None
+
+
+@app.post("/api/pilot/battery/finish", dependencies=[Depends(ratelimit.rate_limit(30, 60, "pilot-battery"))])
+async def pilot_battery_finish(req: BatteryFinishReq, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """층을 마친다. 문항 수·준비된 문항 수·못 낸 까닭과 기기·렌더링 요약을 남긴다. SNR 층은 계단 추정값을 정한다."""
+    import pilot_battery as _pb
+    from database import P3ClosedResponse, P3OpenResponse
+    from sqlalchemy import select, func
+    from datetime import datetime as _dt
+    prof = await _battery_gate(current_user, db)
+    m, _, _ = _battery_manifest()
+    row = await _battery_session(req.session_id, current_user.id, db)
+    if row.completed:
+        return {"completed": True, "already": True}
+    items = _battery_items(m, row.session_label, row.layer, prof.pilot_seq or row.join_seq or 1, row.planned_order,
+                           row.snr_calibrated_db)
+    cnt = _battery_counts(items)
+    R = P3ClosedResponse if row.layer in _pb.CLOSED_LAYERS else P3OpenResponse
+    n_answered = (await db.execute(select(func.count(R.id)).where(R.session_id == row.id))).scalar() or 0
+    out = {"completed": True, "n_answered": int(n_answered), **cnt}
+    if row.layer == "snr":
+        st = await _battery_snr_state(row.id, m, db)
+        if st["estimate_db"] is None and cnt["n_ready"] > 0:
+            raise HTTPException(status_code=409, detail="SNR을 아직 정하지 못했습니다. 문장을 더 풀어 주세요.")
+        row.snr_calibrated_db = st["estimate_db"]
+        out["snr_calibrated_db"] = st["estimate_db"]
+        out["estimate_kind"] = st["estimate_kind"]
+    row.n_items, row.n_ready, row.missing = cnt["n_items"], cnt["n_ready"], cnt["missing"]
+    row.render_log = _pb.clean_render_log(req.render_log)
+    if row.layer in ("av", "snr"):
+        row.headphone_check, row.volume_fixed = req.headphone_check, req.volume_fixed
+    row.completed, row.completed_at = True, _dt.utcnow()
+    await db.commit()
+    return out
 
 
 @app.get("/api/admin/content/candidates")

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import useStore from '../store/useStore'
 import { lessonTalker, lessonSeed } from '../lib/talkers'
+import { resetRenderTiming } from '../lib/frameClock'
 
 // 레슨별 가상 화자(커리큘럼 계획 2-2, docs/talker-variation.md 3절). 단계마다 몇 번째 레슨인지를 사용자별로 기기에 세어 두고,
 // 그 번호로 화자와 흔들림 씨앗을 정한다(lib/talkers.lessonTalker). 저장소가 막혀 있으면 이 창에서만 센다.
@@ -27,6 +28,7 @@ export function startLesson(userKey, stage) {
   writeCounts({ ...counts, [key]: n + 1 })
   const lesson = { index: n, talker: lessonTalker(userKey, stage, n), seed: lessonSeed(userKey, stage, n) }
   last = { key, at: now, lesson }
+  resetRenderTiming()   // 레슨마다 재생 지연을 새로 센다(레슨 끝 노력 문항이 그 레슨의 요약을 함께 보낸다, V20)
   return lesson
 }
 

@@ -6,6 +6,7 @@ import { curriculumAPI } from '../api'
 import { visemeCycleSteps } from '../lib/visemeCycle'
 import { applyTalkerTiming, applyTalkerCycle } from '../lib/talkers'
 import { applyCoarticulation } from '../lib/coarticulation'
+import { recordLateness } from '../lib/frameClock'
 
 /**
  * 입모양만 재생하는 경량 아바타 (오버레이·컨트롤 없음 → 퀴즈에서 정답 미노출).
@@ -51,8 +52,12 @@ export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300,
 
     if (frames && frames.length) {
       let i = 0
+      // 프레임이 예정보다 얼마나 늦게 넘어갔는지 기록만 한다(기기 점검 V20, lib/frameClock). 넘기는 시각은 예전 그대로다
+      let dueAt
+      const later = (fn, ms) => { dueAt = performance.now() + ms; return setTimeout(fn, ms) }
       const step = () => {
         if (!on) return
+        if (Number.isFinite(dueAt)) recordLateness(performance.now() - dueAt)
         const dur = Math.max(frames[i]?.duration_ms || 180, 120) / k
         const tr = frames[i]?.transition_ms
         setVid(frames[i]?.viseme ?? 15)
@@ -62,15 +67,16 @@ export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300,
         if (i >= frames.length) {
           // 한 단어 끝 → 잠깐 중립으로 쉬었다가 반복
           i = 0
-          t = setTimeout(() => { setVid(15); setSyl(null); setTiming({ t: 150, d: 500 }); t = setTimeout(step, 500) }, dur)
+          t = setTimeout(() => { setVid(15); setSyl(null); setTiming({ t: 150, d: 500 }); t = later(step, 500) }, dur)
+          dueAt = undefined   // 마지막 프레임에서 쉼으로 넘어가는 순간은 재지 않는다(쉼 뒤 첫 프레임은 later가 잰다)
           return
         }
-        t = setTimeout(step, dur)
+        t = later(step, dur)
       }
       setVid(15)
       setSyl(null)
       setTiming({ t: 150, d: 300 })
-      t = setTimeout(step, 300)
+      t = later(step, 300)
     } else {
       // 목표 ↔ 중립 반복. 이중모음은 원순 → 개방으로 미끄러지는 움직임(lib/visemeCycle)
       const steps = applyTalkerCycle(visemeCycleSteps(visemeId ?? 15), talker, talkerSeed)

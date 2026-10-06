@@ -14,6 +14,7 @@ import useSlowWeak from '../hooks/useSlowWeak'
 import useLessonTalker from '../hooks/useLessonTalker'
 import useMasteryProbes from '../hooks/useMasteryProbes'
 import MasteryProbeBlock from '../components/MasteryProbeBlock'
+import { trialMeta } from '../lib/measurement'
 
 /**
  * 문맥 추론(Closure) — 독화 레슨 공통 템플릿(핸드오프 §4-03, WordStage와 같은 틀).
@@ -84,10 +85,14 @@ function ClosureQuiz({ items }) {
   // 문항 북마크 — 빈칸을 채운 문장을 저장해 '저장한 문장'에서 입모양을 다시 본다
   const [saved, toggleSaved] = useBookmark(full, { situation: '문맥 추론' })
 
+  // 반응 시간 기준(파일럿 로그 P0): 입모양을 받아 재생을 시작한 때
+  const onsetRef = useRef(null)
   useEffect(() => {
     setResult(null); setSelected(null); setHint(false); setFrames([])
+    onsetRef.current = null
     learningAPI.getVisemes(full).then(setFrames).catch(() => {})
   }, [full])
+  useEffect(() => { if (frames.length && onsetRef.current == null) onsetRef.current = Date.now() }, [frames])
 
   useChoiceKeys(choices, (w) => setSelected(w), !result && !submitting && !done)
 
@@ -97,7 +102,8 @@ function ClosureQuiz({ items }) {
     let correct = selected === item.answer
     let confusions = []
     try {
-      const r = await curriculumAPI.submitClosure(item.id, selected, choices)
+      const r = await curriculumAPI.submitClosure(item.id, selected, choices,
+        trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default', hintUsed: hint }))
       correct = !!r.correct
       confusions = r.confusions || []
       setXpEarned((x) => x + (r.xp_gained || 0))

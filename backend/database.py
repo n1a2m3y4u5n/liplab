@@ -81,6 +81,11 @@ class Progress(Base):
     phoneme_accuracy = Column(JSON, default=dict)  # {initial: 0.9, medial: 0.85, final: 0.95}
     speed = Column(Float, nullable=True)  # 답하기 전에 본 유효 재생 속도(기록만, 숙달에는 넣지 않음. docs/mastery-ewma.md 9절)
     answer_mode = Column(String(10), nullable=True)  # 'choice'(4지선다 보기를 고름)·'typed'(주관식·서술형). 9/29 전 기록과 옛 화면은 비어 있다
+    # 파일럿 로그(P0): 문장 표시부터 답까지 ms, 레슨 가상 화자, 이 문장에서 연 힌트 단계(0~3), 4지선다 보기(보인 순서)
+    rt_from_onset_ms = Column(Integer, nullable=True)
+    talker = Column(String(16), nullable=True)
+    hint_level = Column(Integer, nullable=True)
+    options = Column(JSON(none_as_null=True), nullable=True)
 
     user = relationship("User", back_populates="progress_records")
 
@@ -155,6 +160,9 @@ class LearningProfile(Base):
     pilot_joined_at = Column(DateTime, nullable=True)   # 참여 코드를 처음 넣은 때(내보내기의 '참여 뒤' 집계 기준)
     # 마지막으로 학습 초기화한 때. 초기화하면 시행 기록이 지워져 내보내기의 학습량이 줄어드는 것을 분석에서 알 수 있게 한다
     learning_reset_at = Column(DateTime, nullable=True)
+    # P3 검사 참여 순번(처음 검사 상태를 볼 때 매김)과 그 순번으로 정한 폼 순서(ABC·BCA·CAB). 학습 초기화로 바뀌지 않는다
+    pilot_seq = Column(Integer, nullable=True)
+    pilot_order = Column(String(3), nullable=True)
     # 예정된 복습에 답한 누적 횟수('복습왕' 배지). 복습 항목은 졸업하면 지워져 항목 수로는 셀 수 없다
     reviews_completed = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -322,6 +330,12 @@ class TrialAttempt(Base):
     # 짝 탐색 문항이면 {position, target, read, contrast, source}(보기에 대비 단어를 넣은 2단계 단어 문항, 5.4-2). 보통 문항은 NULL.
     # item_type은 'word' 그대로라 숙달·학습 곡선에 똑같이 들어가고, 분석은 이 열로 탐색 문항을 가를 수 있다
     probe = Column(JSON(none_as_null=True), nullable=True)   # None은 SQL NULL(IS NOT NULL로 거른다)
+    # 파일럿 로그(P0): 문항 표시(자극 재생 시작)부터 답 확정까지 ms, 레슨 가상 화자 id(t1~t4·default), 힌트를 봤는지,
+    # 탐침 종류('contrast' 짝 탐색. 실제 얼굴·지연 탐침은 따로 저장한다). 예전 기록과 옛 화면은 NULL
+    rt_from_onset_ms = Column(Integer, nullable=True)
+    talker = Column(String(16), nullable=True)
+    hint_used = Column(Boolean, nullable=True)
+    probe_kind = Column(String(16), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -467,8 +481,100 @@ class LessonEffort(Base):
     response = Column(String(10), nullable=False)
     n_items = Column(Integer, nullable=True)         # 그 레슨에서 푼 문항 수
     accuracy = Column(Float, nullable=True)          # 그 레슨 정답률(0~1)
+    render_log = Column(JSON(none_as_null=True), nullable=True)   # 그 레슨의 기기·렌더링 요약(V20, pilot_battery.clean_render_log)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class P3TestSession(Base):
+    """청인 예비 파일럿(P3) 검사 회차의 층 하나(pilot_battery.py, docs/pilot/battery.md). 사람 × 회차(A1·A2·B·R) × 층마다 한 행.
+    층을 시작할 때 만들고 끝내면 completed를 채운다. 끝내지 못한 층도 행이 남아 ITT 분석에서 결측을 셀 수 있다.
+    form_version은 검사 목록 파일의 version, manifest_sha는 그 내용 해시다. 신규 테이블이라 create_all이 만든다."""
+    __tablename__ = "p3_test_sessions"
+    __table_args__ = (UniqueConstraint("user_id", "session_label", "layer", name="ux_p3_test_sessions_user_label_layer"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    session_label = Column(String(4), nullable=False)    # 'A1' | 'A2' | 'B' | 'R'
+    layer = Column(String(12), nullable=False)           # 'word' | 'sentence' | 'nonsense' | 'snr' | 'av'
+    form = Column(String(2), nullable=False)             # 'A' | 'B' | 'C'
+    form_version = Column(String(32), nullable=True)
+    manifest_sha = Column(String(16), nullable=True)
+    planned_order = Column(String(3), nullable=True)     # 'ABC' | 'BCA' | 'CAB'
+    join_seq = Column(Integer, nullable=True)            # 검사 참여 순번(배정 근거)
+    modality = Column(String(8), nullable=True)          # 'real' | 'avatar' | 'audio'(snr) | 'mixed'(av의 A·AV)
+    talker = Column(String(16), nullable=True)           # 문장·소음 층의 배정 화자(낱말 층은 문항마다 다름)
+    n_items = Column(Integer, default=0)                 # 폼의 문항 수
+    n_ready = Column(Integer, default=0)                 # 낼 수 있었던 문항 수(영상·문장이 준비된 것)
+    missing = Column(JSON, default=dict)                 # 못 낸 까닭별 문항 수 {media, text, noise, snr}
+    snr_calibrated_db = Column(Float, nullable=True)     # snr 층: 계단 추정값. av 층: 쓴 값(A1 snr 층에서 가져옴)
+    headphone_check = Column(Boolean, nullable=True)     # 소음 층: 헤드폰 착용 확인
+    volume_fixed = Column(Boolean, nullable=True)        # 소음 층: 볼륨 고정 확인
+    render_log = Column(JSON(none_as_null=True), nullable=True)   # 기기·렌더링 요약(pilot_battery.clean_render_log)
+    completed = Column(Boolean, default=False)
+    started_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+
+class P3ClosedResponse(Base):
+    """P3 닫힌 응답(실제 얼굴 낱말 4지선다, 무의미 낱말 자음 식별) 한 문항. 영상이 준비되지 않아 내지 않은 문항은 행이 없다.
+    rt_ms는 첫 재생이 끝난 때부터, rt_from_onset_ms는 첫 재생이 시작한 때부터 답을 확정할 때까지(ms)."""
+    __tablename__ = "p3_closed_responses"
+    __table_args__ = (UniqueConstraint("session_id", "item_id", name="ux_p3_closed_session_item"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    session_id = Column(Integer, ForeignKey("p3_test_sessions.id", ondelete="CASCADE"), nullable=False)
+    layer = Column(String(12), nullable=False)
+    item_id = Column(String(40), nullable=False)
+    seq = Column(Integer, nullable=True)                 # 제시 순번(1부터)
+    talker = Column(String(16), nullable=True)
+    modality = Column(String(8), nullable=True)
+    target = Column(String(100), nullable=False)
+    options = Column(JSON(none_as_null=True), nullable=True)      # 낱말: 보인 순서 4개. 무의미 낱말: 자리별 자음 목록
+    chosen = Column(String(100), nullable=True)
+    correct = Column(Boolean, default=False)
+    target_consonants = Column(JSON(none_as_null=True), nullable=True)   # 무의미 낱말: [C1, C2, C3]
+    chosen_consonants = Column(JSON(none_as_null=True), nullable=True)
+    consonant_hits = Column(Integer, nullable=True)      # 맞힌 자리 수 0~3
+    rt_ms = Column(Integer, nullable=True)
+    rt_from_onset_ms = Column(Integer, nullable=True)
+    plays = Column(Integer, nullable=True)
+    speed = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class P3OpenResponse(Base):
+    """P3 열린 응답(개방형 문장, 소음 속 문장, SNR 계단 시행) 한 문항. 타이핑 원문(answer_text, NFC)과 그때의 앱 점수(app_score,
+    scoring.calculate_score visual)를 남기고, 엄격 음소 정답률(auto_phoneme_acc)은 phoneme_accuracy 모듈이 있을 때만 채운다
+    (없으면 NULL로 두고 scripts/pilot_battery_rescore.py로 나중에 계산한다)."""
+    __tablename__ = "p3_open_responses"
+    __table_args__ = (UniqueConstraint("session_id", "item_id", name="ux_p3_open_session_item"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    session_id = Column(Integer, ForeignKey("p3_test_sessions.id", ondelete="CASCADE"), nullable=False)
+    layer = Column(String(12), nullable=False)
+    item_id = Column(String(40), nullable=False)
+    seq = Column(Integer, nullable=True)
+    talker = Column(String(16), nullable=True)
+    modality = Column(String(8), nullable=True)          # 'real' | 'avatar' | 'A' | 'AV'
+    target = Column(String(300), nullable=False)
+    answer_text = Column(String(300), nullable=False, default="")
+    app_score = Column(Float, nullable=True)
+    app_phoneme_accuracy = Column(JSON(none_as_null=True), nullable=True)
+    auto_phoneme_acc = Column(Float, nullable=True)
+    auto_word_acc = Column(Float, nullable=True)
+    strict_result = Column(JSON(none_as_null=True), nullable=True)
+    scorer_version = Column(String(40), nullable=True)
+    rt_ms = Column(Integer, nullable=True)
+    rt_from_onset_ms = Column(Integer, nullable=True)
+    plays = Column(Integer, nullable=True)
+    speed = Column(Float, nullable=True)
+    snr_db = Column(Float, nullable=True)
+    noise_type = Column(String(16), nullable=True)
+    criterion_met = Column(Boolean, nullable=True)       # snr 층: 계단 판정(낱말 일치 비율 >= 기준)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 # Dependency for getting DB session
@@ -548,6 +654,20 @@ _ADD_COLUMNS = (
     ("review_items", "fsrs_stability", "FLOAT"),
     ("review_items", "fsrs_difficulty", "FLOAT"),
     ("review_items", "last_review_on", "VARCHAR(10)"),
+    # 파일럿 로그 사양 점검(P0, docs/pilot/log-spec-audit.md): 학습 시행의 반응 시간·화자·힌트·탐침 종류
+    ("trial_attempts", "rt_from_onset_ms", "INTEGER"),
+    ("trial_attempts", "talker", "VARCHAR(16)"),
+    ("trial_attempts", "hint_used", "BOOLEAN"),
+    ("trial_attempts", "probe_kind", "VARCHAR(16)"),
+    ("progress", "rt_from_onset_ms", "INTEGER"),
+    ("progress", "talker", "VARCHAR(16)"),
+    ("progress", "hint_level", "INTEGER"),
+    ("progress", "options", "JSON"),
+    # 레슨별 기기·렌더링 요약(V20)
+    ("lesson_efforts", "render_log", "JSON"),
+    # P3 검사 참여 순번과 폼 순서(pilot_battery.assign_order)
+    ("learning_profiles", "pilot_seq", "INTEGER"),
+    ("learning_profiles", "pilot_order", "VARCHAR(3)"),
 )
 
 
@@ -649,6 +769,9 @@ _USER_INDEXES = (
     ("review_logs", "user_id, created_at"),
     ("mastery_probes", "user_id, created_at"),
     ("retention_results", "user_id, created_at"),
+    ("p3_test_sessions", "user_id"),
+    ("p3_closed_responses", "user_id, session_id"),
+    ("p3_open_responses", "user_id, session_id"),
 )
 
 
