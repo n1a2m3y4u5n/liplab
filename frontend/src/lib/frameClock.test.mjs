@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { nextDelay, recordLateness, renderTimingSummary, resetRenderTiming } from './frameClock.js'
+import { nextDelay, recordLateness, renderTimingSummary, resetRenderTiming, hzFromIntervals } from './frameClock.js'
 
 test('제때면 프레임 길이만큼, 재생 속도를 나눈다', () => {
   assert.deepEqual(nextDelay({ dueAt: 1000, durationMs: 100, speed: 1, now: 1000 }), { delay: 100, nextDue: 1100 })
@@ -21,5 +21,11 @@ test('처음(due 없음)은 지금부터', () => {
 test('지연 기록 요약', () => {
   resetRenderTiming()
   ;[0, 10, 30, 60].forEach(recordLateness)
-  assert.deepEqual(renderTimingSummary(), { frames: 4, meanLateMs: 25, maxLateMs: 60, over20Rate: 0.5, over50Rate: 0.25 })
+  assert.deepEqual(renderTimingSummary(), { screenHzEst: null, frames: 4, meanLateMs: 25, maxLateMs: 60, over20Rate: 0.5, over50Rate: 0.25 })
+})
+
+test('주사율 추정: 간격 중앙값', () => {
+  assert.equal(hzFromIntervals(Array(30).fill(16.7)), 60)
+  assert.equal(hzFromIntervals([...Array(25).fill(8.33), 100, 200, 300, 400, 500]), 120)
+  assert.equal(hzFromIntervals([16.7, 16.7]), null)
 })

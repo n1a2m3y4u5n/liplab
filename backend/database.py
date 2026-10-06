@@ -486,6 +486,26 @@ class LessonEffort(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class SentencePracticeLog(Base):
+    """3단계 문장의 연습 답(practice_only) 기록. 숙달·XP·복습·오답 목록과 무관하고 분석용으로만 남긴다.
+    reason: 'consonant_retry'(자음 피드백 뒤 두 번째 답, C9) | 'hint3'(발음 자막을 본 뒤) | 'answer_shown'(정답을 본 뒤 다시 풀기).
+    C9의 효과(두 번째 답이 첫 답보다 나아지는지)와 힌트 3 사용을 보려는 것이다. 신규 테이블이라 create_all이 만든다."""
+    __tablename__ = "sentence_practice_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    scenario_id = Column(String(200), nullable=True)
+    sentence = Column(String(200), nullable=True)
+    user_answer = Column(String(200), nullable=True)
+    reason = Column(String(16), nullable=True)
+    score = Column(Float, nullable=True)
+    hint_level = Column(Integer, nullable=True)
+    rt_from_onset_ms = Column(Integer, nullable=True)
+    words_correct = Column(Integer, nullable=True)   # 자음 피드백 낱말 판정(sentence_feedback)의 맞힌 낱말 수
+    words_total = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class P3TestSession(Base):
     """청인 예비 파일럿(P3) 검사 회차의 층 하나(pilot_battery.py, docs/pilot/battery.md). 사람 × 회차(A1·A2·B·R) × 층마다 한 행.
     층을 시작할 때 만들고 끝내면 completed를 채운다. 끝내지 못한 층도 행이 남아 ITT 분석에서 결측을 셀 수 있다.

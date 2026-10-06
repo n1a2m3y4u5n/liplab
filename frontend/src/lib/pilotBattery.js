@@ -82,6 +82,7 @@ export function buildRenderLog({ timing = renderTimingSummary(), video = null, d
     max_late_ms: timing?.maxLateMs ?? 0,
     over20_rate: timing?.over20Rate ?? 0,
     over50_rate: timing?.over50Rate ?? 0,
+    ...(Number.isFinite(timing?.screenHzEst) ? { screen_hz_est: timing.screenHzEst } : {}),
     ...device,
   }
   if (renderMode) out.render_mode = renderMode

@@ -77,3 +77,47 @@ def test_scoring_ignores_any_whitespace_and_punctuation():
     from scoring import calculate_score
     for a in ["옷 입어", "옷입어", "옷　입어", "옷 입어", "옷\t입어", "옷,입어", "옷 입어!"]:
         assert asyncio.run(calculate_score("옷 입어", a, mode="visual"))["score"] == 100.0, repr(a)
+
+
+_FLOW_LOG = r'''
+import asyncio, json
+from fastapi.testclient import TestClient
+import main, database
+from sqlalchemy import select
+out = {}
+with TestClient(main.app) as c:
+    r = c.post("/api/auth/register", json={"email": "pl@example.com", "username": "pl1", "password": "pw-123456",
+                                           "agree_terms": True, "age_confirmed": True})
+    h = {"Authorization": f"Bearer {r.json()['access_token']}"}
+    uid = r.json()["user"]["id"]
+    body = {"scenario_id": "t", "sentence": "물 좀 주세요.", "time_spent_seconds": 5, "situation": "식당", "difficulty_level": 1,
+            "answer_mode": "typed"}
+    c.post("/api/progress", json={**body, "user_answer": "불 좀 주세요"}, headers=h)
+    c.post("/api/progress", json={**body, "user_answer": "물 좀 주세요", "practice_only": True,
+                                  "practice_reason": "consonant_retry", "hint_level": 2, "rt_from_onset_ms": 4200}, headers=h)
+    c.post("/api/progress", json={**body, "user_answer": "물 좀", "practice_only": True, "practice_reason": "weird"}, headers=h)
+    async def rows():
+        async with database.AsyncSessionLocal() as db:
+            rs = (await db.execute(select(database.SentencePracticeLog).where(
+                database.SentencePracticeLog.user_id == uid).order_by(database.SentencePracticeLog.id))).scalars().all()
+            prog = (await db.execute(select(database.Progress).where(database.Progress.user_id == uid))).scalars().all()
+            return [(x.reason, x.score, x.hint_level, x.rt_from_onset_ms, x.words_correct, x.words_total) for x in rs], len(prog)
+    out["logs"], out["n_progress"] = asyncio.run(rows())
+print("RESULT " + json.dumps(out, ensure_ascii=False))
+'''
+
+
+def test_practice_only_answers_are_logged_separately():
+    import json, os, subprocess, sys, tempfile
+    here = os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as d:
+        env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", PYTHONDONTWRITEBYTECODE="1")
+        env.pop("ANTHROPIC_API_KEY", None)
+        p = subprocess.run([sys.executable, "-c", _FLOW_LOG], cwd=here, env=env, capture_output=True, text=True, timeout=180)
+    line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
+    assert line, f"시나리오 실패:\n{p.stdout[-2000:]}\n{p.stderr[-3000:]}"
+    r = json.loads(line[len("RESULT "):])
+    assert r["n_progress"] == 1   # 연습 답은 진행 기록(숙달·오답 목록)에 들어가지 않는다
+    assert len(r["logs"]) == 2
+    assert r["logs"][0][0] == "consonant_retry" and r["logs"][0][1] == 100.0 and r["logs"][0][2:] == [2, 4200, 3, 3]
+    assert r["logs"][1][0] is None   # 알 수 없는 사유는 비운다
