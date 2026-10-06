@@ -155,6 +155,11 @@ def test_scoring_helpers():
     assert pb.score_choice({"word": "수박"}, "수박") and not pb.score_choice({"word": "수박"}, None)
     assert pb.clean_answer("  밥 먹어요 ") == "밥 먹어요"
     assert pb.word_proportion("밥을 먹어요.", "밥을 먹었어요") == 0.5
+    # 띄어쓰기를 빼먹거나 잘못 띄어도 같다(검토 결함 4), 낱말 안 음절 끼움·순서 바뀜은 틀린다
+    assert pb.word_proportion("감기에 걸렸어요.", "감기에걸렸어요") == 1.0
+    assert pb.word_proportion("감기에 걸렸어요.", "감 기에 걸렸어요") == 1.0
+    assert pb.word_proportion("감기에 걸렸어요", "걸렸어요 감기에") == 0.5
+    assert pb.word_proportion("가 봐", "각 봐") == 0.5
     assert pb.phoneme_count("밥 먹어요") == 3 + 3 + 1 + 1   # 밥(ㅂㅏㅂ) 먹(ㅁㅓㄱ) 어(ㅓ) 요(ㅛ)
 
 
@@ -506,3 +511,47 @@ def test_strict_hook_with_real_module():
     f = pb.strict_fields(r)
     assert f["strict_version"] == "strict-v1" and 0 < f["auto_phoneme_acc"] < 1
     assert f["n_target_phonemes"] >= f["n_matched_phonemes"] > 0
+
+
+def test_label_done_is_stable_once_later_label_started():
+    # 검토 결함 6: 뒤 회차를 시작했으면, 건너뛴 층에 나중에 영상이 생겨도 앞 회차는 마친 것으로 본다
+    import main
+    class R:
+        def __init__(self, completed): self.completed = completed
+    m = {"layers_by_label": {"A1": ["word"], "A2": ["word"]}, "layers": {"word": {}}}
+    rows = {("A2", "word"): R(False)}
+    assert main._battery_label_done(m, rows, "A1", 1, "ABC") is True
+
+
+_FLOW_SEQ = r'''
+import asyncio, json
+import database
+from sqlalchemy.exc import IntegrityError
+async def run():
+    await database.init_db()
+    async with database.AsyncSessionLocal() as db:
+        db.add(database.LearningProfile(user_id=1, pilot_seq=5))
+        db.add(database.LearningProfile(user_id=2, pilot_seq=None))
+        db.add(database.LearningProfile(user_id=3, pilot_seq=None))
+        await db.commit()
+    async with database.AsyncSessionLocal() as db:
+        db.add(database.LearningProfile(user_id=4, pilot_seq=5))
+        try:
+            await db.commit(); return "no-error"
+        except IntegrityError:
+            return "blocked"
+print("RESULT " + json.dumps(asyncio.run(run())))
+'''
+
+
+def test_pilot_seq_unique_index_blocks_duplicates():
+    # 검토 결함 2: 같은 순간 처음 연 두 참여자가 같은 순번을 받지 못하게 고유 인덱스(NULL은 여럿 허용)
+    import json, os, subprocess, sys, tempfile
+    here = os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as d:
+        env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", PYTHONDONTWRITEBYTECODE="1")
+        env.pop("ANTHROPIC_API_KEY", None)
+        p = subprocess.run([sys.executable, "-c", _FLOW_SEQ], cwd=here, env=env, capture_output=True, text=True, timeout=180)
+    line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
+    assert line, f"시나리오 실패:\n{p.stdout[-2000:]}\n{p.stderr[-3000:]}"
+    assert json.loads(line[len("RESULT "):]) == "blocked"

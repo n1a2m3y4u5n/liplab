@@ -699,6 +699,7 @@ async def init_db():
         await conn.run_sync(Base.metadata.create_all)
         await _add_missing_columns(conn)
         await _dedupe_and_index(conn)
+        await _pilot_seq_index(conn)
         await _user_indexes(conn)
 
 
@@ -756,6 +757,17 @@ _UNIQUE_KEYS = (
     ("weak_visemes", "user_id, viseme_id", "total_attempts DESC, id DESC"),
     ("review_items", "user_id, kind, ref", "updated_at DESC, id DESC"),
 )
+
+
+async def _pilot_seq_index(conn) -> None:
+    """P3 검사 참여 순번(learning_profiles.pilot_seq)의 고유 인덱스. 순번은 폼 순서·화자·제시 순서를 정하므로 둘이 같으면 역균형이 깨진다.
+    NULL은 여럿이어도 된다(SQLite·PostgreSQL 모두). 이미 겹친 순번이 있으면 만들지 못하고 경고만 남긴다(지우지 않는다)."""
+    try:
+        async with _Isolated(conn):
+            await conn.exec_driver_sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_learning_profiles_pilot_seq ON learning_profiles (pilot_seq)")
+    except Exception as e:
+        print(f"[WARN] learning_profiles.pilot_seq 고유 인덱스 실패(겹친 순번 확인 필요): {e}")
 
 
 async def _dedupe_and_index(conn) -> None:

@@ -192,6 +192,11 @@ function LayerRunner({ run, checks, onExit }) {
               </>
             )}
           </section>
+        ) : audio.enabled && audio.status !== 'ready' ? (
+          <section role="status" className="rounded-16 border-2 border-line bg-white px-5 py-8 text-center text-[15px] font-bold text-ink-muted">
+            {audio.status === 'loading' ? '잡음 소리를 준비하고 있어요…'
+              : '잡음 소리를 불러오지 못해 이 검사를 진행할 수 없어요. 연구진에게 알려 주세요.'}
+          </section>
         ) : (
           <ItemView run={run} item={item} maxPlays={maxPlays} audio={audio} snrDb={snrNow}
             onVideoQuality={(vq) => { videoQ.current = addVideoQuality(videoQ.current, vq) }} onSubmit={submit} />
@@ -334,6 +339,7 @@ function VideoStim({ item, playing, hidden, audio, snrDb, onStart, onEnd, onQual
   const ref = useRef(null)
   const [url, setUrl] = useState(null)
   const [failed, setFailed] = useState(false)
+  const [noNoise, setNoNoise] = useState(false)   // 잡음을 틀지 못해 재생하지 않음(이 시행은 내지 않는다)
   const needsAudio = audio.enabled
 
   useEffect(() => {
@@ -350,8 +356,8 @@ function VideoStim({ item, playing, hidden, audio, snrDb, onStart, onEnd, onQual
     if (playing) {
       v.currentTime = 0
       const go = async () => {
-        if (needsAudio) await audio.startNoise(v, item.speech_rms_dbfs, snrDb)
-        try { await v.play() } catch { onEnd() }
+        if (needsAudio && !(await audio.startNoise(v, item.speech_rms_dbfs, snrDb))) { setNoNoise(true); return }
+        try { await v.play() } catch { if (needsAudio) audio.stopNoise(); onEnd() }
       }
       go()
     }
@@ -370,6 +376,7 @@ function VideoStim({ item, playing, hidden, audio, snrDb, onStart, onEnd, onQual
       <video ref={ref} src={url} playsInline preload="auto" muted={!needsAudio} onPlaying={onStart} onEnded={ended}
         className="h-full w-full object-contain" />
       {hidden && <div className="absolute inset-0 flex items-center justify-center bg-[#1a1a2e] text-[15px] font-bold text-white/80">소리만 들어요</div>}
+      {noNoise && <div role="alert" className="absolute inset-0 flex items-center justify-center bg-[#1a1a2e] px-4 text-center text-[14px] font-bold text-white">잡음을 틀지 못해 재생하지 않았어요. 연구진에게 알려 주세요.</div>}
     </>
   )
 }
@@ -378,9 +385,14 @@ function VideoStim({ item, playing, hidden, audio, snrDb, onStart, onEnd, onQual
 function useAudioMixer(run) {
   const enabled = run.layer === 'av' || run.layer === 'snr'
   const st = useRef({ ctx: null, noise: null, noiseDb: null, src: null, wired: new WeakSet() })
+  // 잡음 준비 상태: 'off'(소리 층 아님) | 'loading' | 'ready' | 'failed'. 준비 전·실패 때는 시행을 내지 않는다
+  // (깨끗한 소리로 들은 답이 그 SNR로 기록되면 계단과 개인 SNR이 틀어진다)
+  const [status, setStatus] = useState(enabled ? (run.noise ? 'loading' : 'failed') : 'off')
   useEffect(() => {
-    if (!enabled || !run.noise) return undefined
+    if (!enabled) { setStatus('off'); return undefined }
+    if (!run.noise) { setStatus('failed'); return undefined }
     let on = true
+    setStatus('loading')
     batteryAPI.blob(run.noise).then((b) => b.arrayBuffer()).then(async (buf) => {
       if (!on) return
       const Ctx = window.AudioContext || window.webkitAudioContext
@@ -389,16 +401,18 @@ function useAudioMixer(run) {
       const decoded = await ctx.decodeAudioData(buf)
       st.current.noise = decoded
       st.current.noiseDb = rmsDbfs(decoded.getChannelData(0))
-    }).catch(() => {})
+      if (on) setStatus(Number.isFinite(st.current.noiseDb) ? 'ready' : 'failed')
+    }).catch(() => { if (on) setStatus('failed') })
     return () => { on = false; try { st.current.src?.stop() } catch { /* 이미 멈춤 */ } st.current.ctx?.close?.() }
   }, [enabled, run.noise])
 
+  // 잡음을 틀었으면 true. 준비가 안 됐거나 크기 정보가 없으면 false(호출부는 재생하지 않는다)
   const startNoise = async (video, speechDb, snrDb) => {
     const s = st.current
-    if (!s.ctx) return
+    if (!s.ctx) return false
     if (s.ctx.state === 'suspended') await s.ctx.resume()
     if (!s.wired.has(video)) { s.ctx.createMediaElementSource(video).connect(s.ctx.destination); s.wired.add(video) }
-    if (!s.noise || !Number.isFinite(s.noiseDb) || !Number.isFinite(speechDb) || !Number.isFinite(snrDb)) return
+    if (!s.noise || !Number.isFinite(s.noiseDb) || !Number.isFinite(speechDb) || !Number.isFinite(snrDb)) return false
     const src = s.ctx.createBufferSource()
     src.buffer = s.noise
     src.loop = true
@@ -408,11 +422,12 @@ function useAudioMixer(run) {
     src.start()
     s.src = src
     await new Promise((r) => setTimeout(r, 300))
+    return true
   }
   const stopNoise = () => {
     const src = st.current.src
     st.current.src = null
     if (src) setTimeout(() => { try { src.stop() } catch { /* 이미 멈춤 */ } }, 300)
   }
-  return { enabled, startNoise, stopNoise }
+  return { enabled, status, startNoise, stopNoise }
 }

@@ -2816,9 +2816,18 @@ async def _probe_items(user_id: int, stage: int, wave: int, db) -> list:
     import mastery_probe as _mp
     from sqlalchemy import select
     rng = _random.Random(_mp.seed_for(user_id, stage, wave))
+    from database import MasteryProbe, TrialAttempt
+    # 앞 회차에 이미 낸 탐침 자극도 뺀다(탐침 답은 시행 기록에 안 남아, 예전에는 7일 회차가 1일 회차 문항을 다시 낼 수 있었다)
+    earlier = set((await db.execute(select(MasteryProbe.stimulus).where(
+        MasteryProbe.user_id == user_id, MasteryProbe.stage == stage, MasteryProbe.wave < wave))).scalars().all())
     if stage == 1:
         seen = set(_curriculum.DEMO_SYLLABLE.values())
         seen |= {w[0] for l in _curriculum.VISEME_LESSONS for w in (l.get("example_words") or []) if w}
+        # 같은지 다른지(AX) 문항에서 본 음절('a/b')도 '본 것'으로 친다
+        for t in (await db.execute(select(TrialAttempt.target).where(
+                TrialAttempt.user_id == user_id, TrialAttempt.item_type == "viseme_ax"))).scalars().all():
+            seen |= {x for x in str(t or "").split("/") if x}
+        seen |= earlier
         return _mp.stage1_items(_curriculum.VISEME_LESSONS, seen, rng)
     if stage == 2:
         import assessment as _asmt
@@ -2827,12 +2836,14 @@ async def _probe_items(user_id: int, stage: int, wave: int, db) -> list:
         pool = [w["word"] for w in _curriculum.WORD_BANK if w["word"] not in skip]
         seen = set((await db.execute(select(TrialAttempt.target).where(TrialAttempt.user_id == user_id))).scalars().all())
         seen |= set((await db.execute(select(TrialAttempt.chosen).where(TrialAttempt.user_id == user_id))).scalars().all())
+        seen |= earlier
         return _mp.text_items("word", pool, seen, rng,
                               lambda w, used: _asmt._confusable_options(w, [x for x in pool if x not in used], k=3,
                                                                          closeness=0.5, rng=rng))
     import sentence_options as _so
     from database import Progress
     seen = set((await db.execute(select(Progress.sentence).where(Progress.user_id == user_id))).scalars().all())
+    seen |= earlier
     opt_pool = await _sentence_option_pool(db)
     return _mp.text_items("sentence", _so.static_pool(), seen, rng,
                           lambda s, used: _so.pick_options(s, opt_pool, exclude=used, rng=rng))
@@ -3705,11 +3716,27 @@ async def _battery_assign(prof, db, manifest) -> tuple:
     import pilot_battery as _pb
     from database import LearningProfile
     from sqlalchemy import select, func
+    from sqlalchemy.exc import IntegrityError
+    import database as _database
     if prof.pilot_seq is None:
-        mx = (await db.execute(select(func.max(LearningProfile.pilot_seq)))).scalar() or 0
-        prof.pilot_seq = int(mx) + 1
-        prof.pilot_order = _pb.assign_order(prof.pilot_seq, manifest.get("orders") or _pb.ORDERS)
-        await db.commit()
+        # 요청 세션을 되돌리면(rollback) 그 세션의 객체가 모두 만료돼 비동기에서 다시 읽다 실패하므로, 순번은 따로 연 짧은 세션에서
+        # 매긴다. 같은 순간 다른 참여자가 같은 순번을 받으면 고유 인덱스(ux_learning_profiles_pilot_seq)가 막고 다시 매긴다
+        for _ in range(8):
+            async with _database.AsyncSessionLocal() as s2:
+                p2 = (await s2.execute(select(LearningProfile).where(LearningProfile.user_id == prof.user_id))).scalars().first()
+                if p2 is None or p2.pilot_seq is not None:
+                    break
+                mx = (await s2.execute(select(func.max(LearningProfile.pilot_seq)))).scalar() or 0
+                p2.pilot_seq = int(mx) + 1
+                p2.pilot_order = _pb.assign_order(p2.pilot_seq, manifest.get("orders") or _pb.ORDERS)
+                try:
+                    await s2.commit()
+                    break
+                except IntegrityError:
+                    await s2.rollback()
+        await db.refresh(prof)
+    if prof.pilot_seq is None:
+        raise HTTPException(status_code=503, detail="검사 순번을 정하지 못했어요. 잠시 뒤 다시 열어 주세요.")
     return prof.pilot_seq, prof.pilot_order
 
 
@@ -3767,7 +3794,13 @@ def _battery_snr(rows: dict):
 
 
 def _battery_label_done(manifest, rows, label, seq, order) -> bool:
-    """회차를 마쳤는가: 그 회차의 층마다 끝냈거나, 낼 수 있는 문항이 하나도 없던 층이다."""
+    """회차를 마쳤는가: 그 회차의 층마다 끝냈거나, 낼 수 있는 문항이 하나도 없던 층이다.
+    이미 뒤 회차를 시작했으면 마친 것으로 본다. 문항이 없어 건너뛴 층에 나중에 영상을 올려도 지난 회차가 다시 미완료가 되어
+    진행 중인 회차가 막히지 않게 한다(판정이 '지금 있는 파일'에 따라 바뀌던 문제)."""
+    import pilot_battery as _pb
+    later = _pb.LABELS[_pb.LABELS.index(label) + 1:] if label in _pb.LABELS else []
+    if any(lab in later for (lab, _layer) in rows.keys()):
+        return True
     snr = _battery_snr(rows)
     for layer in (manifest.get("layers_by_label") or {}).get(label, []):
         r = rows.get((label, layer))
@@ -3848,6 +3881,9 @@ async def pilot_battery_start(req: BatteryStartReq, current_user=Depends(get_cur
     snr = _battery_snr(rows)
     L = m["layers"][layer]
     row = rows.get((label, layer))
+    if row is None and layer == "av" and snr is None:
+        # 소음 속 시청각 층은 개인 SNR(snr 층)이 정해진 뒤에만 연다. 먼저 만들면 그 행의 SNR이 비어 영구히 쓸 수 없다
+        raise HTTPException(status_code=409, detail="개인 SNR 검사를 먼저 마쳐 주세요.")
     if row is None:
         talkers = (m.get("talkers") or {}).get(layer) or []
         row = P3TestSession(user_id=current_user.id, session_label=label, layer=layer, form=_pb.form_for(order, label),
