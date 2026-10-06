@@ -69,3 +69,11 @@ def test_progress_returns_word_feedback_for_typed_only():
     assert wf["words"][0] == {"text": None, "correct": False, "skeleton": ["ㅁ"]}
     assert r["retry"]["status"] == "practice_only" and r["retry"]["word_feedback"]["correct_words"] == 3
     assert r["choice"].get("word_feedback") is None
+
+
+def test_scoring_ignores_any_whitespace_and_punctuation():
+    # 전각 공백·줄 바꿈 없는 공백·탭·쉼표가 낱말 사이에 있어도 연음이 막히지 않는다(docs/pilot/typed-scoring-check.md)
+    import asyncio
+    from scoring import calculate_score
+    for a in ["옷 입어", "옷입어", "옷　입어", "옷 입어", "옷\t입어", "옷,입어", "옷 입어!"]:
+        assert asyncio.run(calculate_score("옷 입어", a, mode="visual"))["score"] == 100.0, repr(a)
