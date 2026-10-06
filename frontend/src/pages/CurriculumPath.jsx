@@ -159,6 +159,14 @@ export default function CurriculumPath() {
   const loadFailed = list.length === 0 && failed[track]   // 단계를 못 받아 빈 경로 → 안내와 다시 불러오기
   const startLabel = (view?.attempts ?? 0) === 0 ? '학습 시작하기' : '이어서 학습하기'   // 80:6 / 58:11
   const skipStage = list.find((s) => s.key === skipTarget) || null
+  // 뜻 없는 말 짝 맞추기(C10): 1·2단계 사이의 하루 10분 과제. 2단계가 열린 뒤 1·2단계 카드에 보조 버튼으로 둔다(숙달에는 들어가지 않음)
+  const wordStage = track === 'read' ? list.find((s) => s.key === 'word') : null
+  const showNonsense = !!wordStage && wordStage.status !== 'locked' && (view?.key === 'viseme' || view?.key === 'word')
+  const nonsenseBtn = (cls) => showNonsense && (
+    <button type="button" onClick={() => navigate('/learn/nonsense')} className={`btn-secondary w-full ${cls}`}>
+      뜻 없는 말 짝 맞추기 <span className="font-normal text-ink-muted">· 하루 10분</span>
+    </button>
+  )
 
   // 사용법 가이드는 지금 트랙의 레슨 탭으로 열고, 그 탭 맨 위에 보고 있는 단계의 상태를 보여 준다(가이드 점검 4절 A안).
   const guideTab = track === 'speak' ? 'speaking' : 'reading'
@@ -228,7 +236,7 @@ export default function CurriculumPath() {
         )}
 
         {/* 경로(61:18 / 모바일 233:45) — 모바일은 가운데, 데스크톱은 왼쪽(x 130)에 노드 열을 두고 오른쪽에 카드 */}
-        <div className={`relative w-full py-2 max-lg:pb-[170px] ${loadFailed ? 'hidden' : ''}`}
+        <div className={`relative w-full py-2 ${showNonsense ? 'max-lg:pb-[226px]' : 'max-lg:pb-[170px]'} ${loadFailed ? 'hidden' : ''}`}
           style={{ '--arrow-top': `${8 + vIdx * PITCH_MOBILE + 9}px` }}>
           {list.length > 1 && (
             <>
@@ -280,8 +288,9 @@ export default function CurriculumPath() {
                     {/* 레슨 카드(75:12 · 80:115) — 보고 있는 단계 노드 오른쪽(데스크톱). 모바일은 아래 시트. */}
                     {i === vIdx && viewOpen && (
                       <div className="absolute left-full z-10 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-20 border-2 border-line bg-white px-6 py-[22px] shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
-                        style={{ bottom: 'calc(50% - 37.5px)' }}>
-                        <TailLeft className="bottom-[24.5px] left-[-15px]" />
+                        style={{ bottom: showNonsense ? 'calc(50% - 100.5px)' : 'calc(50% - 37.5px)' }}>
+                        {/* 짝 맞추기 버튼(높이 49 + 간격 14)이 붙으면 카드가 위 배너를 덮지 않게 아래로 늘리고 꼬리도 그만큼 올린다 */}
+                        <TailLeft className={`${showNonsense ? 'bottom-[87.5px]' : 'bottom-[24.5px]'} left-[-15px]`} />
                         <p className="text-[22px] font-bold leading-figma tracking-[-0.44px] text-ink">{s.title}</p>
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center justify-between text-[13px] font-bold leading-figma">
@@ -297,6 +306,7 @@ export default function CurriculumPath() {
                           className={(s.attempts ?? 0) === 0 ? 'btn-primary w-full rounded-15 py-[17px] text-[17px]' : 'btn-primary btn-lg w-full'}>
                           {startLabel}
                         </button>
+                        {nonsenseBtn('py-3 text-[15px]')}
                       </div>
                     )}
                   </div>
@@ -325,6 +335,7 @@ export default function CurriculumPath() {
               <div className="h-full rounded-full bg-track" style={{ width: `${progPct}%` }} />
             </div>
             <button type="button" onClick={() => navigate(view.route)} className="btn-primary w-full py-4 text-[16px]">{startLabel}</button>
+            {nonsenseBtn('py-3 text-[15px]')}
           </div>
         )}
       </div>
