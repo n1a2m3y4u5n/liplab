@@ -24,6 +24,7 @@ import qa_rules as Q  # noqa: E402
 
 STAGE1 = ["c0", "c1"]
 STAGE2 = ["c2", "c3", "c4", "c5", "c6", "c7"]
+STAGE3 = ["c8", "c9", "c10", "c11", "c12", "c13", "c14", "c15"]   # 사후 추가: 2단계 뒤 통과 후보가 없는 새 글만
 
 
 def P(work, *a):
@@ -65,7 +66,7 @@ def judge(work, cands, ref_path=None):
                 g = pron_group(t)
                 m = dict(e.get("metrics") or {})
                 # 사후 변경 1: 문장 끝 '요'가 파일 끝에 정렬된 클립은 그 음절을 빼고 모음 끊김·쉼을 다시 센다
-                stuck = False
+                stuck = ""
                 try:
                     import jamo_vocab
                     groups = Q.syllable_groups_ms(e.get("phones") or [], jamo_vocab.text_to_tokens(t["text"]))
@@ -73,6 +74,7 @@ def judge(work, cands, ref_path=None):
                     stuck = Q.tail_stuck(groups, se)
                     if stuck:
                         m["vowel_drop_n"] = max(0, int(m.get("vowel_drop_n") or 0) - 1)
+                    if stuck == "syl":
                         m["gap_in_word_ms"], m["gap_between_ms"] = Q.max_gaps(groups[:-1])
                 except Exception:
                     pass
@@ -178,7 +180,7 @@ def final(work):
     plan = json.load(open(P(work, "plan.json"))) if os.path.exists(P(work, "plan.json")) else {"normalize": True}
     orig = {r["uid"]: r for r in Q.read_jsonl([P(work, "judged.orig.jsonl")])}
     cand = defaultdict(list)
-    for c in STAGE1 + STAGE2:
+    for c in STAGE1 + STAGE2 + STAGE3:
         for r in Q.read_jsonl([P(work, f"judged.{c}.jsonl")]):
             cand[r["uid"]].append(r)
     ev = load_eval(work)

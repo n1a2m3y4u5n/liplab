@@ -170,8 +170,8 @@ def signal_metrics(x: np.ndarray, sr: int, phones: Optional[Sequence[Dict]] = No
 TAIL_STUCK_MS = 60
 
 
-def syllable_groups_ms(phones: Sequence[Dict], tokens: Sequence[str]) -> Optional[List[Tuple[float, float, int]]]:
-    """음절마다 (첫 자모 시작 ms, 마지막 자모 끝 ms, 어절 번호). 정렬이 비면 None."""
+def syllable_groups_ms(phones: Sequence[Dict], tokens: Sequence[str]) -> Optional[List[Tuple[float, float, int, float]]]:
+    """음절마다 (첫 자모 시작 ms, 마지막 자모 끝 ms, 어절 번호, 중성 시작 ms). 정렬이 비면 None."""
     if not phones or not tokens or len(phones) != len(tokens):
         return None
     import sound_clips as S
@@ -182,12 +182,22 @@ def syllable_groups_ms(phones: Sequence[Dict], tokens: Sequence[str]) -> Optiona
         t1s = [phones[i].get("t1") for i in g]
         if any(v is None for v in t0s + t1s):
             return None
-        out.append((min(t0s) * 1000, max(t1s) * 1000, widx[g[-1]]))
+        vi = [i for i in g if tokens[i].startswith("n:")][0]
+        out.append((min(t0s) * 1000, max(t1s) * 1000, widx[g[-1]], phones[vi]["t0"] * 1000))
     return out
 
 
-def tail_stuck(groups, speech_end_ms: Optional[float]) -> bool:
-    return bool(groups) and len(groups) >= 2 and speech_end_ms is not None and groups[-1][0] >= speech_end_ms - TAIL_STUCK_MS
+def tail_stuck(groups, speech_end_ms: Optional[float]) -> str:
+    """'syl' = 마지막 음절 전체가 말소리 끝(60 ms 안)이나 뒤에 놓임(초성 없는 '요' 등), 'vowel' = 마지막 음절의 중성만 그렇다
+    (초성은 제자리, '다' 등), '' = 정상."""
+    if not groups or len(groups) < 2 or speech_end_ms is None:
+        return ""
+    lim = speech_end_ms - TAIL_STUCK_MS
+    if groups[-1][0] >= lim:
+        return "syl"
+    if groups[-1][3] >= lim:
+        return "vowel"
+    return ""
 
 
 def max_gaps(groups) -> Tuple[float, float]:
@@ -197,15 +207,20 @@ def max_gaps(groups) -> Tuple[float, float]:
 
 
 def fix_tail_syllables(syl, speech_end_ms: Optional[float]):
-    """마지막 음절 시작이 말소리 끝 근처(60 ms 안)나 뒤에 놓였으면, 끝에서 둘째 음절 시작부터 말소리 끝까지를 두 음절이 반씩 갖게 한다."""
-    if not syl or len(syl) < 2 or speech_end_ms is None or syl[-1][0] < speech_end_ms - TAIL_STUCK_MS:
+    """마지막 음절 시작이 말소리 끝 근처(60 ms 안)나 뒤에 놓였으면, 끝에서 둘째 음절 시작부터 말소리 끝까지를 두 음절이 반씩 갖게 한다.
+    시작은 제자리인데 끝이 말소리 끝을 넘으면(중성만 파일 끝에 놓인 경우) 끝을 말소리 끝으로 줄인다."""
+    if not syl or len(syl) < 2 or speech_end_ms is None:
         return syl
-    a = syl[-2][0]
-    b = int(round(max(speech_end_ms, a + 2)))
-    mid = int(round((a + b) / 2))
     out = [list(x) for x in syl]
-    out[-2] = [a, mid]
-    out[-1] = [mid, max(b, mid + 1)]
+    b = int(round(speech_end_ms))
+    if syl[-1][0] >= speech_end_ms - TAIL_STUCK_MS:
+        a = syl[-2][0]
+        b = max(b, a + 2)
+        mid = int(round((a + b) / 2))
+        out[-2] = [a, mid]
+        out[-1] = [mid, max(b, mid + 1)]
+    elif syl[-1][1] > b + TAIL_STUCK_MS:
+        out[-1] = [syl[-1][0], max(b, syl[-1][0] + 1)]
     return out
 
 
@@ -519,6 +534,9 @@ def selftest():
     fx = fix_tail_syllables([[100, 200], [200, 300], [950, 970]], 700)
     assert fx[1] == [200, 450] and fx[2][0] == 450 and fx[2][1] >= 700, fx
     assert fix_tail_syllables([[100, 200], [200, 300]], 700) == [[100, 200], [200, 300]]
+    assert fix_tail_syllables([[100, 200], [600, 1400]], 1260) == [[100, 200], [600, 1260]]
+    g = [(100, 300, 0, 120), (1068, 1410, 0, 1390)]
+    assert tail_stuck(g, 1260) == "vowel" and tail_stuck([(100, 300, 0, 120), (950, 970, 0, 950)], 700) == "syl"
     print("QA_RULES_SELFTEST_OK")
 
 

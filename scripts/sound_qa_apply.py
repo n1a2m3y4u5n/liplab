@@ -36,6 +36,7 @@ def main():
                                          "다시 합성한 클립은 q 후보 설정(docs/sound-qa-2026-10.md 3절)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--prune", default="")
+    ap.add_argument("--sylfix", default="", help="그대로 둔 기존 클립의 음절 시각 고침(qa_judge final의 orig_sylfix.jsonl)")
     a = ap.parse_args()
     mpath = os.path.join(a.out, "manifest.json")
     clips_dir = os.path.join(a.out, "clips")
@@ -71,6 +72,17 @@ def main():
         if not a.dry_run:
             for ext, p in src.items():
                 shutil.copyfile(p, os.path.join(clips_dir, f"{cid}.{ext}"))
+    n_fix = 0
+    if a.sylfix:
+        for l in open(a.sylfix, encoding="utf-8"):
+            if not l.strip():
+                continue
+            r = json.loads(l)
+            c = man["clips"].get(r["voice"], {}).get(r["key"])
+            t = targets.get(r["uid"])
+            if c and t and c["id"] == t.get("orig_id"):      # 이번에 바뀌지 않은 클립만(바뀐 클립은 final.jsonl의 고친 시각)
+                c["syl"] = r["syl"]
+                n_fix += 1
     pruned = 0
     if a.prune:
         from sound_qa_targets import wanted_keys
@@ -94,7 +106,7 @@ def main():
             json.dump(man, f, ensure_ascii=False, separators=(",", ":"))
         os.replace(mpath + ".tmp", mpath)
     size = dir_bytes(a.out)
-    print(json.dumps({"replaced": n_rep, "added": n_new, "pruned": pruned, "removed_files": removed, "files": len(keep),
+    print(json.dumps({"replaced": n_rep, "added": n_new, "pruned": pruned, "sylfix": n_fix, "removed_files": removed, "files": len(keep),
                       "sound_bytes": size, "limit": LIMIT, "dry_run": a.dry_run}, ensure_ascii=False))
     if size > LIMIT:
         sys.exit("SOUND_SIZE_OVER_LIMIT")
