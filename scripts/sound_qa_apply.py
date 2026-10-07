@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 """소리 품질 점검·재합성 결과를 저장소 목록(backend/data/sound/manifest.json)과 clips/에 넣는다(맥, 가벼운 파일 작업).
 
-    python scripts/sound_qa_apply.py RUN_DIR --targets TARGETS.jsonl [--out backend/data/sound] [--dry-run]
+    python scripts/sound_qa_apply.py RUN_DIR --targets TARGETS.jsonl [--prune INVENTORY.json] [--out backend/data/sound] [--dry-run]
+--prune: 인벤토리(sound_inventory.py 결과, 모든 화면의 출처)가 더는 쓰지 않는 글의 항목을 목록에서 지운다.
 
 RUN_DIR(qa_session.sh fetch가 푼 폴더): final.jsonl({uid, voice, key, cand, ms, syl, …}), enc/<후보>_<uid>.{ogg,m4a}.
 바뀐 클립은 rev(새 Ogg sha1 앞 12자)로 새 이름 clip_id(키, 목소리, rev)를 받고(docs/sound-qa-2026-10.md 6절), 목록 항목에
@@ -16,6 +17,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "backend"))
+sys.path.insert(0, HERE)
 import sound_clips as S  # noqa: E402
 
 LIMIT = 50_000_000
@@ -33,6 +35,7 @@ def main():
     ap.add_argument("--engine", default="Supertonic 3 (supertonic 1.3.1). 기본 total_steps 8, speed 1.05; "
                                          "다시 합성한 클립은 q 후보 설정(docs/sound-qa-2026-10.md 3절)")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--prune", default="")
     a = ap.parse_args()
     mpath = os.path.join(a.out, "manifest.json")
     clips_dir = os.path.join(a.out, "clips")
@@ -68,6 +71,14 @@ def main():
         if not a.dry_run:
             for ext, p in src.items():
                 shutil.copyfile(p, os.path.join(clips_dir, f"{cid}.{ext}"))
+    pruned = 0
+    if a.prune:
+        from sound_qa_targets import wanted_keys
+        want = wanted_keys(a.prune)
+        for v, clips in man["clips"].items():
+            for k in [k for k in clips if k not in want.get(v, set())]:
+                del clips[k]
+                pruned += 1
     man["engine"] = a.engine
     keep = {f"{c['id']}.{ext}" for clips in man["clips"].values() for c in clips.values() for ext in ("ogg", "m4a")}
     removed = 0
@@ -83,7 +94,7 @@ def main():
             json.dump(man, f, ensure_ascii=False, separators=(",", ":"))
         os.replace(mpath + ".tmp", mpath)
     size = dir_bytes(a.out)
-    print(json.dumps({"replaced": n_rep, "added": n_new, "removed_files": removed, "files": len(keep),
+    print(json.dumps({"replaced": n_rep, "added": n_new, "pruned": pruned, "removed_files": removed, "files": len(keep),
                       "sound_bytes": size, "limit": LIMIT, "dry_run": a.dry_run}, ensure_ascii=False))
     if size > LIMIT:
         sys.exit("SOUND_SIZE_OVER_LIMIT")

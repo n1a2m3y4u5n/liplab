@@ -122,10 +122,16 @@ def decide(work, force=None):
     tiers = Counter(r["tier"] for r in rows)
     plan = {"normalize": norm, "stats": st, "rule": rule, "orig_tiers": dict(tiers), "n": len(rows)}
     json.dump(plan, open(P(work, "plan.json"), "w"), ensure_ascii=False, indent=1)
+    allt = Q.load_targets(P(work, "targets.jsonl"))
     if norm:
-        uids = [t["uid"] for t in Q.load_targets(P(work, "targets.jsonl"))]
+        uids = [t["uid"] for t in allt]
     else:
         uids = [r["uid"] for r in rows if r["tier"] != "pass"]
+    # 목록에 없던 글(orig_id 없음)은 언제나 합성한다
+    have = set(uids)
+    uids += [t["uid"] for t in allt if not t.get("orig_id") and t["uid"] not in have]
+    plan["new_texts"] = sum(1 for t in allt if not t.get("orig_id"))
+    json.dump(plan, open(P(work, "plan.json"), "w"), ensure_ascii=False, indent=1)
     open(P(work, "stage1.uids"), "w").write("\n".join(uids) + "\n")
     print("DECIDE_OK", json.dumps(plan, ensure_ascii=False), "stage1", len(uids))
 
@@ -165,8 +171,8 @@ def final(work):
             if o is None and b is None:
                 summ["no_data"] += 1
                 continue
-            if o is None:                           # 목록에 없던 글: 실패만 아니면 넣는다
-                choice = b["cand"] if b["tier"] != "fail" else None
+            if o is None:                           # 목록에 없던 글: 통과한 후보만 넣는다(문서 4절, 10/7 콘텐츠 검수 요청)
+                choice = b["cand"] if b["tier"] == "pass" else None
             elif b is None:
                 choice = "orig"
             elif plan.get("normalize"):
