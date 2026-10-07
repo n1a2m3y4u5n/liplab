@@ -101,15 +101,31 @@ function normalizeSpeak(stages) {
   }))
 }
 
-// 소리 듣기(청능훈련)도 0단계(소리 확인)부터. 진행 표시: 수준이 있는 1·2단계는 '수준 L / N', 4단계는 소음 속 역치(dB)를 적는다.
-const LISTEN_TOTAL = { 0: 1, 1: 40, 2: 30, 3: 10, 4: 20, 5: 12 }
+// 소리 듣기(청능훈련)도 0단계(소리 확인)부터. 단계마다 숙달 방식이 달라 진행 글과 막대를 단계별로 정한다(backend listen_curriculum):
+//  - 0 소리 확인: 한 번 하면 숙달(매일 점검용) → '확인 n번', 막대는 했으면 가득
+//  - 1·2 수준 단계: 맨 위 수준에서 10번 중 9·8번 → '수준 L / N', 막대는 수준 비율(시작 전은 '시작 전')
+//  - 3·5 이동 평균 단계: 최소 시도 10·12번 → 'n / 최소', 시도를 채웠는데 숙달 전이면 '숙달 중'(경로 공통 규칙)
+//  - 4 소음 속 듣기: 역치 기준 → 역치가 있으면 '역치 +x dB', 막대는 최소 20번 대비 시도
+const LISTEN_TOTAL = { 0: 1, 1: 10, 2: 10, 3: 10, 4: 20, 5: 12 }
+function listenProgress(s) {
+  const attempts = s.attempts ?? 0
+  if (s.stage === 0) return attempts ? { progText: `확인 ${attempts}번`, progPct: 100 } : { progText: '시작 전', progPct: 0 }
+  if (s.status === 'mastered') return { progText: s.level ? `수준 ${s.level} / ${s.levels}` : '숙달', progPct: 100 }
+  if (s.levels || s.level) {
+    if (!s.level) return { progText: '시작 전', progPct: 0 }
+    return { progText: `수준 ${s.level} / ${s.levels}`, progPct: Math.round((s.level / s.levels) * 100) }
+  }
+  if (s.srt_db != null) {
+    return { progText: `역치 ${s.srt_db > 0 ? '+' : ''}${s.srt_db} dB`, progPct: Math.min(100, (attempts / LISTEN_TOTAL[4]) * 100) }
+  }
+  return {}
+}
 function normalizeListen(stages) {
   return (stages || []).map((s, i) => ({
     key: `listen-${s.stage}`, stage: s.stage, no: i + 1, title: s.title, route: `/learn/listening?stage=${s.stage}`,
     status: s.status, attempts: s.attempts ?? 0, total: LISTEN_TOTAL[s.stage] || 10,
     desc: s.desc || '', guide: s.guide || '', mastery: null, pass: null,
-    progText: s.status === 'mastered' ? null
-      : s.level ? `수준 ${s.level} / ${s.levels}` : s.srt_db != null ? `역치 ${s.srt_db > 0 ? '+' : ''}${s.srt_db} dB` : null,
+    ...listenProgress(s),
   }))
 }
 
@@ -179,7 +195,7 @@ export default function CurriculumPath() {
   // 그때는 막대를 끝까지 채우지 않고 수 대신 '숙달 중'으로 적는다(경로 노드가 완료로 보이는 단계는 그대로 둔다).
   const progPending = viewStatus !== 'mastered' && progCur >= progTotal
   const progLabel = view?.progText || (progPending ? '숙달 중' : `${progCur} / ${progTotal}`)
-  const progPct = progPending ? 90 : (progCur / progTotal) * 100
+  const progPct = view?.progPct ?? (progPending ? 90 : (progCur / progTotal) * 100)
   const loadFailed = list.length === 0 && failed[track]   // 단계를 못 받아 빈 경로 → 안내와 다시 불러오기
   const startLabel = (view?.attempts ?? 0) === 0 ? '학습 시작하기' : '이어서 학습하기'   // 80:6 / 58:11
   const skipStage = list.find((s) => s.key === skipTarget) || null
@@ -248,6 +264,15 @@ export default function CurriculumPath() {
             가이드
           </button>
         </div>
+
+        {/* 소리 듣기: 진단·치료가 아니라는 안내(설계 8절, 첫 화면과 결과에 둔다)와 결과 화면으로 가는 길 */}
+        {track === 'listen' && !loadFailed && (
+          <div className="flex w-full items-center justify-between gap-3 rounded-14 bg-surface-sunken px-4 py-2.5">
+            <p className="min-w-0 break-keep text-[12px] leading-[1.6] text-ink-muted lg:text-[13px]">소리 듣기는 청력을 진단하거나 치료하지 않아요.</p>
+            <button type="button" onClick={() => navigate('/analysis/listening')}
+              className="min-h-[44px] shrink-0 rounded-10 px-2 text-[13px] font-bold text-track-dark hover:underline">결과 보기</button>
+          </div>
+        )}
 
         {/* 지연 유지 검사(C7): 사후 검사 뒤 정해진 날수가 지났을 때만 조용히 권한다(막지 않음, 볼 때가 아니면 그리지 않음) */}
         <RetentionPrompt />

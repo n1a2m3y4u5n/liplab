@@ -101,6 +101,24 @@ def test_test_srt():
     srt = L.test_srt(alt)
     assert srt is not None and 1.0 <= srt <= 5.0
     assert L.test_form_for(2, 0) == "A" and L.test_form_for(2, 1) == "B" and L.test_form_for(3, 0) == "B"
+    # 연습 문장: 연습은 4 dB, 검사 문장은 처음부터 2 dB. 역치는 연습을 뺀 검사 문장 20개로
+    prac = [(10.0, True), (6.0, True), (2.0, False), (6.0, True), (2.0, True)]
+    assert L.test_next_snr(prac, n_practice=5) == -2.0
+    assert L.test_next_snr(prac + [(-2.0, False)], n_practice=5) == 0.0
+    seq, snr = list(prac), -2.0
+    for k in range(20):
+        seq.append((snr, snr >= 3.0))
+        snr = L.test_next_snr(seq, n_practice=5)
+    assert L.test_srt(seq[:24], n_practice=5) is None
+    srt5 = L.test_srt(seq, n_practice=5)
+    assert srt5 is not None and 1.0 <= srt5 <= 5.0
+    test_snrs = [s for s, _ in seq[5:]]
+    assert srt5 == round((sum(test_snrs[4:20]) + snr) / 17, 1)
+    items = L.test_practice_items("test:abc")
+    assert len(items) == L.TEST_STAIR["practice"] == 5 and all(it["practice"] and it["key"].startswith("testp:t") for it in items)
+    assert items == L.test_practice_items("test:abc") and items != L.test_practice_items("test:abd")
+    tests = {"".join(ch for ch in s if ch.isalnum()) for f in L.TEST_FORMS.values() for s in f}
+    assert not tests & {"".join(ch for ch in it["text"] if ch.isalnum()) for it in items}
 
 
 def test_content_separation():
@@ -138,6 +156,25 @@ def test_convo_items_hide_answer():
     for c in L.CONVO_ITEMS:
         assert len(c["options"]) == 4 and 0 <= c["answer"] < 4 and len(set(c["options"])) == 4
     assert L.convo_correct("c:c01", 0) is True and L.convo_correct("c:c01", 1) is False
+
+
+def test_convo_content_quality():
+    """대화 문항: 정답 자리가 한쪽으로 쏠리지 않고(자리마다 6~9개), 정답이 혼자 가장 긴 보기가 아니다(10/7 콘텐츠 검토)."""
+    from collections import Counter
+    pos = Counter(c["answer"] for c in L.CONVO_ITEMS)
+    assert set(pos) == {0, 1, 2, 3} and all(6 <= n <= 9 for n in pos.values()), pos
+    for c in L.CONVO_ITEMS:
+        lens = [len(o.replace(" ", "")) for o in c["options"]]
+        a = lens[c["answer"]]
+        assert not (a == max(lens) and lens.count(a) == 1), c["id"]
+
+
+def test_listen_excluded_words():
+    pool = set(L.word_pool(include_gen=True))
+    assert L.LISTEN_EXCLUDED and not pool & set(L.LISTEN_EXCLUDED)
+    assert not set(L.GEN_WORDS) & set(L.LISTEN_EXCLUDED)
+    assert all(len(w) <= 2 for w in L.GEN_WORDS) and len(set(L.GEN_WORDS)) == 20
+    assert 2 <= min(len(s.split()) for s in L.TRAIN_SENTENCES) and max(len(s.split()) for s in L.TRAIN_SENTENCES) <= 5
 
 
 def test_word_score_and_recommendations():
@@ -201,16 +238,29 @@ with TestClient(main.app) as c:
     out["a4"] = [a4["correct"], a4["stair"]["ao"]["next_db"], a4["next_condition"]]
     ts = c.post("/api/listen/test/start", json={}, headers=h).json()
     out["test_form"] = ts["form"]
+    out["test_practice"] = [ts["n_practice"], [it["practice"] for it in ts["items"]][:6], len(ts["items"]),
+                            all(it["key"].startswith("testp:") for it in ts["items"][:5])]
     snrs = []
     for k, it in enumerate(ts["items"]):
         r = c.post("/api/listen/test/answer", json={"session": ts["session"], "item_key": it["key"],
                                                    "answer": it["text"] if k % 2 == 0 else ""}, headers=h).json()
         snrs.append(r["snr_db"])
-    out["test_done"] = [r["done"], r["srt_db"] is not None, snrs[:3]]
+        if k == 0:
+            out["prac_resp"] = [r["practice"], r.get("target") == it["text"], r["n"], r["n_practice"], r["done"]]
+        if k == 5:
+            out["first_test"] = [r["practice"], "target" not in r, r["n"], r["n_practice"]]
+    out["test_done"] = [r["done"], r["srt_db"] is not None, snrs[:3], snrs[4:8], r["n"], r["n_practice"]]
     out["test_dup"] = c.post("/api/listen/test/answer", json={"session": ts["session"], "item_key": ts["items"][0]["key"],
                                                              "answer": ""}, headers=h).status_code
     out["s4_after"] = c.get("/api/listen/stage/4", headers=h).json()["needs_pretest"]
-    out["next_form"] = c.post("/api/listen/test/start", json={}, headers=h).json()["form"]
+    ts2 = c.post("/api/listen/test/start", json={}, headers=h).json()
+    out["next_form"] = ts2["form"]
+    r2 = c.post("/api/listen/test/answer", json={"session": ts2["session"], "item_key": ts2["items"][5]["key"], "answer": ""},
+                headers=h).json()
+    late = c.post("/api/listen/test/answer", json={"session": ts2["session"], "item_key": ts2["items"][0]["key"], "answer": ""},
+                  headers=h)
+    alien = c.post("/api/listen/test/answer", json={"session": ts2["session"], "item_key": "testp:t001", "answer": ""}, headers=h)
+    out["practice_order"] = [r2["snr_db"], r2["n"], late.status_code, alien.status_code in (400, 409)]
     out["s5_locked"] = c.get("/api/listen/stage/5", headers=h).json()["status"]
     summ = c.get("/api/listen/summary", headers=h).json()
     out["summary"] = [summ["n_checks"], len(summ["tests"]), summ["last_check"]["summary"]["dropped"], len(summ["days"]),
@@ -242,7 +292,13 @@ def test_listen_api_flow():
     assert r["s4"] == [10.0, "ao", True]
     assert r["a4"] == [True, 6.0, "ao"]
     assert r["test_form"] == "B" or r["test_form"] == "A"
+    assert r["test_practice"] == [5, [True] * 5 + [False], 25, True]
+    assert r["prac_resp"] == [True, True, 0, 1, False]
+    assert r["first_test"] == [False, True, 1, 5]
+    # 연습 5문장(맞음·틀림 번갈아, 4 dB) 10, 6, 10, 6, 10. 연습 마지막(맞음) 뒤 첫 검사 문장 6, 그 뒤 검사는 2 dB(틀림 8, 맞음 6)
     assert r["test_done"][0] and r["test_done"][1] and r["test_done"][2] == [10.0, 6.0, 10.0]
+    assert r["test_done"][3] == [10.0, 6.0, 8.0, 6.0] and r["test_done"][4:] == [20, 5]
+    assert r["practice_order"] == [10.0, 1, 400, True]                       # 연습 없이 시작하면 옛 규칙, 검사 뒤 연습은 받지 않음
     assert r["test_dup"] == 409 and r["s4_after"] is False and r["next_form"] != r["test_form"]
     assert r["s5_locked"] == "unlocked"
     assert r["summary"][0] == 2 and r["summary"][1] == 1 and r["summary"][2] == ["s"] and r["summary"][3] == 7
