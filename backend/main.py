@@ -1549,8 +1549,12 @@ async def get_analysis_overview(tz_offset_min: int = -540, current_user=Depends(
     reviews_overdue = sum(1 for r in reviews if r.due_date and r.due_date < today_local
                           and (r.kind != "sentence" or r.id in shown_sentences))
 
+    try:
+        listen = await _listen_brief(current_user, db)
+    except Exception:
+        listen = None   # 듣기 요약이 실패해도 분석 탭의 기존 칸은 낸다
     return _an.overview(
-        events, now, tz,
+        events, now, tz, listen=listen,
         read_mastered=read_mastered,
         read_total=len([s for s in _curriculum.STAGES if not s.get("coming_soon")]),
         speak_mastered=speak_mastered, speak_total=len(_speakcur.stages_overview()),
@@ -2599,9 +2603,18 @@ async def review_due(current_user=Depends(get_current_user), db: AsyncSession = 
         else:
             (speak if it.kind == "speak" else read).append(entry)
     read += sentences   # 문장은 한 문항이 길어 입모양·단어 뒤에 낸다
+    # 소리 듣기 복습(GET /api/listen/review가 내는 것, 낱말 하루 10·문장 5까지). total에는 넣지 않고 total_with_listen에 더한다
+    # (total을 쓰는 화면·과제 '오늘의 복습 정리'의 뜻을 바꾸지 않게, docs/listen-integration-api-2026-10.md 4절)
+    try:
+        lw, ls = await _listen_review_due(current_user.id, db)
+    except Exception:
+        lw, ls = [], []
+    total = len(read) + len(speak)
     return {"count": len(read), "items": read, "speak_count": len(speak), "speak": speak,
-            "total": len(read) + len(speak), "sentence_count": len(sentences),
-            "sentence_daily_cap": _SENTENCE_REVIEW_DAILY}
+            "total": total, "sentence_count": len(sentences),
+            "sentence_daily_cap": _SENTENCE_REVIEW_DAILY,
+            "listen_count": len(lw) + len(ls), "listen_words": len(lw), "listen_sentences": len(ls),
+            "total_with_listen": total + len(lw) + len(ls)}
 
 
 @app.delete("/api/review/item")
@@ -2650,10 +2663,56 @@ async def _task_board(user, db) -> tuple:
     today = _kst_today()
     events = await _activity_events(user.id, db, since=_dt.events_since(today))
     due_left = len(await _due_review_items(user.id, db, today))   # 예정 목록(/api/review/due)과 같은 정의(문장 하루 상한 포함)
-    periods = {_dt.period_of(t, today) for t in _dt.TASKS}
+    listen_on, listen_min = await _listen_today_minutes(user.id, db, today)
+    periods = {_dt.period_of(t, today) for t in _dt.tasks_for(listen_on)}
     claimed = (await db.execute(select(TaskClaim.task_key, TaskClaim.period).where(
         TaskClaim.user_id == user.id, TaskClaim.period.in_(periods)))).all()
-    return today, _dt.board(_dt.stats(events, today, due_left), today, [tuple(c) for c in claimed])
+    return today, _dt.board(_dt.stats(events, today, due_left, listen_minutes=listen_min), today,
+                            [tuple(c) for c in claimed], listen=listen_on)
+
+
+async def _listen_brief(user, db) -> Optional[dict]:
+    """분석 탭 요약의 소리 듣기 칸(GET /api/listen/summary와 같은 정의). 듣기 트랙을 시작하지 않았으면 None.
+    날짜는 듣기 요약처럼 KST다(분석 탭의 tz_offset_min을 쓰지 않음)."""
+    started, _ = await _listen_today_minutes(user.id, db)
+    if not started:
+        return None
+    s = await listen_summary(user, db)
+    tests = s.get("tests") or []
+    main_tests = [t for t in tests if t.get("noise") == "babble"] or tests
+    last = main_tests[-1] if main_tests else None
+    ax_n = sum(k["n"] for k in s.get("ax_kinds") or [])
+    ax_c = sum(k["correct"] for k in s.get("ax_kinds") or [])
+    days = s.get("days") or []
+    return {
+        "test_srt_db": last["srt_db"] if last else None,          # 가장 최근에 마친 소음 속 문장 검사 역치(잡담 잡음 우선)
+        "test_noise": last["noise"] if last else None,
+        "test_at": last["started_at"] if last else None,
+        "n_tests": len(tests),
+        "training_srt_db": (s.get("training") or {}).get("srt_ao_db"),
+        "week_minutes": round(sum(d.get("minutes") or 0.0 for d in days), 1),   # 오늘로 끝나는 7일
+        "week_days": sum(1 for d in days if d.get("n")),                          # 그 7일 가운데 듣기 시행이 있는 날
+        "ax_accuracy": round(ax_c / ax_n, 4) if ax_n else None,   # 소리 구별(같다·다르다) 정답률, 1단계와 연습 탭
+        "ax_n": ax_n,
+    }
+
+
+async def _listen_today_minutes(user_id: int, db, today=None) -> tuple:
+    """(듣기 트랙을 시작했는가, 오늘 KST 듣기 연습 분). 시작 = 듣기 시행이나 단계 행이 하나라도 있음. 분은 듣기 요약 days의 minutes와
+    같은 추정(listen_curriculum.practice_minutes, 모든 시행)."""
+    from database import ListenAttempt, ListenStageProgress
+    from sqlalchemy import select
+    from datetime import datetime as _dtm, time as _tm, timedelta as _td
+    today = today or _kst_today()
+    started = (await db.execute(select(ListenAttempt.id).where(ListenAttempt.user_id == user_id).limit(1))).first() is not None \
+        or (await db.execute(select(ListenStageProgress.id).where(ListenStageProgress.user_id == user_id).limit(1))).first() is not None
+    if not started:
+        return False, 0.0
+    start = _dtm.combine(today, _tm()) - _td(hours=9)
+    evs = (await db.execute(select(ListenAttempt.created_at, ListenAttempt.rt_ms).where(
+        ListenAttempt.user_id == user_id, ListenAttempt.created_at >= start,
+        ListenAttempt.created_at < start + _td(days=1)))).all()
+    return True, _listencur.practice_minutes([(t, rt) for t, rt in evs])
 
 
 def _task_payload(today, rows) -> dict:
@@ -3584,6 +3643,7 @@ def _pilot_admin_gate(user):
 
 
 PILOT_EXPORT_VERSION = 6   # 6(10/7): 소리 듣기(listen: 검사 역치·잡음·모의 청취, 낱말 일반화 검사, 단계별 시행 수, trials=true면 시행 기록).
+# 6 안에서 키만 더함(10/7 밤): listen.practice_by_mode(연습 탭·복습 탭 답, session 'practice:*'). 그 답은 trials_by_stage에 넣지 않는다
 # 2(9/24): 참여일·참여 뒤 집계·동형 폼 문항 기록·현지 날짜 추가. 3(9/28): 사후 문항의 화자 조건(talker)
 # 4(9/29): 검사 전 연습 시행 수(trials_before)·연습 뒤 사전 표시, 학습 초기화 날(learning_reset_on), 시행 단위 기록(trials=true일 때만)
 # 5(10/6): P3 검사 묶음(battery: 회차·층·폼·순서·문항 응답, 개방형 답 원문 포함), 참여 순번(join_seq)·폼 순서(planned_order)·
@@ -3694,9 +3754,18 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
         rs = (await db.execute(select(ListenAttempt).where(ListenAttempt.user_id == uid)
                                .order_by(ListenAttempt.created_at, ListenAttempt.id))).scalars().all()
         rs = [r for r in rs if r.session != _LISTEN_PRACTICE]
-        by_stage = {}
+        by_stage, by_practice = {}, {}
         for r in rs:
             if r.mode in ("test", "wordtest"):
+                continue
+            if _listencur.is_practice_session(r.session):
+                # 연습 탭·복습 탭 답은 단계 훈련 수(trials_by_stage)에 섞지 않고 모드별로 따로 센다(10/7, 키만 더함)
+                pm = r.session[len(_listencur.PRACTICE_SESSION_PREFIX):]
+                k = f"{pm}:{r.stage}:{r.mode}:{r.sim_mode or '-'}"
+                d = by_practice.setdefault(k, {"practice": pm, "stage": r.stage, "mode": r.mode, "sim": r.sim_mode,
+                                               "n": 0, "correct": 0})
+                d["n"] += 1
+                d["correct"] += 1 if r.correct else 0
                 continue
             k = f"{r.stage}:{r.mode}:{r.sim_mode or '-'}"
             d = by_stage.setdefault(k, {"stage": r.stage, "mode": r.mode, "sim": r.sim_mode, "n": 0, "correct": 0})
@@ -3710,7 +3779,7 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
             return x
         out = {"tests": [_on(t) for t in _listen_test_state([r for r in rs if r.mode == "test"])],
                "word_tests": [_on(t) for t in _listen_wordtests([r for r in rs if r.mode == "wordtest"])],
-               "trials_by_stage": list(by_stage.values())}
+               "trials_by_stage": list(by_stage.values()), "practice_by_mode": list(by_practice.values())}
         if with_log:
             out["log"] = [{"seq": i + 1, "day": day(r.created_at), "stage": r.stage, "mode": r.mode, "item_key": r.item_key,
                            "correct": r.correct, "score": r.score, "level": r.level, "snr_db": r.snr_db, "condition": r.condition,
@@ -5719,10 +5788,19 @@ import listen_curriculum as _listencur
 
 # 숙달·계단에 넣지 않는 시행의 session 값: 다시 풀기(정답 단서를 본 뒤)·잠긴 단계의 답
 _LISTEN_PRACTICE = "practice"
+# 연습 탭의 듣기 연습·복습 탭의 듣기 복습 답은 session 'practice:<모드>'(listen_curriculum.practice_session)로 남긴다.
+# 시행 기록이 어디에 들어가는지(docs/listen-integration-api-2026-10.md 2절, test_listen_practice가 고정):
+#   단계 숙달·수준·4단계 소음 계단·단계 상태     : session 없음(검사·점검 회차 id 포함)만. 'practice'와 'practice:*'는 뺀다
+#   간격 복습(due_reviews)·혼동 집계·소리 구별 정답률 : 'practice'만 빼고 'practice:*'는 넣는다
+#   연습량(요약 days·오늘의 듣기·과제 '소리 듣기 15분') : 모든 시행('practice' 포함, 예전과 같음)
+#   내보내기 trials_by_stage                        : 'practice'·'practice:*' 빼고, 'practice:*'는 practice_by_mode로 따로
 
 
 async def _listen_attempts(user_id: int, db, stage: int = None, mode: str = None, session: str = None,
-                           counted_only: bool = True, limit: int = None, newest_first: bool = False):
+                           counted_only: bool = True, limit: int = None, newest_first: bool = False,
+                           practice_modes: bool = False):
+    """counted_only면 'practice'(다시 쓴 답·잠긴 단계 답)를 뺀다. 그때 practice_modes가 거짓이면 연습 모드 답('practice:*')도 뺀다
+    (단계 숙달·수준·계단 계산은 이 기본값을 쓴다). session을 주면 그 회차만 읽는다."""
     from database import ListenAttempt
     from sqlalchemy import select
     q = select(ListenAttempt).where(ListenAttempt.user_id == user_id)
@@ -5732,8 +5810,11 @@ async def _listen_attempts(user_id: int, db, stage: int = None, mode: str = None
         q = q.where(ListenAttempt.mode == mode)
     if session is not None:
         q = q.where(ListenAttempt.session == session)
-    if counted_only:
+    elif counted_only:
         q = q.where((ListenAttempt.session.is_(None)) | (ListenAttempt.session != _LISTEN_PRACTICE))
+        if not practice_modes:
+            q = q.where((ListenAttempt.session.is_(None)) |
+                        (ListenAttempt.session.notlike(_listencur.PRACTICE_SESSION_PREFIX + "%")))
     q = q.order_by(ListenAttempt.created_at.desc() if newest_first else ListenAttempt.created_at,
                    ListenAttempt.id.desc() if newest_first else ListenAttempt.id)
     if limit:
@@ -5762,6 +5843,12 @@ def _ao_trials(rows) -> list:
 
 def _av_trials(rows) -> list:
     return [(r.snr_db, bool(r.correct)) for r in rows if r.condition == "av" and r.snr_db is not None]
+
+
+def _practice_trials(rows) -> list:
+    """연습 모드 '소음 속 문장 이어 듣기'의 계단 시행(condition 'practice_ao')."""
+    return [(r.snr_db, bool(r.correct)) for r in rows
+            if r.condition == _listencur.PRACTICE_STAIR_CONDITION and r.snr_db is not None]
 
 
 @app.get("/api/listen/curriculum")
@@ -5878,13 +5965,16 @@ async def listen_stage_content(n: int, current_user=Depends(get_current_user), d
                                                kind_scale=_listencur.ling_avoid_kinds(ling))
         else:
             weak = [r.target for r in reversed(rows[-40:]) if not r.correct and r.target]
-            wrong = [(r.target, r.answer) for r in rows if r.correct is False and r.target and r.answer]
+            # 혼동 집계와 간격 복습은 연습 탭·복습 탭의 낱말 답('practice:*')까지 본다. 복습 탭에서 맞힌 낱말이 여기서 또 나오지 않게
+            allw = await _listen_attempts(current_user.id, db, stage=2, mode="word_id", practice_modes=True)
+            wrong = [(r.target, r.answer) for r in allw if r.correct is False and r.target and r.answer]
             focus = _listencur.tally_confusions(wrong[-200:])[:3]
-            review = _listencur.due_reviews([(r.target, bool(r.correct), _listen_day(r)) for r in rows if r.target], _kst_today())
+            review = _listencur.due_reviews([(r.target, bool(r.correct), _listen_day(r)) for r in allw if r.target], _kst_today())
             out["items"] = _listencur.word_items(level, _listen_word_pool(), f"{seed}:{len(rows)}", n=10, weak=weak, pick=pick,
                                                  focus=focus, review=review)
     elif n == 3:
-        rows3 = await _listen_attempts(current_user.id, db, stage=3)
+        # 받아쓰기·듣기 조건·복습 탭의 문장 답('practice:*')도 최근에 들은 문장과 간격 복습에 넣는다(낱말과 같은 까닭)
+        rows3 = await _listen_attempts(current_user.id, db, stage=3, practice_modes=True)
         recent = [r.item_key[2:] for r in rows3[-40:]]
         review = _listencur.due_reviews([(r.item_key[2:], bool(r.correct), _listen_day(r)) for r in rows3], _kst_today())
         out["items"] = _listencur.sentence_items(f"3:{seed}", n=8, recent=recent, review=review)
@@ -5958,6 +6048,14 @@ class ListenAnswer(BaseModel):
     noise: Optional[str] = Field(None, max_length=16)      # 잡음 이름(4단계 babble, 5단계 소음 조건의 종류)
     sim: Optional[str] = Field(None, max_length=12)        # 모의 청취(ci)
     practice: bool = False                                # 자음 단서를 본 뒤 다시 쓴 답: 점수만 주고 세지 않는다
+    # 연습 탭 듣기 연습(contrast|dictation|noise_endless|scenario|conditions)·복습 탭 듣기 복습(review)의 답. 있으면 채점·기록만 하고
+    # 단계 숙달·수준·4단계 계단에 넣지 않는다(session 'practice:<모드>'). 모드마다 받는 단계가 정해져 있다(_LISTEN_PRACTICE_STAGES)
+    practice_mode: Optional[str] = Field(None, max_length=20)
+
+
+# 연습 모드마다 답을 받는 단계(문항 꼴). contrast는 같다·다르다(1)와 낱말 고르기(2), review는 낱말(2)과 문장(3)
+_LISTEN_PRACTICE_STAGES = {"contrast": (1, 2), "dictation": (3,), "noise_endless": (4,), "scenario": (5,),
+                           "conditions": (3,), "review": (2, 3)}
 
 
 def _clip_snr(v) -> Optional[float]:
@@ -6019,12 +6117,21 @@ async def _listen_with_retry(db, work, tries: int = 4):
 
 @app.post("/api/listen/answer")
 async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """소리 듣기 1~5단계 답 하나를 채점·기록하고 숙달·수준·소음 계단을 갱신한다."""
+    """소리 듣기 1~5단계 답 하나를 채점·기록하고 숙달·수준·소음 계단을 갱신한다.
+    practice_mode가 있으면(연습 탭·복습 탭) 같은 방식으로 채점해 'practice:<모드>' 시행으로 남기기만 한다(숙달·수준·4단계 계단 그대로,
+    단계가 잠겨 있어도 받는다). noise_endless는 연습 전용 계단(condition 'practice_ao')을 응답 stair.practice_ao로 준다."""
     from database import ListenAttempt, ListenStageProgress
     n = int(req.stage)
     stg = _listencur.get_stage(n)
     if not stg or n == 0:
         raise HTTPException(status_code=400, detail="unknown stage")
+    pm = req.practice_mode
+    if pm is not None and (pm not in _LISTEN_PRACTICE_STAGES or n not in _LISTEN_PRACTICE_STAGES[pm]):
+        raise HTTPException(status_code=400, detail="bad practice_mode")
+    if pm == "conditions" and req.condition not in _listencur.PRACTICE_CONDS:
+        raise HTTPException(status_code=400, detail="condition must be phone|room|noise")
+    if pm == "conditions" and req.condition == "noise" and req.snr_db is None:
+        raise HTTPException(status_code=400, detail="snr_db is required")
     mode = stg["mode"]
     key = req.item_key
     res = {"stage": n, "mode": mode}
@@ -6059,7 +6166,9 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
             raise HTTPException(status_code=400, detail="snr_db is required")
         ws = _listencur.word_score(target, req.answer or "")
         score = ws["proportion"]
-        correct = score >= _listencur.STAIR["criterion"] if mode == "noise" else score >= 0.75
+        # 소음이 섞인 답(4단계, 듣기 조건의 noise)은 계단과 같은 기준(낱말 절반), 조용한 문장·전화·울리는 방은 3단계 기준
+        noisy = mode == "noise" or (pm == "conditions" and req.condition == "noise")
+        correct = score >= _listencur.STAIR["criterion"] if noisy else score >= 0.75
         credit = score
         res.update({"score": score, "word_feedback": ws["feedback"], "passed": correct})
         if req.practice or ws["feedback"]["correct_words"] == ws["feedback"]["total_words"]:
@@ -6083,12 +6192,44 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
     if mode == "convo" and cond not in _listencur.CONVO_CONDITIONS:
         cond = "quiet"
     snr = _clip_snr(req.snr_db) if mode in ("noise", "convo") else None
+    noise_name = req.noise if mode in ("noise", "convo") else None
+    if pm == "noise_endless":
+        cond = _listencur.PRACTICE_STAIR_CONDITION     # 4단계 계단(ao·av)과 섞이지 않게
+        noise_name = "babble"
+    elif pm == "conditions":
+        cond = req.condition
+        snr = _clip_snr(req.snr_db) if cond == "noise" else None
+        noise_name = req.noise if cond == "noise" else None
     repairs = [x for x in (req.repairs or []) if x in _LISTEN_REPAIRS] if req.repairs is not None else None
     level_in = level
+    p_session = _listencur.practice_session(pm) if pm else None
 
     async def work():
         out = dict(res)
         level = level_in
+        if pm is not None:
+            # 연습 모드: 기록·채점만. 정답 단서를 본 뒤 다시 쓴 답(practice)은 예전처럼 'practice'로 남겨 복습·혼동에서도 뺀다
+            sess = _LISTEN_PRACTICE if req.practice else p_session
+            # 계단은 넣기 전에 읽는다(넣은 뒤 읽으면 자동 flush로 이번 답이 두 번 들어간다)
+            prow = await _listen_attempts(uid, db, stage=4, mode="noise", session=p_session) if pm == "noise_endless" else []
+            db.add(ListenAttempt(user_id=uid, stage=n, mode=mode, item_key=key, target=target,
+                                 answer=(req.answer if req.answer is not None else
+                                         ("same" if req.same else "diff") if req.same is not None else
+                                         str(req.choice) if req.choice is not None else None),
+                                 correct=correct, score=score, level=level, snr_db=snr, condition=cond, voice=req.voice,
+                                 plays=req.plays, repairs=repairs, rt_ms=req.rt_ms, route=req.route,
+                                 output_latency_ms=req.output_latency_ms, av_offset_ms=req.av_offset_ms,
+                                 pick_mode=None, sim_mode="ci" if req.sim == "ci" else None,
+                                 noise=(noise_name if noise_name in set(_listencur.TRAIN_NOISES) | {_listencur.HELDOUT_NOISE}
+                                        else None),
+                                 session=sess))
+            out.update({"counted": False, "practice_mode": pm})
+            if pm == "noise_endless":
+                trials =_practice_trials(prow) + ([(snr, bool(correct))] if not req.practice else [])
+                out.update({"stair": {_listencur.PRACTICE_STAIR_CONDITION: _listencur.stair_state(trials)},
+                            "next_condition": _listencur.PRACTICE_STAIR_CONDITION})
+            await db.flush()
+            return out
         sp_map = await _listen_progress_map(uid, db)
         counted = not req.practice and _listen_open(n, sp_map, who)
         rows = await _listen_attempts(uid, db, stage=n, mode=mode) if counted else []   # 같은 단계의 검사 기록은 빼고
@@ -6400,8 +6541,10 @@ async def listen_today(current_user=Depends(get_current_user), db: AsyncSession 
     ling_today = bool(ling) and _listen_day(ling[0]) == today
     summ_days = (await listen_summary(current_user, db))["days"]
     today_row = next((d for d in summ_days if d.get("date") == today.isoformat()), {})
+    rw, rs = await _listen_review_due(current_user.id, db)
     return {"blocks": _listencur.today_plan(status, ling_today), "target_min": 15,
-            "done_today": {"n": today_row.get("n", 0), "minutes": today_row.get("minutes")}}
+            "done_today": {"n": today_row.get("n", 0), "minutes": today_row.get("minutes")},
+            "review_due": len(rw) + len(rs)}
 
 
 @app.get("/api/listen/summary")
@@ -6457,6 +6600,14 @@ async def listen_summary(current_user=Depends(get_current_user), db: AsyncSessio
         d = today - _td(days=k)
         evs = by_day.get(d, [])
         days.append({"date": d.isoformat(), "n": len(evs), "minutes": _listencur.practice_minutes(evs)})
+    # 연습 탭·복습 탭 답('practice:*')은 위의 혼동·소리 구별 종류·날마다 연습량에 들어 있고, 훈련 역치(ao·av)와 검사에는 없다.
+    # 모드마다 시행 수와 연습 전용 계단의 역치를 따로 준다
+    by_mode = {}
+    for r in counted:
+        if _listencur.is_practice_session(r.session):
+            m = r.session[len(_listencur.PRACTICE_SESSION_PREFIX):]
+            by_mode[m] = by_mode.get(m, 0) + 1
+    prac_noise = _practice_trials([r for r in noise if r.session == _listencur.practice_session("noise_endless")])
     return {
         "last_check": last_check, "n_checks": len(checks),
         "tests": tests,
@@ -6466,7 +6617,212 @@ async def listen_summary(current_user=Depends(get_current_user), db: AsyncSessio
         "confusions": conf[:8], "recommendations": _listencur.recommendations(conf),
         "ax_kinds": sorted(ax_kinds.values(), key=lambda x: x["kind"]),
         "days": days,
+        "practice": {"by_mode": by_mode, "noise_srt_db": _listencur.srt_estimate(prac_noise[-20:]),
+                     "n_noise": len(prac_noise)},
     }
+
+
+# ── 연습 탭 듣기 연습·복습 탭 듣기 복습·소리 교실(docs/listen-integration-api-2026-10.md) ─────────────────
+
+async def _listen_ling_done(user_id: int, db) -> bool:
+    return bool(await _listen_attempts(user_id, db, stage=0, mode="ling", limit=1))
+
+
+_LISTEN_NO_LING = "먼저 '소리 확인'에서 여섯 가지 소리를 한 번 들어 보세요. 소리 크기와 기기를 확인한 뒤에 연습할 수 있어요."
+
+
+@app.get("/api/listen/practice/modes")
+async def listen_practice_modes(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """연습 탭의 듣기 연습 모드 목록. 학습 경로 단계 잠금과 무관하게 열고, Ling 점검(소리 확인)을 한 번도 안 했으면 모두 닫는다
+    (소리 크기 맞추기·기기 점검이 먼저다)."""
+    ok = await _listen_ling_done(current_user.id, db)
+    out = []
+    for m in _listencur.PRACTICE_MODES:
+        x = {**m, "available": ok}
+        if not ok:
+            x["reason"] = _LISTEN_NO_LING
+        out.append(x)
+    return {"modes": out}
+
+
+@app.get("/api/listen/practice/scenario/places")
+async def listen_practice_scenario_places(current_user=Depends(get_current_user)):
+    """상황별 대화 듣기의 장면 묶음 [{key, label, n, places}]. 장소(place)마다 문항이 하나뿐인 곳이 많아 비슷한 장소를 묶었다
+    (listen_curriculum.SCENES). ?place=에는 key나 장소 이름 하나를 준다."""
+    return {"places": _listencur.scene_places()}
+
+
+def _listen_recent_sentences(rows, k: int = 60) -> list:
+    """최근에 들은 훈련 문장 id(나중 것이 뒤)."""
+    return [r.item_key[2:] for r in rows if (r.item_key or "").startswith("s:")][-k:]
+
+
+async def _listen_noise_snr(user_id: int, db) -> float:
+    """잡음 조건의 말·잡음 크기 차이: 4단계 소리만 역치 + 5 dB(역치를 모르면 +10 dB). 5단계 소음 조건과 같은 규칙."""
+    rows = await _listen_attempts(user_id, db, stage=4, mode="noise")
+    srt = _listencur.srt_estimate(_ao_trials(rows)[-20:])
+    return round(min(_listencur.STAIR["hi"], (srt if srt is not None else 5.0) + 5.0), 1)
+
+
+@app.get("/api/listen/practice/{mode}")
+async def listen_practice_items(mode: str, contrast: Optional[str] = None, place: Optional[str] = None,
+                                cond: Optional[str] = None, noise: Optional[str] = None,
+                                current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """연습 모드 문항. 답은 POST /api/listen/answer에 practice_mode=<mode>와 문항의 stage로 보낸다(숙달·수준·4단계 계단에 넣지 않음).
+    부를 때마다 이어지는 새 묶음을 준다(seed = 사용자·날짜·그 모드 시행 수). Ling 점검을 한 번도 안 했으면 409."""
+    if mode not in _listencur.PRACTICE_KEYS:
+        raise HTTPException(status_code=404, detail="unknown practice mode")
+    uid = current_user.id
+    if not await _listen_ling_done(uid, db):
+        raise HTTPException(status_code=409, detail=_LISTEN_NO_LING)
+    sess = _listencur.practice_session(mode)
+    done = await _listen_attempts(uid, db, session=sess)
+    seed = f"{uid}:{_kst_today().isoformat()}:{len(done)}"
+    out = {"mode": mode, "n_done": len(done)}
+    if mode == "contrast":
+        spec = _listencur.parse_contrast(contrast) if contrast else None
+        if contrast and spec is None:
+            raise HTTPException(status_code=400, detail="unknown contrast")
+        source = "query" if spec else None
+        if spec is None:
+            # 지정이 없으면 학습자가 가장 자주 헷갈린 소리 짝(낱말 고르기 오답, 연습 답 포함). 없으면 소리 구별에서 가장 약한 종류,
+            # 그것도 없으면 보청기·인공와우 사용자가 가장 자주 놓치는 자리 대조
+            allw = await _listen_attempts(uid, db, stage=2, mode="word_id", practice_modes=True)
+            wrong = [(r.target, r.answer) for r in allw if r.correct is False and r.target and r.answer]
+            for c in _listencur.tally_confusions(wrong[-200:])[:3]:
+                cand = _listencur.parse_contrast(f"{c['slot']}:{c['target']}:{c['heard']}")
+                if cand and _listencur.contrast_practice_items(cand, _listen_word_pool(), seed, n=12):
+                    spec, source = cand, "confusions"
+                    break
+            if spec is None:
+                axr = await _listen_attempts(uid, db, stage=1, mode="ax", practice_modes=True)
+                avoid = _listencur.ling_avoid_kinds(await _listen_last_ling(uid, db))
+                kinds = {}
+                for r in axr:
+                    parsed = _listencur.ax_parse(r.item_key)
+                    if parsed and parsed[0] != parsed[1]:
+                        n_, c_ = kinds.get(parsed[2]["kind"], (0, 0))
+                        kinds[parsed[2]["kind"]] = (n_ + 1, c_ + (1 if r.correct else 0))
+                weak = sorted(((c_ / n_, k) for k, (n_, c_) in kinds.items()
+                               if n_ >= 4 and c_ / n_ < 0.9 and avoid.get(k, 1.0) > 0))
+                if weak:
+                    spec, source = _listencur.parse_contrast(f"kind:{weak[0][1]}"), "ax_stats"
+                else:
+                    spec, source = _listencur.parse_contrast("kind:place"), "default"
+        s2 = await _listen_attempts(uid, db, stage=2, mode="word_id")
+        level = max(2, min(3, _listencur.next_level([(r.level or 1, bool(r.correct)) for r in s2], 2)))
+        out.update({"contrast": spec, "source": source, "level": level,
+                    "items": _listencur.contrast_practice_items(spec, _listen_word_pool(), seed, n=12, level=level)})
+    elif mode == "dictation":
+        rows = await _listen_attempts(uid, db, stage=3, practice_modes=True)
+        out["items"] = _listencur.sentence_items(f"pd:{seed}", n=10, recent=_listen_recent_sentences(rows))
+        for it in out["items"]:
+            it["stage"] = 3
+    elif mode == "noise_endless":
+        rows = await _listen_attempts(uid, db, stage=4, mode="noise", session=sess)
+        allr = await _listen_attempts(uid, db, stage=4, mode="noise", practice_modes=True)
+        out["items"] = _listencur.sentence_items(f"pn:{seed}", n=10, recent=_listen_recent_sentences(allr))
+        for it in out["items"]:
+            it["stage"] = 4
+        st = _listencur.stair_state(_practice_trials(rows))
+        out.update({"stair": {_listencur.PRACTICE_STAIR_CONDITION: st}, "next_db": st["next_db"],
+                    "condition": _listencur.PRACTICE_STAIR_CONDITION, "noise": "babble"})
+    elif mode == "scenario":
+        if not place:
+            raise HTTPException(status_code=400, detail="place가 필요합니다(GET /api/listen/practice/scenario/places).")
+        recent = [r.item_key[2:] for r in await _listen_attempts(uid, db, stage=5, practice_modes=True, limit=40,
+                                                                    newest_first=True)]
+        items = _listencur.scene_items(place, seed, recent=recent)
+        if items is None:
+            raise HTTPException(status_code=404, detail="unknown place")
+        for it in items:
+            it["stage"] = 5
+        out.update({"place": place, "items": items, "noise_snr_db": await _listen_noise_snr(uid, db),
+                    "conditions": list(_listencur.CONVO_CONDITIONS), "room_rt60": list(_listencur.ROOM_RT60),
+                    "noise_types": list(_listencur.TRAIN_NOISES)})
+    else:   # conditions
+        cond = cond or "phone"
+        if cond not in _listencur.PRACTICE_CONDS:
+            raise HTTPException(status_code=400, detail="cond는 phone|room|noise")
+        if noise is not None and noise not in _listencur.TRAIN_NOISES:
+            raise HTTPException(status_code=400, detail="noise는 " + "|".join(_listencur.TRAIN_NOISES))
+        rows = await _listen_attempts(uid, db, stage=3, practice_modes=True)
+        snr = await _listen_noise_snr(uid, db) if cond == "noise" else None
+        items = _listencur.condition_items(cond, seed, n=10, recent=_listen_recent_sentences(rows), noise=noise, snr_db=snr)
+        for it in items:
+            it["stage"] = 3
+        out.update({"cond": cond, "noise": noise, "snr_db": snr, "items": items, "conds": list(_listencur.PRACTICE_CONDS),
+                    "noise_types": list(_listencur.TRAIN_NOISES), "room_rt60": list(_listencur.ROOM_RT60)})
+    return out
+
+
+_LISTEN_REVIEW_WORDS = 10
+_LISTEN_REVIEW_SENTENCES = 5
+
+
+async def _listen_review_due(user_id: int, db) -> tuple:
+    """오늘 복습할 듣기 낱말·문장(listen_curriculum.due_reviews). 낱말은 2단계와 연습·복습 탭의 낱말 고르기 답, 문장은 3단계와
+    받아쓰기·듣기 조건·복습 탭 문장 답으로 센다('practice'는 뺌). 소음 속 문장(4단계·이어 듣기)은 계단이 절반쯤 틀리게 맞추므로
+    넣지 않는다. (낱말 최대 10, 문장 id 최대 5)."""
+    today = _kst_today()
+    pool = set(_listen_word_pool())
+    wr = await _listen_attempts(user_id, db, stage=2, mode="word_id", practice_modes=True)
+    words = [w for w in _listencur.due_reviews([(r.target, bool(r.correct), _listen_day(r)) for r in wr if r.target], today)
+             if w in pool][:_LISTEN_REVIEW_WORDS]
+    sr = await _listen_attempts(user_id, db, stage=3, mode="sentence", practice_modes=True)
+    sents = [i for i in _listencur.due_reviews([(r.item_key[2:], bool(r.correct), _listen_day(r)) for r in sr
+                                                if (r.item_key or "").startswith("s:")], today)
+             if i in _listencur.TRAIN_BY_ID][:_LISTEN_REVIEW_SENTENCES]
+    return words, sents
+
+
+@app.get("/api/listen/review")
+async def listen_review(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """복습 탭의 듣기 복습. 틀린 낱말(보기는 수준 2, 4지)과 문장 가운데 오늘 복습할 것. 답은 POST /api/listen/answer에
+    practice_mode='review'(낱말 stage 2, 문장 stage 3). 그 답도 간격 계산에 들어가서 맞히면 사흘 뒤 한 번 더, 두 번 맞히면 빠진다."""
+    words, sents = await _listen_review_due(current_user.id, db)
+    pool = _listen_word_pool()
+    seed = f"rv:{current_user.id}:{_kst_today().isoformat()}"
+    w_out = []
+    for w in words:
+        it = _listencur.word_item(w, 2, pool, seed) or _listencur.word_item(w, 1, pool, seed)
+        if it:
+            w_out.append({"key": it["key"], "target": w, "options": it["options"], "level": it["level"], "stage": 2})
+    s_out = [{"key": f"s:{i}", "id": i, "text": _listencur.TRAIN_BY_ID[i], "stage": 3} for i in sents]
+    return {"words": w_out, "sentences": s_out, "n": len(w_out) + len(s_out)}
+
+
+_LISTEN_CATALOG = {"key": None, "value": None}
+
+
+def _listen_sound_texts() -> set:
+    """훈련 목소리 모두에 미리 합성된 글의 찾기 키. 목소리가 셋 이상이면 마지막 목소리는 검사 전용이라 뺀다(화면과 같은 규칙)."""
+    import sound_service as _ss
+    m = _ss.manifest()
+    vids = [v.get("id") for v in (m.get("voices") or []) if v.get("id")]
+    train = vids[:-1] if len(vids) >= 3 else vids
+    clips = m.get("clips") or {}
+    keys = None
+    for v in train:
+        ks = set((clips.get(v) or {}).keys())
+        keys = ks if keys is None else keys & ks
+    return keys or set()
+
+
+@app.get("/api/listen/contrasts")
+async def listen_contrasts(current_user=Depends(get_current_user)):
+    """소리 교실(소리 짝 둘러보기): 소리 구별 종류(AX_KIND_LABEL 순서)마다 쉬운 설명(무엇이 다른지, 보청기·인공와우로 왜 어려운지,
+    입모양이 같은지 다른지), 소리 구별 짝, 예시 낱말 짝. 훈련 목소리로 합성된 글만 넣는다. 채점 없음.
+    practice_key·words[].contrast를 GET /api/listen/practice/contrast?contrast=에 그대로 쓸 수 있다."""
+    import sound_clips as _sc
+    import sound_service as _ss
+    keys = _listen_sound_texts()
+    stamp = (id(_ss.manifest()), len(keys))
+    if _LISTEN_CATALOG["key"] != stamp:
+        _LISTEN_CATALOG["value"] = _listencur.contrast_catalog(_listen_word_pool(),
+                                                               has_sound=lambda t: _sc.normalize_text(t) in keys)
+        _LISTEN_CATALOG["key"] = stamp
+    return {"kinds": _LISTEN_CATALOG["value"]}
 
 
 # Health check endpoint
