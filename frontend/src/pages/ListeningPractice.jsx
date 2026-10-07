@@ -4,7 +4,7 @@ import { listenAPI, learningAPI } from '../api'
 import LoadingScreen from '../components/LoadingScreen'
 import ConsonantFeedback from '../components/ConsonantFeedback'
 import MouthAvatar from '../components/MouthAvatar'
-import { loadClip, loadVoices, loadNoise, playClip, playPair, lingClip, silence, stopAll } from '../lib/listenAudio'
+import { loadClip, loadVoices, loadNoise, playClip, playPair, lingClip, silence, stopAll, ensureAudio, outputLatencyMs, avOffsetMs } from '../lib/listenAudio'
 import { readSettings, writeSettings, clampGainDb, voiceRoles, voiceFor, fitFramesToAudio, snrLabel, contrastText,
   DEVICES, ROUTES, GAIN_MIN_DB, GAIN_MAX_DB } from '../lib/listenMix'
 
@@ -425,6 +425,7 @@ function SentenceTask({ data, settings, voices, onProgress, onExit, reload, nois
   // 순서다(Davis 2005, Loebach 2010). 첫 답이 다 맞았으면 자동으로 틀지 않는다. 훅은 아래 조기 반환보다 위에 둔다
   const playRef = useRef(null)
   const autoRef = useRef(null)
+  const avOffsetRef = useRef(null)
   const firstAllRight = !!(first?.word_feedback && first.word_feedback.correct_words === first.word_feedback.total_words)
   const done = !!(first && !first.error && (firstAllRight || retry))
   useEffect(() => {
@@ -446,7 +447,12 @@ function SentenceTask({ data, settings, voices, onProgress, onExit, reload, nois
   const play = async (opts = {}) => {
     setBusy(true)
     if (av && frames?.length) {
-      setPlayFrames(frames.map((f) => ({ ...f })))      // 새 배열이라 아바타가 처음부터 한 번 재생한다
+      // 블루투스 등 출력 지연만큼 입모양을 늦춘다(avOffsetMs, 덜 보정). 새 배열이라 아바타가 처음부터 한 번 재생한다
+      await ensureAudio()
+      const offset = avOffsetMs()
+      avOffsetRef.current = offset
+      const fresh = frames.map((f) => ({ ...f }))
+      setTimeout(() => setPlayFrames(fresh), offset)
       await playClip(clip, { gainDb: settings.gainDb, snrDb: snr, noise: nz.noise, leadMs: 300, ...opts })
     } else {
       await playClip(clip, { gainDb: settings.gainDb, snrDb: noisy ? snr : null, noise: noisy ? nz.noise : null, ...opts })
@@ -455,8 +461,10 @@ function SentenceTask({ data, settings, voices, onProgress, onExit, reload, nois
     setPlays((p) => p + 1)
   }
   const submit = async () => {
-    const body = { stage: noisy ? 4 : 3, item_key: it.key, answer, plays, rt_ms: Date.now() - t0.current, voice, route: settings.route }
+    const body = { stage: noisy ? 4 : 3, item_key: it.key, answer, plays, rt_ms: Date.now() - t0.current, voice, route: settings.route,
+      output_latency_ms: outputLatencyMs() }
     if (noisy) Object.assign(body, { snr_db: snr, condition: cond })
+    if (av && avOffsetRef.current != null) body.av_offset_ms = avOffsetRef.current
     try {
       if (!first) {
         const r = await listenAPI.answer(body)
@@ -486,6 +494,9 @@ function SentenceTask({ data, settings, voices, onProgress, onExit, reload, nois
           <div className="overflow-hidden rounded-16 border-2 border-line">
             <MouthAvatar frames={playFrames} once height={null} className="h-[160px] lg:h-[220px]" showTalker={false} />
           </div>
+        )}
+        {av && settings.route === 'stream' && (
+          <p className="text-[12px] leading-[1.6] text-ink-faint">블루투스로 바로 들으면 소리가 입모양보다 늦게 들릴 수 있어요. 어긋나 보이면 스피커나 유선 이어폰으로 들어 보세요.</p>
         )}
         <PlayButton onClick={() => play()} busy={busy} disabled={!ready || !!finished} label={ready ? '문장 듣기' : '소리 받는 중…'} plays={plays} />
         {!finished && (

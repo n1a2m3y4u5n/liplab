@@ -5771,6 +5771,8 @@ class ListenAnswer(BaseModel):
     repairs: Optional[List[str]] = None
     rt_ms: Optional[int] = None
     route: Optional[str] = Field(None, max_length=20)
+    output_latency_ms: Optional[int] = Field(None, ge=0, le=5000)
+    av_offset_ms: Optional[int] = Field(None, ge=0, le=1000)
     practice: bool = False                                # 자음 단서를 본 뒤 다시 쓴 답: 점수만 주고 세지 않는다
 
 
@@ -5852,6 +5854,7 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
                                  str(req.choice) if req.choice is not None else None),
                          correct=correct, score=score, level=level, snr_db=snr, condition=cond, voice=req.voice,
                          plays=req.plays, repairs=req.repairs, rt_ms=req.rt_ms, route=req.route,
+                         output_latency_ms=req.output_latency_ms, av_offset_ms=req.av_offset_ms,
                          session=None if counted else _LISTEN_PRACTICE))
     res["counted"] = counted
     if counted:
