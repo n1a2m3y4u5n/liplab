@@ -451,3 +451,133 @@ def test_tasks_overview_contrasts_export():
     assert stage_keys == ["0:ling"]                                               # 단계 훈련 수에는 점검만(연습 답 없음)
     assert "contrast:1:ax" in prac_keys and "review:2:word_id" in prac_keys and "noise_endless:4:noise" in prac_keys
     assert n_prac >= 6 + 4 + 9
+
+
+# ── 날짜 경계·처음 사용자·다른 사용자·다시 쓴 답(10/7 검토, docs/review/listen-integration-review-2026-10.md) ──────────
+
+_FLOW2 = r'''
+import json, os, sqlite3
+from datetime import datetime, timedelta
+from fastapi.testclient import TestClient
+import main, listen_curriculum as L
+
+def sql(q, *a):
+    db = sqlite3.connect(os.environ["T_DB"])
+    rows = db.execute(q, a).fetchall()
+    db.commit(); db.close()
+    return rows
+
+def ts(t):
+    return t.strftime("%Y-%m-%d %H:%M:%S.%f")
+
+out = {}
+with TestClient(main.app) as c:
+    def reg(email, name):
+        r = c.post("/api/auth/register", json={"email": email, "username": name, "password": "pw-123456",
+                                               "agree_terms": True, "age_confirmed": True})
+        return {"Authorization": "Bearer " + r.json()["access_token"]}
+    ha, hb = reg("pa@example.com", "pa1"), reg("pb@example.com", "pb1")
+    ua = sql("select id from users where email = 'pa@example.com'")[0][0]
+    ub = sql("select id from users where email = 'pb@example.com'")[0][0]
+
+    # 처음 사용자(B): 오늘의 듣기는 소리 확인 한 블록, 연습 문항은 409, 복습·과제·분석에는 듣기가 없다
+    tb = c.get("/api/listen/today", headers=hb).json()
+    out["first_today"] = [[b["mode"] for b in tb["blocks"]], tb["done_today"], tb["review_due"], tb["target_min"]]
+    out["first_other"] = [c.get("/api/listen/practice/dictation", headers=hb).status_code,
+                          c.get("/api/listen/review", headers=hb).json()["n"],
+                          [t["key"] for t in c.get("/api/tasks", headers=hb).json()["daily"]],
+                          c.get("/api/analysis/overview", headers=hb).json()["listen"]]
+
+    # A: 소리 확인 뒤 연습. 단서를 본 뒤 다시 쓴 답(practice: true)은 연습 모드를 붙여도 복습·혼동·연습 계단에 넣지 않는다
+    c.post("/api/listen/ling", json={"results": {k: True for k in L.LING_KEYS}, "false_alarms": 0}, headers=ha)
+    pc = c.get("/api/listen/practice/contrast", params={"contrast": "onset:ㅂ:ㅍ"}, headers=ha).json()
+    w = next(i for i in pc["items"] if i["type"] == "word")
+    wrong = next(o for o in w["options"] if o != w["target"])
+    r1 = c.post("/api/listen/answer", json={"stage": 2, "item_key": w["key"], "answer": wrong, "level": w["level"],
+                                            "practice_mode": "contrast", "practice": True}, headers=ha).json()
+    ne = c.get("/api/listen/practice/noise_endless", headers=ha).json()
+    s4 = ne["items"][0]
+    r2 = c.post("/api/listen/answer", json={"stage": 4, "item_key": s4["key"], "answer": "", "snr_db": ne["next_db"],
+                                            "practice_mode": "noise_endless", "practice": True}, headers=ha).json()
+    dc = c.get("/api/listen/practice/dictation", headers=ha).json()
+    c.post("/api/listen/answer", json={"stage": 3, "item_key": dc["items"][0]["key"], "answer": "", "practice_mode": "dictation"},
+           headers=ha)
+    sm = c.get("/api/listen/summary", headers=ha).json()
+    out["retry"] = [r1["counted"], r2["stair"]["practice_ao"]["n_trials"], sm["confusions"], sm["practice"]["by_mode"],
+                    c.get("/api/listen/practice/noise_endless", headers=ha).json()["stair"]["practice_ao"]["n_trials"],
+                    sorted({s for (s,) in sql("select session from listen_attempts where user_id = ? and stage in (2, 4)", ua)})]
+    sql("update listen_attempts set created_at = datetime(created_at, '-1 days') where user_id = ?", ua)
+    rv = c.get("/api/listen/review", headers=ha).json()
+    out["retry_review"] = [[x["target"] for x in rv["words"]], len(rv["sentences"])]
+
+    # 다른 사용자(B)에게는 A의 연습이 보이지 않는다
+    sb = c.get("/api/listen/summary", headers=hb).json()
+    out["isolation"] = [sb["practice"]["by_mode"], sb["confusions"], sum(d["n"] for d in sb["days"]),
+                        c.get("/api/listen/review", headers=hb).json()["n"]]
+
+    # 날짜 경계(KST): B의 시행을 어제 23시 59분(KST)에 하나, 오늘 0시 1분부터 2분 간격으로 여덟 개 넣는다(모두 반응 시간 30초).
+    # 자정을 가로지르는 2분 간격은 어제·오늘 어느 쪽에도 더하지 않는다. 오늘 = 30초 + 2분 × 7 = 14.5분 → 과제 14 / 15(미달)
+    today = main._kst_today()
+    start = datetime.combine(today, datetime.min.time()) - timedelta(hours=9)      # 오늘 0시(KST)의 UTC
+    def put(t):
+        sql("insert into listen_attempts (user_id, stage, mode, item_key, target, correct, rt_ms, session, created_at) "
+            "values (?, 3, 'sentence', 's:t001', '창문 좀 열어 주세요.', 1, 30000, 'practice:dictation', ?)", ub, ts(t))
+    put(start - timedelta(minutes=1))
+    for k in range(8):
+        put(start + timedelta(minutes=1 + 2 * k))
+    def view():
+        s = c.get("/api/listen/summary", headers=hb).json()["days"]
+        t = c.get("/api/listen/today", headers=hb).json()["done_today"]
+        g = next(x for x in c.get("/api/tasks", headers=hb).json()["daily"] if x["key"] == "listen_15")
+        ov = c.get("/api/analysis/overview", headers=hb).json()["listen"]
+        return [s[-2]["date"], s[-2]["n"], s[-2]["minutes"], s[-1]["date"], s[-1]["n"], s[-1]["minutes"], t["n"], t["minutes"],
+                g["cur"], g["done"], ov["week_minutes"], ov["week_days"]]
+    out["boundary"] = view()
+    out["boundary_dates"] = [(today - timedelta(days=1)).isoformat(), today.isoformat()]
+    # 2분 뒤 한 시행 더 → 16.5분, 과제 달성(세 곳이 같은 분)
+    put(start + timedelta(minutes=17))
+    out["boundary2"] = view()
+print("RESULT " + json.dumps(out, ensure_ascii=False))
+'''
+
+
+@lru_cache(maxsize=1)
+def _run2():
+    here = os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as d:
+        env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", T_DB=f"{d}/t.db", PYTHONDONTWRITEBYTECODE="1",
+                   LIPLAB_UNLOCK_ALL="0")
+        for k in ("ANTHROPIC_API_KEY", "LIPLAB_PILOT", "LIPLAB_PILOT_CODES", "LIPLAB_ADMIN_EMAILS"):
+            env.pop(k, None)
+        p = subprocess.run([sys.executable, "-c", _FLOW2], cwd=here, env=env, capture_output=True, text=True, timeout=300)
+    line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
+    assert line, f"시나리오 실패:\n{p.stdout[-2000:]}\n{p.stderr[-4000:]}"
+    return json.loads(line[len("RESULT "):])
+
+
+def test_first_user_today_and_gates():
+    r = _run2()
+    assert r["first_today"] == [["ling"], {"n": 0, "minutes": 0.0}, 0, 15]
+    assert r["first_other"] == [409, 0, ["review_clear", "read_once", "two_sessions"], None]
+
+
+def test_practice_retry_excluded_everywhere():
+    """정답 단서를 본 뒤 다시 쓴 답은 practice_mode를 붙여도 session 'practice'로 남아 혼동·복습·연습 계단·모드별 수에 들어가지 않는다."""
+    r = _run2()
+    counted, stair_n, conf, by_mode, stair_n2, sessions = r["retry"]
+    assert counted is False and stair_n == 0 and stair_n2 == 0 and conf == []
+    assert by_mode == {"dictation": 1} and sessions == ["practice"]
+    assert r["retry_review"] == [[], 1]                                           # 다시 쓴 낱말은 복습에 없고, 받아쓰기 문장만
+
+
+def test_other_user_isolated():
+    r = _run2()
+    assert r["isolation"] == [{}, [], 0, 0]
+
+
+def test_kst_day_boundary_same_minutes_everywhere():
+    """요약 days·오늘의 듣기·과제 listen_15·분석 week_minutes가 같은 KST 날짜와 같은 분을 쓴다. 자정을 가로지르는 간격은 어느 날에도 넣지 않는다."""
+    r = _run2()
+    yday, today = r["boundary_dates"]
+    assert r["boundary"] == [yday, 1, 0.5, today, 8, 14.5, 8, 14.5, 14, False, 15.0, 2]
+    assert r["boundary2"] == [yday, 1, 0.5, today, 9, 16.5, 9, 16.5, 15, True, 17.0, 2]

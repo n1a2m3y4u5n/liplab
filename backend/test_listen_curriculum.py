@@ -544,6 +544,9 @@ def test_practice_minutes():
     assert L.practice_minutes([]) == 0.0
     assert L.practice_minutes([(t0, None)]) == 0.0
     assert L.practice_minutes([(t0, 10 ** 9)]) == 3.0           # 반응 시간도 상한
+    # 같은 시각에 반응 시간이 없는 시행과 있는 시행이 겹쳐도 되고(예전에는 None과 int 비교로 TypeError), 들어온 순서와 상관없이 같다
+    tie = [(t0, None), (t0, 30000), (t0 + D.timedelta(seconds=20), None)]
+    assert L.practice_minutes(tie) == L.practice_minutes(list(reversed(tie))) == round((30 + 20) / 60, 1)
 
 
 def test_word_review_not_blocked_by_non_candidates():

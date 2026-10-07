@@ -67,7 +67,9 @@ export default function ConvoTask({ data, settings, voices, onProgress, onExit, 
     setErr(null)
     try {
       const r = await listenAPI.answer({ stage: 5, item_key: it.key, choice: picked, condition: cond, snr_db: cond === 'noise' ? snrDb : null,
-        repairs, plays, rt_ms: Date.now() - t0.current, voice, route: settings.route, ...(cond === 'noise' && condition ? { noise: noiseName } : {}),
+        // 소음 조건이면 들려준 잡음 이름을 늘 남긴다(listen_attempts.noise). 예전에는 조건을 고정했을 때만 보내, 문항마다 잡음을 돌리는
+        // 5단계와 상황별 대화 듣기 연습에서는 어떤 잡음으로 들었는지가 비어 있었다
+        repairs, plays, rt_ms: Date.now() - t0.current, voice, route: settings.route, ...(cond === 'noise' ? { noise: noiseName } : {}),
         ...(answerExtra || {}) })
       setRes(r)
       tally.add(r.correct, r.status)

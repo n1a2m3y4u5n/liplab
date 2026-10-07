@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { listenAPI } from '../api'
 import { stopAll } from '../lib/listenAudio'
-import { TASK_TITLE, blockData, fmtMinutes, todayTotals, pct } from '../lib/listenFlow'
+import { TASK_TITLE, blockData, fmtGoalMinutes, todayTotals, pct } from '../lib/listenFlow'
 import BottomBar from '../components/listen/BottomBar'
 import ListenBlocks from '../components/listen/ListenBlocks'
 import ListenComplete from '../components/listen/ListenComplete'
@@ -58,7 +58,7 @@ function TodayIntro({ plan, onStart, active }) {
       <Card className="flex flex-col gap-2.5">
         <div className="flex items-baseline justify-between gap-3 leading-figma">
           <p className="text-[14px] font-bold text-ink-muted">오늘 연습한 시간</p>
-          <p className="text-[15px] font-bold text-track-dark">{fmtMinutes(doneMin)}<span className="font-normal text-ink-faint"> / {target}분</span></p>
+          <p className="text-[15px] font-bold text-track-dark">{fmtGoalMinutes(doneMin)}<span className="font-normal text-ink-faint"> / {target}분</span></p>
         </div>
         <div className="h-2.5 overflow-hidden rounded-full bg-fill">
           <div className="h-full rounded-full bg-track" style={{ width: `${Math.min(100, (doneMin / target) * 100)}%` }} />
@@ -89,7 +89,9 @@ export default function ListenToday() {
   const [err, setErr] = useState(null)   // 'missing'(아직 없는 API) | 'network'
   const [nonce, setNonce] = useState(0)
   const [step, setStep] = useState({ idx: 0, phase: 'intro' })
-  const [after, setAfter] = useState(null)   // 끝난 뒤 다시 받은 오늘 기록
+  // 끝난 뒤 다시 받은 오늘 기록. undefined = 받는 중(요약은 기다린다), null = 못 받음(시작 전 기록 + 이번 회기로 어림).
+  // 예전에는 받기 전에 어림값으로 요약을 그렸다가 서버 분으로 바뀌어 '15분을 채웠어요'가 잠깐 보였다 사라질 수 있었다
+  const [after, setAfter] = useState(undefined)
   useEffect(() => {
     let on = true
     setPlan(null)
@@ -110,7 +112,7 @@ export default function ListenToday() {
   useEffect(() => {
     if (step.phase !== 'end') return undefined
     let on = true
-    listenAPI.today().then((p) => { if (on) setAfter(p?.done_today || null) }).catch(() => {})
+    listenAPI.today().then((p) => { if (on) setAfter(p?.done_today || null) }).catch(() => { if (on) setAfter(null) })
     return () => { on = false }
   }, [step.phase])
 
@@ -131,16 +133,17 @@ export default function ListenToday() {
             onStep={onStep} onProgress={ctx.onProgress} active={ctx.active} onResults={setDoneBlocks} endNow={endNow}
             intro={(start) => <TodayIntro plan={plan} onStart={start} active={ctx.active} />}
             renderSummary={(results) => {
+              if (after === undefined) return <Skeleton />
               const t = todayTotals(results.map((x) => x.result), { done: after, before: plan.done_today, targetMin: plan.target_min || 15 })
               const target = plan.target_min || 15
               return (
                 <ListenComplete title={t.reached ? `오늘 ${target}분을 채웠어요` : '오늘의 듣기를 마쳤어요'}
-                  sub={t.reached ? '내일도 비슷한 시간에 이어 해요. 일주일에 5일쯤이 알맞아요.' : `${target}분까지 ${Math.max(1, Math.round(target - t.minutes))}분쯤 남았어요. 남은 시간은 연습 탭에서 채워도 돼요.`}
-                  stats={[{ label: '오늘 연습', value: `${fmtMinutes(t.minutes)} / ${target}분`, main: true },
+                  sub={t.reached ? '내일도 비슷한 시간에 이어 해요. 일주일에 5일쯤이 알맞아요.' : `${target}분까지 ${Math.max(1, t.left)}분쯤 남았어요. 남은 시간은 연습 탭에서 채워도 돼요.`}
+                  stats={[{ label: '오늘 연습', value: `${fmtGoalMinutes(t.minutes)} / ${target}분`, main: true },
                     { label: '푼 문항', value: `${t.n}문항` }, { label: '정답률', value: pct(t.c, t.n) }]}
                   notes={[plan.review_due > 0 && `다시 들어 볼 낱말·문장이 ${plan.review_due}개 있어요. 복습 탭의 듣기 복습에서 할 수 있어요.`]}
                   primary={{ label: '돌아가기', onClick: leave }} secondary={{ label: '결과 보기', onClick: () => navigate('/analysis/listening') }}>
-                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-fill" role="img" aria-label={`목표 ${target}분 중 ${fmtMinutes(t.minutes)}`}>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-fill" role="img" aria-label={`목표 ${target}분 중 ${fmtGoalMinutes(t.minutes)}`}>
                     <div className="h-full rounded-full bg-track" style={{ width: `${t.goalPct}%` }} />
                   </div>
                   <ul className="flex w-full flex-col overflow-hidden rounded-18 border-2 border-line bg-white">
