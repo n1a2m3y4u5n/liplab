@@ -5756,6 +5756,7 @@ async def listen_stage_content(n: int, current_user=Depends(get_current_user), d
         out["noise_snr_db"] = round(min(_listencur.STAIR["hi"], (srt if srt is not None else 5.0) + 5.0), 1)
         out["conditions"] = list(_listencur.CONVO_CONDITIONS)
         out["room_rt60"] = list(_listencur.ROOM_RT60)
+        out["noise_types"] = list(_listencur.TRAIN_NOISES)
     return out
 
 
