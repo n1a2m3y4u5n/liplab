@@ -13,6 +13,9 @@ import LoadingScreen from '../components/LoadingScreen'
 
 const LING = { m: '음', u: '우', a: '아', i: '이', sh: '쉬', s: '스' }
 const dB = (v) => (v == null ? '–' : `${v > 0 ? '+' : ''}${v} dB`)
+// 두 검사 차이의 최소 감지 변화(MDC95). 문장 단위(낱말 절반 이상) 1-up-1-down 20문장의 개인 내 SD 약 1.1 dB(Jansen 2012) × 2.77 ≈ 3 dB.
+// 검사 절차를 낱말 점수 규칙으로 바꾸면 이 값도 바꾼다(docs/listen-advance-evidence-2026-10.md Q9)
+const MDC_DB = 3.0
 
 function Section({ title, children, note }) {
   return (
@@ -47,7 +50,7 @@ export default function ListeningReport() {
         ) : (
           <>
             <Section title="소음 속 듣기 검사"
-              note="역치는 낱말의 절반쯤을 알아듣는 '말과 소음의 크기 차이'예요. 낮을수록 시끄러운 곳에서 잘 알아들어요. 검사 사이 2 dB 안쪽의 차이는 측정 오차일 수 있어요.">
+              note="역치는 낱말의 절반쯤을 알아듣는 '말과 소음의 크기 차이'예요. 낮을수록 시끄러운 곳에서 잘 알아들어요. 지금 검사 방식에서는 두 검사 사이 3 dB 안쪽의 차이는 측정 오차일 수 있어요. 처음 한두 번은 검사에 익숙해지는 것만으로 1~2 dB 낮아지기도 해요.">
               {tests.length === 0 ? (
                 <p className="text-[14px] text-ink-muted">아직 검사 기록이 없어요. 소리 듣기 5단계(소음 속 듣기)에서 처음 검사를 할 수 있어요.</p>
               ) : (
@@ -63,6 +66,7 @@ export default function ListeningReport() {
                   {change != null && (
                     <p className="text-[15px] font-bold text-track-dark">
                       {change > 0 ? `처음보다 ${change} dB 낮아졌어요` : change < 0 ? `처음보다 ${-change} dB 높아졌어요` : '처음과 같아요'}
+                      {change !== 0 && Math.abs(change) < MDC_DB && <span className="font-normal text-ink-muted"> · 측정 오차 범위 안</span>}
                     </p>
                   )}
                 </>
