@@ -402,3 +402,159 @@ def test_wordtest_and_test_noise_api():
     assert r["noise"] == ["talker2", "babble"]
     assert r["summ"] == ["talker2", 0.75, "ci"]
     assert r["next_t2_form"] != r["next_bb_form"]  # 잡음마다 폼을 따로 번갈아 쓴다
+
+
+# ── 10/7 코드 검토 회귀(docs/review/listen-code-review-2026-10.md) ─────────────────────────────
+
+def test_recommendation_wording():
+    """받침 없음('-')은 글로 적고, 조사 와/과·을/를은 앞 글자 받침에 맞춘다(예전 '받침 -와 ㄴ를')."""
+    t = lambda s, a, b: L.recommendations([{"slot": s, "target": a, "heard": b, "n": 3}])[0]["text"]
+    assert t("coda", "-", "ㄴ").startswith("받침 없음과 받침 ㄴ을 자주 헷갈려요.")
+    assert t("coda", "ㄴ", "-").startswith("받침 ㄴ과 받침 없음을 자주 헷갈려요.")
+    assert t("onset", "ㅅ", "ㄷ").startswith("첫소리 ㅅ과 ㄷ을 자주 헷갈려요.")
+    assert t("vowel", "ㅓ", "ㅗ").startswith("모음 ㅓ와 ㅗ를 자주 헷갈려요.")
+    assert all("-" not in t("coda", a, b).split(".")[0] for a, b in (("-", "ㄱ"), ("ㅁ", "-")))
+    assert L._has_final("없음") and L._has_final("ㄹ") and not L._has_final("ㅏ") and not L._has_final("바")
+
+
+def test_practice_minutes():
+    """시행 간격을 더하고 3분 넘는 쉼은 빼며, 쉰 뒤 첫 시행은 반응 시간(상한 3분)으로 센다."""
+    import datetime as D
+    t0 = D.datetime(2026, 10, 7, 1, 0, 0)
+    ev = [(t0 + D.timedelta(seconds=s), rt) for s, rt in [(0, 20000), (30, 15000), (90, None), (150, 10000),
+                                                         (2000, 40000), (2030, None), (2060, 999999)]]
+    # 첫 시행 반응 시간 20초 + 간격 30·60·60, 1850초 쉼은 빼고 쉰 뒤 첫 시행 반응 시간 40초 + 간격 30·30 = 270초
+    assert L.practice_minutes(ev) == round((20 + 30 + 60 + 60 + 40 + 30 + 30) / 60, 1)
+    assert L.practice_minutes([]) == 0.0
+    assert L.practice_minutes([(t0, None)]) == 0.0
+    assert L.practice_minutes([(t0, 10 ** 9)]) == 3.0           # 반응 시간도 상한
+
+
+def test_word_review_not_blocked_by_non_candidates():
+    """복습 낱말 앞쪽 셋이 이 수준의 정답 후보가 아니어도 뒤의 후보 복습 낱말은 나온다(예전에는 자른 뒤 걸러 하나도 안 나왔다)."""
+    pool = L.word_pool()
+    nb = L._neighbors(pool)
+    cfg = L.WORD_LEVELS[3]
+    cands = {w for w in pool if sum(1 for d, _ in nb.get(w, []) if d <= cfg["hi"]) >= cfg["n"] - 1}
+    non = [w for w in pool if w not in cands][:3]
+    yes = [w for w in pool if w in cands][:2]
+    its = L.word_items(3, pool, "s", n=10, review=non + yes)
+    assert [i["target"] for i in its if i.get("review")] == yes
+
+
+def test_gen_test_items_fixed_and_fast():
+    """일반화 검사 20문항(보기 포함)은 예전 방식(낱말마다 '훈련 풀 + 그 낱말'로 이웃 표를 새로 만듦)과 똑같고, 만드는 데 몇 초씩
+    걸리지 않는다(예전 약 12초 동안 서버가 다른 요청을 받지 못했다)."""
+    import time
+    L._NEIGHBOR_CACHE.clear()
+    pool = L.word_pool(include_gen=True)
+    t = time.perf_counter()
+    items = L.gen_test_items(pool)
+    took = time.perf_counter() - t
+    assert took < 3.0, took
+    train = [w for w in pool if w not in set(L.GEN_WORDS)]
+    naive = []
+    for i, w in enumerate(L.GEN_WORDS):
+        it = L.word_item(w, 2, list(train) + [w], "gen-20261007")
+        if it:
+            naive.append({"key": f"g:{w}", "target": w, "options": it["options"], "n": i + 1})
+    assert items == naive
+    t = time.perf_counter()
+    L.word_items(2, L.word_pool(), "x", n=10)          # 검사 풀을 쓴 뒤에도 훈련 풀 이웃 표를 다시 만들지 않는다
+    assert time.perf_counter() - t < 0.5
+
+
+_FLOW_RACE = r'''
+import asyncio, json
+import httpx
+import main
+out = {}
+
+
+async def run():
+    async with main.app.router.lifespan_context(main.app):
+        tr = httpx.ASGITransport(app=main.app, raise_app_exceptions=False)
+        async with httpx.AsyncClient(transport=tr, base_url="http://t") as c:
+            r = await c.post("/api/auth/register", json={"email": "race@example.com", "username": "race1", "password": "pw-123456",
+                                                         "agree_terms": True, "age_confirmed": True})
+            h = {"Authorization": f"Bearer {r.json()['access_token']}"}
+            its = (await c.get("/api/listen/stage/3", headers=h)).json()["items"]
+            post = lambda it: c.post("/api/listen/answer", json={"stage": 3, "item_key": it["key"], "answer": it["text"]}, headers=h)
+            out["first_pair"] = [x.status_code for x in await asyncio.gather(*[post(it) for it in its[:2]])]
+            out["four"] = [x.status_code for x in await asyncio.gather(*[post(it) for it in its[2:6]])]
+            out["attempts"] = (await c.get("/api/listen/curriculum", headers=h)).json()["stages"][3].get("attempts")
+            from database import AsyncSessionLocal, ListenAttempt
+            from sqlalchemy import select, func
+            async with AsyncSessionLocal() as db:
+                out["rows"] = (await db.execute(select(func.count(ListenAttempt.id)).where(ListenAttempt.stage == 3))).scalar()
+            ts = (await c.post("/api/listen/test/start", json={}, headers=h)).json()
+            it = ts["items"][0]
+            rs = await asyncio.gather(*[c.post("/api/listen/test/answer", json={"session": ts["session"], "item_key": it["key"],
+                                                                              "answer": ""}, headers=h) for _ in range(2)])
+            out["test_dup"] = sorted(x.status_code for x in rs)
+            out["test_dup_same_body"] = rs[0].json()["next_db"] == rs[1].json()["next_db"] and rs[0].json()["snr_db"] == rs[1].json()["snr_db"]
+            it2 = ts["items"][1]
+            a = (await c.post("/api/listen/test/answer", json={"session": ts["session"], "item_key": it2["key"], "answer": it2["text"]}, headers=h)).json()
+            b = await c.post("/api/listen/test/answer", json={"session": ts["session"], "item_key": it2["key"], "answer": it2["text"]}, headers=h)
+            out["test_resend"] = [b.status_code, b.json().get("replayed"), b.json().get("next_db") == a["next_db"], b.json().get("n") == a["n"]]
+            out["test_resend_other"] = (await c.post("/api/listen/test/answer", json={"session": ts["session"], "item_key": it2["key"],
+                                                                                     "answer": "다른 답"}, headers=h)).status_code
+            w = (await c.post("/api/listen/wordtest/start", headers=h)).json()
+            wi = w["items"][0]
+            rs = await asyncio.gather(*[c.post("/api/listen/wordtest/answer", json={"session": w["session"], "item_key": wi["key"],
+                                                                                  "answer": wi["target"]}, headers=h) for _ in range(2)])
+            out["wtest_dup"] = sorted(x.status_code for x in rs)
+            out["wtest_other"] = (await c.post("/api/listen/wordtest/answer", json={"session": w["session"], "item_key": wi["key"],
+                                                                                  "answer": "x"}, headers=h)).status_code
+            async with AsyncSessionLocal() as db:
+                out["test_rows"] = (await db.execute(select(func.count(ListenAttempt.id)).where(ListenAttempt.session == ts["session"]))).scalar()
+                out["wtest_rows"] = (await db.execute(select(func.count(ListenAttempt.id)).where(ListenAttempt.session == w["session"]))).scalar()
+            res = {k: True for k in ["m", "u", "a", "i", "sh", "s"]}
+            ling = lambda: c.post("/api/listen/ling", json={"results": res, "false_alarms": 10**30}, headers=h)
+            rs = await asyncio.gather(ling(), ling())
+            out["ling"] = [x.status_code for x in rs] + [rs[0].json()["summary"]["false_alarms"]]
+            out["ling_attempts"] = (await c.get("/api/listen/curriculum", headers=h)).json()["stages"][0].get("attempts")
+            # 입력 검증
+            s5 = (await c.get("/api/listen/stage/5", headers=h)).json()["items"][0]
+            out["convo_bad_choice"] = (await c.post("/api/listen/answer", json={"stage": 5, "item_key": s5["key"], "choice": 7}, headers=h)).status_code
+            s4 = (await c.get("/api/listen/stage/4", headers=h)).json()["items"][0]
+            out["noise_no_snr"] = (await c.post("/api/listen/answer", json={"stage": 4, "item_key": s4["key"], "answer": "x"}, headers=h)).status_code
+            out["huge_plays"] = (await c.post("/api/listen/answer", json={"stage": 3, "item_key": its[0]["key"], "answer": "x",
+                                                                           "plays": 10**20}, headers=h)).status_code
+            w2 = (await c.get("/api/listen/stage/2", headers=h)).json()["items"][0]
+            a2 = (await c.post("/api/listen/answer", json={"stage": 2, "item_key": w2["key"], "answer": w2["target"], "level": 0}, headers=h)).json()
+            out["word_level0"] = a2.get("level")
+            days = (await c.get("/api/listen/summary", headers=h)).json()["days"]
+            out["days"] = [len(days), days[-1]["n"] > 0, isinstance(days[-1].get("minutes"), (int, float))]
+
+
+asyncio.run(run())
+print("RESULT " + json.dumps(out))
+'''
+
+
+def test_listen_concurrent_answers_and_validation():
+    """같은 사용자의 답이 동시에 와도: 첫 답 두 개가 둘 다 기록되고(예전 둘째 500), 시도 수가 기록 수와 같고(예전 유실),
+    검사·낱말 검사의 같은 문항 두 번은 하나만 남는다(예전 둘 다 들어감). 범위 밖 입력은 400·422."""
+    import subprocess
+    import sys
+    import tempfile
+    here = os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as d:
+        env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", PYTHONDONTWRITEBYTECODE="1", LIPLAB_UNLOCK_ALL="1")
+        env.pop("ANTHROPIC_API_KEY", None)
+        p = subprocess.run([sys.executable, "-c", _FLOW_RACE], cwd=here, env=env, capture_output=True, text=True, timeout=300)
+    line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
+    assert line, f"시나리오 실패:\n{p.stdout[-2000:]}\n{p.stderr[-3000:]}"
+    r = json.loads(line[len("RESULT "):])
+    assert r["first_pair"] == [200, 200]
+    assert r["four"] == [200, 200, 200, 200]
+    assert r["attempts"] == r["rows"] == 6
+    # 같은 답이 두 번 오면 하나만 기록하고 둘 다 같은 결과(멱등), 다른 답이면 409
+    assert r["test_dup"] == [200, 200] and r["test_dup_same_body"] and r["test_rows"] == 2
+    assert r["test_resend"] == [200, True, True, True] and r["test_resend_other"] == 409
+    assert r["wtest_dup"] == [200, 200] and r["wtest_rows"] == 1 and r["wtest_other"] == 409
+    assert r["days"] == [7, True, True]
+    assert r["ling"] == [200, 200, 2] and r["ling_attempts"] == 2
+    assert r["convo_bad_choice"] == 400 and r["noise_no_snr"] == 400 and r["huge_plays"] == 422
+    assert r["word_level0"] == 1

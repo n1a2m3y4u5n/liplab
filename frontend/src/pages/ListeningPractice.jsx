@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { listenAPI, learningAPI } from '../api'
 import ConsonantFeedback from '../components/ConsonantFeedback'
 import MouthAvatar from '../components/MouthAvatar'
-import { loadClip, loadVoices, loadNoise, playClip, lingClip, silence, stopAll, ensureAudio, outputLatencyMs, avOffsetMs, setSimMode } from '../lib/listenAudio'
+import { loadClip, loadClipResult, loadVoices, loadNoise, playClip, lingClip, silence, stopAll, ensureAudio, outputLatencyMs, avOffsetMs, setSimMode } from '../lib/listenAudio'
 import { readSettings, writeSettings, clampGainDb, voiceRoles, voiceFor, fitFramesToAudio, snrLabel, contrastText,
   DEVICES, ROUTES, GAIN_MIN_DB, GAIN_MAX_DB } from '../lib/listenMix'
 import { listenKeyAction, sequenceMs, soundStatusText, fmtDb, fmtDuration, levelChangeText, testStep } from '../lib/listenView'
@@ -40,15 +40,18 @@ function useListenSettings() {
   return [s, save]
 }
 
-/** 글 하나의 소리를 미리 받는다. state: 'loading' | 'ready' | 'missing'. retry를 부르면 다시 받는다(실패는 캐시하지 않는다). */
+/**
+ * 글 하나의 소리를 미리 받는다. state: 'loading' | 'ready' | 'missing'. reason(missing일 때): 'not_prepared' | 'network' | 'decode'
+ * (lib/listenAudio.loadClipResult). retry를 부르면 다시 받는다(실패는 캐시하지 않는다).
+ */
 function useClip(text, voice) {
-  const [st, setSt] = useState({ clip: null, state: 'loading' })
+  const [st, setSt] = useState({ clip: null, state: 'loading', reason: null })
   const [nonce, setNonce] = useState(0)
   useEffect(() => {
     let on = true
-    if (!text) { setSt({ clip: null, state: 'missing' }); return undefined }
-    setSt({ clip: null, state: 'loading' })
-    loadClip(text, voice).then((c) => { if (on) setSt({ clip: c, state: c ? 'ready' : 'missing' }) })
+    if (!text) { setSt({ clip: null, state: 'missing', reason: null }); return undefined }
+    setSt({ clip: null, state: 'loading', reason: null })
+    loadClipResult(text, voice).then((r) => { if (on) setSt({ clip: r.clip, state: r.clip ? 'ready' : 'missing', reason: r.error }) })
     return () => { on = false }
   }, [text, voice, nonce])
   const retry = useCallback(() => setNonce((n) => n + 1), [])
@@ -343,9 +346,15 @@ function Skeleton() {
   )
 }
 
+// 못 받은 이유마다 문구(useClip의 reason). 모르면 예전 문구
+const MISSING_BODY = {
+  not_prepared: '이 소리는 서버에서 아직 만들지 않았어요. 이 문항은 세지 않고 넘어가요.',
+  network: '인터넷 연결이 끊겨 소리를 받지 못했어요. 연결을 확인하고 다시 받아 보세요.',
+  decode: '이 브라우저에서 소리 파일을 열지 못했어요. 다른 브라우저로 열거나 이 문항은 세지 않고 넘어가요.',
+}
 const missingCard = (clip, onSkip) => (
   <StateCard title="이 소리를 아직 들을 수 없어요"
-    body="소리가 아직 준비되지 않았거나 인터넷 연결이 끊겼어요. 다시 받아 보거나, 이 문항은 세지 않고 넘어가요."
+    body={MISSING_BODY[clip.reason] || '소리가 아직 준비되지 않았거나 인터넷 연결이 끊겼어요. 다시 받아 보거나, 이 문항은 세지 않고 넘어가요.'}
     actions={[{ label: '다시 받기', onClick: clip.retry }, { label: '이 문항 넘기기', onClick: onSkip }]} />
 )
 
