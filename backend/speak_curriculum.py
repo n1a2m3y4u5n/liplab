@@ -461,7 +461,8 @@ def sentence_direction(m: Dict) -> float:
     """문장 끝 억양(반음). 클라이언트가 pitch_ref(유성 프레임 전체 중앙값)·pitch_final(마지막 3프레임 중앙값)을 보내면 그것으로,
     없으면(예전 클라이언트) 앞 30% → 뒤 30% 평균. 예전 척도는 마지막 음절의 상승을 앞 음절과 섞어 묻었다. 538 음성 확인 절반에서
     예/아니오 의문문 대 평서문 AUC 0.540 → 0.670, 의문문 올림 판정 0.25 → 0.38, 평서문 내림 판정 0.53 → 0.70
-    (docs/sentence-intonation.md)."""
+    (docs/sentence-intonation.md). 청각장애 화자(AI Hub 608 범주 27, 평서·의문 짝 낭독)에서도 확인 절반 AUC 0.918, 평서문 틀린 올림
+    0.060으로 사전 기준을 넘어 그대로 둔다(docs/speak-loudness-intonation-2026-10.md 7.2절)."""
     ref, fin = m.get("pitch_ref") or 0, m.get("pitch_final") or 0
     if ref > 0 and fin > 0:
         return semitones(ref, fin)

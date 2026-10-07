@@ -1,6 +1,7 @@
 """발성 지표(S24): 음높이 수준·안정도·목소리 질을 numpy만으로 낸다.
 
-docs/speak-voice-quality-2026-10.md의 사전 등록 측정과 앱이 같은 함수를 쓰도록 한곳에 둔다. 정의는 Praat의 표준 지표를 따르되
+docs/speak-voice-quality-2026-10.md의 사전 등록 측정에 쓴 구현이다. 2026-10-07 확인에서 일곱 지표 모두 기준(608 안 CER과 |ρ| ≥ 0.30)에
+못 미쳐 앱에는 연결하지 않았다. 측정 재현용으로 남긴다. 정의는 Praat의 표준 지표를 따르되
 (Boersma 1993 자기상관 음높이·HNR, Praat 매뉴얼의 jitter (local)·shimmer (local), Hillenbrand·Houde 1996의 CPPS) 계산은 단순화했다.
 Praat(parselmouth)는 GPL이라 앱에 넣지 않고, 측정에서만 이 구현과의 순위상관을 확인한다.
 
