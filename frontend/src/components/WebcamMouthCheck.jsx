@@ -325,7 +325,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       )}
       {articulationGuide && (
         <p className="mt-1 text-center text-xs text-sky-700">
-          <b>밖에서 안 보이는 혀 움직임</b> — {articulationGuide}
+          <b>밖에서 안 보이는 혀·목 움직임</b> — {articulationGuide}
         </p>
       )}
       {/* 축 E: 조음 교정 — 관찰 계수(개구·원순·폐쇄)를 목표와 비교해 방향을 제시하고 계수를 노출한다 */}
