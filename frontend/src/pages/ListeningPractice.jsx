@@ -254,8 +254,8 @@ function AxDrill({ data, settings, voices, onProgress, onExit, reload }) {
   const [score, setScore] = useState({ n: 0, c: 0, level: data.level, up: null })
   const t0 = useRef(Date.now())
   const it = items[k]
-  const v1 = voiceFor(voices.train, k, it?.voice_pair?.[0] || 0)
-  const v2 = voiceFor(voices.train, k, it?.voice_pair?.[1] || 0)
+  const v1 = voiceFor(voices.train, k, it?.voice_pair?.[0] || 0, data.voice_mode, data.voice_block)
+  const v2 = voiceFor(voices.train, k, it?.voice_pair?.[1] || 0, data.voice_mode, data.voice_block)
   const a = useClip(it?.first, v1)
   const b = useClip(it?.second, v2)
   useEffect(() => { onProgress(k, items.length) }, [k, items.length, onProgress])
@@ -317,7 +317,7 @@ function WordId({ data, settings, voices, onProgress, onExit, reload }) {
   const [score, setScore] = useState({ n: 0, c: 0, level: data.level })
   const t0 = useRef(Date.now())
   const it = items[k]
-  const voice = voiceFor(voices.train, k)
+  const voice = voiceFor(voices.train, k, 0, data.voice_mode, data.voice_block)
   const target = useClip(it?.target, voice)
   const heard = useClip(res && !res.correct ? picked : null, voice)
   useEffect(() => { onProgress(k, items.length) }, [k, items.length, onProgress])
@@ -408,7 +408,7 @@ function SentenceTask({ data, settings, voices, onProgress, onExit, reload, nois
   const [playFrames, setPlayFrames] = useState(null)
   const t0 = useRef(Date.now())
   const it = items[k]
-  const voice = voiceFor(voices.train, k)
+  const voice = voiceFor(voices.train, k, 0, data.voice_mode, data.voice_block)
   const { clip, state } = useClip(it?.text, voice)
   const nz = useNoise(noisy)
   const av = noisy && cond === 'av'
@@ -421,6 +421,18 @@ function SentenceTask({ data, settings, voices, onProgress, onExit, reload, nois
   }
   useEffect(() => { onProgress(k, items.length) }, [k, items.length, onProgress])
   useEffect(() => { setAnswer(''); setFirst(null); setRetry(null); setPlays(0); setPlayFrames(null); t0.current = Date.now() }, [k])
+  // 정답 글을 보인 뒤 같은 소리(소음 속이면 같은 소음·SNR)를 한 번 다시 들려준다. 글 먼저, 그다음 같은 왜곡된 소리가 가장 근거 있는
+  // 순서다(Davis 2005, Loebach 2010). 첫 답이 다 맞았으면 자동으로 틀지 않는다. 훅은 아래 조기 반환보다 위에 둔다
+  const playRef = useRef(null)
+  const autoRef = useRef(null)
+  const firstAllRight = !!(first?.word_feedback && first.word_feedback.correct_words === first.word_feedback.total_words)
+  const done = !!(first && !first.error && (firstAllRight || retry))
+  useEffect(() => {
+    if (!done || firstAllRight || autoRef.current === k) return undefined
+    autoRef.current = k
+    const t = setTimeout(() => { playRef.current?.() }, 700)
+    return () => clearTimeout(t)
+  }, [done, firstAllRight, k])
   if (!it) {
     const lines = [`${stats.n}문장 중 ${stats.c}문장 통과`]
     if (noisy && stair?.ao?.srt_db != null) lines.push(`소리만 역치 추정 ${stair.ao.srt_db > 0 ? '+' : ''}${stair.ao.srt_db} dB`)
@@ -459,6 +471,7 @@ function SentenceTask({ data, settings, voices, onProgress, onExit, reload, nois
   }
   const allRight = first && first.word_feedback && first.word_feedback.correct_words === first.word_feedback.total_words
   const finished = first && (allRight || retry)
+  playRef.current = play
   return (
     <div className="flex flex-col gap-4">
       <Card className="flex flex-col gap-4">
@@ -601,7 +614,7 @@ function ConvoTask({ data, settings, voices, onProgress, onExit, reload }) {
   const [stats, setStats] = useState({ n: 0, c: 0 })
   const t0 = useRef(Date.now())
   const it = items[k]
-  const voice = voiceFor(voices.train, k)
+  const voice = voiceFor(voices.train, k, 0, data.voice_mode, data.voice_block)
   const line = useClip(it?.line, voice)
   const para = useClip(it?.paraphrase, voice)
   const nz = useNoise(cond === 'noise')
