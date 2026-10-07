@@ -1,0 +1,10 @@
+[
+ {"name": "I1", "set": {"3": {"mouthSmileLeft": 0.05, "mouthSmileRight": 0.05, "mouthPucker": 0.30, "mouthFunnel": 0.12, "jawOpen": 0.15}}},
+ {"name": "I2", "set": {"3": {"mouthSmileLeft": 0.02, "mouthSmileRight": 0.02, "mouthPucker": 0.35, "mouthFunnel": 0.12, "jawOpen": 0.15}}},
+ {"name": "I3", "set": {"3": {"mouthSmileLeft": 0.05, "mouthSmileRight": 0.05, "mouthPucker": 0.30, "mouthFunnel": 0.12, "jawOpen": 0.18}}},
+ {"name": "I1_4f", "set": {"3": {"mouthSmileLeft": 0.05, "mouthSmileRight": 0.05, "mouthPucker": 0.30, "mouthFunnel": 0.12, "jawOpen": 0.15}, "4": {"mouthFunnel": 0.45, "mouthPucker": 0.40}}},
+ {"name": "I1_11", "set": {"3": {"mouthSmileLeft": 0.05, "mouthSmileRight": 0.05, "mouthPucker": 0.30, "mouthFunnel": 0.12, "jawOpen": 0.15}, "11": {"mouthClose": 0.40, "mouthRollLower": 0.25, "mouthShrugLower": 0.15, "mouthPucker": 0.2}}},
+ {"name": "I1_12", "set": {"3": {"mouthSmileLeft": 0.05, "mouthSmileRight": 0.05, "mouthPucker": 0.30, "mouthFunnel": 0.12, "jawOpen": 0.15}, "12": {"jawOpen": 0.06, "mouthUpperUpLeft": 0.0, "mouthUpperUpRight": 0.0}}},
+ {"name": "I1_6", "set": {"3": {"mouthSmileLeft": 0.05, "mouthSmileRight": 0.05, "mouthPucker": 0.30, "mouthFunnel": 0.12, "jawOpen": 0.15}, "6": {"mouthUpperUpLeft": 0.12, "mouthUpperUpRight": 0.12}}},
+ {"name": "I1_14", "set": {"3": {"mouthSmileLeft": 0.05, "mouthSmileRight": 0.05, "mouthPucker": 0.30, "mouthFunnel": 0.12, "jawOpen": 0.15}, "14": {"jawOpen": 0.06, "mouthLowerDownLeft": 0.0, "mouthLowerDownRight": 0.0}}}
+]
