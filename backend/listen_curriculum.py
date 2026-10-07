@@ -1022,3 +1022,41 @@ def inventory_texts() -> List[str]:
     for c in CONVO_ITEMS:
         texts += [c["line"], c["paraphrase"]]
     return list(dict.fromkeys(texts))
+
+# ── 오늘의 듣기(하루 묶음 회기, 고도화 방안 P4) ──────────────────────────────
+# 권장 용량은 하루 15~20분, 주 5일이고 결과를 좌우하는 것은 꾸준히 하는 비율이다(docs/auditory-training-evidence-2026-10.md 4절).
+# 단계마다 따로 들어가는 대신 한 회기에 약한 대조 표적 문항, 문장(소음 속 또는 조용함), 대화를 정해진 비율로 섞는다.
+# 블록마다 대략의 분(문항당 초 × 문항 수)을 붙여 15분 안팎이 되게 한다. 순수 함수: 단계 상태만 받는다.
+TODAY_SECONDS = {"ling": 70, "ax": 12, "word_id": 15, "sentence": 40, "noise": 40, "convo": 45}
+
+
+def today_plan(status: Dict[int, str], ling_done_today: bool, target_min: float = 15.0) -> List[Dict]:
+    """status: {단계: 'locked'|'unlocked'|'in_progress'|'mastered'}. 반환: [{stage, mode, n, minutes, why}] 순서대로.
+    0) 오늘 Ling 점검을 안 했으면 먼저(기기 점검), 1) 수준 단계(1·2) 중 아직 숙달 전인 앞 단계, 둘 다 숙달이면 2단계 유지 연습,
+    2) 문장: 4단계가 열렸으면 소음 속, 아니면 3단계가 열렸으면 조용한 문장, 3) 5단계가 열렸으면 대화. 남는 시간은 문장 블록에 더한다."""
+    open_ = lambda n: status.get(n, "locked") != "locked"
+    plan: List[Dict] = []
+    if not ling_done_today:
+        plan.append({"stage": 0, "mode": "ling", "n": 8, "why": "오늘 기기 점검"})
+    lev = next((n for n in (1, 2) if open_(n) and status.get(n) != "mastered"), None)
+    if lev is None and open_(2):
+        lev = 2
+    if lev is not None:
+        mode = "ax" if lev == 1 else "word_id"
+        plan.append({"stage": lev, "mode": mode, "n": 12 if lev == 1 else 10, "why": "약한 소리 짝"})
+    sent = 4 if open_(4) else 3 if open_(3) else None
+    if sent is not None:
+        plan.append({"stage": sent, "mode": "noise" if sent == 4 else "sentence", "n": 8, "why": "소음 속 문장" if sent == 4 else "문장"})
+    if open_(5):
+        plan.append({"stage": 5, "mode": "convo", "n": 4, "why": "대화 듣기"})
+    for b in plan:
+        b["minutes"] = round(b["n"] * TODAY_SECONDS[b["mode"]] / 60 if b["mode"] != "ling" else TODAY_SECONDS["ling"] / 60, 1)
+    total = sum(b["minutes"] for b in plan)
+    # 남는 시간은 문장 블록(없으면 수준 블록)에 문항을 더해 채운다(최대 2배)
+    fill = next((b for b in plan if b["mode"] in ("noise", "sentence")), None) or next((b for b in plan if b["mode"] in ("ax", "word_id")), None)
+    if fill and total < target_min:
+        per = TODAY_SECONDS[fill["mode"]] / 60
+        extra = min(fill["n"], int((target_min - total) / per))
+        fill["n"] += extra
+        fill["minutes"] = round(fill["n"] * per, 1)
+    return plan

@@ -567,3 +567,15 @@ def test_listen_concurrent_answers_and_validation():
     assert r["ling"] == [200, 200, 2] and r["ling_attempts"] == 2
     assert r["convo_bad_choice"] == 400 and r["noise_no_snr"] == 400 and r["huge_plays"] == 422
     assert r["word_level0"] == 1
+
+
+def test_today_plan():
+    st = {0: "mastered", 1: "in_progress", 2: "locked", 3: "locked", 4: "locked", 5: "locked"}
+    p = L.today_plan(st, ling_done_today=False)
+    assert [b["mode"] for b in p] == ["ling", "ax"]
+    assert p[1]["n"] > 12                       # 남는 시간을 수준 블록에 채운다
+    st = {0: "mastered", 1: "mastered", 2: "mastered", 3: "mastered", 4: "in_progress", 5: "unlocked"}
+    p = L.today_plan(st, ling_done_today=True)
+    assert [b["mode"] for b in p] == ["word_id", "noise", "convo"]
+    assert 12 <= sum(b["minutes"] for b in p) <= 17
+    assert L.today_plan({0: "unlocked"}, ling_done_today=True) == []

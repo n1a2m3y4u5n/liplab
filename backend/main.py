@@ -6385,6 +6385,25 @@ def _listen_wordtests(rows: list) -> list:
     return [{**s, "accuracy": round(s["correct"] / s["n"], 3), "complete": s["n"] >= len(_listencur.GEN_WORDS)} for s in by.values()]
 
 
+@app.get("/api/listen/today")
+async def listen_today(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """오늘의 듣기 회기 계획(listen_curriculum.today_plan). 화면이 블록마다 /api/listen/stage/{n}을 받아 앞에서 n문항만 낸다.
+    오늘 이미 한 시행 수와 분도 함께 준다(요약과 같은 추정)."""
+    sp_map = await _listen_progress_map(current_user.id, db)
+    status = {}
+    for meta in _listencur.stages_overview():
+        n = meta["stage"]
+        sp = sp_map.get(n)
+        status[n] = "locked" if not _listen_open(n, sp_map, current_user) else (sp.status if sp else "unlocked")
+    today = _kst_today()
+    ling = await _listen_attempts(current_user.id, db, stage=0, mode="ling", limit=1, newest_first=True)
+    ling_today = bool(ling) and _listen_day(ling[0]) == today
+    summ_days = (await listen_summary(current_user, db))["days"]
+    today_row = next((d for d in summ_days if d.get("date") == today.isoformat()), {})
+    return {"blocks": _listencur.today_plan(status, ling_today), "target_min": 15,
+            "done_today": {"n": today_row.get("n", 0), "minutes": today_row.get("minutes")}}
+
+
 @app.get("/api/listen/summary")
 async def listen_summary(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """소리 듣기 결과: 최근 Ling 점검, 검사 역치 추이, 훈련 역치(소리만·소리+입모양)와 시청각 이득, 자주 헷갈린 소리와 다음 연습 제안,
