@@ -30,12 +30,13 @@ cat corpus/*/*.lab | tr ' ' '\n' | sed '/^$/d' | sort -u > words.txt
 cut -f1 "$DICT" | awk '{print $1}' | sort -u > dict_words.txt
 comm -23 words.txt dict_words.txt > oov.txt
 echo "낱말 $(wc -l < words.txt), 사전에 없음 $(wc -l < oov.txt)"
-: > oov.dict
-if [ -s oov.txt ]; then
-  if $MFA g2p oov.txt korean_mfa oov.dict -j 8 > g2p.log 2>&1 && [ -s oov.dict ]; then echo "MFA_G2P_OK $(wc -l < oov.dict)"
-  else tail -n 5 g2p.log; echo "MFA_G2P_WARN"; fi
+# micromamba run은 작업 폴더를 바꿀 수 있어 모든 경로를 절대 경로로 넘긴다(사후 변경 2)
+if [ -s $D/oov.txt ] && ! grep -q "^G2P_DONE" $D/g2p.done 2>/dev/null; then
+  : > $D/oov.dict
+  if $MFA g2p $D/oov.txt korean_mfa $D/oov.dict -j 8 > $D/g2p.log 2>&1 && [ -s $D/oov.dict ]; then echo "MFA_G2P_OK $(wc -l < $D/oov.dict)"; echo G2P_DONE > $D/g2p.done
+  else tail -n 5 $D/g2p.log; echo "MFA_G2P_WARN"; fi
 fi
-cat "$DICT" oov.dict > combined.dict
-$MFA align --clean -j 8 --beam 100 --retry_beam 400 corpus combined.dict korean_mfa aligned > align.log 2>&1 || { tail -n 20 align.log; fail align; }
-echo "TextGrid $(find aligned -name '*.TextGrid' | wc -l)"
+cat "$DICT" $D/oov.dict > $D/combined.dict
+$MFA align --clean -j 6 --beam 100 --retry_beam 400 $D/corpus $D/combined.dict korean_mfa $D/aligned > $D/align.log 2>&1 || { tail -n 20 $D/align.log; fail align; }
+echo "TextGrid $(find $D/aligned -name '*.TextGrid' | wc -l)"
 echo "MFA_ALIGN_OK"
