@@ -142,7 +142,7 @@ def test_counterbalanced_order_and_export_v2():
     prog = r["progression"]
     assert prog["available"] and prog["homogeneous"] and prog["order"] == "B→A", prog
     ex = r["export_v2"]
-    assert ex["version"] == 5 and ex["flag"] == 20
+    assert ex["version"] == 6 and ex["flag"] == 20
     row = ex["row"]
     # 검사 전 연습 시행 수(문맥 추론 1회)와 연습 뒤 사전 표시(기준 20회 미만이라 False), 초기화 전이라 초기화 날 없음
     assert [t["trials_before"] for t in row["tests"]] == [1, 1]
