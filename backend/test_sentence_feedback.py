@@ -121,3 +121,36 @@ def test_practice_only_answers_are_logged_separately():
     assert len(r["logs"]) == 2
     assert r["logs"][0][0] == "consonant_retry" and r["logs"][0][1] == 100.0 and r["logs"][0][2:] == [2, 4200, 3, 3]
     assert r["logs"][1][0] is None   # 알 수 없는 사유는 비운다
+
+
+def test_merged_vowel_spellings_count_as_correct():
+    # 소리로 가르지 못하는 모음 표기(ㅐ·ㅔ, 이에요·이예요, ㅙ·ㅚ·ㅞ, 자음 뒤 ㅖ, 첫머리 아닌 의)는 맞힌 것
+    for target, answer in [("물 좀 주세요", "물 좀 주새요"), ("저는 학생이에요", "저는 학생이예요"),
+                           ("이건 의자예요", "이건 의자에요"), ("아니에요", "아니예요"), ("안 돼요", "안 되요"),
+                           ("계속 가요", "게속 가요"), ("우리의 집", "우리이 집")]:
+        r = consonant_feedback(target, answer)
+        assert r["correct_words"] == r["total_words"], (target, answer)
+
+
+def test_word_initial_vowels_still_differ():
+    # 낱말 첫머리의 예/에, 의/이는 소리로 갈리므로 그대로 틀린 것
+    assert consonant_feedback("예", "에")["correct_words"] == 0
+    assert consonant_feedback("의사", "이사")["correct_words"] == 0
+    assert consonant_feedback("물 좀 주세요", "물 좀 주시요")["correct_words"] == 2   # 다른 모음은 여전히 틀림
+
+
+def test_spacing_is_ignored():
+    # 띄어쓰기를 틀려도 낱말을 소리대로 다 적었으면 맞힌 것(예전에는 붙여 쓴 낱말이 모두 틀림)
+    for target, answer in [("가을 산에서 밤을 주웠어", "가을산에서 밤을 주웠어"), ("물 좀 주세요", "물좀 주세요"),
+                           ("내일 다시 올게요", "내일다시 올께요"), ("같이 갈 수 있어요", "같이 갈수 있어요"),
+                           ("책을 읽고 있어요", "책을 읽고있어요"), ("국물이 짜요", "궁물이 짜요")]:
+        r = consonant_feedback(target, answer)
+        assert r["correct_words"] == r["total_words"], (target, answer)
+
+
+def test_order_and_missing_words_still_count():
+    r = consonant_feedback("물 좀 주세요", "좀 물 주세요")
+    assert r["correct_words"] == 2          # 순서가 바뀐 낱말 하나는 세지 않는다
+    assert consonant_feedback("물 좀 주세요", "")["correct_words"] == 0
+    r = consonant_feedback("오늘 날씨가 좋아요", "날씨가")
+    assert [w["correct"] for w in r["words"]] == [False, True, False]
