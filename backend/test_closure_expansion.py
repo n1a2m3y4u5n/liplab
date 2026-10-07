@@ -54,8 +54,12 @@ def test_unreviewed_items_are_served_but_flagged():
     with open(C._APPROVED_PATH, encoding="utf-8") as f:
         approved = {(c["display"], c["answer"]) for c in json.load(f)["closures"]}
     for c in new:
-        # 사람이 승인한 것처럼 approved.json에 넣지 않았고, 서빙되는 쪽에는 검수 대기 표시가 붙는다
+        # 사람이 승인한 것처럼 approved.json에 넣지 않았고, 서빙되는 쪽에는 검수 대기 표시가 붙는다.
+        # 사람이 읽고 뺀 문항(CLOSURE_EXCLUDED, 10/7 g3934e0dd)은 파일에 남지만 서빙되지 않는다
         assert (c["display"], c["answer"]) not in approved, c["id"]
+        if c["id"] in C.CLOSURE_EXCLUDED:
+            assert c["id"] not in served, c["id"]
+            continue
         assert c["id"] in served and served[c["id"]].get("review") == "pending", c["id"]
         # id는 승인할 때 붙는 내용 기반 id와 같아 승인 뒤에도 답 기록이 이어진다
         assert c["id"] == CR.closure_id(c)
