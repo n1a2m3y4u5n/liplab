@@ -5717,14 +5717,25 @@ async def listen_stage_content(n: int, current_user=Depends(get_current_user), d
         level = _listencur.next_level(hist, n)
         out["level"] = level
         out["levels"] = _listencur.LEVELED[n]["levels"]
+        pick = _listencur.pick_mode_for(current_user.id)
+        out["pick_mode"] = pick
         if n == 1:
-            out["items"] = _listencur.ax_items(level, f"{seed}:{len(rows)}", n=12, multi_voice=True)
+            ling = await _listen_last_ling(current_user.id, db)
+            stats = _listencur.ax_pair_stats([(r.item_key, bool(r.correct)) for r in rows])
+            out["items"] = _listencur.ax_items(level, f"{seed}:{len(rows)}", n=12, multi_voice=True, pick=pick, stats=stats,
+                                               kind_scale=_listencur.ling_avoid_kinds(ling))
         else:
             weak = [r.target for r in reversed(rows[-40:]) if not r.correct and r.target]
-            out["items"] = _listencur.word_items(level, _listen_word_pool(), f"{seed}:{len(rows)}", n=10, weak=weak)
+            wrong = [(r.target, r.answer) for r in rows if r.correct is False and r.target and r.answer]
+            focus = _listencur.tally_confusions(wrong[-200:])[:3]
+            review = _listencur.due_reviews([(r.target, bool(r.correct), _listen_day(r)) for r in rows if r.target], _kst_today())
+            out["items"] = _listencur.word_items(level, _listen_word_pool(), f"{seed}:{len(rows)}", n=10, weak=weak, pick=pick,
+                                                 focus=focus, review=review)
     elif n == 3:
-        recent = [r.item_key[2:] for r in await _listen_attempts(current_user.id, db, stage=3, limit=40, newest_first=True)]
-        out["items"] = _listencur.sentence_items(f"3:{seed}", n=8, recent=recent)
+        rows3 = await _listen_attempts(current_user.id, db, stage=3)
+        recent = [r.item_key[2:] for r in rows3[-40:]]
+        review = _listencur.due_reviews([(r.item_key[2:], bool(r.correct), _listen_day(r)) for r in rows3], _kst_today())
+        out["items"] = _listencur.sentence_items(f"3:{seed}", n=8, recent=recent, review=review)
     elif n == 4:
         rows = await _listen_attempts(current_user.id, db, stage=4, mode="noise")
         recent = [r.item_key[2:] for r in rows[-40:]]
@@ -5744,10 +5755,26 @@ async def listen_stage_content(n: int, current_user=Depends(get_current_user), d
         # 잡음 조건은 학습자의 소음 속 역치보다 5 dB 넉넉하게(역치 모르면 +10 dB)
         out["noise_snr_db"] = round(min(_listencur.STAIR["hi"], (srt if srt is not None else 5.0) + 5.0), 1)
         out["conditions"] = list(_listencur.CONVO_CONDITIONS)
+        out["room_rt60"] = list(_listencur.ROOM_RT60)
     return out
 
 
 _LISTEN_WORD_POOL = None
+
+
+def _listen_day(r):
+    """시행의 KST 날짜(간격 복습)."""
+    from datetime import timedelta as _td
+    return (r.created_at + _td(hours=9)).date() if r.created_at else _kst_today()
+
+
+async def _listen_last_ling(user_id: int, db):
+    """가장 최근 Ling 점검 결과 {소리: 들렸는가} 또는 None."""
+    last = await _listen_attempts(user_id, db, stage=0, mode="ling", limit=8, newest_first=True)
+    if not last:
+        return None
+    sess = last[0].session
+    return {r.item_key[5:]: bool(r.correct) for r in last if r.session == sess and r.item_key != "ling:silent"}
 
 
 def _listen_word_pool():
@@ -5773,6 +5800,7 @@ class ListenAnswer(BaseModel):
     route: Optional[str] = Field(None, max_length=20)
     output_latency_ms: Optional[int] = Field(None, ge=0, le=5000)
     av_offset_ms: Optional[int] = Field(None, ge=0, le=1000)
+    pick: Optional[str] = Field(None, max_length=12)       # 출제 방식(targeted|uniform), 표적 출제 비교용
     practice: bool = False                                # 자음 단서를 본 뒤 다시 쓴 답: 점수만 주고 세지 않는다
 
 
@@ -5855,6 +5883,7 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
                          correct=correct, score=score, level=level, snr_db=snr, condition=cond, voice=req.voice,
                          plays=req.plays, repairs=req.repairs, rt_ms=req.rt_ms, route=req.route,
                          output_latency_ms=req.output_latency_ms, av_offset_ms=req.av_offset_ms,
+                         pick_mode=req.pick if req.pick in _listencur.PICK_MODES else None,
                          session=None if counted else _LISTEN_PRACTICE))
     res["counted"] = counted
     if counted:

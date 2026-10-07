@@ -246,3 +246,43 @@ def test_listen_api_flow():
     assert r["test_dup"] == 409 and r["s4_after"] is False and r["next_form"] != r["test_form"]
     assert r["s5_locked"] == "unlocked"
     assert r["summary"][0] == 2 and r["summary"][1] == 1 and r["summary"][2] == ["s"] and r["summary"][3] == 7
+
+
+def test_targeted_picking_and_ling_scale():
+    assert {L.pick_mode_for(i) for i in range(20)} == set(L.PICK_MODES)
+    assert L.pick_mode_for(7) == L.pick_mode_for(7)
+    # 0.75 근처 짝이 거의 다 맞히는 짝보다 자주 나온다
+    st = {"4:사|자": (20, 15), "4:각|갑": (20, 20)}
+    its = L.ax_items(4, "s", n=400, pick="targeted", stats=st)
+    diff = [i for i in its if i["first"] != i["second"]]
+    n_mid = sum(1 for i in diff if {i["first"], i["second"]} == {"사", "자"})
+    n_easy = sum(1 for i in diff if {i["first"], i["second"]} == {"각", "갑"})
+    assert n_mid > n_easy and all(i["pick"] == "targeted" for i in its)
+    assert L.ax_pair_stats([("ax:4:사|자", True), ("ax:4:자|사", False), ("ax:4:사|사", True)]) == {"4:사|자": (2, 1)}
+    # 쉬·스가 모두 안 들리면 마찰음 짝을 내지 않는다
+    assert L.ling_avoid_kinds({"sh": False, "s": False}) == {"fricative": 0.0}
+    assert L.ling_avoid_kinds({"sh": True, "s": False}) == {"fricative": 0.5}
+    its = L.ax_items(4, "s", n=60, kind_scale={"fricative": 0.0})
+    assert all(i["kind"] != "fricative" for i in its)
+
+
+def test_word_focus_and_review():
+    pool = L.word_pool()
+    f = [{"slot": "onset", "target": "ㅂ", "heard": "ㅍ"}]
+    its = L.word_items(3, pool, "s", n=10, pick="targeted", focus=f)
+    foc = [i for i in its if i.get("focus")]
+    assert 1 <= len(foc) <= 5
+    for i in foc:
+        assert any(len(L.contrast_of(i["target"], o)) == 1 and {L.contrast_of(i["target"], o)[0]["target"], L.contrast_of(i["target"], o)[0]["heard"]} == {"ㅂ", "ㅍ"}
+                   for o in i["options"] if o != i["target"])
+    assert not any(i.get("focus") for i in L.word_items(3, pool, "s", n=10, pick="uniform", focus=f))
+    rv = L.word_items(2, pool, "s", n=10, review=[pool[5]])
+    assert rv[0]["target"] == pool[5] or not rv[0].get("review")   # 복습 낱말이 2수준 후보면 맨 앞
+    import datetime as D
+    t = D.date(2026, 10, 7)
+    h = [("a", False, t - D.timedelta(2)), ("b", False, t), ("c", False, t - D.timedelta(5)), ("c", True, t - D.timedelta(4)),
+         ("d", False, t - D.timedelta(5)), ("d", True, t - D.timedelta(4)), ("d", True, t - D.timedelta(1)),
+         ("e", False, t - D.timedelta(3)), ("e", True, t - D.timedelta(1))]
+    assert L.due_reviews(h, t) == ["c", "a"]          # b는 오늘 틀림, d는 두 번 맞혀 빠짐, e는 맞힌 지 1일이라 아직
+    s = L.sentence_items("x", n=8, review=["t005", "t006", "t007"])
+    assert [i["id"] for i in s[:2]] == ["t005", "t006"] and s[0]["review"] and "review" not in s[2]

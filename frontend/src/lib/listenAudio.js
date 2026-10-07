@@ -29,20 +29,28 @@ export function audioContext() {
     limiter.attack.value = 0.002
     limiter.release.value = 0.1
     master = ctx.createGain()
-    master.gain.value = isMuted() ? 0 : 1
-    limiter.connect(master).connect(ctx.destination)
+    limiter.connect(master)
+    syncMute()
   }
   return ctx
 }
 
-// 자동 점검(브라우저 테스트)용 음소거: window.__liplabMute = true 또는 sessionStorage 'liplab_mute' = '1'이면 출력 이득 0.
-// 재생 흐름·길이·끝남 이벤트는 그대로 돈다. 학습자 화면에는 이 스위치가 없다.
+// 자동 점검(브라우저 테스트)용 음소거: window.__liplabMute = true 또는 localStorage·sessionStorage 'liplab_mute' = '1'이면 스피커에
+// 아예 잇지 않는다(이득 0만으로 두지 않음). 재생 흐름·길이·끝남 이벤트는 그대로 돈다. 학습자 화면에는 이 스위치가 없다.
 let master = null
-function isMuted() {
-  try { return window.__liplabMute === true || window.sessionStorage?.getItem('liplab_mute') === '1' } catch { return window.__liplabMute === true }
+let wired = false
+export function isMuted() {
+  try {
+    return window.__liplabMute === true || window.localStorage?.getItem('liplab_mute') === '1'
+      || window.sessionStorage?.getItem('liplab_mute') === '1'
+  } catch { return window.__liplabMute === true }
 }
 function syncMute() {
-  if (master) master.gain.value = isMuted() ? 0 : 1
+  if (!master || !ctx) return
+  const mute = isMuted()
+  master.gain.value = mute ? 0 : 1
+  if (mute && wired) { try { master.disconnect() } catch { /* 이미 끊김 */ } wired = false }
+  if (!mute && !wired) { master.connect(ctx.destination); wired = true }
 }
 
 async function resume() {
@@ -190,6 +198,47 @@ export async function phoneClip(clip) {
   } catch { return null }
 }
 
+const roomCache = new WeakMap()
+
+/**
+ * 울리는 방 소리판(5단계 '울리는 방'). 지수 감쇠 잡음 임펄스 응답(RT60에서 60 dB 감쇠, 길이 RT60 × 1.2)을 오프라인으로 걸고, 직접음과
+ * 잔향음 에너지를 같게 섞는다. 크기는 다시 활성 음성 레벨로 잰다. 합성 임펄스 응답이라 실제 방의 초기 반사는 재현하지 않는다.
+ */
+export async function roomClip(clip, rt60 = 0.5) {
+  if (!clip?.buffer) return null
+  const byClip = roomCache.get(clip) || new Map()
+  if (byClip.has(rt60)) return byClip.get(rt60)
+  try {
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext
+    const sr = clip.buffer.sampleRate
+    const irLen = Math.round(sr * rt60 * 1.2)
+    const oc = new OAC(1, clip.buffer.length + irLen, sr)
+    const ir = oc.createBuffer(1, irLen, sr)
+    const h = ir.getChannelData(0)
+    let e = 0
+    for (let i = 0; i < irLen; i += 1) {
+      h[i] = (Math.random() * 2 - 1) * Math.exp(-6.91 * (i / sr) / rt60)
+      e += h[i] * h[i]
+    }
+    const k = e > 0 ? 1 / Math.sqrt(e) : 1   // 잔향음 에너지 = 직접음 에너지
+    for (let i = 0; i < irLen; i += 1) h[i] *= k
+    const src = oc.createBufferSource()
+    src.buffer = clip.buffer
+    const conv = oc.createConvolver()
+    conv.normalize = false
+    conv.buffer = ir
+    src.connect(conv).connect(oc.destination)
+    src.connect(oc.destination)
+    src.start(0)
+    const out = await oc.startRendering()
+    const x = out.getChannelData(0)
+    const rc = { buffer: out, rms: activeLevel(x, sr) || rmsOf(x), url: null, duration_ms: Math.round(out.duration * 1000) }
+    byClip.set(rt60, rc)
+    roomCache.set(clip, byClip)
+    return rc
+  } catch { return null }
+}
+
 let current = null
 /** 지금 재생 중인 소리를 멈춘다. */
 export function stopAll() {
@@ -212,6 +261,11 @@ export async function playClip(clip, opts = {}) {
   if (phone && rate === 1) {
     const pc = await phoneClip(clip)
     if (pc) { clip = pc; phone = false }
+  }
+  // 울리는 방: 미리 만든 잔향판(천천히 재생에는 걸지 않는다)
+  if (opts.room && rate === 1) {
+    const rc = await roomClip(clip, opts.room)
+    if (rc) clip = rc
   }
   const lv = mixLevels(gainDb, noise && snrDb != null ? snrDb : null)
   const out = c.createGain()
@@ -244,6 +298,7 @@ export async function playClip(clip, opts = {}) {
   const startAt = c.currentTime + leadMs / 1000
   if (rate !== 1 && clip.url) {
     el = new Audio(clip.url)
+    if (isMuted()) { el.muted = true; el.volume = 0 }
     el.preservesPitch = true
     el.playbackRate = rate
     el.crossOrigin = 'anonymous'

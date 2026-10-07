@@ -276,6 +276,7 @@ class ListenAttempt(Base):
     route = Column(String(20), nullable=True)      # 듣는 길: stream|speaker|earphone (데이터 품질용)
     output_latency_ms = Column(Integer, nullable=True)   # 브라우저가 알린 출력 지연(블루투스 포함일 수 있음, 분석 공변량)
     av_offset_ms = Column(Integer, nullable=True)        # 소리+입모양 시행에서 입모양을 늦춘 시간
+    pick_mode = Column(String(12), nullable=True)        # 출제 방식(targeted|uniform), 표적 출제 비교(listen_curriculum.pick_mode_for)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 
@@ -675,6 +676,7 @@ class ConsentRecord(Base):
 _ADD_COLUMNS = (
     ("listen_attempts", "output_latency_ms", "INTEGER"),
     ("listen_attempts", "av_offset_ms", "INTEGER"),
+    ("listen_attempts", "pick_mode", "VARCHAR(12)"),
     ("bookmarks", "domain", "VARCHAR(12) DEFAULT 'read'"),
     # SM-2 경량 스케줄링 컬럼
     ("review_items", "ease_factor", "FLOAT DEFAULT 2.5"),

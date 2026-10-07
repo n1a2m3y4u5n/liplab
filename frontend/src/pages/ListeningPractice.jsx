@@ -269,7 +269,8 @@ function AxDrill({ data, settings, voices, onProgress, onExit, reload }) {
   const play = async () => { setBusy(true); await playPair(a.clip, b.clip, { gainDb: settings.gainDb }); setBusy(false); setPlays((p) => p + 1) }
   const answer = async (same) => {
     try {
-      const r = await listenAPI.answer({ stage: 1, item_key: it.key, same, plays, rt_ms: Date.now() - t0.current, voice: v1, route: settings.route })
+      const r = await listenAPI.answer({ stage: 1, item_key: it.key, same, plays, rt_ms: Date.now() - t0.current, voice: v1, route: settings.route,
+        pick: it.pick })
       setRes(r)
       setScore((s) => ({ n: s.n + 1, c: s.c + (r.correct ? 1 : 0), level: r.level ?? s.level, up: r.level_changed ? r.level : null }))
     } catch { setRes({ error: true }) }
@@ -332,7 +333,7 @@ function WordId({ data, settings, voices, onProgress, onExit, reload }) {
     setPicked(w)
     try {
       const r = await listenAPI.answer({ stage: 2, item_key: it.key, answer: w, level: it.level, plays, rt_ms: Date.now() - t0.current,
-        voice, route: settings.route })
+        voice, route: settings.route, pick: it.pick })
       setRes(r)
       setScore((s) => ({ n: s.n + 1, c: s.c + (r.correct ? 1 : 0), level: r.level ?? s.level }))
     } catch { setRes({ error: true }) }
@@ -340,7 +341,7 @@ function WordId({ data, settings, voices, onProgress, onExit, reload }) {
   return (
     <div className="flex flex-col gap-4">
       <Card className="flex flex-col gap-4">
-        <p className="text-[13px] font-bold text-track">수준 {score.level} / {data.levels} · 보기 {it.options.length}개</p>
+        <p className="text-[13px] font-bold text-track">수준 {score.level} / {data.levels} · 보기 {it.options.length}개{it.review ? ' · 다시 보는 낱말' : ''}</p>
         <p className="text-[18px] font-bold text-ink">들은 낱말을 골라요</p>
         <PlayButton onClick={() => play()} busy={busy} disabled={target.state !== 'ready'} label={target.state === 'ready' ? '낱말 듣기' : '소리 받는 중…'} plays={plays} />
         <div className={`grid gap-2 ${it.options.length > 2 ? 'grid-cols-2' : 'grid-cols-2'}`}>
@@ -490,6 +491,7 @@ function SentenceTask({ data, settings, voices, onProgress, onExit, reload, nois
           </div>
         )}
         <p className="text-[18px] font-bold text-ink">문장을 듣고 들은 대로 써요</p>
+        {it.review && <p className="-mt-2 text-[12px] font-bold text-track">며칠 전에 놓친 문장을 다시 들어요</p>}
         {av && (
           <div className="overflow-hidden rounded-16 border-2 border-line">
             <MouthAvatar frames={playFrames} once height={null} className="h-[160px] lg:h-[220px]" showTalker={false} />
@@ -612,7 +614,7 @@ function NoiseStage({ data, settings, voices, onProgress, onExit, reload }) {
 
 // ── 5단계: 대화 듣기 ─────────────────────────────────────────
 
-const COND_LABEL = { quiet: '조용함', noise: '소음', phone: '전화' }
+const COND_LABEL = { quiet: '조용함', noise: '소음', phone: '전화', room: '울리는 방' }
 
 function ConvoTask({ data, settings, voices, onProgress, onExit, reload }) {
   const items = data.items || []
@@ -633,7 +635,10 @@ function ConvoTask({ data, settings, voices, onProgress, onExit, reload }) {
   useEffect(() => { setRes(null); setRepairs([]); setPlays(0); t0.current = Date.now() }, [k])
   if (!it) return <Done title="이번 대화를 마쳤어요" lines={[`${stats.n}문항 중 ${stats.c}문항 맞음`]} onMore={reload} onExit={onExit} />
   if (line.state === 'missing') return <Missing onSkip={() => setK(k + 1)} />
-  const opts = { gainDb: settings.gainDb, phone: cond === 'phone', snrDb: cond === 'noise' ? data.noise_snr_db : null, noise: cond === 'noise' ? nz.noise : null }
+  // 울리는 방은 문항마다 잔향 시간을 돌린다(여러 방에서 훈련할 때 새 방으로 옮겨 갔다)
+  const rt = (data.room_rt60 || [0.5])[k % (data.room_rt60?.length || 1)]
+  const opts = { gainDb: settings.gainDb, phone: cond === 'phone', snrDb: cond === 'noise' ? data.noise_snr_db : null, noise: cond === 'noise' ? nz.noise : null,
+    room: cond === 'room' ? rt : null }
   const play = async (clip, extra = {}, repair = null) => {
     setBusy(true)
     if (repair) setRepairs((r) => [...r, repair])
