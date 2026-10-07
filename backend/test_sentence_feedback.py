@@ -154,3 +154,15 @@ def test_order_and_missing_words_still_count():
     assert consonant_feedback("물 좀 주세요", "")["correct_words"] == 0
     r = consonant_feedback("오늘 날씨가 좋아요", "날씨가")
     assert [w["correct"] for w in r["words"]] == [False, True, False]
+
+
+def test_digits_in_answer_are_read_as_words():
+    # 정답은 한글 수, 답은 숫자: 문맥 읽기·한자어·고유어 가운데 맞는 쪽으로 본다
+    for target, answer in [("여섯 시 오십 분까지 극장 앞으로 와", "6시 50분까지 극장 앞으로 와"),
+                           ("회의는 삼 층 큰 방에서 해요", "회의는 3층 큰 방에서 해요"),
+                           ("부산행 기차는 칠 번 타는 곳에서 출발합니다", "부산행 기차는 7번 타는 곳에서 출발합니다"),
+                           ("하루 세 번 드세요", "하루 3번 드세요"), ("물 한 잔 주세요", "물 1잔 주세요")]:
+        r = consonant_feedback(target, answer)
+        assert r["correct_words"] == r["total_words"], (target, answer)
+    r = consonant_feedback("오 분 빨라요", "6분 빨라요")
+    assert [w["correct"] for w in r["words"]] == [False, True, True]   # 다른 수는 틀림

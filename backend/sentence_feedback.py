@@ -121,6 +121,26 @@ def _match_words(c_words: List[str], answer: str) -> List[bool]:
     return hit
 
 
+_DIGITS = re.compile(r"\d+")
+
+
+def _number_readings(answer: str) -> List[str]:
+    """답에 아라비아 숫자가 있으면 읽는 말로 바꾼 후보들(문맥 읽기, 모두 한자어 수, 모두 고유어 수). 듣기 문장은 숫자를 '삼십 분'처럼
+    한글로 적어 두는데 학습자는 '30분'으로 적기 쉽다. '7번'은 번호면 칠 번, 횟수면 일곱 번이라 문맥 읽기만으로는 틀릴 수 있어
+    세 후보 가운데 가장 많이 맞는 쪽을 쓴다(정답 쪽은 바꾸지 않는다)."""
+    if not _DIGITS.search(answer):
+        return [answer]
+    from korean_numbers import native, normalize_numbers, sino
+    out = [answer]
+    try:
+        out.append(normalize_numbers(answer))
+    except Exception:
+        pass
+    out.append(_DIGITS.sub(lambda m: sino(int(m.group())) if len(m.group()) <= 15 else m.group(), answer))
+    out.append(_DIGITS.sub(lambda m: native(int(m.group())) if len(m.group()) <= 15 else m.group(), answer))
+    return out
+
+
 def consonant_feedback(correct: str, answer: str) -> Dict:
     """정답 문장의 낱말마다 맞혔는지와, 틀린 낱말의 자음 골격을 돌려준다.
 
@@ -130,7 +150,7 @@ def consonant_feedback(correct: str, answer: str) -> Dict:
     correct = unicodedata.normalize("NFC", correct or "").strip()
     answer = unicodedata.normalize("NFC", answer or "").strip()[:400]   # 아주 긴 답은 자른다(계산량)
     c_words = [w for w in correct.split() if _bare(w)]
-    hit = _match_words(c_words, answer)
+    hit = max((_match_words(c_words, a) for a in _number_readings(answer)), key=sum)
     words = [
         {"text": w, "correct": True, "skeleton": None} if ok else {"text": None, "correct": False, "skeleton": skeleton(w)}
         for w, ok in zip(c_words, hit)
