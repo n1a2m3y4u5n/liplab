@@ -21,7 +21,7 @@ if [ ! -f "$W/vapp/.ok" ]; then
   python3 -m venv "$W/vapp" || fail venv
   "$W/vapp/bin/pip" install -q --upgrade pip
   "$W/vapp/bin/pip" install -q "torch==2.8.0" --index-url https://download.pytorch.org/whl/cu128 || fail torch
-  "$W/vapp/bin/pip" install -q "transformers==5.17.0" safetensors soundfile "numpy==2.2.6" scipy "faster-whisper>=1.1" "datasets>=3" || fail deps
+  "$W/vapp/bin/pip" install -q "transformers==5.17.0" safetensors soundfile "numpy==2.2.6" scipy "faster-whisper>=1.1" "datasets>=3,<4" "librosa==0.11.0" || fail deps
   touch "$W/vapp/.ok"
 fi
 PY=$W/vapp/bin/python
