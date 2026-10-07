@@ -234,6 +234,49 @@ class TactileAttempt(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class ListenStageProgress(Base):
+    """소리 듣기(청능훈련) 커리큘럼 단계별 진행·숙달(listen_curriculum, docs/auditory-training-design.md). 독화·발화와 별도 표.
+    stage: 0 소리 확인 ~ 5 대화 듣기. 건너뛰기로 연 단계는 status 'unlocked' 행으로 남는다(프로필 포인터 열을 늘리지 않으려고)."""
+    __tablename__ = "listen_stage_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    stage = Column(Integer, nullable=False)        # 0..5
+    status = Column(String(20), default="unlocked")  # unlocked | in_progress | mastered
+    mastery_score = Column(Float, default=0.0)     # 0-100 (편향 보정 이동 평균, 수준 단계는 맨 위 수준 최근 정답률)
+    attempts = Column(Integer, default=0)
+    correct = Column(Integer, default=0)
+    level = Column(Integer, nullable=True)         # 1·2단계의 지금 수준
+    mastered_attempts = Column(Integer, nullable=True)
+    mastered_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ListenAttempt(Base):
+    """소리 듣기 시행 하나. 숙달·수준·소음 계단·검사 역치·혼동은 모두 이 기록에서 다시 계산한다."""
+    __tablename__ = "listen_attempts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    stage = Column(Integer, nullable=False)        # 0..5
+    mode = Column(String(20), nullable=False)      # ling|ax|word_id|sentence|noise|test|convo
+    item_key = Column(String(200), nullable=False)
+    target = Column(String(200), nullable=True)    # 정답 글(소리 구별은 '첫|둘째')
+    answer = Column(String(300), nullable=True)
+    correct = Column(Boolean, nullable=True)
+    score = Column(Float, nullable=True)           # 문장: 낱말 정답 비율 0~1
+    level = Column(Integer, nullable=True)
+    snr_db = Column(Float, nullable=True)
+    condition = Column(String(20), nullable=True)  # ao|av(4단계·검사), quiet|noise|phone(5단계)
+    voice = Column(String(40), nullable=True)
+    plays = Column(Integer, nullable=True)         # 들은 횟수
+    repairs = Column(JSON, nullable=True)          # 5단계 되묻기 ['again','slow','rephrase']
+    rt_ms = Column(Integer, nullable=True)
+    session = Column(String(40), nullable=True)    # 검사 회차 id(test:...)·점검 회차
+    route = Column(String(20), nullable=True)      # 듣는 길: stream|speaker|earphone (데이터 품질용)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
 class SpeakAttempt(Base):
     """발화 개별 시도 기록 — 말하기 '분석'용(자주 틀리는 소리·억양/크기 추세).
     독화가 Progress에 시도마다 쌓듯, 말하기도 여기에 쌓아 분석을 분리한다."""
@@ -754,6 +797,8 @@ _UNIQUE_KEYS = (
      "CASE status WHEN 'mastered' THEN 0 ELSE 1 END, attempts DESC, id DESC"),
     ("tactile_stage_progress", "user_id, stage",
      "CASE status WHEN 'mastered' THEN 0 ELSE 1 END, attempts DESC, id DESC"),
+    ("listen_stage_progress", "user_id, stage",
+     "CASE status WHEN 'mastered' THEN 0 ELSE 1 END, attempts DESC, id DESC"),
     ("weak_visemes", "user_id, viseme_id", "total_attempts DESC, id DESC"),
     ("review_items", "user_id, kind, ref", "updated_at DESC, id DESC"),
 )
@@ -800,6 +845,7 @@ _USER_INDEXES = (
     ("progress", "user_id, created_at"),
     ("trial_attempts", "user_id, created_at"),
     ("speak_attempts", "user_id, created_at"),
+    ("listen_attempts", "user_id, created_at"),
     ("placement_results", "user_id, created_at"),
     ("tactile_attempts", "user_id, created_at"),
     ("articulation_sessions", "user_id, created_at"),
