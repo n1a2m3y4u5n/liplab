@@ -15,6 +15,7 @@
 검사와 훈련을 나눈다. 소음 속 문장 인식 역치(SRT) 검사 문장(TEST_FORMS)은 훈련 문장(TRAIN_SENTENCES)·대화와 겹치지 않고,
 예비 파일럿(P3) 문장과도 겹치지 않는다(test_listen_curriculum이 확인한다).
 """
+import functools
 import hashlib
 import math
 import random
@@ -293,12 +294,12 @@ def coda_distance(a: str, b: str) -> int:
     return cons_distance(ra, rb)
 
 
-def _sound(word: str) -> List[Tuple[str, str, str]]:
+@functools.lru_cache(maxsize=8192)
+def _sound(word: str) -> Tuple[Tuple[str, str, str], ...]:
+    """소리 나는 대로의 (첫소리, 모음, 받침) 음절열. 같은 낱말을 보기 고르기·이웃 표에서 수만 번 부르므로 기억해 둔다
+    (예전에는 이웃 표 한 번에 약 0.7초, 일반화 검사 시작에 약 12초가 걸려 그동안 서버가 다른 요청을 받지 못했다)."""
     from scoring import to_pronounced_jamos
-    out = []
-    for i, m, f in to_pronounced_jamos(word):
-        out.append(("" if i == "ㅇ" else i, m, f))
-    return out
+    return tuple(("" if i == "ㅇ" else i, m, f) for i, m, f in to_pronounced_jamos(word))
 
 
 def sound_distance(a: str, b: str) -> int:
@@ -353,6 +354,8 @@ def word_pool(exclude: Optional[set] = None, include_gen: bool = False) -> List[
 
 
 _NEIGHBOR_CACHE: Dict[Tuple[str, ...], Dict[str, List[Tuple[int, str]]]] = {}
+# 풀 몇 개(훈련 풀, 일반화 검사 보기용 풀)를 함께 둔다. 예전에는 하나만 두어 두 풀을 번갈아 쓰면 매번 표를 새로 만들었다
+_NEIGHBOR_CACHE_MAX = 4
 
 
 def _neighbors(pool: Sequence[str]) -> Dict[str, List[Tuple[int, str]]]:
@@ -370,16 +373,19 @@ def _neighbors(pool: Sequence[str]) -> Dict[str, List[Tuple[int, str]]]:
                     table[b].append((d, a))
         for w in table:
             table[w].sort()
-        _NEIGHBOR_CACHE.clear()
+        while len(_NEIGHBOR_CACHE) >= _NEIGHBOR_CACHE_MAX:
+            _NEIGHBOR_CACHE.pop(next(iter(_NEIGHBOR_CACHE)))
         _NEIGHBOR_CACHE[key] = table
     return _NEIGHBOR_CACHE[key]
 
 
-def word_item(target: str, level: int, pool: Sequence[str], seed: str) -> Optional[Dict]:
-    """정답 target의 보기. 수준 범위에 맞는 이웃이 모자라면 가까운 순으로 채운다(수준 1은 음절 수가 다른 말도 쓴다)."""
+def word_item(target: str, level: int, pool: Sequence[str], seed: str,
+              nb: Optional[Sequence[Tuple[int, str]]] = None) -> Optional[Dict]:
+    """정답 target의 보기. 수준 범위에 맞는 이웃이 모자라면 가까운 순으로 채운다(수준 1은 음절 수가 다른 말도 쓴다).
+    nb는 pool 안의 target 이웃 [(거리, 낱말)] 가까운 순(이미 있으면 넘겨 표를 다시 만들지 않는다)."""
     cfg = WORD_LEVELS[max(1, min(3, int(level)))]
     r = _rng(f"w:{seed}:{target}:{level}")
-    nb = _neighbors(pool).get(target, [])
+    nb = list(nb) if nb is not None else _neighbors(pool).get(target, [])
     same_sound = {target} | {w for w in pool if w != target and sound_distance(target, w) == 0}
     fit = [w for d, w in nb if cfg["lo"] <= d <= cfg["hi"]]
     r.shuffle(fit)
@@ -427,12 +433,13 @@ def word_items(level: int, pool: Sequence[str], seed: str, n: int = 10, weak: Se
             used.add(it["target"])
             out.append(it)
 
-    for w in list(dict.fromkeys(review))[:3]:
-        if w in cset:
-            it = word_item(w, level, pool, seed)
-            if it:
-                it["review"] = True
-            add(it)
+    # 이 수준의 정답 후보인 복습 낱말만 고른 뒤 3개를 자른다. 예전에는 먼저 3개를 자르고 후보인지 보았는데, due_reviews는 오래
+    # 기다린 순이라 수준 1에서 틀린(수준 3 후보가 아닌) 낱말 3개가 앞을 영영 차지해 그 뒤 복습이 하나도 나오지 않았다
+    for w in [w for w in dict.fromkeys(review) if w in cset][:3]:
+        it = word_item(w, level, pool, seed)
+        if it:
+            it["review"] = True
+        add(it)
     for w in weak:
         if len(out) >= n // 2:
             break
@@ -505,10 +512,15 @@ def due_reviews(history: Sequence[Tuple[str, bool, "object"]], today) -> List[st
 
 def gen_test_items(pool_with_gen: Sequence[str]) -> List[Dict]:
     """낱말 일반화 검사 20문항(수준 2, 4지, 고정 순서·보기). 보기는 훈련 풀 낱말을 쓴다(검사 낱말끼리는 섞지 않음)."""
-    train = [w for w in pool_with_gen if w not in set(GEN_WORDS)]
+    gen = set(GEN_WORDS)
+    train = [w for w in pool_with_gen if w not in gen]
+    # 보기 풀은 낱말마다 '훈련 풀 + 그 낱말'이다. 그 풀의 이웃은 '훈련 풀 + 검사 낱말 전부'의 이웃 표에서 검사 낱말을 뺀 것과 같으므로
+    # 표를 한 번만 만든다(예전에는 낱말마다 새 표를 만들어 검사 시작에 약 12초, 문항은 그대로다: test_listen_curriculum이 해시로 고정)
+    full = _neighbors(list(train) + [w for w in GEN_WORDS if w not in set(train)])
     out = []
     for i, w in enumerate(GEN_WORDS):
-        it = word_item(w, 2, list(train) + [w], "gen-20261007")
+        nb = [(d, b) for d, b in full.get(w, []) if b not in gen]
+        it = word_item(w, 2, list(train) + [w], "gen-20261007", nb=nb)
         if it:
             out.append({"key": f"g:{w}", "target": w, "options": it["options"], "n": i + 1})
     return out
