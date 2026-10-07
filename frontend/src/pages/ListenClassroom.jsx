@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { learningAPI, listenAPI } from '../api'
 import { loadClip, stopAll } from '../lib/listenAudio'
-import { alternate, lipDiffers } from '../lib/listenFlow'
+import { alternate, lipDiffers, pairMissing } from '../lib/listenFlow'
 import { soundStatusText } from '../lib/listenView'
 import BottomBar from '../components/listen/BottomBar'
 import ListenFrame from '../components/listen/ListenFrame'
@@ -56,7 +56,11 @@ function ListenPanel({ item, lip, settings, voices, voiceList, active }) {
   const b = useClip(item.b, voice)
   const player = usePlayer()
   const [what, setWhat] = useState(null)
-  useEffect(() => { player.reset(); setWhat(null) }, [item.a, item.b, voice, player.reset])
+  // 여러 목소리 소리를 받는 동안 짝·목소리를 바꾸거나 화면을 떠나면 받은 뒤에 틀지 않는다(예전에는 다른 짝을 고른 뒤나 연습 탭으로
+  // 나간 뒤에 앞 짝의 소리가 나왔다). 짝이 바뀌면 이 판이 새로 그려지고(key), 목소리가 바뀌면 세대가 오른다
+  const gen = useRef(0)
+  useEffect(() => () => { gen.current += 1 }, [])
+  useEffect(() => { gen.current += 1; player.reset(); setWhat(null) }, [item.a, item.b, voice, player.reset])
   const opts = { gainDb: settings.gainDb }
   const ready = a.state === 'ready' && b.state === 'ready'
   const play = (steps, label) => { if (!player.busy) { setWhat(label); player.play(steps) } }
@@ -64,14 +68,19 @@ function ListenPanel({ item, lip, settings, voices, voiceList, active }) {
   const playAlt = () => ready && play(alternate(a.clip, b.clip, 2).map((clip) => ({ clip, opts })), `${item.a} · ${item.b} 번갈아`)
   const playVoices = async () => {
     if (player.busy) return
+    const id = gen.current
     const clips = (await Promise.all(voices.train.map((v) => loadClip(item.a, v)))).filter(Boolean)
+    if (id !== gen.current) return
     if (clips.length) play(clips.map((clip) => ({ clip, opts })), `「${item.a}」 여러 목소리`)
   }
   useListenKeys({ active, onPlay: playAlt, canPlay: ready && !player.busy, optionCount: 2, canPick: !player.busy,
     onPick: (i) => playOne(i === 0 ? a : b, i === 0 ? item.a : item.b) })
-  const missing = a.state === 'missing' || b.state === 'missing'
+  // 못 받은 이유마다 글을 달리하고, 서버에 아직 없는 소리가 아니면(연결 끊김·풀기 실패) 다시 받기를 둔다(lib/listenFlow.pairMissing)
+  const miss = pairMissing(a, b)
+  const missing = miss.missing
+  const retry = () => { if (a.state === 'missing') a.retry(); if (b.state === 'missing') b.retry() }
   const label = (v, i) => voiceList?.find((x) => x.id === v)?.label || `목소리 ${i + 1}`
-  const status = missing ? '이 짝의 소리는 아직 준비되지 않았어요'
+  const status = missing ? miss.text
     : !ready ? soundStatusText('loading')
       : player.busy ? `${what || ''} 나오는 중${player.parts > 1 ? ` · ${player.part} / ${player.parts}` : ''}`
         : player.phase === 'done' ? '소리가 끝났어요' : '버튼을 누르면 소리가 나와요'
@@ -97,7 +106,12 @@ function ListenPanel({ item, lip, settings, voices, voiceList, active }) {
       </div>
       <div className="flex flex-col gap-2">
         <ProgressLine phase={ready ? player.phase : 'idle'} run={player.run} totalMs={player.totalMs} />
-        <p role="status" aria-live="polite" className={`text-[13px] font-bold ${player.busy ? 'text-track-dark' : 'text-ink-muted'}`}>{status}</p>
+        <div className="flex items-center justify-between gap-3">
+          <p role="status" aria-live="polite" className={`min-w-0 break-keep text-[13px] font-bold ${player.busy ? 'text-track-dark' : 'text-ink-muted'}`}>{status}</p>
+          {miss.canRetry && (
+            <button type="button" onClick={retry} className="btn-secondary min-h-[44px] shrink-0 px-3.5 py-2 text-[13px] text-track-dark">다시 받기</button>
+          )}
+        </div>
       </div>
       {voices.train.length > 1 && (
         <div className="flex flex-col gap-2 border-t-1.5 border-line pt-4">

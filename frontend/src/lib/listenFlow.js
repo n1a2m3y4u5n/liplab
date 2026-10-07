@@ -219,7 +219,7 @@ export function blockData(data, n) {
 /**
  * 오늘의 듣기 요약. results: 블록 결과([{n, c, elapsed(초)}]), done: 오늘 서버 기록({n, minutes}, 끝난 뒤 다시 받은 값이 있으면 그것),
  * before: 시작 전 서버 기록. 서버 분이 있으면 그것을 오늘 분으로 쓰고, 없으면 시작 전 분 + 이번 회기 걸린 시간으로 어림한다.
- * 반환: {minutes, sessionMinutes, n, c, accuracy, goalPct, reached}
+ * 반환: {minutes, sessionMinutes, n, c, accuracy, goalPct, reached, left}. left는 목표까지 남은 분(보이는 내림 분 기준, 0 이상).
  */
 export function todayTotals(results, { done = null, before = null, targetMin = 15 } = {}) {
   const list = results || []
@@ -231,7 +231,8 @@ export function todayTotals(results, { done = null, before = null, targetMin = 1
   const minutes = server != null ? Math.round(server * 10) / 10
     : Math.round(((Number.isFinite(before?.minutes) ? before.minutes : 0) + sessionMinutes) * 10) / 10
   const goal = Number(targetMin) > 0 ? Number(targetMin) : 15
-  return { minutes, sessionMinutes, n, c, accuracy: n ? c / n : null, goalPct: Math.min(100, Math.round((minutes / goal) * 100)), reached: minutes >= goal }
+  return { minutes, sessionMinutes, n, c, accuracy: n ? c / n : null, goalPct: Math.min(100, Math.round((minutes / goal) * 100)), reached: minutes >= goal,
+    left: Math.max(0, goal - goalMinutes(minutes)) }
 }
 
 /** 분 표시: 0.4 → '1분 미만', 6.24 → '6분'. */
@@ -240,6 +241,23 @@ export function fmtMinutes(m) {
   if (!Number.isFinite(v) || v <= 0) return '0분'
   if (v < 1) return '1분 미만'
   return `${Math.round(v)}분`
+}
+
+/**
+ * 15분 목표와 견주는 오늘 분(정수). 과제 '소리 듣기 15분'(backend daily_tasks.progress)과 같이 내림한다: 14.6 → 14.
+ * 예전에는 화면이 반올림해 14.6분이면 '15 / 15분'인데 과제는 14 / 15(미달)였다.
+ */
+export function goalMinutes(m) {
+  const v = Number(m)
+  return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0
+}
+
+/** 목표 대비 분 표시(내림): 0.4 → '1분 미만', 14.6 → '14분'. */
+export function fmtGoalMinutes(m) {
+  const v = Number(m)
+  if (!Number.isFinite(v) || v <= 0) return '0분'
+  if (v < 1) return '1분 미만'
+  return `${goalMinutes(v)}분`
 }
 
 /**
@@ -269,6 +287,25 @@ export function lipDiffers(pair, kind, frames = null) {
   const b = seq(frames.b)
   if (!a || !b) return null
   return a !== b
+}
+
+/**
+ * 소리 교실 짝(A·B)의 소리를 받지 못했을 때. a·b는 useClip 상태({state, reason}). 이유(lib/listenAudio.loadClipResult)마다 글을 달리하고,
+ * 서버에 아직 없는 소리(not_prepared)가 아니면 다시 받기를 보인다. 예전에는 연결이 끊겨도 '아직 준비되지 않았어요'만 적고 다시 받을 길이 없었다.
+ * 반환: {missing, reason, text, canRetry}
+ */
+const PAIR_MISSING_TEXT = {
+  not_prepared: '이 짝의 소리는 아직 준비되지 않았어요',
+  network: '인터넷 연결이 끊겨 소리를 받지 못했어요',
+  decode: '이 브라우저에서 소리 파일을 열지 못했어요',
+}
+export function pairMissing(a, b) {
+  const m = [a, b].find((c) => c?.state === 'missing')
+  if (!m) return { missing: false, reason: null, text: null, canRetry: false }
+  // 둘 다 못 받았으면 다시 받을 수 있는 이유를 먼저 본다(한쪽만 서버에 없어도 다른 쪽은 다시 받으면 될 수 있다)
+  const reasons = [a, b].filter((c) => c?.state === 'missing').map((c) => c.reason || 'not_prepared')
+  const reason = reasons.find((r) => r !== 'not_prepared') || 'not_prepared'
+  return { missing: true, reason, text: PAIR_MISSING_TEXT[reason] || PAIR_MISSING_TEXT.not_prepared, canRetry: reason !== 'not_prepared' }
 }
 
 /** 번갈아 듣기 순서: alternate('A', 'B', 2) → ['A', 'B', 'A', 'B']. */

@@ -6,6 +6,7 @@ import GuideModal from '../components/GuideModal'
 import LoadingScreen from '../components/LoadingScreen'
 import RetentionPrompt from '../components/RetentionPrompt'
 import { curriculumAPI, speakAPI, listenAPI } from '../api'
+import { goalMinutes } from '../lib/listenFlow'
 
 /**
  * 학습 탭 — 커리큘럼 경로 (Figma 58:11 독화 / 171:38 발화, 모바일 232:35 — lg 미만 반응형). DOKA 마스코트 노드.
@@ -213,7 +214,7 @@ export default function CurriculumPath() {
   const showNonsense = !!wordStage && wordStage.status !== 'locked' && (view?.key === 'viseme' || view?.key === 'word')
   // 소리 듣기: 단계를 하나라도 열었으면 오늘의 듣기(블록 회기)를 보조 버튼으로 둔다. 오늘 한 분을 함께 적는다
   const showToday = track === 'listen' && list.some((s) => s.status !== 'locked')
-  const todayMin = Math.round(today?.done_today?.minutes || 0)
+  const todayMin = goalMinutes(today?.done_today?.minutes)   // 과제 '소리 듣기 15분'처럼 내림(반올림하면 14.6분이 15 / 15로 보였다)
   const todayGoal = today?.target_min || 15
   const extraBtn = (cls) => (showNonsense ? (
     <button type="button" onClick={() => navigate('/learn/nonsense')} className={`btn-secondary w-full ${cls}`}>
