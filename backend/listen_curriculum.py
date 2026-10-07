@@ -922,6 +922,22 @@ def ling_summary(results: Dict[str, bool], previous: Optional[Dict[str, bool]] =
 
 # ── 독화·발화와 잇기 ──────────────────────────────────────────────────
 
+def _has_final(word: str) -> bool:
+    """마지막 글자를 읽을 때 받침이 있는가(조사 고르기). 완성형은 종성으로, 자음 자모(ㄱ 기역 … ㅎ 히읗)는 이름이 모두 받침으로 끝나
+    있음, 모음 자모(ㅏ 아 …)는 없음."""
+    if not word:
+        return False
+    ch = word[-1]
+    o = ord(ch)
+    if 0xAC00 <= o <= 0xD7A3:
+        return (o - 0xAC00) % 28 != 0
+    return 0x3131 <= o <= 0x314E
+
+
+def _josa(word: str, with_final: str, without_final: str) -> str:
+    return word + (with_final if _has_final(word) else without_final)
+
+
 def recommendations(confusions: Sequence[Dict], k: int = 3) -> List[Dict]:
     """낱말 고르기에서 자주 헷갈린 소리 짝 → 다음 연습 제안. confusions: [{slot, target, heard, n}] 많은 순.
     입모양 무리가 다른 자음 짝은 입모양이 보완해 주므로 독화 레슨을, 같은 무리(ㅂ·ㅁ 등)는 소리로만 가를 수 있으므로 소리 구별을
@@ -934,7 +950,7 @@ def recommendations(confusions: Sequence[Dict], k: int = 3) -> List[Dict]:
             vt, vh = VISEME_MAP.get(t), VISEME_MAP.get(h)
             lip = vt is not None and vh is not None and vt != vh
             out.append({"pair": [t, h], "slot": "vowel", "lip_differs": lip,
-                        "text": f"모음 {t}와 {h}를 자주 헷갈려요." + (" 입모양은 달라서 입을 함께 보면 도움이 돼요." if lip
+                        "text": f"모음 {_josa(t, '과', '와')} {_josa(h, '을', '를')} 자주 헷갈려요." + (" 입모양은 달라서 입을 함께 보면 도움이 돼요." if lip
                                                                   else " 입모양도 비슷해서 소리 구별 연습이 필요해요."),
                         "routes": [{"label": "입모양 레슨" if lip else "소리 구별", "to": "/learn/viseme" if lip else "/learn/listening?stage=1"}]})
             continue
@@ -942,12 +958,42 @@ def recommendations(confusions: Sequence[Dict], k: int = 3) -> List[Dict]:
         vh = VISEME_MAP.get(h) if h not in ("-", "ㅇ") else None
         lip = vt is not None and vh is not None and vt != vh
         where = "받침" if c.get("slot") == "coda" else "첫소리"
-        text = (f"{where} {t}와 {h}를 자주 헷갈려요. 입모양은 달라서 입을 함께 보면 구별할 수 있어요." if lip
-                else f"{where} {t}와 {h}를 자주 헷갈려요. 입모양이 같거나 잘 안 보여서 소리로 가려야 해요.")
+        # '-'는 받침 없음(contrast_of). 한쪽이 없음이면 둘 다 '받침 …'으로 적고("받침 ㄴ과 받침 없음을"), 조사는 앞 글자 받침에 맞춘다.
+        # 예전에는 "받침 -와 ㄴ를"처럼 기호와 고정 조사가 그대로 나왔다
+        if "-" in (t, h):
+            a, b = (f"{where} {'없음' if x == '-' else x}" for x in (t, h))
+        else:
+            a, b = f"{where} {t}", h
+        pair = f"{_josa(a, '과', '와')} {_josa(b, '을', '를')}"
+        text = (f"{pair} 자주 헷갈려요. 입모양은 달라서 입을 함께 보면 구별할 수 있어요." if lip
+                else f"{pair} 자주 헷갈려요. 입모양이 같거나 잘 안 보여서 소리로 가려야 해요.")
         routes = [{"label": "입모양 레슨", "to": "/learn/viseme"}] if lip else [{"label": "소리 구별", "to": "/learn/listening?stage=1"}]
         routes.append({"label": "말하기 자음", "to": "/learn/speaking?stage=3"})
         out.append({"pair": [t, h], "slot": c.get("slot"), "lip_differs": lip, "text": text, "routes": routes})
     return out
+
+
+# 하루 연습 시간 추정(결과 화면의 7일 연습량을 권장 '하루 15~20분'과 비교하려고). 시행 기록의 시각 사이 간격을 더하되, 간격이
+# IDLE_GAP_S를 넘으면 쉰 것으로 보고 넣지 않는다(학습 기록의 과제 시간 추정에서 흔히 쓰는 '쉼 끊기', Kovanović 2015는 끊는 값에 따라
+# 추정이 크게 달라짐을 보였다). 소리 듣기 한 문항은 듣기·답 쓰기를 합쳐 보통 1분 안이고 다시 듣기와 단서 보고 고쳐 쓰기를 해도
+# 3분을 넘기 드물어 3분으로 둔다. 쉰 뒤 처음 시행(그 앞 간격을 모르는 것)은 화면이 보낸 반응 시간(rt_ms, 문항을 띄운 때부터 답할
+# 때까지)을 같은 상한으로 넣는다. 반응 시간이 없는 기록(소리 확인·검사 문장)은 그 시행 몫을 0으로 본다(덜 세는 쪽).
+IDLE_GAP_S = 180
+
+
+def practice_minutes(events: Sequence[Tuple["object", Optional[int]]], idle_gap_s: int = IDLE_GAP_S) -> float:
+    """[(시각 datetime, rt_ms 또는 None)] 하루치 → 연습 분(소수 첫째 자리). 시각순이 아니어도 된다."""
+    evs = sorted((t, rt) for t, rt in events if t is not None)
+    total = 0.0
+    prev = None
+    for t, rt in evs:
+        gap = (t - prev).total_seconds() if prev is not None else None
+        if gap is not None and gap <= idle_gap_s:
+            total += max(0.0, gap)
+        elif rt:
+            total += min(float(rt) / 1000.0, idle_gap_s)
+        prev = t
+    return round(total / 60.0, 1)
 
 
 def tally_confusions(pairs: Sequence[Tuple[str, str]]) -> List[Dict]:
