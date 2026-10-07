@@ -30,6 +30,10 @@ import MasteryProbeBlock from '../components/MasteryProbeBlock'
 import EffortCheck from '../components/EffortCheck'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR_VISEME, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
 import { trialMeta } from '../lib/measurement'
+import useSoundCondition from '../hooks/useSoundCondition'
+import useSoundReplay from '../hooks/useSoundReplay'
+import SoundReplayBar from '../components/SoundReplayBar'
+import { soundAPI } from '../api'
 
 // MediaPipe 번들이 커서 펼칠 때만 로드(초기 번들 보호)
 const WebcamMouthCheck = lazy(() => import('../components/WebcamMouthCheck'))
@@ -375,6 +379,15 @@ function QuizPanel({ data }) {
   useEffect(() => { onsetRef.current = q ? Date.now() : null }, [q])
   const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계, 고르기 문항)
   const [result, setResult] = useState(null)
+  // 소리 조건(C17): 답한 뒤에만 소리와 함께 다시 보기. 고르기는 그 무리의 대표 음절, AX는 두 음절(문항과 같은 600ms 쉼)
+  const sound = useSoundCondition()
+  const replay = useSoundReplay({
+    texts: !q ? [] : q.kind === 'ax' ? [q.pair.a, q.pair.b] : [q.target.demo_syllable].filter(Boolean),
+    answered: !!result, enabled: sound.enabled,
+    onPlayed: () => q && (q.kind === 'ax'
+      ? soundAPI.logReplay('trial', `${q.pair.a}/${q.pair.b}`, 'viseme_ax')
+      : soundAPI.logReplay('trial', String(q.target.viseme_id), 'viseme')).catch(() => {}),
+  })
   const [submitting, setSubmitting] = useState(false)
   const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
   const [qNum, setQNum] = useState(1)              // 레슨 내 문항 번호(진행바)
@@ -437,7 +450,7 @@ function QuizPanel({ data }) {
     setSubmitting(true)
     try {
       const r = await curriculumAPI.submitRecognitionAx(q.pair.a, q.pair.b, choice, AX_CHOICES.map((c) => c.key),
-        trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default' }))
+        trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default', soundCondition: sound.enabled }))
       setResult({ ...r, chosenKey: choice })
       setXpEarned((x) => x + (r.xp_gained || 0))
       setTally((t) => ({ n: t.n + 1, correct: t.correct + (r.correct ? 1 : 0) }))
@@ -457,7 +470,7 @@ function QuizPanel({ data }) {
     setSubmitting(true)
     try {
       const r = await curriculumAPI.submitRecognition(q.target.viseme_id, selected, q.choices.map((c) => c.viseme_id),
-        trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default' }))
+        trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default', soundCondition: sound.enabled }))
       setResult({ ...r, chosenId: selected })
       setStat({ attempts: r.attempts, mastery: r.mastery_score, mastered: r.mastered })
       setXpEarned((x) => x + (r.xp_gained || 0))
@@ -547,7 +560,7 @@ function QuizPanel({ data }) {
               고르기는 입모양 하나를 되풀이하고, AX는 음절 둘을 쉼을 두고 차례로 되풀이한다(프레임을 받기 전에는 중립) */}
           <div className={LESSON_AVATAR_VISEME}>
             <MouthAvatar frames={isAx ? q.frames : null} visemeId={isAx ? (q.frames ? null : 15) : q.target.viseme_id}
-              height={null} className="h-full" talker={lesson.talker} talkerSeed={lesson.seed} />
+              height={null} className="h-full" talker={lesson.talker} talkerSeed={lesson.seed} override={replay.frame} />
           </div>
 
           {isAx ? (
@@ -579,6 +592,7 @@ function QuizPanel({ data }) {
           <AnimatePresence>
             {result && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                <SoundReplayBar sound={sound} replay={replay} />
                 {isAx ? (
                   <div className={axSameLooking
                     ? 'rounded-16 border-2 border-warn/40 bg-warn-tint px-4 py-3 text-[13px] text-warn-text'

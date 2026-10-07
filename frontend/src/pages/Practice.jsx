@@ -24,6 +24,10 @@ import useSlowWeak from '../hooks/useSlowWeak'
 import useLessonTalker from '../hooks/useLessonTalker'
 import { trialMeta } from '../lib/measurement'
 import { effectiveSpeed } from '../lib/visemeTiming'
+import useSoundCondition from '../hooks/useSoundCondition'
+import useSoundReplay from '../hooks/useSoundReplay'
+import SoundReplayBar from '../components/SoundReplayBar'
+import { soundAPI } from '../api'
 
 /**
  * 힌트 시스템: 단계별로 문장 정보를 공개
@@ -211,6 +215,10 @@ export default function Practice() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState(null)
+  // 소리 조건(C17): 답을 채점한 뒤에만 문장을 소리와 함께 다시 보기(소리 → 소리 없이 한 번 더)
+  const sound = useSoundCondition()
+  const replay = useSoundReplay({ texts: currentSentence ? [currentSentence] : [], answered: !!result, enabled: sound.enabled,
+    onPlayed: () => soundAPI.logReplay('sentence', currentSentence).catch(() => {}) })
   const [startTime, setStartTime] = useState(null)
   const [hintLevel, setHintLevel] = useState(0)
   const [revealedTextIndex, setRevealedTextIndex] = useState(-1)
@@ -344,7 +352,7 @@ export default function Practice() {
         answer_mode: effectiveMode === 'test-multiple' ? 'choice' : 'typed',
         ...(Number.isFinite(speed) && speed > 0 ? { speed } : {}),
         // 파일럿 로그(P0, 기록만): 문장을 연 때부터 답까지 ms, 레슨 가상 화자, 연 힌트 단계(0~3), 4지선다 보기(보인 순서)
-        ...trialMeta({ onsetAt: startTime, talker: lesson.talker || 'default' }),
+        ...trialMeta({ onsetAt: startTime, talker: lesson.talker || 'default', soundCondition: sound.enabled }),
         hint_level: hintLevel,
         ...(effectiveMode === 'test-multiple' && choices.length ? { options: choices } : {}),
       })
@@ -514,7 +522,7 @@ export default function Practice() {
         </div>
       ) : (
         <LipSyncPlayer3D visemes={shownVisemes} isPlaying={isPlaying} onComplete={() => setIsPlaying(false)}
-          talker={lesson.talker} talkerSeed={lesson.seed} onSpeedChange={onPlayerSpeed} {...extra} />
+          talker={lesson.talker} talkerSeed={lesson.seed} onSpeedChange={onPlayerSpeed} override={replay.frame} {...extra} />
       )}
     </div>
   )
@@ -558,7 +566,7 @@ export default function Practice() {
                 {/* 시각증강 기호(축 J-3)는 답을 확인한 뒤에만 — 문제 중에 보이면 보기끼리 다른 자질이 기호로 드러나 답이 된다.
                     그 뒤에는 약한 표적 입모양 음절에만 입꼬리 옆에 겹쳐 '왜 헷갈렸는지'를 보여 준다(숙달되면 흐려짐). */}
                 <MouthAvatar frames={shownVisemes} height={null} className="h-full" cueText={result ? currentSentence : null} cueFocus
-                  talker={lesson.talker} talkerSeed={lesson.seed} />
+                  talker={lesson.talker} talkerSeed={lesson.seed} override={replay.frame} />
               </div>
 
               {/* 4지선다(91:28 / 모바일 235:51) — 선택 → 확인 */}
@@ -572,6 +580,7 @@ export default function Practice() {
                 ))}
               </div>
 
+              {result && <SoundReplayBar sound={sound} replay={replay} />}
               {/* 결과 뒤 음절 기호(시각증강) — 교육 패널이라 유지, 고정 바 위 스크롤 영역 */}
               {result && (
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -656,6 +665,7 @@ export default function Practice() {
 
                 {result && (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-4">
+                    <div className="mb-3"><SoundReplayBar sound={sound} replay={replay} /></div>
                     {result.streak_count > 1 && (
                       <p className="mb-2 text-center text-sm font-bold text-stat-streak">
                         {result.streak_count}일째 연속 학습 중! +{Math.round((result.streak_multiplier - 1) * 100)}% 보너스 XP

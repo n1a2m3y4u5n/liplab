@@ -57,3 +57,9 @@ test('trialMeta: 반응 시간·화자·힌트(없는 값은 보내지 않음)',
   assert.deepEqual(trialMeta({ onsetAt: 5000, now: 1000, talker: 'bad id!' }), { rt_from_onset_ms: 0 })
   assert.deepEqual(trialMeta(), {})
 })
+
+test('trialMeta: 소리 조건 켜짐 여부(참·거짓 모두 보내고, 없으면 보내지 않음)', () => {
+  assert.deepEqual(trialMeta({ soundCondition: true }), { sound_condition: true })
+  assert.deepEqual(trialMeta({ soundCondition: false }), { sound_condition: false })
+  assert.deepEqual(trialMeta({ soundCondition: 'yes' }), {})
+})

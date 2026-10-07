@@ -34,6 +34,7 @@ export default function LipSyncPlayer3D({
   talker = null,
   talkerSeed = 0,
   onSpeedChange = null,
+  override = null,   // 소리 조건(C17)의 '소리와 함께 다시 보기' 중에는 이 프레임을 보인다(hooks/useSoundReplay, MouthAvatar와 같은 모양)
 }) {
   // 선행 동시조음(lib/coarticulation, 플래그 VITE_COART_E)은 입 안쪽 자음 프레임에 섞을 모음(coart_v)만 붙인다. 꺼져 있으면 그대로다.
   const visemes = useMemo(() => applyCoarticulation(applyTalkerTiming(rawVisemes, talker, talkerSeed)), [rawVisemes, talker, talkerSeed])
@@ -153,6 +154,11 @@ export default function LipSyncPlayer3D({
     setIsPaused(true)
   }, [clearTimer])
 
+  // 소리와 함께 다시 보기가 시작되면 자체 재생을 멈춘다(override 프레임만 보인다)
+  useEffect(() => {
+    if (override != null && isPlayingRef.current) stopPlayback()
+  }, [override != null])   // eslint-disable-line react-hooks/exhaustive-deps
+
   // Respond to external isPlaying prop
   useEffect(() => {
     if (isPlaying && visemes.length > 0) {
@@ -206,7 +212,8 @@ export default function LipSyncPlayer3D({
   const isRunning = isPlayingRef.current && !isPaused
 
   // 현재 프레임의 음절(text_index)에 해당하는 시각증강 기호 — cue.syllable_index와 동일 인덱스 공간(engine)
-  const curSyl = Number.isInteger(currentViseme?.text_index) ? currentViseme.text_index : null
+  const shown = override != null ? override : currentViseme
+  const curSyl = Number.isInteger(shown?.text_index) ? shown.text_index : null
   const activeCues = curSyl != null ? cues.filter((c) => c.syllable_index === curSyl) : []
 
   return (
@@ -216,14 +223,14 @@ export default function LipSyncPlayer3D({
         style={{ height: `${stageHeight}px` }}
       >
         <AvatarVRM
-          visemeId={currentViseme?.viseme ?? 15}
+          visemeId={shown?.viseme ?? 15}
           xray={xray}
           view={side ? 'side' : 'front'}
-          transitionMs={currentViseme?.transition_ms}
-          durationMs={currentViseme?.duration_ms}
-          speed={speed}
+          transitionMs={shown?.transition_ms}
+          durationMs={shown?.duration_ms}
+          speed={override != null ? 1 : speed}
           talker={talker}
-          lipVowel={currentViseme?.coart_v}
+          lipVowel={shown?.coart_v}
         />
         <TalkerChip talker={talker} />
 
