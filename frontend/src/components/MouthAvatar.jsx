@@ -21,13 +21,15 @@ import { recordLateness } from '../lib/frameClock'
  *  - talker·talkerSeed: 가상 화자(lib/talkers, 계획 2-2). 말 속도·흔들림·동시조음을 프레임에 입히고 입모양 배율을 아바타에 넘긴다.
  *    speed는 그 위에 곱해진다. showTalker가 true면 왼쪽 위에 화자 이름을 작게 보인다.
  *  - flat: true면 3D 캔버스 없이 2D 입모양으로 그린다(여러 명 대화의 저사양 모드, lib/gpuBudget).
+ *  - once: true면 프레임을 한 번만 재생하고 중립에서 멈춘다(소리 듣기의 소리+입모양 시행, 소리와 함께 한 번). frames가 바뀌면 다시 한 번.
+ *    처음 300ms 중립 뒤 첫 프레임이 나오므로 소리는 300ms 뒤에 튼다(listenAudio.playClip leadMs).
  *  - 선행 동시조음(lib/coarticulation, 플래그 VITE_COART_E): 켜져 있으면 입 안쪽 자음 프레임이 입술을 섞을 모음(coart_v)을 아바타에 넘긴다.
  * LipSyncPlayer3D는 'Viseme N' 오버레이가 있어 퀴즈에 부적합해 별도 컴포넌트로 둔다.
  * 문항이 바뀌어도 key로 다시 마운트하지 않는다. frames가 바뀌면 재생을 처음부터 다시 하고, 다시 마운트하면 캔버스·WebGL
  * 컨텍스트·셰이더·모델 버퍼를 새로 만든다(9/27 측정: 문항마다 컨텍스트가 새로 생기고 첫 그리기까지 0.1~1.1초).
  */
 export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300, className = '', cueText = null, cueFocus = false, modelUrl, speed = 1,
-  talker = null, talkerSeed = 0, showTalker = true, flat = false }) {
+  talker = null, talkerSeed = 0, showTalker = true, flat = false, once = false }) {
   const frames = useMemo(() => applyCoarticulation(applyTalkerTiming(rawFrames, talker, talkerSeed)), [rawFrames, talker, talkerSeed])
   const [vid, setVid] = useState(15)
   const [syl, setSyl] = useState(null)      // 재생 중 프레임의 음절 번호(text_index)
@@ -65,6 +67,10 @@ export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300,
         setTiming({ t: Number.isFinite(tr) ? tr / k : tr, d: dur, lv: frames[i]?.coart_v })
         i += 1
         if (i >= frames.length) {
+          if (once) {   // 한 번만: 마지막 프레임을 다 보인 뒤 중립에서 멈춘다
+            t = setTimeout(() => { if (on) { setVid(15); setSyl(null); setTiming({ t: 150, d: 500 }) } }, dur)
+            return
+          }
           // 한 단어 끝 → 잠깐 중립으로 쉬었다가 반복
           i = 0
           t = setTimeout(() => { setVid(15); setSyl(null); setTiming({ t: 150, d: 500 }); t = later(step, 500) }, dur)
@@ -93,7 +99,7 @@ export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300,
     }
 
     return () => { on = false; clearTimeout(t) }
-  }, [frames, visemeId, speed, talker, talkerSeed])
+  }, [frames, visemeId, speed, talker, talkerSeed, once])
 
   const active = syl != null ? cues.filter((c) => c.syllable_index === syl && (c.strength ?? 1) > 0.05) : []
   return (

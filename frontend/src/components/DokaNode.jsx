@@ -5,7 +5,7 @@
  *
  * status: 'mastered'(완료 — 트랙색 DOKA 55% + 체크 배지) | 'current'(1.15배 + 링)
  *         | 'skip'(건너뛰기 가능 — 연한 DOKA, 눈 뜸) | 'locked'(회색, 잠듦)
- * track:  'read'(보라, 기본) | 'speak'(분홍)
+ * track:  'read'(보라, 기본) | 'speak'(분홍) | 'listen'(청록, 소리 듣기)
  *
  * 자리(layout)는 상태와 무관하게 늘 56px(lg 76px)이다. 현재 노드의 큰 몸통·링은 자리 가운데에
  * 겹쳐 넘치므로, 노드와 DokaConnector를 세로로 쌓기만 하면 Figma 간격(74px / 118px)이 나온다.
@@ -22,6 +22,11 @@ export const DOKA_ASSETS = {
     done: '/ui/lp-171-38-node-done.svg', current: '/ui/lp-171-38-node-current.svg', ring: '/ui/lp-171-38-node-ring.svg',
     badge: '/ui/lp-171-38-node-check-badge.svg', badgeMobile: null,   // Figma에 발화 모바일 배지 없음 → 데스크톱 배지를 줄여 쓴다
     skip: '/ui/lp-78-8-node-skip.svg',                                // Figma에 분홍 건너뛰기 DOKA 없음 → 독화 것을 쓴다
+  },
+  listen: {
+    done: '/ui/listen-node-done.svg', current: '/ui/listen-node-current.svg', ring: '/ui/listen-node-ring.svg',
+    badge: '/ui/listen-node-check-badge.svg', badgeMobile: null,     // 발화 에셋의 분홍을 청록으로 바꾼 것(소리 듣기 트랙)
+    skip: '/ui/lp-78-8-node-skip.svg',
   },
   locked: '/ui/node-locked.svg',
 }

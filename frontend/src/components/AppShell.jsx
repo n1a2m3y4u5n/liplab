@@ -34,10 +34,12 @@ const NAV = [
   { key: 'profile', label: '프로필', to: '/profile', icon: '/ui/nav-profile.svg' },
 ]
 
-/** 발화 트랙(학습 경로 ?track=speak)일 때만 셸을 분홍으로 테마링. */
-function useSpeakLearn() {
+/** 학습 경로의 트랙(?track=speak·listen)이면 셸을 그 트랙색으로 테마링(발화 분홍, 소리 듣기 청록). 아니면 null. */
+function useLearnTrack() {
   const location = useLocation()
-  return location.pathname.startsWith('/learn/path') && new URLSearchParams(location.search).get('track') === 'speak'
+  if (!location.pathname.startsWith('/learn/path')) return null
+  const t = new URLSearchParams(location.search).get('track')
+  return t === 'speak' || t === 'listen' ? t : null
 }
 
 function useMinWidth(px) {
@@ -327,7 +329,8 @@ function MobileTabBar({ activeKey }) {
 export default function AppShell({ children, active, rail = 'default', rightRail, title, description, closeTo }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const speak = useSpeakLearn()
+  const learnTrack = useLearnTrack()
+  const speak = learnTrack === 'speak'
   const showRail = useMinWidth(1280)
   useUserSync()
   // 셸 안에서는 모바일 접근성 버튼을 상단 바로 옮긴다(A11ySettings가 이 표시를 본다)
@@ -338,7 +341,7 @@ export default function AppShell({ children, active, rail = 'default', rightRail
   const activeKey = active || NAV.find((n) => location.pathname.startsWith(n.to))?.key
 
   return (
-    <div data-track={speak ? 'speak' : undefined}
+    <div data-track={learnTrack || undefined}
       className="flex min-h-[100dvh] flex-col bg-page lg:flex-row lg:items-stretch lg:bg-white">
       {/* 상단 바 (모바일) */}
       <MobileTopBar pink={speak} />

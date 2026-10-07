@@ -66,6 +66,7 @@ export default {
           hover: 'var(--track-hover)',
         },
         speak: { DEFAULT: '#ec4899', dark: '#be185d', tint: '#ffe4e9', hover: '#db2777' },  // 발화 트랙(171:38)
+        listen: { DEFAULT: '#0d9488', dark: '#115e59', tint: '#ccfbf1', hover: '#0f766e' },  // 소리 듣기 트랙
         bookmark: { DEFAULT: '#2563eb', dark: '#1d4ed8', light: '#60a5fa', line: '#c3dafb' },  // §3.1 북마크 고정색(199:29)
         // 점수·피드백(§3.2) — 94:98 정답 / 94:140 오답 / 182:92 음소 칩
         good: { DEFAULT: '#16a34a', dark: '#0f7a36', text: '#15803d', tint: '#e7f8ef', line: '#cde7d7' },

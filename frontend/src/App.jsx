@@ -62,6 +62,7 @@ const NonsensePairing = lazy(() => import('./pages/NonsensePairing'))
 const Review = lazy(() => import('./pages/Review'))
 const Closure = lazy(() => import('./pages/Closure'))
 const SpeakingPractice = lazy(() => import('./pages/SpeakingPractice'))
+const ListeningPractice = lazy(() => import('./pages/ListeningPractice'))
 const FreeSpeak = lazy(() => import('./pages/FreeSpeak'))
 const ScenarioHub = lazy(() => import('./pages/ScenarioHub'))
 const ReviewLanding = lazy(() => import('./pages/ReviewLanding'))
@@ -232,6 +233,7 @@ function App() {
         <Route path="/pilot/battery" element={<PilotBattery />} />
         <Route path="/learn/scenario" element={<ScenarioHub />} />
         <Route path="/learn/speaking" element={<SpeakingPractice />} />
+        <Route path="/learn/listening" element={<ListeningPractice />} />
         <Route path="/learn/sign" element={<Sign />} />
         {/* 복습·분석 탭 — 새 Figma 화면을 대표 경로로 */}
         <Route path="/review" element={<ReviewTab />} />
