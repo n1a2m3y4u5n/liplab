@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  pct, skippedNote, completeActions, practiceQuery, practiceTask, normalizeStair, modeAvailability, blockData, todayTotals, fmtMinutes,
+  pct, skippedNote, completeActions, practiceQuery, practiceTask, normalizeStair, modeAvailability, blockData, todayTotals, fmtMinutes, goalMinutes, fmtGoalMinutes, pairMissing,
   lipDiffers, alternate, listenOverview, lingNotes, stairPoints, PRACTICE_MODES,
   practiceApiParams, contrastSegments, practiceActions, choiceLabel, normalizePlaces, josa,
 } from './listenFlow.js'
@@ -95,6 +95,22 @@ test('오늘 요약: 서버 분이 있으면 그것, 없으면 시작 전 + 이�
   assert.equal(fmtMinutes(null), '0분')
 })
 
+test('목표 분은 과제 listen_15처럼 내림한다(14.6분은 14 / 15, 반올림해 15 / 15로 보이던 결함)', () => {
+  assert.equal(goalMinutes(14.6), 14)
+  assert.equal(goalMinutes(15), 15)
+  assert.equal(goalMinutes(14.999999999999), 14)                                // 서버 int()와 같다
+  assert.equal(goalMinutes(null), 0)
+  assert.equal(goalMinutes(-2), 0)
+  assert.equal(fmtGoalMinutes(14.6), '14분')
+  assert.equal(fmtGoalMinutes(0.4), '1분 미만')
+  assert.equal(fmtGoalMinutes(0), '0분')
+  const t = todayTotals([], { done: { minutes: 14.6 } })
+  assert.equal(t.reached, false)
+  assert.equal(t.left, 1)
+  assert.equal(todayTotals([], { done: { minutes: 15.2 } }).left, 0)
+  assert.equal(todayTotals([], { done: { minutes: 13.6 } }).left, 2)            // 보이는 13분 기준
+})
+
 test('입모양이 다른 짝: 서버 표시가 먼저, 없으면 입모양 프레임 비교', () => {
   assert.equal(lipDiffers({ lip_differs: true }, null), true)
   assert.equal(lipDiffers({}, { same_mouth: true }), false)
@@ -184,4 +200,18 @@ test('연습 끝 버튼·고른 것 이름·장소 목록·조사', () => {
   assert.equal(josa('낱말 고르기', '을', '를'), '낱말 고르기를')
   assert.equal(josa('소리 확인', '을', '를'), '소리 확인을')
   assert.equal(josa('ABC', '을', '를'), 'ABC를')
+})
+
+test('소리 교실 짝을 못 받은 이유: 연결 끊김·풀기 실패는 다시 받기, 서버에 없는 소리는 안내만', () => {
+  const ok = { state: 'ready', reason: null }
+  assert.deepEqual(pairMissing(ok, ok), { missing: false, reason: null, text: null, canRetry: false })
+  assert.equal(pairMissing({ state: 'loading' }, ok).missing, false)
+  const np = pairMissing({ state: 'missing', reason: 'not_prepared' }, ok)
+  assert.equal(np.canRetry, false)
+  assert.match(np.text, /아직 준비되지 않았어요/)
+  const net = pairMissing(ok, { state: 'missing', reason: 'network' })
+  assert.equal(net.canRetry, true)
+  assert.match(net.text, /인터넷 연결/)
+  assert.equal(pairMissing({ state: 'missing', reason: 'not_prepared' }, { state: 'missing', reason: 'decode' }).reason, 'decode')
+  assert.equal(pairMissing({ state: 'missing', reason: null }, ok).reason, 'not_prepared')
 })
