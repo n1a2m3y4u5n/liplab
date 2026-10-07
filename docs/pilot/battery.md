@@ -254,3 +254,6 @@ C10 생성기가 실제 낱말을 글자 그대로만 사전과 대조해, 소�
 - 촬영 목록: `python3 scripts/build_shot_list.py` → `docs/pilot/shot-list.md`(화자별 대본·파일 이름·촬영 규칙), `docs/pilot/shot-list.csv`(점검표).
   지금 목록으로 744클립이다(낱말 288, 개방형 문장 264, 소음 속 문장 144, SNR 48). 목록 파일을 고치면 다시 만든다.
 - 촬영 뒤 점검: `python3 scripts/check_pilot_media.py <영상 폴더>`가 빠진 파일, 해상도·프레임·길이, 소리 필수 클립의 48kHz 음성을 확인한다.
+- 촬영 도우미(10/7): `docs/pilot/teleprompter.html`(브라우저로 열어 화자·묶음·폼을 고르고 스페이스로 넘김, 넘길 때마다 2초 쉼 막대)를 보며
+  한 묶음을 이어서 찍는다. 그 뒤 `python3 scripts/split_takes.py <녹화> --talker T1 --set sentence --form A --out <영상 폴더> --dry-run`으로
+  말소리 구간이 목록 수와 맞는지 보고, 다시 찍은 구간은 `--skip`으로 버린 뒤 자른다. 클립은 말소리 앞뒤 1초를 두고 60fps·48kHz로 다시 인코딩한다.
