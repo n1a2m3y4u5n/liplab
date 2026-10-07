@@ -107,7 +107,7 @@ C 24개, 소음 속 문장은 별도 문장 3 × 20과 SNR 문장 24, 잡담 잡
 
 | 표 | 한 행 | 주요 열 |
 |---|---|---|
-| `p3_test_sessions` | 사람 × 회차 × 층 | `session_label`, `layer`, `form`, `form_version`(목록 판), `manifest_sha`, `planned_order`, `join_seq`, `modality`, `talker`, `n_items`, `n_ready`, `missing`(못 낸 까닭별 수), `snr_calibrated_db`, `headphone_check`, `volume_fixed`, `render_log`, `completed`, `started_at`, `completed_at` |
+| `p3_test_sessions` | 사람 × 회차 × 층 | `session_label`, `layer`, `form`, `form_version`(목록 판), `manifest_sha`, `planned_order`, `join_seq`, `modality`, `talker`, `n_items`, `n_ready`, `missing`(못 낸 까닭별 수), `snr_calibrated_db`, `snr_estimate_kind`·`snr_reversals`(SNR 계단이 반전으로 수렴했는지, 10/7 판 7), `headphone_check`, `volume_fixed`, `render_log`, `completed`, `started_at`, `completed_at` |
 | `p3_closed_responses` | 낱말·무의미 낱말 문항 | `seq`(제시 순번), `item_id`, `talker`, `target`, `options`, `chosen`, `correct`, `target_consonants`, `chosen_consonants`, `consonant_hits`, `rt_ms`, `rt_from_onset_ms`, `plays`, `speed` |
 | `p3_open_responses` | 문장·소음·SNR 문항 | `answer_text`(원문, NFC), `app_score`(지금 앱 채점 `calculate_score` visual, 0~100), `auto_phoneme_acc`·`auto_word_acc`(엄격 채점 0~1), `n_matched_phonemes`·`n_target_phonemes`, `scorer_version`(`strict-v1`), `rt_ms`, `rt_from_onset_ms`, `plays`, `modality`(real·avatar·A·AV), `snr_db`, `noise_type`, `criterion_met` |
 
@@ -124,6 +124,9 @@ C 24개, 소음 속 문장은 별도 문장 3 × 20과 SNR 문장 24, 잡담 잡
   `b_completed_seq`는 내보낼 때마다 B 완료 시각 순으로 다시 매기므로, 앞 순번 참여자가 계정을 지우면 뒤 순번이 당겨진다. 순차 멈춤 판정을 할 때마다 그 시점의 내보내기 파일을 보관해 판정에 쓴 순서를 남긴다.
 
 ## 6. 팀 리허설(P0 판정 '리허설에서 필요한 필드가 모두 내보내기 판에 나옴')
+
+API 단계는 `scripts/pilot_rehearsal.py`가 가상 참여자로 자동으로 돈다(등록부터 유지 검사 예약, 내보내기 필드·규칙 검사, 주분석까지,
+`log-spec-audit-2026-10-07.md` 5절). 아래 팀 리허설은 화면이 실제로 값을 보내는지, 시간이 얼마나 드는지를 보는 것이다.
 
 ### 6.1 준비(로컬 또는 개발 서버, 운영 서버 아님)
 
@@ -154,7 +157,8 @@ python -m uvicorn main:app --port 8080
 
 ### 6.3 끝난 뒤
 
-- `GET /api/pilot/export?trials=true`(운영자 계정)로 받아 `log-spec-audit.md` 7절 목록을 확인하고, 빠진 값을 적는다.
+- `GET /api/pilot/export?trials=true`(운영자 계정)로 받아 `log-spec-audit-2026-10-07.md` 5절 목록(`pilot_rehearsal.check_export`와 같은
+  검사)을 확인하고, 빠진 값을 적는다. 주분석은 `scripts/pilot_analyze.py <내보내기> --allow-avatar`로 끝까지 도는지 본다.
 - 리허설 자료로 design-simulation 2.3의 추측값(사전 평균, 문장 안 상관, 상태 잡음)을 다시 잡는다.
 - 리허설 계정은 계정 삭제로 지운다(모든 P3 표가 함께 지워진다).
 
