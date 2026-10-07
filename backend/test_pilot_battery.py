@@ -534,7 +534,7 @@ def test_battery_open_responses_snr_and_av():
 
 def test_battery_export_v5_and_training_fields():
     r = _run()
-    assert r["version"] == 5
+    assert r["version"] == 6
     assert r["export_row_keys"] == sorted(["join_seq", "planned_order", "b_completed_seq", "battery", "review_logs",
                                            "mastery_probes", "retention_results", "lesson_efforts", "progress_log", "trial_log"])
     assert r["planned_order"] == "ABC"

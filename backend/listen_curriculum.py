@@ -333,10 +333,17 @@ def contrast_of(a: str, b: str) -> List[Dict]:
 WORD_LEVELS = {1: {"n": 2, "lo": 5, "hi": 99}, 2: {"n": 4, "lo": 3, "hi": 6}, 3: {"n": 4, "lo": 1, "hi": 2}}
 
 
-def word_pool(exclude: Optional[set] = None) -> List[str]:
-    """낱말 고르기 풀: 단어 은행에서 드문 말(STAGE2_EXCLUDED)·독화 표준검사 정답·exclude를 뺀 것."""
+# 낱말 일반화 검사(청인 파일럿 2절, 훈련 풀에서 뺀다). 단어 은행에서 2음절 이하, 소리 거리 3~6 이웃이 셋 이상, 소리 구별 음절·훈련
+# 문장·대화·검사 문장에 나오지 않는 낱말을 시드 20261007로 고른 20개를 고정했다.
+GEN_WORDS = ['겁', '곡', '기사', '껌', '남', '땀', '만두', '발등', '방지', '밭', '보드', '부두', '빨강', '뺨', '사상', '삽', '수레', '이마',
+             '작문', '탈']
+
+
+def word_pool(exclude: Optional[set] = None, include_gen: bool = False) -> List[str]:
+    """낱말 고르기 풀: 단어 은행에서 드문 말(STAGE2_EXCLUDED)·독화 표준검사 정답·일반화 검사 낱말(GEN_WORDS)·exclude를 뺀 것.
+    include_gen이면 일반화 검사 낱말을 남긴다(검사 문항의 보기를 만들 때)."""
     import curriculum as C
-    skip = set(C.STAGE2_EXCLUDED) | set(exclude or ())
+    skip = set(C.STAGE2_EXCLUDED) | set(exclude or ()) | (set() if include_gen else set(GEN_WORDS))
     try:
         from assessment import test_only_words
         skip |= set(test_only_words())
@@ -494,6 +501,17 @@ def due_reviews(history: Sequence[Tuple[str, bool, "object"]], today) -> List[st
             due.append((gap, item))
     due.sort(key=lambda x: -x[0])
     return [i for _, i in due]
+
+
+def gen_test_items(pool_with_gen: Sequence[str]) -> List[Dict]:
+    """낱말 일반화 검사 20문항(수준 2, 4지, 고정 순서·보기). 보기는 훈련 풀 낱말을 쓴다(검사 낱말끼리는 섞지 않음)."""
+    train = [w for w in pool_with_gen if w not in set(GEN_WORDS)]
+    out = []
+    for i, w in enumerate(GEN_WORDS):
+        it = word_item(w, 2, list(train) + [w], "gen-20261007")
+        if it:
+            out.append({"key": f"g:{w}", "target": w, "options": it["options"], "n": i + 1})
+    return out
 
 
 # ── 3·4단계: 문장 ───────────────────────────────────────────────────
@@ -744,6 +762,7 @@ ROOM_RT60 = (0.3, 0.5, 0.8)
 # 문항마다 종류를 돌린다. talker2(두 사람)는 훈련에 쓰지 않고 일반화 확인용으로 남긴다(docs/listen-advance-plan-2026-10.md S1).
 TRAIN_NOISES = ("talker1_f", "talker1_m", "ssn", "babble")
 HELDOUT_NOISE = "talker2"
+TEST_NOISES = ("babble", HELDOUT_NOISE)   # 역치 검사 잡음: 주 결과 babble, 일반화 talker2
 
 
 def convo_items(seed: str, n: int = 8, recent: Sequence[str] = ()) -> List[Dict]:
@@ -848,7 +867,7 @@ def inventory_texts() -> List[str]:
     """소리 조건(C17)이 듣기 목소리 전부로 미리 합성할 글(scripts/sound_inventory.py의 source 'listen')."""
     texts: List[str] = [CALIBRATION_TEXT]
     texts += sorted(_AX_TEXTS)
-    texts += word_pool()
+    texts += word_pool(include_gen=True)
     texts += TRAIN_SENTENCES
     texts += [s for f in sorted(TEST_FORMS) for s in TEST_FORMS[f]]
     for c in CONVO_ITEMS:

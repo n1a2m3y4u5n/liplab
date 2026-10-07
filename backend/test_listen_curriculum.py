@@ -286,3 +286,63 @@ def test_word_focus_and_review():
     assert L.due_reviews(h, t) == ["c", "a"]          # b는 오늘 틀림, d는 두 번 맞혀 빠짐, e는 맞힌 지 1일이라 아직
     s = L.sentence_items("x", n=8, review=["t005", "t006", "t007"])
     assert [i["id"] for i in s[:2]] == ["t005", "t006"] and s[0]["review"] and "review" not in s[2]
+
+
+def test_gen_words_excluded_from_training():
+    pool = L.word_pool()
+    assert not set(L.GEN_WORDS) & set(pool)
+    assert set(L.GEN_WORDS) <= set(L.word_pool(include_gen=True))
+    items = L.gen_test_items(L.word_pool(include_gen=True))
+    assert len(items) == 20 and [i["target"] for i in items] == L.GEN_WORDS
+    for it in items:
+        assert len(it["options"]) == 4 and it["target"] in it["options"]
+        assert not (set(it["options"]) - {it["target"]}) & set(L.GEN_WORDS)
+    assert set(L.GEN_WORDS) <= set(L.inventory_texts())
+    assert L.TEST_NOISES == ("babble", "talker2") and L.HELDOUT_NOISE not in L.TRAIN_NOISES
+
+
+_FLOW2 = r'''
+import json
+from fastapi.testclient import TestClient
+import main
+out = {}
+with TestClient(main.app) as c:
+    r = c.post("/api/auth/register", json={"email": "lw@example.com", "username": "lw1", "password": "pw-123456",
+                                           "agree_terms": True, "age_confirmed": True})
+    h = {"Authorization": f"Bearer {r.json()['access_token']}"}
+    w = c.post("/api/listen/wordtest/start", headers=h).json()
+    for k, it in enumerate(w["items"]):
+        a = c.post("/api/listen/wordtest/answer", json={"session": w["session"], "item_key": it["key"],
+                   "answer": it["target"] if k < 15 else "x", "sim": "ci"}, headers=h).json()
+    out["wt"] = [a["done"], a["accuracy"]]
+    out["s2_level"] = c.get("/api/listen/stage/2", headers=h).json().get("level")
+    t1 = c.post("/api/listen/test/start", json={"noise": "talker2"}, headers=h).json()
+    t2 = c.post("/api/listen/test/start", json={"noise": "bogus"}, headers=h).json()
+    out["noise"] = [t1["noise"], t2["noise"]]
+    for it in t1["items"]:
+        c.post("/api/listen/test/answer", json={"session": t1["session"], "item_key": it["key"], "answer": "", "noise": "talker2"}, headers=h)
+    summ = c.get("/api/listen/summary", headers=h).json()
+    out["summ"] = [summ["tests"][0]["noise"], summ["word_tests"][0]["accuracy"], summ["word_tests"][0]["sim"]]
+    out["next_t2_form"] = c.post("/api/listen/test/start", json={"noise": "talker2"}, headers=h).json()["form"]
+    out["next_bb_form"] = c.post("/api/listen/test/start", json={"noise": "babble"}, headers=h).json()["form"]
+print("RESULT " + json.dumps(out, ensure_ascii=False))
+'''
+
+
+def test_wordtest_and_test_noise_api():
+    import subprocess
+    import sys
+    import tempfile
+    here = os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as d:
+        env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", PYTHONDONTWRITEBYTECODE="1", LIPLAB_UNLOCK_ALL="1")
+        env.pop("ANTHROPIC_API_KEY", None)
+        p = subprocess.run([sys.executable, "-c", _FLOW2], cwd=here, env=env, capture_output=True, text=True, timeout=300)
+    line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
+    assert line, f"시나리오 실패:\n{p.stdout[-2000:]}\n{p.stderr[-3000:]}"
+    r = json.loads(line[len("RESULT "):])
+    assert r["wt"] == [True, 0.75]
+    assert r["s2_level"] == 1                      # 일반화 검사 답은 2단계 수준·숙달에 들어가지 않는다
+    assert r["noise"] == ["talker2", "babble"]
+    assert r["summ"] == ["talker2", 0.75, "ci"]
+    assert r["next_t2_form"] != r["next_bb_form"]  # 잡음마다 폼을 따로 번갈아 쓴다

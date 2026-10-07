@@ -3583,7 +3583,8 @@ def _pilot_admin_gate(user):
         raise HTTPException(status_code=403, detail="운영자 계정만 파일럿 자료를 내보낼 수 있습니다.")
 
 
-PILOT_EXPORT_VERSION = 5   # 2(9/24): 참여일·참여 뒤 집계·동형 폼 문항 기록·현지 날짜 추가. 3(9/28): 사후 문항의 화자 조건(talker)
+PILOT_EXPORT_VERSION = 6   # 6(10/7): 소리 듣기(listen: 검사 역치·잡음·모의 청취, 낱말 일반화 검사, 단계별 시행 수, trials=true면 시행 기록).
+# 2(9/24): 참여일·참여 뒤 집계·동형 폼 문항 기록·현지 날짜 추가. 3(9/28): 사후 문항의 화자 조건(talker)
 # 4(9/29): 검사 전 연습 시행 수(trials_before)·연습 뒤 사전 표시, 학습 초기화 날(learning_reset_on), 시행 단위 기록(trials=true일 때만)
 # 5(10/6): P3 검사 묶음(battery: 회차·층·폼·순서·문항 응답, 개방형 답 원문 포함), 참여 순번(join_seq)·폼 순서(planned_order)·
 #   B 완료 순번(b_completed_seq), 10/6 측정 표(review_logs·mastery_probes·retention_results·lesson_efforts), trial_log 확장
@@ -3686,6 +3687,39 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
                                         "words_correct": r.words_correct, "words_total": r.words_total} for r in sp],
         }
 
+    async def listen_export(uid, with_log):
+        # 소리 듣기(청능훈련, 청인 모의 파일럿 포함). 검사 역치·낱말 일반화 검사·단계별 시행 수는 늘 싣고, 시행 단위 기록은 trials=true일 때만.
+        # 훈련 답 원문은 싣지 않는다(검사 문항 답만 싣는다)
+        from database import ListenAttempt
+        rs = (await db.execute(select(ListenAttempt).where(ListenAttempt.user_id == uid)
+                               .order_by(ListenAttempt.created_at, ListenAttempt.id))).scalars().all()
+        rs = [r for r in rs if r.session != _LISTEN_PRACTICE]
+        by_stage = {}
+        for r in rs:
+            if r.mode in ("test", "wordtest"):
+                continue
+            k = f"{r.stage}:{r.mode}:{r.sim_mode or '-'}"
+            d = by_stage.setdefault(k, {"stage": r.stage, "mode": r.mode, "sim": r.sim_mode, "n": 0, "correct": 0})
+            d["n"] += 1
+            d["correct"] += 1 if r.correct else 0
+        from datetime import datetime as _dtm
+
+        def _on(t):   # 내보내기에는 시각 대신 현지 날짜만
+            x = {k: v for k, v in t.items() if k != "started_at"}
+            x["started_on"] = day(_dtm.fromisoformat(t["started_at"])) if t.get("started_at") else None
+            return x
+        out = {"tests": [_on(t) for t in _listen_test_state([r for r in rs if r.mode == "test"])],
+               "word_tests": [_on(t) for t in _listen_wordtests([r for r in rs if r.mode == "wordtest"])],
+               "trials_by_stage": list(by_stage.values())}
+        if with_log:
+            out["log"] = [{"seq": i + 1, "day": day(r.created_at), "stage": r.stage, "mode": r.mode, "item_key": r.item_key,
+                           "correct": r.correct, "score": r.score, "level": r.level, "snr_db": r.snr_db, "condition": r.condition,
+                           "noise": r.noise, "voice": r.voice, "plays": r.plays, "repairs": r.repairs, "rt_ms": r.rt_ms,
+                           "route": r.route, "sim": r.sim_mode, "pick": r.pick_mode, "output_latency_ms": r.output_latency_ms,
+                           "av_offset_ms": r.av_offset_ms, "session": r.session,
+                           "answer": r.answer if r.mode in ("test", "wordtest") else None} for i, r in enumerate(rs)]
+        return out
+
     async def battery(uid):
         # P3 검사 묶음. 회차 × 층마다 한 행, 끝내지 못한 층도 싣는다(ITT). 개방형 답 원문은 검사 문항이라 싣는다
         ss = (await db.execute(select(P3TestSession).where(P3TestSession.user_id == uid)
@@ -3758,6 +3792,7 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
             **everything,
             "since_join": (await activity(uid, pf.pilot_joined_at)) if pf.pilot_joined_at else None,
             **({"trial_log": await trial_log(uid), "progress_log": await progress_log(uid)} if trials else {}),
+            "listen": await listen_export(uid, trials),
             "battery": await battery(uid),
             **(await measurement(uid)),
         })
@@ -5780,15 +5815,16 @@ async def listen_skip(req: ListenSkipReq, current_user=Depends(get_current_user)
 
 
 def _listen_test_state(tests: list) -> dict:
-    """검사 회차들 → [{session, form, n, srt_db, started_at}] 시간순."""
+    """검사 회차들 → [{session, form, noise, sim, n, srt_db, started_at}] 시간순."""
     by = {}
     for r in tests:
         s = by.setdefault(r.session, {"session": r.session, "form": (r.item_key or "test:A")[5:6], "trials": [],
+                                       "noise": r.noise or "babble", "sim": r.sim_mode,
                                        "started_at": r.created_at.isoformat() if r.created_at else None})
         s["trials"].append((r.snr_db, bool(r.correct)))
     out = []
     for s in by.values():
-        out.append({"session": s["session"], "form": s["form"], "n": len(s["trials"]),
+        out.append({"session": s["session"], "form": s["form"], "noise": s["noise"], "sim": s["sim"], "n": len(s["trials"]),
                     "srt_db": _listencur.test_srt(s["trials"]), "started_at": s["started_at"]})
     return out
 
@@ -5819,7 +5855,7 @@ async def listen_stage_content(n: int, current_user=Depends(get_current_user), d
         out.update({"sequence": _listencur.ling_sequence(f"{seed}:{(sp.attempts if sp else 0)}"),
                     "sounds": _listencur.LING_SOUNDS, "previous": prev or None})
     elif n in (1, 2):
-        rows = await _listen_attempts(current_user.id, db, stage=n)
+        rows = await _listen_attempts(current_user.id, db, stage=n, mode="ax" if n == 1 else "word_id")   # 일반화 검사(wordtest)는 빼고
         hist = [(r.level or 1, bool(r.correct)) for r in rows]
         level = _listencur.next_level(hist, n)
         out["level"] = level
@@ -5909,6 +5945,7 @@ class ListenAnswer(BaseModel):
     output_latency_ms: Optional[int] = Field(None, ge=0, le=5000)
     av_offset_ms: Optional[int] = Field(None, ge=0, le=1000)
     pick: Optional[str] = Field(None, max_length=12)       # 출제 방식(targeted|uniform), 표적 출제 비교용
+    noise: Optional[str] = Field(None, max_length=16)      # 잡음 이름(4단계 babble, 5단계 소음 조건의 종류)
     sim: Optional[str] = Field(None, max_length=12)        # 모의 청취(ci)
     practice: bool = False                                # 자음 단서를 본 뒤 다시 쓴 답: 점수만 주고 세지 않는다
 
@@ -5981,7 +6018,7 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
     if mode == "convo" and cond not in _listencur.CONVO_CONDITIONS:
         cond = "quiet"
     snr = _clip_snr(req.snr_db) if mode in ("noise", "convo") else None
-    rows = await _listen_attempts(current_user.id, db, stage=n) if counted else []
+    rows = await _listen_attempts(current_user.id, db, stage=n, mode=mode) if counted else []   # 같은 단계의 검사 기록은 빼고
     if mode == "word_id" and counted:
         cur = _listencur.next_level([(r.level or 1, bool(r.correct)) for r in rows], n)
         level = level if abs(level - cur) <= 1 else cur
@@ -5994,6 +6031,8 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
                          output_latency_ms=req.output_latency_ms, av_offset_ms=req.av_offset_ms,
                          pick_mode=req.pick if req.pick in _listencur.PICK_MODES else None,
                          sim_mode="ci" if req.sim == "ci" else None,
+                         noise=(req.noise if req.noise in set(_listencur.TRAIN_NOISES) | {_listencur.HELDOUT_NOISE} else None)
+                         if mode in ("noise", "convo") else None,
                          session=None if counted else _LISTEN_PRACTICE))
     res["counted"] = counted
     if counted:
@@ -6070,16 +6109,19 @@ async def listen_ling(req: ListenLingReq, current_user=Depends(get_current_user)
 
 class ListenTestStart(BaseModel):
     route: Optional[str] = Field(None, max_length=20)
+    noise: Optional[str] = Field(None, max_length=16)   # babble(주 결과, 기본) 또는 talker2(훈련에 안 쓴 잡음, 일반화)
 
 
 @app.post("/api/listen/test/start")
 async def listen_test_start(req: ListenTestStart, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """소음 속 문장 인식 역치(SRT) 검사 한 회차. 폼은 학습자마다 A·B를 번갈아 쓴다(test_form_for). 소리만, 훈련에 안 쓴 목소리(voice_slot 'test')."""
     import uuid
-    tests = [t for t in _listen_test_state(await _listen_attempts(current_user.id, db, stage=4, mode="test")) if t["srt_db"] is not None]
-    form = _listencur.test_form_for(current_user.id, len(tests))
+    noise = req.noise if req.noise in _listencur.TEST_NOISES else "babble"
+    tests = [t for t in _listen_test_state(await _listen_attempts(current_user.id, db, stage=4, mode="test"))
+             if t["srt_db"] is not None and t["noise"] == noise]
+    form = _listencur.test_form_for(current_user.id, len(tests))   # 잡음 종류마다 폼을 번갈아 쓴다
     items = [{"key": f"test:{form}{i + 1:02d}", "text": s} for i, s in enumerate(_listencur.TEST_FORMS[form])]
-    return {"session": f"test:{uuid.uuid4().hex[:12]}", "form": form, "items": items,
+    return {"session": f"test:{uuid.uuid4().hex[:12]}", "form": form, "noise": noise, "items": items,
             "start_db": _listencur.TEST_STAIR["start"], "n_done_tests": len(tests)}
 
 
@@ -6091,6 +6133,7 @@ class ListenTestAnswer(BaseModel):
     plays: Optional[int] = None
     route: Optional[str] = Field(None, max_length=20)
     sim: Optional[str] = Field(None, max_length=12)
+    noise: Optional[str] = Field(None, max_length=16)
 
 
 @app.post("/api/listen/test/answer")
@@ -6109,6 +6152,7 @@ async def listen_test_answer(req: ListenTestAnswer, current_user=Depends(get_cur
         raise HTTPException(status_code=409, detail="이미 답한 문장입니다.")
     if rows and rows[0].item_key[5:6] != form:
         raise HTTPException(status_code=400, detail="회차의 폼과 다릅니다.")
+    noise = (rows[0].noise if rows and rows[0].noise else None) or (req.noise if req.noise in _listencur.TEST_NOISES else "babble")
     trials = [(r.snr_db, bool(r.correct)) for r in rows]
     snr = _listencur.test_next_snr(trials) if trials else _listencur.TEST_STAIR["start"]
     target = _listencur.TEST_FORMS[form][int(idx) - 1]
@@ -6116,11 +6160,65 @@ async def listen_test_answer(req: ListenTestAnswer, current_user=Depends(get_cur
     ok = ws["proportion"] >= _listencur.TEST_STAIR["criterion"]
     db.add(ListenAttempt(user_id=current_user.id, stage=4, mode="test", item_key=key, target=target, answer=req.answer,
                          correct=ok, score=ws["proportion"], snr_db=snr, condition="ao", voice=req.voice, plays=req.plays,
-                         route=req.route, session=req.session, sim_mode="ci" if req.sim == "ci" else None))
+                         route=req.route, session=req.session, sim_mode="ci" if req.sim == "ci" else None, noise=noise))
     await db.commit()
     trials.append((snr, ok))
     srt = _listencur.test_srt(trials)
     return {"n": len(trials), "snr_db": snr, "next_db": _listencur.test_next_snr(trials), "done": srt is not None, "srt_db": srt}
+
+
+@app.post("/api/listen/wordtest/start")
+async def listen_wordtest_start(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """낱말 일반화 검사(훈련 풀에서 뺀 낱말 20개, 4지, 고정 순서, 피드백 없음). 검사용 목소리로 낸다."""
+    import uuid
+    done = await _listen_attempts(current_user.id, db, stage=2, mode="wordtest")
+    n_sessions = len({r.session for r in done})
+    return {"session": f"wtest:{uuid.uuid4().hex[:12]}", "items": _listencur.gen_test_items(_listencur.word_pool(include_gen=True)),
+            "n_done": n_sessions}
+
+
+class ListenWordTestAnswer(BaseModel):
+    session: str = Field(..., max_length=40)
+    item_key: str = Field(..., max_length=40)
+    answer: str = Field(..., max_length=40)
+    voice: Optional[str] = Field(None, max_length=40)
+    plays: Optional[int] = None
+    rt_ms: Optional[int] = None
+    route: Optional[str] = Field(None, max_length=20)
+    sim: Optional[str] = Field(None, max_length=12)
+
+
+@app.post("/api/listen/wordtest/answer")
+async def listen_wordtest_answer(req: ListenWordTestAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """일반화 검사 한 문항. 정답은 알려 주지 않고, 숙달·수준에 넣지 않는다."""
+    from database import ListenAttempt
+    if not req.session.startswith("wtest:") or not req.item_key.startswith("g:"):
+        raise HTTPException(status_code=400, detail="bad item")
+    target = req.item_key[2:]
+    if target not in _listencur.GEN_WORDS:
+        raise HTTPException(status_code=400, detail="bad item")
+    rows = await _listen_attempts(current_user.id, db, stage=2, mode="wordtest", session=req.session)
+    if any(r.item_key == req.item_key for r in rows):
+        raise HTTPException(status_code=409, detail="이미 답한 문항입니다.")
+    ok = req.answer.strip() == target
+    db.add(ListenAttempt(user_id=current_user.id, stage=2, mode="wordtest", item_key=req.item_key, target=target, answer=req.answer,
+                         correct=ok, voice=req.voice, plays=req.plays, rt_ms=req.rt_ms, route=req.route, session=req.session,
+                         sim_mode="ci" if req.sim == "ci" else None))
+    await db.commit()
+    n = len(rows) + 1
+    done = n >= len(_listencur.GEN_WORDS)
+    return {"n": n, "done": done,
+            "accuracy": round((sum(1 for r in rows if r.correct) + (1 if ok else 0)) / n, 3) if done else None}
+
+
+def _listen_wordtests(rows: list) -> list:
+    by = {}
+    for r in rows:
+        s = by.setdefault(r.session, {"session": r.session, "n": 0, "correct": 0, "sim": r.sim_mode,
+                                       "started_at": r.created_at.isoformat() if r.created_at else None})
+        s["n"] += 1
+        s["correct"] += 1 if r.correct else 0
+    return [{**s, "accuracy": round(s["correct"] / s["n"], 3), "complete": s["n"] >= len(_listencur.GEN_WORDS)} for s in by.values()]
 
 
 @app.get("/api/listen/summary")
@@ -6169,6 +6267,7 @@ async def listen_summary(current_user=Depends(get_current_user), db: AsyncSessio
     return {
         "last_check": last_check, "n_checks": len(checks),
         "tests": tests,
+        "word_tests": _listen_wordtests([r for r in counted if r.mode == "wordtest"]),
         "training": {"srt_ao_db": srt_ao, "srt_av_db": srt_av, "n_ao": len(ao), "n_av": len(av),
                      "av_gain_db": round(srt_ao - srt_av, 1) if srt_ao is not None and srt_av is not None else None},
         "confusions": conf[:8], "recommendations": _listencur.recommendations(conf),

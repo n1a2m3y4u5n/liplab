@@ -354,6 +354,8 @@ export const listenAPI = {
   ling: async (body) => (await api.post('/listen/ling', withSim(body))).data,
   testStart: async (body = {}) => (await api.post('/listen/test/start', body)).data,
   testAnswer: async (body) => (await api.post('/listen/test/answer', withSim(body))).data,
+  wordTestStart: async () => (await api.post('/listen/wordtest/start', {})).data,
+  wordTestAnswer: async (body) => (await api.post('/listen/wordtest/answer', withSim(body))).data,
   summary: async () => (await api.get('/listen/summary')).data,
 }
 

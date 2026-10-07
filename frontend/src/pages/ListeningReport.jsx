@@ -33,7 +33,9 @@ export default function ListeningReport() {
   const [err, setErr] = useState(false)
   useEffect(() => { listenAPI.summary().then(setD).catch(() => setErr(true)) }, [])
   if (!d && !err) return <LoadingScreen />
-  const tests = d?.tests || []
+  const allTests = d?.tests || []
+  const tests = allTests.filter((t) => (t.noise || 'babble') === 'babble')   // 변화 비교는 주 검사(잡담 잡음)끼리
+  const otherTests = allTests.filter((t) => t.noise && t.noise !== 'babble')
   const firstT = tests[0]
   const lastT = tests[tests.length - 1]
   const change = tests.length >= 2 ? Math.round((firstT.srt_db - lastT.srt_db) * 10) / 10 : null
@@ -51,18 +53,30 @@ export default function ListeningReport() {
           <>
             <Section title="소음 속 듣기 검사"
               note="역치는 낱말을 열에 넷쯤 알아듣는 '말과 소음의 크기 차이'예요. 낮을수록 시끄러운 곳에서 잘 알아들어요. 지금 검사 방식에서는 두 검사 사이 3 dB 안쪽의 차이는 측정 오차일 수 있어요. 처음 한두 번은 검사에 익숙해지는 것만으로 1~2 dB 낮아지기도 해요.">
-              {tests.length === 0 ? (
+              {allTests.length === 0 && !(d.word_tests || []).length ? (
                 <p className="text-[14px] text-ink-muted">아직 검사 기록이 없어요. 소리 듣기 5단계(소음 속 듣기)에서 처음 검사를 할 수 있어요.</p>
               ) : (
                 <>
                   <div className="flex flex-col gap-2">
                     {tests.map((t, i) => (
                       <div key={t.session} className="flex items-center justify-between rounded-13 bg-surface-muted px-4 py-2.5 text-[14px]">
-                        <span className="text-ink-muted">{i === 0 ? '처음' : `${i + 1}번째`} · 폼 {t.form} · {(t.started_at || '').slice(0, 10)}</span>
+                        <span className="text-ink-muted">{i === 0 ? '처음' : `${i + 1}번째`} · 폼 {t.form}{t.noise === 'talker2' ? ' · 두 사람 말소리' : ''}{t.sim === 'ci' ? ' · 인공와우 모의' : ''} · {(t.started_at || '').slice(0, 10)}</span>
                         <span className="font-bold text-ink">{dB(t.srt_db)}</span>
                       </div>
                     ))}
                   </div>
+                  {otherTests.map((t) => (
+                    <div key={t.session} className="flex items-center justify-between rounded-13 border-2 border-line px-4 py-2 text-[13px]">
+                      <span className="text-ink-muted">훈련에 안 쓴 잡음(두 사람 말소리) · 폼 {t.form} · {(t.started_at || '').slice(0, 10)}</span>
+                      <span className="font-bold text-ink">{dB(t.srt_db)}</span>
+                    </div>
+                  ))}
+                  {(d.word_tests || []).filter((w) => w.complete).map((w) => (
+                    <div key={w.session} className="flex items-center justify-between rounded-13 border-2 border-line px-4 py-2 text-[13px]">
+                      <span className="text-ink-muted">낱말 검사(훈련에 안 나온 낱말 20개) · {(w.started_at || '').slice(0, 10)}</span>
+                      <span className="font-bold text-ink">{Math.round(w.accuracy * 100)}%</span>
+                    </div>
+                  ))}
                   {change != null && (
                     <p className="text-[15px] font-bold text-track-dark">
                       {change > 0 ? `처음보다 ${change} dB 낮아졌어요` : change < 0 ? `처음보다 ${-change} dB 높아졌어요` : '처음과 같아요'}

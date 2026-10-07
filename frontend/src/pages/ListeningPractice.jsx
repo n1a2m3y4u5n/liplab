@@ -391,6 +391,50 @@ function WordId({ data, settings, voices, onProgress, onExit, reload }) {
   )
 }
 
+// ── 낱말 일반화 검사(청인 파일럿, ?stage=2&wordtest=1) ──────────────────
+
+function WordTest({ settings, voices, onExit }) {
+  const [run, setRun] = useState(null)
+  const [k, setK] = useState(0)
+  const [busy, setBusy] = useState(false)
+  const [plays, setPlays] = useState(0)
+  const [result, setResult] = useState(null)
+  const [err, setErr] = useState(null)
+  const t0 = useRef(Date.now())
+  const it = run?.items?.[k]
+  const { clip, state } = useClip(it?.target, voices.test)
+  useEffect(() => { listenAPI.wordTestStart().then(setRun).catch(() => setErr('검사를 시작하지 못했어요.')) }, [])
+  useEffect(() => { setPlays(0); t0.current = Date.now() }, [k])
+  if (err) return <Card className="text-center text-[15px] font-bold text-bad-text">{err}</Card>
+  if (!run) return <LoadingScreen variant="section" />
+  if (result) return <Done title="낱말 검사를 마쳤어요" lines={[`20문항 중 ${Math.round(result.accuracy * 20)}문항 맞음`]} onExit={onExit} />
+  if (state === 'missing') return <Card className="text-center text-[15px] font-bold text-ink-muted">검사 소리가 아직 준비되지 않았어요.</Card>
+  const play = async () => { setBusy(true); await playClip(clip, { gainDb: settings.gainDb }); setBusy(false); setPlays((p) => p + 1) }
+  const choose = async (w) => {
+    try {
+      const r = await listenAPI.wordTestAnswer({ session: run.session, item_key: it.key, answer: w, voice: voices.test, plays,
+        rt_ms: Date.now() - t0.current, route: settings.route })
+      if (r.done) setResult(r)
+      else setK(k + 1)
+    } catch { setErr('답을 보내지 못했어요. 검사를 처음부터 다시 해 주세요.') }
+  }
+  return (
+    <Card className="flex flex-col gap-4">
+      <div className="flex items-center justify-between text-[13px] font-bold">
+        <span className="text-track">낱말 검사 {k + 1} / {run.items.length}</span>
+        <span className="text-ink-muted">정답은 알려 주지 않아요</span>
+      </div>
+      <PlayButton onClick={play} busy={busy} disabled={state !== 'ready' || plays >= 2} label={plays >= 2 ? '두 번까지 들어요' : '낱말 듣기'} plays={plays} />
+      <div className="grid grid-cols-2 gap-2">
+        {it.options.map((o) => (
+          <button key={o} type="button" disabled={!plays} onClick={() => choose(o)}
+            className={`rounded-14 border-2 border-line bg-white py-4 text-[20px] font-bold text-ink ${!plays ? 'opacity-40' : ''}`}>{o}</button>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
 // ── 3·4단계: 문장 받아쓰기(조용함 / 소음 속) ─────────────────────
 
 function useAvFrames(text, clip, on) {
@@ -545,7 +589,7 @@ function SentenceTask({ data, settings, voices, onProgress, onExit, reload, nois
 
 // ── 4단계 검사: 소음 속 문장 인식 역치(20문장) ─────────────────────
 
-function NoiseTest({ settings, voices, onDone, onCancel }) {
+function NoiseTest({ settings, voices, onDone, onCancel, noise: noiseName = 'babble' }) {
   const [run, setRun] = useState(null)
   const [k, setK] = useState(0)
   const [snr, setSnr] = useState(10)
@@ -556,10 +600,11 @@ function NoiseTest({ settings, voices, onDone, onCancel }) {
   const [err, setErr] = useState(null)
   const it = run?.items?.[k]
   const { clip, state } = useClip(it?.text, voices.test)
-  const nz = useNoise(true)
+  const nz = useNoise(true, run?.noise || noiseName)
   useEffect(() => {
-    listenAPI.testStart({ route: settings.route }).then((r) => { setRun(r); setSnr(r.start_db) }).catch(() => setErr('검사를 시작하지 못했어요.'))
-  }, [settings.route])
+    listenAPI.testStart({ route: settings.route, noise: noiseName }).then((r) => { setRun(r); setSnr(r.start_db) })
+      .catch(() => setErr('검사를 시작하지 못했어요.'))
+  }, [settings.route, noiseName])
   useEffect(() => { setAnswer(''); setPlays(0) }, [k])
   if (err) return <Card className="text-center text-[15px] font-bold text-bad-text">{err}</Card>
   if (!run || (state === 'loading' && !result) || nz.state === 'loading') return <LoadingScreen variant="section" />
@@ -577,7 +622,8 @@ function NoiseTest({ settings, voices, onDone, onCancel }) {
   const play = async () => { setBusy(true); await playClip(clip, { gainDb: settings.gainDb, snrDb: snr, noise: nz.noise }); setBusy(false); setPlays((p) => p + 1) }
   const submit = async () => {
     try {
-      const r = await listenAPI.testAnswer({ session: run.session, item_key: it.key, answer, voice: voices.test, plays, route: settings.route })
+      const r = await listenAPI.testAnswer({ session: run.session, item_key: it.key, answer, voice: voices.test, plays, route: settings.route,
+        noise: run.noise })
       if (r.done) { setResult(r); return }
       setSnr(r.next_db)
       setK(k + 1)
@@ -602,7 +648,9 @@ function NoiseTest({ settings, voices, onDone, onCancel }) {
 }
 
 function NoiseStage({ data, settings, voices, onProgress, onExit, reload }) {
-  const [mode, setMode] = useState(data.needs_pretest ? 'intro' : 'train')
+  // 연구용: ?testnoise=talker2면 훈련에 안 쓴 잡음으로 검사만 한다(청인 파일럿 일반화 검사)
+  const testNoise = (() => { try { return new URLSearchParams(window.location.search).get('testnoise') } catch { return null } })()
+  const [mode, setMode] = useState(testNoise === 'talker2' ? 'test' : data.needs_pretest ? 'intro' : 'train')
   useEffect(() => { if (mode !== 'train') onProgress(0, 0) }, [mode, onProgress])
   if (mode === 'intro') {
     return (
@@ -615,7 +663,10 @@ function NoiseStage({ data, settings, voices, onProgress, onExit, reload }) {
       </Card>
     )
   }
-  if (mode === 'test') return <NoiseTest settings={settings} voices={voices} onDone={() => { setMode('train'); reload() }} onCancel={onExit} />
+  if (mode === 'test') {
+    return <NoiseTest settings={settings} voices={voices} noise={testNoise === 'talker2' ? 'talker2' : 'babble'}
+      onDone={() => { setMode('train'); reload() }} onCancel={onExit} />
+  }
   return (
     <div className="flex flex-col gap-3">
       <SentenceTask data={data} settings={settings} voices={voices} onProgress={onProgress} onExit={onExit} reload={reload} noisy />
@@ -795,8 +846,12 @@ export default function ListeningPractice() {
         ) : (
           <>
             {stage > 0 && <p className="text-[14px] leading-[1.6] text-ink-muted">{data.guide}</p>}
-            <Task key={`${stage}:${nonce}`} data={data} settings={settings} voices={voices} onProgress={onProgress} onExit={exit} reload={reload}
-              noisy={data.mode === 'noise'} />
+            {stage === 2 && params.get('wordtest') === '1' ? (
+              <WordTest settings={settings} voices={voices} onExit={exit} />
+            ) : (
+              <Task key={`${stage}:${nonce}`} data={data} settings={settings} voices={voices} onProgress={onProgress} onExit={exit} reload={reload}
+                noisy={data.mode === 'noise'} />
+            )}
           </>
         )}
         <p className="mt-auto pt-4 text-center text-[11px] leading-[1.6] text-ink-faint">{NOTICE}</p>
