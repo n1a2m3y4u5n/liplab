@@ -92,6 +92,74 @@ def test_nonsense_forms_use_c10_heldout_lists_and_never_trained_words():
     assert "처슴" not in nw.repo_real_words()
 
 
+@functools.lru_cache(maxsize=1)
+def _builder():
+    """scripts/build_pilot_manifest.py를 모듈로 불러온다(유사도 점검 함수와 폼 배정)."""
+    import importlib.util
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts", "build_pilot_manifest.py")
+    spec = importlib.util.spec_from_file_location("build_pilot_manifest", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_manifest_sentences_pass_similarity_guard():
+    # 올린 목록의 개방형 문장이 스크립트의 폼 배정과 같고, 조건·훈련 문장 유사도·폼 문장끼리 유사도를 모두 통과한다.
+    # 예비 문장도 훈련 문장, 폼 문장, 다른 예비 문장과 가깝지 않다
+    B = _builder()
+    m = pb.load_manifest()
+    S = m["layers"]["sentence"]
+    forms = {f: [x["text"] for x in S["items"][f]] for f in pb.FORMS}
+    assert forms == B.FORM_SENTENCES
+    words = {x["word"] for f in pb.FORMS for x in m["layers"]["word"]["items"][f]}
+    training = B.training_sentences()
+    assert len(training) > 300
+    assert B.form_problems(forms, words, training) == []
+    flat = [t for f in pb.FORMS for t in forms[f]]
+    reserve = [x["text"] for x in S["reserve"]]
+    assert len(reserve) == B.N_RESERVE
+    for i, r in enumerate(reserve):
+        assert not B.basic_problem(r, words), r
+        assert not B.training_conflicts(r, training), r
+        for t in flat + reserve[i + 1:]:
+            assert not B.similarity_reasons(r, t, both_ways=True), (r, t)
+
+
+def test_similarity_guard_catches_review_cases():
+    # 10/7 내용 1차 검토(docs/review/pilot-sentences.tsv)가 훈련 문장·다른 검사 문장과 겹친다고 찾은 경우는 모두 걸리고,
+    # 검토가 '가벼움'·'경계, 사람 판단'으로 둔 경우는 통과한다
+    B = _builder()
+    caught = [
+        ("많이 기다렸지요", "많이 기다렸어?"), ("머리가 조금 아파요", "머리가 아파요."),
+        ("엄마랑 시장에 갔어요", "엄마랑 시장에 가서 채소를 샀어."), ("내일 아침에 일찍 만나요", "내일 아침 아홉 시에 만나요."),
+        ("맛있게 많이 드세요", "맛있게 드세요."), ("우산을 챙겨 가세요", "비가 올 것 같으니까 우산을 꼭 챙겨 가세요."),
+        ("잠깐만 기다려 주세요", "잠시만 기다려 주세요."), ("조심히 들어가세요", "조심히 가세요."),
+        ("창문 좀 열어 주세요", "더우니까 창문 좀 열어 줄래?"), ("밥을 천천히 먹어요", "천천히 먹어"),
+        ("손을 깨끗이 씻으세요", "밥 먹기 전에 손을 깨끗이 씻어."), ("오늘 날씨가 참 좋네요", "오늘 날씨가 좋아요."),
+        ("밤에 잠이 잘 안 와요", "밤에 잠이 안 와서 책을 읽었어."),   # 예비 SR04, 검토가 교체용으로 쓰지 않음
+        ("약을 먹고 푹 쉬세요", "푹 쉬세요."), ("신발을 새로 샀어요", "이거 새로 샀어요?"),   # 점검이 더 찾은 둘
+    ]
+    for a, b in caught:
+        assert B.similarity_reasons(a, b), (a, b)
+    # 검사 문장끼리(같은 폼 포함, 다른 폼 틀 겹침)
+    assert "포함" in B.similarity_reasons("동생이 감기에 걸렸어요", "감기에 걸렸어요", both_ways=True)
+    assert B.similarity_reasons("전화가 잘 안 들려요", "소리가 잘 안 들려요", both_ways=True)
+    assert B.similarity_reasons("머리가 조금 아파요", "다리가 조금 아파요", both_ways=True)
+    passed = [
+        ("물이 너무 뜨거워요", "솥뚜껑이 너무 뜨거워."), ("비가 그칠 것 같아요", "구름이 잔뜩 껴서 곧 비가 올 것 같아."),
+        ("길을 잃어서 헤맸어요", "택시 기사가 길을 잘 몰라서 헤맸어."), ("주말에 산에 올라갔어요", "주말마다 아빠랑 산에 올라가."),
+        ("너무 피곤해 보여요", "거울에 비친 내 얼굴이 피곤해 보여."), ("숙제를 다 끝냈어요", "친구 덕에 숙제를 빨리 끝냈어."),
+        ("시장에서 사과를 샀어요", "엄마랑 시장에 가서 채소를 샀어."),
+        ("감기에 걸렸어요", "요즘 날씨가 갑자기 추워져서 주변에 감기에 걸린 사람이 많다고 하네요."),
+    ]
+    for a, b in passed:
+        assert not B.similarity_reasons(a, b), (a, b, B.similarity_reasons(a, b))
+    assert not B.similarity_reasons("글씨가 너무 작아요", "옷이 너무 작아졌어요", both_ways=True)
+    # 경계 표시는 검토의 '경계' 다섯을 잡는다(예비에서는 뺀다)
+    for a, b in passed[2:7]:
+        assert B.is_borderline(a, b), (a, b)
+
+
 def test_word_form_c_matches_difficulty_and_avoids_test_words():
     m = pb.load_manifest()
     W = m["layers"]["word"]["items"]
