@@ -26,8 +26,11 @@ const LIP_TEXT = {
 }
 
 function Chip({ on, onClick, children }) {
+  // 휴대폰에서 종류 줄은 옆으로 넘기므로, 고른 칩이 화면 밖에 있으면 보이게 옮긴다
+  const ref = useRef(null)
+  useEffect(() => { if (on) ref.current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }) }, [on])
   return (
-    <button type="button" onClick={onClick} aria-pressed={on}
+    <button ref={ref} type="button" onClick={onClick} aria-pressed={on}
       className={`min-h-[40px] shrink-0 rounded-full px-4 py-2 text-[14px] font-bold leading-figma transition-colors ${on ? 'bg-track text-white' : 'bg-surface-sunken text-ink-muted hover:text-ink'}`}>
       {children}
     </button>
@@ -167,7 +170,7 @@ export default function ListenClassroom() {
         ) : (
           <div className="flex animate-fade-in flex-col gap-4 lg:gap-5">
             <Heading title="소리 교실" sub="헷갈리기 쉬운 소리 짝을 골라 마음껏 들어 봐요. 같은 말을 여러 목소리로 들으면 목소리가 바뀌어도 알아듣기 쉬워져요." />
-            <div className="-mx-[18px] flex gap-2 overflow-x-auto px-[18px] pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0" role="group" aria-label="소리 짝 종류">
+            <div className="-mx-[18px] flex gap-2 overflow-x-auto px-[18px] pb-1 [scrollbar-width:none] lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0" role="group" aria-label="소리 짝 종류">
               {kinds.map((k) => <Chip key={k.kind} on={k.kind === kind.kind} onClick={() => pickKind(k.kind)}>{k.label}</Chip>)}
             </div>
             {kind.desc && <p className="break-keep text-[15px] leading-[1.6] text-ink">{kind.desc}</p>}
