@@ -5198,6 +5198,10 @@ def _weak_phones(dgop_result, k: int = 3) -> list:
     if not phones:
         return []
     mean = sum(p["dgop"] for p in phones) / len(phones)
+    # S2 신뢰도 지도(phone_reliability): 표가 붙어 있으면(reliable 키가 있음) 믿을 만한 소리만 짚는다. 문장 평균은 칩 전체로 낸다.
+    # 믿을 만한 소리가 약하지 않으면 약한 소리를 짚지 않는다(docs/phoneme-feedback-reliability-2026-10.md 7절).
+    if any(p.get("reliable") is not None for p in phones):
+        phones = [p for p in phones if p.get("reliable")]
     out = []
     for p in sorted(phones, key=lambda x: x["dgop"]):
         tok = p.get("token") or ""
@@ -5305,6 +5309,12 @@ async def speak_assess(
                     )
                 if result.get("score") is not None:
                     dgop_result = result
+                    # 소리별 신뢰도(S2): 칩·코칭이 믿을 만한 소리만 확정으로 짚게 음소마다 reliable을 붙인다(표가 없으면 그대로)
+                    try:
+                        import phone_reliability
+                        phone_reliability.annotate(dgop_result.get("phones") or [])
+                    except Exception as e:
+                        print(f"[WARN] 음소 신뢰도 표시 실패: {type(e).__name__}: {e}")
                     # 표시용 보정 점수를 쓴다 — 원점수는 깨끗한 발화도 10점 안쪽이라
                     # 합격선(50·65)과 비교조차 되지 않는다. 보정 전 값은 응답의
                     # dgop.raw_score로 함께 나간다(축 A 한계 ② 대응).
@@ -5417,7 +5427,8 @@ async def speak_assess(
     # 개별 시도 영속화(말하기 분석용 — 독화가 Progress에 쌓는 것과 대칭)
     from database import SpeakAttempt
     _phones = [{"label": (p.get("token") or "").split(":", 1)[-1].replace("|", " ").strip(),
-                "dgop": round(float(p["dgop"]), 3)}
+                "dgop": round(float(p["dgop"]), 3),
+                **({"reliable": bool(p["reliable"])} if p.get("reliable") is not None else {})}   # S2 신뢰도(표가 있을 때만)
                for p in ((dgop_result or {}).get("phones") or [])
                if p.get("aligned") and p.get("scorable") and p.get("dgop") is not None and not p.get("silent_h")][:40]
     attempt = SpeakAttempt(
@@ -5493,6 +5504,8 @@ async def speak_assess(
     if dgop_result:
         acoustic_dgop = {
             "uncertainty": dgop_result.get("uncertainty"),
+            # 음소마다 reliable(S2 신뢰도 지도)이 있으면 true인 칩만 색을 확정으로, 나머지는 '참고'로 보인다. 표가 없으면 False
+            "reliability_map": any(p.get("reliable") is not None for p in (dgop_result.get("phones") or [])),
             "phones": [{**p, "label": (p.get("token") or "").split(":", 1)[-1].replace("|", " ").strip()}
                        for p in (dgop_result.get("phones") or [])
                        if p.get("aligned") and p.get("scorable") and not p.get("silent_h")],   # 내지 않는 ㅎ은 칩에서 뺀다
