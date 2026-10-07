@@ -46,7 +46,7 @@ export const BASE_DEFAULTS = Object.freeze({
   shortHints: false,         // 안내·피드백을 첫 문장만 먼저 보이고 '더 보기'로 펼친다
   signView: false,           // 단어 레슨에서 수어 뜻을 바로 펼쳐 보인다
   speakFocus: [],            // 말하기에서 먼저 권할 영역('prosody' 운율 조절, 'fricative' ㅅ·ㅈ·ㅊ·ㅎ 소리)
-  soundCondition: false,     // 소리 조건(계획 3-2)을 권할지. 소리 조건이 아직 없어 저장만 한다
+  soundCondition: false,     // 소리 조건(계획 3-2, C17)을 권할지. 권하기만 하고 켜는 것은 학습자다(hooks/useSoundCondition)
 })
 
 /**
@@ -82,7 +82,7 @@ export function describeDefaults(d) {
   if (d.readingLoad === 'reduced') out.push('글을 덜 읽는 그림 보기는 준비되면 먼저 켜 둘게요.')
   if (d.signView) out.push('단어를 틀리면 수어 뜻을 바로 펼쳐 보여요.')
   if (d.speakFocus.length) out.push('말하기는 운율 조절(크기·길이·높낮이)과 ㅅ·ㅈ·ㅊ·ㅎ 소리부터 연습해 보세요.')
-  if (d.soundCondition) out.push('소리를 함께 듣는 연습이 생기면 먼저 권해 드릴게요.')
+  if (d.soundCondition) out.push('답한 뒤 소리와 함께 다시 보기를 권해요. 프로필에서 켜고 끌 수 있어요.')
   return out
 }
 

@@ -562,6 +562,8 @@ class ProgressSubmission(BaseModel):
     options: Optional[List[str]] = Field(None, max_length=6)
     # 연습 답(practice_only)의 사유. 화면이 보낸다. 'consonant_retry' | 'hint3' | 'answer_shown'(그 밖의 값은 비운다)
     practice_reason: Optional[str] = Field(None, max_length=16)
+    # 소리 조건(C17)이 켜져 있었는가(기록만, TrialMeta와 같은 뜻)
+    sound_condition: Optional[bool] = None
 
 
 def _sentence_options(options, sentence: str) -> Optional[list]:
@@ -602,6 +604,106 @@ async def get_visemes(text: str):
         return visemes
     except Exception as e:
         raise _server_error(e, "Viseme conversion failed")
+
+
+# ── 소리 조건(C17)·듣기 트랙 소리 ─────────────────────────────────────────────
+# 미리 합성한 서버 음성(docs/sound-condition.md). 화면은 답한 뒤에만 '소리와 함께 다시 보기'로 소리를 튼다(나21).
+# 없는 글·목소리는 404 {"available": false}이고, 화면은 '소리 준비 중'을 보이고 레슨을 그대로 잇는다.
+
+def _sound_missing(reason: str):
+    return _JSONResponse(status_code=404, content={"available": False, "reason": reason})
+
+
+@app.get("/api/sound", dependencies=[Depends(ratelimit.rate_limit(120, 60, "sound"))])
+async def sound_lookup(text: str, voice: Optional[str] = None, current_user=Depends(get_current_user)):
+    """글 → 소리 파일 주소·길이·음절 시각(입모양 프레임의 text_index 기준). 고정 목록 → 서버 캐시 → (켜져 있으면) 동적 합성 순."""
+    import sound_service as _ss
+    if not text or not text.strip() or len(text) > 200:
+        return _sound_missing("bad_text")
+    clip, source, vid = _ss.find(text, voice)
+    if vid is None:
+        return _sound_missing("unknown_voice")
+    if clip:
+        return _ss.response(text, clip, source, vid)
+    if not _ss.dynamic_enabled():
+        return _sound_missing("not_prepared")
+    _ml_admit()
+    try:
+        async with _ml_slot():
+            clip = await asyncio.to_thread(_ss.generate, text, vid)
+    except Exception as e:
+        print(f"[WARN] 동적 소리 합성 실패: {type(e).__name__}: {e}")
+        clip = None
+    if not clip:
+        return _sound_missing("not_prepared")
+    return _ss.response(text, clip, "generated", vid)
+
+
+@app.get("/api/sound/voices")
+async def sound_voices():
+    """목소리 목록 [{id, label, sex}](순서 고정, 듣기 트랙은 마지막 목소리를 검사 전용으로 쓴다), 기본 목소리, 있는 소음 이름."""
+    import sound_service as _ss
+    m = _ss.manifest()
+    return {"default_voice": m.get("default_voice") or None,
+            "voices": [{k: v.get(k) for k in ("id", "label", "sex")} for v in _ss.voices()],
+            "noises": _ss.noises()}
+
+
+@app.get("/api/sound/audio/{name}")
+async def sound_audio(name: str):
+    """소리 파일. 이름(내용 해시)이 목소리·글마다 달라 1년 immutable로 캐시한다. <audio src>는 인증 머리글을 못 보내므로 인증 없이
+    받는다(고정 학습 콘텐츠이고 이름은 추측하기 어렵다). 서비스워커는 /api/를 캐시하지 않아 전체를 미리 받지 않는다."""
+    import sound_service as _ss
+    from fastapi.responses import FileResponse
+    path = _ss.audio_path(name)
+    if not path:
+        raise HTTPException(status_code=404, detail="없는 소리")
+    return FileResponse(path, media_type=_ss.media_type(name), headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+
+@app.get("/api/sound/noise/{name}")
+async def sound_noise(name: str):
+    """듣기 트랙 소음({babble, talker1_f, talker1_m, talker2, ssn}.{ogg,m4a}). 같은 이름으로 바뀔 수 있어 하루만 캐시한다."""
+    import sound_service as _ss
+    from fastapi.responses import FileResponse
+    path = _ss.noise_path(name)
+    if not path:
+        raise HTTPException(status_code=404, detail="없는 잡음")
+    return FileResponse(path, media_type=_ss.media_type(name), headers={"Cache-Control": "public, max-age=86400"})
+
+
+class SoundReplayLog(BaseModel):
+    """'소리와 함께 다시 보기'를 틀었다는 기록. 답은 이미 서버에 들어갔으므로 그 시행(같은 사용자·목표, 30분 안의 가장 최근)에 표시한다.
+    kind 'trial'은 trial_attempts(1단계·2단계·문맥 추론, target은 기록된 목표 그대로), 'sentence'는 progress(3단계 문장)."""
+    kind: str = Field(..., max_length=10)
+    target: str = Field(..., max_length=500)
+    item_type: Optional[str] = Field(None, max_length=12)
+
+
+@app.post("/api/sound/replay", dependencies=[Depends(ratelimit.rate_limit(60, 60, "sound-replay"))])
+async def sound_replay_log(data: SoundReplayLog, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    from datetime import datetime as _dt, timedelta as _td
+    from sqlalchemy import select as _select
+    from database import TrialAttempt, Progress
+    since = _dt.utcnow() - _td(minutes=30)
+    if data.kind == "trial":
+        q = _select(TrialAttempt).where(TrialAttempt.user_id == current_user.id, TrialAttempt.target == data.target,
+                                        TrialAttempt.created_at >= since)
+        if data.item_type:
+            q = q.where(TrialAttempt.item_type == data.item_type)
+        q = q.order_by(TrialAttempt.created_at.desc(), TrialAttempt.id.desc()).limit(1)
+    elif data.kind == "sentence":
+        q = (_select(Progress).where(Progress.user_id == current_user.id, Progress.sentence == data.target,
+                                     Progress.created_at >= since)
+             .order_by(Progress.created_at.desc(), Progress.id.desc()).limit(1))
+    else:
+        raise HTTPException(status_code=422, detail="kind는 trial 또는 sentence")
+    row = (await db.execute(q)).scalars().first()
+    if not row:
+        return {"marked": False}
+    row.sound_replay = True
+    await db.commit()
+    return {"marked": True}
 
 
 @app.get("/api/avatar/audio2face/status")
@@ -867,6 +969,7 @@ async def submit_progress(
             talker=_clean_talker(submission.talker),
             hint_level=submission.hint_level,
             options=_sentence_options(submission.options, submission.sentence) if submission.answer_mode == "choice" else None,
+            sound_condition=submission.sound_condition,
         )
         db.add(progress)
 
@@ -1934,6 +2037,8 @@ class TrialMeta(BaseModel):
     rt_from_onset_ms: Optional[int] = Field(None, ge=0, le=3_600_000)
     talker: Optional[str] = Field(None, max_length=16)
     hint_used: Optional[bool] = None
+    # 소리 조건(C17)이 켜져 있었는가. 답은 늘 소리 없이 본 뒤라 숙달에는 그대로 넣고, 비열등 분석에만 쓴다(docs/sound-condition.md)
+    sound_condition: Optional[bool] = None
 
 
 import re as _re_talker
@@ -1947,7 +2052,7 @@ def _clean_talker(t) -> Optional[str]:
 def _trial_meta(data) -> dict:
     """TrialAttempt에 넣을 측정 열. 학습 화면이 보내지 않은 값은 NULL로 둔다."""
     return {"rt_from_onset_ms": getattr(data, "rt_from_onset_ms", None), "talker": _clean_talker(getattr(data, "talker", None)),
-            "hint_used": getattr(data, "hint_used", None)}
+            "hint_used": getattr(data, "hint_used", None), "sound_condition": getattr(data, "sound_condition", None)}
 
 
 class RecognitionSubmit(TrialMeta):
@@ -3534,7 +3639,8 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
                  "speed": t.speed, "probe": t.probe is not None, "target": t.target,
                  "options": t.options, "chosen": None if t.item_type == "word_typed" else t.chosen, "item_id": t.item_id,
                  "phase": t.phase, "talker": t.talker, "rt_from_onset_ms": t.rt_from_onset_ms, "hint_used": t.hint_used,
-                 "probe_kind": t.probe_kind or ("contrast" if t.probe is not None else None)} for i, t in enumerate(q)]
+                 "probe_kind": t.probe_kind or ("contrast" if t.probe is not None else None),
+                 "sound_condition": t.sound_condition, "sound_replay": t.sound_replay} for i, t in enumerate(q)]
 
     async def progress_log(uid):
         # 문장 연습 기록. 문장·답 원문은 넣지 않는다(학습 중 입력, 명세 3절)
@@ -3542,7 +3648,8 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
                               .order_by(Progress.created_at.asc(), Progress.id.asc()))).scalars().all()
         return [{"seq": i + 1, "day": day(r.created_at), "difficulty_level": r.difficulty_level, "answer_mode": r.answer_mode,
                  "speed": r.speed, "score": r.score, "hint_level": r.hint_level, "talker": r.talker,
-                 "rt_from_onset_ms": r.rt_from_onset_ms, "n_options": len(r.options) if r.options else None}
+                 "rt_from_onset_ms": r.rt_from_onset_ms, "n_options": len(r.options) if r.options else None,
+                 "sound_condition": r.sound_condition, "sound_replay": r.sound_replay}
                 for i, r in enumerate(q)]
 
     async def measurement(uid):
