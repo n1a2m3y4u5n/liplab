@@ -340,6 +340,18 @@ export const speakAPI = {
   },
 }
 
+// 소리 듣기(청능훈련) 트랙 — backend listen_curriculum, docs/auditory-training-design.md
+export const listenAPI = {
+  getCurriculum: async () => (await api.get('/listen/curriculum')).data,
+  skip: async (stage) => (await api.post('/listen/skip', { stage })).data,
+  getStage: async (n) => (await api.get(`/listen/stage/${n}`)).data,
+  answer: async (body) => (await api.post('/listen/answer', body)).data,
+  ling: async (body) => (await api.post('/listen/ling', body)).data,
+  testStart: async (body = {}) => (await api.post('/listen/test/start', body)).data,
+  testAnswer: async (body) => (await api.post('/listen/test/answer', body)).data,
+  summary: async () => (await api.get('/listen/summary')).data,
+}
+
 // 음성구동 아바타(A4) — 실제 음성 → 52 블렌드셰이프 립싱크
 export const avatarAPI = {
   audio2faceStatus: async () => (await api.get('/avatar/audio2face/status')).data,

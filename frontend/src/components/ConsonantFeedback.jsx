@@ -5,7 +5,8 @@ import { motion } from 'framer-motion'
  * 맞힌 낱말은 그대로, 틀린 낱말은 음절마다 첫소리 자음만 보인다(서버 word_feedback, backend/sentence_feedback.py).
  * 학습자는 이 단서를 보고 입모양을 다시 본 뒤 한 번 더 적는다. 숙달에는 첫 답만 들어간다.
  */
-export default function ConsonantFeedback({ feedback }) {
+// hint: 안내 문장(기본은 독화용 '입모양을 다시 보고'). 소리 듣기는 '문장을 다시 듣고'로 바꿔 넘긴다.
+export default function ConsonantFeedback({ feedback, hint = null }) {
   const words = feedback?.words || []
   if (words.length === 0) return null
   return (
@@ -15,7 +16,7 @@ export default function ConsonantFeedback({ feedback }) {
         {feedback.correct_words > 0 ? `${feedback.total_words}낱말 중 ${feedback.correct_words}낱말을 맞혔어요` : '조금 더 볼까요?'}
       </p>
       <p className="mt-1 text-[13px] text-ink-muted">
-        맞힌 낱말은 그대로, 틀린 낱말은 글자마다 첫 자음만 보여요. 입모양을 다시 보고 한 번 더 적어 보세요.
+        {hint || '맞힌 낱말은 그대로, 틀린 낱말은 글자마다 첫 자음만 보여요. 입모양을 다시 보고 한 번 더 적어 보세요.'}
       </p>
       <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2">
         {words.map((w, i) => (w.correct ? (

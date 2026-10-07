@@ -25,6 +25,11 @@
   --speak-dark: #be185d;
   --speak-tint: #ffe4e9;
   --speak-hover: #db2777;
+  /* 소리 듣기 트랙(청능훈련, docs/auditory-training-design.md) — 청록 */
+  --listen: #0d9488;
+  --listen-dark: #115e59;
+  --listen-tint: #ccfbf1;
+  --listen-hover: #0f766e;
   --bookmark: #2563eb;
   --bookmark-light: #60a5fa;
   --endless: #4f46e5;       /* 엔드리스 인디고 카드(endless / endless-light) */
@@ -57,6 +62,12 @@
   --track-dark: var(--speak-dark);
   --track-tint: var(--speak-tint);
   --track-hover: var(--speak-hover);
+}
+[data-track="listen"] {
+  --track: var(--listen);
+  --track-dark: var(--listen-dark);
+  --track-tint: var(--listen-tint);
+  --track-hover: var(--listen-hover);
 }
 [data-track="read"] {
   --track: var(--brand);

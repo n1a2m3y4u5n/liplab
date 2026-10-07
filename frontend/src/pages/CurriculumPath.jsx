@@ -5,7 +5,7 @@ import DokaNode, { DokaConnector } from '../components/DokaNode'
 import GuideModal from '../components/GuideModal'
 import LoadingScreen from '../components/LoadingScreen'
 import RetentionPrompt from '../components/RetentionPrompt'
-import { curriculumAPI, speakAPI } from '../api'
+import { curriculumAPI, speakAPI, listenAPI } from '../api'
 
 /**
  * 학습 탭 — 커리큘럼 경로 (Figma 58:11 독화 / 171:38 발화, 모바일 232:35 — lg 미만 반응형). DOKA 마스코트 노드.
@@ -29,7 +29,8 @@ const READ_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/l
 // 단계별 숙달 최소 시도수 — 진행률 표시의 분모(backend/main.py _STAGE1~4_MIN_ATTEMPTS = 8·6·5·4와 같게).
 // 9/28부터 서버가 단계마다 min_attempts·mastery(·pass)를 실어 보내므로 이 표는 응답에 없을 때만 쓴다.
 const READ_TOTAL = { viseme: 8, word: 6, sentence: 5, conversation: 4 }
-const TRACK_LABEL = { read: '독화', speak: '발화' }
+const TRACK_LABEL = { read: '독화', speak: '발화', listen: '소리 듣기' }
+const TRACKS = Object.keys(TRACK_LABEL)
 
 // 단계 이동 화살표 에셋 — 데스크톱 44 슬롯(58:11) / 모바일 38 슬롯(232:35). 둘 다 그림자 여백만큼 위 4·좌우 7 넘친다.
 // 발화 모바일 프레임은 없어 데스크톱 분홍 에셋을 줄여 쓴다.
@@ -40,6 +41,10 @@ const ARROW = {
   },
   speak: {
     prev: '/ui/lp-171-38-stage-arrow-prev.svg', next: '/ui/lp-171-38-stage-arrow-next.svg',
+    prevMobile: null, nextMobile: null,
+  },
+  listen: {
+    prev: '/ui/listen-stage-arrow-prev.svg', next: '/ui/listen-stage-arrow-next.svg',
     prevMobile: null, nextMobile: null,
   },
 }
@@ -96,12 +101,24 @@ function normalizeSpeak(stages) {
   }))
 }
 
+// 소리 듣기(청능훈련)도 0단계(소리 확인)부터. 진행 표시: 수준이 있는 1·2단계는 '수준 L / N', 4단계는 소음 속 역치(dB)를 적는다.
+const LISTEN_TOTAL = { 0: 1, 1: 40, 2: 30, 3: 10, 4: 20, 5: 12 }
+function normalizeListen(stages) {
+  return (stages || []).map((s, i) => ({
+    key: `listen-${s.stage}`, stage: s.stage, no: i + 1, title: s.title, route: `/learn/listening?stage=${s.stage}`,
+    status: s.status, attempts: s.attempts ?? 0, total: LISTEN_TOTAL[s.stage] || 10,
+    desc: s.desc || '', guide: s.guide || '', mastery: null, pass: null,
+    progText: s.status === 'mastered' ? null
+      : s.level ? `수준 ${s.level} / ${s.levels}` : s.srt_db != null ? `역치 ${s.srt_db > 0 ? '+' : ''}${s.srt_db} dB` : null,
+  }))
+}
+
 export default function CurriculumPath() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const track = searchParams.get('track') === 'speak' ? 'speak' : 'read'
-  const [data, setData] = useState({ read: null, speak: null })
-  const [failed, setFailed] = useState({ read: false, speak: false })   // 트랙별 단계 조회 실패(빈 경로 대신 다시 불러오기)
+  const track = TRACKS.includes(searchParams.get('track')) ? searchParams.get('track') : 'read'
+  const [data, setData] = useState({ read: null, speak: null, listen: null })
+  const [failed, setFailed] = useState({ read: false, speak: false, listen: false })   // 트랙별 단계 조회 실패(빈 경로 대신 다시 불러오기)
   const [skipTarget, setSkipTarget] = useState(null)  // 건너뛰기 확인 중인 단계 key
   const [viewIdx, setViewIdx] = useState(null)        // 화살표로 보고 있는 단계(null = 현재 단계)
   const [guideOpen, setGuideOpen] = useState(false)
@@ -122,6 +139,13 @@ export default function CurriculumPath() {
     }).catch(() => {
       setData((p) => ({ ...p, speak: p.speak || [] }))
       setFailed((f) => ({ ...f, speak: true }))
+    }),
+    listenAPI.getCurriculum().then((d) => {
+      setData((p) => ({ ...p, listen: normalizeListen(d.stages) }))
+      setFailed((f) => ({ ...f, listen: false }))
+    }).catch(() => {
+      setData((p) => ({ ...p, listen: p.listen || [] }))
+      setFailed((f) => ({ ...f, listen: true }))
     }),
   ]), [])
   // 다시 불러오기: 보고 있는 트랙을 로딩으로 돌리고 두 트랙을 다시 받는다
@@ -154,7 +178,7 @@ export default function CurriculumPath() {
   // 진행률은 숙달 최소 시도 대비 시도 수다. 시도를 다 채워도 정답률이 모자라면 아직 숙달 전이라(서버 _bump_stage_progress),
   // 그때는 막대를 끝까지 채우지 않고 수 대신 '숙달 중'으로 적는다(경로 노드가 완료로 보이는 단계는 그대로 둔다).
   const progPending = viewStatus !== 'mastered' && progCur >= progTotal
-  const progLabel = progPending ? '숙달 중' : `${progCur} / ${progTotal}`
+  const progLabel = view?.progText || (progPending ? '숙달 중' : `${progCur} / ${progTotal}`)
   const progPct = progPending ? 90 : (progCur / progTotal) * 100
   const loadFailed = list.length === 0 && failed[track]   // 단계를 못 받아 빈 경로 → 안내와 다시 불러오기
   const startLabel = (view?.attempts ?? 0) === 0 ? '학습 시작하기' : '이어서 학습하기'   // 80:6 / 58:11
@@ -169,7 +193,7 @@ export default function CurriculumPath() {
   )
 
   // 사용법 가이드는 지금 트랙의 레슨 탭으로 열고, 그 탭 맨 위에 보고 있는 단계의 상태를 보여 준다(가이드 점검 4절 A안).
-  const guideTab = track === 'speak' ? 'speaking' : 'reading'
+  const guideTab = track === 'speak' ? 'speaking' : track === 'listen' ? 'listening' : 'reading'
   const nextIdx = vIdx + 1
   const nextStage = list[nextIdx] || null
   const nextSt = nextStage ? nodeStatus(nextStage, nextIdx) : null
@@ -186,10 +210,11 @@ export default function CurriculumPath() {
     },
   } : null
 
-  const switchTrack = (k) => setSearchParams(k === 'speak' ? { track: 'speak' } : {}, { replace: true })
+  const switchTrack = (k) => setSearchParams(k === 'read' ? {} : { track: k }, { replace: true })
   const doSkip = async (s) => {
     try {
       if (track === 'read') await curriculumAPI.setTrack(data.readTrack || 'perception', s.stage)   // 학습자의 트랙은 그대로
+      else if (track === 'listen') await listenAPI.skip(s.stage)
       else await speakAPI.skip(s.stage)
     } catch { /* 실패하면 잠긴 채로 둔다(다시 받은 상태가 그대로 보인다) */ }
     setSkipTarget(null)
