@@ -12,6 +12,8 @@ listen_curriculum.word_score(소리 나는 대로 낱말 비교)다. 결과는 �
                                              섞기·모의(CPU 프로세스) → 받아쓰기(GPU) → W/asr.jsonl에 덧붙임(이미 한 키는 건너뜀)
   score   --work W                           W/asr.jsonl → W/scored.jsonl(word_score, 띄어쓰기 맞춤판과 그대로판)
   analyze --work W --out RESULT.json         문장별 로지스틱 적합과 사전 기준 판정(문서 8절)
+  jfactor --work W --result RESULT.json --out J.json
+                                             문장당 독립 요소 수 j 추정(반복 사이 과분산, Boothroyd·Nittrouer j, 모형 맞추기)
   dump    --work W --key KEY --out F.wav     조건 하나의 소리를 파일로(점검용, 재생하지 않는다)
 
 오디오는 파드 작업 폴더에만 두고 저장소에 넣지 않는다.
@@ -733,6 +735,148 @@ def cmd_analyze(a):
     print(f"ANALYZE_OK {a.out} fits={len(res['fits'])}", flush=True)
 
 
+# ───────────────────────────── jfactor ─────────────────────────────
+# 문장당 독립 요소 수 j(Boothroyd·Nittrouer 1988, Brand·Kollmeier 2002). 문서 'j 추정' 절.
+
+def _model_cells(s_cond, eps_sd, n, xs_rel, R=3, n_sent=4000, sd_d=0.0, seed=0):
+    """시뮬레이션 모형(docs/listen-adaptive-sim-2026-10.md 2.1·2.3): p = 1/(1+exp(−4 s (x − δ − ε))), 낱말 독립.
+    문장 n_sent개 × 상대 SNR xs_rel × 제시 R번의 맞힌 낱말 수 k[s, x, r]."""
+    rng = np.random.default_rng(seed)
+    d = rng.normal(0, sd_d, (n_sent, 1, 1))
+    e = rng.normal(0, eps_sd, (n_sent, len(xs_rel), R))
+    x = np.asarray(xs_rel, dtype=float)[None, :, None]
+    p = 1 / (1 + np.exp(-4 * s_cond * (x - d - e)))
+    return rng.binomial(n, p)
+
+
+def _phi_within(k, n, mask=None):
+    """같은 문장·같은 SNR의 반복 사이 분산 ÷ 이항 분산(불편 추정). k[..., r], mask[...]는 쓸 칸."""
+    R = k.shape[-1]
+    kb = k.mean(-1)
+    s2 = k.var(-1, ddof=1)
+    N = n * R
+    ph = kb / n
+    bvar = n * ph * (1 - ph) * N / (N - 1)
+    if mask is None:
+        mask = np.ones(kb.shape, bool)
+    mask = mask & (bvar > 0)
+    return float(s2[mask].sum() / bvar[mask].sum()) if mask.any() else float("nan"), int(mask.sum())
+
+
+def _jbn(k, n, mask):
+    """Boothroyd·Nittrouer j = ln P(문장 전부 맞음) / ln P(낱말 맞음), 칸 합동."""
+    kk = k[mask]
+    pw = kk.sum() / (kk.size * n)
+    ps = (kk == n).mean()
+    return float(np.log(ps) / np.log(pw)) if 0 < ps < 1 and 0 < pw < 1 else float("nan")
+
+
+def cmd_jfactor(a):
+    res = json.load(open(a.result, encoding="utf-8"))
+    fits = {(f["sid"], f["listener"]): f for f in res["fits"]
+            if f["voice"] == "m3" and f["noise"] == "babble" and f["reps"] == "all"}
+    rows = [json.loads(l) for l in open(os.path.join(a.work, "scored.jsonl"), encoding="utf-8")]
+    kk = "k_raw" if a.raw else "k"
+    cell = {}
+    for r in rows:
+        if r["voice"] == "m3" and r["noise"] == "babble" and r["snr"] is not None:
+            cell.setdefault((r["sid"], r["listener"], r["snr"]), {})[r["rep"]] = (r[kk], r["n"])
+    out = {"score": kk, "listeners": {}}
+    xs_rel = np.arange(-6, 6.01, 2.0)
+    for ln in LISTENERS:
+        L_out = {}
+        for n in (3, 4):
+            ks, prow, xrel, sl = [], [], [], []
+            for (sid, l, x), v in cell.items():
+                if l != ln or len(v) < 3 or v[0][1] != n:
+                    continue
+                f = fits.get((sid, ln))
+                if not f or f.get("srt50") is None:
+                    continue
+                pf = f["u"] / (1 + math.exp(-4 * f["s"] * (x - f["m"])))
+                ks.append([v[r][0] for r in (0, 1, 2)])
+                prow.append(pf)
+                xrel.append(x - f["srt50"])
+                sl.append(f["slope50"])
+            if len(ks) < 30:
+                continue
+            ks, prow, xrel = np.array(ks), np.array(prow), np.array(xrel)
+            win = (prow >= 0.25) & (prow <= 0.75)
+            win2 = np.abs(xrel) <= 2.0
+            phi, ncell = _phi_within(ks, n, win)
+            phi2, ncell2 = _phi_within(ks, n, win2)
+            jbn = _jbn(ks, n, win)
+            s_marg = float(np.median([x for x in sl if x is not None]))   # 문장 적합 기울기(50%, 비율/dB)
+            # 모형 맞추기: 흔들림 SD마다 조건부 기울기를 골라 주변 기울기를 관측값에 맞춘 뒤 같은 추정량의 φ를 계산
+            cal = []
+            for eps in np.arange(0.0, 8.01, 0.5):
+                lo_s, hi_s = 0.01, 3.0
+                for _ in range(30):     # 주변 기울기(제시 흔들림을 섞은 50% 기울기)를 관측값에 맞추는 이분법
+                    mid = 0.5 * (lo_s + hi_s)
+                    z = np.random.default_rng(1).normal(0, eps, 20000)
+                    h = 0.05
+                    pm = lambda xx: np.mean(1 / (1 + np.exp(-4 * mid * (xx - z))))
+                    sm = (pm(h) - pm(-h)) / (2 * h)
+                    if sm < s_marg:
+                        lo_s = mid
+                    else:
+                        hi_s = mid
+                s_c = 0.5 * (lo_s + hi_s)
+                km = _model_cells(s_c, eps, n, xs_rel, seed=int(eps * 10) + n)
+                # 모형 칸의 p(주변)로 같은 창을 쓴다
+                pmv = np.array([np.mean(1 / (1 + np.exp(-4 * s_c * (xx - np.random.default_rng(2).normal(0, eps, 20000))))) for xx in xs_rel])
+                mwin = np.broadcast_to(((pmv >= 0.25) & (pmv <= 0.75))[None, :], km.shape[:2])
+                phm, _ = _phi_within(km, n, mwin)
+                cal.append({"eps_sd": float(eps), "s_cond": round(s_c, 3), "phi": round(phm, 3), "jbn": round(_jbn(km, n, mwin), 3)})
+            # 관측 φ에 맞는 흔들림(선형 보간)
+            phis = np.array([c["phi"] for c in cal])
+            epss = np.array([c["eps_sd"] for c in cal])
+            order = np.argsort(phis)
+            eps_hat = float(np.interp(phi, phis[order], epss[order])) if np.isfinite(phi) else None
+            # 그 흔들림을 시뮬레이션 기울기 0.10(조건부)에 넣으면 j는?
+            j_sim = None
+            if eps_hat is not None:
+                kms = _model_cells(0.10, eps_hat, n, xs_rel, seed=99)
+                pmv = np.array([np.mean(1 / (1 + np.exp(-4 * 0.10 * (xx - np.random.default_rng(2).normal(0, eps_hat, 20000))))) for xx in xs_rel])
+                mwin = np.broadcast_to(((pmv >= 0.25) & (pmv <= 0.75))[None, :], kms.shape[:2])
+                j_sim = n / _phi_within(kms, n, mwin)[0]
+            # 부트스트랩(문장 단위)
+            sids_arr = np.array([sid for (sid, l, x), v in cell.items() if l == ln and len(v) >= 3 and v[0][1] == n
+                                 and fits.get((sid, ln)) and fits[(sid, ln)].get("srt50") is not None])
+            uniq = np.unique(sids_arr)
+            rng = np.random.default_rng(0)
+            bs = []
+            for _ in range(2000):
+                pick = rng.choice(uniq, len(uniq))
+                cnt = {u: c for u, c in zip(*np.unique(pick, return_counts=True))}
+                w = np.array([cnt.get(s_, 0) for s_ in sids_arr])
+                kb = ks.mean(-1)
+                s2 = ks.var(-1, ddof=1)
+                N = n * 3
+                bvar = n * (kb / n) * (1 - kb / n) * N / (N - 1)
+                m_ = win & (bvar > 0)
+                bs.append((s2 * w)[m_].sum() / (bvar * w)[m_].sum())
+            lo, hi = np.percentile(bs, [2.5, 97.5])
+            L_out[f"n{n}"] = {"cells": ncell, "phi": round(phi, 3), "phi_ci": [round(float(lo), 3), round(float(hi), 3)],
+                              "j_od": round(n / phi, 2), "j_od_ci": [round(n / float(hi), 2), round(n / float(lo), 2)],
+                              "phi_win2db": round(phi2, 3), "cells_win2db": ncell2, "j_od_win2db": round(n / phi2, 2),
+                              "j_bn": round(jbn, 2), "slope50_marg_median": round(s_marg, 3),
+                              "eps_sd_hat": None if eps_hat is None else round(eps_hat, 2),
+                              "j_at_sim_slope_0.10": None if j_sim is None else round(j_sim, 2), "calibration": cal}
+        out["listeners"][ln] = L_out
+    # 참고: 시뮬레이션 조건 C3(흔들림 2 dB)·C5(4 dB), 기울기 0.10, 4어절에서 같은 추정량
+    ref = {}
+    for nm, eps in (("C0", 0.0), ("C3", 2.0), ("C5", 4.0)):
+        km = _model_cells(0.10, eps, 4, xs_rel, seed=7)
+        pmv = np.array([np.mean(1 / (1 + np.exp(-4 * 0.10 * (xx - np.random.default_rng(2).normal(0, max(eps, 1e-9), 20000))))) for xx in xs_rel])
+        mwin = np.broadcast_to(((pmv >= 0.25) & (pmv <= 0.75))[None, :], km.shape[:2])
+        ph = _phi_within(km, 4, mwin)[0]
+        ref[nm] = {"eps_sd": eps, "phi": round(ph, 3), "j_od": round(4 / ph, 2), "j_bn": round(_jbn(km, 4, mwin), 2)}
+    out["sim_reference_s0.10_n4"] = ref
+    json.dump(out, open(a.out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    print("JFACTOR_OK", a.out, flush=True)
+
+
 # ───────────────────────────── selftest·dump ─────────────────────────────
 
 def cmd_selftest(a):
@@ -792,9 +936,11 @@ def main():
     p = sub.add_parser("score"); p.add_argument("--work", required=True)
     p = sub.add_parser("analyze"); p.add_argument("--work", required=True); p.add_argument("--out", required=True)
     p.add_argument("--raw", action="store_true", help="띄어쓰기 맞춤 없이 그대로 채점한 값으로")
+    p = sub.add_parser("jfactor"); p.add_argument("--work", required=True); p.add_argument("--result", required=True)
+    p.add_argument("--out", required=True); p.add_argument("--raw", action="store_true")
     p = sub.add_parser("dump"); p.add_argument("--work", required=True); p.add_argument("--key", required=True); p.add_argument("--out", required=True)
     a = ap.parse_args()
-    {"selftest": cmd_selftest, "prep": cmd_prep, "run": cmd_run, "score": cmd_score, "analyze": cmd_analyze, "dump": cmd_dump}[a.cmd](a)
+    {"selftest": cmd_selftest, "prep": cmd_prep, "run": cmd_run, "score": cmd_score, "analyze": cmd_analyze, "jfactor": cmd_jfactor, "dump": cmd_dump}[a.cmd](a)
 
 
 if __name__ == "__main__":
