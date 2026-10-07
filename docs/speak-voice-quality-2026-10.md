@@ -71,3 +71,22 @@ Praat(parselmouth)는 GPL이라 앱에 넣지 않는다. 같은 정의를 numpy�
 - Maryn, Y., Roy, N., De Bodt, M., Van Cauwenberge, P., & Corthals, P. (2009). Acoustic measurement of overall voice quality: A meta-analysis. JASA, 126(5), 2619–2634.
 - Monsen, R. B. (1979). Acoustic qualities of phonation in young hearing-impaired children. JSHR, 22(2), 270–288.
 - Patel, R. R., Awan, S. N., Barkmeier-Kraemer, J., 외 (2018). Recommended protocols for instrumental assessment of voice. AJSLP, 27(3), 887–905.
+
+## 7. 탐색 결과(절반 0, 확인 절반을 열기 전에 커밋)
+
+같은 파드 실행(`docs/speak-loudness-intonation-2026-10.md` 6절)의 값이다. 608 범주 28 절반 0은 7명 185문장, 538 절반 0은 30명 900클립.
+성별 기준 음높이(538 절반 0): 여성 195.8Hz, 남성 128.5Hz.
+
+| 지표 | 정한 방향(608이 큰 쪽 +1) | AUC | 608 안 ρ(CER) | 608 중앙값 | 538 중앙값 |
+|---|--:|--:|--:|--:|--:|
+| f0_level_st | −1 | 0.552 | −0.022 | −0.38 | 0.00 |
+| f0_sd_st | −1 | 0.693 | −0.061 | 3.90 | 4.88 |
+| f0_step_st | −1 | 0.740 | +0.133 | 0.177 | 0.214 |
+| jitter_local | −1 | 0.554 | −0.115 | 5.61 | 5.71 |
+| shimmer_local | −1 | 0.709 | −0.077 | 12.9 | 15.1 |
+| hnr_db | +1 | 0.855 | +0.062 | 10.5 | 7.7 |
+| cpps_db | +1 | 0.558 | +0.160 | 7.24 | 6.97 |
+
+- 탐색에서 |ρ| ≥ 0.30인 지표가 없다(가장 큰 것 cpps_db 0.160). 방향도 예상과 반대로, 608 문장이 538보다 HNR이 높고 shimmer·짧은 음높이 흔들림이 작다.
+  538은 영상 녹화 음성이라 잡음·압축이 섞였기 때문으로 보이며, A가 녹음 조건 차를 담을 수 있다는 4절의 우려가 맞을 가능성이 크다.
+- 확인 판정은 위 방향과 ρ 부호(`s24_explore.json` params, sha256 앞 16자 f00ef24cea0c6285)로 한다.
