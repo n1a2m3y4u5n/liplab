@@ -140,6 +140,25 @@ def test_convo_items_hide_answer():
     assert L.convo_correct("c:c01", 0) is True and L.convo_correct("c:c01", 1) is False
 
 
+def test_convo_content_quality():
+    """대화 문항: 정답 자리가 한쪽으로 쏠리지 않고(자리마다 6~9개), 정답이 혼자 가장 긴 보기가 아니다(10/7 콘텐츠 검토)."""
+    from collections import Counter
+    pos = Counter(c["answer"] for c in L.CONVO_ITEMS)
+    assert set(pos) == {0, 1, 2, 3} and all(6 <= n <= 9 for n in pos.values()), pos
+    for c in L.CONVO_ITEMS:
+        lens = [len(o.replace(" ", "")) for o in c["options"]]
+        a = lens[c["answer"]]
+        assert not (a == max(lens) and lens.count(a) == 1), c["id"]
+
+
+def test_listen_excluded_words():
+    pool = set(L.word_pool(include_gen=True))
+    assert L.LISTEN_EXCLUDED and not pool & set(L.LISTEN_EXCLUDED)
+    assert not set(L.GEN_WORDS) & set(L.LISTEN_EXCLUDED)
+    assert all(len(w) <= 2 for w in L.GEN_WORDS) and len(set(L.GEN_WORDS)) == 20
+    assert 2 <= min(len(s.split()) for s in L.TRAIN_SENTENCES) and max(len(s.split()) for s in L.TRAIN_SENTENCES) <= 5
+
+
 def test_word_score_and_recommendations():
     ws = L.word_score("창문 좀 열어 주세요.", "창문 좀 열어 줘요")
     assert ws["feedback"]["total_words"] == 4 and ws["proportion"] == 0.75
