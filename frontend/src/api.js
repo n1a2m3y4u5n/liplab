@@ -357,6 +357,13 @@ export const listenAPI = {
   wordTestStart: async () => (await api.post('/listen/wordtest/start', {})).data,
   wordTestAnswer: async (body) => (await api.post('/listen/wordtest/answer', withSim(body))).data,
   summary: async () => (await api.get('/listen/summary')).data,
+  // 오늘의 듣기(블록 계획), 연습 모드·소리 교실·듣기 복습(docs/listen-integration-api-2026-10.md). 연습·복습 답은 answer에 practice_mode를 붙인다
+  today: async () => (await api.get('/listen/today')).data,
+  practiceModes: async () => (await api.get('/listen/practice/modes')).data,
+  practice: async (mode, params = {}) => (await api.get(`/listen/practice/${mode}`, { params })).data,
+  scenarioPlaces: async () => (await api.get('/listen/practice/scenario/places')).data,
+  contrasts: async () => (await api.get('/listen/contrasts')).data,
+  review: async () => (await api.get('/listen/review')).data,
 }
 
 // 음성구동 아바타(A4) — 실제 음성 → 52 블렌드셰이프 립싱크

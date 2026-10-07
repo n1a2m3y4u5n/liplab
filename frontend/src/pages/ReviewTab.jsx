@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import WatermarkCard from '../components/WatermarkCard'
 import ScrollHintList from '../components/ScrollHintList'
-import { reviewAPI, learningAPI } from '../api'
+import { reviewAPI, learningAPI, listenAPI } from '../api'
 import { relDay } from '../lib/relDay'
 import { dueCounts, dueStartPath } from '../lib/reviewDue'
 
@@ -18,6 +18,9 @@ import { dueCounts, dueStartPath } from '../lib/reviewDue'
  * 스크롤 안내(192:21 · 320:36)가 겹친다. 안내는 버튼이 아니다(변경 내역 §0-1, components/ScrollHintList).
  * 상대 날짜('3일 전 · ', lib/relDay)는 오답=가장 최근에 틀린 시각, 예정=마지막으로 다시 푼 시각(없으면 큐에 든 시각),
  * 북마크=북마크한 시각으로 붙인다. 오답 횟수('2회 틀렸어요')는 /api/review-sentences의 wrong_count.
+ * 10월: 소리 듣기에서 놓친 낱말·문장(GET /api/listen/review)을 '듣기 복습' 카드(청록)와 목록의 '듣기' 배지 항목으로 보인다.
+ * 누르면 듣기 복습 회기(/listen/review)로 간다. 서버에 아직 그 API가 없으면 카드에 '준비 중'만 적는다. 듣기 항목은 지울 서버 항목이
+ * 없어 선택해 지우면 이 화면에서만 숨긴다(틀린 문장과 같다).
  */
 const HERO = {
   // 오답(199:22 / 239:122) — 보라, 워터마크 X(308:32)
@@ -64,10 +67,11 @@ function RowArrow() {
   )
 }
 
+const BADGE_TONE = { 발화: 'bg-speak-tint text-speak-dark', 듣기: 'bg-listen-tint text-listen-dark' }
+
 function ReviewItem({ track, word, meta, rel, onClick, first, selectMode, checked, className = '' }) {
-  const isSpeak = track === '발화'
   const badge = (
-    <span className={`flex w-[46px] shrink-0 items-center justify-center rounded-[7px] py-1 text-[11px] font-bold leading-figma lg:w-[54px] lg:rounded-lg lg:py-[5px] lg:text-[11.5px] ${isSpeak ? 'bg-speak-tint text-speak-dark' : 'bg-primary-100 text-primary-700'}`}>{track}</span>
+    <span className={`flex w-[46px] shrink-0 items-center justify-center rounded-[7px] py-1 text-[11px] font-bold leading-figma lg:w-[54px] lg:rounded-lg lg:py-[5px] lg:text-[11.5px] ${BADGE_TONE[track] || 'bg-primary-100 text-primary-700'}`}>{track}</span>
   )
   const text = (
     <span className="flex min-w-0 flex-1 flex-col gap-0.5 leading-figma lg:gap-[3px]">
@@ -98,6 +102,31 @@ function ReviewItem({ track, word, meta, rel, onClick, first, selectMode, checke
   )
 }
 
+/** 듣기 복습 카드(청록): 놓친 낱말·문장 수 + 듣기 복습하기. listen: {state: 'loading'|'ready'|'missing'|'error', words, sentences} */
+function ListenReviewCard({ listen, onClick }) {
+  if (listen.state === 'loading' || listen.state === 'error') return null
+  const n = listen.words + listen.sentences
+  const sub = listen.state === 'missing' ? '준비 중이에요'
+    : n === 0 ? '다시 들을 소리가 없어요'
+      : [listen.words && `낱말 ${listen.words}개`, listen.sentences && `문장 ${listen.sentences}개`].filter(Boolean).join(' · ')
+  return (
+    <section data-track="listen" className="flex w-full items-center gap-3.5 rounded-16 border-2 border-line bg-white px-[18px] py-4 lg:gap-4 lg:rounded-18 lg:px-[22px] lg:py-[18px]">
+      <span className="icon-chip-sm bg-listen-tint text-listen-dark">
+        <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="size-[22px]">
+          <path d="M11 5 6 9H3v6h3l5 4V5z" /><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" />
+        </svg>
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-[3px] leading-figma">
+        <p className="text-[16px] font-bold text-ink lg:text-[17px]">듣기 복습{n > 0 ? ` ${n}개` : ''}</p>
+        <p className="truncate text-[12.5px] text-ink-muted lg:text-[13.5px]">{sub}</p>
+      </div>
+      {listen.state === 'ready' && n > 0 && (
+        <button type="button" onClick={onClick} className="btn-primary shrink-0 px-4 py-2.5 text-[14px] lg:px-5 lg:text-[15px]">듣기 복습하기</button>
+      )}
+    </section>
+  )
+}
+
 /** 지우기 버튼(317:34 / 모바일 317:42) — 휴지통 아이콘 + 글자, 1.5px 테두리 알약. */
 function EraseButton({ onClick, className = '' }) {
   return (
@@ -119,6 +148,7 @@ export default function ReviewTab() {
   const [listOverflow, setListOverflow] = useState(false)  // 목록이 틀보다 길어 스크롤 안내가 붙는가
   const [selectMode, setSelectMode] = useState(false)  // 복습 선택(삭제) 모드 UI 상태
   const [selected, setSelected] = useState(new Set())  // 선택된 항목 id 집합
+  const [listen, setListen] = useState({ state: 'loading', words: 0, sentences: 0 })   // 듣기 복습(GET /api/listen/review)
 
   useEffect(() => {
     let on = true
@@ -126,7 +156,8 @@ export default function ReviewTab() {
       reviewAPI.getDue().catch(() => ({ items: [] })),
       learningAPI.getReviewSentences().catch(() => []),
       learningAPI.getBookmarks().catch(() => []),
-    ]).then(([dueRes, wrongRes, bmRes]) => {
+      listenAPI.review().then((r) => ({ ok: true, r })).catch((e) => ({ ok: false, missing: e?.response?.status === 404 })),
+    ]).then(([dueRes, wrongRes, bmRes, lsRes]) => {
       if (!on) return
       // 말하기 예정(kind 'speak')은 /api/review/due의 speak로 따로 온다. 목록에서는 발화 배지로 보인다
       const dueItems = [...(dueRes.items || []), ...(dueRes.speak || [])]
@@ -151,7 +182,14 @@ export default function ReviewTab() {
         kind,
         raw: x,   // 삭제 요청에 쓰는 원래 식별자(북마크 id, 예정 항목 kind·ref)
       }))
-      setItems([...norm(wrongArr, 'wrong'), ...norm(dueItems, 'due'), ...norm(bmArr, 'bookmark')])
+      const lw = lsRes.ok ? lsRes.r?.words || [] : []
+      const lsent = lsRes.ok ? lsRes.r?.sentences || [] : []
+      setListen({ state: lsRes.ok ? 'ready' : lsRes.missing ? 'missing' : 'error', words: lw.length, sentences: lsent.length })
+      const listenItems = [
+        ...lw.map((x, i) => ({ id: `listen-w-${x.key ?? i}`, track: '듣기', word: x.target, meta: '다시 들어 볼 낱말', rel: null, kind: 'listen', raw: x })),
+        ...lsent.map((x, i) => ({ id: `listen-s-${x.key ?? x.id ?? i}`, track: '듣기', word: x.text, meta: '다시 들어 볼 문장', rel: null, kind: 'listen', raw: x })),
+      ]
+      setItems([...norm(wrongArr, 'wrong'), ...norm(dueItems, 'due'), ...listenItems, ...norm(bmArr, 'bookmark')])
     })
     return () => { on = false }
   }, [])
@@ -159,7 +197,7 @@ export default function ReviewTab() {
   const shown = items.filter((it) => filter === 'all' || (filter === 'wrong' ? it.kind !== 'bookmark' : it.kind === 'bookmark'))
   const chips = [
     { key: 'all', label: '전체', n: items.length },
-    { key: 'wrong', label: '오답', n: wrong + due.read + due.speak },
+    { key: 'wrong', label: '오답', n: wrong + due.read + due.speak + items.filter((it) => it.kind === 'listen').length },
     { key: 'bookmark', label: '북마크', n: marks },
   ]
   const deleteShown = selectMode && selected.size > 0
@@ -205,6 +243,7 @@ export default function ReviewTab() {
   const openItem = (it) => {
     if (it.kind === 'due') return navigate(it.raw?.kind === 'speak' ? '/review/speaking' : '/review/scheduled')
     if (it.kind === 'wrong') return navigate('/review/mistakes')
+    if (it.kind === 'listen') return navigate('/listen/review')
     // 발화 북마크는 말하기 복습(/api/speak/review가 발화 북마크를 함께 모은다)으로 간다.
     return navigate(it.track === '발화' ? '/review/speaking' : '/review/saved')
   }
@@ -219,6 +258,8 @@ export default function ReviewTab() {
         <GradientCta tone="bookmark" count={marks} title="복습할 북마크" sub="북마크 다시보기" subMobile="저장해둔 문장이에요"
           btn="북마크 복습하기" onClick={() => navigate('/review/saved')} />
       </div>
+
+      <ListenReviewCard listen={listen} onClick={() => navigate('/listen/review')} />
 
       {/* 복습할 항목 (189:21 / 239:134) */}
       <section className={`flex w-full flex-col rounded-16 border-2 border-line bg-white lg:rounded-18 ${selectMode ? 'gap-3 px-5 pt-5' : 'gap-3 px-[18px] pt-[18px] lg:gap-4'} lg:px-[22px] lg:pt-[22px] ${padBottom}`}>

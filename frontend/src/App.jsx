@@ -63,6 +63,11 @@ const Review = lazy(() => import('./pages/Review'))
 const Closure = lazy(() => import('./pages/Closure'))
 const SpeakingPractice = lazy(() => import('./pages/SpeakingPractice'))
 const ListeningPractice = lazy(() => import('./pages/ListeningPractice'))
+// 소리 듣기를 학습 경로 밖에서도: 연습 모드·소리 교실·오늘의 듣기 15분·듣기 복습(components/listen/의 과제를 함께 쓴다)
+const ListenPractice = lazy(() => import('./pages/ListenPractice'))
+const ListenClassroom = lazy(() => import('./pages/ListenClassroom'))
+const ListenToday = lazy(() => import('./pages/ListenToday'))
+const ListenReview = lazy(() => import('./pages/ListenReview'))
 const FreeSpeak = lazy(() => import('./pages/FreeSpeak'))
 const ScenarioHub = lazy(() => import('./pages/ScenarioHub'))
 const ReviewLanding = lazy(() => import('./pages/ReviewLanding'))
@@ -235,6 +240,10 @@ function App() {
         <Route path="/learn/scenario" element={<ScenarioHub />} />
         <Route path="/learn/speaking" element={<SpeakingPractice />} />
         <Route path="/learn/listening" element={<ListeningPractice />} />
+        <Route path="/listen/practice/:mode" element={<ListenPractice />} />
+        <Route path="/listen/classroom" element={<ListenClassroom />} />
+        <Route path="/listen/today" element={<ListenToday />} />
+        <Route path="/listen/review" element={<ListenReview />} />
         <Route path="/learn/sign" element={<Sign />} />
         {/* 복습·분석 탭 — 새 Figma 화면을 대표 경로로 */}
         <Route path="/review" element={<ReviewTab />} />

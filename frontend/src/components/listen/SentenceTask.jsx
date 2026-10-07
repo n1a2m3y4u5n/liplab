@@ -25,7 +25,7 @@ import { Card, Heading, inputClass, isDesktop } from './ui'
 const SENTENCE_HINT = '맞힌 낱말은 그대로, 틀린 낱말은 글자마다 첫 자음만 보여요. 문장을 다시 듣고 한 번 더 써 보세요. 다시 쓴 답은 점수에 넣지 않아요.'
 
 export default function SentenceTask({ data, settings, voices, onProgress, onExit, finish, noisy, active, exitLabel = '학습 경로로',
-  answerExtra = null, onAnswered = null, condition = null, showStair = false, metaLabel = null }) {
+  answerExtra = null, onAnswered = null, condition: condition0 = null, showStair = false, metaLabel = null }) {
   const items = data.items || []
   const [k, setK] = useState(0)
   const [answer, setAnswer] = useState('')
@@ -50,6 +50,10 @@ export default function SentenceTask({ data, settings, voices, onProgress, onExi
   const frameTimer = useRef(null)
   const avOffsetRef = useRef(null)
   const it = items[k]
+  // 듣기 조건 연습은 문항마다 잔향 시간·잡음 종류·SNR이 올 수 있다(서버 문항 rt60·noise·snr_db가 고정값보다 먼저)
+  const condition = condition0 && {
+    ...condition0, ...(it?.rt60 != null ? { rt60: it.rt60 } : {}), ...(it?.noise ? { noise: it.noise } : {}), ...(it?.snr_db != null ? { snrDb: it.snr_db } : {}),
+  }
   const voice = voiceFor(voices.train, k, 0, data.voice_mode, data.voice_block)
   const clip = useClip(it?.text, voice)
   const fixedNoise = !noisy && condition?.kind === 'noise'
