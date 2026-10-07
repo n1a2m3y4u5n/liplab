@@ -1,0 +1,8780 @@
+{
+ "gate": {
+  "ax:coda": {
+   "n": 60,
+   "agree": 0.7333,
+   "pass": false
+  },
+  "ax:fricative": {
+   "n": 48,
+   "agree": 0.6458,
+   "pass": false
+  },
+  "ax:laryngeal": {
+   "n": 60,
+   "agree": 0.5833,
+   "pass": false
+  },
+  "ax:length": {
+   "n": 46,
+   "agree": 0.8261,
+   "pass": true
+  },
+  "ax:manner": {
+   "n": 53,
+   "agree": 0.9057,
+   "pass": true
+  },
+  "ax:place": {
+   "n": 43,
+   "agree": 0.814,
+   "pass": true
+  },
+  "ax:vowel": {
+   "n": 75,
+   "agree": 0.8533,
+   "pass": true
+  },
+  "word:d1": {
+   "n": 257,
+   "agree": 0.7043,
+   "pass": false
+  },
+  "word:d2": {
+   "n": 563,
+   "agree": 0.7638,
+   "pass": false
+  },
+  "word:d3-6": {
+   "n": 3331,
+   "agree": 0.9364,
+   "pass": true
+  }
+ },
+ "caution_threshold": {
+  "ax": -7.3608,
+  "word": -5.9866,
+  "gen": -5.9866
+ },
+ "table": {
+  "f1|ax": {
+   "items": 70,
+   "scorable": 58,
+   "fail": 23,
+   "applied": 9,
+   "weak_only": 14,
+   "caution": 0,
+   "replaced": 4,
+   "unscorable": 12
+  },
+  "f1|word": {
+   "items": 280,
+   "scorable": 271,
+   "fail": 71,
+   "applied": 42,
+   "weak_only": 29,
+   "caution": 0,
+   "replaced": 18,
+   "unscorable": 9
+  },
+  "f2|ax": {
+   "items": 70,
+   "scorable": 58,
+   "fail": 23,
+   "applied": 10,
+   "weak_only": 13,
+   "caution": 0,
+   "replaced": 1,
+   "unscorable": 12
+  },
+  "f2|word": {
+   "items": 280,
+   "scorable": 271,
+   "fail": 73,
+   "applied": 48,
+   "weak_only": 25,
+   "caution": 0,
+   "replaced": 12,
+   "unscorable": 9
+  },
+  "m1|ax": {
+   "items": 70,
+   "scorable": 58,
+   "fail": 20,
+   "applied": 7,
+   "weak_only": 13,
+   "caution": 0,
+   "replaced": 3,
+   "unscorable": 12
+  },
+  "m1|word": {
+   "items": 280,
+   "scorable": 271,
+   "fail": 54,
+   "applied": 31,
+   "weak_only": 23,
+   "caution": 0,
+   "replaced": 10,
+   "unscorable": 9
+  },
+  "m2|ax": {
+   "items": 70,
+   "scorable": 58,
+   "fail": 23,
+   "applied": 10,
+   "weak_only": 13,
+   "caution": 0,
+   "replaced": 4,
+   "unscorable": 12
+  },
+  "m2|word": {
+   "items": 280,
+   "scorable": 271,
+   "fail": 63,
+   "applied": 38,
+   "weak_only": 25,
+   "caution": 0,
+   "replaced": 14,
+   "unscorable": 9
+  },
+  "m3|gen": {
+   "items": 20,
+   "scorable": 20,
+   "fail": 4,
+   "applied": 3,
+   "weak_only": 1,
+   "caution": 0,
+   "replaced": 0
+  }
+ },
+ "comparison_status": {
+  "ok": 4726,
+  "same_tokens": 40,
+  "unk": 270
+ },
+ "agreement": {
+  "whisper_2x2": {
+   "suspect_and_fail": 32,
+   "suspect_not_fail": 22,
+   "clean_and_fail": 322,
+   "clean_not_fail": 960
+  },
+  "whisper_hyp_is_competitor": {
+   "hyp_not_a_competitor": 45,
+   "judge_agrees": 5,
+   "judge_disagrees": 4
+  },
+  "acoustic_2x2": {
+   "acoustic_diff_and_fail": 8,
+   "acoustic_diff_not_fail": 1,
+   "acoustic_same_and_fail": 17,
+   "acoustic_same_not_fail": 12
+  },
+  "acoustic_rows": [
+   {
+    "voice": "m1",
+    "key": "바",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "바",
+    "judge_fail": true,
+    "min_margin": -7.3502
+   },
+   {
+    "voice": "m1",
+    "key": "버",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "퍼",
+    "judge_fail": true,
+    "min_margin": -0.1109
+   },
+   {
+    "voice": "m1",
+    "key": "짜",
+    "intended": "F",
+    "acoustic": "L",
+    "asr": "자!",
+    "judge_fail": true,
+    "min_margin": -15.8698
+   },
+   {
+    "voice": "f1",
+    "key": "기",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "키",
+    "judge_fail": false,
+    "min_margin": 0.7181
+   },
+   {
+    "voice": "f1",
+    "key": "바",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "바",
+    "judge_fail": true,
+    "min_margin": -5.9101
+   },
+   {
+    "voice": "f1",
+    "key": "짜",
+    "intended": "F",
+    "acoustic": "L",
+    "asr": "자",
+    "judge_fail": true,
+    "min_margin": -17.3222
+   },
+   {
+    "voice": "m2",
+    "key": "기",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "키",
+    "judge_fail": false,
+    "min_margin": 1.0748
+   },
+   {
+    "voice": "m2",
+    "key": "닥",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "탁",
+    "judge_fail": true,
+    "min_margin": -4.4993
+   },
+   {
+    "voice": "m2",
+    "key": "답",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "탑",
+    "judge_fail": false,
+    "min_margin": 5.9195
+   },
+   {
+    "voice": "m2",
+    "key": "따",
+    "intended": "F",
+    "acoustic": "L",
+    "asr": "다.",
+    "judge_fail": true,
+    "min_margin": -5.7999
+   },
+   {
+    "voice": "m2",
+    "key": "버",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "봐.",
+    "judge_fail": true,
+    "min_margin": -1.4648
+   },
+   {
+    "voice": "f2",
+    "key": "간",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "칸",
+    "judge_fail": false,
+    "min_margin": 4.0203
+   },
+   {
+    "voice": "f2",
+    "key": "감",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "컴",
+    "judge_fail": false,
+    "min_margin": 3.414
+   },
+   {
+    "voice": "f2",
+    "key": "기",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "키",
+    "judge_fail": false,
+    "min_margin": 1.232
+   },
+   {
+    "voice": "f2",
+    "key": "까",
+    "intended": "F",
+    "acoustic": "L",
+    "asr": "가",
+    "judge_fail": false,
+    "min_margin": 1.2562
+   },
+   {
+    "voice": "f2",
+    "key": "따",
+    "intended": "F",
+    "acoustic": "F",
+    "asr": "따!",
+    "judge_fail": true,
+    "min_margin": -2.0842
+   },
+   {
+    "voice": "f2",
+    "key": "버",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "4.",
+    "judge_fail": true,
+    "min_margin": -4.0561
+   },
+   {
+    "voice": "f2",
+    "key": "보",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "4.",
+    "judge_fail": true,
+    "min_margin": -1.4295
+   },
+   {
+    "voice": "f2",
+    "key": "부",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "부",
+    "judge_fail": false,
+    "min_margin": 3.827
+   },
+   {
+    "voice": "f2",
+    "key": "빠",
+    "intended": "F",
+    "acoustic": "F",
+    "asr": "바",
+    "judge_fail": false,
+    "min_margin": 5.7692
+   },
+   {
+    "voice": "f2",
+    "key": "짜",
+    "intended": "F",
+    "acoustic": "L",
+    "asr": "자",
+    "judge_fail": true,
+    "min_margin": -19.0837
+   },
+   {
+    "voice": "f2",
+    "key": "파",
+    "intended": "A",
+    "acoustic": "A",
+    "asr": "파",
+    "judge_fail": false,
+    "min_margin": 9.1263
+   },
+   {
+    "voice": "m1",
+    "key": "밭",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "팟",
+    "judge_fail": true,
+    "min_margin": -6.2132
+   },
+   {
+    "voice": "f1",
+    "key": "떡",
+    "intended": "F",
+    "acoustic": "F",
+    "asr": "똑!",
+    "judge_fail": true,
+    "min_margin": -1.7927
+   },
+   {
+    "voice": "f1",
+    "key": "빗",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "빛",
+    "judge_fail": false,
+    "min_margin": 1.7029
+   },
+   {
+    "voice": "f1",
+    "key": "겁",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "컵",
+    "judge_fail": true,
+    "min_margin": -0.4859
+   },
+   {
+    "voice": "f1",
+    "key": "붓",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "푸드",
+    "judge_fail": true,
+    "min_margin": -15.4225
+   },
+   {
+    "voice": "f1",
+    "key": "밖",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "박",
+    "judge_fail": true,
+    "min_margin": -0.9566
+   },
+   {
+    "voice": "f1",
+    "key": "곡",
+    "intended": "L",
+    "acoustic": "F",
+    "asr": "콕",
+    "judge_fail": true,
+    "min_margin": -7.7198
+   },
+   {
+    "voice": "f1",
+    "key": "죽",
+    "intended": "L",
+    "acoustic": "A",
+    "asr": "축!",
+    "judge_fail": true,
+    "min_margin": -2.7795
+   },
+   {
+    "voice": "m2",
+    "key": "떡",
+    "intended": "F",
+    "acoustic": "A",
+    "asr": "똑!",
+    "judge_fail": true,
+    "min_margin": -3.1505
+   },
+   {
+    "voice": "m2",
+    "key": "빗",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "핏",
+    "judge_fail": false,
+    "min_margin": 0.3869
+   },
+   {
+    "voice": "m2",
+    "key": "공",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "콩",
+    "judge_fail": false,
+    "min_margin": 1.4436
+   },
+   {
+    "voice": "m2",
+    "key": "밭",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "팟",
+    "judge_fail": true,
+    "min_margin": -7.8249
+   },
+   {
+    "voice": "m2",
+    "key": "깨",
+    "intended": "F",
+    "acoustic": "A",
+    "asr": "게.",
+    "judge_fail": true,
+    "min_margin": -3.5374
+   },
+   {
+    "voice": "m2",
+    "key": "죽",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "축!",
+    "judge_fail": true,
+    "min_margin": -4.7793
+   },
+   {
+    "voice": "f2",
+    "key": "떡",
+    "intended": "F",
+    "acoustic": "F",
+    "asr": "똑!",
+    "judge_fail": true,
+    "min_margin": -0.7349
+   },
+   {
+    "voice": "f2",
+    "key": "겁",
+    "intended": "L",
+    "acoustic": "L",
+    "asr": "컵",
+    "judge_fail": true,
+    "min_margin": -6.2026
+   }
+  ]
+ },
+ "posthoc": {
+  "fail_voice_count_by_group": {
+   "ax:coda": {
+    "1": 2,
+    "3": 1,
+    "4": 3
+   },
+   "ax:fricative": {
+    "2": 1,
+    "3": 1,
+    "4": 3
+   },
+   "ax:laryngeal": {
+    "1": 1,
+    "3": 1,
+    "4": 7
+   },
+   "ax:length": {
+    "2": 2,
+    "4": 1
+   },
+   "ax:manner": {
+    "1": 1,
+    "4": 1
+   },
+   "ax:place": {
+    "3": 1,
+    "4": 2
+   },
+   "ax:vowel": {
+    "1": 1,
+    "2": 3,
+    "3": 2,
+    "4": 1
+   },
+   "word:d1": {
+    "1": 9,
+    "2": 3,
+    "3": 6,
+    "4": 13
+   },
+   "word:d2": {
+    "1": 16,
+    "2": 10,
+    "3": 8,
+    "4": 23
+   },
+   "word:d3-6": {
+    "1": 39,
+    "2": 19,
+    "3": 15,
+    "4": 26
+   }
+  },
+  "laryngeal_ref_agree_by_direction": {
+   "A->L": {
+    "n": 15,
+    "agree": 0.2
+   },
+   "F->L": {
+    "n": 13,
+    "agree": 0.231
+   },
+   "L->A": {
+    "n": 14,
+    "agree": 0.857
+   },
+   "L->F": {
+    "n": 18,
+    "agree": 0.944
+   }
+  },
+  "greedy_empty": {
+   "1음절": {
+    "n": 511,
+    "empty": 0.466
+   },
+   "2음절 이상": {
+    "n": 909,
+    "empty": 0.023
+   }
+  }
+ },
+ "all_train_voices_fail": [
+  "ax:다",
+  "ax:바",
+  "ax:타",
+  "word:깨",
+  "word:낙엽",
+  "word:베개",
+  "word:붓",
+  "word:삽",
+  "word:서랍",
+  "word:솥",
+  "word:잎",
+  "word:젓가락",
+  "word:턱",
+  "word:토끼",
+  "word:혀"
+ ],
+ "m3_gen_fail": [
+  {
+   "voice": "m3",
+   "set": "gen",
+   "text": "나물",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "나월",
+   "min_margin": -0.4373,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "나무",
+     "margin": -0.4373,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m3",
+   "set": "gen",
+   "text": "마늘",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "많을",
+   "min_margin": -12.2669,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "마을",
+     "margin": -12.2669,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "마루",
+     "margin": -0.2887,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "마당",
+     "margin": -2.2842,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m3",
+   "set": "gen",
+   "text": "바늘",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "받을",
+   "min_margin": -15.8175,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "다리",
+     "margin": -4.4535,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "마을",
+     "margin": -15.8175,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m3",
+   "set": "gen",
+   "text": "오빠",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "다",
+   "min_margin": -4.7861,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "모자",
+     "margin": -4.7861,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  }
+ ],
+ "items": [
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "갑",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -11.2266,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "각",
+     "margin": -11.2266,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "구",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "국",
+   "min_margin": -1.5192,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "고",
+     "margin": -1.5192,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "까",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "가",
+   "min_margin": -5.9831,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "가",
+     "margin": -5.9831,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "나무",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "나",
+   "min_margin": -1.8721,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "나",
+     "margin": -1.8721,
+     "group": "ax:length",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "다",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -2.3233,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사",
+     "margin": -2.3233,
+     "group": "ax:manner",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "닥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -4.8186,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -4.8186,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "따",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -3.61,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "다",
+     "margin": -3.61,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "바",
+   "suspect": true,
+   "hyp": "바",
+   "greedy": "",
+   "min_margin": -7.3502,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "부",
+     "margin": -0.1243,
+     "group": "ax:vowel",
+     "applied": true
+    },
+    {
+     "against": "파",
+     "margin": -7.3502,
+     "group": "ax:laryngeal",
+     "applied": false
+    },
+    {
+     "against": "다",
+     "margin": -4.2437,
+     "group": "ax:place",
+     "applied": true
+    },
+    {
+     "against": "가",
+     "margin": -1.5095,
+     "group": "ax:place",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "반",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "발",
+   "min_margin": -0.7138,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -0.7138,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "버",
+   "suspect": true,
+   "hyp": "퍼",
+   "greedy": "",
+   "min_margin": -0.1109,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "바",
+     "margin": -0.1109,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "브",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "이",
+   "min_margin": -0.2841,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "부",
+     "margin": -0.2841,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "싸",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사",
+   "min_margin": -3.4381,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사",
+     "margin": -3.4381,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "저",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -1.9152,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "서",
+     "margin": -1.9152,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "짜",
+   "suspect": true,
+   "hyp": "자!",
+   "greedy": "자",
+   "min_margin": -15.8698,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "자",
+     "margin": -15.8698,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "차",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "자",
+   "min_margin": -2.9794,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "자",
+     "margin": -2.9794,
+     "group": "ax:laryngeal",
+     "applied": false
+    },
+    {
+     "against": "사",
+     "margin": -1.2597,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "카",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -1.9254,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "가",
+     "margin": -1.9254,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "타",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -6.4116,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "다",
+     "margin": -6.4116,
+     "group": "ax:laryngeal",
+     "applied": false
+    },
+    {
+     "against": "파",
+     "margin": -5.0943,
+     "group": "ax:place",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "하",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사",
+   "min_margin": -7.2092,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사",
+     "margin": -7.2092,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "후",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "수",
+   "min_margin": -0.5131,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "수",
+     "margin": -0.5131,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "ax",
+   "text": "히",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -7.4848,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "시",
+     "margin": -7.4848,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "갑",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -10.0455,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "각",
+     "margin": -10.0455,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "구",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "국",
+   "min_margin": -1.4221,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "고",
+     "margin": -1.4221,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "까",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -4.6444,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "가",
+     "margin": -4.6444,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "나무",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "나",
+   "min_margin": -0.9751,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "나",
+     "margin": -0.9751,
+     "group": "ax:length",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "다",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -2.845,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사",
+     "margin": -2.845,
+     "group": "ax:manner",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "닥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -4.2566,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -4.2566,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "따",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -9.9051,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "다",
+     "margin": -9.9051,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "바",
+   "suspect": true,
+   "hyp": "바",
+   "greedy": "",
+   "min_margin": -5.9101,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "파",
+     "margin": -5.0177,
+     "group": "ax:laryngeal",
+     "applied": false
+    },
+    {
+     "against": "다",
+     "margin": -5.9101,
+     "group": "ax:place",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "바다",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.5878,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "바",
+     "margin": -0.5878,
+     "group": "ax:length",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "반",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "발",
+   "min_margin": -3.6435,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -3.6435,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "밤",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.7483,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "반",
+     "margin": -5.7483,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "베",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -1.2722,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "비",
+     "margin": -1.2722,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "보",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -1.3133,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "부",
+     "margin": -1.3133,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "브",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "이",
+   "min_margin": -0.0314,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "부",
+     "margin": -0.0314,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "싸",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사",
+   "min_margin": -0.638,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사",
+     "margin": -0.638,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "저",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -2.6727,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "서",
+     "margin": -2.6727,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "짜",
+   "suspect": true,
+   "hyp": "자",
+   "greedy": "자",
+   "min_margin": -17.3222,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "자",
+     "margin": -17.3222,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "차",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -1.8233,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "자",
+     "margin": -1.8233,
+     "group": "ax:laryngeal",
+     "applied": false
+    },
+    {
+     "against": "사",
+     "margin": -1.1694,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "카",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -3.8428,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "가",
+     "margin": -3.8428,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "타",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.9536,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "다",
+     "margin": -4.8182,
+     "group": "ax:laryngeal",
+     "applied": false
+    },
+    {
+     "against": "파",
+     "margin": -5.9536,
+     "group": "ax:place",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "하",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -1.501,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사",
+     "margin": -1.501,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "후",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "홍",
+   "min_margin": -0.3118,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "수",
+     "margin": -0.3118,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "ax",
+   "text": "히",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.9633,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "시",
+     "margin": -5.9633,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "갑",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -8.5417,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "각",
+     "margin": -8.5417,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "구름",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "그음",
+   "min_margin": -0.011,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "구",
+     "margin": -0.011,
+     "group": "ax:length",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "까",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "가",
+   "min_margin": -7.5492,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "가",
+     "margin": -7.5492,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "나무",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "나",
+   "min_margin": -2.3928,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "나",
+     "margin": -2.3928,
+     "group": "ax:length",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "누",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.2609,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "두",
+     "margin": -0.2609,
+     "group": "ax:manner",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "다",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.1672,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사",
+     "margin": -0.1672,
+     "group": "ax:manner",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "닥",
+   "suspect": true,
+   "hyp": "탁",
+   "greedy": "",
+   "min_margin": -4.4993,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -4.4993,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "따",
+   "suspect": true,
+   "hyp": "다.",
+   "greedy": "",
+   "min_margin": -5.7999,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "다",
+     "margin": -5.7999,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "바",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -6.183,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "파",
+     "margin": -6.183,
+     "group": "ax:laryngeal",
+     "applied": false
+    },
+    {
+     "against": "다",
+     "margin": -4.7731,
+     "group": "ax:place",
+     "applied": true
+    },
+    {
+     "against": "가",
+     "margin": -2.5011,
+     "group": "ax:place",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "바다",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.7073,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "바",
+     "margin": -0.7073,
+     "group": "ax:length",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "반",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -1.8702,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -1.8702,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "밤",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -7.6399,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "반",
+     "margin": -7.6399,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "버",
+   "suspect": true,
+   "hyp": "봐.",
+   "greedy": "",
+   "min_margin": -1.4648,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "보",
+     "margin": -1.4648,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "베",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.7395,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "비",
+     "margin": -0.7395,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "브",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -1.7643,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "부",
+     "margin": -1.7643,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "상",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "삼",
+   "min_margin": -1.3011,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "산",
+     "margin": -1.3011,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "싸",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사",
+   "min_margin": -6.1969,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사",
+     "margin": -6.1969,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "짜",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "자",
+   "min_margin": -19.9357,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "자",
+     "margin": -19.9357,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "차",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.4327,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "자",
+     "margin": -5.4327,
+     "group": "ax:laryngeal",
+     "applied": false
+    },
+    {
+     "against": "사",
+     "margin": -3.7716,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "카",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -2.2827,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "가",
+     "margin": -2.2827,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "타",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.9428,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "다",
+     "margin": -5.9428,
+     "group": "ax:laryngeal",
+     "applied": false
+    },
+    {
+     "against": "파",
+     "margin": -3.6405,
+     "group": "ax:place",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "후",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "수",
+   "min_margin": -11.4817,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "수",
+     "margin": -11.4817,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "ax",
+   "text": "히",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.5341,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "시",
+     "margin": -5.5341,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "갑",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -12.6996,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "각",
+     "margin": -12.6996,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "구",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "국",
+   "min_margin": -2.1196,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "고",
+     "margin": -2.1196,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "구름",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "고음",
+   "min_margin": -0.0322,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "구",
+     "margin": -0.0322,
+     "group": "ax:length",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "나무",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "나",
+   "min_margin": -2.9785,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "나",
+     "margin": -2.9785,
+     "group": "ax:length",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "다",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -3.802,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사",
+     "margin": -3.802,
+     "group": "ax:manner",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "닥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -3.5636,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -3.5636,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "단",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.1393,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "달",
+     "margin": -0.1393,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "따",
+   "suspect": true,
+   "hyp": "따!",
+   "greedy": "",
+   "min_margin": -2.0842,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "다",
+     "margin": -2.0842,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "바",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "파",
+   "min_margin": -9.6055,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "파",
+     "margin": -9.6055,
+     "group": "ax:laryngeal",
+     "applied": false
+    },
+    {
+     "against": "빠",
+     "margin": -1.6219,
+     "group": "ax:laryngeal",
+     "applied": false
+    },
+    {
+     "against": "다",
+     "margin": -6.103,
+     "group": "ax:place",
+     "applied": true
+    },
+    {
+     "against": "가",
+     "margin": -4.3388,
+     "group": "ax:place",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "반",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "는",
+   "min_margin": -4.9288,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -4.9288,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "밤",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -4.1421,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "반",
+     "margin": -4.1421,
+     "group": "ax:coda",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "버",
+   "suspect": true,
+   "hyp": "4.",
+   "greedy": "",
+   "min_margin": -4.0561,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "보",
+     "margin": -2.8229,
+     "group": "ax:vowel",
+     "applied": true
+    },
+    {
+     "against": "바",
+     "margin": -4.0561,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "베",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "백",
+   "min_margin": -1.629,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "비",
+     "margin": -1.629,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "보",
+   "suspect": true,
+   "hyp": "4.",
+   "greedy": "",
+   "min_margin": -1.4295,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "부",
+     "margin": -1.4295,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "브",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "다",
+   "min_margin": -2.1871,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "부",
+     "margin": -2.1871,
+     "group": "ax:vowel",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "싸",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사",
+   "min_margin": -1.5916,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사",
+     "margin": -1.5916,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "저",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.5685,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "서",
+     "margin": -5.5685,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "짜",
+   "suspect": true,
+   "hyp": "자",
+   "greedy": "자",
+   "min_margin": -19.0837,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "자",
+     "margin": -19.0837,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "차",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -3.8737,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "자",
+     "margin": -3.8737,
+     "group": "ax:laryngeal",
+     "applied": false
+    },
+    {
+     "against": "사",
+     "margin": -3.34,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "카",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사",
+   "min_margin": -3.2743,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "가",
+     "margin": -3.2743,
+     "group": "ax:laryngeal",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "타",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.8887,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "다",
+     "margin": -5.8887,
+     "group": "ax:laryngeal",
+     "applied": false
+    },
+    {
+     "against": "파",
+     "margin": -5.506,
+     "group": "ax:place",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "후",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "쓴",
+   "min_margin": -4.7284,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "수",
+     "margin": -4.7284,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "ax",
+   "text": "히",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.9006,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "시",
+     "margin": -5.9006,
+     "group": "ax:fricative",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "밥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -4.4192,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -2.8709,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "밖",
+     "margin": -4.4192,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "맘",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "마",
+   "min_margin": -2.6656,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "말",
+     "margin": -2.6656,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "불",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "볼",
+   "min_margin": -6.0922,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "볼",
+     "margin": -6.0922,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "살",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사",
+   "min_margin": -0.4797,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "날",
+     "margin": -0.4797,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "차",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "자",
+   "min_margin": -2.9794,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "자",
+     "margin": -2.9794,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "토끼",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "기",
+   "min_margin": -4.1416,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "고기",
+     "margin": -4.1416,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "허리",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "확리",
+   "min_margin": -0.0784,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "서리",
+     "margin": -0.0784,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "저고리",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "어이",
+   "min_margin": -0.3032,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "너구리",
+     "margin": -0.3032,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "턱",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -1.9308,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "떡",
+     "margin": -1.6629,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "겁",
+     "margin": -0.7064,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "답",
+     "margin": -1.9308,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "서랍",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사랑",
+   "min_margin": -16.217,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사랑",
+     "margin": -16.217,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "서리",
+     "margin": -0.6543,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "베개",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "백",
+   "min_margin": -4.0848,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "고기",
+     "margin": -4.0848,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "무",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.5442,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "눈",
+     "margin": -0.5442,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "솥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -10.1672,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "소",
+     "margin": -9.3635,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "손",
+     "margin": -10.1672,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "숲",
+     "margin": -7.8204,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "돌",
+     "margin": -2.8222,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "보라색",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "부색",
+   "min_margin": -0.8341,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "노란색",
+     "margin": -0.8341,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "콩",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "왕",
+   "min_margin": -2.5528,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "코",
+     "margin": -2.5528,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "팔",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -1.5859,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "발",
+     "margin": -1.5859,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "혀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -4.3442,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "파",
+     "margin": -4.3442,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "깁스",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "스",
+   "min_margin": -1.0076,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "기사",
+     "margin": -1.0076,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "그릇",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "그렛",
+   "min_margin": -0.7032,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "그림",
+     "margin": -0.7032,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "논",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "난",
+   "min_margin": -4.2673,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "눈",
+     "margin": -4.2673,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "맛",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -6.3327,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "말",
+     "margin": -6.3327,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "밤",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "다",
+   "min_margin": -5.0053,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -5.0053,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "맘",
+     "margin": -2.2552,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "발",
+     "margin": -4.1404,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "잎",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "이",
+   "min_margin": -3.9068,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "집",
+     "margin": -1.7643,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "빗",
+     "margin": -1.9197,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "비",
+     "margin": -3.9068,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "약",
+     "margin": -0.0593,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "풀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "는",
+   "min_margin": -2.1899,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "물",
+     "margin": -1.6997,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "볼",
+     "margin": -2.1899,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "공",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "왕",
+   "min_margin": -0.8324,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "곡",
+     "margin": -0.8324,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "밭",
+   "suspect": true,
+   "hyp": "팟",
+   "greedy": "",
+   "min_margin": -6.2132,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "밖",
+     "margin": -6.0985,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "밥",
+     "margin": -1.6966,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "답",
+     "margin": -2.0073,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "맛",
+     "margin": -6.2132,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "붓",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -10.4076,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -10.4076,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "불",
+     "margin": -3.4749,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "곡",
+     "margin": -2.0619,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "볼",
+     "margin": -6.1344,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "빗",
+     "margin": -5.2286,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "술",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "수",
+   "min_margin": -0.7412,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "손",
+     "margin": -0.7412,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "시작",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "회장",
+   "min_margin": -11.6525,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "시장",
+     "margin": -11.6525,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "사자",
+     "margin": -6.7042,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "개",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.1212,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "피",
+     "margin": -0.1212,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "바위",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "야위",
+   "min_margin": -0.6546,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "가위",
+     "margin": -0.6546,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "목",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "국",
+   "min_margin": -2.2929,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -2.2929,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "목도리",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "목소리",
+   "min_margin": -2.9249,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "목소리",
+     "margin": -2.9249,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "부추",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "야",
+   "min_margin": -3.9012,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국수",
+     "margin": -3.9012,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "까치",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "가이",
+   "min_margin": -2.2962,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "바지",
+     "margin": -2.2962,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "깨",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "게",
+   "min_margin": -2.9887,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "개",
+     "margin": -2.9887,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "비",
+     "margin": -0.9556,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "사탕",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사탄",
+   "min_margin": -1.4449,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "사랑",
+     "margin": -1.4449,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "사과",
+     "margin": -0.8352,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "김밥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "이박",
+   "min_margin": -0.7259,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "기사",
+     "margin": -0.7259,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "파랑",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사란",
+   "min_margin": -2.0075,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "사랑",
+     "margin": -2.0075,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "바가지",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "아지",
+   "min_margin": -2.8697,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "강아지",
+     "margin": -2.8697,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "빵",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "방",
+   "min_margin": -4.7588,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -4.7588,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "낙엽",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "나이 없다",
+   "min_margin": -7.7823,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "나비",
+     "margin": -7.7823,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "삽",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -3.6396,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -1.6549,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "밥",
+     "margin": -1.2812,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "탑",
+     "margin": -3.6396,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "겁",
+     "margin": -0.8792,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "밖",
+     "margin": -2.6574,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "기타",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "기다",
+   "min_margin": -4.9073,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "기사",
+     "margin": -4.8677,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "기차",
+     "margin": -4.9073,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "밖",
+   "suspect": true,
+   "hyp": "박",
+   "greedy": "",
+   "min_margin": -2.3301,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -2.3301,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "탑",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -3.5187,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -3.5187,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "밥",
+     "margin": -2.7707,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "핀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "팅",
+   "min_margin": -0.9208,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "빗",
+     "margin": -0.9208,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "봄",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "왕",
+   "min_margin": -4.098,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "곰",
+     "margin": -2.9204,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "공",
+     "margin": -0.9844,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "볼",
+     "margin": -4.098,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "밥솥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "송",
+   "min_margin": -2.4916,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "밥상",
+     "margin": -2.4916,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "수저",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "수자",
+   "min_margin": -7.282,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "모자",
+     "margin": -3.3965,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "사자",
+     "margin": -7.282,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "담요",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "다력",
+   "min_margin": -2.9832,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "단추",
+     "margin": -2.9832,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "곡",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -7.0387,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -7.0387,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "공",
+     "margin": -0.7708,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "젓가락",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "적 가락",
+   "min_margin": -3.9132,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "손가락",
+     "margin": -3.9132,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m1",
+   "set": "word",
+   "text": "죽",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "주",
+   "min_margin": -5.1297,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -5.1297,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "목",
+     "margin": -0.9326,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "밥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -4.2681,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -4.2681,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "밖",
+     "margin": -2.2472,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "맘",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "마",
+   "min_margin": -2.1756,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "말",
+     "margin": -2.1756,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "불",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "부",
+   "min_margin": -0.8649,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "볼",
+     "margin": -0.8649,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "풀",
+     "margin": -0.0574,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "쌀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사",
+   "min_margin": -2.8677,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "살",
+     "margin": -2.8677,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "날",
+     "margin": -0.8978,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "발",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "달",
+   "min_margin": -4.6112,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "달",
+     "margin": -4.6112,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "차",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -1.8233,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "자",
+     "margin": -1.8233,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "서점",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사범",
+   "min_margin": -1.3074,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "사자",
+     "margin": -1.3074,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "토끼",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "기",
+   "min_margin": -4.2181,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "고기",
+     "margin": -4.2181,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "떡",
+   "suspect": true,
+   "hyp": "똑!",
+   "greedy": "",
+   "min_margin": -1.7927,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -1.7927,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "허리",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "확리",
+   "min_margin": -0.7095,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "서리",
+     "margin": -0.7095,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "저고리",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "어리",
+   "min_margin": -0.3635,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "너구리",
+     "margin": -0.3635,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "비",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "이",
+   "min_margin": -0.9955,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "피",
+     "margin": -0.9955,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "턱",
+   "suspect": true,
+   "hyp": "톡",
+   "greedy": "",
+   "min_margin": -3.3764,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "떡",
+     "margin": -0.506,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "겁",
+     "margin": -0.3954,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "답",
+     "margin": -3.3764,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "밖",
+     "margin": -0.3082,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "서랍",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사랑",
+   "min_margin": -18.6348,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사랑",
+     "margin": -18.6348,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "서리",
+     "margin": -0.281,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "베개",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "백",
+   "min_margin": -5.4906,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "고기",
+     "margin": -5.4906,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "무",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "위",
+   "min_margin": -0.9307,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "물",
+     "margin": -0.9307,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "눈",
+     "margin": -0.5778,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "솥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -11.5095,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "소",
+     "margin": -8.7545,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "손",
+     "margin": -11.5095,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "숲",
+     "margin": -6.3958,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "돌",
+     "margin": -3.0733,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "망치",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "왕치",
+   "min_margin": -0.8225,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "까치",
+     "margin": -0.8225,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "보라색",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "부가",
+   "min_margin": -2.1204,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "노란색",
+     "margin": -2.1204,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "콩",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "왕",
+   "min_margin": -2.9039,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "공",
+     "margin": -1.9017,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "코",
+     "margin": -2.9039,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "곡",
+     "margin": -1.0141,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "거울",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "가",
+   "min_margin": -6.0426,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "가위",
+     "margin": -6.0426,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "팔",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.2047,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "발",
+     "margin": -0.2047,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "혀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -7.4637,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "형",
+     "margin": -4.0065,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "차",
+     "margin": -2.6941,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "파",
+     "margin": -7.4637,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "깁스",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "슨",
+   "min_margin": -1.1127,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "기사",
+     "margin": -1.1127,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "그릇",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "코로",
+   "min_margin": -2.3297,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "그림",
+     "margin": -2.3297,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "크림",
+     "margin": -0.3404,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "겁",
+   "suspect": true,
+   "hyp": "컵",
+   "greedy": "가",
+   "min_margin": -0.4859,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "밥",
+     "margin": -0.4859,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "논",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "는",
+   "min_margin": -3.4155,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "눈",
+     "margin": -3.4155,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "도끼",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "기",
+   "min_margin": -3.0823,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "고기",
+     "margin": -3.0823,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "맛",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -6.9928,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "말",
+     "margin": -6.9928,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "밤",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -10.5832,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -10.5832,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "강",
+     "margin": -3.2366,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "맘",
+     "margin": -6.7842,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "발",
+     "margin": -9.7922,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "잎",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "이",
+   "min_margin": -2.6994,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "집",
+     "margin": -1.5362,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "빗",
+     "margin": -0.5256,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "비",
+     "margin": -2.6994,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "약",
+     "margin": -0.0341,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "풀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "웃",
+   "min_margin": -1.9381,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "물",
+     "margin": -0.5524,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "볼",
+     "margin": -1.9381,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "빵집",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "방",
+   "min_margin": -0.0011,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "까치",
+     "margin": -0.0011,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "밭",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -6.9463,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "밖",
+     "margin": -5.7241,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "답",
+     "margin": -6.9463,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "맛",
+     "margin": -4.7888,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "붓",
+   "suspect": true,
+   "hyp": "푸드",
+   "greedy": "",
+   "min_margin": -15.4225,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -15.4225,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "불",
+     "margin": -10.3426,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "곡",
+     "margin": -6.7404,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "볼",
+     "margin": -10.3024,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "빗",
+     "margin": -6.7005,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "술",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "수",
+   "min_margin": -2.9649,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "손",
+     "margin": -2.9649,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "시작",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "회장",
+   "min_margin": -12.43,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "시장",
+     "margin": -12.43,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "사자",
+     "margin": -3.5714,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "입",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -2.348,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "빗",
+     "margin": -0.9007,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "비",
+     "margin": -2.348,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "곰",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "왕",
+   "min_margin": -0.6286,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "곡",
+     "margin": -0.6286,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "오리",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "우리",
+   "min_margin": -1.2299,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "서리",
+     "margin": -1.2299,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "숲",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -3.0868,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -3.0868,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "바위",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "야위",
+   "min_margin": -0.3509,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "가위",
+     "margin": -0.3509,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "목",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "홍",
+   "min_margin": -0.1866,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -0.1866,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "참새",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "삼세",
+   "min_margin": -5.1435,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "침대",
+     "margin": -5.1435,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "여우",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "영",
+   "min_margin": -3.1574,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "어부",
+     "margin": -2.1119,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "연어",
+     "margin": -2.316,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "오이",
+     "margin": -3.1574,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "목도리",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "목들리",
+   "min_margin": -3.2616,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "목소리",
+     "margin": -3.2616,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "부추",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "야",
+   "min_margin": -2.5779,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국수",
+     "margin": -2.5779,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "강",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "한",
+   "min_margin": -0.7591,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -0.7591,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "까치",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "가지",
+   "min_margin": -2.6563,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "바지",
+     "margin": -2.6563,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "깨",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "게",
+   "min_margin": -3.561,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "개",
+     "margin": -3.561,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "배",
+     "margin": -0.5679,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "비",
+     "margin": -1.0307,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "피",
+     "margin": -2.0346,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "사탕",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사탄",
+   "min_margin": -0.4038,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사랑",
+     "margin": -0.4038,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "배꼽",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "국",
+   "min_margin": -2.8492,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "거북",
+     "margin": -2.8492,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "전철",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "전찰",
+   "min_margin": -2.7591,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "경찰",
+     "margin": -2.7591,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "파랑",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사란",
+   "min_margin": -1.856,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사랑",
+     "margin": -1.856,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "망고",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "왕국",
+   "min_margin": -4.747,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "항구",
+     "margin": -4.747,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "바가지",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사아지",
+   "min_margin": -1.799,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "강아지",
+     "margin": -1.799,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "빵",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "방",
+   "min_margin": -5.1108,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -5.1108,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "빨강",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "발간",
+   "min_margin": -3.1973,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "발등",
+     "margin": -3.1973,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "낙엽",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "낙이",
+   "min_margin": -9.7833,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "나비",
+     "margin": -9.7833,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "사과",
+     "margin": -0.2584,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "책",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -2.0109,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "차",
+     "margin": -2.0109,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "삽",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -4.1358,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -3.6982,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "탑",
+     "margin": -0.8612,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "밖",
+     "margin": -4.1358,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "기타",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -4.6345,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "기사",
+     "margin": -4.6345,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "기차",
+     "margin": -3.4399,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "밖",
+   "suspect": true,
+   "hyp": "박",
+   "greedy": "",
+   "min_margin": -0.9566,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -0.4998,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "방",
+     "margin": -0.9566,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "탑",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -6.9621,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -6.9621,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "밥",
+     "margin": -1.032,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "삽",
+     "margin": -0.9536,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "턱",
+     "margin": -0.6382,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "봄",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "품",
+   "min_margin": -4.3997,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "곰",
+     "margin": -2.8292,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "공",
+     "margin": -2.8657,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "볼",
+     "margin": -4.3997,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "밥솥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.1328,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "밥상",
+     "margin": -0.1328,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "수저",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "수자",
+   "min_margin": -1.7073,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "사자",
+     "margin": -1.7073,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "곡",
+   "suspect": true,
+   "hyp": "콕",
+   "greedy": "국",
+   "min_margin": -7.7198,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -7.7198,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "땀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.6239,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "밤",
+     "margin": -0.4474,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "빵",
+     "margin": -0.6239,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "젓가락",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "적가락",
+   "min_margin": -5.7903,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "손가락",
+     "margin": -5.7903,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f1",
+   "set": "word",
+   "text": "죽",
+   "suspect": true,
+   "hyp": "축!",
+   "greedy": "주",
+   "min_margin": -2.7795,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -2.7795,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "밥",
+   "suspect": true,
+   "hyp": "팝!",
+   "greedy": "",
+   "min_margin": -2.1113,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -2.1113,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "밖",
+     "margin": -2.1078,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "겁",
+     "margin": -0.4886,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "맘",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "왕",
+   "min_margin": -2.8029,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "말",
+     "margin": -2.8029,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "불",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "굴",
+   "min_margin": -0.5197,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "볼",
+     "margin": -0.5197,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "쌀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사",
+   "min_margin": -2.2605,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "살",
+     "margin": -2.2605,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "차",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.4327,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "자",
+     "margin": -5.4327,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "파",
+     "margin": -0.8208,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "토끼",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "기",
+   "min_margin": -5.2236,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "도끼",
+     "margin": -2.0235,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "고기",
+     "margin": -5.2236,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "떡",
+   "suspect": true,
+   "hyp": "똑!",
+   "greedy": "",
+   "min_margin": -3.1505,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -3.1505,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "밖",
+     "margin": -0.6737,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "허리",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "확리",
+   "min_margin": -0.511,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "서리",
+     "margin": -0.511,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "비",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -2.7423,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "피",
+     "margin": -2.7423,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "턱",
+   "suspect": true,
+   "hyp": "톡",
+   "greedy": "",
+   "min_margin": -3.9964,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "겁",
+     "margin": -2.1166,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "답",
+     "margin": -3.9964,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "서랍",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "악",
+   "min_margin": -17.9254,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사랑",
+     "margin": -17.9254,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "바람",
+     "margin": -2.1765,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "서리",
+     "margin": -2.0666,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "트럭",
+     "margin": -0.7018,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "베개",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "백",
+   "min_margin": -5.0859,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "고기",
+     "margin": -5.0859,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "무",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -1.5676,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "물",
+     "margin": -1.5676,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "솥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -10.4969,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "소",
+     "margin": -9.6634,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "손",
+     "margin": -10.4969,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "숲",
+     "margin": -7.5445,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "곡",
+     "margin": -1.1339,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "돌",
+     "margin": -3.159,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "보트",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "포지",
+   "min_margin": -2.3897,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "포크",
+     "margin": -2.3897,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "보라색",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "부란색",
+   "min_margin": -5.5119,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "노란색",
+     "margin": -5.5119,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "콩",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -2.5114,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "곰",
+     "margin": -1.0214,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "코",
+     "margin": -1.5914,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "곡",
+     "margin": -2.5114,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "거울",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "가",
+   "min_margin": -10.2293,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "가위",
+     "margin": -10.2293,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "팔",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.42,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "발",
+     "margin": -5.42,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "달",
+     "margin": -4.5906,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "말",
+     "margin": -0.8841,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "파",
+     "margin": -0.7179,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "혀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -6.6208,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "형",
+     "margin": -1.7054,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "차",
+     "margin": -1.3411,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "파",
+     "margin": -6.6208,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "깁스",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "슨",
+   "min_margin": -1.1072,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "기사",
+     "margin": -1.1072,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "그릇",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "그",
+   "min_margin": -4.1105,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "그림",
+     "margin": -4.1105,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "겁",
+   "suspect": true,
+   "hyp": "컵",
+   "greedy": "",
+   "min_margin": -3.6609,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "밥",
+     "margin": -3.6609,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "개",
+     "margin": -0.3726,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "논",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -2.6647,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "눈",
+     "margin": -2.6647,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "맛",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -4.1127,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "말",
+     "margin": -4.1127,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "밤",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -12.2013,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -12.2013,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "강",
+     "margin": -4.9955,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "땀",
+     "margin": -1.5752,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "맘",
+     "margin": -6.8542,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "발",
+     "margin": -12.0195,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "잎",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.7093,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "집",
+     "margin": -5.7093,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "빗",
+     "margin": -4.2025,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "비",
+     "margin": -3.6153,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "약",
+     "margin": -1.3033,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "풀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "웃",
+   "min_margin": -6.0,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "불",
+     "margin": -0.928,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "물",
+     "margin": -2.3355,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "볼",
+     "margin": -6.0,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "밭",
+   "suspect": true,
+   "hyp": "팟",
+   "greedy": "",
+   "min_margin": -7.8249,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "밖",
+     "margin": -7.8249,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "밥",
+     "margin": -1.9522,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "답",
+     "margin": -4.3474,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "맛",
+     "margin": -5.3165,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "붓",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -10.3753,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -10.3753,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "불",
+     "margin": -5.855,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "곡",
+     "margin": -2.9865,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "볼",
+     "margin": -6.24,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "빗",
+     "margin": -6.7833,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "술",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "수",
+   "min_margin": -0.119,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "눈",
+     "margin": -0.119,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "시작",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "시장",
+   "min_margin": -7.0984,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "시장",
+     "margin": -7.0984,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "칼",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "가",
+   "min_margin": -6.9178,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "팔",
+     "margin": -5.4486,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "달",
+     "margin": -0.5393,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "발",
+     "margin": -6.9178,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "강",
+     "margin": -0.966,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "날",
+     "margin": -0.0043,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "개",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "게",
+   "min_margin": -0.1448,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "피",
+     "margin": -0.1448,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "곰",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "테",
+   "min_margin": -1.8499,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "곡",
+     "margin": -1.8499,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "바위",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "야위",
+   "min_margin": -0.2308,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "가위",
+     "margin": -0.2308,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "목",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "홍",
+   "min_margin": -1.0951,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -1.0951,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "참새",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "삼세",
+   "min_margin": -3.9792,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "침대",
+     "margin": -3.9792,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "목도리",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "목들리",
+   "min_margin": -2.0933,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "목소리",
+     "margin": -2.0933,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "부추",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.2141,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "국수",
+     "margin": -0.2141,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "깨",
+   "suspect": true,
+   "hyp": "게.",
+   "greedy": "께",
+   "min_margin": -3.5374,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "개",
+     "margin": -3.5374,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "비",
+     "margin": -1.1369,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "피",
+     "margin": -1.7354,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "사탕",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사장",
+   "min_margin": -3.609,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사랑",
+     "margin": -3.609,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "시험",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "치",
+   "min_margin": -0.9188,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "시장",
+     "margin": -0.9188,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "강물",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "단월",
+   "min_margin": -1.3951,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "사물",
+     "margin": -1.3951,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "전철",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "쳤자",
+   "min_margin": -5.3392,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "경찰",
+     "margin": -5.3392,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "망고",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "왕고",
+   "min_margin": -3.1042,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "항구",
+     "margin": -3.1042,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "빵",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "방",
+   "min_margin": -7.5526,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -7.5526,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "거북",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "가",
+   "min_margin": -4.1834,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "어부",
+     "margin": -4.1834,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "공부",
+     "margin": -2.1887,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "날",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "말",
+   "min_margin": -2.1373,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "말",
+     "margin": -2.1373,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "빨강",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "발다",
+   "min_margin": -1.8452,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "발등",
+     "margin": -1.8452,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "바다",
+     "margin": -0.2566,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "낙엽",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "나이 없다",
+   "min_margin": -9.0031,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "나비",
+     "margin": -9.0031,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "삽",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.9757,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -4.9588,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "밥",
+     "margin": -2.8341,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "탑",
+     "margin": -1.2754,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "겁",
+     "margin": -3.6222,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "밖",
+     "margin": -5.9757,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "기타",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "다",
+   "min_margin": -3.7574,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "기사",
+     "margin": -3.7574,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "기차",
+     "margin": -2.7481,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "밖",
+   "suspect": true,
+   "hyp": "박",
+   "greedy": "",
+   "min_margin": -5.6315,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -0.0395,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "방",
+     "margin": -5.6315,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "탑",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -7.9783,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -7.9783,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "핀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "팅",
+   "min_margin": -0.0971,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "빗",
+     "margin": -0.0971,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "봄",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.1708,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "곰",
+     "margin": -1.0637,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "공",
+     "margin": -5.1708,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "볼",
+     "margin": -2.4006,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "돌",
+     "margin": -1.1363,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "밥솥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -7.5667,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "밥상",
+     "margin": -7.5667,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "수저",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "수자",
+   "min_margin": -8.8915,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "모자",
+     "margin": -5.9061,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "사자",
+     "margin": -8.8915,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "곡",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "국",
+   "min_margin": -10.3501,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -10.3501,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "공",
+     "margin": -4.209,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "목",
+     "margin": -1.121,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "땀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.0896,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "밤",
+     "margin": -0.0896,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "젓가락",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "적가락",
+   "min_margin": -5.2385,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "손가락",
+     "margin": -5.2385,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m2",
+   "set": "word",
+   "text": "죽",
+   "suspect": true,
+   "hyp": "축!",
+   "greedy": "",
+   "min_margin": -4.7793,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -4.7793,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "목",
+     "margin": -1.2833,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "밥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -3.3437,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -1.804,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "밖",
+     "margin": -3.3437,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "물",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "몰",
+   "min_margin": -0.9664,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "눈",
+     "margin": -0.0206,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "무",
+     "margin": -0.9664,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "바다",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "파다",
+   "min_margin": -0.5521,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사자",
+     "margin": -0.5521,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "맘",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "마",
+   "min_margin": -1.5744,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "말",
+     "margin": -1.5744,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "불",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "부",
+   "min_margin": -1.2843,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "볼",
+     "margin": -1.2843,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "살",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사",
+   "min_margin": -1.406,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "날",
+     "margin": -1.406,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "쌀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사",
+   "min_margin": -0.7389,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "살",
+     "margin": -0.7389,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "발",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "팔",
+   "min_margin": -0.616,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "팔",
+     "margin": -0.616,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "차",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -3.8737,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "자",
+     "margin": -3.8737,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "그림",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "크림",
+   "min_margin": -3.7399,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "크림",
+     "margin": -3.7399,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "서점",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사죄",
+   "min_margin": -23.5526,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사자",
+     "margin": -23.5526,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "시장",
+     "margin": -11.8484,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "소금",
+     "margin": -1.0158,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "수저",
+     "margin": -0.039,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "토끼",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "기",
+   "min_margin": -6.9701,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "도끼",
+     "margin": -1.6882,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "고기",
+     "margin": -6.9701,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "떡",
+   "suspect": true,
+   "hyp": "똑!",
+   "greedy": "",
+   "min_margin": -0.7349,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -0.7349,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "턱",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -3.7217,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "떡",
+     "margin": -0.0618,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "겁",
+     "margin": -0.239,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "답",
+     "margin": -3.7217,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "서랍",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사랑",
+   "min_margin": -18.538,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사랑",
+     "margin": -18.538,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "바람",
+     "margin": -1.7974,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "서리",
+     "margin": -2.5903,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "베개",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "대기",
+   "min_margin": -8.2565,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "번개",
+     "margin": -1.8756,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "제비",
+     "margin": -4.0953,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "고기",
+     "margin": -8.2565,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "바다",
+     "margin": -0.5603,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "무",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "구",
+   "min_margin": -1.7377,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "물",
+     "margin": -0.4093,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "눈",
+     "margin": -1.7377,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "솥",
+   "suspect": true,
+   "hyp": "소",
+   "greedy": "",
+   "min_margin": -11.8707,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "소",
+     "margin": -11.8707,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "손",
+     "margin": -7.6045,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "숲",
+     "margin": -4.3771,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "곡",
+     "margin": -1.714,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "돌",
+     "margin": -3.3419,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "보트",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "포",
+   "min_margin": -3.1223,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "포크",
+     "margin": -3.1223,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "망치",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "왕치",
+   "min_margin": -0.3875,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "까치",
+     "margin": -0.3875,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "보라색",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "부란색",
+   "min_margin": -3.6209,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "노란색",
+     "margin": -3.6209,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "셔츠",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사지",
+   "min_margin": -0.7869,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "사자",
+     "margin": -0.7869,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "콩",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "왕",
+   "min_margin": -1.5613,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "곰",
+     "margin": -0.014,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "코",
+     "margin": -1.5613,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "곡",
+     "margin": -0.6418,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "거울",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "가",
+   "min_margin": -9.2043,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "가위",
+     "margin": -9.2043,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "혀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -7.1216,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "형",
+     "margin": -0.9829,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "차",
+     "margin": -0.5119,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "파",
+     "margin": -7.1216,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "빗",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "이",
+   "min_margin": -2.7561,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "비",
+     "margin": -2.7561,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "집",
+     "margin": -1.3249,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "깁스",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "슨",
+   "min_margin": -1.5546,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "기사",
+     "margin": -1.5546,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "그릇",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "그려",
+   "min_margin": -2.5272,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "그림",
+     "margin": -2.5272,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "크림",
+     "margin": -0.8801,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "겁",
+   "suspect": true,
+   "hyp": "컵",
+   "greedy": "가",
+   "min_margin": -6.2026,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "밥",
+     "margin": -6.2026,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "개",
+     "margin": -2.1152,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "곡",
+     "margin": -2.9022,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "논",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "는",
+   "min_margin": -2.7683,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "눈",
+     "margin": -2.7683,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "도끼",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "기",
+   "min_margin": -5.2742,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "고기",
+     "margin": -5.2742,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "맛",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "마",
+   "min_margin": -7.6565,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "말",
+     "margin": -7.6565,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "맘",
+     "margin": -0.8938,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "밤",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -8.9223,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -8.2328,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "강",
+     "margin": -2.6756,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "맘",
+     "margin": -3.5084,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "발",
+     "margin": -8.9223,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "잎",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "이",
+   "min_margin": -5.1538,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "집",
+     "margin": -3.2779,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "빗",
+     "margin": -2.8456,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "비",
+     "margin": -5.1538,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "약",
+     "margin": -0.6566,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "풀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "웃",
+   "min_margin": -2.7096,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "물",
+     "margin": -0.0478,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "볼",
+     "margin": -2.7096,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "빵집",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "방치",
+   "min_margin": -0.6372,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "까치",
+     "margin": -0.6372,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "밭",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -7.1291,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "밖",
+     "margin": -7.1291,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "밥",
+     "margin": -4.2719,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "답",
+     "margin": -5.9953,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "맛",
+     "margin": -6.9664,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "붓",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -13.7064,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -13.7064,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "불",
+     "margin": -11.3636,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "곡",
+     "margin": -6.108,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "볼",
+     "margin": -11.4672,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "빗",
+     "margin": -5.8533,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "술",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "수",
+   "min_margin": -3.2949,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "손",
+     "margin": -3.2949,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "눈",
+     "margin": -0.9035,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "시작",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "일",
+   "min_margin": -10.4024,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "시장",
+     "margin": -10.4024,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "사자",
+     "margin": -5.8408,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "기사",
+     "margin": -4.526,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "입",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "이",
+   "min_margin": -1.8953,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "비",
+     "margin": -1.8953,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "칼",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사",
+   "min_margin": -1.386,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "팔",
+     "margin": -1.386,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "발",
+     "margin": -1.2167,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "곰",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "송",
+   "min_margin": -2.8262,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "공",
+     "margin": -0.1992,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "콩",
+     "margin": -0.1962,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "곡",
+     "margin": -2.8262,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "오리",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "어리",
+   "min_margin": -4.6679,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "서리",
+     "margin": -4.6679,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "허리",
+     "margin": -1.9064,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "숲",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "수",
+   "min_margin": -2.3756,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -2.3756,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "바위",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사위",
+   "min_margin": -1.1999,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "가위",
+     "margin": -1.1999,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "목",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -0.4437,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -0.4437,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "참새",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "삼사",
+   "min_margin": -2.02,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "침대",
+     "margin": -2.02,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "부추",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "이  다",
+   "min_margin": -2.959,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국수",
+     "margin": -2.959,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "까치",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "가이",
+   "min_margin": -3.7002,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "바지",
+     "margin": -3.7002,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "깨",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "께",
+   "min_margin": -5.0232,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "개",
+     "margin": -5.0232,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "배",
+     "margin": -1.2354,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "비",
+     "margin": -1.0041,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "피",
+     "margin": -1.2534,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "사탕",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사탄",
+   "min_margin": -0.5136,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "사랑",
+     "margin": -0.5136,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "우물",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "부마",
+   "min_margin": -4.335,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "이불",
+     "margin": -4.335,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "배꼽",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "태고",
+   "min_margin": -0.4523,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "배추",
+     "margin": -0.4523,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "전철",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "전자",
+   "min_margin": -1.8118,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "경찰",
+     "margin": -1.8118,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "망고",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "왕고",
+   "min_margin": -3.9431,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "항구",
+     "margin": -3.9431,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "벼락",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "별",
+   "min_margin": -1.2526,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "파랑",
+     "margin": -1.2526,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "빵",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "방",
+   "min_margin": -5.5229,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -5.5229,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "빨강",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "발장",
+   "min_margin": -7.1861,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "발등",
+     "margin": -7.1861,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "낙엽",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "나 기",
+   "min_margin": -16.3553,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "나비",
+     "margin": -16.3553,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "사과",
+     "margin": -7.1474,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "삽",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "사",
+   "min_margin": -4.126,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -1.9611,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "밥",
+     "margin": -2.7263,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "탑",
+     "margin": -1.5133,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "밖",
+     "margin": -4.126,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "기타",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -3.763,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "기사",
+     "margin": -3.763,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "기차",
+     "margin": -2.0116,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "밖",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -5.3443,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "방",
+     "margin": -5.3443,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "탑",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -6.2484,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "답",
+     "margin": -6.2484,
+     "group": "word:d1",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "복도",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "속",
+   "min_margin": -1.3146,
+   "caution": false,
+   "replaced": true,
+   "fail": [
+    {
+     "against": "국수",
+     "margin": -1.3146,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "봄",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -3.7332,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "공",
+     "margin": -1.3302,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "볼",
+     "margin": -3.7332,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "밥솥",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -10.7021,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "밥상",
+     "margin": -10.7021,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "파도",
+     "margin": -2.4322,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "수저",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "수자",
+   "min_margin": -7.4588,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "수레",
+     "margin": -2.9199,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "모자",
+     "margin": -4.1499,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "사자",
+     "margin": -7.4588,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "곡",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -6.8478,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -6.8478,
+     "group": "word:d1",
+     "applied": false
+    },
+    {
+     "against": "목",
+     "margin": -0.6168,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "땀",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -1.1885,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "밤",
+     "margin": -0.4226,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "빵",
+     "margin": -1.1885,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "젓가락",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "적가",
+   "min_margin": -6.8317,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "손가락",
+     "margin": -6.8317,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "죽",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "",
+   "min_margin": -10.3356,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "국",
+     "margin": -10.3356,
+     "group": "word:d2",
+     "applied": false
+    },
+    {
+     "against": "목",
+     "margin": -6.4132,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "f2",
+   "set": "word",
+   "text": "황토",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "황도",
+   "min_margin": -1.1233,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "황소",
+     "margin": -1.1233,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m3",
+   "set": "gen",
+   "text": "나물",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "나월",
+   "min_margin": -0.4373,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "나무",
+     "margin": -0.4373,
+     "group": "word:d2",
+     "applied": false
+    }
+   ]
+  },
+  {
+   "voice": "m3",
+   "set": "gen",
+   "text": "마늘",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "많을",
+   "min_margin": -12.2669,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "마을",
+     "margin": -12.2669,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "마루",
+     "margin": -0.2887,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "마당",
+     "margin": -2.2842,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m3",
+   "set": "gen",
+   "text": "바늘",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "받을",
+   "min_margin": -15.8175,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "다리",
+     "margin": -4.4535,
+     "group": "word:d3-6",
+     "applied": true
+    },
+    {
+     "against": "마을",
+     "margin": -15.8175,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  },
+  {
+   "voice": "m3",
+   "set": "gen",
+   "text": "오빠",
+   "suspect": false,
+   "hyp": null,
+   "greedy": "다",
+   "min_margin": -4.7861,
+   "caution": false,
+   "replaced": false,
+   "fail": [
+    {
+     "against": "모자",
+     "margin": -4.7861,
+     "group": "word:d3-6",
+     "applied": true
+    }
+   ]
+  }
+ ]
+}
