@@ -34,6 +34,9 @@ import qa_rules as Q  # noqa: E402
 CANDS = {
     "c0": (8, 1.05, False, 0), "c1": (16, 1.05, False, 1), "c2": (8, 1.05, False, 2), "c3": (32, 1.05, False, 3),
     "c4": (16, 1.00, False, 4), "c5": (16, 1.05, True, 5), "c6": (32, 0.95, False, 6), "c7": (16, 1.10, False, 7),
+    # 3단계(사후 추가, 문서 결과 절): 2단계 뒤에도 통과 후보가 없는 새 글에 한해 시드만 바꾼 후보
+    "c8": (8, 1.05, False, 8), "c9": (16, 1.05, False, 9), "c10": (32, 1.05, False, 10), "c11": (16, 1.05, True, 11),
+    "c12": (8, 1.05, True, 12), "c13": (32, 1.05, True, 13), "c14": (16, 1.00, True, 14), "c15": (16, 1.00, False, 15),
 }
 
 targets = [json.loads(l) for l in open(a.targets, encoding="utf-8") if l.strip()]
