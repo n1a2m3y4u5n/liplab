@@ -41,9 +41,18 @@ def normalize_text(text: str) -> str:
     return body + ("?" if question else "")
 
 
-def clip_id(key: str, voice: str = "") -> str:
-    """파일 이름(16자 16진수). 목소리가 바뀌면 이름도 바뀌어 브라우저 캐시가 옛 소리를 쓰지 않는다."""
-    return hashlib.sha1(f"{voice}\n{key}".encode("utf-8")).hexdigest()[:16]
+def clip_id(key: str, voice: str = "", rev: str = "") -> str:
+    """파일 이름(16자 16진수). 목소리가 바뀌면 이름도 바뀌어 브라우저 캐시가 옛 소리를 쓰지 않는다.
+    같은 글·목소리를 다시 합성하면 rev(새 Ogg 파일 sha1 앞 12자, docs/sound-qa-2026-10.md 6절)를 넣어 새 이름을 받는다.
+    소리 파일은 immutable로 1년 캐시되므로, 소리가 바뀌었는데 이름이 같으면 이미 받은 브라우저가 옛 소리를 계속 쓴다.
+    rev가 없으면 처음 규칙(목소리 + 키) 그대로다."""
+    tail = f"\n{rev}" if rev else ""
+    return hashlib.sha1(f"{voice}\n{key}{tail}".encode("utf-8")).hexdigest()[:16]
+
+
+def audio_rev(ogg_bytes: bytes) -> str:
+    """다시 합성한 소리의 rev: Ogg 파일 바이트의 sha1 앞 12자."""
+    return hashlib.sha1(ogg_bytes).hexdigest()[:12]
 
 
 def syllable_positions(text: str) -> List[int]:
@@ -126,7 +135,8 @@ def times_for_text(text: str, syllables: Optional[Sequence[Sequence[int]]]) -> O
 # ── 목록(manifest) ──────────────────────────────────────────────────────────
 # {"version": 2, "engine": "...", "default_voice": "f1",
 #  "voices": [{"id": "f1", "label": "여성 1", "sex": "f", "engine_voice": "F1"}, …],
-#  "clips": {목소리 id: {키: {"id": 파일 이름, "ms": 길이, "syl": [[t0, t1], …] 또는 null, "text": 합성에 넣은 글}}}}
+#  "clips": {목소리 id: {키: {"id": 파일 이름, "ms": 길이, "syl": [[t0, t1], …] 또는 null, "text": 합성에 넣은 글,
+#                              "rev": 다시 합성한 소리의 해시(있을 때만), "q": 고른 후보(c0~c7, 다시 합성했을 때만)}}}}
 # 기본 목소리(소리 조건)는 고정 글 전부, 듣기 목소리는 듣기 트랙 글(source 'listen')을 갖는다.
 
 def load_manifest(path: str) -> Dict:
