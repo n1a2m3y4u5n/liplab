@@ -23,7 +23,12 @@ ap = argparse.ArgumentParser()
 ap.add_argument("run")
 ap.add_argument("--half", default="all")
 ap.add_argument("--json", default="")
+ap.add_argument("--raw", action="store_true", help="정제하지 않은 전체본(보고용). 판정은 정제본")
 a = ap.parse_args()
+# 정제 규칙(5.2절, 측정 전 추가): 608 조각 길이 > 20초 제외(단어 목록 낭독 세션의 유일한 조각과 잘못 자른 긴 조각),
+# 자기 문장과 같은 문장인 '다르게 말함' 짝 제외. 근거는 객관적인 자르기·짝 오류다.
+CLEAN = not a.raw
+MAX608_S = 20.0
 
 PASS = 65.0
 RATE_P10 = 4.08            # speak_cues.RATE_P10
@@ -80,6 +85,12 @@ def auc(pos, neg):
     return float((ranks[:len(pos)].sum() - len(pos) * (len(pos) + 1) / 2) / (len(pos) * len(neg)))
 
 
+def same_text(x, y):
+    import re
+    k = lambda t: re.sub(r"[^가-힣]", "", t or "")
+    return k(x) == k(y)
+
+
 def split_variant(v):
     pair, tr, cond = v.split("_")
     return pair, tr, cond
@@ -123,6 +134,8 @@ def main_stats(main):
     for r in main:
         if r.get("err") or not in_half(r):
             continue
+        if CLEAN and r["set"] == "608" and r["dur_raw"] > MAX608_S:
+            continue
         by.setdefault((r["set"], r["variant"]), []).append(r)
     res = {}
     for (st, v), L in by.items():
@@ -133,7 +146,7 @@ def main_stats(main):
             ph = own["phones"]
             fi = final_idx(ph)
             same.append(own["score"])
-            diff += [t["score"] for t in r["targets"][1:]]
+            diff += [t["score"] for t in r["targets"][1:] if not (CLEAN and same_text(t["target"], own["target"]))]
             se = r.get("speech_end_raw")
             if se is not None and fi is not None:
                 late.append(ph[fi][1] - se)
@@ -372,7 +385,7 @@ def fmt(x):
 M = main_stats(rows("main.*.jsonl"))
 T = tts_stats(rows("tts.*.jsonl"))
 LAT = latency()
-R = {"half": a.half, "main": {"|".join(k): v for k, v in M.items()}, "tts": {"|".join(k): v for k, v in T.items()},
+R = {"half": a.half, "clean": CLEAN, "main": {"|".join(k): v for k, v in M.items()}, "tts": {"|".join(k): v for k, v in T.items()},
      "hyp": hyp_stats(rows("hyp.*.jsonl")), "zeroth": zeroth_stats(rows("zeroth.*.jsonl")), "latency": LAT,
      "mfa_n": len(MFA), "judge": judge(M, T, LAT)}
 if a.json:
