@@ -198,6 +198,10 @@ frontend/src/
   9/29부터 코드가 안 쓰는 CC 전용 모프를 지우고 입 클로즈업에서 안 보이는 텍스처(몸·팔·속눈썹·눈)를 512로 줄인 판이다
   (GPU 약 120MB → 70MB, `scripts/glb-slim`, 원본은 git 9f08043). 모델을 바꾸면 이 스크립트를 다시 돌리고 sw.js CACHE를 올린다.
 - `LipSyncPlayer3D.jsx`: `setTimeout`으로 프레임 스테핑(속도·프레임 이동·리플레이 지원).
+- 입모양 표(`lib/visemeShapes.js`)는 V1(기본, 육안 검증본)과 V15(538 탐색 절반 분포로 맞춘 표, 빌드 플래그 `VITE_VISEME_V15=1`일 때만,
+  V5로 다시 고른 가상 화자 `TALKERS_V15`도 함께) 두 벌이다. 10/7 확인 절반에서 거리 구조(RSA)는 사람 범위에 들었지만 진폭·원순 돌출·무리별
+  구별성이 사전 기준에 못 미쳐 기본은 V1이다(`docs/viseme-calibration-2026-10.md`). 음성 구동·웹캠 실시간 프레임(`bsFrameRef`)은 원본 MediaPipe
+  계수를 CC 두상에 맞게 고치는 리그 보정 사상(`lib/rigMap.js`)을 거친다(`VITE_RIG_MAP=0`이면 끔, 손거울 `mirrorRef`에는 쓰지 않음).
 
 ### 트랙 1: 3D 모션 개선 (구현 순서 **A → B → F → D**)
 

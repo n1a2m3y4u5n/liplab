@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { VISEME_BLENDSHAPES, VISEME_TONGUE, ACTIVE_MORPH_KEYS } from './visemeShapes.js'
+import { VISEME_BLENDSHAPES, VISEME_BLENDSHAPES_V1, VISEME_BLENDSHAPES_V15, VISEME_V15_ENABLED, VISEME_TONGUE, ACTIVE_MORPH_KEYS } from './visemeShapes.js'
 
 const SRC = readFileSync(fileURLToPath(new URL('./visemeShapes.js', import.meta.url)), 'utf8')
 
@@ -28,11 +28,26 @@ function duplicates(list) {
   return [...dup]
 }
 
-test('VISEME_BLENDSHAPES: 중복 정의된 viseme이 없다', () => {
+test('VISEME_BLENDSHAPES_V1·V15: 중복 정의된 viseme이 없다', () => {
   // 과거 깨진 머지로 1·2·4·6·7·10이 두 번씩 정의돼, 앞의 정의(육안 검증본)가 조용히
   // 덮인 적이 있다. JS는 이를 오류로 알리지 않으므로 테스트가 유일한 방어선이다.
-  const dup = duplicates(topLevelKeys('VISEME_BLENDSHAPES'))
-  assert.deepEqual(dup, [], `중복 정의된 viseme: ${dup.join(', ')} — 뒤엣것이 앞엣것을 덮는다`)
+  for (const name of ['VISEME_BLENDSHAPES_V1', 'VISEME_BLENDSHAPES_V15']) {
+    const dup = duplicates(topLevelKeys(name))
+    assert.deepEqual(dup, [], `${name} 중복 정의된 viseme: ${dup.join(', ')} — 뒤엣것이 앞엣것을 덮는다`)
+  }
+})
+
+test('두 표 모두 입모양 1~15를 정의하고, 플래그가 고른 표가 VISEME_BLENDSHAPES다', () => {
+  for (const t of [VISEME_BLENDSHAPES_V1, VISEME_BLENDSHAPES_V15]) {
+    assert.deepEqual(Object.keys(t).map(Number).sort((a, b) => a - b), [...Array(15)].map((_, i) => i + 1))
+  }
+  assert.equal(VISEME_BLENDSHAPES, VISEME_V15_ENABLED ? VISEME_BLENDSHAPES_V15 : VISEME_BLENDSHAPES_V1)
+})
+
+test('V15 표: 양순 1·11은 입술을 닫는 모프를 쓰고, 중립 15는 빈 자세다', () => {
+  // 문서 3절: 양순 1·양순 전환 11은 입술을 닫는 자세로 남긴다(닫힘 달성률은 확인 절반 렌더로 판정).
+  for (const v of [1, 11]) assert.ok((VISEME_BLENDSHAPES_V15[v].mouthClose || 0) > 0, `V15 입모양 ${v}에 mouthClose가 없다`)
+  assert.deepEqual(VISEME_BLENDSHAPES_V15[15], {})
 })
 
 test('VISEME_TONGUE: 중복 정의된 viseme이 없다', () => {
@@ -40,41 +55,46 @@ test('VISEME_TONGUE: 중복 정의된 viseme이 없다', () => {
   assert.deepEqual(dup, [], `중복 정의된 viseme: ${dup.join(', ')}`)
 })
 
-test('개발일지 6절의 육안 검증값이 실제로 적용된다', () => {
+test('개발일지 6절의 육안 검증값이 V1 표에 그대로 있다', () => {
   // 브라우저 스크린샷으로 확정한 값들. 중복 키에 덮이면 여기서 먼저 깨진다.
-  assert.deepEqual(VISEME_BLENDSHAPES[4], { mouthFunnel: 0.62, mouthPucker: 0.48, jawOpen: 0.05 },
+  assert.deepEqual(VISEME_BLENDSHAPES_V1[4], { mouthFunnel: 0.62, mouthPucker: 0.48, jawOpen: 0.05 },
     '원순모음(4) — jaw 최소·funnel 강화로 치아 노출 없이 둥근 내밈')
-  assert.deepEqual(VISEME_BLENDSHAPES[9], { jawOpen: 0.16, mouthFunnel: 0.38, mouthPucker: 0.32 },
+  assert.deepEqual(VISEME_BLENDSHAPES_V1[9], { jawOpen: 0.16, mouthFunnel: 0.38, mouthPucker: 0.32 },
     '이중모음(9) — v4와 v2의 중간')
 })
 
-test('개발일지 2절의 ARKit 감사 결과가 실제로 적용된다', () => {
+test('개발일지 2절의 ARKit 감사 결과가 V1 표에 그대로 있다', () => {
   // 감사에서 "모델에 있는데도 안 쓰이고 있던" 셰이프를 넣은 결과들.
-  assert.equal(VISEME_BLENDSHAPES[1].mouthClose, 0.35, '양순음(1) — 두 입술 확실히 폐쇄')
-  assert.ok(VISEME_BLENDSHAPES[2].mouthUpperUpLeft > 0, '개방모음(2) — 윗입술도 살짝 올림')
-  assert.ok(VISEME_BLENDSHAPES[6].mouthUpperUpLeft > 0, '치경음(6) — 윗니 노출(tongueOut 대체)')
-  assert.ok(VISEME_BLENDSHAPES[3].mouthUpperUpLeft > 0, '전설모음(3) — 윗니 노출')
+  const T = VISEME_BLENDSHAPES_V1
+  assert.equal(T[1].mouthClose, 0.35, '양순음(1) — 두 입술 확실히 폐쇄')
+  assert.ok(T[2].mouthUpperUpLeft > 0, '개방모음(2) — 윗입술도 살짝 올림')
+  assert.ok(T[6].mouthUpperUpLeft > 0, '치경음(6) — 윗니 노출(tongueOut 대체)')
+  assert.ok(T[3].mouthUpperUpLeft > 0, '전설모음(3) — 윗니 노출')
 })
 
 test('혀 모프가 있는 viseme은 혀가 보일 만큼 턱이 열려 있다', () => {
   // 혀 렌더링[YMJ] 작업의 의도: 6·7·10은 혀(VISEME_TONGUE)가 보여야 하므로 턱을 더 연다.
   // 중복 키 정리 때 입술값만 살리고 이 턱 열림을 잃으면 혀가 입 안에 가려진다.
-  for (const v of [6, 7, 10]) {
-    assert.ok(VISEME_TONGUE[v], `viseme ${v}는 혀 모프를 가져야 함`)
-    assert.ok(VISEME_BLENDSHAPES[v].jawOpen >= 0.18,
-      `viseme ${v}의 jawOpen(${VISEME_BLENDSHAPES[v].jawOpen})이 너무 작아 혀가 안 보인다`)
-  }
-})
-
-test('모든 가중치는 0~1 범위', () => {
-  for (const [vid, shape] of Object.entries(VISEME_BLENDSHAPES)) {
-    for (const [key, w] of Object.entries(shape)) {
-      assert.ok(w >= 0 && w <= 1, `viseme ${vid}의 ${key}=${w}가 범위를 벗어남`)
+  // V15는 538 화자의 벌림(중앙값)에 맞춰 턱을 줄였다. 이 두상은 턱 0.10~0.15부터 입술이 벌어지므로(리그 측정, 문서 9절) 0.12를 둔다.
+  for (const [T, min] of [[VISEME_BLENDSHAPES_V1, 0.18], [VISEME_BLENDSHAPES_V15, 0.12]]) {
+    for (const v of [6, 7, 10]) {
+      assert.ok(VISEME_TONGUE[v], `viseme ${v}는 혀 모프를 가져야 함`)
+      assert.ok(T[v].jawOpen >= min, `viseme ${v}의 jawOpen(${T[v].jawOpen})이 너무 작아 혀가 안 보인다`)
     }
   }
 })
 
-test('ACTIVE_MORPH_KEYS는 실제 쓰이는 키의 합집합이다', () => {
-  const used = new Set(Object.values(VISEME_BLENDSHAPES).flatMap((s) => Object.keys(s)))
+test('모든 가중치는 0~1 범위', () => {
+  for (const T of [VISEME_BLENDSHAPES_V1, VISEME_BLENDSHAPES_V15]) {
+    for (const [vid, shape] of Object.entries(T)) {
+      for (const [key, w] of Object.entries(shape)) {
+        assert.ok(w >= 0 && w <= 1, `viseme ${vid}의 ${key}=${w}가 범위를 벗어남`)
+      }
+    }
+  }
+})
+
+test('ACTIVE_MORPH_KEYS는 두 표에서 쓰이는 키의 합집합이다', () => {
+  const used = new Set([...Object.values(VISEME_BLENDSHAPES_V1), ...Object.values(VISEME_BLENDSHAPES_V15)].flatMap((s) => Object.keys(s)))
   assert.deepEqual([...ACTIVE_MORPH_KEYS].sort(), [...used].sort())
 })
