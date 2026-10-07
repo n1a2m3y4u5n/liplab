@@ -110,28 +110,46 @@ const canPlay = (type) => {
 export const CLIP_CACHE_MAX = 40
 const clipCache = createLru(CLIP_CACHE_MAX)
 
-/** 글 하나의 소리. {buffer, rms, url, duration_ms, syllables} 또는 null(준비 전·실패). */
-export function loadClip(text, voice = '') {
+/**
+ * 글 하나의 소리와 못 받은 이유. {clip, error}: clip은 {buffer, rms, url, duration_ms, syllables} 또는 null,
+ * error는 null | 'not_prepared'(서버에 아직 합성된 소리가 없음, 404·available false) | 'network'(목록·파일을 받지 못함: 연결 끊김·
+ * 시간 초과·5xx) | 'decode'(받았지만 이 브라우저가 풀지 못함, 풀 수 있는 형식이 없음 포함).
+ * 예전에는 모두 null이라 화면이 '준비 전'과 '연결 끊김'을 가르지 못했다. 실패는 기억하지 않는다(다음에 다시 받는다).
+ */
+export function loadClipResult(text, voice = '') {
   const key = `${voice}\n${text}`
   if (!clipCache.has(key)) {
     const p = (async () => {
+      let d
       try {
         const r = await api.get('/sound', { params: voice ? { text, voice } : { text }, validateStatus: (s) => s === 200 || s === 404 })
-        const d = r.data
-        if (!d?.available) return null
-        const url = pickSource(d.sources, canPlay)
-        if (!url) return null
-        const buf = await (await fetch(url)).arrayBuffer()
-        const c = audioContext()
-        const buffer = await c.decodeAudioData(buf.slice(0))
-        return { buffer, rms: activeLevel(buffer.getChannelData(0), buffer.sampleRate) || rmsOf(buffer.getChannelData(0)), url, duration_ms: d.duration_ms || Math.round(buffer.duration * 1000),
-          syllables: d.syllables || null, voice: d.voice ?? voice }
-      } catch { return null }
+        d = r.status === 404 ? null : r.data
+      } catch { return { clip: null, error: 'network' } }
+      if (!d?.available) return { clip: null, error: 'not_prepared' }
+      const url = pickSource(d.sources, canPlay)
+      if (!url) return { clip: null, error: 'decode' }
+      let buf
+      try {
+        const res = await fetch(url)
+        if (!res.ok) return { clip: null, error: res.status === 404 ? 'not_prepared' : 'network' }
+        buf = await res.arrayBuffer()
+      } catch { return { clip: null, error: 'network' } }
+      try {
+        const buffer = await audioContext().decodeAudioData(buf.slice(0))
+        const ch = buffer.getChannelData(0)
+        return { clip: { buffer, rms: activeLevel(ch, buffer.sampleRate) || rmsOf(ch), url, duration_ms: d.duration_ms || Math.round(buffer.duration * 1000),
+          syllables: d.syllables || null, voice: d.voice ?? voice }, error: null }
+      } catch { return { clip: null, error: 'decode' } }
     })()
     clipCache.set(key, p)
-    p.then((v) => { if (!v && clipCache.get(key) === p) clipCache.delete(key) })   // 실패는 기억하지 않는다(다음에 다시 받는다)
+    p.then((v) => { if (!v.clip && clipCache.get(key) === p) clipCache.delete(key) })
   }
   return clipCache.get(key)
+}
+
+/** 글 하나의 소리. {buffer, rms, url, duration_ms, syllables} 또는 null(준비 전·실패, 이유는 loadClipResult). */
+export function loadClip(text, voice = '') {
+  return loadClipResult(text, voice).then((r) => r.clip)
 }
 
 /** 시험용: 캐시에 든 소리 수. */

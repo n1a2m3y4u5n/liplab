@@ -6182,15 +6182,33 @@ async def listen_ling(req: ListenLingReq, current_user=Depends(get_current_user)
     return await _listen_with_retry(db, work)
 
 
-async def _listen_commit_once(db) -> None:
+async def _listen_commit_once(db) -> bool:
     """검사 문항 답 커밋. 같은 회차의 같은 문항이 동시에 두 번 오면(두 번 누름) 둘 다 '아직 안 답함'을 읽고 넣어 20문장 검사가 19문장에서
-    끝나고 역치가 한 시행을 두 번 셌다. 고유 인덱스(database._listen_test_index)가 둘째를 막고 여기서 409로 돌려준다."""
+    끝나고 역치가 한 시행을 두 번 셌다. 고유 인덱스(database._listen_test_index)가 둘째를 막는다. 막혔으면 되돌리고 False."""
     from sqlalchemy.exc import IntegrityError
     try:
         await db.commit()
+        return True
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(status_code=409, detail="이미 답한 문항입니다.")
+        return False
+
+
+def _listen_test_out(rows: list, target: str, answer: Optional[str], replayed: bool = False) -> dict:
+    """검사 회차의 답 rows(시간순, 방금 답한 것이 마지막) → 그 답의 응답. 새 답과 재전송(replayed)이 같은 값을 내도록 한 곳에서 만든다."""
+    trials = [(r.snr_db, bool(r.correct)) for r in rows]
+    n_prac = sum(1 for r in rows if _is_test_practice(r))
+    last = rows[-1]
+    is_practice = _is_test_practice(last)
+    srt = _listencur.test_srt(trials, n_practice=n_prac)
+    out = {"n": len(trials) - n_prac, "n_practice": n_prac, "practice": is_practice, "snr_db": last.snr_db,
+           "next_db": _listencur.test_next_snr(trials, n_practice=n_prac), "done": srt is not None, "srt_db": srt}
+    if is_practice:
+        ws = _listencur.word_score(target, answer or "")
+        out.update({"target": target, "score": ws["proportion"], "word_feedback": ws["feedback"]})
+    if replayed:
+        out["replayed"] = True
+    return out
 
 
 class ListenTestStart(BaseModel):
@@ -6237,9 +6255,24 @@ async def listen_test_answer(req: ListenTestAnswer, current_user=Depends(get_cur
     if not req.session.startswith("test:"):
         raise HTTPException(status_code=400, detail="bad session")
     key = req.item_key
-    rows = await _listen_attempts(current_user.id, db, stage=4, mode="test", session=req.session)
-    if any(r.item_key == key for r in rows):
-        raise HTTPException(status_code=409, detail="이미 답한 문장입니다.")
+    uid = current_user.id   # 겹친 답을 되돌린 뒤에도 쓴다(되돌리면 세션 객체가 만료된다)
+
+    async def replay():
+        """이미 받은 문장: 같은 답의 재전송(연결이 끊겨 응답을 못 받은 화면)이면 그때의 결과를 그대로 돌려준다(멱등).
+        답이 다르면 409(검사 답은 고칠 수 없다). 예전에는 늘 409라 화면이 검사를 처음부터 다시 했다."""
+        rs = await _listen_attempts(uid, db, stage=4, mode="test", session=req.session)
+        i = next((k for k, r in enumerate(rs) if r.item_key == key), None)
+        if i is None:
+            return None
+        if (rs[i].answer or "").strip() != (req.answer or "").strip():
+            raise HTTPException(status_code=409, detail="이미 답한 문장입니다.")
+        upto = rs[:i + 1]
+        return _listen_test_out(upto, rs[i].target, rs[i].answer, replayed=True)
+
+    prior = await replay()
+    if prior is not None:
+        return prior
+    rows = await _listen_attempts(uid, db, stage=4, mode="test", session=req.session)
     is_practice = key.startswith("testp:")
     if is_practice:
         allowed = {it["key"]: it["text"] for it in _listencur.test_practice_items(req.session)}
@@ -6263,18 +6296,17 @@ async def listen_test_answer(req: ListenTestAnswer, current_user=Depends(get_cur
     snr = _listencur.test_next_snr(trials, n_practice=n_prac) if trials else _listencur.TEST_STAIR["start"]
     ws = _listencur.word_score(target, req.answer or "")
     ok = ws["proportion"] >= _listencur.TEST_STAIR["criterion"]
-    db.add(ListenAttempt(user_id=current_user.id, stage=4, mode="test", item_key=key, target=target, answer=req.answer,
-                         correct=ok, score=ws["proportion"], snr_db=snr, condition="ao", voice=req.voice, plays=req.plays,
-                         route=req.route, session=req.session, sim_mode="ci" if req.sim == "ci" else None, noise=noise))
-    await _listen_commit_once(db)
-    trials.append((snr, ok))
-    n_prac += 1 if is_practice else 0
-    srt = _listencur.test_srt(trials, n_practice=n_prac)
-    out = {"n": len(trials) - n_prac, "n_practice": n_prac, "practice": is_practice, "snr_db": snr,
-           "next_db": _listencur.test_next_snr(trials, n_practice=n_prac), "done": srt is not None, "srt_db": srt}
-    if is_practice:
-        out.update({"target": target, "score": ws["proportion"], "word_feedback": ws["feedback"]})
-    return out
+    row = ListenAttempt(user_id=uid, stage=4, mode="test", item_key=key, target=target, answer=req.answer,
+                        correct=ok, score=ws["proportion"], snr_db=snr, condition="ao", voice=req.voice, plays=req.plays,
+                        route=req.route, session=req.session, sim_mode="ci" if req.sim == "ci" else None, noise=noise)
+    db.add(row)
+    if not await _listen_commit_once(db):
+        # 같은 문장 답이 동시에 두 번 왔다(두 번 누름·재전송): 먼저 들어간 것을 기준으로 같은 답이면 그 결과, 다르면 409
+        prior = await replay()
+        if prior is not None:
+            return prior
+        raise HTTPException(status_code=409, detail="이미 답한 문장입니다.")
+    return _listen_test_out(rows + [row], target, req.answer)
 
 
 @app.post("/api/listen/wordtest/start")
@@ -6307,18 +6339,38 @@ async def listen_wordtest_answer(req: ListenWordTestAnswer, current_user=Depends
     target = req.item_key[2:]
     if target not in _listencur.GEN_WORDS:
         raise HTTPException(status_code=400, detail="bad item")
-    rows = await _listen_attempts(current_user.id, db, stage=2, mode="wordtest", session=req.session)
-    if any(r.item_key == req.item_key for r in rows):
-        raise HTTPException(status_code=409, detail="이미 답한 문항입니다.")
+    uid = current_user.id
+
+    def out_for(upto):
+        n = len(upto)
+        done = n >= len(_listencur.GEN_WORDS)
+        return {"n": n, "done": done, "accuracy": round(sum(1 for r in upto if r.correct) / n, 3) if done else None}
+
+    async def replay():
+        """같은 문항의 같은 답 재전송이면 그때의 결과(멱등), 다른 답이면 409. 없으면 None."""
+        rs = await _listen_attempts(uid, db, stage=2, mode="wordtest", session=req.session)
+        i = next((k for k, r in enumerate(rs) if r.item_key == req.item_key), None)
+        if i is None:
+            return None
+        if (rs[i].answer or "").strip() != req.answer.strip():
+            raise HTTPException(status_code=409, detail="이미 답한 문항입니다.")
+        return {**out_for(rs[:i + 1]), "replayed": True}
+
+    prior = await replay()
+    if prior is not None:
+        return prior
+    rows = await _listen_attempts(uid, db, stage=2, mode="wordtest", session=req.session)
     ok = req.answer.strip() == target
-    db.add(ListenAttempt(user_id=current_user.id, stage=2, mode="wordtest", item_key=req.item_key, target=target, answer=req.answer,
-                         correct=ok, voice=req.voice, plays=req.plays, rt_ms=req.rt_ms, route=req.route, session=req.session,
-                         sim_mode="ci" if req.sim == "ci" else None))
-    await _listen_commit_once(db)
-    n = len(rows) + 1
-    done = n >= len(_listencur.GEN_WORDS)
-    return {"n": n, "done": done,
-            "accuracy": round((sum(1 for r in rows if r.correct) + (1 if ok else 0)) / n, 3) if done else None}
+    row = ListenAttempt(user_id=uid, stage=2, mode="wordtest", item_key=req.item_key, target=target, answer=req.answer,
+                        correct=ok, voice=req.voice, plays=req.plays, rt_ms=req.rt_ms, route=req.route, session=req.session,
+                        sim_mode="ci" if req.sim == "ci" else None)
+    db.add(row)
+    if not await _listen_commit_once(db):
+        prior = await replay()
+        if prior is not None:
+            return prior
+        raise HTTPException(status_code=409, detail="이미 답한 문항입니다.")
+    return out_for(rows + [row])
 
 
 def _listen_wordtests(rows: list) -> list:
@@ -6370,10 +6422,20 @@ async def listen_summary(current_user=Depends(get_current_user), db: AsyncSessio
                 kd["correct"] += 1 if r.correct else 0
     from datetime import timedelta as _td
     today = _kst_today()
+    # 날마다 시행 수(n)와 연습 분(minutes, listen_curriculum.practice_minutes: 시행 간격 합, 3분 넘는 쉼은 뺌). 권장 용량이 분 단위라
+    # 시행 수만으로는 비교할 수 없었다. 한 번 훑어 KST 날짜로 묶는다
+    since = today - _td(days=6)
+    by_day = {}
+    for r in rows:
+        if r.created_at:
+            d = (r.created_at + _td(hours=9)).date()
+            if d >= since:
+                by_day.setdefault(d, []).append((r.created_at, r.rt_ms))
     days = []
     for k in range(6, -1, -1):
         d = today - _td(days=k)
-        days.append({"date": d.isoformat(), "n": sum(1 for r in rows if r.created_at and (r.created_at + _td(hours=9)).date() == d)})
+        evs = by_day.get(d, [])
+        days.append({"date": d.isoformat(), "n": len(evs), "minutes": _listencur.practice_minutes(evs)})
     return {
         "last_check": last_check, "n_checks": len(checks),
         "tests": tests,

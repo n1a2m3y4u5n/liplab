@@ -140,6 +140,8 @@ globalThis.fetch = async (url) => {
 }
 globalThis.__fakeApi = {
   get: async (path, cfg) => {
+    if (path === '/sound' && cfg.params.text === '준비 전') return { status: 404, data: { available: false } }
+    if (path === '/sound' && cfg.params.text === '연결 끊김') throw new Error('Network Error')
     if (path === '/sound') return { status: 200, data: { available: true, sources: [{ url: `/a/${encodeURIComponent(cfg.params.text)}.ogg`, type: 'audio/ogg' }] } }
     return { status: 200, data: {} }
   },
@@ -332,6 +334,21 @@ test('말소리 시작 알림(onStart)은 준비가 끝난 뒤 소음 앞부분�
     env.offlineDelayMs = 0
   }
   assert.deepEqual(got, [300, 300])
+})
+
+test('못 받은 이유를 가른다: 준비 전(404)·연결 끊김·풀기 실패', async () => {
+  assert.deepEqual(await A.loadClipResult('준비 전', 'v'), { clip: null, error: 'not_prepared' })
+  assert.deepEqual(await A.loadClipResult('연결 끊김', 'v'), { clip: null, error: 'network' })
+  env.decodeFail = true
+  try {
+    assert.equal((await A.loadClipResult('풀기 실패', 'v')).error, 'decode')
+  } finally {
+    env.decodeFail = false
+  }
+  const ok = await A.loadClipResult('정상', 'v')
+  assert.equal(ok.error, null)
+  assert.ok(ok.clip.buffer)
+  assert.equal(await A.loadClip('준비 전', 'v'), null)   // 예전 형태(소리 또는 null)도 그대로
 })
 
 test('받은 소리 캐시는 상한을 넘지 않고, 풀기 실패는 기억하지 않는다', async () => {
