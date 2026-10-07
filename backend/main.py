@@ -5819,7 +5819,8 @@ def _is_test_practice(r) -> bool:
 
 
 def _listen_test_state(tests: list) -> dict:
-    """검사 회차들 → [{session, form, noise, sim, n, n_practice, srt_db, started_at}] 시간순. n은 검사 문장 수(연습 문장 제외)."""
+    """검사 회차들 → [{session, form, noise, sim, n, n_practice, srt_db, started_at}] 시간순. n은 검사 문장 수(연습 문장 제외).
+    form은 첫 검사 문장 키의 폼(A~D)이고, 연습 문장만 답한 회차는 None이다(예전에는 'A'로 적어 talker2 회차도 A로 보였다)."""
     by = {}
     for r in tests:
         s = by.setdefault(r.session, {"session": r.session, "form": None, "trials": [], "n_practice": 0,
@@ -5829,10 +5830,10 @@ def _listen_test_state(tests: list) -> dict:
         if _is_test_practice(r):
             s["n_practice"] += 1
         elif s["form"] is None:
-            s["form"] = (r.item_key or "test:A")[5:6]
+            s["form"] = (r.item_key or "")[5:6] or None
     out = []
     for s in by.values():
-        out.append({"session": s["session"], "form": s["form"] or "A", "noise": s["noise"], "sim": s["sim"],
+        out.append({"session": s["session"], "form": s["form"], "noise": s["noise"], "sim": s["sim"],
                     "n": len(s["trials"]) - s["n_practice"], "n_practice": s["n_practice"],
                     "srt_db": _listencur.test_srt(s["trials"], n_practice=s["n_practice"]), "started_at": s["started_at"]})
     return out
@@ -6216,9 +6217,21 @@ class ListenTestStart(BaseModel):
     noise: Optional[str] = Field(None, max_length=16)   # babble(주 결과, 기본) 또는 talker2(훈련에 안 쓴 잡음, 일반화)
 
 
+def _listen_heldout_ready() -> bool:
+    """talker2 검사 폼(C·D)의 모든 문장에 검사 목소리(목록의 마지막 목소리, 화면 listenMix.voiceRoles와 같음) 소리가 있는가."""
+    import sound_service as _ss
+    vs = _ss.voices()
+    vid = vs[-1].get("id") if vs else None
+    if not vid:
+        return False
+    return _listencur.heldout_forms_ready(lambda t: _ss.find(t, vid)[0] is not None)
+
+
 @app.post("/api/listen/test/start")
 async def listen_test_start(req: ListenTestStart, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """소음 속 문장 인식 역치(SRT) 검사 한 회차. 폼은 학습자마다 A·B를 번갈아 쓴다(test_form_for). 소리만, 훈련에 안 쓴 목소리(voice_slot 'test').
+    """소음 속 문장 인식 역치(SRT) 검사 한 회차. 소리만, 훈련에 안 쓴 목소리(voice_slot 'test').
+    폼(test_form_for): babble은 A·B, talker2는 C·D를 학습자 id 홀짝 순서로 번갈아 쓴다. C·D 소리가 아직 없으면 talker2는 같은 회차의
+    babble 폼과 반대 폼을 쓴다(한 회기에 두 잡음을 해도 같은 문장을 두 번 듣지 않게).
     items 맨 앞 n_practice개는 연습 문장(practice: true, 훈련 문장, 역치에 넣지 않음)이고 그 뒤가 검사 문장 20개다. 차례대로 답한다
     (docs/listen-mastery-sim-2026-10.md 10절)."""
     import uuid
@@ -6227,7 +6240,8 @@ async def listen_test_start(req: ListenTestStart, current_user=Depends(get_curre
     tests = [t for t in states if t["srt_db"] is not None]
     # 폼 순서는 검사 문장을 하나라도 들은 회차까지 센다(마치지 않은 회차 포함). 마친 회차만 세면 중간에 그만둔 뒤 다시 시작할 때
     # 같은 폼이 나와 이미 들은 문장이 섞였다(코드 리뷰 10/7). 잡음 종류마다 따로 번갈아 쓴다
-    form = _listencur.test_form_for(current_user.id, sum(1 for t in states if t["n"] > 0))
+    form = _listencur.test_form_for(current_user.id, sum(1 for t in states if t["n"] > 0), noise=noise,
+                                    heldout_ready=noise == "babble" or _listen_heldout_ready())
     session = f"test:{uuid.uuid4().hex[:12]}"
     practice = _listencur.test_practice_items(session)
     items = [{"key": it["key"], "text": it["text"], "practice": True} for it in practice] + \
