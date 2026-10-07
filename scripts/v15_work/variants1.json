@@ -1,0 +1,6 @@
+[
+ {"name": "i_smile10", "set": {"3": {"mouthSmileLeft": 0.10, "mouthSmileRight": 0.10}}},
+ {"name": "i_smile10_puck25", "set": {"3": {"mouthSmileLeft": 0.10, "mouthSmileRight": 0.10, "mouthPucker": 0.25, "mouthFunnel": 0.12}}},
+ {"name": "i_smile05_puck30_jaw15", "set": {"3": {"mouthSmileLeft": 0.05, "mouthSmileRight": 0.05, "mouthPucker": 0.30, "mouthFunnel": 0.12, "jawOpen": 0.15}}},
+ {"name": "i_smile15_puck22", "set": {"3": {"mouthSmileLeft": 0.15, "mouthSmileRight": 0.15, "mouthPucker": 0.22}}}
+]

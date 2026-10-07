@@ -44,7 +44,7 @@
  *
  * 가중치는 0~1. 모델에 없는 키는 렌더러가 자동으로 건너뛴다.
  */
-export const VISEME_BLENDSHAPES = {
+export const VISEME_BLENDSHAPES_V1 = {
   // 1) 양순음 ㅂ/ㅃ/ㅍ/ㅁ — 두 입술을 붙여 확실히 막고 살짝 압착.
   //    mouthClose로 앞이 열린 모음(아→마) 뒤에도 입술이 반드시 닫히게 한다.
   1: { mouthClose: 0.35, mouthPressLeft: 0.22, mouthPressRight: 0.22, mouthRollLower: 0.12, mouthRollUpper: 0.12 },
@@ -96,12 +96,60 @@ export const VISEME_BLENDSHAPES = {
   15: {},
 }
 
+// ── V15(docs/viseme-calibration-2026-10.md): 538 탐색 절반 분포로 다시 맞춘 표 ──
+// 오늘 아침 V2 감사(docs/avatar-validity-2026-10.md 10절)에서 위의 표(V1)는 실제 화자와의 거리 구조(RSA)와 진폭 범위 두 기준을 모두
+// 넘지 못했다(ㅏ 턱 과다, ㅣ 입꼬리 당김 과다, ㅗㅜ 돌출 과다, 비원순 무리의 돌출 부족, 쉼·전환의 턱 부족). 아래 표는 같은 MediaPipe
+// 측정기에서 538 탐색 절반 화자 37명의 무리별 중앙값을 목표로, 모프 → MediaPipe 순방향 사상(정지 자세 3,798개·렌더로 학습)과 앱
+// 렌더 궤적 시뮬레이션으로 맞춘 뒤 탐색 문장을 실제로 렌더해 확인했다. 비원순 무리에도 사람처럼 약한 기본 돌출이 있고, 입꼬리 당김은
+// 거의 없다(538 화자의 폭 진폭은 0에 가깝다). 확인 절반 판정과 쓰는 방식은 문서 6·10절.
+export const VISEME_BLENDSHAPES_V15 = {
+  // 1) 양순 ㅂ·ㅃ·ㅍ·ㅁ: 입술을 붙이고(mouthClose·압착) 사람처럼 살짝 내민다(538 양순 돌출 중앙값)
+  1: { jawOpen: 0.02, mouthClose: 0.14, mouthPressLeft: 0.2, mouthPressRight: 0.2, mouthRollLower: 0.15, mouthRollUpper: 0.1, mouthFunnel: 0.19, mouthPucker: 0.27, mouthSmileLeft: 0.06, mouthSmileRight: 0.06, mouthUpperUpLeft: 0.01, mouthUpperUpRight: 0.01, mouthLowerDownLeft: 0.07, mouthLowerDownRight: 0.07, mouthShrugUpper: 0.07 },
+  // 2) ㅏ·ㅐ: 턱 벌림을 538 범위로 줄이고(0.50 → 0.27) 아랫입술을 내린다. 돌출은 가장 작은 무리(돌출 바닥값을 정하는 무리)
+  2: { jawOpen: 0.27, mouthFunnel: 0.04, mouthPucker: 0.08, mouthStretchLeft: 0.13, mouthStretchRight: 0.13, mouthLowerDownLeft: 0.15, mouthLowerDownRight: 0.15, mouthShrugLower: 0.1 },
+  // 3) ㅣ·ㅔ: 입꼬리 당김을 크게 줄인다(smile 0.45 → 0.15, stretch 0.20 → 0.07, 538 화자의 폭 진폭은 0에 가깝다). 턱은 조금, 돌출은 비원순 기본값
+  3: { jawOpen: 0.15, mouthFunnel: 0.12, mouthPucker: 0.35, mouthSmileLeft: 0.15, mouthSmileRight: 0.15, mouthStretchLeft: 0.07, mouthStretchRight: 0.07, mouthUpperUpLeft: 0.05, mouthUpperUpRight: 0.05, mouthLowerDownLeft: 0.07, mouthLowerDownRight: 0.07, mouthShrugUpper: 0.04, mouthShrugLower: 0.02 },
+  // 4) ㅗ·ㅜ: 둥글림을 538 범위로 줄인다(funnel 0.62 → 0.50, pucker 0.48 → 0.32)
+  4: { jawOpen: 0.1, mouthClose: 0.04, mouthPressLeft: 0.11, mouthPressRight: 0.11, mouthRollUpper: 0.1, mouthFunnel: 0.5, mouthPucker: 0.32, mouthUpperUpLeft: 0.04, mouthUpperUpRight: 0.04, mouthLowerDownLeft: 0.02, mouthLowerDownRight: 0.02, mouthShrugUpper: 0.02 },
+  // 5) ㅓ·ㅡ: 조금 벌리고 기본 돌출
+  5: { jawOpen: 0.12, mouthClose: 0.03, mouthPressLeft: 0.03, mouthPressRight: 0.03, mouthRollLower: 0.08, mouthFunnel: 0.14, mouthPucker: 0.21, mouthStretchLeft: 0.02, mouthStretchRight: 0.02, mouthUpperUpLeft: 0.07, mouthUpperUpRight: 0.07, mouthLowerDownLeft: 0.02, mouthLowerDownRight: 0.02, mouthShrugUpper: 0.06, mouthShrugLower: 0.04 },
+  // 6) 치경 ㄷ·ㅌ·ㄴ·ㄹ·ㅅ: 조금 벌리고 윗입술을 살짝 올리며 기본 돌출
+  6: { jawOpen: 0.13, mouthClose: 0.01, mouthPressLeft: 0.02, mouthPressRight: 0.02, mouthRollLower: 0.04, mouthRollUpper: 0.04, mouthFunnel: 0.17, mouthPucker: 0.19, mouthStretchLeft: 0.02, mouthStretchRight: 0.02, mouthUpperUpLeft: 0.12, mouthUpperUpRight: 0.12, mouthLowerDownLeft: 0.06, mouthLowerDownRight: 0.06, mouthShrugUpper: 0.04, mouthShrugLower: 0.02 },
+  // 7) 연구개 ㄱ·ㅋ·ㅇ: 조금 벌리고 기본 돌출
+  7: { jawOpen: 0.19, mouthClose: 0.02, mouthPressLeft: 0.01, mouthPressRight: 0.01, mouthRollLower: 0.05, mouthFunnel: 0.17, mouthPucker: 0.24, mouthStretchLeft: 0.06, mouthStretchRight: 0.06, mouthUpperUpLeft: 0.06, mouthUpperUpRight: 0.06, mouthLowerDownLeft: 0.05, mouthLowerDownRight: 0.05, mouthShrugUpper: 0.03, mouthShrugLower: 0.02 },
+  // 8) 성문 ㅎ: 입 안쪽 무리 가운데 턱을 가장 많이 벌린다
+  8: { jawOpen: 0.27, mouthClose: 0.11, mouthPressLeft: 0.01, mouthPressRight: 0.01, mouthRollLower: 0.01, mouthFunnel: 0.15, mouthPucker: 0.16, mouthSmileLeft: 0.02, mouthSmileRight: 0.02, mouthStretchLeft: 0.07, mouthStretchRight: 0.07, mouthUpperUpLeft: 0.07, mouthUpperUpRight: 0.07, mouthLowerDownLeft: 0.01, mouthLowerDownRight: 0.01, mouthShrugUpper: 0.08 },
+  // 9) 이중모음 정지 모양(엔진은 내지 않음, 1단계 순환용): 0.6 × 4 + 0.4 × 2
+  9: { jawOpen: 0.17, mouthClose: 0.02, mouthPressLeft: 0.07, mouthPressRight: 0.07, mouthRollUpper: 0.06, mouthFunnel: 0.32, mouthPucker: 0.22, mouthStretchLeft: 0.05, mouthStretchRight: 0.05, mouthUpperUpLeft: 0.02, mouthUpperUpRight: 0.02, mouthLowerDownLeft: 0.07, mouthLowerDownRight: 0.07, mouthShrugUpper: 0.01, mouthShrugLower: 0.04 },
+  // 10) 경구개 ㅈ·ㅉ·ㅊ: 조금 벌리고 둥글림을 조금 더
+  10: { jawOpen: 0.16, mouthClose: 0.03, mouthPressLeft: 0.01, mouthPressRight: 0.01, mouthRollLower: 0.05, mouthRollUpper: 0.04, mouthFunnel: 0.26, mouthPucker: 0.18, mouthSmileLeft: 0.06, mouthSmileRight: 0.06, mouthStretchLeft: 0.03, mouthStretchRight: 0.03, mouthLowerDownLeft: 0.07, mouthLowerDownRight: 0.07, mouthShrugLower: 0.04 },
+  // 11) 양순 전환: 입술을 더 꽉 다물고 아랫입술을 말아 넣는다(538에서 양순 전환이 가장 두드러진 무리)
+  11: { jawOpen: 0.08, mouthClose: 0.5, mouthPressLeft: 0.06, mouthPressRight: 0.06, mouthRollLower: 0.3, mouthFunnel: 0.1, mouthPucker: 0.2, mouthSmileLeft: 0.02, mouthSmileRight: 0.02, mouthStretchLeft: 0.03, mouthStretchRight: 0.03, mouthUpperUpLeft: 0.03, mouthUpperUpRight: 0.03, mouthShrugUpper: 0.05, mouthShrugLower: 0.15 },
+  // 12) 치경 전환: 턱을 조금만 벌린 기본 돌출
+  12: { jawOpen: 0.08, mouthClose: 0.02, mouthRollLower: 0.01, mouthFunnel: 0.18, mouthPucker: 0.18, mouthUpperUpLeft: 0.1, mouthUpperUpRight: 0.1, mouthLowerDownLeft: 0.03, mouthLowerDownRight: 0.03, mouthShrugUpper: 0.03 },
+  // 13) 연구개 전환: 조금 벌린 기본 돌출
+  13: { jawOpen: 0.17, mouthClose: 0.01, mouthPressLeft: 0.07, mouthPressRight: 0.07, mouthRollUpper: 0.08, mouthFunnel: 0.2, mouthPucker: 0.15, mouthSmileLeft: 0.02, mouthSmileRight: 0.02, mouthStretchLeft: 0.02, mouthStretchRight: 0.02, mouthLowerDownLeft: 0.09, mouthLowerDownRight: 0.09, mouthShrugLower: 0.03 },
+  // 14) 휴지(어절 사이): 다물지 않고 살짝 벌린 이완 자세(538 쉼 구간)
+  14: { jawOpen: 0.09, mouthClose: 0.04, mouthPressLeft: 0.04, mouthPressRight: 0.04, mouthRollLower: 0.01, mouthFunnel: 0.1, mouthPucker: 0.12, mouthStretchLeft: 0.01, mouthStretchRight: 0.01, mouthLowerDownLeft: 0.12, mouthLowerDownRight: 0.12 },
+  // 15) 중립(재생 전후·한글 아닌 문자): 편하게 다문 기본 자세
+  15: {},
+}
+
+// 빌드 시 Vite가 import.meta.env를 채운다. node 테스트에서는 비어 있어 기본값을 쓴다.
+const ENV = (typeof import.meta !== 'undefined' && import.meta.env) || {}
+/** V15 표를 쓰는가. 확인 절반 판정(문서 6절) 결과에 따라 기본값을 정한다. */
+export const VISEME_V15_ENABLED = ENV.VITE_VISEME_V15 === '1'
+
+/** 앱이 쓰는 표(V1 또는 V15). 아바타·퀴즈 보기·가상 화자가 모두 이 표를 읽는다. */
+export const VISEME_BLENDSHAPES = VISEME_V15_ENABLED ? VISEME_BLENDSHAPES_V15 : VISEME_BLENDSHAPES_V1
+
 /**
- * 위 매핑에서 실제 사용하는 모프타깃 키의 합집합.
- * 매 프레임 이 키들만 목표값으로 보간(lerp)하고 나머지는 건드리지 않는다.
+ * 두 표(V1·V15)에서 쓰는 모프타깃 키의 합집합.
+ * 매 프레임 이 키들만 목표값으로 보간(lerp)하고 나머지는 건드리지 않는다. 어느 표를 쓰든 같은 키 집합이라, 표를 바꿔도 다른 표에서만
+ * 쓰던 모프가 얼굴에 남지 않는다(목표에 없는 키는 0으로 돌아간다).
  */
 export const ACTIVE_MORPH_KEYS = Array.from(
-  new Set(Object.values(VISEME_BLENDSHAPES).flatMap((shape) => Object.keys(shape)))
+  new Set([...Object.values(VISEME_BLENDSHAPES_V1), ...Object.values(VISEME_BLENDSHAPES_V15)].flatMap((shape) => Object.keys(shape)))
 )
 
 /**

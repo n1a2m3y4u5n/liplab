@@ -22,6 +22,7 @@ import { guardRendererFactory } from '../lib/safeRenderer'
 import { transitionProgress } from '../lib/visemeTiming'
 import { talkerShapes } from '../lib/talkers'
 import { coartShape, coartWeight } from '../lib/coarticulation'
+import { mapRawFrame } from '../lib/rigMap'
 
 const EMPTY = {}
 const ACTIVE_KEY_SET = new Set(ACTIVE_MORPH_KEYS)
@@ -29,6 +30,9 @@ const MIRROR_KEY_SET = new Set(MIRROR_KEYS)
 // GLB 로드가 실패하면 이만큼 기다렸다가 다시 시도한다(회차마다 늘린다). 네트워크가 잠깐 끊긴 경우를 되살린다.
 const GLB_RETRY_MS = 3000
 const GLB_RETRY_MAX = 2
+// 음성 구동·웹캠 거울(bsFrameRef)의 원본 MediaPipe 계수를 CC 두상에 맞게 고쳐 넣는다(lib/rigMap, V15 5절). 비교할 때만
+// VITE_RIG_MAP=0으로 빌드해 끈다. 손거울(mirrorRef)은 자체 증폭·데드존(lib/mouthMirror)을 거친 값이라 여기에 넣지 않는다.
+const RIG_MAP_ON = import.meta.env?.VITE_RIG_MAP !== '0'
 
 /**
  * 한국어 Viseme → 3D 입모양 렌더링
@@ -139,10 +143,10 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
     if (meshesRef.current.length === 0) return
 
     // 목표 블렌드셰이프의 우선순위(병합 메모):
-    //   ① 음성구동(A4) 프레임 bsFrameRef — 원본 52 블렌드셰이프를 직접 적용
+    //   ① 음성구동(A4)·웹캠 실시간 프레임 bsFrameRef: 원본 52 블렌드셰이프를 리그 보정 사상(lib/rigMap)으로 고쳐 적용
     //   ② 웹캠 거울(축 F) mirrorRef — 사용자 입모양 계수가 목표
     //   ③ 텍스트→비심 매핑 VISEME_BLENDSHAPES(가상 화자면 그 배율을 곱한 표, 동시조음이 켜져 있으면 입술을 섞은 모양)
-    const rawFrame = bsFrameRef?.current || null
+    const rawFrame = bsFrameRef?.current ? (RIG_MAP_ON ? mapRawFrame(bsFrameRef.current) : bsFrameRef.current) : null
     const mirror = !rawFrame ? (mirrorRef?.current || null) : null
     const target = rawFrame || mirror || textTargetRef.current
     // A4 프레임은 이미 30fps 시퀀스라 빠르게 따라가고, 나머지는 부드럽게 전환(~45ms).
