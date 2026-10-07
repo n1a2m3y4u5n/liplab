@@ -184,9 +184,12 @@ def badges(events: Sequence[Event], tz_offset_min: int, best_streak: int, *,
     return [{"key": k, "label": label, "earned": earned[k]} for k, label in BADGES]
 
 
-def overview(events: Sequence[Event], now_utc: datetime, tz_offset_min: int, **track_info) -> Dict:
+def overview(events: Sequence[Event], now_utc: datetime, tz_offset_min: int, listen: Optional[Dict] = None,
+             **track_info) -> Dict:
     """분석 탭 요약. track_info: read_mastered·read_total·speak_mastered·speak_total·
-    conversation_attempts·reviews_done·reviews_overdue·level."""
+    conversation_attempts·reviews_done·reviews_overdue·level.
+    listen은 소리 듣기 요약 몇 칸(main._listen_brief, 듣기 트랙을 시작하지 않았으면 None)이고 그대로 'listen'에 싣는다.
+    듣기 시행은 events에 넣지 않는다(학습 시간·정확도·연속 학습 같은 기존 칸의 뜻을 바꾸지 않게)."""
     today = to_local(now_utc, tz_offset_min).date()
     # 회차 나누기(정렬)와 현지 시각 변환은 한 번만 하고 weekly·badges가 다시 쓴다. 예전에는 sessions가 세 번,
     # to_local이 이벤트마다 네다섯 번 불렸다. 합성 이벤트 2만 개에서 130 → 53ms, 5천 개 30 → 13ms(결과 JSON 같음)
@@ -248,4 +251,5 @@ def overview(events: Sequence[Event], now_utc: datetime, tz_offset_min: int, **t
                       "total": track_info["speak_total"],
                       "questions": len([e for e in speak_ev if e.graded is not None])},
         },
+        "listen": listen,
     }
