@@ -9,7 +9,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import Modal from '../components/Modal'
 import { getSpeakingStageMenuItem } from '../config/speakingNavigation'
 import { toBlendshapeMap, scorePercent, loadCalibration } from '../lib/mouthScore'
-import { scoreTone, scoreLevel } from '../lib/scoreTone'
+import { scoreTone } from '../lib/scoreTone'
 import { VOWEL_IDS } from '../lib/vtlShapes'
 import { mediaErrorMessage } from '../lib/mediaError'
 import { finalTone, riseFallTone, toneDirection, toneMissed } from '../lib/speakTone'
@@ -18,6 +18,7 @@ import { longestVoicedRun } from '../lib/voicing'
 import { autoCorrelate } from '../lib/pitch'
 import { PROBE_CATEGORY, PROBE_HEADING, hasProbes, nextIndex, probeStatusText, withProbes } from '../lib/speakProbe'
 import { rateCueView } from '../lib/speakCue'
+import { phoneChipView, phoneTone, phoneValue } from '../lib/phoneChips'
 
 // 혀 위치 성도 단면(E-6) — 모음 결과를 열 때만 받는다(그림 코드와 윤곽 자료 모두 지연 로드)
 const VocalTractVTL = lazy(() => import('../components/VocalTractVTL'))
@@ -562,8 +563,8 @@ export default function SpeakingPractice() {
       : mode === 'voicing' ? '길이·크기'
         : (PROSODY_SCORE_LABEL[drill] || '운율')
   const localGood = summary ? (summary.volOk && !toneMissed(summary, toneDirection(mode, drill))) : null
-  const phoneScore = (p) => Math.round((p.dgop ?? 0) * 100)
-  const goodCount = phones.filter((p) => scoreLevel(phoneScore(p), 'phone') === 'good').length
+  // 소리별 칩(S2): 서버가 신뢰도 표로 reliable을 붙였으면 믿을 만한 소리만 색으로 확정하고 나머지는 회색 참고(lib/phoneChips)
+  const chipView = phoneChipView(phones, assessment?.acoustic_dgop?.reliability_map)
   // 지표 모드: 서버 판정·note를 쓰고, 응답 전에는 판정하지 않는다(good null = '분석 중')
   const metricFb = metricMode ? metricVerdict({ assessment, assessing, summary, localGood }) : null
   const good = metricFb ? metricFb.good
@@ -573,7 +574,7 @@ export default function SpeakingPractice() {
   const hold = !metricFb && !!(assessment && !assessment.error && assessment.hold)
   const fbSub = metricFb ? metricFb.sub
     : hold ? '점수가 합격선 근처예요. 한 번 더 말하면 더 정확히 알 수 있어요'
-      : good ? (phones.length ? `${phones.length}개 중 ${goodCount}개 소리를 정확히 냈어요` : (summary?.volMsg || '잘 전달됐어요'))
+      : good ? (chipView.sure ? `${chipView.sure}개 중 ${chipView.sureGood}개 소리를 정확히 냈어요` : (summary?.volMsg || '잘 전달됐어요'))
         : '소리가 잘 전달되지 않았어요'
   const fbTitle = metricFb ? metricFb.title : hold ? '한 번 더 말해 볼까요?' : good ? '잘했어요!' : '조금 더 연습해요'
   const barTone = good == null ? 'border-line bg-white text-ink-muted' : hold ? 'border-warn/35 bg-warn-tint'
@@ -720,19 +721,20 @@ export default function SpeakingPractice() {
                 {phones.length > 0 && (
                   <div className="flex flex-wrap justify-center gap-2 lg:mt-[33px] lg:gap-2.5">
                     {phones.map((p, i) => {
-                      const v = phoneScore(p)
+                      const v = phoneValue(p)
+                      const ref = p.reliable === false
                       return (
-                        <div key={i} title={`정확도 ${v} · 신뢰도 ${Math.round((p.confidence ?? 0) * 100)}`}
-                          className={`flex size-12 items-center justify-center rounded-13 border-2 lg:size-[52px] lg:rounded-14 ${scoreTone(v, 'phone').chip}`}>
+                        <div key={i} title={ref ? `정확도 ${v} · 참고` : `정확도 ${v} · 신뢰도 ${Math.round((p.confidence ?? 0) * 100)}`}
+                          className={`flex size-12 items-center justify-center rounded-13 lg:size-[52px] lg:rounded-14 ${ref ? 'border-1.5' : 'border-2'} ${phoneTone(p).chip}`}>
                           <span className="text-[20px] font-bold leading-figma lg:text-[22px]">{p.label || '·'}</span>
                         </div>
                       )
                     })}
                   </div>
                 )}
-                {/* 소리별 색은 재검사 일치도가 낮아(카파 0.39) 참고로만 보인다(docs/scoring-analyses-2026-10.md S14) */}
-                {phones.length > 0 && (
-                  <p className="text-center text-[11.5px] leading-relaxed text-ink-faint lg:mt-3">소리별 색은 참고용이에요. 같은 말을 다시 해도 색이 바뀔 수 있어요.</p>
+                {/* 신뢰도 표가 없으면 전체 참고(S14 카파 0.39), 있으면 믿을 만한 소리만 확정(docs/phoneme-feedback-reliability-2026-10.md) */}
+                {chipView.note && (
+                  <p className="text-center text-[11.5px] leading-relaxed text-ink-faint lg:mt-3">{chipView.note}</p>
                 )}
 
                 {assessing && !metricMode && (
@@ -823,12 +825,12 @@ export default function SpeakingPractice() {
                 {/* 음소별 발음 정확도(182:88) */}
                 {phones.length > 0 && (
                   <div className="flex flex-col items-center gap-2.5 rounded-14 border-1.5 border-fill bg-surface-muted px-4 py-3.5">
-                    <p className="text-[13px] font-bold leading-figma text-ink-muted">소리별 발음 정확도(참고)</p>
+                    <p className="text-[13px] font-bold leading-figma text-ink-muted">{chipView.title}</p>
                     <div className="flex flex-wrap justify-center gap-2">
                       {phones.map((p, i) => {
-                        const v = phoneScore(p)
+                        const v = phoneValue(p)
                         return (
-                          <div key={i} className={`flex flex-col items-center gap-0.5 rounded-[11px] border-1.5 px-[15px] py-[9px] font-bold leading-figma ${scoreTone(v, 'phone').chip}`}>
+                          <div key={i} className={`flex flex-col items-center gap-0.5 rounded-[11px] border-1.5 px-[15px] py-[9px] font-bold leading-figma ${phoneTone(p).chip}`}>
                             <span className="text-[18px]">{p.label || '·'}</span>
                             <span className="text-[11px] opacity-80">{v}</span>
                           </div>
