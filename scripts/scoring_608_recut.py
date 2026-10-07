@@ -399,7 +399,7 @@ def s4_report(v, run, cs):
            "608_wp_tau": round(float(np.mean(np.array(SX.sel(stu, "608", "other")) >= tau)), 4)}
     # C3: E2를 다시 돌리지 않으므로 조각 제외(V1)로만
     d = json.load(open(f"{S4}/e2_H.json"))
-    bad = {c.replace(":", "_") + ".wav" for c in cs["drop"]["V1"]}
+    bad = {c.replace(":", "_") + ".wav" for c in cs["drop"]["V1"]} if v != "V0a" else set()
     tmp = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
     json.dump([r for r in d if not (r["group"] == "608" and r["path"] in bad)], tmp)
     tmp.close()
@@ -466,6 +466,14 @@ def decisions(v, rows, cs):
     t = next(float(g) for g in np.round(np.arange(0, 100.0001, 0.1), 1) if wp(h0_538, g) <= 0.05)
     res["D2"] = {"t_h0": t, "wp538_h1_at_t": round(wp(h1_538, t), 4), "confirmed": bool(wp(h1_538, t) <= 0.05),
                  "ff608_at_t": round(ff_of("dg", t)(r), 4), "verdict": "그대로" if not wp(h1_538, t) <= 0.05 else "바뀜"}
+    # 보고만(사후, 등록 밖): 2-1 규칙에 608 다른 문장 합격 ≤ 5%를 더한 판(S15·S1·S18의 lowest_threshold와 같은 정의)
+    h0r = [x for x in rows if x["half"] == 0 and x["label"] in ("own", "other")]
+    h1r = [x for x in rows if x["half"] == 1 and x["label"] in ("own", "other")]
+    tb = SA.lowest_threshold(np.round(np.arange(0, 100.0001, 0.1), 1), lambda x: x["dg"], h0r)
+    oo = lambda rs, st, lab: [x["dg"] for x in rs if x["set"] == st and x["label"] == lab]     # noqa: E731
+    res["D2_both_report"] = {"t_h0": tb, "wp538_h1": round(wp(oo(h1r, "538", "other"), tb), 4), "wp608_h1": round(wp(oo(h1r, "608", "other"), tb), 4),
+                             "ff608_h1": round(ff(oo(h1r, "608", "own"), tb), 4), "ff608_all": round(ff(oo(r, "608", "own"), tb), 4),
+                             "ff608_at_t21_all": round(ff_of("dg", t)(r), 4), "wp608_at_t21_all": round(wp_of("dg", t)(r), 4)}
     # D3 개인 향상 경로 근거
     f = res["basic"]["dg_ff65"]
     res["D3"] = {"ff65": f, "verdict": "그대로" if f[1] > 0.10 else ("판정 불가" if f[0] > 0.10 else "바뀜")}
