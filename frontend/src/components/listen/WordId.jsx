@@ -14,7 +14,8 @@ import { Card, Heading, Option, optionState } from './ui'
 /**
  * 낱말 고르기(2단계). 소리만 듣고 보기에서 낱말을 고른다. 틀리면 어느 소리를 무엇으로 들었는지 알려 주고 정답·고른 말을 다시 들려준다.
  * 단계 레슨, 소리 짝 집중 연습(낱말 문항), 오늘의 듣기, 듣기 복습에서 쓴다.
- * data: {items:[{key, target, options, level?, review?, pick?}], level?, levels?, voice_mode, voice_block, guide, status}
+ * data: {items:[{key, target, options, level?, review?, pick?, avoid_voices?}], level?, levels?, voice_mode, voice_block, guide, status}
+ * 목소리는 voiceFor가 문항의 avoid_voices(정답 글을 구별되게 내지 못한 목소리)를 건너뛰어 고른다. 재생·미리 받기·답 기록이 같은 목소리다.
  * metaLabel을 주면 질문 아래 줄에 수준 대신 그 글을 쓴다(복습: '다시 듣는 낱말').
  */
 export default function WordId({ data, settings, voices, onProgress, finish, active, answerExtra = null, onAnswered = null, metaLabel = null }) {
@@ -32,11 +33,11 @@ export default function WordId({ data, settings, voices, onProgress, finish, act
   const player = usePlayer()
   const t0 = useRef(Date.now())
   const it = items[k]
-  const voice = voiceFor(voices.train, k, 0, data.voice_mode, data.voice_block)
+  const voice = voiceFor(voices.train, k, 0, data.voice_mode, data.voice_block, it?.avoid_voices)
   const target = useClip(it?.target, voice)
   const pickedWord = picked != null ? it?.options?.[picked] : null
   const heard = useClip(res && !res.correct ? pickedWord : null, voice)
-  usePrefetch(items[k + 1] ? [[items[k + 1].target, voiceFor(voices.train, k + 1, 0, data.voice_mode, data.voice_block)]] : [])
+  usePrefetch(items[k + 1] ? [[items[k + 1].target, voiceFor(voices.train, k + 1, 0, data.voice_mode, data.voice_block, items[k + 1].avoid_voices)]] : [])
   useEffect(() => { onProgress(k, items.length) }, [k, items.length, onProgress])
   useEffect(() => { setRes(null); setPicked(null); setErr(null); setPlays(0); setChange(null); player.reset(); t0.current = Date.now() }, [k, player.reset])
   const play = async (clip = target.clip) => {

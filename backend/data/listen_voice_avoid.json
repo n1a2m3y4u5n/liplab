@@ -1,0 +1,1498 @@
+{
+ "version": 1,
+ "doc": "docs/listen-voice-contrast-2026-10.md",
+ "judge": "kresnik/wav2vec2-large-xlsr-korean CTC 로그우도 차 margin = ll(의도) - ll(경쟁), margin < 0이면 실패",
+ "rule": "소리 구별: 짝의 두 글 중 하나라도 그 짝의 상대 글에 실패한 목소리를 피함. 낱말 고르기: 정답 글이 실패한 목소리를 피함.",
+ "voices": {
+  "f1": {
+   "깨": [
+    {
+     "against": "피",
+     "margin": -2.035,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "비",
+     "margin": -1.031,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "낙엽": [
+    {
+     "against": "나비",
+     "margin": -9.783,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "사과",
+     "margin": -0.258,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "다": [
+    {
+     "against": "사",
+     "margin": -2.845,
+     "set": "ax",
+     "group": "ax:manner"
+    }
+   ],
+   "떡": [
+    {
+     "against": "답",
+     "margin": -1.793,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "망고": [
+    {
+     "against": "항구",
+     "margin": -4.747,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "목": [
+    {
+     "against": "국",
+     "margin": -0.187,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "무": [
+    {
+     "against": "눈",
+     "margin": -0.578,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "바": [
+    {
+     "against": "다",
+     "margin": -5.91,
+     "set": "ax",
+     "group": "ax:place"
+    }
+   ],
+   "베": [
+    {
+     "against": "비",
+     "margin": -1.272,
+     "set": "ax",
+     "group": "ax:vowel"
+    }
+   ],
+   "베개": [
+    {
+     "against": "고기",
+     "margin": -5.491,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "보": [
+    {
+     "against": "부",
+     "margin": -1.313,
+     "set": "ax",
+     "group": "ax:vowel"
+    }
+   ],
+   "보라색": [
+    {
+     "against": "노란색",
+     "margin": -2.12,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "부추": [
+    {
+     "against": "국수",
+     "margin": -2.578,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "붓": [
+    {
+     "against": "볼",
+     "margin": -10.302,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "곡",
+     "margin": -6.74,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "빗",
+     "margin": -6.7,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "삽": [
+    {
+     "against": "밖",
+     "margin": -4.136,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "서랍": [
+    {
+     "against": "사랑",
+     "margin": -18.635,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "서리",
+     "margin": -0.281,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "솥": [
+    {
+     "against": "돌",
+     "margin": -3.073,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "숲": [
+    {
+     "against": "국",
+     "margin": -3.087,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "시작": [
+    {
+     "against": "사자",
+     "margin": -3.571,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "잎": [
+    {
+     "against": "비",
+     "margin": -2.699,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "집",
+     "margin": -1.536,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "빗",
+     "margin": -0.526,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "약",
+     "margin": -0.034,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "전철": [
+    {
+     "against": "경찰",
+     "margin": -2.759,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "젓가락": [
+    {
+     "against": "손가락",
+     "margin": -5.79,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "참새": [
+    {
+     "against": "침대",
+     "margin": -5.144,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "콩": [
+    {
+     "against": "곡",
+     "margin": -1.014,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "타": [
+    {
+     "against": "파",
+     "margin": -5.954,
+     "set": "ax",
+     "group": "ax:place"
+    }
+   ],
+   "턱": [
+    {
+     "against": "답",
+     "margin": -3.376,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "겁",
+     "margin": -0.395,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "밖",
+     "margin": -0.308,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "토끼": [
+    {
+     "against": "고기",
+     "margin": -4.218,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "파랑": [
+    {
+     "against": "사랑",
+     "margin": -1.856,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "혀": [
+    {
+     "against": "파",
+     "margin": -7.464,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "차",
+     "margin": -2.694,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ]
+  },
+  "f2": {
+   "거울": [
+    {
+     "against": "가위",
+     "margin": -9.204,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "겁": [
+    {
+     "against": "곡",
+     "margin": -2.902,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "개",
+     "margin": -2.115,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "곡": [
+    {
+     "against": "목",
+     "margin": -0.617,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "곰": [
+    {
+     "against": "곡",
+     "margin": -2.826,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "구": [
+    {
+     "against": "고",
+     "margin": -2.12,
+     "set": "ax",
+     "group": "ax:vowel"
+    }
+   ],
+   "그릇": [
+    {
+     "against": "그림",
+     "margin": -2.527,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "크림",
+     "margin": -0.88,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "까치": [
+    {
+     "against": "바지",
+     "margin": -3.7,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "깨": [
+    {
+     "against": "피",
+     "margin": -1.253,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "비",
+     "margin": -1.004,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "나무": [
+    {
+     "against": "나",
+     "margin": -2.978,
+     "set": "ax",
+     "group": "ax:length"
+    }
+   ],
+   "낙엽": [
+    {
+     "against": "나비",
+     "margin": -16.355,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "사과",
+     "margin": -7.147,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "다": [
+    {
+     "against": "사",
+     "margin": -3.802,
+     "set": "ax",
+     "group": "ax:manner"
+    }
+   ],
+   "떡": [
+    {
+     "against": "답",
+     "margin": -0.735,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "맛": [
+    {
+     "against": "맘",
+     "margin": -0.894,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "망고": [
+    {
+     "against": "항구",
+     "margin": -3.943,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "바": [
+    {
+     "against": "다",
+     "margin": -6.103,
+     "set": "ax",
+     "group": "ax:place"
+    },
+    {
+     "against": "가",
+     "margin": -4.339,
+     "set": "ax",
+     "group": "ax:place"
+    }
+   ],
+   "바다": [
+    {
+     "against": "사자",
+     "margin": -0.552,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "밥솥": [
+    {
+     "against": "밥상",
+     "margin": -10.702,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "파도",
+     "margin": -2.432,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "버": [
+    {
+     "against": "바",
+     "margin": -4.056,
+     "set": "ax",
+     "group": "ax:vowel"
+    },
+    {
+     "against": "보",
+     "margin": -2.823,
+     "set": "ax",
+     "group": "ax:vowel"
+    }
+   ],
+   "베": [
+    {
+     "against": "비",
+     "margin": -1.629,
+     "set": "ax",
+     "group": "ax:vowel"
+    }
+   ],
+   "베개": [
+    {
+     "against": "고기",
+     "margin": -8.257,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "제비",
+     "margin": -4.095,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "번개",
+     "margin": -1.876,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "바다",
+     "margin": -0.56,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "보": [
+    {
+     "against": "부",
+     "margin": -1.429,
+     "set": "ax",
+     "group": "ax:vowel"
+    }
+   ],
+   "보라색": [
+    {
+     "against": "노란색",
+     "margin": -3.621,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "부추": [
+    {
+     "against": "국수",
+     "margin": -2.959,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "붓": [
+    {
+     "against": "볼",
+     "margin": -11.467,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "곡",
+     "margin": -6.108,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "빗",
+     "margin": -5.853,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "브": [
+    {
+     "against": "부",
+     "margin": -2.187,
+     "set": "ax",
+     "group": "ax:vowel"
+    }
+   ],
+   "빵집": [
+    {
+     "against": "까치",
+     "margin": -0.637,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "삽": [
+    {
+     "against": "밖",
+     "margin": -4.126,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "서랍": [
+    {
+     "against": "사랑",
+     "margin": -18.538,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "서리",
+     "margin": -2.59,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "바람",
+     "margin": -1.797,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "서점": [
+    {
+     "against": "사자",
+     "margin": -23.553,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "시장",
+     "margin": -11.848,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "소금",
+     "margin": -1.016,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "수저",
+     "margin": -0.039,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "솥": [
+    {
+     "against": "돌",
+     "margin": -3.342,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "곡",
+     "margin": -1.714,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "수저": [
+    {
+     "against": "사자",
+     "margin": -7.459,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "모자",
+     "margin": -4.15,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "수레",
+     "margin": -2.92,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "술": [
+    {
+     "against": "눈",
+     "margin": -0.903,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "숲": [
+    {
+     "against": "국",
+     "margin": -2.376,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "시작": [
+    {
+     "against": "사자",
+     "margin": -5.841,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "기사",
+     "margin": -4.526,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "오리": [
+    {
+     "against": "서리",
+     "margin": -4.668,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "허리",
+     "margin": -1.906,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "우물": [
+    {
+     "against": "이불",
+     "margin": -4.335,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "잎": [
+    {
+     "against": "비",
+     "margin": -5.154,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "집",
+     "margin": -3.278,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "빗",
+     "margin": -2.846,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "약",
+     "margin": -0.657,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "젓가락": [
+    {
+     "against": "손가락",
+     "margin": -6.832,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "죽": [
+    {
+     "against": "목",
+     "margin": -6.413,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "참새": [
+    {
+     "against": "침대",
+     "margin": -2.02,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "콩": [
+    {
+     "against": "곡",
+     "margin": -0.642,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "타": [
+    {
+     "against": "파",
+     "margin": -5.506,
+     "set": "ax",
+     "group": "ax:place"
+    }
+   ],
+   "턱": [
+    {
+     "against": "답",
+     "margin": -3.722,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "겁",
+     "margin": -0.239,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "토끼": [
+    {
+     "against": "고기",
+     "margin": -6.97,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "혀": [
+    {
+     "against": "파",
+     "margin": -7.122,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "차",
+     "margin": -0.512,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ]
+  },
+  "m1": {
+   "까치": [
+    {
+     "against": "바지",
+     "margin": -2.296,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "깨": [
+    {
+     "against": "비",
+     "margin": -0.956,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "낙엽": [
+    {
+     "against": "나비",
+     "margin": -7.782,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "다": [
+    {
+     "against": "사",
+     "margin": -2.323,
+     "set": "ax",
+     "group": "ax:manner"
+    }
+   ],
+   "목": [
+    {
+     "against": "국",
+     "margin": -2.293,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "무": [
+    {
+     "against": "눈",
+     "margin": -0.544,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "바": [
+    {
+     "against": "다",
+     "margin": -4.244,
+     "set": "ax",
+     "group": "ax:place"
+    },
+    {
+     "against": "가",
+     "margin": -1.51,
+     "set": "ax",
+     "group": "ax:place"
+    },
+    {
+     "against": "부",
+     "margin": -0.124,
+     "set": "ax",
+     "group": "ax:vowel"
+    }
+   ],
+   "밥솥": [
+    {
+     "against": "밥상",
+     "margin": -2.492,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "버": [
+    {
+     "against": "바",
+     "margin": -0.111,
+     "set": "ax",
+     "group": "ax:vowel"
+    }
+   ],
+   "베개": [
+    {
+     "against": "고기",
+     "margin": -4.085,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "보라색": [
+    {
+     "against": "노란색",
+     "margin": -0.834,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "부추": [
+    {
+     "against": "국수",
+     "margin": -3.901,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "붓": [
+    {
+     "against": "볼",
+     "margin": -6.134,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "빗",
+     "margin": -5.229,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "곡",
+     "margin": -2.062,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "삽": [
+    {
+     "against": "밖",
+     "margin": -2.657,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "겁",
+     "margin": -0.879,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "서랍": [
+    {
+     "against": "사랑",
+     "margin": -16.217,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "서리",
+     "margin": -0.654,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "솥": [
+    {
+     "against": "돌",
+     "margin": -2.822,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "수저": [
+    {
+     "against": "사자",
+     "margin": -7.282,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "모자",
+     "margin": -3.397,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "시작": [
+    {
+     "against": "사자",
+     "margin": -6.704,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "잎": [
+    {
+     "against": "비",
+     "margin": -3.907,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "빗",
+     "margin": -1.92,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "집",
+     "margin": -1.764,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "약",
+     "margin": -0.059,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "젓가락": [
+    {
+     "against": "손가락",
+     "margin": -3.913,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "죽": [
+    {
+     "against": "목",
+     "margin": -0.933,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "타": [
+    {
+     "against": "파",
+     "margin": -5.094,
+     "set": "ax",
+     "group": "ax:place"
+    }
+   ],
+   "턱": [
+    {
+     "against": "답",
+     "margin": -1.931,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "겁",
+     "margin": -0.706,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "토끼": [
+    {
+     "against": "고기",
+     "margin": -4.142,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "혀": [
+    {
+     "against": "파",
+     "margin": -4.344,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ]
+  },
+  "m2": {
+   "겁": [
+    {
+     "against": "개",
+     "margin": -0.373,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "곡": [
+    {
+     "against": "목",
+     "margin": -1.121,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "깁스": [
+    {
+     "against": "기사",
+     "margin": -1.107,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "깨": [
+    {
+     "against": "피",
+     "margin": -1.735,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "비",
+     "margin": -1.137,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "나무": [
+    {
+     "against": "나",
+     "margin": -2.393,
+     "set": "ax",
+     "group": "ax:length"
+    }
+   ],
+   "낙엽": [
+    {
+     "against": "나비",
+     "margin": -9.003,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "다": [
+    {
+     "against": "사",
+     "margin": -0.167,
+     "set": "ax",
+     "group": "ax:manner"
+    }
+   ],
+   "떡": [
+    {
+     "against": "답",
+     "margin": -3.151,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "밖",
+     "margin": -0.674,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "목": [
+    {
+     "against": "국",
+     "margin": -1.095,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "바": [
+    {
+     "against": "다",
+     "margin": -4.773,
+     "set": "ax",
+     "group": "ax:place"
+    },
+    {
+     "against": "가",
+     "margin": -2.501,
+     "set": "ax",
+     "group": "ax:place"
+    }
+   ],
+   "밥솥": [
+    {
+     "against": "밥상",
+     "margin": -7.567,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "버": [
+    {
+     "against": "보",
+     "margin": -1.465,
+     "set": "ax",
+     "group": "ax:vowel"
+    }
+   ],
+   "베": [
+    {
+     "against": "비",
+     "margin": -0.74,
+     "set": "ax",
+     "group": "ax:vowel"
+    }
+   ],
+   "베개": [
+    {
+     "against": "고기",
+     "margin": -5.086,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "봄": [
+    {
+     "against": "돌",
+     "margin": -1.136,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "붓": [
+    {
+     "against": "빗",
+     "margin": -6.783,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "볼",
+     "margin": -6.24,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "곡",
+     "margin": -2.986,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "삽": [
+    {
+     "against": "밖",
+     "margin": -5.976,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "겁",
+     "margin": -3.622,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "서랍": [
+    {
+     "against": "사랑",
+     "margin": -17.925,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "바람",
+     "margin": -2.176,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "서리",
+     "margin": -2.067,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "트럭",
+     "margin": -0.702,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "솥": [
+    {
+     "against": "돌",
+     "margin": -3.159,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "곡",
+     "margin": -1.134,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "수저": [
+    {
+     "against": "사자",
+     "margin": -8.892,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "모자",
+     "margin": -5.906,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "잎": [
+    {
+     "against": "집",
+     "margin": -5.709,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "빗",
+     "margin": -4.202,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "비",
+     "margin": -3.615,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "약",
+     "margin": -1.303,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "젓가락": [
+    {
+     "against": "손가락",
+     "margin": -5.239,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "죽": [
+    {
+     "against": "목",
+     "margin": -1.283,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "참새": [
+    {
+     "against": "침대",
+     "margin": -3.979,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "칼": [
+    {
+     "against": "강",
+     "margin": -0.966,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "날",
+     "margin": -0.004,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "콩": [
+    {
+     "against": "곡",
+     "margin": -2.511,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "타": [
+    {
+     "against": "파",
+     "margin": -3.64,
+     "set": "ax",
+     "group": "ax:place"
+    }
+   ],
+   "턱": [
+    {
+     "against": "답",
+     "margin": -3.996,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "겁",
+     "margin": -2.117,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "토끼": [
+    {
+     "against": "고기",
+     "margin": -5.224,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ],
+   "혀": [
+    {
+     "against": "파",
+     "margin": -6.621,
+     "set": "word",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "차",
+     "margin": -1.341,
+     "set": "word",
+     "group": "word:d3-6"
+    }
+   ]
+  }
+ },
+ "test_voice_report": {
+  "m3": {
+   "나물": [
+    {
+     "against": "나무",
+     "margin": -0.437,
+     "set": "gen",
+     "group": "word:d2"
+    }
+   ],
+   "마늘": [
+    {
+     "against": "마을",
+     "margin": -12.267,
+     "set": "gen",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "마당",
+     "margin": -2.284,
+     "set": "gen",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "마루",
+     "margin": -0.289,
+     "set": "gen",
+     "group": "word:d3-6"
+    }
+   ],
+   "바늘": [
+    {
+     "against": "마을",
+     "margin": -15.818,
+     "set": "gen",
+     "group": "word:d3-6"
+    },
+    {
+     "against": "다리",
+     "margin": -4.454,
+     "set": "gen",
+     "group": "word:d3-6"
+    }
+   ],
+   "오빠": [
+    {
+     "against": "모자",
+     "margin": -4.786,
+     "set": "gen",
+     "group": "word:d3-6"
+    }
+   ]
+  }
+ }
+}

@@ -17,7 +17,9 @@
 """
 import functools
 import hashlib
+import json
 import math
+import os
 import random
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -100,6 +102,59 @@ AX_PAIRS: List[Dict] = (
 AX_KIND_LABEL = {"length": "길이", "intonation": "억양", "vowel": "모음", "manner": "자음 방식", "laryngeal": "소리 세기",
                  "place": "소리 자리", "fricative": "마찰음", "coda": "받침"}
 _AX_TEXTS = {p["a"] for p in AX_PAIRS} | {p["b"] for p in AX_PAIRS}
+
+
+# ── 목소리별 피할 문항(docs/listen-voice-contrast-2026-10.md) ──────────────────────────
+# 미리 합성한 훈련 목소리(m1·f1·m2·f2) 가운데 어떤 글을 그 짝·보기와 구별되게 내지 못하는 목소리가 있다(예: 한 음절 예사소리가
+# 거센소리처럼 들림). 판정자(kresnik CTC)로 측정한 실패를 data/listen_voice_avoid.json에 두고, 문항에 avoid_voices(피할 목소리 id,
+# 정렬)를 붙인다. 화면(lib/listenMix.voiceFor)이 그 목소리를 건너뛰고 다음 목소리를 고른다(모두 걸리면 원래 목소리).
+# 파일 꼴: {"voices": {목소리: {글: [{"against": 경쟁 글, "margin": …, "set": "ax"|"word", …}]}}, "test_voice_report": {…}}
+# test_voice_report(검사 목소리 m3)는 피할 수 없어 보고만 하고 여기서 읽지 않는다. 파일이 없거나 깨졌으면 빈 목록(문항은 그대로).
+VOICE_AVOID_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "listen_voice_avoid.json")
+_VOICE_AVOID: Dict[str, object] = {"path": None, "data": {}}
+
+
+def _avoid_key(text: str) -> str:
+    from sound_clips import normalize_text
+    return normalize_text(text)
+
+
+def voice_avoid(path: Optional[str] = None) -> Dict[str, Dict[str, List[Dict]]]:
+    """{목소리: {찾기 키: [{against(찾기 키), …}]}}. 경로가 같으면 한 번만 읽는다(LISTEN_VOICE_AVOID 환경변수로 바꿀 수 있다)."""
+    p = path or os.getenv("LISTEN_VOICE_AVOID") or VOICE_AVOID_PATH
+    if _VOICE_AVOID["path"] != p:
+        data: Dict[str, Dict[str, List[Dict]]] = {}
+        try:
+            with open(p, encoding="utf-8") as f:
+                raw = json.load(f)
+            for v, texts in ((raw or {}).get("voices") or {}).items():
+                if not isinstance(texts, dict):
+                    continue
+                d = data.setdefault(str(v), {})
+                for t, ents in texts.items():
+                    if isinstance(ents, list):
+                        d[_avoid_key(t)] = [{**e, "against": _avoid_key(e.get("against", ""))} for e in ents if isinstance(e, dict)]
+        except (OSError, ValueError, AttributeError, TypeError):
+            data = {}
+        _VOICE_AVOID.update(path=p, data=data)
+    return _VOICE_AVOID["data"]  # type: ignore[return-value]
+
+
+def avoid_voices_ax(a: str, b: str) -> List[str]:
+    """소리 구별 짝 (a, b)에서 피할 목소리: a 클립이 b에 대해, 또는 b 클립이 a에 대해 구별되지 않은 목소리.
+    같음 문항('a|a')도 그 짝에서 나왔으면 같은 목록을 쓴다(목소리를 바꿔 들려줄 때 다른 소리로 들리지 않게)."""
+    ka, kb = _avoid_key(a), _avoid_key(b)
+    out = []
+    for v, d in voice_avoid().items():
+        if any(e.get("against") == kb for e in d.get(ka, ())) or any(e.get("against") == ka for e in d.get(kb, ())):
+            out.append(v)
+    return sorted(out)
+
+
+def avoid_voices_word(target: str) -> List[str]:
+    """낱말 고르기에서 피할 목소리: 정답 글을 어느 경쟁 글과든 구별되게 내지 못한 목소리."""
+    k = _avoid_key(target)
+    return sorted(v for v, d in voice_avoid().items() if d.get(k))
 
 
 def ax_key(first: str, second: str, level: int) -> str:
@@ -202,7 +257,8 @@ def ax_items(level: int, seed: str, n: int = 12, multi_voice: bool = False, pick
         first, second = (a, a) if same else (a, b)
         vp = [0, 1] if multi_voice and level >= 3 else [0, 0]
         out.append({"key": ax_key(first, second, level), "first": first, "second": second, "kind": p["kind"],
-                    "kind_label": AX_KIND_LABEL[p["kind"]], "level": level, "voice_pair": vp, "pick": pick})
+                    "kind_label": AX_KIND_LABEL[p["kind"]], "level": level, "voice_pair": vp, "pick": pick,
+                    "avoid_voices": avoid_voices_ax(p["a"], p["b"])})
     r.shuffle(out)
     return out
 
@@ -431,7 +487,8 @@ def word_item(target: str, level: int, pool: Sequence[str], seed: str,
         return None
     options = [target] + picks
     r.shuffle(options)
-    return {"key": f"w:{target}", "target": target, "options": options, "level": int(level)}
+    return {"key": f"w:{target}", "target": target, "options": options, "level": int(level),
+            "avoid_voices": avoid_voices_word(target)}
 
 
 def _matches(c: Dict, f: Dict) -> bool:
@@ -1245,7 +1302,7 @@ def contrast_ax_items(pairs: Sequence[Dict], seed: str, n: int) -> List[Dict]:
         first, second = (a, a) if k % 2 == 0 else (a, b)
         out.append({"type": "ax", "stage": 1, "key": ax_key(first, second, p["level"]), "first": first, "second": second,
                     "kind": p["kind"], "kind_label": AX_KIND_LABEL[p["kind"]], "level": p["level"],
-                    "voice_pair": [0, 1] if p["level"] >= 3 else [0, 0]})
+                    "voice_pair": [0, 1] if p["level"] >= 3 else [0, 0], "avoid_voices": avoid_voices_ax(p["a"], p["b"])})
     return out
 
 

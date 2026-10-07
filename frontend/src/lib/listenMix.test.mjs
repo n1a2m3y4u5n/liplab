@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mixLevels, clampGainDb, pickSource, voiceRoles, voiceFor, fitFramesToAudio, snrLabel, contrastText,
+import { mixLevels, clampGainDb, pickSource, voiceRoles, voiceFor, axVoices, fitFramesToAudio, snrLabel, contrastText,
   readSettings, writeSettings, REF_DBFS, gainFor, rmsOf, activeLevel, createLru } from './listenMix.js'
 
 const db = (x) => 20 * Math.log10(x)
@@ -39,6 +39,44 @@ test('목소리가 셋 이상이면 마지막은 검사 전용', () => {
   assert.equal(voiceFor(['a', 'b', 'c'], 4, 1), 'c')
   assert.equal(voiceFor(['a', 'b', 'c'], 4, 0, 'blocked', 1), 'b')   // 묶음 안에서는 문항이 바뀌어도 같은 목소리
   assert.equal(voiceFor(['a', 'b', 'c'], 7, 0, 'blocked', 1), 'b')
+})
+
+test('피할 목소리(avoid_voices)는 건너뛰고 다음 목소리, 모두 걸리면 원래 목소리', () => {
+  const tr = ['m1', 'f1', 'm2', 'f2']
+  assert.equal(voiceFor(tr, 1, 0, 'mixed', 0, ['f1']), 'm2')            // 차례가 f1이면 다음 m2
+  assert.equal(voiceFor(tr, 3, 0, 'mixed', 0, ['f2']), 'm1')            // 끝에서 처음으로 돈다
+  assert.equal(voiceFor(tr, 3, 0, 'mixed', 0, ['f2', 'm1']), 'f1')
+  assert.equal(voiceFor(tr, 0, 0, 'mixed', 0, ['f1']), 'm1')            // 차례가 걸리지 않으면 그대로
+  assert.equal(voiceFor(tr, 2, 0, 'mixed', 0, []), 'm2')
+  assert.equal(voiceFor(tr, 2, 0, 'mixed', 0, null), 'm2')
+  assert.equal(voiceFor(tr, 2, 0, 'mixed', 0, tr), 'm2')                // 모두 걸리면 원래 목소리
+  assert.equal(voiceFor(tr, 2, 0, 'mixed', 0, ['x']), 'm2')             // 모르는 id는 무시
+})
+
+test('묶음 모드에서도 피할 목소리를 건너뛴다(그 문항만)', () => {
+  const tr = ['m1', 'f1', 'm2', 'f2']
+  // 묶음 1의 목소리는 f1. 걸린 문항만 m2로, 다른 문항은 f1 그대로
+  assert.equal(voiceFor(tr, 5, 0, 'blocked', 1, ['f1']), 'm2')
+  assert.equal(voiceFor(tr, 6, 0, 'blocked', 1, []), 'f1')
+  assert.equal(voiceFor(tr, 7, 0, 'blocked', 1, ['f1', 'm2', 'f2']), 'm1')
+  assert.equal(voiceFor(tr, 7, 0, 'blocked', 1, tr), 'f1')
+})
+
+test('소리 구별 두 목소리: 건너뛴 결과가 겹치면 둘째 칸을 옮긴다', () => {
+  const tr = ['m1', 'f1', 'm2', 'f2']
+  assert.deepEqual(axVoices(tr, 0, [0, 1], 'mixed', 0, []), ['m1', 'f1'])
+  assert.deepEqual(axVoices(tr, 0, [0, 1], 'mixed', 0, ['f1']), ['m1', 'm2'])
+  // 첫 칸 m1이 걸려 f1로 가면 둘째 칸(f1)과 겹친다 → 둘째 칸은 m2
+  assert.deepEqual(axVoices(tr, 0, [0, 1], 'mixed', 0, ['m1']), ['f1', 'm2'])
+  // 같은 칸 문항은 두 소리가 같은 목소리(건너뛴 뒤에도)
+  assert.deepEqual(axVoices(tr, 0, [0, 0], 'mixed', 0, ['m1']), ['f1', 'f1'])
+  assert.deepEqual(axVoices(tr, 0, undefined, 'blocked', 2, ['m2']), ['f2', 'f2'])
+  // 남은 목소리가 하나뿐이면 피하는 것이 먼저라 겹친 채로 둔다
+  assert.deepEqual(axVoices(tr, 0, [0, 1], 'mixed', 0, ['m1', 'f1', 'm2']), ['f2', 'f2'])
+  // 모두 걸리면 원래 두 목소리
+  assert.deepEqual(axVoices(tr, 1, [0, 1], 'mixed', 0, tr), ['f1', 'm2'])
+  // 묶음 모드 칸 [0, 1]
+  assert.deepEqual(axVoices(tr, 9, [0, 1], 'blocked', 3, ['f2']), ['m1', 'f1'])
 })
 
 test('입모양 프레임을 소리 길이에 맞춘다', () => {
