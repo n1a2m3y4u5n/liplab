@@ -646,24 +646,41 @@ def noise_mastered(ao_trials: Sequence[Tuple[float, bool]], cfg: Dict = NOISE_MA
     return False
 
 
-# 검사 계단(Plomp·Mimpen 1979 방식을 낱말 기준으로): 20문장, +10 dB 시작, 처음 4문장은 4 dB, 그 뒤 2 dB. 역치 = 5~20번째
-# 문장 SNR과 (21번째로 냈을) 다음 SNR의 평균.
-TEST_STAIR = {"start": 10.0, "big": 4.0, "small": 2.0, "big_trials": 4, "lo": -10.0, "hi": 25.0, "criterion": 0.5}
+# 검사 계단(Plomp·Mimpen 1979 방식을 낱말 기준으로): 20문장, +10 dB 시작, 역치 = 5~20번째 문장 SNR과 (21번째로 냈을) 다음 SNR의 평균.
+# 10/7부터 검사 앞에 연습 문장 5개(훈련 문장, 역치에 넣지 않음)를 4 dB 걸음으로 내고, 그 마지막 다음 SNR에서 검사 문장을 처음부터 2 dB 걸음으로
+# 낸다. 시작점이 역치에 가까워져 재검사 SD가 5~10% 줄고 편향·천장 막힘은 그대로였으며(가상 청취자 확인 시드, docs/listen-mastery-sim-2026-10.md
+# 7.4·8절), 첫 리스트의 연습 효과(1~2 dB, Jansen 2012)를 검사 밖으로 빼는 몫은 문헌 근거다. 연습 없이 시작한 회차(이전 기록)는 처음 4문장
+# 4 dB의 옛 규칙으로 계산한다(n_practice = 0).
+TEST_STAIR = {"start": 10.0, "big": 4.0, "small": 2.0, "big_trials": 4, "lo": -10.0, "hi": 25.0, "criterion": 0.5,
+              "practice": 5, "n_test": 20}
 
 
-def test_next_snr(trials: Sequence[Tuple[float, bool]], cfg: Dict = TEST_STAIR) -> float:
+def test_practice_items(seed: str, n: Optional[int] = None) -> List[Dict]:
+    """검사 앞 연습 문장(훈련 문장에서, 회차 seed로 고름). 키는 'testp:<훈련 문장 id>'."""
+    n = TEST_STAIR["practice"] if n is None else n
+    return [{"key": f"testp:{it['id']}", "id": it["id"], "text": it["text"], "practice": True}
+            for it in sentence_items(f"tp:{seed}", n=n)]
+
+
+def test_next_snr(trials: Sequence[Tuple[float, bool]], cfg: Dict = TEST_STAIR, n_practice: int = 0) -> float:
+    """trials: 회차의 (SNR, 맞음) 시간순. 앞의 n_practice개가 연습 문장이다. 연습은 4 dB, 검사 문장은 2 dB.
+    n_practice가 0이면 옛 규칙(처음 big_trials문장 4 dB)."""
     snr = float(cfg["start"])
     for k, (s, ok) in enumerate(trials):
-        step = cfg["big"] if k < cfg["big_trials"] else cfg["small"]
+        if n_practice:
+            step = cfg["big"] if k < n_practice else cfg["small"]
+        else:
+            step = cfg["big"] if k < cfg["big_trials"] else cfg["small"]
         snr = min(cfg["hi"], max(cfg["lo"], float(s) + (-step if ok else step)))
     return round(snr, 1)
 
 
-def test_srt(trials: Sequence[Tuple[float, bool]], cfg: Dict = TEST_STAIR) -> Optional[float]:
-    """검사 역치. 20문장을 다 들어야 낸다."""
-    if len(trials) < 20:
+def test_srt(trials: Sequence[Tuple[float, bool]], cfg: Dict = TEST_STAIR, n_practice: int = 0) -> Optional[float]:
+    """검사 역치. 연습 뒤 검사 문장 20개를 다 들어야 낸다."""
+    test = list(trials)[n_practice:]
+    if len(test) < cfg["n_test"]:
         return None
-    xs = [float(s) for s, _ in trials[4:20]] + [test_next_snr(trials, cfg)]
+    xs = [float(s) for s, _ in test[4:cfg["n_test"]]] + [test_next_snr(list(trials)[:n_practice + cfg["n_test"]], cfg, n_practice)]
     return round(sum(xs) / len(xs), 1)
 
 
