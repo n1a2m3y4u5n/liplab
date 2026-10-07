@@ -5570,6 +5570,463 @@ async def sign_translate(
         raise _server_error(e, "Sign translation failed")
 
 
+# ============================================
+# 소리 듣기(청능훈련) 트랙 — listen_curriculum, docs/auditory-training-design.md
+# ============================================
+import listen_curriculum as _listencur
+
+# 숙달·계단에 넣지 않는 시행의 session 값: 다시 풀기(정답 단서를 본 뒤)·잠긴 단계의 답
+_LISTEN_PRACTICE = "practice"
+
+
+async def _listen_attempts(user_id: int, db, stage: int = None, mode: str = None, session: str = None,
+                           counted_only: bool = True, limit: int = None, newest_first: bool = False):
+    from database import ListenAttempt
+    from sqlalchemy import select
+    q = select(ListenAttempt).where(ListenAttempt.user_id == user_id)
+    if stage is not None:
+        q = q.where(ListenAttempt.stage == stage)
+    if mode is not None:
+        q = q.where(ListenAttempt.mode == mode)
+    if session is not None:
+        q = q.where(ListenAttempt.session == session)
+    if counted_only:
+        q = q.where((ListenAttempt.session.is_(None)) | (ListenAttempt.session != _LISTEN_PRACTICE))
+    q = q.order_by(ListenAttempt.created_at.desc() if newest_first else ListenAttempt.created_at,
+                   ListenAttempt.id.desc() if newest_first else ListenAttempt.id)
+    if limit:
+        q = q.limit(limit)
+    return list((await db.execute(q)).scalars().all())
+
+
+async def _listen_progress_map(user_id: int, db) -> dict:
+    from database import ListenStageProgress
+    from sqlalchemy import select
+    rows = (await db.execute(select(ListenStageProgress).where(ListenStageProgress.user_id == user_id))).scalars().all()
+    return {sp.stage: sp for sp in rows}
+
+
+def _listen_open(n: int, sp_map: dict, user) -> bool:
+    """0단계는 늘 열림. N단계는 N-1을 숙달했거나 그 단계 행이 있으면(건너뛰기로 연 단계) 열림."""
+    if n == 0 or _unlock_all_for(user):
+        return True
+    prev = sp_map.get(n - 1)
+    return (prev is not None and prev.status == "mastered") or n in sp_map
+
+
+def _ao_trials(rows) -> list:
+    return [(r.snr_db, bool(r.correct)) for r in rows if r.condition == "ao" and r.snr_db is not None]
+
+
+def _av_trials(rows) -> list:
+    return [(r.snr_db, bool(r.correct)) for r in rows if r.condition == "av" and r.snr_db is not None]
+
+
+@app.get("/api/listen/curriculum")
+async def listen_curriculum_stages(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """소리 듣기 6단계 + 사용자 상태(locked | unlocked | in_progress | mastered). 4단계는 소리만 조건의 역치 추정값(srt_db)을 붙인다."""
+    sp_map = await _listen_progress_map(current_user.id, db)
+    stages = []
+    for meta in _listencur.stages_overview():
+        st = dict(meta)
+        n = meta["stage"]
+        sp = sp_map.get(n)
+        if not _listen_open(n, sp_map, current_user):
+            st["status"] = "locked"
+        elif sp is None:
+            st["status"] = "unlocked"
+        else:
+            st["status"] = sp.status
+            st["mastery_score"] = round(sp.mastery_score or 0.0, 1)
+            st["attempts"] = sp.attempts
+            if sp.level:
+                st["level"] = sp.level
+                st["levels"] = _listencur.LEVELED.get(n, {}).get("levels")
+        if n == 4 and sp is not None:
+            rows = await _listen_attempts(current_user.id, db, stage=4, mode="noise")
+            st["srt_db"] = _listencur.srt_estimate(_ao_trials(rows)[-_listencur.NOISE_MASTER["window"]:])
+        stages.append(st)
+    return {"stages": stages}
+
+
+class ListenSkipReq(BaseModel):
+    stage: int
+
+
+@app.post("/api/listen/skip")
+async def listen_skip(req: ListenSkipReq, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """잠긴 다음 단계 하나를 연다(바로 앞 단계가 열려 있어야 한다). 연 단계는 'unlocked' 행으로 남는다."""
+    from database import ListenStageProgress
+    n = int(req.stage)
+    if _listencur.get_stage(n) is None or n == 0:
+        raise HTTPException(status_code=400, detail="건너뛸 수 없는 단계입니다.")
+    sp_map = await _listen_progress_map(current_user.id, db)
+    if not _listen_open(n - 1, sp_map, current_user):
+        raise HTTPException(status_code=400, detail="바로 앞 단계를 먼저 열어야 건너뛸 수 있습니다.")
+    if n not in sp_map:
+        db.add(ListenStageProgress(user_id=current_user.id, stage=n, status="unlocked", attempts=0, correct=0, mastery_score=0.0))
+        try:
+            await db.commit()
+        except Exception:
+            await db.rollback()   # 동시에 두 번 누르면 고유 인덱스에 걸린다. 이미 열린 것이다
+    return {"stage": n, "status": "unlocked"}
+
+
+def _listen_test_state(tests: list) -> dict:
+    """검사 회차들 → [{session, form, n, srt_db, started_at}] 시간순."""
+    by = {}
+    for r in tests:
+        s = by.setdefault(r.session, {"session": r.session, "form": (r.item_key or "test:A")[5:6], "trials": [],
+                                       "started_at": r.created_at.isoformat() if r.created_at else None})
+        s["trials"].append((r.snr_db, bool(r.correct)))
+    out = []
+    for s in by.values():
+        out.append({"session": s["session"], "form": s["form"], "n": len(s["trials"]),
+                    "srt_db": _listencur.test_srt(s["trials"]), "started_at": s["started_at"]})
+    return out
+
+
+@app.get("/api/listen/stage/{n}")
+async def listen_stage_content(n: int, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """단계 문항. (사용자, 날짜) seed라 같은 날 다시 열면 같은 순서다. 목소리는 화면이 voice_slot(0부터)을 쓸 수 있는 목소리에 대응한다."""
+    stg = _listencur.get_stage(n)
+    if not stg:
+        raise HTTPException(status_code=404, detail="unknown stage")
+    sp_map = await _listen_progress_map(current_user.id, db)
+    sp = sp_map.get(n)
+    seed = f"{current_user.id}:{_kst_today().isoformat()}"
+    out = {"stage": n, "title": stg["title"], "mode": stg["mode"], "desc": stg["desc"], "guide": stg["guide"],
+           "status": sp.status if sp else ("unlocked" if _listen_open(n, sp_map, current_user) else "locked")}
+    if n == 0:
+        last = await _listen_attempts(current_user.id, db, stage=0, mode="ling", limit=8, newest_first=True)
+        prev = {}
+        if last:
+            sess = last[0].session
+            prev = {r.item_key[5:]: bool(r.correct) for r in last if r.session == sess and r.item_key != "ling:silent"}
+        out.update({"sequence": _listencur.ling_sequence(f"{seed}:{(sp.attempts if sp else 0)}"),
+                    "sounds": _listencur.LING_SOUNDS, "previous": prev or None})
+    elif n in (1, 2):
+        rows = await _listen_attempts(current_user.id, db, stage=n)
+        hist = [(r.level or 1, bool(r.correct)) for r in rows]
+        level = _listencur.next_level(hist, n)
+        out["level"] = level
+        out["levels"] = _listencur.LEVELED[n]["levels"]
+        if n == 1:
+            out["items"] = _listencur.ax_items(level, f"{seed}:{len(rows)}", n=12, multi_voice=True)
+        else:
+            weak = [r.target for r in reversed(rows[-40:]) if not r.correct and r.target]
+            out["items"] = _listencur.word_items(level, _listen_word_pool(), f"{seed}:{len(rows)}", n=10, weak=weak)
+    elif n == 3:
+        recent = [r.item_key[2:] for r in await _listen_attempts(current_user.id, db, stage=3, limit=40, newest_first=True)]
+        out["items"] = _listencur.sentence_items(f"3:{seed}", n=8, recent=recent)
+    elif n == 4:
+        rows = await _listen_attempts(current_user.id, db, stage=4, mode="noise")
+        recent = [r.item_key[2:] for r in rows[-40:]]
+        out["items"] = _listencur.sentence_items(f"4:{seed}:{len(rows)}", n=10, recent=recent)
+        out["stair"] = {"ao": _listencur.stair_state(_ao_trials(rows)), "av": _listencur.stair_state(_av_trials(rows))}
+        out["next_condition"] = _listencur.noise_condition(len(rows))
+        out["n_done"] = len(rows)
+        tests = _listen_test_state(await _listen_attempts(current_user.id, db, stage=4, mode="test"))
+        done = [t for t in tests if t["srt_db"] is not None]
+        out["tests"] = done
+        out["needs_pretest"] = not done
+    elif n == 5:
+        recent = [r.item_key[2:] for r in await _listen_attempts(current_user.id, db, stage=5, limit=40, newest_first=True)]
+        out["items"] = _listencur.convo_items(f"5:{seed}", n=8, recent=recent)
+        rows = await _listen_attempts(current_user.id, db, stage=4, mode="noise")
+        srt = _listencur.srt_estimate(_ao_trials(rows)[-20:])
+        # 잡음 조건은 학습자의 소음 속 역치보다 5 dB 넉넉하게(역치 모르면 +10 dB)
+        out["noise_snr_db"] = round(min(_listencur.STAIR["hi"], (srt if srt is not None else 5.0) + 5.0), 1)
+        out["conditions"] = list(_listencur.CONVO_CONDITIONS)
+    return out
+
+
+_LISTEN_WORD_POOL = None
+
+
+def _listen_word_pool():
+    global _LISTEN_WORD_POOL
+    if _LISTEN_WORD_POOL is None:
+        _LISTEN_WORD_POOL = _listencur.word_pool()
+    return _LISTEN_WORD_POOL
+
+
+class ListenAnswer(BaseModel):
+    stage: int
+    item_key: str = Field(..., max_length=200)
+    answer: Optional[str] = Field(None, max_length=300)   # 낱말·문장 답
+    same: Optional[bool] = None                           # 소리 구별: '같아요'
+    choice: Optional[int] = None                          # 대화: 보기 번호
+    level: Optional[int] = None
+    snr_db: Optional[float] = None
+    condition: Optional[str] = Field(None, max_length=20)
+    voice: Optional[str] = Field(None, max_length=40)
+    plays: Optional[int] = None
+    repairs: Optional[List[str]] = None
+    rt_ms: Optional[int] = None
+    route: Optional[str] = Field(None, max_length=20)
+    practice: bool = False                                # 자음 단서를 본 뒤 다시 쓴 답: 점수만 주고 세지 않는다
+
+
+def _clip_snr(v) -> Optional[float]:
+    if v is None:
+        return None
+    return float(min(_listencur.STAIR["hi"], max(_listencur.STAIR["lo"], float(v))))
+
+
+@app.post("/api/listen/answer")
+async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """소리 듣기 1~5단계 답 하나를 채점·기록하고 숙달·수준·소음 계단을 갱신한다."""
+    from database import ListenAttempt, ListenStageProgress
+    n = int(req.stage)
+    stg = _listencur.get_stage(n)
+    if not stg or n == 0:
+        raise HTTPException(status_code=400, detail="unknown stage")
+    mode = stg["mode"]
+    key = req.item_key
+    res = {"stage": n, "mode": mode}
+    target, correct, score, level, credit = None, None, None, None, None
+    if mode == "ax":
+        parsed = _listencur.ax_parse(key)
+        if not parsed or req.same is None:
+            raise HTTPException(status_code=400, detail="bad item")
+        first, second, pair = parsed
+        target = key[3:]                                        # '수준:첫|둘째'(요약이 짝의 종류를 다시 찾는다)
+        correct = bool(req.same) == (first == second)
+        level = int(pair["level"])
+        credit = 1.0 if correct else -1.0                       # 2지 우연 보정
+        res.update({"same": first == second, "kind_label": _listencur.AX_KIND_LABEL[pair["kind"]]})
+    elif mode == "word_id":
+        target = key[2:] if key.startswith("w:") else ""
+        pool = _listen_word_pool()
+        if target not in pool or not req.answer:
+            raise HTTPException(status_code=400, detail="bad item")
+        correct = req.answer.strip() == target
+        level = int(req.level or 1)
+        k = _listencur.WORD_LEVELS[max(1, min(3, level))]["n"]
+        credit = 1.0 if correct else -1.0 / (k - 1)
+        res.update({"target": target, "contrast": [] if correct else _listencur.contrast_of(target, req.answer.strip())})
+    elif mode in ("sentence", "noise"):
+        sid = key[2:] if key.startswith("s:") else ""
+        target = _listencur.TRAIN_BY_ID.get(sid)
+        if not target:
+            raise HTTPException(status_code=400, detail="bad item")
+        ws = _listencur.word_score(target, req.answer or "")
+        score = ws["proportion"]
+        correct = score >= _listencur.STAIR["criterion"] if mode == "noise" else score >= 0.75
+        credit = score
+        res.update({"score": score, "word_feedback": ws["feedback"], "passed": correct})
+        if req.practice or ws["feedback"]["correct_words"] == ws["feedback"]["total_words"]:
+            res["target"] = target
+    elif mode == "convo":
+        c = _listencur.CONVO_BY_ID.get(key[2:]) if key.startswith("c:") else None
+        if not c or req.choice is None:
+            raise HTTPException(status_code=400, detail="bad item")
+        target = c["line"]
+        correct = int(req.choice) == int(c["answer"])
+        credit = 1.0 if correct else -1.0 / 3
+        res.update({"answer": c["answer"], "line": c["line"]})
+    res["correct"] = correct
+
+    sp_map = await _listen_progress_map(current_user.id, db)
+    counted = not req.practice and _listen_open(n, sp_map, current_user)
+    cond = req.condition if mode in ("noise", "convo") else None
+    if mode == "noise" and cond not in ("ao", "av"):
+        cond = "ao"
+    if mode == "convo" and cond not in _listencur.CONVO_CONDITIONS:
+        cond = "quiet"
+    snr = _clip_snr(req.snr_db) if mode in ("noise", "convo") else None
+    rows = await _listen_attempts(current_user.id, db, stage=n) if counted else []
+    if mode == "word_id" and counted:
+        cur = _listencur.next_level([(r.level or 1, bool(r.correct)) for r in rows], n)
+        level = level if abs(level - cur) <= 1 else cur
+    db.add(ListenAttempt(user_id=current_user.id, stage=n, mode=mode, item_key=key, target=target,
+                         answer=(req.answer if req.answer is not None else
+                                 ("same" if req.same else "diff") if req.same is not None else
+                                 str(req.choice) if req.choice is not None else None),
+                         correct=correct, score=score, level=level, snr_db=snr, condition=cond, voice=req.voice,
+                         plays=req.plays, repairs=req.repairs, rt_ms=req.rt_ms, route=req.route,
+                         session=None if counted else _LISTEN_PRACTICE))
+    res["counted"] = counted
+    if counted:
+        sp = sp_map.get(n)
+        if sp is None:
+            sp = ListenStageProgress(user_id=current_user.id, stage=n, status="in_progress", attempts=0, correct=0, mastery_score=0.0)
+            db.add(sp)
+        prev_attempts = sp.attempts or 0
+        sp.attempts = prev_attempts + 1
+        sp.correct = (sp.correct or 0) + (1 if correct else 0)
+        if n in _listencur.LEVELED:
+            hist = [(r.level or 1, bool(r.correct)) for r in rows] + [(level, bool(correct))]
+            sp.mastery_score = _ewma_mastery(sp.mastery_score, prev_attempts, credit)
+            sp.level = _listencur.next_level(hist, n)
+            _settle_mastery(sp, _listencur.leveled_mastered(hist, n))
+            res.update({"level": sp.level, "level_changed": sp.level != level})
+        elif mode == "noise":
+            trials_rows = [r for r in rows if r.mode == "noise"]
+            ao = _ao_trials(trials_rows) + ([(snr, bool(correct))] if cond == "ao" else [])
+            av = _av_trials(trials_rows) + ([(snr, bool(correct))] if cond == "av" else [])
+            st_ao, st_av = _listencur.stair_state(ao), _listencur.stair_state(av)
+            sp.mastery_score = _ewma_mastery(sp.mastery_score, prev_attempts, credit)
+            _settle_mastery(sp, _listencur.noise_mastered(ao))
+            res.update({"stair": {"ao": st_ao, "av": st_av},
+                        "next_condition": _listencur.noise_condition(len(trials_rows) + 1)})
+        else:
+            cfg = _listencur.EWMA_STAGES[n]
+            sp.mastery_score = _ewma_mastery(sp.mastery_score, prev_attempts, credit)
+            _settle_mastery(sp, sp.attempts >= cfg["min_attempts"] and sp.mastery_score >= cfg["mastery"])
+        res.update({"mastery_score": round(sp.mastery_score, 1), "status": sp.status})
+    await db.commit()
+    return res
+
+
+class ListenLingReq(BaseModel):
+    results: dict                     # {m|u|a|i|sh|s: 들렸는가}
+    false_alarms: int = 0             # 소리 없는 시행에서 '들렸어요'를 누른 수
+    route: Optional[str] = Field(None, max_length=20)
+
+
+@app.post("/api/listen/ling")
+async def listen_ling(req: ListenLingReq, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Ling 6소리 점검 한 번을 기록한다. 마치면 0단계는 숙달(점검 자체가 목표)이고, 지난번에 들렸는데 이번에 안 들린 소리를 알린다."""
+    import uuid
+    from database import ListenAttempt, ListenStageProgress
+    results = {k: bool(req.results.get(k)) for k in _listencur.LING_KEYS if k in req.results}
+    if len(results) != len(_listencur.LING_KEYS):
+        raise HTTPException(status_code=400, detail="여섯 소리 결과가 모두 필요합니다.")
+    last = await _listen_attempts(current_user.id, db, stage=0, mode="ling", limit=8, newest_first=True)
+    prev = None
+    if last:
+        sess = last[0].session
+        prev = {r.item_key[5:]: bool(r.correct) for r in last if r.session == sess and r.item_key != "ling:silent"}
+    session = f"ling:{uuid.uuid4().hex[:12]}"
+    for k, heard in results.items():
+        db.add(ListenAttempt(user_id=current_user.id, stage=0, mode="ling", item_key=f"ling:{k}", target=k, correct=heard,
+                             session=session, route=req.route))
+    fa = max(0, int(req.false_alarms or 0))
+    db.add(ListenAttempt(user_id=current_user.id, stage=0, mode="ling", item_key="ling:silent", target="silent",
+                         correct=fa == 0, score=float(fa), session=session, route=req.route))
+    sp_map = await _listen_progress_map(current_user.id, db)
+    sp = sp_map.get(0)
+    if sp is None:
+        sp = ListenStageProgress(user_id=current_user.id, stage=0, status="in_progress", attempts=0, correct=0, mastery_score=0.0)
+        db.add(sp)
+    sp.attempts = (sp.attempts or 0) + 1
+    sp.correct = (sp.correct or 0) + 1
+    sp.mastery_score = 100.0
+    _settle_mastery(sp, True)
+    await db.commit()
+    return {"summary": _listencur.ling_summary({**results, "silent_false_alarms": fa}, prev), "session": session}
+
+
+class ListenTestStart(BaseModel):
+    route: Optional[str] = Field(None, max_length=20)
+
+
+@app.post("/api/listen/test/start")
+async def listen_test_start(req: ListenTestStart, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """소음 속 문장 인식 역치(SRT) 검사 한 회차. 폼은 학습자마다 A·B를 번갈아 쓴다(test_form_for). 소리만, 훈련에 안 쓴 목소리(voice_slot 'test')."""
+    import uuid
+    tests = [t for t in _listen_test_state(await _listen_attempts(current_user.id, db, stage=4, mode="test")) if t["srt_db"] is not None]
+    form = _listencur.test_form_for(current_user.id, len(tests))
+    items = [{"key": f"test:{form}{i + 1:02d}", "text": s} for i, s in enumerate(_listencur.TEST_FORMS[form])]
+    return {"session": f"test:{uuid.uuid4().hex[:12]}", "form": form, "items": items,
+            "start_db": _listencur.TEST_STAIR["start"], "n_done_tests": len(tests)}
+
+
+class ListenTestAnswer(BaseModel):
+    session: str = Field(..., max_length=40)
+    item_key: str = Field(..., max_length=40)
+    answer: Optional[str] = Field(None, max_length=300)
+    voice: Optional[str] = Field(None, max_length=40)
+    plays: Optional[int] = None
+    route: Optional[str] = Field(None, max_length=20)
+
+
+@app.post("/api/listen/test/answer")
+async def listen_test_answer(req: ListenTestAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """검사 문장 하나. 이번 SNR은 서버가 회차 기록에서 정하고(화면이 보낸 값을 쓰지 않는다) 답 뒤에 다음 SNR을 돌려준다.
+    20문장을 마치면 역치를 낸다. 검사는 훈련 숙달에 넣지 않는다. 정답 문장은 마칠 때까지 보이지 않는다."""
+    from database import ListenAttempt
+    if not req.session.startswith("test:"):
+        raise HTTPException(status_code=400, detail="bad session")
+    key = req.item_key
+    form, idx = key[5:6], key[6:]
+    if form not in _listencur.TEST_FORMS or not idx.isdigit() or not (1 <= int(idx) <= len(_listencur.TEST_FORMS[form])):
+        raise HTTPException(status_code=400, detail="bad item")
+    rows = await _listen_attempts(current_user.id, db, stage=4, mode="test", session=req.session)
+    if any(r.item_key == key for r in rows):
+        raise HTTPException(status_code=409, detail="이미 답한 문장입니다.")
+    if rows and rows[0].item_key[5:6] != form:
+        raise HTTPException(status_code=400, detail="회차의 폼과 다릅니다.")
+    trials = [(r.snr_db, bool(r.correct)) for r in rows]
+    snr = _listencur.test_next_snr(trials) if trials else _listencur.TEST_STAIR["start"]
+    target = _listencur.TEST_FORMS[form][int(idx) - 1]
+    ws = _listencur.word_score(target, req.answer or "")
+    ok = ws["proportion"] >= _listencur.TEST_STAIR["criterion"]
+    db.add(ListenAttempt(user_id=current_user.id, stage=4, mode="test", item_key=key, target=target, answer=req.answer,
+                         correct=ok, score=ws["proportion"], snr_db=snr, condition="ao", voice=req.voice, plays=req.plays,
+                         route=req.route, session=req.session))
+    await db.commit()
+    trials.append((snr, ok))
+    srt = _listencur.test_srt(trials)
+    return {"n": len(trials), "snr_db": snr, "next_db": _listencur.test_next_snr(trials), "done": srt is not None, "srt_db": srt}
+
+
+@app.get("/api/listen/summary")
+async def listen_summary(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """소리 듣기 결과: 최근 Ling 점검, 검사 역치 추이, 훈련 역치(소리만·소리+입모양)와 시청각 이득, 자주 헷갈린 소리와 다음 연습 제안,
+    최근 7일 날마다 시행 수(권장 용량 하루 15~20분, 주 5회와 비교하는 데 쓴다)."""
+    rows = await _listen_attempts(current_user.id, db, counted_only=False)
+    counted = [r for r in rows if r.session != _LISTEN_PRACTICE]
+    ling = [r for r in counted if r.mode == "ling"]
+    checks = []
+    by = {}
+    for r in ling:
+        by.setdefault(r.session, []).append(r)
+    for sess, rs in by.items():
+        res = {r.item_key[5:]: bool(r.correct) for r in rs if r.item_key != "ling:silent"}
+        fa = next((int(r.score or 0) for r in rs if r.item_key == "ling:silent"), 0)
+        checks.append({"session": sess, "at": rs[0].created_at.isoformat() if rs[0].created_at else None, "results": res,
+                       "false_alarms": fa})
+    last_check = None
+    if checks:
+        prev = checks[-2]["results"] if len(checks) > 1 else None
+        last_check = {**checks[-1], "summary": _listencur.ling_summary({**checks[-1]["results"],
+                                                                         "silent_false_alarms": checks[-1]["false_alarms"]}, prev)}
+    noise = [r for r in counted if r.mode == "noise"]
+    ao, av = _ao_trials(noise), _av_trials(noise)
+    srt_ao = _listencur.srt_estimate(ao[-20:])
+    srt_av = _listencur.srt_estimate(av[-8:]) if len(av) >= 8 else None
+    tests = [t for t in _listen_test_state([r for r in counted if r.mode == "test"]) if t["srt_db"] is not None]
+    wrong = [(r.target, r.answer) for r in counted if r.mode == "word_id" and r.correct is False and r.target and r.answer]
+    conf = _listencur.tally_confusions(wrong[-200:])
+    ax_kinds = {}
+    for r in counted:
+        if r.mode == "ax" and r.target:
+            parsed = _listencur.ax_parse(f"ax:{r.target}")
+            if parsed:
+                kd = ax_kinds.setdefault(parsed[2]["kind"], {"kind": parsed[2]["kind"], "label": _listencur.AX_KIND_LABEL[parsed[2]["kind"]],
+                                                             "n": 0, "correct": 0})
+                kd["n"] += 1
+                kd["correct"] += 1 if r.correct else 0
+    from datetime import timedelta as _td
+    today = _kst_today()
+    days = []
+    for k in range(6, -1, -1):
+        d = today - _td(days=k)
+        days.append({"date": d.isoformat(), "n": sum(1 for r in rows if r.created_at and (r.created_at + _td(hours=9)).date() == d)})
+    return {
+        "last_check": last_check, "n_checks": len(checks),
+        "tests": tests,
+        "training": {"srt_ao_db": srt_ao, "srt_av_db": srt_av, "n_ao": len(ao), "n_av": len(av),
+                     "av_gain_db": round(srt_ao - srt_av, 1) if srt_ao is not None and srt_av is not None else None},
+        "confusions": conf[:8], "recommendations": _listencur.recommendations(conf),
+        "ax_kinds": sorted(ax_kinds.values(), key=lambda x: x["kind"]),
+        "days": days,
+    }
+
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():
