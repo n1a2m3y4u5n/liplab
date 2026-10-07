@@ -605,8 +605,10 @@ def sentence_id(i: int) -> str:
 
 TRAIN_BY_ID: Dict[str, str] = {sentence_id(i): s for i, s in enumerate(TRAIN_SENTENCES)}
 
-# 소음 속 문장 인식 역치(SRT) 검사 문장. 두 폼은 같은 꼴(같은 자리의 문장이 같은 구조·어절 수)로 짝을 맞췄다.
-# 사전 검사는 한 폼, 사후는 다른 폼으로 하고 폼 순서는 학습자마다 번갈아 정한다(test_form_for).
+# 소음 속 문장 인식 역치(SRT) 검사 문장. 네 폼은 같은 꼴(같은 자리의 문장이 같은 구조·어절 수)로 짝을 맞췄다.
+# 잡담 잡음(babble) 검사는 A·B, 훈련에 안 쓴 잡음(talker2) 검사는 C·D를 쓴다(TEST_FORM_PAIRS). 사전·사후 검사에서 두 잡음을
+# 모두 하면 한 회기에 같은 문장을 두 번 듣지 않는다. 잡음마다 사전은 한 폼, 사후는 다른 폼이고 폼 순서는 학습자 id 홀짝으로
+# 번갈아 정한다(test_form_for). C·D는 2026-10에 더했고 A·B와의 난이도 등가는 docs/listen-forms-cd-2026-10.md에 있다.
 TEST_FORMS: Dict[str, List[str]] = {
     "A": ["책상 위에 열쇠가 있어요.", "오늘은 버스를 타고 왔어요.", "냄비에 물을 끓여 주세요.", "우리 집은 삼 층이에요.",
           "친구가 선물을 줬어요.", "밤에 별이 많이 보여요.", "의자를 저쪽으로 옮겨 주세요.", "시계가 오 분 빨라요.",
@@ -618,14 +620,37 @@ TEST_FORMS: Dict[str, List[str]] = {
           "언니는 피아노를 잘 쳐요.", "소포를 편의점에서 찾았어요.", "세면대 앞에서 이를 닦아요.", "계단이 높으니 천천히 오세요.",
           "과자를 반만 먹었어요.", "삼촌이 새 집으로 이사했어요.", "주말에 등산하러 가요.", "숟가락이 식탁 아래 떨어졌어요.",
           "어머니는 뉴스를 보세요.", "김밥을 세 줄 샀어요.", "겨울에는 해가 짧아요.", "양말을 서랍 안에 넣어요."],
+    "C": ["지갑 안에 카드가 있어요.", "아까는 불을 끄고 나갔어요.", "컵에 우유를 따라 주세요.", "우리 반은 스무 명이에요.",
+          "아빠가 생선을 구웠어요.", "점심에 손님이 많이 와요.", "책을 이쪽으로 가져와 주세요.", "전철을 칠 분 기다렸어요.",
+          "이모는 그림을 잘 그려요.", "운동화를 백화점에서 샀어요.", "마트 앞에서 자전거를 세워요.", "날이 추우니 따뜻하게 입으세요.",
+          "주스를 조금만 마셨어요.", "사촌이 새 학교로 전학했어요.", "오후에 공부하러 가요.", "강아지가 이불 속에 숨었어요.",
+          "할아버지는 바둑을 두세요.", "귤을 여섯 개 먹었어요.", "여름에는 모기가 많아요.", "겉옷을 옷장 안에 걸어요."],
+    "D": ["가방 속에 휴지가 있어요.", "주말엔 늦잠을 자고 쉬었어요.", "벽에 달력을 붙여 주세요.", "우리 강아지는 세 살이에요.",
+          "엄마가 국수를 삶았어요.", "새벽에 비가 많이 왔어요.", "쓰레기를 밖에 버려 주세요.", "공원까지 팔 분 걸려요.",
+          "오빠는 글씨를 잘 써요.", "배드민턴을 마당에서 쳤어요.", "가게 앞에서 우산을 접어요.", "밤이 늦었으니 얼른 주무세요.",
+          "용돈을 절반만 남겼어요.", "고모가 새 회사로 옮겼어요.", "일요일에 봉사하러 가요.", "동전이 소파 밑으로 굴러갔어요.",
+          "할머니는 꽃을 기르세요.", "복숭아를 네 개 샀어요.", "봄에는 바람이 따뜻해요.", "접시를 쟁반 위에 올려요."],
 }
+# 잡음마다 쓰는 폼 짝(앞이 짝수 id의 첫 폼). talker2의 C·D는 검사 목소리 소리가 모두 있을 때만 쓴다(heldout_forms_ready).
+TEST_FORM_PAIRS: Dict[str, Tuple[str, str]] = {"babble": ("A", "B"), "talker2": ("C", "D")}
 
 
-def test_form_for(user_id: int, n_done: int) -> str:
-    """학습자의 n_done번째(0부터) 검사 폼. 짝수 id는 A → B → A …, 홀수 id는 B → A → B …."""
-    first = "A" if int(user_id) % 2 == 0 else "B"
-    other = "B" if first == "A" else "A"
+def test_form_for(user_id: int, n_done: int, noise: str = "babble", heldout_ready: bool = True) -> str:
+    """학습자가 잡음 noise로 하는 n_done번째(0부터) 검사의 폼. n_done은 그 잡음의 회차만 센다.
+    babble: 짝수 id는 A → B → A …, 홀수 id는 B → A → B …. talker2: 짝수 id는 C → D …, 홀수 id는 D → C ….
+    heldout_ready가 거짓이면(C·D 검사 목소리 소리가 아직 없음) talker2는 같은 회차의 babble 폼과 반대 폼(A·B 가운데)을 쓴다.
+    그래도 한 회기의 두 검사는 서로 다른 문장이다."""
+    pair = TEST_FORM_PAIRS.get(noise, TEST_FORM_PAIRS["babble"])
+    if noise != "babble" and not heldout_ready:
+        a, b = TEST_FORM_PAIRS["babble"]
+        return b if test_form_for(user_id, n_done) == a else a
+    first, other = pair if int(user_id) % 2 == 0 else pair[::-1]
     return first if n_done % 2 == 0 else other
+
+
+def heldout_forms_ready(has_clip) -> bool:
+    """talker2 폼(C·D) 문장이 모두 검사 목소리 소리를 가졌는가. has_clip(글) → bool(서버 음성 목록 조회)."""
+    return all(has_clip(s) for f in TEST_FORM_PAIRS["talker2"] for s in TEST_FORMS[f])
 
 
 def sentence_items(seed: str, n: int = 8, recent: Sequence[str] = (), review: Sequence[str] = ()) -> List[Dict]:
