@@ -257,6 +257,44 @@ def _share_once(aligner_id: str, scorer_id: str) -> None:
         print(f"[WARN] 특징 추출부 공유 실패: {type(e).__name__}: {e}")
 
 
+# 문장 끝 모음 정렬 결함(docs/dgop-final-vowel-2026-10.md, 2026-10-07). 자체 학습 정렬기·채점기는 마지막 토큰(대개 끝 모음)을
+# 말소리 안이 아니라 입력의 마지막 프레임에 낸다. 앱 녹음은 정지 버튼으로 끝나 끝 무음이 길어서, 끝 모음이 녹음 끝 무음에 놓이고
+# 말 빠르기·입모양 비교의 시각이 그만큼 늦어졌다. 정렬기에 넣기 전에 말소리 끝 + 여유에서 자른다(앞은 자르지 않는다).
+TAIL_TRIM_MARGIN_S = 0.05
+_TRIM_WIN_S = 0.01
+_TRIM_MIN_S = 0.1
+
+
+def speech_end_seconds(waveform, sample_rate: int) -> Optional[float]:
+    """말소리 끝(초). 10 ms 창 RMS(dB)가 max(99백분위 − 35 dB, 10백분위 + 6 dB)를 넘는 마지막 창의 끝. 창이 3개 미만이거나
+    넘는 창이 없으면 None."""
+    import numpy as np
+    if waveform is None:
+        return None
+    y = np.asarray(waveform, dtype=np.float64).reshape(-1)
+    n = int(sample_rate * _TRIM_WIN_S)
+    m = len(y) // n if n > 0 else 0
+    if m < 3:
+        return None
+    db = 20.0 * np.log10(np.sqrt(np.mean(y[:m * n].reshape(m, n) ** 2, axis=1) + 1e-12))
+    thr = max(np.percentile(db, 99) - 35.0, np.percentile(db, 10) + 6.0)
+    idx = np.nonzero(db > thr)[0]
+    return None if not len(idx) else float((idx[-1] + 1) * _TRIM_WIN_S)
+
+
+def trim_trailing_silence(waveform, sample_rate: int, margin_s: Optional[float] = None):
+    """정렬기·채점기에 넣을 소리: 말소리 끝 + margin_s 뒤를 잘라 낸다. 말소리 끝을 못 찾으면 그대로, 0.1초보다 짧게 만들지 않는다.
+    DGOP_TAIL_TRIM=0이면 자르지 않는다(측정 비교용)."""
+    if waveform is None or os.getenv("DGOP_TAIL_TRIM", "1") == "0":
+        return waveform
+    end = speech_end_seconds(waveform, sample_rate)
+    if end is None:
+        return waveform
+    margin = TAIL_TRIM_MARGIN_S if margin_s is None else margin_s
+    cut = min(len(waveform), int(round((end + margin) * sample_rate)))
+    return waveform[:max(cut, int(_TRIM_MIN_S * sample_rate))]
+
+
 def phone_confidences(waveform, sample_rate: int, target_tokens: Sequence[str],
                        aligner_id: str = DEFAULT_MODEL_ID,
                        scorer_id: str = None) -> List[Dict]:
@@ -285,6 +323,8 @@ def phone_confidences(waveform, sample_rate: int, target_tokens: Sequence[str],
     scorer_id = scorer_id or aligner_id
     if scorer_id != aligner_id:
         _share_once(aligner_id, scorer_id)
+    # 끝 무음을 잘라 넣는다(TAIL_TRIM_MARGIN_S 참고). 자르는 것은 끝뿐이라 아래 시각(초)은 원래 녹음 기준 그대로다.
+    waveform = trim_trailing_silence(waveform, sample_rate)
     log_probs, vocab = ctc_log_probs(waveform, sample_rate, aligner_id)
     spans = align_targets(log_probs, vocab, target_tokens)
 
