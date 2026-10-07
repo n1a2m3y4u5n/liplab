@@ -37,6 +37,8 @@ test('목소리가 셋 이상이면 마지막은 검사 전용', () => {
   assert.deepEqual(voiceRoles([{ id: 'f1' }]), { train: ['f1'], test: 'f1' })
   assert.deepEqual(voiceRoles([]), { train: [''], test: '' })
   assert.equal(voiceFor(['a', 'b', 'c'], 4, 1), 'c')
+  assert.equal(voiceFor(['a', 'b', 'c'], 4, 0, 'blocked', 1), 'b')   // 묶음 안에서는 문항이 바뀌어도 같은 목소리
+  assert.equal(voiceFor(['a', 'b', 'c'], 7, 0, 'blocked', 1), 'b')
 })
 
 test('입모양 프레임을 소리 길이에 맞춘다', () => {

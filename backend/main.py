@@ -5697,6 +5697,12 @@ async def listen_stage_content(n: int, current_user=Depends(get_current_user), d
     seed = f"{current_user.id}:{_kst_today().isoformat()}"
     out = {"stage": n, "title": stg["title"], "mode": stg["mode"], "desc": stg["desc"], "guide": stg["guide"],
            "status": sp.status if sp else ("unlocked" if _listen_open(n, sp_map, current_user) else "locked")}
+    # 목소리 제시: 숙달 추정 50 미만(처음 포함)이면 한 묶음을 한 목소리로 내고 묶음마다 바꾼다(blocked). 그 뒤로는 문항마다 바꾼다(mixed).
+    # 여러 목소리 훈련은 잘하는 학습자에게 도움이 되지만 서툰 학습자는 방해를 받고, 목소리를 묶어 내면 그 방해가 줄었다
+    # (Perrachione 2011, docs/listen-advance-evidence-2026-10.md).
+    attempts = sp.attempts if sp else 0
+    out["voice_mode"] = "blocked" if (sp is None or (sp.mastery_score or 0) < 50) else "mixed"
+    out["voice_block"] = attempts // 10
     if n == 0:
         last = await _listen_attempts(current_user.id, db, stage=0, mode="ling", limit=8, newest_first=True)
         prev = {}

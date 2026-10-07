@@ -111,11 +111,14 @@ export function voiceRoles(voices) {
   return { train: ids, test: ids[ids.length - 1] }
 }
 
-/** 문항 k의 훈련 목소리(목소리를 돌려 가며). slot은 소리 구별의 voice_pair 칸(0·1). */
-export function voiceFor(train, k, slot = 0) {
+/**
+ * 문항 k의 훈련 목소리. slot은 소리 구별의 voice_pair 칸(0·1). mode 'blocked'면 묶음(block) 하나를 한 목소리로 내고(서툰 단계),
+ * 'mixed'면 문항마다 돌린다. 서버 단계 응답의 voice_mode·voice_block을 넘긴다.
+ */
+export function voiceFor(train, k, slot = 0, mode = 'mixed', block = 0) {
   const n = train?.length || 0
   if (!n) return ''
-  return train[(k + slot) % n]
+  return mode === 'blocked' ? train[(block + slot) % n] : train[(k + slot) % n]
 }
 
 /**
