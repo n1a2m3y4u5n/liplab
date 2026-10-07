@@ -68,6 +68,7 @@ const ScenarioHub = lazy(() => import('./pages/ScenarioHub'))
 const ReviewLanding = lazy(() => import('./pages/ReviewLanding'))
 const SpeakingReviewLanding = lazy(() => import('./pages/SpeakingReviewLanding'))
 const AnalysisDetail = lazy(() => import('./pages/AnalysisDetail'))
+const ListeningReport = lazy(() => import('./pages/ListeningReport'))
 const EvalReport = lazy(() => import('./pages/EvalReport'))
 const ContentReview = lazy(() => import('./pages/ContentReview'))
 const PracticeHub = lazy(() => import('./pages/PracticeHub'))
@@ -254,6 +255,7 @@ function App() {
         <Route path="/analysis/scores" element={<AnalysisDetail mode="scores" />} />
         <Route path="/analysis/history" element={<AnalysisDetail mode="history" />} />
         <Route path="/analysis/eval" element={<EvalReport />} />
+        <Route path="/analysis/listening" element={<ListeningReport />} />
         <Route path="/admin/content-review" element={<ContentReview />} />
         <Route path="/practice/hub" element={<PracticeHub />} />
         <Route path="/tasks" element={<TasksPage />} />

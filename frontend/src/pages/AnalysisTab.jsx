@@ -640,6 +640,10 @@ function FullStats({ ov, onGo }) {
             className="flex flex-1 items-center justify-between rounded-[12px] px-3 py-2.5 text-[14px] font-bold text-ink hover:bg-surface-sunken">
             학습 효과 리포트(사전·사후 검사) <img src="/ui/review-arrow.svg" alt="" className="max-w-none" />
           </button>
+          <button type="button" onClick={() => onGo('/analysis/listening')}
+            className="flex flex-1 items-center justify-between rounded-[12px] px-3 py-2.5 text-[14px] font-bold text-ink hover:bg-surface-sunken">
+            소리 듣기 결과 <img src="/ui/review-arrow.svg" alt="" className="max-w-none" />
+          </button>
         </div>
       )}
     </div>
