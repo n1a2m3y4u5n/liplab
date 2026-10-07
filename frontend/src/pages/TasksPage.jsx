@@ -15,7 +15,10 @@ import useFocusTrap from '../hooks/useFocusTrap'
  * 배지는 GET /api/analysis/overview(backend/analytics.py). 불러오기 전에는 미획득으로 보인다.
  * 오른쪽 패널은 과제 탭 구성(스탯 + 레벨 진행 + 복습할 항목, 137:151).
  * 크기는 lg 미만이 모바일 프레임 값, lg 이상이 데스크톱 프레임 값이다.
+ * 10월: 서버가 '소리 듣기 15분' 과제(key가 listen으로 시작, 또는 to가 /listen/…)를 주면 그 줄은 트랙색 청록으로 그리고,
+ * 채우기 전에는 눌러서 오늘의 듣기(/listen/today?from=tasks)로 간다. 분 단위 과제라 'n / 15분'으로 적는다(unit이 오면 그것).
  */
+const isListenTask = (t) => /^listen/.test(t?.key || '') || /^\/listen\//.test(t?.to || '')
 
 /** 오늘 남은 시간(137:190 "오늘 남은 시간 N시간") — 자정까지 남은 시간을 올림한 정수. */
 function hoursLeftToday() {
@@ -26,9 +29,9 @@ function hoursLeftToday() {
 
 /** 과제 한 줄(139:18 / 238:254): 완료 원 + 제목·n / n + 진행 막대 + 보상 칩.
  * 달성했는데 아직 못 받은 보상(받기 요청 실패)은 칩을 눌러 다시 받는다(onClaim). */
-function TaskRow({ label, cur, total, xp, claimed, onClick, onClaim }) {
+function TaskRow({ label, cur, total, xp, claimed, onClick, onClaim, listen = false, unit = '' }) {
   const done = cur >= total
-  const chip = `shrink-0 rounded-full px-[9px] py-[5px] text-[11px] font-bold leading-figma lg:px-3 lg:py-1.5 lg:text-[12px] ${done ? 'bg-primary-100 text-primary-700' : 'bg-surface-sunken text-ink-faint'}`
+  const chip = `shrink-0 rounded-full px-[9px] py-[5px] text-[11px] font-bold leading-figma lg:px-3 lg:py-1.5 lg:text-[12px] ${done ? (listen ? 'bg-listen-tint text-listen-dark' : 'bg-primary-100 text-primary-700') : 'bg-surface-sunken text-ink-faint'}`
   // onClick을 주면(오늘의 복습 정리 → 예정 복습) 같은 모양의 버튼으로 그린다.
   const Row = onClick ? 'button' : 'div'
   return (
@@ -42,10 +45,10 @@ function TaskRow({ label, cur, total, xp, claimed, onClick, onClaim }) {
         <div className="flex items-center justify-between font-bold leading-figma">
           {/* 완료한 과제 제목은 모바일(238:259)만 흐린 글자, 데스크톱(139:23)은 그대로 */}
           <span className={`text-[14px] lg:text-[15px] ${done ? 'text-ink-muted lg:text-ink' : 'text-ink'}`}>{label}</span>
-          <span className="text-[12px] text-primary-500 lg:text-[13px]">{cur} / {total}</span>
+          <span className={`text-[12px] lg:text-[13px] ${listen ? 'text-listen-dark' : 'text-primary-500'}`}>{cur} / {total}{unit}</span>
         </div>
         <div className="h-[7px] overflow-hidden rounded-full bg-fill lg:h-2">
-          <div className="h-full rounded-full bg-primary-500" style={{ width: `${Math.min(100, (cur / total) * 100)}%` }} />
+          <div className={`h-full rounded-full ${listen ? 'bg-listen' : 'bg-primary-500'}`} style={{ width: `${Math.min(100, (cur / total) * 100)}%` }} />
         </div>
       </div>
       {done && !claimed && onClaim
@@ -215,11 +218,15 @@ export default function TasksPage() {
           <span className="text-[12px] text-ink-muted lg:text-[13px]">오늘 남은 시간 {hoursLeftToday()}시간</span>
         </div>
         {/* 오늘의 복습 정리: 예정 복습(독화·말하기, /api/review/due)이 남아 있으면 눌러서 그 복습 세션으로 간다(독화 먼저) */}
-        {daily.map((t) => (
-          <TaskRow key={t.key} label={t.label} cur={t.cur} total={t.total} xp={t.xp} claimed={t.claimed}
-            onClick={t.key === 'review_clear' && !t.done && due?.total > 0 ? () => navigate(dueStartPath(due, '/review')) : undefined}
-            onClaim={() => claim().catch(() => {})} />
-        ))}
+        {daily.map((t) => {
+          const listen = isListenTask(t)
+          const open = t.key === 'review_clear' && !t.done && due?.total > 0 ? () => navigate(dueStartPath(due, '/review'))
+            : listen && !t.done ? () => navigate(t.to && t.to.startsWith('/listen/') ? t.to : '/listen/today?from=tasks') : undefined
+          return (
+            <TaskRow key={t.key} label={t.label} cur={Math.round(t.cur)} total={t.total} xp={t.xp} claimed={t.claimed} listen={listen}
+              unit={t.unit || (listen ? '분' : '')} onClick={open} onClaim={() => claim().catch(() => {})} />
+          )
+        })}
         {!tasks && <p className="py-3 text-center text-[13px] text-ink-muted">과제를 불러오는 중…</p>}
       </section>
 

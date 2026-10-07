@@ -4,7 +4,9 @@ import AppShell from '../components/AppShell'
 import Modal from '../components/Modal'
 import WatermarkCard from '../components/WatermarkCard'
 import ScrollHintList from '../components/ScrollHintList'
-import { learningAPI } from '../api'
+import { learningAPI, listenAPI } from '../api'
+import { listenOverview } from '../lib/listenFlow'
+import { fmtDb } from '../lib/listenView'
 import { mergeBadges } from '../lib/badges'
 import { scoreLevel, scoreTone } from '../lib/scoreTone'
 
@@ -16,6 +18,9 @@ import { scoreLevel, scoreTone } from '../lib/scoreTone'
  * 활동 캘린더·회차 히스토리는 GET /api/calendar/activities(날짜×주제, 독화·발화·검사 모두)로 그린다.
  * 회차 히스토리 행을 누르면 그 학습 화면으로 간다 — 회차 상세 모달(212:24)은 문항별 기록 API가 없어 아직 없다.
  * 크기는 lg 미만이 모바일 프레임 값, lg 이상이 데스크톱 프레임 값이다.
+ * 10월: 차트 아래 '소리 듣기' 칸(최근 역치 · 이번 주 듣기 분 · 소리 구별 정답률)과 결과 화면(/analysis/listening) 진입을 더했다.
+ * 값은 overview의 listen 칸을 쓰고, 그 칸이 아직 없으면 /api/listen/summary에서 계산한다(lib/listenFlow.listenOverview).
+ * 듣기 기록이 하나도 없으면 칸을 그리지 않는다(독화·발화만 하는 학습자 화면을 늘리지 않게).
  */
 
 // 스탯 워터마크(326:33/36/41 · 모바일 326:83/86/91) — 회전 -20°, 오른쪽 위로 걸쳐 잘림
@@ -47,6 +52,45 @@ function fmtDur(m) {
   if (v < 60) return `${v}분`
   if (v >= 600) return `${Math.round(v / 60)}시간`
   return v % 60 ? `${Math.floor(v / 60)}시간 ${v % 60}분` : `${v / 60}시간`
+}
+
+/** 소리 듣기 칸: 최근 역치 · 이번 주 듣기 · 소리 구별 정답률 + 결과 보기. 기록이 없으면 그리지 않는다. */
+function ListenSummary({ ov, onOpen }) {
+  const [summary, setSummary] = useState(null)
+  // overview에 listen 칸이 있으면(시작 안 했으면 null) 그것만 쓴다. 칸이 아예 없는 예전 서버일 때만 결과 요약에서 계산한다
+  const needSummary = !!ov && !('listen' in ov)
+  useEffect(() => {
+    if (!needSummary) return undefined
+    let on = true
+    listenAPI.summary().then((d) => { if (on) setSummary(d) }).catch(() => {})
+    return () => { on = false }
+  }, [needSummary])
+  const l = listenOverview(ov, summary)
+  if (!l.has) return null
+  const cells = [
+    { label: '최근 역치', value: fmtDb(l.srt), note: '낮을수록 시끄러운 곳에서 잘 들어요' },
+    { label: '이번 주 듣기', value: l.weekMinutes == null ? '–' : `${Math.round(l.weekMinutes)}분`, note: '권장 하루 15분, 주 5일' },
+    { label: '소리 구별 정답률', value: l.axAccuracy == null ? '–' : `${Math.round(l.axAccuracy * 100)}%`, note: '같다·다르다 문항' },
+  ]
+  return (
+    <section data-track="listen" className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
+      <div className="flex items-center justify-between font-bold leading-figma">
+        <p className="text-[16px] text-ink lg:text-[17px]">소리 듣기</p>
+        <button type="button" onClick={onOpen} className="flex min-h-[32px] items-center gap-2 text-[12px] text-listen-dark hover:underline lg:text-[13px]">
+          결과 보기 <img src="/ui/review-arrow.svg" alt="" aria-hidden className="max-w-none" />
+        </button>
+      </div>
+      <div className="grid grid-cols-3 gap-2 lg:gap-3">
+        {cells.map((c) => (
+          <div key={c.label} className="flex min-w-0 flex-col gap-1 rounded-14 bg-surface-sunken px-3 py-3 leading-figma lg:gap-1.5 lg:px-4">
+            <span className="break-keep text-[11.5px] font-bold text-ink-faint lg:text-[13px] lg:text-ink-soft">{c.label}</span>
+            <span className="text-[18px] font-bold tracking-[-0.36px] text-listen-dark lg:text-[22px]">{c.value}</span>
+            <span className="hidden break-keep text-[12px] text-ink-faint lg:block">{c.note}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
 }
 
 /** 차트 카드(197:21 / 240:133) — 머리(제목·'최근 7주') + 플롯. */
@@ -215,6 +259,7 @@ export default function AnalysisTab() {
 
       <ChartCard title="학습시간 추이"><BarChart weeks={weeks} /></ChartCard>
       <ChartCard title="정확도 추이"><LineChart weeks={weeks} /></ChartCard>
+      <ListenSummary ov={ov} onOpen={() => navigate('/analysis/listening')} />
 
       <div className="flex w-full flex-col gap-[9px] lg:flex-row lg:gap-3">
         <DetailLink label="활동 캘린더" onClick={() => setModal('calendar')} />
@@ -597,6 +642,8 @@ function FullStats({ ov, onGo }) {
   const tracks = [
     { name: '독화', acc: pct(tr.read?.accuracy), done: tr.read?.done ?? 0, total: tr.read?.total || 5, card: 'bg-primary-100 text-primary-700', fill: 'bg-primary-500' },
     { name: '발화', acc: pct(tr.speak?.accuracy), done: tr.speak?.done ?? 0, total: tr.speak?.total || 6, card: 'bg-speak-tint text-speak-dark', fill: 'bg-speak' },
+    // 소리 듣기 진도는 서버가 overview tracks에 listen을 실을 때만(10월 계약)
+    ...(tr.listen ? [{ name: '소리 듣기', acc: pct(tr.listen.accuracy), done: tr.listen.done ?? 0, total: tr.listen.total || 6, card: 'bg-listen-tint text-listen-dark', fill: 'bg-listen' }] : []),
   ]
   return (
     <div className="flex flex-col gap-[22px]">

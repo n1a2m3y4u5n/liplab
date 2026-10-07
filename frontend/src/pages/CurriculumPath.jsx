@@ -19,6 +19,8 @@ import { curriculumAPI, speakAPI, listenAPI } from '../api'
  * 없어 노드 = 단계로 둔다(의도된 차이). 화살표는 보고 있는 단계(배너·레슨 카드)를 앞뒤 단계로 옮긴다.
  * 건너뛰기: 독화는 배치 API(setTrack start_stage)가, 발화는 speakAPI.skip이 서버 포인터를 옮겨 그 단계를 연다.
  * 연 뒤에는 단계를 다시 받아 경로에 머물고, 연 단계가 현재 노드가 되어 레슨 카드가 뜬다(80:6).
+ * 소리 듣기 트랙은 레슨 카드 아래에 '오늘의 듣기'(15분 회기, /listen/today, 오늘 한 분 / 15분)를 보조 버튼으로 두고(독화의 짝 맞추기와 같은 자리),
+ * 안내 줄에서 소리 교실(/listen/classroom)과 결과(/analysis/listening)로 간다.
  */
 
 // ── 독화 트랙 ─────────────────────────────────────────────────────────────
@@ -139,6 +141,13 @@ export default function CurriculumPath() {
   const [viewIdx, setViewIdx] = useState(null)        // 화살표로 보고 있는 단계(null = 현재 단계)
   const [guideOpen, setGuideOpen] = useState(false)
   const closeGuide = useCallback(() => setGuideOpen(false), [])
+  const [today, setToday] = useState(null)   // 소리 듣기 오늘의 회기({target_min, done_today}), 못 받으면 null
+  useEffect(() => {
+    if (track !== 'listen') return undefined
+    let on = true
+    listenAPI.today().then((t) => { if (on) setToday(t) }).catch(() => { if (on) setToday(null) })
+    return () => { on = false }
+  }, [track])
 
   // 두 트랙을 한 번에 받아 두면 스위처 전환이 즉시 된다. 건너뛴 뒤에도 같은 함수로 다시 받는다.
   const load = useCallback(() => Promise.all([
@@ -202,11 +211,20 @@ export default function CurriculumPath() {
   // 뜻 없는 말 짝 맞추기(C10): 1·2단계 사이의 하루 10분 과제. 2단계가 열린 뒤 1·2단계 카드에 보조 버튼으로 둔다(숙달에는 들어가지 않음)
   const wordStage = track === 'read' ? list.find((s) => s.key === 'word') : null
   const showNonsense = !!wordStage && wordStage.status !== 'locked' && (view?.key === 'viseme' || view?.key === 'word')
-  const nonsenseBtn = (cls) => showNonsense && (
+  // 소리 듣기: 단계를 하나라도 열었으면 오늘의 듣기(블록 회기)를 보조 버튼으로 둔다. 오늘 한 분을 함께 적는다
+  const showToday = track === 'listen' && list.some((s) => s.status !== 'locked')
+  const todayMin = Math.round(today?.done_today?.minutes || 0)
+  const todayGoal = today?.target_min || 15
+  const extraBtn = (cls) => (showNonsense ? (
     <button type="button" onClick={() => navigate('/learn/nonsense')} className={`btn-secondary w-full ${cls}`}>
       뜻 없는 말 짝 맞추기 <span className="font-normal text-ink-muted">· 하루 10분</span>
     </button>
-  )
+  ) : showToday ? (
+    <button type="button" onClick={() => navigate('/listen/today')} className={`btn-secondary w-full text-track-dark ${cls}`}>
+      오늘의 듣기 <span className="font-normal text-ink-muted">· {todayMin > 0 ? `${Math.min(todayMin, todayGoal)} / ${todayGoal}분` : `하루 ${todayGoal}분`}</span>
+    </button>
+  ) : null)
+  const hasExtra = showNonsense || showToday
 
   // 사용법 가이드는 지금 트랙의 레슨 탭으로 열고, 그 탭 맨 위에 보고 있는 단계의 상태를 보여 준다(가이드 점검 4절 A안).
   const guideTab = track === 'speak' ? 'speaking' : track === 'listen' ? 'listening' : 'reading'
@@ -269,8 +287,13 @@ export default function CurriculumPath() {
         {track === 'listen' && !loadFailed && (
           <div className="flex w-full items-center justify-between gap-3 rounded-14 bg-surface-sunken px-4 py-2.5">
             <p className="min-w-0 break-keep text-[12px] leading-[1.6] text-ink-muted lg:text-[13px]">소리 듣기는 청력을 진단하거나 치료하지 않아요.</p>
-            <button type="button" onClick={() => navigate('/analysis/listening')}
-              className="min-h-[44px] shrink-0 rounded-10 px-2 text-[13px] font-bold text-track-dark hover:underline">결과 보기</button>
+            <div className="flex shrink-0 items-center">
+              <button type="button" onClick={() => navigate('/listen/classroom')}
+                className="min-h-[44px] rounded-10 px-2 text-[13px] font-bold text-track-dark hover:underline">소리 교실</button>
+              <span aria-hidden className="h-3 w-px bg-line-strong" />
+              <button type="button" onClick={() => navigate('/analysis/listening')}
+                className="min-h-[44px] rounded-10 px-2 text-[13px] font-bold text-track-dark hover:underline">결과 보기</button>
+            </div>
           </div>
         )}
 
@@ -286,7 +309,7 @@ export default function CurriculumPath() {
         )}
 
         {/* 경로(61:18 / 모바일 233:45) — 모바일은 가운데, 데스크톱은 왼쪽(x 130)에 노드 열을 두고 오른쪽에 카드 */}
-        <div className={`relative w-full py-2 ${showNonsense ? 'max-lg:pb-[226px]' : 'max-lg:pb-[170px]'} ${loadFailed ? 'hidden' : ''}`}
+        <div className={`relative w-full py-2 ${hasExtra ? 'max-lg:pb-[226px]' : 'max-lg:pb-[170px]'} ${loadFailed ? 'hidden' : ''}`}
           style={{ '--arrow-top': `${8 + vIdx * PITCH_MOBILE + 9}px` }}>
           {list.length > 1 && (
             <>
@@ -338,9 +361,9 @@ export default function CurriculumPath() {
                     {/* 레슨 카드(75:12 · 80:115) — 보고 있는 단계 노드 오른쪽(데스크톱). 모바일은 아래 시트. */}
                     {i === vIdx && viewOpen && (
                       <div className="absolute left-full z-10 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-20 border-2 border-line bg-white px-6 py-[22px] shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
-                        style={{ bottom: showNonsense ? 'calc(50% - 100.5px)' : 'calc(50% - 37.5px)' }}>
+                        style={{ bottom: hasExtra ? 'calc(50% - 100.5px)' : 'calc(50% - 37.5px)' }}>
                         {/* 짝 맞추기 버튼(높이 49 + 간격 14)이 붙으면 카드가 위 배너를 덮지 않게 아래로 늘리고 꼬리도 그만큼 올린다 */}
-                        <TailLeft className={`${showNonsense ? 'bottom-[87.5px]' : 'bottom-[24.5px]'} left-[-15px]`} />
+                        <TailLeft className={`${hasExtra ? 'bottom-[87.5px]' : 'bottom-[24.5px]'} left-[-15px]`} />
                         <p className="text-[22px] font-bold leading-figma tracking-[-0.44px] text-ink">{s.title}</p>
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center justify-between text-[13px] font-bold leading-figma">
@@ -356,7 +379,7 @@ export default function CurriculumPath() {
                           className={(s.attempts ?? 0) === 0 ? 'btn-primary w-full rounded-15 py-[17px] text-[17px]' : 'btn-primary btn-lg w-full'}>
                           {startLabel}
                         </button>
-                        {nonsenseBtn('py-3 text-[15px]')}
+                        {extraBtn('py-3 text-[15px]')}
                       </div>
                     )}
                   </div>
@@ -385,7 +408,7 @@ export default function CurriculumPath() {
               <div className="h-full rounded-full bg-track" style={{ width: `${progPct}%` }} />
             </div>
             <button type="button" onClick={() => navigate(view.route)} className="btn-primary w-full py-4 text-[16px]">{startLabel}</button>
-            {nonsenseBtn('py-3 text-[15px]')}
+            {extraBtn('py-3 text-[15px]')}
           </div>
         )}
       </div>

@@ -36,6 +36,41 @@ export const PRACTICE_MODES = {
 }
 export const PRACTICE_KEYS = Object.keys(PRACTICE_MODES)
 
+/**
+ * 연습 모드 묶음 끝의 버튼: 한 묶음 더 / 다른 것 고르기(고르는 모드) 또는 연습 탭으로.
+ * 반환: {primary, secondary}
+ */
+export function practiceActions({ mode, reload, onChoose, onExit }) {
+  const m = PRACTICE_MODES[mode]
+  return {
+    primary: { label: '한 묶음 더 하기', onClick: reload },
+    secondary: m?.chooseAgain && onChoose ? { label: m.chooseAgain, onClick: onChoose } : { label: '연습 탭으로', onClick: onExit },
+  }
+}
+
+/** 주소 질의 → 고른 것의 이름(위 제목 줄). 소리 짝 종류 이름은 목록(kinds: [{kind, label}])에서 찾는다. */
+export function choiceLabel(mode, query, kinds = []) {
+  if (mode === 'contrast') {
+    if (query?.weak) return '자주 헷갈린 짝'
+    return (kinds || []).find((k) => k.kind === query?.kind)?.label || null
+  }
+  if (mode === 'scenario') return query?.place || null
+  if (mode === 'conditions') {
+    const c = CONDITIONS.find((x) => x.key === query?.condition)
+    if (!c) return null
+    if (c.key !== 'noise') return c.label
+    return NOISE_TYPES.find((n) => n.key === query.noise)?.label || c.label
+  }
+  return null
+}
+
+/** 장소 목록 응답(문자열 또는 {key|place, label, n}) → [{key, label, n}] */
+export function normalizePlaces(list) {
+  const src = Array.isArray(list) ? list : Array.isArray(list?.places) ? list.places : []
+  return src.map((p) => (typeof p === 'string' ? { key: p, label: p, n: null }
+    : { key: p?.key || p?.place || p?.label, label: p?.label || p?.place || p?.key, n: p?.n ?? null })).filter((p) => p.key)
+}
+
 /** 연습 모드 목록 응답([{key, available, reason}]) → {key: {available, reason}}. 응답이 없거나 깨졌으면 빈 객체(모두 '알 수 없음'). */
 export function modeAvailability(list) {
   const out = {}
@@ -47,7 +82,7 @@ export function modeAvailability(list) {
 
 /**
  * 주소의 질의(URLSearchParams 또는 객체) → 연습 API 질의와 '고를 것이 남았는가'.
- *  - contrast: kind(소리 짝 종류) 또는 weak=1(내가 자주 헷갈린 짝)
+ *  - contrast: kind(소리 짝 종류), contrast(대조 그대로, 'onset:ㅂ:ㅍ' 꼴) 또는 weak=1(내가 자주 헷갈린 짝)
  *  - scenario: place
  *  - conditions: condition(phone | room | noise), noise일 때 noise(잡음 종류)
  * 반환: {ready, query}. ready가 false면 고르는 화면을 먼저 보인다.
@@ -70,6 +105,8 @@ export function practiceQuery(mode, params) {
   const get = (k) => (typeof params?.get === 'function' ? params.get(k) : params?.[k]) || null
   if (mode === 'contrast') {
     if (get('weak') === '1') return { ready: true, query: { weak: 1 } }
+    const contrast = get('contrast')
+    if (contrast) return { ready: true, query: { contrast } }
     const kind = get('kind')
     return kind ? { ready: true, query: { kind } } : { ready: false, query: {} }
   }
@@ -85,6 +122,38 @@ export function practiceQuery(mode, params) {
     return { ready: true, query: { condition, noise } }
   }
   return { ready: PRACTICE_KEYS.includes(mode), query: {} }
+}
+
+/**
+ * 화면 질의 → 연습 API 질의(docs/listen-integration-api-2026-10.md 1절). 소리 짝은 contrast(종류는 'kind:<종류>', 자주 헷갈린 짝은 비움),
+ * 듣기 조건은 cond·noise, 장면은 place.
+ */
+export function practiceApiParams(mode, query = {}) {
+  if (mode === 'contrast') {
+    if (query.weak) return {}
+    if (query.contrast) return { contrast: query.contrast }
+    return query.kind ? { contrast: `kind:${query.kind}` } : {}
+  }
+  if (mode === 'conditions') return query.condition ? { cond: query.condition, ...(query.noise ? { noise: query.noise } : {}) } : {}
+  if (mode === 'scenario') return query.place ? { place: query.place } : {}
+  return {}
+}
+
+/**
+ * 소리 짝 연습 문항(같다·다르다 type 'ax' · 낱말 고르기 type 'word'가 섞여 옴) → 과제별 묶음 [{task, items}]. 처음 나온 순서대로 종류를 묶는다.
+ * type이 없으면 문항 모양으로 정한다.
+ */
+export function contrastSegments(items) {
+  const order = []
+  const by = {}
+  for (const it of items || []) {
+    const t = it?.type === 'word' || (it?.type == null && it?.target != null && Array.isArray(it?.options)) ? 'word_id'
+      : it?.type === 'ax' || (it?.first != null && it?.second != null) ? 'ax' : null
+    if (!t) continue
+    if (!by[t]) { by[t] = []; order.push(t) }
+    by[t].push(it)
+  }
+  return order.map((task) => ({ task, items: by[task] }))
 }
 
 /**
@@ -105,14 +174,15 @@ export function practiceTask(mode, res) {
 }
 
 /**
- * 소음 계단 응답을 화면이 쓰는 꼴 {ao: {next_db, ...}, av?} 로 맞춘다. 단계 응답은 이미 이 꼴이고, 연습 응답은 계단 하나
- * ({next_db, ...})만 올 수 있다. 없으면 null.
+ * 소음 계단 응답을 화면이 쓰는 꼴 {조건: {next_db, ...}} 로 맞춘다. 단계 응답은 {ao, av}, 소음 속 듣기 연습은 {practice_ao}이고,
+ * 계단 하나({next_db, ...})만 오면 ao로 둔다. 없으면 null.
  */
 export function normalizeStair(stair) {
   if (!stair || typeof stair !== 'object') return null
-  if (stair.ao || stair.av) return stair
   if (stair.next_db != null) return { ao: stair }
-  return null
+  // {ao, av}(4단계) 또는 {practice_ao}(소음 속 듣기 연습)처럼 조건 이름 → 계단
+  const keys = Object.keys(stair).filter((k) => stair[k] && typeof stair[k] === 'object' && 'next_db' in stair[k])
+  return keys.length ? stair : null
 }
 
 /**
@@ -173,7 +243,7 @@ export function fmtMinutes(m) {
 }
 
 /**
- * 소리 짝의 입모양이 다른가(소리 교실 표시). 서버가 짝이나 종류에 표시를 주면 그것을 쓰고(lip_differs · same_mouth · lip),
+ * 소리 짝의 입모양이 다른가(소리 교실 표시). 서버가 짝이나 종류에 표시를 주면 그것을 쓰고(짝 lip_same, 종류 lip 'same'·'differs', 'mixed'는 모름),
  * 없으면 두 말의 입모양 프레임(/api/viseme)을 비교한다. 전환 프레임(11~13)과 이어지는 같은 입모양은 하나로 본다.
  * 반환: true(다름) | false(같음) | null(모름)
  */
@@ -181,6 +251,7 @@ export function lipDiffers(pair, kind, frames = null) {
   for (const src of [pair, kind]) {
     if (!src) continue
     if (typeof src.lip_differs === 'boolean') return src.lip_differs
+    if (typeof src.lip_same === 'boolean') return !src.lip_same
     if (typeof src.same_mouth === 'boolean') return !src.same_mouth
     if (src.lip === 'differs' || src.lip === 'same') return src.lip === 'differs'
   }
@@ -208,17 +279,18 @@ export function alternate(a, b, times = 2) {
 }
 
 /**
- * 분석 탭 듣기 칸. ov: /api/analysis/overview(백엔드가 listen 칸을 더하면 그것), summary: /api/listen/summary(없을 때 대신).
+ * 분석 탭 듣기 칸. ov: /api/analysis/overview의 listen(최근 검사 역치, 없으면 훈련 역치 · 7일 분 · 소리 구별 정답률, 계약 6절),
+ * summary: /api/listen/summary(overview에 listen 칸이 아예 없는 예전 서버일 때만 대신).
  * 반환: {srt, weekMinutes, axAccuracy, has} (값을 모르면 null). has는 하나라도 기록이 있는가.
  */
 export function listenOverview(ov, summary = null) {
-  const l = ov?.listen || ov?.listening || null
+  const l = ov?.listen || null
   const num = (v) => (v == null || !Number.isFinite(Number(v)) ? null : Number(v))
   let srt = null
   let weekMinutes = null
   let axAccuracy = null
   if (l) {
-    srt = num(l.srt_db ?? l.recent_srt_db ?? l.srt)
+    srt = num(l.test_srt_db ?? l.training_srt_db ?? l.srt_db)
     weekMinutes = num(l.week_minutes ?? l.minutes_week ?? l.minutes)
     axAccuracy = num(l.ax_accuracy ?? l.discrimination_accuracy ?? l.accuracy)
   } else if (summary) {
@@ -231,6 +303,17 @@ export function listenOverview(ov, summary = null) {
     axAccuracy = n ? kinds.reduce((a, k) => a + (k.correct || 0), 0) / n : null
   }
   return { srt, weekMinutes, axAccuracy, has: srt != null || (weekMinutes || 0) > 0 || axAccuracy != null }
+}
+
+/** 과제 이름(블록·전환 화면). 단계 응답의 mode 기준. */
+export const TASK_TITLE = { ling: '소리 확인', ax: '소리 구별', word_id: '낱말 고르기', sentence: '문장 알아듣기', noise: '소음 속 듣기', convo: '대화 듣기' }
+
+/** 받침에 맞는 조사: josa('낱말 고르기', '을', '를') → '낱말 고르기를'. 한글이 아니면 받침 없음으로 본다. */
+export function josa(word, withFinal, withoutFinal) {
+  const s = String(word || '')
+  const code = s.charCodeAt(s.length - 1) - 0xac00
+  const has = code >= 0 && code <= 11171 && code % 28 !== 0
+  return `${s}${has ? withFinal : withoutFinal}`
 }
 
 /** Ling 6소리 이름. */

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   pct, skippedNote, completeActions, practiceQuery, practiceTask, normalizeStair, modeAvailability, blockData, todayTotals, fmtMinutes,
   lipDiffers, alternate, listenOverview, lingNotes, stairPoints, PRACTICE_MODES,
+  practiceApiParams, contrastSegments, practiceActions, choiceLabel, normalizePlaces, josa,
 } from './listenFlow.js'
 
 const params = (o) => new URLSearchParams(o)
@@ -133,4 +134,54 @@ test('소리 확인 안내와 계단 점', () => {
   assert.equal(pts[2].x, 100)
   assert.ok(pts[2].y < pts[1].y)   // 큰 SNR이 위
   assert.ok(pts.every((p) => p.y >= 0 && p.y <= 20))
+})
+
+test('화면 질의 → 연습 API 질의(계약 1절)', () => {
+  assert.deepEqual(practiceApiParams('contrast', { weak: 1 }), {})
+  assert.deepEqual(practiceApiParams('contrast', { kind: 'place' }), { contrast: 'kind:place' })
+  assert.deepEqual(practiceApiParams('contrast', { contrast: 'onset:ㅂ:ㅍ' }), { contrast: 'onset:ㅂ:ㅍ' })
+  assert.deepEqual(practiceQuery('contrast', params({ contrast: 'coda:ㄴ:-' })).query, { contrast: 'coda:ㄴ:-' })
+  assert.deepEqual(practiceApiParams('conditions', { condition: 'noise', noise: 'ssn' }), { cond: 'noise', noise: 'ssn' })
+  assert.deepEqual(practiceApiParams('conditions', { condition: 'room' }), { cond: 'room' })
+  assert.deepEqual(practiceApiParams('scenario', { place: 'clinic' }), { place: 'clinic' })
+  assert.deepEqual(practiceApiParams('dictation', {}), {})
+})
+
+test('소리 짝 문항은 같다·다르다와 낱말 고르기로 묶는다', () => {
+  const items = [{ type: 'ax', first: '바', second: '파' }, { type: 'word', target: '불', options: ['불', '풀'] }, { type: 'ax', first: '바', second: '바' }, { foo: 1 }]
+  const seg = contrastSegments(items)
+  assert.deepEqual(seg.map((x) => [x.task, x.items.length]), [['ax', 2], ['word_id', 1]])
+  assert.deepEqual(contrastSegments([{ target: '말', options: ['말', '발'] }]).map((x) => x.task), ['word_id'])
+  assert.deepEqual(contrastSegments(null), [])
+})
+
+test('연습 계단 이름(practice_ao)과 입모양 lip_same, 분석 칸 검사 역치', () => {
+  const st = { practice_ao: { next_db: 6, n_trials: 3 } }
+  assert.equal(normalizeStair(st), st)
+  assert.equal(lipDiffers({ a: '바', b: '마', lip_same: true }, { lip: 'mixed' }), false)
+  assert.equal(lipDiffers({ lip_same: null }, { lip: 'differs' }), true)
+  assert.equal(lipDiffers({ lip_same: null }, { lip: 'mixed' }), null)
+  assert.equal(listenOverview({ listen: { test_srt_db: 2.5, training_srt_db: 6, week_minutes: 0, ax_accuracy: null } }).srt, 2.5)
+  assert.equal(listenOverview({ listen: { test_srt_db: null, training_srt_db: 6 } }).srt, 6)
+  assert.equal(listenOverview({ listen: null }, null).has, false)
+})
+
+test('연습 끝 버튼·고른 것 이름·장소 목록·조사', () => {
+  const calls = []
+  const a = practiceActions({ mode: 'scenario', reload: () => calls.push('r'), onChoose: () => calls.push('c'), onExit: () => calls.push('x') })
+  assert.equal(a.secondary.label, '다른 장소 고르기')
+  a.primary.onClick(); a.secondary.onClick()
+  const b = practiceActions({ mode: 'dictation', reload: () => {}, onChoose: () => {}, onExit: () => calls.push('x') })
+  assert.equal(b.secondary.label, '연습 탭으로')
+  b.secondary.onClick()
+  assert.deepEqual(calls, ['r', 'c', 'x'])
+  assert.equal(choiceLabel('contrast', { weak: 1 }), '자주 헷갈린 짝')
+  assert.equal(choiceLabel('contrast', { kind: 'place' }, [{ kind: 'place', label: '소리 자리' }]), '소리 자리')
+  assert.equal(choiceLabel('conditions', { condition: 'noise', noise: 'ssn' }), '웅웅 소리')
+  assert.equal(choiceLabel('conditions', { condition: 'phone' }), '전화')
+  assert.deepEqual(normalizePlaces({ places: [{ key: 'clinic', label: '병원·약국', n: 4, places: ['병원'] }, '카페', {}] }),
+    [{ key: 'clinic', label: '병원·약국', n: 4 }, { key: '카페', label: '카페', n: null }])
+  assert.equal(josa('낱말 고르기', '을', '를'), '낱말 고르기를')
+  assert.equal(josa('소리 확인', '을', '를'), '소리 확인을')
+  assert.equal(josa('ABC', '을', '를'), 'ABC를')
 })
