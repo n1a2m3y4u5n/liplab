@@ -106,7 +106,7 @@ do_fetch() {
   [ -n "$POD" ] || die "파드 없음"
   out="$LAB/data/pod_runs/$(date +%Y%m%d)_${POD}/fcd"
   mkdir -p "$out"
-  bash "$P" ssh 'cd /workspace/fcd && tar -czf - work/asr.jsonl work/scored.jsonl work/items.json work/run.env work/spec.json work/extra.json out logs 2>/dev/null' \
+  bash "$P" ssh 'cd /workspace/fcd && tar -czf - $(ls -d work/asr.jsonl work/scored.jsonl work/items.json work/run.env work/spec.json work/extra.json out logs 2>/dev/null)' \
     | tar -xzf - -C "$out" && echo "FCD_FETCH_OK $out" || echo "FCD_FETCH_WARN"
   ls -la "$out" "$out/work" "$out/out" 2>/dev/null | tail -20
 }
