@@ -689,3 +689,14 @@ def test_today_plan():
     assert [b["mode"] for b in p] == ["word_id", "noise", "convo"]
     assert 12 <= sum(b["minutes"] for b in p) <= 17
     assert L.today_plan({0: "unlocked"}, ling_done_today=True) == []
+
+
+def test_contrast_catalog_carries_avoid_voices():
+    # 소리 교실 짝·예시 낱말에도 피할 목소리 목록이 붙는다(없으면 빈 목록)
+    pool = L.word_pool()
+    kinds = L.contrast_catalog(pool)
+    items = [x for k in kinds for x in k["pairs"] + k["words"]]
+    assert items and all(isinstance(x.get("avoid_voices"), list) for x in items)
+    for k in kinds:
+        for p in k["pairs"]:
+            assert p["avoid_voices"] == L.avoid_voices_ax(p["a"], p["b"])

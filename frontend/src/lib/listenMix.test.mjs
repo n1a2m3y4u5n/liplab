@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mixLevels, clampGainDb, pickSource, voiceRoles, voiceFor, axVoices, fitFramesToAudio, snrLabel, contrastText,
-  readSettings, writeSettings, REF_DBFS, gainFor, rmsOf, activeLevel, createLru } from './listenMix.js'
+  readSettings, writeSettings, REF_DBFS, gainFor, rmsOf, activeLevel, createLru, usableVoices } from './listenMix.js'
 
 const db = (x) => 20 * Math.log10(x)
 
@@ -197,4 +197,10 @@ test('개수 상한 캐시는 가장 오래 안 쓴 것부터 버린다', () => 
   assert.ok(c.has('a') && c.has('c') && c.has('d'))
   c.delete('a')
   assert.equal(c.size, 2)
+})
+
+test('usableVoices: 피할 목소리를 빼고, 모두 걸리면 전부', () => {
+  assert.deepEqual(usableVoices(['m1', 'f1', 'm2', 'f2'], ['f1']), ['m1', 'm2', 'f2'])
+  assert.deepEqual(usableVoices(['m1', 'f1'], ['m1', 'f1']), ['m1', 'f1'])
+  assert.deepEqual(usableVoices(['m1', 'f1'], null), ['m1', 'f1'])
 })
