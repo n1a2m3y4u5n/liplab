@@ -231,6 +231,116 @@ export async function roomClip(clip, rt60 = 0.5) {
   } catch { return null }
 }
 
+// ── 인공와우 모의(청인 예비 파일럿, docs/listen-advance-plan-2026-10.md V2) ─────────────────────────────
+// 8채널 잡음 보코더(Shannon 1995 계열). 대역 200 ~ 7000 Hz를 Greenwood 함수로 나눠 각 대역의 포락선(전파 정류 → 160 Hz 저역 통과)으로
+// 같은 대역의 잡음을 변조해 더한다. 소음 속 문항은 말과 소음을 먼저 섞은 뒤 보코더를 건다(어음처리기는 섞인 소리를 받는다).
+// 청인 참여자가 '들리기 어려운 말소리'를 학습하는 조건을 만들 뿐, 실제 인공와우 청취를 재현하지는 않는다.
+const VOC = { channels: 8, lo: 200, hi: 7000, envCut: 160 }
+let simMode = null
+/** 이 기기의 모의 청취 모드('ci' 또는 null). 소리 듣기 화면이 설정에서 정한다. playClip의 opts.sim이 없으면 이 값을 쓴다. */
+export function setSimMode(mode) {
+  simMode = mode === 'ci' ? 'ci' : null
+  globalThis.__liplabListenSim = simMode   // api.js가 기록에 붙인다(순환 import를 피하려고 전역으로 넘김)
+}
+export function getSimMode() { return simMode }
+
+export function greenwoodEdges(n = VOC.channels, lo = VOC.lo, hi = VOC.hi) {
+  const A = 165.4, a = 2.1, k = 0.88
+  const pos = (f) => Math.log10(f / A + k) / a
+  const frq = (x) => A * (10 ** (a * x) - k)
+  const x0 = pos(lo)
+  const x1 = pos(hi)
+  return Array.from({ length: n + 1 }, (_, i) => frq(x0 + ((x1 - x0) * i) / n))
+}
+
+async function vocodeBuffer(buffer) {
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext
+  const sr = buffer.sampleRate
+  const oc = new OAC(1, buffer.length, sr)
+  const edges = greenwoodEdges()
+  const src = oc.createBufferSource()
+  src.buffer = buffer
+  const nb = oc.createBuffer(1, buffer.length, sr)
+  const nd = nb.getChannelData(0)
+  for (let i = 0; i < nd.length; i += 1) nd[i] = Math.random() * 2 - 1
+  const noise = oc.createBufferSource()
+  noise.buffer = nb
+  const rect = oc.createWaveShaper()
+  const curve = new Float32Array(1025)
+  for (let i = 0; i < curve.length; i += 1) curve[i] = Math.abs((i / 512) - 1)
+  rect.curve = curve
+  const band = (input, f1, f2) => {
+    const fc = Math.sqrt(f1 * f2)
+    const q = fc / (f2 - f1)
+    let node = input
+    for (let j = 0; j < 2; j += 1) {   // 2단(4차) 대역 통과
+      const bp = oc.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fc; bp.Q.value = q
+      node.connect(bp); node = bp
+    }
+    return node
+  }
+  for (let c = 0; c < edges.length - 1; c += 1) {
+    const sb = band(src, edges[c], edges[c + 1])
+    const r = oc.createWaveShaper(); r.curve = curve
+    sb.connect(r)
+    let env = r
+    for (let j = 0; j < 2; j += 1) {
+      const lp = oc.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = VOC.envCut; lp.Q.value = 0.707
+      env.connect(lp); env = lp
+    }
+    const carrier = band(noise, edges[c], edges[c + 1])
+    const vca = oc.createGain()
+    vca.gain.value = 0
+    env.connect(vca.gain)     // 포락선이 잡음 대역의 크기를 정한다
+    carrier.connect(vca)
+    const post = band(vca, edges[c], edges[c + 1])
+    post.connect(oc.destination)
+  }
+  src.start(0)
+  noise.start(0)
+  return oc.startRendering()
+}
+
+const vocCache = new WeakMap()
+
+/** 보코더 판(소음 없음). */
+export async function vocodedClip(clip) {
+  if (!clip?.buffer) return null
+  if (vocCache.has(clip)) return vocCache.get(clip)
+  try {
+    const out = await vocodeBuffer(clip.buffer)
+    const x = out.getChannelData(0)
+    const vc = { buffer: out, rms: activeLevel(x, out.sampleRate) || rmsOf(x), url: null, duration_ms: clip.duration_ms }
+    vocCache.set(clip, vc)
+    return vc
+  } catch { return null }
+}
+
+/** 말과 소음을 SNR로 먼저 섞은 뒤 보코더를 건 판. 앞 leadMs·뒤 300 ms는 소음만. 크기는 섞인 소리 전체 RMS. */
+export async function vocodedMix(clip, noise, snrDb, leadMs = 500) {
+  if (!clip?.buffer || !noise?.buffer) return null
+  try {
+    const sr = clip.buffer.sampleRate
+    const lead = Math.round((leadMs / 1000) * sr)
+    const tail = Math.round(0.3 * sr)
+    const len = lead + clip.buffer.length + tail
+    const mix = new Float32Array(len)
+    const sp = clip.buffer.getChannelData(0)
+    const nz = noise.buffer.getChannelData(0)
+    const lv = mixLevels(0, snrDb)
+    const gs = gainFor(lv.speech, clip.rms)
+    const gn = gainFor(lv.noise, noise.rms)
+    const off = Math.floor(Math.random() * Math.max(1, nz.length - len))
+    for (let i = 0; i < len; i += 1) mix[i] = gn * nz[(off + i) % nz.length]
+    for (let i = 0; i < sp.length; i += 1) mix[lead + i] += gs * sp[i]
+    const buf = audioContext().createBuffer(1, len, sr)
+    buf.copyToChannel(mix, 0)
+    const out = await vocodeBuffer(buf)
+    const x = out.getChannelData(0)
+    return { buffer: out, rms: rmsOf(x), url: null, duration_ms: Math.round(out.duration * 1000) }
+  } catch { return null }
+}
+
 let current = null
 /** 지금 재생 중인 소리를 멈춘다. */
 export function stopAll() {
@@ -247,8 +357,8 @@ export async function playClip(clip, opts = {}) {
   if (!clip) return false
   stopAll()
   const c = await resume()
-  const { gainDb = -10, snrDb = null, noise = null, rate = 1, leadMs = noise && snrDb != null ? 500 : 0 } = opts
-  let { phone = false } = opts
+  let { snrDb = null, noise = null, leadMs = noise && snrDb != null ? 500 : 0, phone = false } = opts
+  const { gainDb = -10, rate = 1 } = opts
   // 전화 소리는 미리 만든 판을 쓴다(천천히 재생은 <audio>라 실시간 필터로 대신)
   if (phone && rate === 1) {
     const pc = await phoneClip(clip)
@@ -258,6 +368,18 @@ export async function playClip(clip, opts = {}) {
   if (opts.room && rate === 1) {
     const rc = await roomClip(clip, opts.room)
     if (rc) clip = rc
+  }
+  // 인공와우 모의: 보코더 판으로 바꾸고(소음은 먼저 섞음), 재생 속도는 버퍼 재생 속도로 대신한다
+  let vocoded = false
+  if ((opts.sim ?? simMode) === 'ci') {
+    const vc = noise && snrDb != null ? await vocodedMix(clip, noise, snrDb, leadMs) : await vocodedClip(clip)
+    if (vc) {
+      clip = vc
+      vocoded = true
+      noise = null
+      snrDb = null
+      leadMs = 0
+    }
   }
   const lv = mixLevels(gainDb, noise && snrDb != null ? snrDb : null)
   const out = c.createGain()
@@ -288,7 +410,7 @@ export async function playClip(clip, opts = {}) {
   let el = null
   let src = null
   const startAt = c.currentTime + leadMs / 1000
-  if (rate !== 1 && clip.url) {
+  if (rate !== 1 && clip.url && !vocoded) {
     el = new Audio(clip.url)
     if (isMuted()) { el.muted = true; el.volume = 0 }
     el.preservesPitch = true
@@ -301,6 +423,7 @@ export async function playClip(clip, opts = {}) {
   } else {
     src = c.createBufferSource()
     src.buffer = clip.buffer
+    if (rate !== 1) src.playbackRate.value = rate
     src.connect(sg)
     src.onended = () => done(true)
     src.start(startAt)

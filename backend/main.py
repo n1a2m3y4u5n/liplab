@@ -5909,6 +5909,7 @@ class ListenAnswer(BaseModel):
     output_latency_ms: Optional[int] = Field(None, ge=0, le=5000)
     av_offset_ms: Optional[int] = Field(None, ge=0, le=1000)
     pick: Optional[str] = Field(None, max_length=12)       # 출제 방식(targeted|uniform), 표적 출제 비교용
+    sim: Optional[str] = Field(None, max_length=12)        # 모의 청취(ci)
     practice: bool = False                                # 자음 단서를 본 뒤 다시 쓴 답: 점수만 주고 세지 않는다
 
 
@@ -5992,6 +5993,7 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
                          plays=req.plays, repairs=req.repairs, rt_ms=req.rt_ms, route=req.route,
                          output_latency_ms=req.output_latency_ms, av_offset_ms=req.av_offset_ms,
                          pick_mode=req.pick if req.pick in _listencur.PICK_MODES else None,
+                         sim_mode="ci" if req.sim == "ci" else None,
                          session=None if counted else _LISTEN_PRACTICE))
     res["counted"] = counted
     if counted:
@@ -6030,6 +6032,7 @@ class ListenLingReq(BaseModel):
     results: dict                     # {m|u|a|i|sh|s: 들렸는가}
     false_alarms: int = 0             # 소리 없는 시행에서 '들렸어요'를 누른 수
     route: Optional[str] = Field(None, max_length=20)
+    sim: Optional[str] = Field(None, max_length=12)
 
 
 @app.post("/api/listen/ling")
@@ -6048,7 +6051,7 @@ async def listen_ling(req: ListenLingReq, current_user=Depends(get_current_user)
     session = f"ling:{uuid.uuid4().hex[:12]}"
     for k, heard in results.items():
         db.add(ListenAttempt(user_id=current_user.id, stage=0, mode="ling", item_key=f"ling:{k}", target=k, correct=heard,
-                             session=session, route=req.route))
+                             session=session, route=req.route, sim_mode="ci" if req.sim == "ci" else None))
     fa = max(0, int(req.false_alarms or 0))
     db.add(ListenAttempt(user_id=current_user.id, stage=0, mode="ling", item_key="ling:silent", target="silent",
                          correct=fa == 0, score=float(fa), session=session, route=req.route))
@@ -6087,6 +6090,7 @@ class ListenTestAnswer(BaseModel):
     voice: Optional[str] = Field(None, max_length=40)
     plays: Optional[int] = None
     route: Optional[str] = Field(None, max_length=20)
+    sim: Optional[str] = Field(None, max_length=12)
 
 
 @app.post("/api/listen/test/answer")
@@ -6112,7 +6116,7 @@ async def listen_test_answer(req: ListenTestAnswer, current_user=Depends(get_cur
     ok = ws["proportion"] >= _listencur.TEST_STAIR["criterion"]
     db.add(ListenAttempt(user_id=current_user.id, stage=4, mode="test", item_key=key, target=target, answer=req.answer,
                          correct=ok, score=ws["proportion"], snr_db=snr, condition="ao", voice=req.voice, plays=req.plays,
-                         route=req.route, session=req.session))
+                         route=req.route, session=req.session, sim_mode="ci" if req.sim == "ci" else None))
     await db.commit()
     trials.append((snr, ok))
     srt = _listencur.test_srt(trials)

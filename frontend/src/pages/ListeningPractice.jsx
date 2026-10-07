@@ -4,7 +4,7 @@ import { listenAPI, learningAPI } from '../api'
 import LoadingScreen from '../components/LoadingScreen'
 import ConsonantFeedback from '../components/ConsonantFeedback'
 import MouthAvatar from '../components/MouthAvatar'
-import { loadClip, loadVoices, loadNoise, playClip, playPair, lingClip, silence, stopAll, ensureAudio, outputLatencyMs, avOffsetMs } from '../lib/listenAudio'
+import { loadClip, loadVoices, loadNoise, playClip, playPair, lingClip, silence, stopAll, ensureAudio, outputLatencyMs, avOffsetMs, setSimMode } from '../lib/listenAudio'
 import { readSettings, writeSettings, clampGainDb, voiceRoles, voiceFor, fitFramesToAudio, snrLabel, contrastText,
   DEVICES, ROUTES, GAIN_MIN_DB, GAIN_MAX_DB } from '../lib/listenMix'
 
@@ -106,8 +106,15 @@ function Done({ title, lines = [], onMore, onExit, moreLabel = '계속하기' })
 
 const CALIBRATION_TEXT = '안녕하세요. 이 정도 크기가 편안한가요?'
 
+// 인공와우 모의(청인 예비 파일럿): 연구진이 주소에 ?sim=ci를 붙여 열었거나 이미 켠 기기에서만 고를 수 있다. 학습자 화면에는 보이지 않는다
+function simAllowed(initial) {
+  try { return initial?.sim === 'ci' || new URLSearchParams(window.location.search).get('sim') === 'ci' } catch { return false }
+}
+
 function ListenSetup({ initial, onSave, onCancel }) {
   const [gainDb, setGainDb] = useState(initial?.gainDb ?? -15)
+  const [sim, setSim] = useState(initial?.sim === 'ci' || (simAllowed(initial) && !initial))
+  const showSim = simAllowed(initial)
   const [device, setDevice] = useState(initial?.device || 'unknown')
   const [route, setRoute] = useState(initial?.route || 'speaker')
   const [busy, setBusy] = useState(false)
@@ -115,7 +122,7 @@ function ListenSetup({ initial, onSave, onCancel }) {
   const test = async () => {
     setBusy(true)
     const c = clip || await lingClip('a')
-    await playClip(c, { gainDb })
+    await playClip(c, { gainDb, sim: sim ? 'ci' : null })
     setBusy(false)
   }
   useEffect(() => () => stopAll(), [])
@@ -157,10 +164,18 @@ function ListenSetup({ initial, onSave, onCancel }) {
           ))}
         </div>
       </fieldset>
+      {showSim && (
+        <label className="flex items-start gap-3 rounded-13 border-2 border-warn/40 bg-warn-tint px-4 py-3">
+          <input type="checkbox" checked={sim} onChange={(e) => setSim(e.target.checked)} className="mt-1" />
+          <span className="text-[13px] leading-[1.6] text-ink">
+            <b>인공와우 모의(연구용)</b> · 청인 참여자가 인공와우를 흉내 낸 소리(8채널 보코더)로 들어요. 예비 파일럿에서만 켜요.
+          </span>
+        </label>
+      )}
       <p className="text-[12px] leading-[1.6] text-ink-faint">{NOTICE} 기기 정보는 이 기기에만 저장돼요.</p>
       <div className="flex gap-2">
         {onCancel && <button type="button" onClick={onCancel} className="btn-secondary flex-1 py-3 text-[15px]">취소</button>}
-        <button type="button" onClick={() => { stopAll(); onSave({ gainDb, device, route }) }} className="btn-primary flex-1 py-3 text-[15px]">이 크기로 시작</button>
+        <button type="button" onClick={() => { stopAll(); onSave({ gainDb, device, route, ...(sim && showSim ? { sim: 'ci' } : {}) }) }} className="btn-primary flex-1 py-3 text-[15px]">이 크기로 시작</button>
       </div>
     </Card>
   )
@@ -725,6 +740,7 @@ export default function ListeningPractice() {
   const voices = useMemo(() => voiceRoles(voiceList || []), [voiceList])
 
   useEffect(() => { loadVoices().then(setVoiceList) }, [])
+  useEffect(() => { setSimMode(settings?.sim) }, [settings?.sim])
   useEffect(() => {
     let on = true
     setData(null)

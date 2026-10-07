@@ -195,7 +195,8 @@ export function readSettings(storage) {
     if (!raw) return null
     const s = JSON.parse(raw)
     if (!s || typeof s !== 'object') return null
-    return { gainDb: clampGainDb(s.gainDb), device: s.device || 'unknown', route: s.route || 'speaker', at: s.at || null }
+    return { gainDb: clampGainDb(s.gainDb), device: s.device || 'unknown', route: s.route || 'speaker', at: s.at || null,
+      ...(s.sim === 'ci' ? { sim: 'ci' } : {}) }
   } catch { return null }
 }
 
