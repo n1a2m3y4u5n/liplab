@@ -740,6 +740,10 @@ CONVO_BY_ID = {c["id"]: c for c in CONVO_ITEMS}
 # 않고 여러 잔향 시간을 돌려 가며 낸다(여러 방에서 훈련할 때만 새 방으로 옮겨 갔다, Vlahou 2019). 화면이 ConvolverNode로 입힌다.
 CONVO_CONDITIONS = ("quiet", "noise", "phone", "room")
 ROOM_RT60 = (0.3, 0.5, 0.8)
+# 잡음 종류(서버 음성 C17의 noise/). 4단계 계단·검사는 babble 하나로 고정하고(계단이 잡음 종류에 따라 흔들리지 않게), 5단계 소음 조건은
+# 문항마다 종류를 돌린다. talker2(두 사람)는 훈련에 쓰지 않고 일반화 확인용으로 남긴다(docs/listen-advance-plan-2026-10.md S1).
+TRAIN_NOISES = ("talker1_f", "talker1_m", "ssn", "babble")
+HELDOUT_NOISE = "talker2"
 
 
 def convo_items(seed: str, n: int = 8, recent: Sequence[str] = ()) -> List[Dict]:

@@ -123,35 +123,27 @@ export function loadVoices() {
   return voicesP
 }
 
-let noiseP = null
-/** 잡담 잡음 {buffer, rms} 또는 null. */
-export function loadNoise() {
-  if (!noiseP) {
-    noiseP = (async () => {
-      const order = canPlay('audio/ogg; codecs=opus') ? ['babble.ogg', 'babble.m4a'] : ['babble.m4a', 'babble.ogg']
-      for (const name of order) {
+const noiseP = new Map()
+/** 잡음 {buffer, rms} 또는 null. name: babble(8명 이상 잡담, 기본)·talker1_f·talker1_m(경쟁 화자 1명)·talker2·ssn(말소리 모양 정상 잡음). */
+export function loadNoise(name = 'babble') {
+  if (!noiseP.has(name)) {
+    const p = (async () => {
+      const order = canPlay('audio/ogg; codecs=opus') ? ['ogg', 'm4a'] : ['m4a', 'ogg']
+      for (const ext of order) {
         try {
-          const res = await fetch(`/api/sound/noise/${name}`)
+          const res = await fetch(`/api/sound/noise/${name}.${ext}`)
           if (!res.ok) continue
           const buffer = await audioContext().decodeAudioData(await res.arrayBuffer())
           const rms = rmsOf(buffer.getChannelData(0))   // 잡음은 쉬지 않고 이어지므로 전체 RMS
-          if (rms > 0) return { buffer, rms }
+          if (rms > 0) return { buffer, rms, name }
         } catch { /* 다음 형식 */ }
       }
       return null
     })()
-    noiseP.then((v) => { if (!v) noiseP = null })
+    noiseP.set(name, p)
+    p.then((v) => { if (!v) noiseP.delete(name) })
   }
-  return noiseP
-}
-
-function phoneFilter(c, input) {
-  const hp = c.createBiquadFilter()
-  hp.type = 'highpass'; hp.frequency.value = 300; hp.Q.value = 0.7
-  const lp = c.createBiquadFilter()
-  lp.type = 'lowpass'; lp.frequency.value = 3400; lp.Q.value = 0.7
-  input.connect(hp).connect(lp)
-  return lp
+  return noiseP.get(name)
 }
 
 // 버터워스 8차(2차 단 4개) 단별 Q

@@ -39,14 +39,15 @@ function useClip(text, voice) {
   return st
 }
 
-function useNoise(enabled) {
+function useNoise(enabled, name = 'babble') {
   const [st, setSt] = useState({ noise: null, state: enabled ? 'loading' : 'off' })
   useEffect(() => {
     let on = true
     if (!enabled) { setSt({ noise: null, state: 'off' }); return undefined }
-    loadNoise().then((n) => { if (on) setSt({ noise: n, state: n ? 'ready' : 'missing' }) })
+    setSt({ noise: null, state: 'loading' })
+    loadNoise(name).then((n) => { if (on) setSt({ noise: n, state: n ? 'ready' : 'missing' }) })
     return () => { on = false }
-  }, [enabled])
+  }, [enabled, name])
   return st
 }
 
@@ -614,6 +615,7 @@ function NoiseStage({ data, settings, voices, onProgress, onExit, reload }) {
 
 // ── 5단계: 대화 듣기 ─────────────────────────────────────────
 
+const NOISE_LABEL = { babble: '여러 사람 소리', talker1_f: '여자 한 명 말소리', talker1_m: '남자 한 명 말소리', talker2: '두 사람 말소리', ssn: '웅웅 소리' }
 const COND_LABEL = { quiet: '조용함', noise: '소음', phone: '전화', room: '울리는 방' }
 
 function ConvoTask({ data, settings, voices, onProgress, onExit, reload }) {
@@ -630,7 +632,10 @@ function ConvoTask({ data, settings, voices, onProgress, onExit, reload }) {
   const voice = voiceFor(voices.train, k, 0, data.voice_mode, data.voice_block)
   const line = useClip(it?.line, voice)
   const para = useClip(it?.paraphrase, voice)
-  const nz = useNoise(cond === 'noise')
+  // 소음 조건은 문항마다 잡음 종류를 돌린다(경쟁 화자 1명이 인공와우 사용자에게 가장 어렵고 화자 수 효과는 단조롭지 않아 한 축으로
+  // 쓰지 않는다, Chen 2020). talker2는 일반화 확인용으로 훈련에 쓰지 않는다
+  const noiseName = (data.noise_types || ['babble'])[k % (data.noise_types?.length || 1)]
+  const nz = useNoise(cond === 'noise', noiseName)
   useEffect(() => { onProgress(k, items.length) }, [k, items.length, onProgress])
   useEffect(() => { setRes(null); setRepairs([]); setPlays(0); t0.current = Date.now() }, [k])
   if (!it) return <Done title="이번 대화를 마쳤어요" lines={[`${stats.n}문항 중 ${stats.c}문항 맞음`]} onMore={reload} onExit={onExit} />
@@ -666,7 +671,7 @@ function ConvoTask({ data, settings, voices, onProgress, onExit, reload }) {
         ))}
       </div>
       <Card className="flex flex-col gap-4">
-        <p className="text-[13px] font-bold text-track">{it.place}</p>
+        <p className="text-[13px] font-bold text-track">{it.place}{cond === 'noise' ? ` · ${NOISE_LABEL[noiseName] || '소음'}` : ''}</p>
         <PlayButton onClick={() => play(line.clip)} busy={busy} disabled={!ready} label={plays ? '처음 말 다시 듣기' : '말 듣기'} plays={plays} />
         {plays > 0 && !res && (
           <div className="grid grid-cols-3 gap-2">
