@@ -15,6 +15,10 @@ import useLessonTalker from '../hooks/useLessonTalker'
 import useMasteryProbes from '../hooks/useMasteryProbes'
 import MasteryProbeBlock from '../components/MasteryProbeBlock'
 import { trialMeta } from '../lib/measurement'
+import useSoundCondition from '../hooks/useSoundCondition'
+import useSoundReplay from '../hooks/useSoundReplay'
+import SoundReplayBar from '../components/SoundReplayBar'
+import { soundAPI } from '../api'
 
 /**
  * 문맥 추론(Closure) — 독화 레슨 공통 템플릿(핸드오프 §4-03, WordStage와 같은 틀).
@@ -73,6 +77,7 @@ function ClosureQuiz({ items }) {
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [hint, setHint] = useState(false)
+  const sound = useSoundCondition()   // 소리 조건(C17): 답한 뒤에만 빈칸을 채운 문장을 소리와 함께 다시 보기
   const [tally, setTally] = useState({ n: 0, correct: 0 })
   const [xpEarned, setXpEarned] = useState(0)
   const [done, setDone] = useState(false)
@@ -84,6 +89,8 @@ function ClosureQuiz({ items }) {
   const full = item.display.replace('___', item.answer)
   // 문항 북마크 — 빈칸을 채운 문장을 저장해 '저장한 문장'에서 입모양을 다시 본다
   const [saved, toggleSaved] = useBookmark(full, { situation: '문맥 추론' })
+  const replay = useSoundReplay({ texts: [full], answered: !!result, enabled: sound.enabled,
+    onPlayed: () => soundAPI.logReplay('trial', item.answer, 'closure').catch(() => {}) })
 
   // 반응 시간 기준(파일럿 로그 P0): 입모양을 받아 재생을 시작한 때
   const onsetRef = useRef(null)
@@ -103,7 +110,7 @@ function ClosureQuiz({ items }) {
     let confusions = []
     try {
       const r = await curriculumAPI.submitClosure(item.id, selected, choices,
-        trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default', hintUsed: hint }))
+        trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default', hintUsed: hint, soundCondition: sound.enabled }))
       correct = !!r.correct
       confusions = r.confusions || []
       setXpEarned((x) => x + (r.xp_gained || 0))
@@ -177,7 +184,7 @@ function ClosureQuiz({ items }) {
 
           {/* 입모양 카드 — 문장 전체를 말한다. 보기는 입모양이 같아 문맥으로 골라야 한다 */}
           <div className={LESSON_AVATAR_CLOSURE}>
-            <MouthAvatar frames={shownFrames} height={null} className="h-full" talker={lesson.talker} talkerSeed={lesson.seed} />
+            <MouthAvatar frames={shownFrames} height={null} className="h-full" talker={lesson.talker} talkerSeed={lesson.seed} override={replay.frame} />
           </div>
 
           {/* 빈칸 문장 + 힌트 */}
@@ -203,6 +210,7 @@ function ClosureQuiz({ items }) {
             ))}
           </div>
 
+          {result && <SoundReplayBar sound={sound} replay={replay} />}
           <AnimatePresence>
             {result && !result.correct && result.confusions?.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}

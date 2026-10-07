@@ -167,6 +167,9 @@ frontend/src/
 | POST | `/api/score` | 임의 문장 채점(4단계 대화 이해도) |
 | GET/POST | `/api/review/*` | 간격 반복 복습(SRS) |
 | POST | `/api/conversation` | 4단계 대화 턴 생성 |
+| GET | `/api/sound?text=&voice=` | 미리 합성한 소리의 주소·길이·음절 시각(소리 조건 C17·듣기 트랙). 없으면 404 `{available:false}` |
+| GET | `/api/sound/voices`, `/api/sound/audio/{id}.{ogg,m4a}`, `/api/sound/noise/babble.{ogg,m4a}` | 목소리 목록, 소리 파일(immutable), 잡담 잡음 |
+| POST | `/api/sound/replay` | 답한 뒤 '소리와 함께 다시 보기'를 틀었다는 시행 표시(`sound_replay`) |
 
 ---
 
@@ -223,5 +226,7 @@ frontend/src/
 - **내 문장 연습(Custom phrase)** — 실생활 문구 입력 → 즉시 드릴. 입력 문장의 입모양을 보는 것까지는 있다(`/pronounce`
   '내 문장 발음 보기', `pages/FreeSpeak.jsx`). 그 문장으로 읽기 문제를 내는 드릴은 없다.
 - **실제 화자 영상 라이브러리** — 음소별 실제 입 영상 토글(아바타 ↔ 실제).
-- **TTS 오디오 동기화** — 잔존 청력 대상 멀티모달(입+소리+자막).
+- ~~TTS 오디오 동기화~~: 구현됨(10/7, C17). 독화 레슨에서 답한 뒤에만 '소리와 함께 다시 보기'(소리 → 소리 없이 한 번 더).
+  미리 합성한 서버 음성(`backend/data/sound/`)과 D-GOP 정렬기로 얻은 음절 시각에 아바타를 맞춘다. 기본 끔, 보청기·인공와우 사용자에게만 권함
+  (`docs/sound-condition.md`, `hooks/useSoundReplay.js`, `lib/soundSync.js`, `backend/sound_clips.py`).
 - **일일 챌린지/배지/스트릭 강화**, **PWA 오프라인 모드**(설치와 앱 셸 오프라인은 `public/sw.js`에 있고, API·학습 데이터는 캐시하지 않는다).

@@ -86,6 +86,10 @@ class Progress(Base):
     talker = Column(String(16), nullable=True)
     hint_level = Column(Integer, nullable=True)
     options = Column(JSON(none_as_null=True), nullable=True)
+    # 소리 조건(C17, docs/sound-condition.md): 답할 때 소리 조건이 켜져 있었는지, 답한 뒤 '소리와 함께 다시 보기'를 틀었는지.
+    # 답 자체는 늘 소리 없이 본 것이다. 소리 없는 문항 향상의 비열등 분석(사용자 대 미사용자)에 쓴다. 예전 기록은 NULL
+    sound_condition = Column(Boolean, nullable=True)
+    sound_replay = Column(Boolean, nullable=True)
 
     user = relationship("User", back_populates="progress_records")
 
@@ -382,6 +386,9 @@ class TrialAttempt(Base):
     talker = Column(String(16), nullable=True)
     hint_used = Column(Boolean, nullable=True)
     probe_kind = Column(String(16), nullable=True)
+    # 소리 조건(C17): 답할 때 켜져 있었는지, 답한 뒤 소리와 함께 다시 봤는지(Progress와 같은 뜻)
+    sound_condition = Column(Boolean, nullable=True)
+    sound_replay = Column(Boolean, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -734,6 +741,11 @@ _ADD_COLUMNS = (
     ("progress", "talker", "VARCHAR(16)"),
     ("progress", "hint_level", "INTEGER"),
     ("progress", "options", "JSON"),
+    # 소리 조건(C17): 켜져 있었는지, 답한 뒤 소리와 함께 다시 봤는지
+    ("trial_attempts", "sound_condition", "BOOLEAN"),
+    ("trial_attempts", "sound_replay", "BOOLEAN"),
+    ("progress", "sound_condition", "BOOLEAN"),
+    ("progress", "sound_replay", "BOOLEAN"),
     # 레슨별 기기·렌더링 요약(V20)
     ("lesson_efforts", "render_log", "JSON"),
     # P3 검사 참여 순번과 폼 순서(pilot_battery.assign_order)

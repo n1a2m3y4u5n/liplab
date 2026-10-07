@@ -10,6 +10,7 @@ import { mergeBadges } from '../lib/badges'
 import { dueCounts } from '../lib/reviewDue'
 import LearnerInfoForm from '../components/LearnerInfoForm'
 import useLearnerInfo from '../hooks/useLearnerInfo'
+import useSoundCondition from '../hooks/useSoundCondition'
 import { hasAnswers } from '../lib/learnerProfile'
 
 /**
@@ -70,6 +71,7 @@ export default function ProfilePage() {
   const [modal, setModal] = useState(null)     // 'account' | 'reset' | 'pilot' | 'learner'
   // 학습자 정보(계획 2-6) — 이 기기에만 계정별로 저장. 여기서 바꾸거나 지운다(민감정보라 서버에 두지 않는다)
   const learnerInfo = useLearnerInfo()
+  const sound = useSoundCondition()   // 소리 조건(C17): 기본 끔, 이 기기에만 저장
   const [guideOpen, setGuideOpen] = useState(false)  // 사용법 가이드 모달
   // 가이드 닫기는 한 번만 만든다. 렌더마다 새 함수를 넘기면 가이드가 보던 탭을 첫 탭으로 되돌렸다.
   const closeGuide = useCallback(() => setGuideOpen(false), [])
@@ -234,6 +236,8 @@ export default function ProfilePage() {
         <MenuRow title="계정 설정" sub="이름 · 이메일 · 비밀번호 · 로그아웃" onClick={openAccount} />
         <MenuRow title="나에게 맞춘 안내" sub={hasAnswers(learnerInfo.answers) ? '답한 내용으로 맞춰 두었어요 · 이 기기에만 저장' : '선택 질문 3개 · 이 기기에만 저장'}
           onClick={() => setModal('learner')} />
+        <MenuRow title="소리와 함께 다시 보기" onClick={() => setModal('sound')}
+          sub={sound.enabled ? '켜짐 · 답한 뒤 소리와 함께 한 번 더' : sound.recommended ? '꺼짐 · 보청기·인공와우를 쓰신다면 권해요' : '꺼짐 · 답한 뒤 소리와 함께 한 번 더'} />
         {pilot?.enabled && (
           <MenuRow title="파일럿 참여" sub={pilot.joined ? '참여 중이에요' : '받은 참여 코드를 입력해요'} onClick={() => { setPilotMsg(''); setModal('pilot') }} />
         )}
@@ -259,6 +263,16 @@ export default function ProfilePage() {
           </>
         )}
         {pilotMsg && <p role="status" className="text-center text-[13px] font-bold text-ink-muted">{pilotMsg}</p>}
+      </Modal>
+
+      {/* 소리와 함께 다시 보기(C17, docs/sound-condition.md) — 독화 레슨에서 답한 뒤에만 소리를 붙여 다시 보여 준다 */}
+      <Modal open={modal === 'sound'} onClose={() => setModal(null)} title="소리와 함께 다시 보기" gap="gap-[14px]" maxW="max-w-[480px]">
+        <p className="text-[14px] leading-[1.6] text-ink">입모양 레슨에서 답을 확인한 뒤 '소리와 함께 다시 보기'를 누르면, 아바타가 소리에 맞춰 한 번 말하고 소리 없이 한 번 더 말해요.</p>
+        <p className="text-[13px] leading-[1.6] text-ink-muted">답은 늘 소리 없이 해요. 남은 청력으로 소리와 입모양을 함께 익히고 싶은 분(보청기·인공와우 사용자)께 권해요. 소리는 미리 만든 합성 음성이에요. 설정은 이 기기에만 저장돼요.</p>
+        <button type="button" onClick={() => { sound.setEnabled(!sound.enabled); setModal(null) }}
+          className={`${sound.enabled ? 'btn-secondary' : 'btn-primary'} w-full py-3 text-[15px]`}>
+          {sound.enabled ? '끄기' : '켜기'}
+        </button>
       </Modal>
 
       {/* 나에게 맞춘 안내(계획 2-6) — 온보딩과 같은 선택 질문. 답은 이 기기에만 둔다 */}

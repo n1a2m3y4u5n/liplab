@@ -365,6 +365,25 @@ export const avatarAPI = {
   },
 }
 
+// 소리 조건(C17)·듣기 트랙 소리. lookup은 미리 합성한 서버 음성의 주소·길이·음절 시각을 준다. 없는 글·목소리면 서버가 404
+// {available:false}로 답하고, 여기서는 null을 돌려준다(화면은 '소리 준비 중'을 보이고 레슨을 잇는다).
+// voice를 생략하면 기본 목소리(소리 조건용). 목소리 목록은 voices().
+export const soundAPI = {
+  lookup: async (text, voice) => {
+    try {
+      return (await api.get('/sound', { params: { text, ...(voice ? { voice } : {}) }, timeout: 20000 })).data
+    } catch (e) {
+      if (e?.response?.status === 404) return null
+      throw e
+    }
+  },
+  voices: async () => (await api.get('/sound/voices')).data,
+  // 답한 뒤 '소리와 함께 다시 보기'를 틀었다는 기록. kind 'trial'(1·2단계·문맥 추론, target = 서버에 기록된 목표) | 'sentence'(3단계)
+  logReplay: async (kind, target, itemType) =>
+    (await api.post('/sound/replay', { kind, target, ...(itemType ? { item_type: itemType } : {}) })).data,
+  noiseUrl: (ext = 'ogg') => `/api/sound/noise/babble.${ext}`,
+}
+
 // 데모용 더미 학습 기록 시드(계정이 비어 있을 때만)
 export const seedAPI = {
   seedDemo: async () => (await api.post('/seed-demo')).data,
