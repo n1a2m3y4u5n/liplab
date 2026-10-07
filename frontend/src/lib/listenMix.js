@@ -137,14 +137,50 @@ export function voiceRoles(voices) {
   return { train: ids, test: ids[ids.length - 1] }
 }
 
+const baseIndex = (n, k, slot, mode, block) => {
+  const i = mode === 'blocked' ? (block || 0) + slot : (k || 0) + slot
+  return ((i % n) + n) % n
+}
+
 /**
  * 문항 k의 훈련 목소리. slot은 소리 구별의 voice_pair 칸(0·1). mode 'blocked'면 묶음(block) 하나를 한 목소리로 내고(서툰 단계),
  * 'mixed'면 문항마다 돌린다. 서버 단계 응답의 voice_mode·voice_block을 넘긴다.
+ * avoid는 문항의 avoid_voices(그 문항을 구별되게 내지 못한 목소리, docs/listen-voice-contrast-2026-10.md). 고른 목소리가 그 안에
+ * 있으면 다음 목소리로 넘어가고(묶음 모드에서도 그 문항만), 모두 걸리면 원래 목소리를 쓴다.
  */
-export function voiceFor(train, k, slot = 0, mode = 'mixed', block = 0) {
+export function voiceFor(train, k, slot = 0, mode = 'mixed', block = 0, avoid = null) {
   const n = train?.length || 0
   if (!n) return ''
-  return mode === 'blocked' ? train[(block + slot) % n] : train[(k + slot) % n]
+  const base = baseIndex(n, k, slot, mode, block)
+  const skip = new Set(avoid || [])
+  if (skip.size) {
+    for (let j = 0; j < n; j += 1) {
+      const v = train[(base + j) % n]
+      if (!skip.has(v)) return v
+    }
+  }
+  return train[base]
+}
+
+/**
+ * 소리 구별 문항의 두 목소리 [첫 소리, 둘째 소리]. pair는 voice_pair. 두 칸이 다른 문항은 피할 목소리를 건너뛴 결과가 같은 목소리로
+ * 겹치면 둘째 칸을 피할 목소리가 아닌 다른 목소리로 한 번 더 옮긴다(그런 목소리가 없으면 겹친 채로 둔다: 피하는 것이 먼저다).
+ */
+export function axVoices(train, k, pair, mode = 'mixed', block = 0, avoid = null) {
+  const s0 = pair?.[0] || 0
+  const s1 = pair?.[1] || 0
+  const v1 = voiceFor(train, k, s0, mode, block, avoid)
+  let v2 = voiceFor(train, k, s1, mode, block, avoid)
+  const n = train?.length || 0
+  if (s0 !== s1 && v2 === v1 && n > 1) {
+    const skip = new Set(avoid || [])
+    const base = baseIndex(n, k, s1, mode, block)
+    for (let j = 1; j < n; j += 1) {
+      const v = train[(base + j) % n]
+      if (v !== v1 && !skip.has(v)) { v2 = v; break }
+    }
+  }
+  return [v1, v2]
 }
 
 /**

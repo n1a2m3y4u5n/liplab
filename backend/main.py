@@ -6860,7 +6860,8 @@ async def listen_review(current_user=Depends(get_current_user), db: AsyncSession
     for w in words:
         it = _listencur.word_item(w, 2, pool, seed) or _listencur.word_item(w, 1, pool, seed)
         if it:
-            w_out.append({"key": it["key"], "target": w, "options": it["options"], "level": it["level"], "stage": 2})
+            w_out.append({"key": it["key"], "target": w, "options": it["options"], "level": it["level"], "stage": 2,
+                          "avoid_voices": it.get("avoid_voices", [])})
     s_out = [{"key": f"s:{i}", "id": i, "text": _listencur.TRAIN_BY_ID[i], "stage": 3} for i in sents]
     return {"words": w_out, "sentences": s_out, "n": len(w_out) + len(s_out)}
 

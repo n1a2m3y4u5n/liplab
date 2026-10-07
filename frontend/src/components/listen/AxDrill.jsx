@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { listenAPI } from '../../api'
-import { voiceFor } from '../../lib/listenMix'
+import { axVoices } from '../../lib/listenMix'
 import { pct, skippedNote } from '../../lib/listenFlow'
 import { fmtDuration, levelChangeText } from '../../lib/listenView'
 import BottomBar from './BottomBar'
@@ -13,7 +13,8 @@ import { Heading, Option, optionState } from './ui'
 
 /**
  * 소리 구별(1단계 같다·다르다). 두 소리를 차례로 듣고 같은지 다른지 고른다. 단계 레슨, 소리 짝 집중 연습, 오늘의 듣기에서 쓴다.
- * data: {items:[{key, first, second, voice_pair, kind_label, pick}], level?, levels?, voice_mode, voice_block, guide, status}
+ * data: {items:[{key, first, second, voice_pair, kind_label, pick, avoid_voices?}], level?, levels?, voice_mode, voice_block, guide, status}
+ * 목소리는 lib/listenMix.axVoices로 고른다(문항의 avoid_voices를 건너뜀). 재생·미리 받기·답 기록이 같은 목소리를 쓴다.
  * answerExtra는 답에 그대로 붙는다(연습이면 {practice_mode}). 끝 처리는 finish(ListenComplete.TaskEnd).
  */
 export default function AxDrill({ data, settings, voices, onProgress, finish, active, answerExtra = null, onAnswered = null }) {
@@ -31,13 +32,12 @@ export default function AxDrill({ data, settings, voices, onProgress, finish, ac
   const player = usePlayer()
   const t0 = useRef(Date.now())
   const it = items[k]
-  const v1 = voiceFor(voices.train, k, it?.voice_pair?.[0] || 0, data.voice_mode, data.voice_block)
-  const v2 = voiceFor(voices.train, k, it?.voice_pair?.[1] || 0, data.voice_mode, data.voice_block)
+  const [v1, v2] = axVoices(voices.train, k, it?.voice_pair, data.voice_mode, data.voice_block, it?.avoid_voices)
   const a = useClip(it?.first, v1)
   const b = useClip(it?.second, v2)
   const nx = items[k + 1]
-  usePrefetch(nx ? [[nx.first, voiceFor(voices.train, k + 1, nx.voice_pair?.[0] || 0, data.voice_mode, data.voice_block)],
-    [nx.second, voiceFor(voices.train, k + 1, nx.voice_pair?.[1] || 0, data.voice_mode, data.voice_block)]] : [])
+  const nv = nx ? axVoices(voices.train, k + 1, nx.voice_pair, data.voice_mode, data.voice_block, nx.avoid_voices) : null
+  usePrefetch(nx ? [[nx.first, nv[0]], [nx.second, nv[1]]] : [])
   useEffect(() => { onProgress(k, items.length) }, [k, items.length, onProgress])
   useEffect(() => { setRes(null); setPicked(null); setErr(null); setPlays(0); setChange(null); player.reset(); t0.current = Date.now() }, [k, player.reset])
   const ready = a.state === 'ready' && b.state === 'ready'
@@ -78,7 +78,8 @@ export default function AxDrill({ data, settings, voices, onProgress, finish, ac
         notes={[skippedNote(tally.skipped)]} />
     )
   }
-  const sameVoice = it.voice_pair?.[1] === it.voice_pair?.[0] || voices.train.length < 2
+  // 피할 목소리를 건너뛰면 칸이 달라도 같은 목소리가 될 수 있어 실제로 고른 목소리로 본다
+  const sameVoice = v1 === v2 || voices.train.length < 2
   const answerIdx = res ? (res.same ? 0 : 1) : null
   return (
     <div className="flex flex-col gap-4 lg:gap-5">

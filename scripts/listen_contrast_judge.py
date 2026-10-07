@@ -136,6 +136,54 @@ def agreement(rows, verdict):
     return out
 
 
+LAX, ASP, TENSE = set("ㄱㄷㅂㅈ"), set("ㅋㅌㅍㅊ"), set("ㄲㄸㅃㅉㅆ")
+_CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
+
+
+def _onset_cat(t):
+    s = [ch for ch in t if "가" <= ch <= "힣"]
+    if not s:
+        return None
+    c = _CHO[(ord(s[0]) - 0xAC00) // 588]
+    return "L" if c in LAX else "A" if c in ASP else "F" if c in TENSE else ("L" if c == "ㅅ" else None)
+
+
+def posthoc(rows):
+    """보고만(사후 분석, 판정에 쓰지 않음). (1) 같은 (대상, 글, 경쟁 글) 실패가 몇 목소리에서 나왔나(목소리 공통인지 특이인지).
+    (2) 소리 세기 짝의 기준 클립 일치율을 방향(의도 범주 → 경쟁 범주)별로. (3) 탐욕 복호가 빈 전사인 비율(한 음절은 모델이 거의 blank만 낸다)."""
+    out = {}
+    nv = defaultdict(set)
+    for r in rows:
+        if r["voice"] not in TRAIN:
+            continue
+        for c in r["comps"]:
+            if c["status"] == "ok" and c["margin"] < 0:
+                nv[(r["set"], r["text"], c["text"], c["group"])].add(r["voice"])
+    by = defaultdict(Counter)
+    for (s, t, ct, g), vs in nv.items():
+        by[g][len(vs)] += 1
+    out["fail_voice_count_by_group"] = {g: dict(sorted(c.items())) for g, c in sorted(by.items())}
+    d = defaultdict(lambda: [0, 0])
+    for r in rows:
+        if r["suspect"] or r["set"] != "ax":
+            continue
+        for c in r["comps"]:
+            if c["status"] == "ok" and c.get("kind") == "laryngeal":
+                k = f"{_onset_cat(r['text'])}->{_onset_cat(c['text'])}"
+                d[k][0] += 1
+                d[k][1] += c["margin"] > 0
+    out["laryngeal_ref_agree_by_direction"] = {k: {"n": n, "agree": round(a / n, 3)} for k, (n, a) in sorted(d.items())}
+    e = defaultdict(lambda: [0, 0])
+    for r in rows:
+        if r.get("greedy") is None:
+            continue
+        g = "1음절" if len([ch for ch in r["text"] if "가" <= ch <= "힣"]) == 1 else "2음절 이상"
+        e[g][0] += 1
+        e[g][1] += not (r["greedy"] or "").strip()
+    out["greedy_empty"] = {k: {"n": n, "empty": round(m / n, 3)} for k, (n, m) in sorted(e.items())}
+    return out
+
+
 def avoid_json(rows):
     voices, test = defaultdict(dict), defaultdict(dict)
     for r in rows:
@@ -231,7 +279,7 @@ def main():
         if r["voice"] in TRAIN and r["fail_applied"] and not r["replaced"]:
             all_fail_train[(r["set"], r["text"])].add(r["voice"])
     report = {"gate": gate_tab, "caution_threshold": thr, "table": table(rows), "comparison_status": dict(unsc),
-              "agreement": agreement(rows, verdict),
+              "agreement": agreement(rows, verdict), "posthoc": posthoc(rows),
               "all_train_voices_fail": sorted(f"{s}:{t}" for (s, t), vs in all_fail_train.items() if len(vs) == len(TRAIN)),
               "m3_gen_fail": [f for f in fails if f["set"] == "gen" and f["fail"]],
               "items": fails}
@@ -256,6 +304,7 @@ def main():
         print("TABLE", k, v)
     print("AGREE", json.dumps({k: v for k, v in report["agreement"].items() if k != "acoustic_rows"}, ensure_ascii=False))
     print("ALL4", report["all_train_voices_fail"])
+    print("POSTHOC", json.dumps(report["posthoc"], ensure_ascii=False))
 
 
 if __name__ == "__main__":

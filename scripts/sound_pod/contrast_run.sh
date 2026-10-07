@@ -70,7 +70,7 @@ resynth)
   SP=$R/venv/score/lib/python3.11/site-packages
   ALL=c0,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15
   NP=$(( CPUS / 2 )); [ "$NP" -lt 2 ] && NP=2; [ "$NP" -gt 8 ] && NP=8
-  mkdir -p $W/asr $W/eval $W/cand $W/enc
+  mkdir -p $W/asr $W/eval $W/cand $W/enc $R/logs
   python3 -c "import json;print('\n'.join(json.loads(l)['uid'] for l in open('$W/targets.jsonl') if l.strip()))" > $W/all.uids
   echo "targets=$(wc -l < $W/all.uids) procs=$NP"
   if ! done_ $W synth; then
