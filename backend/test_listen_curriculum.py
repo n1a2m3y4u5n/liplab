@@ -121,17 +121,59 @@ def test_test_srt():
     assert not tests & {"".join(ch for ch in it["text"] if ch.isalnum()) for it in items}
 
 
+def test_test_form_assignment():
+    """babble은 A·B, talker2는 C·D를 학습자 id 홀짝 순서로 번갈아 쓴다. C·D 소리가 없으면 talker2는 같은 회차 babble의 반대 폼."""
+    assert set(L.TEST_FORMS) == {"A", "B", "C", "D"} and L.TEST_FORM_PAIRS == {"babble": ("A", "B"), "talker2": ("C", "D")}
+    for uid in (2, 3, 10, 11):
+        bb = [L.test_form_for(uid, n, "babble") for n in range(4)]
+        t2 = [L.test_form_for(uid, n, "talker2") for n in range(4)]
+        fb = [L.test_form_for(uid, n, "talker2", heldout_ready=False) for n in range(4)]
+        assert bb == [L.test_form_for(uid, n) for n in range(4)]            # 예전 호출(잡음 생략)은 babble 그대로
+        assert set(bb[:2]) == {"A", "B"} and bb[2:] == bb[:2]
+        assert set(t2[:2]) == {"C", "D"} and t2[2:] == t2[:2]
+        assert (bb[0], t2[0]) == (("A", "C") if uid % 2 == 0 else ("B", "D"))   # 같은 홀짝 역균형
+        assert all(f != b and f in "AB" for f, b in zip(fb, bb))           # 대체 규칙: 같은 회차의 babble과 다른 폼
+        # 사전(회차 0)에 두 잡음을 다 해도 다른 문장이고, 사전·사후 사이에 같은 잡음 폼이 되풀이되지 않는다
+        assert bb[0] != t2[0] and bb[0] != bb[1] and t2[0] != t2[1]
+    assert L.test_form_for(2, 0, "bogus") == "A"
+    assert L.heldout_forms_ready(lambda t: True) and not L.heldout_forms_ready(lambda t: t != L.TEST_FORMS["D"][19])
+    assert L.heldout_forms_ready(lambda t: t not in L.TEST_FORMS["A"])   # A·B 소리와 무관
+
+
+def test_test_forms_have_listen_voice_audio():
+    """네 폼 문장은 서버 음성 목록의 듣기 목소리(마지막이 검사 목소리 m3) 모두에 소리가 있다(docs/listen-forms-cd-2026-10.md)."""
+    import sound_clips as S
+    here = os.path.dirname(os.path.abspath(__file__))
+    man = S.load_manifest(os.path.join(here, "data", "sound", "manifest.json"))
+    voices = [v["id"] for v in man["voices"]]
+    assert voices and voices[-1] == "m3"
+    missing = [(v, s) for v in voices for f in sorted(L.TEST_FORMS) for s in L.TEST_FORMS[f]
+               if not S.lookup({"clips": man["clips"].get(v, {})}, s)]
+    assert not missing, missing[:5]
+
+
+def _pilot_builder():
+    import importlib.util
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts", "build_pilot_manifest.py")
+    spec = importlib.util.spec_from_file_location("build_pilot_manifest", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def test_content_separation():
-    """검사 문장은 훈련 문장·대화와 겹치지 않고, P3 파일럿 문장과도 겹치지 않는다. 두 폼은 같은 길이다."""
+    """검사 문장은 훈련 문장·대화와 겹치지 않고, P3 파일럿 문장과도 겹치지 않는다. 네 폼은 같은 길이이고 같은 자리끼리 어절 수가 같다.
+    10/7에 더한 C·D는 P3 빌드의 유사도 점검(similarity_reasons)으로도 훈련 문장·대화·앱 문장·P3 문장·다른 검사 문장과 가깝지 않다."""
     def key(s):
         return "".join(ch for ch in s if ch.isalnum())
     test = {key(s) for f in L.TEST_FORMS.values() for s in f}
     train = {key(s) for s in L.TRAIN_SENTENCES} | {key(c[k]) for c in L.CONVO_ITEMS for k in ("line", "paraphrase")}
     assert not test & train
     assert len(L.TRAIN_SENTENCES) == len(set(map(key, L.TRAIN_SENTENCES)))
-    assert len(L.TEST_FORMS["A"]) == len(L.TEST_FORMS["B"]) == 20
-    for a, b in zip(L.TEST_FORMS["A"], L.TEST_FORMS["B"]):
-        assert len(a.split()) == len(b.split()), (a, b)
+    assert len(test) == 80 and all(len(L.TEST_FORMS[f]) == 20 for f in "ABCD")
+    for row in zip(*(L.TEST_FORMS[f] for f in "ABCD")):
+        assert len({len(s.split()) for s in row}) == 1, row
+    assert not any(ch.isdigit() for f in "CD" for s in L.TEST_FORMS[f] for ch in s)   # 숫자는 한글로
     here = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(here, "data", "pilot", "battery_manifest.json"), encoding="utf-8") as f:
         raw = f.read()
@@ -148,6 +190,31 @@ def test_content_separation():
                 walk(v)
     walk(json.loads(raw))
     assert pilot and not (test | {key(s) for s in L.TRAIN_SENTENCES}) & pilot
+    # C·D 유사도 점검(P3 빌드와 같은 규칙). 비교 대상: 듣기 훈련 문장·대화, 앱의 훈련 문장(독화·말하기·문맥), P3 문장, 네 폼의 다른 문장
+    B = _pilot_builder()
+    p3 = []
+
+    def walk2(x):
+        if isinstance(x, dict):
+            if isinstance(x.get("text"), str) and " " in x["text"].strip():
+                p3.append(x["text"])
+            for v in x.values():
+                walk2(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk2(v)
+    walk2(json.loads(raw))
+    others = list(L.TRAIN_SENTENCES) + [c[k] for c in L.CONVO_ITEMS for k in ("line", "paraphrase")] + \
+        list(B.training_sentences()) + p3
+    assert len(p3) > 50
+    for f in "CD":
+        for i, s in enumerate(L.TEST_FORMS[f]):
+            hits = [(t, B.similarity_reasons(s, t)) for t in others if B.similarity_reasons(s, t)]
+            assert not hits, (f, i + 1, s, hits[:3])
+            for g in "ABCD":
+                for j, t in enumerate(L.TEST_FORMS[g]):
+                    if (g, j) != (f, i):
+                        assert not B.similarity_reasons(s, t, both_ways=True), (s, t)
 
 
 def test_convo_items_hide_answer():
@@ -389,6 +456,10 @@ with TestClient(main.app) as c:
             break
     out["after_abandon"] = c.post("/api/listen/test/start", json={"noise": "talker2"}, headers=h).json()["form"]
     out["next_bb_form"] = c.post("/api/listen/test/start", json={"noise": "babble"}, headers=h).json()["form"]
+    out["t1_form"] = t1["form"]
+    out["t1_items_form"] = sorted({it["key"][5] for it in t1["items"] if not it.get("practice")})
+    out["ready"] = main._listen_heldout_ready()
+    out["summ_forms"] = [t["form"] for t in summ["tests"]]
 print("RESULT " + json.dumps(out, ensure_ascii=False))
 '''
 
@@ -411,6 +482,42 @@ def test_wordtest_and_test_noise_api():
     assert r["summ"] == ["talker2", 0.75, "ci"]
     assert r["next_t2_form"] != r["next_bb_form"]  # 잡음마다 폼을 따로 번갈아 쓴다
     assert r["after_abandon"] != r["next_t2_form"]  # 그만둔 회차 뒤에는 다른 폼
+    # 저장소의 서버 음성에는 C·D 검사 목소리 소리가 있으므로 talker2는 C·D, babble은 A·B
+    assert r["ready"] is True
+    assert r["t1_form"] in ("C", "D") and r["t1_items_form"] == [r["t1_form"]] and r["next_t2_form"] in ("C", "D")
+    assert r["next_t2_form"] != r["t1_form"] and r["next_bb_form"] in ("A", "B") and r["summ_forms"] == [r["t1_form"]]
+
+
+_FLOW_FALLBACK = r'''
+import json
+from fastapi.testclient import TestClient
+import main
+with TestClient(main.app) as c:
+    r = c.post("/api/auth/register", json={"email": "lf@example.com", "username": "lf1", "password": "pw-123456",
+                                           "agree_terms": True, "age_confirmed": True})
+    h = {"Authorization": f"Bearer {r.json()['access_token']}"}
+    bb = c.post("/api/listen/test/start", json={"noise": "babble"}, headers=h).json()
+    t2 = c.post("/api/listen/test/start", json={"noise": "talker2"}, headers=h).json()
+    print("RESULT " + json.dumps({"ready": main._listen_heldout_ready(), "bb": bb["form"], "t2": t2["form"]}))
+'''
+
+
+def test_test_noise_fallback_without_heldout_audio():
+    """C·D 소리가 없으면(서버 음성 폴더가 비었을 때) talker2는 같은 회차의 babble 폼과 반대 폼(A·B)을 쓴다."""
+    import subprocess
+    import sys
+    import tempfile
+    here = os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as d:
+        os.makedirs(os.path.join(d, "sound"))
+        env = dict(os.environ, DATABASE_URL=f"sqlite+aiosqlite:///{d}/t.db", PYTHONDONTWRITEBYTECODE="1", LIPLAB_UNLOCK_ALL="1",
+                   LIPLAB_SOUND_DIR=os.path.join(d, "sound"), LIPLAB_SOUND_CACHE_DIR="")
+        env.pop("ANTHROPIC_API_KEY", None)
+        p = subprocess.run([sys.executable, "-c", _FLOW_FALLBACK], cwd=here, env=env, capture_output=True, text=True, timeout=300)
+    line = next((l for l in p.stdout.splitlines() if l.startswith("RESULT ")), None)
+    assert line, f"시나리오 실패:\n{p.stdout[-2000:]}\n{p.stderr[-3000:]}"
+    r = json.loads(line[len("RESULT "):])
+    assert r["ready"] is False and r["bb"] in ("A", "B") and r["t2"] in ("A", "B") and r["t2"] != r["bb"]
 
 
 # ── 10/7 코드 검토 회귀(docs/review/listen-code-review-2026-10.md) ─────────────────────────────
