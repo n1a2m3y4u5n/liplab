@@ -403,6 +403,7 @@ def run_mfaprep():
 
 _VOW = set("aeiouɛɯʌøyɐɨəɤæɑɔɪʊ")
 SIL = {"", "sil", "sp", "spn", "<eps>", "silence", "noise"}
+GLIDES = {"j", "w", "ɥ", "ɰ"}
 
 
 def is_vowel(ph):
@@ -452,7 +453,13 @@ def run_mfaparse():
         if f:
             ph = parse_textgrid(f[0]) or []
             ph = [p for p in ph if p[0].strip().lower() not in SIL]
-            vow = [[p[0], round(p[1], 4), round(p[2], 4)] for p in ph if is_vowel(p[0])]
+            # korean_mfa는 활음을 따로 낸다('요' = j o). 우리 중성 토큰(ㅛ)은 활음을 포함하므로, 모음 바로 앞이 활음이면
+            # 그 활음 시작을 모음 시작으로 둔다(사후 변경 1, 결과를 보기 전).
+            vow = []
+            for k, p in enumerate(ph):
+                if is_vowel(p[0]):
+                    t0 = ph[k - 1][1] if k > 0 and ph[k - 1][0].strip() in GLIDES else p[1]
+                    vow.append([p[0], round(t0, 4), round(p[2], 4)])
             if ph and vow:
                 row.update(ok=True, vowels=vow, n_vowel=len(vow), final_vowel_t0=vow[-1][1], speech_t1=ph[-1][2],
                            phones=[[p[0], round(p[1], 4), round(p[2], 4)] for p in ph])
