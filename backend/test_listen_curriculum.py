@@ -380,6 +380,14 @@ with TestClient(main.app) as c:
     summ = c.get("/api/listen/summary", headers=h).json()
     out["summ"] = [summ["tests"][0]["noise"], summ["word_tests"][0]["accuracy"], summ["word_tests"][0]["sim"]]
     out["next_t2_form"] = c.post("/api/listen/test/start", json={"noise": "talker2"}, headers=h).json()["form"]
+    # 중간에 그만둔 회차(검사 문장 하나만 답함)도 폼 순서에 센다
+    t3 = c.post("/api/listen/test/start", json={"noise": "talker2"}, headers=h).json()
+    first_test = next(it for it in t3["items"] if not it.get("practice"))
+    for it in t3["items"]:
+        c.post("/api/listen/test/answer", json={"session": t3["session"], "item_key": it["key"], "answer": "", "noise": "talker2"}, headers=h)
+        if it["key"] == first_test["key"]:
+            break
+    out["after_abandon"] = c.post("/api/listen/test/start", json={"noise": "talker2"}, headers=h).json()["form"]
     out["next_bb_form"] = c.post("/api/listen/test/start", json={"noise": "babble"}, headers=h).json()["form"]
 print("RESULT " + json.dumps(out, ensure_ascii=False))
 '''
@@ -402,6 +410,7 @@ def test_wordtest_and_test_noise_api():
     assert r["noise"] == ["talker2", "babble"]
     assert r["summ"] == ["talker2", 0.75, "ci"]
     assert r["next_t2_form"] != r["next_bb_form"]  # 잡음마다 폼을 따로 번갈아 쓴다
+    assert r["after_abandon"] != r["next_t2_form"]  # 그만둔 회차 뒤에는 다른 폼
 
 
 # ── 10/7 코드 검토 회귀(docs/review/listen-code-review-2026-10.md) ─────────────────────────────

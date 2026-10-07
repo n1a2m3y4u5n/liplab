@@ -6223,9 +6223,11 @@ async def listen_test_start(req: ListenTestStart, current_user=Depends(get_curre
     (docs/listen-mastery-sim-2026-10.md 10절)."""
     import uuid
     noise = req.noise if req.noise in _listencur.TEST_NOISES else "babble"
-    tests = [t for t in _listen_test_state(await _listen_attempts(current_user.id, db, stage=4, mode="test"))
-             if t["srt_db"] is not None and t["noise"] == noise]
-    form = _listencur.test_form_for(current_user.id, len(tests))   # 잡음 종류마다 폼을 번갈아 쓴다
+    states = [t for t in _listen_test_state(await _listen_attempts(current_user.id, db, stage=4, mode="test")) if t["noise"] == noise]
+    tests = [t for t in states if t["srt_db"] is not None]
+    # 폼 순서는 검사 문장을 하나라도 들은 회차까지 센다(마치지 않은 회차 포함). 마친 회차만 세면 중간에 그만둔 뒤 다시 시작할 때
+    # 같은 폼이 나와 이미 들은 문장이 섞였다(코드 리뷰 10/7). 잡음 종류마다 따로 번갈아 쓴다
+    form = _listencur.test_form_for(current_user.id, sum(1 for t in states if t["n"] > 0))
     session = f"test:{uuid.uuid4().hex[:12]}"
     practice = _listencur.test_practice_items(session)
     items = [{"key": it["key"], "text": it["text"], "practice": True} for it in practice] + \
