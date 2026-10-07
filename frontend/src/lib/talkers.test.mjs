@@ -1,9 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { VISEME_BLENDSHAPES, ACTIVE_MORPH_KEYS } from './visemeShapes.js'
+import { VISEME_BLENDSHAPES, VISEME_BLENDSHAPES_V15, ACTIVE_MORPH_KEYS } from './visemeShapes.js'
 import { transitionTime } from './visemeTiming.js'
 import {
-  TALKERS, TRAINING_TALKERS, HELD_OUT_TALKERS, DEFAULT_TALKER, RANGES, TALKER_BLOCK,
+  TALKERS, TALKERS_V15, RANGES_V15, TRAINING_TALKERS, HELD_OUT_TALKERS, DEFAULT_TALKER, RANGES, TALKER_BLOCK,
   scaleShape, talkerShapes, applyTalkerTiming, applyTalkerCycle, lessonTalker, talkerById, atNaturalRate, unitNoise,
 } from './talkers.js'
 import { COART_TARGETS, LIP_KEYS, coartShape, coartWeight } from './coarticulation.js'
@@ -20,23 +20,26 @@ const LOW = [6, 7, 8, 10]
 const ALLOWED = { 11: [11, 1, 6, 7], 12: [12, 13, 1, 6, 7], 13: [13, 12, 1, 6, 7] }
 const vec = (shape) => ACTIVE_MORPH_KEYS.map((k) => shape[k] || 0)
 const dist = (a, b) => Math.hypot(...a.map((x, i) => x - b[i]))
-const DEFAULTS = Object.fromEntries(CLASSES.map((v) => [v, vec(VISEME_BLENDSHAPES[v])]))
+const defaultsOf = (T) => Object.fromEntries(CLASSES.map((v) => [v, vec(T[v])]))
+const DEFAULTS = defaultsOf(VISEME_BLENDSHAPES)
+const DEFAULTS_V15 = defaultsOf(VISEME_BLENDSHAPES_V15)
 
-function nearest(t, set) {
+function nearest(t, set, D = DEFAULTS) {
   let d = Infinity
   let who = null
-  for (const u of set) { const x = dist(t, DEFAULTS[u]); if (x < d) { d = x; who = u } }
+  for (const u of set) { const x = dist(t, D[u]); if (x < d) { d = x; who = u } }
   return [d, who]
 }
 
 // 입모양 v마다 {rule, margin, rival}: margin = 허용 밖 기본 목표까지의 최소 거리 − 허용 안 기본 목표까지의 최소 거리
-function margins(talker) {
+// V15 표(쉼 14는 빈 자세가 아니지만 휴지 무리라 판별 대상에서 그대로 뺀다)도 같은 규칙으로 본다.
+function margins(talker, T = VISEME_BLENDSHAPES, D = DEFAULTS) {
   return CLASSES.filter((v) => v !== 14).map((v) => {
-    const t = vec(scaleShape(VISEME_BLENDSHAPES[v], talker, v))
+    const t = vec(scaleShape(T[v], talker, v))
     const ok = QUIZ.includes(v) ? [v] : LOW.includes(v) ? LOW : ALLOWED[v]
     const bad = LOW.includes(v) ? QUIZ : CLASSES.filter((u) => !ok.includes(u))
-    const [dIn] = nearest(t, ok)
-    const [dOut, rival] = nearest(t, bad)
+    const [dIn] = nearest(t, ok, D)
+    const [dOut, rival] = nearest(t, bad, D)
     return { v, rule: QUIZ.includes(v) ? 'a' : LOW.includes(v) ? 'b' : 'c', margin: dOut - dIn, rival }
   })
 }
@@ -70,8 +73,8 @@ const plainBlend = (table, c, V, w) => {
   for (const k of LIP_KEYS) out[k] = (1 - w) * (table[c][k] || 0) + w * (table[V][k] || 0)
   return out
 }
-function coartMargins(talker, shapeOf = coartShape) {
-  const table = talkerShapes(talker)
+function coartMargins(talker, shapeOf = coartShape, T = null, D = DEFAULTS) {
+  const table = T ? Object.fromEntries(Object.entries(T).map(([v, sh]) => [v, scaleShape(sh, talker, Number(v))])) : talkerShapes(talker)
   const w = coartWeight(talker)
   const out = []
   for (const c of COART_TARGETS) {
@@ -79,8 +82,8 @@ function coartMargins(talker, shapeOf = coartShape) {
       const t = vec(shapeOf(table, c, V, w))
       const ok = [...new Set([...LOW, ...(ALLOWED[c] || []), V, ...(ROUND.includes(V) ? ROUND : [])])]
       const bad = CLASSES.filter((u) => !ok.includes(u))
-      const [dIn] = nearest(t, ok)
-      const [dOut, rival] = nearest(t, bad)
+      const [dIn] = nearest(t, ok, D)
+      const [dOut, rival] = nearest(t, bad, D)
       out.push({ v: `${c}←${V}`, margin: dOut - dIn, rival })
     }
   }
@@ -98,6 +101,22 @@ test('판별 기준(d): 선행 동시조음을 켜도 섞은 자음이 문맥에
   console.log(`(d) 최소 여백 ${worst.margin.toFixed(4)} (${worst.talker}, ${worst.v} 대 ${worst.rival})`)
   // (a)(b)(c)는 기본 목표만 보므로 켜고 꺼도 같다: 섞기는 입모양 표를 바꾸지 않는다
   assert.equal(coartShape(VISEME_BLENDSHAPES, 6, null), VISEME_BLENDSHAPES[6])
+})
+
+test('V15 표와 V5 재선정 화자도 판별 기준 (a)(b)(c)(d)를 만족하고 매개변수는 V15 범위 안이다', () => {
+  for (const t of [DEFAULT_TALKER, ...TALKERS_V15]) {
+    for (const m of margins(t, VISEME_BLENDSHAPES_V15, DEFAULTS_V15)) {
+      assert.ok(m.margin > 0, `V15 ${t.label} 입모양 ${m.v}(${m.rule})이 ${m.rival} 쪽으로 넘어갔다(여백 ${m.margin.toFixed(5)})`)
+    }
+    for (const m of coartMargins(t, coartShape, VISEME_BLENDSHAPES_V15, DEFAULTS_V15)) {
+      assert.ok(m.margin > 0, `V15 ${t.label} ${m.v}가 ${m.rival} 쪽으로 넘어갔다(여백 ${m.margin.toFixed(5)})`)
+    }
+  }
+  for (const t of TALKERS_V15) {
+    for (const [k, [lo, hi]] of Object.entries(RANGES_V15)) {
+      assert.ok(t[k] >= lo - 1e-9 && t[k] <= hi + 1e-9, `${t.id}.${k}=${t[k]} V15 범위 밖`)
+    }
+  }
 })
 
 test('판별 기준(d)는 비어 있지 않다: 자음 입술 모양까지 그냥 섞으면 자(10←2)가 중설모음(5)으로 넘어간다', () => {

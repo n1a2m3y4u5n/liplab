@@ -1,0 +1,7 @@
+[
+ {"name": "D1", "set": {"3": {"mouthSmileLeft": 0.15, "mouthSmileRight": 0.15}, "11": {"mouthClose": 0.5, "mouthRollLower": 0.3}}},
+ {"name": "D2", "set": {"3": {"mouthSmileLeft": 0.18, "mouthSmileRight": 0.18, "mouthStretchLeft": 0.10, "mouthStretchRight": 0.10}, "11": {"mouthClose": 0.5, "mouthRollLower": 0.3}}},
+ {"name": "D3", "set": {"3": {"mouthSmileLeft": 0.15, "mouthSmileRight": 0.15}, "11": {"mouthClose": 0.5, "mouthRollLower": 0.3}, "2": {"jawOpen": 0.27, "mouthLowerDownLeft": 0.15, "mouthLowerDownRight": 0.15}}},
+ {"name": "D4", "set": {"3": {"mouthSmileLeft": 0.15, "mouthSmileRight": 0.15}, "11": {"mouthClose": 0.5, "mouthRollLower": 0.3}, "2": {"mouthLowerDownLeft": 0.18, "mouthLowerDownRight": 0.18, "mouthUpperUpLeft": 0.06, "mouthUpperUpRight": 0.06}}},
+ {"name": "D5", "set": {"3": {"mouthSmileLeft": 0.15, "mouthSmileRight": 0.15}, "11": {"mouthClose": 0.5, "mouthRollLower": 0.3}, "5": {"jawOpen": 0.12, "mouthShrugUpper": 0.06}, "13": {"jawOpen": 0.17}, "7": {"jawOpen": 0.19}}}
+]

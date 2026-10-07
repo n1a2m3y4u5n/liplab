@@ -54,18 +54,29 @@ def open_page(pw, a, port):
     pg.wait_for_function("window.__v2ready === true", timeout=60000)
     cam = [float(x) for x in a.cam.split(",")]
     tgt = [float(x) for x in a.target.split(",")]
-    info = pg.evaluate("(c) => window.__v2.init(c)", {"w": 640, "h": 360, "fov": a.fov, "camPos": cam, "target": tgt})
+    info = pg.evaluate("(c) => window.__v2.init(c)", {"w": 640, "h": 360, "fov": a.fov, "camPos": cam, "target": tgt,
+                                                      "glb": a.glb or None})
     return br, pg, info
 
 
-def run_job(pg, j):
+def run_job(pg, j, tables=None):
     if j["kind"] == "text":
+        # V15: table(후보 입모양 표 이름, --tables 파일의 키)이 있으면 그 표로 렌더한다. 없으면 하네스에 빌드된 앱 표.
+        tbl = (tables or {}).get(j["table"]) if j.get("table") else None
+        if j.get("table") and tbl is None:
+            raise KeyError("table " + j["table"])
         r = pg.evaluate("(j) => window.__v2.renderText(j)",
-                        {"frames": j["frames"], "talker": j["talker"], "seed": 0, "speed": j["speed"], "leadMs": 400, "tailMs": 400})
-        sched = {"id": j["id"], "schedule": r["schedule"], "speech": r["speech"], "fps": r["fps"], "talker": j["talker"], "speed": j["speed"]}
+                        {"frames": j["frames"], "talker": j["talker"], "seed": 0, "speed": j["speed"], "leadMs": 400, "tailMs": 400,
+                         "table": tbl})
+        sched = {"id": j["id"], "schedule": r["schedule"], "speech": r["speech"], "fps": r["fps"], "talker": j["talker"], "speed": j["speed"],
+                 "table": j.get("table")}
+    elif j["kind"] == "poses":
+        r = pg.evaluate("(j) => window.__v2.renderPoses(j)", {"poses": j["poses"], "hold": j.get("hold", 3)})
+        sched = {"id": j["id"], "poses": len(j["poses"]), "hold": r["hold"], "fps": r["fps"]}
     else:
-        r = pg.evaluate("(j) => window.__v2.renderRaw(j)", {"names": j["names"], "frames": j["frames"], "fps": j.get("fps", 30)})
-        sched = {"id": j["id"], "raw": True, "fps": r["fps"], "n_in": len(j["frames"])}
+        r = pg.evaluate("(j) => window.__v2.renderRaw(j)", {"names": j["names"], "frames": j["frames"], "fps": j.get("fps", 30),
+                                                             "rawMap": j.get("rawMap")})
+        sched = {"id": j["id"], "raw": True, "fps": r["fps"], "n_in": len(j["frames"]), "rawMap": bool(j.get("rawMap"))}
     return r["images"], sched
 
 
@@ -95,7 +106,7 @@ def _worker(wid, a, port, jobs, q, _cnt):
                 continue
             t0 = time.time()
             try:
-                images, sched = run_job(pg, j)
+                images, sched = run_job(pg, j, a.tables_obj)
                 write_mp4(images, mp4)
                 json.dump(sched, open(sj + ".tmp", "w"), ensure_ascii=False)
                 os.replace(sj + ".tmp", sj)
@@ -126,7 +137,10 @@ def main():
     ap.add_argument("--port", type=int, default=5196)
     ap.add_argument("--only", default="", help="id 접두어로 거르기(쉼표)")
     ap.add_argument("--bench", action="store_true")
+    ap.add_argument("--glb", default="", help="하네스 폴더 기준 다른 GLB(리그 측정용 원본 GLB)")
+    ap.add_argument("--tables", default="", help="V15 후보 입모양 표 JSON({이름: {입모양: {모프: 가중치}}})")
     a = ap.parse_args()
+    a.tables_obj = json.load(open(a.tables, encoding="utf-8")) if a.tables else None
     os.makedirs(a.out, exist_ok=True)
     jobs = []
     for p in a.jobs:
@@ -140,7 +154,7 @@ def main():
         with sync_playwright() as pw:
             br, pg, info = open_page(pw, a, a.port)
             t0 = time.time()
-            images, _ = run_job(pg, jobs[0])
+            images, _ = run_job(pg, jobs[0], a.tables_obj)
             dt = time.time() - t0
             write_mp4(images, os.path.join(a.out, "_bench_" + a.gl + ".mp4"))
             print("RJ_BENCH", a.gl, json.dumps(info), f"frames={len(images)} sec={dt:.1f} fps={len(images) / dt:.1f}", flush=True)

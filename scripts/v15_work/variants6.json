@@ -1,0 +1,8 @@
+[
+ {"name": "D_i10", "set": {"3": {"mouthSmileLeft": 0.10, "mouthSmileRight": 0.10}}},
+ {"name": "D_i15", "set": {"3": {"mouthSmileLeft": 0.15, "mouthSmileRight": 0.15}}},
+ {"name": "D_i12_st12", "set": {"3": {"mouthSmileLeft": 0.12, "mouthSmileRight": 0.12, "mouthStretchLeft": 0.12, "mouthStretchRight": 0.12}}},
+ {"name": "D_i12_5", "set": {"3": {"mouthSmileLeft": 0.12, "mouthSmileRight": 0.12}, "5": {"jawOpen": 0.12, "mouthShrugUpper": 0.07}}},
+ {"name": "D_i12_11", "set": {"3": {"mouthSmileLeft": 0.12, "mouthSmileRight": 0.12}, "11": {"mouthClose": 0.5, "mouthRollLower": 0.3}}},
+ {"name": "D_i12_all", "set": {"3": {"mouthSmileLeft": 0.12, "mouthSmileRight": 0.12}, "5": {"jawOpen": 0.12, "mouthShrugUpper": 0.07}, "11": {"mouthClose": 0.5, "mouthRollLower": 0.3}, "2": {"jawOpen": 0.26}, "10": {"mouthFunnel": 0.26}}}
+]
