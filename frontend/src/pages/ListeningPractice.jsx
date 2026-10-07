@@ -839,8 +839,10 @@ function WordTest({ settings, voices, onProgress, onExit, active }) {
       if (r.done) setResult(r)
       else setK(k + 1)
     } catch (e) {
-      if (e?.response) setFatal('답을 기록하지 못했어요. 검사를 처음부터 다시 해 주세요.')
-      else setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.')
+      // 응답 없이 끊겼으면 같은 답을 다시 보내면 서버가 그때 결과를 그대로 돌려준다(멱등). 버튼을 다시 누르면 이어서 한다
+      if (e?.response && e.response.status !== 409) setFatal('답을 기록하지 못했어요. 검사를 처음부터 다시 해 주세요.')
+      else if (e?.response?.status === 409) setFatal('이미 다른 답이 기록된 문장이에요. 검사를 처음부터 다시 해 주세요.')
+      else setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 같은 답으로 다시 눌러 주세요. 검사는 이어서 할 수 있어요.')
     }
     setSending(false)
   }
@@ -948,8 +950,13 @@ function SentenceTask({ data, settings, voices, onProgress, onExit, onStage, rel
       avOffsetRef.current = offset
       const fresh = frames.map((f) => ({ ...f }))
       clearTimeout(frameTimer.current)
-      frameTimer.current = setTimeout(() => setPlayFrames(fresh), offset)
-      opts = { gainDb: settings.gainDb, snrDb: snr, noise: nz.noise, leadMs: 300 }
+      // 말소리가 실제로 나오는 순간에 맞춘다. 보코더·전화·방 판을 만드는 시간이 있으므로 재생이 알려 준 지연(delayMs)을 기준으로,
+      // 아바타의 처음 300 ms 중립을 빼고 출력 지연 보정(offset)을 더한다(listenAudio.playClip onStart)
+      const onStart = (delayMs) => {
+        clearTimeout(frameTimer.current)
+        frameTimer.current = setTimeout(() => setPlayFrames(fresh), Math.max(0, delayMs - 300 + offset))
+      }
+      opts = { gainDb: settings.gainDb, snrDb: snr, noise: nz.noise, leadMs: 300, onStart }
     } else {
       opts = { gainDb: settings.gainDb, snrDb: noisy ? snr : null, noise: noisy ? nz.noise : null }
     }
