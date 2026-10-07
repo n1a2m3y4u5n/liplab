@@ -368,7 +368,8 @@ async def account_learning_reset(confirm: bool = False, current_user=Depends(get
     XP·연속 학습·레벨·배치를 처음 상태로 되돌린다. 프로필 화면의 '사라지는 기록' 목록과 같은 범위다.
     가입 동의 기록(ConsentRecord)은 법적 기록이라 남긴다. 공용 데모 계정은 방문자 모두의 화면이라 막는다.
     파일럿 참여 중이면 표준검사 사전·사후(A·B) 결과는 남긴다 — 연구 자료이고, 지우면 사전검사를 다시 볼 수 없다.
-    같은 까닭으로 유지 검사(C7)와 P3 검사 묶음(p3_test_sessions·p3_closed_responses·p3_open_responses)도 남긴다.
+    같은 까닭으로 유지 검사(C7)와 P3 검사 묶음(p3_test_sessions·p3_closed_responses·p3_open_responses), 소리 듣기 역치 검사·낱말
+    일반화 검사(listen_attempts의 test·wordtest 행, 청인 모의 파일럿의 사전·사후)도 남긴다.
     참여 철회와 자료 삭제는 연구진을 통해 한다(docs/pilot-data-spec.md §5)."""
     if not confirm:
         raise HTTPException(status_code=400, detail="초기화를 확인하려면 confirm=true가 필요합니다.")
@@ -376,7 +377,7 @@ async def account_learning_reset(confirm: bool = False, current_user=Depends(get
         raise HTTPException(status_code=403, detail="공용 데모 계정은 초기화할 수 없어요.")
     from sqlalchemy import delete as _delete
     from database import (ConsentRecord, LearningProfile, PlacementResult, RetentionResult, P3TestSession,
-                          P3ClosedResponse, P3OpenResponse)
+                          P3ClosedResponse, P3OpenResponse, ListenAttempt)
     prof = await _get_or_create_profile(current_user.id, db)
     in_pilot = bool(prof.pilot_code)
     removed, kept = {}, {}
@@ -388,6 +389,9 @@ async def account_learning_reset(confirm: bool = False, current_user=Depends(get
         if in_pilot and M is PlacementResult:
             from sqlalchemy import or_ as _or
             q = q.where(_or(PlacementResult.form.is_(None), PlacementResult.form.not_in(("A", "B"))))
+        if in_pilot and M is ListenAttempt:
+            # 소리 듣기 검사(역치 검사·낱말 일반화 검사)는 청인 모의 파일럿의 사전·사후 자료라 남기고 훈련 시행만 지운다
+            q = q.where(ListenAttempt.mode.not_in(("test", "wordtest")))
         res = await db.execute(q)
         removed[M.__tablename__] = res.rowcount if res.rowcount is not None else 0
     if in_pilot:
@@ -398,6 +402,10 @@ async def account_learning_reset(confirm: bool = False, current_user=Depends(get
             _select(_func.count(P3TestSession.id)).where(P3TestSession.user_id == current_user.id))).scalar() or 0
         if n_p3:
             kept["p3_test_sessions"] = n_p3
+        n_lt = (await db.execute(_select(_func.count(ListenAttempt.id)).where(
+            ListenAttempt.user_id == current_user.id, ListenAttempt.mode.in_(("test", "wordtest"))))).scalar() or 0
+        if n_lt:
+            kept["listen_tests"] = n_lt
     # 학습 프로필은 지우지 않고 배치만 처음으로 — 파일럿 참여(코드·집단)는 학습 기록이 아니라 그대로 둔다
     prof.track, prof.current_stage, prof.placed = None, 0, False
     prof.speak_current_stage = 0
@@ -3642,8 +3650,10 @@ def _pilot_admin_gate(user):
         raise HTTPException(status_code=403, detail="운영자 계정만 파일럿 자료를 내보낼 수 있습니다.")
 
 
-PILOT_EXPORT_VERSION = 6   # 6(10/7): 소리 듣기(listen: 검사 역치·잡음·모의 청취, 낱말 일반화 검사, 단계별 시행 수, trials=true면 시행 기록).
-# 6 안에서 키만 더함(10/7 밤): listen.practice_by_mode(연습 탭·복습 탭 답, session 'practice:*'). 그 답은 trials_by_stage에 넣지 않는다
+PILOT_EXPORT_VERSION = 7   # 7(10/7 밤): 날마다 학습량(reading_days, listen.days: 시행 수와 분, 용량·준수 분석), P3 SNR 계단 추정 방식·반전 수
+#   (battery[].snr_estimate_kind·snr_reversals, SNR 실패 제외 규칙), 유지 검사 예정(battery_schedule). docs/pilot/log-spec-audit-2026-10-07.md
+#   소리 듣기 연습 탭·복습 탭 답은 listen.practice_by_mode(session 'practice:*')로 따로 싣고 trials_by_stage에 넣지 않는다.
+# 6(10/7): 소리 듣기(listen: 검사 역치·잡음·모의 청취, 낱말 일반화 검사, 단계별 시행 수, trials=true면 시행 기록).
 # 2(9/24): 참여일·참여 뒤 집계·동형 폼 문항 기록·현지 날짜 추가. 3(9/28): 사후 문항의 화자 조건(talker)
 # 4(9/29): 검사 전 연습 시행 수(trials_before)·연습 뒤 사전 표시, 학습 초기화 날(learning_reset_on), 시행 단위 기록(trials=true일 때만)
 # 5(10/6): P3 검사 묶음(battery: 회차·층·폼·순서·문항 응답, 개방형 답 원문 포함), 참여 순번(join_seq)·폼 순서(planned_order)·
@@ -3690,6 +3700,16 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
         return {"trials_by_stage": {str(st or 0): {"n": n, "correct": int(c or 0)} for st, n, c in by_stage},
                 "speak": {"n": sp[0] or 0, "mean_score": round(float(sp[1]), 2) if sp[1] is not None else None},
                 "active_days": len(days)}
+
+    async def reading_days(uid):
+        # 독화 학습량(용량·프로토콜 준수 분석). 선다형 시행·문장 연습·문장 연습 답의 시각을 현지 날짜로 묶어 날마다 시행 수와 분을 준다.
+        # 분은 소리 듣기 요약과 같은 규칙(listen_curriculum.practice_minutes: 시행 간격 합, 3분 넘는 쉼은 끊음)이다. 시각은 싣지 않는다
+        by = {}
+        for M in (TrialAttempt, Progress, SentencePracticeLog):
+            for ts, rt in (await db.execute(select(M.created_at, M.rt_from_onset_ms).where(M.user_id == uid))).all():
+                if ts:
+                    by.setdefault(day(ts), []).append((ts, rt))
+        return [{"day": d, "n": len(evs), "minutes": _listencur.practice_minutes(evs)} for d, evs in sorted(by.items())]
 
     async def trial_log(uid):
         # 선다형 시행 단위 기록. 시각 대신 순번과 현지 날짜만 준다(시각 단위 기록은 넣지 않는다). 주관식 답(입력 글)은 넣지 않는다:
@@ -3753,6 +3773,15 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
         from database import ListenAttempt
         rs = (await db.execute(select(ListenAttempt).where(ListenAttempt.user_id == uid)
                                .order_by(ListenAttempt.created_at, ListenAttempt.id))).scalars().all()
+        train_by_day = {}
+        for r in rs:   # 훈련 시간(다시 풀기 포함, 검사·낱말 검사 제외). 5회기 × 20분 같은 용량 기준을 날짜로 본다
+            if r.mode in ("test", "wordtest") or not r.created_at:
+                continue
+            d = train_by_day.setdefault(day(r.created_at), {"evs": [], "n_ci": 0})
+            d["evs"].append((r.created_at, r.rt_ms))
+            d["n_ci"] += 1 if r.sim_mode == "ci" else 0
+        days = [{"day": k, "n": len(v["evs"]), "minutes": _listencur.practice_minutes(v["evs"]), "n_ci": v["n_ci"]}
+                for k, v in sorted(train_by_day.items())]
         rs = [r for r in rs if r.session != _LISTEN_PRACTICE]
         by_stage, by_practice = {}, {}
         for r in rs:
@@ -3779,7 +3808,7 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
             return x
         out = {"tests": [_on(t) for t in _listen_test_state([r for r in rs if r.mode == "test"])],
                "word_tests": [_on(t) for t in _listen_wordtests([r for r in rs if r.mode == "wordtest"])],
-               "trials_by_stage": list(by_stage.values()), "practice_by_mode": list(by_practice.values())}
+               "trials_by_stage": list(by_stage.values()), "practice_by_mode": list(by_practice.values()), "days": days}
         if with_log:
             out["log"] = [{"seq": i + 1, "day": day(r.created_at), "stage": r.stage, "mode": r.mode, "item_key": r.item_key,
                            "correct": r.correct, "score": r.score, "level": r.level, "snr_db": r.snr_db, "condition": r.condition,
@@ -3814,7 +3843,8 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
                         "manifest_sha": s_.manifest_sha, "planned_order": s_.planned_order, "modality": s_.modality,
                         "talker": s_.talker, "started_on": day(s_.started_at), "completed_on": day(s_.completed_at),
                         "completed": bool(s_.completed), "n_items": s_.n_items, "n_ready": s_.n_ready, "missing": s_.missing,
-                        "snr_calibrated_db": s_.snr_calibrated_db, "headphone_check": s_.headphone_check,
+                        "snr_calibrated_db": s_.snr_calibrated_db, "snr_estimate_kind": s_.snr_estimate_kind,
+                        "snr_reversals": s_.snr_reversals, "headphone_check": s_.headphone_check,
                         "volume_fixed": s_.volume_fixed, "render_log": s_.render_log,
                         "closed": closed if s_.layer in ("word", "nonsense") else None,
                         "open": opened if s_.layer in ("sentence", "av", "snr") else None})
@@ -3861,8 +3891,11 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
             **everything,
             "since_join": (await activity(uid, pf.pilot_joined_at)) if pf.pilot_joined_at else None,
             **({"trial_log": await trial_log(uid), "progress_log": await progress_log(uid)} if trials else {}),
+            "reading_days": await reading_days(uid),
             "listen": await listen_export(uid, trials),
             "battery": await battery(uid),
+            # 유지 검사(R) 예정과 상태(B를 마친 날 + LIPLAB_RETENTION_DAYS). 날짜만
+            "battery_schedule": _battery_retention_schedule(await _battery_rows(uid, db)),
             **(await measurement(uid)),
         })
     return {"exported_at": _dt.utcnow().replace(microsecond=0).isoformat() + "Z", "version": PILOT_EXPORT_VERSION,
@@ -4036,6 +4069,16 @@ async def _battery_snr_state(session_id: int, manifest: dict, db) -> dict:
     return _pb.staircase_run(manifest["layers"]["snr"]["staircase"], [bool(o) for o in outs])
 
 
+def _battery_retention_schedule(rows: dict) -> dict:
+    """유지 검사(R) 예정: B 회차의 마지막 층을 마친 날(KST)에서 LIPLAB_RETENTION_DAYS(기본 28, 14~28)일 뒤. 막지는 않고 알리기만 한다
+    (연구진이 날을 맞춘다). 분석은 R과 B의 완료 날짜 차이를 그대로 쓴다. state: none | waiting | due | done(retention.status)."""
+    import retention as _ret
+    b_done = [r.completed_at for (lab, _l), r in rows.items() if lab == "B" and r.completed and r.completed_at]
+    r_done = [r.completed_at for (lab, _l), r in rows.items() if lab == "R" and r.completed and r.completed_at]
+    return _ret.status(_kst_date(max(b_done)) if b_done else None, _kst_date(min(r_done)) if r_done else None, _kst_today(),
+                       _ret.retention_days(os.getenv("LIPLAB_RETENTION_DAYS")))
+
+
 @app.get("/api/pilot/battery/status")
 async def pilot_battery_status(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """내 P3 검사 순서·회차별 층 상태. 상태: done | in_progress | todo. available은 앞 회차를 마쳤는지."""
@@ -4059,8 +4102,10 @@ async def pilot_battery_status(current_user=Depends(get_current_user), db: Async
         done = _battery_label_done(m, rows, label, seq, order)
         if next_label is None and available and not done:
             next_label = label
-        labels.append({"label": label, "form": _pb.form_for(order, label), "available": available, "done": done,
-                       "layers": layers})
+        entry = {"label": label, "form": _pb.form_for(order, label), "available": available, "done": done, "layers": layers}
+        if label == "R":
+            entry["schedule"] = _battery_retention_schedule(rows)
+        labels.append(entry)
     return {"seq": seq, "order": order, "manifest": {"version": m.get("version"), "status": m.get("status"), "sha": sha,
                                                       "errors": errs[:20], "n_errors": len(errs)},
             "snr_calibrated_db": snr, "labels": labels, "next_label": next_label,
@@ -4323,6 +4368,7 @@ async def pilot_battery_finish(req: BatteryFinishReq, current_user=Depends(get_c
         if st["estimate_db"] is None and cnt["n_ready"] > 0:
             raise HTTPException(status_code=409, detail="SNR을 아직 정하지 못했습니다. 문장을 더 풀어 주세요.")
         row.snr_calibrated_db = st["estimate_db"]
+        row.snr_estimate_kind, row.snr_reversals = st["estimate_kind"], int(st["reversals"])
         out["snr_calibrated_db"] = st["estimate_db"]
         out["estimate_kind"] = st["estimate_kind"]
     row.n_items, row.n_ready, row.missing = cnt["n_items"], cnt["n_ready"], cnt["missing"]

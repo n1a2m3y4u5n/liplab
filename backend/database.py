@@ -583,6 +583,10 @@ class P3TestSession(Base):
     n_ready = Column(Integer, default=0)                 # 낼 수 있었던 문항 수(영상·문장이 준비된 것)
     missing = Column(JSON, default=dict)                 # 못 낸 까닭별 문항 수 {media, text, noise, snr}
     snr_calibrated_db = Column(Float, nullable=True)     # snr 층: 계단 추정값. av 층: 쓴 값(A1 snr 층에서 가져옴)
+    # snr 층: 추정 방식('reversals' 반전 평균 | 'last_levels' 반전이 모자라 마지막 시행 수준 평균)과 반전 수. 계단이 수렴했는지를
+    # 분석의 'SNR 실패' 제외 규칙이 본다(10/7, 예전에는 마침 응답에만 있고 저장하지 않았다)
+    snr_estimate_kind = Column(String(16), nullable=True)
+    snr_reversals = Column(Integer, nullable=True)
     headphone_check = Column(Boolean, nullable=True)     # 소음 층: 헤드폰 착용 확인
     volume_fixed = Column(Boolean, nullable=True)        # 소음 층: 볼륨 고정 확인
     render_log = Column(JSON(none_as_null=True), nullable=True)   # 기기·렌더링 요약(pilot_battery.clean_render_log)
@@ -755,6 +759,9 @@ _ADD_COLUMNS = (
     # P3 검사 참여 순번과 폼 순서(pilot_battery.assign_order)
     ("learning_profiles", "pilot_seq", "INTEGER"),
     ("learning_profiles", "pilot_order", "VARCHAR(3)"),
+    # P3 SNR 계단의 추정 방식과 반전 수(분석의 SNR 실패 제외 규칙, docs/pilot/log-spec-audit-2026-10-07.md)
+    ("p3_test_sessions", "snr_estimate_kind", "VARCHAR(16)"),
+    ("p3_test_sessions", "snr_reversals", "INTEGER"),
 )
 
 
