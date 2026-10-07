@@ -23,7 +23,9 @@ if a.uids:
     targets = [t for t in targets if t["uid"] in keep]
 si, sn = map(int, a.shard.split("/"))
 items = list(Q.iter_items(targets, a.cands.split(","), a.clips, a.cand_root))[si::sn]
-done = {(r["uid"], r["cand"]) for r in Q.read_jsonl([a.out])}
+# 같은 폴더의 다른 조각·미리 돌린 결과도 끝난 것으로 본다(합성 중에 미리 잰 결과를 다시 재지 않게)
+import glob  # noqa: E402
+done = {(r["uid"], r["cand"]) for r in Q.read_jsonl(glob.glob(os.path.join(os.path.dirname(os.path.abspath(a.out)), "*.jsonl")))}
 items = [it for it in items if (it[0], it[1]) not in done]
 
 from faster_whisper import WhisperModel  # noqa: E402

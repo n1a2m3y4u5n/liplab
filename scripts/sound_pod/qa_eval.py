@@ -26,6 +26,10 @@ os.environ.setdefault("DGOP_CALIBRATION", os.path.join(Q.BACKEND, "data", "dgop_
 import torch  # noqa: E402
 torch.set_num_threads(a.threads)
 torch.set_grad_enabled(False)
+if os.environ.get("DGOP_DEVICE") == "cuda":
+    # 같은 int8 파일을 GPU에서 푼다(Int8Linear가 순전파 때 fp32로 곱함). CPU와 값이 가깝도록 TF32를 끈다
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
 from faster_whisper.audio import decode_audio  # noqa: E402
@@ -42,7 +46,10 @@ if a.uids:
 tmap = {t["uid"]: t for t in targets}
 si, sn = map(int, a.shard.split("/"))
 items = list(Q.iter_items(targets, a.cands.split(","), a.clips, a.cand_root))[si::sn]
-done = {(r["uid"], r["cand"]) for r in Q.read_jsonl([a.out])}
+# 같은 폴더의 다른 조각·미리 돌린 결과도 끝난 것으로 본다(합성 중에 미리 잰 결과를 다시 재지 않게). 오류 줄은 다시 잰다
+import glob  # noqa: E402
+done = {(r["uid"], r["cand"]) for r in Q.read_jsonl(glob.glob(os.path.join(os.path.dirname(os.path.abspath(a.out)), "*.jsonl")))
+        if not r.get("err")}
 items = [it for it in items if (it[0], it[1]) not in done]
 
 out = open(a.out, "a")

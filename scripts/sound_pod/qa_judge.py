@@ -35,6 +35,16 @@ def load_ref(work, ref_path=None):
     return json.load(open(p, encoding="utf-8")) if os.path.exists(p) else None
 
 
+def load_eval(work):
+    """(uid, 후보) → D-GOP·신호 기록. 같은 것이 여러 번 있으면 오류 없는 줄을 쓴다."""
+    ev = {}
+    for r in Q.read_jsonl(sorted(glob.glob(P(work, "eval", "*.jsonl")))):
+        k = (r["uid"], r["cand"])
+        if k not in ev or (ev[k].get("err") and not r.get("err")):
+            ev[k] = r
+    return ev
+
+
 def pron_group(t):
     return Q.length_group(int(t.get("n_syl") or 0), t["key"])
 
@@ -42,7 +52,7 @@ def pron_group(t):
 def judge(work, cands, ref_path=None):
     targets = {t["uid"]: t for t in Q.load_targets(P(work, "targets.jsonl"))}
     asr = {(r["uid"], r["cand"]): r for r in Q.read_jsonl(glob.glob(P(work, "asr", "*.jsonl")))}
-    ev = {(r["uid"], r["cand"]): r for r in Q.read_jsonl(glob.glob(P(work, "eval", "*.jsonl")))}
+    ev = load_eval(work)
     syn = {(r["uid"], r["cand"]): r for r in Q.read_jsonl(glob.glob(P(work, "cand", "*", "synth.*.jsonl"))) if r.get("ok")}
     ref = load_ref(work, ref_path)
     for c in cands:
@@ -53,7 +63,19 @@ def judge(work, cands, ref_path=None):
                 if e is None or s is None:
                     continue
                 g = pron_group(t)
-                m = e.get("metrics") or {}
+                m = dict(e.get("metrics") or {})
+                # 사후 변경 1: 문장 끝 '요'가 파일 끝에 정렬된 클립은 그 음절을 빼고 모음 끊김·쉼을 다시 센다
+                stuck = False
+                try:
+                    import jamo_vocab
+                    groups = Q.syllable_groups_ms(e.get("phones") or [], jamo_vocab.text_to_tokens(t["text"]))
+                    se = (m["dur_ms"] - m["tail_ms"]) if m.get("tail_ms") is not None else None
+                    stuck = Q.tail_stuck(groups, se)
+                    if stuck:
+                        m["vowel_drop_n"] = max(0, int(m.get("vowel_drop_n") or 0) - 1)
+                        m["gap_in_word_ms"], m["gap_between_ms"] = Q.max_gaps(groups[:-1])
+                except Exception:
+                    pass
                 per_v = Q.per(t["text"], s["hyp"])
                 pron = Q.judge_pron(g, per_v, e.get("dgop"), s["hyp"])
                 rv = Q.rate_value(m, g)
@@ -81,7 +103,7 @@ def judge(work, cands, ref_path=None):
                 rec = {"uid": uid, "cand": c, "voice": t["voice"], "key": t["key"], "group": g, "hyp": s["hyp"], "word_prop": wp,
                        "per": None if per_v is None else round(per_v, 4), "dgop": e.get("dgop"), "rate": rv,
                        "rate_z": None if rz is None else round(rz, 3), "level_dev": None if lvl is None else round(lvl, 2),
-                       **res, "metrics": m}
+                       **res, "tail_stuck": stuck, "metrics": m}
                 if c == "orig" and e.get("syl") and t.get("orig_syl") and len(e["syl"]) == len(t["orig_syl"]):
                     rec["resync_start_diff_ms"] = [abs(x[0] - y[0]) for x, y in zip(e["syl"], t["orig_syl"])]
                 out.write(json.dumps(rec, ensure_ascii=False) + "\n")
@@ -159,7 +181,7 @@ def final(work):
     for c in STAGE1 + STAGE2:
         for r in Q.read_jsonl([P(work, f"judged.{c}.jsonl")]):
             cand[r["uid"]].append(r)
-    ev = {(r["uid"], r["cand"]): r for r in Q.read_jsonl(glob.glob(P(work, "eval", "*.jsonl")))}
+    ev = load_eval(work)
     syn = {(r["uid"], r["cand"]): r for r in Q.read_jsonl(glob.glob(P(work, "cand", "*", "synth.*.jsonl"))) if r.get("ok")}
     summ = Counter()
     unresolved = []
@@ -190,11 +212,24 @@ def final(work):
             if choice and choice != "orig":
                 e = ev[(u, choice)]
                 s = syn.get((u, choice)) or {}
+                em = e["metrics"]
+                se = (em["dur_ms"] - em["tail_ms"]) if em.get("tail_ms") is not None else None
                 out.write(json.dumps({"uid": u, "voice": t["voice"], "key": t["key"], "cand": choice,
-                                      "ms": int(round(float(e["metrics"]["dur_ms"]))), "syl": e["syl"],
+                                      "ms": int(round(float(em["dur_ms"]))), "syl": Q.fix_tail_syllables(e["syl"], se),
+                                      "syl_raw": e["syl"], "tail_stuck": chosen.get("tail_stuck"),
                                       "tier": chosen["tier"], "orig_tier": o and o["tier"], "dgop": chosen["dgop"],
                                       "per": chosen["per"], "tts_text": s.get("tts_text"),
                                       "peak_limited_db": s.get("peak_limited_db")}, ensure_ascii=False) + "\n")
+    # 기존 클립을 그대로 두는 경우에도 음절 시각은 사후 변경 1로 고친다(파일은 그대로, 목록의 syl만)
+    with open(P(work, "orig_sylfix.jsonl"), "w", encoding="utf-8") as fo:
+        for u, o in orig.items():
+            em = o.get("metrics") or {}
+            se = (em["dur_ms"] - em["tail_ms"]) if em.get("tail_ms") is not None else None
+            t = next((x for x in targets if x["uid"] == u), None)
+            if t and t.get("orig_syl"):
+                fx = Q.fix_tail_syllables(t["orig_syl"], se)
+                if fx != t["orig_syl"]:
+                    fo.write(json.dumps({"uid": u, "voice": t["voice"], "key": t["key"], "syl": fx}, ensure_ascii=False) + "\n")
     json.dump({"counts": dict(summ), "unresolved": unresolved}, open(P(work, "summary.json"), "w"), ensure_ascii=False, indent=1)
     print("FINAL_OK", json.dumps(dict(summ), ensure_ascii=False), "unresolved", len(unresolved))
 

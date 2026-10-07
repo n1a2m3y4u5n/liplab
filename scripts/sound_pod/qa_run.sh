@@ -77,17 +77,26 @@ run_asr() {  # 후보목록 이름 [uids]
       --shard $i/$NA ${uids:+--uids $uids} >> logs/asr_$name.log 2>&1 &
   done
 }
+# D-GOP: GPU용 torch 가상환경(venv/sg)이 있으면 같은 int8 모델을 GPU에서(프로세스 NG개), 없으면 CPU(NP개)
+SG=$R/venv/sg/bin/python
+if [ -x "$SG" ] && $SG -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>/dev/null; then
+  # 전사용 LD_LIBRARY_PATH(cu12 cuDNN)가 이 torch(cu13)의 cuDNN을 가려 합성곱이 실패한다 → D-GOP 프로세스에서는 뺀다
+  EVPY="env -u LD_LIBRARY_PATH $SG"; EVN=${NG:-4}; export DGOP_DEVICE=cuda
+else
+  EVPY=$SC; EVN=$NP; export DGOP_DEVICE=cpu
+fi
+echo "eval python=$EVPY procs=$EVN device=$DGOP_DEVICE"
 run_eval() {
   local cands=$1 name=$2 uids=${3:-} i
-  for i in $(seq 0 $((NP - 1))); do
-    $SC $X/qa_eval.py $W/targets.jsonl $W/eval/$name.$i.jsonl --cands "$cands" --clips $R/sound/clips --cand-root $W/cand \
-      --models $R/models/dgop_ours --shard $i/$NP --threads 2 ${uids:+--uids $uids} >> logs/eval_$name.log 2>&1 &
+  for i in $(seq 0 $((EVN - 1))); do
+    $EVPY $X/qa_eval.py $W/targets.jsonl $W/eval/$name.$i.jsonl --cands "$cands" --clips $R/sound/clips --cand-root $W/cand \
+      --models $R/models/dgop_ours --shard $i/$EVN --threads 2 ${uids:+--uids $uids} >> logs/eval_$name.log 2>&1 &
   done
 }
 measure() {  # 후보목록 이름 [uids] — 전사(GPU)와 D-GOP·신호(CPU)를 함께 돌리고 둘 다 끝날 때까지
   run_asr "$@"; run_eval "$@"; wait
   grep -c ASR_OK logs/asr_$2.log | xargs echo "asr_ok_procs"; grep -c EVAL_OK logs/eval_$2.log | xargs echo "eval_ok_procs"
-  [ "$(grep -c ASR_OK logs/asr_$2.log)" -ge "$NA" ] && [ "$(grep -c EVAL_OK logs/eval_$2.log)" -ge "$NP" ]
+  [ "$(grep -c ASR_OK logs/asr_$2.log)" -ge "$NA" ] && [ "$(grep -c EVAL_OK logs/eval_$2.log)" -ge "$EVN" ]
 }
 synth() {  # 후보목록 uids
   local cands=$1 uids=$2 i S=$(( CPUS / 2 )); [ "$S" -lt 2 ] && S=2; [ "$S" -gt 8 ] && S=8

@@ -163,6 +163,52 @@ def signal_metrics(x: np.ndarray, sr: int, phones: Optional[Sequence[Dict]] = No
     return out
 
 
+# ── 사후 변경 1(결과 절): 문장 끝 '요' 정렬 결함 ─────────────────────────────────
+# 정렬기는 문장 끝 음절 '요'(초성 없는 ㅛ)를 내지 않아(탐욕 복호에 나오지 않음) 강제정렬이 ㅛ를 파일 끝 무음에 놓는다.
+# 그 결과 마지막 음절 시작이 말소리 끝 뒤에 오고, 모음 끊김·어절 안 긴 쉼이 소리와 상관없이 잡힌다. 다시 합성해도 고쳐지지
+# 않으므로(같은 정렬기), 판정에서는 그 음절을 빼고 끊김·쉼을 다시 세고, 목록의 음절 시각은 마지막 두 음절을 고르게 나눠 고친다.
+TAIL_STUCK_MS = 60
+
+
+def syllable_groups_ms(phones: Sequence[Dict], tokens: Sequence[str]) -> Optional[List[Tuple[float, float, int]]]:
+    """음절마다 (첫 자모 시작 ms, 마지막 자모 끝 ms, 어절 번호). 정렬이 비면 None."""
+    if not phones or not tokens or len(phones) != len(tokens):
+        return None
+    import sound_clips as S
+    widx = _token_word_index(tokens)
+    out = []
+    for g in S.group_jamo_by_syllable(list(tokens)):
+        t0s = [phones[i].get("t0") for i in g]
+        t1s = [phones[i].get("t1") for i in g]
+        if any(v is None for v in t0s + t1s):
+            return None
+        out.append((min(t0s) * 1000, max(t1s) * 1000, widx[g[-1]]))
+    return out
+
+
+def tail_stuck(groups, speech_end_ms: Optional[float]) -> bool:
+    return bool(groups) and len(groups) >= 2 and speech_end_ms is not None and groups[-1][0] >= speech_end_ms - TAIL_STUCK_MS
+
+
+def max_gaps(groups) -> Tuple[float, float]:
+    gin = [groups[k + 1][0] - groups[k][1] for k in range(len(groups) - 1) if groups[k][2] == groups[k + 1][2]]
+    gbt = [groups[k + 1][0] - groups[k][1] for k in range(len(groups) - 1) if groups[k][2] != groups[k + 1][2]]
+    return (round(max(gin), 1) if gin else 0.0), (round(max(gbt), 1) if gbt else 0.0)
+
+
+def fix_tail_syllables(syl, speech_end_ms: Optional[float]):
+    """마지막 음절 시작이 말소리 끝 근처(60 ms 안)나 뒤에 놓였으면, 끝에서 둘째 음절 시작부터 말소리 끝까지를 두 음절이 반씩 갖게 한다."""
+    if not syl or len(syl) < 2 or speech_end_ms is None or syl[-1][0] < speech_end_ms - TAIL_STUCK_MS:
+        return syl
+    a = syl[-2][0]
+    b = int(round(max(speech_end_ms, a + 2)))
+    mid = int(round((a + b) / 2))
+    out = [list(x) for x in syl]
+    out[-2] = [a, mid]
+    out[-1] = [mid, max(b, mid + 1)]
+    return out
+
+
 def length_group(n_syl: int, key: str) -> str:
     if n_syl >= 5 or " " in key.strip():
         return "sent"
@@ -470,6 +516,9 @@ def selftest():
     a = {"tier": "pass", "n_suspect": 0, "per": 0.0, "dgop": 90, "rate_z": 0.5}
     b = {"tier": "pass", "n_suspect": 0, "per": 0.0, "dgop": 85, "rate_z": 0.1}
     assert select_key(a) < select_key(b)
+    fx = fix_tail_syllables([[100, 200], [200, 300], [950, 970]], 700)
+    assert fx[1] == [200, 450] and fx[2][0] == 450 and fx[2][1] >= 700, fx
+    assert fix_tail_syllables([[100, 200], [200, 300]], 700) == [[100, 200], [200, 300]]
     print("QA_RULES_SELFTEST_OK")
 
 

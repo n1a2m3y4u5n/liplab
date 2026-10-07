@@ -163,3 +163,28 @@ numpy 난수를 쓰지 않으면 결과 절에 실제 방식을 적는다.
   `rev`(다시 만든 소리 Ogg 파일의 sha1 앞 12자)를 더해, 바뀐 클립은 `sha1(목소리 + 키 + rev)` 앞 16자로 새 이름을 받는다. 목록 항목에
   `rev`를 적는다. 바뀌지 않은 클립은 옛 이름(`rev` 없음) 그대로다.
 - 저장소의 소리 자료(목록 + 클립 + 소음)는 50 MB 이하를 지킨다.
+
+## 7. 다시 돌리기(전체 점검, 목록에 없는 글만 합성)
+
+스크립트(앱 저장소): 대상 목록 `scripts/sound_qa_targets.py`, 결과 반영 `scripts/sound_qa_apply.py`, 파드 세션 `scripts/sound_pod/qa_session.sh`
+(liplab-lab의 `tools/pod/pod.sh`만 부른다, 상태 폴더 `tools/pod/.sqastate`, 파드 이름 `liplab-sqa`), 파드 쪽 단계 `qa_run.sh`와
+`qa_synth.py`(후보 합성·정리)·`qa_asr.py`(전사)·`qa_eval.py`(D-GOP·음절 시각·신호)·`qa_judge.py`(판정·선택)·`qa_rules.py`(규칙, 자체 시험
+`python qa_rules.py selftest`). 기준 분포는 `scripts/sound_pod/qa_ref.json`(이번 기존 클립 점검에서 만든 목소리 × 길이 묶음 빠르기,
+목소리별 레벨 중앙값)이다.
+
+**목록에 없는 글만 합성**(콘텐츠 검수가 새 글을 보냈을 때)
+
+1. 새 글을 코드(커리큘럼·듣기 목록 등)에 넣었으면 `python scripts/sound_inventory.py /tmp/inv.json`로 인벤토리를 다시 만든다.
+   코드에 넣지 않은 글 목록만 받았으면 그 목록(JSON 배열이나 한 줄에 글 하나)을 그대로 쓴다.
+2. `python scripts/sound_qa_targets.py missing /tmp/inv.json /tmp/targets.jsonl`(출처 없는 글 목록이면 `--voices m1,f1` 또는 `--listen`).
+   0개면 할 일이 없다.
+3. `bash scripts/sound_pod/qa_session.sh stage /tmp/targets.jsonl` → `MODE=missing bash scripts/sound_pod/qa_session.sh launch`.
+   파드는 기존 점검과 정리 결정을 건너뛰고 c0·c1, 필요하면 c2~c7을 만들어 통과 후보만 고른다. 진행은 `… tail`, 연결이 끊겼으면
+   `… resume`(끝난 단계는 건너뛴다).
+4. 끝나면(로그 `QA_ALL_OK`) `bash scripts/sound_pod/qa_session.sh finish`(받기 → terminate → 상태 확인).
+5. `python scripts/sound_qa_apply.py RUN_DIR --targets /tmp/targets.jsonl --prune /tmp/inv.json`. RUN_DIR은 finish가 찍은
+   `liplab-lab/data/pod_runs/<날짜>_<파드>/sqa`다. 크기가 50MB를 넘으면 실패 코드로 끝난다.
+6. 테스트(`backend/test_sound_condition.py`는 목록의 이름 규칙과 파일 존재를 확인한다) 뒤 커밋.
+
+**전체 점검**: 2단계를 `sound_qa_targets.py all /tmp/t1.jsonl --inventory /tmp/inv.json`과 `missing`의 결과를 이어 붙인 목록으로 하고,
+3단계를 `MODE=full`(기본)로 띄운다.
