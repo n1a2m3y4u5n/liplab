@@ -64,6 +64,47 @@ def test_no_real_words():
     assert "바다" in bank and "바다" in nw.repo_real_words()
 
 
+def test_sound_key_applies_standard_pronunciation():
+    k = nw.sound_key
+    # ㅐ·ㅔ, ㅒ·ㅖ 합류와 '예·례' 밖의 ㅖ → ㅔ(표준 발음법 5항)
+    assert k("채림") == k("체림") and k("자객") == k("자겍") and k("계급") == k("게급")
+    assert k("례") == "례" and k("예") == "예"
+    # 연음·ㅎ 탈락·구개음화·거센소리되기·끝 받침 대표음
+    assert k("밥알") == "바발" and k("닭이") == "달기" and k("많이") == "마니" and k("좋아") == "조아"
+    assert k("같이") == "가치" and k("국화") == "구콰" and k("무릎") == "무릅"
+    # 띄어쓰기와 한글 밖 글자는 버린다
+    assert k("허 참") == "허참"
+    # 후보(CV + CVC)는 글자와 소리가 같다
+    assert all(k(w) == w for w in ALL_TRAIN + ALL_HELD)
+
+
+def test_no_real_words_by_sound():
+    # 10/7 검토에서 소리 내면 실제 말이었던 다섯(게급·체림·자겍·허참)과 초딩과 입모양이 같은 초뎅이 다시 나오지 않는다
+    real = nw.repo_real_words() | set(DATA["excluded_by_wordfreq"]) | set(nw.MANUAL_EXCLUDED)
+    keys = nw.sound_keys(real)
+    import pilot_battery as pb
+    form_c = [it["text"] for it in pb.nonsense_forms()[2]]
+    for w in ALL_TRAIN + ALL_HELD + form_c:
+        assert nw.sound_key(w) not in keys, w
+    for w in ("게급", "체림", "자겍", "허참", "초뎅"):
+        assert w not in ALL_TRAIN + ALL_HELD + form_c
+        assert nw.sound_key(w) in keys, w
+
+
+def test_training_heldout_and_form_c_are_disjoint():
+    # C10 학습 목록 48, 검사 폼 A·B(남겨 둔 목록 둘), 폼 C(세 번째 남겨 둔 목록)는 낱말도 소리 열쇠도 서로 겹치지 않고,
+    # 검사 폼의 자음 골격은 학습 목록에 없다
+    import pilot_battery as pb
+    forms = [[it["text"] for it in f] for f in pb.nonsense_forms()]
+    assert forms[0] == DATA["heldout"][0] and forms[1] == DATA["heldout"][1]
+    groups = [ALL_TRAIN] + forms
+    allw = [w for g in groups for w in g]
+    assert len(allw) == 48 + 3 * 16
+    assert len(set(allw)) == len(allw) and len({nw.sound_key(w) for w in allw}) == len(allw)
+    train_sk = {nw.skeleton(w) for w in ALL_TRAIN}
+    assert not ({nw.skeleton(w) for f in forms for w in f} & train_sk)
+
+
 def test_within_set_constraints():
     for s in DATA["sets"]:
         words = [w["word"] for w in s["words"]]
