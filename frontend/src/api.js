@@ -341,14 +341,19 @@ export const speakAPI = {
 }
 
 // 소리 듣기(청능훈련) 트랙 — backend listen_curriculum, docs/auditory-training-design.md
+// 모의 청취 모드(인공와우 모의, 청인 파일럿)면 기록에 sim: 'ci'를 붙인다(lib/listenAudio의 setSimMode)
+const withSim = (body) => {
+  const sim = globalThis.__liplabListenSim
+  return sim ? { ...body, sim } : body
+}
 export const listenAPI = {
   getCurriculum: async () => (await api.get('/listen/curriculum')).data,
   skip: async (stage) => (await api.post('/listen/skip', { stage })).data,
   getStage: async (n) => (await api.get(`/listen/stage/${n}`)).data,
-  answer: async (body) => (await api.post('/listen/answer', body)).data,
-  ling: async (body) => (await api.post('/listen/ling', body)).data,
+  answer: async (body) => (await api.post('/listen/answer', withSim(body))).data,
+  ling: async (body) => (await api.post('/listen/ling', withSim(body))).data,
   testStart: async (body = {}) => (await api.post('/listen/test/start', body)).data,
-  testAnswer: async (body) => (await api.post('/listen/test/answer', body)).data,
+  testAnswer: async (body) => (await api.post('/listen/test/answer', withSim(body))).data,
   summary: async () => (await api.get('/listen/summary')).data,
 }
 
