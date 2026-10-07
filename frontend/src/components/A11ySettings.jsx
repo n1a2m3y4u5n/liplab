@@ -19,7 +19,7 @@ const LS_KEY = 'liplab.a11y'
 // 레슨 화면(하단 고정 버튼 바)과 학습 경로의 모바일 시트에서는 떠 있는 버튼이 버튼·시트를 가려
 // 모바일에서는 숨긴다(데스크톱은 왼쪽 아래 빈자리라 그대로). 설정은 저장돼 있어 레슨에도 그대로 적용된다.
 const LESSON_PATHS = ['/practice', '/conversation', '/learn/viseme', '/learn/word', '/learn/placement',
-  '/learn/scenario', '/learn/speaking', '/learn/closure', '/learn/path', '/review/scheduled', '/review/speaking/session']
+  '/learn/scenario', '/learn/speaking', '/learn/closure', '/learn/path', '/learn/listening', '/review/scheduled', '/review/speaking/session']
 // 정확히 같은 경로만 — 앞부분만 맞추면 '/practice'가 연습 탭('/practice/hub')까지 잡는다
 const isLesson = (path) => LESSON_PATHS.includes(path.replace(/\/+$/, ''))
 
