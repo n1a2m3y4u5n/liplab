@@ -551,7 +551,7 @@ function NoiseTest({ settings, voices, onDone, onCancel }) {
     return (
       <Done title="검사를 마쳤어요" lines={[`소음 속 문장 인식 역치 ${result.srt_db > 0 ? '+' : ''}${result.srt_db} dB`,
         result.srt_db >= 24 ? '소음을 가장 작게 해도 낱말 절반을 넘기 어려웠어요. 3단계 문장 알아듣기를 더 연습하고 다시 검사해 보세요.'
-          : '말이 소음보다 이만큼 클 때 낱말의 절반쯤을 알아들었다는 뜻이에요. 낮을수록 시끄러운 곳에서 잘 알아들어요.']}
+          : '말이 소음보다 이만큼 클 때 낱말을 열에 넷쯤 알아들었다는 뜻이에요. 낮을수록 시끄러운 곳에서 잘 알아들어요.']}
         onMore={onDone} moreLabel="훈련 시작하기" onExit={onCancel} />
     )
   }
