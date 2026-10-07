@@ -854,8 +854,36 @@ CONVO_ITEMS: List[Dict] = [
     {"id": "c30", "place": "관리실 안내", "line": "내일 아침 아홉 시부터 물이 안 나온대요.",
      "paraphrase": "내일 아침 아홉 시에 물이 끊긴대요.",
      "question": "내일 아침에 무엇을 못 써요?", "options": ["전기", "가스", "인터넷", "물"], "answer": 3},
+    # 10/7 연습 모드(상황별 대화 듣기)에서 장면 묶음마다 4문항 이상이 되게 더한 넷(docs/listen-integration-api-2026-10.md 6절).
+    # 콘텐츠 검토(docs/review/listen-content-review-2026-10.md 5절)의 (가)~(바)를 따랐다. 들은 말 안에 소리가 비슷한 오답이 있다
+    # (일곱 시·여섯 시 오십 분, 수요일·금요일, 오 층·이 층, 열 시·열두 시·열한 시).
+    {"id": "c31", "place": "친구", "line": "영화는 일곱 시에 시작하니까 여섯 시 오십 분까지 극장 앞으로 와.",
+     "paraphrase": "여섯 시 오십 분까지 극장 앞에 와. 영화는 일곱 시야.",
+     "question": "몇 시까지 와야 해요?", "options": ["여섯 시", "일곱 시", "여섯 시 오십 분", "일곱 시 오십 분"], "answer": 2},
+    {"id": "c32", "place": "회사", "line": "출장은 수요일에 가고, 금요일 아침에 돌아와요.",
+     "paraphrase": "수요일에 출장을 가요. 금요일 아침에 와요.",
+     "question": "언제 돌아와요?", "options": ["수요일 아침", "목요일 저녁", "금요일 저녁", "금요일 아침"], "answer": 3},
+    {"id": "c33", "place": "도서관 안내", "line": "오 층 열람실은 공사 중이라 이 층 열람실만 쓸 수 있습니다.",
+     "paraphrase": "오 층 열람실은 고치는 중이에요. 이 층 열람실로 가세요.",
+     "question": "어느 열람실을 쓸 수 있어요?", "options": ["오 층 열람실", "일 층 열람실", "이 층 열람실", "사 층 열람실"], "answer": 2},
+    {"id": "c34", "place": "아파트", "line": "내일 승강기 검사가 있어서 열 시부터 열두 시까지 못 타요.",
+     "paraphrase": "내일 열 시부터 열두 시까지는 승강기를 쓸 수 없어요.",
+     "question": "승강기는 언제부터 못 타요?", "options": ["아홉 시부터", "열한 시부터", "열두 시부터", "열 시부터"], "answer": 3},
 ]
 CONVO_BY_ID = {c["id"]: c for c in CONVO_ITEMS}
+
+# 상황별 대화 듣기(연습 모드 scenario)의 장면 묶음. 장소 이름(place)은 문항마다 달라 한 장소에 한 문항뿐인 곳이 많아서, 비슷한
+# 장소를 묶어 묶음마다 4문항 이상이 되게 했다. 모든 장소는 정확히 한 묶음에 든다(test_listen_practice가 확인).
+SCENES: List[Dict] = [
+    {"key": "clinic", "label": "병원·약국", "places": ("병원", "약국", "병원 접수")},
+    {"key": "food", "label": "식당·카페", "places": ("카페", "식당", "식당 주문")},
+    {"key": "transit", "label": "교통", "places": ("버스 안내", "지하철", "기차역", "택시")},
+    {"key": "shop", "label": "가게·은행·우체국", "places": ("은행", "마트", "미용실", "가게", "우체국")},
+    {"key": "home", "label": "집·동네", "places": ("아파트", "집", "관리실 안내")},
+    {"key": "work", "label": "학교·회사·도서관", "places": ("학교", "회사", "수업", "도서관")},
+    {"key": "notice", "label": "안내 방송", "places": ("일기 예보", "건물 안내", "안내 방송", "도서관 안내")},
+    {"key": "friends", "label": "친구·전화", "places": ("전화", "친구", "약속")},
+]
 # 듣기 조건(5단계 선택): 조용함, 잡음(학습자의 4단계 역치 + 5 dB), 전화(300~3400 Hz 대역), 울리는 방(잔향).
 # 잔향은 인공와우 사용자의 문장 인식을 꾸준히 떨어뜨린다(RT60 0.3초 약 60%, 1.0초 약 20%, Kokkinakis 2011). 방을 한 곳으로 고정하지
 # 않고 여러 잔향 시간을 돌려 가며 낸다(여러 방에서 훈련할 때만 새 방으로 옮겨 갔다, Vlahou 2019). 화면이 ConvolverNode로 입힌다.
@@ -1060,3 +1088,314 @@ def today_plan(status: Dict[int, str], ling_done_today: bool, target_min: float 
         fill["n"] += extra
         fill["minutes"] = round(fill["n"] * per, 1)
     return plan
+
+
+# ── 연습 모드(연습 탭의 소리 듣기, docs/listen-integration-api-2026-10.md) ─────────────────────
+# 학습 경로 단계와 따로, 연습 탭에서 고르는 듣기 연습. 답은 단계 숙달·수준·4단계 소음 계단에 넣지 않고(시행 session
+# 'practice:<모드>'), 혼동 집계·간격 복습·연습량에는 넣는다. 여기에는 문항을 만드는 순수 함수만 둔다(기록 규칙은 main.py).
+
+PRACTICE_MODES: List[Dict] = [
+    {"key": "contrast", "title": "소리 짝 집중 연습",
+     "desc": "헷갈리는 소리 짝 하나를 골라 같은지 다른지 듣고, 그 소리로 갈리는 낱말을 골라요."},
+    {"key": "dictation", "title": "문장 받아쓰기",
+     "desc": "조용한 곳에서 문장을 듣고 들은 대로 써요. 끝없이 이어서 할 수 있어요."},
+    {"key": "noise_endless", "title": "소음 속 문장 이어 듣기",
+     "desc": "떠드는 소리 속에서 문장을 들어요. 맞히면 소음이 커지고 놓치면 작아져요. 학습 경로의 소음 단계와 따로 맞춰요."},
+    {"key": "scenario", "title": "상황별 대화 듣기",
+     "desc": "병원, 가게, 교통처럼 장면을 골라 그곳에서 듣는 말을 듣고 내용을 골라요."},
+    {"key": "conditions", "title": "듣기 조건 고르기",
+     "desc": "전화 소리, 울리는 방, 여러 가지 소음 가운데 골라 그 조건에서 문장을 들어요."},
+]
+PRACTICE_KEYS = tuple(m["key"] for m in PRACTICE_MODES)
+# 시행 기록의 session. 'practice'(정답 단서를 본 뒤 다시 쓴 답, 잠긴 단계의 답)와 섞이지 않게 콜론 뒤에 모드를 붙인다.
+# 'review'는 복습 탭의 듣기 복습(GET /api/listen/review)의 답이다.
+PRACTICE_SESSION_PREFIX = "practice:"
+PRACTICE_SESSION_MODES = PRACTICE_KEYS + ("review",)
+# 연습 모드 소음 계단의 조건 이름. 4단계 계단(ao·av)과 따로 센다
+PRACTICE_STAIR_CONDITION = "practice_ao"
+PRACTICE_CONDS = ("phone", "room", "noise")
+
+
+def practice_session(mode: str) -> str:
+    return PRACTICE_SESSION_PREFIX + mode
+
+
+def is_practice_session(session: Optional[str]) -> bool:
+    return bool(session) and session.startswith(PRACTICE_SESSION_PREFIX)
+
+
+# 소리 짝(대조) 이름: 'onset:ㅂ:ㅍ', 'vowel:ㅓ:ㅗ', 'coda:ㄴ:ㅁ'(받침 없음은 '-'), 'kind:fricative'(소리 구별 종류).
+_SLOT_LABEL = {"onset": "첫소리", "vowel": "모음", "coda": "받침"}
+_VOWELS = set(_V_BASE) | set(_V_GLIDE)
+_ONSETS = {k for k in _C_FEAT if k} | {"ㅇ"}
+_CODAS = {v for v in _CODA_REP.values() if v} | {"-"}
+# 마찰음·파찰음(높은 주파수 바람 소리)
+_FRIC = {"ㅅ", "ㅆ", "ㅈ", "ㅉ", "ㅊ", "ㅎ"}
+
+
+def parse_contrast(spec: Optional[str]) -> Optional[Dict]:
+    """대조 이름 → {key, type: 'slot'|'kind', slot?, a?, b?, kind?, label}. 모르는 이름이면 None."""
+    if not spec or not isinstance(spec, str):
+        return None
+    parts = spec.strip().split(":")
+    if len(parts) == 2 and parts[0] == "kind" and parts[1] in AX_KIND_LABEL:
+        k = parts[1]
+        return {"key": f"kind:{k}", "type": "kind", "kind": k, "label": AX_KIND_LABEL[k]}
+    if len(parts) != 3 or parts[0] not in _SLOT_LABEL:
+        return None
+    slot, a, b = parts
+    allowed = {"onset": _ONSETS, "vowel": _VOWELS, "coda": _CODAS}[slot]
+    if a == b or a not in allowed or b not in allowed:
+        return None
+    if slot == "vowel" and not vowel_distance(a, b):
+        return None   # ㅐ·ㅔ처럼 같은 소리
+
+    def show(x):
+        if x == "-":
+            return "없음"
+        return "소리 없음" if slot == "onset" and x == "ㅇ" else x
+    return {"key": f"{slot}:{a}:{b}", "type": "slot", "slot": slot, "a": a, "b": b,
+            "label": f"{_SLOT_LABEL[slot]} {show(a)}·{show(b)}"}
+
+
+def contrast_kind(c: Dict) -> Optional[str]:
+    """낱말 두 개 사이의 대조 하나({slot, target, heard}) → 소리 구별 종류(AX_KIND_LABEL의 키) 또는 None(섞인 대조).
+    받침 → coda, 모음 → vowel. 첫소리는 세기만 다르면 laryngeal, 마찰음·파찰음이 끼고 자리가 다르면 fricative,
+    방식만 다르면 manner, 자리만 다르면 place(소리 구별 짝 AX_PAIRS의 종류 나눔과 같다)."""
+    slot = c.get("slot")
+    if slot == "coda":
+        return "coda"
+    if slot == "vowel":
+        return "vowel"
+    if slot != "onset":
+        return None
+    a, b = c.get("target"), c.get("heard")
+    fa, fb = _C_FEAT.get("" if a == "ㅇ" else a), _C_FEAT.get("" if b == "ㅇ" else b)
+    if not fa or not fb or "none" in (fa[0], fb[0]):
+        return None
+    diff = [i for i in range(3) if fa[i] != fb[i]]
+    if diff == [2]:
+        return "laryngeal"
+    if (a in _FRIC or b in _FRIC) and 0 in diff:
+        return "fricative"
+    if 0 not in diff and 1 in diff:
+        return "manner"          # 콧소리·흐름소리는 세기가 'son'이라 방식과 세기가 함께 다르게 잡힌다(ㅁ·ㅂ)
+    if diff == [0]:
+        return "place"
+    return None
+
+
+def _contrast_pred(spec: Dict):
+    """대조 이름 → 낱말 대조 하나를 받아 맞는지 돌려주는 함수."""
+    if spec["type"] == "kind":
+        return lambda c: contrast_kind(c) == spec["kind"]
+    f = {"slot": spec["slot"], "target": spec["a"], "heard": spec["b"]}
+    return lambda c: _matches(c, f)
+
+
+def ax_pairs_for(spec: Dict) -> List[Dict]:
+    """대조 이름에 맞는 소리 구별 짝. 종류면 그 종류의 짝 전부, 자리 대조면 그 대조 하나로만 갈리는 짝."""
+    if spec["type"] == "kind":
+        return [p for p in AX_PAIRS if p["kind"] == spec["kind"]]
+    pred = _contrast_pred(spec)
+    out = []
+    for p in AX_PAIRS:
+        cs = contrast_of(p["a"], p["b"])
+        if len(cs) == 1 and pred(cs[0]):
+            out.append(p)
+    return out
+
+
+def contrast_ax_items(pairs: Sequence[Dict], seed: str, n: int) -> List[Dict]:
+    """짝 목록에서 같다·다르다 문항 n개(같음·다름 반반). 키·채점은 1단계와 같다(ax_key·ax_correct)."""
+    if not pairs or n <= 0:
+        return []
+    r = _rng(f"pax:{seed}")
+    out = []
+    for k in range(n):
+        p = r.choice(list(pairs))
+        a, b = (p["a"], p["b"]) if r.random() < 0.5 else (p["b"], p["a"])
+        first, second = (a, a) if k % 2 == 0 else (a, b)
+        out.append({"type": "ax", "stage": 1, "key": ax_key(first, second, p["level"]), "first": first, "second": second,
+                    "kind": p["kind"], "kind_label": AX_KIND_LABEL[p["kind"]], "level": p["level"],
+                    "voice_pair": [0, 1] if p["level"] >= 3 else [0, 0]})
+    return out
+
+
+def contrast_word_items(spec: Dict, pool: Sequence[str], seed: str, n: int, level: int = 2) -> List[Dict]:
+    """대조로 갈리는 낱말 고르기 문항 n개. 정답 낱말마다 그 대조 하나로만 갈리는 이웃(소리 거리 4 이하)을 보기에 꼭 넣는다
+    (word_items의 focus와 같은 방식이지만 문항 전부가 그 대조다). 수준 2(4지, 나머지 보기는 거리 3~6) 또는 3(1~2)."""
+    if n <= 0:
+        return []
+    level = max(2, min(3, int(level)))
+    pred = _contrast_pred(spec)
+    nb = _neighbors(pool)
+    cands = list(pool)
+    r = _rng(f"pw:{seed}:{spec['key']}")
+    r.shuffle(cands)
+    out: List[Dict] = []
+    for w in cands:
+        if len(out) >= n:
+            break
+        hit = None
+        for d, o in nb.get(w, []):
+            if d > 4:
+                break
+            cs = contrast_of(w, o)
+            if len(cs) == 1 and pred(cs[0]):
+                hit = (o, cs[0])
+                break
+        if not hit:
+            continue
+        it = word_item(w, level, pool, seed, nb=nb.get(w, []))
+        if not it:
+            continue
+        if hit[0] not in it["options"]:
+            it["options"][next(i for i, x in enumerate(it["options"]) if x != w)] = hit[0]
+        out.append({"type": "word", "stage": 2, **it,
+                    "focus": {"slot": hit[1]["slot"], "target": hit[1]["target"], "heard": hit[1]["heard"]}})
+    return out
+
+
+def contrast_practice_items(spec: Dict, pool: Sequence[str], seed: str, n: int = 12, level: int = 2) -> List[Dict]:
+    """소리 짝 집중 연습 n개: 같다·다르다 문항과 낱말 고르기 문항을 반씩(한쪽이 모자라면 다른 쪽으로 채움) 섞는다."""
+    pairs = ax_pairs_for(spec)
+    words = contrast_word_items(spec, pool, seed, n if not pairs else n // 2, level)
+    if not pairs:
+        items = words
+    else:
+        items = contrast_ax_items(pairs, seed, n - len(words)) + words
+    _rng(f"pmix:{seed}").shuffle(items)
+    return items
+
+
+# 소리 교실(소리 짝 둘러보기)의 종류별 설명. 무엇이 다른지, 보청기·인공와우로 왜 어려운지(docs/auditory-training-design.md,
+# AX_PAIRS 머리말). 입모양 문장은 짝마다 engine.VISEME_MAP으로 판정해 contrast_catalog가 덧붙인다.
+KIND_DESC = {
+    "length": "말의 길이(음절 수)가 달라요. 바와 바다처럼 짧은 말과 긴 말을 가려요. 길이는 보청기나 인공와우로도 비교적 잘 들려 처음 연습하기 좋아요.",
+    "intonation": "끝이 올라가면 묻는 말, 내려가면 말하는 말이에요. 인공와우는 소리의 높낮이를 자세히 전하지 못해 억양을 놓치기 쉬워요.",
+    "vowel": "아, 이, 우처럼 모음이 달라요. 모음은 크고 길게 나서 잘 들리는 편이지만, 어와 오처럼 비슷한 모음은 헷갈리기 쉬워요.",
+    "manner": "소리 내는 방법이 달라요. ㅁ은 코로 소리를 내고 ㅂ은 입술을 막았다가 터뜨려요. 방법 차이는 낮은 소리 쪽에도 남아 자리 차이보다는 잘 들리는 편이에요.",
+    "laryngeal": "ㅂ, ㅃ, ㅍ처럼 같은 자리에서 소리의 세기가 달라요. 거센소리는 숨이 세게 나오고 된소리는 목에 힘이 들어가요. 숨소리 차이는 높은 소리 쪽에 있어 약하게 들릴 수 있어요.",
+    "place": "소리를 내는 자리가 달라요. ㅂ은 입술, ㄷ은 혀끝, ㄱ은 혀 뒤에서 나요. 자리 차이는 아주 짧은 순간의 높은 소리 변화로만 들려서 보청기나 인공와우를 쓰면 가장 자주 놓쳐요.",
+    "fricative": "ㅅ, ㅈ, ㅊ, ㅎ처럼 바람 소리가 나는 자음이에요. 아주 높은 소리라 높은 소리가 잘 안 들리면 거의 들리지 않을 수 있어요.",
+    "coda": "받침이 달라요. 간과 감, 각과 갑처럼 음절 끝소리가 달라요. 받침은 짧고 약하게 나서 놓치기 쉬워요.",
+}
+LIP_TEXT = {
+    "same": "입모양은 같아서 입만 봐서는 가를 수 없어요. 소리로 가려야 해요.",
+    "differs": "입모양은 달라서 입을 함께 보면 도움이 돼요.",
+    "mixed": "짝에 따라 입모양이 같기도 하고 다르기도 해요.",
+}
+
+
+def lip_same(c: Optional[Dict], kind: Optional[str] = None) -> Optional[bool]:
+    """대조 하나의 두 소리가 입모양 무리(engine.VISEME_MAP)가 같은가. 길이 짝은 입 움직임 길이가 달라 False, 억양 짝은 글이 같아 True.
+    받침 없음·소리 없는 첫소리처럼 무리를 정할 수 없으면 None."""
+    if kind == "length":
+        return False
+    if kind == "intonation":
+        return True
+    if not c:
+        return None
+    from engine import VISEME_MAP
+    a, b = c.get("target"), c.get("heard")
+    if "-" in (a, b) or (c.get("slot") == "onset" and "ㅇ" in (a, b)):
+        return None
+    va, vb = VISEME_MAP.get(a), VISEME_MAP.get(b)
+    if va is None or vb is None:
+        return None
+    return va == vb
+
+
+def contrast_catalog(pool: Sequence[str], has_sound=None, n_words: int = 6) -> List[Dict]:
+    """소리 교실 목록: 종류(AX_KIND_LABEL 순서)마다 설명·소리 구별 짝·예시 낱말 짝. has_sound(글)가 거짓인 글(서버 음성이 없는 글)은
+    넣지 않는다. 예시 낱말은 그 종류의 대조 하나로만 갈리는 낱말 짝이고 소리 거리가 가까운 순이다(거리 1부터, 모자라면 2까지.
+    마찰음 종류는 거리 1인 짝이 없다). 한 낱말은 한 번만 쓴다. 채점 없음."""
+    ok = has_sound or (lambda t: True)
+    words = [w for w in pool if ok(w)]
+    nb = _neighbors(words)
+    found: Dict[str, List[Tuple[int, str, str, Dict]]] = {k: [] for k in AX_KIND_LABEL}
+    for w in sorted(words):
+        for d, o in nb.get(w, []):
+            if d > 2:
+                break
+            if o < w:
+                continue
+            cs = contrast_of(w, o)
+            if len(cs) != 1:
+                continue
+            k = contrast_kind(cs[0])
+            if k:
+                found[k].append((d, w, o, cs[0]))
+    out = []
+    for k, label in AX_KIND_LABEL.items():
+        pairs = []
+        for p in AX_PAIRS:
+            if p["kind"] != k or not (ok(p["a"]) and ok(p["b"])):
+                continue
+            cs = contrast_of(p["a"], p["b"])
+            pairs.append({"a": p["a"], "b": p["b"], "level": p["level"],
+                          "lip_same": lip_same(cs[0] if len(cs) == 1 else None, k)})
+        ex, seen = [], set()
+        for d, w, o, c in sorted(found[k], key=lambda x: (x[0], x[1], x[2])):
+            if len(ex) >= n_words:
+                break
+            if w in seen or o in seen:
+                continue
+            seen |= {w, o}
+            ex.append({"target": w, "partner": o, "distance": d, "contrast": f"{c['slot']}:{c['target']}:{c['heard']}",
+                       "lip_same": lip_same(c)})
+        flags = {x["lip_same"] for x in pairs + ex if x["lip_same"] is not None}
+        lip = "same" if flags == {True} else "differs" if flags == {False} else "mixed" if flags else None
+        out.append({"kind": k, "label": label, "practice_key": f"kind:{k}", "lip": lip,
+                    "desc": KIND_DESC[k] + (" " + LIP_TEXT[lip] if lip else ""), "pairs": pairs, "words": ex})
+    return out
+
+
+def scene_places() -> List[Dict]:
+    """장면 묶음 [{key, label, n, places}] (SCENES 순서). n은 문항 수, places는 그 묶음에 실제로 문항이 있는 장소 이름."""
+    out = []
+    for s in SCENES:
+        its = [c for c in CONVO_ITEMS if c["place"] in s["places"]]
+        out.append({"key": s["key"], "label": s["label"], "n": len(its),
+                    "places": [p for p in s["places"] if any(c["place"] == p for c in its)]})
+    return out
+
+
+def scene_items(place: str, seed: str, recent: Sequence[str] = ()) -> Optional[List[Dict]]:
+    """장면 묶음 key(또는 장소 이름 하나)의 대화 문항 전부. 최근에 낸 것(recent id)을 뒤로 두고 나머지는 seed 순서.
+    정답 번호는 뺀다(convo_items와 같은 꼴). 모르는 이름이면 None."""
+    sc = next((s for s in SCENES if s["key"] == place), None)
+    if sc:
+        places = set(sc["places"])
+    elif any(c["place"] == place for c in CONVO_ITEMS):
+        places = {place}
+    else:
+        return None
+    ids = [c["id"] for c in CONVO_ITEMS if c["place"] in places]
+    _rng(f"sc:{seed}:{place}").shuffle(ids)
+    seen = set(recent)
+    ids = [i for i in ids if i not in seen] + [i for i in ids if i in seen]
+    out = []
+    for i in ids:
+        c = CONVO_BY_ID[i]
+        out.append({"key": f"c:{i}", "id": i, "place": c["place"], "line": c["line"], "paraphrase": c["paraphrase"],
+                    "question": c["question"], "options": list(c["options"])})
+    return out
+
+
+def condition_items(cond: str, seed: str, n: int = 10, recent: Sequence[str] = (), noise: Optional[str] = None,
+                    snr_db: Optional[float] = None) -> List[Dict]:
+    """듣기 조건 고르기: 훈련 문장 n개에 조건을 붙인다. room은 잔향 시간을 문항마다 돌리고(ROOM_RT60), noise는 잡음 종류를
+    noise로 고정하거나(훈련 잡음만, 일반화용 talker2는 쓰지 않음) 문항마다 돌린다. snr_db는 noise 조건의 말과 잡음 크기 차이
+    (main이 학습자의 4단계 역치로 정한다)."""
+    out = []
+    for k, it in enumerate(sentence_items(f"pc:{cond}:{seed}", n=n, recent=recent)):
+        x = {**it, "cond": cond}
+        if cond == "room":
+            x["rt60"] = ROOM_RT60[k % len(ROOM_RT60)]
+        elif cond == "noise":
+            x["noise"] = noise if noise in TRAIN_NOISES else TRAIN_NOISES[k % len(TRAIN_NOISES)]
+            x["snr_db"] = snr_db
+        out.append(x)
+    return out
