@@ -320,7 +320,7 @@ _W = {}
 
 def _winit(work):
     z = np.load(os.path.join(work, "cache.npz"))
-    _W["z"] = {k: z[k].astype(np.float64) for k in z.files}
+    _W["z"] = {k: z[k] for k in z.files}          # float32로 두고 쓸 때 넓힌다(프로세스마다 메모리 절약)
     _W["meta"] = json.load(open(os.path.join(work, "items.json"), encoding="utf-8"))["meta"]
     import os as _os
     for v in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
@@ -332,8 +332,8 @@ def render(spec):
     sid, voice, noise, snr, rep = spec
     mk = mix_key(sid, voice, noise, snr, rep)
     m = _W["meta"][f"{sid}|{voice}"]
-    sp = _W["z"]["c:" + f"{sid}|{voice}"]
-    nz = _W["z"]["n:" + noise]
+    sp = _W["z"]["c:" + f"{sid}|{voice}"].astype(np.float64)
+    nz = _W["z"]["n:" + noise].astype(np.float64)
     x = make_mix(sp, m["active"], nz, _W["meta"]["noise:" + noise]["rms"], snr, seed_of("mix", mk))
     ref = mix_levels(GAIN_DB, snr)
     ref = math.sqrt(ref[0] ** 2 + ref[1] ** 2)
@@ -405,13 +405,15 @@ def cmd_run(a):
     if not specs:
         print("RUN_OK nothing", flush=True)
         return
-    asr = ASR(a.model, a.batch)
-    t0 = time.time()
-    n_rows = 0
-    deadline = t0 + a.max_minutes * 60 if a.max_minutes else None
     nproc = a.procs or max(1, (os.cpu_count() or 2) - 1)
     buf = []
+    nb = [0]
+    # 프로세스 풀을 CUDA 초기화 전에 만든다(CUDA가 켜진 프로세스를 fork하지 않게)
     with open(outp, "a", encoding="utf-8") as fo, mp.get_context("fork").Pool(nproc, _winit, (a.work,)) as pool:
+        asr = ASR(a.model, a.batch)
+        t0 = time.time()
+        n_rows = 0
+        deadline = t0 + a.max_minutes * 60 if a.max_minutes else None
         def flush():
             nonlocal n_rows
             keys = [k for k, _ in buf]
@@ -424,12 +426,16 @@ def cmd_run(a):
                 n_rows += 1
             fo.flush()
             buf.clear()
-        for res in pool.imap(render, specs, chunksize=4):
+        def results():   # 조각마다 imap(결과가 GPU보다 앞서 메모리에 쌓이지 않게)
+            for c0 in range(0, len(specs), 1500):
+                yield from pool.imap(render, specs[c0:c0 + 1500], chunksize=4)
+        for res in results():
             buf += [r for r in res if r[0] not in done]
             if len(buf) >= asr.batch:
                 flush()
+                nb[0] += 1
                 el = time.time() - t0
-                if n_rows and n_rows % (asr.batch * 20) < asr.batch:
+                if n_rows and nb[0] % 20 == 0:
                     left = (len(specs) * 3 - n_rows) / (n_rows / el)
                     print(f"PROG rows={n_rows} {n_rows / el:.1f}/s eta={left / 60:.1f}min", flush=True)
                 if deadline and time.time() > deadline:
@@ -485,7 +491,7 @@ def fit_curve(x, k, n):
         p = np.clip(p, 1e-6, 1 - 1e-6)
         return -float(np.sum(k * np.log(p) + (n - k) * np.log(1 - p)))
     best = None
-    for m0 in (-10, -4, 2, 8, 14, 20):
+    for m0 in (-12, -4, 4, 12, 20):
         for s0 in (0.05, 0.15):
             r = minimize(nll, [m0, math.log(s0), 3.0], method="Nelder-Mead",
                          options={"xatol": 1e-3, "fatol": 1e-4, "maxiter": 2000})
