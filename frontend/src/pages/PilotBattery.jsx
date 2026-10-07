@@ -88,6 +88,11 @@ export default function PilotBattery() {
                   <p className="text-[17px] font-bold text-ink">{L.label} <span className="text-[14px] font-bold text-ink-muted">· 폼 {L.form}</span></p>
                   <span className="text-[13px] font-bold text-ink-muted">{L.done ? '회차 마침' : L.available ? '진행할 수 있어요' : '앞 회차를 먼저 마쳐요'}</span>
                 </div>
+                {L.schedule?.due_on && L.schedule.state !== 'done' && (
+                  <p className={`text-[13px] ${L.schedule.state === 'due' ? 'font-bold text-good-text' : 'text-ink-muted'}`}>
+                    유지 검사 예정일 {L.schedule.due_on}{L.schedule.state === 'waiting' ? ` · ${L.schedule.days_left}일 남음(B 뒤 ${L.schedule.days}일)` : ' · 볼 날이에요'}
+                  </p>
+                )}
                 {L.layers.map((x) => {
                   const audioLayer = x.layer === 'av' || x.layer === 'snr'
                   const blocked = !L.available || x.state === 'done' || x.n_ready === 0 || (audioLayer && !(checks.headphone && checks.volume))
