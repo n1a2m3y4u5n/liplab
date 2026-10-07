@@ -47,5 +47,13 @@ test('7일 막대: 마지막 날은 오늘, 비면 total 0', () => {
   assert.equal(r.total, 12)
   assert.equal(r.activeDays, 2)
   assert.equal(dayBars([{ date: '2026-10-01', n: 0 }]).total, 0)
-  assert.deepEqual(dayBars(null), { bars: [], total: 0, activeDays: 0 })
+  assert.equal(dayBars(null).total, 0)
+  assert.equal(dayBars(null).bars.length, 0)
+  // 서버가 분을 주면 분으로 그리고 15분 목표를 넘긴 날을 센다
+  const m = dayBars([{ date: '2026-10-06', n: 30, minutes: 18.4 }, { date: '2026-10-07', n: 5, minutes: 4 }])
+  assert.equal(m.unit, '분')
+  assert.equal(m.totalMin, 22)
+  assert.equal(m.goalDays, 1)
+  assert.equal(m.bars[0].pct, 90)          // 18분 ÷ 기준 최대 20분
+  assert.equal(m.goalPct, 75)
 })

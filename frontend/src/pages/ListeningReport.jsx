@@ -250,13 +250,20 @@ export default function ListeningReport() {
                 <Empty navigate={navigate} text="지난 7일 동안 연습한 기록이 없어요." to="/learn/path?track=listen" label="연습하러 가기" />
               ) : (
                 <>
-                  <p className="text-[14px] text-ink"><b className="text-track-dark">7일 중 {week.activeDays}일</b> 연습했어요 · 모두 {week.total}문항</p>
-                  <div className="flex h-[112px] items-end gap-1.5 sm:gap-2" role="img"
-                    aria-label={week.bars.map((b) => `${b.label} ${b.n}문항`).join(', ')}>
+                  <p className="text-[14px] text-ink"><b className="text-track-dark">7일 중 {week.activeDays}일</b> 연습했어요 · 모두 {week.unit === '분' ? `약 ${week.totalMin}분 · ${week.total}문항` : `${week.total}문항`}
+                    {week.unit === '분' && <span className="text-ink-muted"> · 15분 넘긴 날 {week.goalDays}일</span>}</p>
+                  <div className="relative flex h-[112px] items-end gap-1.5 sm:gap-2" role="img"
+                    aria-label={week.bars.map((b) => `${b.label} ${b.value}${week.unit}`).join(', ')}>
+                    {week.goalPct != null && (
+                      <div aria-hidden className="pointer-events-none absolute inset-x-0 border-t border-dashed border-track/50"
+                        style={{ bottom: `${20 + week.goalPct * 0.64}px` }}>
+                        <span className="absolute -top-4 right-0 text-[11px] text-ink-faint">15분</span>
+                      </div>
+                    )}
                     {week.bars.map((b) => (
                       <div key={b.date} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
-                        <span className="text-[12px] font-bold text-ink-muted">{b.n || ''}</span>
-                        <div className={`w-full max-w-[44px] rounded-t-md ${b.n ? 'bg-track' : 'bg-fill'}`} style={{ height: b.n ? `${Math.max(6, b.pct * 0.64)}px` : '3px' }} />
+                        <span className="text-[12px] font-bold text-ink-muted">{b.value || ''}</span>
+                        <div className={`w-full max-w-[44px] rounded-t-md ${b.value ? 'bg-track' : 'bg-fill'}`} style={{ height: b.value ? `${Math.max(6, b.pct * 0.64)}px` : '3px' }} />
                         <span className={`text-[12px] ${b.today ? 'font-bold text-track-dark' : 'text-ink-faint'}`}>{b.label}</span>
                       </div>
                     ))}

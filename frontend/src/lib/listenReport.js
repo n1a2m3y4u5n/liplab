@@ -58,12 +58,22 @@ export function confusionRows(confusions, limit = 5) {
  * 최근 7일 막대. 반환: {bars: [{date, label, n, pct, today}], total, activeDays}.
  * pct는 가장 많이 한 날 대비 높이(0~100). today는 마지막 날.
  */
+// 권장 용량(하루 15~20분, 주 5일, docs/auditory-training-evidence-2026-10.md 4절)과 비교하려고 막대는 분을 쓴다. 서버가 분(minutes)을 주지 않는
+// 예전 응답이면 문항 수로 그린다. 분 막대의 높이는 최소 20분 기준으로 잡아 15분 목표선이 늘 보이게 한다
+export const DAILY_GOAL_MIN = 15
 export function dayBars(days) {
   const list = days || []
-  const max = Math.max(1, ...list.map((d) => d.n || 0))
+  const useMin = list.some((d) => Number.isFinite(d?.minutes))
+  const val = (d) => (useMin ? Math.round(d.minutes || 0) : d.n || 0)
+  const max = Math.max(useMin ? 20 : 1, ...list.map(val))
   const bars = list.map((d, i) => ({
-    date: d.date, n: d.n || 0, pct: Math.round(((d.n || 0) / max) * 100), today: i === list.length - 1,
-    label: i === list.length - 1 ? '오늘' : String(d.date || '').slice(5).replace('-', '/'),
+    date: d.date, n: d.n || 0, min: useMin ? Math.round(d.minutes || 0) : null, value: val(d), pct: Math.round((val(d) / max) * 100),
+    today: i === list.length - 1, label: i === list.length - 1 ? '오늘' : String(d.date || '').slice(5).replace('-', '/'),
   }))
-  return { bars, total: bars.reduce((a, b) => a + b.n, 0), activeDays: bars.filter((b) => b.n > 0).length }
+  return {
+    bars, total: bars.reduce((a, b) => a + b.n, 0), totalMin: useMin ? bars.reduce((a, b) => a + b.min, 0) : null,
+    activeDays: bars.filter((b) => b.n > 0).length, unit: useMin ? '분' : '문항',
+    goalPct: useMin ? Math.round((DAILY_GOAL_MIN / max) * 100) : null,
+    goalDays: useMin ? bars.filter((b) => b.min >= DAILY_GOAL_MIN).length : null,
+  }
 }
