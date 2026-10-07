@@ -152,6 +152,24 @@ frontend/src/
 
 ---
 
+## 소리 듣기(청능훈련) 트랙 — 10/7 추가
+
+독화(보기)·발화(말하기)에 이은 세 번째 트랙. 보청기·인공와우 사용자가 남은 청력으로 말소리를 알아듣는 연습이다
+(설계 `docs/auditory-training-design.md`, 근거 `docs/auditory-training-evidence-2026-10.md`·`docs/listen-advance-evidence-2026-10.md`,
+진행 상태 `docs/listen-advance-plan-2026-10.md` 7절).
+
+- **6단계**(`backend/listen_curriculum.py`, 순수 데이터·함수): 0 소리 확인(Ling 6소리, 화면 합성) · 1 소리 구별(수준 4개) · 2 낱말 고르기(소리 거리 보기,
+  수준 3개) · 3 문장 알아듣기 · 4 소음 속 듣기(1-up-1-down 계단, 네 번에 한 번 입모양, 연습 5 + 20문장 역치 검사) · 5 대화 듣기(되묻기·전화·울리는 방·잡음 종류).
+  진행·숙달은 `listen_stage_progress`, 시행은 `listen_attempts`. 숙달 규칙 개선 시뮬레이션 1~5차는 모두 미달이라 지금 규칙 유지(`docs/listen-*-sim-2026-10.md`).
+- **API** `/api/listen/*`(main.py): curriculum·skip·stage/{n}·answer·ling·test/start·test/answer·wordtest·today·summary.
+- **소리**: 미리 합성한 서버 음성(Supertonic 3, `backend/data/sound/`, 목소리 m1·f1·m2·f2 훈련, m3 검사 전용, 잡음 다섯). `/api/sound?text=&voice=`.
+  재생·믹서는 `frontend/src/lib/listenAudio.js`(말소리 활성 레벨 P.56로 SNR, 전체 크기 고정, 전화·잔향·인공와우 모의 보코더를 오프라인 처리,
+  블루투스 지연 보정), 계산은 `lib/listenMix.js`. 콘텐츠가 바뀌면 합성이 필요하다(`docs/sound-qa-2026-10.md` 7절).
+- **화면**: 학습 경로 `?track=listen`(청록), 레슨 `/learn/listening?stage=N`, 결과 `/analysis/listening`. 연습·복습·과제·분석 탭 연동은 10/7 진행 중.
+- **연구용**: 인공와우 모의 `?sim=ci`(청인 파일럿, `docs/pilot/listen-vocoder-pilot-prereg.md`), 검사 잡음 `?testnoise=talker2`, 낱말 일반화 검사 `?stage=2&wordtest=1`.
+- **브라우저 점검 때 소리 금지**: 탭에서 `localStorage.liplab_mute='1'` 뒤 `isMuted()`가 참인지 확인하고 재생한다(스피커 연결 자체를 끊는다).
+- 문구에 '치료·청력 개선'을 쓰지 않는다(디지털치료기기 판단 대상). '진단·치료하지 않아요' 안내를 둔다. 합성 음성임을 표시한다(라이선스).
+
 ## 주요 API 엔드포인트
 
 | Method | Path | 용도 |
