@@ -352,19 +352,24 @@ class ASR:
         from transformers import WhisperForConditionalGeneration, WhisperProcessor
         self.torch = torch
         self.proc = WhisperProcessor.from_pretrained(name)
-        self.model = WhisperForConditionalGeneration.from_pretrained(
-            name, torch_dtype=torch.float16, attn_implementation="sdpa").to("cuda").eval()
+        try:
+            m = WhisperForConditionalGeneration.from_pretrained(name, torch_dtype=torch.float16, attn_implementation="sdpa")
+        except ImportError:      # torch 2.1.0 이미지는 transformers의 sdpa 조건(≥2.1.1)에 못 미친다
+            m = WhisperForConditionalGeneration.from_pretrained(name, torch_dtype=torch.float16, attn_implementation="eager")
+        torch.set_default_dtype(torch.float32)     # 실패한 첫 시도가 기본 dtype을 fp16으로 남길 수 있다
+        print("ASR attn", m.config._attn_implementation, flush=True)
+        self.model = m.to("cuda").eval()
         fe = self.proc.feature_extractor
         self.n_mels = fe.feature_size
         self.filters = torch.tensor(np.asarray(fe.mel_filters), dtype=torch.float32, device="cuda")   # (201, n_mels)
-        self.window = torch.hann_window(400, device="cuda")
+        self.window = torch.hann_window(400, device="cuda", dtype=torch.float32)
         self.batch = batch
 
     def feats(self, wavs):
         torch = self.torch
-        x = torch.zeros(len(wavs), 480000, device="cuda")
+        x = torch.zeros(len(wavs), 480000, device="cuda", dtype=torch.float32)
         for i, w in enumerate(wavs):
-            w = torch.from_numpy(w[:480000]).to("cuda")
+            w = torch.from_numpy(np.ascontiguousarray(w[:480000], dtype=np.float32)).to("cuda")
             x[i, : w.numel()] = w
         st = torch.stft(x, 400, 160, window=self.window, return_complex=True)
         mag = st[..., :-1].abs() ** 2
