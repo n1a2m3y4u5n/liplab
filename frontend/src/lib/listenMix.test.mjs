@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mixLevels, clampGainDb, pickSource, voiceRoles, voiceFor, fitFramesToAudio, snrLabel, contrastText,
-  readSettings, writeSettings, REF_DBFS, gainFor, rmsOf } from './listenMix.js'
+  readSettings, writeSettings, REF_DBFS, gainFor, rmsOf, activeLevel } from './listenMix.js'
 
 const db = (x) => 20 * Math.log10(x)
 
@@ -68,4 +68,19 @@ test('설정은 기기에만 저장하고 깨진 값이면 없음으로', () => 
   const broken = { getItem: () => { throw new Error('blocked') }, setItem: () => { throw new Error('blocked') } }
   assert.equal(readSettings(broken), null)
   assert.equal(writeSettings({ gainDb: 0 }, broken), false)
+})
+
+test('활성 음성 레벨은 무음 길이에 흔들리지 않는다', () => {
+  const sr = 16000
+  const tone = (sec, amp) => Float32Array.from({ length: sr * sec }, (_, i) => amp * Math.sin(2 * Math.PI * 300 * i / sr) * (0.6 + 0.4 * Math.sin(2 * Math.PI * 3 * i / sr)))
+  const speech = tone(1.5, 0.3)
+  const pad = (sec) => new Float32Array(Math.round(sr * sec))
+  const cat = (...xs) => { const out = new Float32Array(xs.reduce((a, x) => a + x.length, 0)); let o = 0; for (const x of xs) { out.set(x, o); o += x.length } return out }
+  const short = cat(pad(0.2), speech, pad(0.2))
+  const long = cat(pad(1.0), speech, pad(1.0))
+  const dB = (x) => 20 * Math.log10(x)
+  assert.ok(dB(rmsOf(short)) - dB(rmsOf(long)) > 2)                       // 전체 RMS는 무음이 길수록 낮아진다
+  assert.ok(Math.abs(dB(activeLevel(short, sr)) - dB(activeLevel(long, sr))) < 0.3)
+  assert.ok(Math.abs(dB(activeLevel(long, sr)) - dB(rmsOf(speech))) < 1)  // 말소리 구간 RMS와 1 dB 안
+  assert.equal(activeLevel(new Float32Array(100), sr), 0)
 })

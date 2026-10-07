@@ -5,12 +5,15 @@
  *    파일은 받아서 풀고(decodeAudioData) RMS를 재 두었다가 목표 크기로 맞춘다. 못 받으면 null(화면이 '소리 준비 전'으로 알린다).
  *  - 잡음: /api/sound/noise/babble.{ogg,m4a}(여러 목소리를 겹친 잡담 잡음, 반복 재생).
  *  - 크기: 말+소음 전체 크기를 학습자가 맞춘 편안한 크기에 고정(listenMix.mixLevels). 끝에 제한기(-1 dBFS)를 둔다.
- *  - 전화 소리: 300 ~ 3400 Hz 대역만 통과(5단계 선택).
+ *    말소리 크기는 무음을 뺀 활성 음성 레벨(ITU-T P.56, listenMix.activeLevel)이다. 전체 RMS를 쓰면 합성음 앞뒤 무음만큼 실제 SNR이
+ *    표시값보다 높아진다(HINT·Matrix 검사도 무음을 뺀 레벨로 SNR을 정한다, docs/listen-advance-plan-2026-10.md F1).
+ *  - 전화 소리: 오프라인으로 300 ~ 3400 Hz 8차 대역 통과 → 8 kHz 표본화 → G.711 μ-law 8비트 양자화한 소리를 미리 만든다(phoneClip).
+ *    논문의 전화 모의는 6~9차 필터를 썼다(Liu 2009 등). 실제 통신망의 손실·코덱 차이는 재현하지 않는다.
  *  - 천천히: <audio>의 playbackRate 0.8(음높이 유지)로 같은 연결에 흘린다.
  *  - Ling 6소리: 오프라인으로 합성한다(대역을 정확히 맞추려고). 모음·콧소리는 톱니파를 공명 필터로, 쉬·스는 띠 잡음.
  */
 import api from '../api'
-import { mixLevels, gainFor, rmsOf, pickSource } from './listenMix'
+import { mixLevels, gainFor, rmsOf, pickSource, activeLevel } from './listenMix'
 
 let ctx = null
 let limiter = null
@@ -69,7 +72,7 @@ export function loadClip(text, voice = '') {
         const buf = await (await fetch(url)).arrayBuffer()
         const c = audioContext()
         const buffer = await c.decodeAudioData(buf.slice(0))
-        return { buffer, rms: rmsOf(buffer.getChannelData(0)), url, duration_ms: d.duration_ms || Math.round(buffer.duration * 1000),
+        return { buffer, rms: activeLevel(buffer.getChannelData(0), buffer.sampleRate) || rmsOf(buffer.getChannelData(0)), url, duration_ms: d.duration_ms || Math.round(buffer.duration * 1000),
           syllables: d.syllables || null, voice: d.voice ?? voice }
       } catch { return null }
     })()
@@ -100,7 +103,7 @@ export function loadNoise() {
           const res = await fetch(`/api/sound/noise/${name}`)
           if (!res.ok) continue
           const buffer = await audioContext().decodeAudioData(await res.arrayBuffer())
-          const rms = rmsOf(buffer.getChannelData(0))
+          const rms = rmsOf(buffer.getChannelData(0))   // 잡음은 쉬지 않고 이어지므로 전체 RMS
           if (rms > 0) return { buffer, rms }
         } catch { /* 다음 형식 */ }
       }
@@ -120,6 +123,50 @@ function phoneFilter(c, input) {
   return lp
 }
 
+// 버터워스 8차(2차 단 4개) 단별 Q
+const BUTTER8_Q = [0.5098, 0.6013, 0.9000, 2.5629]
+const phoneCache = new WeakMap()
+
+/** 전화 소리판: 8차 대역 통과(300 ~ 3400 Hz) → 8 kHz → μ-law 8비트. 실패하면 null(재생은 실시간 필터로 대신한다). */
+export async function phoneClip(clip) {
+  if (!clip?.buffer) return null
+  if (phoneCache.has(clip)) return phoneCache.get(clip)
+  try {
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext
+    const sr = 8000
+    const oc = new OAC(1, Math.ceil(clip.buffer.duration * sr), sr)
+    const src = oc.createBufferSource()
+    src.buffer = clip.buffer
+    let node = src
+    for (const q of BUTTER8_Q) {
+      const hp = oc.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 300; hp.Q.value = q
+      node.connect(hp); node = hp
+    }
+    for (const q of BUTTER8_Q) {
+      const lp = oc.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3400; lp.Q.value = q
+      node.connect(lp); node = lp
+    }
+    node.connect(oc.destination)
+    src.start(0)
+    const out = await oc.startRendering()
+    const x = out.getChannelData(0)
+    // μ-law(μ=255) 압축 → 8비트 양자화 → 복원
+    const MU = 255
+    let peak = 0
+    for (let i = 0; i < x.length; i += 1) peak = Math.max(peak, Math.abs(x[i]))
+    const norm = peak > 0 ? 0.98 / peak : 1
+    for (let i = 0; i < x.length; i += 1) {
+      const v = x[i] * norm
+      const y = Math.sign(v) * Math.log1p(MU * Math.abs(v)) / Math.log1p(MU)
+      const qy = Math.round(y * 127) / 127
+      x[i] = (Math.sign(qy) * (Math.expm1(Math.abs(qy) * Math.log1p(MU)) / MU)) / norm
+    }
+    const pc = { buffer: out, rms: activeLevel(x, sr) || rmsOf(x), url: null, duration_ms: clip.duration_ms }
+    phoneCache.set(clip, pc)
+    return pc
+  } catch { return null }
+}
+
 let current = null
 /** 지금 재생 중인 소리를 멈춘다. */
 export function stopAll() {
@@ -136,7 +183,13 @@ export async function playClip(clip, opts = {}) {
   if (!clip) return false
   stopAll()
   const c = await resume()
-  const { gainDb = -10, snrDb = null, noise = null, phone = false, rate = 1, leadMs = noise && snrDb != null ? 500 : 0 } = opts
+  const { gainDb = -10, snrDb = null, noise = null, rate = 1, leadMs = noise && snrDb != null ? 500 : 0 } = opts
+  let { phone = false } = opts
+  // 전화 소리는 미리 만든 판을 쓴다(천천히 재생은 <audio>라 실시간 필터로 대신)
+  if (phone && rate === 1) {
+    const pc = await phoneClip(clip)
+    if (pc) { clip = pc; phone = false }
+  }
   const lv = mixLevels(gainDb, noise && snrDb != null ? snrDb : null)
   const out = c.createGain()
   out.gain.value = 1
