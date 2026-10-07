@@ -765,6 +765,7 @@ async def init_db():
         await _add_missing_columns(conn)
         await _dedupe_and_index(conn)
         await _pilot_seq_index(conn)
+        await _listen_test_index(conn)
         await _user_indexes(conn)
 
 
@@ -841,6 +842,19 @@ async def _pilot_seq_index(conn) -> None:
                 "CREATE UNIQUE INDEX IF NOT EXISTS ux_retention_results_user_post ON retention_results (user_id, post_result_id)")
     except Exception as e:
         print(f"[WARN] retention_results 고유 인덱스 실패(겹친 행 확인 필요): {e}")
+
+
+async def _listen_test_index(conn) -> None:
+    """소리 듣기 검사(test:…)·낱말 일반화 검사(wtest:…) 회차 안에서 문항 하나에 답 하나. 두 번 눌러 같은 문항 답이 동시에 오면 둘 다
+    들어가 20문장 검사가 19문장에서 끝나고 역치가 한 시행을 두 번 셌다. 훈련 답(session 없음·practice)은 같은 문항을 되풀이하므로
+    부분 인덱스로 검사 회차만 묶는다(SQLite·PostgreSQL 모두 WHERE 부분 인덱스를 지원). 이미 겹친 행이 있으면 경고만 남긴다(지우지 않는다)."""
+    try:
+        async with _Isolated(conn):
+            await conn.exec_driver_sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_listen_attempts_test_item ON listen_attempts (user_id, session, item_key) "
+                "WHERE session LIKE 'test:%' OR session LIKE 'wtest:%'")
+    except Exception as e:
+        print(f"[WARN] listen_attempts 검사 문항 고유 인덱스 실패(겹친 답 확인 필요): {e}")
 
 
 async def _dedupe_and_index(conn) -> None:

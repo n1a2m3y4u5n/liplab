@@ -43,8 +43,10 @@ export function rmsOf(samples) {
  * 활성 음성 레벨(ITU-T P.56 방법 B, Kabal 1999 설명과 VOICEBOX v_activlev를 따름). 앞뒤·사이 무음을 빼고 말소리가 있는 구간만으로
  * 크기를 구한다. 반환은 선형 RMS 등가값(전체 RMS와 같은 단위). HINT·Matrix 검사도 무음을 뺀 말소리 레벨로 SNR을 정한다.
  *  - 포락선: |x|를 시간 상수 0.03초 지수 평활 두 번, 유지 시간 0.2초
- *  - 문턱 c_j = 2^j(j = -15 … -1, 표본 크기 −1 ~ 1 기준), 문턱마다 활성 표본의 평균 제곱 레벨 A_j와 문턱 레벨 C_j의 차이가
- *    15.9 dB가 되는 지점을 로그 축에서 선형 보간
+ *  - 문턱 c_j = 2^j(j = -15 … -1, 표본 크기 −1 ~ 1 기준), 문턱마다 A_j = (전체 에너지 / 활성 표본 수)의 dB와 문턱 레벨 C_j의
+ *    차이가 15.9 dB가 되는 지점을 로그 축에서 선형 보간
+ *  A_j의 분자는 신호 전체의 제곱합이다(G.191 sv-p56의 sqr_sum, v_activlev의 sxx). 예전에는 활성 표본의 제곱합만 써서 비활성 구간
+ *  에너지(숨소리·잔잡음)만큼 낮게 나왔다(서버 음성 150개에서 평균 −0.19 dB, 최대 −0.91 dB, docs/review/listen-code-review-2026-10.md).
  *  활성 구간이 거의 없거나 교차점이 없으면 전체 RMS를 돌려준다.
  */
 export function activeLevel(samples, sampleRate) {
@@ -55,22 +57,19 @@ export function activeLevel(samples, sampleRate) {
   const J = 15
   const thr = Array.from({ length: J }, (_, k) => 2 ** (k - J))   // 2^-15 … 2^-1
   const count = new Float64Array(J)
-  const sumSq = new Float64Array(J)
   const last = new Float64Array(J).fill(-Infinity)   // 마지막으로 문턱을 넘은 표본 번호
   let p = 0
   let q = 0
   let total = 0
   for (let i = 0; i < n; i += 1) {
     const x = samples[i]
-    const x2 = x * x
-    total += x2
+    total += x * x
     p = g * p + (1 - g) * Math.abs(x)
     q = g * q + (1 - g) * p
     for (let j = 0; j < J; j += 1) {
       if (q >= thr[j]) last[j] = i
       else if (i - last[j] > hang) continue
       count[j] += 1
-      sumSq[j] += x2
     }
   }
   if (total === 0) return 0
@@ -79,17 +78,44 @@ export function activeLevel(samples, sampleRate) {
   let prev = null
   for (let j = 0; j < J; j += 1) {
     if (count[j] < sampleRate * 0.05) break   // 활성 구간 50ms 미만은 믿지 않는다
-    const A = 10 * Math.log10(sumSq[j] / count[j])
+    const A = 10 * Math.log10(total / count[j])
     const C = 20 * Math.log10(thr[j])
     const d = A - C
     if (d <= M) {
-      if (!prev) return Math.sqrt(sumSq[j] / count[j])
+      if (!prev) return Math.sqrt(total / count[j])
       const t = (prev.d - M) / (prev.d - d)          // 차이 축에서 M이 되는 비율
       return 10 ** ((prev.A + t * (A - prev.A)) / 20)
     }
     prev = { A, d }
   }
   return plain
+}
+
+/**
+ * 개수 상한이 있는 캐시(가장 오래 안 쓴 것부터 버린다). 소리 듣기는 회기 하나에 문항마다 새 글을 받아 풀어 두므로(48 kHz 모노 2초면
+ * 약 380 KB) 상한이 없으면 긴 회기에서 수백 개가 쌓여 저사양 폰의 메모리를 넘는다. get은 쓴 것으로 친다.
+ */
+export function createLru(max) {
+  const m = new Map()
+  const cap = Math.max(1, Math.floor(max) || 1)
+  return {
+    get(k) {
+      if (!m.has(k)) return undefined
+      const v = m.get(k)
+      m.delete(k)
+      m.set(k, v)
+      return v
+    },
+    has: (k) => m.has(k),
+    set(k, v) {
+      m.delete(k)
+      m.set(k, v)
+      while (m.size > cap) m.delete(m.keys().next().value)
+      return v
+    },
+    delete: (k) => m.delete(k),
+    get size() { return m.size },
+  }
 }
 
 /** 소리 원본 고르기: 브라우저가 풀 수 있는 첫 형식(canPlay(type)이 '' 아님). ogg/opus를 못 푸는 Safari는 m4a로 간다. */
