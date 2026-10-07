@@ -69,7 +69,7 @@ export default function ListeningReport() {
               )}
             </Section>
 
-            <Section title="훈련 중 역치" note="훈련은 소리만이 기본이고 네 번에 한 번 입모양을 함께 보여 줘요. 입모양 이득은 두 조건의 역치 차이예요.">
+            <Section title="훈련 중 역치" note="훈련은 소리만이 기본이고 네 번에 한 번 입모양을 함께 보여 줘요. 입모양 이득은 두 조건의 역치 차이예요. 지금 입모양은 3D 아바타라 실제 사람 얼굴의 이득과 다를 수 있어요.">
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-14 bg-surface-muted py-3"><p className="text-[12px] text-ink-muted">소리만</p><p className="text-[18px] font-bold text-ink">{dB(d.training.srt_ao_db)}</p><p className="text-[11px] text-ink-faint">{d.training.n_ao}문장</p></div>
                 <div className="rounded-14 bg-surface-muted py-3"><p className="text-[12px] text-ink-muted">소리 + 입모양</p><p className="text-[18px] font-bold text-ink">{dB(d.training.srt_av_db)}</p><p className="text-[11px] text-ink-faint">{d.training.n_av}문장</p></div>
