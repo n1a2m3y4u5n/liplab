@@ -1,6 +1,6 @@
 {
  "schema": "liplab-pilot-battery/1",
- "version": "draft-2026-10-06",
+ "version": "draft-2026-10-07",
  "status": "draft",
  "note": "촬영 전 초안. 문장·폼 C 낱말·무의미 낱말은 사람이 검토해 동결한다. 영상·음성 파일은 저장소에 넣지 않고 LIPLAB_PILOT_MEDIA_DIR(기본 backend/data/pilot/media) 아래 media_pattern 경로에 둔다. docs/pilot/battery.md",
  "forms": [
@@ -909,8 +909,8 @@
      },
      {
       "id": "SA02",
-      "text": "많이 기다렸지요",
-      "syllables": 7,
+      "text": "새 옷을 입어 봤어요",
+      "syllables": 8,
       "phonemes": 14
      },
      {
@@ -951,8 +951,8 @@
      },
      {
       "id": "SA09",
-      "text": "머리가 조금 아파요",
-      "syllables": 8,
+      "text": "시험을 잘 봤어요",
+      "syllables": 7,
       "phonemes": 15
      },
      {
@@ -1071,9 +1071,9 @@
      },
      {
       "id": "SA29",
-      "text": "엄마랑 시장에 갔어요",
+      "text": "표를 미리 사 두었어요",
       "syllables": 9,
-      "phonemes": 18
+      "phonemes": 17
      },
      {
       "id": "SA30",
@@ -1119,8 +1119,8 @@
      },
      {
       "id": "SA37",
-      "text": "내일 아침에 일찍 만나요",
-      "syllables": 10,
+      "text": "이번 주는 정말 바빠요",
+      "syllables": 9,
       "phonemes": 20
      },
      {
@@ -1131,9 +1131,9 @@
      },
      {
       "id": "SA39",
-      "text": "동생이 감기에 걸렸어요",
-      "syllables": 10,
-      "phonemes": 21
+      "text": "저녁에 산책할까요",
+      "syllables": 8,
+      "phonemes": 18
      },
      {
       "id": "SA40",
@@ -1205,7 +1205,7 @@
      },
      {
       "id": "SB11",
-      "text": "내 말 잘 들리세요",
+      "text": "제 말 잘 들리세요",
       "syllables": 7,
       "phonemes": 16
      },
@@ -1217,7 +1217,7 @@
      },
      {
       "id": "SB13",
-      "text": "맛있게 많이 드세요",
+      "text": "화분에 물을 줬어요",
       "syllables": 8,
       "phonemes": 16
      },
@@ -1229,9 +1229,9 @@
      },
      {
       "id": "SB15",
-      "text": "우산을 챙겨 가세요",
+      "text": "반찬이 정말 많아요",
       "syllables": 8,
-      "phonemes": 16
+      "phonemes": 18
      },
      {
       "id": "SB16",
@@ -1253,7 +1253,7 @@
      },
      {
       "id": "SB19",
-      "text": "신발을 새로 샀어요",
+      "text": "엄마한테 혼났어요",
       "syllables": 8,
       "phonemes": 17
      },
@@ -1295,9 +1295,9 @@
      },
      {
       "id": "SB26",
-      "text": "전화가 잘 안 들려요",
-      "syllables": 8,
-      "phonemes": 18
+      "text": "운동화 끈이 풀렸어요",
+      "syllables": 9,
+      "phonemes": 19
      },
      {
       "id": "SB27",
@@ -1355,9 +1355,9 @@
      },
      {
       "id": "SB36",
-      "text": "잠깐만 기다려 주세요",
-      "syllables": 9,
-      "phonemes": 20
+      "text": "모래성을 쌓았어요",
+      "syllables": 8,
+      "phonemes": 16
      },
      {
       "id": "SB37",
@@ -1471,8 +1471,8 @@
      },
      {
       "id": "SC15",
-      "text": "조심히 들어가세요",
-      "syllables": 8,
+      "text": "줄넘기를 했어요",
+      "syllables": 7,
       "phonemes": 16
      },
      {
@@ -1495,13 +1495,13 @@
      },
      {
       "id": "SC19",
-      "text": "약을 먹고 푹 쉬세요",
+      "text": "열심히 연습했어요",
       "syllables": 8,
       "phonemes": 17
      },
      {
       "id": "SC20",
-      "text": "창문 좀 열어 주세요",
+      "text": "오늘은 일찍 잘게요",
       "syllables": 8,
       "phonemes": 17
      },
@@ -1531,8 +1531,8 @@
      },
      {
       "id": "SC25",
-      "text": "밥을 천천히 먹어요",
-      "syllables": 8,
+      "text": "주머니에 동전이 있어요",
+      "syllables": 10,
       "phonemes": 18
      },
      {
@@ -1549,9 +1549,9 @@
      },
      {
       "id": "SC28",
-      "text": "손을 깨끗이 씻으세요",
-      "syllables": 9,
-      "phonemes": 18
+      "text": "그건 잘 모르겠어요",
+      "syllables": 8,
+      "phonemes": 17
      },
      {
       "id": "SC29",
@@ -1567,9 +1567,9 @@
      },
      {
       "id": "SC31",
-      "text": "선생님께 여쭤봤어요",
+      "text": "선생님께 물어봤어요",
       "syllables": 9,
-      "phonemes": 19
+      "phonemes": 20
      },
      {
       "id": "SC32",
@@ -1591,9 +1591,9 @@
      },
      {
       "id": "SC35",
-      "text": "오늘 날씨가 참 좋네요",
+      "text": "떡볶이가 너무 매워요",
       "syllables": 9,
-      "phonemes": 20
+      "phonemes": 17
      },
      {
       "id": "SC36",
@@ -1630,75 +1630,75 @@
    "reserve": [
     {
      "id": "SR01",
-     "text": "이불을 덮고 자요",
-     "syllables": 7,
-     "phonemes": 14
+     "text": "냄비에 물이 끓어요",
+     "syllables": 8,
+     "phonemes": 15
     },
     {
      "id": "SR02",
-     "text": "손이 너무 차가워요",
+     "text": "오늘 많이 걸었어요",
      "syllables": 8,
-     "phonemes": 14
+     "phonemes": 15
     },
     {
      "id": "SR03",
-     "text": "시험을 잘 봤어요",
-     "syllables": 7,
-     "phonemes": 15
+     "text": "동생이 키가 컸어요",
+     "syllables": 8,
+     "phonemes": 16
     },
     {
      "id": "SR04",
-     "text": "밤에 잠이 잘 안 와요",
-     "syllables": 8,
-     "phonemes": 15
+     "text": "우체국에 다녀올게요",
+     "syllables": 9,
+     "phonemes": 16
     },
     {
      "id": "SR05",
-     "text": "줄넘기를 했어요",
-     "syllables": 7,
-     "phonemes": 16
+     "text": "신호등이 바뀌었어요",
+     "syllables": 9,
+     "phonemes": 17
     },
     {
      "id": "SR06",
-     "text": "모래성을 쌓았어요",
+     "text": "목소리가 참 좋네요",
      "syllables": 8,
-     "phonemes": 16
+     "phonemes": 18
     },
     {
      "id": "SR07",
-     "text": "화분에 물을 줬어요",
+     "text": "생일 정말 축하해요",
      "syllables": 8,
-     "phonemes": 16
+     "phonemes": 19
     },
     {
      "id": "SR08",
-     "text": "그건 잘 모르겠어요",
-     "syllables": 8,
-     "phonemes": 17
+     "text": "햇볕이 정말 따가워요",
+     "syllables": 9,
+     "phonemes": 19
     },
     {
      "id": "SR09",
-     "text": "오늘은 일찍 잘게요",
-     "syllables": 8,
-     "phonemes": 17
+     "text": "강아지가 밖에서 짖어요",
+     "syllables": 10,
+     "phonemes": 19
     },
     {
      "id": "SR10",
-     "text": "떡볶이가 너무 매워요",
-     "syllables": 9,
-     "phonemes": 17
+     "text": "할아버지께 인사했어요",
+     "syllables": 10,
+     "phonemes": 19
     },
     {
      "id": "SR11",
-     "text": "표를 미리 사 두었어요",
+     "text": "손톱을 짧게 깎았어요",
      "syllables": 9,
-     "phonemes": 17
+     "phonemes": 20
     },
     {
      "id": "SR12",
-     "text": "저녁에 산책할까요",
-     "syllables": 8,
-     "phonemes": 18
+     "text": "길에서 친구를 만났어요",
+     "syllables": 10,
+     "phonemes": 22
     }
    ]
   },
@@ -1988,15 +1988,15 @@
      },
      {
       "id": "NB03",
-      "text": "체림",
+      "text": "차럼",
       "consonants": [
        "ㅊ",
        "ㄹ",
        "ㅁ"
       ],
       "vowels": [
-       "ㅔ",
-       "ㅣ"
+       "ㅏ",
+       "ㅓ"
       ]
      },
      {
@@ -2053,19 +2053,6 @@
      },
      {
       "id": "NB08",
-      "text": "헤힘",
-      "consonants": [
-       "ㅎ",
-       "ㅎ",
-       "ㅁ"
-      ],
-      "vowels": [
-       "ㅔ",
-       "ㅣ"
-      ]
-     },
-     {
-      "id": "NB09",
       "text": "타몹",
       "consonants": [
        "ㅌ",
@@ -2078,7 +2065,7 @@
       ]
      },
      {
-      "id": "NB10",
+      "id": "NB09",
       "text": "네텐",
       "consonants": [
        "ㄴ",
@@ -2091,7 +2078,7 @@
       ]
      },
      {
-      "id": "NB11",
+      "id": "NB10",
       "text": "므눙",
       "consonants": [
        "ㅁ",
@@ -2104,7 +2091,7 @@
       ]
      },
      {
-      "id": "NB12",
+      "id": "NB11",
       "text": "거졸",
       "consonants": [
        "ㄱ",
@@ -2117,7 +2104,7 @@
       ]
      },
      {
-      "id": "NB13",
+      "id": "NB12",
       "text": "조독",
       "consonants": [
        "ㅈ",
@@ -2130,7 +2117,7 @@
       ]
      },
      {
-      "id": "NB14",
+      "id": "NB13",
       "text": "포롬",
       "consonants": [
        "ㅍ",
@@ -2143,7 +2130,7 @@
       ]
      },
      {
-      "id": "NB15",
+      "id": "NB14",
       "text": "초찹",
       "consonants": [
        "ㅊ",
@@ -2156,7 +2143,7 @@
       ]
      },
      {
-      "id": "NB16",
+      "id": "NB15",
       "text": "리선",
       "consonants": [
        "ㄹ",
@@ -2167,29 +2154,29 @@
        "ㅣ",
        "ㅓ"
       ]
+     },
+     {
+      "id": "NB16",
+      "text": "케콩",
+      "consonants": [
+       "ㅋ",
+       "ㅋ",
+       "ㅇ"
+      ],
+      "vowels": [
+       "ㅔ",
+       "ㅗ"
+      ]
      }
     ],
     "C": [
      {
       "id": "NC01",
-      "text": "조슨",
+      "text": "브첩",
       "consonants": [
-       "ㅈ",
-       "ㅅ",
-       "ㄴ"
-      ],
-      "vowels": [
-       "ㅗ",
-       "ㅡ"
-      ]
-     },
-     {
-      "id": "NC02",
-      "text": "느걱",
-      "consonants": [
-       "ㄴ",
-       "ㄱ",
-       "ㄱ"
+       "ㅂ",
+       "ㅊ",
+       "ㅂ"
       ],
       "vowels": [
        "ㅡ",
@@ -2197,77 +2184,64 @@
       ]
      },
      {
-      "id": "NC03",
-      "text": "체듭",
+      "id": "NC02",
+      "text": "크셀",
       "consonants": [
-       "ㅊ",
-       "ㄷ",
-       "ㅂ"
+       "ㅋ",
+       "ㅅ",
+       "ㄹ"
       ],
       "vowels": [
-       "ㅔ",
-       "ㅡ"
+       "ㅡ",
+       "ㅔ"
+      ]
+     },
+     {
+      "id": "NC03",
+      "text": "토징",
+      "consonants": [
+       "ㅌ",
+       "ㅈ",
+       "ㅇ"
+      ],
+      "vowels": [
+       "ㅗ",
+       "ㅣ"
       ]
      },
      {
       "id": "NC04",
-      "text": "도핌",
+      "text": "푸핀",
       "consonants": [
-       "ㄷ",
        "ㅍ",
-       "ㅁ"
+       "ㅍ",
+       "ㄴ"
       ],
       "vowels": [
-       "ㅗ",
+       "ㅜ",
        "ㅣ"
       ]
      },
      {
       "id": "NC05",
-      "text": "부킬",
+      "text": "스맘",
       "consonants": [
-       "ㅂ",
-       "ㅋ",
-       "ㄹ"
+       "ㅅ",
+       "ㅁ",
+       "ㅁ"
       ],
       "vowels": [
-       "ㅜ",
-       "ㅣ"
+       "ㅡ",
+       "ㅏ"
       ]
      },
      {
       "id": "NC06",
-      "text": "크탕",
-      "consonants": [
-       "ㅋ",
-       "ㅌ",
-       "ㅇ"
-      ],
-      "vowels": [
-       "ㅡ",
-       "ㅏ"
-      ]
-     },
-     {
-      "id": "NC07",
-      "text": "투눈",
-      "consonants": [
-       "ㅌ",
-       "ㄴ",
-       "ㄴ"
-      ],
-      "vowels": [
-       "ㅜ",
-       "ㅜ"
-      ]
-     },
-     {
-      "id": "NC08",
-      "text": "므직",
+      "text": "므킵",
       "consonants": [
        "ㅁ",
-       "ㅈ",
-       "ㄱ"
+       "ㅋ",
+       "ㅂ"
       ],
       "vowels": [
        "ㅡ",
@@ -2275,25 +2249,38 @@
       ]
      },
      {
-      "id": "NC09",
-      "text": "허참",
+      "id": "NC07",
+      "text": "자겔",
       "consonants": [
-       "ㅎ",
-       "ㅊ",
-       "ㅁ"
+       "ㅈ",
+       "ㄱ",
+       "ㄹ"
       ],
       "vowels": [
-       "ㅓ",
+       "ㅏ",
+       "ㅔ"
+      ]
+     },
+     {
+      "id": "NC08",
+      "text": "치방",
+      "consonants": [
+       "ㅊ",
+       "ㅂ",
+       "ㅇ"
+      ],
+      "vowels": [
+       "ㅣ",
        "ㅏ"
       ]
      },
      {
-      "id": "NC10",
-      "text": "고빌",
+      "id": "NC09",
+      "text": "노힌",
       "consonants": [
-       "ㄱ",
-       "ㅂ",
-       "ㄹ"
+       "ㄴ",
+       "ㅎ",
+       "ㄴ"
       ],
       "vowels": [
        "ㅗ",
@@ -2301,12 +2288,12 @@
       ]
      },
      {
-      "id": "NC11",
-      "text": "스홍",
+      "id": "NC10",
+      "text": "르롬",
       "consonants": [
-       "ㅅ",
-       "ㅎ",
-       "ㅇ"
+       "ㄹ",
+       "ㄹ",
+       "ㅁ"
       ],
       "vowels": [
        "ㅡ",
@@ -2314,12 +2301,12 @@
       ]
      },
      {
-      "id": "NC12",
-      "text": "파민",
+      "id": "NC11",
+      "text": "하닉",
       "consonants": [
-       "ㅍ",
-       "ㅁ",
-       "ㄴ"
+       "ㅎ",
+       "ㄴ",
+       "ㄱ"
       ],
       "vowels": [
        "ㅏ",
@@ -2327,25 +2314,25 @@
       ]
      },
      {
-      "id": "NC13",
-      "text": "자겍",
+      "id": "NC12",
+      "text": "다둡",
       "consonants": [
-       "ㅈ",
-       "ㄱ",
-       "ㄱ"
+       "ㄷ",
+       "ㄷ",
+       "ㅂ"
       ],
       "vowels": [
        "ㅏ",
-       "ㅔ"
+       "ㅜ"
       ]
      },
      {
-      "id": "NC14",
-      "text": "니듭",
+      "id": "NC13",
+      "text": "비슬",
       "consonants": [
-       "ㄴ",
-       "ㄷ",
-       "ㅂ"
+       "ㅂ",
+       "ㅅ",
+       "ㄹ"
       ],
       "vowels": [
        "ㅣ",
@@ -2353,12 +2340,12 @@
       ]
      },
      {
-      "id": "NC15",
-      "text": "체펨",
+      "id": "NC14",
+      "text": "케젱",
       "consonants": [
-       "ㅊ",
-       "ㅍ",
-       "ㅁ"
+       "ㅋ",
+       "ㅈ",
+       "ㅇ"
       ],
       "vowels": [
        "ㅔ",
@@ -2366,16 +2353,29 @@
       ]
      },
      {
-      "id": "NC16",
-      "text": "디킬",
+      "id": "NC15",
+      "text": "티핀",
       "consonants": [
-       "ㄷ",
-       "ㅋ",
-       "ㄹ"
+       "ㅌ",
+       "ㅍ",
+       "ㄴ"
       ],
       "vowels": [
        "ㅣ",
        "ㅣ"
+      ]
+     },
+     {
+      "id": "NC16",
+      "text": "사탁",
+      "consonants": [
+       "ㅅ",
+       "ㅌ",
+       "ㄱ"
+      ],
+      "vowels": [
+       "ㅏ",
+       "ㅏ"
       ]
      }
     ]

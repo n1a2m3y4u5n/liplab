@@ -399,7 +399,7 @@ export default function EvalReport() {
 
             {/* 조음 교정 전후 오차(축 E-9) — 웹캠 교정 세션의 처음·끝에서 잰 관찰 차원(개구·원순·폐쇄) 평균 |목표−관찰| */}
             {art?.sessions > 0 && (
-              <Card title="웹캠 입모양 연습 전후 차이" hint={`입모양 연습 ${art.sessions}회 · 0에 가까울수록 목표 입모양`}>
+              <Card title="웹캠 입모양 연습: 목표와의 차이(처음 → 끝)" hint={`입모양 연습 ${art.sessions}회 · 0에 가까울수록 목표 입모양`}>
                 <div className="flex flex-wrap items-end gap-6">
                   <div>
                     <p className="text-[11px] font-bold text-ink-faint">세션 처음</p>

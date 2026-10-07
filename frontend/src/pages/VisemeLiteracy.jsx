@@ -247,7 +247,7 @@ function LearnPanel({ data }) {
                 <span className="text-[11px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700">{sel.articulation.manner}</span>
                 {sel.articulation.nasal && <span className="text-[11px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700">비음</span>}
               </div>
-              <span className="text-sky-800">밖에서 안 보이는 혀 움직임 — {sel.articulation.guide}</span>
+              <span className="text-sky-800">밖에서 안 보이는 혀·목 움직임 — {sel.articulation.guide}</span>
             </div>
           )}
           {VISEME_GROUP_VTL[sel.viseme_id] && <GroupTract group={VISEME_GROUP_VTL[sel.viseme_id]} />}

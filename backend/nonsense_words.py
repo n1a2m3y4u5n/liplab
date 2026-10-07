@@ -12,8 +12,10 @@ https://pmc.ncbi.nlm.nih.gov/articles/PMC4215828/ . 설계와 기록은 docs/non
   받침은 _CODAS 6개(대표음 ㄱ·ㄴ·ㄹ·ㅁ·ㅂ·ㅇ. ㄷ 계열 받침은 철자와 소리가 달라 뺌). 첫 음절에 받침이 없어 두 음절 사이에
   발음 규칙이 걸리지 않으므로, 아바타는 적힌 그대로 말한다. 모든 낱말은 표준 한글 음절이다.
 - 실제 낱말 빼기: 저장소의 낱말 자료(curriculum 단어 은행·최소대립쌍·문맥 문항, backend/data 아래 JSON의 모든 한글 덩어리,
-  표준검사 단어)와 wordfreq 한국어 빈도 사전(약 3만 낱말)에 있는 말, 사람이 보고 뺀 MANUAL_EXCLUDED를 뺀다. wordfreq는 앱
-  실행에 필요 없게, 후보 공간에서 사전에 걸린 낱말 목록을 생성 결과 JSON(excluded_by_wordfreq)에 함께 얼려 둔다.
+  표준검사 단어)와 wordfreq 한국어 빈도 사전(약 3만 낱말)에 있는 말, 사람이 보고 뺀 MANUAL_EXCLUDED를 뺀다. 2026-10-07부터는
+  글자가 아니라 소리로 대조한다(sound_key: 연음 등 표준 발음, ㅐ·ㅔ와 ㅒ·ㅖ 합류, ㅖ→ㅔ). 글자 대조는 게급(계급 [게급]),
+  체림(채림), 자겍(자객)을 놓쳤다. wordfreq는 앱 실행에 필요 없게, 후보 공간에서 사전 낱말과 소리가 같은 후보 목록을 생성 결과
+  JSON(excluded_by_wordfreq)에 함께 얼려 둔다.
 - 학습 목록: SET_COUNT개, 목록마다 SET_SIZE개. 한 목록은 모음 틀(V1, V2)이 같아 낱말이 자음으로만 갈린다(자음 지각 훈련).
   목록 안에서 첫소리 C1끼리, C2끼리 겹치지 않고, 세 자음의 입모양 무리(engine.VISEME_MAP)가 두 자리 이상 다르다
   (아바타는 같은 무리 자음을 같은 입모양으로 그리므로, 무리가 한 자리만 다르면 구별 단서가 하나뿐이다). 자음 골격은 목록끼리도
@@ -53,8 +55,16 @@ _VOWELS = "ㅏㅓㅗㅜㅡㅣㅔ"
 _CODAS = "ㄱㄴㄹㅁㅂㅇ"
 # 화면 도형 이름(frontend/src/lib/nonsenseShapes.js SHAPES와 같아야 한다, nonsensePairing.test.mjs가 확인)
 SHAPES = ("circle", "triangle", "square", "diamond", "star", "cross", "hexagon", "ring", "arch", "bolt", "drop", "bars")
-# 사람이 보고 뺀 말(사전에 없지만 실제로 쓰이는 말, 이름·상표·비속어 등). 생성 결과를 사람이 읽은 뒤 더한다
-MANUAL_EXCLUDED = frozenset({"고락", "저몸", "구김", "파닥"})   # 고락(苦樂), 저 몸(두 낱말), 구김, 파닥(흉내말)
+# 사람이 보고 뺀 말(사전에 없지만 실제로 쓰이는 말, 이름·상표·비속어 등). 생성 결과를 사람이 읽은 뒤 더한다.
+# 다른 실제 낱말과 같이 소리 열쇠(sound_key)로 대조하므로 표준 표기로 적으면 된다(채림을 적으면 체림도 빠진다).
+MANUAL_EXCLUDED = frozenset({
+    "고락", "저몸", "구김", "파닥",   # 6일: 고락(苦樂), 저 몸(두 낱말), 구김, 파닥(흉내말)
+    # 7일 내용 1차 검토(docs/review/nonsense-words.tsv): 허 참(감탄사, 방송인 이름), 채림(배우 이름), 자객·계급(사전에 있지만
+    # 앞 판의 글자 대조는 ㅐ·ㅔ 합류와 ㅖ→ㅔ 발음을 보지 않아 자겍·게급을 놓쳤다. 지금은 소리 대조로 빠지나 확인용으로 둔다),
+    # 초딩 무리 속어와 초딩과 입모양·소리가 같은 초뎅(ㅣ·ㅔ는 아바타 입모양 무리가 같다)
+    "허참", "채림", "자객", "계급",
+    "초딩", "중딩", "고딩", "대딩", "유딩", "초뎅", "고뎅", "대뎅",
+})
 
 _CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
 _JUNG = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ"
@@ -108,6 +118,74 @@ def candidates() -> List[str]:
 
 
 # ── 실제 낱말 ───────────────────────────────────────────────────────
+# 무의미 낱말은 소리 내어(아바타 입모양으로) 내므로, 글자가 달라도 소리가 실제 낱말과 같으면 뺀다(7일). 실제 낱말과 후보를 모두
+# 아래 규칙으로 '소리 열쇠'로 바꿔 대조한다. 후보(CV + CVC, 첫 음절 받침 없음)는 글자와 소리가 같아 열쇠가 자기 자신이고, 실제
+# 낱말 쪽에서 첫 음절 받침이 다음 음절로 넘어가거나 사라지는 규칙만 후보와 겹칠 수 있다.
+# - 연음(표준 발음법 13·14항): 받침 + ㅇ 첫소리 → 받침이 다음 첫소리로(밥알 → 바발, 닭이 → 달기). ㅎ 받침은 모음 앞에서 빠진다(12항 4).
+# - 구개음화(17항): ㄷ·ㅌ 받침 + 이 → 지·치. 거센소리되기(12항): ㅎ과 ㄱ·ㄷ·ㅂ·ㅈ이 만나면 ㅋ·ㅌ·ㅍ·ㅊ 하나로.
+# - 끝 받침은 대표음(9~11항, 무릎 → 무릅).
+# - 모음: ㅐ·ㅔ와 ㅒ·ㅖ는 지금 표준어 화자 대부분이 소리로 가르지 못하므로 합친다. '예·례' 밖의 ㅖ는 [ㅔ]로도 발음한다(5항 다만 2,
+#   계급 → 게급). 자음 뒤 ㅢ는 [ㅣ](5항 다만 3), 첫 음절 밖의 '의'는 [이]로도 발음한다(5항 다만 4).
+# 허용 발음까지 한 열쇠로 합치므로 실제보다 조금 넓게 뺀다(후보가 넉넉해 손해가 없다).
+_COMPLEX_CODA = {"ㄳ": ("ㄱ", "ㅅ"), "ㄵ": ("ㄴ", "ㅈ"), "ㄶ": ("ㄴ", "ㅎ"), "ㄺ": ("ㄹ", "ㄱ"), "ㄻ": ("ㄹ", "ㅁ"), "ㄼ": ("ㄹ", "ㅂ"),
+                 "ㄽ": ("ㄹ", "ㅅ"), "ㄾ": ("ㄹ", "ㅌ"), "ㄿ": ("ㄹ", "ㅍ"), "ㅀ": ("ㄹ", "ㅎ"), "ㅄ": ("ㅂ", "ㅅ")}
+_FINAL_CODA = {"ㄲ": "ㄱ", "ㅋ": "ㄱ", "ㄳ": "ㄱ", "ㄺ": "ㄱ", "ㅅ": "ㄷ", "ㅆ": "ㄷ", "ㅈ": "ㄷ", "ㅊ": "ㄷ", "ㅌ": "ㄷ", "ㅎ": "ㄷ",
+               "ㅍ": "ㅂ", "ㄿ": "ㅂ", "ㅄ": "ㅂ", "ㄵ": "ㄴ", "ㄶ": "ㄴ", "ㄻ": "ㅁ", "ㄼ": "ㄹ", "ㄽ": "ㄹ", "ㄾ": "ㄹ", "ㅀ": "ㄹ"}
+_ASPIRATE = {"ㄱ": "ㅋ", "ㄷ": "ㅌ", "ㅂ": "ㅍ", "ㅈ": "ㅊ"}
+_VOWEL_MERGE = {"ㅐ": "ㅔ", "ㅒ": "ㅖ"}
+
+
+def _decompose(word: str) -> List[List[str]]:
+    out = []
+    for ch in word:
+        k = ord(ch) - 0xAC00
+        if 0 <= k < 11172:
+            out.append([_CHO[k // 588], _JUNG[(k % 588) // 28], _JONG[k % 28]])
+    return out
+
+
+def sound_key(word: str) -> str:
+    """소리 열쇠: 위 발음 규칙을 적용하고 모음을 합친 꼴(다시 한글 음절로). 한글 밖의 글자와 띄어쓰기는 버린다(허 참 → 허참)."""
+    syl = _decompose(word)
+    for i in range(len(syl) - 1):
+        cur, nxt = syl[i], syl[i + 1]
+        j = cur[2]
+        if not j:
+            continue
+        if nxt[0] == "ㅇ" and j != "ㅇ":
+            if j in ("ㄶ", "ㅀ"):
+                cur[2], move = "", _COMPLEX_CODA[j][0]   # 많이 → 마니, 싫어 → 시러
+            elif j in _COMPLEX_CODA:
+                cur[2], move = _COMPLEX_CODA[j]          # 닭이 → 달기
+            else:
+                cur[2], move = "", j
+            if move == "ㅎ":
+                move = "ㅇ"                              # 좋아 → 조아
+            elif nxt[1] == "ㅣ" and move in ("ㄷ", "ㅌ"):
+                move = "ㅈ" if move == "ㄷ" else "ㅊ"   # 굳이 → 구지, 같이 → 가치
+            nxt[0] = move
+        elif j == "ㅎ" and nxt[0] in _ASPIRATE:     # 좋고 → 조코
+            cur[2], nxt[0] = "", _ASPIRATE[nxt[0]]
+        elif j in _ASPIRATE and nxt[0] == "ㅎ":     # 국화 → 구콰
+            cur[2], nxt[0] = "", _ASPIRATE[j]
+    if syl:
+        syl[-1][2] = _FINAL_CODA.get(syl[-1][2], syl[-1][2])
+    out = []
+    for i, (c, v, j) in enumerate(syl):
+        v = _VOWEL_MERGE.get(v, v)
+        if v == "ㅖ" and c not in ("ㅇ", "ㄹ"):
+            v = "ㅔ"
+        if v == "ㅢ" and (c != "ㅇ" or i > 0):
+            v = "ㅣ"
+        if j not in _JONG:
+            j = ""
+        out.append(chr(0xAC00 + (_CHO.index(c) * 21 + _JUNG.index(v)) * 28 + _JONG.index(j)))
+    return "".join(out)
+
+
+def sound_keys(words: Iterable[str]) -> Set[str]:
+    return {k for k in (sound_key(w) for w in words) if k}
+
 
 def _runs(obj) -> Iterable[str]:
     if isinstance(obj, str):
@@ -148,21 +226,25 @@ def repo_real_words() -> Set[str]:
 
 
 def wordfreq_hits(words: Sequence[str]) -> Optional[List[str]]:
-    """wordfreq 한국어 사전에 있는 후보(정렬). wordfreq가 없으면 None."""
+    """소리 내면 wordfreq 한국어 사전의 낱말과 같은 후보(정렬, sound_key로 대조). wordfreq가 없으면 None."""
     try:
         from wordfreq import get_frequency_dict
     except Exception:
         return None
-    d = get_frequency_dict("ko")
-    return sorted(w for w in words if w in d)
+    keys = sound_keys(get_frequency_dict("ko"))
+    return sorted(w for w in words if sound_key(w) in keys)
 
 
 # ── 생성 ─────────────────────────────────────────────────────────────
 
 def generate(excluded: Set[str], seed: int = SEED) -> Dict:
-    """학습 목록과 남겨 둔 목록을 만든다. excluded = 실제 낱말(저장소 + wordfreq + 사람이 뺀 말)."""
+    """학습 목록과 남겨 둔 목록을 만든다. excluded = 실제 낱말(저장소 + wordfreq + 사람이 뺀 말). 후보는 소리 열쇠가
+    excluded의 열쇠와 같으면 뺀다(글자가 달라도 소리가 같은 말, sound_key)."""
     rng = random.Random(seed)
-    bad = set(excluded) | set(MANUAL_EXCLUDED)
+    bad_keys = sound_keys(set(excluded) | set(MANUAL_EXCLUDED))
+
+    def is_real(w: str) -> bool:
+        return sound_key(w) in bad_keys
     used_skel: Set[str] = set()
     usage = {c: 0 for c in _ONSETS}
 
@@ -180,7 +262,7 @@ def generate(excluded: Set[str], seed: int = SEED) -> Dict:
         # 쓰인 횟수가 적은 자음부터. 정렬은 안정적이라 같은 횟수 안에서는 섞은 순서를 따른다
         for c1, c2, c3 in sorted(pool, key=lambda t: usage[t[0]] + usage[t[1]]):
             w = compose(c1, v1, c2, v2, c3)
-            if w in bad or skeleton(w) in used_skel or c1 in c1s or c2 in c2s or c3s.get(c3, 0) >= 2:
+            if is_real(w) or skeleton(w) in used_skel or c1 in c1s or c2 in c2s or c3s.get(c3, 0) >= 2:
                 continue
             if any(group_distance(w, p) < MIN_GROUP_DISTANCE for p in picked):
                 continue
@@ -214,7 +296,7 @@ def generate(excluded: Set[str], seed: int = SEED) -> Dict:
             rng.shuffle(vowels)
             for v1, v2 in vowels:
                 w = compose(c1, v1, c2, v2, c3)
-                if w not in bad and w not in taken and skeleton(w) not in used_skel:
+                if not is_real(w) and w not in taken and skeleton(w) not in used_skel:
                     lst.append(w)
                     taken.add(w)
                     break
@@ -233,9 +315,9 @@ def build(seed: int = SEED, wordfreq_excluded: Optional[Sequence[str]] = None) -
     real = repo_real_words()
     out = generate(real | set(wordfreq_excluded), seed)
     return {
-        "version": 1, "seed": seed,
+        "version": 2, "seed": seed,
         "rule": "CV+CVC, 첫소리 " + _ONSETS + ", 모음 " + _VOWELS + ", 받침 " + _CODAS
-                + ". 저장소 낱말·wordfreq 한국어 사전·MANUAL_EXCLUDED에 있는 말 제외(backend/nonsense_words.py 머리말)",
+                + ". 저장소 낱말·wordfreq 한국어 사전·MANUAL_EXCLUDED에 있는 말과 소리가 같은 후보 제외(sound_key, backend/nonsense_words.py 머리말)",
         "set_size": SET_SIZE, "criterion": CRITERION,
         **out,
         "excluded_by_wordfreq": list(wordfreq_excluded),
