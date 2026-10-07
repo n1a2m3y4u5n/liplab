@@ -16,6 +16,7 @@
 예비 파일럿(P3) 문장과도 겹치지 않는다(test_listen_curriculum이 확인한다).
 """
 import hashlib
+import math
 import random
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -117,21 +118,88 @@ def ax_parse(key: str) -> Optional[Tuple[str, str, Dict]]:
     return None
 
 
-def ax_items(level: int, seed: str, n: int = 12, multi_voice: bool = False) -> List[Dict]:
+def ax_pair_id(level: int, a: str, b: str) -> str:
+    x, y = sorted((a, b))
+    return f"{int(level)}:{x}|{y}"
+
+
+# ── 표적 출제(고도화 방안 P1) ─────────────────────────────────────────
+# 대조(소리 짝)마다 '다름' 시행의 정답률을 베타 분포(사전 1, 1)로 추정하고, 추정 정답률이 0.75 근처인 짝을 자주 낸다. 3번 미만 본 짝은
+# 탐색으로 무게 1. 너무 쉬운 짝(0.95)과 아직 너무 어려운 짝(0.5)은 덜 낸다. 표적 대조 훈련은 인공와우 사용자에게 근거가 가장 좋지만
+# (Fu 2005: 모음 +15.8, 자음 +13.5%p) 혼동 기록으로 문항을 고르는 방식 자체는 시험된 적이 없어, 학습자를 해시로 둘로 나눠
+# 'targeted'와 'uniform'(무작위)을 비교한다(pick_mode_for, 시행 기록 pick_mode).
+PICK_MODES = ("targeted", "uniform")
+
+
+def pick_mode_for(user_id: int) -> str:
+    """학습자의 출제 방식. 검사 폼 순서(id 홀짝)와 엇갈리지 않게 따로 해시한다."""
+    h = int(hashlib.sha1(f"pick:{int(user_id)}".encode()).hexdigest()[:8], 16)
+    return PICK_MODES[h % 2]
+
+
+def pair_weight(n: int, c: int, target: float = 0.75, width: float = 0.15) -> float:
+    if n < 3:
+        return 1.0
+    p = (c + 1) / (n + 2)
+    return 0.15 + math.exp(-((p - target) / width) ** 2)
+
+
+def ax_pair_stats(history: Sequence[Tuple[str, bool]]) -> Dict[str, Tuple[int, int]]:
+    """소리 구별 시행 [(키, 정답)] → 짝 id마다 (다름 시행 수, 정답 수). 같음 시행은 어느 짝인지 정해지지 않아 세지 않는다."""
+    out: Dict[str, Tuple[int, int]] = {}
+    for key, ok in history:
+        parsed = ax_parse(key)
+        if not parsed:
+            continue
+        first, second, pair = parsed
+        if first == second:
+            continue
+        pid = ax_pair_id(pair["level"], pair["a"], pair["b"])
+        n, c = out.get(pid, (0, 0))
+        out[pid] = (n + 1, c + (1 if ok else 0))
+    return out
+
+
+def ling_avoid_kinds(ling: Optional[Dict[str, bool]]) -> Dict[str, float]:
+    """최근 Ling 점검 → 소리 구별 종류별 무게 배율(고도화 방안 P2). 쉬·스가 모두 안 들리면 마찰음 짝을 내지 않고(0),
+    하나만 안 들리면 절반으로 줄인다. 들리지 않는 대역의 구별을 되풀이하면 좌절만 쌓인다."""
+    if not ling:
+        return {}
+    miss = [k for k in ("sh", "s") if ling.get(k) is False]
+    if len(miss) == 2:
+        return {"fricative": 0.0}
+    if len(miss) == 1:
+        return {"fricative": 0.5}
+    return {}
+
+
+def ax_items(level: int, seed: str, n: int = 12, multi_voice: bool = False, pick: str = "uniform",
+             stats: Optional[Dict[str, Tuple[int, int]]] = None, kind_scale: Optional[Dict[str, float]] = None) -> List[Dict]:
     """수준 level의 같다·다르다 문항 n개(같음·다름 반반, 순서 섞음). 수준 3 이상이고 목소리가 여럿이면 두 소리를 서로 다른
-    목소리로 들려준다(목소리가 달라도 같은 말인지 가리는 연습). voice_pair: [첫 소리 목소리 칸, 둘째 칸](화면이 목소리에 대응)."""
+    목소리로 들려준다(목소리가 달라도 같은 말인지 가리는 연습). voice_pair: [첫 소리 목소리 칸, 둘째 칸](화면이 목소리에 대응).
+    pick 'targeted'면 짝 무게(pair_weight)로, 'uniform'이면 고르게 뽑는다. kind_scale은 종류별 무게 배율(Ling 출발점, 두 방식 모두 적용)."""
     level = max(1, min(4, int(level)))
-    pool = [p for p in AX_PAIRS if p["level"] == level]
+    scale = kind_scale or {}
+    pool = [p for p in AX_PAIRS if p["level"] == level and scale.get(p["kind"], 1.0) > 0] or \
+        [p for p in AX_PAIRS if p["level"] == level]
+    stats = stats or {}
+    weights = []
+    for p in pool:
+        w = scale.get(p["kind"], 1.0)
+        if pick == "targeted":
+            nn, cc = stats.get(ax_pair_id(level, p["a"], p["b"]), (0, 0))
+            w *= pair_weight(nn, cc)
+        weights.append(w)
     r = _rng(f"ax:{seed}:{level}")
     out = []
     for k in range(n):
-        p = pool[r.randrange(len(pool))]
+        p = r.choices(pool, weights=weights, k=1)[0]
         same = k % 2 == 0
         a, b = (p["a"], p["b"]) if r.random() < 0.5 else (p["b"], p["a"])
         first, second = (a, a) if same else (a, b)
         vp = [0, 1] if multi_voice and level >= 3 else [0, 0]
         out.append({"key": ax_key(first, second, level), "first": first, "second": second, "kind": p["kind"],
-                    "kind_label": AX_KIND_LABEL[p["kind"]], "level": level, "voice_pair": vp})
+                    "kind_label": AX_KIND_LABEL[p["kind"]], "level": level, "voice_pair": vp, "pick": pick})
     r.shuffle(out)
     return out
 
@@ -325,8 +393,16 @@ def word_item(target: str, level: int, pool: Sequence[str], seed: str) -> Option
     return {"key": f"w:{target}", "target": target, "options": options, "level": int(level)}
 
 
-def word_items(level: int, pool: Sequence[str], seed: str, n: int = 10, weak: Sequence[str] = ()) -> List[Dict]:
-    """수준 level 문항 n개. 이웃이 넉넉한 낱말만 정답으로 쓴다. weak(약한 낱말)를 앞에 끼운다."""
+def _matches(c: Dict, f: Dict) -> bool:
+    return c["slot"] == f["slot"] and {c["target"], c["heard"]} == {f["target"], f["heard"]}
+
+
+def word_items(level: int, pool: Sequence[str], seed: str, n: int = 10, weak: Sequence[str] = (), pick: str = "uniform",
+               focus: Sequence[Dict] = (), review: Sequence[str] = ()) -> List[Dict]:
+    """수준 level 문항 n개. 이웃이 넉넉한 낱말만 정답으로 쓴다.
+    review(간격 복습이 된 낱말, 최대 3개)를 맨 앞에, weak(방금 틀린 낱말)를 그다음에 둔다.
+    pick 'targeted'이고 focus(자주 헷갈린 대조 [{slot, target, heard}])가 있으면 문항의 절반까지는 그 대조로 갈리는 이웃을 보기에
+    꼭 넣은 문항으로 채운다(수준 1은 음절 수가 다른 보기라 쓰지 않음)."""
     cfg = WORD_LEVELS[max(1, min(3, int(level)))]
     nb = _neighbors(pool)
     if level == 1:
@@ -335,16 +411,89 @@ def word_items(level: int, pool: Sequence[str], seed: str, n: int = 10, weak: Se
         cands = [w for w in pool if sum(1 for d, _ in nb.get(w, []) if d <= cfg["hi"]) >= cfg["n"] - 1]
     r = _rng(f"wi:{seed}:{level}")
     r.shuffle(cands)
-    weak_first = [w for w in weak if w in set(cands)]
-    order = list(dict.fromkeys(weak_first + cands))
-    out = []
-    for w in order:
-        it = word_item(w, level, pool, seed)
-        if it:
+    cset = set(cands)
+    out: List[Dict] = []
+    used = set()
+
+    def add(it):
+        if it and it["target"] not in used:
+            used.add(it["target"])
             out.append(it)
+
+    for w in list(dict.fromkeys(review))[:3]:
+        if w in cset:
+            it = word_item(w, level, pool, seed)
+            if it:
+                it["review"] = True
+            add(it)
+    for w in weak:
+        if len(out) >= n // 2:
+            break
+        if w in cset:
+            add(word_item(w, level, pool, seed))
+    if pick == "targeted" and focus and level >= 2:
+        quota = n // 2
+        k = 0
+        for w in cands:
+            if k >= quota or len(out) >= n:
+                break
+            if w in used:
+                continue
+            hit = None
+            for d, o in nb.get(w, []):
+                if d > cfg["hi"]:
+                    break
+                cs = contrast_of(w, o)
+                if len(cs) == 1 and any(_matches(cs[0], f) for f in focus):
+                    hit = (o, cs[0])
+                    break
+            if not hit:
+                continue
+            it = word_item(w, level, pool, seed)
+            if not it:
+                continue
+            if hit[0] not in it["options"]:
+                it["options"][next(i for i, x in enumerate(it["options"]) if x != w)] = hit[0]
+            it["focus"] = {"slot": hit[1]["slot"], "target": hit[1]["target"], "heard": hit[1]["heard"]}
+            add(it)
+            k += 1
+    for w in cands:
         if len(out) >= n:
             break
-    return out
+        if w not in used:
+            add(word_item(w, level, pool, seed))
+    for it in out:
+        it["pick"] = pick
+    return out[:n]
+
+
+# ── 간격 복습(고도화 방안 P3) ─────────────────────────────────────────
+# 틀린 문항은 같은 단계 안에서 하루 뒤, 맞히면 사흘 뒤 한 번 더 낸다. 틀린 뒤 두 번 맞히면 빠진다. 전체 복습 큐(ReviewItem)와 따로 둔다
+# (소리 문항은 오늘의 복습 화면이 재생하지 못한다).
+REVIEW_GAPS = (1, 3)
+
+
+def due_reviews(history: Sequence[Tuple[str, bool, "object"]], today) -> List[str]:
+    """[(문항, 정답, 날짜)] 시간순 → 오늘 복습할 문항(오래 기다린 순). 마지막 오답 뒤 맞힌 수 m이 0이면 마지막 시도 다음 날부터,
+    1이면 사흘 뒤부터 낸다. 2 이상이면 빠진다."""
+    last_wrong, after, last_seen = {}, {}, {}
+    for item, ok, day in history:
+        last_seen[item] = day
+        if not ok:
+            last_wrong[item] = day
+            after[item] = 0
+        elif item in last_wrong:
+            after[item] = after.get(item, 0) + 1
+    due = []
+    for item, wd in last_wrong.items():
+        m = after.get(item, 0)
+        if m >= len(REVIEW_GAPS):
+            continue
+        gap = (today - last_seen[item]).days
+        if gap >= REVIEW_GAPS[m]:
+            due.append((gap, item))
+    due.sort(key=lambda x: -x[0])
+    return [i for _, i in due]
 
 
 # ── 3·4단계: 문장 ───────────────────────────────────────────────────
@@ -403,14 +552,15 @@ def test_form_for(user_id: int, n_done: int) -> str:
     return first if n_done % 2 == 0 else other
 
 
-def sentence_items(seed: str, n: int = 8, recent: Sequence[str] = ()) -> List[Dict]:
-    """훈련 문장 n개. 최근에 낸 문장(recent id)은 뒤로 미룬다."""
+def sentence_items(seed: str, n: int = 8, recent: Sequence[str] = (), review: Sequence[str] = ()) -> List[Dict]:
+    """훈련 문장 n개. 간격 복습 문장(review id, 최대 2개)을 앞에 두고, 최근에 낸 문장(recent id)은 뒤로 미룬다."""
     ids = list(TRAIN_BY_ID)
     r = _rng(f"s:{seed}")
     r.shuffle(ids)
-    seen = set(recent)
-    ids = [i for i in ids if i not in seen] + [i for i in ids if i in seen]
-    return [{"key": f"s:{i}", "id": i, "text": TRAIN_BY_ID[i]} for i in ids[:n]]
+    rv = [i for i in dict.fromkeys(review) if i in TRAIN_BY_ID][:2]
+    seen = set(recent) | set(rv)
+    ids = rv + [i for i in ids if i not in seen] + [i for i in ids if i in seen and i not in rv]
+    return [{"key": f"s:{i}", "id": i, "text": TRAIN_BY_ID[i], **({"review": True} if i in rv else {})} for i in ids[:n]]
 
 
 def word_score(target: str, answer: str) -> Dict:
@@ -584,8 +734,11 @@ CONVO_ITEMS: List[Dict] = [
      "question": "무엇이 안 나와요?", "options": ["전기", "물", "가스", "인터넷"], "answer": 1},
 ]
 CONVO_BY_ID = {c["id"]: c for c in CONVO_ITEMS}
-# 듣기 조건(5단계 선택): 조용함, 잡음(학습자의 4단계 역치 + 5 dB), 전화(300~3400 Hz 대역)
-CONVO_CONDITIONS = ("quiet", "noise", "phone")
+# 듣기 조건(5단계 선택): 조용함, 잡음(학습자의 4단계 역치 + 5 dB), 전화(300~3400 Hz 대역), 울리는 방(잔향).
+# 잔향은 인공와우 사용자의 문장 인식을 꾸준히 떨어뜨린다(RT60 0.3초 약 60%, 1.0초 약 20%, Kokkinakis 2011). 방을 한 곳으로 고정하지
+# 않고 여러 잔향 시간을 돌려 가며 낸다(여러 방에서 훈련할 때만 새 방으로 옮겨 갔다, Vlahou 2019). 화면이 ConvolverNode로 입힌다.
+CONVO_CONDITIONS = ("quiet", "noise", "phone", "room")
+ROOM_RT60 = (0.3, 0.5, 0.8)
 
 
 def convo_items(seed: str, n: int = 8, recent: Sequence[str] = ()) -> List[Dict]:
