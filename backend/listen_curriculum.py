@@ -1036,7 +1036,9 @@ IDLE_GAP_S = 180
 
 def practice_minutes(events: Sequence[Tuple["object", Optional[int]]], idle_gap_s: int = IDLE_GAP_S) -> float:
     """[(시각 datetime, rt_ms 또는 None)] 하루치 → 연습 분(소수 첫째 자리). 시각순이 아니어도 된다."""
-    evs = sorted((t, rt) for t, rt in events if t is not None)
+    # 같은 시각이면 rt_ms가 있는 것을 앞에 둔다(들어온 순서와 상관없이 같은 값). 예전에는 (시각, rt_ms) 짝 그대로 정렬해, 같은 시각에
+    # rt_ms가 없는 시행(소리 확인·검사)과 있는 시행이 겹치면 None과 int를 비교해 TypeError(요약·과제·분석·내보내기가 500)였다
+    evs = sorted(((t, rt) for t, rt in events if t is not None), key=lambda e: (e[0], e[1] is None, e[1] or 0))
     total = 0.0
     prev = None
     for t, rt in evs:
