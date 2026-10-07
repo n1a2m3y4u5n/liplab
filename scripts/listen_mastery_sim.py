@@ -359,7 +359,26 @@ def run_test_practice(rng, lis, cond, k_prac, big_trials):
     return est, blocked
 
 
+def check_practice_matches_app(seed=0, n=200):
+    """p5s 시뮬레이션의 걸음 규칙이 앱 함수(test_next_snr·test_srt, n_practice)와 같은지 무작위 응답으로 확인한다."""
+    rng = np.random.default_rng([seed, 77])
+    kp = L.TEST_STAIR["practice"]
+    for _ in range(n):
+        oks = rng.random(kp + 20) < 0.5
+        x, xs, trials = S.START, [], []
+        for j in range(kp + 20):
+            assert abs((L.test_next_snr(trials, n_practice=min(kp, len(trials))) if trials else S.START) - x) < 1e-9
+            trials.append((x, bool(oks[j])))
+            xs.append(x)
+            step = L.TEST_STAIR["big"] if j < kp else L.TEST_STAIR["small"]
+            x = float(np.clip(x + (-step if oks[j] else step), S.LO, S.HI))
+        test = np.array(xs[kp:])
+        est = (test[4:20].sum() + x) / 17
+        assert abs(L.test_srt(trials, n_practice=kp) - est) < 0.051
+
+
 def run_practice(seed, n_lis, conds, variants):
+    check_practice_matches_app()
     res = {}
     for cn in conds:
         ci = list(S.CONDITIONS).index(cn)

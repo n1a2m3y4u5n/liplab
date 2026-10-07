@@ -5672,17 +5672,26 @@ async def listen_skip(req: ListenSkipReq, current_user=Depends(get_current_user)
     return {"stage": n, "status": "unlocked"}
 
 
+def _is_test_practice(r) -> bool:
+    return (r.item_key or "").startswith("testp:")
+
+
 def _listen_test_state(tests: list) -> dict:
-    """검사 회차들 → [{session, form, n, srt_db, started_at}] 시간순."""
+    """검사 회차들 → [{session, form, n, n_practice, srt_db, started_at}] 시간순. n은 검사 문장 수(연습 문장 제외)."""
     by = {}
     for r in tests:
-        s = by.setdefault(r.session, {"session": r.session, "form": (r.item_key or "test:A")[5:6], "trials": [],
+        s = by.setdefault(r.session, {"session": r.session, "form": None, "trials": [], "n_practice": 0,
                                        "started_at": r.created_at.isoformat() if r.created_at else None})
         s["trials"].append((r.snr_db, bool(r.correct)))
+        if _is_test_practice(r):
+            s["n_practice"] += 1
+        elif s["form"] is None:
+            s["form"] = (r.item_key or "test:A")[5:6]
     out = []
     for s in by.values():
-        out.append({"session": s["session"], "form": s["form"], "n": len(s["trials"]),
-                    "srt_db": _listencur.test_srt(s["trials"]), "started_at": s["started_at"]})
+        out.append({"session": s["session"], "form": s["form"] or "A", "n": len(s["trials"]) - s["n_practice"],
+                    "n_practice": s["n_practice"], "srt_db": _listencur.test_srt(s["trials"], n_practice=s["n_practice"]),
+                    "started_at": s["started_at"]})
     return out
 
 
@@ -5963,12 +5972,17 @@ class ListenTestStart(BaseModel):
 
 @app.post("/api/listen/test/start")
 async def listen_test_start(req: ListenTestStart, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """소음 속 문장 인식 역치(SRT) 검사 한 회차. 폼은 학습자마다 A·B를 번갈아 쓴다(test_form_for). 소리만, 훈련에 안 쓴 목소리(voice_slot 'test')."""
+    """소음 속 문장 인식 역치(SRT) 검사 한 회차. 폼은 학습자마다 A·B를 번갈아 쓴다(test_form_for). 소리만, 훈련에 안 쓴 목소리(voice_slot 'test').
+    items 맨 앞 n_practice개는 연습 문장(practice: true, 훈련 문장, 역치에 넣지 않음)이고 그 뒤가 검사 문장 20개다. 차례대로 답한다
+    (docs/listen-mastery-sim-2026-10.md 10절)."""
     import uuid
     tests = [t for t in _listen_test_state(await _listen_attempts(current_user.id, db, stage=4, mode="test")) if t["srt_db"] is not None]
     form = _listencur.test_form_for(current_user.id, len(tests))
-    items = [{"key": f"test:{form}{i + 1:02d}", "text": s} for i, s in enumerate(_listencur.TEST_FORMS[form])]
-    return {"session": f"test:{uuid.uuid4().hex[:12]}", "form": form, "items": items,
+    session = f"test:{uuid.uuid4().hex[:12]}"
+    practice = _listencur.test_practice_items(session)
+    items = [{"key": it["key"], "text": it["text"], "practice": True} for it in practice] + \
+        [{"key": f"test:{form}{i + 1:02d}", "text": s, "practice": False} for i, s in enumerate(_listencur.TEST_FORMS[form])]
+    return {"session": session, "form": form, "items": items, "n_practice": len(practice),
             "start_db": _listencur.TEST_STAIR["start"], "n_done_tests": len(tests)}
 
 
@@ -5983,23 +5997,37 @@ class ListenTestAnswer(BaseModel):
 
 @app.post("/api/listen/test/answer")
 async def listen_test_answer(req: ListenTestAnswer, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """검사 문장 하나. 이번 SNR은 서버가 회차 기록에서 정하고(화면이 보낸 값을 쓰지 않는다) 답 뒤에 다음 SNR을 돌려준다.
-    20문장을 마치면 역치를 낸다. 검사는 훈련 숙달에 넣지 않는다. 정답 문장은 마칠 때까지 보이지 않는다."""
+    """검사 문장 하나(연습 문장 포함). 이번 SNR은 서버가 회차 기록에서 정하고(화면이 보낸 값을 쓰지 않는다) 답 뒤에 다음 SNR을 돌려준다.
+    연습 문장(키 'testp:', 회차 시작 때 받은 것)은 검사 문장보다 먼저만 받고 역치에 넣지 않으며, 답 뒤 정답 문장을 보여 준다.
+    검사 문장 20개를 마치면 역치를 낸다. n은 답한 검사 문장 수(연습 제외). 검사는 훈련 숙달에 넣지 않는다.
+    검사 문장의 정답은 마칠 때까지 보이지 않는다."""
     from database import ListenAttempt
     if not req.session.startswith("test:"):
         raise HTTPException(status_code=400, detail="bad session")
     key = req.item_key
-    form, idx = key[5:6], key[6:]
-    if form not in _listencur.TEST_FORMS or not idx.isdigit() or not (1 <= int(idx) <= len(_listencur.TEST_FORMS[form])):
-        raise HTTPException(status_code=400, detail="bad item")
     rows = await _listen_attempts(current_user.id, db, stage=4, mode="test", session=req.session)
     if any(r.item_key == key for r in rows):
         raise HTTPException(status_code=409, detail="이미 답한 문장입니다.")
-    if rows and rows[0].item_key[5:6] != form:
-        raise HTTPException(status_code=400, detail="회차의 폼과 다릅니다.")
+    is_practice = key.startswith("testp:")
+    if is_practice:
+        allowed = {it["key"]: it["text"] for it in _listencur.test_practice_items(req.session)}
+        if key not in allowed:
+            raise HTTPException(status_code=400, detail="bad item")
+        if any(not _is_test_practice(r) for r in rows):
+            raise HTTPException(status_code=400, detail="연습 문장은 검사 문장보다 먼저 답합니다.")
+        target = allowed[key]
+    else:
+        form, idx = key[5:6], key[6:]
+        if not key.startswith("test:") or form not in _listencur.TEST_FORMS or not idx.isdigit() or \
+                not (1 <= int(idx) <= len(_listencur.TEST_FORMS[form])):
+            raise HTTPException(status_code=400, detail="bad item")
+        first_test = next((r for r in rows if not _is_test_practice(r)), None)
+        if first_test is not None and first_test.item_key[5:6] != form:
+            raise HTTPException(status_code=400, detail="회차의 폼과 다릅니다.")
+        target = _listencur.TEST_FORMS[form][int(idx) - 1]
     trials = [(r.snr_db, bool(r.correct)) for r in rows]
-    snr = _listencur.test_next_snr(trials) if trials else _listencur.TEST_STAIR["start"]
-    target = _listencur.TEST_FORMS[form][int(idx) - 1]
+    n_prac = sum(1 for r in rows if _is_test_practice(r))
+    snr = _listencur.test_next_snr(trials, n_practice=n_prac) if trials else _listencur.TEST_STAIR["start"]
     ws = _listencur.word_score(target, req.answer or "")
     ok = ws["proportion"] >= _listencur.TEST_STAIR["criterion"]
     db.add(ListenAttempt(user_id=current_user.id, stage=4, mode="test", item_key=key, target=target, answer=req.answer,
@@ -6007,8 +6035,13 @@ async def listen_test_answer(req: ListenTestAnswer, current_user=Depends(get_cur
                          route=req.route, session=req.session))
     await db.commit()
     trials.append((snr, ok))
-    srt = _listencur.test_srt(trials)
-    return {"n": len(trials), "snr_db": snr, "next_db": _listencur.test_next_snr(trials), "done": srt is not None, "srt_db": srt}
+    n_prac += 1 if is_practice else 0
+    srt = _listencur.test_srt(trials, n_practice=n_prac)
+    out = {"n": len(trials) - n_prac, "n_practice": n_prac, "practice": is_practice, "snr_db": snr,
+           "next_db": _listencur.test_next_snr(trials, n_practice=n_prac), "done": srt is not None, "srt_db": srt}
+    if is_practice:
+        out.update({"target": target, "score": ws["proportion"], "word_feedback": ws["feedback"]})
+    return out
 
 
 @app.get("/api/listen/summary")
