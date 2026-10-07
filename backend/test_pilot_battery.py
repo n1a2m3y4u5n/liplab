@@ -448,7 +448,10 @@ with TestClient(main.app) as c:
     out["bat_word"] = {"missing": bat[("A1", "word")]["missing"], "n_closed": len(bat[("A1", "word")]["closed"])}
     out["bat_sentence"] = bat[("A1", "sentence")]["open"]
     out["bat_snr"] = {"est": bat[("A1", "snr")]["snr_calibrated_db"], "hp": bat[("A1", "snr")]["headphone_check"],
-                      "n": len(bat[("A1", "snr")]["open"]), "snr0": bat[("A1", "snr")]["open"][0]["snr_db"]}
+                      "n": len(bat[("A1", "snr")]["open"]), "snr0": bat[("A1", "snr")]["open"][0]["snr_db"],
+                      "kind": bat[("A1", "snr")]["snr_estimate_kind"], "revs": bat[("A1", "snr")]["snr_reversals"]}
+    out["schedule"] = row["battery_schedule"]
+    out["reading_days"] = row["reading_days"]
     out["bat_av"] = bat[("A1", "av")]["open"][0]
     out["trial_meta"] = [{k: t.get(k) for k in ("talker", "rt_from_onset_ms", "hint_used", "target", "options", "chosen")}
                          for t in row["trial_log"]]
@@ -530,11 +533,16 @@ def test_battery_open_responses_snr_and_av():
     assert r["bat_av"]["snr_db"] == r["snr_finish"]["est"] and r["bat_av"]["noise_type"] == "babble"
     assert r["bat_av"]["modality"] in ("A", "AV")
     assert r["bat_snr"]["hp"] is True and r["bat_snr"]["snr0"] == 0
+    # 판 7: 계단 추정 방식과 반전 수가 회차 행에 남는다(SNR 실패 제외 규칙)
+    assert r["bat_snr"]["kind"] == r["snr_finish"]["kind"] and isinstance(r["bat_snr"]["revs"], int)
 
 
 def test_battery_export_v5_and_training_fields():
     r = _run()
-    assert r["version"] == 6
+    assert r["version"] == 7
+    # 판 7: B 전이라 유지 검사 예정이 없고, 학습량은 날마다 시행 수와 분
+    assert r["schedule"]["state"] == "none"
+    assert len(r["reading_days"]) == 1 and r["reading_days"][0]["n"] == 2 and r["reading_days"][0]["minutes"] >= 0
     assert r["export_row_keys"] == sorted(["join_seq", "planned_order", "b_completed_seq", "battery", "review_logs",
                                            "mastery_probes", "retention_results", "lesson_efforts", "progress_log", "trial_log"])
     assert r["planned_order"] == "ABC"

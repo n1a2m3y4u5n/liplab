@@ -208,7 +208,9 @@ def max_gaps(groups) -> Tuple[float, float]:
 
 def fix_tail_syllables(syl, speech_end_ms: Optional[float]):
     """마지막 음절 시작이 말소리 끝 근처(60 ms 안)나 뒤에 놓였으면, 끝에서 둘째 음절 시작부터 말소리 끝까지를 두 음절이 반씩 갖게 한다.
-    시작은 제자리인데 끝이 말소리 끝을 넘으면(중성만 파일 끝에 놓인 경우) 끝을 말소리 끝으로 줄인다."""
+    시작은 제자리인데 끝이 말소리 끝을 넘으면(중성만 파일 끝에 놓인 경우) 끝을 말소리 끝으로 줄인다.
+    2026-10-07부터 dgop_acoustic.phone_confidences가 정렬 전에 끝 무음을 잘라(docs/dgop-final-vowel-2026-10.md) 끝 모음이 파일 끝이 아니라
+    말소리 끝 근처에 놓인다. 그래도 '요' 음절 시작은 말소리 끝 60 ms 안에 남는 일이 많아(서버 음성 52.8%) 이 보정은 그대로 쓴다."""
     if not syl or len(syl) < 2 or speech_end_ms is None:
         return syl
     out = [list(x) for x in syl]
