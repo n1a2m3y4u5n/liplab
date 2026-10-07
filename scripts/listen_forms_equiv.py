@@ -42,14 +42,16 @@ ROUND_REPS = {0: (0, 1, 2), 1: (3, 4, 5), 2: (6, 7, 8)}
 
 # 예비 문장(문서 2.3절). 자리마다 C용 하나, D용 하나. 같은 자리의 C·D 문장과 구조·어절 수가 같고, 훈련 문장·대화·앱 문장·
 # P3 문장·네 폼·다른 예비 문장과 유사도 점검(build_pilot_manifest.similarity_reasons)에 걸리지 않는다. 그 폼의 다른 자리 문장과
-# 내용어가 겹치지 않게 골랐다. 측정 전에 정해 커밋했고 결과를 보고 바꾸지 않는다.
+# 내용어가 겹치지 않게 골랐다. 측정 전에 정해 커밋했고 결과를 보고 바꾸지 않는다. None은 이미 쓴 예비 문장이다(D01: 합성 단계에서
+# '방석 밑에 반지가 있어요'가 모든 후보에서 '방송'으로 들려 통과 후보가 없어, 측정 전에 이 자리 예비 '가방 속에 휴지가 있어요'로 바꿨다.
+# 문서 5.1절 사후 변경 1).
 RESERVE = {
     "C": ["필통 안에 지우개가 있어요.", "방금 창문을 닫고 왔어요.", "상처에 약을 발라 주세요.", "이 건물은 십 층이에요.",
           "선생님이 숙제를 내셨어요.", "요즘 감기가 많이 돌아요.", "공책을 가방에 챙겨 주세요.", "운동장을 육 분 뛰었어요.",
           "막내는 그네를 잘 타요.", "과일을 시장에서 골랐어요.", "약국 앞에서 줄을 서요.", "칼이 날카로우니 조심해서 쓰세요.",
           "소설을 앞부분만 읽었어요.", "사장님이 새 식당을 열었어요.", "방학에 캠핑하러 가요.", "다람쥐가 나무 위에 올라갔어요.",
           "아주머니는 떡을 파세요.", "피자를 세 조각 먹었어요.", "밤에는 거리가 조용해요.", "인형을 선반 위에 놓아요."],
-    "D": ["가방 속에 휴지가 있어요.", "주말엔 늦잠을 자고 쉬었어요.", "국에 소금을 쳐 주세요.", "우리 강아지는 세 살이에요.",
+    "D": [None, "주말엔 늦잠을 자고 쉬었어요.", "국에 소금을 쳐 주세요.", "우리 강아지는 세 살이에요.",
           "아기가 장난감을 던졌어요.", "오늘따라 기침이 많이 나요.", "단추를 옷에 달아 주세요.", "음악을 구 분 들었어요.",
           "짝꿍은 한자를 잘 읽어요.", "배드민턴을 마당에서 쳤어요.", "식당 앞에서 메뉴를 봐요.", "밤이 늦었으니 얼른 주무세요.",
           "청소를 거실만 했어요.", "동네에 새 빵집이 생겼어요.", "일요일에 봉사하러 가요.", "풍선이 지붕 위에 걸렸어요.",
@@ -101,6 +103,8 @@ def cmd_check(a):
     for f in names:
         assert len(sets[f]) == 20, f
         for i, s in enumerate(sets[f]):
+            if s is None:
+                continue
             if len(s.split()) != len(L.TEST_FORMS["A"][i].split()):
                 bad.append((f, i + 1, s, "어절 수"))
             if any(ch.isdigit() for ch in s):
@@ -113,7 +117,7 @@ def cmd_check(a):
                     bad.append((f, i + 1, s, f"{t}: {why}"))
             for g in names:
                 for j, t in enumerate(sets[g]):
-                    if (g, j) == (f, i) or (names.index(g), j) < (names.index(f), i) and g not in ("A", "B"):
+                    if t is None or (g, j) == (f, i) or (names.index(g), j) < (names.index(f), i) and g not in ("A", "B"):
                         continue
                     why = B.similarity_reasons(s, t, both_ways=True)
                     if why:
@@ -344,7 +348,7 @@ def plan_replacements(res, spec, used):
         dfx = [d["pos"] - 1 for sid, d in res["defects"].items() if d["form"] == f]
         if not todo[f] and not dfx:
             continue
-        chosen = [p for p in dfx if (f, p) not in used][:MAX_REPLACE]
+        chosen = [p for p in dfx if (f, p) not in used and RESERVE[f][p] is not None][:MAX_REPLACE]
         score = {}
         for p in range(20):
             terms = []
@@ -355,7 +359,8 @@ def plan_replacements(res, spec, used):
                         terms.append(s * (x - (a_ + b_) / 2))
             score[p] = float(np.mean(terms)) if terms else None
         ranked = [p for p in sorted(score, key=lambda p: -(score[p] if score[p] is not None else -1e9))
-                  if score[p] is not None and score[p] > 0 and p not in chosen and (f, p) not in used]
+                  if score[p] is not None and score[p] > 0 and p not in chosen and (f, p) not in used
+                  and RESERVE[f][p] is not None]
 
         def predicted(sel):
             pr = {}
