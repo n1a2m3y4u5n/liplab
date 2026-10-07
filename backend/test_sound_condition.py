@@ -35,6 +35,31 @@ def test_clip_id_depends_on_voice_and_key():
     assert a != S.clip_id("사과?", "f1")
 
 
+def test_clip_id_rev_gives_new_name_for_resynthesized_audio():
+    # 다시 합성한 소리는 rev(새 Ogg sha1 앞 12자)로 새 이름을 받는다(immutable 캐시가 옛 소리를 쓰지 않게, docs/sound-qa-2026-10.md 6절)
+    old = S.clip_id("사과", "f1")
+    assert S.clip_id("사과", "f1", "") == old
+    r1, r2 = S.audio_rev(b"OggS one"), S.audio_rev(b"OggS two")
+    assert len(r1) == 12 and r1 != r2
+    n1 = S.clip_id("사과", "f1", r1)
+    assert n1 != old and n1 != S.clip_id("사과", "f1", r2) and S.safe_audio_name(f"{n1}.m4a") == (n1, "m4a")
+
+
+def test_shipped_manifest_ids_follow_clip_id_rule():
+    # 저장소 목록: 파일 이름이 clip_id(키, 목소리, rev) 규칙을 따르고 두 형식 파일이 모두 있다
+    import json
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "sound")
+    p = os.path.join(base, "manifest.json")
+    if not os.path.exists(p):
+        return
+    m = json.load(open(p, encoding="utf-8"))
+    for v, clips in m["clips"].items():
+        for k, c in clips.items():
+            assert c["id"] == S.clip_id(k, v, c.get("rev", "")), (v, k)
+            for ext in ("ogg", "m4a"):
+                assert os.path.exists(os.path.join(base, "clips", f"{c['id']}.{ext}")), (v, k, ext)
+
+
 def test_safe_audio_name_rejects_paths():
     i = S.clip_id("사과", "f1")
     assert S.safe_audio_name(f"{i}.ogg") == (i, "ogg")
