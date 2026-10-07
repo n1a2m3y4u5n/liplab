@@ -252,7 +252,7 @@ export default function ProfilePage() {
           </>
         ) : (
           <>
-            <p className="text-[14px] leading-[1.6] text-ink-muted">안내받은 참여 코드를 입력해 주세요. 학습 기록은 이름과 이메일 없이, 가짜 이름(가명)으로만 연구에 쓰여요.</p>
+            <p className="text-[14px] leading-[1.6] text-ink-muted">안내받은 참여 코드를 입력해 주세요. 학습 기록은 이름과 이메일을 빼고, 비밀키로 만든 번호(가명)를 붙여 연구에 쓰여요. 이 번호만으로는 누구인지 알 수 없어요.</p>
             <input value={pilotCode} onChange={(e) => setPilotCode(e.target.value)} maxLength={32} placeholder="참여 코드"
               className="w-full rounded-13 border-2 border-line px-4 py-3 text-[15px] outline-none focus:border-primary-400" />
             <button type="button" disabled={busy || !pilotCode.trim()} onClick={joinPilot} className="btn-primary w-full py-3 text-[15px]">참여하기</button>
