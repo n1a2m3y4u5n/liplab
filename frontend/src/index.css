@@ -355,6 +355,18 @@ html.a11y-contrast .text-gray-500 { color: #1f2937 !important; }
 html.a11y-contrast .border-gray-100,
 html.a11y-contrast .border-gray-200 { border-color: #6b7280 !important; }
 
+/* 고대비: 소리 듣기 화면(data-track="listen"). 청록(#0d9488)은 흰 글자·작은 글자에 대비가 모자라(약 3.7:1) 진한 청록으로 바꾸고,
+   흐린 회색 글자·옅은 테두리를 진하게 한다. 새 색은 만들지 않고 기존 토큰 값을 쓴다. */
+html.a11y-contrast [data-track="listen"] {
+  --track: var(--listen-dark);
+  --track-hover: var(--listen-dark);
+}
+html.a11y-contrast [data-track="listen"] .text-ink-faint,
+html.a11y-contrast [data-track="listen"] .text-ink-soft,
+html.a11y-contrast [data-track="listen"] .text-ink-muted { color: var(--ink) !important; }
+html.a11y-contrast [data-track="listen"] .border-line { border-color: var(--ink-faint) !important; }
+html.a11y-contrast [data-track="listen"] .bg-fill { background-color: var(--line) !important; }
+
 /* 모달 본문 스크롤바 — 카드 안쪽에 얇고 연하게. 트랙은 투명, 손잡이는 여백만큼 안쪽으로 */
 .modal-scroll { scrollbar-width: thin; scrollbar-color: #d9d6e6 transparent; scrollbar-gutter: stable; }
 .modal-scroll::-webkit-scrollbar { width: 10px; }
