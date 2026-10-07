@@ -2400,310 +2400,516 @@
     "A": [
      {
       "id": "VA01",
-      "text": null,
+      "text": "사이즈가 안 맞아요",
+      "syllables": 8,
+      "phonemes": 14,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA02",
-      "text": null,
+      "text": "귤이 정말 달아요",
+      "syllables": 7,
+      "phonemes": 15,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA03",
-      "text": null,
+      "text": "날씨가 많이 추워요",
+      "syllables": 8,
+      "phonemes": 15,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA04",
-      "text": null,
+      "text": "오후에 비가 그쳤어요",
+      "syllables": 9,
+      "phonemes": 15,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA05",
-      "text": null,
+      "text": "잠깐 쉬었다 해요",
+      "syllables": 7,
+      "phonemes": 15,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA06",
-      "text": null,
+      "text": "기다려 줘서 고마워요",
+      "syllables": 9,
+      "phonemes": 16,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA07",
-      "text": null,
+      "text": "라디오 소리가 작아요",
+      "syllables": 9,
+      "phonemes": 16,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA08",
-      "text": null,
+      "text": "이따가 연락할게요",
+      "syllables": 8,
+      "phonemes": 16,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA09",
-      "text": null,
+      "text": "이어폰을 놓고 왔어요",
+      "syllables": 9,
+      "phonemes": 16,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA10",
-      "text": null,
+      "text": "마스크를 쓰고 왔어요",
+      "syllables": 9,
+      "phonemes": 17,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA11",
-      "text": null,
+      "text": "배터리가 다 닳았어요",
+      "syllables": 9,
+      "phonemes": 17,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA12",
-      "text": null,
+      "text": "아이스크림이 녹았어요",
+      "syllables": 10,
+      "phonemes": 17,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA13",
-      "text": null,
+      "text": "택배가 아직 안 왔어요",
+      "syllables": 9,
+      "phonemes": 17,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA14",
-      "text": null,
+      "text": "손님이 많아서 바빠요",
+      "syllables": 9,
+      "phonemes": 18,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA15",
-      "text": null,
+      "text": "식당 예약을 바꿨어요",
+      "syllables": 9,
+      "phonemes": 18,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA16",
-      "text": null,
+      "text": "컴퓨터가 자꾸 꺼져요",
+      "syllables": 9,
+      "phonemes": 18,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA17",
-      "text": null,
+      "text": "학원 끝나고 갈게요",
+      "syllables": 8,
+      "phonemes": 18,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA18",
-      "text": null,
+      "text": "문자를 확인해 보세요",
+      "syllables": 9,
+      "phonemes": 20,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA19",
-      "text": null,
+      "text": "아빠가 출장을 가셨어요",
+      "syllables": 10,
+      "phonemes": 20,
       "speech_rms_dbfs": null
      },
      {
       "id": "VA20",
-      "text": null,
+      "text": "간식을 조금 남겼어요",
+      "syllables": 9,
+      "phonemes": 21,
       "speech_rms_dbfs": null
      }
     ],
     "B": [
      {
       "id": "VB01",
-      "text": null,
+      "text": "아이가 잠들었어요",
+      "syllables": 8,
+      "phonemes": 14,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB02",
-      "text": null,
+      "text": "같이 점심 먹어요",
+      "syllables": 7,
+      "phonemes": 15,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB03",
-      "text": null,
+      "text": "내일은 비가 온대요",
+      "syllables": 8,
+      "phonemes": 15,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB04",
-      "text": null,
+      "text": "오늘 수영장에 가요",
+      "syllables": 8,
+      "phonemes": 15,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB05",
-      "text": null,
+      "text": "전화를 안 받아요",
+      "syllables": 7,
+      "phonemes": 15,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB06",
-      "text": null,
+      "text": "국이 조금 싱거워요",
+      "syllables": 8,
+      "phonemes": 16,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB07",
-      "text": null,
+      "text": "방학이 곧 끝나요",
+      "syllables": 7,
+      "phonemes": 16,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB08",
-      "text": null,
+      "text": "연필 좀 빌려줘요",
+      "syllables": 7,
+      "phonemes": 16,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB09",
-      "text": null,
+      "text": "창밖에 눈이 내려요",
+      "syllables": 8,
+      "phonemes": 16,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB10",
-      "text": null,
+      "text": "길을 건너면 있어요",
+      "syllables": 8,
+      "phonemes": 17,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB11",
-      "text": null,
+      "text": "버스가 곧 도착해요",
+      "syllables": 8,
+      "phonemes": 17,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB12",
-      "text": null,
+      "text": "아까 보낸 메일 봤어요",
+      "syllables": 9,
+      "phonemes": 17,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB13",
-      "text": null,
+      "text": "기차표가 다 팔렸어요",
+      "syllables": 9,
+      "phonemes": 18,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB14",
-      "text": null,
+      "text": "버스를 잘못 탔어요",
+      "syllables": 8,
+      "phonemes": 18,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB15",
-      "text": null,
+      "text": "이번에는 제가 낼게요",
+      "syllables": 9,
+      "phonemes": 18,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB16",
-      "text": null,
+      "text": "축구 경기를 봤어요",
+      "syllables": 8,
+      "phonemes": 18,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB17",
-      "text": null,
+      "text": "회의가 늦게 끝났어요",
+      "syllables": 9,
+      "phonemes": 18,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB18",
-      "text": null,
+      "text": "주말에 등산을 갔어요",
+      "syllables": 9,
+      "phonemes": 19,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB19",
-      "text": null,
+      "text": "양말을 거꾸로 신었어요",
+      "syllables": 10,
+      "phonemes": 20,
       "speech_rms_dbfs": null
      },
      {
       "id": "VB20",
-      "text": null,
+      "text": "편의점에서 빵을 샀어요",
+      "syllables": 10,
+      "phonemes": 20,
       "speech_rms_dbfs": null
      }
     ],
     "C": [
      {
       "id": "VC01",
-      "text": null,
+      "text": "옷이 조금 커 보여요",
+      "syllables": 8,
+      "phonemes": 14,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC02",
-      "text": null,
+      "text": "감기약을 사 왔어요",
+      "syllables": 8,
+      "phonemes": 15,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC03",
-      "text": null,
+      "text": "병원 예약을 했어요",
+      "syllables": 8,
+      "phonemes": 15,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC04",
-      "text": null,
+      "text": "에어컨을 켜 줄래요",
+      "syllables": 8,
+      "phonemes": 15,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC05",
-      "text": null,
+      "text": "주차할 곳이 없어요",
+      "syllables": 8,
+      "phonemes": 15,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC06",
-      "text": null,
+      "text": "교복이 조금 작아요",
+      "syllables": 8,
+      "phonemes": 16,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC07",
-      "text": null,
+      "text": "빵이 아직 따뜻해요",
+      "syllables": 8,
+      "phonemes": 16,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC08",
-      "text": null,
+      "text": "연극을 보러 갔어요",
+      "syllables": 8,
+      "phonemes": 16,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC09",
-      "text": null,
+      "text": "휴일에도 일을 했어요",
+      "syllables": 9,
+      "phonemes": 16,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC10",
-      "text": null,
+      "text": "교실 불을 꺼 주세요",
+      "syllables": 8,
+      "phonemes": 17,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC11",
-      "text": null,
+      "text": "비행기가 늦게 떠요",
+      "syllables": 8,
+      "phonemes": 17,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC12",
-      "text": null,
+      "text": "시계가 조금 빨라요",
+      "syllables": 8,
+      "phonemes": 17,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC13",
-      "text": null,
+      "text": "냄새가 정말 좋아요",
+      "syllables": 8,
+      "phonemes": 18,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC14",
-      "text": null,
+      "text": "버스 카드를 찍으세요",
+      "syllables": 9,
+      "phonemes": 18,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC15",
-      "text": null,
+      "text": "저녁에 운동하러 가요",
+      "syllables": 9,
+      "phonemes": 18,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC16",
-      "text": null,
+      "text": "책을 두 권 빌렸어요",
+      "syllables": 8,
+      "phonemes": 18,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC17",
-      "text": null,
+      "text": "나머지는 내일 할게요",
+      "syllables": 9,
+      "phonemes": 19,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC18",
-      "text": null,
+      "text": "오늘 회의는 취소됐어요",
+      "syllables": 10,
+      "phonemes": 19,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC19",
-      "text": null,
+      "text": "재미있는 책을 읽었어요",
+      "syllables": 10,
+      "phonemes": 20,
       "speech_rms_dbfs": null
      },
      {
       "id": "VC20",
-      "text": null,
+      "text": "주소를 다시 알려 주세요",
+      "syllables": 10,
+      "phonemes": 20,
       "speech_rms_dbfs": null
      }
     ]
-   }
+   },
+   "reserve": [
+    {
+     "id": "VR01",
+     "text": "수영을 배우고 싶어요",
+     "syllables": 9,
+     "phonemes": 16,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VR02",
+     "text": "배가 너무 불러요",
+     "syllables": 7,
+     "phonemes": 14,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VR03",
+     "text": "화요일에 시간 있어요",
+     "syllables": 9,
+     "phonemes": 15,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VR04",
+     "text": "주스를 쏟고 말았어요",
+     "syllables": 9,
+     "phonemes": 19,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VR05",
+     "text": "책가방이 너무 커요",
+     "syllables": 8,
+     "phonemes": 16,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VR06",
+     "text": "동물원에 가 봤어요",
+     "syllables": 8,
+     "phonemes": 16,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VR07",
+     "text": "옆집 개가 짖어요",
+     "syllables": 7,
+     "phonemes": 14,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VR08",
+     "text": "목요일까지 끝낼게요",
+     "syllables": 9,
+     "phonemes": 19,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VR09",
+     "text": "키가 많이 컸네요",
+     "syllables": 7,
+     "phonemes": 14,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VR10",
+     "text": "밖이 벌써 어두워요",
+     "syllables": 8,
+     "phonemes": 14,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VR11",
+     "text": "피자를 시켜 먹었어요",
+     "syllables": 9,
+     "phonemes": 18,
+     "speech_rms_dbfs": null
+    },
+    {
+     "id": "VR12",
+     "text": "물병을 채워 왔어요",
+     "syllables": 8,
+     "phonemes": 15,
+     "speech_rms_dbfs": null
+    }
+   ]
   },
   "snr": {
    "title": "SNR 맞추기",
@@ -2729,122 +2935,170 @@
    "items": [
     {
      "id": "VK01",
-     "text": null,
+     "text": "이번 역에서 내려요",
+     "syllables": 8,
+     "phonemes": 14,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK02",
-     "text": null,
+     "text": "컵을 깨뜨렸어요",
+     "syllables": 7,
+     "phonemes": 14,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK03",
-     "text": null,
+     "text": "사진이 잘 나왔어요",
+     "syllables": 8,
+     "phonemes": 15,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK04",
-     "text": null,
+     "text": "새 신발이 편해요",
+     "syllables": 7,
+     "phonemes": 15,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK05",
-     "text": null,
+     "text": "할 일이 너무 많아요",
+     "syllables": 8,
+     "phonemes": 15,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK06",
-     "text": null,
+     "text": "강의실이 너무 더워요",
+     "syllables": 9,
+     "phonemes": 16,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK07",
-     "text": null,
+     "text": "소리 좀 줄여 주세요",
+     "syllables": 8,
+     "phonemes": 16,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK08",
-     "text": null,
+     "text": "숙소를 예약했어요",
+     "syllables": 8,
+     "phonemes": 16,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK09",
-     "text": null,
+     "text": "거스름돈 여기 있어요",
+     "syllables": 9,
+     "phonemes": 17,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK10",
-     "text": null,
+     "text": "과일을 씻어서 먹어요",
+     "syllables": 9,
+     "phonemes": 17,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK11",
-     "text": null,
+     "text": "선물이 마음에 들어요",
+     "syllables": 9,
+     "phonemes": 17,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK12",
-     "text": null,
+     "text": "시간이 금방 갔어요",
+     "syllables": 8,
+     "phonemes": 17,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK13",
-     "text": null,
+     "text": "밤하늘에 별이 많아요",
+     "syllables": 9,
+     "phonemes": 18,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK14",
-     "text": null,
+     "text": "버스 정류장이 멀어요",
+     "syllables": 9,
+     "phonemes": 18,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK15",
-     "text": null,
+     "text": "지하철이 너무 붐벼요",
+     "syllables": 9,
+     "phonemes": 18,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK16",
-     "text": null,
+     "text": "차가 막혀서 늦었어요",
+     "syllables": 9,
+     "phonemes": 18,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK17",
-     "text": null,
+     "text": "동생이 피아노를 배워요",
+     "syllables": 10,
+     "phonemes": 19,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK18",
-     "text": null,
+     "text": "비밀번호를 잊었어요",
+     "syllables": 9,
+     "phonemes": 19,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK19",
-     "text": null,
+     "text": "저는 매운 걸 못 먹어요",
+     "syllables": 9,
+     "phonemes": 20,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK20",
-     "text": null,
+     "text": "주문하신 음료 나왔어요",
+     "syllables": 10,
+     "phonemes": 20,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK21",
-     "text": null,
+     "text": "나중에 다시 전화할게요",
+     "syllables": 10,
+     "phonemes": 21,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK22",
-     "text": null,
+     "text": "전기가 갑자기 나갔어요",
+     "syllables": 10,
+     "phonemes": 21,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK23",
-     "text": null,
+     "text": "휴대폰 충전이 필요해요",
+     "syllables": 10,
+     "phonemes": 21,
      "speech_rms_dbfs": null
     },
     {
      "id": "VK24",
-     "text": null,
+     "text": "선생님께 칭찬받았어요",
+     "syllables": 10,
+     "phonemes": 24,
      "speech_rms_dbfs": null
     }
    ]

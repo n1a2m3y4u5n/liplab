@@ -48,8 +48,12 @@ def test_frozen_manifest_validates_and_counts():
         assert all(6 <= len(pb.syllables(x["text"])) <= 10 and 14 <= pb.phoneme_count(x["text"]) <= 26 for x in items)
         means.append(sum(pb.phoneme_count(x["text"]) for x in items) / len(items))
     assert max(means) - min(means) <= 0.5
-    # 소음 속 문장·SNR 문장은 촬영 전이라 비어 있다(지어낸 음성 없음)
-    assert all(x["text"] is None and x["speech_rms_dbfs"] is None for f in pb.FORMS for x in L["av"]["items"][f])
+    # 소음 속 문장·SNR 문장은 10/7에 글을 정했다(조건·유사도 점검 통과). 말소리 크기는 촬영 전이라 비어 있다(지어낸 음성 없음)
+    av_all = [x for f in pb.FORMS for x in L["av"]["items"][f]] + list(L["snr"]["items"])
+    assert all(x["text"] and 6 <= len(pb.syllables(x["text"])) <= 10 and x["speech_rms_dbfs"] is None for x in av_all)
+    assert len({x["text"] for x in av_all}) == len(av_all)
+    open_texts = {x["text"] for f in pb.FORMS for x in L["sentence"]["items"][f]}
+    assert not (open_texts & {x["text"] for x in av_all})
 
 
 def test_validate_manifest_catches_errors():
@@ -521,7 +525,7 @@ def test_battery_open_responses_snr_and_av():
     assert r["snr_levels"][:3] == [-3, -6, -4]   # 맞음 −3, 맞음 −3, 틀림 +2
     assert r["snr_finish"]["est"] is not None and r["snr_finish"]["kind"] in ("reversals", "last_levels")
     av = r["av_start"]
-    assert av["snr"] == r["snr_finish"]["est"] and av["ready"] == 4 and av["missing"] == {"text": 16}
+    assert av["snr"] == r["snr_finish"]["est"] and av["ready"] == 4 and av["missing"] == {"media": 16}
     assert set(av["blocks"]) <= {"A", "AV"} and av["blocks"]
     assert r["bat_av"]["snr_db"] == r["snr_finish"]["est"] and r["bat_av"]["noise_type"] == "babble"
     assert r["bat_av"]["modality"] in ("A", "AV")

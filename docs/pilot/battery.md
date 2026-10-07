@@ -246,3 +246,11 @@ C10 생성기가 실제 낱말을 글자 그대로만 사전과 대조해, 소�
 - 기록: 검사 응답 행(`p3_closed_responses`)은 문항 id(NA01 등)와 함께 `target`(낱말)을 남기고, 회차 행에 목록 판(`form_version`)과
   `manifest_sha`가 남는다. id는 목록 안 자리라 판이 바뀌면 다른 낱말을 가리킬 수 있으므로 분석은 `target`과 판으로 한다. 파일럿
   전이라 검사 기록은 없다. C10 학습 시행 기록에 미치는 영향은 `docs/nonsense-pairing.md` 2.1.1절.
+
+## 촬영 목록과 촬영 뒤 점검 (10/7)
+
+- 소음 속 문장(폼마다 20)과 SNR 맞추기 문장(24), 예비 12를 정했다(`scripts/build_pilot_manifest.py`의 `AV_CANDIDATES`). 개방형 문장과 같은
+  조건·유사도 점검을 통과한 것만 썼고, 폼별 평균 음소 수가 16.9~16.95로 같다. 사람 검토 전 초안이다.
+- 촬영 목록: `python3 scripts/build_shot_list.py` → `docs/pilot/shot-list.md`(화자별 대본·파일 이름·촬영 규칙), `docs/pilot/shot-list.csv`(점검표).
+  지금 목록으로 744클립이다(낱말 288, 개방형 문장 264, 소음 속 문장 144, SNR 48). 목록 파일을 고치면 다시 만든다.
+- 촬영 뒤 점검: `python3 scripts/check_pilot_media.py <영상 폴더>`가 빠진 파일, 해상도·프레임·길이, 소리 필수 클립의 48kHz 음성을 확인한다.
