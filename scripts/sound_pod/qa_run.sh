@@ -20,9 +20,16 @@ done_() { [ -f "$W/.done_$1" ]; }
 mark() { touch "$W/.done_$1"; echo "$(date '+%T') STEP_OK $1"; }
 
 # CPU 할당(cgroup) 기준 병렬 수: 프로세스마다 2스레드
+# cgroup v2(cpu.max)나 v1(cpu.cfs_quota_us)의 할당 코어. nproc·cpu_count는 호스트 코어(96)를 보여 과다 구독이 된다
 CPUS=$(python3 -c "import os
-q=open('/sys/fs/cgroup/cpu.max').read().split() if os.path.exists('/sys/fs/cgroup/cpu.max') else ['max']
-print(int(int(q[0])/int(q[1])) if q[0]!='max' else os.cpu_count())")
+def rd(p):
+    try: return open(p).read().split()
+    except OSError: return None
+q = rd('/sys/fs/cgroup/cpu.max')
+if q and q[0] != 'max': print(max(1, int(int(q[0]) / int(q[1])))); raise SystemExit
+a, b = rd('/sys/fs/cgroup/cpu/cpu.cfs_quota_us'), rd('/sys/fs/cgroup/cpu/cpu.cfs_period_us')
+if a and b and int(a[0]) > 0: print(max(1, int(int(a[0]) / int(b[0])))); raise SystemExit
+print(min(8, os.cpu_count()))")
 NP=$(( CPUS / 2 )); [ "$NP" -lt 2 ] && NP=2; [ "$NP" -gt 8 ] && NP=8
 NA=${NA:-2}   # GPU 전사 프로세스 수
 echo "cpus=$CPUS eval_procs=$NP asr_procs=$NA"
@@ -83,7 +90,7 @@ measure() {  # 후보목록 이름 [uids] — 전사(GPU)와 D-GOP·신호(CPU)�
   [ "$(grep -c ASR_OK logs/asr_$2.log)" -ge "$NA" ] && [ "$(grep -c EVAL_OK logs/eval_$2.log)" -ge "$NP" ]
 }
 synth() {  # 후보목록 uids
-  local cands=$1 uids=$2 i S=$(( CPUS / 2 )); [ "$S" -lt 2 ] && S=2
+  local cands=$1 uids=$2 i S=$(( CPUS / 2 )); [ "$S" -lt 2 ] && S=2; [ "$S" -gt 8 ] && S=8
   for i in $(seq 0 $((S - 1))); do
     $ST $X/qa_synth.py $W/targets.jsonl $W/cand --cands "$cands" --uids "$uids" --shard $i/$S --threads 2 >> logs/synth.log 2>&1 &
   done
