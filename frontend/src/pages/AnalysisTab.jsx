@@ -7,6 +7,7 @@ import ScrollHintList from '../components/ScrollHintList'
 import { learningAPI } from '../api'
 import { mergeBadges } from '../lib/badges'
 import { scoreLevel, scoreTone } from '../lib/scoreTone'
+import { phoneTone } from '../lib/phoneChips'
 
 /**
  * 분석 탭 (Figma 104:15 · 모바일 240:34) — 워터마크 스탯 3칸 + 학습시간 막대차트 + 정확도 선차트 + 상세 링크.
@@ -438,8 +439,8 @@ function DetailItem({ it, i, kind }) {
           <div className="order-last flex w-full flex-wrap gap-1.5 font-bold sm:order-none sm:w-[204px] sm:flex-nowrap sm:overflow-hidden">
             {it.phones.slice(0, 6).map((p, k) => {
               const v = Math.round((p.dgop ?? 0) * 100)
-              return (
-                <div key={k} className={`flex shrink-0 flex-col items-center gap-px rounded-lg border-1.5 px-2.5 py-1.5 ${scoreTone(v, 'phone').chip}`}>
+              return (   // 신뢰도 표(S2)로 참고로 둔 소리(reliable false)는 회색
+                <div key={k} className={`flex shrink-0 flex-col items-center gap-px rounded-lg border-1.5 px-2.5 py-1.5 ${phoneTone(p).chip}`}>
                   <span className="text-[14px]">{p.label}</span>
                   <span className="text-[10px] opacity-80">{v}</span>
                 </div>
