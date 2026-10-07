@@ -166,6 +166,14 @@ export function voiceFor(train, k, slot = 0, mode = 'mixed', block = 0, avoid = 
  * 소리 구별 문항의 두 목소리 [첫 소리, 둘째 소리]. pair는 voice_pair. 두 칸이 다른 문항은 피할 목소리를 건너뛴 결과가 같은 목소리로
  * 겹치면 둘째 칸을 피할 목소리가 아닌 다른 목소리로 한 번 더 옮긴다(그런 목소리가 없으면 겹친 채로 둔다: 피하는 것이 먼저다).
  */
+/** 짝을 구별되게 낼 수 있는 훈련 목소리(avoid_voices를 뺀 것). 모두 걸리면 전부를 돌려준다(소리 교실 목소리 칩·여러 목소리 듣기). */
+export function usableVoices(train, avoid = null) {
+  const list = train || []
+  const skip = new Set(avoid || [])
+  const ok = list.filter((v) => !skip.has(v))
+  return ok.length ? ok : list
+}
+
 export function axVoices(train, k, pair, mode = 'mixed', block = 0, avoid = null) {
   const s0 = pair?.[0] || 0
   const s1 = pair?.[1] || 0

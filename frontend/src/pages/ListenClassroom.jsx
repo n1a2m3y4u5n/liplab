@@ -4,6 +4,7 @@ import { learningAPI, listenAPI } from '../api'
 import { loadClip, stopAll } from '../lib/listenAudio'
 import { alternate, lipDiffers, pairMissing } from '../lib/listenFlow'
 import { soundStatusText } from '../lib/listenView'
+import { usableVoices } from '../lib/listenMix'
 import BottomBar from '../components/listen/BottomBar'
 import ListenFrame from '../components/listen/ListenFrame'
 import StateCard from '../components/listen/StateCard'
@@ -51,7 +52,9 @@ function PairButton({ item, on, lip, onClick }) {
 /** 고른 짝 듣기 판: A · B · 번갈아 듣기 + 목소리 + 같은 말 다른 목소리 + 재생 상태. */
 function ListenPanel({ item, lip, settings, voices, voiceList, active }) {
   const [voiceIdx, setVoiceIdx] = useState(0)
-  const voice = voices.train[voiceIdx % voices.train.length] || ''
+  // 이 짝을 구별되게 내지 못한 목소리는 칩·여러 목소리 듣기에서 뺀다(docs/listen-voice-contrast-2026-10.md)
+  const train = usableVoices(voices.train, item.avoid_voices)
+  const voice = train[voiceIdx % train.length] || ''
   const a = useClip(item.a, voice)
   const b = useClip(item.b, voice)
   const player = usePlayer()
@@ -69,7 +72,7 @@ function ListenPanel({ item, lip, settings, voices, voiceList, active }) {
   const playVoices = async () => {
     if (player.busy) return
     const id = gen.current
-    const clips = (await Promise.all(voices.train.map((v) => loadClip(item.a, v)))).filter(Boolean)
+    const clips = (await Promise.all(train.map((v) => loadClip(item.a, v)))).filter(Boolean)
     if (id !== gen.current) return
     if (clips.length) play(clips.map((clip) => ({ clip, opts })), `「${item.a}」 여러 목소리`)
   }
@@ -100,7 +103,7 @@ function ListenPanel({ item, lip, settings, voices, voiceList, active }) {
         <button type="button" onClick={playAlt} disabled={!ready || player.busy} className="btn-primary py-3 text-[15px] disabled:cursor-not-allowed disabled:border-inactive-line disabled:bg-inactive disabled:text-inactive-text">
           번갈아 듣기 <span className="font-normal opacity-80">· A B A B</span>
         </button>
-        <button type="button" onClick={playVoices} disabled={a.state !== 'ready' || player.busy || voices.train.length < 2} className="btn-secondary py-3 text-[15px] text-track-dark">
+        <button type="button" onClick={playVoices} disabled={a.state !== 'ready' || player.busy || train.length < 2} className="btn-secondary py-3 text-[15px] text-track-dark">
           같은 말, 다른 목소리
         </button>
       </div>
@@ -113,11 +116,11 @@ function ListenPanel({ item, lip, settings, voices, voiceList, active }) {
           )}
         </div>
       </div>
-      {voices.train.length > 1 && (
+      {train.length > 1 && (
         <div className="flex flex-col gap-2 border-t-1.5 border-line pt-4">
           <p className="text-[13px] font-bold text-ink-muted">목소리</p>
           <div className="flex flex-wrap gap-2" role="group" aria-label="목소리">
-            {voices.train.map((v, i) => <Chip key={v || i} on={i === voiceIdx % voices.train.length} onClick={() => setVoiceIdx(i)}>{label(v, i)}</Chip>)}
+            {train.map((v, i) => <Chip key={v || i} on={i === voiceIdx % train.length} onClick={() => setVoiceIdx(i)}>{label(v, i)}</Chip>)}
           </div>
         </div>
       )}
@@ -147,7 +150,7 @@ export default function ListenClassroom() {
   const kindKey = params.get('kind')
   const kind = kinds?.find((k) => k.kind === kindKey) || kinds?.[0] || null
   const items = kind ? [...(kind.pairs || []).map((p) => ({ ...p, group: 'pair' })),
-    ...(kind.words || []).map((w) => ({ a: w.target, b: w.partner, group: 'word', lip_same: w.lip_same, contrast: w.contrast }))] : []
+    ...(kind.words || []).map((w) => ({ a: w.target, b: w.partner, group: 'word', lip_same: w.lip_same, contrast: w.contrast, avoid_voices: w.avoid_voices }))] : []
   const cur = sel && items.find((x) => x.a === sel.a && x.b === sel.b) ? sel : items[0] || null
   // 입모양 표시: 서버 표시가 없으면 고른 종류의 짝마다 입모양 프레임을 한 번씩 받아 비교한다(같은 짝은 다시 받지 않는다)
   useEffect(() => {

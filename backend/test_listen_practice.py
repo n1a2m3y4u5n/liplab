@@ -87,7 +87,7 @@ def test_contrast_catalog():
     none = L.contrast_catalog(L.word_pool(), has_sound=lambda t: False)
     assert all(not k["pairs"] and not k["words"] for k in none)
     only = L.contrast_catalog(L.word_pool(), has_sound=lambda t: t in {"바", "파"})
-    assert [p for k in only for p in k["pairs"]] == [{"a": "바", "b": "파", "level": 3, "lip_same": True}]
+    assert [p for k in only for p in k["pairs"]] == [{"a": "바", "b": "파", "level": 3, "lip_same": True, "avoid_voices": L.avoid_voices_ax("바", "파")}]
 
 
 def test_scenes_cover_places():

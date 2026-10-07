@@ -1419,7 +1419,7 @@ def contrast_catalog(pool: Sequence[str], has_sound=None, n_words: int = 6) -> L
                 continue
             cs = contrast_of(p["a"], p["b"])
             pairs.append({"a": p["a"], "b": p["b"], "level": p["level"],
-                          "lip_same": lip_same(cs[0] if len(cs) == 1 else None, k)})
+                          "lip_same": lip_same(cs[0] if len(cs) == 1 else None, k), "avoid_voices": avoid_voices_ax(p["a"], p["b"])})
         ex, seen = [], set()
         for d, w, o, c in sorted(found[k], key=lambda x: (x[0], x[1], x[2])):
             if len(ex) >= n_words:
@@ -1428,7 +1428,7 @@ def contrast_catalog(pool: Sequence[str], has_sound=None, n_words: int = 6) -> L
                 continue
             seen |= {w, o}
             ex.append({"target": w, "partner": o, "distance": d, "contrast": f"{c['slot']}:{c['target']}:{c['heard']}",
-                       "lip_same": lip_same(c)})
+                       "lip_same": lip_same(c), "avoid_voices": avoid_voices_ax(w, o)})
         flags = {x["lip_same"] for x in pairs + ex if x["lip_same"] is not None}
         lip = "same" if flags == {True} else "differs" if flags == {False} else "mixed" if flags else None
         out.append({"kind": k, "label": label, "practice_key": f"kind:{k}", "lip": lip,
