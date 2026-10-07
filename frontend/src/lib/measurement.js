@@ -42,12 +42,14 @@ export function localDay(d = new Date()) {
 }
 
 /** 학습 시행에 함께 보낼 측정 필드(파일럿 로그 P0, docs/pilot/log-spec-audit.md). 서버 TrialMeta와 같은 이름이다.
- *  onsetAt: 문항을 보인(자극 재생을 시작한) 시각(Date.now()). talker: 레슨 가상 화자 객체나 id. hintUsed: 힌트를 봤는지(없으면 보내지 않음). */
-export function trialMeta({ onsetAt, now = Date.now(), talker = null, hintUsed } = {}) {
+ *  onsetAt: 문항을 보인(자극 재생을 시작한) 시각(Date.now()). talker: 레슨 가상 화자 객체나 id. hintUsed: 힌트를 봤는지(없으면 보내지 않음).
+ *  soundCondition: 소리 조건(C17)이 켜져 있었는지(없으면 보내지 않음). 답은 늘 소리 없이 본 뒤이고, 비열등 분석에만 쓴다. */
+export function trialMeta({ onsetAt, now = Date.now(), talker = null, hintUsed, soundCondition } = {}) {
   const out = {}
   if (Number.isFinite(onsetAt) && Number.isFinite(now)) out.rt_from_onset_ms = Math.min(3600000, Math.max(0, Math.round(now - onsetAt)))
   const id = typeof talker === 'string' ? talker : talker?.id
   if (id && /^[A-Za-z0-9_-]{1,16}$/.test(id)) out.talker = id
   if (typeof hintUsed === 'boolean') out.hint_used = hintUsed
+  if (typeof soundCondition === 'boolean') out.sound_condition = soundCondition
   return out
 }

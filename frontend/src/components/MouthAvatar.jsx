@@ -24,12 +24,15 @@ import { recordLateness } from '../lib/frameClock'
  *  - once: true면 프레임을 한 번만 재생하고 중립에서 멈춘다(소리 듣기의 소리+입모양 시행, 소리와 함께 한 번). frames가 바뀌면 다시 한 번.
  *    처음 300ms 중립 뒤 첫 프레임이 나오므로 소리는 300ms 뒤에 튼다(listenAudio.playClip leadMs).
  *  - 선행 동시조음(lib/coarticulation, 플래그 VITE_COART_E): 켜져 있으면 입 안쪽 자음 프레임이 입술을 섞을 모음(coart_v)을 아바타에 넘긴다.
+ *  - override: {viseme, transition_ms, duration_ms, text_index, coart_v}를 주면 반복 재생을 멈추고 그 프레임을 보인다(소리 조건의
+ *    '소리와 함께 다시 보기', hooks/useSoundReplay가 소리 재생 시각에 맞춰 넘긴다). null로 돌아오면 반복 재생을 처음부터 다시 한다.
  * LipSyncPlayer3D는 'Viseme N' 오버레이가 있어 퀴즈에 부적합해 별도 컴포넌트로 둔다.
  * 문항이 바뀌어도 key로 다시 마운트하지 않는다. frames가 바뀌면 재생을 처음부터 다시 하고, 다시 마운트하면 캔버스·WebGL
  * 컨텍스트·셰이더·모델 버퍼를 새로 만든다(9/27 측정: 문항마다 컨텍스트가 새로 생기고 첫 그리기까지 0.1~1.1초).
  */
 export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300, className = '', cueText = null, cueFocus = false, modelUrl, speed = 1,
-  talker = null, talkerSeed = 0, showTalker = true, flat = false, once = false }) {
+  talker = null, talkerSeed = 0, showTalker = true, flat = false, once = false, override = null }) {
+  const overriding = override != null
   const frames = useMemo(() => applyCoarticulation(applyTalkerTiming(rawFrames, talker, talkerSeed)), [rawFrames, talker, talkerSeed])
   const [vid, setVid] = useState(15)
   const [syl, setSyl] = useState(null)      // 재생 중 프레임의 음절 번호(text_index)
@@ -48,6 +51,7 @@ export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300,
   }, [cueText, cueFocus])
 
   useEffect(() => {
+    if (overriding) return undefined   // 소리와 함께 다시 보기 중에는 반복 재생을 쉰다
     let on = true
     let t
     const k = Number.isFinite(speed) && speed > 0 ? speed : 1   // 배속: 머무는 시간·전환 시간을 k로 나눈다
@@ -99,13 +103,16 @@ export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300,
     }
 
     return () => { on = false; clearTimeout(t) }
-  }, [frames, visemeId, speed, talker, talkerSeed, once])
+  }, [frames, visemeId, speed, talker, talkerSeed, once, overriding])
 
-  const active = syl != null ? cues.filter((c) => c.syllable_index === syl && (c.strength ?? 1) > 0.05) : []
+  const shownVid = overriding ? (override.viseme ?? 15) : vid
+  const shownSyl = overriding ? (Number.isInteger(override.text_index) ? override.text_index : null) : syl
+  const shownTiming = overriding ? { t: override.transition_ms, d: override.duration_ms, lv: override.coart_v } : timing
+  const active = shownSyl != null ? cues.filter((c) => c.syllable_index === shownSyl && (c.strength ?? 1) > 0.05) : []
   return (
     <div className={`relative w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-slate-800 to-slate-900 [container-type:size] ${className}`}
          style={height != null ? { height } : undefined}>
-      <AvatarVRM visemeId={vid} modelUrl={modelUrl} flat={flat} transitionMs={timing.t} durationMs={timing.d} talker={talker} lipVowel={timing.lv} />
+      <AvatarVRM visemeId={shownVid} modelUrl={modelUrl} flat={flat} transitionMs={shownTiming.t} durationMs={shownTiming.d} talker={talker} lipVowel={shownTiming.lv} />
       {showTalker && <TalkerChip talker={talker} />}
       {/* 기호는 오른쪽 입꼬리 옆 — 카메라 세로 화각이 고정이라 입 높이는 캔버스 높이의 약 68%, 입 반폭은 높이의 약 25% */}
       {active.length > 0 && (

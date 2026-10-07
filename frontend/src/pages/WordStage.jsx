@@ -25,6 +25,10 @@ import { typedSlots, contextSlots, probeSlot, pickProbe } from '../lib/openSet'
 import MouthCompare from '../components/MouthCompare'
 import ShortText from '../components/ShortText'
 import useLearnerInfo from '../hooks/useLearnerInfo'
+import useSoundCondition from '../hooks/useSoundCondition'
+import useSoundReplay from '../hooks/useSoundReplay'
+import SoundReplayBar from '../components/SoundReplayBar'
+import { soundAPI } from '../api'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
@@ -156,6 +160,12 @@ function WordQuiz({ data, reload }) {
   const { defaults: learner } = useLearnerInfo()
   const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계)
   const [result, setResult] = useState(null)
+  // 소리 조건(C17): 답한 뒤에만 '소리와 함께 다시 보기'(문맥 문항은 문장 전체). 답은 늘 소리 없이 한다
+  const sound = useSoundCondition()
+  const replay = useSoundReplay({
+    texts: q ? [q.kind === 'context' ? q.full : q.target] : [], answered: !!result, enabled: sound.enabled,
+    onPlayed: () => q && soundAPI.logReplay('trial', q.target, q.kind === 'context' ? 'context' : q.kind === 'typed' ? 'word_typed' : 'word').catch(() => {}),
+  })
   const [compareOpen, setCompareOpen] = useState(false)   // 오답 뒤 정답·고른 말 입모양 나란히 비교(누를 때만 WebGL 둘 추가)
   const [submitting, setSubmitting] = useState(false)
   const [qNum, setQNum] = useState(1)              // 레슨 내 문항 번호(진행바)
@@ -246,7 +256,7 @@ function WordQuiz({ data, reload }) {
       // 문맥 문항: 숙달(stat)은 그대로, 시행 기록·취약 입모양에만 남는다(/api/curriculum/context-answer)
       try {
         const rc = await curriculumAPI.submitContext(q.item.id, answer, q.choices,
-          trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default' }))
+          trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default', soundCondition: sound.enabled }))
         correct = !!rc.correct
         confusions = rc.confusions || []
         setXpEarned((x) => x + (rc.xp_gained || 0))
@@ -259,7 +269,7 @@ function WordQuiz({ data, reload }) {
       // 선다형은 보여 준 보기도 보낸다(시행 기록, 기회로 나눈 혼동률). 주관식은 보기가 없다
       const rr = await curriculumAPI.submitWord(q.target, correct, answer, effectiveSpeed(frames, shownFrames, playSpeed),
         typed ? 'typed' : undefined, typed ? undefined : q.choices, q.probe,
-        trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default' }))
+        trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default', soundCondition: sound.enabled }))
       setStat({ attempts: rr.attempts, mastery: rr.mastery_score, mastered: rr.mastered })
       confusions = rr.confusions || []
       if (typed && rr.verdict) { verdict = rr.verdict; correct = verdict === 'correct' }
@@ -355,7 +365,7 @@ function WordQuiz({ data, reload }) {
             {/* 시각증강 기호(축 J-3)는 답을 확인한 뒤에만 — 보기가 최소대립 짝이라 문제 중에 보이면 기호만으로 답이 드러난다.
                 확인 뒤에는 약한 표적 입모양 음절에만 입꼬리 옆에 겹쳐 무엇이 달랐는지 보여 준다(숙달되면 흐려짐). */}
             <MouthAvatar frames={shownFrames} height={null} className="h-full" cueText={result && !isContext ? q.target : null} cueFocus speed={playSpeed}
-              talker={lesson.talker} talkerSeed={lesson.seed} />
+              talker={lesson.talker} talkerSeed={lesson.seed} override={replay.frame} />
           </div>
           {fastOk && (
             <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs" role="group" aria-label="빠른 말 속도">
@@ -397,6 +407,7 @@ function WordQuiz({ data, reload }) {
           <AnimatePresence>
             {result && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                <SoundReplayBar sound={sound} replay={replay} />
                 {result.verdict === 'homophene' && (
                   <div className="rounded-16 border-2 border-warn/40 bg-warn-tint p-4 text-[13px] leading-snug text-warn-text">
                     <p className="text-xs font-bold">입모양은 맞았어요</p>
