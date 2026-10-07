@@ -155,16 +155,19 @@ def read_audio(job):
             y, sr = sf.read(f, dtype="float32")
             return resample_poly(y, SR, sr).astype(np.float32)
     assert sr == SR, sr
-    return y.astype(np.float32)
+    return y.astype(np.float32)[:SR * MAX_S]
+
+
+MAX_S = 30            # assess_text와 같이 앞 30초만 채점한다(사후 변경 1)
 
 
 def variants(y, key, with_pad=True):
     """(이름, 정렬기에 넣는 소리, 앱이 받은 녹음(빠르기 계산용), 구간 제약 끝 초) 목록."""
-    yT = np.concatenate([y, room_tail(y, key)])
+    yT = np.concatenate([y, room_tail(y, key)])[:SR * MAX_S]
     out = [("R", y, y, None), ("T", yT, yT, None)]
     if with_pad:
         z = np.zeros(int(SR * PAD_S), np.float32)
-        out += [("Rp", np.concatenate([y, z]), y, None), ("Tp", np.concatenate([yT, z]), yT, None)]
+        out += [("Rp", np.concatenate([y, z])[:SR * MAX_S], y, None), ("Tp", np.concatenate([yT, z])[:SR * MAX_S], yT, None)]
     for nm, base in (("R", y), ("T", yT)):
         e = speech_end(base)
         for m in MARGINS:
