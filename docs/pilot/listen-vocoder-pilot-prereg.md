@@ -22,7 +22,7 @@
 - **활동 대조 집단:** 같은 시간 동안 독화 트랙(소리 없이 입모양만). 시간·화면 노출을 맞추고, 왜곡된 소리에는 노출하지 않는다. 검사만 반복해도 10%p 안팎 오르는 효과(Loebach 2010의 노출 없음 집단 +11%p, Fu 2005의 검사만 집단)를 대조군으로 뺀다.
 - **검사(사전·사후, 두 집단 같음):** 인공와우 모의 켬, 검사 전용 목소리 m3, 소리만.
   1. 주 결과: 소음 속 문장 인식 역치(잡담 잡음 babble), 검사 폼 A·B 중 사전과 다른 폼을 사후에.
-  2. 일반화 1: 훈련에 쓰지 않은 잡음(두 사람 말소리 talker2)에서 같은 검사.
+  2. 일반화 1: 훈련에 쓰지 않은 잡음(두 사람 말소리 talker2)에서 같은 검사. 폼은 C·D 중 사전과 다른 폼을 사후에(폼 순서는 babble과 같은 홀짝). 한 회기의 두 검사가 다른 문장이다(`docs/listen-forms-cd-2026-10.md`).
   3. 일반화 2: 조용한 곳에서 훈련하지 않은 낱말 고르기 20문항(수준 2), 정답률.
 - **회기 기록:** 시행마다 `listen_attempts`(sim_mode='ci', 출력 지연, 출제 방식)로 남는다.
 
@@ -45,7 +45,7 @@
 
 ## 5. 실행 전에 앱에서 할 것
 
-1. ~~검사 잡음 종류 선택~~ 됨(10/7, 312dd75): `/api/listen/test/start`에 noise(babble·talker2), 잡음마다 폼을 따로 번갈아 쓴다. 화면은 `/learn/listening?stage=4&testnoise=talker2`.
+1. ~~검사 잡음 종류 선택~~ 됨(10/7, 312dd75): `/api/listen/test/start`에 noise(babble·talker2). 10/7부터 babble은 A·B, talker2는 C·D를 번갈아 쓴다(C·D 소리가 없으면 talker2는 babble과 반대 폼). 화면은 `/learn/listening?stage=4&testnoise=talker2`.
 2. ~~낱말 일반화 검사 20문항~~ 됨: `GEN_WORDS`(훈련 풀에서 뺌), `/api/listen/wordtest/*`, 화면 `/learn/listening?stage=2&wordtest=1`. 두 번까지 듣고 피드백 없음.
 3. ~~파일럿 내보내기~~ 됨: 판 6에 `listen`(검사 역치·잡음·모의 청취, 낱말 검사, 단계별 시행 수, trials=true면 시행 기록, 훈련 답 원문은 뺌).
 4. 인공와우 모의 설정: 연구진이 참여자 기기에서 `/learn/listening?sim=ci`로 열어 소리 크기 맞추기에서 '인공와우 모의(연구용)'를 켠다. 기록에 sim_mode='ci'.
