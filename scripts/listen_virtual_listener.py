@@ -492,8 +492,8 @@ def fit_curve(x, k, n):
 
     def nll(th):
         m, ls, lu = th
-        s = math.exp(ls)
-        u = 0.2 + 0.8 / (1 + math.exp(-lu))
+        s = math.exp(min(max(ls, -10.0), 3.0))
+        u = 0.2 + 0.8 / (1 + math.exp(-min(max(lu, -50.0), 50.0)))
         p = u / (1 + np.exp(np.clip(-4 * s * (x - m), -50, 50)))
         p = np.clip(p, 1e-6, 1 - 1e-6)
         return -float(np.sum(k * np.log(p) + (n - k) * np.log(1 - p)))
@@ -505,8 +505,8 @@ def fit_curve(x, k, n):
             if best is None or r.fun < best.fun:
                 best = r
     m, ls, lu = best.x
-    s = min(math.exp(ls), 2.0)
-    u = 0.2 + 0.8 / (1 + math.exp(-lu))
+    s = min(math.exp(min(ls, 3.0)), 2.0)
+    u = 0.2 + 0.8 / (1 + math.exp(-min(max(lu, -50.0), 50.0)))
 
     def srt(q):
         if u <= q + 1e-6:
