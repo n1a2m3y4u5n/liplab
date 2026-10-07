@@ -398,8 +398,14 @@ def rsa_block(real_profiles, cond_profiles):
             continue
         rho = spearman(v, ref_all)
         loo_mean = float(np.mean([spearman(v, np.delete(M, k, axis=0).mean(0)) for k in range(len(spks))]))
+        # 보고만: 실제 평균 대비 순위가 가장 크게 어긋난 무리 쌍(+는 아바타에서 상대적으로 더 멀다)
+        from scipy.stats import rankdata
+        iu = [(GROUPS[i], GROUPS[j]) for i in range(len(GROUPS)) for j in range(i + 1, len(GROUPS))]
+        dr = (rankdata(v) - rankdata(ref_all)) / len(v)
+        order = np.argsort(-np.abs(dr))[:8]
         res["cond"][c] = {"rho": round(rho, 4), "rho_vs_loo_refs_mean": round(loo_mean, 4), "pct_in_loo": round(pct_rank(lv, rho), 1),
-                          "pass": bool(rho >= p10), "flat_feats": p.get("flat_feats", [])}
+                          "pass": bool(rho >= p10), "flat_feats": p.get("flat_feats", []),
+                          "pair_dev": [[f"{iu[k][0]}-{iu[k][1]}", round(float(dr[k]), 3)] for k in order]}
     return res
 
 
