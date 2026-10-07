@@ -266,6 +266,217 @@ _PARTICLES = ("", "을", "를", "이", "가", "은", "는", "도", "에", "에�
 # 개방형 문장 폼 배정(2026-10-07). 10/6 초안(후보를 음소 수 뱀 순서로 나눈 것)의 자리를 그대로 두고, 내용 1차 검토
 # (docs/review/pilot-sentences.tsv, README 3.4절)의 교체 16자리와 유사도 점검이 더 찾은 2자리(SB19, SC19)를 바꿨다. 자리 번호는
 # 목록 순서대로 S{폼}01~40이다. 바꾼 자리와 까닭은 docs/pilot/battery.md 8.1절.
+# 소음 속 시청각(av, 폼마다 20)과 SNR 맞추기(snr, 24) 문장 후보(10/7 작성). 개방형 문장과 같은 조건(basic_problem)과 유사도 점검
+# (훈련 문장, 개방형 폼·예비 문장, 서로 간)을 통과한 것만 순서대로 쓴다. 남는 것은 예비로 둔다. 사람 검토 전 초안이다.
+AV_CANDIDATES = """
+버스가 곧 도착해요
+우산을 챙겨 가세요
+내일은 비가 온대요
+회의가 늦게 끝났어요
+커피를 한 잔 마셨어요
+지하철이 너무 붐벼요
+휴대폰 충전이 필요해요
+영화가 생각보다 길었어요
+저녁에 운동하러 가요
+가방이 생각보다 무거워요
+할머니 댁에 다녀왔어요
+오늘 점심은 김밥이에요
+길이 많이 막혔어요
+숙제를 아직 못 했어요
+강아지가 산책을 좋아해요
+냉장고에 우유가 없어요
+택배가 아직 안 왔어요
+엘리베이터가 고장 났어요
+다음 주에 시험이 있어요
+표를 미리 예매했어요
+손님이 많아서 바빠요
+창밖에 눈이 내려요
+이번 역에서 내려요
+주말에 등산을 갔어요
+머리를 짧게 잘랐어요
+약국이 문을 닫았어요
+동생이 피아노를 배워요
+아침을 거르지 마세요
+컴퓨터가 자꾸 꺼져요
+빨래를 널어야 해요
+사진을 같이 찍어요
+공원에 사람이 많아요
+배고파서 라면 먹었어요
+비밀번호를 잊었어요
+자전거를 타고 왔어요
+책을 두 권 빌렸어요
+감자를 삶아 먹었어요
+선생님께 칭찬받았어요
+노래방에 같이 가요
+교실 불을 꺼 주세요
+시계가 조금 빨라요
+바람이 많이 불어요
+기차표가 다 팔렸어요
+국이 조금 싱거워요
+신호등이 바뀌었어요
+문자를 확인해 보세요
+수업이 일찍 끝났어요
+이 길로 쭉 가세요
+열이 조금 있어요
+저는 매운 걸 못 먹어요
+영수증 드릴까요
+계단 조심하세요
+오늘은 일찍 잘게요
+나중에 다시 전화할게요
+거스름돈 여기 있어요
+버스 카드를 찍으세요
+내일 아침에 만나요
+주문하신 음료 나왔어요
+어디가 아프세요
+잠깐 쉬었다 해요
+소리 좀 줄여 주세요
+차가 막혀서 늦었어요
+카드로 계산할게요
+사이즈가 안 맞아요
+숙소를 예약했어요
+할 일이 너무 많아요
+시간이 금방 갔어요
+어제 늦게 잤어요
+오늘 기분이 좋아요
+연필 좀 빌려줘요
+같이 점심 먹어요
+날씨가 많이 추워요
+길을 건너면 있어요
+가게 문이 닫혔어요
+지갑을 잃어버렸어요
+이따가 연락할게요
+모자를 쓰고 나가요
+귤이 정말 달아요
+줄이 너무 길어요
+오늘 수영장에 가요
+밤하늘에 별이 많아요
+교복이 조금 작아요
+축구 경기를 봤어요
+손이 너무 시려요
+버스를 잘못 탔어요
+이번 주말에 이사해요
+그림을 잘 그리네요
+새 신발이 편해요
+종이를 반으로 접어요
+꽃이 활짝 피었어요
+전화를 안 받아요
+컵을 깨뜨렸어요
+우리 집은 삼 층이에요
+아이가 잠들었어요
+오늘은 쉬는 날이에요
+고양이가 창가에 앉았어요
+떡볶이가 너무 매워요
+엄마가 반찬을 만드셨어요
+운동화 끈이 풀렸어요
+도시락을 싸 왔어요
+방학이 곧 끝나요
+책상 위를 정리했어요
+강의실이 너무 더워요
+주차할 곳이 없어요
+감기약을 사 왔어요
+노트를 두고 왔어요
+창문 밖이 시끄러워요
+라디오 소리가 작아요
+편의점에서 빵을 샀어요
+버스 정류장이 멀어요
+양말을 거꾸로 신었어요
+오늘 저녁은 뭐 먹을까요
+휴일에도 일을 했어요
+주소를 다시 알려 주세요
+식당 예약을 바꿨어요
+은행에 들렀다 갈게요
+과일을 씻어서 먹어요
+냄새가 정말 좋아요
+조용히 해 주시겠어요
+아까 보낸 메일 봤어요
+전기가 갑자기 나갔어요
+요즘 너무 피곤해요
+마스크를 쓰고 왔어요
+배터리가 다 닳았어요
+나머지는 내일 할게요
+옷이 조금 커 보여요
+목소리가 잘 안 들려요
+에어컨을 켜 줄래요
+기다려 줘서 고마워요
+오늘 회의는 취소됐어요
+사진이 잘 나왔어요
+재미있는 책을 읽었어요
+아빠가 출장을 가셨어요
+간식을 조금 남겼어요
+이어폰을 놓고 왔어요
+병원 예약을 했어요
+학원 끝나고 갈게요
+비행기가 늦게 떠요
+이번에는 제가 낼게요
+아이스크림이 녹았어요
+선물이 마음에 들어요
+설거지는 제가 할게요
+오후에 비가 그쳤어요
+연극을 보러 갔어요
+빵이 아직 따뜻해요
+수영을 배우고 싶어요
+배가 너무 불러요
+화요일에 시간 있어요
+주스를 쏟고 말았어요
+버스에 우산을 두고 내렸어요
+책가방이 너무 커요
+동물원에 가 봤어요
+소설책을 다 읽었어요
+머리가 조금 아파요
+옆집 개가 짖어요
+기차가 곧 출발해요
+목요일까지 끝낼게요
+키가 많이 컸네요
+밖이 벌써 어두워요
+피자를 시켜 먹었어요
+물병을 채워 왔어요
+안내 방송을 들었어요
+신발 끈을 다시 맸어요
+시험공부를 하고 있어요
+치과에 가기 싫어요
+수학 문제를 다 풀었어요
+"""
+
+
+def pick_av(forms: dict, reserve: list, words: set, training: dict):
+    """후보에서 av 폼 A·B·C(각 N_AV)와 snr(N_SNR), 예비(최대 N_RESERVE)를 고른다. 음소 수로 정렬해 뱀 모양으로 나눠 폼 난이도를 맞춘다."""
+    taken = [t for f in pb.FORMS for t in forms[f]] + list(reserve)
+    ok, rejected = [], []
+    for c in [l.strip() for l in AV_CANDIDATES.strip().splitlines() if l.strip()]:
+        tc = training_conflicts(c, training)
+        why = basic_problem(c, words) or (f"훈련 문장 '{tc[0][0]}'와 가까움" if tc else "")
+        if not why:
+            near = next((t for t in taken + ok if similarity_reasons(c, t, both_ways=True)), None)
+            if near:
+                why = f"'{near}'와 가까움"
+        if why:
+            rejected.append((c, why))
+        else:
+            ok.append(c)
+    need = N_AV * len(pb.FORMS) + N_SNR
+    if len(ok) < need:
+        for c, w in rejected:
+            print(f"뺌(av·snr): {c} ({w})")
+        raise SystemExit(f"av·snr 후보 부족: {len(ok)} < {need}")
+    pool = sorted(ok[:need], key=lambda t: (pb.phoneme_count(t), t))
+    av = {f: [] for f in pb.FORMS}
+    snr = []
+    order = list(pb.FORMS) + ["snr"]
+    k = 0
+    for i in range(0, len(pool), len(order)):
+        chunk = pool[i:i + len(order)]
+        slots = order if (i // len(order)) % 2 == 0 else list(reversed(order))
+        for t, slot in zip(chunk, slots):
+            target = snr if slot == "snr" else av[slot]
+            cap = N_SNR if slot == "snr" else N_AV
+            if len(target) < cap:
+                target.append(t)
+            else:
+                (snr if len(snr) < N_SNR else next(av[f] for f in pb.FORMS if len(av[f]) < N_AV)).append(t)
+            k += 1
+    return av, snr, ok[need:need + N_RESERVE], rejected
+
+
 FORM_SENTENCES = {
     "A": [
         "감기에 걸렸어요", "새 옷을 입어 봤어요", "시계가 멈췄어요", "무슨 일이 있었어요", "물이 너무 뜨거워요",
@@ -544,6 +755,7 @@ def build():
     sforms = FORM_SENTENCES
     problems = form_problems(sforms, words, training)
     reserve, rejected = pick_reserve(cands, sforms, words, training, N_RESERVE)
+    av_forms, snr_items, av_reserve, av_rejected = pick_av(sforms, reserve, words, training)
 
     def sent_item(prefix, i, s):
         return {"id": f"{prefix}{i + 1:02d}", "text": s, "syllables": len(pb.syllables(s)), "phonemes": pb.phoneme_count(s)}
@@ -593,19 +805,23 @@ def build():
             "av": {
                 "title": "소음 속 문장", "response": "typed", "modality": "real", "n_per_form": N_AV, "syllable_range": [6, 10],
                 "media_pattern": "av/{talker}/{id}.mp4", "noise": "babble", "blocks": ["A", "AV"],
-                "items": {f: [{"id": f"V{f}{i + 1:02d}", "text": None, "speech_rms_dbfs": None} for i in range(N_AV)]
-                          for f in pb.FORMS},
+                "items": {f: [{"id": f"V{f}{i + 1:02d}", "text": t, "syllables": len(pb.syllables(t)),
+                               "phonemes": pb.phoneme_count(t), "speech_rms_dbfs": None}
+                              for i, t in enumerate(av_forms[f])] for f in pb.FORMS},
+                "reserve": [{"id": f"VR{i + 1:02d}", "text": t, "syllables": len(pb.syllables(t)),
+                             "phonemes": pb.phoneme_count(t), "speech_rms_dbfs": None} for i, t in enumerate(av_reserve)],
             },
             "snr": {
                 "title": "SNR 맞추기", "response": "typed", "modality": "audio", "syllable_range": [6, 10],
                 "media_pattern": "av/{talker}/{id}.mp4", "noise": "babble",
                 "staircase": {"start_db": 0, "step_down_db": 3, "step_up_db": 2, "min_db": -20, "max_db": 10,
                               "reversals": 8, "use_last": 6, "max_trials": 24, "criterion": 0.5},
-                "items": [{"id": f"VK{i + 1:02d}", "text": None, "speech_rms_dbfs": None} for i in range(N_SNR)],
+                "items": [{"id": f"VK{i + 1:02d}", "text": t, "syllables": len(pb.syllables(t)),
+                           "phonemes": pb.phoneme_count(t), "speech_rms_dbfs": None} for i, t in enumerate(snr_items)],
             },
         },
     }
-    return m, rejected, problems
+    return m, rejected + [(c, "av·snr: " + w) for c, w in av_rejected], problems
 
 
 def main():
