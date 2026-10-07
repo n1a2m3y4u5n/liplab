@@ -274,6 +274,8 @@ class ListenAttempt(Base):
     rt_ms = Column(Integer, nullable=True)
     session = Column(String(40), nullable=True)    # 검사 회차 id(test:...)·점검 회차
     route = Column(String(20), nullable=True)      # 듣는 길: stream|speaker|earphone (데이터 품질용)
+    output_latency_ms = Column(Integer, nullable=True)   # 브라우저가 알린 출력 지연(블루투스 포함일 수 있음, 분석 공변량)
+    av_offset_ms = Column(Integer, nullable=True)        # 소리+입모양 시행에서 입모양을 늦춘 시간
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 
@@ -671,6 +673,8 @@ class ConsentRecord(Base):
 # 괜찮았지만 PostgreSQL은 한 문장이 실패하면 그 트랜잭션의 뒤 문장이 모두 실패해(current transaction is aborted), 첫 ALTER가 '이미 있음'으로
 # 실패하면 뒤에 새로 더한 컬럼이 조용히 빠졌다. 지금은 있는 컬럼을 먼저 읽어 없는 것만 ALTER하고, 문장마다 SAVEPOINT로 실패를 가둔다.
 _ADD_COLUMNS = (
+    ("listen_attempts", "output_latency_ms", "INTEGER"),
+    ("listen_attempts", "av_offset_ms", "INTEGER"),
     ("bookmarks", "domain", "VARCHAR(12) DEFAULT 'read'"),
     # SM-2 경량 스케줄링 컬럼
     ("review_items", "ease_factor", "FLOAT DEFAULT 2.5"),

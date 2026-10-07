@@ -52,6 +52,29 @@ async function resume() {
   return c
 }
 
+/** 재생을 위해 오디오를 깨운다(출력 지연 값은 재생 중에만 의미가 있다). */
+export async function ensureAudio() {
+  return resume()
+}
+
+/**
+ * 브라우저가 알린 출력 지연(ms, 블루투스 지연이 들어 있을 수 있음). 모르면 null.
+ * Safari 18.4 전에는 없고, 재생 중이 아니면 0이며, 블루투스에서는 실제보다 작게 나온다는 보고가 있다(docs/listen-advance-evidence-2026-10.md).
+ */
+export function outputLatencyMs() {
+  const v = ctx?.outputLatency
+  return Number.isFinite(v) && v > 0 ? Math.round(v * 1000) : null
+}
+
+/**
+ * 소리+입모양 시행에서 입모양을 늦출 시간. 소리가 입모양보다 앞서는 것은 30~45 ms만 넘어도 시청각 통합이 깨지지만, 늦는 것은
+ * 170~200 ms까지 견딘다. 그래서 알려진 지연의 80%만, 250 ms까지만 보정한다(덜 보정해서 소리가 앞서지 않게).
+ */
+export function avOffsetMs() {
+  const lat = outputLatencyMs()
+  return lat ? Math.min(250, Math.round(lat * 0.8)) : 0
+}
+
 const canPlay = (type) => {
   try { return new Audio().canPlayType(type) } catch { return '' }
 }
