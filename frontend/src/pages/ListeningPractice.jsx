@@ -859,7 +859,10 @@ function WordTest({ settings, voices, onProgress, onExit, active }) {
     <div className="flex flex-col gap-4 lg:gap-5">
       <Heading title="들은 낱말을 골라요" meta={`낱말 검사 ${k + 1} / ${run.items.length} · 정답은 알려 주지 않아요`}
         sub={k === 0 ? '낱말마다 두 번까지 들을 수 있어요.' : null} />
-      {clip.state === 'missing' ? (
+      {clip.state === 'missing' && clip.reason === 'not_prepared' ? (
+        <StateCard title="검사 소리가 아직 준비되지 않았어요" body="서버에서 검사 낱말 소리를 만드는 중이라 지금은 검사를 할 수 없어요. 나중에 다시 해 주세요."
+          actions={[{ label: '학습 경로로', onClick: onExit }]} />
+      ) : clip.state === 'missing' ? (
         <StateCard title="검사 소리를 받지 못했어요" body="인터넷 연결을 확인하고 다시 받아 주세요." actions={[{ label: '다시 받기', onClick: clip.retry }, { label: '학습 경로로', onClick: onExit }]} />
       ) : (
         <>
@@ -1164,7 +1167,14 @@ function NoiseTest({ settings, voices, onProgress, onDone, onCancel, active, noi
       <Heading title="문장을 듣고 들은 대로 써요"
         meta={step.practice ? `연습 ${step.no} / ${step.total} · 점수에 안 들어가요` : `검사 ${step.no} / ${step.total} · 정답은 마칠 때까지 알려 주지 않아요`}
         sub={k === 0 ? '문장마다 한 번만 들어요. 모르면 비워 두고 넘어가도 돼요. 먼저 연습 문장으로 익혀요.' : null} />
-      {clip.state === 'missing' ? (
+      {clip.state === 'missing' && clip.reason === 'not_prepared' && step.practice ? (
+        // 연습 문장 소리가 아직 합성되지 않았으면 그 연습만 건너뛴다(연습은 역치에 들어가지 않는다)
+        <StateCard title="이 연습 문장은 소리가 아직 준비되지 않았어요" body="이 연습은 건너뛰고 다음으로 가요."
+          actions={[{ label: '다음으로', onClick: () => setK((x) => x + 1) }]} />
+      ) : clip.state === 'missing' && clip.reason === 'not_prepared' ? (
+        <StateCard title="검사 소리가 아직 준비되지 않았어요" body="서버에서 검사 문장 소리를 만드는 중이라 지금은 검사를 할 수 없어요. 나중에 다시 해 주세요."
+          actions={[{ label: '학습 경로로', onClick: onCancel }]} />
+      ) : clip.state === 'missing' ? (
         <StateCard title="검사 소리를 받지 못했어요" body="인터넷 연결을 확인하고 다시 받아 주세요." actions={[{ label: '다시 받기', onClick: clip.retry }, { label: '학습 경로로', onClick: onCancel }]} />
       ) : nz.state === 'missing' ? noiseMissingCard(nz, onCancel) : (
         <>
