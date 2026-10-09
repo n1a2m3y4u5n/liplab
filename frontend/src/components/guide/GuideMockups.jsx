@@ -913,7 +913,7 @@ function ProfileMock() {
 // 목업 목록. design = 설계 크기(px, 가이드 사진 상자와 같은 비율). areas = 이 목업에 번호 배지를 다는 영역.
 export const MOCKS = {
   overview: { design: [1440, 760], C: OverviewMock, areas: ['stats', 'rail', 'logo'],
-    alt: '데스크톱 학습 화면 예시. 왼쪽 메뉴, 가운데 학습 경로와 레슨 카드, 오른쪽 오늘의 과제와 복습 카드.' },
+    alt: '데스크톱 학습 화면 예시. 왼쪽 메뉴, 가운데 단계 목록과 레슨 카드, 오른쪽 오늘의 과제와 복습 카드.' },
   learn: { design: [520, 653], C: LearnMock, areas: ['switch', 'guideBtn', 'nodes', 'arrows', 'sheet'],
     alt: '휴대폰 학습 탭 예시. 독화·발화 전환, 단계 이름과 가이드 버튼, DOKA 단계 노드와 아래 레슨 카드.' },
   readQuestion: { design: [375, 564], C: (p) => <ReadMock {...p} />, areas: ['bookmark', 'stage', 'options'],

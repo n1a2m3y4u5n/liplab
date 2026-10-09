@@ -32,7 +32,7 @@ export default function SoundCard({ player, onPlay, clipState = 'ready', label, 
             {text}
           </p>
           <p className="text-[12px] leading-snug text-ink-faint">
-            {plays > 0 ? `${plays}번 들었어요${left} · ` : left ? `${left.slice(3)} · ` : ''}합성 음성<span className="hidden lg:inline"> · 스페이스 키로 듣기</span>
+            {plays > 0 ? `${plays}번 들었어요${left} · ` : left ? `${left.slice(3)} · ` : ''}기계 목소리(합성)<span className="hidden lg:inline"> · 스페이스 키로 듣기</span>
           </p>
         </div>
       </div>

@@ -60,21 +60,21 @@ export default function WordTest({ settings, voices, onProgress, onExit, active 
   useListenKeys({ active: active && !!it && !result && !fatal, onPlay: play, canPlay: clip.state === 'ready' && !player.busy && plays < 2,
     optionCount: it?.options?.length || 0, canPick: canAnswer, onPick: setPicked, onEnter: confirm, canEnter: canAnswer && picked != null })
 
-  if (fatal) return <StateCard title={fatal} actions={[{ label: '검사 다시 시작', onClick: () => { setRun(null); setNonce((n) => n + 1) } }, { label: '학습 경로로', onClick: onExit }]} />
+  if (fatal) return <StateCard title={fatal} actions={[{ label: '검사 다시 시작', onClick: () => { setRun(null); setNonce((n) => n + 1) } }, { label: '학습 화면으로', onClick: onExit }]} />
   if (!run) return <Skeleton />
   if (result) {
     return <ListenComplete title="낱말 검사를 마쳤어요" stats={[{ label: '맞힌 낱말', value: `${Math.round(result.accuracy * run.items.length)} / ${run.items.length}`, main: true }]}
-      sub="훈련에 나오지 않은 낱말로 측정했어요. 정답은 따로 알려 주지 않아요." primary={{ label: '학습 경로로', onClick: onExit }} />
+      sub="훈련에 나오지 않은 낱말로 측정했어요. 정답은 따로 알려 주지 않아요." primary={{ label: '학습 화면으로', onClick: onExit }} />
   }
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
       <Heading title="들은 낱말을 골라요" meta={`낱말 검사 ${k + 1} / ${run.items.length} · 정답은 알려 주지 않아요`}
         sub={k === 0 ? '낱말마다 두 번까지 들을 수 있어요.' : null} />
       {clip.state === 'missing' && clip.reason === 'not_prepared' ? (
-        <StateCard title="검사 소리가 아직 준비되지 않았어요" body="서버에서 검사 낱말 소리를 만드는 중이라 지금은 검사를 할 수 없어요. 나중에 다시 해 주세요."
-          actions={[{ label: '학습 경로로', onClick: onExit }]} />
+        <StateCard title="검사 소리가 아직 준비되지 않았어요" body="검사 낱말 소리를 아직 만드는 중이라 지금은 검사를 할 수 없어요. 나중에 다시 해 주세요."
+          actions={[{ label: '학습 화면으로', onClick: onExit }]} />
       ) : clip.state === 'missing' ? (
-        <StateCard title="검사 소리를 받지 못했어요" body="인터넷 연결을 확인하고 다시 받아 주세요." actions={[{ label: '다시 받기', onClick: clip.retry }, { label: '학습 경로로', onClick: onExit }]} />
+        <StateCard title="검사 소리를 받지 못했어요" body="인터넷 연결을 확인하고 다시 받아 주세요." actions={[{ label: '다시 받기', onClick: clip.retry }, { label: '학습 화면으로', onClick: onExit }]} />
       ) : (
         <>
           <SoundCard player={player} onPlay={play} clipState={clip.state} label="낱말 듣기" plays={plays} maxPlays={2} />

@@ -12,7 +12,7 @@ test('정답률·넘긴 문항 문구', () => {
   assert.equal(pct(3, 4), '75%')
   assert.equal(pct(0, 0), '–')
   assert.equal(skippedNote(0), null)
-  assert.match(skippedNote(2), /2문항/)
+  assert.match(skippedNote(2), /2문제/)
 })
 
 test('단계 레슨 끝 버튼: 0단계는 소리 구별로, 숙달하면 다음 단계, 아니면 한 묶음 더', () => {
@@ -28,7 +28,7 @@ test('단계 레슨 끝 버튼: 0단계는 소리 구별로, 숙달하면 다음
   assert.equal(s5.primary.label, '한 묶음 더 하기')
   s5.primary.onClick()
   s5.secondary.onClick()
-  assert.equal(s5.secondary.label, '학습 경로로')
+  assert.equal(s5.secondary.label, '학습 화면으로')
   assert.deepEqual(calls, ['stage1', 'stage3', 'reload', 'exit'])
 })
 

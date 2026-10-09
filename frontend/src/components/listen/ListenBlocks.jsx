@@ -51,7 +51,7 @@ function BlockBreak({ done, no, total, next, onNext, onStop, active }) {
   const r = done?.result
   const line = !r ? '이 연습은 건너뛰었어요'
     : r.summary ? lingNotes(r.summary).sub
-      : r.n ? `${r.n}문항 중 ${r.c}문항 · 정답률 ${pct(r.c, r.n)}` : '소리를 받지 못해 세지 않고 넘겼어요'
+      : r.n ? `${r.n}문제 중 ${r.c}문제 · 정답률 ${pct(r.c, r.n)}` : '소리를 받지 못해 세지 않고 넘겼어요'
   const notes = r?.summary ? lingNotes(r.summary).notes.filter(Boolean) : []
   return (
     <div className="flex animate-fade-in flex-col gap-4 lg:gap-5">

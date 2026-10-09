@@ -180,7 +180,7 @@ export default function NonsensePairing() {
             <p className="text-[21px] font-bold leading-figma text-ink lg:text-[26px]">{title}</p>
             <p className="text-[15px] leading-relaxed text-ink-muted">{body}</p>
             {view?.today && <p className="text-[13px] text-ink-faint">오늘 {view.today.n}번 골랐어요</p>}
-            <button type="button" onClick={() => navigate('/learn/path')} className="btn-primary mt-2 px-8 py-3 text-[16px]">학습 경로로</button>
+            <button type="button" onClick={() => navigate('/learn/path')} className="btn-primary mt-2 px-8 py-3 text-[16px]">학습 화면으로</button>
           </div>
         </div>
       </div>

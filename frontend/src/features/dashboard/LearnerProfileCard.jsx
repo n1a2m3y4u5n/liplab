@@ -45,7 +45,7 @@ export default function LearnerProfileCard({ user, statistics, calendarData }) {
     {
       id: 'practice',
       label: '독화 학습 1회',
-      detail: todaySessions >= 1 ? '첫 학습을 완료했어요' : '짧게 시작해도 좋아요',
+      detail: todaySessions >= 1 ? '첫 학습을 마쳤어요' : '짧게 시작해도 좋아요',
       completed: todaySessions >= 1,
       to: '/learn/scenario',   // 완료 판정(문장 Progress)과 링크를 일치시킴
     },

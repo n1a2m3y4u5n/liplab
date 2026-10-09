@@ -441,14 +441,14 @@ export default function Conversation() {
               animate={{ opacity: 1, scale: 1 }}
               className="card text-center py-6"
             >
-              <h2 className="mb-2 text-[26px] font-bold leading-figma tracking-[-0.65px] text-ink">대화 완료</h2>
+              <h2 className="mb-2 text-[26px] font-bold leading-figma tracking-[-0.65px] text-ink">대화를 마쳤어요</h2>
               {scores.length > 0 && (
                 <p className="mb-1 text-lg font-bold text-primary-600">
                   평균 이해도 {Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}점
                 </p>
               )}
               <p className="mb-4 text-ink-muted">
-                {MAX_TURNS}번의 대화를 완료했습니다!
+                {MAX_TURNS}번의 대화를 마쳤습니다!
                 {totalRepairs > 0 && <span className="block text-[13px]">되묻기 {totalRepairs}번. 실제 대화에서도 편하게 부탁해 보세요.</span>}
               </p>
               <button type="button" onClick={handleFinish} className="btn-primary">

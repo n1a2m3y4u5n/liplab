@@ -94,7 +94,7 @@ export default function AnalysisDetail({ mode = 'activity' }) {
     <>
       <div className="grid gap-3 sm:grid-cols-3">
         <MetricCard label="활동한 날" value={`${activeDays.length}일`} description="최근 90일 동안 학습한 날짜" />
-        <MetricCard label="총 활동량" value={`${totalActivity}개`} description="기간 내 완료한 학습 항목" tone="text-stat-level" />
+        <MetricCard label="총 활동량" value={`${totalActivity}개`} description="기간 안에 마친 학습 항목" tone="text-stat-level" />
         <MetricCard label="하루 평균" value={`${activeDays.length ? (totalActivity / activeDays.length).toFixed(1) : 0}개`} description="학습한 날을 기준으로 계산" tone="text-stat-accuracy" />
       </div>
       <section className="card-flat">

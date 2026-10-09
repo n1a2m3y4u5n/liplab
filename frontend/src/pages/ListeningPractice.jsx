@@ -41,18 +41,18 @@ export default function ListeningPractice() {
   const Task = data ? STAGE_TASK[data.mode] : null
   const wordTest = stage === 2 && params.get('wordtest') === '1'
   return (
-    <ListenFrame key={stage} kicker={`소리 듣기 · ${stage + 1}단계${data?.title ? ` ${data.title}` : ''}`} onExit={exit} exitAria="나가기, 학습 경로로">
+    <ListenFrame key={stage} kicker={`소리 듣기 · ${stage + 1}단계${data?.title ? ` ${data.title}` : ''}`} onExit={exit} exitAria="나가기, 학습 화면으로">
       {({ settings, voices, voiceList, onProgress, active }) => (
         err ? (
-          <StateCard title="단계를 불러오지 못했어요" body="인터넷 연결을 확인하고 다시 불러와 주세요."
-            actions={[{ label: '다시 불러오기', onClick: reload }, { label: '학습 경로로', onClick: exit }]} />
+          <StateCard title="단계를 가져오지 못했어요" body="인터넷 연결을 확인하고 다시 가져와 주세요."
+            actions={[{ label: '다시 가져오기', onClick: reload }, { label: '학습 화면으로', onClick: exit }]} />
         ) : !data || !voiceList ? (
           <Skeleton />
         ) : data.status === 'locked' ? (
-          <StateCard title="이 단계는 아직 잠겨 있어요" body="앞 단계를 숙달하면 열려요. 학습 경로에서 바로 앞 단계를 이어 하거나 건너뛸 수 있어요."
-            actions={[{ label: '학습 경로로', onClick: exit }]} />
+          <StateCard title="이 단계는 아직 잠겨 있어요" body="앞 단계를 숙달하면 열려요. 학습 화면에서 바로 앞 단계를 이어 하거나 건너뛸 수 있어요."
+            actions={[{ label: '학습 화면으로', onClick: exit }]} />
         ) : !Task ? (
-          <StateCard title="이 단계를 열 수 없어요" actions={[{ label: '학습 경로로', onClick: exit }]} />
+          <StateCard title="이 단계를 열 수 없어요" actions={[{ label: '학습 화면으로', onClick: exit }]} />
         ) : wordTest ? (
           <WordTest settings={settings} voices={voices} onProgress={onProgress} onExit={exit} active={active} />
         ) : (
