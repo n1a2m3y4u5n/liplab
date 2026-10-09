@@ -163,8 +163,8 @@ def confirm(path, bridge_path=None, out_path=None, bridge_ref=None, cuts=None, m
     valid = bool(sc_ok and br.get("ok") and s28 and s538 and s28["HEAD"]["n_spk"] >= MIN_P28_SPK
                  and s28["HEAD"]["n_own"] >= MIN_P28_OWN)
     if s28 and s538:
-        c = {"auc608>=0.92": s28["HEAD"]["auc"] >= 0.92, "wp608<=5%": s28["HEAD"]["wp"] <= 0.05,
-             "wp538<=5%": s538["HEAD"]["wp"] <= 0.05, "사자차하_auc>=0.80": "이 자료로 잴 수 없음"}
+        c = {"auc608>=0.92": bool(s28["HEAD"]["auc"] >= 0.92), "wp608<=5%": bool(s28["HEAD"]["wp"] <= 0.05),
+             "wp538<=5%": bool(s538["HEAD"]["wp"] <= 0.05), "사자차하_auc>=0.80": "이 자료로 잴 수 없음"}
         out["criteria"] = c
         allp = c["auc608>=0.92"] and c["wp608<=5%"] and c["wp538<=5%"]
         out["verdict"] = ("HOLD(유효성 미달)" if not valid else ("통과(S3 축소 조건의 일부 충족)" if allp else "실패"))
@@ -172,7 +172,7 @@ def confirm(path, bridge_path=None, out_path=None, bridge_ref=None, cuts=None, m
             out["verdict"] = "판정 불가(P28 표본 부족)"
     if "P27" in out["strata"] and s538:
         h = out["strata"]["P27"]["HEAD"]
-        out["p27_secondary"] = {"auc608>=0.92": h["auc"] >= 0.92, "wp608<=5%": h["wp"] <= 0.05}
+        out["p27_secondary"] = {"auc608>=0.92": bool(h["auc"] >= 0.92), "wp608<=5%": bool(h["wp"] <= 0.05)}
     txt = json.dumps(out, ensure_ascii=False, indent=1)
     print(txt)
     if out_path:
