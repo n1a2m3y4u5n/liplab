@@ -10,6 +10,7 @@ import { fmtDb } from '../lib/listenView'
 import { mergeBadges } from '../lib/badges'
 import { scoreLevel, scoreTone } from '../lib/scoreTone'
 import { phoneTone } from '../lib/phoneChips'
+import { speakTrendView } from '../lib/speakTrend'
 
 /**
  * 분석 탭 (Figma 104:15 · 모바일 240:34) — 워터마크 스탯 3칸 + 학습시간 막대차트 + 정확도 선차트 + 상세 링크.
@@ -22,6 +23,7 @@ import { phoneTone } from '../lib/phoneChips'
  * 10월: 차트 아래 '소리 듣기' 칸(최근 역치 · 이번 주 듣기 분 · 소리 구별 정답률)과 결과 화면(/analysis/listening) 진입을 더했다.
  * 값은 overview의 listen 칸을 쓰고, 그 칸이 아직 없으면 /api/listen/summary에서 계산한다(lib/listenFlow.listenOverview).
  * 듣기 기록이 하나도 없으면 칸을 그리지 않는다(독화·발화만 하는 학습자 화면을 늘리지 않게).
+ * 10/9: '말하기 문장 점수' 줄(주 평균, 참고 · 기계 채점 기준)을 더했다. 값은 overview의 speak_trend(lib/speakTrend), 합격·숙달에는 쓰지 않는다.
  */
 
 // 스탯 워터마크(326:33/36/41 · 모바일 326:83/86/91) — 회전 -20°, 오른쪽 위로 걸쳐 잘림
@@ -94,13 +96,15 @@ function ListenSummary({ ov, onOpen }) {
   )
 }
 
-/** 차트 카드(197:21 / 240:133) — 머리(제목·'최근 7주') + 플롯. */
-function ChartCard({ title, children }) {
+/** 차트 카드(197:21 / 240:133) — 머리(제목·'최근 7주') + 플롯. tag는 제목 옆 작은 글(말하기 문장 점수의 '참고 · 기계 채점 기준'). */
+function ChartCard({ title, tag = null, track = null, children }) {
   return (
-    <section className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
-      <div className="flex items-center justify-between font-bold leading-figma">
-        <p className="text-[16px] text-ink lg:text-[17px]">{title}</p>
-        <span className="text-[12px] text-ink-muted lg:text-[13px]">최근 7주</span>
+    <section data-track={track || undefined} className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
+      <div className="flex items-center justify-between gap-3 font-bold leading-figma">
+        <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-[16px] text-ink lg:text-[17px]">
+          {title}{tag && <span className="text-[12px] font-bold text-track-dark lg:text-[13px]">{tag}</span>}
+        </p>
+        <span className="shrink-0 text-[12px] text-ink-muted lg:text-[13px]">최근 7주</span>
       </div>
       {children}
     </section>
@@ -154,11 +158,15 @@ function BarChart({ weeks }) {
  * 선은 preserveAspectRatio="none" SVG(가로만 늘어남)라 점은 찌그러지지 않게 HTML로 따로 찍는다.
  * 채점 기록이 없는 주는 점·수치를 두지 않고 선을 끊는다.
  */
-function LineChart({ weeks }) {
+function LineChart({ weeks, empty = '아직 채점된 기록이 없어요', tone = 'accuracy' }) {
+  // tone 'track'은 감싼 칸의 트랙 색(말하기 분홍)으로 그린다. 기본은 정확도 에메랄드
+  const c = tone === 'track'
+    ? { stroke: 'stroke-track', dot: 'bg-track', last: 'text-track-dark', label: 'text-chart-label' }
+    : { stroke: 'stroke-chart-accuracy', dot: 'bg-chart-accuracy', last: 'text-stat-accuracy', label: 'text-chart-label' }
   const vals = weeks.map((w) => (w.accuracy == null ? null : Math.round(w.accuracy * 100)))
   const known = vals.filter((v) => v != null)
   if (!known.length) {
-    return <p className="flex h-[96px] items-center justify-center text-[14px] text-ink-muted lg:h-[150px]">아직 채점된 기록이 없어요</p>
+    return <p className="flex h-[96px] items-center justify-center break-keep px-4 text-center text-[14px] text-ink-muted lg:h-[150px]">{empty}</p>
   }
   let lo = Math.min(...known)
   let hi = Math.max(...known)
@@ -178,24 +186,42 @@ function LineChart({ weeks }) {
       <GridLines />
       {/* SVG는 대체 요소라 left/right만으로 늘어나지 않는다 — 폭을 점 중심 사이 거리로 직접 준다 */}
       <svg aria-hidden viewBox={`0 0 ${Math.max(1, n - 1)} 96`} preserveAspectRatio="none" className="absolute left-2 top-0 h-[96px] w-[calc(100%-12px)] overflow-visible lg:hidden">
-        <path d={path(28, 76)} fill="none" className="stroke-chart-accuracy" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        <path d={path(28, 76)} fill="none" className={c.stroke} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
       <svg aria-hidden viewBox={`0 0 ${Math.max(1, n - 1)} 150`} preserveAspectRatio="none" className="absolute left-2.5 top-0 hidden h-[150px] w-[calc(100%-16px)] overflow-visible lg:block">
-        <path d={path(30, 123)} fill="none" className="stroke-chart-accuracy" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        <path d={path(30, 123)} fill="none" className={c.stroke} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
       {vals.map((v, i) => v != null && (
         <span key={`p${i}`} aria-hidden
-          className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-white bg-chart-accuracy ${i === lastIdx ? 'size-3 border-[2.5px] lg:size-4 lg:border-[3px]' : 'size-2 border-[2.5px] lg:size-[11px] lg:border-[3px]'}`}
+          className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-white ${c.dot} ${i === lastIdx ? 'size-3 border-[2.5px] lg:size-4 lg:border-[3px]' : 'size-2 border-[2.5px] lg:size-[11px] lg:border-[3px]'}`}
           style={{ left: posX(i), top: posY(v) }} />
       ))}
       {vals.map((v, i) => v != null && (
         <span key={`v${i}`}
-          className={`absolute hidden -translate-x-1/2 font-bold leading-figma lg:block ${i === lastIdx ? 'text-[13px] text-stat-accuracy' : 'text-[11.5px] text-chart-label'}`}
+          className={`absolute hidden -translate-x-1/2 font-bold leading-figma lg:block ${i === lastIdx ? `text-[13px] ${c.last}` : `text-[11.5px] ${c.label}`}`}
           style={{ left: posX(i), top: posY(v, i === lastIdx ? 31.2 : 26.67) }}>
           {v}
         </span>
       ))}
     </div>
+  )
+}
+
+/**
+ * 말하기 문장 점수 주 평균(10/9, S20 제안). 참고용 기계 채점 점수라 합격·숙달에는 쓰지 않고, 문장이 5개보다 적은 주는 점을 두지 않는다.
+ * 지난 7주에 말하기 문장 기록이 없으면 그리지 않는다.
+ */
+function SpeakTrend({ ov }) {
+  const v = speakTrendView(ov)
+  if (!v.show) return null
+  return (
+    <ChartCard title="말하기 문장 점수" tag="참고 · 기계 채점 기준" track="speak">
+      <LineChart weeks={v.weeks} tone="track" empty={`한 주에 문장을 ${v.minN}개 이상 말하면 그 주 평균이 보여요`} />
+      <p className="break-keep text-[12px] leading-figma text-ink-muted lg:text-[13px]">
+        주마다 말하기 문장 점수를 평균했어요. 기계가 매긴 점수라 참고로만 보고, 단계 통과와 숙달에는 쓰지 않아요.
+        문장이 {v.minN}개보다 적은 주는 비워 둬요.
+      </p>
+    </ChartCard>
   )
 }
 
@@ -260,6 +286,7 @@ export default function AnalysisTab() {
 
       <ChartCard title="학습 시간 변화"><BarChart weeks={weeks} /></ChartCard>
       <ChartCard title="정확도 변화"><LineChart weeks={weeks} /></ChartCard>
+      <SpeakTrend ov={ov} />
       <ListenSummary ov={ov} onOpen={() => navigate('/analysis/listening')} />
 
       <div className="flex w-full flex-col gap-[9px] lg:flex-row lg:gap-3">

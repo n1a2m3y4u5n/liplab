@@ -82,7 +82,7 @@ export function dayBars(days) {
   }))
   return {
     bars, total: bars.reduce((a, b) => a + b.n, 0), totalMin: useMin ? bars.reduce((a, b) => a + b.min, 0) : null,
-    activeDays: bars.filter((b) => b.n > 0).length, unit: useMin ? '분' : '문항',
+    activeDays: bars.filter((b) => b.n > 0).length, unit: useMin ? '분' : '문제',
     goalPct: useMin ? Math.round((DAILY_GOAL_MIN / max) * 100) : null,
     goalDays: useMin ? bars.filter((b) => b.min >= DAILY_GOAL_MIN).length : null,
   }

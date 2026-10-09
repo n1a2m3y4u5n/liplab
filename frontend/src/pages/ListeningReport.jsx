@@ -51,9 +51,9 @@ function Stat({ label, value, sub, main }) {
 
 function ReportSkeleton() {
   return (
-    <div role="status" aria-label="불러오는 중" className="flex animate-pulse-slow flex-col gap-4">
+    <div role="status" aria-label="가져오는 중" className="flex animate-pulse-slow flex-col gap-4">
       {[148, 120, 160].map((h, i) => <div key={i} className="rounded-18 border-2 border-line bg-white lg:rounded-22" style={{ height: h }} />)}
-      <span className="sr-only">불러오는 중이에요</span>
+      <span className="sr-only">가져오는 중이에요</span>
     </div>
   )
 }
@@ -87,14 +87,14 @@ export default function ListeningReport() {
           <button type="button" onClick={() => navigate('/learn/path?track=listen')} className="btn-primary min-h-[44px] shrink-0 px-4 py-2 text-[14px]">연습하러 가기</button>
         </div>
         {err ? (
-          <Section title="결과를 불러오지 못했어요">
-            <p className="text-[14px] text-ink-muted">인터넷 연결을 확인하고 다시 불러와 주세요.</p>
-            <button type="button" onClick={load} className="btn-primary self-start px-5 py-2.5 text-[14px]">다시 불러오기</button>
+          <Section title="결과를 가져오지 못했어요">
+            <p className="text-[14px] text-ink-muted">인터넷 연결을 확인하고 다시 가져와 주세요.</p>
+            <button type="button" onClick={load} className="btn-primary self-start px-5 py-2.5 text-[14px]">다시 가져오기</button>
           </Section>
         ) : !d ? <ReportSkeleton /> : (
           <>
             <Section title="소음 속 듣기 검사"
-              note={`역치는 ${srtMeaning(latest)} '말과 소음의 크기 차이'예요. 낮을수록 시끄러운 곳에서 잘 알아들어요. 두 검사 사이 ${MDC_DB} dB 안쪽의 차이는 측정 오차일 수 있어요. 처음 한두 번은 검사에 익숙해지는 것만으로 1~2 dB 낮아지기도 해요.`}>
+              note={`역치는 ${srtMeaning(latest)} '말과 소음의 크기 차이(dB)'예요. 낮을수록 시끄러운 곳에서 잘 알아들어요. 두 검사의 차이가 ${MDC_DB} dB보다 작으면 측정 오차일 수 있어요. 처음 한두 번은 검사에 익숙해지는 것만으로 1~2 dB 낮아지기도 해요.`}>
               {main.length === 0 && other.length === 0 && wordTests.length === 0 ? (
                 <Empty navigate={navigate} text="아직 검사 기록이 없어요. 5단계 소음 속 듣기에서 처음 검사를 할 수 있어요." to="/learn/listening?stage=4" label="검사하러 가기" />
               ) : (
@@ -111,7 +111,7 @@ export default function ListeningReport() {
                       <table className="w-full text-left text-[14px]">
                         <caption className="sr-only">검사 기록, 최근 것부터</caption>
                         <thead className="bg-surface-sunken text-[12px] text-ink-muted">
-                          <tr><th scope="col" className="px-3 py-2 font-bold">회차</th><th scope="col" className="px-3 py-2 font-bold">날짜</th>
+                          <tr><th scope="col" className="px-3 py-2 font-bold">차례</th><th scope="col" className="px-3 py-2 font-bold">날짜</th>
                             <th scope="col" className="px-3 py-2 font-bold">폼</th><th scope="col" className="px-3 py-2 text-right font-bold">역치</th></tr>
                         </thead>
                         <tbody>
@@ -153,14 +153,14 @@ export default function ListeningReport() {
               )}
             </Section>
 
-            <Section title="훈련 중 역치" note="훈련은 소리만이 기본이고 네 번에 한 번 입모양을 함께 보여 줘요. 입모양 이득은 두 역치의 차이예요. 입모양은 3D 아바타라 실제 얼굴과 다를 수 있어요.">
+            <Section title="훈련 중 역치" note="훈련은 소리만이 기본이고 네 번에 한 번 입모양을 함께 보여 줘요. 입모양 도움(이득)은 두 역치의 차이예요. 입모양은 3D 아바타라 실제 얼굴과 다를 수 있어요.">
               {!tr.n_ao && !tr.n_av ? (
                 <Empty navigate={navigate} text="5단계 소음 속 듣기를 하면 여기에 역치가 보여요." to="/learn/listening?stage=4" label="소음 속 듣기" />
               ) : (
                 <div className="grid grid-cols-3 gap-2">
                   <Stat label="소리만" value={fmtDb(tr.srt_ao_db)} sub={`${tr.n_ao}문장`} />
                   <Stat label="소리 + 입모양" value={fmtDb(tr.srt_av_db)} sub={tr.srt_av_db == null ? '8문장부터' : `${tr.n_av}문장`} />
-                  <Stat label="입모양 이득" value={tr.av_gain_db == null ? '–' : `${tr.av_gain_db} dB`} main />
+                  <Stat label="입모양 도움" value={tr.av_gain_db == null ? '–' : `${tr.av_gain_db} dB`} main />
                 </div>
               )}
             </Section>
@@ -245,12 +245,12 @@ export default function ListeningReport() {
               )}
             </Section>
 
-            <Section title="최근 7일 연습" note="막대는 날마다 푼 문항 수예요. 하루 15~20분, 일주일에 5일쯤이 알맞아요.">
+            <Section title="최근 7일 연습" note="막대는 날마다 푼 문제 수예요. 하루 15~20분, 일주일에 5일쯤이 알맞아요.">
               {week.total === 0 ? (
                 <Empty navigate={navigate} text="지난 7일 동안 연습한 기록이 없어요." to="/learn/path?track=listen" label="연습하러 가기" />
               ) : (
                 <>
-                  <p className="text-[14px] text-ink"><b className="text-track-dark">7일 중 {week.activeDays}일</b> 연습했어요 · 모두 {week.unit === '분' ? `약 ${week.totalMin}분 · ${week.total}문항` : `${week.total}문항`}
+                  <p className="text-[14px] text-ink"><b className="text-track-dark">7일 중 {week.activeDays}일</b> 연습했어요 · 모두 {week.unit === '분' ? `약 ${week.totalMin}분 · ${week.total}문제` : `${week.total}문제`}
                     {week.unit === '분' && <span className="text-ink-muted"> · 15분 넘긴 날 {week.goalDays}일</span>}</p>
                   <div className="relative flex h-[112px] items-end gap-1.5 sm:gap-2" role="img"
                     aria-label={week.bars.map((b) => `${b.label} ${b.value}${week.unit}`).join(', ')}>

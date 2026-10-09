@@ -24,7 +24,7 @@ import { Card, Heading, inputClass, isDesktop } from './ui'
  */
 const SENTENCE_HINT = '맞힌 낱말은 그대로, 틀린 낱말은 글자마다 첫 자음만 보여요. 문장을 다시 듣고 한 번 더 써 보세요. 다시 쓴 답은 점수에 넣지 않아요.'
 
-export default function SentenceTask({ data, settings, voices, onProgress, onExit, finish, noisy, active, exitLabel = '학습 경로로',
+export default function SentenceTask({ data, settings, voices, onProgress, onExit, finish, noisy, active, exitLabel = '학습 화면으로',
   answerExtra = null, onAnswered = null, condition: condition0 = null, showStair = false, metaLabel = null }) {
   const items = data.items || []
   const [k, setK] = useState(0)
@@ -158,7 +158,7 @@ export default function SentenceTask({ data, settings, voices, onProgress, onExi
         sub={tally.mastered ? `${noisy ? '소음 속 듣기' : '문장 알아듣기'}를 숙달했어요. 다음 단계가 열렸어요.` : null}
         stats={tally.n ? [
           { label: '통과한 문장', value: `${tally.c} / ${tally.n}`, main: true },
-          noisy ? { label: '소리만 역치', value: fmtDb(stair?.ao?.srt_db), note: '낮을수록 시끄러운 곳에서 잘 들어요' } : { label: '낱말 정확도', value: avgWords, note: '첫 답 평균' },
+          noisy ? { label: '소리만 역치', value: fmtDb(stair?.ao?.srt_db), note: '낮을수록 시끄러운 곳에서 잘 들어요' } : { label: '맞힌 낱말 비율', value: avgWords, note: '첫 답 평균' },
           { label: '걸린 시간', value: fmtDuration(tally.elapsed()) }] : []}
         notes={[skippedNote(tally.skipped)]} />
     )
@@ -168,7 +168,7 @@ export default function SentenceTask({ data, settings, voices, onProgress, onExi
   const needRetry = first && !firstAllRight && !retry
   const meta = [
     metaLabel,
-    noisy && (cond === 'av' ? '소리 + 입모양' : '소리만'), noisy && snrLabel(snr),
+    noisy && (cond === 'av' ? '소리 + 입모양' : '소리만'), noisy && !showStair && snrLabel(snr),   // 계단 흐름이 보이면 크기 차이는 그쪽에 적는다
     !noisy && condition?.label, fixedNoise && snrLabel(snr),
     it.review && '며칠 전에 놓친 문장',
   ].filter(Boolean).join(' · ') || null

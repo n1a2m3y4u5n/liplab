@@ -13,7 +13,7 @@ import { Heading, Option } from './ui'
  * 0단계 소리 확인(Ling 6소리): 음·우·아·이·쉬·스와 소리 없는 차례를 섞어 들렸는지 누른다. 소리는 화면이 합성한다(lingClip).
  * 끝나면 /api/listen/ling에 결과를 보내고 요약(들림·안 들림, 어제와 달라진 소리)을 보인다. 끝 버튼은 finish가 정한다(ListenComplete.TaskEnd).
  */
-export default function LingCheck({ data, settings, onProgress, onExit, finish, exitLabel = '학습 경로로', active }) {
+export default function LingCheck({ data, settings, onProgress, onExit, finish, exitLabel = '학습 화면으로', active }) {
   const seq = data.sequence || []
   const [k, setK] = useState(0)
   const res = useRef({ results: {}, fa: 0 })

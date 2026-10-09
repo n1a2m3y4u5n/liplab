@@ -98,7 +98,7 @@ export default function SpeakingReviewLanding() {
         ) : (
           <div className="card py-16 text-center">
             <h2 className="mb-1 text-xl font-bold text-gray-900">복습할 말하기 항목이 없어요</h2>
-            <p className="mb-5 text-gray-500">새로운 말하기 학습을 완료하면 다시 연습할 항목이 이곳에 모입니다.</p>
+            <p className="mb-5 text-gray-500">새로운 말하기 학습을 마치면 다시 연습할 항목이 이곳에 모입니다.</p>
             <button type="button" onClick={() => navigate('/learn/speaking?stage=0')} className="btn-primary">말하기 학습으로</button>
           </div>
         )}

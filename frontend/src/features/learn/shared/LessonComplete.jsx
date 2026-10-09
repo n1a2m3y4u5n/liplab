@@ -36,7 +36,7 @@ export default function LessonComplete({ track: trackId, lessonId, result: resul
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
         <p className="text-4xl" aria-hidden="true">🎉</p>
-        <h1 className="mt-2 text-2xl font-black text-slate-900">레슨 완료!</h1>
+        <h1 className="mt-2 text-2xl font-black text-slate-900">레슨을 마쳤어요!</h1>
         <p className="mt-1 text-sm text-slate-500">{track.label} · {current?.title || '레슨'}</p>
 
         <dl className="mt-6 grid grid-cols-3 gap-2">

@@ -49,7 +49,7 @@ const HERO_SLIDES = [
   },
 ]
 
-const CONVERSATION_UNLOCK_HINT = '3단계 문장 독화를 완료하면 대화 실전이 해금됩니다.'
+const CONVERSATION_UNLOCK_HINT = '3단계 문장 독화를 마치면 대화 실전이 열립니다.'
 
 // ── 단계형 커리큘럼 경로 (재설계 Phase 1) ────────────────────────────────────
 const TRACKS = [
@@ -154,7 +154,7 @@ export default function Dashboard() {
     const isConversation = mode === 'conversation'
     if ((!isConversation && testLocked) || (isConversation && conversationLocked)) {
       if (isConversation) explainConversationUnlock()
-      else setUnlockNotice('아직 잠긴 단계예요. 학습에서 2단계(음절·단어)를 먼저 완료해주세요.')
+      else setUnlockNotice('아직 잠긴 단계예요. 학습에서 2단계(음절·단어)를 먼저 마쳐 주세요.')
       return
     }
     if (!effectiveSituation.trim()) {

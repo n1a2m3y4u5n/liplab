@@ -80,7 +80,7 @@ export function NoiseTest({ settings, voices, onProgress, onDone, onCancel, acti
     onEnter: prac ? nextPractice : submit, canEnter: prac ? true : canSubmit })
 
   if (fatal) {
-    return <StateCard title={fatal} actions={[{ label: '검사 다시 시작', onClick: () => { setRun(null); setNonce((n) => n + 1) } }, { label: '학습 경로로', onClick: onCancel }]} />
+    return <StateCard title={fatal} actions={[{ label: '검사 다시 시작', onClick: () => { setRun(null); setNonce((n) => n + 1) } }, { label: '학습 화면으로', onClick: onCancel }]} />
   }
   if (!run) return <Skeleton />
   if (result) {
@@ -88,7 +88,7 @@ export function NoiseTest({ settings, voices, onProgress, onDone, onCancel, acti
       <ListenComplete title="검사를 마쳤어요" stats={[{ label: '소음 속 문장 인식 역치', value: fmtDb(result.srt_db), main: true }]}
         sub={result.srt_db >= 24 ? '소음을 가장 작게 해도 낱말 절반을 넘기 어려웠어요. 문장 알아듣기를 더 연습하고 다시 검사해 보세요.'
           : `말이 소음보다 이만큼 클 때 ${(run.session || '').startsWith('test:v2-') ? '낱말을 절반쯤' : '낱말을 열에 넷쯤'} 알아들었다는 뜻이에요. 낮을수록 시끄러운 곳에서 잘 알아들어요.`}
-        primary={{ label: '훈련 시작하기', onClick: onDone }} secondary={{ label: '학습 경로로', onClick: onCancel }} />
+        primary={{ label: '훈련 시작하기', onClick: onDone }} secondary={{ label: '학습 화면으로', onClick: onCancel }} />
     )
   }
   const firstTest = !step.practice && step.no === 1 && step.nPractice > 0
@@ -105,10 +105,10 @@ export function NoiseTest({ settings, voices, onProgress, onDone, onCancel, acti
         <StateCard title="이 연습 문장은 소리가 아직 준비되지 않았어요" body="이 연습은 건너뛰고 다음으로 가요."
           actions={[{ label: '다음으로', onClick: () => setK((x) => x + 1) }]} />
       ) : clip.state === 'missing' && clip.reason === 'not_prepared' ? (
-        <StateCard title="검사 소리가 아직 준비되지 않았어요" body="서버에서 검사 문장 소리를 만드는 중이라 지금은 검사를 할 수 없어요. 나중에 다시 해 주세요."
-          actions={[{ label: '학습 경로로', onClick: onCancel }]} />
+        <StateCard title="검사 소리가 아직 준비되지 않았어요" body="검사 문장 소리를 아직 만드는 중이라 지금은 검사를 할 수 없어요. 나중에 다시 해 주세요."
+          actions={[{ label: '학습 화면으로', onClick: onCancel }]} />
       ) : clip.state === 'missing' ? (
-        <StateCard title="검사 소리를 받지 못했어요" body="인터넷 연결을 확인하고 다시 받아 주세요." actions={[{ label: '다시 받기', onClick: clip.retry }, { label: '학습 경로로', onClick: onCancel }]} />
+        <StateCard title="검사 소리를 받지 못했어요" body="인터넷 연결을 확인하고 다시 받아 주세요." actions={[{ label: '다시 받기', onClick: clip.retry }, { label: '학습 화면으로', onClick: onCancel }]} />
       ) : nz.state === 'missing' ? noiseMissingCard(nz, onCancel) : (
         <>
           <SoundCard player={player} onPlay={play} clipState={ready ? 'ready' : 'loading'} label={prac ? '글을 보며 다시 듣기' : '문장 듣기'}

@@ -33,13 +33,13 @@ function TodayBlock({ block, ctx, onDone }) {
   }, [block.stage, block.n, nonce])
   const finish = useMemo(() => ({ onDone }), [onDone])
   if (err) {
-    return <StateCard title="이 연습을 불러오지 못했어요" body="인터넷 연결을 확인하고 다시 불러오거나, 이 연습은 건너뛰어요."
-      actions={[{ label: '다시 불러오기', onClick: () => setNonce((n) => n + 1) }, { label: '이 연습 건너뛰기', onClick: () => onDone(null) }]} />
+    return <StateCard title="이 연습을 가져오지 못했어요" body="인터넷 연결을 확인하고 다시 가져오거나, 이 연습은 건너뛰어요."
+      actions={[{ label: '다시 가져오기', onClick: () => setNonce((n) => n + 1) }, { label: '이 연습 건너뛰기', onClick: () => onDone(null) }]} />
   }
   if (!data || !ctx.voiceList) return <Skeleton />
   const Task = TRAIN_TASK[data.mode]
   if (data.status === 'locked' || !Task) {
-    return <StateCard title="이 연습은 아직 열리지 않았어요" body="학습 경로에서 앞 단계를 마치면 열려요." actions={[{ label: '다음 연습으로', onClick: () => onDone(null) }]} />
+    return <StateCard title="이 연습은 아직 열리지 않았어요" body="학습 화면에서 앞 단계를 마치면 열려요." actions={[{ label: '다음 연습으로', onClick: () => onDone(null) }]} />
   }
   return (
     <Task data={data} settings={ctx.settings} voices={ctx.voices} onProgress={ctx.onProgress} onExit={() => onDone(null)} exitLabel="이 연습 건너뛰기"
@@ -123,11 +123,11 @@ export default function ListenToday() {
     <ListenFrame kicker={kicker} onExit={exit} exitAria="나가기">
       {(ctx) => (
         err ? (
-          <StateCard title={err === 'missing' ? '오늘의 듣기를 준비하고 있어요' : '오늘의 계획을 불러오지 못했어요'}
-            body={err === 'missing' ? '곧 열려요. 지금은 학습 경로에서 단계를 하나씩 이어 해 주세요.' : '인터넷 연결을 확인하고 다시 불러와 주세요.'}
-            actions={err === 'missing' ? [{ label: '돌아가기', onClick: exit }] : [{ label: '다시 불러오기', onClick: () => setNonce((n) => n + 1) }, { label: '돌아가기', onClick: exit }]} />
+          <StateCard title={err === 'missing' ? '오늘의 듣기를 준비하고 있어요' : '오늘의 계획을 가져오지 못했어요'}
+            body={err === 'missing' ? '곧 열려요. 지금은 학습 화면에서 단계를 하나씩 이어 해 주세요.' : '인터넷 연결을 확인하고 다시 가져와 주세요.'}
+            actions={err === 'missing' ? [{ label: '돌아가기', onClick: exit }] : [{ label: '다시 가져오기', onClick: () => setNonce((n) => n + 1) }, { label: '돌아가기', onClick: exit }]} />
         ) : !plan ? <Skeleton /> : blocks.length === 0 ? (
-          <StateCard title="오늘 할 연습이 없어요" body="학습 경로에서 소리 듣기 단계를 열면 오늘의 듣기가 만들어져요." actions={[{ label: '돌아가기', onClick: exit }]} />
+          <StateCard title="오늘 할 연습이 없어요" body="학습 화면에서 소리 듣기 단계를 열면 오늘의 듣기가 만들어져요." actions={[{ label: '돌아가기', onClick: exit }]} />
         ) : (
           <ListenBlocks blocks={blocks.map((b) => ({ ...b, run: ({ onDone }) => <TodayBlock block={b} ctx={ctx} onDone={onDone} /> }))}
             onStep={onStep} onProgress={ctx.onProgress} active={ctx.active} onResults={setDoneBlocks} endNow={endNow}
@@ -140,7 +140,7 @@ export default function ListenToday() {
                 <ListenComplete title={t.reached ? `오늘 ${target}분을 채웠어요` : '오늘의 듣기를 마쳤어요'}
                   sub={t.reached ? '내일도 비슷한 시간에 이어 해요. 일주일에 5일쯤이 알맞아요.' : `${target}분까지 ${Math.max(1, t.left)}분쯤 남았어요. 남은 시간은 연습 탭에서 채워도 돼요.`}
                   stats={[{ label: '오늘 연습', value: `${fmtGoalMinutes(t.minutes)} / ${target}분`, main: true },
-                    { label: '푼 문항', value: `${t.n}문항` }, { label: '정답률', value: pct(t.c, t.n) }]}
+                    { label: '푼 문제', value: `${t.n}문제` }, { label: '정답률', value: pct(t.c, t.n) }]}
                   notes={[plan.review_due > 0 && `다시 들어 볼 낱말·문장이 ${plan.review_due}개 있어요. 복습 탭의 듣기 복습에서 할 수 있어요.`]}
                   primary={{ label: '돌아가기', onClick: leave }} secondary={{ label: '결과 보기', onClick: () => navigate('/analysis/listening') }}>
                   <div className="h-2.5 w-full overflow-hidden rounded-full bg-fill" role="img" aria-label={`목표 ${target}분 중 ${fmtGoalMinutes(t.minutes)}`}>
