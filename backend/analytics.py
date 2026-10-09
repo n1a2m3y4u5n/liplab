@@ -141,6 +141,29 @@ def weekly(events: Sequence[Event], today: date, tz_offset_min: int, weeks: int 
     return out
 
 
+# 말하기 문장 점수 주 평균(분석 탭 '참고, 기계 채점 기준' 줄). 화자 단위로 보면 지금 문장 점수(D-GOP)의 평균이 기계 전사 오류율과
+# 같은 방향으로 움직였다(S20, docs/speak-intelligibility-index-2026-10.md 10.4절, 33명 ρ 0.762). 근거가 화자당 6~80문장 평균이라
+# 문장이 SPEAK_TREND_MIN_N개보다 적은 주는 평균을 내지 않는다. 합격·숙달 판정에는 쓰지 않는다(보이기만 한다).
+SPEAK_TREND_MIN_N = 5
+
+
+def speak_sentence_weekly(points: Sequence[Tuple[datetime, float]], today: date, tz_offset_min: int,
+                          weeks: int = WEEKS, min_n: int = SPEAK_TREND_MIN_N) -> List[Dict]:
+    """말하기 문장 점수(0~100)의 주 평균. points는 (UTC 시각, 점수). 창은 weekly와 같다(오늘로 끝나는 7일, 오래된 순).
+    반환: [{start, n, mean}], n이 min_n보다 적으면 mean은 None(n은 그대로 낸다)."""
+    first = today - timedelta(days=7 * (weeks - 1) + 6)
+    starts = [first + timedelta(days=7 * k) for k in range(weeks)]
+    vals: List[List[float]] = [[] for _ in starts]
+    for ts, sc in points:
+        if ts is None or sc is None:
+            continue
+        k = (to_local(ts, tz_offset_min).date() - first).days
+        if 0 <= k < 7 * weeks:
+            vals[k // 7].append(max(0.0, min(100.0, float(sc))))
+    return [{"start": s.isoformat(), "n": len(v), "mean": round(sum(v) / len(v), 1) if len(v) >= min_n else None}
+            for s, v in zip(starts, vals)]
+
+
 # 배지 정의 — 과제 탭(TasksPage)의 12칸 순서와 같다. 'sign'은 서버 기록이 없어 브라우저가 판정한다.
 BADGES = [
     ("first_step", "첫 걸음"), ("streak7", "7일 연속"), ("viseme_master", "입모양 마스터"),
@@ -185,9 +208,10 @@ def badges(events: Sequence[Event], tz_offset_min: int, best_streak: int, *,
 
 
 def overview(events: Sequence[Event], now_utc: datetime, tz_offset_min: int, listen: Optional[Dict] = None,
-             **track_info) -> Dict:
+             speak_sentences: Optional[Sequence[Tuple[datetime, float]]] = None, **track_info) -> Dict:
     """분석 탭 요약. track_info: read_mastered·read_total·speak_mastered·speak_total·
     conversation_attempts·reviews_done·reviews_overdue·level.
+    speak_sentences는 말하기 문장 시도의 (UTC 시각, 점수)이고 'speak_trend'(주 평균, 참고용)로 낸다. None이면 'speak_trend'도 None.
     listen은 소리 듣기 요약 몇 칸(main._listen_brief, 듣기 트랙을 시작하지 않았으면 None)이고 그대로 'listen'에 싣는다.
     듣기 시행은 events에 넣지 않는다(학습 시간·정확도·연속 학습 같은 기존 칸의 뜻을 바꾸지 않게)."""
     today = to_local(now_utc, tz_offset_min).date()
@@ -252,4 +276,7 @@ def overview(events: Sequence[Event], now_utc: datetime, tz_offset_min: int, lis
                       "questions": len([e for e in speak_ev if e.graded is not None])},
         },
         "listen": listen,
+        "speak_trend": None if speak_sentences is None else {
+            "weeks": speak_sentence_weekly(speak_sentences, today, tz_offset_min), "min_n": SPEAK_TREND_MIN_N,
+            "n": sum(1 for p in speak_sentences if p[1] is not None)},
     }
