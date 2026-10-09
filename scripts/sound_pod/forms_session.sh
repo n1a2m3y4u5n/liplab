@@ -5,7 +5,7 @@
 #   bash scripts/sound_pod/forms_session.sh tail      파드 로그 끝부분
 #   bash scripts/sound_pod/forms_session.sh fetch     결과(받아쓰기·채점 jsonl, 판정, 로그. 오디오 없음)를 data/pod_runs/<날짜>_<파드>/fcd/로
 #   bash scripts/sound_pod/forms_session.sh finish    fetch → terminate → status
-# 환경: ROUND(0·1·2), SIDS(쉼표 목록, 기본 all), REPS(기본 ROUND의 반복), EXTRA(교체 문장 {sid: 글} JSON), SPEC(판정 spec JSON),
+# 환경: ROUND(0~5, 3~5는 docs/listen-forms-clean-2026-10.md), SIDS(쉼표 목록, 기본 all), REPS(기본 ROUND의 반복), EXTRA(교체 문장 {sid: 글} JSON), SPEC(판정 spec JSON),
 #       LAB(기본 ~/Downloads/liplab-lab), GPUS, WD_MIN. 상태 폴더 .fcdstate, 파드 이름 liplab-fcd(다른 작업과 섞이지 않게).
 # 키는 pod.sh가 ~/.runpod/config.toml에서 메모리로만 읽는다. AI Hub 자료는 올리지 않는다.
 set -uo pipefail
@@ -18,7 +18,8 @@ S=${STAGE_DIR:-$LAB/data/fcd_stage}
 GPUS=${GPUS:-NVIDIA RTX A6000|SECURE,NVIDIA A40|SECURE,NVIDIA L40S|SECURE}
 WD_MIN=${WD_MIN:-120}
 ROUND=${ROUND:-0}
-case "$ROUND" in 0) DEF_REPS=0,1,2 ;; 1) DEF_REPS=3,4,5 ;; 2) DEF_REPS=6,7,8 ;; *) echo "ROUND 0·1·2"; exit 2 ;; esac
+case "$ROUND" in 0) DEF_REPS=0,1,2 ;; 1) DEF_REPS=3,4,5 ;; 2) DEF_REPS=6,7,8 ;; 3) DEF_REPS=9,10,11 ;; 4) DEF_REPS=12,13,14 ;;
+  5) DEF_REPS=15,16,17 ;; *) echo "ROUND 0~5"; exit 2 ;; esac
 REPS=${REPS:-$DEF_REPS}
 SIDS=${SIDS:-all}
 mkdir -p "$S" "$LAB/data/pod_runs" "$POD_STATE_DIR"

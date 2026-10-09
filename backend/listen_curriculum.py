@@ -401,6 +401,15 @@ WORD_LEVELS = {1: {"n": 2, "lo": 5, "hi": 99}, 2: {"n": 4, "lo": 3, "hi": 6}, 3:
 #   채택 = 앞에서부터 하나씩 넣되, 넣은 뒤 남은 훈련 풀에서 고른 낱말 모두가 소리 거리 3~6 이웃을 셋 이상 가질 때만 넣는다(20개까지)
 GEN_WORDS = ['공항', '귀', '기자', '나물', '당근', '된장', '마늘', '몸', '무릎', '바늘', '아들', '양파', '어깨', '오빠', '의사', '이마', '이모',
              '컵', '포도', '호수']
+# 일반화 검사 낱말 교체 후보((B′), docs/listen-gen-replace-2026-10.md 6.3절). GEN_WORDS를 바꿀지는 사람이 정하지만, 어느 쪽으로 정해도
+# 검사 문장이 검사 낱말을 미리 들려주지 않도록 검사 문장 점검(gen_words_in)은 후보까지 본다(docs/listen-forms-clean-2026-10.md 2절).
+GEN_REPLACE_CANDIDATES = ('손목', '경찰', '고기', '오이')
+
+
+def gen_words_in(text: str) -> List[str]:
+    """글에 글자로 들어 있는 일반화 검사 낱말(GEN_WORDS와 교체 후보). 낱말을 고를 때의 규칙('검사 문장에 글자로 들어 있지 않음')과
+    같은 부분 문자열 비교라 '고기'는 '물고기'에도 걸린다(보수적으로 둔다)."""
+    return [w for w in list(GEN_WORDS) + [w for w in GEN_REPLACE_CANDIDATES if w not in GEN_WORDS] if w in (text or "")]
 
 
 # 낱말 고르기에서 쓰지 않는 말(10/7 콘텐츠 검토, docs/review/listen-content-review-2026-10.md 3절). 단어 은행(STAGE2_EXCLUDED를 뺀
