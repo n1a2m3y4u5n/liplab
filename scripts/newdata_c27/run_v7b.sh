@@ -7,13 +7,15 @@ W=/workspace/v7b
 L=/workspace/dax/logs
 mkdir -p "$L" "$W/out/bs"
 exec >> "$L/v7b.log" 2>&1
+echo $$ > "$L/v7b.pid"
 fail() { echo "V7B_FAIL $*"; exit 1; }
 export PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 NC=$(nproc --all)
 Q=$(awk '{ if ($1 != "max") print int($1 / $2) }' /sys/fs/cgroup/cpu.max 2>/dev/null || true)
 if [ -n "$Q" ] && [ "$Q" -gt 0 ] && [ "$Q" -lt "$NC" ]; then NC=$Q; fi
 VMP=/workspace/vmp/bin/python
-echo "=== $(date '+%F %T') run_v7b (pid $$, cpus $NC)"
+[ "$NC" -gt "${V7B_MAXP:-24}" ] && NC=${V7B_MAXP:-24}   # 96개를 띄우면 mediapipe GpuResources::Create가 60개에서 죽었다(10/10)
+echo "=== [v7b] start pid=$$ cpus=$NC $(date '+%F %T')"
 if [ ! -f "$W/.apt_ok" ]; then
   (apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg libegl1 libgl1) || fail "apt"
   touch "$W/.apt_ok"
@@ -32,10 +34,13 @@ LIST=$W/list.tsv
 for f in "$W"/clips/*.mp4; do b=$(basename "$f" .mp4); [ -s "$W/out/bs/$b.json" ] || printf '%s\t%s\n' "$f" "$W/out/bs/$b.json" >> "$LIST"; done
 rm -f "$LIST".part.*
 split -n "l/$NC" -d "$LIST" "$LIST.part."
+( while sleep 60; do echo "PROGRESS bs=$(ls "$W/out/bs" | grep -c '\.json$')"; done ) &
+TICK=$!
 for k in "$LIST".part.*; do
   (cd "$W/tools" && $VMP extract_blendshapes.py --list "$k" --lips --no-audio > "$k.log" 2>&1) &
 done
-wait
+wait $(jobs -p | grep -v "^$TICK$")
+kill $TICK 2>/dev/null
 echo "EXTRACT $(cat "$LIST".part.*.log | grep -h LIST_DONE | tr '\n' ' ')"
 echo "V7B_EXTRACT_OK bs=$(ls "$W/out/bs" | grep -c '\.json$')"
 cd "$W/out" && tar -czf "$W/v7b_result.tgz" bs || fail tar
