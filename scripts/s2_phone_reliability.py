@@ -23,6 +23,9 @@ DGOP_1006 = f"{LAB}/data/pod_runs/20261006_35zrgz6wvrqiho/sc/out/dgop_full.jsonl
 QUIET_A1 = {"spk332", "spk334", "spk337", "spk339", "spk342", "spk344", "spk347", "spk349", "spk352"}   # S16·S17의 조용 환경 9명
 RED, GREEN = 45, 70
 B, SEED = 2000, 0
+# 끝 음절 포함 판정(docs/dgop-final-vowel-fix2-2026-10.md 6절): S2_INCLUDE_FINAL=1이면 끝 음절 토큰을 주 분석(양성)에 넣고 끝 모음 대치를
+# 가까운 대치(음성)에 넣는다. 재검사 카파(B)는 평서·의문의 억양 차이 때문에 끝 음절을 계속 뺀다(S14와 같은 이유, 정렬과 무관).
+INCLUDE_FINAL = os.environ.get("S2_INCLUDE_FINAL", "0") == "1"
 CRIT = {"n_pos": 50, "n_neg": 30, "n_spk": 8, "auc": 0.80, "auc_lo": 0.70, "fr": 0.10,
         "kappa": 0.40, "n_pair": 30, "pe_hi": 0.85, "po_hi": 0.90, "per_sentence": 1.0}
 
@@ -108,7 +111,11 @@ def kappa3(a, b):
 
 # ───────── 자료 읽기 ─────────
 def load_jobs():
-    return {j["clip"]: j for j in (json.loads(l) for l in open(JOBS, encoding="utf-8"))}
+    jobs = {j["clip"]: j for j in (json.loads(l) for l in open(JOBS, encoding="utf-8"))}
+    if INCLUDE_FINAL:
+        for j in jobs.values():
+            j["fs"] = len(j["tokens"])
+    return jobs
 
 
 def load_run(run_dir):
@@ -164,6 +171,8 @@ def per_set(recs, jobs, st):
         for kind, i, y, v, _all in r["subs"]:
             if v is None:
                 continue
+            if INCLUDE_FINAL and kind == "final":
+                kind = "near"
             {"near": neg, "any": aneg, "final": fneg}[kind][y][spk].append(disp(v))
     return pos, neg, aneg, fpos, fneg, errors
 
@@ -287,7 +296,7 @@ def sub_detection(recs, jobs, R, st):
         j = jobs[r["clip"]]
         silent = set(j["silent_h"])
         for kind, i, y, v, alld in r["subs"]:
-            if kind != "near" or y not in R or v is None:
+            if kind not in (("near", "final") if INCLUDE_FINAL else ("near",)) or y not in R or v is None:
                 continue
             n += 1
             det += disp(v) < RED
@@ -302,6 +311,8 @@ def own608_stats(own608, R):
     per_sent = []
     for r in own608:
         main, _fin = chip_tokens(r["phones"])
+        if INCLUDE_FINAL:
+            main = main + _fin
         for _i, t, v in main:
             red[t].append(v < RED)
         per_sent.append(sum(1 for _i, t, v in main if t in R and v < RED))
@@ -313,7 +324,7 @@ def analyze(run_dir, out_path):
     jobs = load_jobs()
     recs = load_run(run_dir)
     own538, own608, pairs = load_1006()
-    res = {"criteria": CRIT, "records": len(recs), "jobs": len(jobs)}
+    res = {"criteria": CRIT, "records": len(recs), "jobs": len(jobs), "include_final": INCLUDE_FINAL}
     res["bridge"] = bridge(recs, jobs, own538)
     kap, kap_all = kappa_by_sound(pairs)
     res["kappa_all"] = kap_all
