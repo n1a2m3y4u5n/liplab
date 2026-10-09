@@ -4,6 +4,10 @@
     python scripts/s18_confirm_newspk.py selfcheck                    고정본을 10/6 특성 CSV 절반 1에 다시 적용(0.941·5.9%가 나와야 함)
     python scripts/s18_confirm_newspk.py bridge <다리 특성 csv>       옛 538 클립 30개를 새 파드에서 다시 만든 특성이 10/6 값과 같은지
     python scripts/s18_confirm_newspk.py confirm <새 특성 csv> [다리 특성 csv] [출력 json]
+    python scripts/s18_confirm_newspk.py confirm <csv1,csv2,...> <다리 csv> <출력 json> [--bridge-ref <기준 특성 csv>]
+                                                 [--cuts <cuts608.json> [--max-cut-s 20]]
+      (10/9 추가, 8.9절) 특성 CSV 여러 개를 합친다(10/6 밤 538 run1 + 10/9 P28). --bridge-ref는 다리 기준(기본 10/6 특성 CSV),
+      --cuts는 KSC A1 규칙(조각 길이 > max-cut-s초인 608 조각의 행을 모두 뺀다)으로 주 판정을 내고, 빼지 않은 판을 보고만 한다.
 
 층: 608 화자 ID가 '28-'로 시작하면 P28(감음신경성, 주 판정), '27-'이면 P27(전음성, 보조). 538은 새 화자(v1_538).
 수치는 집계만 출력한다. 문장별 CSV는 저장소 밖(liplab-lab/data/scores_newspk_2026-10-06/)에 둔다.
@@ -89,9 +93,9 @@ def selfcheck():
     return ok
 
 
-def bridge(path):
+def bridge(path, ref=None):
     p, head = frozen()
-    old = {(r["clip"], r["target_sid"], r["label"]): r for r in load(OLD) if r["set"] == "538"}
+    old = {(r["clip"], r["target_sid"], r["label"]): r for r in load(ref or OLD) if r["set"] == "538"}
     new = load(path)
     dp, ddg, n, miss = [], [], 0, 0
     for r in new:
@@ -108,14 +112,38 @@ def bridge(path):
     return res
 
 
-def confirm(path, bridge_path=None, out_path=None):
+def long_clips(cuts_path, max_s):
+    """KSC A1(10/7 정제 V1과 같은 규칙): 조각 길이(끝 − 시작) > max_s초인 608 조각 ID(세션:문장 번호)."""
+    out = set()
+    for c in json.load(open(cuts_path, encoding="utf-8")):
+        if c.get("cut") and float(c["end"]) - float(c["start"]) > max_s:
+            out.add("%s:%03d" % (c["file"][:-5], c["si"]))
+    return out
+
+
+def confirm(path, bridge_path=None, out_path=None, bridge_ref=None, cuts=None, max_cut_s=20.0):
     p, head = frozen()
     sc_ok = selfcheck()
-    br = bridge(bridge_path) if bridge_path else {"ok": False, "note": "다리 특성 없음"}
-    rows = load(path)
+    br = bridge(bridge_path, bridge_ref) if bridge_path else {"ok": False, "note": "다리 특성 없음"}
+    rows = [r for part in path.split(",") for r in load(part)]
     for r in rows:
         r["st"] = stratum(r)
+    sens = None
+    if cuts:
+        drop = long_clips(cuts, max_cut_s)
+        full = rows
+        rows = [r for r in full if not (r["set"] == "608" and r["clip"] in drop)]
+        s28 = [r for r in full if r["st"] == "P28"]
+        sens = {"rule": "A1 없이(등록 문자 그대로, 보고만)",
+                "P28_HEAD": {k: round(v, 4) if isinstance(v, float) else v for k, v in metrics(s28, head, p["thr"]).items()}
+                if s28 else None}
+        if s28:
+            sens["P28_HEAD"]["ci"] = boot(s28, head, p["thr"])
+            sens["P28_DGOP65"] = {k: round(v, 4) if isinstance(v, float) else v for k, v in metrics(s28, lambda r: r["dg"], 65.0).items()}
+        sens["a1_dropped_clips"] = len({r["clip"] for r in full if r["set"] == "608" and r["clip"] in drop})
+        sens["a1_dropped_rows"] = len(full) - len(rows)
     out = {"frozen_sha256_note": "scripts/s18_head_frozen_2026-10-06.json", "thr": p["thr"], "selfcheck": sc_ok, "bridge": br,
+           "bridge_ref": bridge_ref or OLD, "a1": {"cuts": cuts, "max_cut_s": max_cut_s} if cuts else None, "sens_noA1": sens,
            "strata": {}}
     for st in ("P28", "P27", "538"):
         rs = [r for r in rows if r["st"] == st]
@@ -160,4 +188,12 @@ if __name__ == "__main__":
     elif cmd == "bridge":
         sys.exit(0 if bridge(sys.argv[2])["ok"] else 1)
     elif cmd == "confirm":
-        confirm(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None, sys.argv[4] if len(sys.argv) > 4 else None)
+        av = sys.argv[2:]
+        opt = {}
+        for k in ("--bridge-ref", "--cuts", "--max-cut-s"):
+            if k in av:
+                i = av.index(k)
+                opt[k] = av[i + 1]
+                del av[i:i + 2]
+        confirm(av[0], av[1] if len(av) > 1 else None, av[2] if len(av) > 2 else None, bridge_ref=opt.get("--bridge-ref"),
+                cuts=opt.get("--cuts"), max_cut_s=float(opt.get("--max-cut-s", 20)))
