@@ -65,7 +65,7 @@ export default function MouthCalibration({ landmarkerRef, modelStatus, onDone, o
   useEffect(() => {
     if (modelStatus === 'error') {
       setStatus('error')
-      setErrMsg('입모양 모델을 불러오지 못했어요. 네트워크를 확인해 주세요.')
+      setErrMsg('입모양 모델을 가져오지 못했어요. 네트워크를 확인해 주세요.')
       return undefined
     }
     if (modelStatus !== 'ready') return undefined

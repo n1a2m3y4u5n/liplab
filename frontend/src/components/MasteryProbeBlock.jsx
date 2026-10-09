@@ -52,7 +52,7 @@ export default function MasteryProbeBlock({ items, onDone }) {
 
         <div className={LESSON_STACK}>
           <div className="flex flex-col gap-1.5 font-bold leading-figma lg:gap-2">
-            <p className="text-[12px] text-track lg:text-[13px]">확인 문항 · 보통 빠르기, 도움 없이</p>
+            <p className="text-[12px] text-track lg:text-[13px]">확인 문제 · 보통 빠르기, 도움 없이</p>
             <h1 className="text-[21px] tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">
               {it.kind === 'viseme' ? '이 입모양은 어떤 모양일까요?' : it.kind === 'sentence' ? '어떤 문장일까요?' : '어떤 단어일까요?'}
             </h1>

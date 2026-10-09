@@ -90,7 +90,7 @@ export default function LipReadCheck({ target, candidates = [] }) {
       setStatus('loading')   // 처음이면 모델을 받는다(이미 받았으면 바로 넘어간다)
       const [fl, lip] = await Promise.all([ensureLandmarker(gen).catch(() => null), loadLipread()])
       if (gen !== camGenRef.current) return
-      if (!fl || !lip) { setStatus('error'); setErrMsg('입모양 모델을 불러오지 못했어요. 다시 눌러 보세요.'); return }
+      if (!fl || !lip) { setStatus('error'); setErrMsg('입모양 모델을 가져오지 못했어요. 다시 눌러 보세요.'); return }
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
       // 권한을 기다리는 사이 화면을 떠났다 → 켠 카메라를 바로 끈다
       const video = videoRef.current
@@ -155,7 +155,7 @@ export default function LipReadCheck({ target, candidates = [] }) {
         )}
         {(status === 'idle' || status === 'loading' || status === 'error') && (
           <div className="absolute inset-0 grid place-items-center px-4 text-center text-sm text-white/75">
-            {status === 'loading' ? '모델 불러오는 중…' : status === 'error' ? errMsg : '카메라를 켜고 목표 단어를 소리 없이 말해보세요'}
+            {status === 'loading' ? '모델 가져오는 중…' : status === 'error' ? errMsg : '카메라를 켜고 목표 단어를 소리 없이 말해보세요'}
           </div>
         )}
         {status === 'thinking' && (

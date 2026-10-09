@@ -17,7 +17,10 @@
             「한국어 학습용 어휘 목록」(scripts/data/nikl_learner_vocab.tsv, A·B·C 등급)에서 찾는다. 고유 명사는 세지 않는다.
             A·B가 아닌 낱말(C 등급과 목록에 없는 낱말)이 내용어의 10%를 넘으면 실패.
       용어: 학습자에게 보이면 안 되는 전문 용어(JARGON)와 결손 중심 표현(DEFICIT)을 따로 표시한다(통과 판정에는 넣지 않음).
-  · 목표: 문자열의 95% 이상 통과(다7 판정 기준).
+  · 판정(2026-10-09부터, docs/easy-korean-rebase-2026-10.md 7절): 세 층 기준. 낱말 결정표(scripts/data/easy_korean_termbook.json)에서
+      결정 안 된 낱말 0개, 이름표(버튼·탭·제목) 95%가 어려운 말 0개, 문장형은 화면(파일) 단위 쉬운 말 덮기 95% 이상인 파일 90%와
+      30음절 이하 95%. 계산은 scripts/easy_korean_rebase.py의 layers()이고 요약의 "layers"에 나온다.
+      예전 엄격 통과율(A·B만, 문자열마다 10%, 목표 95%)은 숫자가 이어지게 pass_rate로 계속 낸다.
 
   python scripts/easy_korean_audit.py                 # 요약 출력
   python scripts/easy_korean_audit.py --json out.json # 문자열별 결과
@@ -643,6 +646,14 @@ def main():
         return
     items, top_unlisted = run()
     s = summarize(items)
+    try:
+        import easy_korean_rebase as _rb   # 세 층 판정(같은 scripts 폴더)
+        lay = _rb.layers(items, load_vocab(), json.load(open(_rb.TERMBOOK, encoding="utf-8")))
+        s["layers"] = {k: lay[k] for k in ("undecided_types", "labels", "n_labels", "files_ge95", "n_files", "coverage_overall",
+                                           "sentences_len_ok", "n_sentences", "pass")}
+        s["layers"]["undecided_top"] = lay["undecided"][:20]
+    except Exception as e:   # 결정표가 없어도 예전 요약은 낸다
+        s["layers_error"] = str(e)
     print(json.dumps(s, ensure_ascii=False))
     if a.json:
         json.dump(items, open(a.json, "w", encoding="utf-8"), ensure_ascii=False, indent=1)

@@ -29,7 +29,7 @@ export default function RetentionPrompt() {
     <div role="status" className="flex w-full flex-col gap-2.5 rounded-16 border-2 border-line bg-white px-4 py-3.5 sm:flex-row sm:items-center lg:rounded-18 lg:px-5">
       <p className="flex-1 text-[13px] leading-relaxed text-ink-muted lg:text-[14px]">
         사후 검사를 본 지 {status.days_since_post}일이 지났어요. 배운 것이 얼마나 남아 있는지 보는 유지 검사를 볼 수 있어요.
-        사후 검사와 같은 24문항, 5분 안팎이에요.
+        사후 검사와 같은 24문제, 5분 안팎이에요.
       </p>
       <div className="flex shrink-0 gap-2">
         <button type="button" onClick={later} className="btn-secondary whitespace-nowrap !py-2.5 px-4 text-[14px]">나중에</button>

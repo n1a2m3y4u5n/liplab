@@ -171,7 +171,7 @@ export default function Dashboard() {
       setScenario(scenario, 'test')
       navigate(isConversation ? '/conversation' : '/practice')
     } catch (error) {
-      setUnlockNotice('시나리오 생성에 실패했습니다. 다시 시도해주세요.')
+      setUnlockNotice('시나리오를 만들지 못했습니다. 다시 시도해주세요.')
       console.error(error)
     } finally {
       setLoading(false)

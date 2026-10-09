@@ -106,7 +106,7 @@ export default function Conversation() {
     setIsPlaying(ok)
     if (!ok) {
       setPhase('answering')
-      setNotice('입모양을 불러오지 못했어요. 무슨 말인지 보기로 문장을 확인할 수 있어요.')
+      setNotice('입모양을 가져오지 못했어요. 무슨 말인지 보기로 문장을 확인할 수 있어요.')
     }
   }
 
@@ -423,7 +423,7 @@ export default function Conversation() {
                   disabled={!userInput.trim() || repairBusy}
                   className="btn-primary px-5"
                 >
-                  전송
+                  보내기
                 </button>
               </div>
             </motion.div>

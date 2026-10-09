@@ -156,7 +156,7 @@ export default function NonsensePairing() {
   }
 
   if (phase === 'loading') return <LoadingScreen />
-  if (phase === 'error') return <LoadFailed message="짝 맞추기를 불러오지 못했어요." onRetry={load} onExit={() => navigate('/learn/path')} />
+  if (phase === 'error') return <LoadFailed message="짝 맞추기를 가져오지 못했어요." onRetry={load} onExit={() => navigate('/learn/path')} />
 
   const exitBtn = (
     <button type="button" onClick={() => navigate('/learn/path')} aria-label="나가기" className="shrink-0">

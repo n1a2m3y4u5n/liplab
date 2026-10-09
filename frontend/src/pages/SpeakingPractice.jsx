@@ -50,7 +50,7 @@ const RESULT_BTN = 'btn-bar flex-1 max-lg:rounded-13 max-lg:px-0 max-lg:text-[15
 const cssVar = (el, name) => (el ? getComputedStyle(el).getPropertyValue(name).trim() : '') || 'gray'
 
 // /api/viseme 실패 안내(아바타만 멈추고 녹음·채점은 된다). 다음 문항에서 받으면 이 안내만 지운다.
-const VISEME_ERR = '입모양 자료를 불러오지 못해 아바타가 움직이지 않아요. 녹음과 채점은 그대로 할 수 있어요.'
+const VISEME_ERR = '입모양 자료를 가져오지 못해 아바타가 움직이지 않아요. 녹음과 채점은 그대로 할 수 있어요.'
 
 // 지표 모드 점수 이름: 서버가 드릴마다 다른 것을 잰다(backend/speak_curriculum.py _score_prosody).
 // 발성(voicing)은 길이 60% + 크기 40%라 '길이·크기'로 따로 붙인다.
@@ -247,7 +247,7 @@ export default function SpeakingPractice() {
           setReviewItems(d.items || [])
           if (d.items?.length) applyItem(d.items, 0)
         })
-        .catch(() => { if (!cancelled) setErr('복습을 불러오지 못했어요.') })
+        .catch(() => { if (!cancelled) setErr('복습을 가져오지 못했어요.') })
     } else if (stageNo != null) {
       speakAPI.getStage(stageNo)
         .then((d) => {
@@ -257,7 +257,7 @@ export default function SpeakingPractice() {
           setStageInfo({ ...d, items: its })
           applyItem(its, 0)
         })
-        .catch(() => { if (!cancelled) setErr('단계를 불러오지 못했어요.') })
+        .catch(() => { if (!cancelled) setErr('단계를 가져오지 못했어요.') })
     } else {
       curriculumAPI.getWords()
         .then((d) => {
@@ -266,7 +266,7 @@ export default function SpeakingPractice() {
           setWords(ws)
           pickWord(ws)
         })
-        .catch(() => { if (!cancelled) setErr('콘텐츠를 불러오지 못했어요.') })
+        .catch(() => { if (!cancelled) setErr('콘텐츠를 가져오지 못했어요.') })
     }
     return () => {
       cancelled = true
@@ -614,10 +614,10 @@ export default function SpeakingPractice() {
       <main className="mx-auto w-full max-w-[676px] flex-1 px-[18px] pb-8 pt-6 lg:pt-5 lg:[@media(max-height:860px)]:pb-4 lg:[@media(max-height:860px)]:pt-3.5">
           {exitError ? (
             <div className="flex flex-col items-center gap-2 rounded-22 border-2 border-line bg-white px-6 py-16 text-center">
-              <p className="text-lg font-bold text-ink">단계를 불러오지 못했어요</p>
+              <p className="text-lg font-bold text-ink">단계를 가져오지 못했어요</p>
               <p className="mb-3 text-sm text-ink-faint">{err} 네트워크를 확인하고 다시 시도해 주세요.</p>
               <div className="flex justify-center gap-2">
-                <button type="button" onClick={() => setRetry((n) => n + 1)} className="btn-primary px-6 py-2.5 text-sm">다시 불러오기</button>
+                <button type="button" onClick={() => setRetry((n) => n + 1)} className="btn-primary px-6 py-2.5 text-sm">다시 가져오기</button>
                 <button type="button" onClick={() => { teardown(); navigate('/learn/path?track=speak') }} className="btn-secondary px-6 py-2.5 text-sm">발화 커리큘럼으로</button>
               </div>
             </div>
@@ -1056,7 +1056,7 @@ function PitchEnergyGraph({ trace, summary, dir, drill }) {
         ) : (
           <>
             <line x1={padL} y1={yTh} x2={W - padR} y2={yTh} strokeWidth="1" strokeDasharray="5 4" style={{ stroke: 'var(--warn)' }} />
-            <text x={W - padR} y={yTh - 3} textAnchor="end" fontSize="9" style={{ fill: 'var(--warn-strong)' }}>적정</text>
+            <text x={W - padR} y={yTh - 3} textAnchor="end" fontSize="9" style={{ fill: 'var(--warn-strong)' }}>알맞음</text>
           </>
         )}
 
@@ -1073,7 +1073,7 @@ function PitchEnergyGraph({ trace, summary, dir, drill }) {
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-muted">
         <span className="inline-flex items-center gap-1"><span className="inline-block h-[2px] w-3 bg-speak" /> 억양선</span>
         <span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-3 border border-speak bg-speak-tint" /> 목소리 크기</span>
-        <span className="inline-flex items-center gap-1"><span className="inline-block w-3 border-t border-dashed border-warn" /> {soft ? `목표 크기 ${SOFT_BAND[0]}~${SOFT_BAND[1]}` : '적정 크기'}</span>
+        <span className="inline-flex items-center gap-1"><span className="inline-block w-3 border-t border-dashed border-warn" /> {soft ? `목표 크기 ${SOFT_BAND[0]}~${SOFT_BAND[1]}` : '알맞은 크기'}</span>
       </div>
       <div className="mt-1 space-y-0.5">
         {flat && <p className="text-[11px] text-warn-text">억양선 끝이 시작보다 {dir === 'rise' ? '높아지지' : '낮아지지'} 않았어요 → 끝에서 선을 {dir === 'rise' ? '올려' : '내려'}보세요.</p>}

@@ -37,7 +37,7 @@ export default function useFaceLandmarker() {
       } catch {
         if (!cancelled) {
           setStatus('error')
-          setErrMsg('모델을 불러오지 못했어요. 네트워크를 확인해 주세요.')
+          setErrMsg('모델을 가져오지 못했어요. 네트워크를 확인해 주세요.')
         }
       }
     })()

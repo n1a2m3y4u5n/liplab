@@ -55,9 +55,9 @@ export default function SpeakingReviewLanding() {
           <LoadingScreen variant="inline" />
         ) : error ? (
           <div className="card py-16 text-center">
-            <p className="text-lg font-bold text-gray-900">복습 항목을 불러오지 못했어요</p>
+            <p className="text-lg font-bold text-gray-900">복습 항목을 가져오지 못했어요</p>
             <p className="mt-1 text-sm text-gray-500">잠시 후 다시 시도해 주세요.</p>
-            <button type="button" onClick={() => setReloadKey((key) => key + 1)} className="btn-primary mt-5 px-6 py-2.5 text-sm">다시 불러오기</button>
+            <button type="button" onClick={() => setReloadKey((key) => key + 1)} className="btn-primary mt-5 px-6 py-2.5 text-sm">다시 가져오기</button>
           </div>
         ) : items.length ? (
           <>

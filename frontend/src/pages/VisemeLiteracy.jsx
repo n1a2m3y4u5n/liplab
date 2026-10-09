@@ -177,7 +177,7 @@ export default function VisemeLiteracy() {
   // 레슨 시작 전 = 독화 트랙 로딩(223:30 / 모바일 243:81). 학습 자료는 레슨이 아니라 기본 로딩(256:34).
   if (loading) return learnMode ? <LoadingScreen /> : <LoadingScreen variant="brand" track="perception" />
   if (!learnMode && !introDone) return <LoadingScreen variant="brand" track="perception" />
-  if (!data) return <LoadFailed message="콘텐츠를 불러오지 못했어요." onRetry={load} onExit={() => navigate(exitTo)} />
+  if (!data) return <LoadFailed message="콘텐츠를 가져오지 못했어요." onRetry={load} onExit={() => navigate(exitTo)} />
 
   if (learnMode) {
     return (
@@ -269,7 +269,7 @@ function LearnPanel({ data }) {
 
       {/* 웹캠으로 따라하기 (축 D) — 펼칠 때만 MediaPipe 로드 */}
       {showCam ? (
-        <Suspense fallback={<div className="card text-sm text-ink-muted">카메라 모듈 불러오는 중…</div>}>
+        <Suspense fallback={<div className="card text-sm text-ink-muted">카메라 모듈 가져오는 중…</div>}>
           <WebcamMouthCheck visemeId={sel.viseme_id} visemeName={sel.name} articulationGuide={sel.articulation?.guide} />
         </Suspense>
       ) : (
@@ -343,7 +343,7 @@ function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, effort }) {
           <p className={`${STAT_VALUE} text-primary-700`}>{accuracy}%</p>
         </WatermarkCard>
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-xp.svg', size: 157.945, top: -76, right: -71.44 }}>
-          <p className={STAT_LABEL}>획득 XP</p>
+          <p className={STAT_LABEL}>받은 XP</p>
           <p className={`${STAT_VALUE} text-warn-text`}>+{xp}</p>
         </WatermarkCard>
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-clock.svg', size: 115.2, top: -45.83, right: -43.82 }}>
@@ -625,7 +625,7 @@ function QuizPanel({ data }) {
               </p>
             </div>
           ) : isAx ? (
-            <span className="text-[15px] leading-figma text-ink-faint">{q.frames ? '같으면 =, 다르면 ≠' : '입모양을 불러오는 중'}</span>
+            <span className="text-[15px] leading-figma text-ink-faint">{q.frames ? '같으면 =, 다르면 ≠' : '입모양을 가져오는 중'}</span>
           ) : (
             <span className="hidden text-[15px] leading-figma text-ink-faint lg:inline">{selected == null ? '보기를 선택해주세요' : '정답을 확인해보세요'}</span>
           )}

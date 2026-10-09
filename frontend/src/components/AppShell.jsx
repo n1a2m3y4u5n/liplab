@@ -159,7 +159,7 @@ export function RailReviewCard({ due, wrong, marks }) {
   return (
     <div className="card-flat flex flex-col items-center gap-3.5">
       <div className="flex items-baseline gap-3 font-bold leading-figma">
-        <p className="text-[17px] text-ink">오답 <span className="text-[22px] text-primary-500">{n ?? '…'}</span><span className="text-primary-500">개</span></p>
+        <p className="text-[17px] text-ink">틀린 문제 <span className="text-[22px] text-primary-500">{n ?? '…'}</span><span className="text-primary-500">개</span></p>
         <span className="h-[18px] w-[1.5px] shrink-0 rounded-[1px] bg-line" />
         <p className="text-[17px] text-ink">북마크 <span className="text-[22px] text-bookmark">{marks ?? '…'}</span><span className="text-bookmark">개</span></p>
       </div>

@@ -179,11 +179,11 @@ export default function MultiConversation() {
         <div className="flex justify-end">{speakerToggle}</div>
         <div className="card flex flex-col items-center gap-3 py-16 text-center">
           {loading ? (
-            <p role="status" className="text-[15px] font-bold text-ink-muted">대화를 불러오는 중…</p>
+            <p role="status" className="text-[15px] font-bold text-ink-muted">대화를 가져오는 중…</p>
           ) : (
             <>
-              <p role="alert" className="text-[15px] font-bold text-ink">대화를 불러오지 못했어요.</p>
-              <button type="button" onClick={load} className="btn-primary">다시 불러오기</button>
+              <p role="alert" className="text-[15px] font-bold text-ink">대화를 가져오지 못했어요.</p>
+              <button type="button" onClick={load} className="btn-primary">다시 가져오기</button>
             </>
           )}
         </div>
@@ -208,8 +208,8 @@ export default function MultiConversation() {
       </div>
       {loadError && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-14 border-2 border-bad-line bg-bad-tint px-4 py-2.5 text-[13.5px] font-bold text-bad-text">
-          새 대화를 불러오지 못했어요.
-          <button type="button" onClick={load} className="shrink-0 underline">다시 불러오기</button>
+          새 대화를 가져오지 못했어요.
+          <button type="button" onClick={load} className="shrink-0 underline">다시 가져오기</button>
         </div>
       )}
 
@@ -231,7 +231,7 @@ export default function MultiConversation() {
           <span className="text-sm font-bold text-emerald-800">이번 대화 종합 {result.combined}점</span>
           <span className="text-xs text-emerald-700">
             문장 {Math.round(result.read_accuracy * 100)}%
-            {result.closure_correct != null && <> · 빈칸 {result.closure_correct ? '정답' : '오답'}</>}
+            {result.closure_correct != null && <> · 빈칸 {result.closure_correct ? '정답' : '틀림'}</>}
             {' '}· 화자 찾기 {Math.round(result.speaker_accuracy * 100)}%
           </span>
           {result.missed_visemes?.length > 0 && (

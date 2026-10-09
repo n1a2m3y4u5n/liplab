@@ -272,7 +272,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
     <div className="rounded-xl border border-gray-200 bg-white p-3">
       <div className="mb-2 flex items-center justify-between">
         <h4 className="text-sm font-bold text-gray-900">웹캠으로 따라하기 {visemeName ? `— ${visemeName}` : ''}</h4>
-        <span className="text-[10px] text-gray-400">영상은 기기 안에서만 처리 · 저장/전송 안 함</span>
+        <span className="text-[10px] text-gray-400">영상은 기기 안에서만 처리 · 저장하거나 보내지 않음</span>
       </div>
       <div className={showMirror ? 'grid grid-cols-2 gap-2' : ''}>
         <div className="relative overflow-hidden rounded-lg bg-gray-900" style={{ aspectRatio: '4/3' }}>
@@ -291,7 +291,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
           )}
           {status !== 'running' && (
             <div className="absolute inset-0 grid place-items-center text-sm text-white/70">
-              {status === 'loading' ? '모델 불러오는 중…' : status === 'error' ? errMsg : '아래 버튼으로 시작'}
+              {status === 'loading' ? '모델 가져오는 중…' : status === 'error' ? errMsg : '아래 버튼으로 시작'}
             </div>
           )}
         </div>

@@ -304,8 +304,8 @@ export default function CurriculumPath() {
         {/* 단계를 불러오지 못했으면 빈 경로 대신 안내와 다시 불러오기(여러 명 대화의 실패 카드와 같은 모양) */}
         {loadFailed && (
           <div className="card flex w-full flex-col items-center gap-3 py-16 text-center">
-            <p role="alert" className="text-[15px] font-bold text-ink">학습 경로를 불러오지 못했어요.</p>
-            <button type="button" onClick={retry} className="btn-primary">다시 불러오기</button>
+            <p role="alert" className="text-[15px] font-bold text-ink">학습 경로를 가져오지 못했어요.</p>
+            <button type="button" onClick={retry} className="btn-primary">다시 가져오기</button>
           </div>
         )}
 
