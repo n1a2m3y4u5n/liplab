@@ -686,14 +686,14 @@ TEST_FORMS: Dict[str, List[str]] = {
           "언니는 피아노를 잘 쳐요.", "소포를 편의점에서 찾았어요.", "세면대 앞에서 이를 닦아요.", "계단이 높으니 천천히 오세요.",
           "과자를 반만 먹었어요.", "삼촌이 새 집으로 이사했어요.", "주말에 등산하러 가요.", "숟가락이 식탁 아래 떨어졌어요.",
           "어머니는 뉴스를 보세요.", "김밥을 세 줄 샀어요.", "겨울에는 해가 짧아요.", "양말을 서랍 안에 넣어요."],
-    "C": ["지갑 안에 카드가 있어요.", "아까는 불을 끄고 나갔어요.", "컵에 우유를 따라 주세요.", "우리 반은 스무 명이에요.",
+    "C": ["지갑 안에 카드가 있어요.", "아까는 불을 끄고 나갔어요.", "병에 꿀을 채워 주세요.", "우리 반은 스무 명이에요.",
           "아빠가 생선을 구웠어요.", "점심에 손님이 많이 와요.", "책을 이쪽으로 가져와 주세요.", "전철을 칠 분 기다렸어요.",
-          "이모는 그림을 잘 그려요.", "운동화를 백화점에서 샀어요.", "마트 앞에서 자전거를 세워요.", "날이 추우니 따뜻하게 입으세요.",
+          "막내는 그네를 잘 타요.", "운동화를 백화점에서 샀어요.", "마트 앞에서 자전거를 세워요.", "날이 추우니 따뜻하게 입으세요.",
           "주스를 조금만 마셨어요.", "사촌이 새 학교로 전학했어요.", "오후에 공부하러 가요.", "강아지가 이불 속에 숨었어요.",
           "할아버지는 바둑을 두세요.", "귤을 여섯 개 먹었어요.", "여름에는 모기가 많아요.", "겉옷을 옷장 안에 걸어요."],
     "D": ["가방 속에 휴지가 있어요.", "주말엔 늦잠을 자고 쉬었어요.", "벽에 달력을 붙여 주세요.", "우리 강아지는 세 살이에요.",
           "엄마가 국수를 삶았어요.", "새벽에 비가 많이 왔어요.", "쓰레기를 밖에 버려 주세요.", "공원까지 팔 분 걸려요.",
-          "오빠는 글씨를 잘 써요.", "배드민턴을 마당에서 쳤어요.", "가게 앞에서 우산을 접어요.", "밤이 늦었으니 얼른 주무세요.",
+          "짝꿍은 한자를 잘 읽어요.", "배드민턴을 마당에서 쳤어요.", "가게 앞에서 우산을 접어요.", "밤이 늦었으니 얼른 주무세요.",
           "용돈을 절반만 남겼어요.", "고모가 새 회사로 옮겼어요.", "일요일에 봉사하러 가요.", "동전이 소파 밑으로 굴러갔어요.",
           "할머니는 꽃을 기르세요.", "복숭아를 네 개 샀어요.", "봄에는 바람이 따뜻해요.", "접시를 쟁반 위에 올려요."],
 }
@@ -831,6 +831,56 @@ TEST_HALF_PREFIX = "test:v2-"
 def test_rule(session: Optional[str]) -> str:
     """회차의 계단 규칙: 'half'(절반 규칙, 10/9부터) 또는 'forty'(옛 규칙)."""
     return "half" if (session or "").startswith(TEST_HALF_PREFIX) else "forty"
+
+
+# ── 검사 폼 판본(docs/listen-forms-clean-2026-10.md 6절) ─────────────────────────
+# 폼 문장을 바꾸면 판(전체 번호)을 올리고 바뀐 자리를 TEST_FORM_CHANGES에 남긴다. 새 회차 id에는 그 판의 표식(TEST_HALF_PREFIX 뒤
+# 'f<판>-')을 넣고, 답 채점은 회차의 판으로 정답 문장을 고른다(test_form_sentences). 표식이 없는 회차는 판 1이다. 그래서 바뀌기 전에
+# 시작한 회차는 그때 받은 문장으로 끝까지 채점되고, 지난 기록은 행마다 저장한 정답 문장(target)을 그대로 쓴다.
+# 판 2(10/9): C·D 문장에 든 일반화 검사 낱말(컵·이모·오빠)을 빼려고 C03·C09·D09를 예비 문장으로 바꿨다. A·B는 판 1 그대로다.
+# 바꾼 뒤 C·D 등가는 10/7 규칙 그대로 다시 판정했다(docs/listen-forms-clean-2026-10.md 8절).
+TEST_FORMS_REV = 2
+# (바뀐 판, 폼, 자리(1부터), 옛 문장, 새 문장)
+TEST_FORM_CHANGES: List[Tuple[int, str, int, str, str]] = [
+    (2, "C", 3, "컵에 우유를 따라 주세요.", "병에 꿀을 채워 주세요."),   # 1차 예비는 m3 합성 통과 후보가 없어 2차 예비
+    (2, "C", 9, "이모는 그림을 잘 그려요.", "막내는 그네를 잘 타요."),
+    (2, "D", 9, "오빠는 글씨를 잘 써요.", "짝꿍은 한자를 잘 읽어요."),
+]
+
+
+def test_session_id(hex_id: str) -> str:
+    """새 검사 회차 id: 절반 규칙 표식 + 지금 폼 판 표식 + 임의 hex."""
+    return f"{TEST_HALF_PREFIX}f{TEST_FORMS_REV}-{hex_id}"
+
+
+def test_session_rev(session: Optional[str]) -> int:
+    """회차가 쓴 폼 판. 'test:v2-f<판>-…'이면 그 판, 아니면 1(판 표식 전에 시작한 회차)."""
+    s = session or ""
+    if s.startswith(TEST_HALF_PREFIX + "f"):
+        head = s[len(TEST_HALF_PREFIX) + 1:].split("-", 1)[0]
+        if head.isdigit():
+            return min(int(head), TEST_FORMS_REV)
+    return 1
+
+
+def test_form_sentences(form: str, session: Optional[str] = None) -> List[str]:
+    """회차(session)의 판으로 본 폼 문장 20개. session이 없으면 지금 판."""
+    rev = TEST_FORMS_REV if session is None else test_session_rev(session)
+    out = list(TEST_FORMS[form])
+    for r, f, pos, old, new in sorted(TEST_FORM_CHANGES, key=lambda c: -c[0]):
+        if f == form and r > rev:
+            assert out[pos - 1] == new, (form, pos)
+            out[pos - 1] = old
+    return out
+
+
+def test_form_version(form: Optional[str], session: Optional[str]) -> Optional[str]:
+    """회차가 쓴 폼의 판본 표시(예: 'C2'). 판 번호는 그 폼이 마지막으로 바뀐 판이다(A·B는 늘 1). 폼이 없으면 None."""
+    if not form or form not in TEST_FORMS:
+        return None
+    rev = test_session_rev(session)
+    changed = [r for r, f, *_ in TEST_FORM_CHANGES if f == form and r <= rev]
+    return f"{form}{max(changed) if changed else 1}"
 
 
 def test_trial_ok(score: Optional[float], correct: Optional[bool], rule: str) -> Optional[bool]:
