@@ -186,6 +186,11 @@ def test_content_separation():
     for row in zip(*(L.TEST_FORMS[f] for f in "ABCD")):
         assert len({len(s.split()) for s in row}) == 1, row
     assert not any(ch.isdigit() for f in "CD" for s in L.TEST_FORMS[f] for ch in s)   # 숫자는 한글로
+    # 검사 문장은 일반화 검사 낱말(GEN_WORDS와 교체 후보)을 글자로 담지 않는다(10/9, docs/listen-forms-clean-2026-10.md 2절).
+    # 폼 C·D가 낱말을 고른 뒤에 만들어져 컵·이모·오빠가 든 문장이 있었다
+    hits = [(f, i + 1, s, L.gen_words_in(s)) for f in "ABCD" for i, s in enumerate(L.TEST_FORMS[f]) if L.gen_words_in(s)]
+    assert not hits, hits
+    assert L.gen_words_in("컵에 우유를 따라 주세요.") == ["컵"] and L.gen_words_in("물고기") == ["고기"]
     here = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(here, "data", "pilot", "battery_manifest.json"), encoding="utf-8") as f:
         raw = f.read()
@@ -227,6 +232,29 @@ def test_content_separation():
                 for j, t in enumerate(L.TEST_FORMS[g]):
                     if (g, j) != (f, i):
                         assert not B.similarity_reasons(s, t, both_ways=True), (s, t)
+
+
+def test_test_form_versions():
+    """폼 판본(docs/listen-forms-clean-2026-10.md 6절): 새 회차 id에 판 표식, 표식 없는 회차는 판 1 문장으로 채점, 판본 표시."""
+    sid = L.test_session_id("abc123def456")
+    assert sid.startswith(L.TEST_HALF_PREFIX) and L.test_rule(sid) == "half" and len(sid) <= 40
+    assert L.test_session_rev(sid) == L.TEST_FORMS_REV == 2
+    assert L.test_session_rev("test:v2-abc123def456") == 1 and L.test_session_rev("test:abc") == 1 and L.test_session_rev(None) == 1
+    assert L.test_session_rev(L.TEST_HALF_PREFIX + "f9-x") == L.TEST_FORMS_REV   # 앞날의 판은 지금 판으로
+    for f in "ABCD":
+        assert L.test_form_sentences(f, sid) == L.TEST_FORMS[f] == L.test_form_sentences(f)
+    old_c, old_d = L.test_form_sentences("C", "test:v2-old"), L.test_form_sentences("D", "test:abc")
+    assert old_c[2] == "컵에 우유를 따라 주세요." and old_c[8] == "이모는 그림을 잘 그려요." and old_d[8] == "오빠는 글씨를 잘 써요."
+    assert sum(a != b for a, b in zip(old_c, L.TEST_FORMS["C"])) == 2 and sum(a != b for a, b in zip(old_d, L.TEST_FORMS["D"])) == 1
+    assert L.test_form_sentences("A", "test:abc") == L.TEST_FORMS["A"]
+    assert [L.test_form_version(f, sid) for f in "ABCD"] == ["A1", "B1", "C2", "D2"]
+    assert [L.test_form_version(f, "test:abc") for f in "ABCD"] == ["A1", "B1", "C1", "D1"]
+    assert L.test_form_version(None, sid) is None
+    for r, f, pos, old, new in L.TEST_FORM_CHANGES:   # 바뀐 문장은 같은 자리 꼴(어절 수)이고 새 문장은 지금 폼에 있다
+        assert L.TEST_FORMS[f][pos - 1] == new and len(old.split()) == len(new.split()) and L.gen_words_in(old)
+    # 소리 목록 인벤토리는 지금 판 문장만 담는다(옛 문장 클립은 목록에서 빠짐)
+    inv = set(L.inventory_texts())
+    assert all(new in inv and old not in inv for _, _, _, old, new in L.TEST_FORM_CHANGES)
 
 
 def test_convo_items_hide_answer():
@@ -345,6 +373,11 @@ with TestClient(main.app) as c:
     out["summary"] = [summ["n_checks"], len(summ["tests"]), summ["last_check"]["summary"]["dropped"], len(summ["days"]),
                       len(summ["confusions"]) >= 1]
     out["test_rule"] = [ts["session"].startswith("test:v2-"), sorted({t["rule"] for t in summ["tests"]})]
+    out["form_version"] = [ts["form_version"], ts["form_version"] == ts["form"] + "1", [t.get("form_version") for t in summ["tests"]]]
+    # 판 표식 없는 회차(10/9 판 2 전에 시작)도 받는다: 정답 문장은 그 회차의 판(판 1)으로 고른다
+    old = c.post("/api/listen/test/answer", json={"session": "test:v2-oldform00001", "item_key": "test:C03",
+                                                  "answer": "컵에 우유를 따라 주세요"}, headers=h)
+    out["old_rev"] = old.status_code
 print("RESULT " + json.dumps(out, ensure_ascii=False))
 '''
 
@@ -381,6 +414,7 @@ def test_listen_api_flow():
     assert r["practice_order"] == [10.0, 1, 400, True]                       # 연습 없이 시작하면 옛 규칙, 검사 뒤 연습은 받지 않음
     assert r["test_dup"] == 409 and r["s4_after"] is False and r["next_form"] != r["test_form"]
     assert r["test_rule"] == [True, ["half"]]   # 새 회차는 절반 규칙(10/9)
+    assert r["form_version"] == [r["test_form"] + "1", True, [r["test_form"] + "1"]] and r["old_rev"] == 200   # A·B는 판 1
     assert r["s5_locked"] == "unlocked"
     assert r["summary"][0] == 2 and r["summary"][1] == 1 and r["summary"][2] == ["s"] and r["summary"][3] == 7
 
