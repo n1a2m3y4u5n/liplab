@@ -4,7 +4,16 @@
 
 // 두 검사 차이의 최소 감지 변화(MDC95). 문장 단위(낱말 절반 이상) 1-up-1-down 20문장의 개인 내 SD 약 1.1 dB(Jansen 2012) × 2.77 ≈ 3 dB.
 // 검사 절차를 낱말 점수 규칙으로 바꾸면 이 값도 바꾼다(docs/listen-advance-evidence-2026-10.md Q9). 시뮬레이션 2차도 3.0.
+// 10/9 절반 규칙(새 회차, docs/listen-stair-target-sim-2026-10.md)도 같은 규칙으로 C0~C3 최대 2.67 dB → 3.0.
 export const MDC_DB = 3.0
+
+// 검사 회차의 계단 규칙(서버 tests[].rule). 'half'는 10/9부터의 새 회차(낱말 절반 지점), 그 밖은 옛 회차(낱말 약 40% 지점, 약 0.7 dB 낮게 나옴).
+export const isHalfRule = (t) => t?.rule === 'half'
+
+/** 결과 화면의 역치 설명. 최근 검사의 규칙으로 정한다. */
+export function srtMeaning(latest) {
+  return isHalfRule(latest) ? '낱말을 절반쯤 알아듣는' : '낱말을 열에 넷쯤 알아듣는'
+}
 
 /** 검사 회차를 주 검사(잡담 잡음)와 그 밖(훈련에 안 쓴 잡음)으로 나눈다. 시간순은 그대로. */
 export function splitTests(tests) {
@@ -17,13 +26,14 @@ export function splitTests(tests) {
 
 /**
  * 첫 검사와 마지막 검사의 차이. 낮아질수록 좋다. 두 번 미만이면 null.
- * 반환: {change(dB, 양수 = 낮아짐), text, withinError}
+ * 반환: {change(dB, 양수 = 낮아짐), text, withinError, mixedRule(첫·마지막 검사의 계단 규칙이 다름)}
  */
 export function srtChange(main, mdc = MDC_DB) {
   if (!main || main.length < 2) return null
   const change = Math.round((main[0].srt_db - main[main.length - 1].srt_db) * 10) / 10
   const text = change > 0 ? `처음보다 ${change} dB 낮아졌어요` : change < 0 ? `처음보다 ${-change} dB 높아졌어요` : '처음과 같아요'
-  return { change, text, withinError: change !== 0 && Math.abs(change) < mdc }
+  const mixedRule = isHalfRule(main[0]) !== isHalfRule(main[main.length - 1])
+  return { change, text, withinError: change !== 0 && Math.abs(change) < mdc, mixedRule }
 }
 
 /**

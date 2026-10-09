@@ -765,7 +765,7 @@ def build():
 
     m = {
         "schema": pb.SCHEMA,
-        "version": "draft-2026-10-07",
+        "version": "draft-2026-10-09",
         "status": "draft",
         "note": ("촬영 전 초안. 문장·폼 C 낱말·무의미 낱말은 사람이 검토해 동결한다. 영상·음성 파일은 저장소에 넣지 않고 "
                  "LIPLAB_PILOT_MEDIA_DIR(기본 backend/data/pilot/media) 아래 media_pattern 경로에 둔다. docs/pilot/battery.md"),
@@ -814,8 +814,8 @@ def build():
             "snr": {
                 "title": "SNR 맞추기", "response": "typed", "modality": "audio", "syllable_range": [6, 10],
                 "media_pattern": "av/{talker}/{id}.mp4", "noise": "babble",
-                "staircase": {"start_db": 0, "step_down_db": 3, "step_up_db": 2, "min_db": -20, "max_db": 10,
-                              "reversals": 8, "use_last": 6, "max_trials": 24, "criterion": 0.5},
+                "staircase": {"rule": "word_prop_post", "start_db": 0, "min_db": -20, "max_db": 25,   # 10/9 P4(docs/listen-stair-target-sim-2026-10.md)
+                              "target": 0.4, "s0": 0.15, "f_min": 0.1, "max_trials": 24, "criterion": 0.5},
                 "items": [{"id": f"VK{i + 1:02d}", "text": t, "syllables": len(pb.syllables(t)),
                            "phonemes": pb.phoneme_count(t), "speech_rms_dbfs": None} for i, t in enumerate(snr_items)],
             },

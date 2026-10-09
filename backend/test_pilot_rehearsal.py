@@ -78,7 +78,7 @@ def test_rehearsal_missing_media_path_and_battery_rows():
     av = [b for b in rows if b["layer"] == "av"]
     assert av and all(b["missing"] == {"media": 10} and {r["modality"] for r in b["open"]} == {"A", "AV"} for b in av)
     snr = [b for b in rows if b["layer"] == "snr"]
-    assert len(snr) == 5 and all(b["snr_estimate_kind"] in ("reversals", "last_levels") and b["snr_calibrated_db"] is not None
+    assert len(snr) == 5 and all(b["snr_estimate_kind"] in ("reversals", "last_levels", "posterior40") and b["snr_calibrated_db"] is not None
                                  for b in snr)
     # 한 사람만 유지 검사(R)를 봤고 나머지는 예정일을 기다린다
     states = sorted(p["battery_schedule"]["state"] for p in ex["participants"])

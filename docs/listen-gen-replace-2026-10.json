@@ -1,0 +1,1179 @@
+{
+ "A": {
+  "마늘": {
+   "uid": "m3_7bb064cef31ddffc",
+   "adopted": false,
+   "final": null,
+   "pick": {
+    "cands": [
+     {
+      "cand": "c0",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 92.9,
+      "min_margin": -12.2104,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c1",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 92.0,
+      "min_margin": -13.8965,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c2",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 74.5,
+      "min_margin": -12.396,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c3",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 92.9,
+      "min_margin": -13.2384,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c4",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 91.9,
+      "min_margin": -13.4354,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c5",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 74.1,
+      "min_margin": -12.0225,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c6",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 93.6,
+      "min_margin": -11.4638,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c7",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 94.5,
+      "min_margin": -11.2788,
+      "greedy": "을",
+      "ok": false
+     },
+     {
+      "cand": "c8",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 93.7,
+      "min_margin": -11.3624,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c9",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 72.8,
+      "min_margin": -12.3457,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c10",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 73.3,
+      "min_margin": -14.0342,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c11",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 93.9,
+      "min_margin": -12.3943,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c12",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 78.7,
+      "min_margin": -11.7228,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c13",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 94.6,
+      "min_margin": -11.9731,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c14",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 94.5,
+      "min_margin": -13.0767,
+      "greedy": "많을",
+      "ok": false
+     },
+     {
+      "cand": "c15",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "마늘",
+      "dgop": 95.5,
+      "min_margin": -12.181,
+      "greedy": "많을",
+      "ok": false
+     }
+    ],
+    "chosen": null
+   }
+  },
+  "바늘": {
+   "uid": "m3_f4a0ae731f3348cd",
+   "adopted": false,
+   "final": null,
+   "pick": {
+    "cands": [
+     {
+      "cand": "c0",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 93.0,
+      "min_margin": -17.365,
+      "greedy": "빛을",
+      "ok": false
+     },
+     {
+      "cand": "c1",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 92.5,
+      "min_margin": -16.2603,
+      "greedy": "받을",
+      "ok": false
+     },
+     {
+      "cand": "c2",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 83.0,
+      "min_margin": -16.5904,
+      "greedy": "빛을",
+      "ok": false
+     },
+     {
+      "cand": "c3",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 86.8,
+      "min_margin": -16.9122,
+      "greedy": "원을",
+      "ok": false
+     },
+     {
+      "cand": "c4",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 93.8,
+      "min_margin": -17.4258,
+      "greedy": "빛을",
+      "ok": false
+     },
+     {
+      "cand": "c5",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 94.1,
+      "min_margin": -17.4103,
+      "greedy": "원을",
+      "ok": false
+     },
+     {
+      "cand": "c6",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 94.4,
+      "min_margin": -18.2466,
+      "greedy": "몸을",
+      "ok": false
+     },
+     {
+      "cand": "c7",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 95.6,
+      "min_margin": -19.5883,
+      "greedy": "원을",
+      "ok": false
+     },
+     {
+      "cand": "c8",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 92.7,
+      "min_margin": -18.2791,
+      "greedy": "을",
+      "ok": false
+     },
+     {
+      "cand": "c9",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 94.4,
+      "min_margin": -17.5363,
+      "greedy": "원을",
+      "ok": false
+     },
+     {
+      "cand": "c10",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 93.4,
+      "min_margin": -17.2702,
+      "greedy": "을",
+      "ok": false
+     },
+     {
+      "cand": "c11",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 93.3,
+      "min_margin": -15.5031,
+      "greedy": "빛을",
+      "ok": false
+     },
+     {
+      "cand": "c12",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 90.5,
+      "min_margin": -17.2843,
+      "greedy": "빛을",
+      "ok": false
+     },
+     {
+      "cand": "c13",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 86.1,
+      "min_margin": -16.3106,
+      "greedy": "빛을",
+      "ok": false
+     },
+     {
+      "cand": "c14",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 95.3,
+      "min_margin": -16.6929,
+      "greedy": "법을",
+      "ok": false
+     },
+     {
+      "cand": "c15",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "바늘",
+      "dgop": 91.3,
+      "min_margin": -15.031,
+      "greedy": "빛을",
+      "ok": false
+     }
+    ],
+    "chosen": null
+   }
+  },
+  "오빠": {
+   "uid": "m3_fdbdde024a81d7c6",
+   "adopted": true,
+   "final": {
+    "uid": "m3_fdbdde024a81d7c6",
+    "voice": "m3",
+    "key": "오빠",
+    "cand": "c3",
+    "ms": 950,
+    "syl": [
+     [
+      328,
+      408
+     ],
+     [
+      553,
+      654
+     ]
+    ],
+    "syl_raw": [
+     [
+      328,
+      408
+     ],
+     [
+      553,
+      654
+     ]
+    ],
+    "tier": "pass",
+    "orig_tier": null,
+    "dgop": 94.2,
+    "min_margin": 3.083,
+    "enc_min_margin": 3.0657,
+    "tts_text": "오빠",
+    "peak_limited_db": 0.0
+   },
+   "pick": {
+    "cands": [
+     {
+      "cand": "c0",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠.",
+      "dgop": 93.5,
+      "min_margin": -5.2086,
+      "greedy": "다",
+      "ok": false
+     },
+     {
+      "cand": "c1",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠",
+      "dgop": 94.4,
+      "min_margin": 0.4626,
+      "greedy": "",
+      "ok": true
+     },
+     {
+      "cand": "c2",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠.",
+      "dgop": 69.4,
+      "min_margin": -0.2707,
+      "greedy": "",
+      "ok": false
+     },
+     {
+      "cand": "c3",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠.",
+      "dgop": 94.2,
+      "min_margin": 3.083,
+      "greedy": "호빠",
+      "ok": true
+     },
+     {
+      "cand": "c4",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠",
+      "dgop": 93.0,
+      "min_margin": -0.5526,
+      "greedy": "원다",
+      "ok": false
+     },
+     {
+      "cand": "c5",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠",
+      "dgop": 95.2,
+      "min_margin": 2.2198,
+      "greedy": "다",
+      "ok": true
+     },
+     {
+      "cand": "c6",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠.",
+      "dgop": 93.1,
+      "min_margin": -2.2282,
+      "greedy": "다",
+      "ok": false
+     },
+     {
+      "cand": "c7",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠",
+      "dgop": 92.9,
+      "min_margin": -4.0093,
+      "greedy": "다",
+      "ok": false
+     },
+     {
+      "cand": "c8",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠.",
+      "dgop": 70.0,
+      "min_margin": -2.3799,
+      "greedy": "",
+      "ok": false
+     },
+     {
+      "cand": "c9",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠",
+      "dgop": 61.1,
+      "min_margin": 1.3857,
+      "greedy": "다",
+      "ok": true
+     },
+     {
+      "cand": "c10",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠.",
+      "dgop": 95.6,
+      "min_margin": 0.638,
+      "greedy": "가",
+      "ok": true
+     },
+     {
+      "cand": "c11",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠",
+      "dgop": 94.8,
+      "min_margin": -1.3656,
+      "greedy": "다",
+      "ok": false
+     },
+     {
+      "cand": "c12",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠",
+      "dgop": 93.3,
+      "min_margin": 2.5865,
+      "greedy": "다",
+      "ok": true
+     },
+     {
+      "cand": "c13",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠",
+      "dgop": 94.2,
+      "min_margin": 0.9368,
+      "greedy": "가",
+      "ok": true
+     },
+     {
+      "cand": "c14",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠",
+      "dgop": 94.9,
+      "min_margin": 1.0092,
+      "greedy": "다",
+      "ok": true
+     },
+     {
+      "cand": "c15",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "오빠.",
+      "dgop": 94.0,
+      "min_margin": -3.7271,
+      "greedy": "",
+      "ok": false
+     }
+    ],
+    "chosen": "c3",
+    "enc_min_margin": 3.0657
+   }
+  },
+  "나물": {
+   "uid": "m3_35ccb59f762bcf91",
+   "adopted": true,
+   "final": {
+    "uid": "m3_35ccb59f762bcf91",
+    "voice": "m3",
+    "key": "나물",
+    "cand": "c4",
+    "ms": 820,
+    "syl": [
+     [
+      185,
+      391
+     ],
+     [
+      391,
+      616
+     ]
+    ],
+    "syl_raw": [
+     [
+      185,
+      391
+     ],
+     [
+      391,
+      616
+     ]
+    ],
+    "tier": "pass",
+    "orig_tier": null,
+    "dgop": 87.9,
+    "min_margin": 1.4606,
+    "enc_min_margin": 2.5561,
+    "tts_text": "나물",
+    "peak_limited_db": 0.0
+   },
+   "pick": {
+    "cands": [
+     {
+      "cand": "c0",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 91.7,
+      "min_margin": -3.8642,
+      "greedy": "나월",
+      "ok": false
+     },
+     {
+      "cand": "c1",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 72.4,
+      "min_margin": -1.1768,
+      "greedy": "나 월",
+      "ok": false
+     },
+     {
+      "cand": "c2",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 86.0,
+      "min_margin": 1.4432,
+      "greedy": "나 월",
+      "ok": true
+     },
+     {
+      "cand": "c3",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 92.2,
+      "min_margin": -1.0148,
+      "greedy": "나무",
+      "ok": false
+     },
+     {
+      "cand": "c4",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 87.9,
+      "min_margin": 1.4606,
+      "greedy": "나월",
+      "ok": true
+     },
+     {
+      "cand": "c5",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 88.2,
+      "min_margin": -3.7177,
+      "greedy": "나월",
+      "ok": false
+     },
+     {
+      "cand": "c6",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 81.4,
+      "min_margin": -1.8657,
+      "greedy": "나 월",
+      "ok": false
+     },
+     {
+      "cand": "c7",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 94.8,
+      "min_margin": -0.8975,
+      "greedy": "나무",
+      "ok": false
+     },
+     {
+      "cand": "c8",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 86.3,
+      "min_margin": 0.8542,
+      "greedy": "나월",
+      "ok": true
+     },
+     {
+      "cand": "c9",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 53.0,
+      "min_margin": -1.2115,
+      "greedy": "나무",
+      "ok": false
+     },
+     {
+      "cand": "c10",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 76.9,
+      "min_margin": -1.5662,
+      "greedy": "나무",
+      "ok": false
+     },
+     {
+      "cand": "c11",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 87.8,
+      "min_margin": 0.0106,
+      "greedy": "나 월",
+      "ok": true
+     },
+     {
+      "cand": "c12",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 88.7,
+      "min_margin": 1.0933,
+      "greedy": "나월",
+      "ok": true
+     },
+     {
+      "cand": "c13",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 91.8,
+      "min_margin": -1.4477,
+      "greedy": "나월",
+      "ok": false
+     },
+     {
+      "cand": "c14",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 72.9,
+      "min_margin": -5.0692,
+      "greedy": "나",
+      "ok": false
+     },
+     {
+      "cand": "c15",
+      "tier": "pass",
+      "flags": [],
+      "hyp": "나물",
+      "dgop": 85.5,
+      "min_margin": -0.8244,
+      "greedy": "나월",
+      "ok": false
+     }
+    ],
+    "chosen": "c4",
+    "enc_min_margin": 2.5561
+   }
+  }
+ },
+ "B": {
+  "picked": [
+   "손목",
+   "경찰",
+   "고기",
+   "오이"
+  ],
+  "rows": [
+   {
+    "word": "오리",
+    "min_margin": -0.9924,
+    "fail": [
+     [
+      "서리",
+      -0.9924
+     ]
+    ],
+    "ok5": false
+   },
+   {
+    "word": "토끼",
+    "min_margin": -4.8674,
+    "fail": [
+     [
+      "도끼",
+      -3.5972
+     ],
+     [
+      "고기",
+      -4.8674
+     ]
+    ],
+    "ok5": false
+   },
+   {
+    "word": "손목",
+    "min_margin": 8.1007,
+    "fail": [],
+    "ok5": true,
+    "combo_ok": true,
+    "options": [
+     "손목",
+     "손톱",
+     "손녀",
+     "발목"
+    ]
+   },
+   {
+    "word": "쌀",
+    "min_margin": -1.8608,
+    "fail": [
+     [
+      "살",
+      -1.8608
+     ]
+    ],
+    "ok5": false
+   },
+   {
+    "word": "경찰",
+    "min_margin": 34.0331,
+    "fail": [],
+    "ok5": true,
+    "combo_ok": true,
+    "options": [
+     "전철",
+     "경찰",
+     "양팔",
+     "감자"
+    ]
+   },
+   {
+    "word": "고기",
+    "min_margin": 10.7389,
+    "fail": [],
+    "ok5": true,
+    "combo_ok": true,
+    "options": [
+     "고기",
+     "제비",
+     "아기",
+     "포크"
+    ]
+   },
+   {
+    "word": "교실",
+    "min_margin": 6.7998,
+    "fail": [],
+    "ok5": true,
+    "combo_ok": false
+   },
+   {
+    "word": "오이",
+    "min_margin": 3.7278,
+    "fail": [],
+    "ok5": true,
+    "combo_ok": true,
+    "options": [
+     "오리",
+     "오이",
+     "도끼",
+     "아기"
+    ]
+   },
+   {
+    "word": "소금",
+    "min_margin": 15.085,
+    "fail": [],
+    "ok5": true
+   },
+   {
+    "word": "식당",
+    "min_margin": 10.7951,
+    "fail": [],
+    "ok5": true
+   },
+   {
+    "word": "밥솥",
+    "min_margin": -3.5817,
+    "fail": [
+     [
+      "밥상",
+      -3.5817
+     ]
+    ],
+    "ok5": false
+   },
+   {
+    "word": "배꼽",
+    "min_margin": 4.5172,
+    "fail": [],
+    "ok5": true
+   }
+  ]
+ },
+ "back": {
+  "마늘": {
+   "m1": {
+    "min_margin": -12.2032,
+    "fail": [
+     [
+      "마을",
+      -12.2032,
+      null
+     ],
+     [
+      "마루",
+      -5.4961,
+      null
+     ],
+     [
+      "나무",
+      -1.5113,
+      null
+     ]
+    ]
+   },
+   "f1": {
+    "min_margin": -9.3746,
+    "fail": [
+     [
+      "마을",
+      -9.3746,
+      null
+     ],
+     [
+      "마루",
+      -0.4306,
+      null
+     ]
+    ]
+   },
+   "m2": {
+    "min_margin": -10.9078,
+    "fail": [
+     [
+      "마을",
+      -10.9078,
+      null
+     ]
+    ]
+   },
+   "f2": {
+    "min_margin": -10.3493,
+    "fail": [
+     [
+      "마을",
+      -10.3493,
+      null
+     ]
+    ]
+   }
+  },
+  "바늘": {
+   "m1": {
+    "min_margin": -18.183,
+    "fail": [
+     [
+      "마늘",
+      -1.1204,
+      null
+     ],
+     [
+      "가슴",
+      -1.3234,
+      null
+     ],
+     [
+      "다리",
+      -10.9099,
+      null
+     ],
+     [
+      "마을",
+      -18.183,
+      null
+     ],
+     [
+      "바람",
+      -2.8152,
+      null
+     ]
+    ]
+   },
+   "f1": {
+    "min_margin": -11.5113,
+    "fail": [
+     [
+      "가슴",
+      -0.5495,
+      null
+     ],
+     [
+      "다리",
+      -8.2396,
+      null
+     ],
+     [
+      "마을",
+      -11.5113,
+      null
+     ],
+     [
+      "바람",
+      -2.1222,
+      null
+     ]
+    ]
+   },
+   "m2": {
+    "min_margin": -19.936,
+    "fail": [
+     [
+      "가슴",
+      -4.3548,
+      null
+     ],
+     [
+      "다리",
+      -15.3047,
+      null
+     ],
+     [
+      "마을",
+      -19.936,
+      null
+     ],
+     [
+      "바람",
+      -3.6982,
+      null
+     ]
+    ]
+   },
+   "f2": {
+    "min_margin": -13.0915,
+    "fail": [
+     [
+      "다리",
+      -7.1154,
+      null
+     ],
+     [
+      "마을",
+      -13.0915,
+      null
+     ],
+     [
+      "바람",
+      -0.9331,
+      null
+     ]
+    ]
+   }
+  },
+  "오빠": {
+   "m1": {
+    "min_margin": 1.2228,
+    "fail": []
+   },
+   "f1": {
+    "min_margin": -3.642,
+    "fail": [
+     [
+      "아빠",
+      -1.1663,
+      null
+     ],
+     [
+      "도마",
+      -2.5917,
+      null
+     ],
+     [
+      "모자",
+      -3.642,
+      null
+     ]
+    ]
+   },
+   "m2": {
+    "min_margin": -1.968,
+    "fail": [
+     [
+      "모자",
+      -1.968,
+      null
+     ]
+    ]
+   },
+   "f2": {
+    "min_margin": -1.9352,
+    "fail": [
+     [
+      "아빠",
+      -1.0447,
+      null
+     ],
+     [
+      "모자",
+      -1.9352,
+      null
+     ]
+    ]
+   }
+  },
+  "나물": {
+   "m1": {
+    "min_margin": 0.5122,
+    "fail": []
+   },
+   "f1": {
+    "min_margin": 1.0227,
+    "fail": []
+   },
+   "m2": {
+    "min_margin": -1.2438,
+    "fail": [
+     [
+      "나무",
+      -1.2438,
+      null
+     ]
+    ]
+   },
+   "f2": {
+    "min_margin": 0.2181,
+    "fail": []
+   }
+  }
+ },
+ "orig": {
+  "마늘": {
+   "min_margin": -12.2669,
+   "fail": [
+    [
+     "마을",
+     -12.2669
+    ],
+    [
+     "마루",
+     -0.2887
+    ],
+    [
+     "마당",
+     -2.2842
+    ]
+   ]
+  },
+  "바늘": {
+   "min_margin": -15.8175,
+   "fail": [
+    [
+     "다리",
+     -4.4535
+    ],
+    [
+     "마을",
+     -15.8175
+    ]
+   ]
+  },
+  "오빠": {
+   "min_margin": -4.7861,
+   "fail": [
+    [
+     "모자",
+     -4.7861
+    ]
+   ]
+  },
+  "나물": {
+   "min_margin": -0.4373,
+   "fail": [
+    [
+     "나무",
+     -0.4373
+    ]
+   ]
+  }
+ },
+ "recommend": {
+  "마늘": "B:손목",
+  "바늘": "B:경찰",
+  "오빠": "A",
+  "나물": "A"
+ }
+}

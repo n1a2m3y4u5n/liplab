@@ -1,6 +1,6 @@
 {
  "schema": "liplab-pilot-battery/1",
- "version": "draft-2026-10-07",
+ "version": "draft-2026-10-09",
  "status": "draft",
  "note": "촬영 전 초안. 문장·폼 C 낱말·무의미 낱말은 사람이 검토해 동결한다. 영상·음성 파일은 저장소에 넣지 않고 LIPLAB_PILOT_MEDIA_DIR(기본 backend/data/pilot/media) 아래 media_pattern 경로에 둔다. docs/pilot/battery.md",
  "forms": [
@@ -2922,13 +2922,13 @@
    "media_pattern": "av/{talker}/{id}.mp4",
    "noise": "babble",
    "staircase": {
+    "rule": "word_prop_post",
     "start_db": 0,
-    "step_down_db": 3,
-    "step_up_db": 2,
     "min_db": -20,
-    "max_db": 10,
-    "reversals": 8,
-    "use_last": 6,
+    "max_db": 25,
+    "target": 0.4,
+    "s0": 0.15,
+    "f_min": 0.1,
     "max_trials": 24,
     "criterion": 0.5
    },
