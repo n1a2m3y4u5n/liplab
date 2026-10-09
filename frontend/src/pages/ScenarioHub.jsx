@@ -20,7 +20,7 @@ import { sentenceQuestionTypes } from '../lib/openSet'
  *  - 회차 히스토리 등에서 ?situation=은행 으로 들어오면 그 상황을 입력칸에 채워 이어서 연습하게 한다.
  *  - ?mode=conversation 이면 연습 방법을 'AI 대화'로 골라 둔다(학습 경로 4단계 '학습 시작하기'가 여기로 온다).
  */
-const LOCK_HINT = { practice: '단어 학습을 완료하면 문장 학습이 열려요.', conversation: '문장 학습을 완료하면 대화 실전이 열려요.' }
+const LOCK_HINT = { practice: '단어 학습을 마치면 문장 학습이 열려요.', conversation: '문장 학습을 마치면 대화 실전이 열려요.' }
 const MODES = [{ key: 'practice', title: '문장 테스트' }, { key: 'conversation', title: 'AI 대화' }]
 const PARTNERS = [{ key: 'one', label: '1 : 1 대화' }, { key: 'multi', label: '여러 명 대화' }]
 const LEVEL_LABEL = { 1: '아주 쉬움', 2: '쉬움', 3: '보통', 4: '어려움', 5: '아주 어려움' }

@@ -231,13 +231,16 @@ export function fitFramesToAudio(frames, durationMs, syllables = null) {
     transition_ms: Number.isFinite(f.transition_ms) ? f.transition_ms * k : f.transition_ms }))
 }
 
-/** SNR을 학습자에게 보이는 말로. */
+/**
+ * 말과 소음의 크기 차이(SNR)를 학습자에게 보이는 말로. 연습 화면이라 dB 숫자는 숨기고 '조금'(5 dB 이하)·'훨씬'(6 dB 이상)으로 말한다
+ * (docs/easy-korean-rebase-2026-10.md 8절). 숫자가 필요한 검사 결과는 listenView.fmtDb로 따로 보인다.
+ */
 export function snrLabel(db) {
   if (db == null || !Number.isFinite(Number(db))) return ''
   const v = Math.round(Number(db))
-  if (v > 0) return `말이 소음보다 ${v} dB 커요`
-  if (v < 0) return `소음이 말보다 ${-v} dB 커요`
-  return '말과 소음이 같은 크기예요'
+  if (v === 0) return '말과 소음이 같은 크기예요'
+  const how = Math.abs(v) <= 5 ? '조금' : '훨씬'
+  return v > 0 ? `말이 소음보다 ${how} 커요` : `소음이 말보다 ${how} 커요`
 }
 
 /** 낱말 대비(서버 contrast_of) → 설명 한 줄. */

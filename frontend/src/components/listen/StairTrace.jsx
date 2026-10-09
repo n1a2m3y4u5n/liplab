@@ -1,4 +1,4 @@
-import { fmtDb } from '../../lib/listenView'
+import { snrLabel } from '../../lib/listenMix'
 import { stairPoints } from '../../lib/listenFlow'
 
 /**
@@ -13,7 +13,7 @@ export default function StairTrace({ trace = [], now = null }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-14 bg-surface-sunken px-4 py-2.5">
       <div className="flex min-w-0 flex-col gap-0.5 leading-figma">
-        <p className="text-[13px] font-bold text-ink">지금 소음 차이 <span className="text-track-dark">{fmtDb(now)}</span></p>
+        <p className="break-keep text-[13px] font-bold text-ink">지금은 <span className="text-track-dark">{snrLabel(now) || '–'}</span></p>
         <p className="break-keep text-[12px] text-ink-muted">연습용 계단이라 검사와 숙달에는 들어가지 않아요</p>
       </div>
       <svg aria-hidden width={W} height={H} viewBox={`-4 -4 ${W + 8} ${H + 8}`} className="shrink-0">

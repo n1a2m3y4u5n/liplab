@@ -50,6 +50,6 @@ export function pickNextLesson(lessons, currentId) {
 export function lockHint(lessons, lesson) {
   const prev = lessons.find((l) => l.stage === lesson.stage - 1)
   return prev
-    ? `직전 단계(${prev.stage}단계 · ${prev.title})를 먼저 완료해주세요.`
-    : '직전 단계를 먼저 완료해주세요.'
+    ? `직전 단계(${prev.stage}단계 · ${prev.title})를 먼저 마쳐 주세요.`
+    : '직전 단계를 먼저 마쳐 주세요.'
 }

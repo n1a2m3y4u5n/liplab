@@ -65,7 +65,7 @@ function ContrastChooser({ onPick, onClassroom }) {
         ))}
       </RowList>
       {!kinds && !err && <Skeleton />}
-      {err && <p className="text-center text-[13px] text-ink-muted">{err === 'missing' ? '종류별 목록은 준비 중이에요. 자주 헷갈린 짝으로 연습할 수 있어요.' : '종류 목록을 불러오지 못했어요.'}</p>}
+      {err && <p className="text-center text-[13px] text-ink-muted">{err === 'missing' ? '종류별 목록은 준비 중이에요. 자주 헷갈린 짝으로 연습할 수 있어요.' : '종류 목록을 가져오지 못했어요.'}</p>}
       <button type="button" onClick={onClassroom} className="min-h-[44px] self-center rounded-13 px-4 text-[13px] font-bold text-track-dark underline-offset-4 hover:underline">
         소리 교실에서 먼저 들어 보기
       </button>
@@ -92,7 +92,7 @@ function PlaceChooser({ onPick, onExit }) {
           <button key={p.key} type="button" onClick={() => onPick({ place: p.key })}
             className="flex min-h-[64px] flex-col items-start justify-center gap-0.5 rounded-14 border-2 border-b-5 border-line bg-white px-4 py-3 text-left transition-colors hover:border-track lg:rounded-16">
             <span className="break-keep text-[16px] font-bold leading-snug text-ink">{p.label}</span>
-            {p.n != null && <span className="text-[12px] text-ink-muted">{p.n}문항</span>}
+            {p.n != null && <span className="text-[12px] text-ink-muted">{p.n}문제</span>}
           </button>
         ))}
       </div>
@@ -123,10 +123,10 @@ function NotReady({ kind, onRetry, onExit, reason }) {
       actions={[{ label: '소리 확인 하러 가기', onClick: () => { stopAll(); navigate('/learn/listening?stage=0') } }, { label: '연습 탭으로', onClick: onExit }]} />
   }
   return kind === 'missing' || kind === 'unavailable' ? (
-    <StateCard title="이 연습은 준비 중이에요" body={reason || '곧 열려요. 지금은 학습 경로의 소리 듣기 단계로 연습해 주세요.'} actions={[{ label: '연습 탭으로', onClick: onExit }]} />
+    <StateCard title="이 연습은 준비 중이에요" body={reason || '곧 열려요. 지금은 학습 화면의 소리 듣기 단계로 연습해 주세요.'} actions={[{ label: '연습 탭으로', onClick: onExit }]} />
   ) : (
-    <StateCard title="연습을 불러오지 못했어요" body="인터넷 연결을 확인하고 다시 불러와 주세요."
-      actions={[{ label: '다시 불러오기', onClick: onRetry }, { label: '연습 탭으로', onClick: onExit }]} />
+    <StateCard title="연습을 가져오지 못했어요" body="인터넷 연결을 확인하고 다시 가져와 주세요."
+      actions={[{ label: '다시 가져오기', onClick: onRetry }, { label: '연습 탭으로', onClick: onExit }]} />
   )
 }
 
@@ -154,7 +154,7 @@ function PracticeSession({ mode, query, ctx, onExit, onChoose, summaryOpen, tall
   // 엔드리스는 묶음 번호가 뜻이 없어 진행 글을 '지금까지 n문항'으로 쓴다(막대는 이번 묶음 안 진행)
   const doneN = tally.n
   const ctxProgress = ctx.onProgress
-  const onProgress = useCallback((cur, total, label = null) => ctxProgress(cur, total, meta.endless ? `지금까지 ${doneN}문항` : label),
+  const onProgress = useCallback((cur, total, label = null) => ctxProgress(cur, total, meta.endless ? `지금까지 ${doneN}문제` : label),
     [ctxProgress, meta.endless, doneN])
   const reload = () => { stopAll(); setBatch((b) => b + 1) }
   const finish = useMemo(() => (meta.endless
@@ -171,7 +171,7 @@ function PracticeSession({ mode, query, ctx, onExit, onChoose, summaryOpen, tall
     if (meta.endless && tally.n > 0) {
       return <StateCard title="오늘 준비한 문장을 다 들었어요" body="내일 새 문장으로 이어 해요." actions={[{ label: '연습 탭으로', onClick: onExit }]} />
     }
-    return <StateCard title="지금 낼 문항이 없어요" body={res.reason || EMPTY_BODY[mode] || '나중에 다시 해 주세요.'}
+    return <StateCard title="지금 낼 문제가 없어요" body={res.reason || EMPTY_BODY[mode] || '나중에 다시 해 주세요.'}
       actions={[...(meta.chooseAgain ? [{ label: meta.chooseAgain, onClick: onChoose }] : []), { label: '연습 탭으로', onClick: onExit }]} />
   }
   // 소음 속 듣기 연습은 계단 이름이 practice_ao다(응답 condition). 문장 과제가 그 이름의 계단에서 다음 SNR을 읽는다
@@ -238,7 +238,7 @@ export default function ListenPractice() {
           )}
           {summaryOpen && (
             <ListenComplete title={`${josa(meta.title, '을', '를')} 멈췄어요`} sub="원할 때 다시 이어서 하면 돼요."
-              stats={[{ label: '푼 문항', value: `${tally.n}문항`, main: true }, { label: '통과', value: pct(tally.c, tally.n) },
+              stats={[{ label: '푼 문제', value: `${tally.n}문제`, main: true }, { label: '통과', value: pct(tally.c, tally.n) },
                 { label: '연습한 시간', value: fmtMinutes((Date.now() - tally.start) / 60000) }]}
               primary={{ label: '계속하기', onClick: () => setSummaryOpen(false) }} secondary={{ label: '연습 탭으로', onClick: toHub }} />
           )}

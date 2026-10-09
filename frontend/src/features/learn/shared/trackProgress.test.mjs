@@ -51,6 +51,6 @@ test('다음 추천: 모르는 레슨 id면 이어하기 대상, 마지막 레�
 
 test('잠금 안내는 직전 단계 번호·제목을 알려준다', () => {
   const conversation = lessons.find((l) => l.id === 'conversation')
-  assert.equal(lockHint(lessons, conversation), '직전 단계(3단계 · 문장 학습)를 먼저 완료해주세요.')
-  assert.equal(lockHint(lessons, { stage: 0 }), '직전 단계를 먼저 완료해주세요.')
+  assert.equal(lockHint(lessons, conversation), '직전 단계(3단계 · 문장 학습)를 먼저 마쳐 주세요.')
+  assert.equal(lockHint(lessons, { stage: 0 }), '직전 단계를 먼저 마쳐 주세요.')
 })

@@ -19,7 +19,7 @@ import { Card, Heading, Option, optionState } from './ui'
 const NOISE_LABEL = { ...Object.fromEntries(NOISE_TYPES.map((n) => [n.key, n.label])), talker2: '두 사람 말소리' }
 const COND_LABEL = { quiet: '조용함', noise: '소음', phone: '전화', room: '울리는 방' }
 
-export default function ConvoTask({ data, settings, voices, onProgress, onExit, finish, active, exitLabel = '학습 경로로',
+export default function ConvoTask({ data, settings, voices, onProgress, onExit, finish, active, exitLabel = '학습 화면으로',
   answerExtra = null, onAnswered = null, condition = null }) {
   const items = data.items || []
   const [k, setK] = useState(0)
@@ -87,7 +87,7 @@ export default function ConvoTask({ data, settings, voices, onProgress, onExit, 
     return (
       <TaskEnd finish={finish} result={result}
         title={tally.n ? '이번 대화를 마쳤어요' : '소리가 아직 준비되지 않았어요'} sub={tally.mastered ? '대화 듣기를 숙달했어요.' : null}
-        stats={tally.n ? [{ label: '정답률', value: pct(tally.c, tally.n), note: `${tally.n}문항 중 ${tally.c}문항`, main: true },
+        stats={tally.n ? [{ label: '정답률', value: pct(tally.c, tally.n), note: `${tally.n}문제 중 ${tally.c}문제`, main: true },
           { label: '되물은 횟수', value: `${repairTotal}번`, note: '되묻기는 감점이 없어요' }, { label: '걸린 시간', value: fmtDuration(tally.elapsed()) }] : []}
         notes={[skippedNote(tally.skipped)]} />
     )

@@ -1516,6 +1516,20 @@ async def _activity_events(uid: int, db, since=None) -> list:
     return [e for e in events if e.ts is not None]
 
 
+async def _speak_sentence_points(uid: int, db, since) -> list:
+    """분석 탭 말하기 문장 점수 주 평균(analytics.speak_sentence_weekly)의 재료: 말하기 문장 단계(mode 'sentence') 시도의
+    (UTC 시각, 점수). 점수는 입모양을 섞기 전 음향 점수(audio_score, 예전 행은 score)다. 소리가 잡히지 않은 시도는
+    개인 향상 경로와 같은 기준(speak_curriculum.voiced_attempt)으로 뺀다. 확인 시도는 mode가 'probe'라 들어오지 않는다."""
+    from database import SpeakAttempt
+    from sqlalchemy import select
+    rows = (await db.execute(select(SpeakAttempt.created_at, SpeakAttempt.audio_score, SpeakAttempt.score,
+                                    SpeakAttempt.loudness, SpeakAttempt.transcript)
+                             .where(SpeakAttempt.user_id == uid, SpeakAttempt.mode == "sentence",
+                                    SpeakAttempt.created_at >= since))).all()
+    return [(ts, a if a is not None else sc) for ts, a, sc, loud, tr in rows
+            if ts is not None and (a is not None or sc is not None) and _speakcur.voiced_attempt(loud, tr, sc)]
+
+
 @app.get("/api/analysis/overview")
 async def get_analysis_overview(tz_offset_min: int = -540, current_user=Depends(get_current_user),
                                 db: AsyncSession = Depends(get_db)):
@@ -1561,8 +1575,9 @@ async def get_analysis_overview(tz_offset_min: int = -540, current_user=Depends(
         listen = await _listen_brief(current_user, db)
     except Exception:
         listen = None   # 듣기 요약이 실패해도 분석 탭의 기존 칸은 낸다
+    speak_sentences = await _speak_sentence_points(uid, db, now - dt.timedelta(days=7 * _an.WEEKS + 1))
     return _an.overview(
-        events, now, tz, listen=listen,
+        events, now, tz, listen=listen, speak_sentences=speak_sentences,
         read_mastered=read_mastered,
         read_total=len([s for s in _curriculum.STAGES if not s.get("coming_soon")]),
         speak_mastered=speak_mastered, speak_total=len(_speakcur.stages_overview()),

@@ -248,7 +248,7 @@ export default function Placement() {
           <p className="text-xs leading-relaxed text-ink-muted">사후 검사와 같은 문제라 기억 효과가 조금 섞일 수 있어요. 이 결과는 사전·사후 향상도에는 들어가지 않아요.</p>
         </div>
         <div className="flex w-full max-w-[640px] flex-col gap-2.5 lg:gap-3">
-          <button type="button" onClick={() => navigate('/learn/path')} className={`btn-primary btn-lg ${RESULT_BTN}`}>학습 경로로</button>
+          <button type="button" onClick={() => navigate('/learn/path')} className={`btn-primary btn-lg ${RESULT_BTN}`}>학습 화면으로</button>
           <button type="button" onClick={() => navigate('/analysis/eval')} className={`btn-secondary btn-lg text-track ${RESULT_BTN}`}>학습 효과 리포트 보기</button>
         </div>
       </div>
