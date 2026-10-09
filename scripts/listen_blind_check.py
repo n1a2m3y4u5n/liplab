@@ -12,6 +12,9 @@
   analyze 여러 청취자의 CSV와 열쇠로 10.2절 판정을 내고 반영 제안을 JSON으로 쓴다(앱 반영은 사람이 결과를 본 뒤 한다).
 
   python3 scripts/listen_blind_check.py build --out ~/Downloads/liplab-lab/data/listen_blind_check.html
+  python3 scripts/listen_blind_check.py build --out … --extra 교체후보.json   (10.1절 (라) 끝: 일반화 검사 교체 후보, 묶음 'rb')
+      교체후보.json = [{"text": 낱말, "voice": "m3", "tag": "A:c3" 등, "options": [...], "ogg": 경로?, "m4a": 경로?}]
+      ogg·m4a가 없으면 저장소 목록의 그 목소리 클립을 쓴다.
   python3 scripts/listen_blind_check.py analyze 청취자1.csv 청취자2.csv … --key ~/Downloads/liplab-lab/data/listen_blind_check_key.json --out result.json
 """
 import argparse
@@ -159,13 +162,25 @@ def plan():
     return trials
 
 
-def build(out):
+def build(out, extra=None):
     import sound_clips as S
     manifest = json.load(open(os.path.join(SOUND, "manifest.json"), encoding="utf-8"))
     trials = plan()
+    for e in (json.load(open(extra, encoding="utf-8")) if extra else []):
+        tag = e.get("tag") or "repo"
+        trials.append({"id": tid("rb", e["voice"], f"{e['text']}|{tag}"), "set": "rb", "voice": e["voice"], "text": e["text"],
+                       "intended": e["text"], "options": e["options"], "tag": tag, "files": {k: e[k] for k in ("ogg", "m4a") if e.get(k)}})
     page_trials, key = [], {}
     missing = []
     for t in trials:
+        if t.get("files"):   # 저장소 밖 교체 후보 클립(다시 합성한 것)
+            src = {}
+            for ext, mime in (("ogg", "audio/ogg"), ("m4a", "audio/mp4")):
+                with open(os.path.expanduser(t["files"][ext]), "rb") as f:
+                    src[ext] = f"data:{mime};base64," + base64.b64encode(f.read()).decode()
+            page_trials.append({"id": t["id"], "options": t["options"], "src": src})
+            key[t["id"]] = {k: t[k] for k in ("set", "voice", "text", "intended", "options", "tag")} | {"clip": os.path.basename(t["files"]["ogg"])}
+            continue
         c = manifest["clips"].get(t["voice"], {}).get(S.normalize_text(t["text"]))
         if not c:
             # (다)의 소리 점검 미해결 한 음절 가운데 듣기 글이 아닌 것(m1·f1만 있음)은 m2·f2 클립이 없다. 있는 목소리만 낸다
@@ -177,7 +192,7 @@ def build(out):
             with open(os.path.join(SOUND, "clips", f"{c['id']}.{ext}"), "rb") as f:
                 src[ext] = f"data:{mime};base64," + base64.b64encode(f.read()).decode()
         page_trials.append({"id": t["id"], "options": t["options"], "src": src})
-        key[t["id"]] = {k: t[k] for k in ("set", "voice", "text", "intended", "options")} | {"clip": c["id"]}
+        key[t["id"]] = {k: t[k] for k in ("set", "voice", "text", "intended", "options", "tag") if k in t} | {"clip": c["id"]}
     if missing:
         sys.exit(f"클립 없음: {missing[:5]} …")
     page = TEMPLATE.replace("__TRIALS__", json.dumps(page_trials, ensure_ascii=False)).replace("__N__", str(len(page_trials)))
@@ -187,7 +202,7 @@ def build(out):
     with open(kp, "w", encoding="utf-8") as f:
         json.dump({"doc": "docs/listen-voice-contrast-2026-10.md 10절", "trials": key}, f, ensure_ascii=False, indent=1)
     n = Counter(k["set"] for k in key.values())
-    print(f"문항 {len(page_trials)}개 (가 {n['ga']} · 나 {n['na']} · 다 {n['da']} · 라 {n['ra']}), "
+    print(f"문항 {len(page_trials)}개 (가 {n['ga']} · 나 {n['na']} · 다 {n['da']} · 라 {n['ra']} · 교체 후보 {n['rb']}), "
           f"{os.path.getsize(out) / 1e6:.1f} MB → {out}\n열쇠 → {kp}")
 
 
@@ -255,7 +270,7 @@ def analyze(files, keyfile, out):
             verdict = "실패"
         else:
             verdict = "보류"
-        rows[i] = {"set": k["set"], "voice": k["voice"], "text": k["text"], "n": n, "p_intended": None if p is None else round(p, 3),
+        rows[i] = {"set": k["set"], "voice": k["voice"], "text": k["text"], "tag": k.get("tag"), "n": n, "p_intended": None if p is None else round(p, 3),
                    "top": top, "counts": dict(cnt), "dont_know": sum(1 for r in rs if not r), "verdict": verdict}
     avoid = json.load(open(os.path.join(BACKEND, "data", "listen_voice_avoid.json"), encoding="utf-8"))
     in_avoid = {(v, t) for v, tx in avoid["voices"].items() for t in tx}
@@ -265,6 +280,7 @@ def analyze(files, keyfile, out):
         "add_to_avoid": sorted([(r["voice"], r["text"]) for r in by("da") if r["verdict"] == "실패"
                                 and (r["voice"], r["text"]) not in in_avoid]),
         "gen_human_fail": sorted([r["text"] for r in by("ra") if r["verdict"] == "실패"]),
+        "gen_candidates": sorted([(r["text"], r["tag"], r["verdict"], r["p_intended"]) for r in by("rb")]),
     }
     # 보고만: 글마다 (가)와 (나)의 p 차이, 소리 세기 방향별 오답, 기계 margin과 사람 p의 순위 상관
     na_p = {r["text"]: r["p_intended"] for r in by("na") if r["p_intended"] is not None}
@@ -286,7 +302,7 @@ def analyze(files, keyfile, out):
            "rule": {"min_answered": MIN_ANSWERED, "min_control_p": MIN_CONTROL, "min_control_items": MIN_CONTROL_ITEMS,
                     "min_listeners": MIN_LISTENERS, "pass_if": "p >= 2/3", "fail_if": "p < 0.5 and top != intended"},
            "listeners": listeners, "n_included": len(inc),
-           "summary": {s: dict(Counter(r["verdict"] for r in by(s))) for s in ("ga", "na", "da", "ra")},
+           "summary": {s: dict(Counter(r["verdict"] for r in by(s))) for s in ("ga", "na", "da", "ra", "rb")},
            "proposal": proposal,
            "report": {"avoided_minus_control": diff, "laryngeal_direction_errors": dict(direction),
                       "spearman_margin_vs_p": spearman(mm, pp), "n_margin_pairs": len(mm)},
@@ -401,12 +417,13 @@ if __name__ == "__main__":
     sub = ap.add_subparsers(dest="cmd", required=True)
     b = sub.add_parser("build")
     b.add_argument("--out", required=True)
+    b.add_argument("--extra", default="")
     a = sub.add_parser("analyze")
     a.add_argument("csv", nargs="+")
     a.add_argument("--key", required=True)
     a.add_argument("--out", required=True)
     args = ap.parse_args()
     if args.cmd == "build":
-        build(os.path.expanduser(args.out))
+        build(os.path.expanduser(args.out), os.path.expanduser(args.extra) if args.extra else None)
     else:
         analyze(args.csv, os.path.expanduser(args.key), os.path.expanduser(args.out))
