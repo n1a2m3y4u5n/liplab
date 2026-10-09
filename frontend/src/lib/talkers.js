@@ -12,7 +12,7 @@ import { VISEME_BLENDSHAPES, VISEME_V15_ENABLED } from './visemeShapes.js'
 
 // 새 가상 화자 조건 점수 옆에 보이는 안내(9/29). 문항 12개씩이라 개인 차이는 판정하지 않고 집단 평균으로 읽는다
 // (docs/talker-variation.md 6절). 학습 효과 리포트·인쇄 결과지·검사 결과 화면이 같은 문구를 쓴다.
-export const TRANSFER_NOISE_NOTE = '문항 12개씩이라 한 사람 점수 차는 잡음이 커요. 여러 사람의 평균으로 읽어요.'
+export const TRANSFER_NOISE_NOTE = '문제 12개씩이라 한 사람 점수 차는 잡음이 커요. 여러 사람의 평균으로 읽어요.'
 
 // 매개변수별로 곱하는 모프. 입을 닫는 모프(mouthClose·Press·Roll)와 혀는 바꾸지 않는다(양순 폐쇄는 화자와 무관하게 보여야 한다).
 export const AMP_KEYS = ['jawOpen', 'mouthLowerDownLeft', 'mouthLowerDownRight', 'mouthUpperUpLeft', 'mouthUpperUpRight']

@@ -344,7 +344,7 @@ function OverviewMock({ motion }) {
           </div>
           <div className="card-flat flex flex-col items-center gap-3.5">
             <div className="flex items-baseline gap-3 font-bold leading-figma">
-              <p className="text-[17px] text-ink">오답 <span className="text-[22px] text-primary-500">5</span><span className="text-primary-500">개</span></p>
+              <p className="text-[17px] text-ink">틀린 문제 <span className="text-[22px] text-primary-500">5</span><span className="text-primary-500">개</span></p>
               <span className="h-[18px] w-[1.5px] shrink-0 rounded-[1px] bg-line" />
               <p className="text-[17px] text-ink">북마크 <span className="text-[22px] text-bookmark">3</span><span className="text-bookmark">개</span></p>
             </div>
@@ -682,7 +682,7 @@ function TaskMock() {
       <section {...area('badges')} className="flex flex-col gap-[18px] rounded-18 border-2 border-line bg-white p-[22px]">
         <div className="flex items-center justify-between font-bold leading-figma">
           <p className="text-[17px] text-ink">배지</p>
-          <span className="text-[13px] text-ink-muted">4 / 12개 획득</span>
+          <span className="text-[13px] text-ink-muted">4 / 12개 받음</span>
         </div>
         <div className="grid grid-cols-6 gap-x-3">
           {BADGES.map(([label, icon, earned]) => (
@@ -728,7 +728,7 @@ function ReviewMock() {
   return (
     <MobileShell active="review" title="복습">
       <div className="flex w-full gap-2.5">
-        <ReviewCta id="ctaWrong" title="복습할 오답 5개" sub="약 3분이면 끝나요" btn="오답 복습하기" btnCls="text-primary-700"
+        <ReviewCta id="ctaWrong" title="복습할 틀린 문제 5개" sub="약 3분이면 끝나요" btn="틀린 문제 복습하기" btnCls="text-primary-700"
           card="border-primary-700 bg-[linear-gradient(137.7deg,var(--brand-light)_0%,var(--brand)_70.92%)]" />
         <ReviewCta id="ctaMark" title="복습할 북마크 3개" sub="저장해둔 문장이에요" btn="북마크 복습하기" btnCls="text-bookmark-dark"
           card="border-bookmark-dark bg-[linear-gradient(137.7deg,var(--bookmark-light)_0%,var(--bookmark)_70.92%)]" />
@@ -742,7 +742,7 @@ function ReviewMock() {
           </span>
         </div>
         <div className="flex gap-[7px]">
-          {[['전체', 8, true], ['오답', 5], ['북마크', 3]].map(([l, n, on]) => (
+          {[['전체', 8, true], ['틀린 문제', 5], ['북마크', 3]].map(([l, n, on]) => (
             <span key={l} className={`flex items-center gap-[5px] rounded-full px-[13px] py-2 font-bold leading-figma ${on ? 'bg-primary-500 text-white' : 'bg-surface-sunken text-ink-muted'}`}>
               <span className="text-[12.5px]">{l}</span>
               <span className={`text-[11px] ${on ? 'text-white/75' : 'text-ink-ghost'}`}>{n}</span>
@@ -813,7 +813,7 @@ function AnalysisMock() {
           </div>
         ))}
       </div>
-      <ChartCard id="bars" title="학습시간 추이">
+      <ChartCard id="bars" title="학습 시간 변화">
         <div className="relative h-[150px] w-full">
           <GridLines />
           <div className="absolute inset-x-0 bottom-[22px] top-0 flex items-end">
@@ -832,7 +832,7 @@ function AnalysisMock() {
           </div>
         </div>
       </ChartCard>
-      <ChartCard id="line" title="정확도 추이">
+      <ChartCard id="line" title="정확도 변화">
         <div className="relative h-[150px] w-full">
           <GridLines />
           <svg viewBox={`0 0 ${n} 150`} preserveAspectRatio="none" className="absolute left-2.5 top-0 h-[150px] w-[calc(100%-16px)] overflow-visible">
@@ -917,11 +917,11 @@ export const MOCKS = {
   learn: { design: [520, 653], C: LearnMock, areas: ['switch', 'guideBtn', 'nodes', 'arrows', 'sheet'],
     alt: '휴대폰 학습 탭 예시. 독화·발화 전환, 단계 이름과 가이드 버튼, DOKA 단계 노드와 아래 레슨 카드.' },
   readQuestion: { design: [375, 564], C: (p) => <ReadMock {...p} />, areas: ['bookmark', 'stage', 'options'],
-    alt: '단어 독화 문항 예시. 왼쪽 위에 화자 이름이 붙은 입모양 영상이 있다. 보기를 고르고 확인을 누르면 초록 결과 바에 \'정답이에요\'가 나온다.' },
+    alt: '단어 독화 문제 예시. 왼쪽 위에 화자 이름이 붙은 입모양 영상이 있다. 보기를 고르고 확인을 누르면 초록 결과 바에 \'정답이에요\'가 나온다.' },
   readWrong: { design: [375, 564], C: (p) => <ReadMock wrong {...p} />, areas: ['resultBar'],
-    alt: '단어 독화 오답 예시. 고른 보기는 빨강, 정답 보기는 초록 테두리. 아래 빨간 결과 바에 정답이 나온다.' },
+    alt: '단어 독화에서 틀렸을 때의 예시. 고른 보기는 빨강, 정답 보기는 초록 테두리. 아래 빨간 결과 바에 정답이 나온다.' },
   speakBefore: { design: [375, 564], C: (p) => <SpeakMock {...p} />, areas: ['stage', 'mic'],
-    alt: '발화 문항 예시. 말할 단어와 아바타 입모양, 아래 마이크 버튼. 녹음 중에는 파형이 움직인다.' },
+    alt: '발화 문제 예시. 말할 단어와 아바타 입모양, 아래 마이크 버튼. 녹음 중에는 파형이 움직인다.' },
   speakResult: { design: [375, 564], C: (p) => <SpeakMock result {...p} />, areas: ['score', 'chips', 'detail'],
     alt: '발화 결과 예시. 발음 정확도 84%, 소리별 칩 네 개 중 ㄷ은 주황, 아래 초록 결과 바 잘했어요.' },
   practice: { design: [520, 653], C: PracticeMock, areas: ['free', 'scenario', 'sign', 'endless', 'mouth'],
@@ -929,9 +929,9 @@ export const MOCKS = {
   task: { design: [700, 606], C: TaskMock, areas: ['today', 'special', 'badges'],
     alt: '과제 탭 예시. 오늘의 과제 세 줄, 특별 과제 카드, 배지 목록.' },
   review: { design: [520, 653], C: ReviewMock, areas: ['ctaWrong', 'ctaMark', 'items', 'erase'],
-    alt: '복습 탭 예시. 오답·북마크 복습 카드와 복습할 항목 목록, 지우기 버튼.' },
+    alt: '복습 탭 예시. 틀린 문제·북마크 복습 카드와 복습할 항목 목록, 지우기 버튼.' },
   analysis: { design: [640, 804], C: AnalysisMock, areas: ['stats', 'bars', 'line', 'calendar', 'history', 'fullStats'],
-    alt: '분석 탭 예시. 맨 위에 총 학습, 평균 정확도, 연속 학습 세 칸. 가운데에 학습시간과 정확도 추이 그래프. 아래에 활동 캘린더, 회차 히스토리, 전체 통계 링크.' },
+    alt: '분석 탭 예시. 맨 위에 총 학습, 평균 정확도, 연속 학습 세 칸. 가운데에 학습 시간과 정확도 변화 그래프. 아래에 활동 캘린더, 회차 히스토리, 전체 통계 링크.' },
   profile: { design: [520, 653], C: ProfileMock, areas: ['placement', 'account', 'reset', 'a11y'],
     alt: '프로필 탭 예시. 이름과 레벨 카드. 자가진단 다시 하기, 계정 설정, 학습 초기화 메뉴. 왼쪽 아래 접근성 설정 Aa 버튼.' },
 }

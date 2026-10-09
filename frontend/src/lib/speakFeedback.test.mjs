@@ -73,7 +73,7 @@ test('서버 결과가 없거나 실패하면 화면에서 잰 값으로 보인�
 
 test("그래프 크기 안내: '작게'는 목표 구간 기준, 다른 연습은 적정선 기준", () => {
   assert.equal(volumeCurveNote(soft30, 'soft'), null)
-  assert.equal(volumeCurveNote(plain30, null), '크기 곡선이 적정선 아래로 자주 내려갔어요 → 배에 힘을 주고 더 크게.')
+  assert.equal(volumeCurveNote(plain30, null), '크기 곡선이 알맞은 선 아래로 자주 내려갔어요 → 배에 힘을 주고 더 크게.')
   const hi = { loudness: 60, ...volumeFeedback(60, 0.05, 'soft') }
   assert.match(volumeCurveNote(hi, 'soft'), /더 작게/)
   const lo = { loudness: 5, ...volumeFeedback(5, 0.05, 'soft') }

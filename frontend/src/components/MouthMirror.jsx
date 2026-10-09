@@ -100,7 +100,7 @@ export default function MouthMirror({ compareVisemeId = null, compareLabel = '' 
         <h4 className="text-sm font-bold text-gray-900">
           아바타 거울 {compareLabel ? `— ${compareLabel}` : ''}
         </h4>
-        <span className="text-[10px] text-gray-400">영상은 기기 안에서만 처리 · 저장/전송 안 함</span>
+        <span className="text-[10px] text-gray-400">영상은 기기 안에서만 처리 · 저장하거나 보내지 않음</span>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -112,7 +112,7 @@ export default function MouthMirror({ compareVisemeId = null, compareLabel = '' 
           </span>
           {!running && (
             <div className="absolute inset-0 grid place-items-center px-2 text-center text-xs text-white/70">
-              {modelStatus === 'loading' ? '모델 불러오는 중…'
+              {modelStatus === 'loading' ? '모델 가져오는 중…'
                 : modelStatus === 'error' ? modelErr
                   : camStatus === 'error' ? camErr
                     : '아래 버튼으로 시작'}

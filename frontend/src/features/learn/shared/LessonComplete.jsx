@@ -28,7 +28,7 @@ export default function LessonComplete({ track: trackId, lessonId, result: resul
 
   const stats = [
     ['정답률', accuracy != null ? `${accuracy}%` : '—', result?.total > 0 ? `${result.correct} / ${result.total}` : ''],
-    ['획득 XP', typeof result?.xpGained === 'number' ? `+${result.xpGained}` : '—', ''],
+    ['받은 XP', typeof result?.xpGained === 'number' ? `+${result.xpGained}` : '—', ''],
     ['연속 학습', `${streak}일`, ''],
   ]
 

@@ -223,7 +223,7 @@ export default function VocalTractSimulator() {
   }, [on])
 
   if (!supported) {
-    return <div className="p-3 text-sm text-gray-500 bg-gray-50 rounded-lg">이 브라우저는 오디오 합성을 지원하지 않습니다.</div>
+    return <div className="p-3 text-sm text-gray-500 bg-gray-50 rounded-lg">이 브라우저에서는 소리를 만들 수 없습니다.</div>
   }
 
   const [f1, f2] = formants(pos, round)

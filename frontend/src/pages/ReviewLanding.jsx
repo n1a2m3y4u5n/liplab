@@ -77,7 +77,7 @@ export default function ReviewLanding({ mode = 'today' }) {
                 {mistakes.map((item, index) => (
                   <article key={`${item.sentence}-${index}`} className="card max-sm:p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">오답 {String(index + 1).padStart(2, '0')}</span>
+                      <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">틀린 문장 {String(index + 1).padStart(2, '0')}</span>
                       <span className="text-xs text-gray-400">{item.situation || '문장 독화'}</span>
                     </div>
                     <p className="mt-2 text-lg font-bold leading-relaxed text-gray-900 sm:mt-4">{item.sentence}</p>
@@ -89,7 +89,7 @@ export default function ReviewLanding({ mode = 'today' }) {
           ) : (
             <div className="card text-center py-16">
               <h2 className="text-xl font-bold text-gray-900 mb-1">다시 풀 문장이 없어요</h2>
-              <p className="text-gray-500 mb-5">새로운 문장 학습을 완료하면 오답이 이곳에 모입니다.</p>
+              <p className="text-gray-500 mb-5">새로운 문장 학습을 완료하면 틀린 문장이 이곳에 모입니다.</p>
               <button type="button" onClick={() => navigate('/learn/scenario')} className="btn-primary">문장 학습으로</button>
             </div>
           )}

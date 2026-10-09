@@ -17,7 +17,7 @@ export default function TopBar() {
 
         <div className="ml-auto flex items-center gap-3 text-sm font-bold text-slate-700">
           <span title="연속 학습일">🔥 {streak}일</span>
-          <span title="레벨 · 누적 경험치">Lv.{level} · {xp.toLocaleString()} XP</span>
+          <span title="레벨 · 모은 경험치">Lv.{level} · {xp.toLocaleString()} XP</span>
           {/* 캐릭터 미니 위젯 자리 — 디자인 확정 후 실제 캐릭터로 교체 */}
           <span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-full bg-sky-100">🙂</span>
         </div>

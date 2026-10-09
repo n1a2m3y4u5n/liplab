@@ -215,7 +215,7 @@ export default function SignPanel({ text, variant = 'default' }) {
                   </p>
                 ) : (
                   <p className="text-[11px] text-amber-600 mb-0.5">
-                    ‘{token.word}’은 사전에 없어 근접 수어 ‘{token.signed_as}’로 표시합니다.
+                    ‘{token.word}’은 사전에 없어 비슷한 수어 ‘{token.signed_as}’로 표시합니다.
                   </p>
                 )
               )}
@@ -234,7 +234,7 @@ export default function SignPanel({ text, variant = 'default' }) {
         {showMouth && (
           <div className="md:col-span-2">
             <p className="text-xs text-gray-500 mb-1">입모양</p>
-            <Suspense fallback={<div className="py-10 text-center text-xs text-gray-400">입모양 불러오는 중…</div>}>
+            <Suspense fallback={<div className="py-10 text-center text-xs text-gray-400">입모양 가져오는 중…</div>}>
               <LipSyncPlayer3D visemes={token.visemes || []} isPlaying={false} />
             </Suspense>
           </div>
@@ -385,7 +385,7 @@ function SplitView({ single = false, text, loading, error, result, tokens, token
           {token.type === 'sign' && token.signed_as && (
             /^[\d.,]+$/.test(String(token.word))
               ? <p className="text-[12px] leading-relaxed text-ink-muted">숫자 ‘{token.word}’ → 수어 ‘{token.signed_as}’</p>
-              : <p className="text-[12px] leading-relaxed text-warn-text">‘{token.word}’은 사전에 없어 근접 수어 ‘{token.signed_as}’로 표시합니다.</p>
+              : <p className="text-[12px] leading-relaxed text-warn-text">‘{token.word}’은 사전에 없어 비슷한 수어 ‘{token.signed_as}’로 표시합니다.</p>
           )}
         </>
       )}

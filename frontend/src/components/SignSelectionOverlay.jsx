@@ -110,7 +110,7 @@ export default function SignSelectionOverlay() {
               </button>
             </div>
             <div className="p-5">
-              <Suspense fallback={<div className="py-14 text-center text-gray-500 text-sm">불러오는 중…</div>}>
+              <Suspense fallback={<div className="py-14 text-center text-gray-500 text-sm">가져오는 중…</div>}>
                 <SignPanel text={modalText} />
               </Suspense>
             </div>
