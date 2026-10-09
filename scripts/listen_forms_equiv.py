@@ -38,25 +38,50 @@ TARGET = 0.25        # 교체 뒤 예측 차이 목표(dB)
 MAX_REPLACE = 4      # 회차마다 폼 하나에서 바꾸는 자리 수 상한(결함 문장 포함)
 N_SPARE = 2          # 합성 실패에 대비해 함께 합성하는 다음 순위 자리 수
 MIN_POSITIONS = 16   # 한 칸(소음 × 청취자)에서 네 폼 모두 SRT40이 정해진 자리가 이보다 적으면 그 칸은 판정 불가
-ROUND_REPS = {0: (0, 1, 2), 1: (3, 4, 5), 2: (6, 7, 8)}
+ROUND_REPS = {0: (0, 1, 2), 1: (3, 4, 5), 2: (6, 7, 8),
+              # 10/9 일반화 검사 낱말 오염 교체(docs/listen-forms-clean-2026-10.md): 3회차는 교체 뒤 C·D 전부, 4·5회차는 그 뒤 3.3절 교체
+              3: (9, 10, 11), 4: (12, 13, 14), 5: (15, 16, 17)}
 
 # 예비 문장(문서 2.3절). 자리마다 C용 하나, D용 하나. 같은 자리의 C·D 문장과 구조·어절 수가 같고, 훈련 문장·대화·앱 문장·
 # P3 문장·네 폼·다른 예비 문장과 유사도 점검(build_pilot_manifest.similarity_reasons)에 걸리지 않는다. 그 폼의 다른 자리 문장과
 # 내용어가 겹치지 않게 골랐다. 측정 전에 정해 커밋했고 결과를 보고 바꾸지 않는다. None은 이미 쓴 예비 문장이다(D01: 합성 단계에서
 # '방석 밑에 반지가 있어요'가 모든 후보에서 '방송'으로 들려 통과 후보가 없어, 측정 전에 이 자리 예비 '가방 속에 휴지가 있어요'로 바꿨다.
 # 문서 5.1절 사후 변경 1). D10: 1회차 교체(결함 문장, 정상 모의가 조용한 곳에서 '주웠어요'를 '주었어요'로 받아씀, 5.3절). D02·D04·D12·D15: 2회차 교체(1회차 판정 babble 벗어남, 5.4절).
+# C03·C09·D09: 10/9 일반화 검사 낱말(컵·이모·오빠) 오염 교체(docs/listen-forms-clean-2026-10.md). C03 1차 예비 '상처에 약을 발라 주세요'는
+# m3 합성 통과 후보가 없어(전사 '상처의') 2차 예비 '병에 꿀을 채워 주세요'를 썼다(RESERVE_B의 None은 쓴 것).
 RESERVE = {
-    "C": ["필통 안에 지우개가 있어요.", "방금 창문을 닫고 왔어요.", "상처에 약을 발라 주세요.", "이 건물은 십 층이에요.",
+    "C": ["필통 안에 지우개가 있어요.", "방금 창문을 닫고 왔어요.", None, "이 건물은 십 층이에요.",
           "선생님이 숙제를 내셨어요.", "요즘 감기가 많이 돌아요.", "공책을 가방에 챙겨 주세요.", "운동장을 육 분 뛰었어요.",
-          "막내는 그네를 잘 타요.", "과일을 시장에서 골랐어요.", "약국 앞에서 줄을 서요.", "칼이 날카로우니 조심해서 쓰세요.",
+          None, "과일을 시장에서 골랐어요.", "약국 앞에서 줄을 서요.", "칼이 날카로우니 조심해서 쓰세요.",
           "소설을 앞부분만 읽었어요.", "사장님이 새 식당을 열었어요.", "방학에 캠핑하러 가요.", "다람쥐가 나무 위에 올라갔어요.",
           "아주머니는 떡을 파세요.", "피자를 세 조각 먹었어요.", "밤에는 거리가 조용해요.", "인형을 선반 위에 놓아요."],
     "D": [None, None, "국에 소금을 쳐 주세요.", None,
           "아기가 장난감을 던졌어요.", "오늘따라 기침이 많이 나요.", "단추를 옷에 달아 주세요.", "음악을 구 분 들었어요.",
-          "짝꿍은 한자를 잘 읽어요.", None, "식당 앞에서 메뉴를 봐요.", None,
+          None, None, "식당 앞에서 메뉴를 봐요.", None,
           "청소를 거실만 했어요.", "동네에 새 빵집이 생겼어요.", None, "풍선이 지붕 위에 걸렸어요.",
           "아저씨는 화분을 가꾸세요.", "양파를 두 개 썰었어요.", "아침에는 공기가 맑아요.", "사진을 액자 안에 끼워요."],
 }
+
+
+# 2차 예비 문장(docs/listen-forms-clean-2026-10.md 3절, 10/9 측정 전에 정함). 일반화 검사 낱말(GEN_WORDS와 교체 후보)이 든 자리의
+# 1차 예비를 쓴 뒤, 그 1차 예비가 합성 통과 후보를 못 얻거나 결함 문장(3.3절)이면 쓴다. D18은 1차 예비 '양파를 두 개 썰었어요'가
+# 검사 낱말 '양파'를 담아 쓸 수 없으므로 교체가 필요하면 이 2차 예비를 쓴다. 2.1절 작성 규칙과 겹침 금지를 같은 점검(check)으로 본다.
+RESERVE_B = {
+    "C": {2: None, 8: "조카는 피리를 잘 불어요."},
+    "D": {8: "딸은 퍼즐을 잘 맞춰요.", 17: "만두를 열 개 빚었어요."},
+}
+
+
+def reserve_for(form, pos, used_b=()):
+    """자리의 쓸 수 있는 예비 문장: 1차 예비가 남아 있고 일반화 검사 낱말이 없으면 그것, 아니면 쓰지 않은 2차 예비, 없으면 None."""
+    import listen_curriculum as L
+    r = RESERVE[form][pos]
+    if r is not None and not L.gen_words_in(r):
+        return r
+    b = RESERVE_B.get(form, {}).get(pos)
+    if b is not None and (form, pos) not in set(used_b) and not L.gen_words_in(b):
+        return b
+    return None
 
 
 def base_items():
@@ -98,8 +123,17 @@ def cmd_check(a):
         list(B.training_sentences()) + p3
     sets = {f: L.TEST_FORMS[f] for f in FORMS}
     sets.update({f"{f}R": RESERVE[f] for f in RESERVE})
+    sets.update({f"{f}R2": [RESERVE_B[f].get(i) for i in range(20)] for f in RESERVE_B})
     names = list(sets)
     bad = []
+    # 일반화 검사 낱말(GEN_WORDS와 교체 후보)은 네 폼 어느 문장에도 없어야 한다(A·B 포함). 예비 문장에 든 것은 쓸 수 없음으로만 적는다
+    for f in names:
+        for i, s in enumerate(sets[f]):
+            g = L.gen_words_in(s) if s else []
+            if g and f in FORMS:
+                bad.append((f, i + 1, s, f"일반화 검사 낱말 {g}"))
+            elif g:
+                print("CHECK_UNUSABLE", f, i + 1, s, g)
     for f in names:
         assert len(sets[f]) == 20, f
         for i, s in enumerate(sets[f]):
@@ -327,8 +361,19 @@ def judge(by, quiet, spec, B=10000):
     return {"cells": cells, "verdict": verdict, "defects": defects, "pass": bool(ok), "vals": vals}
 
 
-def plan_replacements(res, spec, used):
-    """사전 규칙(문서 3.3절)으로 교체할 자리를 고른다. used: 이미 예비 문장을 쓴 (폼, 자리) 집합."""
+def plan_replacements(res, spec, used, used_b=()):
+    """사전 규칙(문서 3.3절)으로 교체할 자리를 고른다. used: 이미 예비 문장을 쓴 (폼, 자리) 집합, used_b: 2차 예비를 쓴 자리.
+    결함 문장은 그 자리를 이미 바꿨어도 2차 예비가 남았으면 그것으로 바꾼다(docs/listen-forms-clean-2026-10.md 3절). 난이도 순위로 고르는
+    자리는 이미 바꾼 자리를 건너뛴다(10/7 3.3절 4항). 예비는 reserve_for(일반화 검사 낱말이 든 예비는 쓰지 않음)로 정한다."""
+    used_b = set(used_b)
+
+    def pick(f, p, defect=False):
+        if (f, p) not in used:
+            return reserve_for(f, p, used_b)
+        if defect and (f, p) not in used_b:
+            b = RESERVE_B.get(f, {}).get(p)
+            return b if b is not None else None
+        return None
     cells, verdict, vals = res["cells"], res["verdict"], res["vals"]
     out = {}
     # 폼마다 고칠 칸(잡음)과 방향 s. C−D만 벗어나면 talker2에서 AB와 더 먼 폼 하나를 C−D를 줄이는 방향으로
@@ -348,7 +393,8 @@ def plan_replacements(res, spec, used):
         dfx = [d["pos"] - 1 for sid, d in res["defects"].items() if d["form"] == f]
         if not todo[f] and not dfx:
             continue
-        chosen = [p for p in dfx if (f, p) not in used and RESERVE[f][p] is not None][:MAX_REPLACE]
+        chosen = [p for p in dfx if pick(f, p, defect=True) is not None][:MAX_REPLACE]
+        new_text = {p: pick(f, p, defect=True) for p in chosen}
         score = {}
         for p in range(20):
             terms = []
@@ -359,8 +405,7 @@ def plan_replacements(res, spec, used):
                         terms.append(s * (x - (a_ + b_) / 2))
             score[p] = float(np.mean(terms)) if terms else None
         ranked = [p for p in sorted(score, key=lambda p: -(score[p] if score[p] is not None else -1e9))
-                  if score[p] is not None and score[p] > 0 and p not in chosen and (f, p) not in used
-                  and RESERVE[f][p] is not None]
+                  if score[p] is not None and score[p] > 0 and p not in chosen and pick(f, p) is not None]
 
         def predicted(sel):
             pr = {}
@@ -386,12 +431,14 @@ def plan_replacements(res, spec, used):
             return pr
         pred = predicted(chosen)
         while todo[f] and ranked and len(chosen) < MAX_REPLACE and any(abs(v) > TARGET for v in pred.values()):
-            chosen.append(ranked.pop(0))
+            p_ = ranked.pop(0)
+            chosen.append(p_)
+            new_text[p_] = pick(f, p_)
             pred = predicted(chosen)
         spares = ranked[:N_SPARE]
         out[f] = {"fix": todo[f], "pair_only": pair_only, "defects": [p + 1 for p in dfx],
-                  "replace": [{"pos": p + 1, "old": None, "new": RESERVE[f][p], "score": score.get(p)} for p in chosen],
-                  "spares": [{"pos": p + 1, "new": RESERVE[f][p], "score": score.get(p)} for p in spares],
+                  "replace": [{"pos": p + 1, "old": None, "new": new_text[p], "score": score.get(p)} for p in chosen],
+                  "spares": [{"pos": p + 1, "new": pick(f, p), "score": score.get(p)} for p in spares],
                   "predicted": pred}
     return out
 
@@ -401,7 +448,8 @@ def cmd_judge(a):
     by, quiet = _load(a.work)
     res = judge(by, quiet, spec, B=a.boot)
     used = {tuple(u) for u in spec.get("used", [])}
-    res["plan"] = None if res["pass"] else plan_replacements(res, spec, used)
+    used_b = {tuple(u) for u in spec.get("used_b", [])}
+    res["plan"] = None if res["pass"] else plan_replacements(res, spec, used, used_b)
     vals = res.pop("vals")
     res["spec"] = spec
     res["quiet_nh"] = {sid: list(quiet[(sid, "nh")][:2]) for f in ("C", "D") for sid in spec[f]["sids"] if (sid, "nh") in quiet}

@@ -5989,8 +5989,9 @@ def _listen_test_trials(rows: list) -> list:
 
 
 def _listen_test_state(tests: list) -> dict:
-    """검사 회차들 → [{session, form, noise, sim, n, n_practice, srt_db, started_at}] 시간순. n은 검사 문장 수(연습 문장 제외).
-    form은 첫 검사 문장 키의 폼(A~D)이고, 연습 문장만 답한 회차는 None이다(예전에는 'A'로 적어 talker2 회차도 A로 보였다)."""
+    """검사 회차들 → [{session, form, form_version, noise, sim, n, n_practice, srt_db, started_at}] 시간순. n은 검사 문장 수(연습 문장 제외).
+    form은 첫 검사 문장 키의 폼(A~D)이고, 연습 문장만 답한 회차는 None이다(예전에는 'A'로 적어 talker2 회차도 A로 보였다).
+    form_version은 회차가 쓴 폼 판본(예: 'C2', listen_curriculum.test_form_version). 판본이 다른 두 회차는 바뀐 자리 문장이 다르다."""
     by = {}
     for r in tests:
         s = by.setdefault(r.session, {"session": r.session, "form": None, "rows": [], "n_practice": 0,
@@ -6004,7 +6005,8 @@ def _listen_test_state(tests: list) -> dict:
     out = []
     for s in by.values():
         trials = _listen_test_trials(s["rows"])
-        out.append({"session": s["session"], "form": s["form"], "noise": s["noise"], "sim": s["sim"],
+        out.append({"session": s["session"], "form": s["form"], "form_version": _listencur.test_form_version(s["form"], s["session"]),
+                    "noise": s["noise"], "sim": s["sim"],
                     "n": len(trials) - s["n_practice"], "n_practice": s["n_practice"], "rule": _listencur.test_rule(s["session"]),
                     "srt_db": _listencur.test_srt(trials, n_practice=s["n_practice"]), "started_at": s["started_at"]})
     return out
@@ -6467,11 +6469,14 @@ async def listen_test_start(req: ListenTestStart, current_user=Depends(get_curre
     # 같은 폼이 나와 이미 들은 문장이 섞였다(코드 리뷰 10/7). 잡음 종류마다 따로 번갈아 쓴다
     form = _listencur.test_form_for(current_user.id, sum(1 for t in states if t["n"] > 0), noise=noise,
                                     heldout_ready=noise == "babble" or _listen_heldout_ready())
-    session = f"{_listencur.TEST_HALF_PREFIX}{uuid.uuid4().hex[:12]}"   # 새 회차는 절반 규칙(10/9)
+    # 새 회차는 절반 규칙(10/9)과 지금 폼 판(판 2, 10/9) 표식을 id에 담는다. 답 채점은 회차의 판으로 정답 문장을 고른다
+    session = _listencur.test_session_id(uuid.uuid4().hex[:12])
     practice = _listencur.test_practice_items(session)
     items = [{"key": it["key"], "text": it["text"], "practice": True} for it in practice] + \
-        [{"key": f"test:{form}{i + 1:02d}", "text": s, "practice": False} for i, s in enumerate(_listencur.TEST_FORMS[form])]
-    return {"session": session, "form": form, "noise": noise, "items": items, "n_practice": len(practice),
+        [{"key": f"test:{form}{i + 1:02d}", "text": s, "practice": False}
+         for i, s in enumerate(_listencur.test_form_sentences(form, session))]
+    return {"session": session, "form": form, "form_version": _listencur.test_form_version(form, session), "noise": noise,
+            "items": items, "n_practice": len(practice),
             "start_db": _listencur.TEST_STAIR["start"], "n_done_tests": len(tests)}
 
 
@@ -6530,7 +6535,7 @@ async def listen_test_answer(req: ListenTestAnswer, current_user=Depends(get_cur
         first_test = next((r for r in rows if not _is_test_practice(r)), None)
         if first_test is not None and first_test.item_key[5:6] != form:
             raise HTTPException(status_code=400, detail="회차의 폼과 다릅니다.")
-        target = _listencur.TEST_FORMS[form][int(idx) - 1]
+        target = _listencur.test_form_sentences(form, req.session)[int(idx) - 1]   # 회차의 폼 판으로(판 표식 없는 회차는 판 1)
     noise = (rows[0].noise if rows and rows[0].noise else None) or (req.noise if req.noise in _listencur.TEST_NOISES else "babble")
     trials = _listen_test_trials(rows)
     n_prac = sum(1 for r in rows if _is_test_practice(r))
