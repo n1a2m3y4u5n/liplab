@@ -251,3 +251,16 @@ m3는 검사 전용이라 피할 수 없다. 낱말을 바꾸거나 m3 클립을
 
 청인 팀원의 판단이다. 보청기·인공와우 사용자가 같은 소리를 같게 듣는다는 근거가 아니다. 청취자가 3~5명이면 p의 신뢰구간이 넓다
 (3명 모두 맞혀도 이항 95% 구간 하한 0.29). 그래서 사람 통과는 '피할 근거가 없음'으로만 해석한다.
+
+### 10.4 청취 페이지(2026-10-09 만듦, 청취 자료는 아직 없음)
+
+- `python3 scripts/listen_blind_check.py build --out ~/Downloads/liplab-lab/data/listen_blind_check.html --extra ~/Downloads/liplab-lab/data/listen_blind_check_extra.json`.
+  문항 305개(가 129 · 나 37 · 다 129 · 라 4 · 교체 후보 rb 6), 2.2 MB, 정답 열쇠 `listen_blind_check_key.json`(페이지 밖). (다)는 소리 점검 미해결 한 음절 가운데
+  듣기 글이 아니어서 m2·f2 클립이 없는 10개 (목소리, 글)을 뺐다(있는 목소리만 낸다). 교체 후보 rb는 `docs/listen-gen-replace-2026-10.md` 7절의 여섯 클립이다.
+- 쓰는 법: 페이지 파일 하나를 팀원에게 보낸다(인터넷 없이 열린다). 이름을 넣고 시작, 소리는 두 번까지, '잘 모르겠어요' 가능, 중간에 '잠시 멈추고 지금까지 받기'로
+  CSV를 받고 같은 이름으로 이어서 한다. 끝나면 CSV를 담당자에게 보낸다. 약 25분.
+- 판정: `python3 scripts/listen_blind_check.py analyze 소리판정_*.csv --key ~/Downloads/liplab-lab/data/listen_blind_check_key.json --out 결과.json`.
+  가짜 청취자 CSV로 확인한 동작: 무작위로 고르는 청취자와 80% 미만만 답한 청취자는 빠지고, 심어 둔 실패(경쟁 글로 들림 20개, '짜' → '자', m3 '마늘' → '마을')를
+  모두 '실패'로 찾았다. 청취자가 3명 미만으로 남으면 모든 문항이 '판정 불가'다.
+- 소리 없이 점검: 주소에 `?mute=1`(또는 `localStorage.liplab_mute = '1'`)이면 재생하지 않고 들은 것처럼 진행한다. 이 상태로 브라우저에서 시작·재생·고르기·이어 하기를
+  확인했다(재생 호출 0회).
