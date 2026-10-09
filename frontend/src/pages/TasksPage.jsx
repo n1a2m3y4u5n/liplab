@@ -140,7 +140,7 @@ function BadgeDetailModal({ badge, onClose }) {
             <span className="rounded-full border-[1.5px] border-white/[0.22] bg-white/[0.12] px-[18px] py-[9px] leading-figma">
               <span className="text-[15px] text-white">전체 사용자 중 </span>
               <span className="text-[18px] font-bold text-chart-onDark">{badge.percent}%</span>
-              <span className="text-[15px] text-white">가 획득했어요</span>
+              <span className="text-[15px] text-white">가 받았어요</span>
             </span>
           )}
         </div>
@@ -227,7 +227,7 @@ export default function TasksPage() {
               unit={t.unit || (listen ? '분' : '')} onClick={open} onClaim={() => claim().catch(() => {})} />
           )
         })}
-        {!tasks && <p className="py-3 text-center text-[13px] text-ink-muted">과제를 불러오는 중…</p>}
+        {!tasks && <p className="py-3 text-center text-[13px] text-ink-muted">과제를 가져오는 중…</p>}
       </section>
 
       {/* 이번 주 도전 (141:18 / 238:285) — 워터마크 DOKA(306:32 / 306:39, -20°, 잘림) */}
@@ -255,7 +255,7 @@ export default function TasksPage() {
       <section className="hidden w-full flex-col gap-[18px] rounded-18 border-2 border-line bg-white p-5 lg:flex lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
         <div className="flex items-center justify-between font-bold leading-figma">
           <p className="text-[17px] text-ink">배지</p>
-          <span className="text-[13px] text-ink-muted">{earned} / {badges.length}개 획득</span>
+          <span className="text-[13px] text-ink-muted">{earned} / {badges.length}개 받음</span>
         </div>
         <div className="grid grid-cols-4 gap-x-3 gap-y-[18px] sm:grid-cols-6">
           {badges.map((b) => <Badge key={b.key} b={b} onSelect={setSelectedBadge} />)}

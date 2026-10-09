@@ -6,7 +6,7 @@
   python scripts/easy_korean_rebase.py /tmp/ek.json           # 기준별 통과율, 유형별 통과율, 바꿀 후보의 효과
   python scripts/easy_korean_rebase.py /tmp/ek.json --md      # 문서에 넣는 표(마크다운)
 
-용어 결정표 초안은 scripts/data/easy_korean_termbook_draft.json이다(사용자 결정 전 초안).
+낱말 결정표는 scripts/data/easy_korean_termbook.json이다(2026-10-09 확정, 갈래 tech는 바꾸거나 숨길 기술어라 쉬운 말로 치지 않는다).
 기준(누적):
   R0  지금 감사(A·B만 쉬운 말, 문자열마다 어려운 말 ≤ 10%, 한 문장 30음절 이하)
   R1  R0 + 측정 오류 고침(명사형 -기, 분석기가 자른 조각)
@@ -15,6 +15,11 @@
   R4  R3 + 앱이 가르치는 핵심 용어 허용(결정표 taught, 처음 나올 때 풀이가 조건)
   P   R4를 문자열 유형별로: 이름표(버튼·탭·제목)는 어려운 말 0개, 문장형은 ≤ 10%와 30음절
   P+swap  P에서 바꿀 후보(결정표 swap)를 모두 쉬운 대안으로 바꿨다고 칠 때
+
+세 층 판정(layers, 2026-10-09 채택, docs/easy-korean-rebase-2026-10.md 7절):
+  낱말    결정 안 된 낱말(A·B·C도 아니고 결정표 어느 갈래에도 없는 낱말) 0개
+  이름표  이름표 문자열 가운데 어려운 말(결정 안 된 낱말·swap·tech)이 0개인 비율 ≥ 95%
+  문장형  화면(파일)마다 문장형 문자열의 쉬운 말 덮기 ≥ 95%인 파일 비율 ≥ 90%, 30음절 이하 문장형 문자열 ≥ 95%
 """
 import argparse
 import json
@@ -24,7 +29,9 @@ from collections import Counter
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 VOCAB_TSV = os.path.join(_HERE, "data", "nikl_learner_vocab.tsv")
-TERMBOOK = os.path.join(_HERE, "data", "easy_korean_termbook_draft.json")
+TERMBOOK = os.path.join(_HERE, "data", "easy_korean_termbook.json")
+COVER = 0.95          # 문장형: 화면(파일) 단위 쉬운 말 덮기 비율
+LAYER_TARGET = {"labels": 0.95, "files_ge95": 0.90, "sentences_len_ok": 0.95}
 MAX_HARD = 0.10
 _END = re.compile(r"(요|다|까|죠|니다|세요|어|아|해|지|네|자|라|래|게|군)$")
 _TAIL = re.compile(r"[\s.!?…·:)\]」』'\"○→~\-0-9A-Za-z%()]+$")
@@ -85,6 +92,37 @@ def evaluate(items, grade, tb):
     return rows, hard_under, ok_typed
 
 
+def layers(items, grade, tb):
+    """세 층 판정. 감사 스크립트(easy_korean_audit.py)도 이 함수를 부른다."""
+    _rows, hard_under, _ok = evaluate(items, grade, tb)
+    decided = set(tb["swap"]) | set(tb.get("tech", {})) | set(tb.get("applied", {}))
+    undecided = Counter(w for it in items for w in set(hard_under(it, 4)) if w not in decided)
+    lab = [it for it in items if is_label(it)]
+    sen = [it for it in items if not is_label(it)]
+    lab_ok = sum(not hard_under(it, 4) for it in lab)
+    per = {}
+    for it in sen:
+        if not it["n_words"]:
+            continue
+        h = len(hard_under(it, 4))
+        a_, b_ = per.get(it["file"], (0, 0))
+        per[it["file"]] = (a_ + it["n_words"] - h, b_ + it["n_words"])
+    ge = sum(1 for a_, b_ in per.values() if a_ / b_ >= COVER)
+    tot = sum(b_ for _, b_ in per.values())
+    out = {
+        "undecided_types": len(undecided), "undecided": undecided.most_common(),
+        "labels": round(lab_ok / len(lab), 4) if lab else 0.0, "n_labels": len(lab),
+        "files_ge95": round(ge / len(per), 4) if per else 0.0, "n_files": len(per),
+        "coverage_overall": round(sum(a_ for a_, _ in per.values()) / tot, 4) if tot else 0.0,
+        "sentences_len_ok": round(sum(1 for it in sen if it["len_ok"]) / len(sen), 4) if sen else 0.0, "n_sentences": len(sen),
+        "low_files": sorted(((f, round(a_ / b_, 3)) for f, (a_, b_) in per.items() if a_ / b_ < COVER), key=lambda x: x[1])[:30],
+    }
+    out["pass"] = {"words": out["undecided_types"] == 0, "labels": out["labels"] >= LAYER_TARGET["labels"],
+                   "files_ge95": out["files_ge95"] >= LAYER_TARGET["files_ge95"],
+                   "sentences_len_ok": out["sentences_len_ok"] >= LAYER_TARGET["sentences_len_ok"]}
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("audit_json")
@@ -136,7 +174,8 @@ def main():
     out["sentences_le1_R4_swap"] = round(sum(1 for i in sen_idx if items[i]["len_ok"]
                                              and len(hard_under(items[i], 4, swapped=True)) <= 1) / len(sen_idx), 4)
     # 미결 낱말: P에서도 어려운 말로 남는 낱말(결정표에 없는 목록 밖 낱말)
-    left = Counter(w for it in items for w in set(hard_under(it, 4)) if w not in tb["swap"])
+    decided = set(tb["swap"]) | set(tb.get("tech", {})) | set(tb.get("applied", {}))
+    left = Counter(w for it in items for w in set(hard_under(it, 4)) if w not in decided)
     out["undecided_types"] = len(left)
     out["undecided_top"] = left.most_common(40)
     # 바꿀 후보마다: P에서 그 낱말 하나만 바꿨다고 칠 때 통과로 바뀌는 문자열 수
@@ -155,6 +194,7 @@ def main():
     # P+swap에서도 실패하는 이유
     fail_len = sum(1 for i, it in enumerate(items) if not rows["P+swap"][i] and not it["len_ok"])
     out["p_swap_fail"] = {"total": sum(not x for x in rows["P+swap"]), "length": fail_len}
+    out["layers"] = {k: v for k, v in layers(items, grade, tb).items() if k != "undecided"}
     if a.md:
         print("| 기준 | 전체 | 서로 다른 글 | 이름표 | 문장형 |\n|---|--:|--:|--:|--:|")
         for k, r in out["rates"].items():

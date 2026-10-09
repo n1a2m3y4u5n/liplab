@@ -59,7 +59,7 @@ export default function ErrorScreen({ kind = 'error', onRetry, onHome, children 
  * 예전에는 안내 글자만 있어 돌아갈 길이 없었다. 배경·글자는 예전 안내 그대로, 버튼은 복습 빈 화면(Review)과 같은 크기다.
  * onExit은 그 화면의 나가기 X와 같은 곳으로 보낸다.
  */
-export function LoadFailed({ message = '불러오지 못했어요.', onRetry, onExit }) {
+export function LoadFailed({ message = '가져오지 못했어요.', onRetry, onExit }) {
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-page px-6 text-center">
       <p role="alert" className="text-[15px] text-ink-muted">{message}</p>

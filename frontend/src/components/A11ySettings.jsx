@@ -124,10 +124,10 @@ export default function A11ySettings() {
           {/* 개인정보 열람·삭제권(§4.9) — 공용 데모 계정에는 노출하지 않음(방문자 간 데이터 격리) */}
           {!isDemo && (
           <div className="mt-3 border-t border-gray-100 pt-2.5">
-            <p className="mb-1.5 text-xs font-semibold text-gray-500">내 데이터</p>
+            <p className="mb-1.5 text-xs font-semibold text-gray-500">내 기록</p>
             <button type="button" onClick={exportData}
               className="mb-1.5 flex w-full items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50">
-              내 학습 데이터 내려받기 <span className="text-[11px] text-gray-400">(JSON)</span>
+              내 학습 기록 내려받기 <span className="text-[11px] text-gray-400">(JSON)</span>
             </button>
             <button type="button" onClick={deleteAccount}
               className="flex w-full items-center gap-2 rounded-lg border border-rose-200 px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50">

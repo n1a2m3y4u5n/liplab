@@ -87,7 +87,7 @@ const LINE_TONE = {
 }
 function LineChart({ series, max = 1, fmt = (v) => `${Math.round(v * 100)}%`, tone = 'accuracy' }) {
   const t = LINE_TONE[tone] || LINE_TONE.accuracy
-  if (!series || series.length === 0) return <EmptyLine>데이터가 쌓이면 학습곡선이 표시됩니다.</EmptyLine>
+  if (!series || series.length === 0) return <EmptyLine>기록이 쌓이면 학습곡선이 표시됩니다.</EmptyLine>
   const W = 520, H = 140, PL = 34, PR = 12, PT = 12, PB = 22
   const n = series.length
   const x = (i) => PL + (n === 1 ? (W - PL - PR) / 2 : (i * (W - PL - PR)) / (n - 1))
@@ -276,7 +276,7 @@ export default function EvalReport() {
         {loading ? (
           <LoadingScreen variant="inline" />
         ) : !data ? (
-          <div className="rounded-18 border-2 border-line bg-white py-16 text-center text-sm text-ink-muted">리포트를 불러오지 못했습니다.</div>
+          <div className="rounded-18 border-2 border-line bg-white py-16 text-center text-sm text-ink-muted">리포트를 가져오지 못했습니다.</div>
         ) : noData ? (
           <div className="rounded-18 border-2 border-line bg-white px-5 py-16 text-center text-sm text-ink-muted">
             아직 학습 기록이 없습니다. 입모양 인지·단어·문장 연습을 진행하면 학습곡선과 향상도가 여기에 표시됩니다.
@@ -456,7 +456,7 @@ export default function EvalReport() {
             </Card>
 
             <div className="grid gap-5 md:grid-cols-2">
-              <Card title="같은 입모양 혼동 비율" hint="오답 중 시각적으로 같은 입모양">
+              <Card title="같은 입모양 혼동 비율" hint="틀린 답 중 시각적으로 같은 입모양">
                 {data.same_viseme_ratio != null ? (
                   <div className="flex items-center gap-4">
                     <p className="text-3xl font-bold text-bad">{Math.round(data.same_viseme_ratio * 100)}%</p>
@@ -465,10 +465,10 @@ export default function EvalReport() {
                       어려운 부분이에요. 이 비율이 높으면 소리나 문맥 같은 다른 단서를 함께 써야 해요.
                     </p>
                   </div>
-                ) : <EmptyLine>혼동 데이터가 쌓이면 표시됩니다.</EmptyLine>}
+                ) : <EmptyLine>혼동 기록이 쌓이면 표시됩니다.</EmptyLine>}
               </Card>
 
-              <Card title="문장 점수 추이" hint="시간순 구간별 · 문장 난이도 차이 보정">
+              <Card title="문장 점수 변화" hint="시간순 구간별 · 문장 난이도 차이 보정">
                 <LineChart series={data.sentence_trend} max={100} fmt={(v) => `${Math.round(v)}`} tone="score" />
                 {/* 답 방식별: 4지선다는 찍어도 25%가 맞고 100 또는 0점이라, 직접 입력(부분 점수)과 섞으면 어느 쪽 실력인지 알 수 없다 */}
                 {data.sentence_by_mode?.length > 0 && (

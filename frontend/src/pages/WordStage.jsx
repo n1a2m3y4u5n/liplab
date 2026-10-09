@@ -72,7 +72,7 @@ function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, homeLabel = 
           <p className={`${STAT_VALUE} text-primary-700`}>{accuracy}%</p>
         </WatermarkCard>
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-xp.svg', size: 157.945, top: -76, right: -71.44 }}>
-          <p className={STAT_LABEL}>획득 XP</p>
+          <p className={STAT_LABEL}>받은 XP</p>
           <p className={`${STAT_VALUE} text-warn-text`}>+{xp}</p>
         </WatermarkCard>
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-clock.svg', size: 115.2, top: -45.83, right: -43.82 }}>
@@ -376,7 +376,7 @@ function WordQuiz({ data, reload }) {
                   {v === 2 ? '2x·실제' : `${v}x`}
                 </button>
               ))}
-              {speedLevels.length < 3 && <span className="text-ink-faint">다음 속도: 지금 가장 빠른 속도에서 12문항 중 10개</span>}
+              {speedLevels.length < 3 && <span className="text-ink-faint">다음 속도: 지금 가장 빠른 속도에서 12문제 중 10개</span>}
             </div>
           )}
 
@@ -412,7 +412,7 @@ function WordQuiz({ data, reload }) {
                   <div className="rounded-16 border-2 border-warn/40 bg-warn-tint p-4 text-[13px] leading-snug text-warn-text">
                     <p className="text-xs font-bold">입모양은 맞았어요</p>
                     <p className="mt-1"><ShortText key={q.target} short={learner.shortHints}
-                      text={`「${result.chosen}」와 「${q.target}」는 입모양이 똑같아요. 입만 보고는 가를 수 없는 차이라 오답으로 보지 않고 절반만 인정해요. 실제 대화에서는 앞뒤 문맥으로 가려요.`} /></p>
+                      text={`「${result.chosen}」와 「${q.target}」는 입모양이 똑같아요. 입만 보고는 가를 수 없는 차이라 틀린 답으로 보지 않고 절반만 인정해요. 실제 대화에서는 앞뒤 문맥으로 가려요.`} /></p>
                   </div>
                 )}
                 {!result.correct && result.verdict !== 'homophene' && result.confusions?.length > 0 && (
@@ -430,9 +430,9 @@ function WordQuiz({ data, reload }) {
                 )}
                 {isContext && (
                   <div className="rounded-16 border-2 border-line bg-white p-4 text-[13px] leading-snug text-ink-muted">
-                    <p className="text-xs font-bold text-ink">문장으로 고르는 문항이에요</p>
+                    <p className="text-xs font-bold text-ink">문장으로 고르는 문제예요</p>
                     <p className="mt-1"><ShortText key={q.target} short={learner.shortHints}
-                      text="보기는 모두 입모양이 비슷해서 눈만으로는 고르기 어려워요. 앞뒤 말의 흐름으로 고르는 연습이에요. 이 문항은 단어 단계 숙달에는 들어가지 않아요." /></p>
+                      text="보기는 모두 입모양이 비슷해서 눈만으로는 고르기 어려워요. 앞뒤 말의 흐름으로 고르는 연습이에요. 이 문제는 단어 단계 숙달에는 들어가지 않아요." /></p>
                     {q.item.hint && <p className="mt-1">힌트: {q.item.hint}</p>}
                   </div>
                 )}
@@ -512,7 +512,7 @@ function WordQuiz({ data, reload }) {
                 <ModalClose onClose={() => setSignOpen(false)} />
               </div>
               <div className="p-5">
-                <Suspense fallback={<div className="py-10 text-center text-sm text-ink-faint">불러오는 중…</div>}>
+                <Suspense fallback={<div className="py-10 text-center text-sm text-ink-faint">가져오는 중…</div>}>
                   <SignPanel text={q.target} />
                 </Suspense>
               </div>

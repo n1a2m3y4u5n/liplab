@@ -13,7 +13,7 @@ export default function AppLayout() {
     <div className="app-shell">
       <TopBar />
       <NavShell />
-      <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>불러오는 중…</div>}>
+      <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>가져오는 중…</div>}>
         <Outlet />
       </Suspense>
     </div>

@@ -58,7 +58,7 @@ export default function ReviewSection() {
       </p>
 
       {!data ? (
-        <div className="py-4 text-center text-xs text-gray-400">불러오는 중...</div>
+        <div className="py-4 text-center text-xs text-gray-400">가져오는 중...</div>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {pillars.map((p) => {

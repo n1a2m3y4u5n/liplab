@@ -1,8 +1,8 @@
 # 쉬운 한국어 감사 기준 재설정안과 바꿀 UI 용어 후보 (C15 후속, 2026-10-09)
 
 > 대상: C15 감사(`docs/easy-korean-audit.md`, 기준선 `docs/easy-korean-audit-baseline.json`, 스크립트 `scripts/easy_korean_audit.py`).
-> 이 문서의 수치: `scripts/easy_korean_rebase.py`(감사 결과 JSON을 여러 기준으로 다시 센다), 용어 결정표 초안 `scripts/data/easy_korean_termbook_draft.json`.
-> **화면 문구는 바꾸지 않았다.** 기준을 바꿀지, 어떤 용어를 바꿀지는 사용자 결정이다.
+> 이 문서의 수치: `scripts/easy_korean_rebase.py`(감사 결과 JSON을 여러 기준으로 다시 센다), 낱말 결정표 `scripts/data/easy_korean_termbook.json`(10/9 확정, 예전 이름 `easy_korean_termbook_draft.json`).
+> 1~6절은 10/9 오전의 제안이다. 사용자가 결정을 맡겨 같은 날 세 층 기준을 채택하고 용어 일부를 화면에 반영했다(7절).
 
 ## 1. 지금 숫자
 
@@ -144,3 +144,228 @@ C도 이 기본 어휘 안에 든다. C에는 답·낱말·짝·화면·목록·
 - 결정표는 이 작업에서 만든 초안이다. 당사자(수어·구어·인공와우 사용자)가 읽어 본 판정이 아니다. 다7의 셋째 기준(쉬운 보기 대화 100턴 표본)도 아직 하지 않았다.
 - 형태소 분석(kiwipiepy)의 오류와 2003년 목록의 한계(요즘 말이 없음)는 그대로 남는다. 덮기 비율 95%는 제2언어 읽기 연구의 값을 옮긴 것이다.
 - 재설정은 기준을 느슨하게 하는 방향이다. 기준을 바꾼 뒤의 통과율을 지금 통과율과 같은 뜻으로 읽으면 안 된다. 두 숫자를 나란히 보고한다.
+
+
+## 7. 결정과 반영(2026-10-09 오후, 사용자 위임)
+
+### 7.1 기준
+
+- 감사 판정을 3절의 세 층 기준으로 바꾼다. `scripts/easy_korean_audit.py`의 요약에 `layers`(낱말·이름표·문장형)를 더했고, 계산은
+  `scripts/easy_korean_rebase.py`의 `layers()`다. 예전 엄격 통과율(A·B만, 문자열마다 10%)은 숫자가 이어지도록 `pass_rate`로 계속 낸다.
+- 목표: 결정 안 된 낱말 0개, 이름표 95%, 문장형 화면 덮기 95% 이상인 파일 90%, 30음절 이하 문장형 95%. 앱 핵심 용어(taught)는 처음 나올 때
+  풀이가 있어야 쉬운 말로 친다는 조건을 유지한다(풀이 여부는 자동으로 재지 않는다).
+
+### 7.2 낱말 결정표 확정
+
+초안에서 결정 안 된 낱말 289종을 모두 갈래에 넣었다. 결과는 측정 오류 27, 일상 말 208, 고지 98, 앱 핵심 용어 62, 기술어 47, 바꿀 후보 53이다.
+
+- **기초 IT·화면 말은 일상 말로 둔다**: 계정, 설정, 프로필, 브라우저, 로그아웃(분석기가 로그+아웃으로 자름), 권한, 네트워크, 캘린더, 드래그 등.
+- **새 갈래 tech(기술어)**: 학습자에게 보이지 않아도 되는 말이라 쉬운 말로 치지 않고 바꾸거나 숨길 후보로 둔다. 서버, dB, SNR, Hz, 합성, 메모리,
+  '95% 구간', 신뢰도, 융합, 불확실성, 이득과 API 오류 문장의 영어 낱말(confirm=true 등). 개인정보 안내의 '서버'·'메모리'는 처리 방식을 알리는
+  고지라 지우지 않는다. '합성 음성' 표시는 라이선스 조건이라 지우지 않고 풀이를 붙일 후보다.
+- **고지(notice)에 더한 것**: 개인정보 처리방침의 법 용어(도용·보증·시행일 등), 출처·라이선스 표기(CC BY, Wikimedia, Fly.io, Anthropic 등),
+  교사·연구용 보고서 용어(판본, 선다형, 동형, 향상도, 전이).
+- **앱 핵심 용어(taught)에 더한 것**: 조음 위치 이름(여린입천장·센입천장·목청·양순·연구개), 초성·중성, 원순, 비음, 공명, 기식, 역치, 수형·지화,
+  혼동(혼동 지도). 트랙 이름 '발화'와 말하기 단계 이름 '발성'·'운율'은 소개서·커리큘럼과 맞추려고 바꿀 후보에서 빼고 이 갈래로 옮겼다.
+  '숙달'도 바꾸지 않고 이 갈래로 옮겨 풀이를 붙였다(7.3절).
+
+### 7.3 화면 문자열에 반영한 것
+
+원칙: 뜻이 확실히 쉬워지고 기존 의미를 바꾸지 않는 것만 바꾼다. 트랙 이름(독화·발화·소리 듣기), 입모양, 단계 이름은 그대로다.
+소리 듣기 화면(`components/listen/`, `pages/Listen*.jsx`, `lib/listen*.js`)은 다른 작업과 겹치지 않게 이번에 고치지 않고 7.5절 목록에만 둔다.
+개인정보 처리방침(`Legal.jsx`), 연구 검사(`PilotBattery`), 다른 작업이 맡았던 `pages/Practice.jsx`도 그대로다.
+
+| 말 | 바꾼 말 | 곳 | 그대로 둔 곳과 까닭 |
+|---|---|--:|---|
+| 문항 | 문제 | 29 | 사전·사후 검사 보고서(`EvalReport`), 연구 검사, 서버의 검사 오류 안내(검사 용어) |
+| 불러오다 | 가져오다 | 43 | 소리 듣기 화면, `Practice.jsx` |
+| 오답 | 틀린 문제(복습 개수·탭), 틀린 문장(문장 복습 목록), 틀린 답(설명), 틀림(결과 칸) | 19 | 코드 주석 |
+| 추이 | 변화 | 9 | |
+| 획득 | 받은, 받음, 받았어요 | 8 | |
+| 데이터 | 기록 | 5 | '계정·데이터 삭제'(고지), 수어 자료 출처 |
+| 전송·생성·누적 | 보내기, 만들지 못했어요, 모은·모두 합쳐 | 3·2·3 | 분석 상세의 '누적 성과' |
+| 취약·근접·적정 | 약한, 비슷한(수어), 알맞은·알맞음 | 3·2·3 | |
+| 합성(기술어) | '오디오 합성을 지원하지 않습니다' → '소리를 만들 수 없습니다' | 1 | 합성 음성 표시(라이선스) |
+| 건너뛰기 링크 | 본문으로 바로 가기 | 1 | 단계 건너뛰기('여기로 건너뛸까요?')는 '넘어가다'로 바꾸면 '건너뛴다'는 뜻이 흐려져 그대로 |
+
+합계 127쌍, 130곳, 48파일(전체 목록 7.6절). 그 밖에:
+
+- **'숙달' 풀이**: 가이드의 '지금 내 상태' 카드에서 숙달 기준 바로 위에 "숙달: 다음 단계가 열릴 만큼 충분히 익혔다는 뜻이에요."를 보인다
+  (`components/GuideModal.jsx`). 경로 화면의 '숙달'·'숙달 중' 표시에서 가이드 버튼으로 바로 닿는 자리다.
+- 바꾸지 않은 바꿀 후보: 정확도('맞힌 비율'은 말하기 '발음 정확도'와 뜻이 다르다), 완료('끝'과 '다 했어요'가 섞여 이름표가 흔들린다), 저장·삭제·항목·회차·
+  예시(맥락마다 대안이 달라 일괄로 바꾸면 뜻이 흐려진다), 화자(`lib/talkers.js`의 가상 화자 이름, 아바타 작업과 함께 볼 것), 경로·트랙·커리큘럼·레벨·XP
+  (제품 이름, 4.2절). 이들은 결정표에 바꿀 후보로 남아 있다.
+- 테스트 기대값 1곳(`lib/speakFeedback.test.mjs`, 적정선 → 알맞은 선)을 함께 고쳤다.
+
+### 7.4 다시 잰 결과(10/9, 같은 결정표로 전후 비교)
+
+| | 고치기 전 | 고친 뒤 | 목표 |
+|---|--:|--:|--:|
+| 문자열 | 3,152 | 3,154 | |
+| 예전 엄격 통과율(A·B, 문자열마다 10%) | 35.1% | 36.3% | (참고) |
+| 낱말: 결정 안 된 낱말 | 289종(초안) → 0종(확정) | 0종 | 0 |
+| 이름표: 어려운 말 0개 | 84.1% | 86.2% | 95% |
+| 문장형: 화면 덮기 95% 이상인 파일 | 54.4%(62/114) | 59.6%(68/114) | 90% |
+| 문장형: 전체 덮기 | 94.5% | 95.3% | (참고) |
+| 문장형: 30음절 이하 | 95.7% | 95.7% | 95% |
+
+- '고치기 전'도 확정 결정표로 다시 센 값이다. 그래서 두 열의 차이는 화면 문자열을 바꾼 효과만이다. 결정표를 확정한 효과(초안 대비)는 낱말 층의 289 → 0이다.
+- 세 층 가운데 낱말 층과 30음절 기준은 통과, 이름표와 화면 덮기는 미달이다. 이름표 실패 251개 가운데 68개가 이번에 손대지 않은 화면(소리 듣기·고지·연구)에
+  있다. 남은 실패의 상위는 정확도 28, 완료 21, 문항 21(소리 듣기·검사 화면), 경로 19, XP 11, 항목 11, 레벨·커리큘럼·사후 각 8이다.
+- 바꿀 후보를 모두 바꿨다고 치면(P+swap) 96.3%로, 기준만 바꿔서는 닿지 않고 제품 이름 결정(4.2절)이 남아 있다는 3.2절의 결론은 그대로다.
+
+### 7.5 소리 듣기 화면에서 다음에 고칠 것(이번에는 목록만)
+
+같은 결정표로 본 소리 듣기 화면의 어려운 말이다. 그 화면을 맡은 작업이 끝난 뒤 7.3절과 같은 원칙으로 고친다.
+
+| 말 | 갈래 | 문자열 수 | 위치 |
+|---|---|--:|---|
+| 경로 → 길, 순서(A) | 바꿀 후보 | 23 | `listen/ConvoTask.jsx:22`, `listen/LingCheck.jsx:16`, `listen/NoiseTest.jsx:83`, `listen/NoiseTest.jsx:91`, `listen/NoiseTest.jsx:109`, `listen/NoiseTest.jsx:111` 외 |
+| 문항 → 문제(A) | 바꿀 후보 | 21 | `listen/AxDrill.jsx:76`, `listen/ContrastRun.jsx:30`, `listen/ConvoTask.jsx:90`, `listen/ListenBlocks.jsx:54`, `listen/StateCard.jsx:22`, `listen/StateCard.jsx:24` 외 |
+| 불러오다 → 가져오다(A), '여는 중' | 바꿀 후보 | 20 | `pages/ListenClassroom.jsx:183`, `pages/ListenClassroom.jsx:184`, `pages/ListenPractice.jsx:68`, `pages/ListenPractice.jsx:128`, `pages/ListenPractice.jsx:128`, `pages/ListenPractice.jsx:129` 외 |
+| dB | 기술어 | 7 | `lib/listenMix.js:238`, `lib/listenMix.js:239`, `lib/listenReport.js:25`, `lib/listenReport.js:25`, `pages/ListeningReport.jsx:97`, `pages/ListeningReport.jsx:105` 외 |
+| 저장 → 남기기(B) | 바꿀 후보 | 6 | `listen/LingCheck.jsx:48`, `listen/LingCheck.jsx:85`, `listen/LingCheck.jsx:85`, `listen/LingCheck.jsx:86`, `listen/ListenSetup.jsx:69`, `listen/ListenSetup.jsx:71` |
+| 건너뛰다 → 넘어가다(A) | 바꿀 후보 | 5 | `listen/ListenBlocks.jsx:52`, `listen/NoiseTest.jsx:105`, `pages/ListenToday.jsx:36`, `pages/ListenToday.jsx:153`, `pages/ListeningPractice.jsx:52` |
+| 예시 → 예(A), 보기 | 바꿀 후보 | 3 | `listen/ListenSetup.jsx:39`, `listen/ListenSetup.jsx:41`, `listen/ListenSetup.jsx:41` |
+| 합성 | 기술어 | 3 | `listen/ListenSetup.jsx:41`, `listen/SoundCard.jsx:34`, `listen/ui.jsx:10` |
+| 서버 | 기술어 | 3 | `listen/NoiseTest.jsx:108`, `listen/StateCard.jsx:22`, `listen/WordTest.jsx:74` |
+| 이득 | 기술어 | 2 | `pages/ListeningReport.jsx:156`, `pages/ListeningReport.jsx:163` |
+| 파일럿 → 시범 연구 | 바꿀 후보 | 1 | `listen/ListenSetup.jsx:63` |
+| 정확도 → 맞힌 비율 | 바꿀 후보 | 1 | `listen/SentenceTask.jsx:161` |
+| 오답 → 틀린 문제(A·B) | 바꿀 후보 | 1 | `listen/ui.jsx:75` |
+| 회차 → 번째, 차례 | 바꿀 후보 | 1 | `pages/ListeningReport.jsx:114` |
+
+
+### 7.6 바꾼 문자열 전체 목록
+
+위치의 줄 번호는 바꾼 뒤 파일 기준이다. 경로는 `frontend/src/`를 뺐다.
+
+| # | 갈래 | 위치 | 고치기 전 | 고친 뒤 |
+|--:|---|---|---|---|
+| 1 | 문항 | `components/GuideModal.jsx:75` | 수준이 분명해지면 5문항 만에도 끝나고, 길어도 12문항이에요. 문항마다 정답은 알려 주지 않아요. | 수준이 분명해지면 5문제 만에도 끝나고, 길어도 12문제예요. 문제마다 정답은 알려 주지 않아요. |
+| 2 | 문항 | `components/GuideModal.jsx:82` | 숙달하면 직접 적는 문항도 나와요. | 숙달하면 직접 적는 문제도 나와요. |
+| 3 | 문항 | `components/GuideModal.jsx:83` | 잘할수록 직접 적는 문항이 늘어요. | 잘할수록 직접 적는 문제가 늘어요. |
+| 4 | 문항 | `components/GuideModal.jsx:123` | 2단계 레슨의 2문항과 문맥 추론은 | 2단계 레슨의 2문제와 문맥 추론은 |
+| 5 | 문항 | `components/GuideModal.jsx:124` | 12문항을 마치면 정답률·XP·걸린 시간이 나와요. | 12문제를 마치면 정답률·XP·걸린 시간이 나와요. |
+| 6 | 문항 | `components/GuideModal.jsx:128` | "12문항 중 4문항은 읽은 단어를 직접 적어요. | "12문제 중 4문제는 읽은 단어를 직접 적어요. |
+| 7 | 문항 | `components/GuideModal.jsx:162` | 최근 통과율과 시도 수가 문항 아래에 보여요. | 최근 통과율과 시도 수가 문제 아래에 보여요. |
+| 8 | 문항 | `components/GuideModal.jsx:163` | 약하게 나온 소리가 든 문항을 앞쪽에 섞어 내요. | 약하게 나온 소리가 든 문제를 앞쪽에 섞어 내요. |
+| 9 | 문항 | `components/GuideModal.jsx:203` | 두 레슨이 12문항씩 번갈아 나와요. | 두 레슨이 12문제씩 번갈아 나와요. |
+| 10 | 문항 | `components/GuideModal.jsx:209` | 가장 빠른 속도에서 최근 12문항 중 10개를 맞히면 | 가장 빠른 속도에서 최근 12문제 중 10개를 맞히면 |
+| 11 | 문항 | `components/GuideModal.jsx:253` | 사전·사후 검사(각 24문항)는 난이도가 같아서 훈련 전과 후를 비교할 수 있어요. 사후 문항 절반은 | 사전·사후 검사(각 24문제)는 난이도가 같아서 훈련 전과 후를 비교할 수 있어요. 사후 문제 절반은 |
+| 12 | 문항 | `components/RetentionPrompt.jsx:32` | 사후 검사와 같은 24문항, 5분 안팎이에요. | 사후 검사와 같은 24문제, 5분 안팎이에요. |
+| 13 | 문항 | `components/MasteryProbeBlock.jsx:55` | 확인 문항 · 보통 빠르기, 도움 없이 | 확인 문제 · 보통 빠르기, 도움 없이 |
+| 14 | 문항 | `components/guide/GuideMockups.jsx:920` | alt: '단어 독화 문항 예시. | alt: '단어 독화 문제 예시. |
+| 15 | 문항 | `components/guide/GuideMockups.jsx:924` | alt: '발화 문항 예시. | alt: '발화 문제 예시. |
+| 16 | 문항 | `lib/changeTone.js:6` | '문항이 적어 한 사람의 차이는 잡음이 커요. | '문제가 적어 한 사람의 차이는 잡음이 커요. |
+| 17 | 문항 | `lib/talkers.js:15` | '문항 12개씩이라 한 사람 점수 차는 잡음이 커요. | '문제 12개씩이라 한 사람 점수 차는 잡음이 커요. |
+| 18 | 문항 | `pages/WordStage.jsx:379` | 다음 속도: 지금 가장 빠른 속도에서 12문항 중 10개 | 다음 속도: 지금 가장 빠른 속도에서 12문제 중 10개 |
+| 19 | 문항 | `pages/WordStage.jsx:433` | >문장으로 고르는 문항이에요< | >문장으로 고르는 문제예요< |
+| 20 | 문항 | `pages/WordStage.jsx:435` | 이 문항은 단어 단계 숙달에는 들어가지 않아요. | 이 문제는 단어 단계 숙달에는 들어가지 않아요. |
+| 21 | 문항·불러오다 | `pages/Placement.jsx:169` | message="문항을 불러오지 못했어요." | message="문제를 가져오지 못했어요." |
+| 22 | 문항 | `pages/Placement.jsx:194` | {result.total}문항 정답<br /> | {result.total}문제 정답<br /> |
+| 23 | 문항 | `pages/Placement.jsx:211` | 사전 검사(A)를 봐 두세요. 24문항, 5분 안팎이에요. | 사전 검사(A)를 봐 두세요. 24문제, 5분 안팎이에요. |
+| 24 | 문항 | `pages/Placement.jsx:248` | 사후 검사와 같은 문항이라 기억 효과가 | 사후 검사와 같은 문제라 기억 효과가 |
+| 25 | 문항 | `backend/main.py:4591` | out["note"] = "사후 검사와 같은 문항이라 기억 효과가 조금 섞일 수 있어요." | out["note"] = "사후 검사와 같은 문제라 기억 효과가 조금 섞일 수 있어요." |
+| 26 | 문항 | `pages/AnalysisDetail.jsx:173` | description: `정확도 · ${read?.questions \|\| 0}문항` | description: `정확도 · ${read?.questions \|\| 0}문제` |
+| 27 | 문항 | `pages/AnalysisTab.jsx:74` | note: '같다·다르다 문항' } | note: '같다·다르다 문제' } |
+| 28 | 문항 | `pages/AnalysisTab.jsx:511` | {it.total}문항 중 {it.correct}문항 · Lv.{it.level} | {it.total}문제 중 {it.correct}문제 · Lv.{it.level} |
+| 29 | 문항 | `pages/AnalysisTab.jsx:605` | label="이 회차 문항"> | label="이 회차 문제"> |
+| 30 | 불러오다 | `components/ErrorScreen.jsx:62` | message = '불러오지 못했어요.' | message = '가져오지 못했어요.' |
+| 31 | 불러오다 | `components/LipReadCheck.jsx:93` | '입모양 모델을 불러오지 못했어요. 다시 눌러 보세요.' | '입모양 모델을 가져오지 못했어요. 다시 눌러 보세요.' |
+| 32 | 불러오다 | `components/LipReadCheck.jsx:158` | '모델 불러오는 중…' | '모델 가져오는 중…' |
+| 33 | 불러오다 | `components/MouthCalibration.jsx:68` | '입모양 모델을 불러오지 못했어요. 네트워크를 확인해 주세요.' | '입모양 모델을 가져오지 못했어요. 네트워크를 확인해 주세요.' |
+| 34 | 불러오다 | `components/VocalTractVTL.jsx:140` | 성도 단면을 불러오지 못했어요. | 성도 단면을 가져오지 못했어요. |
+| 35 | 불러오다 | `components/WebcamMouthCheck.jsx:294` | '모델 불러오는 중…' | '모델 가져오는 중…' |
+| 36 | 불러오다 | `components/MouthMirror.jsx:115` | '모델 불러오는 중…' | '모델 가져오는 중…' |
+| 37 | 불러오다 | `components/SignPanel.jsx:237` | 입모양 불러오는 중… | 입모양 가져오는 중… |
+| 38 | 불러오다 | `components/SignSelectionOverlay.jsx:113` | >불러오는 중…< | >가져오는 중…< |
+| 39 | 불러오다 | `components/SoundReplayBar.jsx:11` | loading: '소리 불러오는 중', | loading: '소리 가져오는 중', |
+| 40 | 불러오다 | `features/learn/shared/LessonList.jsx:43` | 진행도를 불러오지 못해 잠금 표시 없이 보여드려요. | 진행도를 가져오지 못해 잠금 표시 없이 보여드려요. |
+| 41 | 불러오다 | `features/learn/shared/TrackHub.jsx:31,55` | '불러오는 중…' | '가져오는 중…' | (2곳)
+| 42 | 불러오다 | `features/learn/shared/TrackHub.jsx:32` | '진행도를 불러오지 못했어요' | '진행도를 가져오지 못했어요' |
+| 43 | 불러오다 | `features/dashboard/ReviewSection.jsx:61` | >불러오는 중...< | >가져오는 중...< |
+| 44 | 불러오다 | `hooks/useFaceLandmarker.js:40` | '모델을 불러오지 못했어요. 네트워크를 확인해 주세요.' | '모델을 가져오지 못했어요. 네트워크를 확인해 주세요.' |
+| 45 | 불러오다 | `layouts/AppLayout.jsx:16` | >불러오는 중…< | >가져오는 중…< |
+| 46 | 불러오다 | `pages/AnalysisTab.jsx:569` | 기록을 불러오지 못했어요. | 기록을 가져오지 못했어요. |
+| 47 | 불러오다 | `pages/AnalysisTab.jsx:571` | text-ink-muted">불러오는 중…</p> | text-ink-muted">가져오는 중…</p> |
+| 48 | 불러오다 | `pages/Conversation.jsx:109` | '입모양을 불러오지 못했어요. 무슨 말인지 보기로 문장을 확인할 수 있어요.' | '입모양을 가져오지 못했어요. 무슨 말인지 보기로 문장을 확인할 수 있어요.' |
+| 49 | 불러오다 | `pages/CurriculumPath.jsx:307` | 학습 경로를 불러오지 못했어요. | 학습 경로를 가져오지 못했어요. |
+| 50 | 불러오다 | `pages/CurriculumPath.jsx:308` | className="btn-primary">다시 불러오기</button> | className="btn-primary">다시 가져오기</button> |
+| 51 | 불러오다 | `pages/EvalReport.jsx:279` | 리포트를 불러오지 못했습니다. | 리포트를 가져오지 못했습니다. |
+| 52 | 불러오다 | `pages/MultiConversation.jsx:182` | 대화를 불러오는 중… | 대화를 가져오는 중… |
+| 53 | 불러오다 | `pages/MultiConversation.jsx:185` | >대화를 불러오지 못했어요.< | >대화를 가져오지 못했어요.< |
+| 54 | 불러오다 | `pages/MultiConversation.jsx:186,212` | >다시 불러오기</button> | >다시 가져오기</button> | (2곳)
+| 55 | 불러오다 | `pages/MultiConversation.jsx:211` | 새 대화를 불러오지 못했어요. | 새 대화를 가져오지 못했어요. |
+| 56 | 불러오다 | `pages/NonsensePairing.jsx:159` | message="짝 맞추기를 불러오지 못했어요." | message="짝 맞추기를 가져오지 못했어요." |
+| 57 | 불러오다 | `pages/SpeakingPractice.jsx:53` | '입모양 자료를 불러오지 못해 아바타가 움직이지 않아요. | '입모양 자료를 가져오지 못해 아바타가 움직이지 않아요. |
+| 58 | 불러오다 | `pages/SpeakingPractice.jsx:250` | setErr('복습을 불러오지 못했어요.') | setErr('복습을 가져오지 못했어요.') |
+| 59 | 불러오다 | `pages/SpeakingPractice.jsx:260` | setErr('단계를 불러오지 못했어요.') | setErr('단계를 가져오지 못했어요.') |
+| 60 | 불러오다 | `pages/SpeakingPractice.jsx:269` | setErr('콘텐츠를 불러오지 못했어요.') | setErr('콘텐츠를 가져오지 못했어요.') |
+| 61 | 불러오다 | `pages/SpeakingPractice.jsx:617` | text-ink">단계를 불러오지 못했어요</p> | text-ink">단계를 가져오지 못했어요</p> |
+| 62 | 불러오다 | `pages/SpeakingPractice.jsx:620` | text-sm">다시 불러오기</button> | text-sm">다시 가져오기</button> |
+| 63 | 불러오다 | `pages/SpeakingReviewLanding.jsx:58` | 복습 항목을 불러오지 못했어요 | 복습 항목을 가져오지 못했어요 |
+| 64 | 불러오다 | `pages/SpeakingReviewLanding.jsx:60` | text-sm">다시 불러오기</button> | text-sm">다시 가져오기</button> |
+| 65 | 불러오다 | `pages/VisemeLiteracy.jsx:180` | message="콘텐츠를 불러오지 못했어요." | message="콘텐츠를 가져오지 못했어요." |
+| 66 | 불러오다 | `pages/VisemeLiteracy.jsx:272` | 카메라 모듈 불러오는 중… | 카메라 모듈 가져오는 중… |
+| 67 | 불러오다 | `pages/VisemeLiteracy.jsx:628` | '입모양을 불러오는 중' | '입모양을 가져오는 중' |
+| 68 | 불러오다 | `pages/WordStage.jsx:515` | text-ink-faint">불러오는 중…</div> | text-ink-faint">가져오는 중…</div> |
+| 69 | 불러오다 | `pages/TasksPage.jsx:230` | 과제를 불러오는 중… | 과제를 가져오는 중… |
+| 70 | 오답 | `components/AppShell.jsx:162` | <p className="text-[17px] text-ink">오답 <span | <p className="text-[17px] text-ink">틀린 문제 <span |
+| 71 | 오답 | `components/guide/GuideMockups.jsx:347` | <p className="text-[17px] text-ink">오답 <span | <p className="text-[17px] text-ink">틀린 문제 <span |
+| 72 | 오답 | `components/GuideModal.jsx:97` | 다시 풀 오답 수(틀린 문장·말하기 포함) | 다시 풀 틀린 문제 수(틀린 문장·말하기 포함) |
+| 73 | 오답 | `components/GuideModal.jsx:230` | ['오답 복습', | ['틀린 문제 복습', |
+| 74 | 오답 | `components/guide/GuideMockups.jsx:731` | title="복습할 오답 5개" sub="약 3분이면 끝나요" btn="오답 복습하기" | title="복습할 틀린 문제 5개" sub="약 3분이면 끝나요" btn="틀린 문제 복습하기" |
+| 75 | 오답 | `components/guide/GuideMockups.jsx:745` | ['오답', 5] | ['틀린 문제', 5] |
+| 76 | 오답 | `components/guide/GuideMockups.jsx:922` | alt: '단어 독화 오답 예시. | alt: '단어 독화에서 틀렸을 때의 예시. |
+| 77 | 오답 | `components/guide/GuideMockups.jsx:932` | 오답·북마크 복습 카드와 | 틀린 문제·북마크 복습 카드와 |
+| 78 | 오답 | `pages/ReviewTab.jsx:200` | { key: 'wrong', label: '오답', | { key: 'wrong', label: '틀린 문제', |
+| 79 | 오답 | `pages/ReviewTab.jsx:256` | title="복습할 오답" sub="오답 다시보기" | title="복습할 틀린 문제" sub="틀린 문제 다시 보기" |
+| 80 | 오답 | `pages/ReviewTab.jsx:257` | btn="오답 복습하기" | btn="틀린 문제 복습하기" |
+| 81 | 오답 | `pages/ProfilePage.jsx:196` | `오답 ${n(lost?.wrong)}개 · 북마크 | `틀린 문제 ${n(lost?.wrong)}개 · 북마크 |
+| 82 | 오답 | `pages/ReviewLanding.jsx:80` | text-red-700">오답 {String | text-red-700">틀린 문장 {String |
+| 83 | 오답 | `pages/ReviewLanding.jsx:92` | 새로운 문장 학습을 완료하면 오답이 이곳에 모입니다. | 새로운 문장 학습을 완료하면 틀린 문장이 이곳에 모입니다. |
+| 84 | 오답 | `pages/AnalysisTab.jsx:531` | homophene ? '입모양 맞음' : '오답'} | homophene ? '입모양 맞음' : '틀림'} |
+| 85 | 오답 | `pages/MultiConversation.jsx:234` | result.closure_correct ? '정답' : '오답'} | result.closure_correct ? '정답' : '틀림'} |
+| 86 | 오답 | `pages/AnalysisDetail.jsx:155` | >오답률 {item.error_rate}%< | >틀린 비율 {item.error_rate}%< |
+| 87 | 오답 | `pages/WordStage.jsx:415` | 가를 수 없는 차이라 오답으로 보지 않고 | 가를 수 없는 차이라 틀린 답으로 보지 않고 |
+| 88 | 오답 | `pages/EvalReport.jsx:459` | hint="오답 중 시각적으로 같은 입모양" | hint="틀린 답 중 시각적으로 같은 입모양" |
+| 89 | 추이 | `components/GuideModal.jsx:244` | ['학습시간 추이', | ['학습 시간 변화', |
+| 90 | 추이 | `components/GuideModal.jsx:245` | ['정확도 추이', | ['정확도 변화', |
+| 91 | 추이 | `components/GuideModal.jsx:252` | 결과 보기를 누르면 검사 추이와 자주 헷갈린 소리를 | 결과 보기를 누르면 검사 결과의 변화와 자주 헷갈린 소리를 |
+| 92 | 추이 | `components/guide/GuideMockups.jsx:816` | title="학습시간 추이" | title="학습 시간 변화" |
+| 93 | 추이 | `components/guide/GuideMockups.jsx:835` | title="정확도 추이" | title="정확도 변화" |
+| 94 | 추이 | `components/guide/GuideMockups.jsx:934` | 가운데에 학습시간과 정확도 추이 그래프. | 가운데에 학습 시간과 정확도 변화 그래프. |
+| 95 | 추이 | `pages/AnalysisTab.jsx:261` | <ChartCard title="학습시간 추이"> | <ChartCard title="학습 시간 변화"> |
+| 96 | 추이 | `pages/AnalysisTab.jsx:262` | <ChartCard title="정확도 추이"> | <ChartCard title="정확도 변화"> |
+| 97 | 추이 | `pages/EvalReport.jsx:471` | title="문장 점수 추이" | title="문장 점수 변화" |
+| 98 | 획득 | `components/LessonComplete.jsx:32` | >획득 XP< | >받은 XP< |
+| 99 | 획득 | `features/learn/shared/LessonComplete.jsx:31` | ['획득 XP', | ['받은 XP', |
+| 100 | 획득 | `pages/VisemeLiteracy.jsx:346` | >획득 XP< | >받은 XP< |
+| 101 | 획득 | `pages/WordStage.jsx:75` | >획득 XP< | >받은 XP< |
+| 102 | 획득 | `pages/AnalysisTab.jsx:639` | { label: '획득 배지', | { label: '받은 배지', |
+| 103 | 획득 | `pages/TasksPage.jsx:143` | >가 획득했어요< | >가 받았어요< |
+| 104 | 획득 | `pages/TasksPage.jsx:258` | {badges.length}개 획득</span> | {badges.length}개 받음</span> |
+| 105 | 획득 | `components/guide/GuideMockups.jsx:685` | 4 / 12개 획득 | 4 / 12개 받음 |
+| 106 | 전송 | `pages/Conversation.jsx:426` | 전송 | 보내기 |
+| 107 | 전송 | `components/MouthMirror.jsx:103` | 영상은 기기 안에서만 처리 · 저장/전송 안 함 | 영상은 기기 안에서만 처리 · 저장하거나 보내지 않음 |
+| 108 | 전송 | `components/WebcamMouthCheck.jsx:275` | 영상은 기기 안에서만 처리 · 저장/전송 안 함 | 영상은 기기 안에서만 처리 · 저장하거나 보내지 않음 |
+| 109 | 생성 | `features/dashboard/Dashboard.jsx:174` | '시나리오 생성에 실패했습니다. 다시 시도해주세요.' | '시나리오를 만들지 못했습니다. 다시 시도해주세요.' |
+| 110 | 생성 | `pages/FreeSpeak.jsx:55` | '입모양 생성에 실패했어요. 잠시 후 다시 시도해주세요.' | '입모양을 만들지 못했어요. 잠시 후 다시 시도해주세요.' |
+| 111 | 누적 | `layouts/TopBar.jsx:20` | title="레벨 · 누적 경험치" | title="레벨 · 모은 경험치" |
+| 112 | 누적 | `pages/ProfilePage.jsx:229` | label="누적 XP" | label="모은 XP" |
+| 113 | 누적 | `lib/badges.js:12` | desc: '누적 100문제를 풀어내기' | desc: '모두 합쳐 100문제를 풀어내기' |
+| 114 | 데이터 | `components/A11ySettings.jsx:127` | >내 데이터</p> | >내 기록</p> |
+| 115 | 데이터 | `components/A11ySettings.jsx:130` | 내 학습 데이터 내려받기 <span | 내 학습 기록 내려받기 <span |
+| 116 | 데이터 | `components/GuideModal.jsx:263` | 내 학습 데이터 내려받기도 여기 있어요. | 내 학습 기록 내려받기도 여기 있어요. |
+| 117 | 데이터 | `pages/EvalReport.jsx:90` | <EmptyLine>데이터가 쌓이면 학습곡선이 표시됩니다.</EmptyLine> | <EmptyLine>기록이 쌓이면 학습곡선이 표시됩니다.</EmptyLine> |
+| 118 | 데이터 | `pages/EvalReport.jsx:468` | <EmptyLine>혼동 데이터가 쌓이면 표시됩니다.</EmptyLine> | <EmptyLine>혼동 기록이 쌓이면 표시됩니다.</EmptyLine> |
+| 119 | 취약 | `pages/AnalysisDetail.jsx:15` | visemes: { title: '취약 입모양', | visemes: { title: '약한 입모양', |
+| 120 | 취약 | `pages/AnalysisDetail.jsx:24` | { mode: 'visemes', label: '취약 입모양' } | { mode: 'visemes', label: '약한 입모양' } |
+| 121 | 취약 | `pages/AnalysisDetail.jsx:141` | 연습을 더 하면 입모양 유형별 취약도가 이곳에 표시됩니다. | 연습을 더 하면 입모양 유형별로 약한 정도가 이곳에 표시됩니다. |
+| 122 | 근접 | `components/SignPanel.jsx:218,388` | ’은 사전에 없어 근접 수어 ‘{token.signed_as}’로 | ’은 사전에 없어 비슷한 수어 ‘{token.signed_as}’로 | (2곳)
+| 123 | 적정 | `lib/speakFeedback.js:50` | '크기 곡선이 적정선 아래로 자주 내려갔어요 | '크기 곡선이 알맞은 선 아래로 자주 내려갔어요 |
+| 124 | 적정 | `pages/SpeakingPractice.jsx:1059` | style={{ fill: 'var(--warn-strong)' }}>적정</text> | style={{ fill: 'var(--warn-strong)' }}>알맞음</text> |
+| 125 | 적정 | `pages/SpeakingPractice.jsx:1076` | : '적정 크기'} | : '알맞은 크기'} |
+| 126 | 합성 | `components/VocalTractSimulator.jsx:226` | 이 브라우저는 오디오 합성을 지원하지 않습니다. | 이 브라우저에서는 소리를 만들 수 없습니다. |
+| 127 | 건너뛰다 | `App.jsx:188` | >본문으로 건너뛰기</a> | >본문으로 바로 가기</a> |

@@ -193,7 +193,7 @@ export default function ProfilePage() {
   const lostRows = [
     ['학습 기록', `${n(ov?.sessions)}회 · ${ov ? fmtHours(ov.total_minutes) : n(null)}`],
     ['단계 진도', `독화 ${n(ov?.tracks?.read?.done)}단계 · 발화 ${n(ov?.tracks?.speak?.done)}단계`],
-    ['복습 목록', `오답 ${n(lost?.wrong)}개 · 북마크 ${n(lost?.marks)}개`],
+    ['복습 목록', `틀린 문제 ${n(lost?.wrong)}개 · 북마크 ${n(lost?.marks)}개`],
     ['배지 · XP', `배지 ${n(badgeCount)}개 · ${xp.toLocaleString()} XP`],
   ]
 
@@ -226,7 +226,7 @@ export default function ProfilePage() {
         <span className="h-[34px] w-[1.5px] shrink-0 bg-line lg:h-[46px]" />
         <StatCol icon="/ui/stat-check.svg" label="학습 회차" value={statVal(summary?.sessions, '회')} color="text-stat-accuracy" />
         <span className="h-[34px] w-[1.5px] shrink-0 bg-line lg:h-[46px]" />
-        <StatCol icon="/ui/stat-starplus.svg" label="누적 XP" value={xp.toLocaleString()} color="text-stat-streak" />
+        <StatCol icon="/ui/stat-starplus.svg" label="모은 XP" value={xp.toLocaleString()} color="text-stat-streak" />
       </section>
 
       {/* 설정(107:175 / 241:145) */}

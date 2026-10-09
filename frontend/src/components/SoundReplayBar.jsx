@@ -8,7 +8,7 @@ import { shouldSuggest } from '../lib/soundSync'
  */
 const LABEL = {
   idle: '소리와 함께 다시 보기',
-  loading: '소리 불러오는 중',
+  loading: '소리 가져오는 중',
   sound: '소리와 함께 보는 중',
   silent: '소리 없이 한 번 더',
   unavailable: '소리 준비 중이에요',
