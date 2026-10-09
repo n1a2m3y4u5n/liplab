@@ -114,3 +114,8 @@ Praat(parselmouth)는 GPL이라 앱에 넣지 않는다. 같은 정의를 numpy�
   쓰지 않으며 탐색 절반 값도 보지 않았다. CPPS는 연결 발화의 목소리 질 지표로 권고되므로(Patel 등 2018), Praat와 같은 정의(2ms 간격, 추세선 뺀 뒤
   평활, 지수 감쇠 추세)로 구현을 맞춘 뒤 새 화자로 다시 등록해 볼 만하다.
 - 비용·파드: S10과 같은 실행(`docs/speak-loudness-intonation-2026-10.md` 7.3절).
+
+## 9. 2026-10-09 재등록
+
+Praat식 CPPS를 새 화자(608 범주 28 18명)로 다시 등록해 판정했다(`docs/speak-cues-rereg-2026-10.md` 2·7절). Praat와 순위상관 0.9999인 numpy 구현
+(`voice_quality.cpps_praat`)의 ρ(CER)는 −0.159 [−0.341, 0.088]로 실패했고, 앱은 그대로다.

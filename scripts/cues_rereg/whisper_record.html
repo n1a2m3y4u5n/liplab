@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>속삭임 녹음</title>
+<style>
+  :root { --bg: #fafaf8; --fg: #1d1d1b; --muted: #6b6b66; --line: #d9d9d3; --accent: #2f5d8a; --rec: #b23a2e; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #1b1b1a; --fg: #ecece8; --muted: #a3a39c; --line: #3a3a37; --accent: #8fb6dc; --rec: #e0786c; } }
+  :root[data-theme="dark"] { --bg: #1b1b1a; --fg: #ecece8; --muted: #a3a39c; --line: #3a3a37; --accent: #8fb6dc; --rec: #e0786c; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; margin: 8px 0 4px; }
+  p.note { color: var(--muted); font-size: 14px; margin: 4px 0 16px; }
+  label { display: inline-block; margin-right: 12px; }
+  input { font: inherit; width: 6em; padding: 4px; border: 1px solid var(--line); background: transparent; color: var(--fg); }
+  .item { border-top: 1px solid var(--line); padding: 12px 0; }
+  .say { font-size: 18px; font-weight: 600; }
+  .how { color: var(--muted); font-size: 14px; }
+  button { font: inherit; padding: 6px 14px; border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 6px; cursor: pointer; }
+  button.rec { border-color: var(--rec); color: var(--rec); }
+  .done { color: var(--muted); font-size: 14px; margin-left: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>속삭임·숨소리 녹음</h1>
+  <p class="note">앱의 발성 단계와 같은 마이크 설정(에코 제거·잡음 억제 켬, 자동 음량 조절 끔)으로 녹음한다. 한 번 누르면 정해진 길이만큼 녹음하고 WAV 파일을 내려받는다.
+  파일 이름은 참가자_기기_항목_반복.wav다. 절차는 docs/speak-cues-rereg-2026-10.md 4절.</p>
+  <div>
+    <label>참가자 <input id="pid" value="P01"></label>
+    <label>기기 <input id="dev" value="L1"></label>
+  </div>
+  <div id="list"></div>
+</main>
+<script>
+const ITEMS = [
+  ['a_normal', 'ㅏ (보통 크기)', '평소 말하는 크기로 "아"를 길게 3초 동안 이어 낸다.', 3, 4.0],
+  ['a_soft', 'ㅏ (작게, 목소리는 냄)', '목소리는 내면서 작게 "아"를 길게 3초 동안 이어 낸다.', 3, 4.0],
+  ['a_whisper', 'ㅏ (속삭임)', '목소리 없이 속삭여 "아"를 길게 3초 동안 이어 낸다.', 3, 4.0],
+  ['a_stagewhisper', 'ㅏ (센 속삭임)', '목소리 없이, 멀리 들리게 세게 속삭여 "아"를 길게 3초 동안.', 3, 4.0],
+  ['breath', '숨 내쉬기', '입을 벌리고 "하" 하고 숨만 3초 동안 길게 내쉰다.', 3, 4.0],
+  ['i_whisper', 'ㅣ (속삭임)', '목소리 없이 속삭여 "이"를 길게 3초 동안.', 1, 4.0],
+  ['u_whisper', 'ㅜ (속삭임)', '목소리 없이 속삭여 "우"를 길게 3초 동안.', 1, 4.0],
+  ['s_whisper', '오늘 날씨가 좋아요 (속삭임)', '목소리 없이 속삭여 문장을 한 번 읽는다.', 2, 4.5],
+  ['s_soft', '오늘 날씨가 좋아요 (작게, 목소리는 냄)', '목소리는 내면서 작게 문장을 한 번 읽는다.', 2, 4.5],
+];
+let ctx = null, stream = null;
+async function ensure() {
+  if (stream) return;
+  stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } });
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === 'suspended') await ctx.resume();
+}
+function wav(samples, sr) {
+  const n = samples.length, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) { const s = Math.max(-1, Math.min(1, samples[i])); v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true); }
+  return new Blob([buf], { type: 'audio/wav' });
+}
+async function record(key, rep, secs, btn, mark) {
+  try { await ensure(); } catch (e) { alert('마이크를 열 수 없다: ' + e.message); return; }
+  btn.disabled = true; btn.textContent = '녹음 중…';
+  const src = ctx.createMediaStreamSource(stream);
+  const proc = ctx.createScriptProcessor(4096, 1, 1);
+  const chunks = [];
+  proc.onaudioprocess = (ev) => chunks.push(new Float32Array(ev.inputBuffer.getChannelData(0)));
+  src.connect(proc); proc.connect(ctx.destination);
+  await new Promise((r) => setTimeout(r, secs * 1000));
+  proc.disconnect(); src.disconnect();
+  const n = chunks.reduce((a, c) => a + c.length, 0), all = new Float32Array(n);
+  let o = 0; for (const c of chunks) { all.set(c, o); o += c.length; }
+  const name = `${document.getElementById('pid').value}_${document.getElementById('dev').value}_${key}_${rep}.wav`;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(wav(all, ctx.sampleRate)); a.download = name; a.click();
+  btn.disabled = false; btn.textContent = `다시 ${rep}`; mark.textContent = '받음: ' + name;
+}
+const list = document.getElementById('list');
+for (const [key, say, how, reps, secs] of ITEMS) {
+  const d = document.createElement('div'); d.className = 'item';
+  d.innerHTML = `<div class="say">${say}</div><div class="how">${how} 녹음 ${secs}초(처음 0.5초는 조용히).</div>`;
+  for (let r = 1; r <= reps; r++) {
+    const row = document.createElement('div');
+    const b = document.createElement('button'); b.className = 'rec'; b.textContent = `녹음 ${r}`;
+    const m = document.createElement('span'); m.className = 'done';
+    b.onclick = () => record(key, r, secs, b, m);
+    row.appendChild(b); row.appendChild(m); d.appendChild(row);
+  }
+  list.appendChild(d);
+}
+</script>
+</body>
+</html>
