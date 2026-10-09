@@ -1,0 +1,2697 @@
+{
+ "meta": {
+  "updated_at": "2026-10-09 16:13",
+  "commit": "d9560917",
+  "branch": "regress-docs-2026-10",
+  "python": "3.14.6",
+  "layers": {
+   "lipread": 59,
+   "dictation": 35,
+   "speak": 69,
+   "engine": 80,
+   "speak_api": 28
+  }
+ },
+ "cases": {
+  "lipread": {
+   "visual | 물 좀 주세요 ← '물 좀 주세요'": {
+    "score": 100.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 물 좀 주세요 ← '물 좀 주세요'": {
+    "score": 100.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 굳이 가야 해요 ← '구지 가야 해요'": {
+    "score": 100.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 굳이 가야 해요 ← '구지 가야 해요'": {
+    "score": 100.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 케이크가 다 팔렸대요 ← '다음 역에서 내리세요'": {
+    "score": 17.22,
+    "precision": 0.503,
+    "recall": 0.503,
+    "phoneme_accuracy": {
+     "initial": 62.2,
+     "medial": 28.9,
+     "final": 0.0
+    },
+    "viseme_errors": [
+     7,
+     3,
+     5,
+     2,
+     6,
+     1
+    ],
+    "feedback_level": "retry",
+    "specific_tip": "자음 (초성), 모음 (중성), 받침 (종성) 발음을 더 집중해서 연습해보세요."
+   },
+   "phonological | 케이크가 다 팔렸대요 ← '다음 역에서 내리세요'": {
+    "score": 64.31,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 55.9,
+     "medial": 64.0,
+     "final": 0.0
+    },
+    "viseme_errors": [
+     7,
+     3,
+     5,
+     2,
+     6,
+     1
+    ],
+    "feedback_level": "fair",
+    "specific_tip": "자음 (초성), 모음 (중성), 받침 (종성) 발음을 더 집중해서 연습해보세요."
+   },
+   "visual | 영수증 드릴까요 ← '영수증 드릴까요 몸조리 잘하세요'": {
+    "score": 44.44,
+    "precision": 0.5,
+    "recall": 1.0,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "needs_improvement",
+    "specific_tip": ""
+   },
+   "phonological | 영수증 드릴까요 ← '영수증 드릴까요 몸조리 잘하세요'": {
+    "score": 100.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 바다가 넓어요 ← '마다가 넓어요'": {
+    "score": 98.06,
+    "precision": 0.988,
+    "recall": 0.988,
+    "phoneme_accuracy": {
+     "initial": 96.7,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     1
+    ],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 바다가 넓어요 ← '마다가 넓어요'": {
+    "score": 98.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 93.3,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     1
+    ],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 바다가 넓어요 ← '가다가 넓어요'": {
+    "score": 90.28,
+    "precision": 0.942,
+    "recall": 0.942,
+    "phoneme_accuracy": {
+     "initial": 83.3,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     1
+    ],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 바다가 넓어요 ← '가다가 넓어요'": {
+    "score": 95.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 83.3,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     1
+    ],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 오늘 저녁에 같이 밥 먹을래요 ← '오늘 저녁에 밥 먹을래요'": {
+    "score": 84.85,
+    "precision": 1.0,
+    "recall": 0.833,
+    "phoneme_accuracy": {
+     "initial": 83.3,
+     "medial": 83.3,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     7,
+     2,
+     10,
+     3
+    ],
+    "feedback_level": "good",
+    "specific_tip": ""
+   },
+   "phonological | 오늘 저녁에 같이 밥 먹을래요 ← '오늘 저녁에 밥 먹을래요'": {
+    "score": 83.33,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 83.3,
+     "medial": 83.3,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     7,
+     2,
+     10,
+     3
+    ],
+    "feedback_level": "good",
+    "specific_tip": ""
+   },
+   "visual | 오늘 저녁에 같이 밥 먹을래요 ← '오늘 밥 먹을래요'": {
+    "score": 56.14,
+    "precision": 1.0,
+    "recall": 0.583,
+    "phoneme_accuracy": {
+     "initial": 58.3,
+     "medial": 58.3,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     10,
+     5,
+     6,
+     7,
+     3,
+     2
+    ],
+    "feedback_level": "needs_improvement",
+    "specific_tip": "자음 (초성), 모음 (중성) 발음을 더 집중해서 연습해보세요."
+   },
+   "phonological | 오늘 저녁에 같이 밥 먹을래요 ← '오늘 밥 먹을래요'": {
+    "score": 58.33,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 58.3,
+     "medial": 58.3,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     10,
+     5,
+     6,
+     7,
+     3,
+     2
+    ],
+    "feedback_level": "needs_improvement",
+    "specific_tip": "자음 (초성), 모음 (중성) 발음을 더 집중해서 연습해보세요."
+   },
+   "visual | 물 좀 주세요 ← '   '": {
+    "score": 0.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 0,
+     "medial": 0,
+     "final": 0
+    },
+    "viseme_errors": [],
+    "feedback_level": null,
+    "specific_tip": null
+   },
+   "phonological | 물 좀 주세요 ← '   '": {
+    "score": 0.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 0,
+     "medial": 0,
+     "final": 0
+    },
+    "viseme_errors": [],
+    "feedback_level": null,
+    "specific_tip": null
+   },
+   "visual | 옷 입어 ← '옷\\u3000입어'": {
+    "score": 100.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 옷 입어 ← '옷\\u3000입어'": {
+    "score": 100.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 옷 입어 ← '옷\\xa0입어'": {
+    "score": 100.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 옷 입어 ← '옷\\xa0입어'": {
+    "score": 100.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 옷 입어 ← '옷,입어'": {
+    "score": 100.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 옷 입어 ← '옷,입어'": {
+    "score": 100.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 물 좀 주세요 ← '물 좀 주세요'": {
+    "score": 100.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 물 좀 주세요 ← '물 좀 주세요'": {
+    "score": 100.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 같이 가요 ← '가치 가요'": {
+    "score": 100.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 같이 가요 ← '가치 가요'": {
+    "score": 100.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 학교에 가요 ← '학꾜에 가요'": {
+    "score": 97.67,
+    "precision": 0.986,
+    "recall": 0.986,
+    "phoneme_accuracy": {
+     "initial": 96.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     7
+    ],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 학교에 가요 ← '학꾜에 가요'": {
+    "score": 98.2,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 94.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     7
+    ],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 안녕하세요 ← '안녕하세여'": {
+    "score": 85.0,
+    "precision": 0.91,
+    "recall": 0.91,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 80.0,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     4
+    ],
+    "feedback_level": "good",
+    "specific_tip": ""
+   },
+   "phonological | 안녕하세요 ← '안녕하세여'": {
+    "score": 92.17,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 84.3,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     4
+    ],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 고맙습니다 ← '감사합니다'": {
+    "score": 33.33,
+    "precision": 0.6,
+    "recall": 0.6,
+    "phoneme_accuracy": {
+     "initial": 60.0,
+     "medial": 60.0,
+     "final": 50.0
+    },
+    "viseme_errors": [
+     4,
+     1,
+     6,
+     5
+    ],
+    "feedback_level": "retry",
+    "specific_tip": "자음 (초성), 모음 (중성), 받침 (종성) 발음을 더 집중해서 연습해보세요."
+   },
+   "phonological | 고맙습니다 ← '감사합니다'": {
+    "score": 65.32,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 64.6,
+     "medial": 67.9,
+     "final": 50.0
+    },
+    "viseme_errors": [
+     4,
+     1,
+     6,
+     5
+    ],
+    "feedback_level": "fair",
+    "specific_tip": "자음 (초성), 모음 (중성), 받침 (종성) 발음을 더 집중해서 연습해보세요."
+   },
+   "visual | 세 시에 만나요 ← '3시에 만나요'": {
+    "score": 100.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 세 시에 만나요 ← '3시에 만나요'": {
+    "score": 100.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 창문 좀 열어 주세요 ← '창문 열어 주세요'": {
+    "score": 76.67,
+    "precision": 0.921,
+    "recall": 0.806,
+    "phoneme_accuracy": {
+     "initial": 75.0,
+     "medial": 87.5,
+     "final": 50.0
+    },
+    "viseme_errors": [
+     6,
+     10,
+     4,
+     1
+    ],
+    "feedback_level": "good",
+    "specific_tip": "받침 (종성) 발음을 더 집중해서 연습해보세요."
+   },
+   "phonological | 창문 좀 열어 주세요 ← '창문 열어 주세요'": {
+    "score": 81.31,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 75.2,
+     "medial": 87.5,
+     "final": 50.0
+    },
+    "viseme_errors": [
+     6,
+     10,
+     4,
+     1
+    ],
+    "feedback_level": "good",
+    "specific_tip": "받침 (종성) 발음을 더 집중해서 연습해보세요."
+   },
+   "visual | 빨간 꽃잎이 떨어졌어요 ← '빨간 꼰니피 떨어져써요'": {
+    "score": 90.83,
+    "precision": 0.945,
+    "recall": 0.945,
+    "phoneme_accuracy": {
+     "initial": 90.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     10
+    ],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 빨간 꽃잎이 떨어졌어요 ← '빨간 꼰니피 떨어져써요'": {
+    "score": 95.51,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 91.7,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     10
+    ],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 내일 다시 올게요 ← '내일다시 올께요'": {
+    "score": 98.33,
+    "precision": 0.99,
+    "recall": 0.99,
+    "phoneme_accuracy": {
+     "initial": 97.1,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     7
+    ],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 내일 다시 올게요 ← '내일다시 올께요'": {
+    "score": 98.71,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 95.7,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     7
+    ],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 버스 ← '퍼스'": {
+    "score": 94.17,
+    "precision": 0.965,
+    "recall": 0.965,
+    "phoneme_accuracy": {
+     "initial": 90.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     1
+    ],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "phonological | 버스 ← '퍼스'": {
+    "score": 95.5,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 85.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     1
+    ],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 아 ← '바'": {
+    "score": 41.67,
+    "precision": 0.65,
+    "recall": 0.65,
+    "phoneme_accuracy": {
+     "initial": 0.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "needs_improvement",
+    "specific_tip": "자음 (초성) 발음을 더 집중해서 연습해보세요."
+   },
+   "phonological | 아 ← '바'": {
+    "score": 70.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 0.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "fair",
+    "specific_tip": "자음 (초성) 발음을 더 집중해서 연습해보세요."
+   },
+   "visual | 책 ← '채'": {
+    "score": 66.67,
+    "precision": 0.8,
+    "recall": 0.8,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 0.0
+    },
+    "viseme_errors": [
+     7
+    ],
+    "feedback_level": "fair",
+    "specific_tip": "받침 (종성) 발음을 더 집중해서 연습해보세요."
+   },
+   "phonological | 책 ← '채'": {
+    "score": 80.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 0.0
+    },
+    "viseme_errors": [
+     7
+    ],
+    "feedback_level": "good",
+    "specific_tip": "받침 (종성) 발음을 더 집중해서 연습해보세요."
+   },
+   "visual | 밥 먹었어요 ← '밥 먹었어요 정말 맛있어요'": {
+    "score": 37.5,
+    "precision": 0.455,
+    "recall": 1.0,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "retry",
+    "specific_tip": ""
+   },
+   "phonological | 밥 먹었어요 ← '밥 먹었어요 정말 맛있어요'": {
+    "score": 100.0,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 100.0,
+     "medial": 100.0,
+     "final": 100.0
+    },
+    "viseme_errors": [],
+    "feedback_level": "excellent",
+    "specific_tip": ""
+   },
+   "visual | 병원에 가야 해요 ← '병원 가야 해요'": {
+    "score": 82.05,
+    "precision": 0.967,
+    "recall": 0.829,
+    "phoneme_accuracy": {
+     "initial": 85.7,
+     "medial": 85.7,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     6,
+     3
+    ],
+    "feedback_level": "good",
+    "specific_tip": ""
+   },
+   "phonological | 병원에 가야 해요 ← '병원 가야 해요'": {
+    "score": 82.86,
+    "precision": null,
+    "recall": null,
+    "phoneme_accuracy": {
+     "initial": 85.7,
+     "medial": 85.7,
+     "final": 100.0
+    },
+    "viseme_errors": [
+     6,
+     3
+    ],
+    "feedback_level": "good",
+    "specific_tip": ""
+   },
+   "confusion | 바다 ← 마다": [
+    "초성 ㅂ→ㅁ viseme=1 양순음(입술 닫음) same=True"
+   ],
+   "confusion | 달 ← 탈": [
+    "초성 ㄷ→ㅌ viseme=6 치경음(혀끝-잇몸) same=True"
+   ],
+   "confusion | 아이 ← 바이": [
+    "초성 ㅇ→ㅂ viseme=None 모음으로 바로 시작하는(첫소리 ㅇ은 소리 없음) same=False"
+   ],
+   "confusion | 닭 ← 달": [
+    "종성 ㄺ→ㄹ viseme=7 입 안쪽 자음(혀·목구멍) same=True"
+   ],
+   "confusion | 가다 ← 다다": [
+    "초성 ㄱ→ㄷ viseme=7 입 안쪽 자음(혀·목구멍) same=True"
+   ],
+   "confusion | 사과 ← 자과": [
+    "초성 ㅅ→ㅈ viseme=6 입 안쪽 자음(혀·목구멍) same=True"
+   ],
+   "confusion | 오리 ← 우리": [
+    "중성 ㅗ→ㅜ viseme=4 원순 모음(입술 둥글게) same=True"
+   ]
+  },
+  "dictation": {
+   "물 좀 주세요. ← '물 좀 주세요'": {
+    "proportion": 1.0,
+    "correct_words": 3,
+    "total_words": 3,
+    "words": "○ 물 | ○ 좀 | ○ 주세요."
+   },
+   "물 좀 주세요 ← '불 좀 주세요'": {
+    "proportion": 0.667,
+    "correct_words": 2,
+    "total_words": 3,
+    "words": "× ㅁ | ○ 좀 | ○ 주세요"
+   },
+   "같이 가요 ← '가치 가요'": {
+    "proportion": 1.0,
+    "correct_words": 2,
+    "total_words": 2,
+    "words": "○ 같이 | ○ 가요"
+   },
+   "오늘 날씨 좋네요 ← '좋네요 오늘'": {
+    "proportion": 0.333,
+    "correct_words": 1,
+    "total_words": 3,
+    "words": "○ 오늘 | × ㄴㅆ | × ㅈㄴㅇ"
+   },
+   "오늘 날씨 좋네요 ← ''": {
+    "proportion": 0.0,
+    "correct_words": 0,
+    "total_words": 3,
+    "words": "× ㅇㄴ | × ㄴㅆ | × ㅈㄴㅇ"
+   },
+   "물 좀 주세요 ← '물 좀 주새요'": {
+    "proportion": 1.0,
+    "correct_words": 3,
+    "total_words": 3,
+    "words": "○ 물 | ○ 좀 | ○ 주세요"
+   },
+   "저는 학생이에요 ← '저는 학생이예요'": {
+    "proportion": 1.0,
+    "correct_words": 2,
+    "total_words": 2,
+    "words": "○ 저는 | ○ 학생이에요"
+   },
+   "이건 의자예요 ← '이건 의자에요'": {
+    "proportion": 1.0,
+    "correct_words": 2,
+    "total_words": 2,
+    "words": "○ 이건 | ○ 의자예요"
+   },
+   "아니에요 ← '아니예요'": {
+    "proportion": 1.0,
+    "correct_words": 1,
+    "total_words": 1,
+    "words": "○ 아니에요"
+   },
+   "안 돼요 ← '안 되요'": {
+    "proportion": 1.0,
+    "correct_words": 2,
+    "total_words": 2,
+    "words": "○ 안 | ○ 돼요"
+   },
+   "계속 가요 ← '게속 가요'": {
+    "proportion": 1.0,
+    "correct_words": 2,
+    "total_words": 2,
+    "words": "○ 계속 | ○ 가요"
+   },
+   "우리의 집 ← '우리이 집'": {
+    "proportion": 1.0,
+    "correct_words": 2,
+    "total_words": 2,
+    "words": "○ 우리의 | ○ 집"
+   },
+   "예 ← '에'": {
+    "proportion": 0.0,
+    "correct_words": 0,
+    "total_words": 1,
+    "words": "× ㅇ"
+   },
+   "의사 ← '이사'": {
+    "proportion": 0.0,
+    "correct_words": 0,
+    "total_words": 1,
+    "words": "× ㅇㅅ"
+   },
+   "물 좀 주세요 ← '물 좀 주시요'": {
+    "proportion": 0.667,
+    "correct_words": 2,
+    "total_words": 3,
+    "words": "○ 물 | ○ 좀 | × ㅈㅅㅇ"
+   },
+   "가을 산에서 밤을 주웠어 ← '가을산에서 밤을 주웠어'": {
+    "proportion": 1.0,
+    "correct_words": 4,
+    "total_words": 4,
+    "words": "○ 가을 | ○ 산에서 | ○ 밤을 | ○ 주웠어"
+   },
+   "물 좀 주세요 ← '물좀 주세요'": {
+    "proportion": 1.0,
+    "correct_words": 3,
+    "total_words": 3,
+    "words": "○ 물 | ○ 좀 | ○ 주세요"
+   },
+   "내일 다시 올게요 ← '내일다시 올께요'": {
+    "proportion": 1.0,
+    "correct_words": 3,
+    "total_words": 3,
+    "words": "○ 내일 | ○ 다시 | ○ 올게요"
+   },
+   "같이 갈 수 있어요 ← '같이 갈수 있어요'": {
+    "proportion": 1.0,
+    "correct_words": 4,
+    "total_words": 4,
+    "words": "○ 같이 | ○ 갈 | ○ 수 | ○ 있어요"
+   },
+   "책을 읽고 있어요 ← '책을 읽고있어요'": {
+    "proportion": 1.0,
+    "correct_words": 3,
+    "total_words": 3,
+    "words": "○ 책을 | ○ 읽고 | ○ 있어요"
+   },
+   "국물이 짜요 ← '궁물이 짜요'": {
+    "proportion": 1.0,
+    "correct_words": 2,
+    "total_words": 2,
+    "words": "○ 국물이 | ○ 짜요"
+   },
+   "물 좀 주세요 ← '좀 물 주세요'": {
+    "proportion": 0.667,
+    "correct_words": 2,
+    "total_words": 3,
+    "words": "○ 물 | × ㅈ | ○ 주세요"
+   },
+   "오늘 날씨가 좋아요 ← '날씨가'": {
+    "proportion": 0.333,
+    "correct_words": 1,
+    "total_words": 3,
+    "words": "× ㅇㄴ | ○ 날씨가 | × ㅈㅇㅇ"
+   },
+   "여섯 시 오십 분까지 극장 앞으로 와 ← '6시 50분까지 극장 앞으로 와'": {
+    "proportion": 1.0,
+    "correct_words": 7,
+    "total_words": 7,
+    "words": "○ 여섯 | ○ 시 | ○ 오십 | ○ 분까지 | ○ 극장 | ○ 앞으로 | ○ 와"
+   },
+   "회의는 삼 층 큰 방에서 해요 ← '회의는 3층 큰 방에서 해요'": {
+    "proportion": 1.0,
+    "correct_words": 6,
+    "total_words": 6,
+    "words": "○ 회의는 | ○ 삼 | ○ 층 | ○ 큰 | ○ 방에서 | ○ 해요"
+   },
+   "부산행 기차는 칠 번 타는 곳에서 출발합니다 ← '부산행 기차는 7번 타는 곳에서 출발합니다'": {
+    "proportion": 1.0,
+    "correct_words": 7,
+    "total_words": 7,
+    "words": "○ 부산행 | ○ 기차는 | ○ 칠 | ○ 번 | ○ 타는 | ○ 곳에서 | ○ 출발합니다"
+   },
+   "하루 세 번 드세요 ← '하루 3번 드세요'": {
+    "proportion": 1.0,
+    "correct_words": 4,
+    "total_words": 4,
+    "words": "○ 하루 | ○ 세 | ○ 번 | ○ 드세요"
+   },
+   "물 한 잔 주세요 ← '물 1잔 주세요'": {
+    "proportion": 1.0,
+    "correct_words": 4,
+    "total_words": 4,
+    "words": "○ 물 | ○ 한 | ○ 잔 | ○ 주세요"
+   },
+   "오 분 빨라요 ← '6분 빨라요'": {
+    "proportion": 0.667,
+    "correct_words": 2,
+    "total_words": 3,
+    "words": "× ㅇ | ○ 분 | ○ 빨라요"
+   },
+   "갈비 먹자 ← '갈삐 먹자'": {
+    "proportion": 1.0,
+    "correct_words": 2,
+    "total_words": 2,
+    "words": "○ 갈비 | ○ 먹자"
+   },
+   "커피 두 잔 주세요 ← '커피 두잔 주세요'": {
+    "proportion": 1.0,
+    "correct_words": 4,
+    "total_words": 4,
+    "words": "○ 커피 | ○ 두 | ○ 잔 | ○ 주세요"
+   },
+   "지하철 이 호선 ← '지하철 2호선'": {
+    "proportion": 1.0,
+    "correct_words": 3,
+    "total_words": 3,
+    "words": "○ 지하철 | ○ 이 | ○ 호선"
+   },
+   "케이티엑스 타요 ← 'KTX 타요'": {
+    "proportion": 0.5,
+    "correct_words": 1,
+    "total_words": 2,
+    "words": "× ㅋㅇㅌㅇㅅ | ○ 타요"
+   },
+   "병원에 가요 ← '병원에 가여'": {
+    "proportion": 0.5,
+    "correct_words": 1,
+    "total_words": 2,
+    "words": "○ 병원에 | × ㄱㅇ"
+   },
+   "손을 씻어요 ← '소늘 씨서요'": {
+    "proportion": 1.0,
+    "correct_words": 2,
+    "total_words": 2,
+    "words": "○ 손을 | ○ 씻어요"
+   }
+  },
+  "speak": {
+   "상수 | 단계 0 발성": {
+    "mode": "voicing",
+    "pass": null,
+    "mastery": 85.0,
+    "min_attempts": 5,
+    "gain": null,
+    "probe": null,
+    "items": 3
+   },
+   "상수 | 단계 1 운율 조절": {
+    "mode": "prosody",
+    "pass": null,
+    "mastery": 90.0,
+    "min_attempts": 10,
+    "gain": null,
+    "probe": null,
+    "items": 5
+   },
+   "상수 | 단계 2 모음": {
+    "mode": "phoneme",
+    "pass": 50.0,
+    "mastery": 85.0,
+    "min_attempts": 8,
+    "gain": null,
+    "probe": {
+     "n": 3,
+     "need": 2
+    },
+    "items": 8
+   },
+   "상수 | 단계 3 자음": {
+    "mode": "phoneme",
+    "pass": 50.0,
+    "mastery": 85.0,
+    "min_attempts": 8,
+    "gain": null,
+    "probe": {
+     "n": 3,
+     "need": 2
+    },
+    "items": 13
+   },
+   "상수 | 단계 4 음절·단어": {
+    "mode": "word",
+    "pass": 65.0,
+    "mastery": 68.0,
+    "min_attempts": 8,
+    "gain": {
+     "first": 10,
+     "recent": 10,
+     "delta": 15.0,
+     "min_attempts": 20,
+     "floor": 15.0
+    },
+    "probe": null,
+    "items": 411
+   },
+   "상수 | 단계 5 문장·억양": {
+    "mode": "sentence",
+    "pass": 65.0,
+    "mastery": 68.0,
+    "min_attempts": 6,
+    "gain": {
+     "first": 10,
+     "recent": 10,
+     "delta": 15.0,
+     "min_attempts": 20,
+     "floor": 15.0
+    },
+    "probe": null,
+    "items": 16
+   },
+   "상수 | 판정·이동 평균": {
+    "_SPEAK_SEM": 7.5,
+    "EWMA_alpha": 0.08,
+    "STAGE3_PASS": 60.0,
+    "STAGE3_MASTERY": 80.0,
+    "SENTENCE_DIR_ST": 1.33,
+    "RISE_FALL_ST": 1.65,
+    "PROBE_DGOP_MIN": 0.05
+   },
+   "판정 보류 | word 합격선 65": {
+    "50": false,
+    "57.5": false,
+    "57.6": true,
+    "60": true,
+    "64.9": true,
+    "65": true,
+    "68": true,
+    "72.4": true,
+    "72.5": false,
+    "80": false
+   },
+   "판정 보류 | sentence 합격선 65": {
+    "50": false,
+    "57.5": false,
+    "57.6": true,
+    "60": true,
+    "64.9": true,
+    "65": true,
+    "68": true,
+    "72.4": true,
+    "72.5": false,
+    "80": false
+   },
+   "판정 보류 | phoneme 합격선 50": {
+    "50": false,
+    "57.5": false,
+    "57.6": false,
+    "60": false,
+    "64.9": false,
+    "65": false,
+    "68": false,
+    "72.4": false,
+    "72.5": false,
+    "80": false
+   },
+   "판정 보류 | 확인 낱말·합격선 없음": {
+    "probe": false,
+    "no_pass": false,
+    "voicing": false
+   },
+   "D-GOP 판정 | 단계 2 '아'": {
+    "0": {
+     "score": 0.0,
+     "passed": false,
+     "hold": false,
+     "note": ""
+    },
+    "49.9": {
+     "score": 49.9,
+     "passed": false,
+     "hold": false,
+     "note": ""
+    },
+    "50": {
+     "score": 50.0,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    },
+    "57.5": {
+     "score": 57.5,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    },
+    "64.9": {
+     "score": 64.9,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    },
+    "65": {
+     "score": 65.0,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    },
+    "68": {
+     "score": 68.0,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    },
+    "72.5": {
+     "score": 72.5,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    },
+    "90": {
+     "score": 90.0,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    }
+   },
+   "D-GOP 판정 | 단계 3 '마'": {
+    "0": {
+     "score": 0.0,
+     "passed": false,
+     "hold": false,
+     "note": ""
+    },
+    "49.9": {
+     "score": 49.9,
+     "passed": false,
+     "hold": false,
+     "note": ""
+    },
+    "50": {
+     "score": 50.0,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    },
+    "57.5": {
+     "score": 57.5,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    },
+    "64.9": {
+     "score": 64.9,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    },
+    "65": {
+     "score": 65.0,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    },
+    "68": {
+     "score": 68.0,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    },
+    "72.5": {
+     "score": 72.5,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    },
+    "90": {
+     "score": 90.0,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    }
+   },
+   "D-GOP 판정 | 단계 4 '밥'": {
+    "0": {
+     "score": 0.0,
+     "passed": false,
+     "hold": false,
+     "note": ""
+    },
+    "49.9": {
+     "score": 49.9,
+     "passed": false,
+     "hold": false,
+     "note": ""
+    },
+    "50": {
+     "score": 50.0,
+     "passed": false,
+     "hold": false,
+     "note": ""
+    },
+    "57.5": {
+     "score": 57.5,
+     "passed": false,
+     "hold": false,
+     "note": ""
+    },
+    "64.9": {
+     "score": 64.9,
+     "passed": false,
+     "hold": true,
+     "note": ""
+    },
+    "65": {
+     "score": 65.0,
+     "passed": true,
+     "hold": true,
+     "note": ""
+    },
+    "68": {
+     "score": 68.0,
+     "passed": true,
+     "hold": true,
+     "note": ""
+    },
+    "72.5": {
+     "score": 72.5,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    },
+    "90": {
+     "score": 90.0,
+     "passed": true,
+     "hold": false,
+     "note": ""
+    }
+   },
+   "D-GOP 판정 | 단계 5 '밥 먹었어요.'": {
+    "0": {
+     "score": 0.0,
+     "passed": false,
+     "hold": false,
+     "note": "억양이 평평했어요. 끝을 내려보세요."
+    },
+    "49.9": {
+     "score": 49.9,
+     "passed": false,
+     "hold": false,
+     "note": "억양이 평평했어요. 끝을 내려보세요."
+    },
+    "50": {
+     "score": 50.0,
+     "passed": false,
+     "hold": false,
+     "note": "억양이 평평했어요. 끝을 내려보세요."
+    },
+    "57.5": {
+     "score": 57.5,
+     "passed": false,
+     "hold": false,
+     "note": "억양이 평평했어요. 끝을 내려보세요."
+    },
+    "64.9": {
+     "score": 64.9,
+     "passed": false,
+     "hold": true,
+     "note": "억양이 평평했어요. 끝을 내려보세요."
+    },
+    "65": {
+     "score": 65.0,
+     "passed": true,
+     "hold": true,
+     "note": "억양이 평평했어요. 끝을 내려보세요."
+    },
+    "68": {
+     "score": 68.0,
+     "passed": true,
+     "hold": true,
+     "note": "억양이 평평했어요. 끝을 내려보세요."
+    },
+    "72.5": {
+     "score": 72.5,
+     "passed": true,
+     "hold": false,
+     "note": "억양이 평평했어요. 끝을 내려보세요."
+    },
+    "90": {
+     "score": 90.0,
+     "passed": true,
+     "hold": false,
+     "note": "억양이 평평했어요. 끝을 내려보세요."
+    }
+   },
+   "억양 | 밥 먹었어요.": {
+    "expected": "fall",
+    "끝 올림 +3반음": {
+     "passed": true,
+     "note": "억양 방향이 반대예요. 끝을 내려보세요."
+    },
+    "끝 내림 −3반음": {
+     "passed": true,
+     "note": "억양 방향도 맞았어요!"
+    },
+    "평평 +1반음": {
+     "passed": true,
+     "note": "억양이 평평했어요. 끝을 내려보세요."
+    },
+    "예전 클라이언트(시작·끝만) 올림": {
+     "passed": true,
+     "note": "억양 방향이 반대예요. 끝을 내려보세요."
+    }
+   },
+   "억양 | 밥 먹었어요?": {
+    "expected": "rise",
+    "끝 올림 +3반음": {
+     "passed": true,
+     "note": "억양 방향도 맞았어요!"
+    },
+    "끝 내림 −3반음": {
+     "passed": true,
+     "note": "억양 방향이 반대예요. 끝을 올려보세요."
+    },
+    "평평 +1반음": {
+     "passed": true,
+     "note": "억양이 평평했어요. 끝을 올려보세요."
+    },
+    "예전 클라이언트(시작·끝만) 올림": {
+     "passed": true,
+     "note": "억양 방향도 맞았어요!"
+    }
+   },
+   "억양 | 어디 가요?": {
+    "expected": null,
+    "끝 올림 +3반음": {
+     "passed": true,
+     "note": ""
+    },
+    "끝 내림 −3반음": {
+     "passed": true,
+     "note": ""
+    },
+    "평평 +1반음": {
+     "passed": true,
+     "note": ""
+    },
+    "예전 클라이언트(시작·끝만) 올림": {
+     "passed": true,
+     "note": ""
+    }
+   },
+   "억양 | 새 문장이에요?": {
+    "expected": "rise",
+    "끝 올림 +3반음": {
+     "passed": true,
+     "note": "억양 방향도 맞았어요!"
+    },
+    "끝 내림 −3반음": {
+     "passed": true,
+     "note": "억양 방향이 반대예요. 끝을 올려보세요."
+    },
+    "평평 +1반음": {
+     "passed": true,
+     "note": "억양이 평평했어요. 끝을 올려보세요."
+    },
+    "예전 클라이언트(시작·끝만) 올림": {
+     "passed": true,
+     "note": "억양 방향도 맞았어요!"
+    }
+   },
+   "발성 | {\"loudness\": 40, \"voiced_duration\": 1.5}": {
+    "score": 71.7,
+    "passed": true,
+    "note": "좋아요! 안정적으로 소리를 냈어요."
+   },
+   "발성 | {\"loudness\": 40, \"voiced_duration\": 0.8}": {
+    "score": 50.7,
+    "passed": false,
+    "note": "소리는 났어요. 조금 더 길게 이어보세요."
+   },
+   "발성 | {\"loudness\": 15, \"voiced_duration\": 2.5}": {
+    "score": 70.0,
+    "passed": false,
+    "note": "소리가 약해요. 배에 힘을 주고 더 또렷이."
+   },
+   "운율 | loud {\"loudness\": 65}": {
+    "score": 100,
+    "passed": true,
+    "note": "크게 잘 냈어요!"
+   },
+   "운율 | loud {\"loudness\": 40}": {
+    "score": 66.7,
+    "passed": false,
+    "note": "조금 더 크게 (지금 40/100, 목표 60↑)."
+   },
+   "운율 | soft {\"loudness\": 30}": {
+    "score": 100.0,
+    "passed": true,
+    "note": "적당히 작게 잘 냈어요!"
+   },
+   "운율 | soft {\"loudness\": 55}": {
+    "score": 25,
+    "passed": false,
+    "note": "너무 커요 (지금 55). 더 작게."
+   },
+   "운율 | soft {\"loudness\": 5}": {
+    "score": 25,
+    "passed": false,
+    "note": "소리가 거의 없어요. 살짝만 소리 내며."
+   },
+   "운율 | long {\"loudness\": 40, \"voiced_duration\": 2.3}": {
+    "score": 100,
+    "passed": true,
+    "note": "충분히 길게 유지했어요!"
+   },
+   "운율 | long {\"loudness\": 40, \"duration\": 3.0, \"voiced_duration\": 1.0}": {
+    "score": 50.0,
+    "passed": false,
+    "note": "더 길게 (지금 1.0초, 목표 2초↑)."
+   },
+   "운율 | rise {\"pitch_start\": 180.0, \"pitch_end\": 205.0, \"pitch_frames\": 12}": {
+    "score": 100,
+    "passed": true,
+    "note": "끝을 잘 올렸어요!"
+   },
+   "운율 | rise {\"pitch_start\": 180.0, \"pitch_end\": 190.0, \"pitch_frames\": 12}": {
+    "score": 56.7,
+    "passed": false,
+    "note": "끝을 더 확실히 올려보세요 (끝음이 시작보다 높게)."
+   },
+   "운율 | fall {\"pitch_start\": 220.0, \"pitch_end\": 190.0, \"pitch_frames\": 12}": {
+    "score": 100,
+    "passed": true,
+    "note": "끝을 잘 내렸어요!"
+   },
+   "운율 | rise {\"pitch_start\": 180.0, \"pitch_end\": 240.0, \"pitch_frames\": 3}": {
+    "score": 0.0,
+    "passed": false,
+    "note": "음높이가 충분히 잡히지 않았어요. 소리를 조금 더 길게 이어 내며 다시 해 보세요."
+   },
+   "전사 판정 | 단계 2 아 ← '이' sim 50.15": {
+    "score": 50.1,
+    "passed": false,
+    "note": "목표 모음은 'ㅏ'인데 'ㅣ' 소리로 들렸어요."
+   },
+   "전사 판정 | 단계 2 아 ← '아.' sim 100": {
+    "score": 100.0,
+    "passed": true,
+    "note": ""
+   },
+   "전사 판정 | 단계 2 애 ← '에' sim 100": {
+    "score": 100.0,
+    "passed": true,
+    "note": ""
+   },
+   "전사 판정 | 단계 3 풀 ← '불' sim 91": {
+    "score": 91.0,
+    "passed": false,
+    "note": "목표 첫소리는 'ㅍ'인데 'ㅂ' 소리로 들렸어요."
+   },
+   "전사 판정 | 단계 3 달 ← '달' sim 100": {
+    "score": 100.0,
+    "passed": true,
+    "note": ""
+   },
+   "전사 판정 | 단계 3 달 ← '다' sim 80": {
+    "score": 80.0,
+    "passed": false,
+    "note": "받침 'ㄹ' 소리가 들리지 않았어요."
+   },
+   "전사 판정 | 단계 2 아 ← '시청해 주셔서 감사합니다.' sim 0": {
+    "score": 0.0,
+    "passed": false,
+    "note": "소리가 잡히지 않았어요. 마이크를 확인하고 가까이에서 다시 말해 보세요."
+   },
+   "전사 판정 | 단계 4 사과 ← '사과' sim 100": {
+    "score": 100.0,
+    "passed": true,
+    "note": ""
+   },
+   "D-GOP 집계 | 모두 0.95": {
+    "raw": 95.0,
+    "uncertainty": 0.3578,
+    "내장 기본값(축 A 9/9)": {
+     "score": 93.9,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration.json(팀원 채점기)": {
+     "score": 93.9,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration_kresnik.json(공개 kresnik)": {
+     "score": 95.3,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration_ours.json(배포 자체 채점기)": {
+     "score": 93.9,
+     "passed": true,
+     "hold": false
+    }
+   },
+   "D-GOP 집계 | 모두 0.80": {
+    "raw": 80.0,
+    "uncertainty": 0.8332,
+    "내장 기본값(축 A 9/9)": {
+     "score": 90.5,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration.json(팀원 채점기)": {
+     "score": 90.5,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration_kresnik.json(공개 kresnik)": {
+     "score": 88.9,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration_ours.json(배포 자체 채점기)": {
+     "score": 87.1,
+     "passed": true,
+     "hold": false
+    }
+   },
+   "D-GOP 집계 | 모두 0.60": {
+    "raw": 60.0,
+    "uncertainty": 0.9942,
+    "내장 기본값(축 A 9/9)": {
+     "score": 84.7,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration.json(팀원 채점기)": {
+     "score": 84.7,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration_kresnik.json(공개 kresnik)": {
+     "score": 78.1,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration_ours.json(배포 자체 채점기)": {
+     "score": 75.8,
+     "passed": true,
+     "hold": false
+    }
+   },
+   "D-GOP 집계 | 모두 0.40": {
+    "raw": 40.0,
+    "uncertainty": 0.9942,
+    "내장 기본값(축 A 9/9)": {
+     "score": 76.7,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration.json(팀원 채점기)": {
+     "score": 76.7,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration_kresnik.json(공개 kresnik)": {
+     "score": 67.3,
+     "passed": true,
+     "hold": true
+    },
+    "dgop_calibration_ours.json(배포 자체 채점기)": {
+     "score": 64.6,
+     "passed": false,
+     "hold": true
+    }
+   },
+   "D-GOP 집계 | 모두 0.10": {
+    "raw": 10.0,
+    "uncertainty": 0.5752,
+    "내장 기본값(축 A 9/9)": {
+     "score": 53.4,
+     "passed": false,
+     "hold": false
+    },
+    "dgop_calibration.json(팀원 채점기)": {
+     "score": 53.4,
+     "passed": false,
+     "hold": false
+    },
+    "dgop_calibration_kresnik.json(공개 kresnik)": {
+     "score": 49.2,
+     "passed": false,
+     "hold": false
+    },
+    "dgop_calibration_ours.json(배포 자체 채점기)": {
+     "score": 42.8,
+     "passed": false,
+     "hold": false
+    }
+   },
+   "D-GOP 집계 | 섞임(약한 소리 둘)": {
+    "raw": 71.9,
+    "uncertainty": 0.5721,
+    "내장 기본값(축 A 9/9)": {
+     "score": 88.3,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration.json(팀원 채점기)": {
+     "score": 88.3,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration_kresnik.json(공개 kresnik)": {
+     "score": 84.9,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration_ours.json(배포 자체 채점기)": {
+     "score": 82.9,
+     "passed": true,
+     "hold": false
+    }
+   },
+   "D-GOP 집계 | 한 소리만 0": {
+    "raw": 78.8,
+    "uncertainty": 0.5033,
+    "내장 기본값(축 A 9/9)": {
+     "score": 90.2,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration.json(팀원 채점기)": {
+     "score": 90.2,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration_kresnik.json(공개 kresnik)": {
+     "score": 88.3,
+     "passed": true,
+     "hold": false
+    },
+    "dgop_calibration_ours.json(배포 자체 채점기)": {
+     "score": 86.5,
+     "passed": true,
+     "hold": false
+    }
+   },
+   "D-GOP 집계 | 빈 목록": {
+    "raw": 0.0,
+    "uncertainty": 1.0,
+    "내장 기본값(축 A 9/9)": {
+     "score": 0.0,
+     "passed": false,
+     "hold": false
+    },
+    "dgop_calibration.json(팀원 채점기)": {
+     "score": 0.0,
+     "passed": false,
+     "hold": false
+    },
+    "dgop_calibration_kresnik.json(공개 kresnik)": {
+     "score": 0.0,
+     "passed": false,
+     "hold": false
+    },
+    "dgop_calibration_ours.json(배포 자체 채점기)": {
+     "score": 0.0,
+     "passed": false,
+     "hold": false
+    }
+   },
+   "보정 앵커 | 내장 기본값(축 A 9/9)": {
+    "0": 0.0,
+    "1": 22.6,
+    "3.8": 42.9,
+    "10": 53.4,
+    "25": 67.5,
+    "40": 76.7,
+    "50.9": 81.5,
+    "60": 84.7,
+    "70": 87.8,
+    "82.45": 91.1,
+    "90": 92.8,
+    "100": 94.9
+   },
+   "보정 앵커 | dgop_calibration.json(팀원 채점기)": {
+    "0": 0.0,
+    "1": 22.6,
+    "3.8": 42.9,
+    "10": 53.4,
+    "25": 67.5,
+    "40": 76.7,
+    "50.9": 81.5,
+    "60": 84.7,
+    "70": 87.8,
+    "82.45": 91.1,
+    "90": 92.8,
+    "100": 94.9
+   },
+   "보정 앵커 | dgop_calibration_kresnik.json(공개 kresnik)": {
+    "0": 0.0,
+    "1": 28.0,
+    "3.8": 40.0,
+    "10": 49.2,
+    "25": 58.0,
+    "40": 67.3,
+    "50.9": 72.0,
+    "60": 78.1,
+    "70": 83.9,
+    "82.45": 90.0,
+    "90": 93.3,
+    "100": 97.2
+   },
+   "보정 앵커 | dgop_calibration_ours.json(배포 자체 채점기)": {
+    "0": 0.0,
+    "1": 23.9,
+    "3.8": 34.1,
+    "10": 42.8,
+    "25": 55.3,
+    "40": 64.6,
+    "50.9": 70.4,
+    "60": 75.8,
+    "70": 81.9,
+    "82.45": 88.3,
+    "90": 91.8,
+    "100": 96.0
+   },
+   "이동 평균 숙달 | 모두 합격": {
+    "after_5": 100.0,
+    "after_10": 100.0,
+    "after_20": 100.0,
+    "final": 100.0,
+    "reach_68_stage4_at": 8,
+    "reach_68_stage5_at": 6
+   },
+   "이동 평균 숙달 | 합격 73%(11번 중 8번)": {
+    "after_5": 80.14,
+    "after_10": 68.96,
+    "after_20": 67.08,
+    "final": 73.1,
+    "reach_68_stage4_at": 8,
+    "reach_68_stage5_at": 7
+   },
+   "이동 평균 숙달 | 번갈아": {
+    "after_5": 60.14,
+    "after_10": 47.92,
+    "after_20": 47.92,
+    "final": 47.92,
+    "reach_68_stage4_at": null,
+    "reach_68_stage5_at": null
+   },
+   "이동 평균 숙달 | 처음 5번 불합격 뒤 합격": {
+    "after_5": 0.0,
+    "after_10": 60.27,
+    "after_20": 87.97,
+    "final": 95.38,
+    "reach_68_stage4_at": 12,
+    "reach_68_stage5_at": 12
+   },
+   "이동 평균 숙달 | 합격 60%": {
+    "after_5": 56.67,
+    "after_10": 56.67,
+    "after_20": 56.67,
+    "final": 56.67,
+    "reach_68_stage4_at": null,
+    "reach_68_stage5_at": 7
+   },
+   "향상 경로 | 19번: 시도 부족": {
+    "no_floor": false,
+    "floor_65": false
+   },
+   "향상 경로 | +20": {
+    "no_floor": true,
+    "floor_65": true
+   },
+   "향상 경로 | +12: 향상 부족": {
+    "no_floor": false,
+    "floor_65": false
+   },
+   "향상 경로 | 처음 중앙값 40 → 58": {
+    "no_floor": true,
+    "floor_65": true
+   },
+   "향상 경로 | 늘 40": {
+    "no_floor": false,
+    "floor_65": false
+   },
+   "향상 경로 | +20이지만 최근 40": {
+    "no_floor": true,
+    "floor_65": false
+   },
+   "향상 경로 | 기준선 0, 늘 30": {
+    "no_floor": true,
+    "floor_65": false
+   },
+   "향상 경로 | 하한 50에 딱 닿음": {
+    "no_floor": true,
+    "floor_65": true
+   },
+   "향상 경로 | gain 없음·점수 없음": {
+    "no_gain": false,
+    "none_scores": false
+   },
+   "소리 잡힌 시도": {
+    "D-GOP 크기 50 점수 30": true,
+    "전사 크기 50 '사과' 80": true,
+    "크기 0": false,
+    "크기 없음": false,
+    "전사 빈 문자열 0점": false,
+    "전사 빈 문자열 5점": true
+   },
+   "확인 낱말 창(3번 중 2번)": {
+    "oo": true,
+    "oxo": true,
+    "xxo": false,
+    "ooxx": false,
+    "xxx": false,
+    "": false
+   }
+  },
+  "engine": {
+   "발음 | 값": {
+    "입모양 경로": "갑",
+    "소리 경로(phonetic)": "갑",
+    "소리+ㅎ탈락+ㄴ첨가": "갑",
+    "입모양+ㄹ뒤 된소리": "갑"
+   },
+   "발음 | 닭": {
+    "입모양 경로": "닥",
+    "소리 경로(phonetic)": "닥",
+    "소리+ㅎ탈락+ㄴ첨가": "닥",
+    "입모양+ㄹ뒤 된소리": "닥"
+   },
+   "발음 | 앉": {
+    "입모양 경로": "안",
+    "소리 경로(phonetic)": "안",
+    "소리+ㅎ탈락+ㄴ첨가": "안",
+    "입모양+ㄹ뒤 된소리": "안"
+   },
+   "발음 | 아이": {
+    "입모양 경로": "아이",
+    "소리 경로(phonetic)": "아이",
+    "소리+ㅎ탈락+ㄴ첨가": "아이",
+    "입모양+ㄹ뒤 된소리": "아이"
+   },
+   "발음 | 굳이": {
+    "입모양 경로": "구지",
+    "소리 경로(phonetic)": "구지",
+    "소리+ㅎ탈락+ㄴ첨가": "구지",
+    "입모양+ㄹ뒤 된소리": "구지"
+   },
+   "발음 | 같이": {
+    "입모양 경로": "가치",
+    "소리 경로(phonetic)": "가치",
+    "소리+ㅎ탈락+ㄴ첨가": "가치",
+    "입모양+ㄹ뒤 된소리": "가치"
+   },
+   "발음 | 밥을": {
+    "입모양 경로": "바블",
+    "소리 경로(phonetic)": "바블",
+    "소리+ㅎ탈락+ㄴ첨가": "바블",
+    "입모양+ㄹ뒤 된소리": "바블"
+   },
+   "발음 | 옷이": {
+    "입모양 경로": "오시",
+    "소리 경로(phonetic)": "오시",
+    "소리+ㅎ탈락+ㄴ첨가": "오시",
+    "입모양+ㄹ뒤 된소리": "오시"
+   },
+   "발음 | 꽃이": {
+    "입모양 경로": "꼬치",
+    "소리 경로(phonetic)": "꼬치",
+    "소리+ㅎ탈락+ㄴ첨가": "꼬치",
+    "입모양+ㄹ뒤 된소리": "꼬치"
+   },
+   "발음 | 한국어": {
+    "입모양 경로": "한구거",
+    "소리 경로(phonetic)": "한구거",
+    "소리+ㅎ탈락+ㄴ첨가": "한구거",
+    "입모양+ㄹ뒤 된소리": "한구거"
+   },
+   "발음 | 닭이": {
+    "입모양 경로": "달기",
+    "소리 경로(phonetic)": "달기",
+    "소리+ㅎ탈락+ㄴ첨가": "달기",
+    "입모양+ㄹ뒤 된소리": "달기"
+   },
+   "발음 | 좋아": {
+    "입모양 경로": "조아",
+    "소리 경로(phonetic)": "조아",
+    "소리+ㅎ탈락+ㄴ첨가": "조아",
+    "입모양+ㄹ뒤 된소리": "조아"
+   },
+   "발음 | 좋다": {
+    "입모양 경로": "조타",
+    "소리 경로(phonetic)": "조타",
+    "소리+ㅎ탈락+ㄴ첨가": "조타",
+    "입모양+ㄹ뒤 된소리": "조타"
+   },
+   "발음 | 많다": {
+    "입모양 경로": "만타",
+    "소리 경로(phonetic)": "만타",
+    "소리+ㅎ탈락+ㄴ첨가": "만타",
+    "입모양+ㄹ뒤 된소리": "만타"
+   },
+   "발음 | 놓고": {
+    "입모양 경로": "노코",
+    "소리 경로(phonetic)": "노코",
+    "소리+ㅎ탈락+ㄴ첨가": "노코",
+    "입모양+ㄹ뒤 된소리": "노코"
+   },
+   "발음 | 입학": {
+    "입모양 경로": "이팍",
+    "소리 경로(phonetic)": "이팍",
+    "소리+ㅎ탈락+ㄴ첨가": "이팍",
+    "입모양+ㄹ뒤 된소리": "이팍"
+   },
+   "발음 | 국화": {
+    "입모양 경로": "구콰",
+    "소리 경로(phonetic)": "구콰",
+    "소리+ㅎ탈락+ㄴ첨가": "구콰",
+    "입모양+ㄹ뒤 된소리": "구콰"
+   },
+   "발음 | 축하": {
+    "입모양 경로": "추카",
+    "소리 경로(phonetic)": "추카",
+    "소리+ㅎ탈락+ㄴ첨가": "추카",
+    "입모양+ㄹ뒤 된소리": "추카"
+   },
+   "발음 | 닫히다": {
+    "입모양 경로": "다치다",
+    "소리 경로(phonetic)": "다치다",
+    "소리+ㅎ탈락+ㄴ첨가": "다치다",
+    "입모양+ㄹ뒤 된소리": "다치다"
+   },
+   "발음 | 강아지": {
+    "입모양 경로": "강아지",
+    "소리 경로(phonetic)": "강아지",
+    "소리+ㅎ탈락+ㄴ첨가": "강아지",
+    "입모양+ㄹ뒤 된소리": "강아지"
+   },
+   "발음 | 많이": {
+    "입모양 경로": "마니",
+    "소리 경로(phonetic)": "만히",
+    "소리+ㅎ탈락+ㄴ첨가": "마니",
+    "입모양+ㄹ뒤 된소리": "마니"
+   },
+   "발음 | 싫어": {
+    "입모양 경로": "시러",
+    "소리 경로(phonetic)": "실허",
+    "소리+ㅎ탈락+ㄴ첨가": "시러",
+    "입모양+ㄹ뒤 된소리": "시러"
+   },
+   "발음 | 괜찮아요": {
+    "입모양 경로": "괜차나요",
+    "소리 경로(phonetic)": "괜찬하요",
+    "소리+ㅎ탈락+ㄴ첨가": "괜차나요",
+    "입모양+ㄹ뒤 된소리": "괜차나요"
+   },
+   "발음 | 꽃": {
+    "입모양 경로": "꼳",
+    "소리 경로(phonetic)": "꼳",
+    "소리+ㅎ탈락+ㄴ첨가": "꼳",
+    "입모양+ㄹ뒤 된소리": "꼳"
+   },
+   "발음 | 몇 시": {
+    "입모양 경로": "멷 시",
+    "소리 경로(phonetic)": "멷 시",
+    "소리+ㅎ탈락+ㄴ첨가": "멷 시",
+    "입모양+ㄹ뒤 된소리": "멷 시"
+   },
+   "발음 | 옷": {
+    "입모양 경로": "옷",
+    "소리 경로(phonetic)": "옫",
+    "소리+ㅎ탈락+ㄴ첨가": "옫",
+    "입모양+ㄹ뒤 된소리": "옷"
+   },
+   "발음 | 앞": {
+    "입모양 경로": "앞",
+    "소리 경로(phonetic)": "압",
+    "소리+ㅎ탈락+ㄴ첨가": "압",
+    "입모양+ㄹ뒤 된소리": "앞"
+   },
+   "발음 | 밖": {
+    "입모양 경로": "밖",
+    "소리 경로(phonetic)": "박",
+    "소리+ㅎ탈락+ㄴ첨가": "박",
+    "입모양+ㄹ뒤 된소리": "밖"
+   },
+   "발음 | 솥": {
+    "입모양 경로": "솥",
+    "소리 경로(phonetic)": "솓",
+    "소리+ㅎ탈락+ㄴ첨가": "솓",
+    "입모양+ㄹ뒤 된소리": "솥"
+   },
+   "발음 | 국물": {
+    "입모양 경로": "국물",
+    "소리 경로(phonetic)": "궁물",
+    "소리+ㅎ탈락+ㄴ첨가": "궁물",
+    "입모양+ㄹ뒤 된소리": "국물"
+   },
+   "발음 | 닫는": {
+    "입모양 경로": "닫는",
+    "소리 경로(phonetic)": "단는",
+    "소리+ㅎ탈락+ㄴ첨가": "단는",
+    "입모양+ㄹ뒤 된소리": "닫는"
+   },
+   "발음 | 밥물": {
+    "입모양 경로": "밥물",
+    "소리 경로(phonetic)": "밤물",
+    "소리+ㅎ탈락+ㄴ첨가": "밤물",
+    "입모양+ㄹ뒤 된소리": "밥물"
+   },
+   "발음 | 밭만": {
+    "입모양 경로": "밭만",
+    "소리 경로(phonetic)": "반만",
+    "소리+ㅎ탈락+ㄴ첨가": "반만",
+    "입모양+ㄹ뒤 된소리": "밭만"
+   },
+   "발음 | 신라": {
+    "입모양 경로": "신라",
+    "소리 경로(phonetic)": "실라",
+    "소리+ㅎ탈락+ㄴ첨가": "실라",
+    "입모양+ㄹ뒤 된소리": "신라"
+   },
+   "발음 | 설날": {
+    "입모양 경로": "설날",
+    "소리 경로(phonetic)": "설랄",
+    "소리+ㅎ탈락+ㄴ첨가": "설랄",
+    "입모양+ㄹ뒤 된소리": "설날"
+   },
+   "발음 | 종로": {
+    "입모양 경로": "종로",
+    "소리 경로(phonetic)": "종노",
+    "소리+ㅎ탈락+ㄴ첨가": "종노",
+    "입모양+ㄹ뒤 된소리": "종로"
+   },
+   "발음 | 백리": {
+    "입모양 경로": "백리",
+    "소리 경로(phonetic)": "뱅니",
+    "소리+ㅎ탈락+ㄴ첨가": "뱅니",
+    "입모양+ㄹ뒤 된소리": "백리"
+   },
+   "발음 | 학교": {
+    "입모양 경로": "학교",
+    "소리 경로(phonetic)": "학꾜",
+    "소리+ㅎ탈락+ㄴ첨가": "학꾜",
+    "입모양+ㄹ뒤 된소리": "학교"
+   },
+   "발음 | 있다": {
+    "입모양 경로": "있다",
+    "소리 경로(phonetic)": "읻따",
+    "소리+ㅎ탈락+ㄴ첨가": "읻따",
+    "입모양+ㄹ뒤 된소리": "있다"
+   },
+   "발음 | 먹었다": {
+    "입모양 경로": "머겄다",
+    "소리 경로(phonetic)": "머걷따",
+    "소리+ㅎ탈락+ㄴ첨가": "머걷따",
+    "입모양+ㄹ뒤 된소리": "머겄다"
+   },
+   "발음 | 안녕하세요": {
+    "입모양 경로": "안녕하세요",
+    "소리 경로(phonetic)": "안녕하세요",
+    "소리+ㅎ탈락+ㄴ첨가": "안녕하세요",
+    "입모양+ㄹ뒤 된소리": "안녕하세요"
+   },
+   "발음 | 붙여": {
+    "입모양 경로": "부쳐",
+    "소리 경로(phonetic)": "부쳐",
+    "소리+ㅎ탈락+ㄴ첨가": "부쳐",
+    "입모양+ㄹ뒤 된소리": "부쳐"
+   },
+   "발음 | 밥 먹자": {
+    "입모양 경로": "밥 먹자",
+    "소리 경로(phonetic)": "밥 먹짜",
+    "소리+ㅎ탈락+ㄴ첨가": "밥 먹짜",
+    "입모양+ㄹ뒤 된소리": "밥 먹자"
+   },
+   "발음 | 좋다!": {
+    "입모양 경로": "조타!",
+    "소리 경로(phonetic)": "조타!",
+    "소리+ㅎ탈락+ㄴ첨가": "조타!",
+    "입모양+ㄹ뒤 된소리": "조타!"
+   },
+   "발음 | 꽃잎": {
+    "입모양 경로": "꼳닢",
+    "소리 경로(phonetic)": "꼬칩",
+    "소리+ㅎ탈락+ㄴ첨가": "꼰닙",
+    "입모양+ㄹ뒤 된소리": "꼳닢"
+   },
+   "발음 | 담요": {
+    "입모양 경로": "담뇨",
+    "소리 경로(phonetic)": "다묘",
+    "소리+ㅎ탈락+ㄴ첨가": "담뇨",
+    "입모양+ㄹ뒤 된소리": "담뇨"
+   },
+   "발음 | 색연필": {
+    "입모양 경로": "색년필",
+    "소리 경로(phonetic)": "새견필",
+    "소리+ㅎ탈락+ㄴ첨가": "생년필",
+    "입모양+ㄹ뒤 된소리": "색년필"
+   },
+   "발음 | 나뭇잎": {
+    "입모양 경로": "나문닢",
+    "소리 경로(phonetic)": "나무십",
+    "소리+ㅎ탈락+ㄴ첨가": "나문닙",
+    "입모양+ㄹ뒤 된소리": "나문닢"
+   },
+   "발음 | 서울역": {
+    "입모양 경로": "서울력",
+    "소리 경로(phonetic)": "서우력",
+    "소리+ㅎ탈락+ㄴ첨가": "서울력",
+    "입모양+ㄹ뒤 된소리": "서울력"
+   },
+   "발음 | 유럽여행을": {
+    "입모양 경로": "유럽녀행을",
+    "소리 경로(phonetic)": "유러벼행을",
+    "소리+ㅎ탈락+ㄴ첨가": "유럼녀행을",
+    "입모양+ㄹ뒤 된소리": "유럽녀행을"
+   },
+   "발음 | 집안일": {
+    "입모양 경로": "지반닐",
+    "소리 경로(phonetic)": "지바닐",
+    "소리+ㅎ탈락+ㄴ첨가": "지반닐",
+    "입모양+ㄹ뒤 된소리": "지반닐"
+   },
+   "발음 | 식용유": {
+    "입모양 경로": "시굥뉴",
+    "소리 경로(phonetic)": "시굥유",
+    "소리+ㅎ탈락+ㄴ첨가": "시굥뉴",
+    "입모양+ㄹ뒤 된소리": "시굥뉴"
+   },
+   "발음 | 해야 할 일이": {
+    "입모양 경로": "해야 할 리리",
+    "소리 경로(phonetic)": "해야 할 이리",
+    "소리+ㅎ탈락+ㄴ첨가": "해야 할 리리",
+    "입모양+ㄹ뒤 된소리": "해야 할 리리"
+   },
+   "발음 | 빨간 꽃잎이": {
+    "입모양 경로": "빨간 꼳니피",
+    "소리 경로(phonetic)": "빨간 꼬치피",
+    "소리+ㅎ탈락+ㄴ첨가": "빨간 꼰니피",
+    "입모양+ㄹ뒤 된소리": "빨간 꼳니피"
+   },
+   "발음 | 할게요": {
+    "입모양 경로": "할게요",
+    "소리 경로(phonetic)": "할게요",
+    "소리+ㅎ탈락+ㄴ첨가": "할게요",
+    "입모양+ㄹ뒤 된소리": "할께요"
+   },
+   "발음 | 할 수 있어": {
+    "입모양 경로": "할 수 이써",
+    "소리 경로(phonetic)": "할 수 이써",
+    "소리+ㅎ탈락+ㄴ첨가": "할 수 이써",
+    "입모양+ㄹ뒤 된소리": "할 쑤 이써"
+   },
+   "발음 | 갈 거야": {
+    "입모양 경로": "갈 거야",
+    "소리 경로(phonetic)": "갈 거야",
+    "소리+ㅎ탈락+ㄴ첨가": "갈 거야",
+    "입모양+ㄹ뒤 된소리": "갈 꺼야"
+   },
+   "발음 | 읽고": {
+    "입모양 경로": "익고",
+    "소리 경로(phonetic)": "익꼬",
+    "소리+ㅎ탈락+ㄴ첨가": "익꼬",
+    "입모양+ㄹ뒤 된소리": "익고"
+   },
+   "발음 | 넓어요": {
+    "입모양 경로": "널버요",
+    "소리 경로(phonetic)": "널버요",
+    "소리+ㅎ탈락+ㄴ첨가": "널버요",
+    "입모양+ㄹ뒤 된소리": "널버요"
+   },
+   "발음 | 흙이": {
+    "입모양 경로": "흘기",
+    "소리 경로(phonetic)": "흘기",
+    "소리+ㅎ탈락+ㄴ첨가": "흘기",
+    "입모양+ㄹ뒤 된소리": "흘기"
+   },
+   "발음 | 닳는": {
+    "입모양 경로": "달는",
+    "소리 경로(phonetic)": "달른",
+    "소리+ㅎ탈락+ㄴ첨가": "달른",
+    "입모양+ㄹ뒤 된소리": "달는"
+   },
+   "발음 | 끓이다": {
+    "입모양 경로": "끄리다",
+    "소리 경로(phonetic)": "끌히다",
+    "소리+ㅎ탈락+ㄴ첨가": "끄리다",
+    "입모양+ㄹ뒤 된소리": "끄리다"
+   },
+   "발음 | 맑다": {
+    "입모양 경로": "막다",
+    "소리 경로(phonetic)": "막따",
+    "소리+ㅎ탈락+ㄴ첨가": "막따",
+    "입모양+ㄹ뒤 된소리": "막다"
+   },
+   "발음 | 밟다": {
+    "입모양 경로": "발다",
+    "소리 경로(phonetic)": "발다",
+    "소리+ㅎ탈락+ㄴ첨가": "발다",
+    "입모양+ㄹ뒤 된소리": "발다"
+   },
+   "발음 | 의사": {
+    "입모양 경로": "의사",
+    "소리 경로(phonetic)": "의사",
+    "소리+ㅎ탈락+ㄴ첨가": "의사",
+    "입모양+ㄹ뒤 된소리": "의사"
+   },
+   "발음 | 희망": {
+    "입모양 경로": "히망",
+    "소리 경로(phonetic)": "희망",
+    "소리+ㅎ탈락+ㄴ첨가": "희망",
+    "입모양+ㄹ뒤 된소리": "히망"
+   },
+   "발음 | 늴리리": {
+    "입모양 경로": "닐리리",
+    "소리 경로(phonetic)": "늴리리",
+    "소리+ㅎ탈락+ㄴ첨가": "늴리리",
+    "입모양+ㄹ뒤 된소리": "닐리리"
+   },
+   "발음 | 밥 먹었어요": {
+    "입모양 경로": "밥 머거써요",
+    "소리 경로(phonetic)": "밥 머거써요",
+    "소리+ㅎ탈락+ㄴ첨가": "밥 머거써요",
+    "입모양+ㄹ뒤 된소리": "밥 머거써요"
+   },
+   "발음 | 같이 갈래요?": {
+    "입모양 경로": "가치 갈래요?",
+    "소리 경로(phonetic)": "가치 갈래요?",
+    "소리+ㅎ탈락+ㄴ첨가": "가치 갈래요?",
+    "입모양+ㄹ뒤 된소리": "가치 갈래요?"
+   },
+   "발음 | 물 좀 주세요": {
+    "입모양 경로": "물 좀 주세요",
+    "소리 경로(phonetic)": "물 좀 주세요",
+    "소리+ㅎ탈락+ㄴ첨가": "물 좀 주세요",
+    "입모양+ㄹ뒤 된소리": "물 좀 주세요"
+   },
+   "발음 | 3시 30분": {
+    "입모양 경로": "세시 삼십분",
+    "소리 경로(phonetic)": "세시 삼십뿐",
+    "소리+ㅎ탈락+ㄴ첨가": "세시 삼십뿐",
+    "입모양+ㄹ뒤 된소리": "세시 삼십분"
+   },
+   "발음 | 5,000원": {
+    "입모양 경로": "오처눤",
+    "소리 경로(phonetic)": "오처눤",
+    "소리+ㅎ탈락+ㄴ첨가": "오처눤",
+    "입모양+ㄹ뒤 된소리": "오처눤"
+   },
+   "발음 | 괜찮으세요?": {
+    "입모양 경로": "괜차느세요?",
+    "소리 경로(phonetic)": "괜찬흐세요?",
+    "소리+ㅎ탈락+ㄴ첨가": "괜차느세요?",
+    "입모양+ㄹ뒤 된소리": "괜차느세요?"
+   },
+   "입모양 프레임 | 밥 먹었어요": {
+    "visemes": "1 2 1 14 1 5 7 5 6 5 4",
+    "duration_ms": 1500,
+    "frames": 11
+   },
+   "입모양 프레임 | 와": {
+    "visemes": "4 2",
+    "duration_ms": 200,
+    "frames": 2
+   },
+   "입모양 프레임 | 의": {
+    "visemes": "5 3",
+    "duration_ms": 200,
+    "frames": 2
+   },
+   "입모양 프레임 | 뭐": {
+    "visemes": "1 4 5",
+    "duration_ms": 320,
+    "frames": 3
+   },
+   "입모양 프레임 | 꽃잎": {
+    "visemes": "7 4 6 12 6 3 1",
+    "duration_ms": 895,
+    "frames": 7
+   },
+   "입모양 프레임 | 물 좀 주세요": {
+    "visemes": "1 4 6 14 10 4 1 14 10 4 6 3 4",
+    "duration_ms": 1790,
+    "frames": 13
+   },
+   "입모양 프레임 | 안녕하세요": {
+    "visemes": "2 6 12 6 5 7 8 2 6 3 4",
+    "duration_ms": 1505,
+    "frames": 11
+   }
+  },
+  "speak_api": {
+   "문장 단계 D-GOP | 01번째 70점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 70.0,
+    "passed": true,
+    "pass_score": 65.0,
+    "hold": true,
+    "note": "억양 방향도 맞았어요!",
+    "transcript": null,
+    "attempts": 1,
+    "mastery_score": 100.0,
+    "mastered": false
+   },
+   "문장 단계 D-GOP | 02번째 64.9점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 64.9,
+    "passed": false,
+    "pass_score": 65.0,
+    "hold": true,
+    "note": "억양 방향도 맞았어요!",
+    "transcript": null,
+    "attempts": 2,
+    "mastery_score": 47.9,
+    "mastered": false
+   },
+   "문장 단계 D-GOP | 03번째 65점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 65.0,
+    "passed": true,
+    "pass_score": 65.0,
+    "hold": true,
+    "note": "억양 방향도 맞았어요!",
+    "transcript": null,
+    "attempts": 3,
+    "mastery_score": 66.7,
+    "mastered": false
+   },
+   "문장 단계 D-GOP | 04번째 57.5점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 57.5,
+    "passed": false,
+    "pass_score": 65.0,
+    "hold": false,
+    "note": "억양 방향도 맞았어요!",
+    "transcript": null,
+    "attempts": 4,
+    "mastery_score": 47.9,
+    "mastered": false
+   },
+   "문장 단계 D-GOP | 05번째 57.6점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 57.6,
+    "passed": false,
+    "pass_score": 65.0,
+    "hold": true,
+    "note": "억양 방향도 맞았어요!",
+    "transcript": null,
+    "attempts": 5,
+    "mastery_score": 36.7,
+    "mastered": false
+   },
+   "문장 단계 D-GOP | 06번째 72.4점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 72.4,
+    "passed": true,
+    "pass_score": 65.0,
+    "hold": true,
+    "note": "억양 방향도 맞았어요!",
+    "transcript": null,
+    "attempts": 6,
+    "mastery_score": 49.5,
+    "mastered": false
+   },
+   "문장 단계 D-GOP | 07번째 72.5점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 72.5,
+    "passed": true,
+    "pass_score": 65.0,
+    "hold": false,
+    "note": "억양 방향도 맞았어요!",
+    "transcript": null,
+    "attempts": 7,
+    "mastery_score": 58.7,
+    "mastered": false
+   },
+   "문장 단계 D-GOP | 08번째 80점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 80.0,
+    "passed": true,
+    "pass_score": 65.0,
+    "hold": false,
+    "note": "억양 방향도 맞았어요!",
+    "transcript": null,
+    "attempts": 8,
+    "mastery_score": 65.5,
+    "mastered": false
+   },
+   "문장 단계 D-GOP | 09번째 90점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 90.0,
+    "passed": true,
+    "pass_score": 65.0,
+    "hold": false,
+    "note": "억양 방향도 맞았어요!",
+    "transcript": null,
+    "attempts": 9,
+    "mastery_score": 70.7,
+    "mastered": true
+   },
+   "문장 단계 D-GOP | 10번째 68점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 68.0,
+    "passed": true,
+    "pass_score": 65.0,
+    "hold": true,
+    "note": "억양 방향도 맞았어요!",
+    "transcript": null,
+    "attempts": 10,
+    "mastery_score": 74.8,
+    "mastered": true
+   },
+   "문장 단계 D-GOP | 11번째 66점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 66.0,
+    "passed": true,
+    "pass_score": 65.0,
+    "hold": true,
+    "note": "억양 방향도 맞았어요!",
+    "transcript": null,
+    "attempts": 11,
+    "mastery_score": 78.2,
+    "mastered": true
+   },
+   "문장 단계 D-GOP | 12번째 75점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 75.0,
+    "passed": true,
+    "pass_score": 65.0,
+    "hold": false,
+    "note": "억양 방향도 맞았어요!",
+    "transcript": null,
+    "attempts": 12,
+    "mastery_score": 81.0,
+    "mastered": true
+   },
+   "낱말 단계 향상 경로 | 10번째 40점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 40.0,
+    "passed": false,
+    "pass_score": 65.0,
+    "hold": false,
+    "note": "",
+    "transcript": null,
+    "attempts": 10,
+    "mastery_score": 0.0,
+    "mastered": false
+   },
+   "낱말 단계 향상 경로 | 19번째 60점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 60.0,
+    "passed": false,
+    "pass_score": 65.0,
+    "hold": true,
+    "note": "",
+    "transcript": null,
+    "attempts": 19,
+    "mastery_score": 0.0,
+    "mastered": false
+   },
+   "낱말 단계 향상 경로 | 20번째 60점": {
+    "status": 200,
+    "method": "dgop",
+    "score": 60.0,
+    "passed": false,
+    "pass_score": 65.0,
+    "hold": true,
+    "note": "",
+    "transcript": null,
+    "attempts": 20,
+    "mastery_score": 0.0,
+    "mastered": true
+   },
+   "전사 경로 | 단계 2 아 ← '이'": {
+    "status": 200,
+    "method": "asr_transcript",
+    "score": 69.0,
+    "passed": false,
+    "pass_score": 50.0,
+    "hold": false,
+    "note": "목표 모음은 'ㅏ'인데 'ㅣ' 소리로 들렸어요.",
+    "transcript": "이",
+    "attempts": 1,
+    "mastery_score": 0.0,
+    "mastered": false
+   },
+   "전사 경로 | 단계 2 아 ← '아.'": {
+    "status": 200,
+    "method": "asr_transcript",
+    "score": 100.0,
+    "passed": true,
+    "pass_score": 50.0,
+    "hold": false,
+    "note": "",
+    "transcript": "아.",
+    "attempts": 2,
+    "mastery_score": 52.1,
+    "mastered": false
+   },
+   "전사 경로 | 단계 3 풀 ← '불'": {
+    "status": 200,
+    "method": "asr_transcript",
+    "score": 91.0,
+    "passed": false,
+    "pass_score": 50.0,
+    "hold": false,
+    "note": "목표 첫소리는 'ㅍ'인데 'ㅂ' 소리로 들렸어요.",
+    "transcript": "불",
+    "attempts": 1,
+    "mastery_score": 0.0,
+    "mastered": false
+   },
+   "전사 경로 | 단계 3 풀 ← '풀'": {
+    "status": 200,
+    "method": "asr_transcript",
+    "score": 100.0,
+    "passed": true,
+    "pass_score": 50.0,
+    "hold": false,
+    "note": "",
+    "transcript": "풀",
+    "attempts": 2,
+    "mastery_score": 52.1,
+    "mastered": false
+   },
+   "전사 경로 | 단계 2 아 ← '시청해 주셔서 감사합니다.'": {
+    "status": 200,
+    "method": "asr_transcript",
+    "score": 0.0,
+    "passed": false,
+    "pass_score": 50.0,
+    "hold": false,
+    "note": "소리가 잡히지 않았어요. 마이크를 확인하고 가까이에서 다시 말해 보세요.",
+    "transcript": "",
+    "attempts": 3,
+    "mastery_score": 33.3,
+    "mastered": false
+   },
+   "전사 경로 | 단계 5 밥 먹었어요. ← '밥 먹었어요'": {
+    "status": 200,
+    "method": "asr_transcript",
+    "score": 100.0,
+    "passed": true,
+    "pass_score": 65.0,
+    "hold": false,
+    "note": "억양이 평평했어요. 끝을 내려보세요.",
+    "transcript": "밥 먹었어요",
+    "attempts": 1,
+    "mastery_score": 100.0,
+    "mastered": false
+   },
+   "전사 경로 | 단계 4 사과 ← '사가'": {
+    "status": 200,
+    "method": "asr_transcript",
+    "score": 76.3,
+    "passed": true,
+    "pass_score": 65.0,
+    "hold": false,
+    "note": "",
+    "transcript": "사가",
+    "attempts": 1,
+    "mastery_score": 100.0,
+    "mastered": false
+   },
+   "독화 진행 | typed 물 좀 주세요. ← 물 좀 주세요": {
+    "score": 100.0,
+    "passed": true,
+    "level": "excellent",
+    "word_feedback": "3/3"
+   },
+   "독화 진행 | typed 물 좀 주세요. ← 불 좀 주세요": {
+    "score": 97.67,
+    "passed": true,
+    "level": "excellent",
+    "word_feedback": "2/3"
+   },
+   "독화 진행 | typed 오늘 저녁에 같이 밥 먹을래요 ← 오늘 밥 먹을래요": {
+    "score": 56.14,
+    "passed": false,
+    "level": "needs_improvement",
+    "word_feedback": "3/5"
+   },
+   "독화 진행 | typed 케이크가 다 팔렸대요 ← 다음 역에서 내리세요": {
+    "score": 17.22,
+    "passed": false,
+    "level": "retry",
+    "word_feedback": "1/3"
+   },
+   "독화 진행 | choice 물 좀 주세요. ← 물 좀 주세요!": {
+    "score": 100.0,
+    "passed": true,
+    "level": "excellent",
+    "word_feedback": null
+   },
+   "독화 진행 | choice 물 좀 주세요. ← 불 좀 주세요": {
+    "score": 0.0,
+    "passed": false,
+    "level": "retry",
+    "word_feedback": null
+   }
+  }
+ }
+}

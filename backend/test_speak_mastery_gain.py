@@ -1,41 +1,8 @@
-"""말하기 4·5단계 숙달 문턱(68)과 개인 향상 경로(9/28, docs/curriculum-roadmap.md 2-1)."""
+"""말하기 4·5단계 숙달 문턱(68)과 개인 향상 경로(9/28, docs/curriculum-roadmap.md 2-1). DB를 거치는 경로만 여기서 본다.
+
+순수 함수 검사(단계 상수 68·65, gain_mastered, voiced_attempt)는 10/9 채점 회귀 묶음의 고정 기대로 옮겼다
+(scoring_regress.PINNED, test_scoring_regress.py). 같은 입력과 기대값이다."""
 import speak_curriculum as sc
-
-
-def test_stage4_5_threshold_reachable_by_hearing_impaired_readers():
-    # 608 청각장애 화자가 대본을 읽은 문장의 65점 합격률(확인용 화자 절반 1) 73.1% − 5점 = 68(계획 2-1, 리뷰 뒤 77에서 고침)
-    for n in (4, 5):
-        stg = sc.get_stage(n)
-        assert stg["mastery"] == 68.0 and stg["pass"] == 65.0 and stg["gain"]
-
-
-def test_gain_mastered_needs_enough_attempts_and_clear_improvement():
-    g = sc.get_stage(4)["gain"]
-    assert not sc.gain_mastered([40] * 10 + [60] * 9, g)          # 19번: 시도 부족
-    assert sc.gain_mastered([40] * 10 + [60] * 10, g)             # +20
-    assert not sc.gain_mastered([40] * 10 + [52] * 10, g)         # +12: 향상 부족
-    assert sc.gain_mastered([30, 40, 50] * 4 + [58] * 10, g)      # 처음 10번 중앙값 40 → 58
-    assert not sc.gain_mastered([40] * 30, g)
-    assert not sc.gain_mastered([40] * 30, None)
-    assert not sc.gain_mastered([None] * 25, g)
-
-
-def test_gain_mastered_absolute_floor():
-    # 리뷰 뒤 고침: 최근 10번 중앙값이 합격선 − 15(합격 65면 50) 이상이어야 한다
-    g = sc.get_stage(4)["gain"]
-    assert g["floor"] == 15.0
-    assert not sc.gain_mastered([20] * 10 + [40] * 10, g, 65.0)   # +20이지만 최근 40 < 50
-    assert not sc.gain_mastered([0] * 10 + [30] * 10, g, 65.0)    # 리뷰어 사례: 기준선 0, 늘 30
-    assert sc.gain_mastered([30] * 10 + [50] * 10, g, 65.0)       # 하한 50에 딱 닿음
-    assert sc.gain_mastered([40] * 10 + [60] * 10, g, 65.0)
-
-
-def test_voiced_attempt():
-    assert sc.voiced_attempt(50, "사과", 80) and sc.voiced_attempt(50, None, 30)   # D-GOP 경로는 전사가 None
-    assert not sc.voiced_attempt(0, "사과", 80)          # 크기 0(micIssue, 예전 클라이언트)
-    assert not sc.voiced_attempt(None, None, 40)
-    assert not sc.voiced_attempt(50, "", 0)              # 전사 경로 소리 없음
-    assert sc.voiced_attempt(50, "", 5)
 
 
 def test_bump_speak_progress_uses_gain_path():
