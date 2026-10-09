@@ -9,7 +9,7 @@
    - 순서(planned_order)를 고정효과로 둔 평균: 순서 평균들의 평균, 오차는 순서 안 잔차의 합동 분산, 자유도 n − (순서 수).
    - 3갈래 판정(MME 5%p): 지지 = 95% 구간 하한 > 0, 반증 = 하한 ≤ 0이고 상한 < MME, 판정 불가 = 나머지.
    - 함께 보고: B − A2(관대한 상한), 낱말 4지선다·무의미 낱말 자음 층의 같은 D(판정 없음), R − A2(유지), RCI ≥ 1.96 비율,
-     ITT(배정·시작·완료 인원과 끝내지 못한 층), 소음 속 문장 시청각 이득(VE), SNR 계단 미수렴(estimate_kind = last_levels) 목록,
+     ITT(배정·시작·완료 인원과 끝내지 못한 층), 소음 속 문장 시청각 이득(VE), SNR 계단 미수렴(estimate_kind = last_levels 또는 없음, 10/9 낱말 비율 걸음은 posterior40) 목록,
      학습량(A2 완료 날부터 B 완료 날까지의 학습 날 수와 분).
    - 순차 멈춤 규칙: B 완료 순번(b_completed_seq)으로 완료자를 줄 세워 5·10·…·40명마다 한쪽 JZS BF+0(반코시 r = 0.707)을 순서 고정효과
      t로 계산한다. 10명 전에는 멈추지 않고, BF ≥ 6(지지 쪽) 또는 ≤ 1/6(영가설 쪽)에서 멈춘다. 최대 40명. 판정 문장은 멈춘 시점의
@@ -250,7 +250,7 @@ def p3_analyze(parts, allow_avatar=False):
                 snr.append({"pid": p["pid"], "snr_db": b.get("snr_calibrated_db"), "kind": b.get("snr_estimate_kind"),
                             "reversals": b.get("snr_reversals"), "headphone": b.get("headphone_check"),
                             "volume_fixed": b.get("volume_fixed")})
-    res["snr"] = {"n": len(snr), "not_converged": [s["pid"] for s in snr if s["kind"] != "reversals"],
+    res["snr"] = {"n": len(snr), "not_converged": [s["pid"] for s in snr if s["kind"] not in ("reversals", "posterior40")],
                   "checks_missing": [s["pid"] for s in snr if not (s["headphone"] and s["volume_fixed"])], "persons": snr}
     ve = {}
     for p in assigned:

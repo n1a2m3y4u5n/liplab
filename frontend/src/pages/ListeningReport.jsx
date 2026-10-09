@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listenAPI } from '../api'
 import AppShell from '../components/AppShell'
-import { MDC_DB, splitTests, srtChange, testRows, axKindRows, confusionRows, dayBars } from '../lib/listenReport'
+import { MDC_DB, srtMeaning, splitTests, srtChange, testRows, axKindRows, confusionRows, dayBars } from '../lib/listenReport'
 import { fmtDb } from '../lib/listenView'
 
 /**
@@ -94,7 +94,7 @@ export default function ListeningReport() {
         ) : !d ? <ReportSkeleton /> : (
           <>
             <Section title="소음 속 듣기 검사"
-              note={`역치는 낱말을 열에 넷쯤 알아듣는 '말과 소음의 크기 차이'예요. 낮을수록 시끄러운 곳에서 잘 알아들어요. 두 검사 사이 ${MDC_DB} dB 안쪽의 차이는 측정 오차일 수 있어요. 처음 한두 번은 검사에 익숙해지는 것만으로 1~2 dB 낮아지기도 해요.`}>
+              note={`역치는 ${srtMeaning(latest)} '말과 소음의 크기 차이'예요. 낮을수록 시끄러운 곳에서 잘 알아들어요. 두 검사 사이 ${MDC_DB} dB 안쪽의 차이는 측정 오차일 수 있어요. 처음 한두 번은 검사에 익숙해지는 것만으로 1~2 dB 낮아지기도 해요.`}>
               {main.length === 0 && other.length === 0 && wordTests.length === 0 ? (
                 <Empty navigate={navigate} text="아직 검사 기록이 없어요. 5단계 소음 속 듣기에서 처음 검사를 할 수 있어요." to="/learn/listening?stage=4" label="검사하러 가기" />
               ) : (
@@ -103,7 +103,7 @@ export default function ListeningReport() {
                     <div className="grid grid-cols-2 gap-2">
                       <Stat label="최근 역치" value={fmtDb(latest.srt_db)} sub={day(latest.started_at)} main />
                       <Stat label="처음과 비교" value={change ? (change.change > 0 ? `${change.change} dB 낮아짐` : change.change < 0 ? `${-change.change} dB 높아짐` : '같음') : '–'}
-                        sub={change ? (change.withinError ? '측정 오차 범위 안' : `검사 ${main.length}번`) : '두 번째 검사부터 보여요'} />
+                        sub={change ? (change.mixedRule ? '첫 검사와 계산 방식이 달라요' : change.withinError ? '측정 오차 범위 안' : `검사 ${main.length}번`) : '두 번째 검사부터 보여요'} />
                     </div>
                   )}
                   {rows.length > 0 && (
