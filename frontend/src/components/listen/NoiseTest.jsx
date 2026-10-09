@@ -87,7 +87,7 @@ export function NoiseTest({ settings, voices, onProgress, onDone, onCancel, acti
     return (
       <ListenComplete title="검사를 마쳤어요" stats={[{ label: '소음 속 문장 인식 역치', value: fmtDb(result.srt_db), main: true }]}
         sub={result.srt_db >= 24 ? '소음을 가장 작게 해도 낱말 절반을 넘기 어려웠어요. 문장 알아듣기를 더 연습하고 다시 검사해 보세요.'
-          : '말이 소음보다 이만큼 클 때 낱말을 열에 넷쯤 알아들었다는 뜻이에요. 낮을수록 시끄러운 곳에서 잘 알아들어요.'}
+          : `말이 소음보다 이만큼 클 때 ${(run.session || '').startsWith('test:v2-') ? '낱말을 절반쯤' : '낱말을 열에 넷쯤'} 알아들었다는 뜻이에요. 낮을수록 시끄러운 곳에서 잘 알아들어요.`}
         primary={{ label: '훈련 시작하기', onClick: onDone }} secondary={{ label: '학습 경로로', onClick: onCancel }} />
     )
   }

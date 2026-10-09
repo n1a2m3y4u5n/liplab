@@ -4064,9 +4064,12 @@ async def _battery_snr_state(session_id: int, manifest: dict, db) -> dict:
     import pilot_battery as _pb
     from database import P3OpenResponse
     from sqlalchemy import select
-    outs = (await db.execute(select(P3OpenResponse.criterion_met).where(P3OpenResponse.session_id == session_id)
-                             .order_by(P3OpenResponse.id))).scalars().all()
-    return _pb.staircase_run(manifest["layers"]["snr"]["staircase"], [bool(o) for o in outs])
+    st = manifest["layers"]["snr"]["staircase"]
+    rows = (await db.execute(select(P3OpenResponse.criterion_met, P3OpenResponse.target, P3OpenResponse.answer_text)
+                             .where(P3OpenResponse.session_id == session_id).order_by(P3OpenResponse.id))).all()
+    if st.get("rule") == "word_prop_post":   # 낱말 비율 걸음(10/9, docs/listen-stair-target-sim-2026-10.md): 답 글에서 다시 센다
+        return _pb.staircase_run(st, [_pb.word_hits(t, a) for _, t, a in rows])
+    return _pb.staircase_run(st, [bool(o) for o, _, _ in rows])
 
 
 def _battery_retention_schedule(rows: dict) -> dict:
@@ -5964,24 +5967,31 @@ def _is_test_practice(r) -> bool:
     return (r.item_key or "").startswith("testp:")
 
 
+def _listen_test_trials(rows: list) -> list:
+    """검사 회차 행들(같은 회차, 시간순) → 계단 시행 [(SNR, 맞음 또는 None)]. 규칙은 회차 id로 정한다(listen_curriculum.test_rule)."""
+    rule = _listencur.test_rule(rows[0].session if rows else None)
+    return [(r.snr_db, _listencur.test_trial_ok(r.score, r.correct, rule)) for r in rows]
+
+
 def _listen_test_state(tests: list) -> dict:
     """검사 회차들 → [{session, form, noise, sim, n, n_practice, srt_db, started_at}] 시간순. n은 검사 문장 수(연습 문장 제외).
     form은 첫 검사 문장 키의 폼(A~D)이고, 연습 문장만 답한 회차는 None이다(예전에는 'A'로 적어 talker2 회차도 A로 보였다)."""
     by = {}
     for r in tests:
-        s = by.setdefault(r.session, {"session": r.session, "form": None, "trials": [], "n_practice": 0,
+        s = by.setdefault(r.session, {"session": r.session, "form": None, "rows": [], "n_practice": 0,
                                        "noise": r.noise or "babble", "sim": r.sim_mode,
                                        "started_at": r.created_at.isoformat() if r.created_at else None})
-        s["trials"].append((r.snr_db, bool(r.correct)))
+        s["rows"].append(r)
         if _is_test_practice(r):
             s["n_practice"] += 1
         elif s["form"] is None:
             s["form"] = (r.item_key or "")[5:6] or None
     out = []
     for s in by.values():
+        trials = _listen_test_trials(s["rows"])
         out.append({"session": s["session"], "form": s["form"], "noise": s["noise"], "sim": s["sim"],
-                    "n": len(s["trials"]) - s["n_practice"], "n_practice": s["n_practice"],
-                    "srt_db": _listencur.test_srt(s["trials"], n_practice=s["n_practice"]), "started_at": s["started_at"]})
+                    "n": len(trials) - s["n_practice"], "n_practice": s["n_practice"], "rule": _listencur.test_rule(s["session"]),
+                    "srt_db": _listencur.test_srt(trials, n_practice=s["n_practice"]), "started_at": s["started_at"]})
     return out
 
 
@@ -6397,7 +6407,7 @@ async def _listen_commit_once(db) -> bool:
 
 def _listen_test_out(rows: list, target: str, answer: Optional[str], replayed: bool = False) -> dict:
     """검사 회차의 답 rows(시간순, 방금 답한 것이 마지막) → 그 답의 응답. 새 답과 재전송(replayed)이 같은 값을 내도록 한 곳에서 만든다."""
-    trials = [(r.snr_db, bool(r.correct)) for r in rows]
+    trials = _listen_test_trials(rows)
     n_prac = sum(1 for r in rows if _is_test_practice(r))
     last = rows[-1]
     is_practice = _is_test_practice(last)
@@ -6442,7 +6452,7 @@ async def listen_test_start(req: ListenTestStart, current_user=Depends(get_curre
     # 같은 폼이 나와 이미 들은 문장이 섞였다(코드 리뷰 10/7). 잡음 종류마다 따로 번갈아 쓴다
     form = _listencur.test_form_for(current_user.id, sum(1 for t in states if t["n"] > 0), noise=noise,
                                     heldout_ready=noise == "babble" or _listen_heldout_ready())
-    session = f"test:{uuid.uuid4().hex[:12]}"
+    session = f"{_listencur.TEST_HALF_PREFIX}{uuid.uuid4().hex[:12]}"   # 새 회차는 절반 규칙(10/9)
     practice = _listencur.test_practice_items(session)
     items = [{"key": it["key"], "text": it["text"], "practice": True} for it in practice] + \
         [{"key": f"test:{form}{i + 1:02d}", "text": s, "practice": False} for i, s in enumerate(_listencur.TEST_FORMS[form])]
@@ -6507,7 +6517,7 @@ async def listen_test_answer(req: ListenTestAnswer, current_user=Depends(get_cur
             raise HTTPException(status_code=400, detail="회차의 폼과 다릅니다.")
         target = _listencur.TEST_FORMS[form][int(idx) - 1]
     noise = (rows[0].noise if rows and rows[0].noise else None) or (req.noise if req.noise in _listencur.TEST_NOISES else "babble")
-    trials = [(r.snr_db, bool(r.correct)) for r in rows]
+    trials = _listen_test_trials(rows)
     n_prac = sum(1 for r in rows if _is_test_practice(r))
     snr = _listencur.test_next_snr(trials, n_practice=n_prac) if trials else _listencur.TEST_STAIR["start"]
     ws = _listencur.word_score(target, req.answer or "")

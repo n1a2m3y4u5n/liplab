@@ -35,10 +35,12 @@
   같은 생성기로 남겨 둔 목록을 하나 더 만든 것이다(`pilot_battery.nonsense_forms`, 같은 시드에서 세 번째 목록이라 앞 두 목록은
   그대로다). 세 폼 모두 학습 목록 48낱말과 겹치지 않고 자음 골격도 학습 목록에 없다. 폼 C를 만들 때 사람이 보고 '주산', '주곡'을
   더 뺐다(`NONSENSE_EXTRA_EXCLUDED`). 10/7부터 실제 낱말은 글자가 아니라 소리로 대조하고, 그래서 폼 B·C 낱말이 바뀌었다(8.2절).
-- SNR 맞추기는 가중 상하 계단이다(Kaernbach 1991). 맞으면 3 dB 내리고 틀리면 2 dB 올려 청각만 정답률 약 40%로 수렴한다(가4의
-  30~50% 목표). '맞음'은 문장 낱말의 50% 이상을 그대로 쓴 경우다. 반전 8번 또는 24시행에서 멈추고, 마지막 반전 6개의 평균을 개인
-  SNR로 쓴다(반전이 모자라면 마지막 6시행 수준의 평균, `estimate_kind = last_levels`). 시작 0 dB, 범위 −20~+10 dB. 계단은 서버가
-  저장된 판정으로 다시 계산한다(`pilot_battery.staircase_run`).
+- SNR 맞추기는 10/9부터(목록 판 `draft-2026-10-09`) 낱말 비율 걸음이다(`staircase.rule = word_prop_post`, `docs/listen-stair-target-sim-2026-10.md` P4).
+  문장마다 맞힌 낱말 비율로 ΔL = −f(i)(비율 − 0.40)/0.15만큼 옮기고(f(i) = max(0.1, 1.5·1.41^−i), i는 방향 전환 수, ICRA 권고 식) 24문장을 모두 낸다.
+  개인 SNR은 낱말 수 이항 가능도의 격자 사후 평균에서 구한 '낱말 40% 지점'이다(`estimate_kind = posterior40`). 시작 0 dB, 범위 −20~+25 dB.
+  가상 청취자 확인 시드에서 정상 청력의 기대 A가 목표 띠(가4의 30~50%)에 드는 비율이 지금 규칙의 54~64%에서 75~89%로 올랐고 'SNR 실패'(A 15% 미만·85% 초과)도
+  줄었다. 계단은 서버가 저장된 답 글로 다시 계산한다(`pilot_battery.staircase_run`). 옛 규칙(가중 상하법 Kaernbach 1991, 맞으면 −3 dB·틀리면 +2 dB,
+  '맞음'은 낱말 50% 이상, 반전 8번 또는 24시행, 마지막 반전 6개 평균, 모자라면 `last_levels`, 범위 −20~+10 dB)은 `rule`이 없는 목록에서 그대로 쓴다.
 - 잡음은 브라우저의 Web Audio로 섞는다. 영상의 소리는 그대로 두고 잡음 이득을 10^((말소리 dBFS − SNR − 잡음 dBFS)/20)으로 맞춘다.
   말소리 크기는 목록의 `speech_rms_dbfs`(매체를 준비할 때 잰 값), 잡음 크기는 받은 잡음 파일에서 브라우저가 잰다. 잡음은 말보다
   0.3초 먼저 시작해 0.3초 뒤에 멈춘다. 헤드폰 착용과 볼륨 고정은 연구진이 화면에서 확인해야 소음 층을 시작할 수 있고, 확인 값이
@@ -68,7 +70,7 @@
 | `layers.sentence.items[]` | `{id, text, syllables, phonemes}` | 6~10음절, 숫자·영문 없음 |
 | `layers.nonsense.items[]` | `{id, text, consonants[3], vowels[2]}` | 글자와 자모가 맞아야 하고, 자음은 `consonant_sets`의 자리별 목록 안 |
 | `layers.av.items[]`, `layers.snr.items[]` | `{id, text, speech_rms_dbfs}` | 촬영 뒤에 채운다. 지금은 모두 `null`(지어낸 문장·음성 없음) |
-| `layers.snr.staircase` | 사전 | `start_db, step_down_db, step_up_db, min_db, max_db, reversals, use_last, max_trials, criterion` |
+| `layers.snr.staircase` | 사전 | `rule: word_prop_post`이면 `start_db, min_db, max_db, target, s0, f_min, max_trials, criterion`(10/9). `rule`이 없으면 옛 `start_db, step_down_db, step_up_db, min_db, max_db, reversals, use_last, max_trials, criterion` |
 
 매체 파일은 저장소에 넣지 않는다(얼굴이 나오는 개인정보, `.gitignore`의 `backend/data/pilot/media/`). 서버의 매체 폴더는
 `LIPLAB_PILOT_MEDIA_DIR`(기본 `backend/data/pilot/media`)이고, 화면은 로그인한 참여자의 회차에 속한 문항만 받는다

@@ -126,8 +126,14 @@ def run_p(rng, lis, cond, var):
             ll = S.loglik(x, k, n)
             logpost = logpost + np.where(active[:, None], ll, 0.0)
         if bk is not None:
-            xn = bk.step(x, prop)
-            xn = np.clip(xn, lo, hi)
+            # S.BK.step는 소리 듣기 범위(−10 ~ +25)로 자르므로 쓰지 않고 같은 식을 이 후보의 범위로 자른다
+            # (10/9 확인 뒤 발견한 결함: 처음 돌린 탐색·확인은 P4의 하한이 −10 dB였다. 문서 7.1절)
+            dd = np.sign(bk.tar - prop)
+            rv = (dd != 0) & (bk.last != 0) & (dd != bk.last) & active
+            bk.nrev += rv
+            bk.last = np.where((dd != 0) & active, dd, bk.last)
+            f = np.maximum(bk.f_min, 1.5 * 1.41 ** (-bk.nrev))
+            xn = np.clip(np.round(x - f * (prop - bk.tar) / bk.s0, 1), lo, hi)
         else:
             ok = prop >= P3_CFG["criterion"]
             d = np.where(ok, -1, 1)
@@ -175,6 +181,32 @@ def check_p0_matches_app(seed=0, n=300):
         assert r["history"] == hist and abs(r["estimate_db"] - est) < 0.006, (r, hist, est)
 
 
+def check_p4_matches_app(seed=0, n=200):
+    """P4 걸음과 추정량이 pilot_battery.staircase_word_prop과 같은지(무작위 낱말 응답)."""
+    params = {"rule": "word_prop_post", "start_db": 0.0, "min_db": -20.0, "max_db": 25.0, "target": 0.4, "s0": 0.15, "f_min": 0.1,
+              "max_trials": 24}
+    rng = np.random.default_rng([seed, 56])
+    for _ in range(n):
+        ns = rng.choice(P3_WORDS, 24)
+        ks = rng.binomial(ns, rng.uniform(0.05, 0.95))
+        r = PB.staircase_run(params, list(zip(ks.tolist(), ns.tolist())))
+        # 시뮬레이션 식으로 같은 응답을 따라간다
+        bk = S.BK(1, 0.40, 0.15, 0.1, False)
+        x, hist, lp = np.array([0.0]), [], S.log_prior("flat")[None]
+        for k, nn in zip(ks, ns):
+            hist.append(float(x[0]))
+            lp = lp + S.loglik(x, np.array([k]), np.array([nn]))
+            prop = np.array([k / nn])
+            dd = np.sign(bk.tar - prop)
+            rv = (dd != 0) & (bk.last != 0) & (dd != bk.last)
+            bk.nrev += rv
+            bk.last = np.where(dd != 0, dd, bk.last)
+            f = np.maximum(bk.f_min, 1.5 * 1.41 ** (-bk.nrev))
+            x = np.clip(np.round(x - f * (prop - bk.tar) / bk.s0, 1), -20.0, 25.0)
+        assert np.allclose(r["history"], hist), (r["history"], hist)
+        assert abs(r["estimate_db"] - float(post_x(lp, 0.40)[0])) < 0.01, (r["estimate_db"], post_x(lp, 0.40))
+
+
 def a_block(rng, x, lis, cond):
     n = len(AV_A_WORDS)
     offs = offsets(rng, lis, n)
@@ -206,6 +238,7 @@ def summarize_p(lis, cond, est, ntr, hi, rng):
 
 def run_p_all(seed, n, variants, conds):
     check_p0_matches_app()
+    check_p4_matches_app()
     res = {}
     for pop in ("nh", "mix"):
         res[pop] = {}
@@ -266,9 +299,29 @@ def run_t(rng, lis, cond, var):
     return est, blocked
 
 
+def check_tt_matches_app(seed=0, n=300):
+    """Tt 걸음·역치가 앱(test_trial_ok·test_next_snr·test_srt, 절반 규칙)과 같은지(무작위 낱말 비율)."""
+    rng = np.random.default_rng([seed, 78])
+    kp = L.TEST_STAIR["practice"]
+    for _ in range(n):
+        ns = rng.choice([2, 3, 4, 5], kp + 20)
+        props = rng.binomial(ns, rng.uniform(0.1, 0.9)) / ns
+        x, xs, trials = S.START, [], []
+        for j in range(kp + 20):
+            assert abs((L.test_next_snr(trials, n_practice=min(kp, len(trials))) if trials else S.START) - x) < 1e-9
+            trials.append((x, L.test_trial_ok(props[j], props[j] >= 0.5, "half")))
+            xs.append(x)
+            step = L.TEST_STAIR["big"] if j < kp else L.TEST_STAIR["small"]
+            if props[j] != 0.5:
+                x = float(np.clip(x + (-step if props[j] > 0.5 else step), S.LO, S.HI))
+        test = np.array(xs[kp:])
+        assert abs(L.test_srt(trials, n_practice=kp) - (test[4:20].sum() + x) / 17) < 0.051
+
+
 def run_t_all(seed, n, variants, conds):
     import listen_mastery_sim as M
     M.check_practice_matches_app()
+    check_tt_matches_app()
     res = {}
     for cn in conds:
         ci = list(CONDS).index(cn)

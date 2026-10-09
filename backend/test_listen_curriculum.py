@@ -114,6 +114,18 @@ def test_test_srt():
     assert srt5 is not None and 1.0 <= srt5 <= 5.0
     test_snrs = [s for s, _ in seq[5:]]
     assert srt5 == round((sum(test_snrs[4:20]) + snr) / 17, 1)
+    # 절반 규칙(10/9, docs/listen-stair-target-sim-2026-10.md Tt): 낱말 비율이 정확히 0.5면 그대로, > 0.5 맞음, < 0.5 틀림
+    assert L.test_rule("test:abc") == "forty" and L.test_rule(L.TEST_HALF_PREFIX + "abc") == "half" and L.test_rule(None) == "forty"
+    assert [L.test_trial_ok(x, x >= 0.5, "half") for x in (0.25, 0.5, 2 / 3, 1.0)] == [False, None, True, True]
+    assert [L.test_trial_ok(x, x >= 0.5, "forty") for x in (0.25, 0.5, 2 / 3)] == [False, True, True]
+    assert L.test_trial_ok(None, True, "half") is True                        # 점수가 없는 옛 행은 저장된 판정
+    held = [(10.0, True), (6.0, None), (6.0, False)]
+    assert L.test_next_snr(held[:2]) == 6.0 and L.test_next_snr(held) == 10.0   # 절반이면 걸음 없이 그대로
+    seqh, snr = [(10.0, None)] * 5, 10.0
+    for k in range(20):
+        seqh.append((snr, None if k % 3 == 0 else snr >= 3.0))
+        snr = L.test_next_snr(seqh, n_practice=5)
+    assert L.test_srt(seqh, n_practice=5) == round((sum(s for s, _ in seqh[9:25]) + snr) / 17, 1)
     items = L.test_practice_items("test:abc")
     assert len(items) == L.TEST_STAIR["practice"] == 5 and all(it["practice"] and it["key"].startswith("testp:t") for it in items)
     assert items == L.test_practice_items("test:abc") and items != L.test_practice_items("test:abd")
@@ -332,6 +344,7 @@ with TestClient(main.app) as c:
     summ = c.get("/api/listen/summary", headers=h).json()
     out["summary"] = [summ["n_checks"], len(summ["tests"]), summ["last_check"]["summary"]["dropped"], len(summ["days"]),
                       len(summ["confusions"]) >= 1]
+    out["test_rule"] = [ts["session"].startswith("test:v2-"), sorted({t["rule"] for t in summ["tests"]})]
 print("RESULT " + json.dumps(out, ensure_ascii=False))
 '''
 
@@ -367,6 +380,7 @@ def test_listen_api_flow():
     assert r["test_done"][3] == [10.0, 6.0, 8.0, 6.0] and r["test_done"][4:] == [20, 5]
     assert r["practice_order"] == [10.0, 1, 400, True]                       # 연습 없이 시작하면 옛 규칙, 검사 뒤 연습은 받지 않음
     assert r["test_dup"] == 409 and r["s4_after"] is False and r["next_form"] != r["test_form"]
+    assert r["test_rule"] == [True, ["half"]]   # 새 회차는 절반 규칙(10/9)
     assert r["s5_locked"] == "unlocked"
     assert r["summary"][0] == 2 and r["summary"][1] == 1 and r["summary"][2] == ["s"] and r["summary"][3] == 7
 
