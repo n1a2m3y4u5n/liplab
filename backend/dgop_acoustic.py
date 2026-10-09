@@ -339,7 +339,8 @@ def retime_tail(log_probs, vocab: Dict[str, int], target_tokens: Sequence[str], 
                 end_frame: Optional[int], gate: Optional[str] = None, blank_token: Optional[str] = None) -> List[Dict]:
     """끝 토큰들(마지막 중성과 그 뒤 종성)의 시각용 구간을 다시 정한 spans 사본. 다른 토큰은 그대로다.
     log_probs: 정렬기 (T, C) 로그확률. end_frame: 말소리 끝 + 여유의 프레임(포함). 바꾼 토큰에는 retimed=True.
-    앞 토큰 p(마지막 중성 앞의 어절 경계가 아닌 토큰)의 CTC 구간 시작부터 end_frame까지를 상태 [p, 끝 토큰들]로 빈칸 없이 나눈다.
+    묶음은 마지막 중성과 그 뒤 토큰, 그리고 그 앞에서 CTC 시작이 end_frame − TAIL_RESEG_LATE_FRAMES 이후인 토큰들이다. 묶음 바로 앞의
+    어절 경계가 아닌 토큰 p의 CTC 구간 시작부터 end_frame까지를 상태 [p, p 뒤 토큰들]로 빈칸 없이 나눈다.
     gate "late"는 마지막 토큰의 CTC 시작이 end_frame − TAIL_RESEG_LATE_FRAMES 이후일 때만 바꾼다. 조건이 맞지 않으면 그대로."""
     import numpy as np
     out = [dict(s) for s in spans]
@@ -351,18 +352,25 @@ def retime_tail(log_probs, vocab: Dict[str, int], target_tokens: Sequence[str], 
     if not nuc:
         return out
     k, K = nuc[-1], len(toks) - 1
-    p = k - 1
-    while p >= 0 and toks[p] in ("|",):
-        p -= 1
-    if p < 0 or any(out[i].get("start") is None for i in [p] + list(range(k, K + 1))):
+    if any(s.get("start") is None for s in out):
         return out
     lp = log_probs.detach().cpu().numpy() if hasattr(log_probs, "detach") else np.asarray(log_probs)
     T = lp.shape[0]
     e = min(int(end_frame), T - 1)
-    if gate == "late" and out[K]["start"] < e - TAIL_RESEG_LATE_FRAMES:
+    late = e - TAIL_RESEG_LATE_FRAMES
+    if gate == "late" and out[K]["start"] < late:
+        return out
+    # 묶음: 마지막 중성부터, 그 앞에서 말소리 끝 근처 이후에 놓인 토큰들까지(끝 토큰 여럿이 함께 입력 끝에 몰린 경우, 사후 변경 1)
+    g = k
+    while g - 1 >= 0 and out[g - 1]["start"] >= late:
+        g -= 1
+    p = g - 1
+    while p >= 0 and toks[p] in ("|",):
+        p -= 1
+    if p < 0:
         return out
     a = int(out[p]["start"])
-    states = [p] + list(range(k, K + 1))
+    states = [p] + list(range(p + 1, K + 1))
     if e - a + 1 < len(states) or any(toks[i] not in vocab for i in states):
         return out
     blank = blank_id_for(vocab, blank_token)
