@@ -58,8 +58,8 @@ def test_retime_handles_vowel_plus_coda_and_word_boundary():
     toks = ["n:ㅐ", "|", "n:ㅛ", "c:ㄴ"]
     spans = [{"token": t, "start": s, "end": s} for t, s in zip(toks, (5, 8, 30, 39))]
     out = DA.retime_tail(lp, VOCAB, toks, spans, end_frame=32, gate="late")
-    assert out[1] == spans[1]                                 # 어절 경계는 건드리지 않는다(앞 토큰은 n:ㅐ)
-    assert out[2]["start"] < out[3]["start"] <= out[3]["end"] == 32
+    assert out[0] == spans[0]                                 # 앞 토큰은 어절 경계를 건너뛴 n:ㅐ
+    assert out[1]["start"] < out[2]["start"] < out[3]["start"] <= out[3]["end"] == 32   # 사이의 어절 경계도 상태 하나로 나눈다
     assert 20 <= out[2]["start"] <= 23
 
 
@@ -117,3 +117,20 @@ def test_phone_confidences_retimes_only_when_flag_is_on(monkeypatch):
     assert new[-1]["retimed"] and abs(new[-1]["t1"] - 0.77) < 0.03 and new[-1]["t0"] < 0.75
     assert [p["naive"] for p in new] == [p["naive"] for p in old]          # 채점은 그대로
     assert new[0]["t0"] == old[0]["t0"]
+
+
+def test_retime_groups_tokens_that_all_landed_at_input_end():
+    """'해요'에서 ㅐ와 ㅛ가 모두 입력 끝에 몰려 나와도(앞 토큰 ㅎ만 말소리 안), 묶음 [ㅐ, ㅛ]를 ㅎ 뒤에서 다시 나눈다."""
+    n = 40
+    fr = {5: {2: 0.9}, 38: {3: 0.9}, 39: {4: 0.95}}
+    for t in range(6, 18):
+        fr[t] = {3: 0.01, 4: 0.001}
+    for t in range(18, 30):
+        fr[t] = {3: 0.001, 4: 0.01}
+    lp = _lp(n, fr)
+    toks = ["o:ㅎ", "n:ㅐ", "n:ㅛ"]
+    spans = [{"token": t, "start": s, "end": s} for t, s in zip(toks, (5, 38, 39))]
+    out = DA.retime_tail(lp, VOCAB, toks, spans, end_frame=30, gate="late")
+    assert out[0] == spans[0]
+    assert out[1]["retimed"] and out[1]["start"] == 6
+    assert out[2]["start"] == 18 and out[2]["end"] == 30
