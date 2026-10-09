@@ -234,12 +234,13 @@ def confirm(run):
     rep = {}
     rep["M0"] = (round(rho(m0, y), 3), boot(n, lambda i: rho(m0[i], y[i]))[0])
     for f in FEATS + ["Fs", "VSA"]:
-        vals = [r[f] for r in rows]
-        if any(v is None for v in vals):
+        k = np.array([r[f] is not None for r in rows])
+        if k.sum() < 5:
             rep[f] = None
             continue
-        x = SIGN[f] * np.array(vals, float)
-        rep[f] = (round(rho(x, y), 3), boot(n, lambda i, x=x: rho(x[i], y[i]))[0])
+        x = SIGN[f] * np.array([r[f] for r in rows if r[f] is not None], float)
+        yk = y[k]
+        rep[f] = (round(rho(x, yk), 3), boot(int(k.sum()), lambda i, x=x, yk=yk: rho(x[i], yk[i]))[0], int(k.sum()))
     fs = -np.array([r["Fs"] for r in rows])
     rep["M1_minus_Fs"] = (round(rho(m1, y) - rho(fs, y), 3), boot(n, lambda i: rho(m1[i], y[i]) - rho(fs[i], y[i]))[0])
     for t in ("T1p", "T2", "T3"):
