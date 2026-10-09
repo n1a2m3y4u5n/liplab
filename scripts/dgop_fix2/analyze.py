@@ -21,6 +21,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.abspath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, os.path.join(APP, "backend"))
+sys.path.insert(0, os.path.join(APP, "scripts", "sound_pod"))   # qa_rules(보고용 보정 비율, 사후 변경 2)
 
 ap = argparse.ArgumentParser()
 ap.add_argument("mode", choices=["explore", "confirm"])
