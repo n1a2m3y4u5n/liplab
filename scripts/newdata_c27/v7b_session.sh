@@ -60,7 +60,7 @@ case "$CMD" in
     out="$LAB/data/pod_runs/$(date +%Y%m%d)_$(pod_id)/v7b"
     mkdir -p "$out"
     bash "$P" ssh 'grep -E "^(ENVMP|V7B_|EXTRACT|===)" /workspace/dax/logs/v7b.log | tail -n 20' || true
-    bash "$P" ssh 'cat /workspace/v7b/v7b_result.tgz' > "$out/result.tgz" && tar -xzf "$out/result.tgz" -C "$out" && echo "V7BS_FETCH_OK $out $(ls "$out/bs" | wc -l)" || echo V7BS_FETCH_WARN
+    bash "$P" ssh 'cd /workspace/v7b/out && tar -czf - bs' > "$out/result.tgz" && tar -xzf "$out/result.tgz" -C "$out" && echo "V7BS_FETCH_OK $out $(ls "$out/bs" | wc -l)" || echo V7BS_FETCH_WARN
     bash "$P" terminate --force || true
     bash "$P" status || true
     [ "$WRC" = 0 ] && echo V7BS_DONE || die "waitfor rc=$WRC" ;;

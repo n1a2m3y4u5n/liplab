@@ -231,8 +231,10 @@ def main():
         picker = C27Picker(left, last)
         f.resolve()
         cfg = f._private('url = "%s"\n' % f.signed.replace('"', '%22'))
-        proc = subprocess.Popen(["curl", "-sS", "--connect-timeout", "30", "--speed-limit", "20000", "--speed-time", "180",
-                                 "-o", "-", "-K", cfg], stdout=subprocess.PIPE, stderr=sys.stderr)
+        rate = os.environ.get("LIPLAB_LIMIT_RATE")   # 예: 2M. 회선을 다른 일에 양보할 때(10/9 사용자 요청)
+        proc = subprocess.Popen(["curl", "-sS", "--connect-timeout", "30", "--speed-limit", "20000", "--speed-time", "180"]
+                                + (["--limit-rate", rate] if rate else []) + ["-o", "-", "-K", cfg],
+                                stdout=subprocess.PIPE, stderr=sys.stderr)
         try:
             got, why = A.stream_zip(StopStream(proc.stdout, picker), set(left), WAV, every_gb=2.0, picker=picker)
         finally:
