@@ -46,7 +46,7 @@ do_stage() {
     mkdir -p "$R/models/R0/$m"
     for f in "$M8/$m"/*; do case "$(basename "$f")" in model.int8.safetensors) ;; *) cp "$f" "$R/models/R0/$m/" ;; esac; done
   done
-  ( cd "$R" && find backend scripts meta models audio -type f ! -name '.DS_Store' | sort | xargs shasum -a 256 ) > "$R/expect.sha256"
+  ( cd "$R" && find backend scripts meta models audio -type f ! -name '.DS_Store' -print0 | sort -z | xargs -0 shasum -a 256 ) > "$R/expect.sha256"
   printf '%s  models/R0/aligner/model.int8.safetensors\n%s  models/R0/scorer/model.int8.safetensors\n' "$SHA_ALIGNER" "$SHA_SCORER" >> "$R/expect.sha256"
   COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs --exclude .DS_Store --exclude '._*' -cf "$S/ad.tar" -C "$R" . || die tar
   ls -la "$S/ad.tar"
