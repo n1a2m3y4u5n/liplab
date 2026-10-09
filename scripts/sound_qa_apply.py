@@ -7,7 +7,7 @@
 RUN_DIR(qa_session.sh fetch가 푼 폴더): final.jsonl({uid, voice, key, cand, ms, syl, …}), enc/<후보>_<uid>.{ogg,m4a}.
 바뀐 클립은 rev(새 Ogg sha1 앞 12자)로 새 이름 clip_id(키, 목소리, rev)를 받고(docs/sound-qa-2026-10.md 6절), 목록 항목에
 rev와 고른 후보 q를 적는다. 목록에 없던 글(목록에 없는 글만 합성)은 새 항목으로 넣는다. 어떤 항목도 가리키지 않는 옛 파일은 지운다.
-끝에 소리 자료 전체 크기(목록 + 클립 + 소음)를 찍고 50MB를 넘으면 실패 코드로 끝난다.
+끝에 소리 자료 전체 크기(목록 + 클립 + 소음)를 찍고 100MB를 넘으면 실패 코드로 끝난다(10/9 상한 50 → 100MB, docs/sound-storage-decision-2026-10.md 5절).
 """
 import argparse
 import json
@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "backend"))
 sys.path.insert(0, HERE)
 import sound_clips as S  # noqa: E402
 
-LIMIT = 50_000_000
+LIMIT = 100_000_000
 
 
 def dir_bytes(d):
