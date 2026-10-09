@@ -298,13 +298,14 @@ def trim_trailing_silence(waveform, sample_rate: int, margin_s: Optional[float] 
 # 끝 구간 다시 나누기(docs/dgop-final-vowel-fix2-2026-10.md, 2026-10-09). 끝 자르기는 끝 모음을 말소리 끝 근처로 옮길 뿐 실제 모음
 # 시작을 찾지 못한다('요'는 말소리 안에서 빈칸이 이겨 ㅛ가 나오지 않고 입력 끝에서만 나온다). 정렬기 사후확률에서 빈칸을 빼고 다시
 # 정규화하면 ㅛ 구간에서도 ㅛ가 앞 소리보다 높으므로, 앞 토큰부터 말소리 끝 + 여유까지를 빈칸 없는 단조 분할(HMM식)로 다시 나눠
-# 끝 토큰들의 시작·끝 시각을 정한다. 채점(구간 평균 분포)은 CTC 구간 그대로 쓰고 시각만 바꾼다. DGOP_TAIL_RESEG=1일 때만 켠다.
+# 끝 토큰들의 시작·끝 시각을 정한다. 채점(구간 평균 분포)은 CTC 구간 그대로 쓰고 시각만 바꾼다. 기본으로 켜고, DGOP_TAIL_RESEG=0이면 끈다
+# (10/9 사전 기준 C1~C9 통과, docs/dgop-final-vowel-fix2-2026-10.md).
 TAIL_RESEG_GATE = "late"       # "late": 끝 토큰이 말소리 끝 근처 이후에 나왔을 때만, "all": 늘(탐색 절반 0에서 고른다, 문서 3절)
 TAIL_RESEG_LATE_FRAMES = 2
 
 
 def tail_reseg_enabled() -> bool:
-    return os.getenv("DGOP_TAIL_RESEG", "0") == "1"
+    return os.getenv("DGOP_TAIL_RESEG", "1") != "0"
 
 
 def _monotone_segments(scores) -> List[int]:

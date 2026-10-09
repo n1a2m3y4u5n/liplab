@@ -109,7 +109,7 @@ def test_phone_confidences_retimes_only_when_flag_is_on(monkeypatch):
     monkeypatch.setattr(DA, "speech_end_seconds", lambda w, s: 0.7)
     monkeypatch.setattr(DA, "TAIL_RESEG_GATE", "all")
     monkeypatch.setenv("DGOP_TAIL_TRIM", "0")
-    monkeypatch.delenv("DGOP_TAIL_RESEG", raising=False)
+    monkeypatch.setenv("DGOP_TAIL_RESEG", "0")
     old = DA.phone_confidences(y, sr, ["n:A", "n:B"], aligner_id="x")
     assert old[-1]["t0"] > 1.2 and "retimed" not in old[-1]
     monkeypatch.setenv("DGOP_TAIL_RESEG", "1")
@@ -134,3 +134,10 @@ def test_retime_groups_tokens_that_all_landed_at_input_end():
     assert out[0] == spans[0]
     assert out[1]["retimed"] and out[1]["start"] == 6
     assert out[2]["start"] == 18 and out[2]["end"] == 30
+
+
+def test_tail_reseg_on_by_default(monkeypatch):
+    monkeypatch.delenv("DGOP_TAIL_RESEG", raising=False)
+    assert DA.tail_reseg_enabled()
+    monkeypatch.setenv("DGOP_TAIL_RESEG", "0")
+    assert not DA.tail_reseg_enabled()
