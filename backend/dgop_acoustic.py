@@ -295,6 +295,96 @@ def trim_trailing_silence(waveform, sample_rate: int, margin_s: Optional[float] 
     return waveform[:max(cut, int(_TRIM_MIN_S * sample_rate))]
 
 
+# 끝 구간 다시 나누기(docs/dgop-final-vowel-fix2-2026-10.md, 2026-10-09). 끝 자르기는 끝 모음을 말소리 끝 근처로 옮길 뿐 실제 모음
+# 시작을 찾지 못한다('요'는 말소리 안에서 빈칸이 이겨 ㅛ가 나오지 않고 입력 끝에서만 나온다). 정렬기 사후확률에서 빈칸을 빼고 다시
+# 정규화하면 ㅛ 구간에서도 ㅛ가 앞 소리보다 높으므로, 앞 토큰부터 말소리 끝 + 여유까지를 빈칸 없는 단조 분할(HMM식)로 다시 나눠
+# 끝 토큰들의 시작·끝 시각을 정한다. 채점(구간 평균 분포)은 CTC 구간 그대로 쓰고 시각만 바꾼다. DGOP_TAIL_RESEG=1일 때만 켠다.
+TAIL_RESEG_GATE = "late"       # "late": 끝 토큰이 말소리 끝 근처 이후에 나왔을 때만, "all": 늘(탐색 절반 0에서 고른다, 문서 3절)
+TAIL_RESEG_LATE_FRAMES = 2
+
+
+def tail_reseg_enabled() -> bool:
+    return os.getenv("DGOP_TAIL_RESEG", "0") == "1"
+
+
+def _monotone_segments(scores) -> List[int]:
+    """scores (n, S): 상태 S개를 순서대로 하나 이상 프레임씩 차지하는 분할 가운데 점수 합이 가장 큰 것의 상태별 시작 프레임.
+    첫 프레임은 상태 0, 마지막 프레임은 상태 S−1. 동점이면 머무름을 고른다. n < S면 ValueError."""
+    import numpy as np
+    sc = np.asarray(scores, dtype=np.float64)
+    n, S = sc.shape
+    if n < S:
+        raise ValueError("프레임이 상태 수보다 적습니다")
+    neg = -np.inf
+    acc = np.full(S, neg)
+    acc[0] = sc[0, 0]
+    adv = np.zeros((n, S), dtype=bool)
+    for t in range(1, n):
+        prev = np.concatenate([[neg], acc[:-1]])
+        take = prev > acc
+        acc = np.where(take, prev, acc) + sc[t]
+        adv[t] = take
+    starts = [0] * S
+    s = S - 1
+    for t in range(n - 1, 0, -1):
+        if s == 0:
+            break
+        if adv[t, s]:
+            starts[s] = t
+            s -= 1
+    return starts
+
+
+def retime_tail(log_probs, vocab: Dict[str, int], target_tokens: Sequence[str], spans: Sequence[Dict],
+                end_frame: Optional[int], gate: Optional[str] = None, blank_token: Optional[str] = None) -> List[Dict]:
+    """끝 토큰들(마지막 중성과 그 뒤 종성)의 시각용 구간을 다시 정한 spans 사본. 다른 토큰은 그대로다.
+    log_probs: 정렬기 (T, C) 로그확률. end_frame: 말소리 끝 + 여유의 프레임(포함). 바꾼 토큰에는 retimed=True.
+    묶음은 마지막 중성과 그 뒤 토큰, 그리고 그 앞에서 CTC 시작이 end_frame − TAIL_RESEG_LATE_FRAMES 이후인 토큰들이다. 묶음 바로 앞의
+    어절 경계가 아닌 토큰 p의 CTC 구간 시작부터 end_frame까지를 상태 [p, p 뒤 토큰들]로 빈칸 없이 나눈다.
+    gate "late"는 마지막 토큰의 CTC 시작이 end_frame − TAIL_RESEG_LATE_FRAMES 이후일 때만 바꾼다. 조건이 맞지 않으면 그대로."""
+    import numpy as np
+    out = [dict(s) for s in spans]
+    gate = gate or TAIL_RESEG_GATE
+    toks = list(target_tokens)
+    if end_frame is None or not toks or len(out) != len(toks):
+        return out
+    nuc = [i for i, t in enumerate(toks) if str(t).startswith("n:")]
+    if not nuc:
+        return out
+    k, K = nuc[-1], len(toks) - 1
+    if any(s.get("start") is None for s in out):
+        return out
+    lp = log_probs.detach().cpu().numpy() if hasattr(log_probs, "detach") else np.asarray(log_probs)
+    T = lp.shape[0]
+    e = min(int(end_frame), T - 1)
+    late = e - TAIL_RESEG_LATE_FRAMES
+    if gate == "late" and out[K]["start"] < late:
+        return out
+    # 묶음: 마지막 중성부터, 그 앞에서 말소리 끝 근처 이후에 놓인 토큰들까지(끝 토큰 여럿이 함께 입력 끝에 몰린 경우, 사후 변경 1)
+    g = k
+    while g - 1 >= 0 and out[g - 1]["start"] >= late:
+        g -= 1
+    p = g - 1
+    while p >= 0 and toks[p] in ("|",):
+        p -= 1
+    if p < 0:
+        return out
+    a = int(out[p]["start"])
+    states = [p] + list(range(p + 1, K + 1))
+    if e - a + 1 < len(states) or any(toks[i] not in vocab for i in states):
+        return out
+    blank = blank_id_for(vocab, blank_token)
+    seg = lp[a:e + 1].astype(np.float64).copy()
+    seg[:, blank] = -np.inf
+    m = seg.max(axis=1, keepdims=True)
+    seg = seg - (m + np.log(np.exp(seg - m).sum(axis=1, keepdims=True)))   # 빈칸을 뺀 다시 정규화
+    starts = _monotone_segments(seg[:, [vocab[toks[i]] for i in states]])
+    bounds = starts[1:] + [e - a + 1]
+    for j, i in enumerate(states[1:]):
+        out[i] = {**out[i], "start": a + bounds[j], "end": a + bounds[j + 1] - 1, "retimed": True}
+    return out
+
+
 def phone_confidences(waveform, sample_rate: int, target_tokens: Sequence[str],
                        aligner_id: str = DEFAULT_MODEL_ID,
                        scorer_id: str = None) -> List[Dict]:
@@ -342,13 +432,22 @@ def phone_confidences(waveform, sample_rate: int, target_tokens: Sequence[str],
     n_frames = max(1, int(log_probs.shape[0]))
     n_samples = len(waveform) if waveform is not None else 0
     sec_per_frame = (n_samples / float(sample_rate)) / n_frames if n_samples else 0.02
+    # 시각용 구간: 끝 구간 다시 나누기를 켰으면 끝 토큰들의 시각만 바꾼다(채점은 아래에서 CTC 구간 그대로)
+    timing_spans = spans
+    if tail_reseg_enabled() and n_samples:
+        end_s = speech_end_seconds(waveform, sample_rate)
+        if end_s is not None:
+            end_frame = int(round((end_s + TAIL_TRIM_MARGIN_S) / sec_per_frame))
+            timing_spans = retime_tail(log_probs, vocab, target_tokens, spans, end_frame)
     results = []
-    for span in spans:
+    for span, tspan in zip(spans, timing_spans):
         token = span["token"]
         # 어절 경계 같은 특수토큰은 정렬은 제약하되 발음 채점 대상은 아니다.
         scorable = _is_scorable(token)
-        timing = ({"t0": round(span["start"] * sec_per_frame, 3), "t1": round((span["end"] + 1) * sec_per_frame, 3)}
-                  if span.get("start") is not None and span.get("end") is not None else {})
+        timing = ({"t0": round(tspan["start"] * sec_per_frame, 3), "t1": round((tspan["end"] + 1) * sec_per_frame, 3)}
+                  if tspan.get("start") is not None and tspan.get("end") is not None else {})
+        if tspan.get("retimed"):
+            timing["retimed"] = True
         dist = span_distribution(score_lp, span["start"], span["end"])
         if not dist or token not in score_vocab:
             results.append({"token": token, "aligned": False, "scorable": scorable, **timing})

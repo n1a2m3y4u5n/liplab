@@ -74,11 +74,24 @@ def naive_for(y, tokens):
     return out
 
 
+# S2_TRIM=1이면 앱과 같이 정렬 전 끝 무음을 자른다(dgop_acoustic.trim_trailing_silence, docs/dgop-final-vowel-fix2-2026-10.md 6절).
+# 10/7 S2는 자르지 않고 쟀다(그때 앱도 자르지 않았다). 시각만 바꾸는 끝 구간 다시 나누기는 점수를 바꾸지 않으므로 여기서는 필요 없다.
+S2_TRIM = os.environ.get("S2_TRIM", "0") == "1"
+
+
 def read(root, clip):
     y, sr = sf.read(f"{root}/data/wav/{clip}.wav", dtype="float32")
     assert sr == SR, (clip, sr)
     if y.ndim > 1:
         y = y.mean(1)
+    if S2_TRIM:
+        old = os.environ.get("DGOP_TAIL_TRIM")
+        os.environ["DGOP_TAIL_TRIM"] = "1"
+        y = DA.trim_trailing_silence(y, SR)
+        if old is None:
+            os.environ.pop("DGOP_TAIL_TRIM", None)
+        else:
+            os.environ["DGOP_TAIL_TRIM"] = old
     return y
 
 
