@@ -253,3 +253,129 @@ def features(y: np.ndarray, sr: int = SR) -> Dict[str, Optional[float]]:
     db = tr["db"]
     out["floor_db"] = float(np.percentile(db, 10) - db.max()) if len(db) else None   # 보고용: 잡음 바닥(최댓값 기준)
     return out
+
+
+# ── Praat식 CPPS(2026-10-09 재등록, docs/speak-cues-rereg-2026-10.md) ──
+# Praat 'To PowerCepstrogram'(음높이 하한 60Hz, 2ms 간격, 최대 5kHz, 50Hz부터 예강조)과
+# 'Get CPPS'(추세선을 먼저 빼고 평활, 시간 0.02초·켑스트럼 0.0005초 평활, 60~330Hz 봉우리, 포물선 보간,
+# 추세선 켑스트럼 0.001~0.05초, 지수 감쇠(로그 켑스트럼 축 직선), 강건 적합(불완전 Theil))를 numpy로 다시 쓴 것이다.
+# Praat 소스의 정의를 따르되 GPL 코드를 옮기지 않고 문서화된 절차만 구현했다.
+CPPS_SR = 10000.0
+
+
+def _resample_fft(y: np.ndarray, sr_in: float, sr_out: float) -> np.ndarray:
+    """FFT 절단으로 대역 제한 리샘플(sr_out/2 위는 버린다)."""
+    n = len(y)
+    m = int(round(n * sr_out / sr_in))
+    if m < 2:
+        return np.zeros(0)
+    Y = np.fft.rfft(y)
+    k = m // 2 + 1
+    Z = np.zeros(k, dtype=complex)
+    kk = min(k, len(Y))
+    Z[:kk] = Y[:kk]
+    return np.fft.irfft(Z, m) * (m / n)
+
+
+def _movavg_praat(a: np.ndarray, window: int, axis: int) -> np.ndarray:
+    """Praat VECsmoothByMovingAverage: 창 [i − w/2, i + w/2](짝수면 끝 하나 뺌), 가장자리는 있는 만큼 평균."""
+    if window <= 1:
+        return a
+    a = np.moveaxis(a, axis, 0)
+    n = a.shape[0]
+    cs = np.concatenate([np.zeros((1,) + a.shape[1:]), np.cumsum(a, axis=0)], axis=0)
+    i = np.arange(n)
+    lo = np.clip(i - window // 2, 0, n - 1)
+    hi = np.clip(i + window // 2 - (1 if window % 2 == 0 else 0), 0, n - 1)
+    out = (cs[hi + 1] - cs[lo]) / (hi - lo + 1).reshape((-1,) + (1,) * (a.ndim - 1))
+    return np.moveaxis(out, 0, axis)
+
+
+def _theil_rows(x: np.ndarray, Y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """행마다 불완전 Theil 직선(쌍 i, i + n/2의 기울기 중앙값, 절편 = y − m·x의 중앙값)."""
+    n = len(x)
+    h = n // 2
+    n2 = h + 1 if n % 2 else h
+    sl = (Y[:, n2:n2 + h] - Y[:, :h]) / (x[n2:n2 + h] - x[:h])
+    m = np.median(sl, axis=1)
+    b = np.median(Y - m[:, None] * x[None, :], axis=1)
+    return m, b
+
+
+def cpps_praat(y: np.ndarray, sr: int = SR, pitch_floor: float = 60.0, dt: float = 0.002, pre_hz: float = 50.0,
+               t_avg: float = 0.02, q_avg: float = 0.0005, f_lo: float = 60.0, f_hi: float = 330.0,
+               q_fit: Tuple[float, float] = (0.001, 0.05), clip_flat: bool = True, speech_only: bool = False
+               ) -> Optional[float]:
+    """Praat식 CPPS(dB). 소리가 0.1초보다 짧으면 None. speech_only면 창 RMS가 최댓값 −30dB 이상인 창만 평균(보고용)."""
+    y = np.asarray(y, dtype=np.float64)
+    x = _resample_fft(y, float(sr), CPPS_SR)
+    if len(x) < 2:
+        return None
+    a = np.exp(-2 * np.pi * pre_hz / CPPS_SR)
+    x = np.append(x[0], x[1:] - a * x[:-1])
+    wdur = 6.0 / pitch_floor                       # 분석 폭 3/하한의 두 배(가우스 창)
+    nw = int(round(wdur * CPPS_SR))
+    if len(x) < nw:
+        return None
+    nf = int(np.floor((len(x) / CPPS_SR - wdur) / dt)) + 1
+    mid = 0.5 * len(x) / CPPS_SR
+    t1 = mid - 0.5 * nf * dt + 0.5 * dt
+    starts = np.round((t1 + np.arange(nf) * dt - wdur / 2) * CPPS_SR).astype(int)
+    starts = np.clip(starts, 0, len(x) - nw)
+    i = np.arange(1, nw + 1)
+    imid = 0.5 * (nw + 1)
+    edge = np.exp(-12.0)
+    win = (np.exp(-48.0 * (i - imid) ** 2 / (nw + 1) ** 2) - edge) / (1 - edge)
+    nfft = 8
+    while nfft < nw:
+        nfft *= 2
+    nq = nfft // 2 + 1
+    dq = 1.0 / CPPS_SR
+    q = np.arange(nq) * dq
+    P = np.empty((nf, nq))
+    rms = np.empty(nf)
+    for c0 in range(0, nf, 512):
+        idx = starts[c0:c0 + 512, None] + np.arange(nw)[None, :]
+        fr = x[idx]
+        rms[c0:c0 + 512] = np.sqrt(np.mean(fr * fr, axis=1))
+        fr = (fr - fr.mean(axis=1, keepdims=True)) * win
+        X = np.fft.rfft(fr, nfft, axis=1)
+        L = np.log(X.real ** 2 + X.imag ** 2 + 1e-300)
+        c = np.fft.irfft(L, nfft, axis=1)[:, :nq]
+        P[c0:c0 + 512] = c * c
+    fit = (q >= q_fit[0] - 1e-12) & (q <= min(q_fit[1], q[-1]) + 1e-12)
+    lq = np.log(np.where(q > 0, q, 0.5 * dq))
+
+    def db(Z):
+        return 10.0 * np.log10(Z + 1e-300)
+
+    D = db(P)
+    m, b = _theil_rows(lq[fit], D[:, fit])
+    flat = D - (m[:, None] * lq[None, :] + b[:, None])
+    if clip_flat:
+        flat = np.clip(flat, 0.0, None)
+    flat = np.minimum(flat, 300.0)                 # 디지털 무음 창(값 0)에서 10^(dB/10)이 넘치지 않게
+    Z = 10.0 ** (flat / 10.0)
+    Z = _movavg_praat(Z, int(np.floor(t_avg / dt + 1e-9)), axis=0)
+    Z = _movavg_praat(Z, int(np.floor(q_avg / dq + 1e-9)), axis=1)
+    S = db(Z)
+    m2, b2 = _theil_rows(lq[fit], S[:, fit])
+    lo = int(np.ceil(1.0 / f_hi / dq))
+    hi = int(np.floor(1.0 / f_lo / dq))
+    seg = S[:, lo:hi + 1]
+    j = np.argmax(seg, axis=1)
+    jj = lo + j
+    ok = (jj > 0) & (jj < nq - 1)
+    a0 = S[np.arange(nf), np.clip(jj - 1, 0, nq - 1)]
+    a1 = S[np.arange(nf), jj]
+    a2 = S[np.arange(nf), np.clip(jj + 1, 0, nq - 1)]
+    den = a0 - 2 * a1 + a2
+    off = np.where(ok & (den < 0), 0.5 * (a0 - a2) / np.where(den < 0, den, -1.0), 0.0)
+    off = np.clip(off, -0.5, 0.5)
+    peak = a1 - 0.25 * (a0 - a2) * off
+    qp = (jj + off) * dq
+    cpp = peak - (m2 * np.log(qp) + b2)
+    if speech_only:
+        keep = 20 * np.log10(rms + 1e-12) >= 20 * np.log10(rms.max() + 1e-12) + SILENCE_DB
+        cpp = cpp[keep]
+    return float(np.mean(cpp)) if len(cpp) else None
