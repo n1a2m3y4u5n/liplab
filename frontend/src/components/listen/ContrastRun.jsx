@@ -27,7 +27,7 @@ export default function ContrastRun({ segments, data, label, onProgress, finish,
     return (
       <TaskEnd finish={finish} result={{ stage: null, n, c, skipped, mastered: false, elapsed }}
         title={n ? '이번 묶음을 마쳤어요' : '소리가 아직 준비되지 않았어요'} sub={label ? `${label} 대조를 연습했어요.` : null}
-        stats={n ? [{ label: '정답률', value: pct(c, n), note: `${n}문항 중 ${c}문항`, main: true }, { label: '걸린 시간', value: fmtDuration(elapsed) }] : []}
+        stats={n ? [{ label: '정답률', value: pct(c, n), note: `${n}문제 중 ${c}문제`, main: true }, { label: '걸린 시간', value: fmtDuration(elapsed) }] : []}
         notes={[skippedNote(skipped)]} />
     )
   }

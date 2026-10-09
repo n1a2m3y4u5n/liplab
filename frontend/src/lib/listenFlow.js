@@ -10,13 +10,13 @@
  */
 
 export const pct = (c, n) => (n ? `${Math.round((c / n) * 100)}%` : '–')
-export const skippedNote = (n) => (n > 0 ? `소리를 받지 못한 ${n}문항은 세지 않고 넘겼어요.` : null)
+export const skippedNote = (n) => (n > 0 ? `소리를 받지 못한 ${n}문제는 세지 않고 넘겼어요.` : null)
 
 /**
  * 단계 레슨 묶음 끝의 버튼. 0단계(소리 확인)는 소리 구별로, 이번에 숙달했으면 다음 단계로, 아니면 한 묶음 더.
  * 반환: {primary, secondary} (각 {label, onClick})
  */
-export function completeActions({ stage, mastered, reload, onExit, onStage, exitLabel = '학습 경로로' }) {
+export function completeActions({ stage, mastered, reload, onExit, onStage, exitLabel = '학습 화면으로' }) {
   const secondary = { label: exitLabel, onClick: onExit }
   if (stage === 0) return { primary: { label: '소리 구별 하러 가기', onClick: () => onStage(1) }, secondary }
   if (mastered && stage < 5) return { primary: { label: '다음 단계로', onClick: () => onStage(stage + 1) }, secondary }

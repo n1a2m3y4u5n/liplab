@@ -179,9 +179,9 @@ export default function ListenClassroom() {
     <ListenFrame kicker="소리 교실 · 채점하지 않아요" onExit={exit} exitAria="나가기, 연습 탭으로" showProgress={false}>
       {(ctx) => (
         err ? (
-          <StateCard title={err === 'missing' ? '소리 교실은 준비 중이에요' : '소리 짝을 불러오지 못했어요'}
-            body={err === 'missing' ? '곧 열려요. 지금은 학습 경로의 소리 구별 단계로 들어 볼 수 있어요.' : '인터넷 연결을 확인하고 다시 불러와 주세요.'}
-            actions={err === 'missing' ? [{ label: '연습 탭으로', onClick: exit }] : [{ label: '다시 불러오기', onClick: () => setNonce((n) => n + 1) }, { label: '연습 탭으로', onClick: exit }]} />
+          <StateCard title={err === 'missing' ? '소리 교실은 준비 중이에요' : '소리 짝을 가져오지 못했어요'}
+            body={err === 'missing' ? '곧 열려요. 지금은 학습 화면의 소리 구별 단계로 들어 볼 수 있어요.' : '인터넷 연결을 확인하고 다시 가져와 주세요.'}
+            actions={err === 'missing' ? [{ label: '연습 탭으로', onClick: exit }] : [{ label: '다시 가져오기', onClick: () => setNonce((n) => n + 1) }, { label: '연습 탭으로', onClick: exit }]} />
         ) : !kinds || !ctx.voiceList ? <Skeleton /> : !kind ? (
           <StateCard title="들어 볼 소리 짝이 없어요" actions={[{ label: '연습 탭으로', onClick: exit }]} />
         ) : (

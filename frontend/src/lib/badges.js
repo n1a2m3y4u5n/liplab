@@ -14,7 +14,7 @@ const BADGE_META = [
   { key: 'free_talk', label: '자유 발화', icon: '/ui/medal-5.svg', desc: '대화 실전 단계에서 자유롭게 말해보기' },
   { key: 'sign', label: '수어 탐험', icon: '/ui/medal-6.svg', desc: '한국수어 학습을 처음으로 경험하기' },
   { key: 'streak30', label: '30일 연속', icon: '/ui/medal-7.svg', desc: '한 달 내내 학습 스트릭을 이어가기' },
-  { key: 'dawn', label: '새벽 학습', icon: '/ui/medal-8.svg', desc: '새벽 시간에 학습을 완료하기' },
+  { key: 'dawn', label: '새벽 학습', icon: '/ui/medal-8.svg', desc: '새벽 시간에 학습을 마치기' },
   { key: 'complete', label: '완주', icon: '/ui/medal-9.svg', desc: '전체 커리큘럼을 끝까지 마치기' },
   { key: 'level5', label: '레벨 5', shape: 'lock', desc: '학습을 반복해 레벨 5에 도달하기' },
 ]

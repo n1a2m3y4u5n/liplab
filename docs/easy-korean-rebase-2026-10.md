@@ -369,3 +369,158 @@ C도 이 기본 어휘 안에 든다. C에는 답·낱말·짝·화면·목록·
 | 125 | 적정 | `pages/SpeakingPractice.jsx:1076` | : '적정 크기'} | : '알맞은 크기'} |
 | 126 | 합성 | `components/VocalTractSimulator.jsx:226` | 이 브라우저는 오디오 합성을 지원하지 않습니다. | 이 브라우저에서는 소리를 만들 수 없습니다. |
 | 127 | 건너뛰다 | `App.jsx:188` | >본문으로 건너뛰기</a> | >본문으로 바로 가기</a> |
+
+## 8. 2차 반영: 소리 듣기 화면과 제품 이름 일부(2026-10-09 밤)
+
+### 8.1 원칙
+
+7.3절과 같다. 뜻이 확실히 쉬워지고 기존 의미를 바꾸지 않는 것만 바꾼다. 트랙 이름(독화·발화·소리 듣기), 입모양, 단계 이름, 발성·운율은 그대로다.
+개인정보 처리방침(`Legal.jsx`), 연구 검사(`PilotBattery`·`lib/pilotBattery.js`)와 서버의 연구 검사 안내, 다른 작업이 맡은 `pages/Practice.jsx`도 그대로다.
+같은 시각 소리 듣기 검사 폼 데이터를 고치는 작업(`liplab-wt-forms`)과 겹치지 않게 이번에는 화면 문구만 고쳤다(서버 응답·자료는 손대지 않음).
+
+기술어는 화면 종류로 나눴다.
+
+- **연습 화면**(학습자가 문제를 푸는 동안 보는 글): 숨기거나 쉬운 말로 바꾼다. 소음 속 듣기의 크기 차이 안내(`listenMix.snrLabel`)는 dB 숫자를
+  숨기고 '조금'(5 dB 이하)·'훨씬'(6 dB 이상)으로 말한다. 계단 흐름(`StairTrace`)도 같은 말을 쓰고, 계단 흐름이 보이는 연습에서는 문제 위
+  안내 줄에서 같은 말을 한 번 뺐다. '서버에서'는 지웠다(소리를 아직 만들지 않았다는 뜻만 남김).
+- **검사 결과**(소리 듣기 결과·검사 끝 화면·경로 카드의 역치): 역치 숫자와 단위 dB는 그대로 둔다. 결과 화면 설명의 첫 자리에 '말과 소음의
+  크기 차이(dB)'로 쉬운 말과 괄호 원어를 붙였고, '입모양 이득'은 '입모양 도움'으로 쓰고 설명에 '(이득)'을 남겼다.
+- **합성 음성 표시**(라이선스 조건): 지우지 않고 쉬운 말을 앞에 둔다. 소리 카드 '합성 음성' → '기계 목소리(합성)'.
+
+### 8.2 제품 이름
+
+| 말 | 결정 | 곳 | 까닭 |
+|---|---|--:|---|
+| 경로 | '학습 경로' → '학습 화면'(경로 화면을 가리키는 버튼·안내만) | 29 | 아래 탭 이름이 '학습'이고 그 탭이 경로 화면이라 같은 곳을 같은 말로 부른다. '학습 경로를 가져오지 못했어요'는 '학습 단계를', 가이드의 '트랙마다 경로와 진도'는 '단계와 진도', 그림 설명의 '학습 경로와 레슨 카드'는 '단계 목록과 레슨 카드' |
+| 완료 | 동사와 끝 화면 제목만 '마치다'('레슨 완료!' → '레슨을 마쳤어요!', '완료하면' → '마치면', '먼저 완료해주세요' → '먼저 마쳐 주세요') | 18 | 앱이 이미 '검사를 마쳤어요'처럼 쓰는 말이다. 상태 표시 '완료'(경로 노드·레슨 목록)와 개수 표시('○ / ○ 완료')는 '끝'으로 바꾸면 길의 끝으로 읽힐 수 있고 '마침'은 부사와 헷갈려 그대로 |
+| 정확도 | 소리 듣기 문장 끝 화면의 '낱말 정확도' → '맞힌 낱말 비율' 1곳만 | 1 | 첫 답에서 맞힌 낱말의 평균 비율이라 뜻이 정확히 같다. 독화 '정확도'(유형 보정 정답률)와 말하기 '발음 정확도'는 7.3절 까닭대로 그대로 |
+| 회차 | 소리 듣기 결과 표 머리 '회차' → '차례' | 1 | 칸 값이 '처음·2번째'다. 분석 탭·프로필의 '학습 회차'(30분 공백으로 나눈 회차)는 정의가 따로 있어 그대로 |
+| 파일럿 | 소리 듣기 설정의 연구용 안내 '예비 파일럿' → '예비 시범 연구' | 1 | 프로필·서버의 파일럿 참여 안내는 연구 동의 문서의 이름과 맞춰야 해 그대로 |
+| 해금 | '대화 실전이 해금됩니다' → '열립니다' | 1 | '완료하면'을 고친 같은 문장 |
+| XP·레벨·트랙·커리큘럼·저장·건너뛰다·예시 | 그대로 | | XP·레벨은 게임 보상 체계 이름이라 바꾸려면 보상 화면을 함께 정해야 한다. 트랙은 트랙 이름 규칙과 함께 볼 것. '저장 → 남기기'와 '예시 → 예·보기'는 소리 듣기 화면에서 뜻이 흐려지고('보기'는 답 고르기 보기와 겹침), 단계 '건너뛰기'는 7.3절과 같은 까닭 |
+
+### 8.3 소리 듣기 화면에 반영한 것
+
+7.5절 목록 가운데 바꾼 것: 문항 → 문제 22곳, 불러오다 → 가져오다 23곳, 경로(학습 화면) 23곳, 서버 숨김 3곳, dB 연습 화면 숨김 3곳과 결과 설명 1곳,
+합성 2곳, 이득 2곳, 파일럿·정확도·회차·오답 각 1곳(문항과 서버를 함께 고친 곳이 하나라 소리 듣기 화면은 모두 82곳이다). 그대로 둔 것은 저장 6, 건너뛰다 5, dB(검사 결과) 5, 예시 3, 합성(이미 풀이가 붙은 안내 등) 2,
+이득(설명의 괄호 원어) 1이다.
+
+### 8.4 다시 측정한 결과(같은 결정표로 전후 비교)
+
+결정표에는 '시범'(시범 연구)을 일상 말로 더했다. 두 열 모두 이 결정표로 센 값이다.
+
+| | 고치기 전(7절 반영 뒤) | 고친 뒤 | 목표 |
+|---|--:|--:|--:|
+| 문자열 | 3,159 | 3,161 | |
+| 예전 엄격 통과율(A·B, 문자열마다 10%) | 36.3% | 37.4% | (참고) |
+| 낱말: 결정 안 된 낱말 | 0종 | 0종 | 0 |
+| 이름표: 어려운 말 0개 | 86.2% | 89.1% | 95% |
+| 문장형: 화면 덮기 95% 이상인 파일 | 59.6%(68/114) | 67.0%(77/115) | 90% |
+| 문장형: 전체 덮기 | 95.3% | 95.7% | (참고) |
+| 문장형: 30음절 이하 | 95.7% | 95.7% | 95% |
+| 소리 듣기 화면만(24파일): 이름표 | 86.1% | 98.3% | |
+| 소리 듣기 화면만: 덮기 95% 이상인 파일 | 62.5%(15/24) | 83.3%(20/24) | |
+
+- 첫 열은 7.4절 '고친 뒤'와 같은 값이다(문자열이 그 뒤 다른 작업으로 5개 늘었다).
+- 세 층 가운데 낱말 층과 30음절 기준은 통과, 이름표와 화면 덮기는 여전히 미달이다. 이름표 실패는 251 → 198개이고, 남은 상위는 정확도 27,
+  완료 13(상태·개수 표시), XP 11, 항목 10, 레벨·커리큘럼·사후 각 8, 트랙 7이다. 남은 몫의 대부분은 8.2절에서 그대로 두기로 한 제품 이름이다.
+
+### 8.5 바꾼 문자열 전체 목록
+
+위치의 줄 번호는 바꾼 뒤 파일 기준이고 경로는 `frontend/src/`를 뺐다. 92쌍 106곳, 42파일이다(테스트 기대값 `lib/listenFlow.test.mjs` 2곳,
+`lib/listenMix.test.mjs`의 snrLabel 검사, `features/learn/shared/trackProgress.test.mjs` 2곳을 함께 고쳤다).
+
+| # | 갈래 | 위치 | 고치기 전 | 고친 뒤 |
+|--:|---|---|---|---|
+| 1 | 문항 | `components/listen/ContrastRun.jsx:30` | ${n}문항 중 ${c}문항(정답률 아래 줄) | ${n}문제 중 ${c}문제 |
+| 2 | 문항 | `components/listen/AxDrill.jsx:76` | ${n}문항 중 ${c}문항(정답률 아래 줄) | ${n}문제 중 ${c}문제 |
+| 3 | 문항 | `components/listen/ConvoTask.jsx:90` | ${n}문항 중 ${c}문항(정답률 아래 줄) | ${n}문제 중 ${c}문제 |
+| 4 | 문항 | `components/listen/WordId.jsx:74` | ${n}문항 중 ${c}문항(정답률 아래 줄) | ${n}문제 중 ${c}문제 |
+| 5 | 문항 | `components/listen/ListenBlocks.jsx:54` | `${r.n}문항 중 ${r.c}문항 · | `${r.n}문제 중 ${r.c}문제 · |
+| 6 | 문항·서버 | `components/listen/StateCard.jsx:22` | '이 소리는 서버에서 아직 만들지 않았어요. 이 문항은 세지 않고 넘어가요.' | '이 소리는 아직 만들지 않았어요. 이 문제는 세지 않고 넘어가요.' |
+| 7 | 문항 | `components/listen/StateCard.jsx:24` | 다른 브라우저로 열거나 이 문항은 세지 않고 | 다른 브라우저로 열거나 이 문제는 세지 않고 |
+| 8 | 문항 | `components/listen/StateCard.jsx:30` | 다시 받아 보거나, 이 문항은 세지 않고 | 다시 받아 보거나, 이 문제는 세지 않고 |
+| 9 | 문항 | `components/listen/StateCard.jsx:31` | '이 문항 넘기기' | '이 문제 넘기기' |
+| 10 | 문항 | `lib/listenFlow.js:13` | ${n}문항은 세지 않고 넘겼어요. | ${n}문제는 세지 않고 넘겼어요. |
+| 11 | 문항 | `lib/listenReport.js:85` | unit: useMin ? '분' : '문항' | unit: useMin ? '분' : '문제' |
+| 12 | 문항 | `pages/ListenPractice.jsx:95` | {p.n}문항</span> | {p.n}문제</span> |
+| 13 | 문항 | `pages/ListenPractice.jsx:157` | `지금까지 ${doneN}문항` | `지금까지 ${doneN}문제` |
+| 14 | 문항 | `pages/ListenPractice.jsx:174` | "지금 낼 문항이 없어요" | "지금 낼 문제가 없어요" |
+| 15 | 문항 | `pages/ListenPractice.jsx:241` | { label: '푼 문항', value: `${tally.n}문항` | { label: '푼 문제', value: `${tally.n}문제` |
+| 16 | 문항 | `pages/ListenToday.jsx:143` | { label: '푼 문항', value: `${t.n}문항` } | { label: '푼 문제', value: `${t.n}문제` } |
+| 17 | 문항 | `pages/ListeningReport.jsx:248` | 막대는 날마다 푼 문항 수예요. | 막대는 날마다 푼 문제 수예요. |
+| 18 | 문항 | `pages/ListeningReport.jsx:253` | `약 ${week.totalMin}분 · ${week.total}문항` : `${week.total}문항` | `약 ${week.totalMin}분 · ${week.total}문제` : `${week.total}문제` |
+| 19 | 불러오다 | `pages/ListenPractice.jsx:68` | '종류 목록을 불러오지 못했어요.' | '종류 목록을 가져오지 못했어요.' |
+| 20 | 불러오다 | `pages/ListenPractice.jsx:128` | title="연습을 불러오지 못했어요" body="인터넷 연결을 확인하고 다시 불러와 주세요." | title="연습을 가져오지 못했어요" body="인터넷 연결을 확인하고 다시 가져와 주세요." |
+| 21 | 불러오다 | `pages/ListenPractice.jsx:129` | label: '다시 불러오기' | label: '다시 가져오기' |
+| 22 | 불러오다 | `pages/ListenClassroom.jsx:182` | '소리 짝을 불러오지 못했어요' | '소리 짝을 가져오지 못했어요' |
+| 23 | 불러오다 | `pages/ListenClassroom.jsx:183` | '인터넷 연결을 확인하고 다시 불러와 주세요.' | '인터넷 연결을 확인하고 다시 가져와 주세요.' |
+| 24 | 불러오다 | `pages/ListenClassroom.jsx:184` | label: '다시 불러오기' | label: '다시 가져오기' |
+| 25 | 불러오다 | `pages/ListenReview.jsx:47` | '복습할 소리를 불러오지 못했어요' | '복습할 소리를 가져오지 못했어요' |
+| 26 | 불러오다 | `pages/ListenReview.jsx:48` | 다시 불러와 주세요. | 다시 가져와 주세요. |
+| 27 | 불러오다 | `pages/ListenReview.jsx:49` | label: '다시 불러오기' | label: '다시 가져오기' |
+| 28 | 불러오다 | `pages/ListenToday.jsx:36` | title="이 연습을 불러오지 못했어요" body="인터넷 연결을 확인하고 다시 불러오거나, 이 연습은 건너뛰어요." | title="이 연습을 가져오지 못했어요" body="인터넷 연결을 확인하고 다시 가져오거나, 이 연습은 건너뛰어요." |
+| 29 | 불러오다 | `pages/ListenToday.jsx:37,128` | label: '다시 불러오기' | label: '다시 가져오기' (2곳) |
+| 30 | 불러오다 | `pages/ListenToday.jsx:126` | '오늘의 계획을 불러오지 못했어요' | '오늘의 계획을 가져오지 못했어요' |
+| 31 | 불러오다 | `pages/ListenToday.jsx:127` | '인터넷 연결을 확인하고 다시 불러와 주세요.' | '인터넷 연결을 확인하고 다시 가져와 주세요.' |
+| 32 | 불러오다 | `pages/ListeningPractice.jsx:47` | title="단계를 불러오지 못했어요" body="인터넷 연결을 확인하고 다시 불러와 주세요." | title="단계를 가져오지 못했어요" body="인터넷 연결을 확인하고 다시 가져와 주세요." |
+| 33 | 불러오다 | `pages/ListeningPractice.jsx:48` | label: '다시 불러오기' | label: '다시 가져오기' |
+| 34 | 불러오다 | `pages/ListeningReport.jsx:90` | "결과를 불러오지 못했어요" | "결과를 가져오지 못했어요" |
+| 35 | 불러오다 | `pages/ListeningReport.jsx:91` | 다시 불러와 주세요. | 다시 가져와 주세요. |
+| 36 | 불러오다 | `pages/ListeningReport.jsx:92` | >다시 불러오기</button> | >다시 가져오기</button> |
+| 37 | 불러오다 | `pages/ListeningReport.jsx:54` | aria-label="불러오는 중" | aria-label="가져오는 중" |
+| 38 | 불러오다 | `pages/ListeningReport.jsx:56` | >불러오는 중이에요< | >가져오는 중이에요< |
+| 39 | 불러오다 | `components/listen/ui.jsx:98` | aria-label="불러오는 중" | aria-label="가져오는 중" |
+| 40 | 불러오다 | `components/listen/ui.jsx:104` | >불러오는 중이에요< | >가져오는 중이에요< |
+| 41 | 오답 | `components/listen/ui.jsx:75` | wrong: ', 고른 답, 오답' | wrong: ', 고른 답, 틀린 답' |
+| 42 | 서버 | `components/listen/NoiseTest.jsx:108` | body="서버에서 검사 문장 소리를 만드는 중이라 | body="검사 문장 소리를 아직 만드는 중이라 |
+| 43 | 서버 | `components/listen/WordTest.jsx:74` | body="서버에서 검사 낱말 소리를 만드는 중이라 | body="검사 낱말 소리를 아직 만드는 중이라 |
+| 44 | 합성 | `components/listen/SoundCard.jsx:35` | ''}합성 음성<span | ''}기계 목소리(합성)<span |
+| 45 | 합성 | `components/listen/ListenSetup.jsx:41` | '예시 소리 듣기(합성 모음)' | '예시 소리 듣기(기계로 만든 모음)' |
+| 46 | 파일럿 | `components/listen/ListenSetup.jsx:64` | 예비 파일럿에서만 켜요. | 예비 시범 연구에서만 켜요. |
+| 47 | 정확도 | `components/listen/SentenceTask.jsx:161` | { label: '낱말 정확도', value: avgWords, note: '첫 답 평균' } | { label: '맞힌 낱말 비율', value: avgWords, note: '첫 답 평균' } |
+| 48 | 회차 | `pages/ListeningReport.jsx:114` | font-bold">회차</th> | font-bold">차례</th> |
+| 49 | 이득 | `pages/ListeningReport.jsx:156` | 입모양 이득은 두 역치의 차이예요. | 입모양 도움(이득)은 두 역치의 차이예요. |
+| 50 | 이득 | `pages/ListeningReport.jsx:163` | label="입모양 이득" | label="입모양 도움" |
+| 51 | dB | `pages/ListeningReport.jsx:97` | '말과 소음의 크기 차이'예요. 낮을수록 시끄러운 곳에서 잘 알아들어요. 두 검사 사이 ${MDC_DB} dB 안쪽의 차이는 측정 오차일 수 있어요. | '말과 소음의 크기 차이(dB)'예요. 낮을수록 시끄러운 곳에서 잘 알아들어요. 두 검사의 차이가 ${MDC_DB} dB보다 작으면 측정 오차일 수 있어요. |
+| 52 | 경로 | `components/listen/NoiseTest.jsx:83,91,109,111` | label: '학습 경로로' | label: '학습 화면으로' (4곳) |
+| 53 | 경로 | `components/listen/WordTest.jsx:63,67,75,77` | label: '학습 경로로' | label: '학습 화면으로' (4곳) |
+| 54 | 경로 | `pages/ListeningPractice.jsx:48,53,55` | label: '학습 경로로' | label: '학습 화면으로' (3곳) |
+| 55 | 경로 | `components/listen/LingCheck.jsx:16` | exitLabel = '학습 경로로' | exitLabel = '학습 화면으로' |
+| 56 | 경로 | `components/listen/ConvoTask.jsx:22` | exitLabel = '학습 경로로' | exitLabel = '학습 화면으로' |
+| 57 | 경로 | `components/listen/SentenceTask.jsx:27` | exitLabel = '학습 경로로' | exitLabel = '학습 화면으로' |
+| 58 | 경로 | `lib/listenFlow.js:19` | exitLabel = '학습 경로로' | exitLabel = '학습 화면으로' |
+| 59 | 경로 | `components/listen/StateCard.jsx:35` | exitLabel = '학습 경로로' | exitLabel = '학습 화면으로' |
+| 60 | 경로 | `pages/ListeningPractice.jsx:44` | exitAria="나가기, 학습 경로로" | exitAria="나가기, 학습 화면으로" |
+| 61 | 경로 | `pages/ListeningPractice.jsx:52` | 학습 경로에서 바로 앞 단계를 | 학습 화면에서 바로 앞 단계를 |
+| 62 | 경로 | `pages/ListenPractice.jsx:126` | 지금은 학습 경로의 소리 듣기 단계로 | 지금은 학습 화면의 소리 듣기 단계로 |
+| 63 | 경로 | `pages/ListenClassroom.jsx:183` | 지금은 학습 경로의 소리 구별 단계로 | 지금은 학습 화면의 소리 구별 단계로 |
+| 64 | 경로 | `pages/ListenToday.jsx:42` | body="학습 경로에서 앞 단계를 마치면 열려요." | body="학습 화면에서 앞 단계를 마치면 열려요." |
+| 65 | 경로 | `pages/ListenToday.jsx:127` | 지금은 학습 경로에서 단계를 하나씩 | 지금은 학습 화면에서 단계를 하나씩 |
+| 66 | 경로 | `pages/ListenToday.jsx:130` | body="학습 경로에서 소리 듣기 단계를 열면 | body="학습 화면에서 소리 듣기 단계를 열면 |
+| 67 | 경로 | `pages/Placement.jsx:251` | >학습 경로로</button> | >학습 화면으로</button> |
+| 68 | 경로 | `pages/NonsensePairing.jsx:183` | >학습 경로로</button> | >학습 화면으로</button> |
+| 69 | 경로 | `pages/CurriculumPath.jsx:307` | 학습 경로를 가져오지 못했어요. | 학습 단계를 가져오지 못했어요. |
+| 70 | 경로 | `components/GuideModal.jsx:110` | 트랙마다 경로와 진도가 따로 저장돼요. | 트랙마다 단계와 진도가 따로 저장돼요. |
+| 71 | 경로 | `components/GuideModal.jsx:382` | 경로에서 건너뛸 수도 있어요. | 학습 화면에서 건너뛸 수도 있어요. |
+| 72 | 경로 | `components/guide/GuideMockups.jsx:916` | 가운데 학습 경로와 레슨 카드 | 가운데 단계 목록과 레슨 카드 |
+| 73 | 완료 | `components/LessonComplete.jsx:24` | >레슨 완료!</h1> | >레슨을 마쳤어요!</h1> |
+| 74 | 완료 | `features/learn/shared/LessonComplete.jsx:39` | >레슨 완료!</h1> | >레슨을 마쳤어요!</h1> |
+| 75 | 완료 | `pages/VisemeLiteracy.jsx:338` | >레슨 완료!</h1> | >레슨을 마쳤어요!</h1> |
+| 76 | 완료 | `pages/WordStage.jsx:67` | >레슨 완료!</h1> | >레슨을 마쳤어요!</h1> |
+| 77 | 완료 | `components/MouthCalibration.jsx:149` | >본뜨기 완료!</div> | >본뜨기를 마쳤어요!</div> |
+| 78 | 완료 | `pages/Conversation.jsx:444` | text-ink">대화 완료</h2> | text-ink">대화를 마쳤어요</h2> |
+| 79 | 완료 | `pages/Conversation.jsx:451` | 번의 대화를 완료했습니다! | 번의 대화를 마쳤습니다! |
+| 80 | 완료·해금 | `features/dashboard/Dashboard.jsx:52` | '3단계 문장 독화를 완료하면 대화 실전이 해금됩니다.' | '3단계 문장 독화를 마치면 대화 실전이 열립니다.' |
+| 81 | 완료 | `features/dashboard/Dashboard.jsx:157` | 2단계(음절·단어)를 먼저 완료해주세요. | 2단계(음절·단어)를 먼저 마쳐 주세요. |
+| 82 | 완료 | `features/dashboard/LearnerProfileCard.jsx:48` | '첫 학습을 완료했어요' | '첫 학습을 마쳤어요' |
+| 83 | 완료 | `features/learn/shared/trackProgress.js:53` | 를 먼저 완료해주세요.` | 를 먼저 마쳐 주세요.` |
+| 84 | 완료 | `features/learn/shared/trackProgress.js:54` | '직전 단계를 먼저 완료해주세요.' | '직전 단계를 먼저 마쳐 주세요.' |
+| 85 | 완료 | `lib/badges.js:17` | '새벽 시간에 학습을 완료하기' | '새벽 시간에 학습을 마치기' |
+| 86 | 완료 | `pages/ReviewLanding.jsx:92` | 새로운 문장 학습을 완료하면 | 새로운 문장 학습을 마치면 |
+| 87 | 완료 | `pages/ScenarioHub.jsx:23` | '단어 학습을 완료하면 문장 학습이 열려요.' | '단어 학습을 마치면 문장 학습이 열려요.' |
+| 88 | 완료 | `pages/ScenarioHub.jsx:23` | '문장 학습을 완료하면 대화 실전이 열려요.' | '문장 학습을 마치면 대화 실전이 열려요.' |
+| 89 | 완료 | `pages/SpeakingReviewLanding.jsx:101` | 새로운 말하기 학습을 완료하면 | 새로운 말하기 학습을 마치면 |
+| 90 | 완료 | `pages/AnalysisDetail.jsx:97` | description="기간 내 완료한 학습 항목" | description="기간 안에 마친 학습 항목" |
+| 91 | dB(숨김) | `lib/listenMix.js:243` | 말이 소음보다 ${v} dB 커요 / 소음이 말보다 ${-v} dB 커요 | 말이 소음보다 조금·훨씬 커요 / 소음이 말보다 조금·훨씬 커요(5 dB 이하 조금, 6 dB 이상 훨씬) |
+| 92 | dB(숨김) | `components/listen/StairTrace.jsx:16` | 지금 소음 차이 {fmtDb(now)} | 지금은 {snrLabel(now)} |

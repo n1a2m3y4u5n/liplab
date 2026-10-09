@@ -38,7 +38,7 @@ export default function ListenSetup({ initial, onSave, onCancel }) {
     <div className="flex flex-col gap-4 lg:gap-5">
       <Heading title="소리 크기 맞추기" sub="평소처럼 보청기나 인공와우를 켜고 예시 소리를 들으며 편안한 크기를 골라요. 연습하는 동안 이 크기를 넘지 않아요." />
       <SoundCard player={player} onPlay={test} clipState={sample.state === 'loading' ? 'loading' : 'ready'}
-        label={sample.state === 'ready' ? '예시 문장 듣기' : '예시 소리 듣기(합성 모음)'} />
+        label={sample.state === 'ready' ? '예시 문장 듣기' : '예시 소리 듣기(기계로 만든 모음)'} />
       <Card className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-3">
           <p id="listen-gain-label" className="text-[15px] font-bold text-ink">크기</p>
@@ -61,7 +61,7 @@ export default function ListenSetup({ initial, onSave, onCancel }) {
           <label className="flex min-h-[48px] items-start gap-3 rounded-13 border-2 border-line bg-surface-sunken px-4 py-3">
             <input type="checkbox" checked={sim} onChange={(e) => setSim(e.target.checked)} className="mt-1 size-4 accent-[var(--track)]" />
             <span className="text-[13px] leading-[1.6] text-ink">
-              <b>인공와우 모의(연구용)</b> · 청인 참여자가 인공와우를 흉내 낸 소리(8채널 보코더)로 들어요. 예비 파일럿에서만 켜요.
+              <b>인공와우 모의(연구용)</b> · 청인 참여자가 인공와우를 흉내 낸 소리(8채널 보코더)로 들어요. 예비 시범 연구에서만 켜요.
             </span>
           </label>
         )}

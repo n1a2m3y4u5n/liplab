@@ -72,7 +72,7 @@ const OPTION_CLASS = {
   target: `${OPTION_BASE} pt-[15px] lg:pt-[18px] border-[2.5px] border-good bg-white text-ink`,
   wrong: `${OPTION_BASE} pt-[15px] lg:pt-[18px] border-[2.5px] border-bad bg-bad-tint text-bad-text`,
 }
-const OPTION_SR = { correct: ', 정답, 고른 답', target: ', 정답', wrong: ', 고른 답, 오답' }
+const OPTION_SR = { correct: ', 정답, 고른 답', target: ', 정답', wrong: ', 고른 답, 틀린 답' }
 
 export function Option({ index, label, state = 'idle', disabled, waiting, onClick, big = false }) {
   return (
@@ -95,13 +95,13 @@ export function optionState(i, { picked, result, answer }) {
 /** 불러오는 중: 화면 모양만 흐리게(질문 · 소리 카드 · 보기). */
 export function Skeleton() {
   return (
-    <div role="status" aria-label="불러오는 중" className="flex animate-pulse-slow flex-col gap-4 lg:gap-5">
+    <div role="status" aria-label="가져오는 중" className="flex animate-pulse-slow flex-col gap-4 lg:gap-5">
       <div className="h-7 w-3/4 rounded-10 bg-fill lg:h-9" />
       <div className="h-[104px] rounded-18 border-2 border-line bg-white lg:h-[124px] lg:rounded-22" />
       <div className="grid grid-cols-2 gap-2.5 lg:gap-3">
         {[0, 1, 2, 3].map((i) => <div key={i} className="h-[56px] rounded-14 bg-fill lg:h-[60px]" />)}
       </div>
-      <span className="sr-only">불러오는 중이에요</span>
+      <span className="sr-only">가져오는 중이에요</span>
     </div>
   )
 }

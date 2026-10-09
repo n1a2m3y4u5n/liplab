@@ -44,9 +44,9 @@ export default function ListenReview() {
     <ListenFrame kicker="듣기 복습" onExit={exit} exitAria="나가기, 복습 탭으로">
       {(ctx) => (
         err ? (
-          <StateCard title={err === 'missing' ? '듣기 복습을 준비하고 있어요' : '복습할 소리를 불러오지 못했어요'}
-            body={err === 'missing' ? '곧 열려요.' : '인터넷 연결을 확인하고 다시 불러와 주세요.'}
-            actions={err === 'missing' ? [{ label: '복습 탭으로', onClick: exit }] : [{ label: '다시 불러오기', onClick: () => setNonce((n) => n + 1) }, { label: '복습 탭으로', onClick: exit }]} />
+          <StateCard title={err === 'missing' ? '듣기 복습을 준비하고 있어요' : '복습할 소리를 가져오지 못했어요'}
+            body={err === 'missing' ? '곧 열려요.' : '인터넷 연결을 확인하고 다시 가져와 주세요.'}
+            actions={err === 'missing' ? [{ label: '복습 탭으로', onClick: exit }] : [{ label: '다시 가져오기', onClick: () => setNonce((n) => n + 1) }, { label: '복습 탭으로', onClick: exit }]} />
         ) : !rev || !ctx.voiceList ? <Skeleton /> : blocks.length === 0 ? (
           <StateCard title="다시 들을 소리가 없어요" body="소리 듣기에서 놓친 낱말과 문장이 며칠 뒤 여기에 모여요." actions={[{ label: '복습 탭으로', onClick: exit }]} />
         ) : (

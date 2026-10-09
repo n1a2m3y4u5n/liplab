@@ -92,8 +92,13 @@ test('입모양 프레임을 소리 길이에 맞춘다', () => {
 })
 
 test('표시 문구', () => {
-  assert.equal(snrLabel(6), '말이 소음보다 6 dB 커요')
-  assert.equal(snrLabel(-2), '소음이 말보다 2 dB 커요')
+  assert.equal(snrLabel(6), '말이 소음보다 훨씬 커요')
+  assert.equal(snrLabel(5), '말이 소음보다 조금 커요')
+  assert.equal(snrLabel(-2), '소음이 말보다 조금 커요')
+  assert.equal(snrLabel(-8.4), '소음이 말보다 훨씬 커요')
+  assert.equal(snrLabel(0.3), '말과 소음이 같은 크기예요')
+  assert.equal(snrLabel(null), '')
+  assert.ok(![6, -2, 12, -15].some((v) => snrLabel(v).includes('dB')))
   assert.equal(contrastText([{ slot: 'onset', target: 'ㅂ', heard: 'ㅍ', syllable: 0 }]), '1번째 음절의 첫소리 ㅂ을(를) ㅍ(으)로 들었어요')
 })
 

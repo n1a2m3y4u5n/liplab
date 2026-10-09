@@ -21,7 +21,7 @@ export default function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHom
       <span className="relative size-[140px] shrink-0">
         <img src="/ui/lp-93-12-mascot.svg" alt="" className="absolute max-w-none" style={OVERFLOW} />
       </span>
-      <h1 className="text-center text-[38px] font-bold leading-figma tracking-[-0.95px] text-ink">레슨 완료!</h1>
+      <h1 className="text-center text-[38px] font-bold leading-figma tracking-[-0.95px] text-ink">레슨을 마쳤어요!</h1>
 
       <div className="flex w-full max-w-[640px] gap-3.5 py-2">
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-percent.svg', size: 115.2, top: -45.83, right: -43.82 }}>

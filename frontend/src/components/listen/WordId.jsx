@@ -71,7 +71,7 @@ export default function WordId({ data, settings, voices, onProgress, finish, act
     return (
       <TaskEnd finish={finish} result={result}
         title={tally.n ? '이번 묶음을 마쳤어요' : '소리가 아직 준비되지 않았어요'} sub={tally.mastered ? '낱말 고르기를 숙달했어요. 다음 단계가 열렸어요.' : null}
-        stats={tally.n ? [{ label: '정답률', value: pct(tally.c, tally.n), note: `${tally.n}문항 중 ${tally.c}문항`, main: true },
+        stats={tally.n ? [{ label: '정답률', value: pct(tally.c, tally.n), note: `${tally.n}문제 중 ${tally.c}문제`, main: true },
           leveled ? { label: '지금 수준', value: `${level} / ${data.levels}` } : null, { label: '걸린 시간', value: fmtDuration(tally.elapsed()) }].filter(Boolean) : []}
         notes={[skippedNote(tally.skipped)]} />
     )
