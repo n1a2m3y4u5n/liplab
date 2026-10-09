@@ -4591,7 +4591,7 @@ async def assessment_retention(current_user=Depends(get_current_user), db: Async
         out["post_accuracy"] = post.accuracy
     if ctx["done"]:
         out["retention_accuracy"] = ctx["done"].accuracy
-        out["note"] = "사후 검사와 같은 문항이라 기억 효과가 조금 섞일 수 있어요."
+        out["note"] = "사후 검사와 같은 문제라 기억 효과가 조금 섞일 수 있어요."
     return out
 
 

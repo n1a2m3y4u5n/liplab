@@ -166,7 +166,7 @@ export default function Placement() {
 
   // 데이터 로딩 = 기본 로딩(§4-10 256:34 / 모바일 256:48)
   if (loading) return <LoadingScreen />
-  const failed = <LoadFailed message="문항을 불러오지 못했어요." onRetry={() => start(mode)} onExit={() => navigate('/learn/path')} />
+  const failed = <LoadFailed message="문제를 가져오지 못했어요." onRetry={() => start(mode)} onExit={() => navigate('/learn/path')} />
   if (loadError || !items) return failed
 
   if (result && mode === 'placement') {
@@ -191,7 +191,7 @@ export default function Placement() {
               <p className="text-[18px] font-bold tracking-[-0.36px] text-primary-700">{result.recommended_start?.title || '입모양 인지'}</p>
             </div>
             <p className="shrink-0 text-right text-[12px] font-bold text-ink-muted">
-              {result.correct}/{result.total}문항 정답<br /><span className="text-primary-600">Lv.{result.level}</span>
+              {result.correct}/{result.total}문제 정답<br /><span className="text-primary-600">Lv.{result.level}</span>
             </p>
           </div>
           {result.error_visemes?.length > 0 && (
@@ -208,7 +208,7 @@ export default function Placement() {
         {hist && !hist.pretest_taken && (
           <div className="flex w-full max-w-[640px] flex-col gap-2 rounded-22 border-2 border-line bg-white px-5 py-4 sm:flex-row sm:items-center lg:px-6">
             <p className="flex-1 text-[13px] leading-relaxed text-ink-muted">
-              학습 효과를 재고 싶다면 연습을 시작하기 전에 사전 검사(A)를 봐 두세요. 24문항, 5분 안팎이에요.
+              학습 효과를 재고 싶다면 연습을 시작하기 전에 사전 검사(A)를 봐 두세요. 24문제, 5분 안팎이에요.
               나중에 분석의 학습 효과 리포트에서도 볼 수 있어요.
             </p>
             <button type="button" onClick={() => { navigate('/learn/placement?form=A', { replace: true }); setMode('A'); start('A') }}
@@ -245,7 +245,7 @@ export default function Placement() {
             <p className="text-[13px] font-bold text-ink-muted">유지 검사{result.days_after_post != null ? ` (${result.days_after_post}일 뒤)` : ''}</p>
             <p className="text-[18px] font-bold text-primary-700">{pct(result.accuracy)} <span className="text-[13px] text-ink-muted">({result.correct}/{result.total})</span></p>
           </div>
-          <p className="text-xs leading-relaxed text-ink-muted">사후 검사와 같은 문항이라 기억 효과가 조금 섞일 수 있어요. 이 결과는 사전·사후 향상도에는 들어가지 않아요.</p>
+          <p className="text-xs leading-relaxed text-ink-muted">사후 검사와 같은 문제라 기억 효과가 조금 섞일 수 있어요. 이 결과는 사전·사후 향상도에는 들어가지 않아요.</p>
         </div>
         <div className="flex w-full max-w-[640px] flex-col gap-2.5 lg:gap-3">
           <button type="button" onClick={() => navigate('/learn/path')} className={`btn-primary btn-lg ${RESULT_BTN}`}>학습 경로로</button>

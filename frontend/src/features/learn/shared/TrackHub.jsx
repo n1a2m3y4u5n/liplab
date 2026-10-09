@@ -28,8 +28,8 @@ export default function TrackHub({ track: trackId }) {
           <div className="flex items-center justify-between text-xs font-bold text-slate-500">
             <span>진행도</span>
             <span>
-              {loading ? '불러오는 중…'
-                : failed ? '진행도를 불러오지 못했어요'
+              {loading ? '가져오는 중…'
+                : failed ? '진행도를 가져오지 못했어요'
                   : `${summary.mastered} / ${summary.total} 단계 완료`}
             </span>
           </div>
@@ -52,7 +52,7 @@ export default function TrackHub({ track: trackId }) {
             onClick={() => navigate(next.to)}
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-wait disabled:bg-slate-300"
           >
-            {next ? `이어하기 · ${next.title}` : '불러오는 중…'}
+            {next ? `이어하기 · ${next.title}` : '가져오는 중…'}
           </button>
           <Link
             to={`${track.basePath}/lessons`}

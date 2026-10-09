@@ -29,7 +29,7 @@ export default function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHom
           <p className={`${STAT_VALUE} text-primary-700`}>{accuracy == null ? '-' : `${accuracy}%`}</p>
         </WatermarkCard>
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-xp.svg', size: 157.945, top: -76, right: -71.44 }}>
-          <p className={STAT_LABEL}>획득 XP</p>
+          <p className={STAT_LABEL}>받은 XP</p>
           <p className={`${STAT_VALUE} text-warn-text`}>+{xp}</p>
         </WatermarkCard>
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-clock.svg', size: 115.2, top: -45.83, right: -43.82 }}>

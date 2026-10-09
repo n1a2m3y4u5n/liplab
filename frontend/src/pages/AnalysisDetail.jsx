@@ -12,7 +12,7 @@ import { activityCounts, recentDays } from '../lib/activityDays'
  */
 const PAGE_META = {
   activity: { title: '학습 활동', description: '최근 90일 동안 언제, 얼마나 꾸준히 학습했는지 확인합니다.' },
-  visemes: { title: '취약 입모양', description: '입모양 유형별 점수와 시도 횟수를 비교해 집중할 항목을 찾습니다.' },
+  visemes: { title: '약한 입모양', description: '입모양 유형별 점수와 시도 횟수를 비교해 집중할 항목을 찾습니다.' },
   scores: { title: '평균 점수', description: '독화는 푼 문제 전체의 정확도, 말하기는 평균 발음 점수를 비교해요.' },
   history: { title: '학습 기록', description: '날짜별 학습량과 누적 성과를 시간순으로 확인합니다.' },
 }
@@ -21,7 +21,7 @@ const PAGE_META = {
 const ANALYSIS_TABS = [
   { to: '/analysis', label: '개요' },
   { mode: 'activity', label: '활동' },
-  { mode: 'visemes', label: '취약 입모양' },
+  { mode: 'visemes', label: '약한 입모양' },
   { mode: 'scores', label: '점수' },
   { mode: 'history', label: '기록' },
 ]
@@ -138,7 +138,7 @@ export default function AnalysisDetail({ mode = 'activity' }) {
         </div>
       </section>
     ) : null
-    if (!items.length && !confusionCard) return <Empty>연습을 더 하면 입모양 유형별 취약도가 이곳에 표시됩니다.</Empty>
+    if (!items.length && !confusionCard) return <Empty>연습을 더 하면 입모양 유형별로 약한 정도가 이곳에 표시됩니다.</Empty>
     return (
       <>
         {confusionCard}
@@ -152,7 +152,7 @@ export default function AnalysisDetail({ mode = 'activity' }) {
                   <h2 className="mt-1 text-lg font-bold leading-figma text-ink">{item.feature}</h2>
                 </div>
                 <div className="text-right">
-                  <strong className="text-2xl font-bold text-bad">오답률 {item.error_rate}%</strong>
+                  <strong className="text-2xl font-bold text-bad">틀린 비율 {item.error_rate}%</strong>
                   <p className="text-xs text-ink-faint">정확도 {acc}%{item.attempts ? ` · ${item.attempts}회` : ''}</p>
                 </div>
               </div>
@@ -170,7 +170,7 @@ export default function AnalysisDetail({ mode = 'activity' }) {
     // 막대 색은 트랙 색(§3.1) — 독화 보라, 말하기 분홍. 독화는 정확도(%)라 단위와 설명을 따로 둔다
     const read = overview?.tracks?.read
     const scores = [
-      { label: '독화', value: Math.round(Number(read?.accuracy || 0) * 1000) / 10, unit: '%', description: `정확도 · ${read?.questions || 0}문항`, tone: 'bg-primary-500' },
+      { label: '독화', value: Math.round(Number(read?.accuracy || 0) * 1000) / 10, unit: '%', description: `정확도 · ${read?.questions || 0}문제`, tone: 'bg-primary-500' },
       { label: '말하기', value: Number(speaking?.avg_score || 0), unit: '점', description: `평균 점수 · ${speaking?.total || 0}회 발화`, tone: 'bg-speak' },
     ]
     return (

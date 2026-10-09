@@ -185,7 +185,7 @@ function SkipLink() {
     }
     target.focus()
   }
-  return <a href="#main-content" className="skip-link" onClick={skip}>본문으로 건너뛰기</a>
+  return <a href="#main-content" className="skip-link" onClick={skip}>본문으로 바로 가기</a>
 }
 
 /**

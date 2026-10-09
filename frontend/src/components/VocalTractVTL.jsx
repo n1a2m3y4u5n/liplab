@@ -137,7 +137,7 @@ export default function VocalTractVTL({
   const overlay = useEasedOutline(overlayTarget, animate)
 
   if (status === 'error') {
-    return fallback || <div className={`rounded-lg bg-surface-muted p-3 text-xs text-ink-faint ${className}`}>성도 단면을 불러오지 못했어요.</div>
+    return fallback || <div className={`rounded-lg bg-surface-muted p-3 text-xs text-ink-faint ${className}`}>성도 단면을 가져오지 못했어요.</div>
   }
   if (status === 'loading' || !main) {
     return <div className={`w-full animate-pulse rounded-lg ${dark ? 'bg-slate-800/60' : 'bg-surface-muted'} ${className}`}

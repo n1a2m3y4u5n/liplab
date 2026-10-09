@@ -197,7 +197,7 @@ export default function ReviewTab() {
   const shown = items.filter((it) => filter === 'all' || (filter === 'wrong' ? it.kind !== 'bookmark' : it.kind === 'bookmark'))
   const chips = [
     { key: 'all', label: '전체', n: items.length },
-    { key: 'wrong', label: '오답', n: wrong + due.read + due.speak + items.filter((it) => it.kind === 'listen').length },
+    { key: 'wrong', label: '틀린 문제', n: wrong + due.read + due.speak + items.filter((it) => it.kind === 'listen').length },
     { key: 'bookmark', label: '북마크', n: marks },
   ]
   const deleteShown = selectMode && selected.size > 0
@@ -253,8 +253,8 @@ export default function ReviewTab() {
       <div className="flex w-full gap-2.5 lg:gap-3.5">
         {/* 오답 수 = 틀린 문장 + 예정 복습(독화·말하기, 패널 '오답'과 같은 정의). 예정 복습이 남아 있으면 그 세션부터 연다
             (독화 → 말하기, 다 풀면 틀린 문장 복습으로 간다). */}
-        <GradientCta tone="mistake" count={wrong + due.read + due.speak} title="복습할 오답" sub="오답 다시보기" subMobile="약 3분이면 끝나요"
-          btn="오답 복습하기" onClick={() => navigate(dueStartPath(due, '/review/mistakes'))} />
+        <GradientCta tone="mistake" count={wrong + due.read + due.speak} title="복습할 틀린 문제" sub="틀린 문제 다시 보기" subMobile="약 3분이면 끝나요"
+          btn="틀린 문제 복습하기" onClick={() => navigate(dueStartPath(due, '/review/mistakes'))} />
         <GradientCta tone="bookmark" count={marks} title="복습할 북마크" sub="북마크 다시보기" subMobile="저장해둔 문장이에요"
           btn="북마크 복습하기" onClick={() => navigate('/review/saved')} />
       </div>

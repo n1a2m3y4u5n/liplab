@@ -71,7 +71,7 @@ function ListenSummary({ ov, onOpen }) {
   const cells = [
     { label: '최근 역치', value: fmtDb(l.srt), note: '낮을수록 시끄러운 곳에서 잘 들어요' },
     { label: '이번 주 듣기', value: l.weekMinutes == null ? '–' : `${Math.round(l.weekMinutes)}분`, note: '권장 하루 15분, 주 5일' },
-    { label: '소리 구별 정답률', value: l.axAccuracy == null ? '–' : `${Math.round(l.axAccuracy * 100)}%`, note: '같다·다르다 문항' },
+    { label: '소리 구별 정답률', value: l.axAccuracy == null ? '–' : `${Math.round(l.axAccuracy * 100)}%`, note: '같다·다르다 문제' },
   ]
   return (
     <section data-track="listen" className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
@@ -258,8 +258,8 @@ export default function AnalysisTab() {
           delta={ov ? `최고 기록 ${ov.streak_best}일` : null} color="text-stat-streak" />
       </section>
 
-      <ChartCard title="학습시간 추이"><BarChart weeks={weeks} /></ChartCard>
-      <ChartCard title="정확도 추이"><LineChart weeks={weeks} /></ChartCard>
+      <ChartCard title="학습 시간 변화"><BarChart weeks={weeks} /></ChartCard>
+      <ChartCard title="정확도 변화"><LineChart weeks={weeks} /></ChartCard>
       <ListenSummary ov={ov} onOpen={() => navigate('/analysis/listening')} />
 
       <div className="flex w-full flex-col gap-[9px] lg:flex-row lg:gap-3">
@@ -508,7 +508,7 @@ function DetailItem({ it, i, kind }) {
     return (
       <div className={`flex items-center gap-4 py-4 leading-figma ${first}`}>
         <p className="w-5 shrink-0 text-[13px] font-bold text-ink-ghost">{i + 1}</p>
-        <p className="flex-1 text-[15px] font-bold text-ink">{it.total}문항 중 {it.correct}문항 · Lv.{it.level}</p>
+        <p className="flex-1 text-[15px] font-bold text-ink">{it.total}문제 중 {it.correct}문제 · Lv.{it.level}</p>
         <p className={`w-[52px] shrink-0 text-right text-[16px] font-bold ${scoreTone(acc, 'accuracy').text}`}>{acc}%</p>
       </div>
     )
@@ -528,7 +528,7 @@ function DetailItem({ it, i, kind }) {
         <span className="truncate text-[15px] font-bold text-ink">{it.chosen || '–'}</span>
       </div>
       <p className={`${homophene ? 'text-[14px]' : 'w-[52px] text-[16px]'} shrink-0 text-right font-bold ${ok === 'good' ? 'text-good-text' : ok === 'warn' ? 'text-warn-text' : 'text-bad-text'}`}>
-        {sentence ? `${Math.round(it.score)}점` : it.correct ? '정답' : homophene ? '입모양 맞음' : '오답'}
+        {sentence ? `${Math.round(it.score)}점` : it.correct ? '정답' : homophene ? '입모양 맞음' : '틀림'}
       </p>
     </div>
   )
@@ -566,9 +566,9 @@ function SessionDetail({ row, onClose, onGo }) {
   return (
     <Modal open={!!row} onClose={onClose} title={title} subtitle={subtitle} gap="gap-[18px]" maxW="max-w-[640px]">
       {err ? (
-        <p className="py-8 text-center text-sm text-ink-muted">기록을 불러오지 못했어요.</p>
+        <p className="py-8 text-center text-sm text-ink-muted">기록을 가져오지 못했어요.</p>
       ) : !data ? (
-        <p role="status" className="py-8 text-center text-sm text-ink-muted">불러오는 중…</p>
+        <p role="status" className="py-8 text-center text-sm text-ink-muted">가져오는 중…</p>
       ) : (
         <>
           <div className="flex w-full items-center rounded-14 border-1.5 border-line bg-surface-muted py-4">
@@ -602,7 +602,7 @@ function SessionDetail({ row, onClose, onGo }) {
           {items.length === 0
             ? <p className="py-6 text-center text-sm text-ink-muted">이 회차의 문제 기록이 없어요.</p>
             : (
-              <ScrollHintList maxHeightClass="max-h-[369px]" hintHeight={56} iconSize={36} iconTop={12} label="이 회차 문항">
+              <ScrollHintList maxHeightClass="max-h-[369px]" hintHeight={56} iconSize={36} iconTop={12} label="이 회차 문제">
                 <div className="flex w-full flex-col">
                   {items.map((it, i) => <DetailItem key={i} it={it} i={i} kind={row.kind} />)}
                 </div>
@@ -636,7 +636,7 @@ function FullStats({ ov, onGo }) {
   const metrics = [
     { label: '총 학습 회차', value: num(ov?.sessions), unit: '회', color: 'text-primary-500' },
     { label: '푼 문제', value: num(ov?.questions), unit: '개', color: 'text-primary-500' },
-    { label: '획득 배지', value: num(badgeCount), unit: '개', color: 'text-speak' },
+    { label: '받은 배지', value: num(badgeCount), unit: '개', color: 'text-speak' },
   ]
   const pct = (a) => (a == null ? '–' : Math.round(a * 100))
   const tr = ov?.tracks || {}

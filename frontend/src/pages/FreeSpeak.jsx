@@ -52,7 +52,7 @@ export default function FreeSpeak() {
       setIsPlaying(true)
     } catch (e) {
       console.error('Failed to load visemes:', e)
-      setError('입모양 생성에 실패했어요. 잠시 후 다시 시도해주세요.')
+      setError('입모양을 만들지 못했어요. 잠시 후 다시 시도해주세요.')
     } finally {
       setLoading(false)
     }
