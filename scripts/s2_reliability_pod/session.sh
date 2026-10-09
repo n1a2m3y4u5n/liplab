@@ -10,6 +10,7 @@ set -uo pipefail
 APP=$(cd "$(dirname "$0")/../.." && pwd)
 LAB=${LAB:-$HOME/Downloads/liplab-lab}
 P="$LAB/tools/pod/pod.sh"
+# S2_SETS(기본 "A0 A1")로 묶을 자료를, S2_TRIM=1로 앱과 같은 끝 자르기를 고른다(run.sh가 넘긴다).
 export POD_STATE_DIR=${POD_STATE_DIR:-$LAB/tools/pod/.s2state} POD_NAME=${POD_NAME:-liplab-s2} POD_DISK_GB=${POD_DISK_GB:-50}
 export DEADMAN_GRACE_MIN=${DEADMAN_GRACE_MIN:-15}
 M8=${M8:-$LAB/models/dgop_ours_2026-09-25_int8}
@@ -49,9 +50,15 @@ import json, os, shutil, sys
 d, lab = sys.argv[1:3]
 src = {"A0": os.path.expanduser("~/Downloads/liplab_gpu_snapshot/expand538_more/clips"), "A1": f"{lab}/data/v1_538/clips"}
 n = {"A0": 0, "A1": 0}
+sets = set(os.environ.get("S2_SETS", "A0 A1").split())
+keep = []
 for l in open(f"{d}/jobs.jsonl", encoding="utf-8"):
     j = json.loads(l)
+    if j["set"] not in sets:
+        continue
+    keep.append(l)
     shutil.copyfile(f"{src[j['set']]}/{j['clip']}.wav", f"{d}/wav/{j['clip']}.wav"); n[j["set"]] += 1
+open(f"{d}/jobs.jsonl", "w", encoding="utf-8").writelines(keep)
 print("COPIED", n)
 EOF
   ( cd "$R" && find backend scripts data -type f | sort | xargs shasum -a 256 ) > "$R/expect.sha256"
@@ -88,7 +95,7 @@ do_launch() {
     | tee "$S/unpack.log" || { bash "$P" terminate --force || true; die "풀기"; }
   grep -q '^REMOTE_SHA_OK' "$S/unpack.log" || { bash "$P" terminate --force || true; die "sha256 불일치"; }
   step "run.sh 시작"
-  bash "$P" run 'bash /workspace/s2/scripts/run.sh' || { bash "$P" terminate --force || true; die run; }
+  bash "$P" run "env S2_TRIM=${S2_TRIM:-0} bash /workspace/s2/scripts/run.sh" || { bash "$P" terminate --force || true; die run; }
   echo "S2S_LAUNCH_OK $(pod_id)"
 }
 
