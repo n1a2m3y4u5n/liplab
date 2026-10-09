@@ -277,6 +277,41 @@ def test_staircase_converges_near_target_proportion():
     assert abs(pb.noise_gain(-20, -20, 0) - 1.0) < 1e-9 and abs(pb.noise_gain(-20, -20, 6) - 10 ** (-6 / 20)) < 1e-9
 
 
+def test_staircase_word_prop_steps_and_posterior():
+    """10/9 P3 SNR 맞추기(docs/listen-stair-target-sim-2026-10.md P4): 낱말 비율 걸음과 격자 사후 40% 지점."""
+    import math
+    import random
+    params = {"rule": "word_prop_post", "start_db": 0, "min_db": -20, "max_db": 25, "target": 0.4, "s0": 0.15, "f_min": 0.1,
+              "max_trials": 24, "criterion": 0.5}
+    st = pb.staircase_run(params, [(3, 3), (3, 3), (0, 3)])
+    assert st["history"] == [0, -6.0, -12.0] and st["next_db"] == -9.2 and st["reversals"] == 1 and not st["done"]
+    st = pb.staircase_run(params, [(1, 3)] * 3)             # 비율 0.33 < 0.40: 조금씩 올린다
+    assert st["history"][1] == round(-1.5 * (1 / 3 - 0.4) / 0.15, 1)
+    assert pb.staircase_run(params, [(5, 5)] * 30)["history"][-1] == -20   # 하한
+    assert pb.staircase_run(params, [(0, 3)] * 30)["history"][-1] == 25    # 상한(+25 dB, 예전 +10)
+    # 모의 청자(낱말 50% 지점 −4 dB, 기울기 0.15/dB, 3어절): 24문장 뒤 개인 SNR이 참 40% 지점(약 −4.68 dB) 가까이 모인다
+    true40 = -4.0 + math.log(0.4 / 0.6) / (4 * 0.15)
+    ests = []
+    for seed in range(60):
+        rng = random.Random(seed)
+        outs = []
+        while True:
+            st = pb.staircase_run(params, outs)
+            if st["done"]:
+                break
+            p = 1 / (1 + math.exp(-4 * 0.15 * (st["next_db"] + 4.0)))
+            outs.append((sum(rng.random() < p for _ in range(3)), 3))
+        assert st["n_trials"] == 24 and st["estimate_kind"] == "posterior40"
+        ests.append(st["estimate_db"])
+    assert abs(sum(ests) / len(ests) - true40) < 0.6, (sum(ests) / len(ests), true40)
+    assert pb.word_hits("이번 역에서 내려요", "이번역에서 내렸어요") == (2, 3)
+    assert pb.word_proportion("이번 역에서 내려요", "이번역에서 내렸어요") == 2 / 3
+    bad = {**params, "target": 1.2}
+    m = json.loads(json.dumps(pb.load_manifest()))
+    m["layers"]["snr"]["staircase"] = bad
+    assert any("word_prop_post" in e for e in pb.validate_manifest(m))
+
+
 def test_clean_render_log_keeps_only_known_keys():
     raw = {"frames": 120, "mean_late_ms": 3.2, "over20_rate": 2, "render_mode": "avatar3d", "device_class": "phone",
            "gpu_renderer": "ANGLE (Apple M1)", "user_agent": "Mozilla/5.0", "dpr": 2, "os_family": "beos", "webgl": True}
@@ -525,8 +560,9 @@ def test_battery_open_responses_snr_and_av():
     assert r["snr_no_noise"] == {"noise": 24}
     assert r["snr_start"] == {"ready": 24, "next": 0, "noise": True} and r["noise_get"] == 200
     assert r["snr_early_finish"] == 409
-    assert r["snr_levels"][:3] == [-3, -6, -4]   # 맞음 −3, 맞음 −3, 틀림 +2
-    assert r["snr_finish"]["est"] is not None and r["snr_finish"]["kind"] in ("reversals", "last_levels")
+    # 10/9 낱말 비율 걸음(목표 0.40): 다 맞힘 −6, 다 맞힘 −6, 다 틀림(방향 전환 1번, f 1.5/1.41) +2.84
+    assert r["snr_levels"][:3] == [-6, -12, -9.2]
+    assert r["snr_finish"]["est"] is not None and r["snr_finish"]["kind"] == "posterior40"
     av = r["av_start"]
     assert av["snr"] == r["snr_finish"]["est"] and av["ready"] == 4 and av["missing"] == {"media": 16}
     assert set(av["blocks"]) <= {"A", "AV"} and av["blocks"]

@@ -812,6 +812,26 @@ def noise_mastered(ao_trials: Sequence[Tuple[float, bool]], cfg: Dict = NOISE_MA
 TEST_STAIR = {"start": 10.0, "big": 4.0, "small": 2.0, "big_trials": 4, "lo": -10.0, "hi": 25.0, "criterion": 0.5,
               "practice": 5, "n_test": 20}
 
+# 10/9부터 새로 시작한 회차(id가 TEST_HALF_PREFIX로 시작)는 문장 낱말 비율이 정확히 0.5면 SNR을 그대로 둔다('절반 규칙', 연습·검사 모두).
+# 옛 규칙은 4어절 문장의 '두 개 맞음'을 맞음으로 세어 낱말 약 40% 지점으로 모였다(편향 −0.75 dB, 인공와우 −1 dB). 절반 규칙은 맞음과
+# 틀림이 같은 확률이 되는 낱말 50% 지점으로 모이고, 가상 청취자 확인 시드에서 편향 ±0.04 dB, 재검사 SD 3~14% 감소, 막힘 +0.5%p 안이었다
+# (docs/listen-stair-target-sim-2026-10.md Tt). 이미 있는 회차는 옛 규칙으로 계산해 기록이 바뀌지 않는다.
+TEST_HALF_PREFIX = "test:v2-"
+
+
+def test_rule(session: Optional[str]) -> str:
+    """회차의 계단 규칙: 'half'(절반 규칙, 10/9부터) 또는 'forty'(옛 규칙)."""
+    return "half" if (session or "").startswith(TEST_HALF_PREFIX) else "forty"
+
+
+def test_trial_ok(score: Optional[float], correct: Optional[bool], rule: str) -> Optional[bool]:
+    """한 문장의 계단 판정. 옛 규칙은 저장된 맞음(비율 ≥ 0.5). 절반 규칙은 비율 > 0.5면 맞음, < 0.5면 틀림, 정확히 0.5면 None(그대로)."""
+    if rule != "half" or score is None:
+        return bool(correct)
+    if abs(float(score) - 0.5) < 1e-9:
+        return None
+    return float(score) > 0.5
+
 
 def test_practice_items(seed: str, n: Optional[int] = None) -> List[Dict]:
     """검사 앞 연습 문장(훈련 문장에서, 회차 seed로 고름). 키는 'testp:<훈련 문장 id>'."""
@@ -821,7 +841,7 @@ def test_practice_items(seed: str, n: Optional[int] = None) -> List[Dict]:
 
 
 def test_next_snr(trials: Sequence[Tuple[float, bool]], cfg: Dict = TEST_STAIR, n_practice: int = 0) -> float:
-    """trials: 회차의 (SNR, 맞음) 시간순. 앞의 n_practice개가 연습 문장이다. 연습은 4 dB, 검사 문장은 2 dB.
+    """trials: 회차의 (SNR, 맞음) 시간순. 맞음이 None이면(절반 규칙의 정확히 절반) SNR을 그대로 둔다. 앞의 n_practice개가 연습 문장이다. 연습은 4 dB, 검사 문장은 2 dB.
     n_practice가 0이면 옛 규칙(처음 big_trials문장 4 dB)."""
     snr = float(cfg["start"])
     for k, (s, ok) in enumerate(trials):
@@ -829,6 +849,9 @@ def test_next_snr(trials: Sequence[Tuple[float, bool]], cfg: Dict = TEST_STAIR, 
             step = cfg["big"] if k < n_practice else cfg["small"]
         else:
             step = cfg["big"] if k < cfg["big_trials"] else cfg["small"]
+        if ok is None:   # 절반 규칙에서 정확히 절반: 그대로
+            snr = float(s)
+            continue
         snr = min(cfg["hi"], max(cfg["lo"], float(s) + (-step if ok else step)))
     return round(snr, 1)
 

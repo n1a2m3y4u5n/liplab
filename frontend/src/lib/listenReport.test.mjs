@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { MDC_DB, splitTests, srtChange, testRows, axKindRows, confusionRows, dayBars } from './listenReport.js'
+import { MDC_DB, splitTests, srtChange, srtMeaning, testRows, axKindRows, confusionRows, dayBars } from './listenReport.js'
 
 const t = (srt, noise = 'babble', i = 0) => ({ session: `s${i}`, srt_db: srt, noise, form: 'A' })
 
@@ -13,10 +13,19 @@ test('검사는 잡담 잡음끼리만 비교하고, 역치가 없는 회차는 
 test('변화는 처음 − 마지막(낮아지면 양수), 3 dB 안쪽은 오차 범위', () => {
   assert.equal(MDC_DB, 3.0)
   assert.equal(srtChange([t(8)]), null)
-  assert.deepEqual(srtChange([t(8), t(6)]), { change: 2, text: '처음보다 2 dB 낮아졌어요', withinError: true })
-  assert.deepEqual(srtChange([t(8), t(4.5)]), { change: 3.5, text: '처음보다 3.5 dB 낮아졌어요', withinError: false })
-  assert.deepEqual(srtChange([t(4), t(5)]), { change: -1, text: '처음보다 1 dB 높아졌어요', withinError: true })
+  assert.deepEqual(srtChange([t(8), t(6)]), { change: 2, text: '처음보다 2 dB 낮아졌어요', withinError: true, mixedRule: false })
+  assert.deepEqual(srtChange([t(8), t(4.5)]), { change: 3.5, text: '처음보다 3.5 dB 낮아졌어요', withinError: false, mixedRule: false })
+  assert.deepEqual(srtChange([t(4), t(5)]), { change: -1, text: '처음보다 1 dB 높아졌어요', withinError: true, mixedRule: false })
   assert.equal(srtChange([t(4), t(4)]).withinError, false)
+})
+
+test('검사 계단 규칙: 새 회차(절반 규칙)는 설명이 바뀌고, 첫 검사와 규칙이 다르면 표시한다', () => {
+  const half = (srt) => ({ ...t(srt), rule: 'half' })
+  assert.equal(srtMeaning(half(5)), '낱말을 절반쯤 알아듣는')
+  assert.equal(srtMeaning(t(5)), '낱말을 열에 넷쯤 알아듣는')
+  assert.equal(srtMeaning(undefined), '낱말을 열에 넷쯤 알아듣는')
+  assert.equal(srtChange([t(8), half(6)]).mixedRule, true)
+  assert.equal(srtChange([half(8), half(6)]).mixedRule, false)
 })
 
 test('검사가 많으면 최근 몇 개와 처음 검사만 보인다', () => {

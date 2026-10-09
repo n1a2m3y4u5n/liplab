@@ -151,7 +151,16 @@ def validate_manifest(m: Dict) -> List[str]:
                 seen_ids.add(iid)
                 err += _validate_item(name, it, L)
     st = (layers.get("snr") or {}).get("staircase") or {}
-    if st:
+    if st and st.get("rule") == "word_prop_post":
+        if not (0 < st.get("target", 0) < 1 and st.get("s0", 0) > 0 and st.get("f_min", 0) > 0):
+            err.append("snr.staircase(word_prop_post)는 0 < target < 1, s0 > 0, f_min > 0")
+        if not (st.get("min_db", 0) < st.get("start_db", 0) < st.get("max_db", 0)):
+            err.append("snr.staircase는 min_db < start_db < max_db")
+        if not (st.get("max_trials", 0) >= 6):
+            err.append("snr.staircase(word_prop_post)는 max_trials >= 6")
+    elif st and st.get("rule") not in (None, "weighted"):
+        err.append(f"snr.staircase.rule을 모른다: {st.get('rule')!r}")
+    elif st:
         if not (st.get("step_down_db", 0) > 0 and st.get("step_up_db", 0) > 0):
             err.append("snr.staircase 계단 크기는 양수")
         if not (st.get("min_db", 0) < st.get("start_db", 0) < st.get("max_db", 0)):
@@ -389,15 +398,11 @@ def strict_fields(r: Optional[Dict]) -> Dict:
             "strict_version": str(ver)[:24] if ver else None}
 
 
-def word_proportion(target: str, answer: str) -> float:
-    """낱말 단위 일치 비율. SNR 계단의 '맞음' 판정에만 쓴다. 정답 낱말마다 철자(음절열)가 답(공백·문장 부호를 뗀 음절열) 안에
-    순서대로 그대로 들어 있으면 맞힌 것이다. 띄어쓰기를 빼먹거나 잘못 띄어도 결과가 같고(예전에는 공백으로만 나눠 '감기에걸렸어요'가
-    0점이었다), 낱말 안에 음절이 끼면(먹었어요 ≠ 먹어요) 틀린다."""
+def word_hits(target: str, answer: str) -> Tuple[int, int]:
+    """(맞힌 낱말 수, 정답 낱말 수). word_proportion과 같은 판정이다(SNR 계단의 낱말 비율 걸음·격자 추정이 쓴다)."""
     def jamo(t: str) -> str:   # 음절 단위(NFC) 철자열. 자모로 풀면 '각' 안에서 '가'가 맞아 버린다
         return re.sub(r"[^\w]", "", unicodedata.normalize("NFC", t or ""))
     words = [w for w in (jamo(x) for x in unicodedata.normalize("NFC", target or "").split()) if w]
-    if not words:
-        return 0.0
     ans = jamo(answer)
     pos, hit = 0, 0
     for w in words:
@@ -405,15 +410,82 @@ def word_proportion(target: str, answer: str) -> float:
         if k >= 0:
             hit += 1
             pos = k + len(w)
-    return hit / len(words)
+    return hit, len(words)
+
+
+def word_proportion(target: str, answer: str) -> float:
+    """낱말 단위 일치 비율. SNR 계단의 '맞음' 판정에만 쓴다. 정답 낱말마다 철자(음절열)가 답(공백·문장 부호를 뗀 음절열) 안에
+    순서대로 그대로 들어 있으면 맞힌 것이다. 띄어쓰기를 빼먹거나 잘못 띄어도 결과가 같고(예전에는 공백으로만 나눠 '감기에걸렸어요'가
+    0점이었다), 낱말 안에 음절이 끼면(먹었어요 ≠ 먹어요) 틀린다."""
+    hit, n = word_hits(target, answer)
+    return hit / n if n else 0.0
 
 
 # ── 적응 계단(SNR) ────────────────────────────────────
-def staircase_run(params: Dict, outcomes: List[bool]) -> Dict:
-    """가중 상하 계단(Kaernbach 1991). 맞으면 SNR을 step_down만큼 내리고(어렵게), 틀리면 step_up만큼 올린다(쉽게).
+# 10/9부터 목록의 staircase.rule = 'word_prop_post'(docs/listen-stair-target-sim-2026-10.md P4): 낱말 비율 걸음(목표 0.40, ICRA 식)으로
+# 24문장을 모두 내고, 개인 SNR은 낱말 수 이항 가능도의 격자 사후 평균에서 구한 '낱말 40% 지점'이다. 가상 청취자 확인 시드에서 정상 청력의
+# 기대 A가 30~50% 띠에 드는 비율이 지금 규칙보다 18~32%p 높았고 'SNR 실패'도 줄었다. rule이 없으면 아래 옛 가중 상하 계단이다.
+_GRID_TH = [-15.0 + 0.5 * i for i in range(95)]             # 역치 −15 ~ +32 dB(0.5 dB), 시뮬레이션 격자와 같다
+_GRID_SL = [0.04, 0.05, 0.065, 0.08, 0.10, 0.125, 0.15, 0.18, 0.22]
+
+
+def _post_x(trials: List[Tuple[float, int, int]], target: float) -> Optional[float]:
+    """(SNR, 맞힌 낱말, 낱말 수) 시행들 → 편평 사전분포 격자 사후 평균의 '낱말 target 지점'(dB). 로지스틱 p = 1/(1+exp(−4s(x−θ)))."""
+    import math
+    if not trials:
+        return None
+    eps = 1e-9
+    off = math.log(target / (1 - target)) / 4.0
+    lls, xs = [], []
+    for th in _GRID_TH:
+        for sl in _GRID_SL:
+            ll = 0.0
+            for x, k, n in trials:
+                p = min(1 - eps, max(eps, 1.0 / (1.0 + math.exp(-4.0 * sl * (x - th)))))
+                ll += k * math.log(p) + (n - k) * math.log1p(-p)
+            lls.append(ll)
+            xs.append(th + off / sl)
+    m = max(lls)
+    w = [math.exp(v - m) for v in lls]
+    return sum(a * b for a, b in zip(w, xs)) / sum(w)
+
+
+def staircase_word_prop(params: Dict, outcomes: List[Tuple[int, int]]) -> Dict:
+    """낱말 비율 걸음(Brand·Kollmeier 2002, ICRA 권고 식): ΔL = −f(i)(비율 − target)/s0, f(i) = max(f_min, 1.5·1.41^−i), i는 SNR 변화
+    방향이 바뀐 횟수(변화가 0인 시행은 방향을 바꾸지 않는다). 0.1 dB로 반올림하고 범위로 자른다. outcomes는 (맞힌 낱말, 낱말 수) 시간순.
+    max_trials까지 늘 다 내고, 끝나면 격자 사후 평균의 '낱말 target 지점'을 개인 SNR로 준다(estimate_kind 'posterior40')."""
+    start, lo, hi = float(params["start_db"]), float(params["min_db"]), float(params["max_db"])
+    tar, s0, f_min = float(params.get("target", 0.4)), float(params.get("s0", 0.15)), float(params.get("f_min", 0.1))
+    max_trials = int(params["max_trials"])
+    level, last, nrev = start, 0, 0
+    history, trials = [], []
+    for k, n in outcomes[:max_trials]:
+        n = max(1, int(n))
+        k = min(n, max(0, int(k)))
+        history.append(level)
+        trials.append((level, k, n))
+        prop = k / n
+        d = (tar > prop) - (tar < prop)          # +1이면 SNR을 올린다(쉽게)
+        if d and last and d != last:
+            nrev += 1
+        if d:
+            last = d
+        f = max(f_min, 1.5 * 1.41 ** (-nrev))
+        level = min(hi, max(lo, round(level - f * (prop - tar) / s0, 1)))
+    done = len(history) >= max_trials
+    est = round(_post_x(trials, tar), 2) if done else None
+    return {"next_db": None if done else round(level, 2), "reversals": nrev, "done": done, "estimate_db": est,
+            "estimate_kind": "posterior40" if done else None, "history": history, "n_trials": len(history)}
+
+
+def staircase_run(params: Dict, outcomes: List) -> Dict:
+    """SNR 계단. params.rule이 'word_prop_post'면 staircase_word_prop(outcomes는 (맞힌 낱말, 낱말 수)), 아니면 아래 가중 상하 계단.
+    가중 상하 계단(Kaernbach 1991). 맞으면 SNR을 step_down만큼 내리고(어렵게), 틀리면 step_up만큼 올린다(쉽게).
     수렴점의 정답률 p는 step_down·p = step_up·(1 − p)에서 정해진다(3 dB·2 dB면 p = 0.4, 가4의 '청각만 30~50%' 목표).
     outcomes는 지금까지의 판정(시간순). {next_db, reversals, done, estimate_db, history} 를 돌려준다.
     끝: 반전 수가 reversals에 닿거나 시행이 max_trials에 닿을 때. 추정값은 마지막 use_last개 반전의 평균(반전이 부족하면 None)."""
+    if params.get("rule") == "word_prop_post":
+        return staircase_word_prop(params, outcomes)
     start, lo, hi = float(params["start_db"]), float(params["min_db"]), float(params["max_db"])
     down, up = float(params["step_down_db"]), float(params["step_up_db"])
     need, use_last, max_trials = int(params["reversals"]), int(params["use_last"]), int(params["max_trials"])
