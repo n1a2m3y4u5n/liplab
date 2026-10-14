@@ -1,9 +1,9 @@
 #!/bin/bash
 # 사용: eval_run.sh HALF NEWDIR OUT
-L=$HOME/Downloads/liplab-lab/data
+L=$HOME/Downloads/LIPLAB_ALL/liplab-lab/data
 F=$L/pod_runs/20261007_czde54612e5kcu/v2_final/out
 R=$L/pod_runs/20261006_oel3rwn7y5zjbv/v2_part2/out
-cd /Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts || exit 1
+cd /Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts || exit 1
 /tmp/v15sp/venv/bin/python v15_calibrate.py evaluate --sel $L/v2_avatar/sel.json --align $R/align_real.jsonl --real-bs $R/bs_real \
   --renders "$2/renders" --render-bs "$2/bs" --old-renders $F/renders --old-bs $F/bs_render --half "$1" --out "$3" 2>&1 | tail -1
 /tmp/v15sp/venv/bin/python - "$3" <<'EOF'

@@ -21,14 +21,14 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.dirname(HERE)
-LAB = os.path.expanduser("~/Downloads/liplab-lab")
+LAB = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab")
 BASE = f"{LAB}/data/scores_2026-10-06"
 SC = f"{LAB}/data/pod_runs/20261006_35zrgz6wvrqiho/sc/out"
 S4 = f"{LAB}/data/pod_runs/20261007_ubn4h922kfnx03/s4/out"
 FV = f"{LAB}/data/pod_runs/20261007_gf8ifdceixcoar/fv"
 SS = os.path.expanduser("~/Downloads/KSC2026/liplab/data")       # KSC 세션의 10/7 SpeechSuper 점수(읽기만)
 OUTROOT = f"{LAB}/data/scores_recut_2026-10-07"
-PY_TORCH = os.path.expanduser("~/Downloads/liplab/backend/.venv/bin/python")
+PY_TORCH = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python")
 PASS = 65.0
 B = 2000
 VARIANTS = ("V0a", "V1", "V1s", "V2")

@@ -1,4 +1,4 @@
-APP = '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/'
+APP = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/'
 tv = '''
 
 ## 9. V15 표와 V5 재선정 (10/7)

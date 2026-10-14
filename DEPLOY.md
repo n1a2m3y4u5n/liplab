@@ -67,7 +67,7 @@
    - 채점 모델(9/25): 자체 학습 정렬기·채점기(`DGOP_MODEL=ours`). 사전등록 독립 재검(538 새 20화자)을 통과해 공개 kresnik
      대신 쓴다(`docs/scorer-selftrain.md`). 체크포인트는 git에 없으므로 배포 전에 빌드 폴더에 있는지 확인한다:
      `ls -l backend/models/dgop_ours/*/model.int8.safetensors`(9/26부터 미리 변환한 int8 파일, 각 355MB). 없으면
-     `rm -rf backend/models/dgop_ours && cp -cR ~/Downloads/liplab-lab/models/dgop_ours_2026-09-25_int8 backend/models/dgop_ours`
+     `rm -rf backend/models/dgop_ours && cp -cR ~/Downloads/LIPLAB_ALL/liplab-lab/models/dgop_ours_2026-09-25_int8 backend/models/dgop_ours`
      (APFS 복제라 디스크를 더 쓰지 않는다. 먼저 지우지 않으면 폴더가 이미 있을 때 그 안에 하위 폴더로 들어가, 예전 fp32가 남은 채
      빌드되고 켜질 때마다 실행 중 변환을 한다. 빌드 기록의 `dgop_ours ok:`가 `file`인지 본다).
      fp32 원본(각 1.26GB)은 `liplab-lab/models/dgop_ours_2026-09-25`에 있고, int8 파일은

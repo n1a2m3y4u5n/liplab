@@ -757,7 +757,7 @@ LLM에게 '같아 보이는 단어쌍'을 직접 물으면 음운 환각이 크�
 ### G.3 실행 환경 이슈와 해결 (iCloud eviction)
 작업본이 iCloud Drive 경로(`.../k-AI/liplab`)에 있어 `.venv` 패키지가 클라우드에서
 evict되었고, `import anthropic` 하나가 40초를 넘겼다. iCloud 경로 파이썬 실행은 부적합.
-→ **실행만 로컬 디스크(`~/Downloads/liplab`)에서** 하도록 분리했다(코드는 iCloud 작업본 유지).
+→ **실행만 로컬 디스크(`~/Downloads/LIPLAB_ALL/liplab`)에서** 하도록 분리했다(코드는 iCloud 작업본 유지).
 로컬 venv에 최소 의존만 설치하니 import 3초로 정상화. 다만 로컬에 최신 **anthropic 1.3.0**이
 깔려 `messages.create()`의 `temperature` 인자가 사라진 API 변경으로 실패 → 프로덕션과
 동일한 **0.116.0으로 고정**해 코드 무수정으로 맞췄다(로컬은 검증용, 프로덕션 SDK와 일치가 원칙).

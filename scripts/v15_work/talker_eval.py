@@ -1,9 +1,9 @@
 """확인 절반 가상 화자(보고만): V15 표·V15 화자 렌더와 V2(지금 표·지금 화자) 렌더의 RSA ρ, 진폭 범위 안 무리 수."""
 import json, sys
-sys.path.insert(0, '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
+sys.path.insert(0, '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
 import v15_calibrate as C
 import v2_avatar_validity as V
-L = '/Users/namyunsu/Downloads/liplab-lab/data/'
+L = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab-lab/data/'
 R = L + 'pod_runs/20261006_oel3rwn7y5zjbv/v2_part2/out/'
 F = L + 'pod_runs/20261007_czde54612e5kcu/v2_final/out/'
 NEW = L + 'pod_runs/20261007_zszjqyqz5m03q2/v15/cf_talkers'

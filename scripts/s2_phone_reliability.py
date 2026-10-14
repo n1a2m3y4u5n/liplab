@@ -17,7 +17,7 @@ from collections import defaultdict
 
 import numpy as np
 
-LAB = os.environ.get("LAB", os.path.expanduser("~/Downloads/liplab-lab"))
+LAB = os.environ.get("LAB", os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab"))
 JOBS = f"{LAB}/data/s2stage/data/jobs.jsonl"
 DGOP_1006 = f"{LAB}/data/pod_runs/20261006_35zrgz6wvrqiho/sc/out/dgop_full.jsonl"
 QUIET_A1 = {"spk332", "spk334", "spk337", "spk339", "spk342", "spk344", "spk347", "spk349", "spk352"}   # S16·S17의 조용 환경 9명

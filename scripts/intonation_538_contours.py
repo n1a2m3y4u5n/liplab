@@ -2,7 +2,7 @@
 import json, math, os, re, sys, wave
 import numpy as np
 
-ROOT = os.path.expanduser("~/Downloads/liplab_gpu_snapshot/expand538_more")
+ROOT = os.path.expanduser("~/Downloads/LIPLAB_ALL/archive/liplab_gpu_snapshot/expand538_more")
 WH = re.compile(r"(뭐|뭘|무엇|무슨|어디|언제|누구|누가|누굴|왜|어떻게|어떤|어느|몇|얼마)")
 
 

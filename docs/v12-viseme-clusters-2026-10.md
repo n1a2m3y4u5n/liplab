@@ -96,12 +96,12 @@
 - 맥에서 한 번 돌린다. 판정 규칙을 결과를 본 뒤 바꾸면 6절에 '사후 변경'으로 따로 적고, 판정은 이 문서의 규칙으로 한다.
 
 ```bash
-PY=~/Downloads/liplab/backend/.venv/bin/python
-OUT=~/Downloads/liplab-lab/data/pod_runs/20261006_oel3rwn7y5zjbv/v2_part2/out
-$PY scripts/v12_viseme_clusters.py extract --sel ~/Downloads/liplab-lab/data/v2_avatar/sel.json \
-  --align $OUT/align_real.jsonl --real-bs $OUT/bs_real --out ~/Downloads/liplab-lab/data/v12/spk_units.json
-$PY scripts/v12_viseme_clusters.py analyze --inp ~/Downloads/liplab-lab/data/v12/spk_units.json \
-  --out ~/Downloads/liplab-lab/data/v12/summary.json
+PY=~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python
+OUT=~/Downloads/LIPLAB_ALL/liplab-lab/data/pod_runs/20261006_oel3rwn7y5zjbv/v2_part2/out
+$PY scripts/v12_viseme_clusters.py extract --sel ~/Downloads/LIPLAB_ALL/liplab-lab/data/v2_avatar/sel.json \
+  --align $OUT/align_real.jsonl --real-bs $OUT/bs_real --out ~/Downloads/LIPLAB_ALL/liplab-lab/data/v12/spk_units.json
+$PY scripts/v12_viseme_clusters.py analyze --inp ~/Downloads/LIPLAB_ALL/liplab-lab/data/v12/spk_units.json \
+  --out ~/Downloads/LIPLAB_ALL/liplab-lab/data/v12/summary.json
 ```
 
 ## 6. 결과 (2026-10-07, 5절 명령 그대로 한 번 실행)

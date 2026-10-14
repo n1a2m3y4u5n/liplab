@@ -28,7 +28,7 @@ import sound_clips as S  # noqa: E402
 FAILED = ("마늘", "바늘", "오빠", "나물")
 TRAIN_VOICES = ("m1", "f1", "m2", "f2")
 N_SCORE = 12
-LAB = os.path.expanduser("~/Downloads/liplab-lab")
+LAB = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab")
 SQA_RUNS = ("20261007_mwo4z0qqys996o", "20261007_y0mn97i6mjalnq")
 # 검토 문서 3.3절의 '추상어·시간어와 한 음절로 뜻이 여럿인 말'
 ABSTRACT = ("사랑·행복·슬픔·겁·시작·맛·날·이틀·공부·수업·시험·사물·형제·목소리·말·배·눈·밤·차·다리·등·병·비·양·파·무·죽·기사·기타·자·살·"

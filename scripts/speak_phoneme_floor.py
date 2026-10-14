@@ -7,7 +7,7 @@
   python scripts/speak_phoneme_floor.py                    # 탐색(절반 0) → 후보 선택 → 확인(절반 1), JSON 요약
   python scripts/speak_phoneme_floor.py --out x.json       # 요약을 파일로
 
-자료 위치는 LIPLAB_LAB(기본 ~/Downloads/liplab-lab)/data/pod_runs 아래(등록 문서 3절).
+자료 위치는 LIPLAB_LAB(기본 ~/Downloads/LIPLAB_ALL/liplab-lab)/data/pod_runs 아래(등록 문서 3절).
 """
 import argparse
 import gzip
@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.join(ROOT, "backend"))
 import dgop  # noqa: E402
 from phone_reliability import final_syllable_start  # noqa: E402
 
-LAB = os.environ.get("LIPLAB_LAB", os.path.expanduser("~/Downloads/liplab-lab"))
+LAB = os.environ.get("LIPLAB_LAB", os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab"))
 PR = os.path.join(LAB, "data", "pod_runs")
 CAL = json.load(open(os.path.join(ROOT, "backend", "data", "dgop_calibration_ours.json"), encoding="utf-8"))
 PASS = 65.0

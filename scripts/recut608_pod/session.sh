@@ -8,7 +8,7 @@
 # 538·608 원자료는 lab 묶음 폴더와 파드에만 두고 앱 저장소에 넣지 않는다. 다른 작업의 파드는 건드리지 않는다.
 set -uo pipefail
 APP=$(cd "$(dirname "$0")/../.." && pwd)
-LAB=${LAB:-$HOME/Downloads/liplab-lab}
+LAB=${LAB:-$HOME/Downloads/LIPLAB_ALL/liplab-lab}
 P="$LAB/tools/pod/pod.sh"
 export POD_STATE_DIR=${POD_STATE_DIR:-$LAB/tools/pod/.rcstate} POD_NAME=${POD_NAME:-liplab-rc} POD_DISK_GB=${POD_DISK_GB:-50}
 export DEADMAN_GRACE_MIN=${DEADMAN_GRACE_MIN:-15}

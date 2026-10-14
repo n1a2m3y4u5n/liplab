@@ -1,7 +1,7 @@
 """사전 등록 6절의 '확인 문장 162클립'(V2 분석 규칙: 문장 id가 확인 절반에 있으면 셈)을 맞추려고, 확인 렌더 151문장에
 탐색 렌더(같은 동결 표 D, 주입 경로) 가운데 확인 절반에도 나오는 문장 11개를 더한 폴더를 만든다(심볼릭 링크)."""
 import json, os
-L = '/Users/namyunsu/Downloads/liplab-lab/data/'
+L = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab-lab/data/'
 CF = L + 'pod_runs/20261007_zszjqyqz5m03q2/v15/cf_default'
 EX = L + 'pod_runs/20261007_zszjqyqz5m03q2/v15/ex_D'
 OUT = '/tmp/v15sp/work/cf162'

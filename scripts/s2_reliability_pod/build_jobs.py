@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.join(APP, "backend"))
 os.environ.setdefault("LIPLAB_CONTENT_WARMUP", "0")
 import jamo_vocab as JV  # noqa: E402
 
-LAB = os.environ.get("LAB", os.path.expanduser("~/Downloads/liplab-lab"))
+LAB = os.environ.get("LAB", os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab"))
 DGOP_1006 = f"{LAB}/data/pod_runs/20261006_35zrgz6wvrqiho/sc/out/dgop_full.jsonl"
 FROZEN = f"{LAB}/data/scores_newspk_2026-10-06/v1_snapshot_spk_frozen.txt"
 V1_MAN = f"{LAB}/data/v1_538/manifest.tsv"

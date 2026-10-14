@@ -9,7 +9,7 @@
 # 다른 이름의 파드(liplab-ad 등)는 건드리지 않는다. 538·608 원자료는 liplab-lab과 파드에만 둔다.
 set -uo pipefail
 APP=$(cd "$(dirname "$0")/../.." && pwd)
-LAB=${LAB:-$HOME/Downloads/liplab-lab}
+LAB=${LAB:-$HOME/Downloads/LIPLAB_ALL/liplab-lab}
 P="$LAB/tools/pod/pod.sh"
 export POD_STATE_DIR=${POD_STATE_DIR:-$LAB/tools/pod/.alstate} POD_NAME=${POD_NAME:-liplab-al} POD_DISK_GB=${POD_DISK_GB:-60}
 export DEADMAN_GRACE_MIN=${DEADMAN_GRACE_MIN:-15}

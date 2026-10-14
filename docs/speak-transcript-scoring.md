@@ -10,7 +10,7 @@
 
 ## 자료와 절차
 
-- 538: 정상 화자 문장 클립 1,740개(`~/Downloads/liplab_gpu_snapshot/expand538_more`). 608: 감음신경성 청각장애 화자 27명의
+- 538: 정상 화자 문장 클립 1,740개(`~/Downloads/LIPLAB_ALL/archive/liplab_gpu_snapshot/expand538_more`). 608: 감음신경성 청각장애 화자 27명의
   읽기 세션을 large-v3 단어 타임스탬프로 문장 단위로 자름(대본 문장과 SequenceMatcher 0.5 이상인 구간, 486문장 중 360문장, 24명).
   자료는 RunPod 파드에서만 처리하고 저장소에 넣지 않는다(국외 반출 확인 범위: RunPod 처리).
 - 전사: 앱과 같은 설정(faster-whisper 1.x base, CPU int8, 빔 1, 온도 0, 한국어), vad_filter 없음(앱)·있음.

@@ -8,7 +8,7 @@
 # 538 원자료는 lab 묶음 폴더와 파드에만 두고 앱 저장소에 넣지 않는다.
 set -uo pipefail
 APP=$(cd "$(dirname "$0")/../.." && pwd)
-LAB=${LAB:-$HOME/Downloads/liplab-lab}
+LAB=${LAB:-$HOME/Downloads/LIPLAB_ALL/liplab-lab}
 P="$LAB/tools/pod/pod.sh"
 # S2_SETS(기본 "A0 A1")로 묶을 자료를, S2_TRIM=1로 앱과 같은 끝 자르기를 고른다(run.sh가 넘긴다).
 export POD_STATE_DIR=${POD_STATE_DIR:-$LAB/tools/pod/.s2state} POD_NAME=${POD_NAME:-liplab-s2} POD_DISK_GB=${POD_DISK_GB:-50}
@@ -48,7 +48,7 @@ do_stage() {
   python3 - "$R/data" "$LAB" <<'EOF' || die "소리 복사"
 import json, os, shutil, sys
 d, lab = sys.argv[1:3]
-src = {"A0": os.path.expanduser("~/Downloads/liplab_gpu_snapshot/expand538_more/clips"), "A1": f"{lab}/data/v1_538/clips"}
+src = {"A0": os.path.expanduser("~/Downloads/LIPLAB_ALL/archive/liplab_gpu_snapshot/expand538_more/clips"), "A1": f"{lab}/data/v1_538/clips"}
 n = {"A0": 0, "A1": 0}
 sets = set(os.environ.get("S2_SETS", "A0 A1").split())
 keep = []

@@ -17,7 +17,7 @@ import zlib
 import numpy as np
 import soundfile as sf
 
-LAB = os.path.expanduser(os.environ.get("LAB", "~/Downloads/liplab-lab"))
+LAB = os.path.expanduser(os.environ.get("LAB", "~/Downloads/LIPLAB_ALL/liplab-lab"))
 KSC = os.path.expanduser("~/Downloads/KSC2026/liplab/data/expand")
 V2 = f"{LAB}/data/scores_recut_2026-10-07/V2/dgop_pairs.csv"
 CUTS_1006 = f"{LAB}/data/pod_runs/20261006_35zrgz6wvrqiho/sc/out/cuts608.json"

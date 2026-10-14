@@ -18,7 +18,7 @@
 - 덤프의 음소 점수로 문장 원점수·표시 점수를 다시 계산하면 덤프의 값과 맞는지 점검했다(덤프마다 40줄, 교체 덤프 50레코드, 0.1점 넘게 다른 것은
   10/6 sc 덤프의 1줄). 이것은 재현 점검이고 결과 지표가 아니다.
 
-## 3. 자료(모두 `~/Downloads/liplab-lab/data/pod_runs/`, 문장별 값은 저장소에 넣지 않는다)
+## 3. 자료(모두 `~/Downloads/LIPLAB_ALL/liplab-lab/data/pod_runs/`, 문장별 값은 저장소에 넣지 않는다)
 
 | 묶음 | 덤프 | 화자 | 쓰는 것 | 채점 경로 |
 |---|---|---|---|---|
@@ -90,7 +90,7 @@
 
 ## 8. 결과(2026-10-09, 등록 커밋 ea452d63 뒤 측정)
 
-실행: `~/Downloads/liplab/backend/.venv/bin/python scripts/speak_phoneme_floor.py`(2초, 파드·유료 API 없음). 전체 요약 JSON은 저장소 밖
+실행: `~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python scripts/speak_phoneme_floor.py`(2초, 파드·유료 API 없음). 전체 요약 JSON은 저장소 밖
 (`liplab-lab/data/speak_floor_2026-10-09/result.json`)에 두었다.
 
 ### 8.1 판정: 실패(탐색)

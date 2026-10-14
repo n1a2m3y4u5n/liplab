@@ -29,14 +29,14 @@ import time
 import unicodedata
 import zlib
 
-LAB = os.path.expanduser("~/Downloads/liplab-lab")
+LAB = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab")
 V18 = f"{LAB}/data/v18"
 ROOT = os.environ.get("V7B_ROOT", f"{V18}/v7b_dl2")
 JS, MP4, CLIPS = f"{ROOT}/js", f"{ROOT}/mp4", f"{ROOT}/clips"
 KEYF = f"{LAB}/.aihub.key"
 URL = "https://api.aihub.or.kr/down/0.6/538.do?fileSn="
 MAP = f"{LAB}/data/spkmap538_full.tsv"
-APP = os.path.expanduser("~/Downloads/liplab-wt-newdata")
+APP = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-wt-newdata")
 PARSE = f"{LAB}/tools/parse_sentences.py"
 MAX_VIDEO_BYTES = 7_500_000_000
 MIN_FREE_GB = 8.0

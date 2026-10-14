@@ -3,13 +3,13 @@ import json, sys, pickle, time
 import numpy as np
 from scipy.optimize import minimize
 sys.path.insert(0, '/tmp/v15sp/work')
-sys.path.insert(0, '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
+sys.path.insert(0, '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
 import v15_calibrate as C
 import v2_avatar_validity as V
 import calib4 as K
 from calib2 import BOUNDS, load_items, old_x, to_table, G_LIST, NC, FEATS, FI, RSA_IDX
 sys.modules['__main__'].FM = C.FM
-L = '/Users/namyunsu/Downloads/liplab-lab/data/'
+L = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab-lab/data/'
 NG = len(G_LIST)
 
 

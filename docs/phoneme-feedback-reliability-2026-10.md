@@ -273,7 +273,7 @@ pe ≥ 0.85인 소리는 관측 일치 po. 판정 칸의 N·A·F·K는 못 넘�
 
 ### 9.10 다시 시작하는 법
 
-- `python3 scripts/s2_reliability_pod/build_jobs.py ~/Downloads/liplab-lab/data/s2stage/data`(같은 sha256이 나와야 한다) →
+- `python3 scripts/s2_reliability_pod/build_jobs.py ~/Downloads/LIPLAB_ALL/liplab-lab/data/s2stage/data`(같은 sha256이 나와야 한다) →
   `bash scripts/s2_reliability_pod/session.sh stage` → `launch` → (`tail`) → `finish` →
   `python scripts/s2_phone_reliability.py analyze <받은 s2/out> <결과.json>`.
 - 끝 모음 수정 뒤에는 수정된 backend로 같은 순서를 밟고, 다리(4절)의 기준값은 수정 전 10/6 값이 아니라 수정판 원래 목표로 바꿔야 한다

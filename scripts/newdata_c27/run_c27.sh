@@ -66,10 +66,10 @@ PY=$W/vapp/bin/python
 $PY -c "import torch, transformers, faster_whisper, ctranslate2, numpy, librosa, scipy; print('ENVAPP torch', torch.__version__, 'tf', transformers.__version__, 'fw', faster_whisper.__version__, 'numpy', numpy.__version__, 'librosa', librosa.__version__, 'scipy', scipy.__version__, 'cuda', torch.cuda.is_available())" || fail "vapp 확인"
 (cd "$W/backend" && $PY -c "import dgop_acoustic as DA, quant_int8; assert DA.HAS_ACOUSTIC") || fail "acoustic import"
 # scoring_s18_head.features가 찾는 경로(맥 lab 배치)를 파드에 맞춘다
-mkdir -p /root/Downloads/liplab-lab/models/dgop_ours_2026-09-25_int8/aligner /root/Downloads/liplab-lab/models/dgop_ours_2026-09-25_int8/scorer /root/Downloads/liplab-lab/tools
-for m in aligner scorer; do ln -sfn "$W/backend/models/dgop_ours/$m/vocab.json" "/root/Downloads/liplab-lab/models/dgop_ours_2026-09-25_int8/$m/vocab.json"; done
-ln -sfn "$W/tools/build_scores_csv.py" /root/Downloads/liplab-lab/tools/build_scores_csv.py
-mkdir -p /root/Downloads/liplab-integrate && ln -sfn "$W/backend" /root/Downloads/liplab-integrate/backend   # build_scores_csv가 dgop을 여기서 찾는다
+mkdir -p /root/Downloads/LIPLAB_ALL/liplab-lab/models/dgop_ours_2026-09-25_int8/aligner /root/Downloads/LIPLAB_ALL/liplab-lab/models/dgop_ours_2026-09-25_int8/scorer /root/Downloads/LIPLAB_ALL/liplab-lab/tools
+for m in aligner scorer; do ln -sfn "$W/backend/models/dgop_ours/$m/vocab.json" "/root/Downloads/LIPLAB_ALL/liplab-lab/models/dgop_ours_2026-09-25_int8/$m/vocab.json"; done
+ln -sfn "$W/tools/build_scores_csv.py" /root/Downloads/LIPLAB_ALL/liplab-lab/tools/build_scores_csv.py
+mkdir -p /root/Downloads/LIPLAB_ALL/liplab-integrate && ln -sfn "$W/backend" /root/Downloads/LIPLAB_ALL/liplab-integrate/backend   # build_scores_csv가 dgop을 여기서 찾는다
 (cd "$W/tools" && $PY c27_pod.py selftest) | tee "$L/selftest.txt"
 grep -q C27_SELFTEST_OK "$L/selftest.txt" || fail selftest
 (cd "$W/backend_new" && $PY -c "import dgop_acoustic as DA; assert DA.HAS_ACOUSTIC and hasattr(DA, 'trim_trailing_silence')") || fail "backend_new import"

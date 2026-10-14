@@ -84,7 +84,7 @@
 
 ```bash
 # 파드. 저장소 backend·scripts와 538 클립(mp4와 같은 이름의 wav·flac, manifest.tsv)이 있어야 한다.
-# /workspace/c538에 mp4가 없으면 로컬 ~/Downloads/liplab_gpu_snapshot/expand538_more(클립 1,740개, 629MB)를 올려 --root로 준다.
+# /workspace/c538에 mp4가 없으면 로컬 ~/Downloads/LIPLAB_ALL/archive/liplab_gpu_snapshot/expand538_more(클립 1,740개, 629MB)를 올려 --root로 준다.
 pip install mediapipe==0.10.14 opencv-python-headless
 curl -L -o /workspace/face_landmarker.task \
   https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task

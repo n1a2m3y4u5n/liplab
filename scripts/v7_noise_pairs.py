@@ -4,7 +4,7 @@
 manifest·받기 기록(liplab-lab/data 아래의 tsv·log·out·json)만 읽고, 받기 중인 작업 폴더(.work)와 받기 프로세스는 건드리지 않는다.
 출력은 집계(인물 수, 소음 환경별 인물 수, 둘 이상의 환경을 가진 인물 수)뿐이다.
 
-  python3 scripts/v7_noise_pairs.py [--root ~/Downloads/liplab-lab/data] [--json out.json]
+  python3 scripts/v7_noise_pairs.py [--root ~/Downloads/LIPLAB_ALL/liplab-lab/data] [--json out.json]
 """
 import argparse
 import json
@@ -69,7 +69,7 @@ def summarize(names):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--root", default=os.path.expanduser("~/Downloads/liplab-lab/data"))
+    ap.add_argument("--root", default=os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab/data"))
     ap.add_argument("--json", default=None)
     a = ap.parse_args()
     s = summarize(scan(a.root))

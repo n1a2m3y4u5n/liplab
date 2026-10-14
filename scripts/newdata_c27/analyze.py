@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """범주 27 새 화자 판정(docs/newdata-c27-judgments-2026-10.md 2·4·5절, 3절은 보고만). 맥에서 파드 결과만 읽고 집계만 낸다.
 
-  ~/Downloads/liplab/backend/.venv/bin/python scripts/newdata_c27/analyze.py RUN_DIR [--out X.json]
+  ~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python scripts/newdata_c27/analyze.py RUN_DIR [--out X.json]
 
 RUN_DIR = liplab-lab/data/pod_runs/<날짜>_<파드>/c27 (out/jobs.json, out/trim.jsonl, out/s18_features_*.csv, outb/trim_bridge.jsonl).
 """
@@ -22,7 +22,7 @@ import s18_confirm_newspk as S18  # noqa: E402
 import scoring_608_newspk as N  # noqa: E402
 from scoring_analyses_1006 import auc, ff, wp  # noqa: E402
 
-LAB = os.path.expanduser("~/Downloads/liplab-lab")
+LAB = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab")
 NS_RUN = f"{LAB}/data/pod_runs/20261009_o11jkbqreech6s/ns"
 RUN1 = f"{LAB}/data/pod_runs/20261006_uoqtuk2pyq0nty/s13"
 EXPLORE = f"{LAB}/data/newdata_c27/explore.json"

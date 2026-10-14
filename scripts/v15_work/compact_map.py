@@ -1,5 +1,5 @@
 import json, sys
-sys.path.insert(0, '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
+sys.path.insert(0, '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
 import v15_calibrate as C
 spec = json.load(open('/tmp/v15sp/work/rawmap_a.json'))['lin']
 SYM = ['jawOpen', 'mouthClose', 'mouthFunnel', 'mouthPucker', 'mouthSmile', 'mouthStretch', 'mouthUpperUp', 'mouthLowerDown', 'mouthPress',

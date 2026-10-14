@@ -6,15 +6,15 @@
 #   bash scripts/sound_pod/qa_session.sh fetch                 result.tgz(판정·선택·인코딩 소리·로그)를 받아 RUN 폴더에 푼다(여러 번 불러도 됨)
 #   bash scripts/sound_pod/qa_session.sh finish                fetch → terminate → status
 #   bash scripts/sound_pod/qa_session.sh resume                연결이 끊긴 뒤 qa_run.sh를 다시 띄운다(끝난 단계는 건너뛴다)
-# 환경: MODE=missing(목록에 없는 글만), LAB(기본 ~/Downloads/liplab-lab), MODELS(D-GOP int8 모델 폴더), GPUS, WD_MIN.
+# 환경: MODE=missing(목록에 없는 글만), LAB(기본 ~/Downloads/LIPLAB_ALL/liplab-lab), MODELS(D-GOP int8 모델 폴더), GPUS, WD_MIN.
 # 다른 작업과 섞이지 않게 상태 폴더 .sqastate, 파드 이름 liplab-sqa. 키는 pod.sh가 ~/.runpod/config.toml에서 메모리로만 읽는다.
 set -uo pipefail
 APP=$(cd "$(dirname "$0")/../.." && pwd)
-LAB=${LAB:-$HOME/Downloads/liplab-lab}
+LAB=${LAB:-$HOME/Downloads/LIPLAB_ALL/liplab-lab}
 P="$LAB/tools/pod/pod.sh"
 export POD_STATE_DIR=${POD_STATE_DIR:-$LAB/tools/pod/.sqastate} POD_NAME=${POD_NAME:-liplab-sqa} POD_DISK_GB=${POD_DISK_GB:-60}
 export DEADMAN_GRACE_MIN=${DEADMAN_GRACE_MIN:-15}
-MODELS=${MODELS:-$HOME/Downloads/liplab-integrate/backend/models/dgop_ours}
+MODELS=${MODELS:-$HOME/Downloads/LIPLAB_ALL/liplab-integrate/backend/models/dgop_ours}
 S=${STAGE_DIR:-$LAB/data/sqa_stage}
 GPUS=${GPUS:-NVIDIA A40|SECURE,NVIDIA RTX A6000|SECURE,NVIDIA L40S|SECURE}
 WD_MIN=${WD_MIN:-210}

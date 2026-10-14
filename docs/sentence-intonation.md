@@ -8,7 +8,7 @@
 
 ## 측정(`scripts/intonation_538_contours.py`, `scripts/intonation_measures.py`)
 
-- 자료: AI Hub 538 스냅숏(`~/Downloads/liplab_gpu_snapshot/expand538_more`, 앱 저장소에는 넣지 않는다) 1,737문장. 전사 끝이 '?'이면
+- 자료: AI Hub 538 스냅숏(`~/Downloads/LIPLAB_ALL/archive/liplab_gpu_snapshot/expand538_more`, 앱 저장소에는 넣지 않는다) 1,737문장. 전사 끝이 '?'이면
   의문문, 마지막 문장에 의문사(뭐·어디·언제·누구·왜·어떻게·몇·얼마 등)가 있으면 의문사 의문문, 없으면 예/아니오 의문문, '.'이면 평서문.
 - 음높이: 프론트 `lib/pitch.js`의 autoCorrelate와 녹음 루프(버퍼 42.7ms, 간격 66.7ms, 70~500Hz, 유성 프레임만)를 파이썬으로 옮김.
   참고로 librosa pYIN(313문장)도 쟀다.

@@ -11,7 +11,7 @@
 set -uo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 APP=$(cd "$HERE/../.." && pwd)
-LAB=${LAB:-$HOME/Downloads/liplab-lab}
+LAB=${LAB:-$HOME/Downloads/LIPLAB_ALL/liplab-lab}
 cd "$LAB/tools/pod" || exit 1
 P=pod.sh
 export POD_STATE_DIR=${POD_STATE_DIR:-$LAB/tools/pod/.v18state} POD_NAME=${POD_NAME:-liplab-v18}

@@ -109,7 +109,7 @@ babble만 쓴다).
 **격자 넓히기 규칙.** 단계 1·2를 마친 뒤 어느 청취자 모의에서든 m3·babble 문장의 10% 넘게 50% 지점이 [−12, +20] dB 밖이거나
 정해지지 않으면, 그 청취자 모의에 한해 단계 5(아래 −22·−20·−18, 위 +26·+28·+30 dB, 반복 0~2)를 더하고 분석한다.
 
-**파드와 비용.** RunPod 1대(RTX A6000 SECURE를 먼저, 안 되면 A40 SECURE·L40S SECURE), `~/Downloads/liplab-lab/tools/pod/pod.sh`로만
+**파드와 비용.** RunPod 1대(RTX A6000 SECURE를 먼저, 안 되면 A40 SECURE·L40S SECURE), `~/Downloads/LIPLAB_ALL/liplab-lab/tools/pod/pod.sh`로만
 다룬다. 맥 워치독과 파드 자폭 타이머를 건다. 이 실험 전체 비용 상한은 3달러이고, 시간당 요금으로 환산한 시간을 워치독 마감으로
 둔다. 받아쓰기는 파드에서만 하고, 맥에서는 편집과 작은 점검만 한다.
 

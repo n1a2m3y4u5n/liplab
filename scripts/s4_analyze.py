@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "backend"))
 import speak_consonant_app_analyze as CA  # noqa: E402
 
 REF = os.environ.get("S4_REF", os.path.expanduser(
-    "~/Downloads/liplab-lab/data/pod_runs/20261006_35zrgz6wvrqiho/sc/out/dgop_full.jsonl"))
+    "~/Downloads/LIPLAB_ALL/liplab-lab/data/pod_runs/20261006_35zrgz6wvrqiho/sc/out/dgop_full.jsonl"))
 TEACHER_AUC608 = 0.9034
 DROP = 0.01
 WP_MAX = 0.05
