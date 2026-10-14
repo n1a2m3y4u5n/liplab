@@ -1,6 +1,6 @@
 """맥: 608 새 화자 확인 파드 작업 목록(docs/scoring-608-newspk-2026-10.md 2·3절). 점수는 읽지 않는다(목표 문장·조각 목록·소리만).
 
-  ~/Downloads/liplab/backend/.venv/bin/python scripts/newspk608_pod/build.py STAGE_DATA_DIR
+  ~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python scripts/newspk608_pod/build.py STAGE_DATA_DIR
 만드는 것(STAGE_DATA_DIR, 저장소 밖):
   jobs.json      클립마다 (목표, 종류) 목록. 종류 same(자기 문장) / diff(다른 문장 2) / cohort(반례 8)
   n608/*.wav     KSC 조각 340개의 APFS 복제(cp -c, 원본은 읽기만)
@@ -14,7 +14,7 @@ import re
 import subprocess
 import sys
 
-LAB = os.path.expanduser("~/Downloads/liplab-lab")
+LAB = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab")
 KSC = os.path.expanduser("~/Downloads/KSC2026/liplab/data/expand")
 S13 = f"{LAB}/data/pod_runs/20261006_uoqtuk2pyq0nty/s13/out"
 SC = f"{LAB}/data/pod_runs/20261006_35zrgz6wvrqiho/sc/out"

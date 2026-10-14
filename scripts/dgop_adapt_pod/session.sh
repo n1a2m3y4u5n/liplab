@@ -10,7 +10,7 @@
 # AI Hub 자료와 새 가중치는 liplab-lab과 파드에만 두고 앱 저장소에 넣지 않는다.
 set -uo pipefail
 APP=$(cd "$(dirname "$0")/../.." && pwd)
-LAB=${LAB:-$HOME/Downloads/liplab-lab}
+LAB=${LAB:-$HOME/Downloads/LIPLAB_ALL/liplab-lab}
 P="$LAB/tools/pod/pod.sh"
 export POD_STATE_DIR=${POD_STATE_DIR:-$LAB/tools/pod/.adstate} POD_NAME=${POD_NAME:-liplab-ad} POD_DISK_GB=${POD_DISK_GB:-200}
 export DEADMAN_GRACE_MIN=${DEADMAN_GRACE_MIN:-20}

@@ -1,6 +1,6 @@
 """전사 경로 채점 비교(docs/speak-transcript-scoring.md). 파드 결과 out/asr.json·out/cuts608.json을 읽는다.
 
-    ~/Downloads/liplab/backend/.venv/bin/python analyze.py <out 폴더> <half: 0|1|all> [--vad]
+    ~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python analyze.py <out 폴더> <half: 0|1|all> [--vad]
 
 R0(지금): calculate_jamo_score = 맞힌 점수 / 정답 음절 수(재현율). R1: 2PR/(P+R), P = 맞힌 점수 / 전사 음절 수.
 맞게 말함: 클립의 자기 문장을 목표로. 다르게 말함: 같은 세트의 다른 문장(음절 수 ±30%)을 목표로(클립마다 3개).
@@ -14,7 +14,7 @@ import re
 import sys
 import zlib
 
-sys.path.insert(0, os.path.expanduser("~/Downloads/liplab-integrate/backend"))
+sys.path.insert(0, os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-integrate/backend"))
 os.environ.setdefault("LIPLAB_CONTENT_WARMUP", "0")
 from scoring import align_jamos, _syllable_match_score, to_pronounced_jamos  # noqa: E402
 import speak_curriculum as sc  # noqa: E402
@@ -51,7 +51,7 @@ def in_half(spk):
 
 rows = []   # (set, spk, target, transcript)
 man = {}
-for l in open(os.path.expanduser("~/Downloads/liplab_gpu_snapshot/expand538_more/manifest.tsv"), encoding="utf-8"):
+for l in open(os.path.expanduser("~/Downloads/LIPLAB_ALL/archive/liplab_gpu_snapshot/expand538_more/manifest.tsv"), encoding="utf-8"):
     clip, spk, text = l.rstrip("\n").split("\t")
     man[clip.replace(".mp4", "")] = (spk, text)
 for p, o in asr["c538"].items():

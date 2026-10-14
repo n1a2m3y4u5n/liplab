@@ -1,10 +1,10 @@
 """정지 구간(1.0배, 150ms 이상 구간의 뒤쪽 절반) 안 프레임 흔들림 = 재측정 잡음 추정."""
 import json, sys, os
 import numpy as np
-sys.path.insert(0, '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
+sys.path.insert(0, '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
 import v15_calibrate as C
 import v2_avatar_validity as V
-L = '/Users/namyunsu/Downloads/liplab-lab/data/'
+L = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab-lab/data/'
 rdir = sys.argv[1]
 feats = C.out_feats()
 sds = []

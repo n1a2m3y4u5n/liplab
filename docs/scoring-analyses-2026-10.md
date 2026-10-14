@@ -459,7 +459,7 @@ KSC가 낸 점수 파일(D-GOP, SpeechSuper)은 열지 않는다.
 
 ### 9.5 남은 일과 다시 시작하는 법
 
-- 608 새 화자 받기: 맥(한국 IP)에서 `cd ~/Downloads/liplab-lab && nohup caffeinate -i python3 tools/fetch608_new.py > data/hi608/fetch_new_<날짜>.log 2>&1 &`.
+- 608 새 화자 받기: 맥(한국 IP)에서 `cd ~/Downloads/LIPLAB_ALL/liplab-lab && nohup caffeinate -i python3 tools/fetch608_new.py > data/hi608/fetch_new_<날짜>.log 2>&1 &`.
   범위 요청이 안 되어 늘 처음부터 약 109GB를 흘리며, 범주 28은 약 94GB 지점부터다(혼자 받으면 약 5시간, V1과 함께면 8~10시간). 끊기면 처음부터 다시
   한다. 받은 뒤 `bash tools/shrink608_new.sh`로 FLAC으로 바꾸고 원본 wav를 지운다. 지금 받은 것은 범주 27 한 명(BJJ-F-36)뿐이다.
 - 측정: `S13_608="27 28" S13_538=0 S13_V1_LIST=<고정 목록> WD_MIN=60 DEADMAN_GRACE_MIN=15 bash tools/pod/s13_newspk.sh`로 608만 재고,

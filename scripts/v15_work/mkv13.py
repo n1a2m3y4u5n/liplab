@@ -1,7 +1,7 @@
 import json, sys, os
-sys.path.insert(0, '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
+sys.path.insert(0, '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
 import v2_avatar_validity as V
-L = '/Users/namyunsu/Downloads/liplab-lab/data/'
+L = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab-lab/data/'
 R = L + 'pod_runs/20261006_oel3rwn7y5zjbv/v2_part2/out/bs_real/'
 half = int(sys.argv[1]); spec = json.load(open(sys.argv[2])) if sys.argv[2] != '-' else None; out = sys.argv[3]
 sel = json.load(open(L + 'v2_avatar/sel.json'))

@@ -10,7 +10,7 @@ import os
 import subprocess
 import sys
 
-LAB = os.path.expanduser("~/Downloads/liplab-lab")
+LAB = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab")
 V18 = f"{LAB}/data/v18"
 OLD, NEW = f"{V18}/v7b_dl", f"{V18}/v7b_dl2"
 HERE = os.path.dirname(os.path.abspath(__file__))

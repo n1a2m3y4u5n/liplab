@@ -29,7 +29,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("fv")
 ap.add_argument("out")
 ap.add_argument("--half", default="all")
-ap.add_argument("--vocab", default=os.path.expanduser("~/Downloads/liplab-lab/models/dgop_ours_2026-09-25_int8/aligner/vocab.json"))
+ap.add_argument("--vocab", default=os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab/models/dgop_ours_2026-09-25_int8/aligner/vocab.json"))
 a = ap.parse_args()
 
 VOCAB = json.load(open(a.vocab, encoding="utf-8"))

@@ -1,11 +1,11 @@
 """V15 5절: 음성 구동·거울 경로(bsFrameRef)의 원본 계수 → CC 모프 선형 사상. 탐색 V13 클립만 쓴다."""
 import json, os, sys, pickle, math
 import numpy as np
-sys.path.insert(0, '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
+sys.path.insert(0, '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
 import v15_calibrate as C
 import v2_avatar_validity as V
 sys.modules['__main__'].FM = C.FM
-L = '/Users/namyunsu/Downloads/liplab-lab/data/'
+L = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab-lab/data/'
 R = L + 'pod_runs/20261006_oel3rwn7y5zjbv/v2_part2/out/'
 F = L + 'pod_runs/20261007_czde54612e5kcu/v2_final/out/'
 FEATS = C.out_feats(); FI = {f: i for i, f in enumerate(FEATS)}

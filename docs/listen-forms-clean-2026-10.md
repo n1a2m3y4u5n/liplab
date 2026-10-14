@@ -95,7 +95,7 @@
 
 ## 7. 파드와 비용
 
-RunPod 1대씩(합성 A40 SECURE 먼저, 측정 A40·A6000 SECURE), `~/Downloads/liplab-lab/tools/pod/pod.sh`로만 다룬다. 시작 전 `pod.sh status`로
+RunPod 1대씩(합성 A40 SECURE 먼저, 측정 A40·A6000 SECURE), `~/Downloads/LIPLAB_ALL/liplab-lab/tools/pod/pod.sh`로만 다룬다. 시작 전 `pod.sh status`로
 잔액을 보고 10달러 아래면 쓰지 않는다. 맥 워치독과 파드 자폭 타이머를 걸고, 끝나면 terminate 뒤 계정의 파드 목록을 확인한다. 이 작업 전체 비용
 상한은 2달러다. 합성·전사·받아쓰기는 파드에서만 하고, 맥에서는 편집, 목록 반영, 작은 적합(judge)만 한다. 소리는 어디에서도 스피커로 틀지 않는다.
 올리는 것은 저장소의 합성 소리, 스크립트, 앱 백엔드 코드와 D-GOP 체크포인트뿐이며 AI Hub 자료는 올리지 않는다.

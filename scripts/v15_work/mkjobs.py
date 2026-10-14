@@ -1,6 +1,6 @@
 """후보 표 렌더 작업: V2 작업(jobs_text.json)에서 절반·화자·속도를 골라 table 이름을 붙인다."""
 import json, sys
-L = '/Users/namyunsu/Downloads/liplab-lab/data/'
+L = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab-lab/data/'
 half = int(sys.argv[1]); table = sys.argv[2]; out = sys.argv[3]
 talkers = sys.argv[4].split(',') if len(sys.argv) > 4 else ['default']
 speeds = [float(x) for x in sys.argv[5].split(',')] if len(sys.argv) > 5 else [1.0, 2.0]

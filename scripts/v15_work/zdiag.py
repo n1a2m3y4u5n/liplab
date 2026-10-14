@@ -1,13 +1,13 @@
 import json, sys, pickle
 import numpy as np
 sys.path.insert(0, '/tmp/v15sp/work')
-sys.path.insert(0, '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
+sys.path.insert(0, '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
 import v15_calibrate as C
 import v2_avatar_validity as V
 from calib2 import load_items
 from calib4 import noisy_profiles
 sys.modules['__main__'].FM = C.FM
-L = '/Users/namyunsu/Downloads/liplab-lab/data/'
+L = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab-lab/data/'
 fm = pickle.load(open('/tmp/v15sp/work/fm_v15.pkl', 'rb'))
 hum = pickle.load(open('/tmp/v15sp/work/human_explore.pkl', 'rb'))
 sel = json.load(open(L + 'v2_avatar/sel.json'))

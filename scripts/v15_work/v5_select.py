@@ -2,9 +2,9 @@
 import json, sys, pickle
 import numpy as np
 sys.path.insert(0, '/tmp/v15sp/work')
-sys.path.insert(0, '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
+sys.path.insert(0, '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
 import v15_calibrate as C
-L = '/Users/namyunsu/Downloads/liplab-lab/data/'
+L = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab-lab/data/'
 cur = json.load(open('/tmp/v15sp/work/v5_curves.json'))
 hum = pickle.load(open('/tmp/v15sp/work/human_explore.pkl', 'rb'))
 prof, st = hum['prof'], hum['stats']

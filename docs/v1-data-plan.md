@@ -37,7 +37,7 @@ V16(`v16-autoavsr-prereg.md`)이 사전 기준을 통과해 V1의 기본 구조�
   `dl_more.sh`가 바로 지운다. 라벨이 없어 실패한 화자의 원본(약 1.3GB)은 `v1_dl.sh`가 30초마다 지운다. 받기를 시작할 때 맥의
   여유 공간이 10GB 미만이면 멈춘다(종료코드 4). 이 세션의 상한(40GB)보다 훨씬 작다.
 - 이어 받기: 같은 명령을 다시 실행하면 끝난 화자는 건너뛰고 이어서 받는다.
-  `cd ~/Downloads/liplab-lab && nohup caffeinate -i bash tools/v1_dl.sh > data/v1_538/v1_dl.out 2>&1 &`
+  `cd ~/Downloads/LIPLAB_ALL/liplab-lab && nohup caffeinate -i bash tools/v1_dl.sh > data/v1_538/v1_dl.out 2>&1 &`
   진행은 `data/v1_538/dl_more.out`의 `CUT_OK` 줄, 끝은 `v1_dl.out`의 `V1_DL end` 줄로 본다.
 - 더 빨리 받으려면: 새 화자는 앞 3개 mp4(각 약 325MB)로 문장 30개가 차므로 VBYTES를 1.3GB로 줄이면 화자당 시간이 약 28% 준다.
   클립이 30개에 못 미치는 화자가 생길 수 있어(최소 15개 규칙) 이번에는 검증된 1.8GB를 그대로 썼다.

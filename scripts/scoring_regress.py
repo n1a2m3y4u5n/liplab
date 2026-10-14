@@ -3,7 +3,7 @@
 채점 회귀 점검 실행기(계획 O4). CI가 없어 이 스크립트 하나로 돈다. 자세한 설명은 docs/scoring-regression-2026-10.md.
 
   # 저장소 뿌리에서(백엔드 가상환경의 파이썬으로)
-  ~/Downloads/liplab/backend/.venv/bin/python scripts/scoring_regress.py
+  ~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python scripts/scoring_regress.py
       기준(backend/scoring_regress_golden.json)과 지금 출력을 비교해 차이 보고를 찍고, 관련 성질 검사(pytest)도 돌린다.
       차이·고정 기대 위반·검사 실패가 하나라도 있으면 종료 코드 1.
 

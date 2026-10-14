@@ -2,11 +2,11 @@
 import json, sys, pickle, os
 import numpy as np
 sys.path.insert(0, '/tmp/v15sp/work')
-sys.path.insert(0, '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
+sys.path.insert(0, '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
 import v15_calibrate as C
 import v2_avatar_validity as V
 sys.modules['__main__'].FM = C.FM
-L = '/Users/namyunsu/Downloads/liplab-lab/data/'
+L = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab-lab/data/'
 fm = pickle.load(open('/tmp/v15sp/work/fm_v15.pkl', 'rb'))
 tab = {int(k): v for k, v in json.load(open('/tmp/v15sp/work/tables_c.json'))['c'].items()}
 rdir = L + 'pod_runs/20261007_zszjqyqz5m03q2/v15/ex_c/'

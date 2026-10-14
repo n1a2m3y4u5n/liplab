@@ -17,7 +17,7 @@ from collections import defaultdict
 
 import numpy as np
 
-D = os.environ.get("SCORES_DIR", os.path.expanduser("~/Downloads/liplab-lab/data/scores_2026-10-06"))
+D = os.environ.get("SCORES_DIR", os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab/data/scores_2026-10-06"))
 PASS = 65.0
 
 

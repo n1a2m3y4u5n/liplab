@@ -1,6 +1,6 @@
 """visemeShapes.js: 지금 표를 VISEME_BLENDSHAPES_V1로, V15 표를 나란히 두고 플래그로 고른다. 다시 돌려도 V15 표만 바꾼다."""
 import subprocess, sys, re
-P = '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/frontend/src/lib/visemeShapes.js'
+P = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/frontend/src/lib/visemeShapes.js'
 table_js = subprocess.run(['/tmp/v15sp/venv/bin/python', '/tmp/v15sp/work/js_table.py', sys.argv[1], sys.argv[2]],
                           capture_output=True, text=True, check=True).stdout.strip()
 default_on = len(sys.argv) > 3 and sys.argv[3] == 'on'

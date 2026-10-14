@@ -38,10 +38,10 @@ D-GOP 음향 모델(wav2vec2)과 Whisper는 불러오지 않는다. 말하기 �
 
 ```bash
 # 저장소 뿌리에서, 백엔드 가상환경의 파이썬으로
-~/Downloads/liplab/backend/.venv/bin/python scripts/scoring_regress.py            # 전체(약 50초): 차이 보고 + API 층 + 관련 성질 검사 14개 파일
-~/Downloads/liplab/backend/.venv/bin/python scripts/scoring_regress.py --quick    # 순수 함수 층만(약 2초)
-~/Downloads/liplab/backend/.venv/bin/python scripts/scoring_regress.py --layers speak,speak_api --report /tmp/regress.md
-~/Downloads/liplab/backend/.venv/bin/python scripts/scoring_regress.py --update   # 의도한 변경일 때만 기준을 다시 쓴다
+~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python scripts/scoring_regress.py            # 전체(약 50초): 차이 보고 + API 층 + 관련 성질 검사 14개 파일
+~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python scripts/scoring_regress.py --quick    # 순수 함수 층만(약 2초)
+~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python scripts/scoring_regress.py --layers speak,speak_api --report /tmp/regress.md
+~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python scripts/scoring_regress.py --update   # 의도한 변경일 때만 기준을 다시 쓴다
 ```
 
 - 종료 코드: 차이·고정 기대 위반·성질 검사 실패가 하나라도 있으면 1, 없으면 0. `--update`는 고정 기대 위반이 있으면 기준을 쓰지 않는다.
@@ -83,6 +83,6 @@ D-GOP 음향 모델(wav2vec2)과 Whisper는 불러오지 않는다. 말하기 �
 
 - 기준 파일은 지금 출력이 옳다는 근거가 아니다. 고정 기대 60개만 규칙 문서에 기대고, 나머지는 '지금과 같은가'만 본다.
 - 입모양 시각 유사도는 numpy 고전 MDS에서 나온다. 다른 파이썬·numpy에서 소수 넷째 자리 아래가 달라질 수 있어 비교 허용 폭을 1e-6으로 두었다(출력은 이미 반올림됨).
-  기준은 파이썬 3.14.6(`~/Downloads/liplab/backend/.venv`)에서 만들었다.
+  기준은 파이썬 3.14.6(`~/Downloads/LIPLAB_ALL/liplab/backend/.venv`)에서 만들었다.
 - 사례 id는 입력 문자열의 repr라, 전각 공백 같은 글자는 `　`으로 적힌다.
 - API 층의 코칭 문장(LLM 대체 문장)은 비교하지 않는다. 채점·판정과 무관하고 문구 수정이 잦기 때문이다.

@@ -13,11 +13,11 @@
 # 올리는 것: 저장소의 합성 소리(Ogg), 스크립트, 앱 백엔드 코드, 앱 D-GOP 모델(다시 합성 판정용). AI Hub 자료는 올리지 않는다.
 set -uo pipefail
 APP=$(cd "$(dirname "$0")/../.." && pwd)
-LAB=${LAB:-$HOME/Downloads/liplab-lab}
+LAB=${LAB:-$HOME/Downloads/LIPLAB_ALL/liplab-lab}
 P="$LAB/tools/pod/pod.sh"
 export POD_STATE_DIR=${POD_STATE_DIR:-$LAB/tools/pod/.vcstate} POD_NAME=${POD_NAME:-liplab-vc} POD_DISK_GB=${POD_DISK_GB:-50}
 export DEADMAN_GRACE_MIN=${DEADMAN_GRACE_MIN:-15} REMOTE_DAX=/workspace/vc
-MODELS=${MODELS:-$HOME/Downloads/liplab-integrate/backend/models/dgop_ours}
+MODELS=${MODELS:-$HOME/Downloads/LIPLAB_ALL/liplab-integrate/backend/models/dgop_ours}
 S=${STAGE_DIR:-$LAB/data/vc_stage}
 GPUS=${GPUS:-NVIDIA A40|SECURE,NVIDIA RTX A6000|SECURE,NVIDIA L40S|SECURE}
 WD_MIN=${WD_MIN:-150}

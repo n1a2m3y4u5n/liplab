@@ -16,8 +16,8 @@ from collections import defaultdict
 
 import numpy as np
 
-D = os.environ.get("SCORES_DIR", os.path.expanduser("~/Downloads/liplab-lab/data/scores_2026-10-06"))
-LAB_M = os.path.expanduser("~/Downloads/liplab-lab/models/dgop_ours_2026-09-25_int8")
+D = os.environ.get("SCORES_DIR", os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab/data/scores_2026-10-06"))
+LAB_M = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab/models/dgop_ours_2026-09-25_int8")
 FEATS = ["dg", "naive_mean", "naive_min", "naive_p10", "frac_bad", "conf_mean", "ll_sc", "ll_al", "lpr_sc", "lpr_al", "len_ratio"]
 
 
@@ -34,7 +34,7 @@ def features(src, out_csv):
     assert voc["aligner"] == voc["scorer"]
     vocab = voc["scorer"]
     blank = vocab["<pad>"]
-    sys.path.insert(0, os.path.expanduser("~/Downloads/liplab-lab/tools"))
+    sys.path.insert(0, os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab/tools"))
     from build_scores_csv import sid_of, half_of  # 같은 ID 규칙
     cache = {}
     rows = []

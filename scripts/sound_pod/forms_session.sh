@@ -6,11 +6,11 @@
 #   bash scripts/sound_pod/forms_session.sh fetch     결과(받아쓰기·채점 jsonl, 판정, 로그. 오디오 없음)를 data/pod_runs/<날짜>_<파드>/fcd/로
 #   bash scripts/sound_pod/forms_session.sh finish    fetch → terminate → status
 # 환경: ROUND(0~5, 3~5는 docs/listen-forms-clean-2026-10.md), SIDS(쉼표 목록, 기본 all), REPS(기본 ROUND의 반복), EXTRA(교체 문장 {sid: 글} JSON), SPEC(판정 spec JSON),
-#       LAB(기본 ~/Downloads/liplab-lab), GPUS, WD_MIN. 상태 폴더 .fcdstate, 파드 이름 liplab-fcd(다른 작업과 섞이지 않게).
+#       LAB(기본 ~/Downloads/LIPLAB_ALL/liplab-lab), GPUS, WD_MIN. 상태 폴더 .fcdstate, 파드 이름 liplab-fcd(다른 작업과 섞이지 않게).
 # 키는 pod.sh가 ~/.runpod/config.toml에서 메모리로만 읽는다. AI Hub 자료는 올리지 않는다.
 set -uo pipefail
 APP=$(cd "$(dirname "$0")/../.." && pwd)
-LAB=${LAB:-$HOME/Downloads/liplab-lab}
+LAB=${LAB:-$HOME/Downloads/LIPLAB_ALL/liplab-lab}
 P="$LAB/tools/pod/pod.sh"
 export POD_STATE_DIR=${POD_STATE_DIR:-$LAB/tools/pod/.fcdstate} POD_NAME=${POD_NAME:-liplab-fcd} POD_DISK_GB=${POD_DISK_GB:-40}
 export DEADMAN_GRACE_MIN=${DEADMAN_GRACE_MIN:-15}

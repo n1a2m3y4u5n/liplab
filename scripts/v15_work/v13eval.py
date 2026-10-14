@@ -1,9 +1,9 @@
 """V13 왕복 r(V2 6.3절 그대로): 원래 실제 계수 대 렌더 재측정. 절반 선택, 두 렌더 폴더 비교."""
 import json, os, sys
 import numpy as np
-sys.path.insert(0, '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
+sys.path.insert(0, '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
 import v2_avatar_validity as V
-L = '/Users/namyunsu/Downloads/liplab-lab/data/'
+L = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab-lab/data/'
 R = L + 'pod_runs/20261006_oel3rwn7y5zjbv/v2_part2/out/bs_real/'
 half = int(sys.argv[1]); dirs = sys.argv[2:]
 sel = json.load(open(L + 'v2_avatar/sel.json'))

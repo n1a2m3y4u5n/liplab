@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """범주 27 확인 전에 기존 자료만으로 하는 탐색(docs/newdata-c27-judgments-2026-10.md 3·4절). 새 자료를 읽지 않는다. 집계만 낸다.
 
-  ~/Downloads/liplab/backend/.venv/bin/python scripts/newdata_c27/explore.py [--out X.json]
+  ~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python scripts/newdata_c27/explore.py [--out X.json]
 
 P3 낮은 음소 개수 규칙: speak_phoneme_floor.py와 같은 덤프·같은 음소 고르기(끝 음절 뺌), 538·608 모든 화자(탐색).
 P4 같은 엄격도 격차 후보: 끝 자르기 판 점수, 608 범주 28 33명(10/7 V2 15명 + 10/9 새 18명), 538 1,200클립(10/6 600 + 10/9 새 21명 600).
@@ -18,7 +18,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS = os.path.dirname(HERE)
 sys.path.insert(0, SCRIPTS)
-LAB = os.environ.get("LIPLAB_LAB", os.path.expanduser("~/Downloads/liplab-lab"))
+LAB = os.environ.get("LIPLAB_LAB", os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab"))
 OUTDIR = os.path.join(LAB, "data", "newdata_c27")
 
 # ───────────────────────── P3 ─────────────────────────

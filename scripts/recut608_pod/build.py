@@ -8,7 +8,7 @@ import json
 import os
 import sys
 
-LAB = os.path.expanduser("~/Downloads/liplab-lab")
+LAB = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab")
 SC = f"{LAB}/data/pod_runs/20261006_35zrgz6wvrqiho/sc/out"
 S4 = f"{LAB}/data/pod_runs/20261007_ubn4h922kfnx03/s4/out"
 E1 = f"{LAB}/data/s16stage/root/" + "ev" + "al/e1_rows.jsonl"

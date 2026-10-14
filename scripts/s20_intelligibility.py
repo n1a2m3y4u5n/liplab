@@ -17,7 +17,7 @@ import numpy as np
 from scipy.optimize import nnls
 from scipy.stats import spearmanr, rankdata
 
-LAB = os.path.expanduser(os.environ.get("LAB", "~/Downloads/liplab-lab"))
+LAB = os.path.expanduser(os.environ.get("LAB", "~/Downloads/LIPLAB_ALL/liplab-lab"))
 CLIPS = f"{LAB}/data/s20_stage/root/data/clips.json"
 OUTD = f"{LAB}/data/s20_2026-10-09"
 CUTS_O = f"{LAB}/data/pod_runs/20261006_35zrgz6wvrqiho/sc/out/cuts608.json"

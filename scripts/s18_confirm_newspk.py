@@ -24,7 +24,7 @@ from scoring_analyses_1006 import auc, ff, wp  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FROZEN = os.path.join(HERE, "s18_head_frozen_2026-10-06.json")
-OLD = os.path.expanduser("~/Downloads/liplab-lab/data/scores_2026-10-06/s18_features.csv")
+OLD = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab/data/scores_2026-10-06/s18_features.csv")
 B = 2000
 MIN_P28_SPK, MIN_P28_OWN = 5, 50
 BRIDGE_TOL_P, BRIDGE_TOL_DG, BRIDGE_MIN = 0.005, 0.1, 25

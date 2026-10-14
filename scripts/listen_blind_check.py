@@ -11,11 +11,11 @@
           자동 점검 때는 주소에 ?mute=1을 붙이거나 localStorage.liplab_mute = '1'이면 소리를 내지 않고 재생이 끝난 것처럼 진행한다.
   analyze 여러 청취자의 CSV와 열쇠로 10.2절 판정을 내고 반영 제안을 JSON으로 쓴다(앱 반영은 사람이 결과를 본 뒤 한다).
 
-  python3 scripts/listen_blind_check.py build --out ~/Downloads/liplab-lab/data/listen_blind_check.html
+  python3 scripts/listen_blind_check.py build --out ~/Downloads/LIPLAB_ALL/liplab-lab/data/listen_blind_check.html
   python3 scripts/listen_blind_check.py build --out … --extra 교체후보.json   (10.1절 (라) 끝: 일반화 검사 교체 후보, 묶음 'rb')
       교체후보.json = [{"text": 낱말, "voice": "m3", "tag": "A:c3" 등, "options": [...], "ogg": 경로?, "m4a": 경로?}]
       ogg·m4a가 없으면 저장소 목록의 그 목소리 클립을 쓴다.
-  python3 scripts/listen_blind_check.py analyze 청취자1.csv 청취자2.csv … --key ~/Downloads/liplab-lab/data/listen_blind_check_key.json --out result.json
+  python3 scripts/listen_blind_check.py analyze 청취자1.csv 청취자2.csv … --key ~/Downloads/LIPLAB_ALL/liplab-lab/data/listen_blind_check_key.json --out result.json
 """
 import argparse
 import base64
@@ -39,7 +39,7 @@ TRAIN_VOICES = ("m1", "f1", "m2", "f2")
 TEST_VOICE = "m3"
 N_OPTS = 4
 GEN_FAILED = ("마늘", "바늘", "오빠", "나물")
-LAB = os.path.expanduser("~/Downloads/liplab-lab")
+LAB = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab")
 SQA_RUNS = ("20261007_mwo4z0qqys996o", "20261007_y0mn97i6mjalnq")
 # 10.2절 판정 상수
 MIN_ANSWERED = 0.80

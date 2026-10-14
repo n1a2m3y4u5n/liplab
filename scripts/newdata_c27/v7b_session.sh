@@ -5,7 +5,7 @@
 # 상태 폴더 .v7bstate, 파드 이름 liplab-v7b. 538 클립은 lab 묶음(data/v18/v7b_stage)과 파드에만 둔다.
 set -uo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
-LAB=${LAB:-$HOME/Downloads/liplab-lab}
+LAB=${LAB:-$HOME/Downloads/LIPLAB_ALL/liplab-lab}
 P="$LAB/tools/pod/pod.sh"
 export POD_STATE_DIR=${POD_STATE_DIR:-$LAB/tools/pod/.v7bstate} POD_NAME=${POD_NAME:-liplab-v7b} POD_DISK_GB=${POD_DISK_GB:-30}
 export DEADMAN_GRACE_MIN=${DEADMAN_GRACE_MIN:-15}

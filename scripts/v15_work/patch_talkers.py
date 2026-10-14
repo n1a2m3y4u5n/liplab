@@ -1,6 +1,6 @@
 """talkers.js: 지금 화자 값(TALKERS_V1)과 V5 재선정 값(TALKERS_V15)을 나란히 두고 표 플래그로 고른다."""
 import json, re
-P = '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/frontend/src/lib/talkers.js'
+P = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/frontend/src/lib/talkers.js'
 sel = {t['id']: t for t in json.load(open('/tmp/v15sp/work/talkers_shrunk_D.json'))}
 s = open(P, encoding='utf-8').read()
 OLD = {'t1': (0.10, 1.10, 1.15), 't2': (0.08, 0.90, 0.85), 't3': (0.15, 1.05, 1.25), 't4': (0.12, 0.88, 0.75), 'h1': (0.12, 0.95, 1.30), 'h2': (0.15, 1.15, 0.70)}

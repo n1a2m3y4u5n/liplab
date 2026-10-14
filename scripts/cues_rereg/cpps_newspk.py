@@ -3,8 +3,8 @@
   python cpps_newspk.py extract OUT_FEATS.jsonl [--procs 4]     클립별 CPPS·말소리 창 비율(CER은 읽지 않음)
   python cpps_newspk.py judge FEATS.jsonl OUT.json              판정(S20의 base·large-v3 전사와 잡음 바닥을 읽는다)
 
-자료: S20 묶음 N(KSC 컷, ~/Downloads/liplab-lab/data/s20_stage/root/data/clips/N, 읽기만).
-전사·잡음 바닥: ~/Downloads/liplab-lab/data/pod_runs/20261009_mw1qp1djnxt56q/s20/out/{asr_base,asr_v3,acoustic}.jsonl.
+자료: S20 묶음 N(KSC 컷, ~/Downloads/LIPLAB_ALL/liplab-lab/data/s20_stage/root/data/clips/N, 읽기만).
+전사·잡음 바닥: ~/Downloads/LIPLAB_ALL/liplab-lab/data/pod_runs/20261009_mw1qp1djnxt56q/s20/out/{asr_base,asr_v3,acoustic}.jsonl.
 출력 JSON은 집계만 담고 화자 ID는 넣지 않는다.
 """
 import argparse, json, math, os, re, sys, zlib

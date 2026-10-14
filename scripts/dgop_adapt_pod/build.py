@@ -1,6 +1,6 @@
 """맥: 608 도메인 적응 파드 묶음 만들기(docs/dgop-608-adapt-2026-10.md 2·3·5절). 점수는 읽지 않는다(목표 문장·조각 시각·화자만).
 
-    ~/Downloads/liplab/backend/.venv/bin/python scripts/dgop_adapt_pod/build.py STAGE_ROOT
+    ~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python scripts/dgop_adapt_pod/build.py STAGE_ROOT
 
 만드는 것(STAGE_ROOT 아래):
   audio/sess/*.flac   학습 세션(3.1절 규칙으로 고른 것, cp -c 복제)
@@ -29,7 +29,7 @@ APP = os.path.abspath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, os.path.join(APP, "backend"))
 import jamo_vocab  # noqa: E402
 
-LAB = os.path.expanduser("~/Downloads/liplab-lab")
+LAB = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab")
 KSC = os.path.expanduser("~/Downloads/KSC2026/liplab/data/expand")
 H608 = f"{LAB}/data/hi608"
 SC10 = f"{LAB}/data/pod_runs/20261006_35zrgz6wvrqiho/sc/out"

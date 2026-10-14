@@ -161,7 +161,7 @@
 
 ### 3.4 파드와 비용
 
-RunPod 1대씩(합성: A40 SECURE 먼저, 측정: RTX A6000 SECURE 먼저), `~/Downloads/liplab-lab/tools/pod/pod.sh`로만 다룬다. 키는
+RunPod 1대씩(합성: A40 SECURE 먼저, 측정: RTX A6000 SECURE 먼저), `~/Downloads/LIPLAB_ALL/liplab-lab/tools/pod/pod.sh`로만 다룬다. 키는
 `~/.runpod/config.toml`에서 pod.sh가 메모리로만 읽는다. 맥 워치독과 파드 자폭 타이머를 걸고, 끝나면 terminate 뒤 계정의 파드 목록을
 확인한다. 이 작업 전체 비용 상한은 4달러다. 합성·전사·받아쓰기는 파드에서만 하고 맥에서는 편집, 목록 반영, 작은 적합(judge)만 한다.
 소리는 어디에서도 스피커로 틀지 않는다.

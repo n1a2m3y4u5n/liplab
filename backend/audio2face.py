@@ -29,7 +29,7 @@ _CKPT_CANDIDATES = [
     os.path.join(os.path.dirname(__file__), "models", "kr_a4_w2v.pt"),
     os.path.join(os.path.dirname(__file__), "models", "kr_a4_w2v_8spk.pt"),
     os.path.join(os.path.dirname(__file__), "models", "kr_a4_w2v_4spk.pt"),
-    os.path.expanduser("~/Downloads/liplab-lab/models/kr_a4_w2v_4spk.pt"),
+    os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab/models/kr_a4_w2v_4spk.pt"),
 ]
 
 _w2v = None

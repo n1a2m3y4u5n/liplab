@@ -3,11 +3,11 @@ import json, os, sys, pickle, time
 import numpy as np
 from scipy.optimize import minimize
 from scipy.stats import spearmanr
-sys.path.insert(0, '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
+sys.path.insert(0, '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
 import v15_calibrate as C
 import v2_avatar_validity as V
 sys.modules['__main__'].FM = C.FM
-L = '/Users/namyunsu/Downloads/liplab-lab/data/'
+L = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab-lab/data/'
 FEATS = C.out_feats()
 FI = {f: i for i, f in enumerate(FEATS)}
 RSA_IDX = [FI[f] for f in V.RSA_FEATS]

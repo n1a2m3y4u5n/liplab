@@ -4,12 +4,12 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.stats import spearmanr
 sys.path.insert(0, '/tmp/v15sp/work')
-sys.path.insert(0, '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
+sys.path.insert(0, '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/scripts')
 import v15_calibrate as C
 import v2_avatar_validity as V
 from calib2 import bounds_for, BOUNDS, load_items, wquant, old_x, to_table, shares, G_LIST, NC, FEATS, FI, RSA_IDX
 sys.modules['__main__'].FM = C.FM
-L = '/Users/namyunsu/Downloads/liplab-lab/data/'
+L = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab-lab/data/'
 NG = len(G_LIST)
 
 

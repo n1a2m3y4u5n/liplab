@@ -58,8 +58,8 @@
 ## 4. 재현과 자체 촬영 영상
 
 ```bash
-PY=~/Downloads/liplab/backend/.venv/bin/python        # torch가 있는 환경(K .pt 추론)
-cd ~/Downloads/liplab-lab
+PY=~/Downloads/LIPLAB_ALL/liplab/backend/.venv/bin/python        # torch가 있는 환경(K .pt 추론)
+cd ~/Downloads/LIPLAB_ALL/liplab-lab
 $PY tools/cue_video.py measure                         # K-4 측정 → data/k4/k4_measure.json (맥 CPU 약 30초)
 $PY tools/cue_video.py pack --n 8                      # 데모 묶음 → data/cue_video_pack/
 $PY tools/cue_video.py serve                           # :8765, CORS·Range 지원 정적 서버

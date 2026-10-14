@@ -1,6 +1,6 @@
 """동결: scripts/data/viseme_v15.json(표·가상 화자·리그 사상·출처)과 표의 sha256."""
 import json, hashlib, sys
-APP = '/Users/namyunsu/Downloads/liplab/.claude/worktrees/agent-add8fe1d30054f08d/'
+APP = '/Users/namyunsu/Downloads/LIPLAB_ALL/liplab/.claude/worktrees/agent-add8fe1d30054f08d/'
 tab = {str(k): v for k, v in json.load(open('/tmp/v15sp/work/tables_r3.json'))['D'].items()}
 talk = json.load(open('/tmp/v15sp/work/talkers_shrunk_D.json'))
 rig = json.load(open('/tmp/v15sp/work/rigmap_compact.json'))
