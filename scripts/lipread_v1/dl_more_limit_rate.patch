@@ -1,0 +1,48 @@
+--- a/tools/dl_more.sh
++++ b/tools/dl_more.sh
+@@ -35,6 +35,7 @@
+ #   --retry-skipped      .skip 표시된 화자를 다시 시도
+ #   --vbytes N (VBYTES=1800000000)  --cap N (CAP=30)  --minclips N (MINCLIPS=15)
+ #   --budget-gb N (BUDGET_GB=10, .work 작업량 상한)  --minfree-gb N (MINFREE_GB=15, 다운로드 시작 전 여유 공간 하한)
++#   회선 양보: LIPLAB_LIMIT_RATE=2M(curl --limit-rate) 또는 $ROOT/.limit_rate 파일(요청마다 다시 읽음, 지우면 제한 해제)
+ #   그 밖의 환경변수: REUSE_MIN(1e9) LEFTOVER_DIR OLD_MANIFEST OLD_CLIPS MAPX MAPF TREE PYTHON AIHUB_URL PLAN_MARGIN(5)
+ #                     BACKOFF_S(300) BACKOFF_MAX_S(3600) BACKOFF_ROUNDS(6) MAXTIME(7200) POLL_S(2)
+ #   실패·중단 때 .work/<spk>는 영상 추출(vid.ok)까지 끝났으면 남겨 둔다 → 다시 실행하면 영상을 다시 받지 않고 이어 한다.
+@@ -222,6 +223,12 @@
+ }
+ fsize(){ stat -c %s "$1" 2>/dev/null || stat -f %z "$1" 2>/dev/null || echo 0; }
+ free_kb(){ df -k "$1" 2>/dev/null | awk 'NR==2 {print $4+0}'; }
++rate_val(){   # 회선 양보(10/15): $ROOT/.limit_rate 파일(첫 단어)이 있으면 그것, 없으면 LIPLAB_LIMIT_RATE. 요청마다 다시 읽는다.
++  local r=""
++  if [ -r "$ROOT/.limit_rate" ]; then r=$(awk 'NR==1 {print $1}' "$ROOT/.limit_rate" 2>/dev/null); else r=${LIPLAB_LIMIT_RATE:-}; fi
++  case "$r" in ''|0|none|off) r="";; *[!0-9KkMmGg]*) r="";; esac
++  printf '%s' "$r"
++}
+ du_kb(){ if [ -e "$1" ]; then du -sk "$1" 2>/dev/null | awk '{s+=$1} END {print s+0}'; else echo 0; fi; }
+ nrows(){ if [ -r "$1" ]; then awk '!/^#/ && NF {n++} END {print n+0}' "$1"; else echo 0; fi; }
+ gb(){ awk -v b="$1" 'BEGIN {printf "%.2f", b/1073741824}'; }
+@@ -455,10 +462,12 @@
+     else
+       set +e
+       if [ "$limit" -gt 0 ]; then
+-        curl -sS -L -D "$out.hdr" --connect-timeout 30 --max-time "$MAXTIME" -H @"$hf" "$URL?fileSn=$fsn" 2>/dev/null | head -c "$limit" > "$out.tmp"
++        RATE=$(rate_val)
++        curl -sS -L -D "$out.hdr" --connect-timeout 30 ${RATE:+--limit-rate "$RATE"} --max-time "$MAXTIME" -H @"$hf" "$URL?fileSn=$fsn" 2>/dev/null | head -c "$limit" > "$out.tmp"
+         cst=${PIPESTATUS[0]}
+       else
+-        curl -sS -L -D "$out.hdr" --connect-timeout 30 --max-time "$MAXTIME" -H @"$hf" -o "$out.tmp" "$URL?fileSn=$fsn" 2>/dev/null
++        RATE=$(rate_val)
++        curl -sS -L -D "$out.hdr" --connect-timeout 30 ${RATE:+--limit-rate "$RATE"} --max-time "$MAXTIME" -H @"$hf" -o "$out.tmp" "$URL?fileSn=$fsn" 2>/dev/null
+         cst=$?
+       fi
+       set -e
+@@ -644,7 +653,8 @@
+       cat "$MOCK/$lsn.tar" 2>/dev/null | bsdtar -xOf - 2>/dev/null | bsdtar -xqf - -C "$W/js" -s ',.*/,,' "${PATS[@]}" 2>> "$W/lx.err"
+       cst=${PIPESTATUS[0]}
+     else
+-      curl -sS -L -D "$W/l.hdr" --connect-timeout 30 --max-time "$MAXTIME" -H @"$hf" "$URL?fileSn=$lsn" 2>/dev/null \
++      RATE=$(rate_val)
++      curl -sS -L -D "$W/l.hdr" --connect-timeout 30 ${RATE:+--limit-rate "$RATE"} --max-time "$MAXTIME" -H @"$hf" "$URL?fileSn=$lsn" 2>/dev/null \
+         | bsdtar -xOf - 2>/dev/null | bsdtar -xqf - -C "$W/js" -s ',.*/,,' "${PATS[@]}" 2>> "$W/lx.err"
+       cst=${PIPESTATUS[0]}
+       rm -f "$hf"
