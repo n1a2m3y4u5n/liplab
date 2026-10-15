@@ -4,6 +4,7 @@ import { predictLipread, loadLipread, lipreadAvailable } from '../lib/lipreadMod
 import { resampleFrames } from '../lib/frameRate'
 import { mediaErrorMessage } from '../lib/mediaError'
 import { memoUntilFail } from '../lib/sharedRequest'
+import { lipreadCheckCopy } from '../lib/lipreadGate'
 
 /**
  * 축 D — 기계가 내 입모양을 읽어본다(자체 립리딩). 사용자가 목표 단어를 입모양으로 말하면
@@ -138,12 +139,13 @@ export default function LipReadCheck({ target, candidates = [] }) {
   }, [])
 
   if (modelOK === false) return null  // 모델 없으면 조용히 숨김
+  const copy = lipreadCheckCopy()
 
   const hit = result?.matched && target && result.matched === target
   return (
     <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-sm font-bold text-violet-900">기계가 내 입모양 읽기 <span className="font-normal text-violet-500">(축 D · 실험)</span></h4>
+        <h4 className="text-sm font-bold text-violet-900">기계가 내 입모양 읽기 <span className="font-normal text-violet-500">{copy.tag}</span></h4>
         <span className="text-[10px] text-gray-400">영상은 기기 안에서만 처리</span>
       </div>
       <div className="relative overflow-hidden rounded-lg bg-gray-900" style={{ aspectRatio: '4/3' }}>
@@ -178,7 +180,7 @@ export default function LipReadCheck({ target, candidates = [] }) {
               후보 근접순: {result.ranked.slice(0, 3).map((r) => r.word).join(' · ')}
             </p>
           )}
-          <p className="mt-1 text-center text-[10px] text-gray-400">소형 실증 모델이라 자주 틀립니다. 입모양만으로 단어를 읽는 어려움을 보여주는 실험이에요.</p>
+          <p className="mt-1 text-center text-[10px] text-gray-400">{copy.note}</p>
         </div>
       )}
 

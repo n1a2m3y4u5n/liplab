@@ -29,11 +29,14 @@ import useSoundCondition from '../hooks/useSoundCondition'
 import useSoundReplay from '../hooks/useSoundReplay'
 import SoundReplayBar from '../components/SoundReplayBar'
 import { soundAPI } from '../api'
+import { lipreadCheckVisible } from '../lib/lipreadGate'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
 // 축 D 자체 립리딩(MediaPipe+onnx로 무거움) — 정답 후에만 로드.
 const LipReadCheck = lazy(() => import('../components/LipReadCheck'))
+// 기계 확인을 보일지(빌드 플래그 VITE_LIPREAD_CHECK, 기본 on). 숨길 때는 칸의 코드도 받지 않는다.
+const SHOW_LIPREAD = lipreadCheckVisible()
 
 /**
  * 2단계 · 음절·단어 (Word Stage) — 독화 레슨 공통 템플릿(핸드오프 §4-03).
@@ -461,9 +464,11 @@ function WordQuiz({ data, reload }) {
                     "{q.target}" 수어로 뜻 보기
                   </button>
                 )}
-                <Suspense fallback={null}>
-                  <LipReadCheck target={q.target} candidates={q.choices} />
-                </Suspense>
+                {SHOW_LIPREAD && (
+                  <Suspense fallback={null}>
+                    <LipReadCheck target={q.target} candidates={q.choices} />
+                  </Suspense>
+                )}
                 </>)}
               </motion.div>
             )}
