@@ -1,0 +1,415 @@
+[
+{
+"name": "school",
+"text": "학교 끝나고 떡볶이 먹으러 가자.",
+"speed": 1.0,
+"frames": [
+{
+"viseme": 8,
+"duration_ms": 150,
+"transition_ms": 30
+},
+{
+"viseme": 2,
+"duration_ms": 180,
+"transition_ms": 40
+},
+{
+"viseme": 7,
+"duration_ms": 130,
+"transition_ms": 35
+},
+{
+"viseme": 13,
+"duration_ms": 55,
+"transition_ms": 20
+},
+{
+"viseme": 7,
+"duration_ms": 110,
+"transition_ms": 30
+},
+{
+"viseme": 4,
+"duration_ms": 150,
+"transition_ms": 30
+},
+{
+"viseme": 14,
+"duration_ms": 120,
+"transition_ms": 0
+},
+{
+"viseme": 7,
+"duration_ms": 130,
+"transition_ms": 30
+},
+{
+"viseme": 5,
+"duration_ms": 150,
+"transition_ms": 40
+},
+{
+"viseme": 6,
+"duration_ms": 130,
+"transition_ms": 35
+},
+{
+"viseme": 12,
+"duration_ms": 55,
+"transition_ms": 20
+},
+{
+"viseme": 6,
+"duration_ms": 120,
+"transition_ms": 30
+},
+{
+"viseme": 2,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 7,
+"duration_ms": 110,
+"transition_ms": 40
+},
+{
+"viseme": 4,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 14,
+"duration_ms": 120,
+"transition_ms": 0
+},
+{
+"viseme": 6,
+"duration_ms": 130,
+"transition_ms": 30
+},
+{
+"viseme": 5,
+"duration_ms": 150,
+"transition_ms": 40
+},
+{
+"viseme": 7,
+"duration_ms": 130,
+"transition_ms": 35
+},
+{
+"viseme": 11,
+"duration_ms": 55,
+"transition_ms": 20
+},
+{
+"viseme": 1,
+"duration_ms": 110,
+"transition_ms": 40
+},
+{
+"viseme": 4,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 7,
+"duration_ms": 130,
+"transition_ms": 30
+},
+{
+"viseme": 3,
+"duration_ms": 150,
+"transition_ms": 30
+},
+{
+"viseme": 14,
+"duration_ms": 120,
+"transition_ms": 0
+},
+{
+"viseme": 1,
+"duration_ms": 120,
+"transition_ms": 30
+},
+{
+"viseme": 5,
+"duration_ms": 150,
+"transition_ms": 30
+},
+{
+"viseme": 7,
+"duration_ms": 110,
+"transition_ms": 30
+},
+{
+"viseme": 5,
+"duration_ms": 150,
+"transition_ms": 30
+},
+{
+"viseme": 6,
+"duration_ms": 115,
+"transition_ms": 30
+},
+{
+"viseme": 5,
+"duration_ms": 150,
+"transition_ms": 30
+},
+{
+"viseme": 14,
+"duration_ms": 120,
+"transition_ms": 0
+},
+{
+"viseme": 7,
+"duration_ms": 110,
+"transition_ms": 30
+},
+{
+"viseme": 2,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 10,
+"duration_ms": 110,
+"transition_ms": 30
+},
+{
+"viseme": 2,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 14,
+"duration_ms": 120,
+"transition_ms": 0
+}
+]
+},
+{
+"name": "round",
+"text": "수술 후에 우유를 마셔요.",
+"speed": 2.0,
+"frames": [
+{
+"viseme": 6,
+"duration_ms": 110,
+"transition_ms": 40
+},
+{
+"viseme": 4,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 6,
+"duration_ms": 110,
+"transition_ms": 40
+},
+{
+"viseme": 4,
+"duration_ms": 180,
+"transition_ms": 40
+},
+{
+"viseme": 6,
+"duration_ms": 130,
+"transition_ms": 30
+},
+{
+"viseme": 14,
+"duration_ms": 120,
+"transition_ms": 0
+},
+{
+"viseme": 8,
+"duration_ms": 150,
+"transition_ms": 40
+},
+{
+"viseme": 4,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 3,
+"duration_ms": 150,
+"transition_ms": 30
+},
+{
+"viseme": 14,
+"duration_ms": 120,
+"transition_ms": 0
+},
+{
+"viseme": 4,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 4,
+"duration_ms": 150,
+"transition_ms": 30
+},
+{
+"viseme": 6,
+"duration_ms": 115,
+"transition_ms": 30
+},
+{
+"viseme": 5,
+"duration_ms": 150,
+"transition_ms": 40
+},
+{
+"viseme": 6,
+"duration_ms": 130,
+"transition_ms": 30
+},
+{
+"viseme": 14,
+"duration_ms": 120,
+"transition_ms": 0
+},
+{
+"viseme": 1,
+"duration_ms": 120,
+"transition_ms": 30
+},
+{
+"viseme": 2,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 6,
+"duration_ms": 110,
+"transition_ms": 30
+},
+{
+"viseme": 5,
+"duration_ms": 150,
+"transition_ms": 30
+},
+{
+"viseme": 4,
+"duration_ms": 150,
+"transition_ms": 30
+},
+{
+"viseme": 14,
+"duration_ms": 120,
+"transition_ms": 0
+}
+]
+},
+{
+"name": "bilabial",
+"text": "바다에 배가 많아요.",
+"speed": 1.0,
+"frames": [
+{
+"viseme": 1,
+"duration_ms": 110,
+"transition_ms": 30
+},
+{
+"viseme": 2,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 6,
+"duration_ms": 110,
+"transition_ms": 30
+},
+{
+"viseme": 2,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 3,
+"duration_ms": 150,
+"transition_ms": 30
+},
+{
+"viseme": 14,
+"duration_ms": 120,
+"transition_ms": 0
+},
+{
+"viseme": 1,
+"duration_ms": 110,
+"transition_ms": 30
+},
+{
+"viseme": 2,
+"duration_ms": 150,
+"transition_ms": 30
+},
+{
+"viseme": 7,
+"duration_ms": 110,
+"transition_ms": 30
+},
+{
+"viseme": 2,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 14,
+"duration_ms": 120,
+"transition_ms": 0
+},
+{
+"viseme": 1,
+"duration_ms": 120,
+"transition_ms": 30
+},
+{
+"viseme": 2,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 6,
+"duration_ms": 120,
+"transition_ms": 30
+},
+{
+"viseme": 2,
+"duration_ms": 180,
+"transition_ms": 30
+},
+{
+"viseme": 4,
+"duration_ms": 150,
+"transition_ms": 30
+},
+{
+"viseme": 14,
+"duration_ms": 120,
+"transition_ms": 0
+}
+]
+},
+{
+"name": "short",
+"text": "아",
+"speed": 1.0,
+"frames": [
+{
+"viseme": 2,
+"duration_ms": 180,
+"transition_ms": 30
+}
+]
+}
+]

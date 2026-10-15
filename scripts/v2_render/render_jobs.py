@@ -65,11 +65,17 @@ def run_job(pg, j, tables=None):
         tbl = (tables or {}).get(j["table"]) if j.get("table") else None
         if j.get("table") and tbl is None:
             raise KeyError("table " + j["table"])
+        # V3(docs/avatar-v3-2026-10.md): v3 = 'app'(하네스에 빌드된 앱 표) 또는 --tables 파일의 V3 표 이름
+        v3 = j.get("v3")
+        if v3 and v3 != "app":
+            v3 = (tables or {}).get(v3)
+            if v3 is None:
+                raise KeyError("v3 table " + j["v3"])
         r = pg.evaluate("(j) => window.__v2.renderText(j)",
                         {"frames": j["frames"], "talker": j["talker"], "seed": 0, "speed": j["speed"], "leadMs": 400, "tailMs": 400,
-                         "table": tbl})
+                         "table": tbl, "v3": v3})
         sched = {"id": j["id"], "schedule": r["schedule"], "speech": r["speech"], "fps": r["fps"], "talker": j["talker"], "speed": j["speed"],
-                 "table": j.get("table")}
+                 "table": j.get("table"), "v3": j.get("v3")}
     elif j["kind"] == "poses":
         r = pg.evaluate("(j) => window.__v2.renderPoses(j)", {"poses": j["poses"], "hold": j.get("hold", 3)})
         sched = {"id": j["id"], "poses": len(j["poses"]), "hold": r["hold"], "fps": r["fps"]}
