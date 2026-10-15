@@ -1130,38 +1130,103 @@ def _josa(word: str, with_final: str, without_final: str) -> str:
     return word + (with_final if _has_final(word) else without_final)
 
 
-def recommendations(confusions: Sequence[Dict], k: int = 3) -> List[Dict]:
-    """낱말 고르기에서 자주 헷갈린 소리 짝 → 다음 연습 제안. confusions: [{slot, target, heard, n}] 많은 순.
-    입모양 무리가 다른 자음 짝은 입모양이 보완해 주므로 독화 레슨을, 같은 무리(ㅂ·ㅁ 등)는 소리로만 가를 수 있으므로 소리 구별을
-    권한다. 자음 짝은 말하기 자음 단계도 함께 권한다."""
+# 입모양으로 가를 수 있는가(docs/listen-cross-track-2026-10.md 2절). 독화 트랙과 같은 규칙이다: 입모양 무리(engine.VISEME_MAP)가 같거나,
+# 둘 다 입 안쪽 무리(치경·연구개·성문·경구개, scoring._INSIDE_VISEMES)면 입만 보고는 가를 수 없다(docs/assessment-design.md 9절).
+# 예전에는 무리 번호만 비교해 ㄷ·ㄱ(치경·연구개)을 '입모양이 달라 입을 함께 보면 구별할 수 있다'고 안내했다.
+_INSIDE_VISEMES = {6, 7, 8, 10}
+
+
+def looks_same(slot: Optional[str], a: Optional[str], b: Optional[str]) -> Optional[bool]:
+    """대조의 두 소리가 입모양으로 같아 보이는가. 받침 없음('-')·소리 없는 첫소리(ㅇ)처럼 무리를 정할 수 없으면 None."""
+    from engine import VISEME_MAP
+    if not a or not b or "-" in (a, b) or (slot == "onset" and "ㅇ" in (a, b)):
+        return None
+    va, vb = VISEME_MAP.get(a), VISEME_MAP.get(b)
+    if va is None or vb is None:
+        return None
+    return va == vb or (va in _INSIDE_VISEMES and vb in _INSIDE_VISEMES)
+
+
+def contrast_route(slot: str, a: str, b: str) -> str:
+    from urllib.parse import quote
+    return "/listen/practice/contrast?contrast=" + quote(f"{slot}:{a}:{b}", safe=":")
+
+
+def _pair_words(slot: str, t: str, h: str) -> Tuple[str, str]:
+    """조사까지 붙인 '첫소리 ㅂ과', 'ㅍ을'. 받침 없음('-')은 둘 다 '받침 …'으로 적는다(예전 '받침 -와 ㄴ를')."""
+    if slot == "vowel":
+        return _josa(f"모음 {t}", "과", "와"), _josa(h, "을", "를")
+    where = "받침" if slot == "coda" else "첫소리"
+    if "-" in (t, h):
+        a, b = (f"{where} {'없음' if x == '-' else x}" for x in (t, h))
+    else:
+        a, b = f"{where} {t}", h
+    return _josa(a, "과", "와"), _josa(b, "을", "를")
+
+
+def recommendations(confusions: Sequence[Dict], k: int = 3, has_practice=None) -> List[Dict]:
+    """낱말 고르기에서 자주 헷갈린 소리 짝 → 다음 연습 제안(docs/listen-cross-track-2026-10.md 3절). confusions: [{slot, target, heard, n}] 많은 순.
+    입모양이 다른 짝은 독화(그 입모양 무리의 학습 자료)와 소리 짝 연습을, 입모양이 같거나 입 안쪽이라 안 보이는 짝은 소리 짝 연습만 권한다.
+    말하기 연습은 권하지 않는다(듣기 혼동이 같은 소리의 발음 문제를 알려 준다는 근거가 약하고, 앱의 음소 단위 말하기 점수도 '참고' 수준이라
+    3.3절). has_practice(대조 이름 → bool)가 거짓인 짝은 소리 짝 연습 길을 빼고(문항이 없음), 기본은 모두 있음으로 본다."""
     from engine import VISEME_MAP
     out = []
     for c in list(confusions)[:k]:
-        t, h = c.get("target"), c.get("heard")
-        if c.get("slot") == "vowel":
-            vt, vh = VISEME_MAP.get(t), VISEME_MAP.get(h)
-            lip = vt is not None and vh is not None and vt != vh
-            out.append({"pair": [t, h], "slot": "vowel", "lip_differs": lip,
-                        "text": f"모음 {_josa(t, '과', '와')} {_josa(h, '을', '를')} 자주 헷갈려요." + (" 입모양은 달라서 입을 함께 보면 도움이 돼요." if lip
-                                                                  else " 입모양도 비슷해서 소리 구별 연습이 필요해요."),
-                        "routes": [{"label": "입모양 레슨" if lip else "소리 구별", "to": "/learn/viseme" if lip else "/learn/listening?stage=1"}]})
-            continue
-        vt = VISEME_MAP.get(t) if t not in ("-", "ㅇ") else None
-        vh = VISEME_MAP.get(h) if h not in ("-", "ㅇ") else None
-        lip = vt is not None and vh is not None and vt != vh
-        where = "받침" if c.get("slot") == "coda" else "첫소리"
-        # '-'는 받침 없음(contrast_of). 한쪽이 없음이면 둘 다 '받침 …'으로 적고("받침 ㄴ과 받침 없음을"), 조사는 앞 글자 받침에 맞춘다.
-        # 예전에는 "받침 -와 ㄴ를"처럼 기호와 고정 조사가 그대로 나왔다
-        if "-" in (t, h):
-            a, b = (f"{where} {'없음' if x == '-' else x}" for x in (t, h))
+        slot, t, h = c.get("slot"), c.get("target"), c.get("heard")
+        same = looks_same(slot, t, h)
+        a, b = _pair_words(slot, t, h)
+        head = f"{a} {b} 자주 헷갈려요."
+        if same is False:
+            body = " 두 소리는 입모양이 달라요. 입을 함께 보면 가를 수 있어요."
+        elif same is True:
+            inside = VISEME_MAP.get(t) != VISEME_MAP.get(h)
+            body = (" 두 소리는 입 안쪽에서 나서 입모양으로는 잘 안 보여요. 소리로 가려야 해요." if inside
+                    else " 두 소리는 입모양이 같아요. 소리로만 가를 수 있어요.")
         else:
-            a, b = f"{where} {t}", h
-        pair = f"{_josa(a, '과', '와')} {_josa(b, '을', '를')}"
-        text = (f"{pair} 자주 헷갈려요. 입모양은 달라서 입을 함께 보면 구별할 수 있어요." if lip
-                else f"{pair} 자주 헷갈려요. 입모양이 같거나 잘 안 보여서 소리로 가려야 해요.")
-        routes = [{"label": "입모양 레슨", "to": "/learn/viseme"}] if lip else [{"label": "소리 구별", "to": "/learn/listening?stage=1"}]
-        routes.append({"label": "말하기 자음", "to": "/learn/speaking?stage=3"})
-        out.append({"pair": [t, h], "slot": c.get("slot"), "lip_differs": lip, "text": text, "routes": routes})
+            body = " 소리 짝 연습으로 두 소리를 번갈아 들어 보세요."
+        spec = f"{slot}:{t}:{h}"
+        routes = []
+        if same is False and VISEME_MAP.get(t) is not None:
+            routes.append({"label": "입모양 보기", "to": f"/learn/viseme?v={VISEME_MAP[t]}", "track": "perception"})
+        if parse_contrast(spec) and (has_practice is None or has_practice(spec)):
+            routes.append({"label": "소리 짝 연습", "to": contrast_route(slot, t, h), "track": "listen"})
+        out.append({"pair": [t, h], "slot": slot, "lip_differs": same is False if same is not None else None,
+                    "text": head + body, "routes": routes, "n": c.get("n")})
+    return out
+
+
+_POS_SLOT = {"초성": "onset", "중성": "vowel", "종성": "coda"}
+
+
+def lipread_to_listen(confusions: Sequence[Dict], k: int = 3, min_n: int = 3, has_practice=None) -> List[Dict]:
+    """독화에서 고른 오답의 자모 혼동(scoring.viseme_confusions의 [{position, target, read, same_viseme}]를 모은 것) → 소리 짝 연습 제안
+    (docs/listen-cross-track-2026-10.md 4절). 입모양으로 같아 보이는 짝(same_viseme)만 쓴다. 눈으로 가를 수 없는 짝은 소리로 가려야 하므로
+    소리 듣기의 소리 짝 연습을 권한다(입모양이 다른 짝은 독화 안의 연습이 맞아 여기서 권하지 않는다). min_n번 넘게 헷갈린 짝만, 많은 순 k개."""
+    counts: Dict[Tuple[str, str, str], int] = {}
+    for c in confusions or ():
+        if not isinstance(c, dict) or not c.get("same_viseme"):
+            continue
+        slot = _POS_SLOT.get(c.get("position"))
+        t, h = c.get("target"), c.get("read")
+        if not slot or not t or not h or h == "∅" or t == h:
+            continue
+        if slot == "coda":
+            t, h = _CODA_REP.get(t, t), _CODA_REP.get(h, h)
+        if t == h or looks_same(slot, t, h) is not True:
+            continue
+        key = (slot, t, h)
+        counts[key] = counts.get(key, 0) + 1
+    out = []
+    for (slot, t, h), n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
+        if len(out) >= k:
+            break
+        spec = f"{slot}:{t}:{h}"
+        if n < min_n or not parse_contrast(spec) or (has_practice is not None and not has_practice(spec)):
+            continue
+        a, b = _pair_words(slot, t, h)
+        out.append({"pair": [t, h], "slot": slot, "n": n,
+                    "text": f"입모양으로 {a} {b} 자주 헷갈렸어요. 두 소리는 입모양이 거의 같아요. 소리로 가려 듣는 연습을 해 보세요.",
+                    "routes": [{"label": "소리 짝 연습", "to": contrast_route(slot, t, h), "track": "listen"}]})
     return out
 
 
@@ -1455,22 +1520,15 @@ LIP_TEXT = {
 
 
 def lip_same(c: Optional[Dict], kind: Optional[str] = None) -> Optional[bool]:
-    """대조 하나의 두 소리가 입모양 무리(engine.VISEME_MAP)가 같은가. 길이 짝은 입 움직임 길이가 달라 False, 억양 짝은 글이 같아 True.
-    받침 없음·소리 없는 첫소리처럼 무리를 정할 수 없으면 None."""
+    """대조 하나의 두 소리가 입모양으로 같아 보이는가(looks_same: 같은 무리이거나 둘 다 입 안쪽 무리). 길이 짝은 입 움직임 길이가 달라 False,
+    억양 짝은 글이 같아 True. 받침 없음·소리 없는 첫소리처럼 무리를 정할 수 없으면 None."""
     if kind == "length":
         return False
     if kind == "intonation":
         return True
     if not c:
         return None
-    from engine import VISEME_MAP
-    a, b = c.get("target"), c.get("heard")
-    if "-" in (a, b) or (c.get("slot") == "onset" and "ㅇ" in (a, b)):
-        return None
-    va, vb = VISEME_MAP.get(a), VISEME_MAP.get(b)
-    if va is None or vb is None:
-        return None
-    return va == vb
+    return looks_same(c.get("slot"), c.get("target"), c.get("heard"))
 
 
 def contrast_catalog(pool: Sequence[str], has_sound=None, n_words: int = 6) -> List[Dict]:
