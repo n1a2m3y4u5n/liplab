@@ -45,6 +45,6 @@ if [ ! -f "$O/.done_lat" ]; then
   (cd $R/scripts && HF_HUB_OFFLINE=1 CUDA_VISIBLE_DEVICES="" OMP_NUM_THREADS=2 $PY stream_lat.py latency) || fail latency
   touch "$O/.done_lat"; echo "PT_LAT_OK"
 fi
-tar -czf $W/pt_result.tgz -C $W pt/out dax/logs --exclude 'pt/out/*.onnx' || fail tar
+tar -czf $W/pt_result.tgz --exclude 'pt/out/*.onnx' -C $W pt/out dax/logs || fail tar
 ls -la $W/pt_result.tgz
 echo "PT_OK"

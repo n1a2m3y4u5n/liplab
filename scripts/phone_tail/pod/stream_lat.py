@@ -25,7 +25,8 @@ import s4_eval_pod as E  # noqa: E402
 
 SR = 16000
 HOP = 320
-C_S, LC_S, RC_S = 4.0, 2.0, 1.0
+C_S, LC_S, RC_S = (float(os.environ.get(k, d)) for k, d in (("STREAM_C", 4.0), ("STREAM_LC", 2.0), ("STREAM_RC", 1.0)))
+SUF = os.environ.get("STREAM_SUFFIX", "")   # 사후 관찰(창 문맥을 바꾼 판, 보고만)
 CF, LF, RF = int(C_S * SR / HOP), int(LC_S * SR / HOP), int(RC_S * SR / HOP)
 LENGTHS = (3, 5, 8, 10, 15, 20, 25, 30)
 OUT = f"{W}/out"
@@ -121,6 +122,13 @@ def cmd_fidelity():
     pool = clips()
     T = E.Teacher("cuda")
     run_t = lambda w: tuple(x.numpy() for x in (lambda o: (o["al"], o["sc"]))(T.run(w)))
+    gnorm = os.environ.get("STREAM_GLOBALNORM") == "1"
+    if gnorm:
+        # 사후 관찰: 입력 정규화(평균 0·분산 1)를 창마다가 아니라 소리 전체로 한 번(스트리밍에서는 그때까지의 누적 통계로 바꿀 수 있다)
+        def run_t(w):
+            x = torch.from_numpy(np.ascontiguousarray(w, dtype=np.float32))[None].cuda()
+            with torch.no_grad():
+                return T.al(x).logits[0].float().cpu().numpy(), T.sc(x).logits[0].float().cpu().numpy()
     res = {"teacher": [], "hubert_cos": []}
     from transformers import HubertModel
     hub = HubertModel.from_pretrained(S.H_ID).cuda().eval()
@@ -134,6 +142,8 @@ def cmd_fidelity():
     for L in (15, 20, 25, 30):
         for r in range(10):
             y, txt = concat(pool, L, zlib.crc32(f"fid|{L}|{r}".encode()), exact=True)
+            if gnorm:
+                y = ((y - y.mean()) / np.sqrt(y.var() + 1e-7)).astype(np.float32)
             toks = JV.text_to_tokens(txt)
             fa, fs = run_t(y)
             ca, cs = stitch(run_t, y)
@@ -159,7 +169,7 @@ def cmd_fidelity():
     y, txt = concat(pool, 3, 1, exact=True)
     G, ws = windows(len(y))
     assert len(ws) == 1 and ws[0][3] == 0 and ws[0][4] == len(y)
-    json.dump(res, open(f"{OUT}/stream_fidelity.json", "w"), indent=1)
+    json.dump(res, open(f"{OUT}/stream_fidelity{SUF}.json", "w"), indent=1)
     log("FIDELITY_OK", json.dumps(res["summary"]))
 
 
@@ -263,7 +273,7 @@ def cmd_latency():
         full(y, t)
         stream(y, t)
     rows = []
-    for rep in range(3):
+    for rep in range(int(os.environ.get("STREAM_REPS", "3"))):
         for L in LENGTHS:
             for r in range(5):
                 y, t = concat(pool, L, zlib.crc32(f"lat|{L}|{r}".encode()), exact=True)
@@ -279,14 +289,14 @@ def cmd_latency():
         summ[L] = {"full_median": float(np.median(f)), "full_p95": float(np.percentile(f, 95)), "stream_median": float(np.median(s)),
                    "stream_p95": float(np.percentile(s, 95)), "during_p95": float(np.percentile(d, 95)) if len(d) else None, "n": len(f)}
     # 다리 2: 10/7 표본 100문장의 길이·목표로 F
-    lat = json.load(open(f"{W}/data/lat100.json", encoding="utf-8"))
+    lat = [] if SUF else json.load(open(f"{W}/data/lat100.json", encoding="utf-8"))
     bridge = []
     for k, x in enumerate(lat):
         y, _ = concat(pool, x["audio_s"], zlib.crc32(f"br|{k}".encode()), exact=True)
         tf, _ = full(y, x["target"])
         bridge.append({"audio_s": x["audio_s"], "sec": tf, "sec_1007": x["sec"]})
-    b = np.array([x["sec"] for x in bridge])
-    b7 = np.array([x["sec_1007"] for x in bridge])
+    b = np.array([x["sec"] for x in bridge] or [np.nan])
+    b7 = np.array([x["sec_1007"] for x in bridge] or [np.nan])
     cpu = ""
     try:
         cpu = next(l.split(":", 1)[1].strip() for l in open("/proc/cpuinfo") if l.startswith("model name"))
@@ -295,7 +305,7 @@ def cmd_latency():
     res = {"cpu": cpu, "threads": threads, "chunk": [C_S, LC_S, RC_S], "by_length": summ, "rows": rows,
            "bridge": {"median": float(np.median(b)), "p95": float(np.percentile(b, 95)), "median_1007": float(np.median(b7)),
                       "p95_1007": float(np.percentile(b7, 95)), "ratio_median": float(np.median(b / b7)), "rows": bridge}}
-    json.dump(res, open(f"{OUT}/stream_latency.json", "w"), indent=1)
+    json.dump(res, open(f"{OUT}/stream_latency{SUF}.json", "w"), indent=1)
     log("LATENCY_OK", cpu, json.dumps(summ), json.dumps({k: v for k, v in res["bridge"].items() if k != "rows"}))
 
 
