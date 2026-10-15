@@ -36,11 +36,12 @@ export default function ConvoTask({ data, settings, voices, onProgress, onExit, 
   const player = usePlayer()
   const t0 = useRef(Date.now())
   const it = items[k]
-  const voice = voiceFor(voices.train, k, 0, data.voice_mode, data.voice_block)
+  // 생성 문항(서버 합성)은 품질 게이트에서 떨어진 목소리를 avoid_voices로 준다(docs/listen-convo-tts-2026-10.md 2절). 미리 합성한 문항은 빈 목록
+  const voice = voiceFor(voices.train, k, 0, data.voice_mode, data.voice_block, it?.avoid_voices)
   const line = useClip(it?.line, voice)
   const para = useClip(it?.paraphrase, voice)
   const nx = items[k + 1]
-  usePrefetch(nx ? [[nx.line, voiceFor(voices.train, k + 1, 0, data.voice_mode, data.voice_block)]] : [])
+  usePrefetch(nx ? [[nx.line, voiceFor(voices.train, k + 1, 0, data.voice_mode, data.voice_block, nx.avoid_voices)]] : [])
   // 소음 조건은 문항마다 잡음 종류를 돌린다(경쟁 화자 1명이 인공와우 사용자에게 가장 어렵고 화자 수 효과는 단조롭지 않아 한 축으로
   // 쓰지 않는다, Chen 2020). talker2는 일반화 확인용으로 훈련에 쓰지 않는다. 조건을 고정했으면 고른 잡음만 쓴다
   const noiseName = condition?.noise || (data.noise_types || ['babble'])[k % (data.noise_types?.length || 1)]

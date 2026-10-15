@@ -63,6 +63,10 @@ def _warmup_models():
             import audio2face
             if audio2face.is_available():
                 audio2face.warm()   # 적재에 더해 백본 가중치를 끝까지 읽어 둔다(첫 아바타 요청이 느린 디스크를 기다리지 않게)
+            import sound_service
+            if sound_service.dynamic_enabled():
+                import sound_tts
+                sound_tts.warm()    # 서버 합성(LIPLAB_SOUND_DYNAMIC=1)이 켜졌을 때만: 엔진을 올리고 한 번 합성해 둔다
             print("[OK] 서버 추론 모델 예열 끝")
         except Exception as e:
             print(f"[WARN] 모델 예열 실패(요청 때 다시 시도): {type(e).__name__}: {e}")
@@ -6079,6 +6083,13 @@ async def listen_stage_content(n: int, current_user=Depends(get_current_user), d
     elif n == 5:
         recent = [r.item_key[2:] for r in await _listen_attempts(current_user.id, db, stage=5, limit=40, newest_first=True)]
         out["items"] = _listencur.convo_items(f"5:{seed}", n=8, recent=recent)
+        import listen_convo_gen as _lcg
+        if _lcg.enabled():
+            # 생성 문항은 8개 중 최대 2개(답은 기록하되 숙달에 넣지 않는다). 최근에 들은 생성 문항은 연습 기록에 있다
+            g_recent = [r.item_key[2:] for r in await _listen_attempts(current_user.id, db, stage=5, counted_only=False, limit=60,
+                                                                       newest_first=True) if (r.item_key or "").startswith("g:")]
+            out["items"] = _lcg.mix(out["items"], _lcg.ready_items(None, recent=g_recent, limit=_lcg.STAGE5_MAX), keep_len=True)
+            _lcg.kick(_lcg.neediest_scene(), _ml_slot)
         rows = await _listen_attempts(current_user.id, db, stage=4, mode="noise")
         srt = _listencur.srt_estimate(_ao_trials(rows)[-20:])
         # 잡음 조건은 학습자의 소음 속 역치보다 5 dB 넉넉하게(역치 모르면 +10 dB)
@@ -6223,6 +6234,7 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
     key = req.item_key
     res = {"stage": n, "mode": mode}
     target, correct, score, level, credit = None, None, None, None, None
+    generated = False   # 생성 대화 문항(g:): 답은 기록하되 단계 숙달·진행에 넣지 않는다(정답 번호를 사람이 확인하지 않았다)
     if mode == "ax":
         parsed = _listencur.ax_parse(key)
         if not parsed or req.same is None:
@@ -6262,12 +6274,18 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
             res["target"] = target
     elif mode == "convo":
         c = _listencur.CONVO_BY_ID.get(key[2:]) if key.startswith("c:") else None
+        if key.startswith("g:"):
+            import listen_convo_gen as _lcg
+            c = _lcg.lookup(key[2:])
+            generated = c is not None
         if not c or req.choice is None or not (0 <= int(req.choice) < len(c["options"])):
             raise HTTPException(status_code=400, detail="bad item")
         target = c["line"]
         correct = int(req.choice) == int(c["answer"])
         credit = 1.0 if correct else -1.0 / 3
         res.update({"answer": c["answer"], "line": c["line"]})
+        if generated:
+            res["generated"] = True
     res["correct"] = correct
 
     from types import SimpleNamespace
@@ -6318,7 +6336,7 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
             await db.flush()
             return out
         sp_map = await _listen_progress_map(uid, db)
-        counted = not req.practice and _listen_open(n, sp_map, who)
+        counted = not req.practice and not generated and _listen_open(n, sp_map, who)
         rows = await _listen_attempts(uid, db, stage=n, mode=mode) if counted else []   # 같은 단계의 검사 기록은 빼고
         if mode == "word_id" and counted:
             cur = _listencur.next_level([(r.level or 1, bool(r.correct)) for r in rows], n)
@@ -6748,6 +6766,13 @@ async def listen_practice_modes(current_user=Depends(get_current_user), db: Asyn
     return {"modes": out}
 
 
+@app.get("/api/listen/convo-gen/status")
+async def listen_convo_gen_status(current_user=Depends(get_current_user)):
+    """대화 생성 문항 상태(켜짐, 장면별 준비·탈락·진행 중 수, 오늘 시도 수, 대기열). 운영·측정용이고 화면은 부르지 않는다."""
+    import listen_convo_gen as _lcg
+    return _lcg.status()
+
+
 @app.get("/api/listen/practice/scenario/places")
 async def listen_practice_scenario_places(current_user=Depends(get_current_user)):
     """상황별 대화 듣기의 장면 묶음 [{key, label, n, places}]. 장소(place)마다 문항이 하나뿐인 곳이 많아 비슷한 장소를 묶었다
@@ -6838,6 +6863,12 @@ async def listen_practice_items(mode: str, contrast: Optional[str] = None, place
         items = _listencur.scene_items(place, seed, recent=recent)
         if items is None:
             raise HTTPException(status_code=404, detail="unknown place")
+        # 생성 문항(기본 끔, docs/listen-convo-tts-2026-10.md): 준비된 것만 섞고, 모자라면 뒤에서 더 만든다(이 응답은 기다리지 않는다)
+        import listen_convo_gen as _lcg
+        sk = _lcg.scene_for(place)
+        if _lcg.enabled() and sk:
+            items = _lcg.mix(items, _lcg.ready_items(sk, recent=recent, limit=_lcg.PRACTICE_MAX))
+            _lcg.kick(sk, _ml_slot)
         for it in items:
             it["stage"] = 5
         out.update({"place": place, "items": items, "noise_snr_db": await _listen_noise_snr(uid, db),

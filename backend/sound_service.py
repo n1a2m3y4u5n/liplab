@@ -130,11 +130,11 @@ def cache_store(key: str, voice: str, clip: Dict, files: Dict[str, bytes]) -> No
         idx.setdefault(voice, {})[key] = {**clip, "used": time.time(),
                                           "bytes": sum(len(b) for b in files.values())}
         entries = [(f"{v}\n{k}", int(c.get("bytes") or 0), float(c.get("used") or 0))
-                   for v, clips in idx.items() for k, c in clips.items()]
+                   for v, clips in idx.items() if not v.startswith("_") for k, c in clips.items()]
         for name in S.evict_plan(entries, cache_cap_bytes()):
             v, k = name.split("\n", 1)
             c = idx.get(v, {}).pop(k, None)
-            if c:
+            if c and c.get("id"):
                 for ext in CODECS:
                     try:
                         os.remove(os.path.join(d, f"{c['id']}.{ext}"))
@@ -218,24 +218,66 @@ def dynamic_enabled() -> bool:
 
 
 MAX_DYNAMIC_CHARS = 80
+# 게이트에서 떨어진 글·목소리(같은 글을 되풀이해 합성하지 않게). 기계가 다시 켜지면 비워져 한 번 더 시도한다(볼륨 index에도 남긴다)
+_REJECTED: Dict[Tuple[str, str], float] = {}
+
+
+def rejected(text: str, voice: str) -> bool:
+    key = S.normalize_text(text)
+    if (voice, key) in _REJECTED:
+        return True
+    d = cache_dir()
+    if not d:
+        return False
+    with _lock:
+        return key in ((_load_index(d).get("_rejected") or {}).get(voice) or {})
+
+
+def _mark_rejected(key: str, voice: str, q: Optional[Dict]) -> None:
+    _REJECTED[(voice, key)] = time.time()
+    d = cache_dir()
+    if not d:
+        return
+    with _lock:
+        idx = _load_index(d)
+        rj = idx.setdefault("_rejected", {}).setdefault(voice, {})
+        rj[key] = {"t": time.time(), "flags": (q or {}).get("flags"), "dgop": (q or {}).get("dgop")}
+        if len(rj) > 2000:   # 오래된 것부터 줄인다
+            for k in sorted(rj, key=lambda k: rj[k].get("t", 0))[:len(rj) - 2000]:
+                rj.pop(k, None)
+        _save_index(d)
 
 
 def generate(text: str, voice: str) -> Optional[Dict]:
-    """글 하나를 합성·인코딩·정렬해 캐시에 넣고 목록 항목을 돌려준다(스레드에서 부른다). 실패하면 None."""
+    """글 하나를 합성·정리·게이트·인코딩해 캐시에 넣고 목록 항목을 돌려준다(스레드에서 부른다). 게이트에서 떨어지거나 실패하면 None.
+    LIPLAB_SOUND_KEEP_REJECTED=1이면(측정 전용) 떨어진 소리도 캐시 폴더의 rejected/에 남긴다."""
     import sound_tts
     key = S.normalize_text(text)
-    if not key or len(key) > MAX_DYNAMIC_CHARS:
+    if not key or len(key) > MAX_DYNAMIC_CHARS or rejected(text, voice):
         return None
     vinfo = next((v for v in voices() if v.get("id") == voice), None)
     engine_voice = (vinfo or {}).get("engine_voice")
     if not engine_voice:
         return None
     from korean_numbers import normalize_numbers
-    res = sound_tts.synthesize(normalize_numbers(text), engine_voice)
-    if not res:
+    keep = os.getenv("LIPLAB_SOUND_KEEP_REJECTED") == "1"
+    res = sound_tts.make_clip(text, normalize_numbers(text), engine_voice, voice, keep_rejected=keep)
+    if not res.get("ok"):
+        _mark_rejected(key, voice, res.get("q"))
+        d = cache_dir()
+        if keep and d and res.get("rejected_files"):
+            rd = os.path.join(d, "rejected")
+            os.makedirs(rd, exist_ok=True)
+            rid = S.clip_id(key, voice)
+            for ext, data in res["rejected_files"].items():
+                with open(os.path.join(rd, f"{rid}.{ext}"), "wb") as f:
+                    f.write(data)
+            with open(os.path.join(rd, "index.jsonl"), "a", encoding="utf-8") as f:
+                f.write(json.dumps({"id": rid, "voice": voice, "key": key, "text": text, "ms": int(res.get("ms") or 0),
+                                    "q": res.get("q"), "tries": res.get("tries")}, ensure_ascii=False) + "\n")
         return None
-    wav16, ms, files = res
-    syl = sound_tts.align_syllables(wav16, text, ms)
-    clip = {"id": S.clip_id(key, voice), "ms": int(ms), "syl": syl, "text": text}
-    cache_store(key, voice, clip, files)
+    q = res["q"]
+    clip = {"id": S.clip_id(key, voice), "ms": int(res["ms"]), "syl": res["syl"], "text": text,
+            "q": {k: q.get(k) for k in ("tier", "cand", "dgop", "flags", "raw_level_db")}, "tries": res.get("tries")}
+    cache_store(key, voice, clip, res["files"])
     return {"key": key, **clip}
