@@ -6717,12 +6717,45 @@ async def listen_summary(current_user=Depends(get_current_user), db: AsyncSessio
         "word_tests": _listen_wordtests([r for r in counted if r.mode == "wordtest"]),
         "training": {"srt_ao_db": srt_ao, "srt_av_db": srt_av, "n_ao": len(ao), "n_av": len(av),
                      "av_gain_db": round(srt_ao - srt_av, 1) if srt_ao is not None and srt_av is not None else None},
-        "confusions": conf[:8], "recommendations": _listencur.recommendations(conf),
+        "confusions": conf[:8], "recommendations": _listencur.recommendations(conf, has_practice=_listen_has_contrast_items),
         "ax_kinds": sorted(ax_kinds.values(), key=lambda x: x["kind"]),
         "days": days,
         "practice": {"by_mode": by_mode, "noise_srt_db": _listencur.srt_estimate(prac_noise[-20:]),
                      "n_noise": len(prac_noise)},
     }
+
+
+# ── 트랙 잇기: 소리 듣기 ↔ 독화(docs/listen-cross-track-2026-10.md) ─────────────────────────────
+
+def _listen_has_contrast_items(spec: str) -> bool:
+    """소리 짝 연습(/api/listen/practice/contrast?contrast=spec)이 문항을 낼 수 있는가."""
+    c = _listencur.parse_contrast(spec)
+    return bool(c and _listencur.contrast_practice_items(c, _listen_word_pool(), "links", n=4))
+
+
+_LIPREAD_CONFUSION_KINDS = ("word", "word_typed", "nonsense")
+
+
+@app.get("/api/listen/links")
+async def listen_links(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """두 방향의 연습 제안. from_listen: 소리 듣기 낱말 고르기에서 자주 헷갈린 짝(GET /api/listen/summary의 recommendations와 같음),
+    from_lipread: 독화 낱말 문항에서 입모양이 같아 헷갈린 짝 → 소리 짝 연습. 소리 듣기를 시작하지 않았으면(소리 확인을 한 번도 안 함)
+    listen_started가 거짓이고 두 목록 모두 비운다(보청기·인공와우를 쓰지 않는 학습자에게 소리 연습을 권하지 않는다)."""
+    from database import TrialAttempt
+    from sqlalchemy import select
+    uid = current_user.id
+    if not await _listen_ling_done(uid, db):
+        return {"listen_started": False, "from_listen": [], "from_lipread": []}
+    rows = await _listen_attempts(uid, db, stage=2, mode="word_id", practice_modes=True)
+    wrong = [(r.target, r.answer) for r in rows if r.correct is False and r.target and r.answer]
+    conf = _listencur.tally_confusions(wrong[-200:])
+    q = (select(TrialAttempt.confusions).where(TrialAttempt.user_id == uid, TrialAttempt.correct.is_(False),
+                                               TrialAttempt.item_type.in_(_LIPREAD_CONFUSION_KINDS))
+         .order_by(TrialAttempt.created_at.desc()).limit(300))
+    lip = [c for (cs,) in (await db.execute(q)).all() for c in (cs or [])]
+    return {"listen_started": True,
+            "from_listen": _listencur.recommendations(conf, has_practice=_listen_has_contrast_items),
+            "from_lipread": _listencur.lipread_to_listen(lip, has_practice=_listen_has_contrast_items)}
 
 
 # ── 연습 탭 듣기 연습·복습 탭 듣기 복습·소리 교실(docs/listen-integration-api-2026-10.md) ─────────────────
