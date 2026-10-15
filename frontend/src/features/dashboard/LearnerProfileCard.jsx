@@ -87,10 +87,10 @@ export default function LearnerProfileCard({ user, statistics, calendarData }) {
           <p className="text-[9px] font-black tracking-[0.14em] text-lime-700">MY PROFILE</p>
           <h2 id="learner-profile-heading" className="mt-1 truncate text-lg font-black tracking-tight text-slate-950">{displayName}</h2>
           <span className="mt-0.5 block text-sm font-black text-sky-600">Lv {level}</span>
-          <p className="mt-1 text-[10px] font-bold leading-tight text-slate-500">다음 레벨까지<br /><b className="text-slate-800">{remainingXp.toLocaleString()} XP</b></p>
+          <p className="mt-1 text-[10px] font-bold leading-tight text-slate-500">다음 레벨까지<br /><b className="text-slate-800">{remainingXp.toLocaleString()} 경험치</b></p>
           <div className="mt-2 flex items-center justify-between text-[8px] font-bold text-slate-400">
             <span>{earnedThisLevel.toLocaleString()}</span>
-            <span>/ {xpNeededThisLevel.toLocaleString()} XP</span>
+            <span>/ {xpNeededThisLevel.toLocaleString()} 경험치</span>
           </div>
         </div>
       </div>

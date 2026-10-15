@@ -618,7 +618,7 @@ export default function SpeakingPractice() {
               <p className="mb-3 text-sm text-ink-faint">{err} 네트워크를 확인하고 다시 시도해 주세요.</p>
               <div className="flex justify-center gap-2">
                 <button type="button" onClick={() => setRetry((n) => n + 1)} className="btn-primary px-6 py-2.5 text-sm">다시 가져오기</button>
-                <button type="button" onClick={() => { teardown(); navigate('/learn/path?track=speak') }} className="btn-secondary px-6 py-2.5 text-sm">발화 커리큘럼으로</button>
+                <button type="button" onClick={() => { teardown(); navigate('/learn/path?track=speak') }} className="btn-secondary px-6 py-2.5 text-sm">발화 학습 화면으로</button>
               </div>
             </div>
           ) : reviewEmpty ? (

@@ -15,7 +15,7 @@ const STAT_VALUE = 'text-[20px] font-bold leading-figma tracking-[-0.5px] lg:tex
 const DONE_BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]'
 const fmtDuration = (sec) => `${Math.floor(sec / 60)}분 ${sec % 60}초`
 
-export default function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, homeLabel = '커리큘럼으로 돌아가기', effort }) {
+export default function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, homeLabel = '학습 화면으로 돌아가기', effort }) {
   return (
     <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center gap-[26px] bg-page px-[18px] py-12">
       <span className="relative size-[140px] shrink-0">
@@ -29,7 +29,7 @@ export default function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHom
           <p className={`${STAT_VALUE} text-primary-700`}>{accuracy == null ? '-' : `${accuracy}%`}</p>
         </WatermarkCard>
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-xp.svg', size: 157.945, top: -76, right: -71.44 }}>
-          <p className={STAT_LABEL}>받은 XP</p>
+          <p className={STAT_LABEL}>받은 경험치</p>
           <p className={`${STAT_VALUE} text-warn-text`}>+{xp}</p>
         </WatermarkCard>
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-clock.svg', size: 115.2, top: -45.83, right: -43.82 }}>

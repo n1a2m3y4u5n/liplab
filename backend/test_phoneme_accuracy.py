@@ -245,3 +245,47 @@ def test_app_scoring_is_untouched():
     with open(os.path.join(here, "main.py"), encoding="utf-8") as f:
         src = f.read()
     assert "phoneme_accuracy import" not in src and "import phoneme_accuracy" not in src
+
+
+# ── strict-v2(10/15): R9 '모름', R3 오타 ───────────────────────
+
+@pytest.mark.parametrize("ans", ["모름", "모르겠어요", " 잘 모르겠어요. ", "몰라요", "몰라", "모르겠음", "모르겠습니다"])
+def test_dont_know_is_zero(ans):
+    r = spa("오늘 날씨가 좋아요", ans)
+    assert r["dont_know"] is True
+    assert r["n_matched_phonemes"] == 0 and r["phoneme_accuracy"] == 0.0 and r["n_target_phonemes"] == 15
+
+
+def test_dont_know_only_when_whole_answer_and_not_in_target():
+    assert spa("오늘 날씨가 좋아요", "모름 날씨")["dont_know"] is False      # 다른 말이 섞이면 그대로 채점
+    r = spa("저도 잘 몰라요", "몰라요")                                        # 정답에 있는 말이면 그대로 채점
+    assert r["dont_know"] is False and r["n_matched_phonemes"] > 0
+    assert spa("모르는 사람이에요", "모르다")["dont_know"] is True            # 정답에 '모르다'는 없다
+    assert pa.is_dont_know("모 름 ?") and not pa.is_dont_know("")
+
+
+def test_v2_equals_v1_except_dont_know():
+    # R9 말고는 바뀐 것이 없다: '모름' 류가 아닌 답은 v1 계산(답을 그대로 채점)과 같다
+    rng = random.Random(7)
+    pool = ["옷 입어", "같이 가요", "학교에 가요", "밥 먹었어", "사과 주세요", "닭이 울어", "세 시에 만나요", "모르는 사람이에요"]
+    for _ in range(200):
+        t, a = rng.choice(pool), rng.choice(pool + ["모름 날씨", "몰라", ""])
+        r = spa(t, a)
+        if r["dont_know"]:
+            continue
+        words, tsyl = pa.target_syllables(t)
+        usyl, _n = pa.answer_syllables(a)
+        assert r["n_target_phonemes"] == sum(len(x.counted()) for x in tsyl)
+        assert len(r["alignment"]) == len(words)
+
+
+def test_typo_scored_as_typed():
+    # R3: 친 글자를 그대로 채점한다(의도 추측 없음). 모음 하나를 잘못 치면 그 음소만 틀린다
+    assert _acc("사과 주세요", "사과 주세여") == (8, 9, 1, 2)
+    assert _acc("사과 주세요", "사과 주세요") == (9, 9, 2, 2)
+    # 받침을 잘못 친 오타는 받침만 틀린다
+    assert _acc("밥 주세요", "밧 주세요") == (7, 8, 1, 2)
+
+
+def test_version_string():
+    assert pa.SCORER_VERSION == "strict-v2" and spa("밥", "밥")["scorer_version"] == "strict-v2"

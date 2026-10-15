@@ -52,8 +52,8 @@ function TaskRow({ label, cur, total, xp, claimed, onClick, onClaim, listen = fa
         </div>
       </div>
       {done && !claimed && onClaim
-        ? <button type="button" onClick={onClaim} className={`${chip} ring-2 ring-primary-300`}>받기 +{xp} XP</button>
-        : <span className={chip}>+{xp} XP</span>}
+        ? <button type="button" onClick={onClaim} className={`${chip} ring-2 ring-primary-300`}>받기 +{xp} 경험치</button>
+        : <span className={chip}>+{xp} 경험치</span>}
     </Row>
   )
 }
@@ -242,7 +242,7 @@ export default function TasksPage() {
           <p className="text-[18px] tracking-[-0.36px] lg:text-[23px] lg:tracking-[-0.46px]">{week?.label ?? '\u00a0'}</p>
           <div className="flex justify-between text-[12px] lg:text-[14px]">
             <span className="opacity-90">{week ? `${weekCur} / ${weekTotal}일` : '…'}</span>
-            <span className="opacity-90">{week ? `${week.claimed ? '받음 ' : ''}+${week.xp} XP` : ''}</span>
+            <span className="opacity-90">{week ? `${week.claimed ? '받음 ' : ''}+${week.xp} 경험치` : ''}</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-white/30 lg:h-3">
             <div className="h-full rounded-full bg-white" style={{ width: `${Math.min(100, (weekCur / weekTotal) * 100)}%` }} />

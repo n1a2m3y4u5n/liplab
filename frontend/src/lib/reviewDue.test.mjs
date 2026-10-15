@@ -22,6 +22,6 @@ test('mistakeCount: 틀린 문장 + 독화 예정 + 말하기 예정', () => {
 
 test('rewardMessage: 하나면 과제 이름, 여럿이면 개수와 합계', () => {
   assert.equal(rewardMessage([]), '')
-  assert.equal(rewardMessage([{ label: '독화 학습 1회', xp: 15 }]), "'독화 학습 1회' 완료 +15 XP")
-  assert.equal(rewardMessage([{ label: 'a', xp: 10 }, { label: 'b', xp: 15 }]), '과제 2개 완료 +25 XP')
+  assert.equal(rewardMessage([{ label: '독화 학습 1회', xp: 15 }]), "'독화 학습 1회' 과제를 마쳤어요 · 경험치 +15")
+  assert.equal(rewardMessage([{ label: 'a', xp: 10 }, { label: 'b', xp: 15 }]), '과제 2개를 마쳤어요 · 경험치 +25')
 })
