@@ -384,6 +384,8 @@ def cmd_jobs(a):
     sents = [e for e in sel['sentences'] if e.get('default')]
     if a.half is not None:
         sents = [e for e in sents if e.get('half') == a.half]
+    if a.limit:
+        sents = sents[:a.limit]
     jobs = []
     for e in sents:
         fr = asyncio.run(engine.text_to_visemes(unicodedata.normalize('NFC', e['text']).strip()))
@@ -635,13 +637,38 @@ def cmd_evaluate(a):
 
 def cmd_tables(a):
     """하네스 --tables 파일: {이름: 표}. v15는 scripts/data/viseme_v15.json의 동결 표, 나머지는 V3 표 JSON(이름=파일 이름)."""
-    out = {}
+    out = json.load(open(a.out, encoding='utf-8')) if (a.merge and os.path.exists(a.out)) else {}
     if a.v15:
         out['v15'] = json.load(open(a.v15, encoding='utf-8'))['table']
     for p in a.v3:
         out[os.path.splitext(os.path.basename(p))[0]] = json.load(open(p, encoding='utf-8'))
     json.dump(out, open(a.out, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
     print('TABLES', sorted(out))
+
+
+def cmd_diag(a):
+    """탐색 진단(보고용): 조건마다 RSA 특징별로 무리 13개의 z 평균이 사람 평균과 얼마나 닮았는지(피어슨), 가장 어긋난 무리 쌍."""
+    import numpy as np
+    import v2_avatar_validity as V
+    sel = json.load(open(a.sel, encoding='utf-8'))
+    align = {json.loads(l)['key']: json.loads(l) for l in open(a.align, encoding='utf-8')}
+    hs = {s['spk']: s['half'] for s in sel['speakers']}
+    clips = [c for c in sel['clips'] if a.half is None or hs[c['spk']] == a.half]
+    real = {s: V.profile(v) for s, v in real_records(clips, align, a.real_bs).items()}
+    H = np.mean([[p['z'][g] for g in V.GROUPS] for p in real.values() if p and all(g in p['z'] for g in V.GROUPS)], 0)
+    sids = {e['sid'] for e in sel['sentences'] if e.get('default') and (a.half is None or e.get('half') == a.half)}
+    for rd, bd, tag in zip(a.renders, a.render_bs, a.tags):
+        for c, recs in render_records_geo(rd, bd, lambda s_, c_: s_ in sids).items():
+            if tag != '-':
+                c = f"{tag}_{c.rsplit('_', 1)[1]}"
+            if a.only and not any(c.startswith(o) for o in a.only):
+                continue
+            p = V.profile(recs)
+            if not p or any(g not in p['z'] for g in V.GROUPS):
+                continue
+            Z = np.array([p['z'][g] for g in V.GROUPS])
+            r = {f: round(float(np.corrcoef(Z[:, j], H[:, j])[0, 1]), 2) if Z[:, j].std() > 1e-6 else None for j, f in enumerate(V.RSA_FEATS)}
+            print('DIAG', c, json.dumps(r))
 
 
 # ───────────────────────────── selftest(JS 구현 일치 기준) ─────────────────────────────
@@ -696,6 +723,7 @@ def main():
     s.add_argument('--cond', required=True)
     s.add_argument('--speeds', type=float, nargs='+', default=[1.0, 2.0])
     s.add_argument('--half', type=int, default=None)
+    s.add_argument('--limit', type=int, default=0)
     s.add_argument('--out', required=True)
     s = sub.add_parser('classifier')
     s.add_argument('--sel', required=True)
@@ -716,9 +744,19 @@ def main():
     s.add_argument('--v3', default='v3-app')
     s.add_argument('--v1', default='v1')
     s.add_argument('--out', required=True)
+    s = sub.add_parser('diag')
+    s.add_argument('--sel', required=True)
+    s.add_argument('--align', required=True)
+    s.add_argument('--real-bs', required=True)
+    s.add_argument('--renders', nargs='+', required=True)
+    s.add_argument('--render-bs', nargs='+', required=True)
+    s.add_argument('--tags', nargs='+', required=True)
+    s.add_argument('--only', nargs='*', default=[])
+    s.add_argument('--half', type=int, default=None)
     s = sub.add_parser('tables')
     s.add_argument('--v15', default='')
     s.add_argument('--v3', nargs='*', default=[])
+    s.add_argument('--merge', action='store_true')
     s.add_argument('--out', required=True)
     s = sub.add_parser('selftest')
     s.add_argument('--table', required=True)
@@ -726,7 +764,7 @@ def main():
     s.add_argument('--out', required=True)
     a = ap.parse_args()
     {'select': cmd_select, 'dataset': cmd_dataset, 'fit': cmd_fit, 'human': cmd_human, 'jobs': cmd_jobs, 'classifier': cmd_classifier,
-     'evaluate': cmd_evaluate, 'tables': cmd_tables, 'selftest': cmd_selftest}[a.cmd](a)
+     'evaluate': cmd_evaluate, 'tables': cmd_tables, 'diag': cmd_diag, 'selftest': cmd_selftest}[a.cmd](a)
 
 
 if __name__ == '__main__':
