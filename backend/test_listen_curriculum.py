@@ -266,10 +266,12 @@ def test_convo_items_hide_answer():
 
 
 def test_convo_content_quality():
-    """대화 문항: 정답 자리가 한쪽으로 쏠리지 않고(자리마다 6~9개), 정답이 혼자 가장 긴 보기가 아니다(10/7 콘텐츠 검토)."""
+    """대화 문항: 정답 자리가 한쪽으로 쏠리지 않고(자리마다 고른 몫의 0.75~1.25배, 10/7 34문항 때는 6~9개), 정답이 혼자 가장 긴 보기가
+    아니다(10/7 콘텐츠 검토). 10/15 장면 확대 뒤 58문항은 자리마다 14~15개."""
     from collections import Counter
     pos = Counter(c["answer"] for c in L.CONVO_ITEMS)
-    assert set(pos) == {0, 1, 2, 3} and all(6 <= n <= 9 for n in pos.values()), pos
+    q = len(L.CONVO_ITEMS) / 4
+    assert set(pos) == {0, 1, 2, 3} and all(0.75 * q <= n <= 1.25 * q for n in pos.values()), pos
     for c in L.CONVO_ITEMS:
         lens = [len(o.replace(" ", "")) for o in c["options"]]
         a = lens[c["answer"]]

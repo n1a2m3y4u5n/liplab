@@ -166,10 +166,15 @@ def train_voices() -> List[str]:
     return vids[:-1] if len(vids) >= 3 else vids
 
 
+HEARD_FIELDS = ("line", "paraphrase")   # 대화 문항에서 소리로 들려주는 글. 질문·보기는 화면에 글로만 보인다
+
+
 def avoid_from_list(item: Dict, voices: Sequence[str]) -> List[str]:
-    """피하기 목록(data/listen_voice_avoid.json)에서 보기 낱말 가운데 하나를 구별되게 내지 못한다고 적힌 목소리."""
+    """피하기 목록(data/listen_voice_avoid.json)에서, 이 문항이 소리로 들려주는 글(대사·바꾼 말)을 그 목소리가 구별되게 내지 못한다고
+    적힌 목소리. 목록은 낱말·음절을 홀로 들려줄 때의 구별 실패라, 글로만 보이는 보기 낱말에는 쓰지 않는다(10/15까지는 보기 낱말에도
+    써서 보기 하나가 목록에 있으면 그 목소리를 피했고, 네 목소리가 모두 걸린 문항이 버려졌다, docs/listen-convo-expand-2026-10.md 4절)."""
     av = L.voice_avoid()
-    keys = {S.normalize_text(o) for o in item.get("options") or []}
+    keys = {S.normalize_text(item.get(f) or "") for f in HEARD_FIELDS} - {""}
     return sorted(v for v in voices if any((av.get(v) or {}).get(k) for k in keys))
 
 

@@ -9,6 +9,8 @@ import tempfile
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
+import pytest
+
 import listen_convo_gen as G
 import listen_curriculum as L
 import sound_clips as S
@@ -19,6 +21,23 @@ FIXTURE = os.path.join(HERE, "..", "scripts", "convo_tts", "fixture_items.json")
 
 def _fixture():
     return json.load(open(FIXTURE, encoding="utf-8"))["items"]
+
+
+@pytest.fixture(autouse=True)
+def _pre_expand_convo(monkeypatch):
+    """대리 문항 파일은 10/15 측정 때 그대로 둔다. 그 가운데 일부를 검수해 미리 합성 대화(c35~c58)로 넣었으므로, 이 시험들은 확대 전
+    대화 목록(c01~c34)을 기준으로 본다(넣은 대사는 '이미 있는 글'이라 생성 점검이 버린다. 그것은 test_known_text_after_expand가 본다)."""
+    monkeypatch.setattr(L, "CONVO_ITEMS", [c for c in L.CONVO_ITEMS if int(c["id"][1:]) <= 34])
+    monkeypatch.setattr(G, "_FORBIDDEN_KEYS", None)
+
+
+def test_known_text_after_expand(monkeypatch):
+    """확대 뒤 목록에서는 미리 합성 대화로 넣은 대사를 생성 문항으로 다시 만들지 않는다."""
+    monkeypatch.undo()
+    G._FORBIDDEN_KEYS = None
+    it = next(x for x in _fixture() if x["line"].startswith("비가 오면 공원"))     # c56과 같은 대사
+    assert G.validate_item(it, it["scene"])[1] == "known_text"
+    G._FORBIDDEN_KEYS = None
 
 
 def test_fixture_items_pass_rules():
@@ -71,13 +90,30 @@ def test_mix_and_ids():
     assert G.scene_for("병원") == "clinic" and G.scene_for("clinic") == "clinic" and G.scene_for("우주") is None
 
 
-def test_avoid_from_list(tmp_path, monkeypatch):
-    p = tmp_path / "avoid.json"
-    p.write_text(json.dumps({"voices": {"f2": {"신분증": [{"against": "신문증"}]}, "m2": {"통장": []}}}, ensure_ascii=False),
-                 encoding="utf-8")
-    monkeypatch.setenv("LISTEN_VOICE_AVOID", str(p))
+def test_avoid_from_list_heard_texts_only(tmp_path, monkeypatch):
+    """피하기 목록은 소리로 들려주는 글(대사·바꾼 말)에만 쓴다. 글로만 보이는 보기 낱말이 목록에 있어도 목소리를 피하지 않는다."""
     it = _fixture()[2]                                  # 보기에 신분증·통장
-    assert G.avoid_from_list(it, ["m1", "f1", "m2", "f2"]) == ["f2"]     # 빈 목록(m2 통장)은 피하지 않는다
+    p = tmp_path / "avoid.json"
+    p.write_text(json.dumps({"voices": {
+        "f2": {"신분증": [{"against": "신문증"}]},                 # 보기 낱말(글로만 보임)
+        "m1": {o: [{"against": "x"}] for o in it["options"]},    # 보기 넷 모두
+        "m2": {it["paraphrase"]: [{"against": "x"}]},             # 들려주는 바꾼 말
+        "f1": {"통장": []}}}, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setenv("LISTEN_VOICE_AVOID", str(p))
+    assert G.avoid_from_list(it, ["m1", "f1", "m2", "f2"]) == ["m2"]
+    assert G.HEARD_FIELDS == ("line", "paraphrase")
+    # 10/15 측정에서 버려졌던 문항(보기 '서랍'이 네 목소리 목록에 있음)도 지금 규칙으로는 피할 목소리가 없다
+    monkeypatch.delenv("LISTEN_VOICE_AVOID")
+    laundry = next(x for x in _fixture() if x["line"].startswith("빨래는"))
+    assert G.avoid_from_list(laundry, ["m1", "f1", "m2", "f2"]) == []
+
+
+def test_repo_avoid_list_has_no_sentence_keys():
+    """저장소 목록의 키는 낱말·음절뿐이라 대화 대사에는 걸리지 않는다(바뀌면 이 시험이 알린다)."""
+    av = L.voice_avoid()
+    assert av and all(" " not in k and len(k) <= 4 for d in av.values() for k in d)
+    heard = {S.normalize_text(c[f]) for c in L.CONVO_ITEMS for f in G.HEARD_FIELDS}
+    assert not heard & {k for d in av.values() for k in d}
 
 
 def _fake_env(tmp, monkeypatch, reject=()):
@@ -89,6 +125,10 @@ def _fake_env(tmp, monkeypatch, reject=()):
     monkeypatch.setenv("LIPLAB_LISTEN_GEN_FIXTURE", FIXTURE)
     monkeypatch.setattr(sound_service, "dynamic_enabled", lambda: True)
     monkeypatch.setattr(sound_service, "_index", None, raising=False)
+    # 고정 목록의 클립은 비운다(목소리만 남김). 대리 문항 일부가 10/15 장면 확대로 미리 합성돼 있어, 비우지 않으면 합성 없이 '있음'이 된다
+    real = sound_service.manifest()
+    empty = {**real, "clips": {}}
+    monkeypatch.setattr(sound_service, "manifest", lambda: empty)
     calls = []
 
     def gen(text, voice):
@@ -187,21 +227,21 @@ with TestClient(main.app) as c:
                                            "agree_terms": True, "age_confirmed": True})
     h = {"Authorization": "Bearer " + r.json()["access_token"]}
     c.post("/api/listen/ling", json={"results": {k: True for k in L.LING_KEYS}, "false_alarms": 0}, headers=h)
-    s0 = c.get("/api/listen/practice/scenario", params={"place": "food"}, headers=h).json()
+    s0 = c.get("/api/listen/practice/scenario", params={"place": "shop"}, headers=h).json()
     out["first"] = [len(s0["items"]), sum(1 for i in s0["items"] if i.get("generated"))]
     for _ in range(100):
         st = c.get("/api/listen/convo-gen/status", headers=h).json()
-        if (st["scenes"].get("food") or {}).get("ready") == 3 and not st["running"]:
+        if (st["scenes"].get("shop") or {}).get("ready") == 3 and not st["running"]:
             break
         time.sleep(0.05)
-    out["status"] = [st["enabled"], st["scenes"].get("food"), st["attempts_today"].get("food")]
-    s1 = c.get("/api/listen/practice/scenario", params={"place": "food"}, headers=h).json()
-    s1b = c.get("/api/listen/practice/scenario", params={"place": "식당"}, headers=h).json()
+    out["status"] = [st["enabled"], st["scenes"].get("shop"), st["attempts_today"].get("shop")]
+    s1 = c.get("/api/listen/practice/scenario", params={"place": "shop"}, headers=h).json()
+    s1b = c.get("/api/listen/practice/scenario", params={"place": "마트"}, headers=h).json()
     out["by_place"] = [len(s1b["items"]), sum(1 for i in s1b["items"] if i.get("generated"))]
     gens = [i for i in s1["items"] if i.get("generated")]
     out["mixed"] = [len(s1["items"]), len(gens), [i["key"][:2] for i in s1["items"][:4]], all("answer" not in i for i in gens)]
     g = gens[0]
-    a = c.post("/api/listen/answer", json={"stage": 5, "item_key": g["key"], "choice": 1, "practice_mode": "scenario"},
+    a = c.post("/api/listen/answer", json={"stage": 5, "item_key": g["key"], "choice": 0, "practice_mode": "scenario"},
                headers=h).json()
     out["ans_practice"] = [a["correct"], a["generated"], a["line"] == g["line"], a["counted"]]
     # 5단계: 생성 문항은 8개 중 2개까지, 답은 숙달에 넣지 않는다
@@ -232,10 +272,15 @@ def _run():
 
 def test_api_flow_generated_items():
     r = _run()
-    assert r["first"] == [4, 0]                               # 처음에는 준비된 생성 문항이 없다(응답은 기다리지 않는다)
+    full = json.loads(subprocess.run([sys.executable, "-c", "import json, listen_curriculum as L; print(json.dumps([c['place'] for c in L.CONVO_ITEMS], ensure_ascii=False))"],
+                                     cwd=HERE, capture_output=True, text=True).stdout)   # 확대 뒤 목록(서버와 같은 것)
+    # 대리 문항 가운데 가게·은행·우체국 셋은 확대 문항(c44~c46)과 대사·바꾼 말이 달라 생성 점검을 통과한다(다른 장면은 일부가 확대 문항과 같다)
+    food = sum(1 for p in full if p in ("은행", "마트", "미용실", "가게", "우체국"))
+    n_sik = sum(1 for p in full if p == "마트")
+    assert r["first"] == [food, 0]                               # 처음에는 준비된 생성 문항이 없다(응답은 기다리지 않는다)
     assert r["status"] == [True, {"ready": 3, "rejected": 0, "pending": 0}, 3]   # 대리 문항이 다 떨어지면 멈춘다
-    assert r["mixed"][0] == 7 and r["mixed"][1] == 3 and r["mixed"][2] == ["c:", "g:", "c:", "g:"] and r["mixed"][3]
-    assert r["by_place"] == [4, 3]                            # 장소 이름(식당, 미리 합성 1개)도 그 장면의 생성 문항을 받는다
+    assert r["mixed"][0] == food + 3 and r["mixed"][1] == 3 and r["mixed"][2] == ["c:", "g:", "c:", "g:"] and r["mixed"][3]
+    assert r["by_place"] == [n_sik + 3, 3]                            # 장소 이름(마트)도 그 장면의 생성 문항을 받는다
     assert r["ans_practice"] == [True, True, True, False]
     assert r["stage5"] == [8, 2]
     assert r["stage5_ans"] == [False, True, True]
