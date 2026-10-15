@@ -90,16 +90,6 @@ loc = A._backbone_location('microsoft/wavlm-large'); p, m = B._load_base(loc, 'c
 print('a4 backbone ok:', loc, m.liplab_quant_from, 'torch', torch.__version__)"; \
     fi
 
-# 서버 실시간 합성(대화 듣기 생성 문항·LLM 시나리오 문장, docs/listen-convo-tts-2026-10.md)은 WITH_SOUND_TTS=1일 때만 넣는다.
-# Supertonic 3(ONNX, 패키지가 고정한 모델 판)을 깔고 모델(약 400MB)을 이미지에 받아 둔다(HF_HUB_OFFLINE=1이라 실행 중에는 받지 않는다).
-# 넣어도 켜지는 것은 아니다. LIPLAB_SOUND_DYNAMIC=1(합성)·LIPLAB_LISTEN_GEN=1(대화 생성)일 때만 쓰고, 켜졌을 때만 예열이 올린다.
-ARG WITH_SOUND_TTS=0
-ENV SUPERTONIC_CACHE_DIR=/app/supertonic3
-RUN if [ "$WITH_SOUND_TTS" = "1" ]; then \
-      pip install --no-cache-dir supertonic==1.3.1 && \
-      python -c "from supertonic import TTS; t = TTS(auto_download=True); print('supertonic ok:', t.model_dir, t.sample_rate)"; \
-    fi
-
 # 파일럿 자료 파기 도구(§4.7) — 서버에서 fly ssh로 실행한다(scripts/pilot_retention.py 머리말)
 COPY scripts/pilot_retention.py ./scripts/pilot_retention.py
 
