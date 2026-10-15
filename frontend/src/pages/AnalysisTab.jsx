@@ -119,7 +119,7 @@ export function TrackLinks({ enabled, navigate }) {
     <section data-track="listen" aria-label="함께 하면 좋은 연습" className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px]">
       <div className="flex flex-col gap-1 leading-figma">
         <p className="text-[16px] font-bold text-ink lg:text-[17px]">함께 하면 좋은 연습</p>
-        <p className="break-keep text-[12px] text-ink-muted lg:text-[13px]">소리와 입모양은 서로 다른 것을 알려 줘요. 한쪽으로 가르기 어려운 소리는 다른 쪽으로 연습해요.</p>
+        <p className="break-keep text-[12px] text-ink-muted lg:text-[13px]">입모양으로 알기 어려운 소리는 듣기로 연습해요. 듣기로 알기 어려운 소리는 입모양으로 연습해요.</p>
       </div>
       {groups.map((g) => (
         <div key={g.key} className="flex flex-col gap-2">

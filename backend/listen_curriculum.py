@@ -1177,11 +1177,11 @@ def recommendations(confusions: Sequence[Dict], k: int = 3, has_practice=None) -
         a, b = _pair_words(slot, t, h)
         head = f"{a} {b} 자주 헷갈려요."
         if same is False:
-            body = " 두 소리는 입모양이 달라요. 입을 함께 보면 가를 수 있어요."
+            body = " 두 소리는 입모양이 달라요. 입을 함께 보면 어느 소리인지 알 수 있어요."
         elif same is True:
             inside = VISEME_MAP.get(t) != VISEME_MAP.get(h)
-            body = (" 두 소리는 입 안쪽에서 나서 입모양으로는 잘 안 보여요. 소리로 가려야 해요." if inside
-                    else " 두 소리는 입모양이 같아요. 소리로만 가를 수 있어요.")
+            body = (" 두 소리는 입 안쪽에서 나서 입모양이 잘 안 보여요. 소리로 알아들어야 해요." if inside
+                    else " 두 소리는 입모양이 같아요. 소리로만 알아들을 수 있어요.")
         else:
             body = " 소리 짝 연습으로 두 소리를 번갈아 들어 보세요."
         spec = f"{slot}:{t}:{h}"
@@ -1225,7 +1225,7 @@ def lipread_to_listen(confusions: Sequence[Dict], k: int = 3, min_n: int = 3, ha
             continue
         a, b = _pair_words(slot, t, h)
         out.append({"pair": [t, h], "slot": slot, "n": n,
-                    "text": f"입모양으로 {a} {b} 자주 헷갈렸어요. 두 소리는 입모양이 거의 같아요. 소리로 가려 듣는 연습을 해 보세요.",
+                    "text": f"입모양으로 {a} {b} 자주 헷갈렸어요. 두 소리는 입모양이 거의 같아요. 소리로 알아듣는 연습을 해 보세요.",
                     "routes": [{"label": "소리 짝 연습", "to": contrast_route(slot, t, h), "track": "listen"}]})
     return out
 
