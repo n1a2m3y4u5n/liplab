@@ -3,6 +3,7 @@
     python judge.py explore A0_DIR BC_DIR OUT.json                 A0(n)·B 지표, 다리, 고르기(PICK)
     python judge.py confirm A1_DIR PICK OUT.json [--n A1N_DIR]     A1(t) 지표와 판정, n은 보고만
     python judge.py s2 A0_DIR A1_DIR BC_DIR CAND OUT.json          고른 후보의 칩 값으로 S2 판정(S2 6절 기준 그대로)
+    python judge.py a2 A2_DIR JOBS OUT.json                        새 538 화자(A2)에서 E1 세 소리 재확인(8절)
     python judge.py export S2_OUT.json APP_JSON                    S2 판정을 통과했을 때만 E1 칩 값용 앱 표(backend/data/phone_reliability_e1.json)
 
 A0_DIR·A1_DIR: offline.py s2의 출력(<후보>/run.0.jsonl), BC_DIR: offline.py dgop의 출력(<후보>/dgop.jsonl). OUT에는 집계만 쓴다.
@@ -264,6 +265,41 @@ def cmd_s2(a0_dir, a1_dir, bc_dir, cand, out_path):
     print("PASS", res["pass"])
 
 
+R3 = ("n:ㅏ", "o:ㄴ", "o:ㄹ")
+
+
+def cmd_a2(a2_dir, jobs_path, out_path):
+    """8절 판정: D1 세 소리 N·A·F(E1), D2 문장 관문(R = 세 소리), D3 E1 대 K 보호 기준."""
+    jobs = {j["clip"]: j for j in (json.loads(l) for l in open(jobs_path, encoding="utf-8"))}
+    res = {"set": "A2", "jobs_sha_note": "build_a2.py", "metrics": {}, "sounds": {}}
+    recs = {c: load(a2_dir, c) for c in ("K", "E1")}
+    for c in ("K", "E1"):
+        mt, _raw = metrics(recs[c], jobs)
+        res["metrics"][c] = r4(mt)
+    for c in ("K", "E1"):
+        pos, neg, aneg, _fp, _fn, err = S2.per_set(recs[c], jobs, "A2")
+        boot = S2.Boot({r["spk"] for r in recs[c] if "error" not in r})
+        st = S2.sound_stats(pos, neg, boot, aneg)
+        res["sounds"][c] = {t: st.get(t) for t in R3}
+        res["errors_" + c] = err
+    d1 = {t: S2.passes_naf(res["sounds"]["E1"][t] or {}) for t in R3}
+    reds = S2.sentence_reds(recs["E1"], jobs, set(R3), "A2")
+    gate = {"definite_red_per_sentence": round(float(np.mean(reds)), 3), "sentences": len(reds),
+            "sub_detection": S2.sub_detection(recs["E1"], jobs, set(R3), "A2")}
+    d3 = protective(res["metrics"]["E1"], res["metrics"]["K"])
+    res.update({"D1": {t: (ok, why) for t, (ok, why) in d1.items()}, "D2": gate, "D3_fail": d3})
+    res["pass"] = bool(all(ok for ok, _ in d1.values()) and gate["definite_red_per_sentence"] <= 1.0 and not d3)
+    res["passing_sounds"] = [t for t, (ok, _) in d1.items() if ok]
+    json.dump(res, open(out_path, "w"), ensure_ascii=False, indent=1)
+    for c in ("K", "E1"):
+        m = res["metrics"][c]
+        print(c, {x: m.get(x) for x in ("M1_tail", "M2_fr", "M3_auc", "M4_detect", "M5_omission", "fr_by_sound_median", "red_per_sentence", "n_pos")})
+        for t in R3:
+            d = res["sounds"][c][t] or {}
+            print("  ", t, {x: d.get(x) for x in ("n_pos", "n_neg", "spk_pos", "spk_neg", "auc", "auc_ci", "fr", "fr_ci")})
+    print("D1", res["D1"]); print("D2", gate); print("D3", d3); print("PASS", res["pass"])
+
+
 def cmd_export(res_path, app_json):
     res = json.load(open(res_path, encoding="utf-8"))
     if not res.get("pass") or res.get("include_final"):
@@ -299,5 +335,7 @@ if __name__ == "__main__":
         cmd_confirm(args[0], args[1], args[2], n_dir)
     elif cmd == "s2":
         cmd_s2(*sys.argv[2:7])
+    elif cmd == "a2":
+        cmd_a2(*sys.argv[2:5])
     elif cmd == "export":
         cmd_export(*sys.argv[2:4])

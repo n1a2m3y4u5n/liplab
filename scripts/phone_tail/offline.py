@@ -27,7 +27,7 @@ import dgop_acoustic as DA  # noqa: E402
 import jamo_vocab as JV  # noqa: E402
 import chipval as CV  # noqa: E402
 
-VOCAB_PATH = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab/models/dgop_ours_2026-09-25_int8/aligner/vocab.json")
+VOCAB_PATH = os.environ.get("PT_VOCAB") or os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab/models/dgop_ours_2026-09-25_int8/aligner/vocab.json")
 VOCAB = json.load(open(VOCAB_PATH, encoding="utf-8"))
 INS_ONSETS = "ㄱㄴㄷㅁㅂㅅㅈ"
 INS_NUCLEI = "ㅏㅓㅗㅜㅣ"
