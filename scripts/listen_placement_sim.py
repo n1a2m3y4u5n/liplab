@@ -2,7 +2,7 @@
 
 청취자는 기존 소음 속 듣기 시뮬레이션(scripts/listen_adaptive_sim.py 2.1~2.3절)과 같은 집단·SRT·기울기를 갖고, 조용한 곳 능력 z와
 과제별 편차(소리 구별 d_a, 낱말 d_w)를 연결 가정(3.2절)으로 더한다. 소음 속 문장의 난이도는 V1(docs/listen-virtual-listener-2026-10.json)의
-배치검사 문장 풀 SRT40이다. 채점은 앱과 같은 backend/listen_placement.py다.
+배치검사 문장 풀 SRT40이다. 채점 모형은 scripts/listen_placement_model.py다(사전 등록 4.3~4.4절, 앱에는 넣지 않음).
 
 사용:
   python scripts/listen_placement_sim.py explore --seed 0 --n 2000 --out docs/listen-placement-explore-seed0.json
@@ -18,8 +18,8 @@ import numpy as np
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_HERE)
-sys.path.insert(0, os.path.join(_ROOT, "backend"))
-import listen_placement as LP  # noqa: E402
+sys.path.insert(0, _HERE)
+import listen_placement_model as LP  # noqa: E402  (scripts/, 채점 모형)
 
 # 4.2절 풀(V1 번호)과 목소리 보정(사전 등록 값)
 POOL = ["t002", "t003", "t004", "t009", "t011", "t012", "t014", "t023", "t029", "t042", "t076", "t087", "t092"]
