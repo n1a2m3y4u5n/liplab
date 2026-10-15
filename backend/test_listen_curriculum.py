@@ -291,7 +291,8 @@ def test_word_score_and_recommendations():
     assert conf[0] == {"slot": "onset", "target": "ㅂ", "heard": "ㅍ", "n": 2}
     recs = L.recommendations(conf)
     assert recs[0]["lip_differs"] is False                                  # ㅂ·ㅍ는 입모양이 같다
-    assert recs[1]["lip_differs"] is True                                   # ㄷ·ㄱ는 입모양 무리가 다르다
+    # ㄷ·ㄱ는 무리 번호는 다르지만 둘 다 입 안쪽이라 독화 트랙 규칙으로 가를 수 없다(10/15, docs/listen-cross-track-2026-10.md 2절)
+    assert recs[1]["lip_differs"] is False and "입 안쪽" in recs[1]["text"]
 
 
 def test_inventory_texts():
@@ -748,3 +749,46 @@ def test_contrast_catalog_carries_avoid_voices():
     for k in kinds:
         for p in k["pairs"]:
             assert p["avoid_voices"] == L.avoid_voices_ax(p["a"], p["b"])
+
+
+# ── 트랙 잇기(10/15, docs/listen-cross-track-2026-10.md) ─────────────────────────────
+
+def test_looks_same_matches_lipreading_rule():
+    """입모양으로 가를 수 없는 짝: 같은 무리이거나 둘 다 입 안쪽 무리(scoring._INSIDE_VISEMES와 같은 집합)."""
+    import scoring
+    assert L._INSIDE_VISEMES == scoring._INSIDE_VISEMES
+    assert L.looks_same("onset", "ㅂ", "ㅍ") is True and L.looks_same("onset", "ㄷ", "ㄱ") is True
+    assert L.looks_same("onset", "ㅂ", "ㄷ") is False and L.looks_same("vowel", "ㅓ", "ㅗ") is False
+    assert L.looks_same("coda", "ㄴ", "-") is None and L.looks_same("onset", "ㅇ", "ㄱ") is None
+    # 독화 오답 설명(scoring.viseme_confusions)과 같은 판정
+    for t, c in (("달", "갈"), ("불", "풀"), ("발", "달"), ("섬", "점")):
+        vc = scoring.viseme_confusions(t, c)[0]
+        assert L.looks_same("onset", vc["target"], vc["read"]) is vc["same_viseme"]
+
+
+def test_recommendations_routes():
+    """입모양이 다른 짝: 입모양 보기(그 무리 학습 자료) + 소리 짝 연습. 같은 짝: 소리 짝 연습만. 말하기 길은 없다."""
+    r_vis, r_same = L.recommendations([{"slot": "onset", "target": "ㅂ", "heard": "ㄷ", "n": 3},
+                                       {"slot": "onset", "target": "ㅂ", "heard": "ㅁ", "n": 2}])
+    assert [x["label"] for x in r_vis["routes"]] == ["입모양 보기", "소리 짝 연습"]
+    assert r_vis["routes"][0]["to"] == "/learn/viseme?v=1"
+    assert [x["label"] for x in r_same["routes"]] == ["소리 짝 연습"]
+    from urllib.parse import unquote
+    assert unquote(r_same["routes"][0]["to"]) == "/listen/practice/contrast?contrast=onset:ㅂ:ㅁ"
+    assert L.parse_contrast(unquote(r_same["routes"][0]["to"]).split("=", 1)[1])
+    assert not any("speaking" in x["to"] for r in (r_vis, r_same) for x in r["routes"])
+    # 문항이 없는 짝은 소리 짝 연습 길을 뺀다
+    r = L.recommendations([{"slot": "onset", "target": "ㅂ", "heard": "ㅁ", "n": 2}], has_practice=lambda spec: False)[0]
+    assert r["routes"] == []
+
+
+def test_lipread_to_listen():
+    """독화 혼동 가운데 입모양이 같은 짝만, 3번 이상, 많은 순으로 소리 짝 연습을 권한다. 받침은 대표음으로 모은다."""
+    c = lambda pos, t, r, same=True: {"position": pos, "target": t, "read": r, "same_viseme": same}
+    conf = [c("초성", "ㅂ", "ㅁ")] * 4 + [c("초성", "ㄷ", "ㄱ")] * 3 + [c("초성", "ㅂ", "ㄷ", False)] * 9 \
+        + [c("초성", "ㅅ", "ㅈ")] * 2 + [c("종성", "ㅅ", "ㄷ")] * 5 + [c("중성", "ㅏ", "ㅑ")] * 3
+    out = L.lipread_to_listen(conf)
+    assert [(o["slot"], o["pair"], o["n"]) for o in out] == [("onset", ["ㅂ", "ㅁ"], 4), ("onset", ["ㄷ", "ㄱ"], 3), ("vowel", ["ㅏ", "ㅑ"], 3)]
+    assert all(o["routes"][0]["label"] == "소리 짝 연습" for o in out)
+    assert L.lipread_to_listen(conf, has_practice=lambda s: not s.startswith("vowel"))[-1]["pair"] == ["ㄷ", "ㄱ"]
+    assert L.lipread_to_listen([{"position": "초성"}, None, "x"]) == []

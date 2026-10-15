@@ -24,6 +24,7 @@ import { speakTrendView } from '../lib/speakTrend'
  * 값은 overview의 listen 칸을 쓰고, 그 칸이 아직 없으면 /api/listen/summary에서 계산한다(lib/listenFlow.listenOverview).
  * 듣기 기록이 하나도 없으면 칸을 그리지 않는다(독화·발화만 하는 학습자 화면을 늘리지 않게).
  * 10/9: '말하기 문장 점수' 줄(주 평균, 참고 · 기계 채점 기준)을 더했다. 값은 overview의 speak_trend(lib/speakTrend), 합격·숙달에는 쓰지 않는다.
+ * 10/15: 소리 듣기 칸 아래 '함께 하면 좋은 연습'(TrackLinks, 소리 듣기 ↔ 독화)을 더했다.
  */
 
 // 스탯 워터마크(326:33/36/41 · 모바일 326:83/86/91) — 회전 -20°, 오른쪽 위로 걸쳐 잘림
@@ -92,6 +93,50 @@ function ListenSummary({ ov, onOpen }) {
           </div>
         ))}
       </div>
+    </section>
+  )
+}
+
+/**
+ * 함께 하면 좋은 연습(트랙 잇기, GET /api/listen/links, docs/listen-cross-track-2026-10.md). 소리 듣기에서 자주 헷갈린 소리 짝은 입모양이 다르면
+ * 입모양 보기와 소리 짝 연습을, 같으면 소리 짝 연습을 권한다. 독화에서 입모양이 같아 헷갈린 짝은 소리 짝 연습을 권한다.
+ * 소리 듣기를 시작한 학습자에게만 그리고(listen_started), 권할 것이 없으면 그리지 않는다.
+ */
+export function TrackLinks({ enabled, navigate }) {
+  const [d, setD] = useState(null)
+  useEffect(() => {
+    if (!enabled) return undefined
+    let on = true
+    listenAPI.links().then((x) => { if (on) setD(x) }).catch(() => {})
+    return () => { on = false }
+  }, [enabled])
+  const groups = [
+    { key: 'listen', title: '소리 듣기에서 헷갈린 소리', items: d?.from_listen || [] },
+    { key: 'read', title: '독화에서 헷갈린 입모양', items: d?.from_lipread || [] },
+  ].filter((g) => g.items.length)
+  if (!enabled || !d?.listen_started || !groups.length) return null
+  return (
+    <section data-track="listen" aria-label="함께 하면 좋은 연습" className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px]">
+      <div className="flex flex-col gap-1 leading-figma">
+        <p className="text-[16px] font-bold text-ink lg:text-[17px]">함께 하면 좋은 연습</p>
+        <p className="break-keep text-[12px] text-ink-muted lg:text-[13px]">입모양으로 알기 어려운 소리는 듣기로 연습해요. 듣기로 알기 어려운 소리는 입모양으로 연습해요.</p>
+      </div>
+      {groups.map((g) => (
+        <div key={g.key} className="flex flex-col gap-2">
+          <p className="text-[13px] font-bold text-ink-muted">{g.title}</p>
+          {g.items.map((r) => (
+            <div key={`${g.key}${r.slot}${r.pair.join('')}`} className="flex flex-col gap-2.5 rounded-14 bg-surface-sunken p-4">
+              <p className="break-keep text-[14px] leading-[1.6] text-ink">{r.text}</p>
+              <div className="flex flex-wrap gap-2">
+                {(r.routes || []).map((x) => (
+                  <button key={x.to} type="button" onClick={() => navigate(x.to)}
+                    className={`btn-secondary min-h-[44px] px-3.5 py-2 text-[13px] ${x.track === 'perception' ? 'text-primary-700' : 'text-listen-dark'}`}>{x.label}</button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
     </section>
   )
 }
@@ -288,6 +333,7 @@ export default function AnalysisTab() {
       <ChartCard title="정확도 변화"><LineChart weeks={weeks} /></ChartCard>
       <SpeakTrend ov={ov} />
       <ListenSummary ov={ov} onOpen={() => navigate('/analysis/listening')} />
+      <TrackLinks enabled={!!ov?.listen} navigate={navigate} />
 
       <div className="flex w-full flex-col gap-[9px] lg:flex-row lg:gap-3">
         <DetailLink label="활동 캘린더" onClick={() => setModal('calendar')} />

@@ -195,7 +195,8 @@ export default function ListeningReport() {
                       <p className="break-keep text-[14px] leading-[1.6] text-ink">{r.text}</p>
                       <div className="flex flex-wrap gap-2">
                         {r.routes.map((x) => (
-                          <button key={x.to} type="button" onClick={() => navigate(x.to)} className="btn-secondary min-h-[44px] px-3.5 py-2 text-[13px] text-track-dark">{x.label}</button>
+                          <button key={x.to} type="button" onClick={() => navigate(x.to)}
+                            className={`btn-secondary min-h-[44px] px-3.5 py-2 text-[13px] ${x.track === 'perception' ? 'text-primary-700' : 'text-track-dark'}`}>{x.label}</button>
                         ))}
                       </div>
                     </div>
