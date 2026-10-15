@@ -3,6 +3,7 @@
     python judge.py explore A0_DIR BC_DIR OUT.json                 A0(n)·B 지표, 다리, 고르기(PICK)
     python judge.py confirm A1_DIR PICK OUT.json [--n A1N_DIR]     A1(t) 지표와 판정, n은 보고만
     python judge.py s2 A0_DIR A1_DIR BC_DIR CAND OUT.json          고른 후보의 칩 값으로 S2 판정(S2 6절 기준 그대로)
+    python judge.py export S2_OUT.json APP_JSON                    S2 판정을 통과했을 때만 E1 칩 값용 앱 표(backend/data/phone_reliability_e1.json)
 
 A0_DIR·A1_DIR: offline.py s2의 출력(<후보>/run.0.jsonl), BC_DIR: offline.py dgop의 출력(<후보>/dgop.jsonl). OUT에는 집계만 쓴다.
 """
@@ -263,6 +264,27 @@ def cmd_s2(a0_dir, a1_dir, bc_dir, cand, out_path):
     print("PASS", res["pass"])
 
 
+def cmd_export(res_path, app_json):
+    res = json.load(open(res_path, encoding="utf-8"))
+    if not res.get("pass") or res.get("include_final"):
+        sys.exit("판정 미통과이거나 끝 음절 포함 판(보고만): 앱 표를 쓰지 않는다")
+    a0, a1 = res["sets"]["A0"]["sounds"], res["sets"]["A1"]["sounds"]
+    sounds = {}
+    for tok, row in res["decision_table"].items():
+        d, e, k = a1.get(tok, {}), a0.get(tok, {}), res["kappa"].get(tok, {})
+        sounds[tok] = {"reliable": row["reliable"], "auc": d.get("auc"), "auc_ci": d.get("auc_ci"), "false_red": d.get("fr"),
+                       "false_red_ci": d.get("fr_ci"), "explore_auc": e.get("auc"), "explore_false_red": e.get("fr"),
+                       "n_pos": d.get("n_pos"), "n_neg": d.get("n_neg"), "kappa": k.get("kappa"), "retest_agree": k.get("po"),
+                       "n_retest": k.get("n_pair")}
+    out = {"version": "2026-10-15", "chip_value": res["cand"],
+           "source": "docs/phone-tail-2026-10.md (S2를 칩 값 E1로 다시 잼). 538 인위 치환(탐색 58명·확인 21명)·608 짝 세션 재검사의 소리별 집계값만 담는다.",
+           "rule": "reliable = 탐색·확인 모두 AUC ≥ 0.80(하한 ≥ 0.70)·거짓 빨강 ≤ 10%·표본 기준, 재검사 카파 ≥ 0.40(E1 칩 값)",
+           "final_syllable": "reference", "reliable": res["reliable"], "system_gate": res["system_gate"], "sounds": sounds}
+    json.dump(out, open(app_json, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    open(app_json, "a").write("\n")
+    print("EXPORT_OK", app_json, res["reliable"])
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1]
     if cmd == "explore":
@@ -277,3 +299,5 @@ if __name__ == "__main__":
         cmd_confirm(args[0], args[1], args[2], n_dir)
     elif cmd == "s2":
         cmd_s2(*sys.argv[2:7])
+    elif cmd == "export":
+        cmd_export(*sys.argv[2:4])

@@ -456,7 +456,18 @@ def phone_confidences(waveform, sample_rate: int, target_tokens: Sequence[str],
         target_prob = dist[score_vocab[token]]
         results.append({"token": token, "aligned": True, "scorable": scorable, **timing,
                         **_dgop.dgop_phone(target_prob, dist)})
+        _add_chip_value(results[-1], score_lp, score_vocab[token], span)
     return results
+
+
+def _add_chip_value(phone: Dict, score_lp, token_id: int, span: Dict) -> None:
+    """DGOP_CHIP_VALUE=E1일 때만 칩 값(`chip`)을 붙인다. 문장 점수(dgop·naive)는 그대로다(docs/phone-tail-2026-10.md, phone_chip_value)."""
+    import phone_chip_value as _pcv
+    if _pcv.mode() != "E1":
+        return
+    lo, hi = max(0, span["start"] - 1), min(int(score_lp.shape[0]) - 1, span["end"] + 1)
+    probs = torch.softmax(score_lp[lo:hi + 1], dim=-1)
+    phone["chip"] = _pcv.e1(probs, token_id, span["start"] - lo, span["end"] - lo, phone["naive"])
 
 
 def _is_jamo_vocab(vocab: Dict[str, int]) -> bool:

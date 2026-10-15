@@ -10,8 +10,8 @@ import { scoreLevel, scoreTone } from './scoreTone.js'
 // 참고 칩: 중립 회색. 색 체계(초록·주황·빨강 + 회색)를 늘리지 않고 은은하게 둔다.
 const REFERENCE = { level: 'reference', text: 'text-ink-faint', chip: 'border-line bg-surface-muted text-ink-faint', color: 'var(--ink-faint)' }
 
-/** 칩 표시 값(0~100): Math.round(dgop × 100). */
-export const phoneValue = (p) => Math.round((p?.dgop ?? 0) * 100)
+/** 칩 표시 값(0~100): Math.round(chip × 100). 서버가 칩 값 보정(DGOP_CHIP_VALUE=E1, docs/phone-tail-2026-10.md)을 켜면 chip을, 아니면 dgop을 쓴다. */
+export const phoneValue = (p) => Math.round((p?.chip ?? p?.dgop ?? 0) * 100)
 
 /** 음소 하나의 칩 색. reliable === false면 참고(회색), 그 밖(true 또는 표 없음)은 점수 색. */
 export function phoneTone(p) {
