@@ -163,3 +163,29 @@
 ## 측정 전 변경 기록
 
 (없음)
+
+## 9. 진행 상태와 다음 순서(2026-10-15 22:00, 사용자 지시로 중단)
+
+### 9.1 한 것
+
+- 받기 전 선택 규칙(8a02f948), 후보·기준 사전 등록(4c10d9b5), 집계 스크립트(결과 보기 전), 탐색 결과 고정(6.4절, frozen.json)까지 커밋했다.
+- 범주 27 두 번째 묶음 받기는 19:31에 시작해 21:58에 사용자 지시로 멈췄다. 약 34 GB를 흘려받았지만 고른 화자는 48 GB 지점부터라 **저장된 세션은 0개**다
+  (`liplab-lab/data/hi608/c27/b2/flac16/` 비어 있음). 서버 속도는 2~7 MB/s로 10/9(약 8.5 MB/s)보다 느렸다.
+- 확인 파드는 띄우지 않았다. 확인 판정(6절)은 아직 없다. 앱 코드는 바꾸지 않았다.
+
+### 9.2 다음에 이어서 할 순서
+
+1. **시작 조건**: `pgrep -fl "aihub|fetch608|v7b_|538.do|dl_more|v1_dl"`가 비어 있을 것(AI Hub는 IP당 한 세션), 맥 여유 9 GB 이상, 맥 부하가 낮을 때.
+2. **받기**(회선 위주, 맥 CPU 거의 안 씀. FLAC 변환은 `nice -n 15` ffmpeg, 필요하면 `renice -n 20`):
+   `cd ~/Downloads/LIPLAB_ALL/liplab-lab && mkdir -p data/hi608/c27/b2 && nohup caffeinate -i python3 tools/fetch608_c27b.py >> data/hi608/c27/b2/fetch.log 2>&1 &`.
+   범위 요청이 안 돼 처음부터 약 93 GB를 흘려받는다. 2~7 MB/s면 4~13시간, 10/9 속도면 약 3시간. 끊기면 같은 명령으로 다시 시작한다(받은 FLAC은 건너뛰지만 흐름은 처음부터).
+   선택 규칙은 2절 그대로(59명 108세션)이며 바꾸지 않는다.
+3. **확인 파드**(맥에서 계산하지 않음): `bash scripts/scoring_rules/session_sr.sh stage confirm` → `bash scripts/scoring_rules/session_sr.sh launch confirm`.
+   시작 전 `pod.sh status`로 잔액 5달러 이상 확인. 파드에서 large-v3 자르기(108세션) → 고르기·짝(`feat_pod.py b2jobs`) → 특성(범주 27 두 번째 묶음,
+   538·범주 28 절반 1). 예상 L40S·A40 약 1시간, 0.5~1달러(탐색 파드는 1,769클립 특성에 16분). 끝나면 결과를 받고 terminate한다(세션 스크립트가 함께 한다).
+   `backend`·`scripts/scoring_rules`에 커밋 안 된 변경이 있으면 stage가 멈춘다(확인은 탐색과 같은 backend로 해야 한다).
+4. **판정 집계**: `python scripts/scoring_rules/analyze.py confirm <feat_confirm.jsonl> <feat_b2.jsonl> OUT.json`(frozen.json을 읽는다). 맥 CPU를 쓰지 말라는
+   지시가 있으면 run_sr.sh 끝에 이 명령을 붙여 파드에서 돌린다(frozen.json과 10/9 ns `dgop_new.jsonl`을 묶음에 넣어야 다리 점검이 된다).
+5. **판정과 처리**: G-LR(al, S) λ −5.0633으로 6.1절 GJ1~GJ4, 다리(6.3절), 최소 자료(20명·자기 문장 300개). 통과하면 7절대로 `LIPLAB_SPEAK_GATE`(기본 꺼짐) 뒤에
+   구현한다. 정렬기 로그 확률과 목표 토큰열은 `dgop_acoustic.phone_confidences`에 이미 있어 CTC 손실 한 번과 프레임별 최댓값 합만 더하면 된다.
+   테스트는 바꾼 파일 관련 것만 돌리고 `scripts/scoring_regress.py --quick`으로 보고한다. H(0.9, 1)는 보고만 한다(실패(탐색)).
