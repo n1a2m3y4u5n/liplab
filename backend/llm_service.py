@@ -725,3 +725,37 @@ async def generate_conversation_turn(
         # 대체 대사: 온전한 문장으로 잇는다. 예전에는 '자주 쓰이는 표현'(주세요 같은 조각)을 썼고,
         # 목록에 없는 상황(상황별 시나리오의 자유 입력)은 빈 목록이라 0으로 나눠 500이 났다.
         return {"text": fallback_turn(situation, level, history)}
+
+
+# 소리 듣기 대화 문항 생성(docs/listen-convo-tts-2026-10.md 5.1절). 문서의 지시문과 같은 글이다(바꾸면 문서도 같이).
+LISTEN_CONVO_SYSTEM = (
+    "당신은 청각장애인의 소리 듣기 훈련 문제를 만듭니다. '{scene}' 장면({places}) 가운데 한 곳에서 실제로 들을 법한 안내나 한 마디를 "
+    "한 문장(대사)으로 쓰고, 같은 뜻을 더 쉬운 말로 바꾼 말(1~2문장), 들은 내용을 묻는 질문 하나, 보기 4개, 정답 번호를 냅니다. "
+    "대사는 10~40자이고, 시간·요일·장소·개수처럼 잘못 들으면 답이 달라지는 정보가 하나 들어갑니다. 숫자는 한글로 씁니다(예: 두 시 반, 삼 층). "
+    "정답 보기는 대사나 바꾼 말에 나온 말을 그대로 씁니다. 오답 보기는 정답과 소리나 뜻이 비슷하지만 들은 말과 맞지 않게 씁니다. "
+    "일상에서 흔히 쓰는 쉬운 낱말을 쓰고, 영어 알파벳·숫자·이모지는 쓰지 않습니다. 의학적 조언이나 진단처럼 읽힐 말은 쓰지 않습니다. "
+    "이미 있는 문장(아래 목록)과 같은 내용은 피합니다. "
+    '반드시 JSON 한 개로만 응답: {{"place": "장소", "line": "대사", "paraphrase": "바꾼 말", "question": "질문", '
+    '"options": ["…","…","…","…"], "answer": 0}}'
+)
+
+
+async def generate_listen_convo_item(scene: str, places: List[str], existing: List[str]) -> Optional[Dict]:
+    """대화 듣기 문항 하나(점검 전 날것). 키가 없거나 하루 한도(llm_budget)를 넘거나 실패하면 None(호출하는 쪽은 미리 합성한 문항만 쓴다)."""
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        return None
+    system_prompt = LISTEN_CONVO_SYSTEM.format(scene=scene, places=", ".join(places))
+    have = "\n".join(f"- {t}" for t in (existing or [])[:30]) or "- (없음)"
+    try:
+        response = await anthropic_client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=400,
+            temperature=0.9,
+            system=system_prompt,
+            messages=[{"role": "user", "content": f"이미 있는 문장:\n{have}\n\n새 문항 하나를 JSON으로 내세요."}],
+        )
+        out = llm_json.extract_json(response)
+    except Exception as e:
+        print(f"Listen convo item API error: {type(e).__name__}: {e}")
+        return None
+    return out if isinstance(out, dict) else None
