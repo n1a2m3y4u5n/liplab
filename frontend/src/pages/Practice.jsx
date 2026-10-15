@@ -139,7 +139,7 @@ function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, effort }) {
       <span className="relative size-[140px] shrink-0">
         <img src="/ui/lp-93-12-mascot.svg" alt="" className="absolute max-w-none" style={OVERFLOW} />
       </span>
-      <h1 className="text-center text-[38px] font-bold leading-figma tracking-[-0.95px] text-ink">레슨 완료!</h1>
+      <h1 className="text-center text-[38px] font-bold leading-figma tracking-[-0.95px] text-ink">레슨을 마쳤어요!</h1>
 
       <div className="flex w-full max-w-[640px] gap-3.5 py-2">
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-percent.svg', size: 115.2, top: -45.83, right: -43.82 }}>
@@ -147,7 +147,7 @@ function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, effort }) {
           <p className={`${STAT_VALUE} text-primary-700`}>{accuracy == null ? '-' : `${accuracy}%`}</p>
         </WatermarkCard>
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-xp.svg', size: 157.945, top: -76, right: -71.44 }}>
-          <p className={STAT_LABEL}>획득 XP</p>
+          <p className={STAT_LABEL}>받은 경험치</p>
           <p className={`${STAT_VALUE} text-warn-text`}>+{xp}</p>
         </WatermarkCard>
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-clock.svg', size: 115.2, top: -45.83, right: -43.82 }}>
@@ -161,7 +161,7 @@ function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, effort }) {
 
       <div className="flex w-full max-w-[640px] flex-col gap-2.5 lg:gap-3">
         <button type="button" onClick={onNext} className={`btn-primary btn-lg ${DONE_BTN}`}>다음 레슨으로</button>
-        <button type="button" onClick={onHome} className={`btn-secondary btn-lg text-track ${DONE_BTN}`}>커리큘럼으로 돌아가기</button>
+        <button type="button" onClick={onHome} className={`btn-secondary btn-lg text-track ${DONE_BTN}`}>학습 화면으로 돌아가기</button>
       </div>
     </div>
   )
@@ -518,7 +518,7 @@ export default function Practice() {
       {loading ? (
         <div className="flex flex-col items-center justify-center gap-3 py-16">
           <div className="spinner size-10 rounded-full border-4 border-primary-200 border-t-primary-600" />
-          <p className="text-sm text-ink-muted">Viseme 생성 중...</p>
+          <p className="text-sm text-ink-muted">입모양을 만들고 있어요…</p>
         </div>
       ) : (
         <LipSyncPlayer3D visemes={shownVisemes} isPlaying={isPlaying} onComplete={() => setIsPlaying(false)}
@@ -547,15 +547,15 @@ export default function Practice() {
             <p className="text-[12px] font-bold text-track lg:text-[13px]">{currentScenario.situation}</p>
             <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">{questionTitle}</h1>
             <BookmarkButton active={isBookmarked} onToggle={toggleBookmark}
-              label={isBookmarked ? '이 문장 북마크 해제' : '이 문장 북마크 저장'}
+              label={isBookmarked ? '이 문장 북마크 해제' : '이 문장 북마크하기'}
               className="absolute right-0 top-[14px] lg:top-[21px]" />
           </div>
 
           {/* 입모양을 받지 못했을 때: 이전 문장 입모양은 비운 채 다시 받기를 둔다(문항 상태는 그대로) */}
           {visemeError && (
             <div role="alert" className="flex items-center justify-between gap-3 rounded-14 border-2 border-bad-line bg-bad-tint px-4 py-2.5 text-[13.5px] font-bold text-bad-text">
-              입모양을 불러오지 못했어요.
-              <button type="button" onClick={fetchVisemes} className="shrink-0 underline">다시 불러오기</button>
+              입모양을 가져오지 못했어요.
+              <button type="button" onClick={fetchVisemes} className="shrink-0 underline">다시 가져오기</button>
             </div>
           )}
 
@@ -607,7 +607,7 @@ export default function Practice() {
                   <p>3. 충분히 익혔으면 다음 문장으로 넘어가세요.</p>
                 </div>
                 <button type="button" onClick={handleNext} className="btn-primary w-full">
-                  {isLastSentence ? '학습 완료' : '익혔어요, 다음 문장 →'}
+                  {isLastSentence ? '학습 마치기' : '익혔어요, 다음 문장 →'}
                 </button>
               </div>
             </>
@@ -668,11 +668,11 @@ export default function Practice() {
                     <div className="mb-3"><SoundReplayBar sound={sound} replay={replay} /></div>
                     {result.streak_count > 1 && (
                       <p className="mb-2 text-center text-sm font-bold text-stat-streak">
-                        {result.streak_count}일째 연속 학습 중! +{Math.round((result.streak_multiplier - 1) * 100)}% 보너스 XP
+                        {result.streak_count}일째 연속 학습 중! 경험치를 {Math.round((result.streak_multiplier - 1) * 100)}% 더 받아요
                       </p>
                     )}
                     <button type="button" onClick={handleNext} className="btn-primary w-full">
-                      {isLastSentence ? '완료' : '다음 문장 →'}
+                      {isLastSentence ? '마치기' : '다음 문장 →'}
                     </button>
                   </motion.div>
                 )}

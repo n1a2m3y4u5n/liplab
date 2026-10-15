@@ -343,7 +343,7 @@ function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, effort }) {
           <p className={`${STAT_VALUE} text-primary-700`}>{accuracy}%</p>
         </WatermarkCard>
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-xp.svg', size: 157.945, top: -76, right: -71.44 }}>
-          <p className={STAT_LABEL}>받은 XP</p>
+          <p className={STAT_LABEL}>받은 경험치</p>
           <p className={`${STAT_VALUE} text-warn-text`}>+{xp}</p>
         </WatermarkCard>
         <WatermarkCard className={STAT_CARD} deco={{ src: '/ui/lp-93-12-deco-clock.svg', size: 115.2, top: -45.83, right: -43.82 }}>
@@ -357,7 +357,7 @@ function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, effort }) {
 
       <div className="flex w-full max-w-[640px] flex-col gap-2.5 lg:gap-3">
         <button type="button" onClick={onNext} className={`btn-primary btn-lg ${DONE_BTN}`}>다음 레슨으로</button>
-        <button type="button" onClick={onHome} className={`btn-secondary btn-lg text-track ${DONE_BTN}`}>커리큘럼으로 돌아가기</button>
+        <button type="button" onClick={onHome} className={`btn-secondary btn-lg text-track ${DONE_BTN}`}>학습 화면으로 돌아가기</button>
       </div>
     </div>
   )
