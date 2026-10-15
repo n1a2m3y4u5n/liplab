@@ -42,7 +42,8 @@ from engine import VISEME_MAP, decompose_hangul, to_pronounced_syllables
 from korean_numbers import normalize_numbers
 from scoring import VISUAL_SAME_GROUP, VISUAL_WEIGHTS, _strip_separators
 
-SCORER_VERSION = "strict-v1"
+# strict-v2(2026-10-15): 사람 채점 규칙 R9('모름'은 0점)를 넣었다. 그 밖의 결과는 strict-v1과 같다(test_phoneme_accuracy가 확인).
+SCORER_VERSION = "strict-v2"
 LOOSE_JAMO_MODES = ("drop", "compose")
 
 _CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
@@ -64,6 +65,16 @@ _REPRESENTATIVE = {
     "ㅂ": "ㅂ", "ㅍ": "ㅂ", "ㄿ": "ㅂ", "ㅄ": "ㅂ",
 }
 _TARGET_SPLIT = re.compile(r"[\s\W_]+")
+# '모름' 류 답(R9). 답 전체가 이 말뿐이고 정답 문장 안에 같은 말이 없을 때만 빈 답으로 본다("몰라요"가 정답이면 그대로 채점)
+_DONT_KNOW = re.compile(r"^(잘)?(모름|모르겠(어요|어|음|다|네요|습니다)?|몰라(요)?|모르다)$")
+
+
+def is_dont_know(answer: str, target: str = "") -> bool:
+    """답이 '모름'·'모르겠어요'·'몰라요' 같은 말뿐인가(공백·문장 부호 무시). 정답 문장에 그 말이 들어 있으면 거짓."""
+    a = _TARGET_SPLIT.sub("", unicodedata.normalize("NFC", answer or ""))
+    if not a or not _DONT_KNOW.match(a):
+        return False
+    return a not in _TARGET_SPLIT.sub("", unicodedata.normalize("NFC", target or ""))
 
 Syl = Tuple[Optional[str], Optional[str], Optional[str]]   # (초성, 중성, 종성). 무음 초성·받침 없음은 '', 친 적 없는 자리는 None
 
@@ -311,11 +322,13 @@ def strict_phoneme_accuracy(target: str, answer: str, *, loose_jamo: str = "drop
     - visual_phoneme_accuracy: 같거나 같은 입모양 무리인 정답 음소 / 정답 음소(보조)
     - n_extra_syllables: 정답과 짝짓지 못한 답 음절 수(덧붙인 말, 감점하지 않음)
     - n_loose_jamo: 답에 있던 완성되지 않은 낱자 수(drop이면 버림, compose면 합침)
+    - dont_know: 답이 '모름'·'모르겠어요' 같은 말뿐이라 빈 답으로 채점했는지(R9, strict-v2)
     - alignment: 어절마다 {word, key(정답 발음열), answer(짝지은 답 음절, 못 짝지은 자리는 '-'), n, matched, correct}
     회차 점수는 문장 비율의 평균이 아니라 n_matched_phonemes 합 / n_target_phonemes 합으로 낸다(문서 3절).
     """
     words, tsyl = target_syllables(target, sound_rules=sound_rules)
-    usyl, n_loose = answer_syllables(answer, loose_jamo=loose_jamo)
+    dont_know = is_dont_know(answer, target)
+    usyl, n_loose = answer_syllables("" if dont_know else answer, loose_jamo=loose_jamo)
     pairs = _align(tsyl, usyl) if usyl else [(i, None) for i in range(len(tsyl))]
 
     per_word = [{"word": w, "key": "", "answer": "", "n": 0, "matched": 0, "visual": 0, "correct": True} for w in words]
@@ -355,6 +368,7 @@ def strict_phoneme_accuracy(target: str, answer: str, *, loose_jamo: str = "drop
         "n_words_correct": n_wc,
         "n_extra_syllables": n_extra,
         "n_loose_jamo": n_loose,
+        "dont_know": dont_know,
         "loose_jamo": loose_jamo,
         "sound_rules": bool(sound_rules),
         "scorer_version": SCORER_VERSION,
