@@ -43,3 +43,9 @@ test('표시 값은 앱과 같은 반올림', () => {
   assert.equal(phoneValue({}), 0)
   assert.equal(phoneChipView([], true).note, null)
 })
+
+test('칩 값 보정(chip)이 있으면 그 값을, 없으면 dgop을 칩 숫자로 쓴다', () => {
+  assert.equal(phoneValue({ dgop: 0.01, chip: 0.8 }), 80)
+  assert.equal(phoneValue({ dgop: 0.62 }), 62)
+  assert.equal(phoneValue({ dgop: 0.3, chip: null }), 30)
+})

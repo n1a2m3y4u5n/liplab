@@ -5330,18 +5330,20 @@ def _weak_phones(dgop_result, k: int = 3) -> list:
               if p.get("aligned") and p.get("scorable") and p.get("dgop") is not None and not p.get("silent_h")]
     if not phones:
         return []
-    mean = sum(p["dgop"] for p in phones) / len(phones)
+    # 칩 값 보정(DGOP_CHIP_VALUE=E1, docs/phone-tail-2026-10.md)을 켰으면 칩과 같은 값(chip)으로 짚는다. 없으면 dgop 그대로.
+    val = lambda p: p["chip"] if p.get("chip") is not None else p["dgop"]
+    mean = sum(val(p) for p in phones) / len(phones)
     # S2 신뢰도 지도(phone_reliability): 표가 붙어 있으면(reliable 키가 있음) 믿을 만한 소리만 짚는다. 문장 평균은 칩 전체로 낸다.
     # 믿을 만한 소리가 약하지 않으면 약한 소리를 짚지 않는다(docs/phoneme-feedback-reliability-2026-10.md 7절).
     if any(p.get("reliable") is not None for p in phones):
         phones = [p for p in phones if p.get("reliable")]
     out = []
-    for p in sorted(phones, key=lambda x: x["dgop"]):
+    for p in sorted(phones, key=val):
         tok = p.get("token") or ""
         label = tok.split(":", 1)[-1].replace("|", " ").strip()
-        if label and p["dgop"] < max(0.05, 0.6 * mean):
+        if label and val(p) < max(0.05, 0.6 * mean):
             pos = _JAMO_POSITION.get(tok.split(":", 1)[0]) if ":" in tok else None
-            out.append({"label": label, "dgop": round(float(p["dgop"]), 3), "position": pos})
+            out.append({"label": label, "dgop": round(float(val(p)), 3), "position": pos})
         if len(out) >= k:
             break
     return out

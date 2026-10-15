@@ -17,6 +17,14 @@ from functools import lru_cache
 from typing import Dict, List, Optional, Sequence
 
 TABLE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "phone_reliability.json")
+# 칩 값 보정 E1(DGOP_CHIP_VALUE=E1, docs/phone-tail-2026-10.md)일 때의 표. E1 칩 값으로 판정했으므로 E1을 켰을 때만 쓴다.
+TABLE_PATH_E1 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "phone_reliability_e1.json")
+
+
+def table_path() -> str:
+    """지금 칩 값 설정에 맞는 표 경로. 기본(칩 값 = naive)은 TABLE_PATH(지금은 없음), E1이면 TABLE_PATH_E1."""
+    import phone_chip_value
+    return TABLE_PATH_E1 if phone_chip_value.mode() == "E1" else TABLE_PATH
 
 
 @lru_cache(maxsize=4)
@@ -49,10 +57,10 @@ def final_syllable_start(tokens: Sequence[str]) -> int:
     return i - 1 if i > 0 and (tokens[i - 1] or "").startswith("o:") else i
 
 
-def annotate(phones: List[Dict], path: str = TABLE_PATH) -> bool:
+def annotate(phones: List[Dict], path: Optional[str] = None) -> bool:
     """D-GOP phones(assess_text 결과, 자리 순서 그대로)에 reliable(True/False)을 붙인다. 표가 없으면 아무것도 하지 않고 False를 돌려준다.
     끝 음절은 phones 전체(어절 경계 포함)의 토큰열로 정한다. 정렬·채점 대상이 아닌 토큰은 False."""
-    rel = reliable_tokens(path)
+    rel = reliable_tokens(path or table_path())
     if rel is None or not phones:
         return False
     cut = final_syllable_start([p.get("token") or "" for p in phones])
