@@ -67,7 +67,8 @@ def test_contrast_catalog():
     by = {k["kind"]: k for k in cat}
     assert all(k["desc"] and k["pairs"] for k in cat)
     assert by["intonation"]["lip"] == "same" and by["length"]["lip"] == "differs"
-    assert by["laryngeal"]["lip"] == "same" and by["place"]["lip"] == "differs"     # ㅂ·ㅍ는 같은 입, 자리가 다르면 다른 입
+    # ㅂ·ㅍ는 같은 입. 자리 짝은 ㅂ·ㄷ처럼 다른 입과 ㄷ·ㄱ처럼 입 안쪽끼리(가를 수 없음)가 섞여 있다(10/15 독화 규칙과 맞춤)
+    assert by["laryngeal"]["lip"] == "same" and by["place"]["lip"] == "mixed"
     assert "소리로 가려야" in by["laryngeal"]["desc"]
     for k in cat:
         seen = set()

@@ -364,6 +364,11 @@ export const listenAPI = {
   scenarioPlaces: async () => (await api.get('/listen/practice/scenario/places')).data,
   contrasts: async () => (await api.get('/listen/contrasts')).data,
   review: async () => (await api.get('/listen/review')).data,
+  // 트랙 잇기: 소리 듣기 ↔ 독화 연습 제안(docs/listen-cross-track-2026-10.md)
+  links: async () => (await api.get('/listen/links')).data,
+  // 배치검사(시작 단계 정하기, docs/listen-placement-2026-10.md). next는 지금까지의 답으로 다음 문항 또는 결과, apply는 1~k단계 열기
+  placementNext: async (body) => (await api.post('/listen/placement/next', body)).data,
+  placementApply: async (body) => (await api.post('/listen/placement/apply', body)).data,
 }
 
 // 음성구동 아바타(A4) — 실제 음성 → 52 블렌드셰이프 립싱크
