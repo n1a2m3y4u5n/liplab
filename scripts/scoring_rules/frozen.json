@@ -1,0 +1,23 @@
+{
+ "registered": "docs/scoring-rules-2026-10.md 6.4",
+ "thr": {
+  "G-LR(sc,T)": -0.5624956521739131,
+  "G-LR(sc,S)": -6.952285714285714,
+  "G-LR(al,T)": -0.342137614678899,
+  "G-LR(al,S)": -5.063285714285714,
+  "G-PER(sc)": 0.71875,
+  "G-PER(al)": 0.65625,
+  "G-Q(0.1)": 3.0000000000000008e-05,
+  "G-Q(0.25)": 0.000525,
+  "G-LEN": [
+   71.5,
+   66.5,
+   65.0,
+   76.0
+  ]
+ },
+ "gate_pick": "G-LR(al,S)",
+ "gate_eligible": true,
+ "hold_pick": "H(0.9,1)",
+ "hold_eligible": false
+}
