@@ -23,6 +23,7 @@ import { talkerShapes, talkerById, applyTalkerTiming, scaleShape, TALKERS, DEFAU
 import { applyCoarticulation, coartShape, coartWeight, COART_E_ENABLED } from '@app/lib/coarticulation.js'
 import { mapRawFrame } from '@app/lib/rigMap.js'
 import { VISEME_V15_ENABLED } from '@app/lib/visemeShapes.js'
+import { framesToV3Coeffs, V3_TABLE, VISEME_V3_ENABLED } from '@app/lib/visemeV3.js'
 import glbUrl from '@front/public/models/realistic_face.glb?url'
 
 const JAW_BONE_NAME = 'CC_Base_JawRoot'
@@ -99,6 +100,7 @@ export async function init(cfg = {}) {
   const dbg = gl.getExtension('WEBGL_debug_renderer_info')
   return {
     meshes: S.meshes.length, tongue: !!S.tongue, jaw: !!S.jaw, coartE: COART_E_ENABLED, visemeV15: VISEME_V15_ENABLED,
+    visemeV3: VISEME_V3_ENABLED, v3TableCells: Object.keys(V3_TABLE.cells || {}).length,
     glRenderer: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
     talkers: TALKERS.map((t) => t.id),
   }
@@ -175,7 +177,9 @@ function grab(q) {
  * 엔진 프레임 재생(LipSyncPlayer3D와 같은 순서: applyTalkerTiming → applyCoarticulation, 프레임 길이는 duration_ms / speed).
  * 반환: images(30fps JPEG data URL), schedule([{v, t0, t1, i}] 영상 시각 ms), speech [t0, t1].
  */
-export function renderText({ frames, talker = 'default', seed = 0, speed = 1, leadMs = 400, tailMs = 400, q = 0.95, maxImages = 0, table = null }) {
+export function renderText({ frames, talker = 'default', seed = 0, speed = 1, leadMs = 400, tailMs = 400, q = 0.95, maxImages = 0, table = null,
+  v3 = null }) {
+  if (v3) return renderV3({ frames, speed, leadMs, tailMs, q, model: v3 === 'app' ? V3_TABLE : v3 })
   const tk = talker === 'default' ? DEFAULT_TALKER : talkerById(talker)
   useKeys(table)
   const tbl = table ? scaledTable(table, tk) : null
@@ -211,6 +215,34 @@ export function renderText({ frames, talker = 'default', seed = 0, speed = 1, le
     }
   }
   return { images, schedule: sched.map(({ i, v, t0, t1, lv }) => ({ i, v, t0, t1, lv })), speech: [leadMs, endMs], fps: 30 }
+}
+
+/**
+ * V3(docs/avatar-v3-2026-10.md): 엔진 프레임 → 앱 lib/visemeV3의 30fps 사람 계수 → 앱 rigMap → bsFrameRef 경로(LERP 34/s) 재생.
+ * 일정은 renderText와 같다(기본 얼굴, applyTalkerTiming·동시조음 없음). 계수 0번 = 재생 시각 0(앞 쉼 시작).
+ */
+function renderV3({ frames, speed = 1, leadMs = 400, tailMs = 400, q = 0.95, model }) {
+  useKeys(null)
+  const sched = []
+  let t = leadMs
+  frames.forEach((f, i) => {
+    const len = (Number(f.duration_ms) || 0) / speed
+    sched.push({ i, v: f.viseme, t0: t, t1: t + len, lv: null })
+    t += len
+  })
+  const endMs = t
+  const coeffs = framesToV3Coeffs(frames, { speed, leadMs, tailMs, fps: 30, model }).map((o) => mapRawFrame(o))
+  resetFace()
+  const st = freshState()
+  const images = []
+  const nTicks = Math.ceil((endMs + tailMs) / (TICK_S * 1000)) + 1
+  for (let n = 0; n < nTicks; n++) {
+    const now = n * TICK_S * 1000
+    const idx = Math.min(coeffs.length - 1, Math.floor((now / 1000) * 30))
+    step(st, TICK_S, { rawFrame: coeffs[idx], visemeId: 15 })
+    if (n % 2 === 0) images.push(grab(q))
+  }
+  return { images, schedule: sched, speech: [leadMs, endMs], fps: 30, v3: true }
 }
 
 /**
@@ -300,5 +332,5 @@ export function setCamera({ camPos, target, fov }) {
   return S.cfg
 }
 
-window.__v2 = { init, renderText, renderRaw, renderPoses, still, setCamera, VISEME_BLENDSHAPES }
+window.__v2 = { init, renderText, renderRaw, renderPoses, still, setCamera, VISEME_BLENDSHAPES, framesToV3Coeffs }
 window.__v2ready = true
