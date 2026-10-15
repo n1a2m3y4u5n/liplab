@@ -6,6 +6,8 @@
 #   bash run_v3.sh prep               탐색 자료 풀기 + 확인 클립 추출(out/real_bs)·CTC 정렬(out/align_confirm.jsonl) → V3_PREP_OK
 #   bash run_v3.sh render NAME JOBS   in/의 작업(쉼표로 여럿)을 in/tables.json과 렌더·추출 → V3_RENDER_<NAME>_OK
 #   bash run_v3.sh py TAG ARGS...     scripts/v3_avatar.py ARGS(분석) → V3_PY_<TAG>_OK
+#   bash run_v3.sh confirm            재개용(10/15 중단 뒤): 판독기 → 동결 표 묶음·확인 작업 → cfbase·cfv3 렌더 → 확인 판정 → V3_CONFIRM_OK
+#                                     먼저 session push로 in/v3final.json과 최신 v3_avatar.py를 올리고 prep을 끝내 둔다. 끝난 단계는 건너뛴다.
 #   표식은 /workspace/dax/logs/v3.log에 남는다. 이미 있는 결과는 건너뛴다.
 set -u
 W=/workspace/v3
@@ -126,5 +128,21 @@ case "$CMD" in
     say "py $TAG $*"
     ( set -o pipefail; $PY v3_avatar.py "$@" 2>&1 | sed -E '/RuntimeWarning|^  (out|return) /d' ) || fail "py $TAG"
     echo "V3_PY_${TAG}_OK" ;;
-  *) echo "사용: $0 setup | prep | render NAME JOBS | py TAG ARGS..."; exit 2 ;;
+  confirm)
+    [ -f "$W/out/.align_ok" ] || fail "prep 먼저"
+    [ -f "$W/in/v3_avatar.py" ] && cp "$W/in/v3_avatar.py" "$W/scripts/v3_avatar.py"
+    [ -f "$W/in/v3final.json" ] || fail "in/v3final.json 없음(session push)"
+    cd "$W/scripts" || fail cd
+    [ "$(sha256sum "$W/in/v3final.json" | cut -d' ' -f1)" = bbb30de3126b92f53e8f525476d43851b8d33460149e7b0685595ad62e3a587c ] || fail "동결 표 sha256"
+    [ -s "$W/out/clf.pkl" ] || bash "$0" py CLF classifier --sel ../ex/sel.json --align ../ex/align_real.jsonl --real-bs ../ex/bs_real --out ../out/clf.pkl
+    [ -s "$W/out/clf.pkl" ] || fail "판독기"
+    $PY v3_avatar.py tables --v15 data/viseme_v15.json --v3 "$W/in/v3final.json" --out "$W/in/tables.json" || fail tables
+    [ -s "$W/in/jobs_cf_v3f.json" ] || $PY v3_avatar.py jobs --sel ../in/sel_confirm.json --backend ../backend --cond v3:v3final --out ../in/jobs_cf_v3f.json || fail jobs
+    bash "$0" render cfbase jobs_cf_base.json
+    bash "$0" render cfv3 jobs_cf_v3f.json
+    bash "$0" py CF evaluate --sel ../in/sel_confirm.json --align ../out/align_confirm.jsonl --real-bs ../out/real_bs \
+      --renders ../out/cfbase/renders ../out/cfv3/renders --render-bs ../out/cfbase/bs ../out/cfv3/bs --tags - - --clf ../out/clf.pkl \
+      --verdict --v3 v3-v3final --v1 v1 --cands v15 --out ../out/ev_confirm.json
+    grep -q V3_PY_CF_OK "$L/v3.log" && echo "V3_CONFIRM_OK" || fail "confirm 평가" ;;
+  *) echo "사용: $0 setup | prep | render NAME JOBS | py TAG ARGS... | confirm"; exit 2 ;;
 esac
