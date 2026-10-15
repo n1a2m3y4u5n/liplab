@@ -18,7 +18,7 @@ N_QUEUE=${N_QUEUE:-130}
 STOP_GB=${STOP_GB:-8}
 mkdir -p "$ROOT"
 { head -n 1 "$SRC/queue_v1.tsv"; grep -v '^#' "$SRC/queue_v1.tsv" | head -n "$N_QUEUE"; } > "$ROOT/queue_run.tsv"
-echo "V1R_DL start $(date '+%F %T') queue=$(grep -vc '^#' "$ROOT/queue_run.tsv") free=$(df -g "$HOME" | awk 'NR==2{print $4}')GB vbytes=${VBYTES:-1000000000} rate=${LIPLAB_LIMIT_RATE:-none}"
+echo "V1R_DL start $(date '+%F %T') queue=$(grep -vc '^#' "$ROOT/queue_run.tsv") free=$(df -g "$HOME" | awk 'NR==2{print $4}')GB vbytes=${VBYTES:-1000000000} rate=$(cat "$ROOT/.limit_rate" 2>/dev/null || echo none)"
 
 cleanup_failed() {
   local f s
@@ -31,8 +31,10 @@ cleanup_failed() {
   done
 }
 
-DLMORE_ROOT=$ROOT VBYTES=${VBYTES:-1000000000} MINFREE_GB=${MINFREE_GB:-10} BUDGET_GB=${BUDGET_GB:-4} \
-  bash "$LAB/tools/dl_more.sh" --protect none --labels stream \
+# 맥 부하(10/15 메인 세션 알림): 받기·ffmpeg 컷을 nice 20으로, 받기 1·컷 1(동시 2개 이하). 회선은 .limit_rate(기본 4M)로 제한.
+[ -e "$ROOT/.limit_rate" ] || echo "${LIPLAB_LIMIT_RATE:-4M}" > "$ROOT/.limit_rate"
+DLMORE_ROOT=$ROOT VBYTES=${VBYTES:-1000000000} MINFREE_GB=${MINFREE_GB:-10} BUDGET_GB=${BUDGET_GB:-4} JOBS=1 \
+  nice -n 20 bash "$LAB/tools/dl_more.sh" --protect none --labels stream \
   --also-manifest "$PR/20260924_k74l2l74024fsz/manifest_all.tsv" \
   --also-manifest "$PR/20260925_4aol7xkyf762yh/dax/manifest_all.tsv" \
   --also-manifest "$PR/20260925_nwcqu40di2ct11/dax/manifest_all.tsv" "$ROOT/queue_run.tsv" &
