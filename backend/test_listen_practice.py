@@ -99,22 +99,23 @@ def test_scenes_cover_places():
     assert [s["key"] for s in sp] == [s["key"] for s in L.SCENES]
     assert all(s["n"] >= 4 for s in sp) and sum(s["n"] for s in sp) == len(L.CONVO_ITEMS)
     its = L.scene_items("home", "x")
-    assert len(its) == 4 and all("answer" not in i and L.CONVO_BY_ID[i["id"]]["place"] in ("아파트", "집", "관리실 안내") for i in its)
+    assert len(its) == sp[[s["key"] for s in sp].index("home")]["n"] >= 4 and all("answer" not in i and L.CONVO_BY_ID[i["id"]]["place"] in ("아파트", "집", "관리실 안내") for i in its)
     assert L.scene_items("home", "x", recent=[its[0]["id"]])[-1]["id"] == its[0]["id"]
     assert [i["id"] for i in L.scene_items("병원", "x")] and all(i["place"] == "병원" for i in L.scene_items("병원", "x"))
     assert L.scene_items("nope", "x") is None
 
 
 def test_new_convo_items_content_rules():
-    """10/7 연습 모드에 맞춰 더한 대화 문항(c31~c34): 대사·바꾼 말이 P3 파일럿·검사·훈련 문장·다른 대화와 유사도 점검에 걸리지 않고,
-    일반화 검사 낱말이 글자로 들어 있지 않다(docs/review/listen-content-review-2026-10.md 1·3.3절)."""
+    """10/7 연습 모드에 맞춰 더한 대화 문항(c31~c34)과 10/15 장면 확대 문항(c35~c58): 대사·바꾼 말이 P3 파일럿·검사·훈련 문장·
+    다른 대화와 유사도 점검에 걸리지 않고, 일반화 검사 낱말이 글자로 들어 있지 않다(docs/review/listen-content-review-2026-10.md 1·3.3절,
+    docs/listen-convo-expand-2026-10.md). 확대 문항은 앱 문장(독화·말하기·문맥)과도 견주고, 정답 보기가 들은 말에 글자로 들어 있다."""
     import importlib.util
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts", "build_pilot_manifest.py")
     spec = importlib.util.spec_from_file_location("build_pilot_manifest", path)
     B = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(B)
-    new = [c for c in L.CONVO_ITEMS if c["id"] in ("c31", "c32", "c33", "c34")]
-    assert len(new) == 4
+    new = [c for c in L.CONVO_ITEMS if 31 <= int(c["id"][1:]) <= 58]
+    assert len(new) == 28
     with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "pilot", "battery_manifest.json"),
               encoding="utf-8") as f:
         man = json.load(f)
@@ -131,6 +132,15 @@ def test_new_convo_items_content_rules():
                 walk(v)
     walk(man)
     others = list(L.TRAIN_SENTENCES) + [s for f in L.TEST_FORMS.values() for s in f] + pilot
+    app = list(B.training_sentences())
+
+    def nos(t):
+        return "".join(ch for ch in t if "가" <= ch <= "힣")
+    for c in [c for c in new if int(c["id"][1:]) >= 35]:
+        assert nos(c["options"][c["answer"]]) in nos(c["line"]) + "|" + nos(c["paraphrase"]), c["id"]
+        for t in (c["line"], c["paraphrase"]):
+            for o in app:
+                assert not B.similarity_reasons(t, o, both_ways=True), (c["id"], t, o)
     for c in L.CONVO_ITEMS:
         if c not in new:
             others += [c["line"], c["paraphrase"]]
@@ -412,7 +422,7 @@ def test_dictation_noise_scenario_conditions():
     assert r["ne"] == [10.0, True, 6.0, "practice_ao", 1, 6.0, 0, 0]
     assert r["places"][0] == len(L.SCENES) and r["places"][1] >= 4
     assert r["sc_noplace"] == 400 and r["sc_unknown"] == 404
-    assert r["sc"] == [4, True, True, False, True, 10.0]
+    assert r["sc"] == [sum(1 for c in L.CONVO_ITEMS if c["place"] in ("아파트", "집", "관리실 안내")), True, True, False, True, 10.0]
     assert r["cond"][:3] == ["phone", 10, True] and r["cond"][3] == ["ssn"] and r["cond"][4] == 10.0
     assert r["cond"][5:] == [400, 400, "phone"]
     assert r["cond_ans"] == [True, False, 400, 400]
