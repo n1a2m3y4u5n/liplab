@@ -35,7 +35,7 @@ export default function PilotBattery() {
   const load = useCallback(async () => {
     setError(null)
     try { setStatus(await batteryAPI.status()) } catch (e) {
-      setError(e?.response?.data?.detail || '검사 상태를 불러오지 못했어요.')
+      setError(e?.response?.data?.detail || '검사 상태를 가져오지 못했어요.')
     }
   }, [])
   useEffect(() => { load() }, [load])
@@ -148,7 +148,7 @@ function LayerRunner({ run, checks, onExit }) {
         render_log: buildRenderLog({ video: videoQ.current, renderMode, webgl }),
         ...(run.layer === 'av' || run.layer === 'snr' ? { headphone_check: checks.headphone, volume_fixed: checks.volume } : {}),
       }))
-    } catch (e) { setErr(e?.response?.data?.detail || '마침을 저장하지 못했어요. 다시 눌러 주세요.') }
+    } catch (e) { setErr(e?.response?.data?.detail || '검사 마치기를 보내지 못했어요. 다시 눌러 주세요.') }
   }, [run, checks, usedVideo, usedAvatar, webgl])
 
   const submit = async (body) => {
@@ -176,8 +176,8 @@ function LayerRunner({ run, checks, onExit }) {
           <div className="h-full rounded-full bg-track transition-all" style={{ width: `${q.nReady ? (q.nDone / q.nReady) * 100 : 100}%` }} />
         </div>
         <p className="text-[13px] text-ink-muted">
-          {q.nDone} / {q.nReady}문항{run.layer === 'snr' && stair ? ` · 시행 ${stair.n_trials}` : ''}
-          {q.missing.length > 0 && ` · ${missingText(run.missing)} 문항은 내지 않고 세지 않아요`}
+          {q.nDone} / {q.nReady}문제{run.layer === 'snr' && stair ? ` · 들은 문장 ${stair.n_trials}` : ''}
+          {q.missing.length > 0 && ` · ${missingText(run.missing)} 문제는 내지 않고 세지 않아요`}
         </p>
         {err && <p role="alert" className="rounded-13 bg-bad-tint px-4 py-3 text-[14px] font-bold text-bad-text">{err}</p>}
 
@@ -186,21 +186,21 @@ function LayerRunner({ run, checks, onExit }) {
             {summary ? (
               <>
                 <p className="text-[19px] font-bold text-ink">이 검사를 마쳤어요</p>
-                <p className="text-[14px] text-ink-muted">답한 문항 {summary.n_answered} / 준비된 문항 {summary.n_ready}
+                <p className="text-[14px] text-ink-muted">답한 문제 {summary.n_answered} / 준비된 문제 {summary.n_ready}
                   {summary.snr_calibrated_db != null && ` · 개인 SNR ${summary.snr_calibrated_db} dB`}</p>
                 <button type="button" onClick={onExit} className="btn-primary px-6 py-3 text-[15px]">목록으로</button>
               </>
             ) : (
               <>
-                <p className="text-[17px] font-bold text-ink">{q.nReady === 0 ? '준비된 문항이 없어요' : '모든 문항에 답했어요'}</p>
-                <button type="button" onClick={finish} className="btn-primary px-6 py-3 text-[15px]">마침 저장</button>
+                <p className="text-[17px] font-bold text-ink">{q.nReady === 0 ? '준비된 문제가 없어요' : '모든 문제에 답했어요'}</p>
+                <button type="button" onClick={finish} className="btn-primary px-6 py-3 text-[15px]">검사 마치기</button>
               </>
             )}
           </section>
         ) : audio.enabled && audio.status !== 'ready' ? (
           <section role="status" className="rounded-16 border-2 border-line bg-white px-5 py-8 text-center text-[15px] font-bold text-ink-muted">
             {audio.status === 'loading' ? '잡음 소리를 준비하고 있어요…'
-              : '잡음 소리를 불러오지 못해 이 검사를 진행할 수 없어요. 연구진에게 알려 주세요.'}
+              : '잡음 소리를 가져오지 못해 이 검사를 할 수 없어요. 연구진에게 알려 주세요.'}
           </section>
         ) : (
           <ItemView run={run} item={item} maxPlays={maxPlays} audio={audio} snrDb={snrNow}

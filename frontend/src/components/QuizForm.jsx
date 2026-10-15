@@ -111,7 +111,7 @@ export default function QuizForm({
                 {/* XP가 0이면(연습으로만 채점 등) 칩을 그리지 않는다. 숫자 0을 &&에 두면 화면에 '0'이 찍힌다. */}
                 {result.xp_gained > 0 && (
                   <div className="inline-flex items-center bg-primary-100 text-primary-700 px-4 py-2 rounded-full font-medium">
-                    +{result.xp_gained} XP
+                    경험치 +{result.xp_gained}
                   </div>
                 )}
               </div>

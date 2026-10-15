@@ -182,7 +182,7 @@ export function RailLevelCard() {
       <div className="flex flex-col gap-2">
         <div className="flex items-start justify-between text-[13px] font-bold leading-figma">
           <p className="text-ink-muted">다음 레벨까지</p>
-          <p className="text-track">{p.remaining.toLocaleString()} XP 남음</p>
+          <p className="text-track">{p.remaining.toLocaleString()} 경험치 남음</p>
         </div>
         <div className="h-[12px] overflow-hidden rounded-full bg-fill">
           <div className="h-full rounded-full bg-track" style={{ width: `${p.pct}%` }} />
