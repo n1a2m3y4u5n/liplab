@@ -643,7 +643,7 @@ function TaskRow({ label, cur, total, xp }) {
           <div className="h-full rounded-full bg-primary-500" style={{ width: `${(cur / total) * 100}%` }} />
         </div>
       </div>
-      <span className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold leading-figma ${done ? 'bg-primary-100 text-primary-700' : 'bg-surface-sunken text-ink-faint'}`}>+{xp} XP</span>
+      <span className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold leading-figma ${done ? 'bg-primary-100 text-primary-700' : 'bg-surface-sunken text-ink-faint'}`}>+{xp} 경험치</span>
     </div>
   )
 }
@@ -672,7 +672,7 @@ function TaskMock() {
           <p className="text-[23px] tracking-[-0.46px]">이번 주 5일 학습하기</p>
           <div className="flex justify-between text-[14px]">
             <span className="opacity-90">3 / 5일</span>
-            <span className="opacity-90">+100 XP</span>
+            <span className="opacity-90">+100 경험치</span>
           </div>
           <div className="h-3 overflow-hidden rounded-full bg-white/30">
             <div className="h-full w-[60%] rounded-full bg-white" />
@@ -894,7 +894,7 @@ function ProfileMock() {
           </div>
           <div className="flex justify-between text-[11.5px]">
             <span className="opacity-85">다음 레벨까지</span>
-            <span>340 / 700 XP</span>
+            <span>340 / 700 경험치</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.28]">
             <div className="h-full w-[49%] rounded-full bg-white" />

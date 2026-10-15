@@ -194,7 +194,7 @@ export default function ProfilePage() {
     ['학습 기록', `${n(ov?.sessions)}회 · ${ov ? fmtHours(ov.total_minutes) : n(null)}`],
     ['단계 진도', `독화 ${n(ov?.tracks?.read?.done)}단계 · 발화 ${n(ov?.tracks?.speak?.done)}단계`],
     ['복습 목록', `틀린 문제 ${n(lost?.wrong)}개 · 북마크 ${n(lost?.marks)}개`],
-    ['배지 · XP', `배지 ${n(badgeCount)}개 · ${xp.toLocaleString()} XP`],
+    ['배지 · 경험치', `배지 ${n(badgeCount)}개 · 경험치 ${xp.toLocaleString()}`],
   ]
 
   return (
@@ -212,7 +212,7 @@ export default function ProfilePage() {
           <div className="flex justify-between text-[11.5px] lg:text-[13px]">
             <span className="opacity-85">다음 레벨까지</span>
             {/* 이 레벨 구간에서 쌓은 XP / 구간 크기 — 막대와 같은 비율, 남은 양은 오른쪽 패널 '레벨 진행'과 같다 */}
-            <span>{lp.inLevel.toLocaleString()} / {lp.span.toLocaleString()} XP</span>
+            <span>{lp.inLevel.toLocaleString()} / {lp.span.toLocaleString()} 경험치</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.28] lg:h-3">
             <div className="h-full rounded-full bg-white" style={{ width: `${lp.pct}%` }} />
@@ -226,7 +226,7 @@ export default function ProfilePage() {
         <span className="h-[34px] w-[1.5px] shrink-0 bg-line lg:h-[46px]" />
         <StatCol icon="/ui/stat-check.svg" label="학습 회차" value={statVal(summary?.sessions, '회')} color="text-stat-accuracy" />
         <span className="h-[34px] w-[1.5px] shrink-0 bg-line lg:h-[46px]" />
-        <StatCol icon="/ui/stat-starplus.svg" label="모은 XP" value={xp.toLocaleString()} color="text-stat-streak" />
+        <StatCol icon="/ui/stat-starplus.svg" label="모은 경험치" value={xp.toLocaleString()} color="text-stat-streak" />
       </section>
 
       {/* 설정(107:175 / 241:145) */}

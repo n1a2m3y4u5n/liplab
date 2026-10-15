@@ -26,5 +26,5 @@ export function rewardMessage(claimed) {
   const list = claimed || []
   if (!list.length) return ''
   const xp = list.reduce((s, c) => s + (c.xp || 0), 0)
-  return list.length === 1 ? `'${list[0].label}' 완료 +${xp} XP` : `과제 ${list.length}개 완료 +${xp} XP`
+  return list.length === 1 ? `'${list[0].label}' 과제를 마쳤어요 · 경험치 +${xp}` : `과제 ${list.length}개를 마쳤어요 · 경험치 +${xp}`
 }
