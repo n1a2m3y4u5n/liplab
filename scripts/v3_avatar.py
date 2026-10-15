@@ -40,6 +40,7 @@ NB = 3                 # 구간 칸 수
 REST_SPAN = 1.0        # 쉼 구간의 칸은 발화에 붙은 쪽 1초 안에
 MIN_SEG, MIN_SPK = 20, 5
 LAG_S = -0.066
+BILABIAL = (1, 11)
 
 
 # ───────────────────────────── 표 모델(앱 lib/visemeV3.js와 같아야 한다) ─────────────────────────────
@@ -106,22 +107,26 @@ def anchors(segs, cells, mode):
     for i, ((v, t0, t1), (p, n)) in enumerate(zip(segs, cx)):
         a, b_ = seg_window(i, len(segs), t0, t1)
         for b in range(NB):
-            out.append((a + (b + 0.5) / NB * (b_ - a), lookup(cells, v, b, p, n, mode)))
+            out.append((a + (b + 0.5) / NB * (b_ - a), lookup(cells, v, b, p, n, mode), 1 if v in BILABIAL else 0))
     out.sort(key=lambda x: x[0])
     return out
 
 
-def predict_series(model, segs, times):
-    """model: 표 JSON. segs: 실제 또는 재생 일정 구간(초, 쉼 붙이기 전). times: 표본 시각(초) → [len, 13]."""
+def predict_series(model, segs, times, with_seal=False):
+    """model: 표 JSON. segs: 실제 또는 재생 일정 구간(초, 쉼 붙이기 전). times: 표본 시각(초) → [len, 13](with_seal이면 양순 표시도)."""
     import numpy as np
-    A = anchors(pad_segments(segs), model['cells'], model['mode'])
-    at = np.array([a for a, _ in A])
-    av = np.array([v for _, v in A], dtype=float)
+    padded = pad_segments(segs)
+    A = anchors(padded, model['cells'], model['mode'])
+    at = np.array([a for a, _, _ in A])
+    av = np.array([v for _, v, _ in A], dtype=float)
     Y = np.stack([np.interp(times, at, av[:, j]) for j in range(len(CH))], 1)
     mu = np.array(model['mu'])
     g = np.array([model['gain'][grp] for grp in channel_gain_groups()])
-    Y = mu + (Y - mu) * g
-    return np.clip(Y, 0.0, 1.0)
+    Y = np.clip(mu + (Y - mu) * g, 0.0, 1.0)
+    if not with_seal:
+        return Y
+    seal = np.interp(times, at, np.array([b for _, _, b in A], dtype=float))
+    return Y, np.minimum(1.0, seal * float(model.get('seal') or 0))
 
 
 def channel_gain_groups():
@@ -145,8 +150,13 @@ def frames_to_coeffs(model, frames, speed=1.0, lead_ms=400, tail_ms=400, fps=30)
     segs, (s0, s1) = schedule_segments(frames, speed, lead_ms)
     segs = [s for s in segs if s[2] > s[1]]
     n = int(math.ceil((s1 + tail_ms / 1000.0) * fps))
-    Y = predict_series(model, segs, np.arange(n) / fps)
-    return [coeff_obj(y) for y in Y]
+    Y, seal = predict_series(model, segs, np.arange(n) / fps, with_seal=True)
+    out = [coeff_obj(y) for y in Y]
+    if model.get('seal'):
+        for o, sv in zip(out, seal):
+            if sv > 0:
+                o['_seal'] = round(float(sv), 4)
+    return out
 
 
 def coeff_obj(y):
@@ -288,6 +298,9 @@ def fit_table(rows, halves=(0, 1), mode='add', gain=None, min_seg=MIN_SEG, min_s
             e[1] += 1
             e[2].add(spk)
     cells = {k: [round(float(x), 4) for x in e[0] / e[1]] for k, e in acc.items() if e[1] >= min_seg and len(e[2]) >= min_spk}
+    if mode != 'full':   # 쓰지 않는 칸은 버린다('add'는 별표가 하나 이상인 칸, 'base'는 둘)
+        need = 1 if mode == 'add' else 2
+        cells = {k: v for k, v in cells.items() if k.count('*') >= need}
     base = [v for k, v in cells.items() if k.endswith('|*|*')]
     mu = [round(float(x), 4) for x in np.mean(base, 0)]
     gain = gain or {g: 1.0 for g in GAIN_GROUPS}
@@ -296,7 +309,7 @@ def fit_table(rows, halves=(0, 1), mode='add', gain=None, min_seg=MIN_SEG, min_s
 
 
 def table_sha(model):
-    s = json.dumps({k: model[k] for k in ('mode', 'nb', 'channels', 'gain', 'mu', 'cells')}, sort_keys=True, separators=(',', ':'))
+    s = json.dumps({k: model.get(k) for k in ('mode', 'nb', 'channels', 'gain', 'mu', 'cells', 'seal')}, sort_keys=True, separators=(',', ':'))
     return hashlib.sha256(s.encode()).hexdigest()
 
 
@@ -306,8 +319,14 @@ def cmd_fit(a):
     gain = json.loads(a.gain) if a.gain else None
     halves = tuple(int(x) for x in a.halves.split(','))
     m = fit_table(d['rows'], halves, a.mode, gain)
+    if a.seal:
+        m['seal'] = a.seal
     m['sha256'] = table_sha(m)
     json.dump(m, open(a.out, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+    if a.js:
+        with open(a.js, 'w', encoding='utf-8') as fo:
+            fo.write('// V3 문맥 평균 궤적 표(집계 값). scripts/v3_avatar.py fit이 만든다. 고치지 말 것. docs/avatar-v3-2026-10.md\n')
+            fo.write('export default ' + json.dumps(m, ensure_ascii=False, separators=(',', ':')) + '\n')
     print(f"FIT cells={len(m['cells'])} mode={m['mode']} halves={halves} gain={m['gain']} sha256={m['sha256']} bytes={os.path.getsize(a.out)}")
 
 
@@ -589,12 +608,21 @@ def cmd_evaluate(a):
     if a.half is not None:
         sids = {e['sid'] for e in sel['sentences'] if e.get('half') == a.half and e.get('default')}
     cond_rec = {}
-    for rd, bd in zip(a.renders, a.render_bs):
+    tags = a.tags or ['-'] * len(a.renders)
+    for rd, bd, tag in zip(a.renders, a.render_bs, tags):
         for c, v in render_records_geo(rd, bd, (lambda s, c_: s in sids) if sids else None).items():
+            if tag != '-':   # 다른 폴더의 같은 조건 이름(default_1.0 등)을 가른다
+                c = f"{tag}_{c.rsplit('_', 1)[1]}"
             cond_rec.setdefault(c, []).extend(v)
     res = evaluate_block(real_rec, cond_rec, clf)
     if a.verdict:
         res['verdict'] = verdict(res, a.v3, a.v1)
+    res['verdict_cands'] = {}
+    for cand in a.cands:
+        if f'{cand}_1.0' in res['cond'] and f'{cand}_2.0' in res['cond']:
+            v = verdict(res, cand, a.v1)
+            res['verdict_cands'][cand] = v
+            print('CAND', cand, sum(v[k] for k in v if k != 'all'), json.dumps(v))
     json.dump(res, open(a.out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1, default=str)
     print('EVALUATE n_real', res['n_real'], 'p10', res['loo']['p10'], 'reader_human', res.get('reader_human_macro'))
     for c, r in res['cond'].items():
@@ -605,14 +633,27 @@ def cmd_evaluate(a):
         print('VERDICT', json.dumps(res['verdict']))
 
 
+def cmd_tables(a):
+    """하네스 --tables 파일: {이름: 표}. v15는 scripts/data/viseme_v15.json의 동결 표, 나머지는 V3 표 JSON(이름=파일 이름)."""
+    out = {}
+    if a.v15:
+        out['v15'] = json.load(open(a.v15, encoding='utf-8'))['table']
+    for p in a.v3:
+        out[os.path.splitext(os.path.basename(p))[0]] = json.load(open(p, encoding='utf-8'))
+    json.dump(out, open(a.out, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+    print('TABLES', sorted(out))
+
+
 # ───────────────────────────── selftest(JS 구현 일치 기준) ─────────────────────────────
 def cmd_selftest(a):
     model = json.load(open(a.table, encoding='utf-8'))
     frames = json.load(open(a.frames, encoding='utf-8'))
     out = []
-    for case in frames:
-        co = frames_to_coeffs(model, case['frames'], case.get('speed', 1.0))
-        out.append({'name': case['name'], 'n': len(co), 'first': co[0], 'mid': co[len(co) // 2], 'last': co[-1]})
+    for seal in (0.0, 1.0):
+        m = dict(model, seal=seal)
+        for case in frames:
+            co = frames_to_coeffs(m, case['frames'], case.get('speed', 1.0))
+            out.append({'name': case['name'], 'seal': seal, 'speed': case.get('speed', 1.0), 'n': len(co), 'coeffs': co})
     json.dump(out, open(a.out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     print('SELFTEST', len(out))
 
@@ -638,6 +679,8 @@ def main():
     s.add_argument('--halves', default='0,1')
     s.add_argument('--mode', default='add')
     s.add_argument('--gain', default='')
+    s.add_argument('--seal', type=float, default=0.0)
+    s.add_argument('--js', default='')
     s.add_argument('--out', required=True)
     s = sub.add_parser('human')
     s.add_argument('--data', required=True)
@@ -668,8 +711,14 @@ def main():
     s.add_argument('--clf', required=True)
     s.add_argument('--half', type=int, default=None)
     s.add_argument('--verdict', action='store_true')
+    s.add_argument('--tags', nargs='*', default=[])
+    s.add_argument('--cands', nargs='*', default=[])
     s.add_argument('--v3', default='v3-app')
     s.add_argument('--v1', default='v1')
+    s.add_argument('--out', required=True)
+    s = sub.add_parser('tables')
+    s.add_argument('--v15', default='')
+    s.add_argument('--v3', nargs='*', default=[])
     s.add_argument('--out', required=True)
     s = sub.add_parser('selftest')
     s.add_argument('--table', required=True)
@@ -677,7 +726,7 @@ def main():
     s.add_argument('--out', required=True)
     a = ap.parse_args()
     {'select': cmd_select, 'dataset': cmd_dataset, 'fit': cmd_fit, 'human': cmd_human, 'jobs': cmd_jobs, 'classifier': cmd_classifier,
-     'evaluate': cmd_evaluate, 'selftest': cmd_selftest}[a.cmd](a)
+     'evaluate': cmd_evaluate, 'tables': cmd_tables, 'selftest': cmd_selftest}[a.cmd](a)
 
 
 if __name__ == '__main__':

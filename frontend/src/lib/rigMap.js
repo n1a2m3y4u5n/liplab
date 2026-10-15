@@ -58,6 +58,13 @@ export function mapRawFrame(frame) {
     y = clamp01(y)
     if (PAIRED.has(k)) { out[`${k}Left`] = y; out[`${k}Right`] = y } else out[k] = y
   }
+  // V3(lib/visemeV3, docs/avatar-v3-2026-10.md)의 양순 구간 표시 _seal(0~1): 이 두상은 mouthClose 모프가 턱 각도만큼 걸려야 입술이 붙으므로
+  // (V15 리그 측정) mouthClose를 턱 쪽으로 _seal만큼 올린다. 음성 구동·웹캠 프레임에는 이 키가 없어 바뀌지 않는다.
+  if (frame._seal > 0) {
+    const s = clamp01(Number(frame._seal) || 0)
+    out.mouthClose = clamp01(out.mouthClose + s * Math.max(0, (out.jawOpen || 0) - out.mouthClose))
+  }
+  delete out._seal
   CACHE.set(frame, out)
   return out
 }
