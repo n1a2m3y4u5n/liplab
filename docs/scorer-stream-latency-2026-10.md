@@ -111,3 +111,71 @@
 
 - `docs/phone-tail-2026-10.md` 7.6절과 같은 파드(약 36분, 약 0.35달러, terminate 확인). 이 실험 몫은 그중 약 20분이다.
 - 원자료 `liplab-lab/data/pod_runs/20261015_0far8r521gcc0s/pt/pt/out/stream_*.json`. 구조가 같은 학생 ONNX는 파드에만 두고 받지 않았다(학습되지 않은 가중치).
+
+## 9. 앱 연결: 스트리밍 채점 경로(2026-10-17, 플래그 뒤 기본 끔, 판정 전)
+
+7절 계획 1의 청크 주의 학생이 판정을 넘으면 바로 끼울 수 있게 앱 쪽 경로만 먼저 만들었다. 학생 ONNX는 아직 없어 지연·점수 결과는 없다.
+판정은 7절 2단계대로 학습된 학생으로 따로 한다.
+
+### 9.1 어디에 연결했나
+
+- 지금 발음 채점은 서버에서 돈다(`backend/dgop_acoustic.assess_text`, torch int8 교사 두 개, `/api/speak/assess`). 브라우저의
+  onnxruntime-web은 얼굴 신호 K 분류기(`lib/kModel.js`)와 독화 모델(`lib/lipreadModel.js`)에만 쓴다. 강제정렬(`ctc_align`),
+  발음 규칙을 거친 자모 목표(`jamo_vocab`), D-GOP·칩 값·끝 구간 다시 나누기·말 빠르기는 모두 파이썬이라, 스트리밍도 서버에 붙였다.
+  브라우저 안 실행(소리가 기기 밖으로 나가지 않는 S4 본래 목표)은 7절 3단계(실제 기기 측정) 뒤의 일이고, 이 연결로는 이루지 못한다.
+- 흐름(켰을 때):
+  1. 프론트(`frontend/src/lib/speakStream.js`, `pages/SpeakingPractice.jsx`): 녹음을 시작하면 `POST /api/speak/stream/start`로 세션을 연다.
+     녹음기와 같은 마이크 소리(에코·잡음 억제 뒤)를 소리 없는 처리 노드로 받아 16 kHz로 바꾸고(창 씌운 sinc 리샘플러) 1초씩
+     16비트 PCM으로 `POST /api/speak/stream/{id}/chunk`에 차례로 보낸다. 발성·운율 단계(지표만 씀)는 쓰지 않는다.
+  2. 서버(`backend/dgop_stream.py`): 덩어리 [t, t + C)의 창 끝 (t + C + R) + 80표본(수용 영역 400표본 − 보폭 320)까지 소리가 오면
+     [t − L, 창 끝]을 순전파하고 가운데 프레임만 남긴다. 창 시작이 320표본 배수라 창 안 프레임이 전역 프레임과 정확히 맞는다.
+  3. 정지하면 프론트가 남은 조각을 보내고 예전처럼 webm 녹음과 함께 `/api/speak/assess`에 `stream_id`를 붙인다. 서버는 끝 무음을 자르고
+     (`trim_trailing_silence`), 창 끝이 자른 곳을 넘은 덩어리를 버린 뒤 남은 부분을 왼쪽 문맥과 함께 한 번 넣는다. 이어 붙인 로짓의
+     로그확률로 `dgop_acoustic.assess_outputs`가 강제정렬·채점을 한다. 이 함수는 `assess_text`와 뒷부분(구간별 D-GOP, 묵음 ㅎ, 문장 점수,
+     말 빠르기, 표시 보정)을 같은 코드로 나눠 쓴다.
+  4. 스트리밍 채점이 실패하면 정렬기가 설정돼 있을 때 예전 경로(`assess_text`, webm)로 다시 채점하고, 없으면 전사 경로로 넘어간다.
+     응답의 `dgop.stream`에 창 수·창 시간·마지막 창 시간이 붙는다.
+
+### 9.2 플래그와 설정
+
+| 이름 | 기본 | 뜻 |
+|---|---|---|
+| `DGOP_STREAM` (서버) | 끔 | `1`일 때만 `/api/speak/stream/*`를 연다. 끄면 404이고 `stream_id`는 무시해 `/api/speak/assess`는 예전과 같다 |
+| `DGOP_STREAM_MODEL` (서버) | 없음 | 학생 ONNX 경로(입력 `wav` [1, 표본], 출력 `al`·`sc` [1, 프레임, 49], `s4_distill_pod.py` 내보내기와 같은 꼴). `teacher`면 지금 정렬기·채점기를 창마다 돌린다(비교용). 비어 있으면 세션을 열지 않는다(503) |
+| `DGOP_STREAM_CHUNK_S`·`_LEFT_S`·`_RIGHT_S` | 4.0·2.0·1.0 | 새 소리·왼쪽 문맥·오른쪽 문맥(초, 20 ms 단위로 반올림) |
+| `DGOP_STREAM_THREADS` | 2 | ONNX Runtime intra-op 스레드(inter-op 1) |
+| `DGOP_STREAM_OUTPUTS` | `al,sc` | 정렬·채점 출력 이름(없으면 그래프의 앞 두 출력) |
+| `DGOP_STREAM_CALIBRATION` | ONNX 옆 `calibration.json` | 학생 표시 점수 앵커. 없으면 경고를 찍고 교사 기본 앵커를 쓴다(눈금이 달라 표시 점수가 어긋난다) |
+| `VITE_DGOP_STREAM` (프론트 빌드) | 끔 | `1`일 때만 녹음 중 조각을 보낸다. 끄면 요청이 예전과 같다 |
+
+- 세션은 서버 메모리에 둔다(서버는 워커 하나, Dockerfile). 2분 동안 쓰지 않으면 지우고 사람마다 최근 2개만 둔다. 앞 30초만 받는다.
+- 학생 경로는 `onnxruntime`(파이썬)이 필요하다. 지금 `requirements-infer.txt`(liplab-dev 이미지)에는 넣지 않았다(이미지가 바뀌므로 켤 때 넣는다).
+
+### 9.3 등록 측정(6절)과 다른 점
+
+- 오른쪽 문맥이 아직 다 오지 않은 덩어리는 녹음 중에 돌리지 않고 마지막 창에 합친다. `stream_lat.py`는 그런 덩어리를 녹음 끝에서 잘린
+  오른쪽 문맥으로 녹음 중에 돌린 것으로 쳤다(예: 8.7초 녹음의 [4, 8)초 덩어리). 실제 녹음에서는 그 소리가 오기 전에 돌릴 수 없어서다.
+  그래서 마지막 창은 최대 약 L + C + R(등록 창 7초)이고, 끝 자르기로 덩어리를 버리면 그만큼 길어진다. 6절 표의 길이 가운데 3·8·10·15·20·30초는
+  창 나누기가 같고, 덩어리 창 끝(4k + 1초 + 80표본)이 녹음 끝을 조금 넘는 5초·25초는 다르다(등록 2·7창, 앱 1·6창). 그래서 L1~L3은 이 경로로 다시 잰다(9.5절).
+- 서버가 받는 소리는 브라우저의 압축 전 PCM이다. 예전 경로의 webm(Opus) 디코드 소리와 조금 다르다.
+
+### 9.4 시험(모델 없이)
+
+- `backend/test_dgop_stream.py`(55개): 합성곱처럼 국소적인 가짜 모델에서 창 설정 5가지 × 길이 8가지(0.05~30초, 덩어리 경계와 마지막
+  부분 덩어리 포함)의 이어 붙인 출력이 전체 순전파와 같다. 창 전체를 보는 가짜 모델에서는 창이 소리 전체를 덮으면 전체 순전파와 비트 단위로
+  같고, 아니면 등록 측정의 창과 같은 값이다. 녹음 중 창이 언제 몇 번 도는지, 끝 자르기에서 버리는 덩어리, 30초 상한, PCM 변환, 세션 주인·만료,
+  국소 모델에서 세션 채점이 `assess_text`와 같은 점수·음소·시각을 내는지, 플래그 끔(404)과 켬(조각 → 채점 `dgop`)의 API 경로를 본다.
+- `frontend/src/lib/speakStream.test.mjs`(8개): 플래그 기본 끔, 리샘플러 길이·크기·접힘 억제·조각 나눔 무관(48·44.1·16 kHz), PCM 변환,
+  조각 차례 보내기와 실패 멈춤, 세션 실패 때 null(예전 경로).
+
+### 9.5 7절 판정을 이 경로로 돌리는 법
+
+1. 파드에 이 브랜치의 `backend/`와 `scripts/`를 올린다(`s4_eval_pod.py`의 BK). 학생 ONNX는 파드에만 둔다(저장소에 넣지 않는다).
+2. C1~C3(판별력): `s4_eval_pod.py`에 `stream:<ONNX 경로>` 백엔드를 더했다. `assess_text`가 끝 무음을 자른 소리를 넘기면 `dgop_stream.stream_outputs`로
+   창 나누기를 하므로, 앱 세션에서 자른 길이로 끝낸 것과 같은 출력이다. 예: `python scripts/s4_eval_pod.py e1 stream:runs/C/student_w8.onnx 8 out/e1_C_stream.jsonl`,
+   `e2`·`dev`도 같다. 비교용 전체 문맥 학생은 `onnx:<경로>`로 같은 명령을 돈다. 창은 `DGOP_STREAM_CHUNK_S`·`_LEFT_S`·`_RIGHT_S`.
+   `scripts/s4_analyze.py`는 H·X 두 학생 고르기를 포함한 10/7 판정이라, 새 등록의 고르기 규칙에 맞춰 파일 이름이나 판정 함수를 맞춘다(이번에는 고치지 않았다).
+3. L1~L3(지연): `STREAM_APP=1 STREAM_ONNX=<경로> STREAM_SUFFIX=_app python scripts/phone_tail/pod/stream_lat.py latency`. 녹음 중에는 0.1초씩
+   들어오는 소리로 `StreamStitcher`가 창을 돌리고, 녹음 뒤 지연은 끝 자르기 + 마지막 창 + `assess_outputs`다(앱 서버와 같은 코드).
+4. 통과하면 앱에서 켜는 법(배포는 사용자 결정): 서버 `DGOP_STREAM=1`, `DGOP_STREAM_MODEL=<학생 ONNX>`, 학생 표시 보정 `calibration.json`
+   (10.4절 분위수 맞추기와 같은 방법), `onnxruntime` 설치, 프론트 `VITE_DGOP_STREAM=1` 빌드. 켠 뒤 실제 녹음으로 조각 지연(조각 응답 시간)과 녹음 뒤 지연을 확인한다.
