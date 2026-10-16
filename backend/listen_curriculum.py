@@ -271,11 +271,12 @@ def ax_correct(key: str, answer_same: bool) -> Optional[bool]:
     return bool(answer_same) == (first == second)
 
 
-def next_level(history: Sequence[Tuple[int, bool]], stage: int) -> int:
-    """수준 정하기. history는 이 단계 시도의 (수준, 정답) 시간순. 지금 수준은 마지막 시도의 수준(없으면 1)이고,
-    지금 수준의 최근 promote[1]번 중 promote[0]번 이상 맞으면 하나 올리고, 최근 demote[1]번 중 demote[0]번 이하면 하나 내린다."""
+def next_level(history: Sequence[Tuple[int, bool]], stage: int, start: int = 1) -> int:
+    """수준 정하기. history는 이 단계 시도의 (수준, 정답) 시간순. 지금 수준은 마지막 시도의 수준(없으면 start, 기본 1)이고,
+    지금 수준의 최근 promote[1]번 중 promote[0]번 이상 맞으면 하나 올리고, 최근 demote[1]번 중 demote[0]번 이하면 하나 내린다.
+    start는 배치검사(listen_placement, 플래그 LISTEN_PLACEMENT)가 정한 시작 수준이다. 기록이 생기면 쓰이지 않는다."""
     cfg = LEVELED[stage]
-    cur = int(history[-1][0]) if history else 1
+    cur = int(history[-1][0]) if history else max(1, min(cfg["levels"], int(start or 1)))
     # 바로 앞 수준 변경 뒤의 시도만 센다(같은 수준으로 돌아온 옛 시도가 섞이지 않게)
     tail = []
     for lv, c in reversed(list(history)):
@@ -1363,10 +1364,11 @@ def inventory_texts() -> List[str]:
 TODAY_SECONDS = {"ling": 70, "ax": 12, "word_id": 15, "sentence": 40, "noise": 40, "convo": 45}
 
 
-def today_plan(status: Dict[int, str], ling_done_today: bool, target_min: float = 15.0) -> List[Dict]:
+def today_plan(status: Dict[int, str], ling_done_today: bool, target_min: float = 15.0, both_leveled: bool = False) -> List[Dict]:
     """status: {단계: 'locked'|'unlocked'|'in_progress'|'mastered'}. 반환: [{stage, mode, n, minutes, why}] 순서대로.
     0) 오늘 Ling 점검을 안 했으면 먼저(기기 점검), 1) 수준 단계(1·2) 중 아직 숙달 전인 앞 단계, 둘 다 숙달이면 2단계 유지 연습,
-    2) 문장: 4단계가 열렸으면 소음 속, 아니면 3단계가 열렸으면 조용한 문장, 3) 5단계가 열렸으면 대화. 남는 시간은 문장 블록에 더한다."""
+    2) 문장: 4단계가 열렸으면 소음 속, 아니면 3단계가 열렸으면 조용한 문장, 3) 5단계가 열렸으면 대화. 남는 시간은 문장 블록에 더한다.
+    both_leveled(배치검사 후보 D를 적용한 학습자, docs/listen-placement3-2026-10.md 10절)면 숙달 전인 1·2단계 묶음을 둘 다 넣는다."""
     open_ = lambda n: status.get(n, "locked") != "locked"
     plan: List[Dict] = []
     if not ling_done_today:
@@ -1377,6 +1379,8 @@ def today_plan(status: Dict[int, str], ling_done_today: bool, target_min: float 
     if lev is not None:
         mode = "ax" if lev == 1 else "word_id"
         plan.append({"stage": lev, "mode": mode, "n": 12 if lev == 1 else 10, "why": "약한 소리 짝"})
+        if both_leveled and lev == 1 and open_(2) and status.get(2) != "mastered":
+            plan.append({"stage": 2, "mode": "word_id", "n": 10, "why": "약한 소리 짝"})
     sent = 4 if open_(4) else 3 if open_(3) else None
     if sent is not None:
         plan.append({"stage": sent, "mode": "noise" if sent == 4 else "sentence", "n": 8, "why": "소음 속 문장" if sent == 4 else "문장"})

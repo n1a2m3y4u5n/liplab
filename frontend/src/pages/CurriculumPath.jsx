@@ -167,7 +167,7 @@ export default function CurriculumPath() {
       setFailed((f) => ({ ...f, speak: true }))
     }),
     listenAPI.getCurriculum().then((d) => {
-      setData((p) => ({ ...p, listen: normalizeListen(d.stages) }))
+      setData((p) => ({ ...p, listen: normalizeListen(d.stages), listenPlacement: d.placement || null }))
       setFailed((f) => ({ ...f, listen: false }))
     }).catch(() => {
       setData((p) => ({ ...p, listen: p.listen || [] }))
@@ -295,6 +295,14 @@ export default function CurriculumPath() {
               <button type="button" onClick={() => navigate('/analysis/listening')}
                 className="min-h-[44px] rounded-10 px-2 text-[13px] font-bold text-track-dark hover:underline">결과 보기</button>
             </div>
+          </div>
+        )}
+
+        {/* 시작 단계 정하기(배치검사 후보 D): 서버 플래그가 켜져 있고 아직 1~5단계를 시작하지 않았을 때만 보인다 */}
+        {track === 'listen' && !loadFailed && data.listenPlacement?.available && (
+          <div className="card flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <p className="min-w-0 break-keep text-[14px] leading-[1.6] text-ink-muted">몇 가지 소리를 듣고, 어느 연습부터 할지 정할 수 있어요. 5분쯤 걸려요.</p>
+            <button type="button" onClick={() => navigate('/learn/listening?placement=1')} className="btn-primary shrink-0 whitespace-nowrap">시작 단계 정하기</button>
           </div>
         )}
 

@@ -286,6 +286,23 @@ class ListenAttempt(Base):
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 
+class ListenPlacementRun(Base):
+    """소리 듣기 배치검사(후보 D, backend/listen_placement.py, 플래그 LISTEN_PLACEMENT) 결과를 적용한 기록. 적용할 때 한 행.
+    답 열(log: 문항 키·날 답·서버 채점)·결과(result)·판본(version, 동결한 조합 이름)을 남긴다. 검사 답은 listen_attempts에 넣지 않는다
+    (숙달·수준·소음 계단·복습에 섞이지 않게). 신규 테이블이라 create_all이 만든다."""
+    __tablename__ = "listen_placement_runs"
+    __table_args__ = (UniqueConstraint("user_id", "session", name="ux_listen_placement_runs_user_session"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    session = Column(String(40), nullable=False)
+    version = Column(String(60), nullable=False)
+    log = Column(JSON, nullable=True)
+    result = Column(JSON, nullable=True)
+    applied = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class SpeakAttempt(Base):
     """발화 개별 시도 기록 — 말하기 '분석'용(자주 틀리는 소리·억양/크기 추세).
     독화가 Progress에 시도마다 쌓듯, 말하기도 여기에 쌓아 분석을 분리한다."""

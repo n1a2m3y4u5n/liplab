@@ -6018,6 +6018,9 @@ async def listen_curriculum_stages(current_user=Depends(get_current_user), db: A
             rows = await _listen_attempts(current_user.id, db, stage=4, mode="noise")
             st["srt_db"] = _listencur.srt_estimate(_ao_trials(rows)[-_listencur.NOISE_MASTER["window"]:])
         stages.append(st)
+    if _listen_placement_mode():
+        # 플래그가 켜졌을 때만 붙인다(꺼져 있으면 응답이 예전과 같다)
+        return {"stages": stages, "placement": _listen_placement_status(sp_map)}
     return {"stages": stages}
 
 
@@ -6042,6 +6045,119 @@ async def listen_skip(req: ListenSkipReq, current_user=Depends(get_current_user)
         except Exception:
             await db.rollback()   # 동시에 두 번 누르면 고유 인덱스에 걸린다. 이미 열린 것이다
     return {"stage": n, "status": "unlocked"}
+
+
+# ── 배치검사(후보 D, backend/listen_placement.py, docs/listen-placement3-2026-10.md 10·11절) ─────────────
+# 서버 환경 변수 LISTEN_PLACEMENT=D일 때만 연다(기본 끔). 꺼져 있으면 두 API는 404이고 다른 응답은 예전과 같다.
+# C는 설계만 있고 구현하지 않았다(D 말고 다른 값은 모두 끔).
+def _listen_placement_mode() -> Optional[str]:
+    return "D" if (os.getenv("LISTEN_PLACEMENT") or "").strip().upper() == "D" else None
+
+
+def _listen_start_level(sp) -> int:
+    """기록이 없을 때의 시작 수준. 배치검사가 적용한 행만 level을 기록 없이 갖는다(그 밖의 행은 None이라 1, 예전과 같음)."""
+    return int(sp.level) if sp is not None and sp.level else 1
+
+
+def _listen_placement_status(sp_map: dict) -> dict:
+    """검사를 받을 수 있는가. 0단계 숙달 뒤에만, 1~5단계를 아직 연습하지 않았을 때만(건너뛰기로 연 'unlocked' 행은 괜찮다)."""
+    import listen_placement as _lp
+    reason = None
+    sp0 = sp_map.get(0)
+    if sp0 is None or sp0.status != "mastered":
+        reason = "ling_first"
+    elif any((sp.attempts or 0) > 0 or sp.status in ("in_progress", "mastered") for n, sp in sp_map.items() if n >= 1):
+        reason = "already"
+    return {"available": reason is None, "reason": reason, "version": _lp.VERSION}
+
+
+async def _listen_placed(user_id: int, db) -> bool:
+    from database import ListenPlacementRun
+    from sqlalchemy import select
+    q = select(ListenPlacementRun.id).where(ListenPlacementRun.user_id == user_id, ListenPlacementRun.applied.is_(True)).limit(1)
+    return (await db.execute(q)).first() is not None
+
+
+class ListenPlacementAnswer(BaseModel):
+    item_key: str = Field(..., max_length=200)
+    same: Optional[bool] = None                          # 소리 구별: '같아요'
+    answer: Optional[str] = Field(None, max_length=300)   # 낱말·문장 답
+
+
+class ListenPlacementReq(BaseModel):
+    session: Optional[str] = Field(None, max_length=40)
+    answers: List[ListenPlacementAnswer] = Field(default_factory=list, max_length=20)
+
+
+_PLACEMENT_REASON = {"ling_first": "소리 확인(0단계)을 먼저 마쳐 주세요.", "already": "이미 소리 듣기 연습을 시작해서 시작 단계를 정할 수 없어요."}
+
+
+async def _listen_placement_run(req: ListenPlacementReq, user, db, new_session: bool):
+    import listen_placement as _lp
+    import re as _re
+    import secrets as _secrets
+    if not _listen_placement_mode():
+        raise HTTPException(status_code=404, detail="Not Found")
+    sp_map = await _listen_progress_map(user.id, db)
+    status = _listen_placement_status(sp_map)
+    if not status["available"]:
+        raise HTTPException(status_code=409, detail=_PLACEMENT_REASON[status["reason"]])
+    session = req.session
+    if session is None and new_session and not req.answers:
+        session = _secrets.token_hex(8)
+    if not session or not _re.fullmatch(r"[0-9a-f]{8,40}", session):
+        raise HTTPException(status_code=400, detail="session이 필요합니다.")
+    raw = [a.model_dump() if hasattr(a, "model_dump") else a.dict() for a in req.answers]
+    try:
+        out = await asyncio.to_thread(_lp.replay, f"{user.id}:{session}", raw)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="답이 검사 문항과 맞지 않아요. 검사를 처음부터 다시 해 주세요.")
+    return session, out
+
+
+@app.post("/api/listen/placement/next")
+async def listen_placement_next(req: ListenPlacementReq, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """배치검사 다음 문항 또는 결과. 화면은 지금까지의 답 열 전체(문항 키와 날 답)를 보내고 서버가 처음부터 다시 채점·선택한다
+    (상태를 서버에 두지 않는다). 첫 요청은 session 없이 보내면 서버가 정한다. 답은 시행 기록·숙달·수준·계단·복습에 넣지 않는다."""
+    session, out = await _listen_placement_run(req, current_user, db, new_session=True)
+    body = {"session": session, "done": out["done"], "n": out["n"], "max_items": out["max_items"], "max_seconds": out["max_seconds"]}
+    if out["done"]:
+        body["result"] = out["result"]
+    else:
+        body["item"] = out["item"]
+        body["elapsed"] = out["elapsed"]
+    return body
+
+
+@app.post("/api/listen/placement/apply")
+async def listen_placement_apply(req: ListenPlacementReq, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """끝난 배치검사 결과를 적용한다(후보 D): 1·2단계는 숙달로 적지 않고 '진행 중' + 정한 시작 수준, 3~upper단계는 연다('unlocked').
+    결과는 서버가 답 열로 다시 계산하고 listen_placement_runs에 답 열·결과·판본을 남긴다."""
+    from database import ListenPlacementRun, ListenStageProgress
+    from sqlalchemy.exc import IntegrityError
+    session, out = await _listen_placement_run(req, current_user, db, new_session=False)
+    if not out["done"]:
+        raise HTTPException(status_code=400, detail="검사가 아직 끝나지 않았어요.")
+    res = out["result"]
+    uid = current_user.id
+    sp_map = await _listen_progress_map(uid, db)
+    want = {1: ("in_progress", res["level1"]), 2: ("in_progress", res["level2"])}
+    for n in range(3, int(res["upper"]) + 1):
+        want[n] = ("unlocked", None)
+    for n, (status, level) in want.items():
+        sp = sp_map.get(n)
+        if sp is None:
+            db.add(ListenStageProgress(user_id=uid, stage=n, status=status, attempts=0, correct=0, mastery_score=0.0, level=level))
+        elif level is not None:
+            sp.status, sp.level = status, level
+    db.add(ListenPlacementRun(user_id=uid, session=session, version=res["version"], log=out["log"], result=res, applied=True))
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="이미 적용한 검사예요.")
+    return {"applied": True, "upper": res["upper"], "level1": res["level1"], "level2": res["level2"],
+            "opened": sorted(want), "version": res["version"]}
 
 
 def _is_test_practice(r) -> bool:
@@ -6106,7 +6222,7 @@ async def listen_stage_content(n: int, current_user=Depends(get_current_user), d
     elif n in (1, 2):
         rows = await _listen_attempts(current_user.id, db, stage=n, mode="ax" if n == 1 else "word_id")   # 일반화 검사(wordtest)는 빼고
         hist = [(r.level or 1, bool(r.correct)) for r in rows]
-        level = _listencur.next_level(hist, n)
+        level = _listencur.next_level(hist, n, start=_listen_start_level(sp))
         out["level"] = level
         out["levels"] = _listencur.LEVELED[n]["levels"]
         pick = _listencur.pick_mode_for(current_user.id)
@@ -6401,7 +6517,7 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
         counted = not req.practice and not generated and _listen_open(n, sp_map, who)
         rows = await _listen_attempts(uid, db, stage=n, mode=mode) if counted else []   # 같은 단계의 검사 기록은 빼고
         if mode == "word_id" and counted:
-            cur = _listencur.next_level([(r.level or 1, bool(r.correct)) for r in rows], n)
+            cur = _listencur.next_level([(r.level or 1, bool(r.correct)) for r in rows], n, start=_listen_start_level(sp_map.get(n)))
             level = level if abs(level - cur) <= 1 else cur
         db.add(ListenAttempt(user_id=uid, stage=n, mode=mode, item_key=key, target=target,
                              answer=(req.answer if req.answer is not None else
@@ -6725,7 +6841,8 @@ async def listen_today(current_user=Depends(get_current_user), db: AsyncSession 
     summ_days = (await listen_summary(current_user, db))["days"]
     today_row = next((d for d in summ_days if d.get("date") == today.isoformat()), {})
     rw, rs = await _listen_review_due(current_user.id, db)
-    return {"blocks": _listencur.today_plan(status, ling_today), "target_min": 15,
+    both = bool(_listen_placement_mode()) and await _listen_placed(current_user.id, db)
+    return {"blocks": _listencur.today_plan(status, ling_today, both_leveled=both), "target_min": 15,
             "done_today": {"n": today_row.get("n", 0), "minutes": today_row.get("minutes")},
             "review_due": len(rw) + len(rs)}
 
