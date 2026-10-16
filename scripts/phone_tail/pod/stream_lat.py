@@ -30,7 +30,7 @@ SUF = os.environ.get("STREAM_SUFFIX", "")   # 사후 관찰(창 문맥을 바꾼
 CF, LF, RF = int(C_S * SR / HOP), int(LC_S * SR / HOP), int(RC_S * SR / HOP)
 LENGTHS = (3, 5, 8, 10, 15, 20, 25, 30)
 OUT = f"{W}/out"
-W8 = f"{W}/runs/Hs/student_w8.onnx"
+W8 = os.environ.get("STREAM_ONNX", f"{W}/runs/Hs/student_w8.onnx")   # 청크 주의 학생 판정 때는 그 ONNX
 os.makedirs(OUT, exist_ok=True)
 
 
@@ -266,6 +266,27 @@ def cmd_latency():
         finally:
             D.ctc_outputs = patched
         return time.perf_counter() - t0, during, r.get("raw_score")
+
+    def stream_app(y, txt):
+        """STREAM_APP=1: 앱 코드(backend/dgop_stream.StreamStitcher + dgop_acoustic.assess_outputs)로 같은 측정. 녹음 중에는 0.1초씩
+        들어오는 소리로 창이 찰 때 순전파하고, 녹음 뒤 지연은 끝 자르기 + 마지막 창 + 정렬·채점이다(docs/scorer-stream-latency-2026-10.md 9절)."""
+        import dgop_stream as DS
+        data = wav_bytes(y)
+        y = decode_audio(io.BytesIO(data), sampling_rate=SR)[:SR * 30]
+        st = DS.StreamStitcher(onnx_run, DS.StreamConfig(C_S, LC_S, RC_S))
+        for i in range(0, len(y), SR // 10):
+            st.feed(y[i:i + SR // 10])
+        during = list(st.window_secs)
+        t0 = time.perf_counter()
+        full = st.waveform.copy()
+        yt = DA.trim_trailing_silence(full, SR)
+        a, s = st.finish(len(yt))
+        r = DA.assess_outputs(full, yt, txt, torch.log_softmax(torch.from_numpy(a).float(), -1), be.vocab,
+                              torch.log_softmax(torch.from_numpy(s).float(), -1), be.vocab, sample_rate=SR)
+        return time.perf_counter() - t0, during, r.get("raw_score")
+
+    if os.environ.get("STREAM_APP") == "1":
+        stream = stream_app  # noqa: F811
 
     # 데우기
     y, t = concat(pool, 10, 7, exact=True)

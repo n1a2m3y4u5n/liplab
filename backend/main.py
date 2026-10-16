@@ -8,7 +8,7 @@ import logging
 import ratelimit
 import llm_budget
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from dotenv import load_dotenv
@@ -5357,6 +5357,52 @@ def _av_fusion_on() -> bool:
     return os.getenv("LIPLAB_AV_FUSION") == "1"
 
 
+# ── S4 스트리밍 채점(docs/scorer-stream-latency-2026-10.md 9절). DGOP_STREAM=1이고 DGOP_STREAM_MODEL이 있을 때만 연다(기본 끔 → 404).
+# 프론트(VITE_DGOP_STREAM=1)가 녹음을 시작하며 세션을 열고, 녹음 중 16 kHz 16비트 PCM 조각을 보낸 뒤 /api/speak/assess에 stream_id를 붙인다.
+_STREAM_CHUNK_MAX = 16000 * 2 * 5   # 조각 하나 최대 5초
+
+
+def _pop_speak_stream(stream_id, user_id):
+    if not stream_id:
+        return None
+    import dgop_stream
+    if not dgop_stream.enabled():
+        return None
+    return dgop_stream.SESSIONS.pop(stream_id, user_id)
+
+
+@app.post("/api/speak/stream/start", dependencies=[Depends(ratelimit.rate_limit(40, 60, "audio"))])
+async def speak_stream_start(current_user=Depends(get_current_user)):
+    import dgop_stream
+    if not dgop_stream.enabled():
+        raise HTTPException(status_code=404, detail="Not Found")
+    try:
+        sess = await asyncio.to_thread(dgop_stream.SESSIONS.create, current_user.id)
+    except Exception as e:
+        print(f"[WARN] 스트리밍 채점 세션을 열지 못했습니다: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=503, detail="스트리밍 채점을 쓸 수 없어요.")
+    cfg = sess.stitcher.cfg
+    return {"stream_id": sess.id, "sample_rate": dgop_stream.SR, "format": "pcm_s16le",
+            "chunk_s": cfg.chunk_s, "left_s": cfg.left_s, "right_s": cfg.right_s}
+
+
+@app.post("/api/speak/stream/{stream_id}/chunk")
+async def speak_stream_chunk(stream_id: str, request: Request, current_user=Depends(get_current_user)):
+    import dgop_stream
+    if not dgop_stream.enabled():
+        raise HTTPException(status_code=404, detail="Not Found")
+    sess = dgop_stream.SESSIONS.get(stream_id, current_user.id)
+    if sess is None:
+        raise HTTPException(status_code=404, detail="녹음 세션이 없어요.")
+    body = await request.body()
+    if len(body) > _STREAM_CHUNK_MAX:
+        raise HTTPException(status_code=413, detail="조각이 너무 커요.")
+    async with _ml_slot():
+        ran = await asyncio.to_thread(sess.feed_pcm16, body)
+    st = sess.stitcher
+    return {"samples": st.n, "frames": st.committed_frames, "windows": ran}
+
+
 @app.post("/api/speak/assess", dependencies=[Depends(ratelimit.rate_limit(40, 60, "audio"))])
 async def speak_assess(
     target: str = Form(...),
@@ -5376,6 +5422,7 @@ async def speak_assess(
     probe: int = Form(0),              # 모음·자음 단계의 낱말 속 소리 확인 문항(계획 2-5)
     mouth_confidence: float = Form(None),
     mouth_track: str = Form(None),   # 녹음 중 입모양 타임라인(B-6) — {"visemes":[...], "frames":[[t, s…], …]}
+    stream_id: str = Form(None),     # S4 스트리밍 녹음 세션(DGOP_STREAM=1일 때만 본다, dgop_stream)
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -5436,16 +5483,29 @@ async def speak_assess(
         #  D-GOP가 켜지면 아래 융합에서 상대의 구간별(per-phone) 후기융합을 쓴다.)
         dgop_aligner_id = os.getenv("DGOP_ALIGNER_ID") or os.getenv("DGOP_MODEL_ID")
         dgop_scorer_id = os.getenv("DGOP_SCORER_ID") or dgop_aligner_id
-        if dgop_aligner_id:
+        # S4 스트리밍(DGOP_STREAM=1, 기본 끔): 녹음 중 /api/speak/stream/*로 미리 순전파한 세션이 있으면 그 로그확률로 채점한다.
+        # 끄면 stream_sess는 늘 None이라 아래는 예전 경로 그대로다. 스트리밍 채점이 실패하면 정렬기가 있을 때 예전 경로로 다시 한다.
+        stream_sess = _pop_speak_stream(stream_id, current_user.id)
+        if dgop_aligner_id or stream_sess is not None:
             try:
                 import dgop_acoustic
                 if not dgop_acoustic.HAS_ACOUSTIC:
                     raise RuntimeError("torch/torchaudio/transformers 미설치")
                 async with _ml_slot():
-                    result = await asyncio.to_thread(
-                        dgop_acoustic.assess_text,
-                        data, target, aligner_id=dgop_aligner_id, scorer_id=dgop_scorer_id,
-                    )
+                    result = None
+                    if stream_sess is not None:
+                        try:
+                            result = await asyncio.to_thread(stream_sess.assess, target)
+                        except Exception as e:
+                            print(f"[WARN] 스트리밍 채점 실패: {type(e).__name__}: {e}")
+                            result = None
+                        if (result is None or result.get("score") is None) and not dgop_aligner_id:
+                            raise RuntimeError("스트리밍 채점 실패, 정렬기 미설정")
+                    if result is None or result.get("score") is None:
+                        result = await asyncio.to_thread(
+                            dgop_acoustic.assess_text,
+                            data, target, aligner_id=dgop_aligner_id, scorer_id=dgop_scorer_id,
+                        )
                 if result.get("score") is not None:
                     dgop_result = result
                     # 소리별 신뢰도(S2): 칩·코칭이 믿을 만한 소리만 확정으로 짚게 음소마다 reliable을 붙인다(표가 없으면 그대로)

@@ -2,7 +2,7 @@
 """
 개방형 타이핑 답 자동 채점 검증(P20) 도구: 표본 뽑기, 사람 채점표 내보내기, 일치도 분석(docs/pilot/typed-scoring-check.md 5·6절, 10절).
 
-자동 채점은 backend/phoneme_accuracy.py의 strict_phoneme_accuracy(지금 strict-v2)다. 이 스크립트는 그 함수를 부르기만 하고,
+자동 채점은 backend/phoneme_accuracy.py의 strict_phoneme_accuracy(지금 strict-v3, 낱자 0점)다. 이 스크립트는 그 함수를 부르기만 하고,
 앱 화면 채점(scoring.calculate_score)과 받아쓰기 판정(sentence_feedback)은 쓰지 않는다.
 
   # 1) 가명 내보내기(GET /api/pilot/export, 판 5 이상)에서 표본 200개 + 연습 20개 + 경계 사례 30개를 뽑아 채점표를 만든다
@@ -44,7 +44,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "backend"))
 
-from phoneme_accuracy import SCORER_VERSION, strict_phoneme_accuracy  # noqa: E402
+from phoneme_accuracy import SCORER_VERSION, scorer_version_for, strict_phoneme_accuracy  # noqa: E402
 
 TOOL_VERSION = "p20-tool-1"
 DEFAULT_SEED = 20261015
@@ -338,9 +338,11 @@ def sample(export_path, out, n=200, n_practice=20, seed=DEFAULT_SEED, layers=("s
                       and abs(rows[i]["stored_auto_phoneme_acc"] - (rows[i]["auto_phoneme_acc"] or 0)) > 1e-6)
     if stored_diff:
         warnings.append(f"내보내기에 저장된 auto_phoneme_acc와 지금 다시 계산한 값이 {stored_diff}개 다르다(채점 판본 확인)")
+    if loose_jamo != "drop":
+        warnings.append("낱자 compose는 느슨한 보조 지표다(strict-v3는 낱자 0점). P20 판정 표본은 drop으로 뽑는다")
     by_pid = Counter(rows[i]["pid"] for i in ids)
     manifest = {
-        "tool": TOOL_VERSION, "scorer_version": SCORER_VERSION, "loose_jamo": loose_jamo, "seed": seed,
+        "tool": TOOL_VERSION, "scorer_version": scorer_version_for(loose_jamo), "loose_jamo": loose_jamo, "seed": seed,
         "export_sha256": file_sha256(export_path) if export_path and os.path.exists(export_path) else None,
         "export_version": export.get("version"), "layers": list(layers), "modality": modality,
         "n_eligible": len(rows), "n_sample": len(ids), "n_practice": len(practice), "n_boundary": len(BOUNDARY_CASES),
@@ -697,7 +699,8 @@ def main():
     s.add_argument("--seed", type=int, default=DEFAULT_SEED)
     s.add_argument("--layers", default="sentence", help="쉼표로 여러 층(sentence,av,snr)")
     s.add_argument("--modality", default="real", help="real·avatar·A·AV 또는 any")
-    s.add_argument("--loose-jamo", default="drop", choices=("drop", "compose"))
+    s.add_argument("--loose-jamo", default="drop", choices=("drop", "compose"),
+                   help="drop(기본, 낱자 0점, 엄격 지표). compose는 느슨한 보조 지표로 P20 판정에 쓰지 않는다")
     a = sub.add_parser("analyze")
     a.add_argument("folder")
     a.add_argument("--a", required=True)
