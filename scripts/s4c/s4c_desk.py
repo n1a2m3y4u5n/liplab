@@ -32,7 +32,7 @@ C_S, L_S = 4.0, 2.0            # 새 소리, 왼쪽 문맥(추론 고정값 = �
 R_RANGE = (1.0, 2.0)
 P_FULL = 0.6                   # 창 길이 L + C + R 몫
 SHORT_RANGE = (3.0, 8.0)
-TEACHER_BATCH_S = float(os.environ.get("S4C_TEACHER_S", "120"))
+TEACHER_BATCH_S = float(os.environ.get("S4C_TEACHER_S", "40"))
 MICRO_S = float(os.environ.get("S4C_MICRO_S", "60"))   # 마이크로 묶음 음성 상한(메모리)
 INIT = "HC"
 log = S.log
@@ -70,6 +70,16 @@ def cmd_teacher():
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
     device = "cuda"
+    # 10/17: Windows(WDDM)는 GPU 메모리가 차면 시스템 RAM으로 넘쳐(공유 GPU 메모리) 느려지고 프로세스 전용 메모리가 18GB까지 늘었다.
+    # 할당 상한을 두어 넘치지 않게 하고(넘치면 오류), 묶음마다 캐시를 비운다.
+    torch.cuda.set_per_process_memory_fraction(float(os.environ.get("S4C_GPU_FRAC", "0.85")))
+    _orig = S.teacher_logits_batch
+
+    def _tl(models_, waves, device_):
+        out = _orig(models_, waves, device_)
+        torch.cuda.empty_cache()
+        return out
+    S.teacher_logits_batch = _tl
     models = S.load_teacher(device)
     dev = S.Pool(f"{S.DATA}/dev")
     rng = np.random.default_rng(0)
@@ -229,6 +239,7 @@ def cmd_train(steps_override=None):
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
     device = "cuda"
+    torch.cuda.set_per_process_memory_fraction(float(os.environ.get("S4C_GPU_FRAC", "0.9")))   # 공유 GPU 메모리로 넘치지 않게
     pool = S.Pool(f"{S.DATA}/pool")
     total_s = sum(it["n"] for it in pool.idx) / SR
     n_steps = steps_override or int(math.ceil(2 * total_s / S.BATCH_S))
