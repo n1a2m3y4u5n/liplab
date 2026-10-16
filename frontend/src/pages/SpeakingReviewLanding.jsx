@@ -55,7 +55,7 @@ export default function SpeakingReviewLanding() {
           <LoadingScreen variant="inline" />
         ) : error ? (
           <div className="card py-16 text-center">
-            <p className="text-lg font-bold text-gray-900">복습 항목을 가져오지 못했어요</p>
+            <p className="text-lg font-bold text-gray-900">복습할 것을 가져오지 못했어요</p>
             <p className="mt-1 text-sm text-gray-500">잠시 후 다시 시도해 주세요.</p>
             <button type="button" onClick={() => setReloadKey((key) => key + 1)} className="btn-primary mt-5 px-6 py-2.5 text-sm">다시 가져오기</button>
           </div>
@@ -63,7 +63,7 @@ export default function SpeakingReviewLanding() {
           <>
             <section className="card flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-sm text-gray-600">복습할 말하기 항목이 <b className="text-gray-900">{items.length}개</b> 있어요.</p>
+                <p className="text-sm text-gray-600">다시 말해 볼 것이 <b className="text-gray-900">{items.length}개</b> 있어요.</p>
                 <p className="mt-1 text-xs text-gray-400">목록 순서대로 발음과 억양을 다시 연습합니다.</p>
               </div>
               <button type="button" onClick={() => navigate('/review/speaking/session')} className="btn-primary py-2.5 text-sm">
@@ -97,8 +97,8 @@ export default function SpeakingReviewLanding() {
           </>
         ) : (
           <div className="card py-16 text-center">
-            <h2 className="mb-1 text-xl font-bold text-gray-900">복습할 말하기 항목이 없어요</h2>
-            <p className="mb-5 text-gray-500">새로운 말하기 학습을 마치면 다시 연습할 항목이 이곳에 모입니다.</p>
+            <h2 className="mb-1 text-xl font-bold text-gray-900">다시 말해 볼 것이 없어요</h2>
+            <p className="mb-5 text-gray-500">새로운 말하기 학습을 마치면 다시 연습할 말이 이곳에 모입니다.</p>
             <button type="button" onClick={() => navigate('/learn/speaking?stage=0')} className="btn-primary">말하기 학습으로</button>
           </div>
         )}

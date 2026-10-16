@@ -32,19 +32,19 @@ export const RANGES_V15 = {
 }
 
 export const DEFAULT_TALKER = Object.freeze({
-  id: 'default', label: '기본 화자', heldOut: false, rate: 1, amp: 1, width: 1, protrusion: 1, coart: 1, jitter: 0,
+  id: 'default', label: '기본 얼굴', heldOut: false, rate: 1, amp: 1, width: 1, protrusion: 1, coart: 1, jitter: 0,
 })
 
 // 가상 화자 6명. 숫자는 레슨·검사 기록에 남는 id와 화면 표시만 다르다(성별·나이 같은 속성은 붙이지 않는다).
 // 입 벌림(amp)·동시조음(coart)은 처음 4절 기준에서 한때 ±4~8%로 줄였다가, 앱이 요구하는 구별에 맞춘 기준(7절: 퀴즈 무리는 자기
 // 목표에, 입 안쪽 무리 6·7·8·10은 입 안쪽 무리 안에, 전환 11~13은 자기나 잇는 무리에)으로 바꾼 뒤 지시 범위의 처음 값으로 되돌렸다.
 export const TALKERS_V1 = Object.freeze([
-  { id: 't1', label: '화자 1', heldOut: false, rate: 1.10, amp: 1.15, width: 1.10, protrusion: 0.95, coart: 1.15, jitter: 0.10 },
-  { id: 't2', label: '화자 2', heldOut: false, rate: 0.90, amp: 0.85, width: 0.90, protrusion: 1.10, coart: 0.85, jitter: 0.08 },
-  { id: 't3', label: '화자 3', heldOut: false, rate: 1.20, amp: 0.90, width: 1.05, protrusion: 0.90, coart: 1.25, jitter: 0.15 },
-  { id: 't4', label: '화자 4', heldOut: false, rate: 0.95, amp: 1.10, width: 0.88, protrusion: 1.12, coart: 0.75, jitter: 0.12 },
-  { id: 'h1', label: '화자 5', heldOut: true, rate: 1.05, amp: 1.20, width: 0.95, protrusion: 1.15, coart: 1.30, jitter: 0.12 },
-  { id: 'h2', label: '화자 6', heldOut: true, rate: 0.88, amp: 0.80, width: 1.15, protrusion: 0.85, coart: 0.70, jitter: 0.15 },
+  { id: 't1', label: '사람 1', heldOut: false, rate: 1.10, amp: 1.15, width: 1.10, protrusion: 0.95, coart: 1.15, jitter: 0.10 },
+  { id: 't2', label: '사람 2', heldOut: false, rate: 0.90, amp: 0.85, width: 0.90, protrusion: 1.10, coart: 0.85, jitter: 0.08 },
+  { id: 't3', label: '사람 3', heldOut: false, rate: 1.20, amp: 0.90, width: 1.05, protrusion: 0.90, coart: 1.25, jitter: 0.15 },
+  { id: 't4', label: '사람 4', heldOut: false, rate: 0.95, amp: 1.10, width: 0.88, protrusion: 1.12, coart: 0.75, jitter: 0.12 },
+  { id: 'h1', label: '사람 5', heldOut: true, rate: 1.05, amp: 1.20, width: 0.95, protrusion: 1.15, coart: 1.30, jitter: 0.12 },
+  { id: 'h2', label: '사람 6', heldOut: true, rate: 0.88, amp: 0.80, width: 1.15, protrusion: 0.85, coart: 0.70, jitter: 0.15 },
 ].map((t) => Object.freeze(t)))
 
 // V5(docs/viseme-calibration-2026-10.md 7절): V15 표와 함께 쓰는 값. 538 탐색 절반 화자 37명의 화자별 배율(무리별 진폭 / 무리 중앙값의
@@ -54,12 +54,12 @@ export const TALKERS_V1 = Object.freeze([
 // 예전 값에서 출발하고, 동시조음·흔들림도 이 자료로 잴 수 없어 예전 값에서 출발한다. 그 뒤 판별 기준 (a)~(d)를 V15 표로 걸어 어긋난
 // 화자 3·5·6은 talker-variation.md 4절 규칙(위반 쌍에 관여하는 매개변수만 1에서 벗어난 폭을 5%씩)으로 줄였다(scripts/v15_talker_shrink.mjs).
 export const TALKERS_V15 = Object.freeze([
-  { id: 't1', label: '화자 1', heldOut: false, rate: 1.03, amp: 1.08, width: 1.10, protrusion: 0.87, coart: 1.15, jitter: 0.10 },
-  { id: 't2', label: '화자 2', heldOut: false, rate: 0.94, amp: 0.94, width: 0.90, protrusion: 1.10, coart: 0.85, jitter: 0.08 },
-  { id: 't3', label: '화자 3', heldOut: false, rate: 1.07, amp: 0.99, width: 1.034, protrusion: 0.78, coart: 1.154, jitter: 0.15 },
-  { id: 't4', label: '화자 4', heldOut: false, rate: 0.96, amp: 1.03, width: 0.88, protrusion: 1.07, coart: 0.75, jitter: 0.12 },
-  { id: 'h1', label: '화자 5', heldOut: true, rate: 1.02, amp: 1.074, width: 0.974, protrusion: 1.08, coart: 1.12, jitter: 0.12 },
-  { id: 'h2', label: '화자 6', heldOut: true, rate: 0.87, amp: 0.879, width: 1.083, protrusion: 0.78, coart: 0.835, jitter: 0.15 },
+  { id: 't1', label: '사람 1', heldOut: false, rate: 1.03, amp: 1.08, width: 1.10, protrusion: 0.87, coart: 1.15, jitter: 0.10 },
+  { id: 't2', label: '사람 2', heldOut: false, rate: 0.94, amp: 0.94, width: 0.90, protrusion: 1.10, coart: 0.85, jitter: 0.08 },
+  { id: 't3', label: '사람 3', heldOut: false, rate: 1.07, amp: 0.99, width: 1.034, protrusion: 0.78, coart: 1.154, jitter: 0.15 },
+  { id: 't4', label: '사람 4', heldOut: false, rate: 0.96, amp: 1.03, width: 0.88, protrusion: 1.07, coart: 0.75, jitter: 0.12 },
+  { id: 'h1', label: '사람 5', heldOut: true, rate: 1.02, amp: 1.074, width: 0.974, protrusion: 1.08, coart: 1.12, jitter: 0.12 },
+  { id: 'h2', label: '사람 6', heldOut: true, rate: 0.87, amp: 0.879, width: 1.083, protrusion: 0.78, coart: 0.835, jitter: 0.15 },
 ].map((t) => Object.freeze(t)))
 
 /** 앱이 쓰는 가상 화자 6명(입모양 표와 같은 플래그로 고른다). */

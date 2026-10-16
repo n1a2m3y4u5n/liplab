@@ -121,7 +121,7 @@ function VisemeAvatar({ visemeId, height = 300, className = '', talker = null, t
           title="피부를 반투명하게 해 안 보이는 혀·치아를 드러냄">투명 두상</button>
         <button onClick={() => setShowTract((v) => !v)}
           className={`flex-1 py-1.5 text-xs rounded-lg font-bold transition-colors ${showTract ? 'bg-primary-500 text-white' : 'bg-surface-sunken text-ink-muted hover:bg-surface-hover'}`}
-          title="옆에서 자른 입 안 그림으로 혀·입술·턱 움직임 보기">성도 단면</button>
+          title="옆에서 자른 입 안 그림으로 혀·입술·턱 움직임 보기">성도 옆모습</button>
       </div>
     </div>
   )
@@ -134,7 +134,7 @@ function GroupTract({ group }) {
   return (
     <div className="rounded-lg border border-line p-3">
       <div className="flex items-baseline justify-between gap-2">
-        <b className="text-sm text-ink">성도 단면</b>
+        <b className="text-sm text-ink">성도 옆모습</b>
         <span className="text-[10px] text-ink-faint">VocalTractLab으로 미리 계산</span>
       </div>
       <div className={`mt-2 grid gap-3 ${n === 1 ? 'grid-cols-1 max-w-[260px]' : 'grid-cols-2'}`}>
@@ -269,7 +269,7 @@ function LearnPanel({ data }) {
 
       {/* 웹캠으로 따라하기 (축 D) — 펼칠 때만 MediaPipe 로드 */}
       {showCam ? (
-        <Suspense fallback={<div className="card text-sm text-ink-muted">카메라 모듈 가져오는 중…</div>}>
+        <Suspense fallback={<div className="card text-sm text-ink-muted">카메라 준비 중…</div>}>
           <WebcamMouthCheck visemeId={sel.viseme_id} visemeName={sel.name} articulationGuide={sel.articulation?.guide} />
         </Suspense>
       ) : (

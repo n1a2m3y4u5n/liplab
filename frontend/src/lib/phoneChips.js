@@ -32,5 +32,5 @@ export function phoneChipView(phones, reliabilityMap = false) {
     : !map ? '소리별 색은 참고용이에요. 같은 말을 다시 해도 색이 바뀔 수 있어요.'
       : sureList.length ? '색이 있는 소리만 확정이에요. 회색 소리는 참고로만 보세요.'
         : '이번 문장의 소리는 모두 참고로만 보세요.'
-  return { map, sure: sureList.length, sureGood, note, title: map ? '소리별 발음 정확도' : '소리별 발음 정확도(참고)' }
+  return { map, sure: sureList.length, sureGood, note, title: map ? '소리별 발음 점수' : '소리별 발음 점수(참고)' }
 }

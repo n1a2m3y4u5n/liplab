@@ -449,7 +449,7 @@ function WordQuiz({ data, reload }) {
                 <div className="rounded-16 border-2 border-line bg-white p-3">
                   <div className="flex items-center gap-2">
                     <CueBadges text={q.target} />
-                    {levelOf[q.target] && <span className="text-[11px] text-ink-faint">입모양 난이도 {levelOf[q.target]}/5</span>}
+                    {levelOf[q.target] && <span className="text-[11px] text-ink-faint">읽기 어려운 정도 {levelOf[q.target]}/5</span>}
                   </div>
                   <div className="mt-1.5"><CueLegend /></div>
                 </div>

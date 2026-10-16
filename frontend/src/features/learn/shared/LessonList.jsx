@@ -4,7 +4,7 @@ import useTrackLessons from './useTrackLessons'
 import { isLockedStatus, lockHint } from './trackProgress'
 
 const STATUS_BADGE = {
-  mastered: { label: '완료', cls: 'bg-green-100 text-green-700' },
+  mastered: { label: '숙달', cls: 'bg-green-100 text-green-700' },
   in_progress: { label: '진행 중', cls: 'bg-blue-100 text-blue-700' },
   unlocked: { label: '시작 가능', cls: 'bg-sky-100 text-sky-700' },
   available: { label: '연습', cls: 'bg-gray-100 text-gray-600' },
@@ -28,7 +28,7 @@ export default function LessonList({ track: trackId }) {
     return () => window.clearTimeout(timer)
   }, [notice])
 
-  if (!track) return <p className="p-10 text-center text-sm text-slate-500">알 수 없는 학습 트랙이에요.</p>
+  if (!track) return <p className="p-10 text-center text-sm text-slate-500">찾을 수 없는 학습이에요.</p>
 
   const open = (lesson) => {
     if (isLockedStatus(lesson.status)) { setNotice(lockHint(lessons, lesson)); return }

@@ -88,7 +88,7 @@ export default function Bookmarks() {
                       disabled={removing === bm.id}
                       className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 transition-colors"
                     >
-                      {removing === bm.id ? '...' : '삭제'}
+                      {removing === bm.id ? '...' : '지우기'}
                     </button>
                   </div>
                 </motion.div>

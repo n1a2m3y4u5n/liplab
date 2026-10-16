@@ -114,7 +114,7 @@ const SECTIONS = [
   },
   {
     id: '48:26', title: ['소리 내어', '말해보세요'], artLeft: true,
-    body: '아바타의 입모양을 보고 따라 말하면 발음 정확도를 바로 확인할 수 있어요. 어떤 소리가 잘 안 나오는지 항목별로 알려드려요.',
+    body: '아바타의 입모양을 보고 따라 말하면 발음 점수를 바로 확인할 수 있어요. 어떤 소리가 잘 안 나오는지 소리별로 알려드려요.',
     card: { box: [293.325, 337.028], rotate: -14, el: <CardImage src="/ui/lp-54-11-card-voice.svg" /> },
     mascot: { src: '/ui/lp-48-19-mascot.svg', size: 130, box: 144.874, rotate: 7 },
   },

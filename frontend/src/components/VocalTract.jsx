@@ -87,7 +87,7 @@ function SchematicTract({ visemeId = 15, articulationRef = null }) {
   }, [])
 
   return (
-    <svg viewBox="0 0 240 190" className="w-full h-full" role="img" aria-label="성도 단면">
+    <svg viewBox="0 0 240 190" className="w-full h-full" role="img" aria-label="성도 옆모습">
       <path d="M40,20 Q150,8 205,55 Q220,95 200,130 Q205,150 190,165 L120,178 Q60,180 40,150 Z" fill="#0f1622" stroke="#2a3444" strokeWidth="1.5" />
       <path d="M46,86 Q95,66 150,70 Q178,74 190,96" fill="none" stroke="#7f8ea3" strokeWidth="3" strokeLinecap="round" />
       <rect x="41" y="84" width="7" height="10" rx="2" fill="#c98b7a" />

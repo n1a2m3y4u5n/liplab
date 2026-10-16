@@ -143,7 +143,7 @@ function PrintReport({ r }) {
       <h2 className="mt-5 text-[12.5pt] font-bold">1. 표준검사 이력</h2>
       {r.tests?.length ? (
         <table className="mt-1 w-full border-collapse">
-          <thead><tr><th className={th}>날짜</th><th className={th}>폼</th><th className={th}>판본</th><th className={th}>정답/문항</th><th className={th}>정확도</th><th className={th}>수준</th></tr></thead>
+          <thead><tr><th className={th}>날짜</th><th className={th}>폼</th><th className={th}>판본</th><th className={th}>정답/문항</th><th className={th}>정답률</th><th className={th}>수준</th></tr></thead>
           <tbody>
             {r.tests.map((t, i) => (
               <tr key={i}><td className={td}>{t.date || '–'}</td><td className={td}>{t.form || '배치'}</td><td className={td}>{t.form_version || '–'}</td>
@@ -156,7 +156,7 @@ function PrintReport({ r }) {
       <h2 className="mt-5 text-[12.5pt] font-bold">2. 사전·사후 비교</h2>
       {prog ? (
         <div className="mt-1">
-          <p>정확도 {pct(prog.pre.accuracy)} → {pct(prog.post.accuracy)} ({prog.accuracy_delta >= 0 ? '+' : ''}{Math.round(prog.accuracy_delta * 100)}%p
+          <p>정답률 {pct(prog.pre.accuracy)} → {pct(prog.post.accuracy)} ({prog.accuracy_delta >= 0 ? '+' : ''}{Math.round(prog.accuracy_delta * 100)}%p
             {prog.accuracy_delta_ci95 ? `, ${ciText(prog.accuracy_delta_ci95)}` : ''}),
             수준 Lv.{prog.pre.level} → Lv.{prog.post.level}{prog.homogeneous ? ` · ${formPairLabel(prog)}` : ` · ${nonHomogeneousLabel(prog)}`}
             {prog.talker_transfer ? ` · 사후는 기본 얼굴 ${prog.talker_transfer.default.n}문항` : ''}</p>
@@ -285,13 +285,13 @@ export default function EvalReport() {
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Metric label="총 시행" value={ov.total_trials} unit="회" tone="text-ink" />
-              <Metric label="시행 정확도" value={ov.trial_accuracy} unit="%" tone="text-stat-accuracy" />
+              <Metric label="시행 정답률" value={ov.trial_accuracy} unit="%" tone="text-stat-accuracy" />
               <Metric label="문장 연습" value={ov.total_sentences} unit="회" tone="text-ink" />
               <Metric label="문장 평균점수" value={ov.sentence_avg_score} unit="점" />
             </div>
 
             {/* 유형(입모양·단어·문맥) 고정효과를 뺀 정확도(docs/eval-metrics.md). 단계가 바뀌어 문항 유형이 달라지는 것만으로 꺾이지 않는다 */}
-            <Card title="학습곡선 (선다형 정확도)" hint="시간순 구간별 · 문항 유형 차이 보정">
+            <Card title="학습곡선 (선다형 정답률)" hint="시간순 구간별 · 문항 유형 차이 보정">
               <LineChart series={data.learning_curve} max={1} />
             </Card>
 
@@ -301,12 +301,12 @@ export default function EvalReport() {
                 hint={prog.homogeneous ? formPairLabel(prog) : nonHomogeneousLabel(prog)}>
                 <div className="flex flex-wrap items-end gap-6">
                   <div>
-                    <p className="text-[11px] font-bold text-ink-faint">사전 정확도</p>
+                    <p className="text-[11px] font-bold text-ink-faint">사전 정답률</p>
                     <p className="text-2xl font-bold text-ink-muted">{Math.round(prog.pre.accuracy * 100)}%</p>
                   </div>
                   <div className="pb-1 text-ink-ghost">→</div>
                   <div>
-                    <p className="text-[11px] font-bold text-ink-faint">사후 정확도</p>
+                    <p className="text-[11px] font-bold text-ink-faint">사후 정답률</p>
                     <p className="text-2xl font-bold text-primary-700">{Math.round(prog.post.accuracy * 100)}%</p>
                   </div>
                   {/* 색은 Newcombe 95% 구간이 0을 벗어날 때만(docs/eval-metrics.md 6절) */}
@@ -328,7 +328,7 @@ export default function EvalReport() {
                 {/* 사후 검사에 새 가상 화자 조건이 있으면 위 비교는 기본 얼굴 문항끼리다(계획 2-3). 옛 검사는 전 문항 그대로 */}
                 {prog.talker_transfer && (
                   <p className="mt-2 text-[11px] text-ink-faint">
-                    기본 얼굴 문항끼리 비교: 사후는 {prog.talker_transfer.default.n}문항(전체 {prog.talker_transfer.default.n + prog.talker_transfer.new_talker.n}문항 정확도 {Math.round((prog.post.accuracy_all ?? 0) * 100)}%)
+                    기본 얼굴 문항끼리 비교: 사후는 {prog.talker_transfer.default.n}문항(전체 {prog.talker_transfer.default.n + prog.talker_transfer.new_talker.n}문항 정답률 {Math.round((prog.post.accuracy_all ?? 0) * 100)}%)
                   </p>
                 )}
                 {prog.error_phoneme_change?.some((e) => e.before || e.after) && (
@@ -388,7 +388,7 @@ export default function EvalReport() {
                 ) : <EmptyLine>한 유형(입모양·단어·문맥)을 9회 이상 풀면 향상도가 표시됩니다.</EmptyLine>}
               </Card>
 
-              <Card title="유형별 정확도">
+              <Card title="유형별 정답률">
                 {data.by_item_type?.length ? (
                   data.by_item_type.map((it) => (
                     <BarRow key={it.item_type} label={it.label} value={it.accuracy} sub={`(${it.n}회)`} />
