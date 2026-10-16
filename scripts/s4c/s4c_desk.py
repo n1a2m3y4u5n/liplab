@@ -32,7 +32,7 @@ C_S, L_S = 4.0, 2.0            # 새 소리, 왼쪽 문맥(추론 고정값 = �
 R_RANGE = (1.0, 2.0)
 P_FULL = 0.6                   # 창 길이 L + C + R 몫
 SHORT_RANGE = (3.0, 8.0)
-TEACHER_BATCH_S = 160.0
+TEACHER_BATCH_S = float(os.environ.get("S4C_TEACHER_S", "120"))
 MICRO_S = float(os.environ.get("S4C_MICRO_S", "60"))   # 마이크로 묶음 음성 상한(메모리)
 INIT = "HC"
 log = S.log
@@ -58,37 +58,48 @@ def teacher_batch16(models, waves, device):
     return out
 
 
+def _nonfinite_rows(path, step=1_000_000):
+    a = np.load(path, mmap_mode="r")
+    return int(sum((~np.isfinite(np.asarray(a[i:i + step], dtype=np.float32)).all(1)).sum() for i in range(0, a.shape[0], step)))
+
+
 def cmd_teacher():
+    """10/17 01:00 판(fp16 자동 혼합 정밀도)은 정렬기 로짓의 약 절반 프레임이 NaN·inf가 되어 버렸다(9절). 원 등록과 같은 fp32(TF32)로 계산하고,
+    끝에 유한하지 않은 행이 하나라도 있으면 실패로 끝낸다."""
     import torch
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
     device = "cuda"
     models = S.load_teacher(device)
     dev = S.Pool(f"{S.DATA}/dev")
     rng = np.random.default_rng(0)
     pick = sorted(rng.choice(len(dev.idx), min(20, len(dev.idx)), replace=False).tolist(), key=lambda i: dev.idx[i]["n"])
-    torch.backends.cuda.matmul.allow_tf32 = False
-    torch.backends.cudnn.allow_tf32 = False
-    ref = [S.teacher_logits_batch(models, [dev.wave(i)], device)[0] for i in pick]        # fp32, TF32 끔, 하나씩
-    got = teacher_batch16(models, [dev.wave(i) for i in pick], device)                    # fp16, 묶음
-    dmax, pmax, dmed = 0.0, 0.0, []
-    for (a1, s1), (a2, s2) in zip(ref, got):
+    single = [S.teacher_logits_batch(models, [dev.wave(i)], device)[0] for i in pick]
+    batched = S.teacher_logits_batch(models, [dev.wave(i) for i in pick], device)
+    dmax, pmax, nonfin = 0.0, 0.0, 0
+    for (a1, s1), (a2, s2) in zip(single, batched):
         for u, v in ((a1, a2), (s1, s2)):
             u, v = u.astype(np.float32), v.astype(np.float32)
-            d = np.abs(u - v)
-            dmax = max(dmax, float(d.max()))
-            dmed.append(float(np.median(d)))
-            pu = np.exp(u - u.max(-1, keepdims=True)); pu /= pu.sum(-1, keepdims=True)  # noqa: E702
-            pv = np.exp(v - v.max(-1, keepdims=True)); pv /= pv.sum(-1, keepdims=True)  # noqa: E702
-            pmax = max(pmax, float(np.abs(pu - pv).max()))
-    chk = {"logit_maxdiff": dmax, "logit_median_of_medians": float(np.median(dmed)), "prob_maxdiff": pmax, "n": len(pick),
-           "ref": "fp32 TF32 끔 하나씩", "got": "fp16 autocast 묶음"}
-    log("TEACHER16_CHECK", json.dumps(chk))
+            nonfin += int((~np.isfinite(u)).sum() + (~np.isfinite(v)).sum())
+            if u.size:
+                dmax = max(dmax, float(np.abs(u - v).max()))
+                pu = np.exp(u - u.max(-1, keepdims=True)); pu /= pu.sum(-1, keepdims=True)  # noqa: E702
+                pv = np.exp(v - v.max(-1, keepdims=True)); pv /= pv.sum(-1, keepdims=True)  # noqa: E702
+                pmax = max(pmax, float(np.abs(pu - pv).max()))
+    chk = {"logit_maxdiff": dmax, "prob_maxdiff": pmax, "nonfinite": nonfin, "n": len(pick), "mode": "fp32 TF32, 묶음 대 하나씩"}
+    log("TEACHER_CHECK", json.dumps(chk))
     json.dump(chk, open(f"{S.DATA}/teacher_batch_check.json", "w"), indent=1)
-    S.teacher_logits_batch = teacher_batch16
+    if nonfin:
+        sys.exit("TEACHER_FAIL 점검 표본에 유한하지 않은 로짓")
     for root in (f"{S.DATA}/dev", f"{S.DATA}/pool"):
         if os.path.exists(f"{root}/t_done"):
             log("teacher skip", root)
             continue
         S.run_teacher_on(root, models, device, max_batch_s=TEACHER_BATCH_S)
+        bad = {nm: _nonfinite_rows(f"{root}/{nm}.npy") for nm in ("t_al", "t_sc")}
+        log("teacher nonfinite rows", root, bad)
+        if any(bad.values()):
+            sys.exit(f"TEACHER_FAIL 유한하지 않은 로짓 {root} {bad}")
         open(f"{root}/t_done", "w").write(time.strftime("%F %T"))
     log("TEACHER_OK")
 
@@ -269,6 +280,8 @@ def cmd_train(steps_override=None):
             la, _ = kl_masked(tai, a, mi)
             ls, _ = kl_masked(tsi, s, mi)
             loss = (la + ls) / max(tot, 1.0)
+            if not torch.isfinite(loss):
+                sys.exit(f"TRAIN_FAIL 손실이 유한하지 않음 step {step}")
             loss.backward()
             sa_sum += float(la)
             ss_sum += float(ls)
