@@ -117,7 +117,7 @@ def test_sheets_hide_auto_scores_and_participants(tmp_path):
     assert len(_read(out / "boundary_sheet.csv")) == 30
     keys = _read(out / "key_sheet.csv")
     assert keys and "발음 열쇠(표준 발음)" in keys[0] and all(not r["발음 열쇠(표준 발음)"] for r in keys)
-    assert m["n_sample"] == 200 and m["scorer_version"] == "strict-v2" and m["export_sha256"]
+    assert m["n_sample"] == 200 and m["scorer_version"] == "strict-v3" and m["export_sha256"]
 
 
 def test_boundary_cases_cover_doc_list():

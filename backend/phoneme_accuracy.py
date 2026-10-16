@@ -22,9 +22,14 @@ P3 주결과(실제 얼굴 개방형 문장 음소 정답률)와 P20(사람 채�
     (ㄱ·ㄴ·ㄷ·ㄹ·ㅁ·ㅂ)으로 바꾼 뒤 옮긴다("옷 입어" → [오디버], "닭 앞" → [다갑]). 답은 띄어쓰기를 지워 채점하므로 띄어 쓴 "옷 입어"와
     붙여 쓴 "옷입어"가 모두 [오시버]가 된다. 그래서 그 자리에는 철자대로 연음한 소리([오시버]의 ㅅ, "닭앞"의 [달갑])도 맞음으로 받는다.
     분모는 표준 발음 쪽(대표음 연음)으로 센다. ㄴ 첨가 사전에 걸려 받침이 남는 자리와 받침 ㅎ은 이 규칙을 걸지 않는다.
-(다) 완성되지 않은 낱자(ㅂ, ㅅㅏ): 기본값 loose_jamo="drop"은 문서 4절 R4의 '결과 전에 정한 차이'대로 버리고 그 수만 n_loose_jamo로 알린다.
-    loose_jamo="compose"는 R4(그 자리의 음소를 친 것으로 인정)를 따른다. 자음+모음(+받침)은 한 음절로 합치고("ㅅㅏ과" → 사과), 홀로 친 자음은
-    모음을 모르는 음절의 첫소리로, 홀로 친 모음은 첫소리 없는 음절로 둔다. 문서 7절 2항의 '한 번만 고치는' 후보로 쓸 수 있게 둔 선택이다.
+(다) 완성되지 않은 낱자(ㅂ, ㅅㅏ): strict-v3부터 엄격 지표는 낱자를 음소로 인정하지 않는다(10/15 결정, 문서 4절 R4·10.5절). 기본값
+    loose_jamo="drop"은 낱자를 0점으로 두고 그 수만 n_loose_jamo로 알린다. 낱자만 친 답("ㄱㅏ", "ㅂ")은 0점이다. 낱자와 음절이 섞인
+    답은 음절만 채점한다. 낱자는 지운 공백처럼 앞뒤 음절을 잇지 않고 그 자리에 남아 발음 규칙(연음 등)이 낱자를 넘어가지 않는다
+    ("옷ㅇ입어"는 [오시버]가 아니라 옷·이버). 친 글자를 그대로 채점한다는 R3을 따른 것이다. 낱자로 치는 것은 한글 호환 자모, 옛 자모,
+    첫가끝 자모(NFC 뒤에도 음절로 합쳐지지 않은 것), 반각 자모다(채움 문자 제외).
+    loose_jamo="compose"는 엄격 지표가 아닌 느슨한 보조 지표로만 남긴다(scorer_version이 LOOSE_SCORER_VERSION). 자음+모음(+받침)은 한
+    음절로 합치고("ㅅㅏ과" → 사과), 홀로 친 자음은 모음을 모르는 음절의 첫소리로, 홀로 친 모음은 첫소리 없는 음절로 둔다. P3 주결과와
+    P20 판정에는 쓰지 않는다.
 
 그 밖의 알려진 차이(사람 채점의 발음 열쇠와 다를 수 있는 곳)
 - 비음화·경음화·평파열음화는 입모양 규칙이 아니라 엔진이 적용하지 않는다. "국물"을 "궁물"로 친 답은 받침이 틀린 것으로 센다.
@@ -42,9 +47,17 @@ from engine import VISEME_MAP, decompose_hangul, to_pronounced_syllables
 from korean_numbers import normalize_numbers
 from scoring import VISUAL_SAME_GROUP, VISUAL_WEIGHTS, _strip_separators
 
-# strict-v2(2026-10-15): 사람 채점 규칙 R9('모름'은 0점)를 넣었다. 그 밖의 결과는 strict-v1과 같다(test_phoneme_accuracy가 확인).
-SCORER_VERSION = "strict-v2"
+# strict-v2(2026-10-15): 사람 채점 규칙 R9('모름'은 0점)를 넣었다. 그 밖의 결과는 strict-v1과 같다.
+# strict-v3(2026-10-17): 낱자 0점을 엄격 지표의 규칙으로 고정했다(10/15 결정). drop 결과는 n_loose_jamo가 옛 자모·첫가끝·반각 낱자도
+# 세는 것 말고는 strict-v2와 같다. compose는 엄격 지표에서 빼 LOOSE_SCORER_VERSION으로 따로 적는다(test_phoneme_accuracy가 확인).
+SCORER_VERSION = "strict-v3"
+LOOSE_SCORER_VERSION = "loose-jamo-v1"
 LOOSE_JAMO_MODES = ("drop", "compose")
+
+
+def scorer_version_for(loose_jamo: str = "drop") -> str:
+    """결과와 기록에 남길 판본 문자열. 낱자를 인정하는 compose는 엄격 지표가 아니므로 다른 이름을 쓴다."""
+    return LOOSE_SCORER_VERSION if loose_jamo == "compose" else SCORER_VERSION
 
 _CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
 _JUNG = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ"
@@ -99,6 +112,17 @@ def _is_cons(ch: str) -> bool:
 
 def _is_vowel(ch: str) -> bool:
     return "ㅏ" <= ch <= "ㅣ"
+
+
+# 낱자로 세는 글자: 호환 자모(옛 자모 포함), 첫가끝 자모와 그 확장, 반각 자모. 채움 문자(U+115F·1160·3164·FFA0)는 뺀다
+_JAMO_RANGES = ((0x1100, 0x11FF), (0x3131, 0x318E), (0xA960, 0xA97F), (0xD7B0, 0xD7FF), (0xFFA1, 0xFFDC))
+_JAMO_FILLERS = {0x115F, 0x1160, 0x3164, 0xFFA0}
+
+
+def is_loose_jamo(ch: str) -> bool:
+    """음절로 합쳐지지 않은 한글 낱자인가(NFC 뒤 기준)."""
+    o = ord(ch)
+    return o not in _JAMO_FILLERS and any(lo <= o <= hi for lo, hi in _JAMO_RANGES)
 
 
 def _compose(cho: str, jung: str, jong: str = "") -> str:
@@ -220,7 +244,7 @@ def answer_syllables(answer: str, loose_jamo: str = "drop") -> Tuple[List[Syl], 
     if loose_jamo not in LOOSE_JAMO_MODES:
         raise ValueError(f"loose_jamo는 {LOOSE_JAMO_MODES} 중 하나")
     text = normalize_numbers(_strip_separators(unicodedata.normalize("NFC", answer or "")))
-    n_loose = sum(1 for ch in text if _is_cons(ch) or _is_vowel(ch))
+    n_loose = sum(1 for ch in text if is_loose_jamo(ch))
     if loose_jamo == "drop" or not n_loose:
         return [tuple(s) for s in _pronounce(text)], n_loose
     composed, unknown_vowel, _ = _compose_loose(text)
@@ -321,7 +345,7 @@ def strict_phoneme_accuracy(target: str, answer: str, *, loose_jamo: str = "drop
     - word_accuracy: 맞은 어절 / 어절(n_words_correct / n_words)
     - visual_phoneme_accuracy: 같거나 같은 입모양 무리인 정답 음소 / 정답 음소(보조)
     - n_extra_syllables: 정답과 짝짓지 못한 답 음절 수(덧붙인 말, 감점하지 않음)
-    - n_loose_jamo: 답에 있던 완성되지 않은 낱자 수(drop이면 버림, compose면 합침)
+    - n_loose_jamo: 답에 있던 완성되지 않은 낱자 수(drop이면 0점으로 둠, compose면 합침)
     - dont_know: 답이 '모름'·'모르겠어요' 같은 말뿐이라 빈 답으로 채점했는지(R9, strict-v2)
     - alignment: 어절마다 {word, key(정답 발음열), answer(짝지은 답 음절, 못 짝지은 자리는 '-'), n, matched, correct}
     회차 점수는 문장 비율의 평균이 아니라 n_matched_phonemes 합 / n_target_phonemes 합으로 낸다(문서 3절).
@@ -371,6 +395,6 @@ def strict_phoneme_accuracy(target: str, answer: str, *, loose_jamo: str = "drop
         "dont_know": dont_know,
         "loose_jamo": loose_jamo,
         "sound_rules": bool(sound_rules),
-        "scorer_version": SCORER_VERSION,
+        "scorer_version": scorer_version_for(loose_jamo),
         "alignment": [{k: r[k] for k in ("word", "key", "answer", "n", "matched", "correct")} for r in per_word],
     }

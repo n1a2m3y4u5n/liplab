@@ -152,6 +152,23 @@ class Onnx:
         return {"al": self.torch.from_numpy(a[0]).float(), "sc": self.torch.from_numpy(s[0]).float()}
 
 
+class StreamOnnx(Onnx):
+    """S4 스트리밍판(docs/scorer-stream-latency-2026-10.md 9절): 앱 backend/dgop_stream의 창 나누기로 학생 ONNX를 돌려 이어 붙인다.
+    창은 DGOP_STREAM_CHUNK_S·LEFT_S·RIGHT_S(기본 4/2/1초). assess_text가 끝 무음을 자른 소리를 넘기므로, 앱 녹음 세션에서
+    자른 길이로 finish한 것과 같은 출력이다(창 끝이 자른 곳을 넘은 덩어리는 버리고 마지막 창에 합침)."""
+
+    def run(self, wave):
+        import dgop_stream as DS
+
+        def fwd(w):
+            a, s = self.sess.run(None, {"wav": np.ascontiguousarray(w, dtype=np.float32)[None]})
+            return a[0], s[0]
+        t0 = time.perf_counter()
+        a, s = DS.stream_outputs(wave, fwd, DS.StreamConfig.from_env())
+        self.fwd.append(time.perf_counter() - t0)
+        return {"al": self.torch.from_numpy(a).float(), "sc": self.torch.from_numpy(s).float()}
+
+
 class TorchStudent:
     def __init__(self, init, device="cuda"):
         import torch
@@ -179,6 +196,8 @@ def make_backend(spec, threads=2):
         return Teacher("cuda")
     if spec.startswith("onnx:"):
         return Onnx(spec[5:], threads)
+    if spec.startswith("stream:"):
+        return StreamOnnx(spec[7:], threads)
     if spec.startswith("torch:"):
         return TorchStudent(spec[6:], "cuda")
     raise ValueError(spec)

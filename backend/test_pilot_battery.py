@@ -552,7 +552,7 @@ def test_battery_open_responses_snr_and_av():
     first, second = r["bat_sentence"]
     assert first["answer_text"] == r["sentence_targets"][0] and first["app_score"] == 100.0
     # 엄격 음소 정답률(phoneme_accuracy.py, 0~1)과 회차 합산용 음소 수
-    assert first["auto_phoneme_acc"] == 1.0 and first["scorer_version"] == "strict-v2"
+    assert first["auto_phoneme_acc"] == 1.0 and first["scorer_version"] == "strict-v3"
     assert first["n_target_phonemes"] > 0 and first["n_matched_phonemes"] == first["n_target_phonemes"]
     assert first["rt_ms"] == 4000 and first["rt_from_onset_ms"] == 6000 and first["modality"] == "avatar"
     assert second["answer_text"] == "" and second["app_score"] == 0.0 and second["n_matched_phonemes"] == 0
@@ -625,7 +625,7 @@ def test_rescore_script_fills_missing_strict_scores(monkeypatch):
 def test_strict_hook_with_real_module():
     r = pb.strict_score("밥 먹어요", "밥 먹어")
     f = pb.strict_fields(r)
-    assert f["strict_version"] == "strict-v2" and 0 < f["auto_phoneme_acc"] < 1
+    assert f["strict_version"] == "strict-v3" and 0 < f["auto_phoneme_acc"] < 1
     assert f["n_target_phonemes"] >= f["n_matched_phonemes"] > 0
 
 
