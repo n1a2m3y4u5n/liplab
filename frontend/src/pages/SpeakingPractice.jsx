@@ -19,6 +19,7 @@ import { autoCorrelate } from '../lib/pitch'
 import { PROBE_CATEGORY, PROBE_HEADING, hasProbes, nextIndex, probeStatusText, withProbes } from '../lib/speakProbe'
 import { rateCueView } from '../lib/speakCue'
 import { phoneChipView, phoneTone, phoneValue } from '../lib/phoneChips'
+import { DGOP_STREAM_ENABLED, startSpeakStream } from '../lib/speakStream'
 
 // 혀 위치 성도 단면(E-6) — 모음 결과를 열 때만 받는다(그림 코드와 윤곽 자료 모두 지연 로드)
 const VocalTractVTL = lazy(() => import('../components/VocalTractVTL'))
@@ -108,6 +109,7 @@ export default function SpeakingPractice() {
   const canvasRef = useRef(null)
   const recorderRef = useRef(null)
   const chunksRef = useRef([])
+  const speakStreamRef = useRef(null)   // S4 스트리밍 녹음 세션(lib/speakStream, VITE_DGOP_STREAM=1일 때만)
   const volHist = useRef([])       // 원본 RMS(무음 포함)
   const pitchHist = useRef([])
   const traceRef = useRef([])      // {t, rms, hz|null} 시계열 — 결과 그래프용
@@ -343,6 +345,7 @@ export default function SpeakingPractice() {
     rafRef.current = null
     const rec = recorderRef.current
     if (rec) { rec.onstop = null; try { if (rec.state !== 'inactive') rec.stop() } catch { /* noop */ } recorderRef.current = null }
+    if (speakStreamRef.current) { speakStreamRef.current.end(); speakStreamRef.current = null }
     if (videoStreamRef.current) { videoStreamRef.current.getTracks().forEach((t) => t.stop()); videoStreamRef.current = null }
     if (landmarkerRef.current) { try { landmarkerRef.current.close?.() } catch { /* noop */ } landmarkerRef.current = null }
     setMirrorOn(false)   // 스트림을 닫았으니 미러 버튼도 꺼진 상태로 맞춘다(단계가 바뀌어 화면이 남는 경우)
@@ -376,6 +379,11 @@ export default function SpeakingPractice() {
       const src = ac.createMediaStreamSource(stream)
       const analyser = ac.createAnalyser(); analyser.fftSize = 2048
       src.connect(analyser); analyserRef.current = analyser
+      // S4 스트리밍 채점(VITE_DGOP_STREAM=1, 기본 끔): 녹음 중 소리 조각을 서버에 미리 보낸다. 지표만 쓰는 발성·운율은 채점 모델을 쓰지 않아 뺀다.
+      speakStreamRef.current = null
+      if (DGOP_STREAM_ENABLED && !metricMode) {
+        try { speakStreamRef.current = startSpeakStream({ ac, source: src, api: speakAPI }) } catch { speakStreamRef.current = null }
+      }
       try {
         const rec = new MediaRecorder(stream)
         rec.ondataavailable = (e) => { if (e.data && e.data.size) chunksRef.current.push(e.data) }
@@ -401,6 +409,9 @@ export default function SpeakingPractice() {
   const onRecStop = async (attempt) => {
     const rec = recorderRef.current
     const blob = new Blob(chunksRef.current, { type: (rec && rec.mimeType) || 'audio/webm' })
+    const sctl = speakStreamRef.current
+    speakStreamRef.current = null
+    if (sctl) sctl.end()
     closeAudio()
     if (attempt !== attemptRef.current) return
     if (blob.size > 500 && target) {
@@ -419,6 +430,10 @@ export default function SpeakingPractice() {
         opts.mouth_confidence = mc
         const track = await buildMouthTrack()
         if (track) opts.mouth_track = JSON.stringify(track)
+      }
+      if (sctl) {
+        const sid = await sctl.finish()
+        if (sid) opts.stream_id = sid
       }
       if (attempt !== attemptRef.current) return
       setAssessing(true)
