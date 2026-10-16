@@ -22,12 +22,16 @@ W = os.environ.setdefault("S4_W", "D:/liplab/s4")
 sys.path.insert(0, os.path.join(W, "scripts"))
 import s4_distill_pod as S  # noqa: E402
 
+# 10/17 데스크탑 RAM 16GB: 자료 준비 작업자 상한(원 코드는 CPU 수 12개를 모두 써 메모리가 15GB를 넘었다). YODAS 원본 셔드는 다시 시작할 때 다시 받지 않게 남긴다.
+S.ncpu = lambda: int(os.environ.get("S4C_DATA_WORKERS", "5"))
+os.environ.setdefault("S4_KEEP_RAW", "1")
+
 SR, V = S.SR, S.V
 HOP = 320
-C_S, L_S = 4.0, 4.0            # 새 소리, 왼쪽 문맥(추론 고정값, 4절)
+C_S, L_S = 4.0, 2.0            # 새 소리, 왼쪽 문맥(추론 고정값 = 앱 dgop_stream 기본, 9절)
 R_RANGE = (1.0, 2.0)
 P_FULL = 0.6                   # 창 길이 L + C + R 몫
-SHORT_RANGE = (3.0, 9.0)
+SHORT_RANGE = (3.0, 8.0)
 TEACHER_BATCH_S = 160.0
 MICRO_S = float(os.environ.get("S4C_MICRO_S", "60"))   # 마이크로 묶음 음성 상한(메모리)
 INIT = "HC"
