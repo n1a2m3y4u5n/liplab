@@ -1,5 +1,16 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
+> **2026-10-17: S4 스트리밍(덩어리) 채점 경로를 앱 서버에 연결, 플래그 뒤 기본 끔 (브랜치 s4-stream-wiring-2026-10, 배포 안 함, integrate에 머지 안 함).**
+> - 청크 주의 학생(다른 기기에서 학습 중)이 판정을 넘으면 바로 끼우기 위한 배관만 했다. 학생 ONNX가 없어 지연·점수 결과는 없고, 판정은 학습된 학생으로 따로 한다.
+> - 채점은 서버(`dgop_acoustic`)에서 돌아 스트리밍도 서버에 붙였다. `backend/dgop_stream.py`: 녹음 중 새 소리 4초 + 왼쪽 2초 + 오른쪽 1초 창을 순전파해
+>   가운데 프레임만 이어 붙이고, 녹음 뒤 끝 자르기 → 마지막 창 → `assess_outputs`(`assess_text`와 뒷부분 공용)로 강제정렬·채점한다.
+>   `/api/speak/stream/start`·`/{id}/chunk`(16 kHz PCM), `/api/speak/assess`의 `stream_id`. 프론트 `lib/speakStream.js`(리샘플러·1초 조각)와 말하기 화면.
+> - 플래그: 서버 `DGOP_STREAM=1` + `DGOP_STREAM_MODEL=<학생 ONNX>`, 프론트 빌드 `VITE_DGOP_STREAM=1`. 모두 기본 끔이고, 끄면 요청·채점이 예전과 같다.
+>   실패하면 예전 경로로 다시 채점한다. 창은 `DGOP_STREAM_CHUNK_S`·`_LEFT_S`·`_RIGHT_S`. 학생 경로는 `onnxruntime`과 학생 보정 `calibration.json`이 필요하다.
+> - 등록 측정과 다른 점: 오른쪽 문맥이 다 오지 않은 덩어리는 마지막 창에 합친다(5·25초에서 창 수가 다름). 그래서 L1~L3은 앱 경로로 다시 잰다.
+> - 판정 실행: `s4_eval_pod.py`의 `stream:<ONNX>` 백엔드(C1~C3), `STREAM_APP=1 stream_lat.py latency`(L1~L3). `docs/scorer-stream-latency-2026-10.md` 9절.
+> - 시험: 새 `test_dgop_stream.py` 55개(가짜 국소·전역 모델로 이어 붙이기·프레임 경계·마지막 부분 덩어리·끝 자르기·API), `speakStream.test.mjs` 8개.
+>   백엔드 864 통과, 프론트 344 통과, vite 빌드 통과, `scoring_regress.py --quick` 통과. 파드·유료 API 없음.
 > **2026-10-17: 소리 듣기 배치검사 2차 사전 등록 탐색, 후보 A·B 모두 미달, 앱에 넣지 않음 (브랜치 listen-placement2-2026-10, 문서·스크립트만, 배포 안 함).**
 > - 1차(10/15) 9절의 두 후보를 같은 가상 청취자(G0~G8)로 사전 등록(a6a02ba4) 뒤 탐색했다(시드 0, 조건마다 2,000명). K1~K5 수치는 그대로, A에는 수준 기준 L1·L2와 κ 조건 H1·H2,
 >   B에는 확인 시간 기준 K6(확인 평균 ≤ 180초, 배치 더해 ≤ 360초)을 더했다. 맥 CPU 6프로세스 약 5분. 확인을 뺀 B가 1차 결과와 똑같음을 점검했다(최대 차 0.0).

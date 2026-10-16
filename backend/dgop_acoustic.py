@@ -428,6 +428,17 @@ def phone_confidences(waveform, sample_rate: int, target_tokens: Sequence[str],
                 f"정렬기·채점기의 프레임 수가 다릅니다({log_probs.shape[0]} vs {score_lp.shape[0]}) — "
                 "구간을 옮길 수 없습니다. 두 모델의 conv stride 설정이 같아야 합니다."
             )
+    return phones_from_outputs(waveform, sample_rate, target_tokens, log_probs, vocab, score_lp, score_vocab, spans=spans)
+
+
+def phones_from_outputs(waveform, sample_rate: int, target_tokens: Sequence[str], log_probs, vocab: Dict[str, int],
+                        score_lp, score_vocab: Dict[str, int], spans: Optional[List[Dict]] = None) -> List[Dict]:
+    """정렬기·채점기 로그확률이 이미 있을 때의 phone_confidences 뒷부분(강제정렬 → 끝 구간 시각 → 구간별 D-GOP).
+    waveform은 정렬기에 넣은 소리(끝 무음을 자른 것)다. S4 스트리밍(dgop_stream)이 이어 붙인 로그확률로 부른다."""
+    if spans is None:
+        spans = align_targets(log_probs, vocab, target_tokens)
+    if score_lp.shape[0] != log_probs.shape[0]:
+        raise ValueError(f"정렬기·채점기의 프레임 수가 다릅니다({log_probs.shape[0]} vs {score_lp.shape[0]})")
 
     # 프레임 → 초(구간별 입모양 보완 B-6이 웹캠 입모양 타임라인과 맞출 때 쓴다). wav2vec2는 약 20ms/프레임.
     n_frames = max(1, int(log_probs.shape[0]))
@@ -542,6 +553,27 @@ def assess_text(audio_bytes: bytes, target_text: str,
     tokens = tokens_for_text(target_text, model_id=aligner_id)
     phones = phone_confidences(waveform, sample_rate, tokens,
                                aligner_id=aligner_id, scorer_id=scorer_id)
+    return _assess_from_phones(waveform, sample_rate, target_text, tokens, phones, calibrate,
+                               lambda: calibration_path_for(scorer_id or aligner_id))
+
+
+def assess_outputs(waveform, trimmed_waveform, target_text: str, log_probs, vocab: Dict[str, int],
+                   score_lp, score_vocab: Dict[str, int], sample_rate: int = 16000, calibrate: bool = True,
+                   calibration_path: Optional[str] = None) -> Dict:
+    """로그확률이 이미 있을 때의 assess_text(S4 스트리밍, dgop_stream). waveform은 녹음 전체(앞 30초, 말 빠르기용),
+    trimmed_waveform은 끝 무음을 잘라 정렬기·채점기에 넣은 소리다. 어휘는 자모 어휘만 받는다(목표 토큰을 jamo_vocab로 만든다)."""
+    if not _is_jamo_vocab(vocab):
+        raise ValueError("스트리밍 채점은 자모 어휘 모델만 지원합니다")
+    import jamo_vocab
+    tokens = jamo_vocab.text_to_tokens(target_text)
+    phones = phones_from_outputs(trimmed_waveform, sample_rate, tokens, log_probs, vocab, score_lp, score_vocab)
+    return _assess_from_phones(waveform, sample_rate, target_text, tokens, phones, calibrate,
+                               lambda: calibration_path or DEFAULT_CALIBRATION_PATH)
+
+
+def _assess_from_phones(waveform, sample_rate: int, target_text: str, tokens, phones: List[Dict], calibrate: bool,
+                        calibration_path_fn) -> Dict:
+    """assess_text·assess_outputs 공통 뒷부분: 묵음 ㅎ 표시, 문장 점수, 말 빠르기, 표시 보정."""
     # ㄶ·ㅀ + 모음에서 라벨에만 남은 ㅎ(표준 발음은 내지 않음)에 표시한다. 문장 점수는 보정이 이 토큰까지 넣고 맞춰져 그대로 두고,
     # 코칭·음소 칩·시행 기록이 빼 쓴다(jamo_vocab.silent_linking_h).
     try:
@@ -566,7 +598,7 @@ def assess_text(audio_bytes: bytes, target_text: str,
         print(f"[WARN] rate_pause 실패: {type(e).__name__}: {e}")
         result["rate"] = None
     if calibrate:
-        cal = load_calibration(calibration_path_for(scorer_id or aligner_id))
+        cal = load_calibration(calibration_path_fn())
         result["score"] = _dgop.calibrate_score(result["raw_score"], cal)
         result["calibration"] = cal.get("source") or "내장 기본값"
     return result
