@@ -93,6 +93,7 @@ def stage_b2():
 
 def main():
     wk, memg = workers()
+    wk = int(os.environ.get("SR_WORKERS", wk))       # 10/17: S4 교사 계산과 함께 돌 때 RAM 16GB에서 작업자 하나가 죽어 3으로 줄임
     os.makedirs(f"{W}/out", exist_ok=True)
     say(f"=== [sr confirm desk] start cpus={os.cpu_count()} mem={memg}G workers={wk}")
     for f in ("backend/dgop_acoustic.py", "backend/data/dgop_calibration_ours.json", "tools/feat_pod.py", "tools/targets.py", "jobs.json"):
