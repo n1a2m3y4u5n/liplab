@@ -221,7 +221,7 @@ def cmd_train(steps_override=None):
     pool = S.Pool(f"{S.DATA}/pool")
     total_s = sum(it["n"] for it in pool.idx) / SR
     n_steps = steps_override or int(math.ceil(2 * total_s / S.BATCH_S))
-    out = f"{S.RUNS}/{INIT}"
+    out = f"{S.RUNS}/{os.environ.get('S4C_RUN_NAME', INIT)}"     # 시험 학습은 다른 폴더(S4C_RUN_NAME=HC_smoke)
     os.makedirs(out, exist_ok=True)
     plan, n_pass = make_plan(pool.idx, n_steps)
     pass_end = {i for i in range(1, len(plan)) if plan[i][0] != plan[i - 1][0]}
