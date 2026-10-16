@@ -25,7 +25,7 @@ export default function ListenComplete({ title, sub, stats = [], notes = [], pri
           <div className={`grid w-full gap-2.5 lg:gap-3.5 ${GRID[stats.length] || 'grid-cols-3'}`}>
             {stats.map((s) => (
               <div key={s.label} className="flex min-w-0 flex-col gap-1.5 rounded-18 border-2 border-line bg-white p-3.5 lg:gap-2 lg:p-5">
-                <p className="text-[13px] font-bold leading-figma text-ink-soft">{s.label}</p>
+                <p className="break-keep text-[13px] font-bold leading-figma text-ink-soft">{s.label}</p>
                 <p className={`break-keep text-[19px] font-bold leading-figma tracking-[-0.4px] lg:text-[26px] ${s.main ? 'text-track-dark' : 'text-ink'}`}>{s.value}</p>
                 {s.note && <p className="break-keep text-[12px] leading-snug text-ink-faint">{s.note}</p>}
               </div>

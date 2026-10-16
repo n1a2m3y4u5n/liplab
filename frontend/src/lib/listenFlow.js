@@ -374,3 +374,19 @@ export function lingNotes(summary) {
     ],
   }
 }
+
+/**
+ * 시작 단계 정하기(배치검사) 결과 화면 문구. 서버 단계 번호는 0부터, 화면(경로·레슨 머리말)은 1부터라 서버 단계 n은 'n + 1단계'다.
+ * 서버 결과 r = {level1, level2, upper}: 1단계(소리 구별)·2단계(낱말 고르기) 시작 수준과 함께 여는 맨 위 단계(3~5).
+ */
+const PLACEMENT_TOP_TITLE = { 3: '문장 알아듣기', 4: '소음 속 듣기', 5: '대화 듣기' }
+export function placementSummary(r) {
+  const opened = r.upper === 3 ? '4단계' : `4~${r.upper + 1}단계`
+  return {
+    opened,
+    sub: `소리 구별은 수준 ${r.level1}, 낱말 고르기는 수준 ${r.level2}부터 연습해요. ${opened}(${PLACEMENT_TOP_TITLE[r.upper]}까지)도 함께 열려요. `
+      + '소리 구별과 낱말 고르기는 그대로 연습해서 숙달해요.',
+    stats: [{ label: '소리 구별 시작 수준', value: `${r.level1} / 4`, main: true }, { label: '낱말 고르기 시작 수준', value: `${r.level2} / 3`, main: true },
+      { label: '함께 여는 단계', value: opened }],
+  }
+}

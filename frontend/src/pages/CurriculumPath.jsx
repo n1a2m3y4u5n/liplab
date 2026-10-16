@@ -7,6 +7,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import RetentionPrompt from '../components/RetentionPrompt'
 import { curriculumAPI, speakAPI, listenAPI } from '../api'
 import { goalMinutes } from '../lib/listenFlow'
+import { pathNodeState } from '../lib/pathNodes'
 
 /**
  * 학습 탭 — 커리큘럼 경로 (Figma 58:11 독화 / 171:38 발화, 모바일 232:35 — lg 미만 반응형). DOKA 마스코트 노드.
@@ -184,17 +185,9 @@ export default function CurriculumPath() {
   if (!learn) return <LoadingScreen />
 
   const list = learn
-  // 현재 단계 = 열린 단계 중 가장 뒤(건너뛰기로 연 단계가 현재가 된다). 그 앞의 열린 단계는 지나온 단계로 보인다.
-  const openIdx = list.map((s, i) => (s.status === 'in_progress' || s.status === 'unlocked' ? i : -1)).filter((i) => i >= 0)
-  const currentIdx = openIdx.length ? openIdx[openIdx.length - 1] : -1
-  const nextLockedIdx = currentIdx >= 0 ? currentIdx + 1 : list.findIndex((s) => s.status === 'locked')
-  const nodeStatus = (s, i) => {
-    if (s.status === 'mastered') return 'mastered'
-    if (i === currentIdx) return 'current'
-    if (i < currentIdx && s.status !== 'locked') return 'mastered'   // 건너뛰고 지나온 단계
-    if (i === nextLockedIdx && s.status === 'locked') return 'skip'   // 다음 잠긴 단계 = 건너뛰기 후보
-    return 'locked'
-  }
+  // 현재 단계·노드 상태(lib/pathNodes): 열린 단계 중 가장 뒤가 현재, 그 앞의 열린 단계는 지나온 단계(✓). 소리 듣기는 숙달 전인 앞의 열린 단계를
+  // ✓ 대신 열린 단계로 둔다(시작 단계 정하기가 1·2단계를 진행 중으로, 3~k단계를 열린 채로 둔다).
+  const { currentIdx, nodeStatus } = pathNodeState(list, track)
   const vIdx = Math.min(list.length - 1, Math.max(0, viewIdx ?? (currentIdx >= 0 ? currentIdx : 0)))
   const view = list[vIdx]
   const viewStatus = view ? nodeStatus(view, vIdx) : 'locked'

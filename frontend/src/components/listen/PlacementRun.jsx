@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { listenAPI } from '../../api'
+import { placementSummary } from '../../lib/listenFlow'
 import BottomBar from './BottomBar'
 import ListenComplete from './ListenComplete'
 import SoundCard from './SoundCard'
@@ -14,8 +15,8 @@ import { Card, Heading, Option, Skeleton, inputClass } from './ui'
  * 화면은 지금까지의 답 전체를 보낸다(서버가 처음부터 다시 채점한다). 답은 연습 기록·숙달에 들어가지 않고, 정답은 알려 주지 않는다.
  * 문제마다 두 번까지 듣는다. 소리는 누를 때만 나온다. 끝나면 결과를 보이고 '이대로 시작하기'를 눌러야 적용한다(placement/apply).
  */
-const STAGE_TITLE = { 3: '문장 알아듣기', 4: '소음 속 듣기', 5: '대화 듣기' }
 const MAX_PLAYS = 2
+const NOT_NOW = '지금은 시작 단계를 정할 수 없어요.'
 
 export default function PlacementRun({ settings, onProgress, onExit, onApplied, active }) {
   const [started, setStarted] = useState(false)
@@ -46,7 +47,9 @@ export default function PlacementRun({ settings, onProgress, onExit, onApplied, 
       setAnswers(list)
       setRun(r)
     } catch (e) {
-      if (e?.response?.status === 409) setFatal(e.response.data?.detail || '지금은 시작 단계를 정할 수 없어요.')
+      // 409 = 받을 수 없는 학습자(서버 안내 문구), 404 = 서버 플래그가 꺼짐(주소로 바로 들어온 경우, 'Not Found'는 보이지 않는다)
+      if (e?.response?.status === 409) setFatal(e.response.data?.detail || NOT_NOW)
+      else if (e?.response?.status === 404) setFatal(NOT_NOW)
       else if (e?.response) setFatal('답을 기록하지 못했어요. 처음부터 다시 해 주세요.')
       else setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 같은 답으로 다시 눌러 주세요.')
     }
@@ -80,7 +83,7 @@ export default function PlacementRun({ settings, onProgress, onExit, onApplied, 
       await listenAPI.placementApply({ session: run.session, answers })
       onApplied()
     } catch (e) {
-      setFatal(e?.response?.data?.detail || '결과를 적용하지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.')
+      setFatal(e?.response?.status === 404 ? NOT_NOW : e?.response?.data?.detail || '결과를 적용하지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.')
     }
     setApplying(false)
   }
@@ -91,7 +94,7 @@ export default function PlacementRun({ settings, onProgress, onExit, onApplied, 
   if (!started) {
     return (
       <div className="flex flex-col gap-4 lg:gap-5">
-        <Heading title="어느 연습부터 할지 정해요" sub="몇 가지 소리를 듣고 답하면 1·2단계를 어느 수준부터 할지, 어느 단계까지 함께 열지 정해요." />
+        <Heading title="어느 연습부터 할지 정해요" sub="몇 가지 소리를 듣고 답하면 소리 구별·낱말 고르기를 어느 수준부터 할지, 어느 단계까지 함께 열지 정해요." />
         <Card className="flex flex-col gap-2">
           <p className="break-keep text-[14px] leading-[1.7] text-ink-muted">5분쯤 걸리고, 문제는 16개를 넘지 않아요. 문제마다 두 번까지 들을 수 있어요.</p>
           <p className="break-keep text-[14px] leading-[1.7] text-ink-muted">정답은 알려 주지 않아요. 이 답은 연습 기록에 넣지 않아요.</p>
@@ -103,13 +106,9 @@ export default function PlacementRun({ settings, onProgress, onExit, onApplied, 
   }
   if (!run) return <Skeleton />
   if (run.done) {
-    const r = run.result
-    const opened = r.upper === 3 ? '3단계' : `3~${r.upper}단계`
+    const { sub, stats } = placementSummary(run.result)   // 단계 번호는 화면 기준(1부터, lib/listenFlow)
     return (
-      <ListenComplete title="어느 연습부터 할지 정했어요"
-        sub={`1단계는 수준 ${r.level1}, 2단계는 수준 ${r.level2}부터 연습해요. ${opened}(${STAGE_TITLE[r.upper]}까지)도 함께 열려요. 1·2단계는 그대로 연습해서 숙달해요.`}
-        stats={[{ label: '소리 구별 시작', value: `수준 ${r.level1} / 4`, main: true }, { label: '낱말 고르기 시작', value: `수준 ${r.level2} / 3`, main: true },
-          { label: '함께 여는 단계', value: opened }]}
+      <ListenComplete title="어느 연습부터 할지 정했어요" sub={sub} stats={stats}
         primary={{ label: applying ? '적용하는 중' : '이대로 시작하기', onClick: applying ? undefined : apply }}
         secondary={{ label: '적용하지 않고 나가기', onClick: onExit }} />
     )
