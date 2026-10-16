@@ -1,5 +1,5 @@
 """S4 청크 주의 학생 평가(docs/scorer-stream-chunk-2026-10.md 4~6절), 데스크탑 쪽. 원 등록 평가 코드(scripts/s4_eval_pod.py)를 그대로 쓰고
-음향 출력만 스트리밍 창 나누기(4절: C 4초, 왼쪽 4초, 오른쪽 1초)로 바꾼 백엔드 'stream:ONNX'를 더한다.
+음향 출력만 스트리밍 창 나누기(4절·9절: C 4초, 왼쪽 2초, 오른쪽 1초)로 바꾼 백엔드 'stream:ONNX'를 더한다.
 
     set S4_W=D:/liplab/s4
     python s4c_eval.py prep
@@ -20,7 +20,7 @@ import s4_distill_pod as S  # noqa: E402
 import s4_eval_pod as E  # noqa: E402
 
 SR, HOP = 16000, 320
-C_S, LC_S, RC_S = 4.0, 4.0, 1.0
+C_S, LC_S, RC_S = 4.0, 2.0, 1.0
 CF, LF, RF = int(C_S * SR / HOP), int(LC_S * SR / HOP), int(RC_S * SR / HOP)
 
 
