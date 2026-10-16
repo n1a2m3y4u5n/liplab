@@ -7,6 +7,7 @@ import ListenFrame from '../components/listen/ListenFrame'
 import StateCard from '../components/listen/StateCard'
 import { Skeleton } from '../components/listen/ui'
 import WordTest from '../components/listen/WordTest'
+import PlacementRun from '../components/listen/PlacementRun'
 import { STAGE_TASK } from '../components/listen/tasks'
 
 /**
@@ -40,6 +41,16 @@ export default function ListeningPractice() {
 
   const Task = data ? STAGE_TASK[data.mode] : null
   const wordTest = stage === 2 && params.get('wordtest') === '1'
+  // 시작 단계 정하기(?placement=1). 학습 화면은 서버가 플래그를 켰다고 알릴 때만 이 주소로 보낸다(꺼져 있으면 API가 404)
+  if (params.get('placement') === '1') {
+    return (
+      <ListenFrame key="placement" kicker="소리 듣기 · 시작 단계 정하기" onExit={exit} exitAria="나가기, 학습 화면으로">
+        {({ settings, voiceList, onProgress, active }) => (!voiceList ? <Skeleton /> : (
+          <PlacementRun settings={settings} onProgress={onProgress} onExit={exit} onApplied={exit} active={active} />
+        ))}
+      </ListenFrame>
+    )
+  }
   return (
     <ListenFrame key={stage} kicker={`소리 듣기 · ${stage + 1}단계${data?.title ? ` ${data.title}` : ''}`} onExit={exit} exitAria="나가기, 학습 화면으로">
       {({ settings, voices, voiceList, onProgress, active }) => (

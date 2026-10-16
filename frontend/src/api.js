@@ -372,6 +372,9 @@ export const listenAPI = {
   review: async () => (await api.get('/listen/review')).data,
   // 트랙 잇기: 소리 듣기 ↔ 독화 연습 제안(docs/listen-cross-track-2026-10.md)
   links: async () => (await api.get('/listen/links')).data,
+  // 시작 단계 정하기(배치검사 후보 D, 서버 플래그 LISTEN_PLACEMENT가 켜졌을 때만, docs/listen-placement3-2026-10.md 11절)
+  placementNext: async (body) => (await api.post('/listen/placement/next', body)).data,
+  placementApply: async (body) => (await api.post('/listen/placement/apply', body)).data,
 }
 
 // 음성구동 아바타(A4) — 실제 음성 → 52 블렌드셰이프 립싱크
