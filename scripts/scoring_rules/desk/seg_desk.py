@@ -25,3 +25,5 @@ os.makedirs(m.OUT, exist_ok=True)
 os.makedirs(W + "/cuts", exist_ok=True)
 m.cut_608()
 print("SEG DONE", flush=True)
+# 10/17: Windows에서 ctranslate2(CUDA)가 인터프리터 종료 때 0xC0000409로 죽는다(cuts608.json은 이미 다 씀). 정리 없이 끝낸다.
+os._exit(0)
