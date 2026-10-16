@@ -162,7 +162,15 @@
 
 ## 측정 전 변경 기록
 
-(없음)
+- 2026-10-17(확인 특성을 계산하기 전): 사용자 지시로 받기·확인 계산을 파드 대신 집 데스크탑(Windows 11, RTX 3060 12GB, i5-10400, RAM 16GB)에서 한다.
+  판정 규칙·후보·문턱(6절, frozen.json)과 2절 선택 규칙은 바꾸지 않는다. 바뀌는 것은 실행 환경뿐이며 10절에 적는다.
+  - 받기: 같은 `fetch608_c27b.py`를 데스크탑 WSL(우분투)에서 돌린다. `aihub608.py`의 실험 폴더 경로만 환경 변수 `LIPLAB_LAB`로 받게 했다.
+    데스크탑의 라벨·제외 목록으로 다시 계산한 선택이 10/15 맥 선택(`c27/b2/select.json`, 59명 108세션)과 같음을 확인했다.
+  - 계산: `scripts/scoring_rules/desk/run_sr_desk.py`가 `run_sr.sh confirm`과 같은 순서로 돈다. backend는 탐색과 같은 4c10d9b5판을
+    `git archive`로 꺼내 쓰고(지금 integrate의 backend가 아니다), int8 가중치 sha256과 CPU 2스레드 작업자는 그대로다.
+    자르기는 `seg_desk.py`로 같은 `cut_608`(b675975판, faster-whisper 0.10.1 large-v3 fp16)을 GPU에서 부른다.
+  - Windows 때문에 더한 것: 조각 경로를 jobs 폴더 기준 상대 경로로 바꾸는 `relpath_jobs.py`(feat_pod는 '/'로 시작하는 경로만 절대로 본다),
+    `PYTHONUTF8=1`(기본 인코딩 cp949), `analyze.py`의 실험 폴더 경로를 `LIPLAB_LAB`로 받기.
 
 ## 9. 진행 상태와 다음 순서(2026-10-15 22:00, 사용자 지시로 중단)
 

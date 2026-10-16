@@ -13,7 +13,7 @@ from collections import Counter, defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.abspath(os.path.join(HERE, "..", ".."))
-LAB = os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab")
+LAB = os.environ.get("LIPLAB_LAB") or os.path.expanduser("~/Downloads/LIPLAB_ALL/liplab-lab")  # 10/17 데스크탑: D:/liplab/lab
 TRIM27 = f"{LAB}/data/pod_runs/20261009_0b7hmamwk96ebn/c27/out/trim.jsonl"
 NSNEW = f"{LAB}/data/pod_runs/20261009_o11jkbqreech6s/ns/out/dgop_new.jsonl"
 FROZEN = f"{HERE}/frozen.json"
