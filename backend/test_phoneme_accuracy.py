@@ -189,7 +189,7 @@ def test_loose_jamo_drop_is_default_and_counted():
     assert r["loose_jamo"] == "drop" and r["n_loose_jamo"] == 2 and r["phoneme_accuracy"] == round(7 / 9, 4)
 
 
-def test_loose_jamo_compose_follows_r4():
+def test_loose_jamo_compose_is_loose_metric():
     assert spa("사과 주세요", "ㅅㅏ과 주세요", loose_jamo="compose")["phoneme_accuracy"] == 1.0
     assert spa("사과 주세요", "ㅅㅏㄱㅘ ㅈㅜㅅㅔㅇㅛ", loose_jamo="compose")["phoneme_accuracy"] == 1.0
     assert spa("사과 주세요", "ㅅㅏㄱㅗㅏ", loose_jamo="compose")["alignment"][0]["correct"] is True   # ㅗ+ㅏ = ㅘ
@@ -288,4 +288,50 @@ def test_typo_scored_as_typed():
 
 
 def test_version_string():
-    assert pa.SCORER_VERSION == "strict-v2" and spa("밥", "밥")["scorer_version"] == "strict-v2"
+    assert pa.SCORER_VERSION == "strict-v3" and spa("밥", "밥")["scorer_version"] == "strict-v3"
+    # compose는 엄격 지표가 아니라 판본 이름을 따로 쓴다(10/15 결정 '느슨한 지표는 따로')
+    assert spa("밥", "ㅂ", loose_jamo="compose")["scorer_version"] == pa.LOOSE_SCORER_VERSION != pa.SCORER_VERSION
+    assert pa.scorer_version_for("drop") == "strict-v3" and pa.scorer_version_for("compose") == "loose-jamo-v1"
+
+
+# ── strict-v3(10/17): 낱자 0점(10/15 결정) ─────────────────────
+
+@pytest.mark.parametrize("target, ans, n_jamo", [
+    ("가", "ㄱㅏ", 2), ("밥", "ㅂ", 1), ("밥", "ㅂㅏㅂ", 3), ("사과", "ㅅㅏ ㄱㅘ", 4), ("아이", "ㅏㅣ", 2),
+    ("오늘 날씨가 좋아요", "ㅇㄴㄴㅆㄱㅈㅇㅇ", 8), ("사과 주세요", "ㅅㅏㄱㅘ ㅈㅜㅅㅔㅇㅛ", 10),
+])
+def test_bare_jamo_answer_is_zero(target, ans, n_jamo):
+    r = spa(target, ans)
+    assert r["n_matched_phonemes"] == 0 and r["phoneme_accuracy"] == 0.0 and r["n_words_correct"] == 0
+    assert r["visual_phoneme_accuracy"] == 0.0 and r["n_extra_syllables"] == 0
+    assert r["n_loose_jamo"] == n_jamo and r["dont_know"] is False
+    assert r["n_target_phonemes"] == spa(target, "")["n_target_phonemes"]   # 분모는 빈 답과 같다
+
+
+def test_mixed_jamo_scores_syllables_only():
+    # 낱자는 0점, 완성된 음절은 그대로 채점한다(R10 부분 낱말)
+    assert _acc("사과 주세요", "ㅅㅏ과 주세요") == (7, 9, 1, 2)
+    assert _acc("고마워요", "고마ㅝ요") == (5, 6, 0, 1)
+    assert _acc("밥 먹었어", "밥 먹었ㅇ") == (7, 9, 1, 2)
+    # 낱자는 지운 공백과 달리 앞뒤 음절을 잇지 않는다: '옷ㅇ입어'는 [오시버]가 아니라 옷·이버(R3 친 글자 그대로)
+    r = spa("옷 입어", "옷ㅇ입어")
+    assert (r["n_matched_phonemes"], r["n_target_phonemes"]) == (4, 5) and [w["answer"] for w in r["alignment"]] == ["옷", "이버"]
+    assert _acc("옷 입어", "옷 입어") == (5, 5, 2, 2)
+
+
+def test_jamo_kinds_counted_and_zero():
+    # 첫가끝 홀자모, 반각 자모, 옛 자모, 확장 자모도 낱자로 세고 0점이다
+    for ans, n in [("\u1100", 1), ("\uffa1\uffc2", 2), ("\u317f", 1), ("\ua960", 1), ("\ud7b0", 1)]:
+        r = spa("가", ans)
+        assert (r["n_matched_phonemes"], r["n_loose_jamo"]) == (0, n), ans
+    # 첫가끝 L+V는 NFC로 '가'가 되므로 낱자가 아니다(NFD 입력). 뒤에 남은 호환 자모 하나만 센다
+    assert _acc("가", "\u1100\u1161")[:2] == (2, 2) and spa("가", "\u1100\u1161")["n_loose_jamo"] == 0
+    assert spa("가", "\u1100\u1161\u3131")["n_loose_jamo"] == 1
+    # 채움 문자는 낱자로 세지 않는다
+    assert spa("가", "\u3164\u115f")["n_loose_jamo"] == 0
+
+
+def test_empty_and_dont_know_still_zero_without_jamo():
+    for ans in ["", "   ", "모름", "잘 모르겠어요"]:
+        r = spa("사과 주세요", ans)
+        assert r["n_matched_phonemes"] == 0 and r["n_loose_jamo"] == 0 and r["scorer_version"] == "strict-v3"
