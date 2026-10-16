@@ -69,6 +69,6 @@ export const LIP_GEOMETRY_LABELS = {
   width: '가로너비',
   height: '세로높이',
   inner: '안쪽 개구도',
-  aspect: '종횡비',
+  aspect: '세로 가로 비율',
   perimeter: '입술둘레',
 }

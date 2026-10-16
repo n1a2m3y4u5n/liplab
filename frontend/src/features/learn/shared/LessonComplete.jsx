@@ -19,7 +19,7 @@ export default function LessonComplete({ track: trackId, lessonId, result: resul
   const location = useLocation()
   const streak = useStore((state) => state.user?.streak_count ?? 0)
   const { track, loading, lessons } = useTrackLessons(trackId)
-  if (!track) return <p className="p-10 text-center text-sm text-slate-500">알 수 없는 학습 트랙이에요.</p>
+  if (!track) return <p className="p-10 text-center text-sm text-slate-500">찾을 수 없는 학습이에요.</p>
 
   const result = resultProp ?? location.state?.result ?? null
   const accuracy = result?.total > 0 ? Math.round((result.correct / result.total) * 100) : null

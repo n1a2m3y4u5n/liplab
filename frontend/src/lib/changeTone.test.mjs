@@ -13,8 +13,8 @@ test('changeTone: 구간이 0을 벗어날 때만 색, 아니면 중립', () => 
 })
 
 test('ciText: 정답률(0~1)과 %p 모두', () => {
-  assert.equal(ciText([-0.214, 0.126]), '95% 구간 −21~+13%p')
-  assert.equal(ciText([-8.4, 15.2], 1), '95% 구간 −8~+15%p')
+  assert.equal(ciText([-0.214, 0.126]), '95% 범위 −21~+13%p')
+  assert.equal(ciText([-8.4, 15.2], 1), '95% 범위 −8~+15%p')
   assert.equal(ciText(null), '')
   assert.equal(ciText([0.1]), '')
 })

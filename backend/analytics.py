@@ -167,7 +167,7 @@ def speak_sentence_weekly(points: Sequence[Tuple[datetime, float]], today: date,
 # 배지 정의 — 과제 탭(TasksPage)의 12칸 순서와 같다. 'sign'은 서버 기록이 없어 브라우저가 판정한다.
 BADGES = [
     ("first_step", "첫 걸음"), ("streak7", "7일 연속"), ("viseme_master", "입모양 마스터"),
-    ("acc90", "정확도 90%"), ("q100", "100문제 돌파"), ("review_king", "복습왕"),
+    ("acc90", "정답률 90%"), ("q100", "100문제 돌파"), ("review_king", "복습왕"),
     ("free_talk", "자유 발화"), ("sign", "수어 탐험"), ("streak30", "30일 연속"),
     ("dawn", "새벽 학습"), ("complete", "완주"), ("level5", "레벨 5"),
 ]

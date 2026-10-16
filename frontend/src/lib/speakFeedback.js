@@ -44,8 +44,8 @@ export function volumeCurveNote(summary, drill) {
   if (!summary || summary.micIssue || summary.volOk !== false) return null
   if (drill === 'soft') {
     return summary.loudness > SOFT_BAND[1]
-      ? '크기 곡선이 목표 구간 위로 올라갔어요 → 더 작게, 속삭이듯.'
-      : '크기 곡선이 목표 구간 아래예요 → 살짝만 소리 내 보세요.'
+      ? '크기 선이 목표 범위 위로 올라갔어요 → 더 작게, 속삭이듯.'
+      : '크기 선이 목표 범위 아래예요 → 살짝만 소리 내 보세요.'
   }
-  return '크기 곡선이 알맞은 선 아래로 자주 내려갔어요 → 배에 힘을 주고 더 크게.'
+  return '크기 선이 알맞은 선 아래로 자주 내려갔어요 → 배에 힘을 주고 더 크게.'
 }

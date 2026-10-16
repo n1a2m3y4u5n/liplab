@@ -10,7 +10,7 @@ import { pickContinueLesson, summarizeProgress } from './trackProgress'
 export default function TrackHub({ track: trackId }) {
   const navigate = useNavigate()
   const { track, loading, failed, lessons } = useTrackLessons(trackId)
-  if (!track) return <p className="p-10 text-center text-sm text-slate-500">알 수 없는 학습 트랙이에요.</p>
+  if (!track) return <p className="p-10 text-center text-sm text-slate-500">찾을 수 없는 학습이에요.</p>
 
   const summary = summarizeProgress(lessons)
   const next = loading ? null : pickContinueLesson(lessons)
@@ -30,7 +30,7 @@ export default function TrackHub({ track: trackId }) {
             <span>
               {loading ? '가져오는 중…'
                 : failed ? '진행도를 가져오지 못했어요'
-                  : `${summary.mastered} / ${summary.total} 단계 완료`}
+                  : `${summary.mastered} / ${summary.total} 단계 숙달`}
             </span>
           </div>
           <div

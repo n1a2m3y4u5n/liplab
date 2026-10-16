@@ -224,7 +224,7 @@ export default function Conversation() {
         levelRef.current = next
         setLevel(next)
         recentRef.current = []
-        setMessages((prev) => [...prev, { role: 'system', text: next < cur ? `조금 더 짧고 쉬운 말로 바꿀게요 (난이도 ${next})` : `잘 읽고 있어요. 조금 더 긴 말로 해 볼게요 (난이도 ${next})` }])
+        setMessages((prev) => [...prev, { role: 'system', text: next < cur ? `조금 더 짧고 쉬운 말로 바꿀게요 (어려운 정도 ${next})` : `잘 읽고 있어요. 조금 더 긴 말로 해 볼게요 (어려운 정도 ${next})` }])
       }
     }
 
@@ -273,7 +273,7 @@ export default function Conversation() {
         {/* Left: Avatar player — 모바일에선 위로 쌓이고, lg 이상에서만 좌측 고정폭 */}
         <div className="w-full lg:w-80 shrink-0 flex flex-col gap-3">
           <div className="card flex-1">
-            <p className="mb-2 text-xs font-bold text-ink-muted">입모양 읽기 · {currentScenario.situation} · 난이도 {level}</p>
+            <p className="mb-2 text-xs font-bold text-ink-muted">입모양 읽기 · {currentScenario.situation} · 어려운 정도 {level}</p>
             {isLoading ? (
               <div className="flex flex-col items-center justify-center gap-2 py-12">
                 <div className="spinner size-8 rounded-full border-4 border-primary-200 border-t-primary-600" />

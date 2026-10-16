@@ -78,7 +78,7 @@ export default function ReviewSection() {
                 </div>
                 <button onClick={p.onStart} disabled={total === 0}
                   className={`w-full rounded-lg px-3 py-2 text-xs font-bold text-white transition disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 ${p.theme.btn}`}>
-                  {total > 0 ? `복습 시작 (${total})` : '복습할 항목 없음'}
+                  {total > 0 ? `복습 시작 (${total})` : '복습할 것 없음'}
                 </button>
               </div>
             )
