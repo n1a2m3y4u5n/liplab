@@ -31,7 +31,7 @@ export default function SoundCard({ player, onPlay, clipState = 'ready', label, 
           <p id={statusId} role="status" aria-live="polite" className={`text-[13px] font-bold leading-snug ${player.busy ? 'text-track-dark' : 'text-ink-muted'}`}>
             {text}
           </p>
-          <p className="text-[12px] leading-snug text-ink-faint">
+          <p className="break-keep text-[12px] leading-snug text-ink-faint">
             {plays > 0 ? `${plays}번 들었어요${left} · ` : left ? `${left.slice(3)} · ` : ''}기계 목소리(합성)<span className="hidden lg:inline"> · 스페이스 키로 듣기</span>
           </p>
         </div>

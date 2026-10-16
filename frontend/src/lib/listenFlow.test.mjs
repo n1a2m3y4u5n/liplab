@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   pct, skippedNote, completeActions, practiceQuery, practiceTask, normalizeStair, modeAvailability, blockData, todayTotals, fmtMinutes, goalMinutes, fmtGoalMinutes, pairMissing,
   lipDiffers, alternate, listenOverview, lingNotes, stairPoints, PRACTICE_MODES,
-  practiceApiParams, contrastSegments, practiceActions, choiceLabel, normalizePlaces, josa,
+  practiceApiParams, contrastSegments, practiceActions, choiceLabel, normalizePlaces, josa, placementSummary,
 } from './listenFlow.js'
 
 const params = (o) => new URLSearchParams(o)
@@ -214,4 +214,16 @@ test('소리 교실 짝을 못 받은 이유: 연결 끊김·풀기 실패는 �
   assert.match(net.text, /인터넷 연결/)
   assert.equal(pairMissing({ state: 'missing', reason: 'not_prepared' }, { state: 'missing', reason: 'decode' }).reason, 'decode')
   assert.equal(pairMissing({ state: 'missing', reason: null }, ok).reason, 'not_prepared')
+})
+
+test('시작 단계 정하기 결과: 단계 번호는 화면 기준(서버 3단계 = 4단계), 1·2단계는 이름으로', () => {
+  const lo = placementSummary({ level1: 1, level2: 1, upper: 3 })
+  assert.equal(lo.opened, '4단계')
+  assert.match(lo.sub, /^소리 구별은 수준 1, 낱말 고르기는 수준 1부터 연습해요\. 4단계\(문장 알아듣기까지\)/)
+  assert.ok(!/[123]단계/.test(lo.sub))
+  assert.deepEqual(lo.stats.map((s) => s.value), ['1 / 4', '1 / 3', '4단계'])
+  const hi = placementSummary({ level1: 4, level2: 3, upper: 5 })
+  assert.equal(hi.opened, '4~6단계')
+  assert.match(hi.sub, /4~6단계\(대화 듣기까지\)/)
+  assert.equal(placementSummary({ level1: 2, level2: 2, upper: 4 }).opened, '4~5단계')
 })

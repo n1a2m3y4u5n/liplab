@@ -6089,7 +6089,7 @@ class ListenPlacementReq(BaseModel):
     answers: List[ListenPlacementAnswer] = Field(default_factory=list, max_length=20)
 
 
-_PLACEMENT_REASON = {"ling_first": "소리 확인(0단계)을 먼저 마쳐 주세요.", "already": "이미 소리 듣기 연습을 시작해서 시작 단계를 정할 수 없어요."}
+_PLACEMENT_REASON = {"ling_first": "소리 확인을 먼저 마쳐 주세요.", "already": "이미 소리 듣기 연습을 시작해서 시작 단계를 정할 수 없어요."}
 
 
 async def _listen_placement_run(req: ListenPlacementReq, user, db, new_session: bool):

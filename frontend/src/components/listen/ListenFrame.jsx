@@ -62,7 +62,7 @@ export default function ListenFrame({ kicker, onExit, exitAria = '나가기', sh
           <div hidden={setup} className="flex flex-col gap-4 lg:gap-5">
             {settings ? children(ctx) : null}
           </div>
-          <p className="mt-auto pt-2 text-center text-[12px] leading-[1.6] text-ink-faint">{NOTICE}</p>
+          <p className="mt-auto break-keep pt-2 text-center text-[12px] leading-[1.6] text-ink-faint">{NOTICE}</p>
         </main>
       </div>
     </div>
