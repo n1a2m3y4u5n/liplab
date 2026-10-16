@@ -32,8 +32,8 @@ cleanup_failed() {
 }
 
 # 맥 부하(10/15 메인 세션 알림): 받기·ffmpeg 컷을 nice 20으로, 받기 1·컷 1(동시 2개 이하). 회선은 .limit_rate(기본 4M)로 제한.
-# 데스크탑: 사용자 지시로 회선 제한 없음(.limit_rate를 만들지 않는다. 필요하면 echo 4M > $ROOT/.limit_rate)
-DLMORE_ROOT=$ROOT VBYTES=${VBYTES:-1000000000} MINFREE_GB=${MINFREE_GB:-10} BUDGET_GB=${BUDGET_GB:-4} JOBS=1 \
+# 데스크탑: 키 하나, 인증 실패면 기다리지 않고 멈춘다(BACKOFF_ROUNDS=1, 10/17 지시). 회선 제한 없음(.limit_rate를 만들지 않는다. 필요하면 echo 4M > $ROOT/.limit_rate)
+BACKOFF_ROUNDS=${BACKOFF_ROUNDS:-1} DLMORE_ROOT=$ROOT VBYTES=${VBYTES:-1000000000} MINFREE_GB=${MINFREE_GB:-10} BUDGET_GB=${BUDGET_GB:-4} JOBS=1 \
   nice -n 20 bash "$LAB/tools/dl_more.sh" --protect none --labels stream \
   --also-manifest "$PR/20260924_k74l2l74024fsz/manifest_all.tsv" \
   --also-manifest "$PR/20260925_4aol7xkyf762yh/dax/manifest_all.tsv" \
