@@ -100,7 +100,7 @@ export default function Login({ initialMode = 'login' }) {
   const demo = async () => {
     setBusy(true); setErr('')
     try { await enter(await authAPI.demoLogin(), { demo: true }) }
-    catch { setErr('데모 입장에 실패했어요.') } finally { setBusy(false) }
+    catch { setErr('둘러보기를 시작하지 못했어요.') } finally { setBusy(false) }
   }
   const toggle = () => {
     setErr(''); setAgree(false); setGuardianOk(false)
@@ -207,7 +207,7 @@ export default function Login({ initialMode = 'login' }) {
 
           {!signup && (
             <button type="button" onClick={demo} disabled={busy} className={`btn-secondary text-track ${BTN}`}>
-              둘러보기 (데모)
+              둘러보기
             </button>
           )}
 

@@ -138,7 +138,7 @@ export default function CueBadges({ text, showControls = false }) {
           <input type="checkbox" checked={focus} onChange={(e) => setFocus(e.target.checked)} className="h-3 w-3 accent-violet-600" />
           약한 소리만 표시
         </label>
-        <label className="inline-flex items-center gap-1.5" title="화면에 동시에 뜨는 기호 수를 제한해 과다를 막습니다.">
+        <label className="inline-flex items-center gap-1.5" title="화면에 동시에 뜨는 기호 수를 제한해 너무 많아지지 않게 합니다.">
           최대 기호
           <input type="range" min="0" max="8" value={maxCues} onChange={(e) => setMaxCues(Number(e.target.value))} className="h-1 w-20 accent-violet-600" />
           <span className="w-8 tabular-nums text-gray-600">{maxCues === 0 ? '무제한' : maxCues}</span>

@@ -35,7 +35,7 @@ function Shape({ id, className = '' }) {
 
 function Skeleton({ word, className = '' }) {
   return (
-    <p className={`font-bold tracking-[0.18em] text-ink ${className}`} aria-label={`자음 골격 ${consonantFrame(word)}`}>
+    <p className={`font-bold tracking-[0.18em] text-ink ${className}`} aria-label={`자음 뼈대 ${consonantFrame(word)}`}>
       {consonantFrame(word).split('').join(' ')}
     </p>
   )
@@ -292,7 +292,7 @@ export default function NonsensePairing() {
           <div className={LESSON_AVATAR}>
             {hinting ? (
               <div className="flex h-full flex-col items-center justify-center gap-2">
-                <span className="text-[13px] font-bold text-ink-faint">자음 골격</span>
+                <span className="text-[13px] font-bold text-ink-faint">자음 뼈대</span>
                 <Skeleton word={cur} className="text-[34px] lg:text-[46px]" />
               </div>
             ) : (

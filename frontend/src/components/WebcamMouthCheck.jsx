@@ -311,7 +311,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       {showMirror && (
         <div className="mt-2 grid grid-cols-2 gap-2">
           <div className="rounded-lg border border-gray-200 bg-slate-900/95 p-1">
-            <p className="px-1 pb-0.5 text-[10px] text-slate-300">내 입 안 모양(추정)</p>
+            <p className="px-1 pb-0.5 text-[10px] text-slate-300">내 입 안 모양(짐작)</p>
             <div className="h-24"><VocalTract visemeId={visemeId} articulationRef={artRef} /></div>
           </div>
           <div className="rounded-lg border border-gray-200 bg-slate-900/95 p-1">
@@ -331,7 +331,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       {/* 축 E: 조음 교정 — 관찰 계수(개구·원순·폐쇄)를 목표와 비교해 방향을 제시하고 계수를 노출한다 */}
       {status === 'running' && correction && (
         <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50/60 p-2">
-          <p className="mb-1 text-center text-[10px] text-sky-600">입모양 맞추기 · 내 입 수치</p>
+          <p className="mb-1 text-center text-[10px] text-sky-600">입모양 맞추기 · 내 입 값</p>
           <p className="text-center text-sm font-semibold text-sky-900">
             {correction.ok ? '입모양이 목표에 가까워요' : correction.primary}
           </p>
@@ -376,7 +376,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       )}
       {status === 'running' && geo && (
         <div className="mt-2">
-          <p className="mb-1 text-center text-[10px] text-gray-400">입술 모양 수치 (두 눈 사이 거리로 크기를 맞춘 값)</p>
+          <p className="mb-1 text-center text-[10px] text-gray-400">입술 모양 값 (두 눈 사이 거리로 크기를 맞춘 값)</p>
           <div className="grid grid-cols-5 gap-1.5">
             {Object.entries(LIP_GEOMETRY_LABELS).map(([k, label]) => (
               <div key={k} className="rounded-md bg-slate-50 py-1 text-center">
@@ -423,11 +423,11 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
               돌아왔을 때 검은 화면으로 남지 않게 한다(돌아오면 '카메라 켜기'로 다시 켠다). */}
           <button type="button" onClick={() => { stop(); setShowCalib(true) }}
             className="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-800">
-            {calibrated ? '✓ 내 얼굴 맞춤 적용됨 · 다시 본뜨기' : '정확도 높이기 — 내 입모양 본뜨기'}
+            {calibrated ? '✓ 내 얼굴 맞춤 적용됨 · 다시 본뜨기' : '더 정확하게 — 내 입모양 본뜨기'}
           </button>
           <button type="button" onClick={() => setShowMirror((v) => !v)}
             className="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-800">
-            {showMirror ? '아바타 미러 끄기' : '아바타로 내 입모양 비추기'}
+            {showMirror ? '아바타로 비추기 끄기' : '아바타로 내 입모양 비추기'}
           </button>
         </div>
       </div>

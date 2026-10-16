@@ -38,7 +38,7 @@ export default function LearnerProfileCard({ user, statistics, calendarData }) {
     {
       id: 'review',
       label: '오늘의 복습 정리',
-      detail: dueReviewCount == null ? '복습 항목 확인하기' : dueReviewCount > 0 ? `${dueReviewCount}개가 기다리고 있어요` : '오늘 복습을 모두 정리했어요',
+      detail: dueReviewCount == null ? '복습할 것 확인하기' : dueReviewCount > 0 ? `${dueReviewCount}개가 기다리고 있어요` : '오늘 복습을 모두 정리했어요',
       completed: dueReviewCount === 0,
       to: '/review/today',
     },
@@ -52,7 +52,7 @@ export default function LearnerProfileCard({ user, statistics, calendarData }) {
     {
       id: 'challenge',
       label: '오늘의 학습 2회 채우기',
-      detail: `${Math.min(todaySessions, 2)} / 2회 완료`,
+      detail: `${Math.min(todaySessions, 2)} / 2회 했어요`,
       completed: todaySessions >= 2,
       to: '/learn/scenario',
     },
@@ -120,7 +120,7 @@ export default function LearnerProfileCard({ user, statistics, calendarData }) {
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-black text-slate-900">오늘의 과제</h3>
           <span className="rounded-full bg-lime-100 px-2 py-1 text-[9px] font-black text-lime-700">
-            {tasks.filter((task) => task.completed).length}/{tasks.length} 완료
+            {tasks.filter((task) => task.completed).length}/{tasks.length} 했어요
           </span>
         </div>
         <ul className="mt-2 space-y-1">

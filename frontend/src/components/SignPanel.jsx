@@ -111,9 +111,9 @@ export default function SignPanel({ text, variant = 'default' }) {
   }
 
   if (!text) return null
-  if (loading) return <div className="py-14 text-center text-gray-500 text-sm">수어로 변환 중…</div>
+  if (loading) return <div className="py-14 text-center text-gray-500 text-sm">수어로 바꾸는 중…</div>
   if (error) return <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</div>
-  if (!result || tokens.length === 0) return <div className="py-10 text-gray-500 text-sm text-center">변환할 단어가 없습니다.</div>
+  if (!result || tokens.length === 0) return <div className="py-10 text-gray-500 text-sm text-center">수어로 바꿀 단어가 없습니다.</div>
 
   return (
     <div>
@@ -288,11 +288,11 @@ function SplitView({ single = false, text, loading, error, result, tokens, token
   if (!text) {
     signStage = single ? null : <img src="/ui/lp-226-32-hand.svg" alt="" aria-hidden className="size-[72px]" />
   } else if (loading) {
-    signStage = <p role="status" className="text-[13.5px] font-bold text-stat-accuracy">수어로 변환 중…</p>
+    signStage = <p role="status" className="text-[13.5px] font-bold text-stat-accuracy">수어로 바꾸는 중…</p>
   } else if (error) {
     signStage = <p role="alert" className="px-4 text-center text-[13.5px] text-bad">{error}</p>
   } else if (!ready) {
-    signStage = <p className="text-[13.5px] text-ink-muted">변환할 단어가 없습니다.</p>
+    signStage = <p className="text-[13.5px] text-ink-muted">수어로 바꿀 단어가 없습니다.</p>
   } else if (token.type === 'sign' && token.video_url) {
     signStage = (
       <video

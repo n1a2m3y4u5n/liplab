@@ -323,14 +323,14 @@ export default function AnalysisTab() {
     <AppShell active="analysis" title="분석">
       <section className="flex w-full gap-2.5 lg:gap-3.5">
         <StatCard deco="clock" label="총 학습" value={ov ? fmtDur(ov.total_minutes) : '–'} delta={minDelta} color="text-stat-xp" />
-        <StatCard deco="percent" label="평균 정확도"
+        <StatCard deco="percent" label="평균 정답률"
           value={ov?.accuracy != null ? `${Math.round(ov.accuracy * 100)}%` : '–'} delta={accDelta} color="text-stat-accuracy" />
         <StatCard deco="flame" label="연속 학습" value={`${ov?.streak_current ?? 0}일`}
           delta={ov ? `최고 기록 ${ov.streak_best}일` : null} color="text-stat-streak" />
       </section>
 
       <ChartCard title="학습 시간 변화"><BarChart weeks={weeks} /></ChartCard>
-      <ChartCard title="정확도 변화"><LineChart weeks={weeks} /></ChartCard>
+      <ChartCard title="정답률 변화"><LineChart weeks={weeks} /></ChartCard>
       <SpeakTrend ov={ov} />
       <ListenSummary ov={ov} onOpen={() => navigate('/analysis/listening')} />
       <TrackLinks enabled={!!ov?.listen} navigate={navigate} />
@@ -654,7 +654,7 @@ function SessionDetail({ row, onClose, onGo }) {
                 {/* 융합 점수는 연구용 융합을 켠 기록에만 있다(9/24부터 입모양은 소리와 따로 보임) */}
                 {sm.fused != null && (
                   <>
-                    <Metric label="융합 점수" value={Math.round(sm.fused)} cls="text-speak-dark" />
+                    <Metric label="합친 점수" value={Math.round(sm.fused)} cls="text-speak-dark" />
                     <Divider />
                   </>
                 )}
@@ -740,9 +740,9 @@ function FullStats({ ov, onGo }) {
           <div key={t.name} className={`flex flex-1 flex-col gap-2.5 rounded-16 p-[18px] leading-figma ${t.card}`}>
             <div className="flex items-center justify-between font-bold">
               <span className="text-[16px]">{t.name}</span>
-              <span className="text-[13px] opacity-80">{t.acc === '–' ? '정확도 –' : `정확도 ${t.acc}%`}</span>
+              <span className="text-[13px] opacity-80">{t.acc === '–' ? '정답률 –' : `정답률 ${t.acc}%`}</span>
             </div>
-            <span className="text-[13px] opacity-75">{t.done} / {t.total}단계 완료</span>
+            <span className="text-[13px] opacity-75">{t.done} / {t.total}단계 숙달</span>
             <div className="h-2.5 overflow-hidden rounded-full bg-white/60">
               <div className={`h-full rounded-full ${t.fill}`} style={{ width: `${(t.done / t.total) * 100}%` }} />
             </div>

@@ -16,7 +16,7 @@ import { getTrack } from '../../../config/tracks'
 export default function LessonRunner({ track: trackId, title, description, progress, onExit, footer, children }) {
   const navigate = useNavigate()
   const track = getTrack(trackId)
-  if (!track) return <p className="p-10 text-center text-sm text-slate-500">알 수 없는 학습 트랙이에요.</p>
+  if (!track) return <p className="p-10 text-center text-sm text-slate-500">찾을 수 없는 학습이에요.</p>
 
   const percent = progress?.total > 0
     ? Math.min(100, Math.max(0, Math.round((progress.current / progress.total) * 100)))

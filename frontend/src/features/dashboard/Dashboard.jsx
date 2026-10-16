@@ -58,7 +58,7 @@ const TRACKS = [
 ]
 
 const STAGE_STATUS = {
-  mastered:    { label: '완료',     cls: 'bg-green-100 text-green-700' },
+  mastered:    { label: '숙달',     cls: 'bg-green-100 text-green-700' },
   in_progress: { label: '진행 중',  cls: 'bg-blue-100 text-blue-700' },
   unlocked:    { label: '시작 가능', cls: 'bg-primary-100 text-primary-700' },
   available:   { label: '연습',     cls: 'bg-gray-100 text-gray-600' },
@@ -221,7 +221,7 @@ export default function Dashboard() {
               <p className="text-sm font-black">대화 실전은 아직 잠겨 있어요</p>
               <p className="mt-0.5 text-xs leading-relaxed text-amber-800">{unlockNotice}</p>
             </div>
-            <button type="button" onClick={() => setUnlockNotice(null)} aria-label="해금 안내 닫기"
+            <button type="button" onClick={() => setUnlockNotice(null)} aria-label="열림 안내 닫기"
               className="text-lg leading-none text-amber-600 hover:text-amber-900">×</button>
           </motion.div>
         )}

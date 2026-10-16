@@ -59,7 +59,7 @@ function LevelSlider({ value, onChange }) {
         </Fragment>
       ))}
       <input type="range" min={1} max={5} step={1} value={value} onChange={(e) => onChange(Number(e.target.value))}
-        aria-label="난이도" aria-valuetext={`${value}단계 · ${LEVEL_LABEL[value]}`}
+        aria-label="어려운 정도" aria-valuetext={`${value}단계 · ${LEVEL_LABEL[value]}`}
         className="peer absolute inset-x-0 top-0 z-10 h-11 w-full cursor-pointer opacity-0" />
       <span aria-hidden className="pointer-events-none absolute top-[7px] size-[30px] -translate-x-1/2 rounded-full border-3 border-primary-500 bg-white shadow-knob transition-[left] duration-150 peer-focus-visible:ring-4 peer-focus-visible:ring-primary-200"
         style={{ left: at(value) }} />
@@ -131,7 +131,7 @@ export default function ScenarioHub() {
       navigate(mode === 'practice' ? '/practice' : '/conversation')
     } catch (error) {
       console.error(error)
-      setNotice('실전 문장을 준비하지 못했어요. 다시 시도해주세요.')
+      setNotice('대화 문장을 준비하지 못했어요. 다시 시도해주세요.')
     } finally {
       setLoading(false)
     }
@@ -162,7 +162,7 @@ export default function ScenarioHub() {
         {/* 난이도 (407:88) */}
         <div className="flex flex-col gap-3.5">
           <div className="flex items-center justify-between text-[17px] font-bold leading-figma">
-            <p className="text-ink">난이도</p>
+            <p className="text-ink">어려운 정도</p>
             <p className="text-primary-500">{level}단계 · {LEVEL_LABEL[level]}</p>
           </div>
           <div className="flex flex-col gap-1">

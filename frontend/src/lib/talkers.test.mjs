@@ -136,7 +136,7 @@ test('매개변수는 지시 범위 안, 훈련 4명·검사 전용 2명, 성별
     for (const [k, [lo, hi]] of Object.entries(RANGES)) {
       assert.ok(t[k] >= lo - 1e-9 && t[k] <= hi + 1e-9, `${t.id}.${k}=${t[k]} 범위 밖`)
     }
-    assert.match(t.label, /^화자 \d$/)
+    assert.match(t.label, /^사람 \d$/)
   }
 })
 

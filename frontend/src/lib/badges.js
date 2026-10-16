@@ -8,7 +8,7 @@ const BADGE_META = [
   { key: 'first_step', label: '첫 걸음', icon: '/ui/medal-0.svg', desc: '첫 학습을 마치고 여정을 시작하기' },
   { key: 'streak7', label: '7일 연속', icon: '/ui/medal-1.svg', desc: '이레 동안 하루도 빠짐없이 학습하기' },
   { key: 'viseme_master', label: '입모양 마스터', icon: '/ui/medal-2.svg', desc: '모든 입모양 그룹을 완벽하게 익히기' },
-  { key: 'acc90', label: '정확도 90%', shape: 'check', desc: '한 레슨에서 정확도 90% 이상을 달성하기' },
+  { key: 'acc90', label: '정답률 90%', shape: 'check', desc: '한 레슨에서 정답률 90% 이상을 달성하기' },
   { key: 'q100', label: '100문제 돌파', icon: '/ui/medal-3.svg', desc: '모두 합쳐 100문제를 풀어내기' },
   { key: 'review_king', label: '복습왕', icon: '/ui/medal-4.svg', desc: '예정된 복습을 미루지 않고 모두 끝내기' },
   { key: 'free_talk', label: '자유 발화', icon: '/ui/medal-5.svg', desc: '대화 실전 단계에서 자유롭게 말해보기' },

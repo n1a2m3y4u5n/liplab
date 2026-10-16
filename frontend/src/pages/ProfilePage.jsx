@@ -135,8 +135,8 @@ export default function ProfilePage() {
       const u = await accountAPI.updateProfile(payload)
       if (u && updateUser) updateUser(u)
       setEdit(null); setForm((f) => ({ ...f, emailPw: '' }))
-      setMsg(field === 'email' ? '이메일을 저장했어요.' : '이름을 저장했어요.')
-    } catch (e) { setMsg(e?.response?.data?.detail || '저장하지 못했어요.') } finally { setBusy(false) }
+      setMsg(field === 'email' ? '이메일을 바꿨어요.' : '이름을 바꿨어요.')
+    } catch (e) { setMsg(e?.response?.data?.detail || '바꾸지 못했어요.') } finally { setBusy(false) }
   }
   const savePassword = async () => {
     if (!form.current || !form.next) { setMsg('현재·새 비밀번호를 입력해 주세요.'); return }
@@ -167,13 +167,13 @@ export default function ProfilePage() {
   }
   // 계정 삭제(삭제권) — 현재 비밀번호로 재인증한 뒤 서버에서 계정·데이터를 일괄 삭제하고 로그아웃한다.
   const delAccount = async () => {
-    if (!form.delPw) { setMsg('계정을 삭제하려면 현재 비밀번호를 입력해 주세요.'); return }
+    if (!form.delPw) { setMsg('계정을 지우려면 현재 비밀번호를 입력해 주세요.'); return }
     setBusy(true); setMsg('')
     try {
       await accountAPI.deleteAccount(form.delPw)
       learnerInfo.clear()   // 이 기기에 남은 학습자 정보도 함께 지운다
       logout(); navigate('/learn/path')
-    } catch (e) { setMsg(e?.response?.data?.detail || '삭제하지 못했어요.') } finally { setBusy(false) }
+    } catch (e) { setMsg(e?.response?.data?.detail || '지우지 못했어요.') } finally { setBusy(false) }
   }
 
   const level = Math.max(1, statistics?.current_level || user?.current_level || 1)
@@ -277,7 +277,7 @@ export default function ProfilePage() {
 
       {/* 나에게 맞춘 안내(계획 2-6) — 온보딩과 같은 선택 질문. 답은 이 기기에만 둔다 */}
       <Modal open={modal === 'learner'} onClose={() => setModal(null)} title="나에게 맞춘 안내" gap="gap-[14px]" maxW="max-w-[480px]">
-        <LearnerInfoForm key={modal === 'learner' ? 'open' : 'closed'} initial={learnerInfo.answers} saveLabel="저장"
+        <LearnerInfoForm key={modal === 'learner' ? 'open' : 'closed'} initial={learnerInfo.answers} saveLabel="다 했어요"
           onSave={(a) => { learnerInfo.save(a); setModal(null) }} />
         {learnerInfo.answers && (
           <button type="button" onClick={() => { learnerInfo.clear(); setModal(null) }}
@@ -434,7 +434,7 @@ function FieldRow({ label, value, display, editing, type = 'text', placeholder, 
         <div className="flex items-center gap-2">
           <input type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="input-field flex-1" />
           <button type="button" onClick={onCancel} className="btn-secondary shrink-0 !px-3 !py-2.5">취소</button>
-          <button type="button" disabled={busy} onClick={onSave} className="btn-primary shrink-0 !px-3 !py-2.5">저장</button>
+          <button type="button" disabled={busy} onClick={onSave} className="btn-primary shrink-0 !px-3 !py-2.5">바꾸기</button>
         </div>
       )}
     </div>

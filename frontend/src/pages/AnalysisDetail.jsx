@@ -12,8 +12,8 @@ import { activityCounts, recentDays } from '../lib/activityDays'
  */
 const PAGE_META = {
   activity: { title: '학습 활동', description: '최근 90일 동안 언제, 얼마나 꾸준히 학습했는지 확인합니다.' },
-  visemes: { title: '약한 입모양', description: '입모양 유형별 점수와 시도 횟수를 비교해 집중할 항목을 찾습니다.' },
-  scores: { title: '평균 점수', description: '독화는 푼 문제 전체의 정확도, 말하기는 평균 발음 점수를 비교해요.' },
+  visemes: { title: '약한 입모양', description: '입모양 유형별 점수와 시도 횟수를 비교해 집중할 입모양을 찾습니다.' },
+  scores: { title: '평균 점수', description: '독화는 푼 문제 전체의 정답률, 말하기는 평균 발음 점수를 비교해요.' },
   history: { title: '학습 기록', description: '날짜별 학습량과 누적 성과를 시간순으로 확인합니다.' },
 }
 
@@ -94,7 +94,7 @@ export default function AnalysisDetail({ mode = 'activity' }) {
     <>
       <div className="grid gap-3 sm:grid-cols-3">
         <MetricCard label="활동한 날" value={`${activeDays.length}일`} description="최근 90일 동안 학습한 날짜" />
-        <MetricCard label="총 활동량" value={`${totalActivity}개`} description="기간 안에 마친 학습 항목" tone="text-stat-level" />
+        <MetricCard label="총 활동량" value={`${totalActivity}개`} description="기간 안에 마친 학습" tone="text-stat-level" />
         <MetricCard label="하루 평균" value={`${activeDays.length ? (totalActivity / activeDays.length).toFixed(1) : 0}개`} description="학습한 날을 기준으로 계산" tone="text-stat-accuracy" />
       </div>
       <section className="card-flat">
@@ -153,7 +153,7 @@ export default function AnalysisDetail({ mode = 'activity' }) {
                 </div>
                 <div className="text-right">
                   <strong className="text-2xl font-bold text-bad">틀린 비율 {item.error_rate}%</strong>
-                  <p className="text-xs text-ink-faint">정확도 {acc}%{item.attempts ? ` · ${item.attempts}회` : ''}</p>
+                  <p className="text-xs text-ink-faint">정답률 {acc}%{item.attempts ? ` · ${item.attempts}회` : ''}</p>
                 </div>
               </div>
               <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-fill">
@@ -170,7 +170,7 @@ export default function AnalysisDetail({ mode = 'activity' }) {
     // 막대 색은 트랙 색(§3.1) — 독화 보라, 말하기 분홍. 독화는 정확도(%)라 단위와 설명을 따로 둔다
     const read = overview?.tracks?.read
     const scores = [
-      { label: '독화', value: Math.round(Number(read?.accuracy || 0) * 1000) / 10, unit: '%', description: `정확도 · ${read?.questions || 0}문제`, tone: 'bg-primary-500' },
+      { label: '독화', value: Math.round(Number(read?.accuracy || 0) * 1000) / 10, unit: '%', description: `정답률 · ${read?.questions || 0}문제`, tone: 'bg-primary-500' },
       { label: '말하기', value: Number(speaking?.avg_score || 0), unit: '점', description: `평균 점수 · ${speaking?.total || 0}회 발화`, tone: 'bg-speak' },
     ]
     return (

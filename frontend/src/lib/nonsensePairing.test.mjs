@@ -64,7 +64,7 @@ test('하루 시간: 한국 날짜로 더하고, 지난 날 기록은 지운다'
 })
 
 test('블록 안내 문장', () => {
-  assert.match(blockSummary({ hint: true, correct: 4, size: 6 }), /골격 없이 확인/)
-  assert.match(blockSummary({ hint: false, correct: 5, size: 6 }), /다시 골격을 보며/)
+  assert.match(blockSummary({ hint: true, correct: 4, size: 6 }), /뼈대 없이 확인/)
+  assert.match(blockSummary({ hint: false, correct: 5, size: 6 }), /다시 뼈대를 보며/)
   assert.match(blockSummary({ hint: false, correct: 6, size: 6, setDone: true }), /끝났어요/)
 })

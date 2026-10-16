@@ -558,7 +558,7 @@ export default function SpeakingPractice() {
   const scoreNum = assessment && !assessment.error ? assessment.score
     : (metricMode && summary ? summary.loudness : null)
   // 지표 모드는 서버가 잰 것에 맞춰 이름을 붙인다. 서버 점수 전(또는 실패)에는 위처럼 소리 크기를 보이므로 '목소리 크기'.
-  const scoreLabel = !metricMode ? '발음 정확도'
+  const scoreLabel = !metricMode ? '발음 점수'
     : !(assessment && !assessment.error) ? '목소리 크기'
       : mode === 'voicing' ? '길이·크기'
         : (PROSODY_SCORE_LABEL[drill] || '운율')
@@ -663,7 +663,7 @@ export default function SpeakingPractice() {
                 <div className="mx-auto w-full max-w-[560px]">
                   <button type="button" onClick={toggleMirror} aria-pressed={mirrorOn} disabled={mirrorBusy}
                     className={`btn-secondary w-full py-2.5 text-[14px] ${mirrorOn ? 'bg-track-tint text-track-dark' : ''}`}>
-                    {mirrorOn ? '웹캠 끄기' : '웹캠 미러 — 내 입모양 보기'}
+                    {mirrorOn ? '웹캠 끄기' : '웹캠으로 내 입모양 보기'}
                   </button>
                   {mirrorOn && (
                     <div className="mt-2 overflow-hidden rounded-14 bg-slate-900">
@@ -724,7 +724,7 @@ export default function SpeakingPractice() {
                       const v = phoneValue(p)
                       const ref = p.reliable === false
                       return (
-                        <div key={i} title={ref ? `정확도 ${v} · 참고` : `정확도 ${v} · 신뢰도 ${Math.round((p.confidence ?? 0) * 100)}`}
+                        <div key={i} title={ref ? `점수 ${v} · 참고` : `점수 ${v} · 확실한 정도 ${Math.round((p.confidence ?? 0) * 100)}`}
                           className={`flex size-12 items-center justify-center rounded-13 lg:size-[52px] lg:rounded-14 ${ref ? 'border-1.5' : 'border-2'} ${phoneTone(p).chip}`}>
                           <span className="text-[20px] font-bold leading-figma lg:text-[22px]">{p.label || '·'}</span>
                         </div>
@@ -852,7 +852,7 @@ export default function SpeakingPractice() {
                 {/* 소리 + 입모양 융합 점수(182:77) — 서버가 연구용 융합을 켰을 때만 */}
                 {fusion && fusion.visual_score != null && (
                   <div className="flex flex-col items-center gap-2.5 rounded-14 border-1.5 border-fill bg-surface-muted px-4 py-3.5">
-                    <p className="text-[13px] font-bold leading-figma text-ink-muted">소리 + 입모양 융합 점수</p>
+                    <p className="text-[13px] font-bold leading-figma text-ink-muted">소리 + 입모양 합친 점수</p>
                     <div className="flex items-center gap-[9px] leading-figma">
                       {fusionAudio != null && (
                         <>
@@ -920,7 +920,7 @@ export default function SpeakingPractice() {
               </div>
               {summary.trace && summary.trace.length >= 3 && !summary.micIssue && (
                 <div className="rounded-14 border-1.5 border-fill bg-white p-3">
-                  <p className="mb-1 text-xs text-ink-muted">내 목소리 곡선</p>
+                  <p className="mb-1 text-xs text-ink-muted">내 목소리 그래프</p>
                   <PitchEnergyGraph trace={summary.trace} summary={summary} dir={toneDirection(mode, drill)} drill={drill} />
                 </div>
               )}
@@ -1078,7 +1078,7 @@ function PitchEnergyGraph({ trace, summary, dir, drill }) {
       <div className="mt-1 space-y-0.5">
         {flat && <p className="text-[11px] text-warn-text">억양선 끝이 시작보다 {dir === 'rise' ? '높아지지' : '낮아지지'} 않았어요 → 끝에서 선을 {dir === 'rise' ? '올려' : '내려'}보세요.</p>}
         {volNote && <p className="text-[11px] text-warn-text">{volNote}</p>}
-        {!flat && !volNote && <p className="text-[11px] text-good-text">{dir ? '억양선과 크기 곡선이 잘 살아있어요.' : '크기 곡선이 고르게 잘 유지됐어요.'}</p>}
+        {!flat && !volNote && <p className="text-[11px] text-good-text">{dir ? '억양선과 크기 선이 잘 살아있어요.' : '크기 선이 고르게 잘 이어졌어요.'}</p>}
       </div>
     </div>
   )

@@ -266,7 +266,7 @@ export default function Placement() {
               <img src="/ui/onb-mascot-light.svg" alt="" className="h-16 w-16" />
               <p className="text-[13px] font-bold opacity-85">{MODE_LABEL[mode]} 결과</p>
               <p className="text-[40px] font-black leading-none tracking-[-1px]">Lv.{result.level}</p>
-              <p className="text-sm font-bold opacity-90">정확도 {Math.round(result.accuracy * 100)}% ({result.correct}/{result.total})</p>
+              <p className="text-sm font-bold opacity-90">정답률 {Math.round(result.accuracy * 100)}% ({result.correct}/{result.total})</p>
             </div>
           </div>
 
@@ -345,7 +345,7 @@ export default function Placement() {
                   {hist?.comparison?.label && <p className="-mt-2 text-xs text-ink-faint">{hist.comparison.label}</p>}
                   <div className="flex flex-wrap gap-2">
                     <span className={`rounded-full px-3 py-1 text-xs font-bold ${changeTone(delta.accuracy_clear, delta.accuracy)}`}>
-                      정확도 {delta.accuracy >= 0 ? '+' : ''}{Math.round(delta.accuracy * 100)}%p
+                      정답률 {delta.accuracy >= 0 ? '+' : ''}{Math.round(delta.accuracy * 100)}%p
                     </span>
                     <span className="rounded-full bg-fill px-3 py-1 text-xs font-bold text-ink-muted">
                       수준 {delta.level >= 0 ? '+' : ''}{delta.level}
@@ -371,7 +371,7 @@ export default function Placement() {
             </div>
 
             <p className="rounded-16 bg-primary-100 px-4 py-3 text-xs text-primary-700">
-              {MODE_LABEL[mode]} 결과를 저장했어요. 사전(A)·사후(B)를 모두 마치면 <b>분석 → 전체 통계 → 학습 효과 리포트</b>에서 변화가 보여요.
+              {MODE_LABEL[mode]} 결과를 기록했어요. 사전(A)·사후(B)를 모두 마치면 <b>분석 → 전체 통계 → 학습 효과 리포트</b>에서 변화가 보여요.
             </p>
             <button type="button" onClick={() => navigate('/analysis/eval')}
               className="btn-secondary w-full py-3 text-[14px]">학습 효과 리포트 보기</button>

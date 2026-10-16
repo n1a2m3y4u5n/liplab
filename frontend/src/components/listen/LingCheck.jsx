@@ -45,7 +45,7 @@ export default function LingCheck({ data, settings, onProgress, onExit, finish, 
     try {
       const r = await listenAPI.ling({ results: res.current.results, false_alarms: res.current.fa, route: settings.route })
       setSummary(r.summary)
-    } catch { setErr('결과를 저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
+    } catch { setErr('결과를 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
     setSaving(false)
   }
   const answer = (heard) => {
@@ -82,8 +82,8 @@ export default function LingCheck({ data, settings, onProgress, onExit, finish, 
   if (done) {
     return (
       <>
-        <StateCard title={saving ? '결과를 저장하고 있어요' : '결과를 저장하지 못했어요'} body={saving ? null : err} />
-        <BottomBar active={active} alert={!saving ? err : null} primary={!saving ? { label: '다시 저장하기', onClick: submit } : null}
+        <StateCard title={saving ? '결과를 보내고 있어요' : '결과를 보내지 못했어요'} body={saving ? null : err} />
+        <BottomBar active={active} alert={!saving ? err : null} primary={!saving ? { label: '다시 보내기', onClick: submit } : null}
           secondary={!saving ? { label: exitLabel, onClick: onExit } : null} />
       </>
     )

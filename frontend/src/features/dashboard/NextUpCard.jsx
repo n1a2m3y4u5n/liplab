@@ -17,9 +17,9 @@ export default function NextUpCard() {
     <section className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-bold text-slate-900">
-          다음 추천 <span className="ml-1 text-xs font-medium text-slate-500">지식추적 맞춤</span>
+          다음 추천 <span className="ml-1 text-xs font-medium text-slate-500">내 기록 맞춤</span>
         </h2>
-        {hasData && <span className="text-xs font-medium text-slate-500">추천 난이도 {data.level}</span>}
+        {hasData && <span className="text-xs font-medium text-slate-500">어려운 정도 {data.level} 추천</span>}
       </div>
       {hasData ? (
         <div className="mt-3 space-y-3">

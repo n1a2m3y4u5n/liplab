@@ -36,9 +36,9 @@ export default function ListenSetup({ initial, onSave, onCancel }) {
   const level = Math.round(((gainDb - GAIN_MIN_DB) / (GAIN_MAX_DB - GAIN_MIN_DB)) * 100)
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
-      <Heading title="소리 크기 맞추기" sub="평소처럼 보청기나 인공와우를 켜고 예시 소리를 들으며 편안한 크기를 골라요. 연습하는 동안 이 크기를 넘지 않아요." />
+      <Heading title="소리 크기 맞추기" sub="평소처럼 보청기나 인공와우를 켜고 소리를 들어 보며 편안한 크기를 골라요. 연습하는 동안 이 크기를 넘지 않아요." />
       <SoundCard player={player} onPlay={test} clipState={sample.state === 'loading' ? 'loading' : 'ready'}
-        label={sample.state === 'ready' ? '예시 문장 듣기' : '예시 소리 듣기(기계로 만든 모음)'} />
+        label={sample.state === 'ready' ? '문장 들어 보기' : '소리 들어 보기(기계로 만든 모음)'} />
       <Card className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-3">
           <p id="listen-gain-label" className="text-[15px] font-bold text-ink">크기</p>
@@ -68,7 +68,7 @@ export default function ListenSetup({ initial, onSave, onCancel }) {
       </Card>
       <p className="break-keep text-[12px] leading-[1.6] text-ink-faint">{SYNTH} 기기 정보는 이 기기에만 저장돼요. {NOTICE}</p>
       <BottomBar hint="편안한 크기를 고른 뒤 시작해요"
-        primary={{ label: initial ? '이 크기로 저장' : '이 크기로 시작', onClick: save }}
+        primary={{ label: initial ? '이 크기로 바꾸기' : '이 크기로 시작', onClick: save }}
         secondary={onCancel ? { label: '취소', onClick: () => { player.stop(); onCancel() } } : null} />
     </div>
   )

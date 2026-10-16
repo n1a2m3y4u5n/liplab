@@ -8,14 +8,14 @@ import AppShell from '../components/AppShell'
 import { VISEME_TO_VTL } from '../lib/vtlShapes'
 
 /**
- * 자유 발화 (Figma 225:30 / 225:73): 자유 입력 → 3D 입모양 + 성도 단면
+ * 자유 발화 (Figma 225:30 / 225:73): 자유 입력 → 3D 입모양 + 성도 옆모습
  * ------------------------------------------------------------------
  * 사용자가 아무 글자·문장이나 입력하면 백엔드 /api/viseme로 입모양 프레임을 받아
  * 3D 얼굴(LipSyncPlayer3D)이 그대로 '발음'하는 모습을 보여준다(반복 재생).
  * 인증이 필요 없는 열린 도구 — 커리큘럼 잠금과 무관하게 누구나 쓸 수 있다.
- * 9/26 Figma(변경 내역 §4-4): 입력·입모양·성도 단면을 카드 하나(445:82)에 넣고 구분선으로 나눈다. 입모양(445:88)과
- * 성도 단면(445:98)은 좌우 2단이고, '지금 발음 중'(445:95)은 두 그림 아래 가운데. 빠른 예시 칩과 소리 내는 법 목록은 빠졌다.
- * 성도 단면은 재생 중인 입모양 프레임을 따라 VocalTractLab 윤곽(E-6)을 바꾼다.
+ * 9/26 Figma(변경 내역 §4-4): 입력·입모양·성도 옆모습을 카드 하나(445:82)에 넣고 구분선으로 나눈다. 입모양(445:88)과
+ * 성도 옆모습(445:98)은 좌우 2단이고, '지금 발음 중'(445:95)은 두 그림 아래 가운데. 빠른 예시 칩과 소리 내는 법 목록은 빠졌다.
+ * 성도 옆모습은 재생 중인 입모양 프레임을 따라 VocalTractLab 윤곽(E-6)을 바꾼다.
  * 음성구동 아바타(A4) 카드는 Figma에 없지만 출시된 기능이라 맨 아래에 둔다(서버에 모델·예시가 없으면 스스로 숨김).
  */
 const PANE = 'h-[240px] w-full overflow-hidden rounded-14 bg-surface-muted'
@@ -27,7 +27,7 @@ export default function FreeSpeak() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [visemeId, setVisemeId] = useState(15)   // 성도 단면이 따라가는 현재 입모양(15 = 쉼)
+  const [visemeId, setVisemeId] = useState(15)   // 성도 옆모습이 따라가는 현재 입모양(15 = 쉼)
 
   const speak = async (raw) => {
     const value = (raw ?? text).trim()
@@ -43,7 +43,7 @@ export default function FreeSpeak() {
       if (!data || data.length === 0) {
         setVisemes([])
         setPlayedText('')
-        setVisemeId(15)   // 입모양 칸이 자리 그림으로 돌아가니 성도 단면도 쉼으로
+        setVisemeId(15)   // 입모양 칸이 자리 그림으로 돌아가니 성도 옆모습도 쉼으로
         setError('입모양으로 바꿀 한글이 없어요. 한글을 입력해주세요. (예: 안녕하세요)')
         return
       }
@@ -65,7 +65,7 @@ export default function FreeSpeak() {
 
   return (
     <AppShell active="practice" title="자유 발화" closeTo="/practice/hub">
-      {/* Card / 자유 발화 (445:82): 입력 · 구분선 · 입모양|성도 단면 · 구분선 · 지금 발음 중 */}
+      {/* Card / 자유 발화 (445:82): 입력 · 구분선 · 입모양|성도 옆모습 · 구분선 · 지금 발음 중 */}
       <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         className="flex w-full flex-col gap-[18px] rounded-18 border-2 border-line bg-white p-[18px] lg:p-[22px]">
         <p className="text-[17px] font-bold leading-figma text-ink">무엇을 발음해 볼까요?</p>
@@ -111,7 +111,7 @@ export default function FreeSpeak() {
             </div>
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-            <p className="text-[14.5px] font-bold leading-figma text-ink">성도 단면</p>
+            <p className="text-[14.5px] font-bold leading-figma text-ink">성도 옆모습</p>
             <div className={`${PANE} grid place-items-center p-3`}>
               <VocalTractVTL phoneme={VISEME_TO_VTL[visemeId] || 'rest'} labels={false}
                 className="flex h-full w-full justify-center [&_svg]:h-full [&_svg]:w-auto" />

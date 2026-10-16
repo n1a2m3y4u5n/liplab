@@ -12,7 +12,7 @@ import { VOWEL_IDS, vtlWavUrl } from '../lib/vtlShapes'
  * 오실레이터로, 성도 공명을 병렬 대역통과 필터 3개(F1~F3)로 근사한다. 끌 때마다 바로 반응해야
  * 해서 이 부분은 포먼트 근사로 둔다. 파동관 모델이 아니며 GPU·서버가 필요 없다.
  *
- * 성도 단면(E-6): VocalTractLab(VTL)을 파라미터 인터페이스로 오프라인 실행해 만든 자산
+ * 성도 옆모습(E-6): VocalTractLab(VTL)을 파라미터 인터페이스로 오프라인 실행해 만든 자산
  * (scripts/vtl_build_assets.py → public/vtl/)을 읽는다. 지금 F1·F2와 원순에서 가장 가까운 VTL 격자
  * 상태를 추정 조음으로 그리고(lib/vtlShapes.js), 목표 모음의 VTL 형상을 점선으로 겹친다. '합성음
  * 듣기'는 VTL이 그 형상으로 합성한 모음이다. 앱은 VTL(GPL-3.0)을 번들하거나 호출하지 않고 결과
@@ -65,7 +65,7 @@ export default function VocalTractSimulator() {
   const nodesRef = useRef(null)                 // {osc, formants:[{bp,g}], master}
   const draggingRef = useRef(false)
   const padRef = useRef(null)
-  // 혀 위치·원순을 성도 단면(VocalTract)에 넘겨, 소리를 바꿀 때 입·혀 단면이 함께 변하게 한다(계획서 E).
+  // 혀 위치·원순을 성도 옆모습(VocalTract)에 넘겨, 소리를 바꿀 때 입·혀 단면이 함께 변하게 한다(계획서 E).
   const artRef = useRef({ tip: 0, back: 0, round: 0, jaw: 0.02, close: 0 })
 
   // 현재 좌표+원순 → 포먼트 3개
@@ -149,7 +149,7 @@ export default function VocalTractSimulator() {
     setNearest(bd < 0.33 ? best : null)
   }, [pos, round, on, applyFormants, formants])
 
-  // 혀 위치(전후=x, 고저=y)·원순 → 성도 단면 파라미터. 전설·고모음=혀끝↑, 후설·고모음=혀뒤↑, 저모음=개구↑.
+  // 혀 위치(전후=x, 고저=y)·원순 → 성도 옆모습 파라미터. 전설·고모음=혀끝↑, 후설·고모음=혀뒤↑, 저모음=개구↑.
   useEffect(() => {
     artRef.current = {
       jaw: clamp(pos.y, 0, 1),
@@ -228,7 +228,7 @@ export default function VocalTractSimulator() {
 
   const [f1, f2] = formants(pos, round)
 
-  // 색의 뜻은 성도 단면과 같다: 트랙색 = 지금 소리(학습자), 초록 = 목표 모음.
+  // 색의 뜻은 성도 옆모습과 같다: 트랙색 = 지금 소리(학습자), 초록 = 목표 모음.
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-3">
       <div className="flex items-center justify-between mb-2">
@@ -269,10 +269,10 @@ export default function VocalTractSimulator() {
             style={{ left: `${pos.x * 100}%`, top: `${pos.y * 100}%`, width: 18, height: 18, opacity: on ? 1 : 0.6 }} />
         </div>
 
-        {/* 성도 단면(E-6): 지금 F1·F2에서 고른 VTL 형상(색칠)과 목표 모음(점선). 자산을 못 받으면 예전 도식 */}
+        {/* 성도 옆모습(E-6): 지금 F1·F2에서 고른 VTL 형상(색칠)과 목표 모음(점선). 자산을 못 받으면 예전 도식 */}
         <div className="rounded-lg border border-line p-2">
           <div className="flex items-baseline justify-between gap-2">
-            <p className="text-xs font-bold text-ink">성도 단면</p>
+            <p className="text-xs font-bold text-ink">성도 옆모습</p>
             <p className="text-[10px] text-ink-faint">VocalTractLab으로 미리 계산</p>
           </div>
           <VocalTractVTL className="mt-1" phoneme={targetId} estimate={{ f1, f2, round }} legend targetLabel={targetKo || ''}
