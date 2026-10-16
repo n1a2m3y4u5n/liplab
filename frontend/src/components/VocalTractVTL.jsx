@@ -137,7 +137,7 @@ export default function VocalTractVTL({
   const overlay = useEasedOutline(overlayTarget, animate)
 
   if (status === 'error') {
-    return fallback || <div className={`rounded-lg bg-surface-muted p-3 text-xs text-ink-faint ${className}`}>성도 단면을 가져오지 못했어요.</div>
+    return fallback || <div className={`rounded-lg bg-surface-muted p-3 text-xs text-ink-faint ${className}`}>성도 옆모습을 가져오지 못했어요.</div>
   }
   if (status === 'loading' || !main) {
     return <div className={`w-full animate-pulse rounded-lg ${dark ? 'bg-slate-800/60' : 'bg-surface-muted'} ${className}`}
@@ -165,8 +165,8 @@ export function TractFigure({ meta, main, overlay = null, target = null, hasEsti
   const mainVelum = hasEstimate ? 0 : (target?.velum || 0)
   const name = target ? (target.kind === 'vowel' || target.kind === 'consonant' ? target.ko : '') : ''
   const aria = hasEstimate
-    ? `성도 단면. 색칠한 혀는 지금 소리에서 추정한 모양이에요.${overlay ? ` 점선은 목표 ${targetLabel || name}의 모양이에요.` : ''}`
-    : `성도 단면. ${name ? `${name} 소리를 낼 때` : '쉬는 자세의'} 혀·입술·연구개 모양이에요.`
+    ? `성도 옆모습. 색칠한 혀는 지금 소리에서 짐작한 모양이에요.${overlay ? ` 점선은 목표 ${targetLabel || name}의 모양이에요.` : ''}`
+    : `성도 옆모습. ${name ? `${name} 소리를 낼 때` : '쉬는 자세의'} 혀·입술·연구개 모양이에요.`
 
   return (
     <figure ref={figRef} className={`m-0 ${className}`}>
@@ -186,7 +186,7 @@ export function TractFigure({ meta, main, overlay = null, target = null, hasEsti
         <figcaption className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] leading-tight text-ink-muted">
           <span className="inline-flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-3.5 rounded-sm border-2 border-track bg-track-tint" aria-hidden="true" />
-            지금 소리(추정)
+            지금 소리(짐작)
           </span>
           {overlay && (
             <span className="inline-flex items-center gap-1.5">

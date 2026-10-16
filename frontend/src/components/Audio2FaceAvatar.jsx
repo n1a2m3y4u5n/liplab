@@ -138,7 +138,7 @@ export default function Audio2FaceAvatar() {
     } catch (e) {
       if (!aliveRef.current) return
       const code = e?.response?.status
-      setErr(code === 503 ? '서버에 음성구동 아바타 모델이 아직 없어요.' : '분석에 실패했어요.')
+      setErr(code === 503 ? '목소리로 움직이는 아바타 모델이 아직 없어요.' : '분석에 실패했어요.')
       setState('error')
     }
   }, [runFrames, stopPlayback])
@@ -221,18 +221,18 @@ export default function Audio2FaceAvatar() {
     <div className="w-full rounded-18 border-2 border-line bg-white p-[18px] lg:p-[22px]">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-[17px] font-bold leading-figma text-ink">내 목소리로 아바타 움직이기</h3>
-        <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 font-bold">AI 음성구동 · A4</span>
+        <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 font-bold">AI 목소리 따라 하기 · A4</span>
       </div>
       <p className="text-sm text-gray-500 mb-3">
         {available === true
-          ? '직접 말하거나 음성 파일을 올리면, 그 소리에서 입·턱·표정 움직임을 예측해 아바타가 따라 합니다.'
-          : '아래 예시 음성을 누르면, A4 모델이 그 소리에서 예측한 입모양으로 아바타가 립싱크합니다.'}
+          ? '직접 말하거나 음성 파일을 올리면, 그 소리에서 입·턱·표정 움직임을 짐작해 아바타가 따라 합니다.'
+          : '아래 준비된 음성을 누르면, A4 모델이 그 소리에서 짐작한 입모양으로 아바타가 립싱크합니다.'}
       </p>
       <div className="relative w-full rounded-2xl overflow-hidden shadow-lg bg-gradient-to-b from-slate-800 to-slate-900"
         style={{ height: '320px' }}>
         <AvatarVRM visemeId={15} bsFrameRef={bsFrameRef} />
         <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-xs">
-          음성구동 아바타 · A4
+          목소리로 움직이는 아바타 · A4
         </div>
         {state === 'playing' && (
           <div className="absolute top-3 right-3 bg-green-500/90 text-white px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5">
@@ -275,7 +275,7 @@ export default function Audio2FaceAvatar() {
       {/* 예시 음성(프리컴퓨트) — 어디서나 A4 예측 시연 */}
       {examples.length > 0 && (
         <div className="mt-3">
-          <p className="text-xs text-gray-500 mb-1.5">예시 음성으로 보기 {available === true ? '(또는 위에서 직접 말하기)' : ''}</p>
+          <p className="text-xs text-gray-500 mb-1.5">준비된 음성으로 보기 {available === true ? '(또는 위에서 직접 말하기)' : ''}</p>
           <div className="flex flex-wrap gap-2">
             {examples.map((ex) => (
               <button key={ex.id} onClick={() => playExample(ex)} disabled={state === 'playing' || busy}
@@ -294,13 +294,13 @@ export default function Audio2FaceAvatar() {
       </p>
       {nFrames > 0 && !err && (
         <p className="mt-2 text-xs text-gray-400">
-          {exLabel ? `"${exLabel}" — ` : '실제 음성에서 '}{nFrames}프레임({(nFrames / fpsRef.current).toFixed(1)}초)의 얼굴 움직임을 A4가 예측했어요.
+          {exLabel ? `"${exLabel}" — ` : '실제 음성에서 '}{nFrames}장면({(nFrames / fpsRef.current).toFixed(1)}초)의 얼굴 움직임을 A4가 짐작했어요.
         </p>
       )}
       <p className="mt-1 text-[11px] text-gray-400 leading-relaxed">
-        직접 녹음한 목소리는 말하는 사람이 바뀌어도 같은 특징을 뽑는 모델(WavLM, 20명으로 학습)이 입모양을 예측해요.
+        직접 녹음한 목소리는 말하는 사람이 바뀌어도 같은 특징을 뽑는 모델(WavLM, 20명으로 학습)이 입모양을 짐작해요.
         처음 듣는 사람의 입 벌림 상관은 r≈0.66이에요. 다만 평가한 사람들로 학습을 멈출 때를 골라서, 실제보다 높게 나왔을 수 있어요.
-        미리 준비한 예시 5개는 합성 음성(TTS)이고, 입모양은 같은 모델로 미리 계산해 둔 결과예요.
+        미리 준비한 음성 5개는 합성 음성(TTS)이고, 입모양은 같은 모델로 미리 계산해 둔 결과예요.
       </p>
     </div>
   )

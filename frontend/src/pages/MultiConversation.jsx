@@ -163,7 +163,7 @@ export default function MultiConversation() {
   // 불러오는 중·실패여도 셸(사이드바 '연습' 활성·레일·모바일 탭)은 그대로 두고 본문 자리만 바꾼다(§4-11).
   const speakerToggle = (
     <div className="flex items-center gap-1.5 text-[13px]">
-      <span className="text-ink-muted">화자</span>
+      <span className="text-ink-muted">말하는 사람</span>
       {[2, 3, 4].map((n) => (
         <button key={n} type="button" onClick={() => setNumSpeakers(n)} aria-pressed={numSpeakers === n} disabled={loading}
           className={`rounded-full px-3.5 py-1 font-bold transition disabled:opacity-60 ${numSpeakers === n ? 'bg-primary-500 text-white' : 'bg-surface-sunken text-ink-muted hover:bg-surface-hover'}`}>
@@ -222,7 +222,7 @@ export default function MultiConversation() {
               className={`h-3 w-6 shrink-0 rounded-full ${color} ${i === idx ? 'ring-2 ring-primary-500' : ''}`} />
           )
         })}
-        <span className="ml-2 shrink-0 text-xs text-ink-muted">{nDone} / {conv.turns.length}턴 완료</span>
+        <span className="ml-2 shrink-0 text-xs text-ink-muted">{nDone} / {conv.turns.length}턴 풀었어요</span>
       </div>
 
       {/* 세션 종합 채점(축 H) — 서버 재채점. 종합 = 닮은꼴 문장 고르기 + 빈칸 문맥 추론, 화자 식별은 따로. */}
@@ -232,7 +232,7 @@ export default function MultiConversation() {
           <span className="text-xs text-emerald-700">
             문장 {Math.round(result.read_accuracy * 100)}%
             {result.closure_correct != null && <> · 빈칸 {result.closure_correct ? '정답' : '틀림'}</>}
-            {' '}· 화자 찾기 {Math.round(result.speaker_accuracy * 100)}%
+            {' '}· 말하는 사람 찾기 {Math.round(result.speaker_accuracy * 100)}%
           </span>
           {result.missed_visemes?.length > 0 && (
             <span className="text-[11px] text-emerald-600">잘못 읽은 입모양 {result.missed_visemes.length}개를 약점 통계에 넣었어요(다음 추천에 반영)</span>
@@ -267,7 +267,7 @@ export default function MultiConversation() {
         </div>
         <p className="mt-3 text-center text-[15px] font-bold text-ink-muted">
           {answered
-            ? <>지금 <span className={`rounded px-1.5 py-0.5 text-white ${SPK_COLOR[turn.speaker]}`}>화자 {SPK_NAME[turn.speaker]}</span>가 말합니다</>
+            ? <>지금 <span className={`rounded px-1.5 py-0.5 text-white ${SPK_COLOR[turn.speaker]}`}>사람 {SPK_NAME[turn.speaker]}</span>가 말합니다</>
             : '지금 말하는 사람은 누구일까요?'}
         </p>
 
@@ -283,7 +283,7 @@ export default function MultiConversation() {
             return (
               <button key={i} disabled={answered} onClick={() => chooseSpeaker(i)} className={`${base} ${cls}`}>
                 <span className="grid h-5 w-5 place-items-center rounded-full bg-black/10 text-xs">{SPK_NAME[i]}</span>
-                화자 {SPK_NAME[i]}
+                사람 {SPK_NAME[i]}
               </button>
             )
           })}

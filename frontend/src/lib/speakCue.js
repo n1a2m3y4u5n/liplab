@@ -18,6 +18,6 @@ export function rateCueView(cue) {
     bandWidthPct: clampPct(hi, RATE_AXIS) - clampPct(lo, RATE_AXIS),
     slow: !!cue.slow,
     message: cue.slow ? cue.message : null,
-    note: `색 띠는 정상 화자 낭독 문장의 가운데 80%(초당 ${lo.toFixed(1)}~${hi.toFixed(1)}음절)예요. 짧은 문장은 값이 흔들릴 수 있어요.`,
+    note: `색 띠는 여러 사람이 문장을 읽은 빠르기의 가운데 80%(초당 ${lo.toFixed(1)}~${hi.toFixed(1)}음절)예요. 짧은 문장은 값이 흔들릴 수 있어요.`,
   }
 }

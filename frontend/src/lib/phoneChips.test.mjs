@@ -28,7 +28,7 @@ test('믿을 만한 소리만 색, 나머지는 회색 참고', () => {
   assert.equal(v.sure, 2)
   assert.equal(v.sureGood, 1)
   assert.match(v.note, /색이 있는 소리만 확정/)
-  assert.equal(v.title, '소리별 발음 정확도')
+  assert.equal(v.title, '소리별 발음 점수')
 })
 
 test('믿을 만한 소리가 하나도 없으면 모두 참고 안내', () => {

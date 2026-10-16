@@ -25,7 +25,7 @@ function Question({ id, title, children }) {
   )
 }
 
-export default function LearnerInfoForm({ initial, onSave, onSkip, saveLabel = '저장하고 계속', skipLabel = '건너뛰기', busy = false }) {
+export default function LearnerInfoForm({ initial, onSave, onSkip, saveLabel = '이대로 계속', skipLabel = '건너뛰기', busy = false }) {
   const [a, setA] = useState(() => normalizeAnswers(initial))
   const pick = (key, value) => setA((p) => ({ ...p, [key]: p[key] === value ? null : value }))
   const notes = describeDefaults(learnerDefaults(a))

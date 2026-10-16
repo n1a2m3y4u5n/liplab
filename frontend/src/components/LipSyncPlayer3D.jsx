@@ -279,7 +279,7 @@ export default function LipSyncPlayer3D({
 
       {/* Frame counter */}
       <div className="mt-1.5 flex justify-between items-center text-xs text-gray-500">
-        <span>프레임 {currentIndex + 1} / {visemes.length}</span>
+        <span>입모양 {currentIndex + 1} / {visemes.length}</span>
         <span>속도 {speed}x</span>
       </div>
 
@@ -290,8 +290,8 @@ export default function LipSyncPlayer3D({
           onClick={prevFrame}
           disabled={currentIndex === 0}
           className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-gray-700"
-          title="이전 프레임"
-          aria-label="이전 프레임"
+          title="이전 입모양"
+          aria-label="이전 입모양"
         >
           <span aria-hidden="true">◀◀</span>
         </button>
@@ -309,8 +309,8 @@ export default function LipSyncPlayer3D({
           onClick={nextFrame}
           disabled={currentIndex >= visemes.length - 1}
           className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-gray-700"
-          title="다음 프레임"
-          aria-label="다음 프레임"
+          title="다음 입모양"
+          aria-label="다음 입모양"
         >
           <span aria-hidden="true">▶▶</span>
         </button>
@@ -370,7 +370,7 @@ export default function LipSyncPlayer3D({
           className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${showTract ? 'bg-violet-600 text-white font-semibold' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           title="옆에서 자른 입 안 그림으로 혀·입술·턱 움직임 보기"
         >
-          성도 단면
+          성도 옆모습
         </button>
       </div>
       </>)}

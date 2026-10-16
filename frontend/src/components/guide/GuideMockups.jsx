@@ -487,7 +487,7 @@ function ReadMock({ wrong = false, scene, tick, running }) {
     <LessonShell done={shown ? 1 : 0} bar={<div {...area('resultBar')}>{bar}</div>}>
       <Question label="단어 독화" title="이 입모양은 어떤 단어일까요?" />
       <div {...area('stage')} className="h-[158px] w-full rounded-18 border-2 border-line bg-white p-4">
-        <FaceStage mouth={mouthAt(tick, running)} className="h-full" talker="화자 2" />
+        <FaceStage mouth={mouthAt(tick, running)} className="h-full" talker="사람 2" />
       </div>
       <div {...area('options')} className="flex flex-col gap-2.5">
         <Option n={1} word="나비" state={optState(1)} />
@@ -525,7 +525,7 @@ function SpeakMock({ result = false, scene, tick, running }) {
           {ready
             ? <p key="score" className={`text-[44px] tracking-[-1.32px] ${FADE} ${scoreTone(84).text}`}>84%</p>
             : <p key="wait" className="text-[44px] tracking-[-1.32px] text-ink-ghost">…</p>}
-          <p className="text-[13px] text-ink-faint">발음 정확도</p>
+          <p className="text-[13px] text-ink-faint">발음 점수</p>
         </div>
         <div {...area('chips')} className="flex justify-center gap-2">
           {PHONES.map(([p, v], i) => (
@@ -650,7 +650,7 @@ function TaskRow({ label, cur, total, xp }) {
 
 const BADGES = [
   ['첫 걸음', '/ui/medal-0.svg', true], ['7일 연속', '/ui/medal-1.svg', true], ['입모양 마스터', '/ui/medal-2.svg', false],
-  ['정확도 90%', null, true], ['100문제 돌파', '/ui/medal-3.svg', true], ['복습왕', '/ui/medal-4.svg', false],
+  ['정답률 90%', null, true], ['100문제 돌파', '/ui/medal-3.svg', true], ['복습왕', '/ui/medal-4.svg', false],
 ]
 
 function TaskMock() {
@@ -730,12 +730,12 @@ function ReviewMock() {
       <div className="flex w-full gap-2.5">
         <ReviewCta id="ctaWrong" title="복습할 틀린 문제 5개" sub="약 3분이면 끝나요" btn="틀린 문제 복습하기" btnCls="text-primary-700"
           card="border-primary-700 bg-[linear-gradient(137.7deg,var(--brand-light)_0%,var(--brand)_70.92%)]" />
-        <ReviewCta id="ctaMark" title="복습할 북마크 3개" sub="저장해둔 문장이에요" btn="북마크 복습하기" btnCls="text-bookmark-dark"
+        <ReviewCta id="ctaMark" title="복습할 북마크 3개" sub="북마크해 둔 문장이에요" btn="북마크 복습하기" btnCls="text-bookmark-dark"
           card="border-bookmark-dark bg-[linear-gradient(137.7deg,var(--bookmark-light)_0%,var(--bookmark)_70.92%)]" />
       </div>
       <section className="flex w-full flex-col gap-3 rounded-16 border-2 border-line bg-white px-[18px] pb-[18px] pt-[18px]">
         <div className="flex items-center justify-between">
-          <p className="text-[16px] font-bold leading-figma text-ink">복습할 항목</p>
+          <p className="text-[16px] font-bold leading-figma text-ink">복습 목록</p>
           <span {...area('erase')} className="flex items-center gap-1.5 rounded-full border-1.5 border-line py-[7px] pl-3 pr-3.5 text-[12.5px] font-bold leading-figma text-ink-muted">
             <img src="/ui/lp-100-15-trash.svg" alt="" className="size-3.5" />
             지우기
@@ -803,7 +803,7 @@ function AnalysisMock() {
     <div className="flex h-full flex-col gap-5 overflow-hidden bg-white px-8 pt-6 text-ink">
       <p className="text-[30px] font-bold leading-figma tracking-[-0.75px] text-ink">분석</p>
       <div {...area('stats')} className="flex w-full gap-3.5">
-        {[['clock', '총 학습', '3시간 40분', '지난주보다 +25분', 'text-stat-xp'], ['percent', '평균 정확도', '82%', '지난주 +3%p', 'text-stat-accuracy'],
+        {[['clock', '총 학습', '3시간 40분', '지난주보다 +25분', 'text-stat-xp'], ['percent', '평균 정답률', '82%', '지난주 +3%p', 'text-stat-accuracy'],
           ['flame', '연속 학습', `${USER.streak}일`, '최고 기록 15일', 'text-stat-streak']].map(([deco, label, value, delta, color]) => (
           <div key={deco} className="relative isolate flex min-w-0 flex-1 flex-col gap-[7px] overflow-hidden rounded-18 border-2 border-line bg-white p-5 leading-figma">
             <WatermarkDeco {...STAT_DECO[deco]} />
@@ -832,7 +832,7 @@ function AnalysisMock() {
           </div>
         </div>
       </ChartCard>
-      <ChartCard id="line" title="정확도 변화">
+      <ChartCard id="line" title="정답률 변화">
         <div className="relative h-[150px] w-full">
           <GridLines />
           <svg viewBox={`0 0 ${n} 150`} preserveAspectRatio="none" className="absolute left-2.5 top-0 h-[150px] w-[calc(100%-16px)] overflow-visible">
@@ -913,27 +913,27 @@ function ProfileMock() {
 // 목업 목록. design = 설계 크기(px, 가이드 사진 상자와 같은 비율). areas = 이 목업에 번호 배지를 다는 영역.
 export const MOCKS = {
   overview: { design: [1440, 760], C: OverviewMock, areas: ['stats', 'rail', 'logo'],
-    alt: '데스크톱 학습 화면 예시. 왼쪽 메뉴, 가운데 단계 목록과 레슨 카드, 오른쪽 오늘의 과제와 복습 카드.' },
+    alt: '데스크톱 학습 화면 그림. 왼쪽 메뉴, 가운데 단계 목록과 레슨 카드, 오른쪽 오늘의 과제와 복습 카드.' },
   learn: { design: [520, 653], C: LearnMock, areas: ['switch', 'guideBtn', 'nodes', 'arrows', 'sheet'],
-    alt: '휴대폰 학습 탭 예시. 독화·발화 전환, 단계 이름과 가이드 버튼, DOKA 단계 노드와 아래 레슨 카드.' },
+    alt: '휴대폰 학습 탭 그림. 독화·발화 전환, 단계 이름과 가이드 버튼, DOKA 단계 노드와 아래 레슨 카드.' },
   readQuestion: { design: [375, 564], C: (p) => <ReadMock {...p} />, areas: ['bookmark', 'stage', 'options'],
-    alt: '단어 독화 문제 예시. 왼쪽 위에 화자 이름이 붙은 입모양 영상이 있다. 보기를 고르고 확인을 누르면 초록 결과 바에 \'정답이에요\'가 나온다.' },
+    alt: '단어 독화 문제 그림. 왼쪽 위에 가상 인물 이름이 붙은 입모양 영상이 있다. 보기를 고르고 확인을 누르면 초록 결과 바에 \'정답이에요\'가 나온다.' },
   readWrong: { design: [375, 564], C: (p) => <ReadMock wrong {...p} />, areas: ['resultBar'],
-    alt: '단어 독화에서 틀렸을 때의 예시. 고른 보기는 빨강, 정답 보기는 초록 테두리. 아래 빨간 결과 바에 정답이 나온다.' },
+    alt: '단어 독화에서 틀렸을 때의 그림. 고른 보기는 빨강, 정답 보기는 초록 테두리. 아래 빨간 결과 바에 정답이 나온다.' },
   speakBefore: { design: [375, 564], C: (p) => <SpeakMock {...p} />, areas: ['stage', 'mic'],
-    alt: '발화 문제 예시. 말할 단어와 아바타 입모양, 아래 마이크 버튼. 녹음 중에는 파형이 움직인다.' },
+    alt: '발화 문제 그림. 말할 단어와 아바타 입모양, 아래 마이크 버튼. 녹음 중에는 파형이 움직인다.' },
   speakResult: { design: [375, 564], C: (p) => <SpeakMock result {...p} />, areas: ['score', 'chips', 'detail'],
-    alt: '발화 결과 예시. 발음 정확도 84%, 소리별 칩 네 개 중 ㄷ은 주황, 아래 초록 결과 바 잘했어요.' },
+    alt: '발화 결과 그림. 발음 점수 84%, 소리별 칩 네 개 중 ㄷ은 주황, 아래 초록 결과 바 잘했어요.' },
   practice: { design: [520, 653], C: PracticeMock, areas: ['free', 'scenario', 'sign', 'endless', 'mouth'],
-    alt: '연습 탭 예시. 자유 발화, 상황별 시나리오, 수어 보기, 엔드리스 학습, 입모양 교실 카드.' },
+    alt: '연습 탭 그림. 자유 발화, 상황별 시나리오, 수어 보기, 엔드리스 학습, 입모양 교실 카드.' },
   task: { design: [700, 606], C: TaskMock, areas: ['today', 'special', 'badges'],
-    alt: '과제 탭 예시. 오늘의 과제 세 줄, 특별 과제 카드, 배지 목록.' },
+    alt: '과제 탭 그림. 오늘의 과제 세 줄, 특별 과제 카드, 배지 목록.' },
   review: { design: [520, 653], C: ReviewMock, areas: ['ctaWrong', 'ctaMark', 'items', 'erase'],
-    alt: '복습 탭 예시. 틀린 문제·북마크 복습 카드와 복습할 항목 목록, 지우기 버튼.' },
+    alt: '복습 탭 그림. 틀린 문제·북마크 복습 카드와 복습 목록, 지우기 버튼.' },
   analysis: { design: [640, 804], C: AnalysisMock, areas: ['stats', 'bars', 'line', 'calendar', 'history', 'fullStats'],
-    alt: '분석 탭 예시. 맨 위에 총 학습, 평균 정확도, 연속 학습 세 칸. 가운데에 학습 시간과 정확도 변화 그래프. 아래에 활동 캘린더, 회차 히스토리, 전체 통계 링크.' },
+    alt: '분석 탭 그림. 맨 위에 총 학습, 평균 정답률, 연속 학습 세 칸. 가운데에 학습 시간과 정답률 변화 그래프. 아래에 활동 캘린더, 회차 히스토리, 전체 통계 링크.' },
   profile: { design: [520, 653], C: ProfileMock, areas: ['placement', 'account', 'reset', 'a11y'],
-    alt: '프로필 탭 예시. 이름과 레벨 카드. 자가진단 다시 하기, 계정 설정, 학습 초기화 메뉴. 왼쪽 아래 접근성 설정 Aa 버튼.' },
+    alt: '프로필 탭 그림. 이름과 레벨 카드. 자가진단 다시 하기, 계정 설정, 학습 초기화 메뉴. 왼쪽 아래 접근성 설정 Aa 버튼.' },
 }
 
 /**

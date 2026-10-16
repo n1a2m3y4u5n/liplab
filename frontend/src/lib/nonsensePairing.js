@@ -80,6 +80,6 @@ export function timeUp(usedMs, minutes) {
 /** 블록이 끝났을 때 보일 안내 문장. */
 export function blockSummary({ hint, correct, size, setDone }) {
   if (setDone) return `확인에서 ${size}개를 모두 맞혔어요. 이 목록은 끝났어요.`
-  if (hint) return `골격을 보며 ${size}개 가운데 ${correct}개를 맞혔어요. 이제 골격 없이 확인해요.`
-  return `골격 없이 ${size}개 가운데 ${correct}개를 맞혔어요. 다시 골격을 보며 익혀요.`
+  if (hint) return `뼈대를 보며 ${size}개 가운데 ${correct}개를 맞혔어요. 이제 뼈대 없이 확인해요.`
+  return `뼈대 없이 ${size}개 가운데 ${correct}개를 맞혔어요. 다시 뼈대를 보며 익혀요.`
 }

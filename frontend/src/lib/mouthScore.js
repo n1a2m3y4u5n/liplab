@@ -223,5 +223,5 @@ export function coachHint(blendshapeMap, visemeId, profiles) {
     const gap = (prof[k] || 0) - (blendshapeMap[k] || 0)
     if (gap > worstGap) { worstGap = gap; worstKey = k }
   }
-  return worstKey ? (labels[worstKey] || '입모양을 조정해') + '보세요' : '좋아요, 그대로 유지!'
+  return worstKey ? (labels[worstKey] || '입모양을 조정해') + '보세요' : '좋아요, 그 모양 그대로!'
 }

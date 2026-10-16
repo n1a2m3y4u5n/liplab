@@ -170,13 +170,13 @@ export default function ReviewTab() {
       const meta = (x, kind) => {
         if (kind === 'bookmark') return '북마크를 했어요'
         if (kind === 'wrong') return x.wrong_count ? `${x.wrong_count}회 틀렸어요` : '틀렸어요'
-        return x.kind === 'speak' ? '다시 말해 볼 항목' : x.kind === 'sentence' ? '다시 읽어 볼 문장' : '다시 볼 항목'
+        return x.kind === 'speak' ? '다시 말해 볼 것' : x.kind === 'sentence' ? '다시 읽어 볼 문장' : '다시 볼 문제'
       }
       const norm = (arr, kind) => arr.map((x, i) => ({
         id: `${kind}-${x.id ?? i}`,
         track: (x.domain === 'speak' || x.track === 'speak' || (kind === 'due' && x.kind === 'speak')) ? '발화' : '독화',
         // 예정 항목(/api/review/due)은 {kind, ref, name}: 입모양은 레슨 이름, 단어·말하기는 ref가 곧 단어·문장
-        word: x.word || x.sentence || x.text || x.target || x.name || x.ref || '복습 항목',
+        word: x.word || x.sentence || x.text || x.target || x.name || x.ref || '복습할 것',
         meta: meta(x, kind),
         rel: relDay(x.updated_at || x.created_at),
         kind,
@@ -255,7 +255,7 @@ export default function ReviewTab() {
             (독화 → 말하기, 다 풀면 틀린 문장 복습으로 간다). */}
         <GradientCta tone="mistake" count={wrong + due.read + due.speak} title="복습할 틀린 문제" sub="틀린 문제 다시 보기" subMobile="약 3분이면 끝나요"
           btn="틀린 문제 복습하기" onClick={() => navigate(dueStartPath(due, '/review/mistakes'))} />
-        <GradientCta tone="bookmark" count={marks} title="복습할 북마크" sub="북마크 다시보기" subMobile="저장해둔 문장이에요"
+        <GradientCta tone="bookmark" count={marks} title="복습할 북마크" sub="북마크 다시보기" subMobile="북마크해 둔 문장이에요"
           btn="북마크 복습하기" onClick={() => navigate('/review/saved')} />
       </div>
 
@@ -265,7 +265,7 @@ export default function ReviewTab() {
       <section className={`flex w-full flex-col rounded-16 border-2 border-line bg-white lg:rounded-18 ${selectMode ? 'gap-3 px-5 pt-5' : 'gap-3 px-[18px] pt-[18px] lg:gap-4'} lg:px-[22px] lg:pt-[22px] ${padBottom}`}>
         {/* 모바일 머리 행(239:135 / 318:266) — 제목 + 지우기 또는 취소 */}
         <div className="flex items-center justify-between lg:hidden">
-          <p className="text-[16px] font-bold leading-figma text-ink">복습할 항목</p>
+          <p className="text-[16px] font-bold leading-figma text-ink">복습 목록</p>
           {selectMode ? (
             <button type="button" onClick={exitSelect}
               className="rounded-full border-1.5 border-line px-3.5 py-[7px] text-[12.5px] font-bold leading-figma text-ink-muted">취소</button>
@@ -297,10 +297,10 @@ export default function ReviewTab() {
         </div>
 
         {shown.length === 0 ? (
-          <p className="py-10 text-center text-sm text-ink-muted">복습할 항목이 없어요. 잘하고 있어요!</p>
+          <p className="py-10 text-center text-sm text-ink-muted">복습할 것이 없어요. 잘하고 있어요!</p>
         ) : (
           /* 항목 묶음(316:33 / 316:35): 간격 0, 각 항목 위아래 패딩으로 구분선 위아래를 같게 */
-          <ScrollHintList maxHeightClass="max-h-[241px] lg:max-h-[419px]" onOverflowChange={setListOverflow} resetKey={filter} label="복습 항목">
+          <ScrollHintList maxHeightClass="max-h-[241px] lg:max-h-[419px]" onOverflowChange={setListOverflow} resetKey={filter} label="복습 목록">
             <div className="flex flex-col">
               {shown.map((it, i) => (
                 <ReviewItem key={it.id} {...it} first={i === 0}

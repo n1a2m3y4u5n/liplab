@@ -332,7 +332,7 @@ export default function CurriculumPath() {
                   {i > 0 && <DokaConnector done={list[i - 1].status === 'mastered'} />}
                   <div className="relative">
                     <button type="button" disabled={!clickable} onClick={onClick}
-                      aria-label={`${s.no}단계 ${s.title}${st === 'mastered' ? ' 완료' : st === 'current' ? ' 진행 중' : st === 'skip' ? ' 건너뛰기 가능' : ' 잠김'}`}
+                      aria-label={`${s.no}단계 ${s.title}${st === 'mastered' ? ' 숙달' : st === 'current' ? ' 진행 중' : st === 'skip' ? ' 건너뛰기 가능' : ' 잠김'}`}
                       className={clickable ? 'block cursor-pointer' : 'block cursor-not-allowed'}>
                       <DokaNode status={st} track={track} />
                     </button>
