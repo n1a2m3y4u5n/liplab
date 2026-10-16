@@ -17,6 +17,7 @@ rng = random.Random(1017)
 sub = sorted(rng.sample(jobs, N), key=lambda j: j["clip"])
 p = f"{W}/jobs_smoke.json"
 json.dump(sub, open(p, "w", encoding="utf-8"), ensure_ascii=False)
+os.makedirs(f"{W}/out", exist_ok=True)
 out = f"{W}/out/feat_smoke.jsonl"
 if os.path.exists(out):
     os.remove(out)
