@@ -26,7 +26,8 @@ B2F = f"{LAB}/data/hi608/c27/b2/flac16"
 LABELS = f"{LAB}/data/hi608/labels"
 SHA = {"aligner": "18681947f740b7486f8fa4f93c7c0f68fe1595ac4fa9822800dfd38d713f5e66",
        "scorer": "e8340d58dd911e380eca508815526eb77ec658560456ce1fe4c16b9b6e3654c4"}
-ENV = dict(os.environ, SR_W=W, SR_BACKEND=f"{W}/backend", HF_HOME="D:/liplab/hf", PYTHONUNBUFFERED="1", PYTHONDONTWRITEBYTECODE="1",
+CACHE = {"PIP_CACHE_DIR": "D:/liplab/cache/pip", "HF_HOME": "D:/liplab/cache/hf", "XDG_CACHE_HOME": "D:/liplab/cache", "TORCH_HOME": "D:/liplab/cache/torch"}
+ENV = dict(os.environ, **CACHE, SR_W=W, SR_BACKEND=f"{W}/backend", PYTHONUNBUFFERED="1", PYTHONDONTWRITEBYTECODE="1",
            PYTHONUTF8="1", PYTHONIOENCODING="utf-8", TOKENIZERS_PARALLELISM="false", LIPLAB_LAB=LAB)
 
 
