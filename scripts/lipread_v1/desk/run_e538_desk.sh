@@ -12,7 +12,7 @@ PAT='fetch608|aihub608|dl_more|v1_dl|v7b_|538\.do|run608|v1r_dl'
 echo "WAIT start $(date '+%F %T')"
 ok=0
 while [ "$ok" -lt 3 ]; do
-  if pgrep -f "$PAT" >/dev/null 2>&1 || ! grep -q '^V1R_DL end' "$LAB/data/v1_538r/v1r_dl.out" 2>/dev/null; then ok=0; sleep 60
+  if pgrep -f "$PAT" >/dev/null 2>&1 || ! tail -n 1 "$LAB/data/v1_538r/v1r_dl.out" 2>/dev/null | grep -q '^V1R_DL end'; then ok=0; sleep 60
   else ok=$((ok + 1)); [ "$ok" -lt 3 ] && sleep 60; fi
 done
 echo "WAIT done $(date '+%F %T')"
