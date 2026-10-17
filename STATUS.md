@@ -18,7 +18,9 @@
 >    끊기면 `bg powershell -File D:\liplab\s4\s4run.ps1 train` 다시 → 이어 학습, 그 뒤 `... s4run.ps1 export`). V1 받기 `1017-040046`(WSL `data/v1_538r/v1r_dl.out`, `dl_more.out`,
 >    끊기면 `bg wsl -e bash -c "cd /mnt/d/liplab/lab && bash tools/run538_desk.sh >> data/v1_538r/v1r_dl.out 2>&1"`로 이어 받음). S4 평가용 538 클립 재받기 감시 `1017-104848`
 >    (V1 받기 끝나면 `tools/run_e538_desk.sh`가 58명을 `data/e538r`로, 끝에 `E538_REPRO` 줄로 재현 확인).
-> 2. V1: 받기 끝나면 WSL에서 `cd /mnt/d/liplab/lab && python3 tools/v1_pick_eval.py --root data/v1_538r --out data/v1_538r/eval40.txt` → 목록을 `scripts/lipread_v1/eval40.txt`와
+> 1-1. (13:16 갱신) V1 받기 끝(04:02~13:00, 111명 커밋·19개 라벨 없음 등 실패, 3,323클립), 평가 40명 커밋(21b2cea7). V1 실행 `1017-131600`(`D:\liplab\v1run.ps1` →
+>    `v1_desk.py all`, 작업 폴더 `D:\liplab\v1\dax`, 끊기면 같은 명령으로 다시: 끝난 bs·학습 run은 건너뜀). S4 평가용 538 재받기 `1017-104848` 진행 중(약 6분/화자, 19시쯤 끝 예상).
+> 2. V1(이미 한 단계 표시): 받기 끝나면 WSL에서 `cd /mnt/d/liplab/lab && python3 tools/v1_pick_eval.py --root data/v1_538r --out data/v1_538r/eval40.txt` → 목록을 `scripts/lipread_v1/eval40.txt`와
 >    사전등록 부록 A에 커밋·push → 데스크탑 `git pull` → S4 학습이 끝나 GPU가 비면 `bg D:\liplab\vlip\Scripts\python.exe -u D:\liplab\repo\scripts\lipread_v1\desk\v1_desk.py all`
 >    (결과 `D:\liplab\v1\dax\v1\v1_verdict.json`, 로그 `logs\v1.log`의 `V1_GATE`). 미달이면 `VITE_LIPREAD_CHECK` 기본값 `research` 제안만.
 > 3. S4 판정(e538 재받기 뒤): `D:\liplab\s4`에서 `set S4_W=D:/liplab/s4`, eval에 `c538wav`(e538r 클립 wav + manifest) 넣고 `python scripts\s4_eval_pod.py prep` →
