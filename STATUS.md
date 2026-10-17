@@ -1,5 +1,31 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
+> **2026-10-17: 집 데스크탑(Windows, RTX 3060 12GB)으로 밀린 시험·발음 판정 규칙 확인·S4 청크 학생·V1 진행 (브랜치 desk-runs-2026-10, 배포·유료 API·파드 없음).**
+> - 환경: 저장소 `D:\liplab\repo`(이 브랜치), 앱 venv `D:\liplab\venv`(py3.12, torch 2.8.0 cu128, transformers 5.17.0, av 16.0.1), 자르기 venv `D:\liplab\vseg`
+>   (faster-whisper 0.10.1, ct2 3.24, cuDNN 8), V1 venv `D:\liplab\vlip`(mediapipe 0.10.14, numpy 1.26.4, transformers 4.40.0, torch 2.8.0). 받기는 WSL 우분투(`/mnt/d/liplab/lab`).
+>   캐시는 `D:\liplab\cache`(스크립트 첫머리 `. D:\liplab\cache_env.ps1`). AI Hub 키는 `D:\liplab\lab\.aihub.key(s)`(새 키 하나, 인증 실패면 기다리지 말고 멈춤).
+> - 전체 시험: 백엔드 pytest 기본 설정 737 통과·72 실패(모두 Windows 기본 인코딩 cp949: 하위 프로세스 출력 디코딩·파일 인코딩), `PYTHONUTF8=1`이면 **809 모두 통과**.
+>   프론트 `npm test`는 package.json의 작은따옴표 글롭이 Windows cmd에서 0개를 돌려 큰따옴표로 고쳤다(336 통과), vite 빌드 통과, `scoring_regress.py --quick` 통과(차이 0).
+>   찾은 위험: requirements의 faster-whisper 1.2.1이 최신 PyAV 19에서 `decode_audio`가 깨진다(`metadata_errors`). av 16.0.1은 된다. pytest는 이를 잡지 못한다(새 이미지 빌드 전 av 상한 필요).
+> - 발음 판정 규칙(`docs/scoring-rules-2026-10.md` 10절): 608 범주 27 두 번째 묶음 107/108세션(59명) 받기(2시간 34분) → 데스크탑에서 자르기·특성·집계. 다리 통과(최대 차 0.1).
+>   **G-LR(al, S) 미달(GJ1)**: 범주 27 다른 문장 합격 7.91% → 5.20%(기준 ≤ 5%), FH 2.42%, 538 FH 0.0%, 범주 28 FH 1.05%. 앱 그대로, `LIPLAB_SPEAK_GATE` 구현 안 함.
+> - S4 청크 학생(`docs/scorer-stream-chunk-2026-10.md`, 사전 등록 부록·측정 전 변경 9절): 자료 97,100개 234.8시간(10/7과 같음), 교사 fp32 TF32(fp16판은 NaN이라 버림),
+>   학습 HC(H 초기값, 창 4/2/1, 7,044단계, 약 0.87초/단계) **10:41 시작, 12:30쯤 끝 예상**. 판정 전.
+> - V1(`docs/lipread-v1-2026-10.md`): 538 큐 130개 받기 04:02 시작(약 4~5분/화자, 13~14시쯤 끝 예상). 데스크탑 V1 실행기 smoke 통과(판정용 아님).
+>
+> **다시 이어 하기(10/17 11시 기준, bg 작업은 `desk bglist`):**
+> 1. 돌고 있는 것: S4 이어 하기 `1017-063823`(`D:\liplab\s4\s4_chain4.ps1`: 학습 → `runs\HC\final.pt` → 내보내기 `runs\HC\student_w8.onnx`·`export.json`, 체크포인트 `runs\HC\ckpt.pt` 250단계마다,
+>    끊기면 `bg powershell -File D:\liplab\s4\s4run.ps1 train` 다시 → 이어 학습, 그 뒤 `... s4run.ps1 export`). V1 받기 `1017-040046`(WSL `data/v1_538r/v1r_dl.out`, `dl_more.out`,
+>    끊기면 `bg wsl -e bash -c "cd /mnt/d/liplab/lab && bash tools/run538_desk.sh >> data/v1_538r/v1r_dl.out 2>&1"`로 이어 받음). S4 평가용 538 클립 재받기 감시 `1017-104848`
+>    (V1 받기 끝나면 `tools/run_e538_desk.sh`가 58명을 `data/e538r`로, 끝에 `E538_REPRO` 줄로 재현 확인).
+> 2. V1: 받기 끝나면 WSL에서 `cd /mnt/d/liplab/lab && python3 tools/v1_pick_eval.py --root data/v1_538r --out data/v1_538r/eval40.txt` → 목록을 `scripts/lipread_v1/eval40.txt`와
+>    사전등록 부록 A에 커밋·push → 데스크탑 `git pull` → S4 학습이 끝나 GPU가 비면 `bg D:\liplab\vlip\Scripts\python.exe -u D:\liplab\repo\scripts\lipread_v1\desk\v1_desk.py all`
+>    (결과 `D:\liplab\v1\dax\v1\v1_verdict.json`, 로그 `logs\v1.log`의 `V1_GATE`). 미달이면 `VITE_LIPREAD_CHECK` 기본값 `research` 제안만.
+> 3. S4 판정(e538 재받기 뒤): `D:\liplab\s4`에서 `set S4_W=D:/liplab/s4`, eval에 `c538wav`(e538r 클립 wav + manifest) 넣고 `python scripts\s4_eval_pod.py prep` →
+>    교사 다리 `e1 teacher 1 out\e1_teacher.jsonl`·`e2 teacher 1 out\e2_teacher.json`(GPU) → 학생 `e1 stream:runs/HC/student_w8.onnx 3 out\e1_HC.jsonl`·`e2 ... out\e2_HC.json`(CPU)
+>    → 지연 `scripts/phone_tail/pod/stream_lat.py latency`를 `STREAM_APP=1 STREAM_ONNX=... STREAM_LC=2`로(현재 backend 사용) → `python scripts\s4c\s4c_analyze.py out`.
+>    재현이 안 되면(이름 99% 미만) 등록 6절대로 538 몫 HOLD.
+
 > **2026-10-17: S4 스트리밍(덩어리) 채점 경로를 앱 서버에 연결, 플래그 뒤 기본 끔 (브랜치 s4-stream-wiring-2026-10, 배포 안 함, integrate에 머지 안 함).**
 > - 청크 주의 학생(다른 기기에서 학습 중)이 판정을 넘으면 바로 끼우기 위한 배관만 했다. 학생 ONNX가 없어 지연·점수 결과는 없고, 판정은 학습된 학생으로 따로 한다.
 > - 채점은 서버(`dgop_acoustic`)에서 돌아 스트리밍도 서버에 붙였다. `backend/dgop_stream.py`: 녹음 중 새 소리 4초 + 왼쪽 2초 + 오른쪽 1초 창을 순전파해
