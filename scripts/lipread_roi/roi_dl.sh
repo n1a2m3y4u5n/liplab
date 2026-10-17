@@ -1,5 +1,5 @@
 #!/bin/bash
-# roi_dl.sh — 데스크탑 WSL(2026-10-17): 입술 영역 전단용 538 받기(docs/lipread-roi-2026-10.md 8·11절).
+# roi_dl.sh: 데스크탑 WSL(2026-10-17): 입술 영역 전단용 538 받기(docs/lipread-roi-2026-10.md 8·11절).
 #   cd /mnt/d/liplab/lab && bash tools/roi_dl.sh >> data/roi538/roi_dl.out 2>&1   (끊기면 같은 명령으로 이어 받음)
 # A: 아직 받지 않은 배치(새 화자, 인물 중복은 V1·S4 루트와 대조), B: 받은 168명을 영상 앞 2.2 GB까지 다시(31~60번째 문장).
 # 키 하나, 인증 실패면 멈춘다(BACKOFF_ROUNDS=1). D: 여유 60 GB 아래면 시작하지 않는다.

@@ -1,4 +1,4 @@
-# roi_extract_loop.ps1 — 데스크탑(2026-10-17): 받은 538 클립의 입술 영역(88x88)을 30분마다 이어 뽑는다(docs/lipread-roi-2026-10.md 4·11절).
+# roi_extract_loop.ps1: 데스크탑(2026-10-17): 받은 538 클립의 입술 영역(88x88)을 30분마다 이어 뽑는다(docs/lipread-roi-2026-10.md 4·11절).
 #   bg powershell -NoProfile -ExecutionPolicy Bypass -File D:\liplab\roi\roi_extract_loop.ps1
 # CPU만 쓴다(GPU 안 씀). 이미 있는 npz는 건너뛴다. 받기가 끝나면(DL_DONE) 마지막으로 한 번 더 돌고 끝난다.
 $ErrorActionPreference = 'Continue'
