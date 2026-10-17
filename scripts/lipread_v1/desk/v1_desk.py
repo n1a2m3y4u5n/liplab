@@ -173,9 +173,10 @@ def extract(dax):
         fail("mp4 없음")
     env = dict(ENV, OMP_NUM_THREADS="1", MKL_NUM_THREADS="1")
     for tag in ("p1", "p2"):
-        todo = [m for m in allm if not os.path.getsize(f"{dax}/bs/{os.path.basename(m)[:-4]}.json")
-                if os.path.exists(f"{dax}/bs/{os.path.basename(m)[:-4]}.json")] + \
-               [m for m in allm if not os.path.exists(f"{dax}/bs/{os.path.basename(m)[:-4]}.json")]
+        def _need(m):
+            p = f"{dax}/bs/{os.path.basename(m)[:-4]}.json"
+            return not os.path.exists(p) or os.path.getsize(p) == 0
+        todo = [m for m in allm if _need(m)]
         say(f"[extract {tag}] mp4={len(allm)} 남음={len(todo)} W={W}")
         if not todo:
             break
