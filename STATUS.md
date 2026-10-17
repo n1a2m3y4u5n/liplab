@@ -22,6 +22,10 @@
 >    `v1_desk.py all`, 작업 폴더 `D:\liplab\v1\dax`, 끊기면 같은 명령으로 다시: 끝난 bs·학습 run은 건너뜀). S4 평가용 538 재받기 `1017-104848` 진행 중(약 6분/화자, 19시쯤 끝 예상).
 > 1-2. (14:25) 데스크탑이 13:43에 비정상 종료 뒤 14:17 재부팅(이벤트 41·6008, 깨끗한 종료 아님; Windows 업데이트 재시작 기록 1074는 없음). 모든 bg 작업이 죽어 다시 띄움:
 >    V1 `1017-142545`(동시 학습 6 → 3, 추출 bs 3,323개는 그대로 씀, 학습은 처음부터), e538 재받기 `1017-142545-2`(dl_more 이어 받기).
+> 1-3. (14:45) **14:37에 두 번째 비정상 재부팅. 이벤트 1001: 버그체크 0x133(DPC_WATCHDOG_VIOLATION), 덤프 `C:\WINDOWS\Minidump\101726-11796-01.dmp`.**
+>    두 번 모두 V1 학습(GPU에 여러 학습 프로세스 동시, 6개·3개)이 시작될 무렵이다. S4 학습(프로세스 하나, 1시간 42분)과 받기·추출은 문제없었다.
+>    그래서 **V1 학습은 다시 띄우지 않았다**(사용자 결정 필요: 그래픽 드라이버 점검, 또는 `V1_PAR=1`로 한 개씩). 정렬까지는 끝났다(정렬 3,070/3,280 = 0.936 통과, 벤치·분할 있음).
+>    e538 재받기만 다시 띄움. 다시 할 때: `$env:V1_PAR='1'` 뒤 `D:\liplab\v1run.ps1`(정렬·벤치는 건너뜀).
 > 2. V1(이미 한 단계 표시): 받기 끝나면 WSL에서 `cd /mnt/d/liplab/lab && python3 tools/v1_pick_eval.py --root data/v1_538r --out data/v1_538r/eval40.txt` → 목록을 `scripts/lipread_v1/eval40.txt`와
 >    사전등록 부록 A에 커밋·push → 데스크탑 `git pull` → S4 학습이 끝나 GPU가 비면 `bg D:\liplab\vlip\Scripts\python.exe -u D:\liplab\repo\scripts\lipread_v1\desk\v1_desk.py all`
 >    (결과 `D:\liplab\v1\dax\v1\v1_verdict.json`, 로그 `logs\v1.log`의 `V1_GATE`). 미달이면 `VITE_LIPREAD_CHECK` 기본값 `research` 제안만.
