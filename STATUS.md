@@ -1,5 +1,38 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
+> **2026-10-17: 집 데스크탑(Windows, RTX 3060 12GB)으로 밀린 시험·발음 판정 규칙 확인·S4 청크 학생·V1 진행 (브랜치 desk-runs-2026-10, 배포·유료 API·파드 없음).**
+> - 환경: 저장소 `D:\liplab\repo`(이 브랜치), 앱 venv `D:\liplab\venv`(py3.12, torch 2.8.0 cu128, transformers 5.17.0, av 16.0.1), 자르기 venv `D:\liplab\vseg`
+>   (faster-whisper 0.10.1, ct2 3.24, cuDNN 8), V1 venv `D:\liplab\vlip`(mediapipe 0.10.14, numpy 1.26.4, transformers 4.40.0, torch 2.8.0). 받기는 WSL 우분투(`/mnt/d/liplab/lab`).
+>   캐시는 `D:\liplab\cache`(스크립트 첫머리 `. D:\liplab\cache_env.ps1`). AI Hub 키는 `D:\liplab\lab\.aihub.key(s)`(새 키 하나, 인증 실패면 기다리지 말고 멈춤).
+> - 전체 시험: 백엔드 pytest 기본 설정 737 통과·72 실패(모두 Windows 기본 인코딩 cp949: 하위 프로세스 출력 디코딩·파일 인코딩), `PYTHONUTF8=1`이면 **809 모두 통과**.
+>   프론트 `npm test`는 package.json의 작은따옴표 글롭이 Windows cmd에서 0개를 돌려 큰따옴표로 고쳤다(336 통과), vite 빌드 통과, `scoring_regress.py --quick` 통과(차이 0).
+>   찾은 위험: requirements의 faster-whisper 1.2.1이 최신 PyAV 19에서 `decode_audio`가 깨진다(`metadata_errors`). av 16.0.1은 된다. pytest는 이를 잡지 못한다(새 이미지 빌드 전 av 상한 필요).
+> - 발음 판정 규칙(`docs/scoring-rules-2026-10.md` 10절): 608 범주 27 두 번째 묶음 107/108세션(59명) 받기(2시간 34분) → 데스크탑에서 자르기·특성·집계. 다리 통과(최대 차 0.1).
+>   **G-LR(al, S) 미달(GJ1)**: 범주 27 다른 문장 합격 7.91% → 5.20%(기준 ≤ 5%), FH 2.42%, 538 FH 0.0%, 범주 28 FH 1.05%. 앱 그대로, `LIPLAB_SPEAK_GATE` 구현 안 함.
+> - S4 청크 학생(`docs/scorer-stream-chunk-2026-10.md`, 사전 등록 부록·측정 전 변경 9절): 자료 97,100개 234.8시간(10/7과 같음), 교사 fp32 TF32(fp16판은 NaN이라 버림),
+>   학습 HC(H 초기값, 창 4/2/1, 7,044단계) 10:41~12:23(1시간 42분) 끝, 내보내기 가중치 전용 int8 104,603,007바이트(C4·다리 1 통과), 개발 KL(전체 순전파, 정렬/채점) Zeroth 원본 0.128/0.136(10/7 H 0.122/0.129). **판정(C1~C3·L1~L3)은 538 평가 클립 재받기 뒤.**
+> - V1(`docs/lipread-v1-2026-10.md`): 538 큐 130개 받기 04:02 시작(약 4~5분/화자, 13~14시쯤 끝 예상). 데스크탑 V1 실행기 smoke 통과(판정용 아님).
+>
+> **다시 이어 하기(10/17 11시 기준, bg 작업은 `desk bglist`):**
+> 1. 돌고 있는 것: S4 이어 하기 `1017-063823`(`D:\liplab\s4\s4_chain4.ps1`: 학습 → `runs\HC\final.pt` → 내보내기 `runs\HC\student_w8.onnx`·`export.json`, 체크포인트 `runs\HC\ckpt.pt` 250단계마다,
+>    끊기면 `bg powershell -File D:\liplab\s4\s4run.ps1 train` 다시 → 이어 학습, 그 뒤 `... s4run.ps1 export`). V1 받기 `1017-040046`(WSL `data/v1_538r/v1r_dl.out`, `dl_more.out`,
+>    끊기면 `bg wsl -e bash -c "cd /mnt/d/liplab/lab && bash tools/run538_desk.sh >> data/v1_538r/v1r_dl.out 2>&1"`로 이어 받음). S4 평가용 538 클립 재받기 감시 `1017-104848`
+>    (V1 받기 끝나면 `tools/run_e538_desk.sh`가 58명을 `data/e538r`로, 끝에 `E538_REPRO` 줄로 재현 확인).
+> 1-1. (13:16 갱신) V1 받기 끝(04:02~13:00, 111명 커밋·19개 라벨 없음 등 실패, 3,323클립), 평가 40명 커밋(21b2cea7). V1 실행 `1017-131600`(`D:\liplab\v1run.ps1` →
+>    `v1_desk.py all`, 작업 폴더 `D:\liplab\v1\dax`, 끊기면 같은 명령으로 다시: 끝난 bs·학습 run은 건너뜀). S4 평가용 538 재받기 `1017-104848` 진행 중(약 6분/화자, 19시쯤 끝 예상).
+> 1-2. (14:25) 데스크탑이 13:43에 비정상 종료 뒤 14:17 재부팅(이벤트 41·6008, 깨끗한 종료 아님; Windows 업데이트 재시작 기록 1074는 없음). 모든 bg 작업이 죽어 다시 띄움:
+>    V1 `1017-142545`(동시 학습 6 → 3, 추출 bs 3,323개는 그대로 씀, 학습은 처음부터), e538 재받기 `1017-142545-2`(dl_more 이어 받기).
+> 1-3. (14:45) **14:37에 두 번째 비정상 재부팅. 이벤트 1001: 버그체크 0x133(DPC_WATCHDOG_VIOLATION), 덤프 `C:\WINDOWS\Minidump\101726-11796-01.dmp`.**
+>    두 번 모두 V1 학습(GPU에 여러 학습 프로세스 동시, 6개·3개)이 시작될 무렵이다. S4 학습(프로세스 하나, 1시간 42분)과 받기·추출은 문제없었다.
+>    그래서 **V1 학습은 다시 띄우지 않았다**(사용자 결정 필요: 그래픽 드라이버 점검, 또는 `V1_PAR=1`로 한 개씩). 정렬까지는 끝났다(정렬 3,070/3,280 = 0.936 통과, 벤치·분할 있음).
+>    e538 재받기만 다시 띄움. 다시 할 때: `$env:V1_PAR='1'` 뒤 `D:\liplab\v1run.ps1`(정렬·벤치는 건너뜀).
+> 2. V1(이미 한 단계 표시): 받기 끝나면 WSL에서 `cd /mnt/d/liplab/lab && python3 tools/v1_pick_eval.py --root data/v1_538r --out data/v1_538r/eval40.txt` → 목록을 `scripts/lipread_v1/eval40.txt`와
+>    사전등록 부록 A에 커밋·push → 데스크탑 `git pull` → S4 학습이 끝나 GPU가 비면 `bg D:\liplab\vlip\Scripts\python.exe -u D:\liplab\repo\scripts\lipread_v1\desk\v1_desk.py all`
+>    (결과 `D:\liplab\v1\dax\v1\v1_verdict.json`, 로그 `logs\v1.log`의 `V1_GATE`). 미달이면 `VITE_LIPREAD_CHECK` 기본값 `research` 제안만.
+> 3. S4 판정(e538 재받기 뒤): `D:\liplab\s4`에서 `set S4_W=D:/liplab/s4`, eval에 `c538wav`(e538r 클립 wav + manifest) 넣고 `python scripts\s4_eval_pod.py prep` →
+>    교사 다리 `e1 teacher 1 out\e1_teacher.jsonl`·`e2 teacher 1 out\e2_teacher.json`(GPU) → 학생 `e1 stream:runs/HC/student_w8.onnx 3 out\e1_HC.jsonl`·`e2 ... out\e2_HC.json`(CPU)
+>    → 지연 `scripts/phone_tail/pod/stream_lat.py latency`를 `STREAM_APP=1 STREAM_ONNX=... STREAM_LC=2`로(현재 backend 사용) → `python scripts\s4c\s4c_analyze.py out`.
+>    재현이 안 되면(이름 99% 미만) 등록 6절대로 538 몫 HOLD.
 > **2026-10-17: 배치검사·쉬운 한국어 4차 화면 점검(소리 끔), 작은 결함 고침 (브랜치 ui-check-2026-10-17, 배포 안 함, integrate에 머지 안 함).**
 > - 로컬 8091(`LISTEN_PLACEMENT=D`, 임시 DB)·데스크톱/375px로 0단계만 숙달한 새 학습자 둘을 검사 → 적용까지 돌림(모두 틀림: 위 단계 3·수준 1·1, 모두 맞힘: 5·4·3). 플래그를 끄면 카드 없음·API 404 확인.
 > - 고친 것: ① 결과·안내 문구가 서버 단계 번호(0부터)를 써서 경로(1부터)와 어긋남('1·2단계', '3단계 열림' → '소리 구별·낱말 고르기', '4~6단계'), `lib/listenFlow.placementSummary`로 옮겨 시험.

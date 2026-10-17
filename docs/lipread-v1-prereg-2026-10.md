@@ -106,3 +106,9 @@
 
 - 저장소: 이 문서, `docs/lipread-v1-2026-10.md`(결과), `scripts/lipread_v1/`(받기·학습·판정·파드 스크립트 사본), 집계 수치만.
 - 실험 폴더(`liplab-lab`, 저장소 밖): 화자별 블렌드셰이프·입술 좌표 JSON, 정렬, 벤치, 입 영역 npz, 학습 가중치, product4way JSON.
+
+## 부록 A. 평가 화자 40명(2026-10-17, 받기 뒤·학습 전 고정)
+
+- 받기: 집 데스크탑 WSL, queue_v1 앞 130개 중 111명 커밋(실패 19개는 라벨 JSON 없음 등), 3,323클립. 후보 111명, 학습+검증 139명(기준 80·120 충족).
+- 3.2절 규칙(sha256 오름차순 40명) 결과. 성별 F 15·M 25, 시점 A 28·I 7·H 4·G 1(보고만).
+- 목록(`scripts/lipread_v1/eval40.txt`와 같음): spk457, spk407, spk417, spk418, spk369, spk501, spk367, spk420, spk491, spk335, spk479, spk334, spk403, spk619, spk344, spk413, spk607, spk389, spk375, spk340, spk463, spk333, spk352, spk459, spk398, spk410, spk499, spk627, spk332, spk487, spk624, spk387, spk412, spk497, spk493, spk409, spk368, spk347, spk483, spk489
