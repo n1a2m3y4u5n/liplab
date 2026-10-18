@@ -171,6 +171,12 @@
      - 가중치 싣는 법: 공개 저장소에 넣지 않고 dgop_ours와 같이 빌드 폴더의 git 제외 폴더로 싣는다. 원본은
        `~/Downloads/LIPLAB_ALL/liplab-lab/models/dgop_stream_HC_2026-10-17/`(student_w8.onnx 104,603,007바이트, sha256 `b1faf8cf…`,
        calibration.json, export.json, train_summary.json). 데스크탑 원본은 `D:\liplab\s4\runs\HC\`다.
+       보정 `calibration.json`은 10/18에 만들었다(10/17 판정 뒤, 판정 수치는 바뀌지 않음). 10/7 등록 방법(`docs/scorer-distill-2026-10.md`
+       7.3절, `scripts/s4_analyze.calib_from_dev`) 그대로 개발 자료(Zeroth 합성 저하, 1,828클립·5,484행)를 교사(전체 순전파)와 학생(앱과
+       같은 스트리밍 창)으로 데스크탑에서 채점하고, 교사 앵커가 놓인 분위수의 학생 원점수를 앵커로 삼았다: 9.4·33.0·57.0·81.8 → 40·58·72·90
+       (10/7 H 9.1·32.0·56.3·82.9). E1 점검(보고만): 교사 표시 점수와의 차 평균 3.38점·95백분위 8.9점, 65점 기준 608 자기 문장 불합격
+       21.5%(교사 18.7%), 다른 문장 합격 538 0.0%·608 0.7%(교사 2.1%). 학생 쪽이 2~3%p 엄격하다. 원자료
+       `liplab-lab/data/s4c_2026-10-17/out/dev_teacher.jsonl`·`dev_HC.jsonl`.
        ```bash
        rm -rf backend/models/dgop_stream && cp -cR ~/Downloads/LIPLAB_ALL/liplab-lab/models/dgop_stream_HC_2026-10-17 backend/models/dgop_stream
        shasum -a 256 backend/models/dgop_stream/student_w8.onnx   # b1faf8cf6c440506a3cbe37f5541144c2cda21529e82175984dfda04be94c82a

@@ -1,5 +1,12 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
+> **2026-10-18: 다음 liplab-dev 배포 준비(브랜치 deploy-prep-2026-10-18, 배포 안 함, integrate에 머지 안 함).**
+> - `av>=11,<19`(faster-whisper 1.2.1 + PyAV 19.0.1 `decode_audio` TypeError 재확인, 16·17·18 통과), `onnxruntime==1.31.0`(infer). Windows pytest는 conftest가
+>   UTF-8 모드로 다시 띄워 PYTHONUTF8 없이 886 모두 통과(데스크탑), 맥 886 통과, 프론트 350 통과, vite 빌드 통과.
+> - S4: 빌드 인자 `DGOP_STREAM`(fly.dev.toml, 기본 "0")이 프론트·서버 플래그를 함께 정함. 학생 ONNX·보정은 `liplab-lab/models/dgop_stream_HC_2026-10-17/`,
+>   켤 때만 `backend/models/dgop_stream/`으로 복제(git 제외). 학생 보정 새로 만듦(앵커 9.4·33.0·57.0·81.8, E1 교사와 차 평균 3.38점). 점검표 `DEPLOY.md` 10항.
+> - 사용자 결정: S4를 켜고 배포할지(켜면 이미지 +105MB, 메모리 약 +0.4GB). 도커가 없어 이미지 빌드는 해 보지 않았다.
+
 > **2026-10-17 23:00: S4 청크 학생 판정 통과(데스크탑, 한 번만 판정, 브랜치 s4-judge-2026-10-17, 머지·배포 안 함).**
 > - C1 608 AUC 0.9031, C2 538 다른 문장 합격 0.0%, C3 최솟값 0.8842, C4 104.6MB, L1 중앙값 최대 1.18초·95백분위 최대 1.83초, L2 0.81초 ≤ 2.33초, L3 1.52초. 다리 1·2 통과.
 > - `DGOP_STREAM`은 기본 끔 그대로, 학생 ONNX를 플래그 뒤에 넣을지는 사용자 결정. 기록 `docs/scorer-stream-chunk-2026-10.md` 10절, 집계 `liplab-lab/data/s4c_2026-10-17/`.
