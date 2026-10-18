@@ -98,15 +98,23 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
 {tone_rule}   - 다르게 들린 소리가 있으면 그 소리를 입술/혀를 '어떻게' 하는지 구체적으로.
    - 약하게 잰 소리가 있으면 그중 하나를 골라 입술·혀를 어떻게 하는지 알려 주기{weak_note}.
 3) 짧은 격려.{caution}
+영어 낱말이나 알파벳은 쓰지 마세요(단위 Hz만 예외).
 {PLAIN_KO_STYLE}"""
     try:
-        resp = await anthropic_client.messages.create(
-            **llm_models.request("fast", max_tokens=500),
-            messages=[{"role": "user", "content": prompt}],
-        )
+        msgs = [{"role": "user", "content": prompt}]
+        resp = await anthropic_client.messages.create(**llm_models.request("fast", max_tokens=500), messages=msgs)
         text = llm_json.response_text(resp)
         if not text:
             raise ValueError("empty coaching text")
+        # 10/18 실호출 점검에서 '입술을 더 동그just 모아'처럼 영문 조각이 섞였다. 한 번 다시 받고, 그래도 섞이면 규칙 코칭으로 간다
+        # (영문만 지우면 '동그 모아'처럼 문장이 깨진다).
+        if coaching_has_latin(text):
+            msgs = msgs + [{"role": "assistant", "content": text},
+                           {"role": "user", "content": "영어 낱말이 섞였습니다. 같은 내용을 한국어로만 다시 써 주세요."}]
+            resp = await anthropic_client.messages.create(**llm_models.request("fast", max_tokens=500), messages=msgs)
+            text = llm_json.response_text(resp)
+            if not text or coaching_has_latin(text):
+                raise ValueError("latin in coaching text")
         return text
     except Exception:
         bits = []
@@ -568,6 +576,11 @@ def fallback_turn(situation: str, level: int, history: List[Dict]) -> str:
         return fresh[0]
     last = {k: i for i, k in enumerate(said)}
     return min(fits, key=lambda t: last.get(_norm_turn(t), -1))
+
+
+def coaching_has_latin(text: str) -> bool:
+    """발음 코칭 글에 영문이 섞였는가. 측정값 단위 Hz는 프롬프트가 주는 것이라 허용한다."""
+    return bool(re.search(r"[A-Za-z]", re.sub(r"\d\s*Hz(?![A-Za-z])", "", text or "")))
 
 
 def conv_turn_ok(text: str, level: int) -> bool:

@@ -249,3 +249,40 @@ def test_stage4_endpoint_orders_pool_per_user_and_day(monkeypatch):
     assert [x["target"] for x in a[:14]] != ["밥", "물", "손", "발", "눈", "코", "입", "귀", "산", "달", "별", "꽃", "집", "차"]
     s5 = asyncio.run(main.speak_stage_content(5, current_user=u1))["items"]
     assert s5 == main._speakcur.SPEAK_STAGES[5]["items"]   # 5단계는 그대로
+
+
+def _fake_client(replies, seen):
+    class _Msg:
+        def __init__(self, t):
+            self.content = [type("B", (), {"text": t, "type": "text"})()]
+
+    class _Fake:
+        class messages:
+            @staticmethod
+            async def create(*a, **k):
+                seen.append(k["messages"])
+                return _Msg(next(replies))
+    return _Fake
+
+
+def test_coaching_retries_once_when_latin_mixed_in(monkeypatch):
+    # 10/18 실호출 점검: '입술을 더 동그just 모아'. 영문이 섞이면 한 번 다시 받는다
+    seen = []
+    monkeypatch.setattr(llm_service, "anthropic_client",
+                        _fake_client(iter(["입술을 더 동그just 모아 보세요.", "입술을 더 동그랗게 모아 보세요."]), seen))
+    r = asyncio.run(llm_service.generate_speaking_coaching("우유", None, 80, [], {"loudness": 70}, method="dgop"))
+    assert r == "입술을 더 동그랗게 모아 보세요." and len(seen) == 2
+    assert "한국어로만" in seen[1][-1]["content"]
+
+
+def test_coaching_falls_back_to_rules_when_latin_persists(monkeypatch):
+    seen = []
+    monkeypatch.setattr(llm_service, "anthropic_client",
+                        _fake_client(iter(["Good job 잘했어요.", "Nice 잘했어요."]), seen))
+    r = asyncio.run(llm_service.generate_speaking_coaching("아", None, 90, [], {"loudness": 70}, method="dgop"))
+    assert len(seen) == 2 and not llm_service.coaching_has_latin(r)
+
+
+def test_coaching_latin_check_allows_hz_unit():
+    assert not llm_service.coaching_has_latin("억양 변화가 18Hz로 평평했어요.")
+    assert llm_service.coaching_has_latin("입술을 just 모아요")
