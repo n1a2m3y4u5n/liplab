@@ -8,11 +8,11 @@
 """
 import random
 import llm_json
+import llm_models
 from typing import Dict, List, Optional
 
 from llm_service import anthropic_client, PLAIN_KO_WORDS
 
-_MODEL = "claude-sonnet-4-6"
 _SCENES = ["카페", "병원 대기실", "학교 교실", "가족 저녁 식사", "가게 계산대", "친구 모임"]
 
 # LLM 실패(키 없음·파싱 오류)시 결정론적 폴백 — 500/무한로딩 방지. 장면별 짧은 구어체 대화.
@@ -217,7 +217,7 @@ async def generate_multi_conversation(speakers: int = 2, turns: int = 6,
     )
     try:
         resp = await anthropic_client.messages.create(
-            model=_MODEL, max_tokens=600, temperature=1.0, system=system,
+            **llm_models.request("quality", max_tokens=600, temperature=1.0), system=system,
             messages=[{"role": "user", "content": f"변주 시드 {rng.randint(1000, 9999)}"}],
         )
         data = llm_json.extract_json(resp)

@@ -7,6 +7,7 @@ import os
 import random
 import re
 import llm_json
+import llm_models
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 from anthropic import AsyncAnthropic
@@ -100,11 +101,13 @@ async def generate_speaking_coaching(target: str, transcript: str, score: float,
 {PLAIN_KO_STYLE}"""
     try:
         resp = await anthropic_client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=500,
+            **llm_models.request("fast", max_tokens=500),
             messages=[{"role": "user", "content": prompt}],
         )
-        return resp.content[0].text.strip()
+        text = llm_json.response_text(resp)
+        if not text:
+            raise ValueError("empty coaching text")
+        return text
     except Exception:
         bits = []
         if m.get("loudness", 100) < 40:
@@ -450,9 +453,7 @@ async def generate_adaptive_scenario(
         # 2번(3단계는 6~7어절, 5단계는 90자 넘는 문장)이 상황과 무관한 저장·대체 문장을 받았다(9/27 밤).
         for attempt in range(2):
             response = await anthropic_client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=1024,
-                temperature=1.0,  # 변주 극대화 — 매번 다른 문장
+                **llm_models.request("quality", max_tokens=1024, temperature=1.0),  # 변주 극대화(예전 세대만), 매번 다른 문장
                 system=system_prompt,
                 messages=messages,
             )
@@ -594,9 +595,7 @@ async def rephrase_turn(text: str, situation: str, level: int) -> Optional[str]:
     )
     try:
         response = await anthropic_client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=120,
-            temperature=0.7,
+            **llm_models.request("fast", max_tokens=120, temperature=0.7),
             system=system_prompt,
             messages=[{"role": "user", "content": f"상황: {situation}\n원문: {src}"}],
         )
@@ -692,9 +691,7 @@ async def generate_conversation_turn(
         prev_lines = {_norm_turn(h.get("content", "")) for h in (history or []) if h.get("role") == "assistant"}
         for attempt in range(2):
             response = await anthropic_client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=150,
-                temperature=0.9,
+                **llm_models.request("fast", max_tokens=150, temperature=0.9),
                 system=system_prompt,
                 messages=msgs
             )
@@ -748,9 +745,7 @@ async def generate_listen_convo_item(scene: str, places: List[str], existing: Li
     have = "\n".join(f"- {t}" for t in (existing or [])[:30]) or "- (없음)"
     try:
         response = await anthropic_client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=400,
-            temperature=0.9,
+            **llm_models.request("fast", max_tokens=400, temperature=0.9),
             system=system_prompt,
             messages=[{"role": "user", "content": f"이미 있는 문장:\n{have}\n\n새 문항 하나를 JSON으로 내세요."}],
         )

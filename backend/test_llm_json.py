@@ -15,6 +15,13 @@ class _Block:
         self.text = text
 
 
+class _Typed:
+    def __init__(self, type_, text=None):
+        self.type = type_
+        if text is not None:
+            self.text = text
+
+
 class _Resp:
     def __init__(self, blocks):
         self.content = blocks
@@ -50,8 +57,33 @@ def test_invalid_json_raises():
         _ok(True, "JSONDecodeError 전달")
 
 
+def test_response_text_skips_thinking_blocks():
+    # Haiku 5.5·Sonnet 5.5는 생각이 기본으로 켜져 응답이 thinking 블록으로 시작할 수 있다
+    resp = _Resp([_Typed("thinking"), _Typed("text", '{"a": 1}')])
+    _ok(J.response_text(resp) == '{"a": 1}', "thinking 블록을 건너뛰고 본문을 읽음")
+    _ok(J.extract_json(resp) == {"a": 1}, "thinking 블록 뒤 JSON 파싱")
+
+
+def test_parse_json_with_surrounding_prose():
+    _ok(J.parse_json('다음과 같습니다.\n{"x": 1}\n이상입니다.') == {"x": 1}, "앞뒤 설명 문장이 붙은 JSON")
+
+
+def test_llm_models_defaults_and_overrides(monkeypatch):
+    import llm_models as M
+    monkeypatch.delenv("LIPLAB_LLM_FAST", raising=False)
+    monkeypatch.delenv("LIPLAB_LLM_QUALITY", raising=False)
+    kw = M.request("fast", max_tokens=150, temperature=0.9)
+    _ok(kw["model"] == "claude-haiku-5-5" and "temperature" not in kw, "새 세대는 temperature를 보내지 않음")
+    _ok(kw["max_tokens"] >= 1024 and kw["output_config"] == {"effort": "low"}, "생각 여유와 effort")
+    _ok(M.request("quality", max_tokens=600)["model"] == "claude-sonnet-5-5", "quality 기본값")
+    monkeypatch.setenv("LIPLAB_LLM_FAST", "claude-haiku-4-5")
+    kw = M.request("fast", max_tokens=150, temperature=0.9)
+    _ok(kw == {"model": "claude-haiku-4-5", "max_tokens": 150, "temperature": 0.9}, "되돌리면 예전 인자 그대로")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
+    tests = [t for t in tests if not t.__code__.co_argcount]   # monkeypatch가 필요한 것은 pytest에서만
     for t in tests:
         t()
         print(f"  ✓ {t.__name__}")

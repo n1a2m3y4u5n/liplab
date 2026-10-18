@@ -20,19 +20,30 @@ def strip_code_fence(text: str) -> str:
 
 
 def response_text(resp) -> str:
-    """Anthropic 응답 객체에서 첫 텍스트 블록을 안전하게 꺼낸다(빈 content·속성 없음 방어)."""
+    """Anthropic 응답 객체의 텍스트 블록을 모두 이어 꺼낸다(빈 content·속성 없음 방어).
+
+    Haiku 5.5·Sonnet 5.5는 생각이 기본으로 켜져 응답이 thinking 블록으로 시작할 수 있다. 예전처럼 첫 블록만 읽으면
+    본문을 놓치므로 type이 text인 블록(type 속성이 없는 테스트용 블록 포함)만 모은다."""
     try:
         blocks = getattr(resp, "content", None) or []
-        if not blocks:
-            return ""
-        return (getattr(blocks[0], "text", "") or "").strip()
+        parts = [getattr(b, "text", "") or "" for b in blocks if getattr(b, "type", "text") == "text"]
+        return "".join(parts).strip()
     except Exception:
         return ""
 
 
 def parse_json(text: str) -> Any:
-    """코드펜스를 제거하고 JSON을 파싱. 실패 시 json.JSONDecodeError를 그대로 전달한다."""
-    return json.loads(strip_code_fence(text))
+    """코드펜스를 제거하고 JSON을 파싱. 실패 시 json.JSONDecodeError를 그대로 전달한다.
+
+    JSON 앞뒤에 설명 문장이 붙으면 처음 '{'부터 마지막 '}'까지를 한 번 더 시도한다."""
+    t = strip_code_fence(text)
+    try:
+        return json.loads(t)
+    except json.JSONDecodeError:
+        i, j = t.find("{"), t.rfind("}")
+        if 0 <= i < j:
+            return json.loads(t[i:j + 1])
+        raise
 
 
 def extract_json(resp) -> Any:
