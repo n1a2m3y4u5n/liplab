@@ -1,5 +1,9 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
+> **2026-10-18 23시: 다음 배포 결정(사용자).** 다음 liplab-dev 배포 때 **S4 스트리밍 채점을 켠다**(`fly.dev.toml` 빌드 인자 `DGOP_STREAM=1`, 절차·되돌리기 `DEPLOY.md` 10항). 배포 시점은 사용자가 정한다("배포해").
+> - ① 화소 앞단 학습은 데스크탑 bg `1018-224245`로 진행 중(R1 s0, 에폭당 약 8분, 4실행 25~45시간). 판정은 `docs/lipread-roi-2026-10.md` 12.3절 메모대로.
+> - 데스크탑 유선 랜이 100Mbps(벽 속 랜선 추정)라 내려받기 약 11MB/s 상한. 데스크탑은 지금 LG U+ 장비(192.168.219.x)에 연결, ipTIME(AX1500SR, 192.168.0.1)과 다른 망.
+
 > **2026-10-18: 다음 liplab-dev 배포 준비(브랜치 deploy-prep-2026-10-18, 배포 안 함, integrate에 머지 안 함).**
 > - `av>=11,<19`(faster-whisper 1.2.1 + PyAV 19.0.1 `decode_audio` TypeError 재확인, 16·17·18 통과), `onnxruntime==1.31.0`(infer). Windows pytest는 conftest가
 >   UTF-8 모드로 다시 띄워 PYTHONUTF8 없이 886 모두 통과(데스크탑), 맥 886 통과, 프론트 350 통과, vite 빌드 통과.
