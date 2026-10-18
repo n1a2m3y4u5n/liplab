@@ -99,6 +99,8 @@ data_out/*.npz
 backend/models/*.pt
 # 자체 학습 D-GOP 정렬기·채점기(각 1.26GB, 원본 liplab-lab/models/dgop_ours_2026-09-25). liplab-dev 빌드 때만 여기 둔다
 backend/models/dgop_ours/
+# S4 스트리밍 채점 학생 ONNX(104.6MB)·보정(원본 liplab-lab/models/dgop_stream_HC_2026-10-17). 켜고 빌드할 때만 여기 둔다(DEPLOY.md 10항)
+backend/models/dgop_stream/
 
 # 공개 자원 배포 묶음(scripts/build_resource_release.py로 언제든 똑같이 다시 만든다)
 release/

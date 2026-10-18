@@ -13,6 +13,11 @@ RUN npm ci
 # Copy frontend source
 COPY frontend/ ./
 
+# S4 스트리밍 채점(빌드 인자 DGOP_STREAM=1일 때만, 기본 0). 프론트는 녹음 중 소리 조각을 서버에 보내고(VITE_DGOP_STREAM),
+# 서버는 아래 단계에서 같은 인자로 켠다. 한 인자로 묶어 프론트와 서버가 어긋나지 않게 한다(DEPLOY.md 10항).
+ARG DGOP_STREAM=0
+ENV VITE_DGOP_STREAM=$DGOP_STREAM
+
 # Build for production
 RUN npm run build
 
@@ -89,6 +94,23 @@ RUN if [ "$WITH_ML" = "1" ]; then \
 loc = A._backbone_location('microsoft/wavlm-large'); p, m = B._load_base(loc, 'cpu'); m(torch.zeros(1, 16000)); \
 print('a4 backbone ok:', loc, m.liplab_quant_from, 'torch', torch.__version__)"; \
     fi
+
+# S4 스트리밍 채점 학생(DGOP_STREAM=1일 때만, docs/scorer-stream-chunk-2026-10.md 10절 통과). 가중치는 공개 저장소에 넣지 않고
+# dgop_ours처럼 빌드 폴더 backend/models/dgop_stream/(git 제외)에 둔 것을 위의 COPY backend/로 싣는다(DEPLOY.md 10항).
+# 파일이 없거나 서버 추론(WITH_ML=1)이 꺼져 있으면 빌드를 멈추고, 켜질 때와 같은 경로(dgop_stream.load_backend)로 학생을 올려
+# 1초 무음을 한 번 돌려 본다. 플래그가 0이면 아무것도 하지 않는다(그 폴더가 빌드 폴더에 있으면 이미지에는 들어간다, 약 105MB).
+ARG DGOP_STREAM=0
+RUN if [ "$DGOP_STREAM" = "1" ]; then \
+      test "$WITH_ML" = "1" || { echo "DGOP_STREAM=1은 WITH_ML=1이 필요하다(채점 후처리가 torch를 쓴다)"; exit 1; }; \
+      for f in student_w8.onnx calibration.json; do \
+        test -s models/dgop_stream/$f || { echo "backend/models/dgop_stream/$f 이 없다(DEPLOY.md 10항)"; exit 1; }; \
+      done && \
+      DGOP_STREAM=1 DGOP_STREAM_MODEL=/app/models/dgop_stream/student_w8.onnx python -c "import numpy as np, onnxruntime, dgop_stream as S; \
+f, v, c = S.load_backend(); al, sc = f(np.zeros(16000, np.float32)); \
+assert al.shape == sc.shape == (49, 49), (al.shape, sc.shape); \
+print('dgop_stream ok:', c, al.shape, 'onnxruntime', onnxruntime.__version__)"; \
+    fi
+ENV DGOP_STREAM=$DGOP_STREAM
 
 # 파일럿 자료 파기 도구(§4.7) — 서버에서 fly ssh로 실행한다(scripts/pilot_retention.py 머리말)
 COPY scripts/pilot_retention.py ./scripts/pilot_retention.py
