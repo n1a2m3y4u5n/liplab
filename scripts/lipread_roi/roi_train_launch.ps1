@@ -13,7 +13,7 @@ if (-not $env:ROI_MAX_FRAMES) { $env:ROI_MAX_FRAMES = '4000' }               # �
 $run = if ($env:ROI_RUN) { $env:ROI_RUN } else { 'D:/liplab/roi/run' }
 $py = 'D:\liplab\vlip\Scripts\python.exe'
 $tool = Join-Path $PSScriptRoot 'roi_train.py'
-$wait = if ($env:ROI_WAIT -eq '0') { @() } else { @('--wait-roi') }
+$wait = @(); if ($env:ROI_WAIT -ne '0') { $wait += '--wait-roi' }   # if 식은 원소 하나짜리 배열을 문자열로 풀어 @wait가 글자 단위로 쪼개짐(10/18 고침)
 New-Item -ItemType Directory -Force $run | Out-Null
 "=== ROI_LAUNCH $(Get-Date -Format s) run=$run tool=$tool frac=$env:ROI_GPU_FRAC maxf=$env:ROI_MAX_FRAMES git=$(git -C $PSScriptRoot rev-parse --short HEAD)"
 nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu --format=csv
