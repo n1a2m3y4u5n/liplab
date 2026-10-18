@@ -1,5 +1,9 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
+> **2026-10-18: Claude 모델을 Haiku 5.5·Sonnet 5.5로 올림(브랜치 claude-models-5-5, 머지·배포 안 함).**
+> - 모델 이름은 `backend/llm_models.py` 한 곳(fast `claude-haiku-5-5`, quality `claude-sonnet-5-5`), 되돌리기는 `LIPLAB_LLM_FAST`·`LIPLAB_LLM_QUALITY`(DEPLOY.md Phase 3). 새 세대에는 temperature를 빼고 effort low, 응답은 텍스트 블록만 읽는다.
+> - 실호출 점검 11경로 12번 모두 성공(지연 0.7~3.1초, 입력 5.8k·출력 1.4k 토큰, 약 0.015달러). 발음 코칭 한 번에 영문 조각("동그just")이 섞여 코칭에도 영문 걸러내기가 필요한지 볼 것.
+
 > **2026-10-17 23:00: S4 청크 학생 판정 통과(데스크탑, 한 번만 판정, 브랜치 s4-judge-2026-10-17, 머지·배포 안 함).**
 > - C1 608 AUC 0.9031, C2 538 다른 문장 합격 0.0%, C3 최솟값 0.8842, C4 104.6MB, L1 중앙값 최대 1.18초·95백분위 최대 1.83초, L2 0.81초 ≤ 2.33초, L3 1.52초. 다리 1·2 통과.
 > - `DGOP_STREAM`은 기본 끔 그대로, 학생 ONNX를 플래그 뒤에 넣을지는 사용자 결정. 기록 `docs/scorer-stream-chunk-2026-10.md` 10절, 집계 `liplab-lab/data/s4c_2026-10-17/`.

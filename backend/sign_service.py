@@ -31,8 +31,7 @@ DICT_VIEW_URL = SLDICT_BASE + "/front/sign/signContentsView.do?origin_no="
 
 DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "ksl_dictionary.csv")
 
-# 사용하는 Claude 모델 (앱의 시나리오 생성과 동일 계열로 일관성 유지)
-_SIGN_MODEL = "claude-sonnet-4-6"
+# 사용하는 Claude 모델은 llm_models의 quality 등급(앱의 시나리오 생성과 같은 계열)
 
 # 별칭표(수기 검증): 사전에 없는 흔한 단어 → 사전에 있는 **근접 동의어**.
 # 각 항목을 사람이 확인했고, UI에는 치환을 **투명하게 표시**("밥 → 식사")한다.
@@ -350,17 +349,17 @@ async def _gloss_via_llm(text: str) -> Optional[Dict]:
     try:
         from anthropic import AsyncAnthropic
         import llm_budget
+        import llm_models
         client = llm_budget.guard(AsyncAnthropic(api_key=api_key, timeout=30.0, max_retries=1))   # llm_service와 같은 제한·하루 한도
         response = await client.messages.create(
-            model=_SIGN_MODEL,
-            max_tokens=800,
+            **llm_models.request("quality", max_tokens=800),
             system=_KSL_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": text}],
         )
-        content = response.content[0].text.strip()
-        # 코드펜스 방어
-        content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
-        data = json.loads(content)
+        import llm_json
+        data = llm_json.extract_json(response)   # 텍스트 블록만 모아 코드펜스 제거 후 파싱(thinking 블록 방어)
+        if not isinstance(data, dict):
+            return None
         if not isinstance(data.get("gloss"), list):
             return None
         return data
