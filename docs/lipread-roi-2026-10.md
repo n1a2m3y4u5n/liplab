@@ -153,3 +153,82 @@
   정면 영상이 인물당 5개 이상이므로 CAP을 더 올려도 인물당 문장을 늘릴 수 있다(다음 받기에서 판단). 큐 A의 spk301~310은
   기존 벤치 화자라 도구가 건너뛰어 A는 실제 54배치다.
 - ROI 기존 클립 추출은 분당 약 60클립(4워커)으로 22:30쯤, 받기 A는 배치당 약 8분으로 10/18 05시쯤, 받기 B는 10/19 03시쯤 끝날 것으로 본다.
+
+### 12.1 학습 실행 점검표(10/18 시험 실행 뒤, 측정 아님)
+
+등록 학습을 띄우기 전에 작은 학습 화자 부분집합으로 코드 경로만 시험했다. 검증 수치는 코드 확인용이라 보고하지 않고, 평가 화자 ROI는
+읽지 않았다(p4는 평가 화자가 들어 있으면 `--judge` 없이 멈추는 것까지 확인).
+
+- 도구: `scripts/lipread_roi/roi_train.py`(prep·teacher·pretrain·train·select·p4·export·probe·selftest·all), 실행기
+  `scripts/lipread_roi/roi_train_launch.ps1`. 벤치·분할은 V1 것(`D:\liplab\v1\dax\v1\bench_v1.pkl`, `split.json`, bench_id b98573cb)을
+  그대로 쓰고, d_bench·train_lipread는 `LIPLAB_TOOLS=D:/liplab/v1/dax`에서 가져온다. 산출물은 `D:\liplab\roi\run`에만 둔다.
+- 시험 범위(`D:\liplab\roi\smoke`): 학습 화자 클립 300개로 prep(pack 0.7 GB) → R1 2에폭 → 이어 하기 → WavLM 교사(293클립 46초) →
+  사전학습 1에폭 + 이어 하기 1에폭 → R2 미세조정 1에폭 + 이어 하기 → select → ONNX·int8 → 학습 화자 3명 p4 300문항.
+  채점식은 정답 자모열을 내는 가짜 로그확률로 40/40 확인(`selftest`). 이어 붙인 Conv3d와 시퀀스별 Conv3d의 차이 9.9e-6.
+  전체 자료 prep(10.2 GB)과 R1 4,000항목 1에폭으로 디스크·처리 속도를 쟀다.
+
+**시험에서 고친 것(학습 설정값은 바꾸지 않음)**
+
+| 문제 | 고침 |
+|---|---|
+| 자동혼합정밀 인자가 정수라 `torch.autocast`가 멈춤 | bool로 바꿈, 전단만 bf16, CTC·GRU 머리는 fp32 |
+| 가장 긴 배치(32클립, 최대 451프레임)에서 GPU 할당 10.1 GB, 예약 13.0 GB(12 GB 넘음) | Conv3d를 유효 프레임만 이어 붙여 한 번에 돌림(패딩 계산 없음, 값 같음), 유효 프레임이 4,000을 넘는 배치만 나눠 기울기를 모음(배치 32와 CTC 평균은 그대로, BN 통계만 묶음별), 프로세스 상한 `set_per_process_memory_fraction(0.45)` → 최악 배치 할당 3.1 GB, 예약 4.3 GB |
+| int8 동적 양자화가 ConvInteger를 만들어 onnxruntime CPU에서 열리지 않음 | 가중치만 int8(출력 채널별 눈금) + DequantizeLinear, 계산은 float. fp32 23.1 MB → int8 5.8 MB(목표 20 MB 이하), 임의 입력 argmax 일치 1.000, CPU 75프레임 0.11초 |
+| D:가 HDD라 항목마다 npz를 여는 방식은 느림 | 학습·검증 화자 ROI를 한 파일(`pack/roi_u8.bin`)로 모으고, 클립 192개 덩어리 단위로 섞어 거의 순차로 읽음(덩어리 두 개씩 섞어 배치 구성) |
+| p4가 문항 0개여도 성공으로 끝남 | 문항 0개면 실패 |
+| PowerShell 실행기가 Python 실패를 종료 코드 0으로 넘김 | 실행기 끝에 `exit $LASTEXITCODE` |
+
+**구현하며 정한 것(사전등록에 없던 세부, 결과를 보기 전에 정함)**
+
+- 받기 A·B와 S4 루트(e538r)의 새 클립은 벤치에 어절 구간이 없어 문장 항목으로만 들어간다. 어절 항목과 idle75 창 증강은 V1 벤치의
+  학습 화자 클립에서만 나온다. 새 클립의 어절 구간이 필요하면 build_cd 정렬(GPU, wav2vec2)을 먼저 돌려야 한다(이번 실행에는 넣지 않음).
+- 받기 B는 화자 ID의 인물이 V1·S4 manifest_meta와 다른 화자 2명의 클립 91개를 뺐다(3절 규칙). 내용 분리로 학습 클립 1,387개를 뺐다.
+- 검증 문항 2,110개 가운데 193개는 ROI가 없는 검증 클립(옛 파드 클립 27개, 영상이 데스크탑에 없음)에 걸려 모든 실행에서 오답으로 센다.
+  평가 화자 클립은 1,099개 모두 ROI가 있다.
+- R2 사전학습: 최적화기는 R1과 같은 AdamW(lr 3e-4, wd 1e-4, 배치 32, 기울기 노름 5), 증강은 자르기·좌우 뒤집기만(속도·시간 마스크는
+  교사 목표와 어긋나서 뺌), 시드마다 따로 사전학습한다. 교사는 `microsoft/wavlm-base-plus`의 hidden_states[9](합성곱 출력 다음
+  9번째 층), 음성 정규화는 Wav2Vec2 특징 추출기와 같은 평균 0·분산 1, 50 Hz 프레임 가운데 시각에서 30 fps로 선형 보간, 화자별 평균을 뺀다.
+  음성이 있는 학습 클립만 쓴다(옛 파드 클립은 음성이 없어 빠짐).
+- ROI 추출 관문(4절): 추출 실패 0/9,515, 입 벌림과 jawOpen 상관 지연 0에서 최대(r 중앙값 0.90). `train_lip_roi.py check`는 벤치 클립
+  가운데 ROI가 없는 281/4,942(5.7%)를 이유로 FAIL을 낸다. 이 281개는 추출 실패가 아니라 영상이 데스크탑에 없는 옛 파드 클립이라
+  관문 통과로 보았다(사용자 확인 필요).
+
+**메모리와 시간(RTX 3060 12 GB, 측정값은 시험 실행)**
+
+- 우리 학습 프로세스 하나: 할당 최고 2.8 GB(일반 배치)~3.1 GB(최악 배치), 예약 4.8 GB, 상한 5.4 GB. 다른 세션 TTS 서버 약 3.8 GB와
+  화면·기타 약 1.2 GB를 더해도 약 9.8 GB(약 80%)라 90% 안쪽이다. 프로세스 하나일 때 GPU 사용률은 평균 약 70%다.
+- 처리 속도는 덩어리를 처음 읽는 동안 약 1,000 fr/s, 그 뒤 약 4,000 fr/s다. 현재 자료(문장 6,162, 어절 22,843, idle75 증강 포함)로
+  R1 한 에폭은 약 210만 프레임이라 약 9~10분, 검증(4지 2,110문항 × dup 2, 문장 CER) 약 35초다.
+- 추정 합계(받기 B가 끝나 문장이 늘면 약 1.3배): 교사 약 15분, 사전학습 20에폭 약 1.8시간 × 2, R1·R2 미세조정 실행마다 조기 종료면
+  약 4~7시간, 60에폭 끝까지 가면 약 10시간. **4실행 모두 약 25~45시간**으로 8절 추정(12~16시간)보다 길다. 에폭당 2~3분 추정은 이
+  전단 크기에서 맞지 않았다.
+- 동시 실행: GPU 메모리가 90% 안쪽에 들 때만 하나씩 더한다. 두 프로세스는 약 4.8 GB × 2 + TTS 3.8 GB + 1.2 GB ≈ 14.8 GB로 넘치므로
+  **R1·R2는 한 번에 하나씩 차례로** 돌린다. 둘을 함께 돌리려면 `ROI_GPU_FRAC=0.25`, `ROI_MAX_FRAMES=2000`으로 프로세스당 약 3 GB로
+  줄이고, 하나를 띄운 뒤 30분 이상 메모리·오류를 보고 나서 둘째를 더한다. 10/17 블루스크린(0x133)은 학습 프로세스 3~6개를
+  함께 돌릴 때 났으므로 셋 이상은 띄우지 않는다. 사용률이 이미 약 70%라 둘을 돌려도 합계 속도는 크게 늘지 않을 것으로 본다.
+
+**띄우기(10/19 02:37)**
+
+1. 확인: `bglist`에서 받기 `1017-210547`과 ROI 추출 `1017-210547-2` 상태, `nvidia-smi`로 다른 학습 프로세스가 없는지, D: 여유 60 GB 이상.
+2. 코드: `cd D:\liplab\repo; git fetch; git checkout lipread-roi-smoke-2026-10-18; git pull` (병합 뒤에는 통합 가지).
+3. 실행(PowerShell, bg):
+
+   ```powershell
+   cd D:\liplab\roi
+   bg powershell -NoProfile -ExecutionPolicy Bypass -File D:\liplab\repo\scripts\lipread_roi\roi_train_launch.ps1
+   ```
+
+   실행기가 넣는 환경 변수: `PYTHONUTF8=1`, `PYTHONIOENCODING=utf-8`, `HF_HOME=D:/liplab/cache/hf`(WavLM은 이미 받아 둠),
+   `LIPLAB_TOOLS=D:/liplab/v1/dax`, `PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128,garbage_collection_threshold:0.8`,
+   `ROI_GPU_FRAC=0.45`, `ROI_MAX_FRAMES=4000`. 바꿀 수 있는 것: `ROI_RUN`(기본 `D:/liplab/roi/run`), `ROI_WAIT=0`(ROI 추출 끝을
+   기다리지 않고 지금 있는 ROI로 prep).
+4. 기본은 ROI 추출 로그에 `ROI_LOOP_DONE`이 찍힐 때까지 10분마다 기다렸다가 prep을 한 번 만든다(받기 B가 끝나야 찍힌다). 02:37에
+   B가 덜 끝났으면 기다리는 동안 GPU를 쓰지 않는다. 지금 자료로 바로 시작하려면 `$env:ROI_WAIT='0'` 뒤 같은 명령. prep이 한 번 만들어지면
+   그 뒤 받은 클립은 이 실행에 들어가지 않는다.
+5. 순서와 끝 표식(`D:\liplab\roi\run\logs\<단계>.log`): prep `ROI_PREP_OK` → teacher `ROI_TEACHER_OK` → train_R1s0 `ROI_TRAIN_DONE` →
+   pre_s0 `ROI_PRE_DONE` → train_R2s0 → train_R1s1 → pre_s1 → train_R2s1 → select `ROI_SELECT`, 전체 `ROI_ALL_OK`(실패는 `ROI_ALL_FAIL`).
+   진행은 `bglog <id> -Once -Lines 30` 또는 `Get-Content D:\liplab\roi\run\logs\train_R1s0.log -Tail 5`.
+6. 이어 하기: 끊기거나 실패하면 원인을 본 뒤 3의 같은 명령을 다시 띄운다. 끝난 단계는 표식을 보고 건너뛰고, 학습 중이던 단계는
+   `last.pt`(에폭마다 저장)에서 이어 한다. 최고 체크포인트는 `run_<후보>s<시드>\model.pt`.
+7. 판정은 이 실행기가 하지 않는다. 4실행과 select가 끝난 뒤 `p4 --judge`로 선택 모델만 평가 화자에 걸고, 그 전에 문항 ID가 V1
+   product4way와 같은지 비교한다(비교 코드는 판정 전에 붙인다, 7절).
