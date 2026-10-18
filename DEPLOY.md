@@ -153,6 +153,41 @@
      빌드 캐시 앞쪽을 바꿔 다음 빌드는 ML 층을 모두 다시 만든다(원격 빌더에서 몇 분 더 걸림). 서버 추론은 한 번에 하나씩 돌고
      (`LIPLAB_ML_CONCURRENCY`, 기본 1), 추론에 넣는 음성은 앞 30초까지다. 요청 본문은 멀티파트 12MB·그 밖 2MB가 넘으면 413이다.
 
+10. **다음 liplab-dev 배포 점검표(10/18 준비, 배포 전, 사용자 "배포해" 뒤에만)**: 이 판(브랜치 deploy-prep-2026-10-18)이 integrate에
+    들어간 뒤 그 작업 폴더에서 한다. 전시앱 `fly.toml`은 건드리지 않는다.
+   - 의존성(10/18 반영): `backend/requirements.txt`에 `av>=11,<19`. faster-whisper 1.2.1이 `av.open(metadata_errors=...)`를 부르는데
+     PyAV 19에서 이 인자가 없어져 `decode_audio`가 깨진다(10/18 맥에서 16.0.1·17.0.1·18.1.0 통과, 19.0.1 `TypeError` 재확인).
+     pytest는 이 경로를 실제 PyAV로 돌리지 않아 잡지 못하므로, 빌드 기록에서 `av` 판이 19 미만인지 본다. `onnxruntime==1.31.0`은
+     `requirements-infer.txt`(WITH_ML=1만)에 고정했다(10/17 판정과 같은 판, faster-whisper가 이미 끌어오는 패키지라 이미지 크기는 그대로).
+   - 빌드 전 확인(모델은 git에 없다): `ls -l backend/models/dgop_ours/*/model.int8.safetensors backend/models/kr_a4_wavlm.pt`(9항).
+     빌드 폴더 크기 `du -sh backend/models`(S4를 끈 채면 약 0.7GB).
+   - 배포 명령: `fly deploy -c fly.dev.toml -a liplab-dev --remote-only`. 무옵션 `fly deploy`는 전시앱을 덮어쓰므로 쓰지 않는다.
+   - 배포 뒤 확인은 9항과 같다(`GET /api/backbone/status`의 int8·file, 발음 응답 `assessment_method`가 `dgop`, VmHWM 4GB 안).
+   - **S4 스트리밍 채점(기본 끔, 켤지는 사용자 결정)**: 10/17 판정 통과(`docs/scorer-stream-chunk-2026-10.md` 10절). 켜면 녹음하는 동안
+     소리를 4초 덩어리로 미리 순전파해 녹음 뒤 지연을 줄인다(판정 L1 중앙값 최대 1.18초). 끄면 요청·응답이 지금과 같다.
+     - 무엇이 바뀌나: 빌드 인자 `DGOP_STREAM` 하나가 프론트 `VITE_DGOP_STREAM`과 서버 환경 변수 `DGOP_STREAM`을 함께 정한다
+       (Dockerfile, 둘이 어긋나지 않게). 모델 경로 `DGOP_STREAM_MODEL=/app/models/dgop_stream/student_w8.onnx`는 `fly.dev.toml` [env]에
+       이미 있고, 표시 점수 보정은 ONNX 옆 `calibration.json`을 읽는다.
+     - 가중치 싣는 법: 공개 저장소에 넣지 않고 dgop_ours와 같이 빌드 폴더의 git 제외 폴더로 싣는다. 원본은
+       `~/Downloads/LIPLAB_ALL/liplab-lab/models/dgop_stream_HC_2026-10-17/`(student_w8.onnx 104,603,007바이트, sha256 `b1faf8cf…`,
+       calibration.json, export.json, train_summary.json). 데스크탑 원본은 `D:\liplab\s4\runs\HC\`다.
+       ```bash
+       rm -rf backend/models/dgop_stream && cp -cR ~/Downloads/LIPLAB_ALL/liplab-lab/models/dgop_stream_HC_2026-10-17 backend/models/dgop_stream
+       shasum -a 256 backend/models/dgop_stream/student_w8.onnx   # b1faf8cf6c440506a3cbe37f5541144c2cda21529e82175984dfda04be94c82a
+       ```
+     - 켜기: `fly.dev.toml` [build.args]의 `DGOP_STREAM`을 `"1"`로 바꾸고 위 명령으로 배포한다. 빌드는 ONNX·보정 파일이 없거나
+       `WITH_ML`이 0이면 멈추고, 켜질 때와 같은 경로(`dgop_stream.load_backend`)로 학생을 올려 1초 무음을 돌린다. 빌드 기록에
+       `dgop_stream ok: /app/models/dgop_stream/calibration.json (49, 49) onnxruntime 1.31.0`이 있어야 한다.
+     - 크기·메모리: 이미지와 빌드 폴더 업로드가 약 105MB 는다(onnxruntime은 이미 들어 있다). 10/18 맥에서 onnxruntime 1.31.0으로
+       학생을 올리면 상주 메모리가 약 0.4GB 늘었다(적재 0.4초). 9/26 배포의 서버 프로세스 최고 2.40GiB에 더해도 4GB 안이지만, 켠 뒤
+       VmHWM을 다시 본다. 끈 채로 이 폴더를 빌드 폴더에 두면 쓰지 않는 105MB가 이미지에 들어가므로, 끌 때는 폴더를 지운다.
+     - 켠 뒤 확인: 발음 연습 응답의 `dgop.stream`(녹음 중 창 수 `windows_during`, 마지막 창 시간 `final_window_s`)이 있는지, 녹음 뒤 결과가 나오기까지의 시간, 조각 요청
+       (`/api/speak/stream/{id}/chunk`) 응답 시간을 본다. 판정 지연은 데스크탑 i5-10400 기준이라 fly shared-cpu 2개에서는 다시 잰다.
+       실제 기기(브라우저) 지연은 아직 재지 않았다.
+     - 되돌리기: 빠르게는 `fly secrets set DGOP_STREAM=0 -a liplab-dev`(기계가 다시 켜지며 서버가 `/api/speak/stream/*`를 404로 닫고,
+       프론트는 함께 보내는 녹음 파일로 예전 경로 채점을 한다). 완전히는 `DGOP_STREAM = "0"`으로 되돌려 다시 배포하고 비밀값을
+       `fly secrets unset DGOP_STREAM -a liplab-dev`로 지운다.
+
 ---
 
 ## 로컬 Docker 테스트

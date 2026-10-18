@@ -7,6 +7,9 @@ primary_region = "nrt"
   [build.args]
     WITH_ML = "1"   # 서버 추론(D-GOP 발음채점·음성구동 아바타). 전시앱 fly.toml은 기본값 0이라 이미지가 그대로다.
     DGOP_MODEL = "ours"   # 자체 학습 정렬기·채점기(9/25 재검 통과). 체크포인트는 backend/models/dgop_ours/에 둔다(git 제외, DEPLOY.md 9항)
+    # S4 스트리밍 채점(10/17 판정 통과, 기본 끔). "1"이면 프론트 VITE_DGOP_STREAM과 서버 DGOP_STREAM을 함께 켜고, 학생 ONNX와 보정
+    # (backend/models/dgop_stream/, git 제외)이 없으면 빌드가 멈춘다. 켜는 절차·되돌리기는 DEPLOY.md 10항
+    DGOP_STREAM = "0"
 
 [env]
   PORT = "8080"
@@ -20,6 +23,7 @@ primary_region = "nrt"
   DGOP_ALIGNER_ID = "/app/models/dgop_ours/aligner"
   DGOP_SCORER_ID = "/app/models/dgop_ours/scorer"
   DGOP_CALIBRATION = "/app/data/dgop_calibration_ours.json"
+  DGOP_STREAM_MODEL = "/app/models/dgop_stream/student_w8.onnx"   # S4 학생. 빌드 인자 DGOP_STREAM이 "0"이면 쓰지 않는다(보정은 옆의 calibration.json)
   HF_HUB_OFFLINE = "1"         # 모델은 이미지 안에 있다
   BACKBONE_QUANT = "int8"      # 정렬기·채점기 선형층 가중치 int8(quant_int8.py). 9/25 사전등록 점검 통과: 표시 점수 차 평균 0.2점,
                                # 호스팅 점검 최대 3.15GB(fp32 4.3GB). 아바타 백본은 fp32. 빌드 폴더에 int8 파일만 있으면 이 값과
