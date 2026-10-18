@@ -5,3 +5,6 @@
 # 판을 고정한다: 미리 변환한 int8 파일과 채점 점수는 torch 2.14.0(Dockerfile)·transformers 5.17.0에서 검증했다
 # (docs/scorer-selftrain.md). 범위로 두면 빌드 캐시가 비는 날 새 판이 들어와 점수가 조용히 바뀔 수 있다.
 transformers==5.17.0
+# S4 스트리밍 채점 학생(dgop_stream.OnnxStudent, DGOP_STREAM=1일 때만 쓴다). faster-whisper가 이미 범위(<2)로 끌어오지만,
+# 10/17 판정(데스크탑)과 같은 판으로 고정한다. 10/18 맥에서 학생 ONNX 적재·순전파 확인(적재 뒤 상주 약 +0.4GB).
+onnxruntime==1.31.0

@@ -1,5 +1,11 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
+> **2026-10-18: 다음 liplab-dev 배포 준비(브랜치 deploy-prep-2026-10-18, 배포 안 함, integrate에 머지 안 함).**
+> - `av>=11,<19`(faster-whisper 1.2.1 + PyAV 19.0.1 `decode_audio` TypeError 재확인, 16·17·18 통과), `onnxruntime==1.31.0`(infer). Windows pytest는 conftest가
+>   UTF-8 모드로 다시 띄워 PYTHONUTF8 없이 886 모두 통과(데스크탑), 맥 886 통과, 프론트 350 통과, vite 빌드 통과.
+> - S4: 빌드 인자 `DGOP_STREAM`(fly.dev.toml, 기본 "0")이 프론트·서버 플래그를 함께 정함. 학생 ONNX·보정은 `liplab-lab/models/dgop_stream_HC_2026-10-17/`,
+>   켤 때만 `backend/models/dgop_stream/`으로 복제(git 제외). 학생 보정 새로 만듦(앵커 9.4·33.0·57.0·81.8, E1 교사와 차 평균 3.38점). 점검표 `DEPLOY.md` 10항.
+> - 사용자 결정: S4를 켜고 배포할지(켜면 이미지 +105MB, 메모리 약 +0.4GB). 도커가 없어 이미지 빌드는 해 보지 않았다.
 > **2026-10-18: Claude 모델을 Haiku 5.5·Sonnet 5.5로 올림(브랜치 claude-models-5-5, 머지·배포 안 함).**
 > - 모델 이름은 `backend/llm_models.py` 한 곳(fast `claude-haiku-5-5`, quality `claude-sonnet-5-5`), 되돌리기는 `LIPLAB_LLM_FAST`·`LIPLAB_LLM_QUALITY`(DEPLOY.md Phase 3). 새 세대에는 temperature를 빼고 effort low, 응답은 텍스트 블록만 읽는다.
 > - 실호출 점검 11경로 12번 모두 성공(지연 0.7~3.1초, 입력 5.8k·출력 1.4k 토큰, 약 0.015달러). 발음 코칭 한 번에 영문 조각("동그just")이 섞여 코칭에도 영문 걸러내기가 필요한지 볼 것.

@@ -12,5 +12,9 @@ anthropic>=0.40.0,<1
 python-dotenv>=1.0.0,<2
 python-Levenshtein>=0.26.0,<1
 faster-whisper>=1.0.0,<2
+# PyAV(faster-whisper의 음성 디코딩, D-GOP도 이 경로로 읽는다): faster-whisper 1.2.1은 av.open(metadata_errors=...)을 부르는데
+# PyAV 19에서 이 인자가 없어져 decode_audio가 TypeError로 깨진다(10/17 데스크탑, 10/18 16.0.1·17.0.1·18.1.0 통과, 19.0.1 실패 재확인).
+# faster-whisper가 고치기 전까지 19 미만으로 묶는다. 데스크탑 판정 환경은 16.0.1.
+av>=11,<19
 aiosqlite>=0.20.0,<1
 email-validator>=2.0.0,<3
