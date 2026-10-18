@@ -7,12 +7,12 @@
 """
 import random
 import llm_json
+import llm_models
 from typing import List
 
 from llm_service import anthropic_client
 import speak_curriculum as _speakcur
 
-_MODEL = "claude-sonnet-4-6"
 
 # 단어 생성용 범주 — 매 호출 몇 개를 무작위로 골라 다양성을 강제
 _WORD_CATEGORIES = [
@@ -27,9 +27,7 @@ _SENT_SCENES = ["카페·식당", "길 찾기", "쇼핑", "병원·약국", "학
 async def _call(system: str, expect_key: str = "items") -> List[str]:
     """LLM 호출 → JSON {expect_key: [...]} 파싱. 실패는 예외로 올려 호출부가 폴백."""
     resp = await anthropic_client.messages.create(
-        model=_MODEL,
-        max_tokens=512,
-        temperature=1.0,           # 변주 극대화
+        **llm_models.request("quality", max_tokens=512, temperature=1.0),   # 변주 극대화(예전 세대만, 새 세대는 시드·변주 축)
         system=system,
         messages=[{"role": "user", "content": f"변주 시드 {random.randint(1000, 9999)} — 새롭게 생성"}],
     )
@@ -77,7 +75,7 @@ async def generate_sentences(n: int = 8, avoid: List[str] = None, with_intonatio
     )
     if with_intonation:
         resp = await anthropic_client.messages.create(
-            model=_MODEL, max_tokens=512, temperature=1.0, system=system,
+            **llm_models.request("quality", max_tokens=512, temperature=1.0), system=system,
             messages=[{"role": "user", "content": f"변주 시드 {random.randint(1000, 9999)} — 새롭게 생성"}],
         )
         data = llm_json.extract_json(resp)

@@ -18,9 +18,10 @@ from typing import Dict, List, Optional
 
 import content_rules as R
 from content_gen import generate_words
+import llm_json
+import llm_models
 from llm_service import anthropic_client
 
-_MODEL = "claude-sonnet-4-6"
 
 
 async def build_word_bank(target: int = 60, max_syllable: int = 3,
@@ -70,15 +71,10 @@ async def _filter_real_batch(cands: List[str]) -> List[str]:
     )
     try:
         resp = await anthropic_client.messages.create(
-            model=_MODEL, max_tokens=1024, temperature=0.0, system=system,
+            **llm_models.request("quality", max_tokens=1024, temperature=0.0), system=system,
             messages=[{"role": "user", "content": "판정"}],
         )
-        content = resp.content[0].text.strip()
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
-        got = {str(x).strip() for x in json.loads(content).get("items", [])}
+        got = {str(x).strip() for x in llm_json.extract_json(resp).get("items", [])}
         return [c for c in cands if c in got]  # LLM 환각 방지: 후보에 있던 것만
     except Exception:
         return []
@@ -144,15 +140,10 @@ async def _closure_sentence(answer: str, distractors: List[str]) -> Optional[str
     )
     try:
         resp = await anthropic_client.messages.create(
-            model=_MODEL, max_tokens=200, temperature=0.9, system=system,
+            **llm_models.request("quality", max_tokens=200, temperature=0.9), system=system,
             messages=[{"role": "user", "content": f"시드 {random.randint(1000, 9999)}"}],
         )
-        content = resp.content[0].text.strip()
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
-        data = json.loads(content)
+        data = llm_json.extract_json(resp)
         display = str(data.get("display", "")).strip()
         hint = str(data.get("hint", "")).strip()
         return display, hint

@@ -269,6 +269,16 @@ $secret = [Convert]::ToBase64String($bytes)
 fly secrets set JWT_SECRET="$secret" --app liplab
 ```
 
+**Claude 모델(2026-10-18부터, `backend/llm_models.py`):**
+
+| 환경 변수 | 기본값 | 쓰는 곳 |
+|-----------|--------|---------|
+| `LIPLAB_LLM_FAST` | `claude-haiku-5-5` | 대화 턴, 되묻기, 발음 코칭, 대화 듣기 문항 |
+| `LIPLAB_LLM_QUALITY` | `claude-sonnet-5-5` | 시나리오 문장, 단어·문장 출제, 단어 판정, 문맥 문항, 다자 대화, 수어 gloss |
+
+- 새 세대 모델에는 temperature를 보내지 않고(기본값이 아니면 400), `effort: low`와 max_tokens 하한 1024를 둔다.
+- 되돌릴 때는 코드 수정 없이 `fly secrets set LIPLAB_LLM_FAST=claude-haiku-4-5 LIPLAB_LLM_QUALITY=claude-sonnet-4-6 --app liplab`. 4.x 이름이면 예전처럼 temperature를 보낸다.
+
 ### Phase 4: 배포
 
 ```bash
