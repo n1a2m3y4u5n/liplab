@@ -1,7 +1,7 @@
 """538 새 화자 고르기 등록 전 점검(docs/scoring-subst-2026-10.md 3.5절). 점수는 읽지 않고 'spk숫자' 문자열만 센다(읽기만, 줄 단위).
 
   python spk_scan.py scan OUT_SCAN.json            데스크탑 두 자료 뿌리를 훑어 폴더별 538 화자 ID
-  python spk_scan.py exclude OUT_SCAN.json OUT.json  v1_538r·roi538을 뺀 모든 폴더의 화자 합집합 → {"exclude": [...]}
+  python spk_scan.py exclude OUT_SCAN.json OUT.json  영상 전용 폴더(KEEP)를 뺀 모든 폴더의 화자 합집합 → {"exclude": [...]}
 """
 import collections
 import gzip
@@ -13,7 +13,8 @@ import sys
 PAT = re.compile(r"spk(\d{3})")
 ROOTS = [r"D:\liplab\mac_archive\liplab-lab\data", r"D:\liplab\lab\data"]
 SKIP_EXT = {".wav", ".flac", ".mp4", ".npy", ".npz", ".pt", ".png", ".jpg", ".onnx", ".safetensors", ".bin", ".tar", ".zip", ".mp3", ".webm"}
-KEEP = ("v1_538r", "roi538")   # 후보 클립이 있는 폴더(독화 전용)
+# 소리를 D-GOP로 채점하지 않은 영상 전용 폴더(독화 큐·화소 앞단·입 돌출·입모양 무리·아바타). 이 폴더에만 나온 화자는 뺄 화자가 아니다(등록 변경 기록 1).
+KEEP = ("v1_538r", "roi538", "v1_538", "v18", "v12", "v2_avatar", "v3_avatar", "cue_video_pack")
 
 
 def scan(out):
@@ -53,7 +54,7 @@ def exclude(scan_path, out):
         top = k.split(":", 1)[-1].split("/")[0]
         if top not in KEEP:
             ex |= {"spk" + x for x in v}
-    json.dump({"exclude": sorted(ex), "rule": "v1_538r·roi538 밖 모든 폴더에 나온 538 화자"}, open(out, "w"), indent=0)
+    json.dump({"exclude": sorted(ex), "rule": "영상 전용 폴더(KEEP) 밖 모든 폴더에 나온 538 화자"}, open(out, "w"), indent=0)
     print("EXCLUDE", len(ex))
 
 

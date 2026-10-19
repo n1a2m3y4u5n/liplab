@@ -29,8 +29,8 @@ for a, bs in K.items():
             CAT[(a, b)] = "마찰"
         elif pair == {"ㄴ", "ㄹ"}:
             CAT[(a, b)] = "유음"
-FEATURES = ["lp_t", "lpr_k", "lpr_all", "fr_k", "dctc_sc", "dctc_al", "dctc_sc_all", "span", "blank", "dgop", "word_init", "rel_pos",
-            "al_sc_agree"]
+# 후보 A의 입력(12개). dctc_sc_all(모든 초성으로 바꾼 ΔCTC)은 계산량이 커서 보고용으로만 남기고 입력에 넣지 않는다.
+FEATURES = ["lp_t", "lpr_k", "lpr_all", "fr_k", "dctc_sc", "dctc_al", "span", "blank", "dgop", "word_init", "rel_pos", "al_sc_agree"]
 
 
 def final_syllable_start(tokens: Sequence[str]) -> int:
@@ -83,6 +83,29 @@ def ctc_ll_batch(lp, seqs: List[List[int]], blank: int = 0, torch=None):
     loss = torch.nn.functional.ctc_loss(x, tgt, torch.full((n,), T, dtype=torch.long), torch.tensor([len(s) for s in seqs]),
                                         blank=blank, reduction="none", zero_infinity=False)
     return [(-float(v) if math.isfinite(float(v)) else float("-inf")) for v in loss]
+
+
+def fill_cache(name, lp, voc, blank, tokens, positions, comps_of, cache, torch=None):
+    """자리 여러 개 × 경쟁자의 바꾼 토큰열 로그 우도를 한 번의 묶음 계산으로 채운다(ll_cache 열쇠 (모델, 자리, 경쟁자))."""
+    base = [voc[x] for x in tokens]
+    keys, seqs = [], []
+    for i in positions:
+        for c in comps_of(tokens[i]):
+            if (name, i, c) not in cache:
+                q = list(base)
+                q[i] = voc[c]
+                keys.append((name, i, c))
+                seqs.append(q)
+    for k, v in zip(keys, ctc_ll_batch(lp, seqs, blank, torch)):
+        cache[k] = v
+
+
+def comps_k(t):
+    return ["o:" + c for c in K[t[2:]]]
+
+
+def comps_all(t):
+    return ["o:" + c for c in ONSETS if "o:" + c != t]
 
 
 def position_features(i: int, tokens: Sequence[str], spans: Sequence[Dict], phones: Sequence[Dict], lp_sc, voc_sc, lp_al, voc_al,
