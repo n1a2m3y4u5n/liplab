@@ -6,7 +6,9 @@
       10/17 확인 자료: 538 절반 1 → 538h1(보고만), 범주 28 절반 1 → c28h1, 범주 27 두 번째 묶음(jobs_b2.json) → c27b2.
   python build_jobs.py fresh538 V1_538R_DIR EXCLUDE.json OUT.json
       538 새 화자: V1 재받기 클립(v1_538r) 가운데 EXCLUDE.json(어느 채점 자료에든 나온 538 화자)에 없는 화자. 화자마다 클립 ID 순 정렬 뒤
-      random.Random(20261019)로 최대 15개, 목표는 자기 문장 + 대치(min ≤ 2, min2)로 10/15와 같은 규칙(scripts/scoring_rules/targets.py).
+      random.Random(20261019)로 최대 30개, 목표는 자기 문장 + 대치(min ≤ 2, min2)로 10/15와 같은 규칙(scripts/scoring_rules/targets.py).
+  python build_jobs.py concat30 JOBS OUTDIR
+      지연 보고용(등록 7.2절): JOBS의 화자마다 클립을 순서대로 이어 붙여 30초 가까운 녹음 하나(0.3초 무음 사이), 목표는 자기 문장들을 이은 글. 처음 10명.
 """
 import csv
 import json
@@ -18,7 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "scoring_rules"))
 BK = os.environ.get("SUB_BACKEND") or os.path.join(HERE, "..", "..", "backend")
 SEED = 20261019
-PER_SPK = 15
+PER_SPK = 30   # 새 화자가 19명뿐이라 화자의 클립을 모두 쓴다(화자당 27~30개, 등록 변경 기록 1)
 
 
 def _abs(root, jobs, rename=None, drop_other=True):
@@ -63,7 +65,7 @@ def cmd_fresh538(d, exclude_path, out):
     with open(os.path.join(d, "manifest_clips.tsv"), encoding="utf-8") as f:
         for row in csv.DictReader((l for l in f if not l.startswith("#") or l.startswith("#clip")), delimiter="\t"):
             cid = row.get("#clip") or row.get("clip")
-            if cid and row["spk"] not in excl and cid in text and os.path.exists(os.path.join(d, "clips", cid + ".wav")):
+            if cid and row["spk"] not in excl and cid in text and (os.environ.get("SUB_SKIP_EXISTS") == "1" or os.path.exists(os.path.join(d, "clips", cid + ".wav"))):
                 clips.setdefault(row["spk"], []).append(cid)
     rng_m = random.Random(TG.MIN_SEED)
     jobs = []
@@ -81,12 +83,44 @@ def cmd_fresh538(d, exclude_path, out):
           "min2", sum(1 for j in jobs for t in j["targets"] if t["kind"] == "min2"))
 
 
+def cmd_concat30(jobs_path, outdir, n_spk=10, limit_s=29.5):
+    import numpy as np
+    import soundfile as sf
+    jobs = json.load(open(jobs_path, encoding="utf-8"))
+    os.makedirs(os.path.join(outdir, "audio"), exist_ok=True)
+    by = {}
+    for j in jobs:
+        by.setdefault(j["spk"], []).append(j)
+    out = []
+    for spk in sorted(by)[:n_spk]:
+        parts, texts, dur = [], [], 0.0
+        for j in by[spk]:
+            x, sr = sf.read(j["path"], dtype="float32")
+            if x.ndim > 1:
+                x = x.mean(1)
+            if dur + len(x) / sr + 0.3 > limit_s:
+                break
+            parts += [x, np.zeros(int(0.3 * sr), dtype="float32")]
+            texts.append(next(t["text"] for t in j["targets"] if t["kind"] == "own"))
+            dur += len(x) / sr + 0.3
+        if not parts:
+            continue
+        name = f"{spk}_concat30.wav"
+        sf.write(os.path.join(outdir, "audio", name), np.concatenate(parts), sr)
+        out.append({"set": "lat30", "spk": spk, "clip": f"{spk}_concat30", "path": os.path.join(outdir, "audio", name),
+                    "targets": [{"text": " ".join(texts), "kind": "own"}], "dur": round(dur, 2)})
+    json.dump(out, open(os.path.join(outdir, "jobs_concat30.json"), "w", encoding="utf-8"), ensure_ascii=False)
+    print("CONCAT30_JOBS", len(out), [o["dur"] for o in out])
+
+
 if __name__ == "__main__":
     a = sys.argv[1:]
     if a and a[0] == "explore":
         cmd_explore(a[1], a[2])
     elif a and a[0] == "confirm":
         cmd_confirm(a[1], a[2])
+    elif a and a[0] == "concat30":
+        cmd_concat30(a[1], a[2])
     elif a and a[0] == "fresh538":
         cmd_fresh538(a[1], a[2], a[3])
     else:

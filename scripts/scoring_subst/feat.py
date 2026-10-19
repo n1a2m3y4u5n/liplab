@@ -82,6 +82,14 @@ def _job(task):
             swapped = set(t.get("tok_idx") if isinstance(t.get("tok_idx"), list) else
                           ([t["tok_idx"]] if t.get("tok_idx") is not None else []))
             elig = C.eligible_positions(toks, phones)
+            # 제품 경로에 드는 계산(K 경쟁자의 ΔCTC 두 모델)과 보고용(채점기 모든 초성)을 나눠 시간을 잰다(SK5는 t_feat)
+            C.fill_cache("sc", lp_sc, voc_sc, D.blank_id_for(voc_sc), toks, elig, C.comps_k, cache, torch)
+            C.fill_cache("al", lp_al, voc_al, D.blank_id_for(voc_al), toks, elig, C.comps_k, cache, torch)
+            t_k = time.time() - t1
+            t2 = time.time()
+            C.fill_cache("sc", lp_sc, voc_sc, D.blank_id_for(voc_sc), toks, elig, C.comps_all, cache, torch)
+            t_all = time.time() - t2
+            t3 = time.time()
             for i in elig:
                 f = C.position_features(i, toks, spans, phones, lp_sc, voc_sc, lp_al, voc_al, base, cache,
                                         D.blank_id_for(voc_sc), D.blank_id_for(voc_al), torch)
@@ -93,11 +101,13 @@ def _job(task):
                     hid_out[f"{ti}_{i}"] = np.concatenate([hidden[s:e + 1].mean(0).numpy(), hidden[lo:hi].mean(0).numpy()]).astype(np.float16)
             rows.append({"rec": "t", **meta, "ti": ti, "target": t["text"], "kind": t["kind"], **extra, "score": r.get("score"),
                          "raw": r.get("raw_score"), "T": int(lp_sc.shape[0]), "n_tok": len(toks), "n_elig": len(elig),
-                         "swapped_elig": sorted(set(swapped) & set(elig)), "t_app": round(t_app, 3), "t_feat": round(time.time() - t1, 3),
+                         "swapped_elig": sorted(set(swapped) & set(elig)), "t_app": round(t_app, 3),
+                         "t_feat": round(t_k + (time.time() - t3), 3), "t_all": round(t_all, 3),
                          "pos": pos})
         except Exception as e:
             rows.append({"rec": "t", **meta, "ti": ti, "target": t["text"], "kind": t["kind"], **extra, "error": f"{type(e).__name__}: {e}"})
-    rows.append({"rec": "clip", **meta, "sec": round(time.time() - t_clip, 2)})
+    if any("error" not in r for r in rows):          # 모두 실패한 클립은 끝 표시를 남기지 않아 다시 돌릴 때 이어서 계산한다
+        rows.append({"rec": "clip", **meta, "sec": round(time.time() - t_clip, 2)})
     return rows, hid_out
 
 
@@ -119,7 +129,7 @@ def cmd_feat(jobs_path, out, workers, want_hid):
     with open(out, "a", encoding="utf-8") as fo, ProcessPoolExecutor(workers) as ex:
         for k, (rows, hid) in enumerate(ex.map(_job, [(root, j, want_hid) for j in todo], chunksize=1), 1):
             if want_hid and hid:
-                np.savez(os.path.join(hdir, rows[-1]["clip"].replace(":", "_") + ".npz"), **hid)
+                np.savez(os.path.join(hdir, rows[0]["clip"].replace(":", "_") + ".npz"), **hid)
             for x in rows:
                 fo.write(json.dumps(x, ensure_ascii=False) + "\n")
             fo.flush()
