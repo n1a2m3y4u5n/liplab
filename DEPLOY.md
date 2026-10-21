@@ -194,6 +194,24 @@
        프론트는 함께 보내는 녹음 파일로 예전 경로 채점을 한다). 완전히는 `DGOP_STREAM = "0"`으로 되돌려 다시 배포하고 비밀값을
        `fly secrets unset DGOP_STREAM -a liplab-dev`로 지운다.
 
+11. **독화 ① 화소 입술 ROI 모델(10/21 앱 연결, 기본 끔, 켤지는 사용자 결정)**: 10/21 판정 통과(`docs/lipread-roi-2026-10.md` 10절, 4지
+    58.7%). 켜면 단어 레슨 결과의 웹캠 '기계 확인'(LipReadCheck)이 입 27계수 BiGRU 대신 입술 화소 ROI 모델과 ctc_ll 채점(α=1, dup1)으로
+    읽는다. 화면·문구는 그대로다. 끄면 지금과 같다(같은 빌드에 모델 폴더가 있어도 쓰지 않고 이미지에서 지운다).
+    - 무엇이 바뀌나: 빌드 인자 `LIPREAD_ROI` 하나가 프론트 `VITE_LIPREAD_ROI`를 정한다(Dockerfile). 서버는 바뀌지 않는다.
+    - 모델 싣는 법: 공개 저장소에 넣지 않고 S4 학생처럼 빌드 폴더의 git 제외 폴더(`frontend/public/models/roi/`)로 싣는다. Vite가
+      `public/`을 `dist/`로 복사하므로 `/models/roi/`로 그대로 내려간다. 원본은 `~/Downloads/LIPLAB_ALL/liplab-lab/models/lipread_roi_R2s0_2026-10-21/`
+      (`kr_lipread_roi.web.onnx` 6,096,954바이트, sha256 `d3c01830…`, `kr_lipread_roi.web.meta.json`), 데스크탑 원본 `D:\liplab\roi\web\`.
+      판정 int8 ONNX(`roi_R2s0.int8.onnx`, sha256 `87ab5b92…`)에서 앞단 정규화 노드만 뺀 그래프다(`scripts/lipread_roi/roi_web_export.py`).
+      ```bash
+      rm -rf frontend/public/models/roi && cp -cR ~/Downloads/LIPLAB_ALL/liplab-lab/models/lipread_roi_R2s0_2026-10-21 frontend/public/models/roi
+      shasum -a 256 frontend/public/models/roi/kr_lipread_roi.web.onnx   # d3c01830f4397955d658545a623df0f0aa662fce86dca51803c1198df9acaa36
+      ```
+    - 켜기: 빌드 인자 `LIPREAD_ROI = "1"`을 넣어 빌드한다(liplab-dev면 `fly.dev.toml` [build.args], 아직 넣지 않았다). 로컬 확인은
+      `cd frontend && VITE_LIPREAD_ROI=1 npm run dev`. 빌드는 모델이 없으면 멈춘다.
+    - 크기: 처음 카메라를 켤 때 모델 6.1MB를 더 받는다(지금 모델 10.8MB 대신, 켜면 지금 모델은 받지 않는다). 지연·메모리는
+      `docs/lipread-roi-2026-10.md` 13.3절.
+    - 되돌리기: `LIPREAD_ROI`를 `"0"`으로 다시 빌드한다(서버 상태는 없다).
+
 ---
 
 ## 로컬 Docker 테스트
