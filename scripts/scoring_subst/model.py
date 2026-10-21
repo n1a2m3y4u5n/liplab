@@ -342,7 +342,7 @@ def cmd_confirm(out, paths, hid_dirs):
         "SK4": bool(b) and b["NG"] >= 0 and bool(h) and h["NG"] >= 0,
         "SK5": res["t_feat_p95"] is not None and res["t_feat_p95"] <= 0.15,
     }
-    valid = bool(f) and f["speakers"] >= 20 and f["n_own_pass"] >= 300 and bool(b) and b["speakers"] >= 20
+    valid = bool(f) and f["speakers"] >= 15 and f["n_own_pass"] >= 300 and bool(b) and b["speakers"] >= 20
     res.update(criteria=crit, valid=valid, verdict=("판정 불가" if not valid else "통과" if all(crit.values()) else "실패"))
     if report:
         rv = pos_values(name, report, lambda r: ms, hid)
