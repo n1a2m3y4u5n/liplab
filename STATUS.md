@@ -1,5 +1,9 @@
 # 지금 상태 — 다시 들어왔을 때 여기부터
 
+> **2026-10-21 밤: 말하기 녹음 뒤 지연 줄임(브랜치 speak-latency-2026-10-21, integrate에 머지, 배포 안 함).**
+> - 남은 약 4.8초는 채점 요청 안에서 기다리던 Claude 코칭(맥 실측 5.4~6.1초, 3번)이었다. 서버 채점은 로컬 0.27~0.30초, dev 마지막 창 0.44~0.74초.
+> - 점수 먼저 돌려주고 같은 코칭을 뒤에서 받기(`coaching_async`, `/api/speak/coaching/{id}`), 마지막 조각을 채점 요청에 붙이기(`stream_tail`), 학생 ONNX 예열. 점수·음소·코칭 내용 그대로, 기대 녹음 뒤 지연 약 0.8~1.1초(dev는 배포 뒤 `Server-Timing`으로 확인). 문서 `docs/scorer-stream-latency-2026-10.md` 10절.
+
 > **2026-10-21 저녁: liplab-dev v16 배포(사용자 "배포해", 커밋 e2020a08, S4 스트리밍 채점 켬 `DGOP_STREAM=1`, 이미지 3.3GB `deployment-01M5EVBA93K50BWJPTQ0V9DK67`, 되돌릴 v15 이미지 `deployment-01M4G2A5MPP51RZM808N2P4CFK`).**
 > - 빌드: av 18.1.0, `dgop_ours ok`(int8 file 둘), `a4 backbone ok`, `dgop_stream ok … (49, 49) onnxruntime 1.31.0`, 프론트 번들 `VITE_DGOP_STREAM:"1"`. /health 200, 세 모델 int8·file(적재 22.0·21.2·21.8초), 서버 VmHWM 2.11GiB(기계 3.82GiB, 여유 1.68GiB).
 > - 맥에서 잰 녹음 뒤 지연(데모 계정, 음성합성 문장, 1초 조각 실시간): 4.9초 문장 예전 경로 8.8~10.1초 → 스트리밍 5.2~6.4초, 9.6초 문장 11.3~12.3초 → 5.3초(녹음 중 창 2개, 마지막 창 0.44초, 조각 응답 중앙값 0.20초). 두 경로 모두 `dgop`(84.7 → 학생 89.1). 마지막 창 뒤 남은 약 4.8초가 어디서 드는지는 아직 안 봄.

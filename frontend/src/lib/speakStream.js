@@ -1,7 +1,7 @@
 /**
  * S4 스트리밍 채점용 녹음 조각 보내기(docs/scorer-stream-latency-2026-10.md 9절). 빌드 플래그 VITE_DGOP_STREAM=1일 때만 쓴다(기본 끔).
  * 녹음하는 동안 마이크 소리를 16 kHz 16비트 PCM으로 바꿔 1초씩 서버(/api/speak/stream/{id}/chunk)에 보낸다. 서버가 4초 덩어리마다
- * 미리 순전파해 두고, 녹음이 끝나면 /api/speak/assess에 stream_id를 붙여 마지막 창과 채점만 한다. 녹음 파일(webm)은 예전처럼 함께 보내므로
+ * 미리 순전파해 두고, 녹음이 끝나면 /api/speak/assess에 stream_id와 남은 1초 미만 조각(stream_tail)을 붙여 마지막 창과 채점만 한다. 녹음 파일(webm)은 예전처럼 함께 보내므로
  * 세션이 실패해도 서버가 예전 경로로 채점한다.
  */
 const ENV = (typeof import.meta !== 'undefined' && import.meta.env) || {}
@@ -104,6 +104,15 @@ export function createChunkUploader({ send, chunkSamples = STREAM_RATE }) {
       if (n > 0) { const len = n; ship(take(len), len) }
       return chain.then(() => state)
     },
+    /** 보낸 조각이 다 끝나기를 기다리고, 아직 안 보낸 나머지(chunkSamples 미만)를 보내지 않고 16비트 PCM으로 돌려준다. */
+    holdTail() {
+      const len = n
+      const f = new Float32Array(len)
+      let o = 0
+      for (const p of take(len)) { f.set(p, o); o += p.length }
+      const tail = toPcm16(f)
+      return chain.then(() => ({ ...state, tail }))
+    },
   }
 }
 
@@ -146,5 +155,14 @@ export function startSpeakStream({ ac, source, api, chunkSamples = STREAM_RATE }
     await ready
     return failed || up.state.failed ? null : id
   }
-  return { end, finish }
+  // 남은 조각을 따로 보내지 않고 채점 요청에 붙인다(stream_tail). 서버는 같은 순서로 넣으므로 점수는 finish()와 같고 왕복 한 번이 준다.
+  // 돌려주는 값: { id, tail } 또는 실패면 null(예전 경로로 채점).
+  const finishWithTail = async (timeoutMs = 4000) => {
+    end()
+    let st
+    try { st = await withTimeout(up.holdTail(), timeoutMs) } catch { return null }
+    await ready
+    return failed || st.failed || !id ? null : { id, tail: st.tail }
+  }
+  return { end, finish, finishWithTail }
 }

@@ -179,3 +179,39 @@
    들어오는 소리로 `StreamStitcher`가 창을 돌리고, 녹음 뒤 지연은 끝 자르기 + 마지막 창 + `assess_outputs`다(앱 서버와 같은 코드).
 4. 통과하면 앱에서 켜는 법(배포는 사용자 결정): 서버 `DGOP_STREAM=1`, `DGOP_STREAM_MODEL=<학생 ONNX>`, 학생 표시 보정 `calibration.json`
    (10.4절 분위수 맞추기와 같은 방법), `onnxruntime` 설치, 프론트 `VITE_DGOP_STREAM=1` 빌드. 켠 뒤 실제 녹음으로 조각 지연(조각 응답 시간)과 녹음 뒤 지연을 확인한다.
+
+## 10. 녹음 뒤 지연 나누기와 줄이기(2026-10-21, 브랜치 speak-latency-2026-10-21, 배포 안 함)
+
+v16(S4 켬) dev에서 녹음 뒤 지연이 5.2~6.4초였는데 마지막 창은 0.44~0.74초였다. 나머지 약 4.8초가 어디서 드는지 단계마다 쟀다.
+
+### 10.1 측정
+
+- 서버: `/api/speak/assess`가 단계별 시간을 `Server-Timing` 머리글과 로그 한 줄(`[TIMING] speak_assess …`)로 낸다
+  (read, ml_wait, stream_tail, stream_assess 또는 dgop_full·asr, score, db, formants, coaching, coaching_save, total). 뒤에서 만든 코칭은
+  `[TIMING] speak_coaching llm=…`. 프론트는 `performance.mark`로 `speak:stop` 뒤 `speak:stream-done`·`speak:score`·`speak:coaching`을 잰다(개발자 도구 Performance).
+- 맥 로컬(TestClient, 실제 S4 학생 int8 ONNX 2스레드, 9.6초 합성 문장, 가짜 Claude 지연 0, 두 번씩): stream_assess 0.25~0.28초, 점수·진행도 저장(db)
+  0.004~0.014초, 코칭 저장 0.002~0.003초, 서버 합계 0.27~0.30초. 마지막 1초 조각이 덩어리 창을 채우면 그 조각에서 창 하나(0.46~0.50초)가 더 돈다.
+- 실제 Claude 코칭(`generate_speaking_coaching`, Haiku 5.5, 같은 문장·약한 소리 2개, 맥에서 3번): **5.42·5.58·6.14초**. 세 번째는 규칙 코칭으로 끝났다
+  (영문이 섞여 다시 받은 뒤에도 섞였거나 오류, 두 번 호출). API 요청은 이 3번(재시도 포함 최대 6건)만 했다.
+- 결론: dev의 남은 약 4.8초는 거의 전부 **채점 요청 안에서 기다리던 Claude 코칭 호출**이다. 그 밖은 업로드·왕복 약 0.2~0.3초(조각 응답 중앙값 0.20초)와
+  마지막 조각 왕복 한 번이다. 첫 녹음은 따로 학생 ONNX 적재(dev 첫 `stream/start` 7.4초)가 걸려, 조각이 늦으면 기다림 상한 4초를 넘어 예전 경로로 떨어질 수 있었다.
+
+### 10.2 고친 것(점수·음소·코칭 내용은 그대로)
+
+1. **점수 먼저, 코칭은 뒤에서**: 프론트가 `coaching_async=1`을 보내면 서버는 채점·저장 뒤 코칭을 기다리지 않고 돌려준다(`coaching: null`,
+   `coaching_pending: true`, `coaching_id`). 같은 함수(`_speak_coaching_text`: Claude 코칭 또는 규칙 코칭 + 억양 note + 모음 교정)를 같은 입력으로
+   뒤에서 돌리고 시도 기록(`SpeakAttempt.coaching`)에도 저장한다. 프론트는 `GET /api/speak/coaching/{id}`로 받아 'DOKA의 한마디'를 채우고, 그동안
+   같은 칸에 '한마디를 쓰고 있어요…'를 흐리게 보인다. 이 값을 보내지 않는 예전 클라이언트는 예전처럼 기다린다. 작업은 서버 메모리에 3분 둔다(워커 하나).
+2. **마지막 조각을 채점 요청에 붙이기**: 녹음 끝에 남은 1초 미만 PCM을 따로 조각 요청으로 보내지 않고 `stream_tail`로 붙인다. 서버는 같은 세션에 같은
+   순서로 넣고 채점하므로(창 위치는 표본 수로만 정해진다) 점수가 같고 왕복 한 번이 준다.
+3. **학생 ONNX 예열**: `LIPLAB_WARMUP=1`이고 S4가 켜져 있으면 켜질 때 학생을 올리고 1초 무음으로 한 번 돌린다.
+
+녹음 파일(webm) 업로드는 남겼다. 세션이 실패할 때 예전 경로로 채점하는 데 필요하고, 모음 단계 포먼트도 그 파일에서 잰다(바꾸면 값이 달라진다).
+코칭은 점수·약한 소리를 입력으로 쓰므로 채점과 나란히 돌릴 수 없어, 기다리는 순서만 바꿨다.
+
+### 10.3 기대 지연과 시험
+
+- 녹음 뒤 점수까지: 서버 마지막 창 + 정렬(dev 0.44~0.74초) + 업로드·왕복(약 0.3초) ≈ **0.8~1.1초**(dev 5.2~6.4초에서). 코칭 문장은 그 뒤 약 4~6초에
+  따로 뜬다(예전과 같은 때). dev 실측은 배포 뒤 `Server-Timing`과 브라우저 표시로 확인한다.
+- 시험: `test_dgop_stream.py::test_tail_in_assess_and_async_coaching_keep_outputs`(꼬리를 붙여도 점수·음소가 같고, 뒤에서 받은 코칭이 기다린 코칭과 같고
+  기록에 저장되며, 다른 사람·없는 id는 404), `speakStream.test.mjs` 2개(꼬리를 이어 붙이면 `finish()`와 같은 소리, 세션 실패 때 null).
