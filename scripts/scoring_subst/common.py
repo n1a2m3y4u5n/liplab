@@ -6,6 +6,7 @@
 - ctc_ll_batch: 여러 토큰열의 CTC 로그 우도(모든 정렬 합)를 한 번에 낸다(바꿈 변형 비교, 후보 B의 ΔCTC).
 """
 import math
+import os
 from typing import Dict, List, Sequence
 
 K: Dict[str, List[str]] = {
@@ -79,10 +80,18 @@ def ctc_ll_batch(lp, seqs: List[List[int]], blank: int = 0, torch=None):
     for k, s in enumerate(seqs):
         if s:
             tgt[k, :len(s)] = torch.tensor(s)
-    x = lp.unsqueeze(1).expand(T, n, lp.shape[1]).float()
-    loss = torch.nn.functional.ctc_loss(x, tgt, torch.full((n,), T, dtype=torch.long), torch.tensor([len(s) for s in seqs]),
-                                        blank=blank, reduction="none", zero_infinity=False)
-    return [(-float(v) if math.isfinite(float(v)) else float("-inf")) for v in loss]
+    lens = torch.tensor([len(s) for s in seqs])
+    # 긴 클립에서 열 수천 개를 한 번에 계산하면 메모리가 수십 GB가 되어(10/21 확인 특성에서 작업자 비정상 종료) 묶음을 나눈다.
+    # 열마다 독립 계산이라 값은 같다(변경 기록 7). SUB_CTC_BUDGET은 묶음 하나의 T·n·(2L+1) 상한.
+    step = max(1, int(float(os.environ.get("SUB_CTC_BUDGET", "5e7")) // (T * (2 * max(L, 1) + 1))))
+    out = []
+    for a in range(0, n, step):
+        b = min(n, a + step)
+        x = lp.unsqueeze(1).expand(T, b - a, lp.shape[1]).float()
+        loss = torch.nn.functional.ctc_loss(x, tgt[a:b], torch.full((b - a,), T, dtype=torch.long), lens[a:b],
+                                            blank=blank, reduction="none", zero_infinity=False)
+        out += [(-float(v) if math.isfinite(float(v)) else float("-inf")) for v in loss]
+    return out
 
 
 def fill_cache(name, lp, voc, blank, tokens, positions, comps_of, cache, torch=None):
