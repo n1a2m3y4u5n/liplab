@@ -295,3 +295,81 @@ def test_endpoints_on_streams_and_scores():
     assert r["other_user_chunk"] == 404
     code, method, stream = r["assess"]
     assert code == 200 and method == "dgop" and stream["windows_during"] == 1 and stream["samples"] == 6 * 16000
+
+
+# ── 녹음 뒤 지연 줄이기(docs/scorer-stream-latency-2026-10.md 10절): 꼬리 조각을 채점 요청에 붙이기·코칭 뒤에서 받기
+_SCENARIO_LATENCY = r'''
+import json, numpy as np
+from fastapi.testclient import TestClient
+import dgop_acoustic, dgop_stream, jamo_vocab, main
+import test_dgop_stream as T
+
+dgop_stream.load_backend = lambda: (T.local_forward, dict(jamo_vocab.VOCAB), dgop_acoustic.DEFAULT_CALIBRATION_PATH)
+out = {}
+with TestClient(main.app) as c:
+    r = c.post("/api/auth/register", json={"email": "lat@example.com", "username": "지연시험", "password": "pw-123456",
+                                           "agree_terms": True, "age_confirmed": True})
+    h = {"Authorization": "Bearer " + r.json()["access_token"]}
+    r2 = c.post("/api/auth/register", json={"email": "lat2@example.com", "username": "다른사람", "password": "pw-123456",
+                                            "agree_terms": True, "age_confirmed": True})
+    h2 = {"Authorization": "Bearer " + r2.json()["access_token"]}
+    y16 = (T._wave(6.5) * 20000).astype("<i2").tobytes()
+    step, last = 32000, 6 * 32000
+    for kind in ("chunk", "tail"):
+        sid = c.post("/api/speak/stream/start", headers=h).json()["stream_id"]
+        for i in range(0, last, step):
+            c.post(f"/api/speak/stream/{sid}/chunk", content=y16[i:i + step], headers=h)
+        d = {"target": "오늘 날씨", "stage": "5", "stream_id": sid, "loudness": "60", "duration": "6.5"}
+        files = {"audio": ("a.webm", b"\x00" * 2048, "audio/webm")}
+        if kind == "chunk":
+            c.post(f"/api/speak/stream/{sid}/chunk", content=y16[last:], headers=h)
+        else:
+            files["stream_tail"] = ("t.pcm", y16[last:], "application/octet-stream")
+            d["coaching_async"] = "1"
+        res = c.post("/api/speak/assess", data=d, files=files, headers=h)
+        j = res.json()
+        o = {"code": res.status_code, "score": j.get("score"), "method": j.get("assessment_method"),
+             "phones": (j.get("acoustic_dgop") or {}).get("phones"), "samples": ((j.get("dgop") or {}).get("stream") or {}).get("samples"),
+             "coaching": j.get("coaching"), "pending": j.get("coaching_pending"), "timing": res.headers.get("server-timing")}
+        if kind == "tail":
+            cid = j.get("coaching_id")
+            o["other_user"] = c.get(f"/api/speak/coaching/{cid}", headers=h2).status_code
+            o["missing"] = c.get("/api/speak/coaching/nope", headers=h).status_code
+            o["coaching_later"] = c.get(f"/api/speak/coaching/{cid}", headers=h).json().get("coaching")
+            hist = c.get("/api/speak/analysis", headers=h)
+            o["analysis_code"] = hist.status_code
+        out[kind] = o
+    import asyncio
+    from sqlalchemy import select
+    from database import AsyncSessionLocal, SpeakAttempt
+    async def saved():
+        async with AsyncSessionLocal() as s:
+            return [a.coaching for a in (await s.execute(select(SpeakAttempt).order_by(SpeakAttempt.id))).scalars()]
+    out["saved"] = asyncio.run(saved())
+print("RESULT " + json.dumps(out, ensure_ascii=False))
+'''
+
+
+def test_tail_in_assess_and_async_coaching_keep_outputs():
+    """꼬리 조각을 채점 요청에 붙여도(stream_tail) 따로 보낸 것과 점수·음소가 같고, coaching_async=1이면 점수를 먼저 주고
+    같은 코칭을 /api/speak/coaching/{id}로 준다(시도 기록에도 저장). 다른 사람·없는 id는 404."""
+    import dgop_acoustic as DA
+    if not DA.HAS_ACOUSTIC:
+        pytest.skip("torch 미설치")
+    global _SCENARIO
+    keep = _SCENARIO
+    try:
+        _SCENARIO = _SCENARIO_LATENCY
+        r = _run(DGOP_STREAM="1")
+    finally:
+        _SCENARIO = keep
+    a, b = r["chunk"], r["tail"]
+    assert a["code"] == b["code"] == 200 and a["method"] == b["method"] == "dgop"
+    assert a["samples"] == b["samples"] == int(6.5 * 16000)
+    assert a["score"] == b["score"] and a["phones"] == b["phones"]
+    assert a["pending"] is False and a["coaching"]
+    assert b["pending"] is True and b["coaching"] is None
+    assert b["coaching_later"] == a["coaching"]          # 같은 입력이면 같은 코칭(키 없음 → 규칙 코칭)
+    assert b["other_user"] == 404 and b["missing"] == 404
+    assert r["saved"] == [a["coaching"], a["coaching"]]
+    assert "stream_assess;dur=" in a["timing"] and "stream_tail;dur=" in b["timing"]
