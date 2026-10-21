@@ -12,6 +12,7 @@
   fence   --fence F --renders DIR --bs DIR --conds … --v2 … --v3 … --out fence_eval.json  양순 닫힘·2.0배 위쪽 진폭
   select  --score S --fence E --out sel.json               관문 0 → 울타리 → 탐색 4지 최고
   judge   --score S --sel J --out judge.json               확인 한 번: 고른 조건 − V1 j1.0 l1.0
+  real    --items I --bench P --npz ROI --eval-list E --onnx M --out real.json   보고만: 같은 낱말의 실제 화자(평가 40명) 정확도
   selftest
 표식: AVR_ITEMS_OK, AVR_JOBS_OK, AVR_SCORE_OK, AVR_FENCE_OK, AVR_SELECT, AVR_JUDGE, *_FAIL
 """
@@ -442,6 +443,53 @@ def cmd_judge(a):
     return 0
 
 
+def cmd_real(a):
+    """보고만: 문항 낱말 가운데 판독 어휘에도 있는 낱말을 ROI 판정 평가 화자 40명이 말한 어절 문항(같은 창·같은 보기 규칙)으로 같은 ONNX가 읽은 정확도."""
+    import onnxruntime as ort
+    import torch
+    from d_bench import Bench
+    from train_lipread import MOUTH_KEYS
+    import roi_train as R
+    items = json.load(open(a.items, encoding='utf-8'))['items']
+    split_of = {it['w']: it['split'] for it in items}
+    b = Bench(a.bench)
+    spks = set(R.read_list(a.eval_list))
+    cols = [b.bs_names.index(k) for k in MOUTH_KEYS]
+    lead, tail = R.rest_runs_idx(b, cols, spks)
+    h4 = [x for x in R.h4_items(b, spks) if x['w'] in split_of]
+    so = ort.SessionOptions()
+    so.intra_op_num_threads = a.threads
+    sess = ort.InferenceSession(a.onnx, so, providers=['CPUExecutionProvider'])
+    c0 = (S_ROI - CROP) // 2
+    cache, by_w = {}, {}
+    for it in h4:
+        w = R.p4_window(b, it['inst'], cols, lead, tail)
+        hit = 0
+        if w is not None:
+            fr = []
+            for ci, f in w:
+                if ci not in cache:
+                    p = os.path.join(a.npz, b.clips[ci]['clip'] + '.npz')
+                    cache[ci] = np.load(p)['roi'] if os.path.exists(p) else None
+                r = cache[ci]
+                if r is None:
+                    fr = None
+                    break
+                fr.append(r[min(f, len(r) - 1)])
+            if fr is not None:
+                X = np.stack(fr)[:, c0:c0 + CROP, c0:c0 + CROP].astype(np.float32)[None]
+                lp = torch.log_softmax(torch.from_numpy(sess.run(['logits'], {'roi': X})[0][0]).float(), -1)
+                hit = int(int(np.argmax(R.ctc_scores(lp, it['labs']))) == it['tgt'])
+        by_w.setdefault(it['w'], []).append(hit)
+    out = {'n_words': len(by_w), 'n_inst': len(h4), 'words': {w: {'split': split_of[w], 'n': len(v), 'acc': float(np.mean(v))} for w, v in by_w.items()}}
+    for s in ('explore', 'confirm'):
+        ws = [w for w in by_w if split_of[w] == s]
+        out[f'acc_word_mean_{s}'] = float(np.mean([np.mean(by_w[w]) for w in ws])) if ws else None
+    wjson(out, a.out)
+    print(f"AVR_REAL_OK words={len(by_w)} inst={len(h4)} explore={out['acc_word_mean_explore']} confirm={out['acc_word_mean_confirm']}", flush=True)
+    return 0
+
+
 def cmd_selftest(_a):
     ok = True
     # 창: 발화가 짧으면 75프레임, 쉬는 프레임으로 양쪽을 채움
@@ -489,10 +537,14 @@ def main(argv=None):
     p.add_argument('--v3', required=True, help='sel;align;bs_dir'); p.add_argument('--out', required=True)
     p = sub.add_parser('select'); p.add_argument('--score', required=True); p.add_argument('--fence', required=True); p.add_argument('--out', required=True)
     p = sub.add_parser('judge'); p.add_argument('--score', required=True); p.add_argument('--sel', required=True); p.add_argument('--out', required=True)
+    p = sub.add_parser('real')
+    p.add_argument('--items', required=True); p.add_argument('--bench', required=True); p.add_argument('--npz', required=True)
+    p.add_argument('--eval-list', required=True); p.add_argument('--onnx', required=True); p.add_argument('--threads', type=int, default=2)
+    p.add_argument('--out', required=True)
     sub.add_parser('selftest')
     a = ap.parse_args(argv)
     return {'items': cmd_items, 'fence-sents': cmd_fence_sents, 'jobs': cmd_jobs, 'score': cmd_score, 'fence': cmd_fence,
-            'select': cmd_select, 'judge': cmd_judge, 'selftest': cmd_selftest}[a.cmd](a)
+            'select': cmd_select, 'judge': cmd_judge, 'real': cmd_real, 'selftest': cmd_selftest}[a.cmd](a)
 
 
 if __name__ == '__main__':
