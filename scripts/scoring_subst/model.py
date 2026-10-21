@@ -347,7 +347,7 @@ def cmd_confirm(out, paths, hid_dirs):
     if report:
         rv = pos_values(name, report, lambda r: ms, hid)
         rs = sentence_scores(report, rv)
-        res["report_aux"] = {k: metrics(report, rs, tau, [i for i, r in enumerate(report) if r["kind"] in k])
+        res["report_aux"] = {"+".join(k): metrics(report, rs, tau, [i for i, r in enumerate(report) if r["kind"] in k])
                              for k in (("splice_sub", "splice_same"), ("tts_min", "tts_own"))}
     json.dump(res, open(os.path.join(out, "confirm.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=str)
     print("SUB_CONFIRM", json.dumps({"verdict": res["verdict"], "criteria": crit, **{g: {k: v for k, v in m.items() if k != "ci"}
