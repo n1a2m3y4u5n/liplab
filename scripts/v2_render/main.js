@@ -22,7 +22,7 @@ import { transitionProgress } from '@app/lib/visemeTiming.js'
 import { talkerShapes, talkerById, applyTalkerTiming, scaleShape, TALKERS, DEFAULT_TALKER } from '@app/lib/talkers.js'
 import { applyCoarticulation, coartShape, coartWeight, COART_E_ENABLED } from '@app/lib/coarticulation.js'
 import { mapRawFrame } from '@app/lib/rigMap.js'
-import { VISEME_V15_ENABLED } from '@app/lib/visemeShapes.js'
+import { VISEME_V15_ENABLED, VISEME_BLENDSHAPES_V1, VISEME_BLENDSHAPES_V15 } from '@app/lib/visemeShapes.js'
 import { framesToV3Coeffs, V3_TABLE, VISEME_V3_ENABLED } from '@app/lib/visemeV3.js'
 import glbUrl from '@front/public/models/realistic_face.glb?url'
 
@@ -45,6 +45,21 @@ function scaledTable(table, talker) {
   return out
 }
 const TICK_S = 1 / 60
+
+// 아바타 판독 곡선(docs/avatar-readability-2026-10.md): 크기 손잡이. jaw는 턱(jawOpen), lip은 나머지 입 모프·채널에 곱한다.
+// V1·V15는 모프 목표에 곱하고 0~1로 자른다. V3는 채널 무리 이득(표 평균 μ 중심)에 곱한다(jawOpen만 jaw 배율로 따로 계산).
+function ampTable(base, jaw, lip) {
+  const out = {}
+  for (const [v, sh] of Object.entries(base)) {
+    const o = {}
+    for (const [k, w] of Object.entries(sh || {})) o[k] = Math.max(0, Math.min(1, w * (k === 'jawOpen' ? jaw : lip)))
+    out[v] = o
+  }
+  return out
+}
+function ampV3(model, s) {
+  return { ...model, gain: Object.fromEntries(Object.entries(model.gain || {}).map(([g, x]) => [g, x * s])) }
+}
 
 const S = { renderer: null, scene: null, camera: null, canvas: null, meshes: [], tongue: null, jaw: null, cfg: null }
 
@@ -178,7 +193,12 @@ function grab(q) {
  * 반환: images(30fps JPEG data URL), schedule([{v, t0, t1, i}] 영상 시각 ms), speech [t0, t1].
  */
 export function renderText({ frames, talker = 'default', seed = 0, speed = 1, leadMs = 400, tailMs = 400, q = 0.95, maxImages = 0, table = null,
-  v3 = null }) {
+  v3 = null, amp = null }) {
+  if (amp) {
+    const jaw = Number(amp.jaw ?? 1), lip = Number(amp.lip ?? 1)
+    if (amp.table === 'V3') return renderV3({ frames, speed, leadMs, tailMs, q, model: ampV3(V3_TABLE, lip), jawModel: ampV3(V3_TABLE, jaw) })
+    table = ampTable(amp.table === 'V15' ? VISEME_BLENDSHAPES_V15 : VISEME_BLENDSHAPES_V1, jaw, lip)
+  }
   if (v3) return renderV3({ frames, speed, leadMs, tailMs, q, model: v3 === 'app' ? V3_TABLE : v3 })
   const tk = talker === 'default' ? DEFAULT_TALKER : talkerById(talker)
   useKeys(table)
@@ -221,7 +241,7 @@ export function renderText({ frames, talker = 'default', seed = 0, speed = 1, le
  * V3(docs/avatar-v3-2026-10.md): 엔진 프레임 → 앱 lib/visemeV3의 30fps 사람 계수 → 앱 rigMap → bsFrameRef 경로(LERP 34/s) 재생.
  * 일정은 renderText와 같다(기본 얼굴, applyTalkerTiming·동시조음 없음). 계수 0번 = 재생 시각 0(앞 쉼 시작).
  */
-function renderV3({ frames, speed = 1, leadMs = 400, tailMs = 400, q = 0.95, model }) {
+function renderV3({ frames, speed = 1, leadMs = 400, tailMs = 400, q = 0.95, model, jawModel = null }) {
   useKeys(null)
   const sched = []
   let t = leadMs
@@ -231,7 +251,13 @@ function renderV3({ frames, speed = 1, leadMs = 400, tailMs = 400, q = 0.95, mod
     t += len
   })
   const endMs = t
-  const coeffs = framesToV3Coeffs(frames, { speed, leadMs, tailMs, fps: 30, model }).map((o) => mapRawFrame(o))
+  let raw = framesToV3Coeffs(frames, { speed, leadMs, tailMs, fps: 30, model })
+  if (jawModel) {
+    // 판독 곡선: jawOpen만 다른 이득으로 계산한 값으로 바꾼다(같은 일정·같은 표라 길이가 같다)
+    const jw = framesToV3Coeffs(frames, { speed, leadMs, tailMs, fps: 30, model: jawModel })
+    raw = raw.map((o, k) => ({ ...o, jawOpen: jw[k].jawOpen }))
+  }
+  const coeffs = raw.map((o) => mapRawFrame(o))
   resetFace()
   const st = freshState()
   const images = []
