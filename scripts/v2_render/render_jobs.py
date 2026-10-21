@@ -23,7 +23,10 @@ GL_ARGS = {
     "swiftshader": ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
     "egl": ["--use-gl=angle", "--use-angle=gl-egl", "--ignore-gpu-blocklist", "--enable-gpu-rasterization"],
     "vulkan": ["--use-angle=vulkan", "--enable-features=Vulkan", "--ignore-gpu-blocklist"],
+    # Windows 데스크탑(RTX 3060, docs/avatar-readability-2026-10.md)
+    "d3d11": ["--use-angle=d3d11", "--ignore-gpu-blocklist", "--enable-gpu-rasterization"],
 }
+FFMPEG = os.environ.get("FFMPEG", "ffmpeg")
 
 
 def serve(root, port):
@@ -36,7 +39,7 @@ def serve(root, port):
 
 def write_mp4(images, path):
     tmp = path + ".part.mp4"
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "image2pipe", "-c:v", "mjpeg", "-framerate", "30", "-i", "-",
+    p = subprocess.Popen([FFMPEG, "-v", "error", "-y", "-f", "image2pipe", "-c:v", "mjpeg", "-framerate", "30", "-i", "-",
                           "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", "-r", "30", tmp],
                          stdin=subprocess.PIPE)
     for im in images:
@@ -72,10 +75,10 @@ def run_job(pg, j, tables=None):
             if v3 is None:
                 raise KeyError("v3 table " + j["v3"])
         r = pg.evaluate("(j) => window.__v2.renderText(j)",
-                        {"frames": j["frames"], "talker": j["talker"], "seed": 0, "speed": j["speed"], "leadMs": 400, "tailMs": 400,
-                         "table": tbl, "v3": v3})
+                        {"frames": j["frames"], "talker": j["talker"], "seed": 0, "speed": j["speed"], "leadMs": j.get("leadMs", 400),
+                         "tailMs": j.get("tailMs", 400), "table": tbl, "v3": v3, "amp": j.get("amp")})
         sched = {"id": j["id"], "schedule": r["schedule"], "speech": r["speech"], "fps": r["fps"], "talker": j["talker"], "speed": j["speed"],
-                 "table": j.get("table"), "v3": j.get("v3")}
+                 "table": j.get("table"), "v3": j.get("v3"), "amp": j.get("amp"), "n_images": len(r["images"])}
     elif j["kind"] == "poses":
         r = pg.evaluate("(j) => window.__v2.renderPoses(j)", {"poses": j["poses"], "hold": j.get("hold", 3)})
         sched = {"id": j["id"], "poses": len(j["poses"]), "hold": r["hold"], "fps": r["fps"]}
