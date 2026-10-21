@@ -103,3 +103,30 @@ test('startSpeakStream: 세션을 못 열면 null(예전 경로로 채점)', asy
   proc.onaudioprocess({ inputBuffer: { getChannelData: () => new Float32Array(20000) } })
   assert.equal(await ctl.finish(), null)
 })
+
+test('startSpeakStream.finishWithTail: 1초 미만 나머지는 보내지 않고 PCM으로 돌려준다(이어 붙이면 finish와 같은 소리)', async () => {
+  const x = sine(48000 * 2 + 4096, 48000, 200)
+  const run = async (withTail) => {
+    const { ac, source, proc } = fakeAudio(48000)
+    const chunks = []
+    const api = { streamStart: async () => ({ stream_id: 'abc' }), streamChunk: async (id, pcm) => { chunks.push(Int16Array.from(pcm)) } }
+    const ctl = startSpeakStream({ ac, source, api })
+    for (let i = 0; i < x.length; i += 4096) proc.onaudioprocess({ inputBuffer: { getChannelData: () => x.subarray(i, i + 4096) } })
+    const out = withTail ? await ctl.finishWithTail() : await ctl.finish()
+    return { chunks, out }
+  }
+  const a = await run(false)
+  const b = await run(true)
+  assert.equal(b.out.id, 'abc')
+  assert.deepEqual(b.chunks.map((c) => c.length), [16000, 16000])
+  const flat = (arr) => Int16Array.from(arr.flatMap((c) => Array.from(c)))
+  assert.deepEqual(flat([...b.chunks, b.out.tail]), flat(a.chunks))
+})
+
+test('startSpeakStream.finishWithTail: 세션을 못 열면 null', async () => {
+  const { ac, source, proc } = fakeAudio(16000)
+  const api = { streamStart: async () => { throw new Error('404') }, streamChunk: async () => { throw new Error('안 불려야 함') } }
+  const ctl = startSpeakStream({ ac, source, api })
+  proc.onaudioprocess({ inputBuffer: { getChannelData: () => new Float32Array(20000) } })
+  assert.equal(await ctl.finishWithTail(), null)
+})

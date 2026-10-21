@@ -335,10 +335,17 @@ export const speakAPI = {
     if (opts.mouth_confidence != null) fd.append('mouth_confidence', String(opts.mouth_confidence))  // 웹캠 입모양 신뢰도(축 B AV융합)
     if (opts.mouth_track) fd.append('mouth_track', opts.mouth_track)  // 입모양 타임라인(축 B 구간별 보완, B-6)
     if (opts.stream_id) fd.append('stream_id', opts.stream_id)   // S4 스트리밍 녹음 세션(VITE_DGOP_STREAM=1일 때만 생김, lib/speakStream)
+    if (opts.stream_id && opts.stream_tail && opts.stream_tail.length) {   // 녹음 끝에 남은 PCM 조각(따로 보내는 왕복 한 번을 줄인다)
+      const t = opts.stream_tail
+      fd.append('stream_tail', new Blob([t.buffer.slice(t.byteOffset, t.byteOffset + t.byteLength)], { type: 'application/octet-stream' }), 'tail.pcm')
+    }
+    if (opts.coaching_async) fd.append('coaching_async', '1')   // 점수부터 받고 Claude 코칭은 coaching(id)로 따로 받는다
     // FormData는 브라우저가 multipart 경계를 붙이도록 Content-Type을 비운다(인스턴스 기본 json 무효화).
     const res = await api.post('/speak/assess', fd, { headers: { 'Content-Type': undefined }, timeout: 60000 })
     return res.data
   },
+  // assess(coaching_async)가 돌려준 coaching_id의 코칭 문장. 서버가 다 만들 때까지 기다린다
+  coaching: async (id) => (await api.get(`/speak/coaching/${encodeURIComponent(id)}`, { timeout: 80000 })).data,
   // S4 스트리밍 채점(서버 DGOP_STREAM=1일 때만 열림, 끄면 404). 조각은 16 kHz 16비트 PCM
   streamStart: async () => (await api.post('/speak/stream/start', {}, { timeout: 15000 })).data,
   streamChunk: async (id, pcm) => (await api.post(`/speak/stream/${encodeURIComponent(id)}/chunk`,
