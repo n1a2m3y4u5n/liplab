@@ -36,3 +36,12 @@ export function lipreadCheckCopy(env = ENV) {
     note: '소형 실증 모델이라 자주 틀립니다. 입모양만으로 단어를 읽는 어려움을 보여주는 실험이에요.',
   }
 }
+
+/**
+ * 독화 ① 화소 입술 ROI 모델로 바꿀지(VITE_LIPREAD_ROI=1, 기본 끔, docs/lipread-roi-2026-10.md 13절).
+ * 켜면 LipReadCheck가 입 27계수 BiGRU 대신 입술 화소 ROI 모델과 ctc_ll 채점을 쓴다. 화면은 그대로다.
+ * 모델 파일(public/models/roi/)은 git에 없어 빌드 전에 복사해야 한다(DEPLOY.md 11항). 없으면 칸이 숨는다.
+ */
+export function lipreadRoiOn(env = ENV) {
+  return String(env.VITE_LIPREAD_ROI || '').trim() === '1'
+}

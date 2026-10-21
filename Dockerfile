@@ -18,6 +18,16 @@ COPY frontend/ ./
 ARG DGOP_STREAM=0
 ENV VITE_DGOP_STREAM=$DGOP_STREAM
 
+# 독화 ① 화소 입술 ROI 모델(빌드 인자 LIPREAD_ROI=1일 때만, 기본 0, DEPLOY.md 11항). 웹캠 '기계 확인'이 입 27계수 모델 대신 이 모델을 쓴다.
+# 모델(6.1MB)은 공개 저장소에 없으므로 빌드 폴더의 frontend/public/models/roi/(git 제외)에 복사해 둔다. 켰는데 없으면 빌드를 멈추고,
+# 끈 채로 폴더가 있으면 쓰지 않는 파일이 이미지에 들어가지 않게 지운다.
+ARG LIPREAD_ROI=0
+ENV VITE_LIPREAD_ROI=$LIPREAD_ROI
+RUN if [ "$LIPREAD_ROI" = "1" ]; then \
+      test -s public/models/roi/kr_lipread_roi.web.onnx && test -s public/models/roi/kr_lipread_roi.web.meta.json \
+      || { echo "frontend/public/models/roi/ 모델이 없다(DEPLOY.md 11항)"; exit 1; }; \
+    else rm -rf public/models/roi; fi
+
 # Build for production
 RUN npm run build
 
