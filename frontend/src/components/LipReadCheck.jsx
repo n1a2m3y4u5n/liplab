@@ -4,7 +4,8 @@ import { predictLipread, loadLipread, lipreadAvailable } from '../lib/lipreadMod
 import { resampleFrames } from '../lib/frameRate'
 import { mediaErrorMessage } from '../lib/mediaError'
 import { memoUntilFail } from '../lib/sharedRequest'
-import { lipreadCheckCopy } from '../lib/lipreadGate'
+import { lipreadCheckCopy, lipreadRoiOn } from '../lib/lipreadGate'
+import { predictLipreadRoi, loadLipreadRoi, lipreadRoiAvailable, grabRoiFrame } from '../lib/lipreadRoiModel'
 
 /**
  * 축 D — 기계가 내 입모양을 읽어본다(자체 립리딩). 사용자가 목표 단어를 입모양으로 말하면
@@ -19,6 +20,8 @@ const WASM_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERS
 const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
 const REC_MS = 2500  // 녹화(수집) 길이
 const SEQ_HZ = 60    // 모델 입력 속도. 30 fps 카메라면 프레임마다 두 번(벤치에서 검증한 제품 조건 dup2)
+// VITE_LIPREAD_ROI=1이면 입술 화소 ROI 모델(30 fps 격자, dup1, ctc_ll)로 읽는다. 화면·문구는 같다(lipreadGate.lipreadRoiOn)
+const ROI = lipreadRoiOn()
 
 // MediaPipe 얼굴 모델은 모듈 전역에 한 번 만들어 문항끼리 나눈다(lipreadModel의 ONNX 세션과 같은 방식).
 // 이 칸은 WordStage 결과 패널 안에 있어 문항마다 언마운트된다. 예전에는 그때 모델을 닫아, 다음 문항에서 카메라를 켤 때마다
@@ -45,6 +48,8 @@ export default function LipReadCheck({ target, candidates = [] }) {
   const camGenRef = useRef(0)       // 언마운트마다 올린다. 켜는 중이던 카메라가 늦게 오면 끈다
   const startingRef = useRef(false)
   const recTimerRef = useRef(null)
+  const roiFramesRef = useRef([])    // ROI 모델일 때 [{t, gray, geom, W, H}]
+  const roiCanvasRef = useRef({})    // 흑백 변환용 화면 밖 캔버스
   const [status, setStatus] = useState('idle') // idle | loading | ready | recording | thinking | done | error
   const [result, setResult] = useState(null)   // {jamo, matched, ranked}
   const [errMsg, setErrMsg] = useState('')
@@ -54,7 +59,7 @@ export default function LipReadCheck({ target, candidates = [] }) {
   // 모델이 배포돼 있는지만 작은 메타 파일로 확인한다(없으면 칸을 숨김). 모델 자체는 카메라를 켤 때 받는다.
   useEffect(() => {
     let cancelled = false
-    lipreadAvailable().then((ok) => { if (!cancelled) setModelOK(!!ok) })
+    ;(ROI ? lipreadRoiAvailable : lipreadAvailable)().then((ok) => { if (!cancelled) setModelOK(!!ok) })
     return () => { cancelled = true }
   }, [])
 
@@ -75,8 +80,16 @@ export default function LipReadCheck({ target, candidates = [] }) {
       try {
         const now = performance.now()
         const res = fl.detectForVideo(video, now)
-        const bs = toBlendshapeMap(res.faceBlendshapes?.[0])
-        if (recordingRef.current && Object.keys(bs).length) framesRef.current.push({ t: now, bs })
+        if (ROI) {
+          // 학습 추출처럼 얼굴이 안 잡힌 프레임도 넣는다(자를 위치는 앞뒤 검출에서 보간)
+          if (recordingRef.current) {
+            const f = grabRoiFrame(video, res.faceLandmarks?.[0], roiCanvasRef.current)
+            if (f) roiFramesRef.current.push(f)
+          }
+        } else {
+          const bs = toBlendshapeMap(res.faceBlendshapes?.[0])
+          if (recordingRef.current && Object.keys(bs).length) framesRef.current.push({ t: now, bs })
+        }
       } catch { /* 프레임 스킵 */ }
     }
     rafRef.current = requestAnimationFrame(loop)
@@ -89,7 +102,7 @@ export default function LipReadCheck({ target, candidates = [] }) {
     let stream = null
     try {
       setStatus('loading')   // 처음이면 모델을 받는다(이미 받았으면 바로 넘어간다)
-      const [fl, lip] = await Promise.all([ensureLandmarker(gen).catch(() => null), loadLipread()])
+      const [fl, lip] = await Promise.all([ensureLandmarker(gen).catch(() => null), ROI ? loadLipreadRoi() : loadLipread()])
       if (gen !== camGenRef.current) return
       if (!fl || !lip) { setStatus('error'); setErrMsg('입모양 모델을 가져오지 못했어요. 다시 눌러 보세요.'); return }
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
@@ -115,6 +128,7 @@ export default function LipReadCheck({ target, candidates = [] }) {
   const record = useCallback(() => {
     if (status !== 'ready' && status !== 'done') return
     framesRef.current = []
+    roiFramesRef.current = []
     recStartRef.current = performance.now()
     recordingRef.current = true
     setResult(null)
@@ -122,8 +136,16 @@ export default function LipReadCheck({ target, candidates = [] }) {
     recTimerRef.current = setTimeout(async () => {
       recordingRef.current = false
       setStatus('thinking')
-      const seq = resampleFrames(framesRef.current, recStartRef.current, REC_MS, SEQ_HZ)
-      const r = await predictLipread(seq, candidates)
+      let r
+      if (ROI) {
+        const fr = roiFramesRef.current
+        roiFramesRef.current = []   // 흑백 프레임(약 13 MB)을 바로 놓는다
+        const W = fr[0]?.W, H = fr[0]?.H
+        r = await predictLipreadRoi(fr.filter((f) => f.W === W && f.H === H), W, H, candidates)
+      } else {
+        const seq = resampleFrames(framesRef.current, recStartRef.current, REC_MS, SEQ_HZ)
+        r = await predictLipread(seq, candidates)
+      }
       setResult(r)
       setStatus('done')
     }, REC_MS)
