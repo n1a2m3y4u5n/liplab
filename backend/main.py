@@ -4,11 +4,12 @@ Serves API endpoints and React static files for production deployment
 """
 import os
 import asyncio
+import time
 import logging
 import ratelimit
 import llm_budget
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Request
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from dotenv import load_dotenv
@@ -60,6 +61,13 @@ def _warmup_models():
                     if scorer and scorer != aligner:
                         dgop_acoustic._load(scorer)
                         dgop_acoustic._share_once(aligner, scorer)   # 특징 추출부 공유도 미리(첫 채점이 확인하지 않게)
+            import dgop_stream
+            if dgop_stream.enabled() and dgop_stream.model_spec():
+                # S4 학생도 미리 올리고 한 번 돌려 둔다. 10/21 dev에서 첫 /api/speak/stream/start가 적재로 7.4초 걸렸고, 그동안 쌓인
+                # 조각이 늦으면 녹음 끝의 기다림 상한(4초)을 넘어 예전 경로(8.8~12초)로 떨어진다(docs/scorer-stream-latency-2026-10.md 10절).
+                import numpy as _np
+                fwd, _vocab, _cal = dgop_stream.load_backend()
+                fwd(_np.zeros(dgop_stream.SR, dtype=_np.float32))
             import audio2face
             if audio2face.is_available():
                 audio2face.warm()   # 적재에 더해 백본 가중치를 끝까지 읽어 둔다(첫 아바타 요청이 느린 디스크를 기다리지 않게)
@@ -5362,6 +5370,91 @@ def _av_fusion_on() -> bool:
 _STREAM_CHUNK_MAX = 16000 * 2 * 5   # 조각 하나 최대 5초
 
 
+class _StageTimer:
+    """요청 하나의 단계별 시간(docs/scorer-stream-latency-2026-10.md 10절). Server-Timing 머리글과 로그 한 줄로 낸다(값에는 영향 없음)."""
+
+    def __init__(self):
+        self.t0 = self._last = time.perf_counter()
+        self.marks = []
+
+    def mark(self, name: str):
+        now = time.perf_counter()
+        self.marks.append((name, now - self._last))
+        self._last = now
+
+    def header(self) -> str:
+        parts = [f"{n};dur={d * 1000:.1f}" for n, d in self.marks]
+        parts.append(f"total;dur={(time.perf_counter() - self.t0) * 1000:.1f}")
+        return ", ".join(parts)
+
+
+def _join_vowel_coaching(coaching, vowel_msgs):
+    """코칭 뒤에 모음 포먼트 교정 문장(축 E)을 붙인다(예전 speak_assess 끝부분과 같은 규칙)."""
+    if vowel_msgs:
+        return f"{coaching} {' '.join(vowel_msgs)}".strip()
+    return coaching
+
+
+async def _speak_coaching_text(target, transcript, score, confusions, metrics, weak_phones, intonation, method,
+                               note="", vowel_msgs=()):
+    """모음~문장 단계의 코칭 문장: Claude 코칭(실패하면 규칙 코칭) + 억양 note + 모음 교정. 기다리는 경로와 뒤에서 만드는 경로가 함께 쓴다."""
+    from llm_service import generate_speaking_coaching
+    coaching = await generate_speaking_coaching(target, transcript, score, confusions, metrics,
+                                                weak_phones=weak_phones, intonation=intonation, method=method)
+    if note:
+        coaching = f"{coaching} {note}"
+    return _join_vowel_coaching(coaching, list(vowel_msgs or []))
+
+
+class _CoachingJobs:
+    """점수를 먼저 돌려준 시도의 코칭을 뒤에서 만든다(coaching_async=1). 서버는 워커 하나라 프로세스 메모리에 둔다(dgop_stream 세션과 같다).
+    만든 코칭은 시도 기록(SpeakAttempt.coaching)에도 저장한다. 오래된 작업은 지운다."""
+
+    def __init__(self, ttl_s: float = 180.0, total: int = 256):
+        self.ttl_s, self.total = ttl_s, total
+        self._jobs = {}
+
+    def _sweep(self):
+        now = time.monotonic()
+        for k in [k for k, j in self._jobs.items() if now - j["t"] > self.ttl_s]:
+            del self._jobs[k]
+        while len(self._jobs) >= self.total:
+            del self._jobs[min(self._jobs, key=lambda k: self._jobs[k]["t"])]
+
+    def start(self, user_id, attempt_id, coach_args) -> str:
+        import uuid as _uuid
+        self._sweep()
+        cid = _uuid.uuid4().hex
+        task = asyncio.create_task(self._run(attempt_id, coach_args))
+        self._jobs[cid] = {"user": user_id, "task": task, "t": time.monotonic()}
+        return cid
+
+    @staticmethod
+    async def _run(attempt_id, coach_args):
+        t0 = time.perf_counter()
+        coaching = await _speak_coaching_text(**coach_args)
+        dt = time.perf_counter() - t0
+        if coaching and attempt_id is not None:
+            try:
+                from database import AsyncSessionLocal, SpeakAttempt
+                from sqlalchemy import update
+                async with AsyncSessionLocal() as s:
+                    await s.execute(update(SpeakAttempt).where(SpeakAttempt.id == attempt_id)
+                                    .values(coaching=str(coaching)[:600]))
+                    await s.commit()
+            except Exception as e:
+                print(f"[WARN] coaching save failed: {e}")
+        print(f"[TIMING] speak_coaching llm={dt * 1000:.1f}ms total={(time.perf_counter() - t0) * 1000:.1f}ms")
+        return coaching
+
+    def get(self, cid, user_id):
+        j = self._jobs.get(cid or "")
+        return j if j is not None and j["user"] == user_id else None
+
+
+_COACH_JOBS = _CoachingJobs()
+
+
 def _pop_speak_stream(stream_id, user_id):
     if not stream_id:
         return None
@@ -5423,6 +5516,9 @@ async def speak_assess(
     mouth_confidence: float = Form(None),
     mouth_track: str = Form(None),   # 녹음 중 입모양 타임라인(B-6) — {"visemes":[...], "frames":[[t, s…], …]}
     stream_id: str = Form(None),     # S4 스트리밍 녹음 세션(DGOP_STREAM=1일 때만 본다, dgop_stream)
+    stream_tail: UploadFile = File(None),   # S4: 녹음 끝에 남은 PCM 조각(16 kHz 16비트). 따로 조각 요청을 보내는 왕복 한 번을 줄인다
+    coaching_async: int = Form(0),   # 1이면 Claude 코칭을 기다리지 않고 점수부터 돌려준다. 코칭은 /api/speak/coaching/{id}로 받는다
+    response: Response = None,
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -5430,7 +5526,12 @@ async def speak_assess(
     발성·운율(0·1)은 지표만으로, 모음·자음·단어·문장(2~5)은 Whisper 전사+음운 유사도."""
     if len(target or "") > _TEXT_MAX:   # 채점 정렬 비용이 길이의 곱이라 상한을 둔다(다른 채점 요청과 같다)
         raise HTTPException(status_code=400, detail="목표 문장이 너무 길어요.")
+    tm = _StageTimer()
     data = await _read_audio_limited(audio)
+    tail_pcm = await stream_tail.read(_STREAM_CHUNK_MAX + 1) if stream_tail is not None and stream_id else b""
+    if len(tail_pcm) > _STREAM_CHUNK_MAX:
+        raise HTTPException(status_code=413, detail="조각이 너무 커요.")
+    tm.mark("read")
 
     metrics = {"loudness": loudness, "pitch_range": pitch_range, "duration": duration,
                "pitch_start": pitch_start, "pitch_end": pitch_end, "pitch_ref": pitch_ref, "pitch_final": pitch_final,
@@ -5460,6 +5561,7 @@ async def speak_assess(
     dgop_result = None
     assessment_method = None
     no_voice = False   # 전사 경로에서 소리 없는 녹음이라 전사를 건너뜀
+    stream_sess = None
     need_asr = (mode in ("phoneme", "word", "sentence")) or (stage is None)
     if need_asr:
         _ml_admit()   # 추론 대기열이 차면 받기 전에 503(지표만 쓰는 발성·운율은 추론이 없어 해당하지 않는다)
@@ -5493,9 +5595,14 @@ async def speak_assess(
                     raise RuntimeError("torch/torchaudio/transformers 미설치")
                 async with _ml_slot():
                     result = None
+                    tm.mark("ml_wait")
                     if stream_sess is not None:
                         try:
+                            if tail_pcm:
+                                await asyncio.to_thread(stream_sess.feed_pcm16, tail_pcm)
+                                tm.mark("stream_tail")
                             result = await asyncio.to_thread(stream_sess.assess, target)
+                            tm.mark("stream_assess")
                         except Exception as e:
                             print(f"[WARN] 스트리밍 채점 실패: {type(e).__name__}: {e}")
                             result = None
@@ -5506,6 +5613,7 @@ async def speak_assess(
                             dgop_acoustic.assess_text,
                             data, target, aligner_id=dgop_aligner_id, scorer_id=dgop_scorer_id,
                         )
+                        tm.mark("dgop_full")
                 if result.get("score") is not None:
                     dgop_result = result
                     # 소리별 신뢰도(S2): 칩·코칭이 믿을 만한 소리만 확정으로 짚게 음소마다 reliable을 붙인다(표가 없으면 그대로)
@@ -5541,6 +5649,7 @@ async def speak_assess(
                     transcript = await transcribe(data)
             except Exception as e:
                 raise _server_error(e, "전사 실패")
+            tm.mark("asr")
             try:
                 sc = await calculate_score(correct=target, user_answer=transcript, db=db)
                 sim = sc.get("score", 0)
@@ -5561,6 +5670,7 @@ async def speak_assess(
                 pass
             assessment_method = "asr_transcript"
 
+    tm.mark("score")
     note = ""
     passed = None
     progress = None
@@ -5649,6 +5759,7 @@ async def speak_assess(
     if mode in ("phoneme", "word", "sentence") and passed is not None and not is_probe:
         await _sr_touch(current_user.id, "speak", target, bool(passed), db, score=score)
     await db.commit()
+    tm.mark("db")
     if sp is not None:
         progress = {"stage": stage, "attempts": sp.attempts,
                     "mastery_score": round(sp.mastery_score, 1),
@@ -5669,23 +5780,28 @@ async def speak_assess(
                 vowel_fb = await asyncio.to_thread(_fm.vowel_feedback, _y, _v) if _y is not None else None
             except Exception as e:  # 교정 실패는 채점 결과와 무관
                 print(f"[WARN] vowel formant feedback failed: {e}")
+        tm.mark("formants")
 
     # 발성·운율은 규칙 기반 note가 곧 구체 코칭, 모음~문장은 Claude 코칭(+억양 note)
+    coaching_id = None
+    vowel_msgs = (vowel_fb or {}).get("messages") or []
     if mode in ("voicing", "prosody"):
-        coaching = note
+        coaching = _join_vowel_coaching(note, vowel_msgs)
     elif no_voice:
-        coaching = note or _speakcur.NO_VOICE_NOTE   # 들은 것이 없으니 LLM 코칭을 부르지 않는다
+        coaching = _join_vowel_coaching(note or _speakcur.NO_VOICE_NOTE, vowel_msgs)   # 들은 것이 없으니 LLM 코칭을 부르지 않는다
     else:
-        from llm_service import generate_speaking_coaching
         # 억양은 문장에서만, 그것도 기대 방향 규칙(note)이 판정하지 않았을 때만 코칭에 넣는다(음절·단어는 음높이가 고른 게 자연스럽다)
-        coaching = await generate_speaking_coaching(target, transcript, score, confusions, metrics,
-                                                    weak_phones=_weak_phones(dgop_result),
-                                                    intonation=(mode == "sentence" and not note),
-                                                    method=assessment_method)   # D-GOP면 '음성인식 결과' 줄을 뺀다
-        if note:
-            coaching = f"{coaching} {note}"
-    if vowel_fb and vowel_fb.get("messages"):
-        coaching = f"{coaching} {' '.join(vowel_fb['messages'])}".strip()
+        coach_args = dict(target=target, transcript=transcript, score=score, confusions=confusions, metrics=metrics,
+                          weak_phones=_weak_phones(dgop_result), intonation=(mode == "sentence" and not note),
+                          method=assessment_method,   # D-GOP면 '음성인식 결과' 줄을 뺀다
+                          note=note, vowel_msgs=vowel_msgs)
+        if coaching_async:
+            # 점수를 먼저 돌려주고 같은 코칭을 뒤에서 만든다(docs/scorer-stream-latency-2026-10.md 10절). 내용·저장은 기다릴 때와 같다
+            coaching = None
+            coaching_id = _COACH_JOBS.start(current_user.id, attempt.id, coach_args)
+        else:
+            coaching = await _speak_coaching_text(**coach_args)
+            tm.mark("coaching")
     # 회차 상세의 'DOKA의 한마디'용으로 코칭 문장도 시도 기록에 남긴다(채점 기록은 위에서 이미 저장됨)
     if coaching:
         try:
@@ -5694,6 +5810,7 @@ async def speak_assess(
         except Exception as e:
             await db.rollback()
             print(f"[WARN] coaching save failed: {e}")
+        tm.mark("coaching_save")
 
     # 프론트 음소 칩(SpeakingPractice)이 읽는 acoustic_dgop. 채점은 위 assess_text(naive)가 끝냈고,
     # 여기서는 그 결과를 화면용 모양으로만 옮긴다. 정렬됐고 채점 대상인 음소만 싣고, 자모 토큰의
@@ -5721,6 +5838,10 @@ async def speak_assess(
     if mode == "sentence" and dgop_result and not no_voice and not is_probe:
         import speak_cues as _cues
         sound_cue = _cues.rate_cue(dgop_result.get("rate"))
+    if response is not None:
+        response.headers["Server-Timing"] = tm.header()
+    print(f"[TIMING] speak_assess mode={mode} method={assessment_method} stream={stream_sess is not None if need_asr else False} "
+          f"async={bool(coaching_id)} {tm.header()}")
     return {
         "transcript": transcript,
         "score": score,
@@ -5730,6 +5851,8 @@ async def speak_assess(
         "note": note,
         "confusions": confusions[:6],
         "coaching": coaching,
+        "coaching_pending": coaching_id is not None,   # True면 coaching이 비어 있고 /api/speak/coaching/{coaching_id}로 받는다
+        "coaching_id": coaching_id,
         "assessment_method": assessment_method,  # "dgop" | "asr_transcript" — 축 B 전환 투명성
         "dgop": dgop_result,
         "metrics": metrics,
@@ -5744,6 +5867,21 @@ async def speak_assess(
         "probe": is_probe,                 # 낱말 속 소리 확인으로 채점했는가(확인 상태·오늘 확인 낱말일 때만)
         "probe_counted": probe_counted,    # 확인 창에 셌는가(소리 없음·정렬 실패면 False)
     }
+
+
+@app.get("/api/speak/coaching/{coaching_id}")
+async def speak_coaching(coaching_id: str, current_user=Depends(get_current_user)):
+    """coaching_async=1로 채점한 시도의 코칭 문장. 다 만들어질 때까지 기다렸다 돌려준다(Claude 호출 상한 30초 + 재시도)."""
+    job = _COACH_JOBS.get(coaching_id, current_user.id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="코칭을 찾지 못했어요.")
+    try:
+        coaching = await asyncio.wait_for(asyncio.shield(job["task"]), timeout=75)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="코칭이 늦어지고 있어요.")
+    except Exception as e:
+        raise _server_error(e, "코칭 실패")
+    return {"coaching": coaching}
 
 
 @app.get("/api/speak/analysis")

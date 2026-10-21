@@ -21,6 +21,15 @@ import { rateCueView } from '../lib/speakCue'
 import { phoneChipView, phoneTone, phoneValue } from '../lib/phoneChips'
 import { DGOP_STREAM_ENABLED, startSpeakStream } from '../lib/speakStream'
 
+// 녹음 뒤 지연 측정용 표시(개발자 도구 Performance, docs/scorer-stream-latency-2026-10.md 10절). 'speak:stop'부터 잰다
+function speakMark(name, start = false) {
+  try {
+    if (typeof performance === 'undefined' || !performance.mark) return
+    performance.mark(name)
+    if (!start) performance.measure(`${name}-since-stop`, 'speak:stop', name)
+  } catch { /* 'speak:stop' 표시가 없으면 건너뛴다 */ }
+}
+
 // 혀 위치 성도 단면(E-6) — 모음 결과를 열 때만 받는다(그림 코드와 윤곽 자료 모두 지연 로드)
 const VocalTractVTL = lazy(() => import('../components/VocalTractVTL'))
 
@@ -432,16 +441,21 @@ export default function SpeakingPractice() {
         if (track) opts.mouth_track = JSON.stringify(track)
       }
       if (sctl) {
-        const sid = await sctl.finish()
-        if (sid) opts.stream_id = sid
+        // 남은 1초 미만 조각은 채점 요청에 붙인다(왕복 한 번 줄임, 점수는 같다)
+        const fin = await sctl.finishWithTail()
+        if (fin) { opts.stream_id = fin.id; opts.stream_tail = fin.tail }
       }
+      speakMark('speak:stream-done')
       if (attempt !== attemptRef.current) return
       setAssessing(true)
       try {
-        const res = await speakAPI.assess(target, blob, metrics, opts)
+        // 점수부터 받고 Claude 코칭은 뒤따라 받는다(docs/scorer-stream-latency-2026-10.md 10절). 코칭 내용은 기다릴 때와 같다
+        const res = await speakAPI.assess(target, blob, metrics, { ...opts, coaching_async: true })
+        speakMark('speak:score')
         if (attempt !== attemptRef.current) return
         setAssessment(res)
         if (res.progress) { setProgress(res.progress); maybeAddProbes(res.progress, itemIdx) }
+        if (res.coaching_pending && res.coaching_id) loadCoaching(res.coaching_id, attempt)
       } catch (e) {
         if (attempt !== attemptRef.current) return
         setAssessment({ error: e?.response?.data?.detail || '발음 분석에 실패했어요. 잠시 후 다시 시도해 주세요.' })
@@ -451,7 +465,17 @@ export default function SpeakingPractice() {
     }
   }
 
+  // assess가 coaching_pending으로 돌려준 코칭을 받아 지금 시도의 결과에 채운다. 실패하면 한마디 칸을 비운다(점수·칩은 그대로)
+  const loadCoaching = async (id, attempt) => {
+    let text = null
+    try { text = (await speakAPI.coaching(id))?.coaching ?? null } catch { text = null }
+    speakMark('speak:coaching')
+    if (attempt !== attemptRef.current) return
+    setAssessment((a) => (a && !a.error && a.coaching_id === id ? { ...a, coaching: text, coaching_pending: false } : a))
+  }
+
   const stop = () => {
+    speakMark('speak:stop', true)
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     rafRef.current = null
     setRecording(false); setVol(0); setPitch(null)
@@ -943,6 +967,16 @@ export default function SpeakingPractice() {
           )}
 
           {/* DOKA의 한마디(182:106 — DOKA 303:32 · 제목 303:39 · 구분선 303:40) */}
+          {!assessment?.coaching && assessment?.coaching_pending && (
+            <div className="flex items-center gap-2.5 rounded-14 bg-track-tint px-4 py-3.5 opacity-70" aria-live="polite">
+              <span className="relative size-[34px] shrink-0">
+                <img src={IC.doka} alt="" className="absolute max-w-none" style={OVERFLOW} />
+              </span>
+              <p className="shrink-0 whitespace-nowrap text-[14px] font-bold leading-figma text-track-dark">DOKA의 한마디</p>
+              <span aria-hidden className="h-4 w-[1.5px] shrink-0 rounded-[1px] bg-speak-dark/30" />
+              <p className="min-w-0 flex-1 text-[14px] leading-[1.6] text-track-dark">한마디를 쓰고 있어요…</p>
+            </div>
+          )}
           {assessment?.coaching && (
             <div className="flex items-center gap-2.5 rounded-14 bg-track-tint px-4 py-3.5">
               <span className="relative size-[34px] shrink-0">
