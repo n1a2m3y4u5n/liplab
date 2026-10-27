@@ -7,6 +7,7 @@ REPO=Path(__file__).resolve().parents[1]
 KEY=Path(r'D:\work\hq\projects\liplab-lab\.aihub.key')
 EXHASH='a826028983d56eab1a3d9017ee647dc875854fdfb607bdb4ed3beccf9f2a233f'
 class AuthFailure(Exception): pass
+class SlowStop(AuthFailure): pass   # 인증 실패와 같은 길로 즉시 멈추되 AUTH_STOP은 남기지 않는다
 class Stream:
     def __init__(self, r, cap):
         self.r=r; self.cap=cap; self.n=0; self.t=time.time()
@@ -21,6 +22,9 @@ class Stream:
         n=min(n if n>=0 else 1024*1024,self.cap-self.n)
         if n<=0:return b''
         b=self.p.stdout.read(n);self.n+=len(b)
+        el=time.time()-self.t
+        if el>180 and self.n/el<512*1024:   # 10/27 오후 서버가 100KB/s로 느려져 요청만 날렸다. 느리면 전체를 멈춘다
+            (ROOT/'SLOW_STOP').write_text(time.strftime('%Y-%m-%dT%H:%M:%S')+' '+self.r['video_file']+' '+str(self.n));raise SlowStop('server too slow; stopped')
         if self.first:
             self.first=False
             if '인증실패'.encode() in b or '인증실패'.encode('cp949') in b:
