@@ -259,7 +259,7 @@ export default function LipSyncPlayer3D({
 
         {/* Status badge */}
         {showControls && isRunning && (
-          <div className="absolute top-3 right-3 bg-green-500/90 text-white px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 backdrop-blur-sm">
+          <div role="status" aria-live="polite" className="absolute top-3 right-3 bg-good text-white px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 backdrop-blur-sm">
             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
             재생 중
           </div>

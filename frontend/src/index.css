@@ -3,9 +3,10 @@
 @tailwind utilities;
 
 /* Figma 디자인 토큰(LIPLAB 리디자인) — tailwind.config.js colors와 같은 값.
+   캡션·버튼은 AA 대비에 맞게 보정하고 트랙별 색상 구분을 유지한다.
    클래스로 못 쓰는 곳(인라인 style·SVG·그라데이션)에서 var(--…)로 쓴다. */
 :root {
-  --brand: #7d53de;         /* brand/primary */
+  --brand: #7446ce;         /* brand/primary */
   --brand-dark: #5f3ab8;    /* brand/primary-dark (3D 하단테두리) */
   --brand-tint: #efe9fc;    /* brand/primary-tint (활성 배경) */
   --brand-hover: #6d3fc4;
@@ -13,18 +14,20 @@
   --on-primary: #ffffff;    /* text/on-primary */
   --ink: #1a1a2e;           /* text/primary */
   --ink-muted: #5a5a6e;     /* text/secondary */
-  --ink-faint: #8a8a9b;
+  --ink-faint: #68687b;
   --line: #e2e2e8;          /* border/default */
   --surface: #ffffff;       /* surface/card */
   --page: #f3f3f3;          /* surface/background */
   --fill: #ededf3;
   --fill-strong: #e4e4ec;
+  --focus-ring: var(--track-dark);
+  --control-min: 44px;
 
   /* 발화 트랙(171:38)·북마크(§3.1 고정색) */
-  --speak: #ec4899;
+  --speak: #c02670;
   --speak-dark: #be185d;
   --speak-tint: #ffe4e9;
-  --speak-hover: #db2777;
+  --speak-hover: #a21c5b;
   /* 소리 듣기 트랙(청능훈련, docs/auditory-training-design.md) — 청록 */
   --listen: #117a7e;
   --listen-dark: #0c5e66;
@@ -36,7 +39,7 @@
   --endless-light: #818cf8;
 
   /* 점수 색(§3.2) */
-  --good: #16a34a;
+  --good: #15803d;
   --good-text: #15803d;
   --good-tint: #e7f8ef;
   --warn: #f59e0b;
@@ -109,6 +112,11 @@ body,
        .btn-md  = 59:43 오른쪽 패널 "복습하기" (r16·b6, 18/14, 17px)
        .btn-bar = 130:20·94:138 레슨 하단 바 "확인·계속하기" (r14·b5, 40/15, 17px)
      비활성은 Figma "확인 (비활성)"(130:20) 회색. */
+  /* 공통 컨트롤의 최소 높이: 모바일 터치와 줄바꿈 때도 유지한다. */
+  .btn-primary, .btn-secondary, .btn-good, .btn-bad {
+    min-height: var(--control-min);
+  }
+
   .btn-primary {
     @apply px-6 py-3 rounded-14 border-2 border-b-5 font-bold leading-figma
            bg-track border-track-dark text-white
@@ -151,6 +159,7 @@ body,
   }
 
   .input-field {
+    font-size: 16px; /* iOS 포커스 확대를 막고 입력 글자를 읽기 쉽게 한다. */
     @apply w-full px-4 py-3 border-2 border-line rounded-[12px] bg-gray-50
            focus:outline-none focus:ring-2 focus:ring-primary-200
            focus:border-primary-400 focus:bg-white transition-all duration-200;
@@ -221,14 +230,14 @@ body,
     background-image: linear-gradient(121.64deg, #a78bfa 0%, #8b5cf6 39.286%, #6d3fc4 71.429%);
   }
   .bg-loading-language {
-    background-image: linear-gradient(121.64deg, #fb7185 0%, #ec4899 39.286%, #be185d 71.429%);
+    background-image: linear-gradient(121.64deg, #fb7185 0%, #c02670 39.286%, #be185d 71.429%);
   }
   @media (min-width: 1024px) {
     .bg-loading-perception {
       background-image: linear-gradient(151.93deg, #a78bfa 0%, #8b5cf6 39.286%, #6d3fc4 71.429%);
     }
     .bg-loading-language {
-      background-image: linear-gradient(151.93deg, #fb7185 0%, #ec4899 39.286%, #be185d 71.429%);
+      background-image: linear-gradient(151.93deg, #fb7185 0%, #c02670 39.286%, #be185d 71.429%);
     }
   }
 
@@ -382,4 +391,15 @@ html.a11y-contrast [data-track="listen"] .bg-fill { background-color: var(--line
 @media print {
   @page { size: A4; margin: 14mm; }
   body { background: #fff; }
+}
+
+/* hover 없이도 현재 조작 위치를 찾는다. 기존 focus:outline-none보다 우선한다. */
+:is(button, a[href], input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--focus-ring) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--surface) !important;
+}
+input::placeholder, textarea::placeholder {
+  color: var(--ink-faint);
+  opacity: 1;
 }
