@@ -37,9 +37,9 @@ class Stream:
             if not codes or codes[-1]!='200': raise RuntimeError('download HTTP '+str(codes[-1:] or 'unknown'))
         return b
     def close(self):
-        self.p.terminate();self.p.stdout.close();self.p.wait()
+        rc=self.p.poll();self.p.terminate();self.p.stdout.close();self.p.wait();self.p.returncode=rc if rc is not None else 'killed'
         Path(self.header).unlink(missing_ok=True);Path(self.response).unlink(missing_ok=True)
-        with (ROOT/'transfers.jsonl').open('a') as f:f.write(json.dumps({'file':self.r['video_file'],'bytes':self.n,'seconds':round(time.time()-self.t,3),'cap':self.cap})+'\n')
+        with (ROOT/'transfers.jsonl').open('a') as f:f.write(json.dumps({'file':self.r['video_file'],'bytes':self.n,'seconds':round(time.time()-self.t,3),'cap':self.cap,'curl_rc':self.p.returncode})+'\n')   # 10/28: 서버가 일찍 끊는지(18·56) 남긴다
 class JoinedParts:
     """외부 tar의 .partN을 이어 내부 tar의 1GiB 경계 절단을 없앤다."""
     def __init__(self, outer):self.outer=outer;self.current=None;self.eof=False
