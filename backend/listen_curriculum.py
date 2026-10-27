@@ -1361,6 +1361,56 @@ def inventory_texts() -> List[str]:
 # 권장 용량은 하루 15~20분, 주 5일이고 결과를 좌우하는 것은 꾸준히 하는 비율이다(docs/auditory-training-evidence-2026-10.md 4절).
 # 단계마다 따로 들어가는 대신 한 회기에 약한 대조 표적 문항, 문장(소음 속 또는 조용함), 대화를 정해진 비율로 섞는다.
 # 블록마다 대략의 분(문항당 초 × 문항 수)을 붙여 15분 안팎이 되게 한다. 순수 함수: 단계 상태만 받는다.
+BATCH_N = {0: 8, 1: 12, 2: 10, 3: 8, 4: 10, 5: 8}
+DAILY_QUOTA = {n: 2 for n in BATCH_N}
+
+
+def counts_for_quota(session) -> bool:
+    """숙달에 들어가는 학습 답만 센다. 검사·연습·정답 확인 뒤 다시 쓴 답은 제외."""
+    return session is None or session == "" or session.startswith("ling:")
+
+
+def quota_days(rows, stage, today, keep=14) -> dict:
+    """UTC 시행을 KST 날짜별 완성 묶음으로 계산. Ling 제출은 7개 행이지만 한 묶음이다."""
+    from datetime import timedelta, timezone
+    by, ling = {}, set()
+    for r in rows:
+        if r.stage != stage or not counts_for_quota(r.session) or r.mode in ("test", "wordtest"):
+            continue
+        ts = r.created_at
+        if ts is None:
+            continue
+        if ts.tzinfo is not None:
+            ts = ts.astimezone(timezone.utc).replace(tzinfo=None)
+        day = (ts + timedelta(hours=9)).date()
+        if day > today:
+            continue
+        if stage == 0:
+            # 완료된 점검마다 반드시 하나 있는 silent 집계 행으로 중복 없이 센다.
+            if r.item_key != "ling:silent" or (day, r.session) in ling:
+                continue
+            ling.add((day, r.session))
+            by[day] = by.get(day, 0) + BATCH_N[0]
+        else:
+            by[day] = by.get(day, 0) + 1
+    batch, quota = BATCH_N[stage], DAILY_QUOTA[stage]
+    answers = by.get(today, 0)
+    n = answers // batch
+    return {"today_n": n, "quota_n": quota, "batch_n": batch, "today_answers": answers,
+            "partial_n": answers % batch, "met": n >= quota,
+            "days": [{"date": d.isoformat(), "n": by[d] // batch, "met": by[d] // batch >= quota}
+                     for d in sorted(by)[-max(1, keep):]]}
+
+
+def recommended_stage(status, placed_stage=None, ling_done=False) -> int:
+    """전 단계가 열려도 추천은 하나. 몫 대신 숙달·배치 결과를 기준으로 고른다."""
+    if not ling_done:
+        return 0
+    if placed_stage in range(1, 6) and status.get(placed_stage) not in (None, "locked", "mastered"):
+        return placed_stage
+    return next((n for n in range(1, 6) if status.get(n) not in (None, "locked", "mastered")), 5)
+
+
 TODAY_SECONDS = {"ling": 70, "ax": 12, "word_id": 15, "sentence": 40, "noise": 40, "convo": 45}
 
 

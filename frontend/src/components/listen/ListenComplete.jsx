@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useListenKeys } from './usePlayer'
-import { NOTICE, OVERFLOW, releaseClickFocus } from './ui'
+import { OVERFLOW, releaseClickFocus } from './ui'
 
 /**
  * 묶음 끝 화면(독화 레슨 완료 93:12와 같은 결): 소리 듣기 DOKA + 스탯 칸 + 버튼 2개. 화면 전체를 덮는다.
@@ -40,7 +40,6 @@ export default function ListenComplete({ title, sub, stats = [], notes = [], pri
           {primary && <button type="button" onClick={primary.onClick} className="btn-primary btn-lg w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]">{primary.label}</button>}
           {secondary && <button type="button" onClick={secondary.onClick} className="btn-secondary btn-lg w-full text-track-dark max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]">{secondary.label}</button>}
         </div>
-        <p className="break-keep text-center text-[12px] leading-[1.6] text-ink-faint">{NOTICE}</p>
       </div>
     </div>
   )
@@ -59,6 +58,7 @@ export function TaskEnd({ finish, result, ...complete }) {
     if (onDone && !sent.current) { sent.current = true; onDone(result) }
   }, [onDone, result])
   if (onDone) return null
+  if (finish?.render) return finish.render(result)
   const acts = finish?.actions ? finish.actions(result) : {}
   return <ListenComplete {...complete} {...acts} />
 }

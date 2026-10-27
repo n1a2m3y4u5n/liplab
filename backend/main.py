@@ -2702,7 +2702,9 @@ async def _task_board(user, db) -> tuple:
     periods = {_dt.period_of(t, today) for t in _dt.tasks_for(listen_on)}
     claimed = (await db.execute(select(TaskClaim.task_key, TaskClaim.period).where(
         TaskClaim.user_id == user.id, TaskClaim.period.in_(periods)))).all()
-    return today, _dt.board(_dt.stats(events, today, due_left, listen_minutes=listen_min), today,
+    quota_rows = await _listen_attempts(user.id, db, counted_only=False) if listen_on else []
+    batches = sum(_listencur.quota_days(quota_rows, n, today)["today_n"] for n in range(1, 6))
+    return today, _dt.board(_dt.stats(events, today, due_left, listen_minutes=listen_min, listen_batches=batches), today,
                             [tuple(c) for c in claimed], listen=listen_on)
 
 
@@ -6114,10 +6116,37 @@ async def _listen_progress_map(user_id: int, db) -> dict:
 
 def _listen_open(n: int, sp_map: dict, user) -> bool:
     """0단계는 늘 열림. N단계는 N-1을 숙달했거나 그 단계 행이 있으면(건너뛰기로 연 단계) 열림."""
-    if n == 0 or _unlock_all_for(user):
+    if n == 0 or _listen_demo(user):
         return True
     prev = sp_map.get(n - 1)
     return (prev is not None and prev.status == "mastered") or n in sp_map
+
+
+def _listen_demo(user) -> bool:
+    """듣기는 환경 변수와 무관하게 체험 계정만 전 단계가 열린다."""
+    return (getattr(user, "email", "") or "").lower() == _DEMO_EMAIL
+
+
+async def _listen_quota(user_id, db, stage):
+    rows = await _listen_attempts(user_id, db, stage=stage, counted_only=False)
+    return _listencur.quota_days(rows, stage, _kst_today())
+
+
+async def _listen_batch_award(uid, db) -> dict:
+    """묶음 보상도 시행·단계 진행과 같은 트랜잭션. 동시 묶음은 사용자 값 비교 후 재시도한다."""
+    from database import User
+    from sqlalchemy import select, update
+    from types import SimpleNamespace
+    user = (await db.execute(select(User).where(User.id == uid).execution_options(populate_existing=True))).scalar_one()
+    fields = ("total_xp", "current_level", "streak_count", "last_practice_date")
+    before = {k: getattr(user, k) for k in fields}
+    state = SimpleNamespace(**before)
+    award = _award_xp_and_streak(state, 15)
+    result = await db.execute(update(User).where(User.id == uid, *(getattr(User, k) == v for k, v in before.items()))
+                              .values(**{k: getattr(state, k) for k in fields}).execution_options(synchronize_session=False))
+    if result.rowcount != 1:
+        raise _ListenConflict()
+    return award
 
 
 def _ao_trials(rows) -> list:
@@ -6158,10 +6187,32 @@ async def listen_curriculum_stages(current_user=Depends(get_current_user), db: A
             rows = await _listen_attempts(current_user.id, db, stage=4, mode="noise")
             st["srt_db"] = _listencur.srt_estimate(_ao_trials(rows)[-_listencur.NOISE_MASTER["window"]:])
         stages.append(st)
+    rows = await _listen_attempts(current_user.id, db, counted_only=False)
+    today = _kst_today()
+    for st in stages:
+        st["quota"] = _listencur.quota_days(rows, st["stage"], today)
+    ling_today = stages[0]["quota"]["today_n"] > 0
+    placed = None
     if _listen_placement_mode():
-        # 플래그가 켜졌을 때만 붙인다(꺼져 있으면 응답이 예전과 같다)
-        return {"stages": stages, "placement": _listen_placement_status(sp_map)}
-    return {"stages": stages}
+        from database import ListenPlacementRun
+        from sqlalchemy import select
+        run = (await db.execute(select(ListenPlacementRun).where(ListenPlacementRun.user_id == current_user.id,
+                    ListenPlacementRun.applied.is_(True)).order_by(ListenPlacementRun.id.desc()).limit(1))).scalar_one_or_none()
+        if run:
+            placed = (run.result or {}).get("upper")
+    recommended = _listencur.recommended_stage({s["stage"]: s["status"] for s in stages}, placed,
+                                              stages[0]["status"] == "mastered")
+    quota = stages[recommended]["quota"]
+    demo = _listen_demo(current_user)
+    out = {"stages": stages, "recommended": recommended, "ling_today": ling_today,
+           "is_demo": demo, "all_stages_open": demo,
+           "experience_label": "체험용 · 모든 단계 열림" if demo else None,
+           "next_node": {"stage": recommended, "kind": "tomorrow" if quota["met"] else "today",
+                         "batch": 1 if quota["met"] else quota["today_n"] + 1}}
+    if _listen_placement_mode():
+        # 배치검사 필드는 해당 플래그가 켜졌을 때만 붙인다.
+        out["placement"] = _listen_placement_status(sp_map)
+    return out
 
 
 class ListenSkipReq(BaseModel):
@@ -6370,7 +6421,7 @@ async def listen_stage_content(n: int, current_user=Depends(get_current_user), d
         if n == 1:
             ling = await _listen_last_ling(current_user.id, db)
             stats = _listencur.ax_pair_stats([(r.item_key, bool(r.correct)) for r in rows])
-            out["items"] = _listencur.ax_items(level, f"{seed}:{len(rows)}", n=12, multi_voice=True, pick=pick, stats=stats,
+            out["items"] = _listencur.ax_items(level, f"{seed}:{len(rows)}", n=_listencur.BATCH_N[n], multi_voice=True, pick=pick, stats=stats,
                                                kind_scale=_listencur.ling_avoid_kinds(ling))
         else:
             weak = [r.target for r in reversed(rows[-40:]) if not r.correct and r.target]
@@ -6379,18 +6430,18 @@ async def listen_stage_content(n: int, current_user=Depends(get_current_user), d
             wrong = [(r.target, r.answer) for r in allw if r.correct is False and r.target and r.answer]
             focus = _listencur.tally_confusions(wrong[-200:])[:3]
             review = _listencur.due_reviews([(r.target, bool(r.correct), _listen_day(r)) for r in allw if r.target], _kst_today())
-            out["items"] = _listencur.word_items(level, _listen_word_pool(), f"{seed}:{len(rows)}", n=10, weak=weak, pick=pick,
+            out["items"] = _listencur.word_items(level, _listen_word_pool(), f"{seed}:{len(rows)}", n=_listencur.BATCH_N[n], weak=weak, pick=pick,
                                                  focus=focus, review=review)
     elif n == 3:
         # 받아쓰기·듣기 조건·복습 탭의 문장 답('practice:*')도 최근에 들은 문장과 간격 복습에 넣는다(낱말과 같은 까닭)
         rows3 = await _listen_attempts(current_user.id, db, stage=3, practice_modes=True)
         recent = [r.item_key[2:] for r in rows3[-40:]]
         review = _listencur.due_reviews([(r.item_key[2:], bool(r.correct), _listen_day(r)) for r in rows3], _kst_today())
-        out["items"] = _listencur.sentence_items(f"3:{seed}", n=8, recent=recent, review=review)
+        out["items"] = _listencur.sentence_items(f"3:{seed}", n=_listencur.BATCH_N[n], recent=recent, review=review)
     elif n == 4:
         rows = await _listen_attempts(current_user.id, db, stage=4, mode="noise")
         recent = [r.item_key[2:] for r in rows[-40:]]
-        out["items"] = _listencur.sentence_items(f"4:{seed}:{len(rows)}", n=10, recent=recent)
+        out["items"] = _listencur.sentence_items(f"4:{seed}:{len(rows)}", n=_listencur.BATCH_N[n], recent=recent)
         out["stair"] = {"ao": _listencur.stair_state(_ao_trials(rows)), "av": _listencur.stair_state(_av_trials(rows))}
         out["next_condition"] = _listencur.noise_condition(len(rows))
         out["n_done"] = len(rows)
@@ -6400,7 +6451,7 @@ async def listen_stage_content(n: int, current_user=Depends(get_current_user), d
         out["needs_pretest"] = not done
     elif n == 5:
         recent = [r.item_key[2:] for r in await _listen_attempts(current_user.id, db, stage=5, limit=40, newest_first=True)]
-        out["items"] = _listencur.convo_items(f"5:{seed}", n=8, recent=recent)
+        out["items"] = _listencur.convo_items(f"5:{seed}", n=_listencur.BATCH_N[n], recent=recent)
         import listen_convo_gen as _lcg
         if _lcg.enabled():
             # 생성 문항은 8개 중 최대 2개(답은 기록하되 숙달에 넣지 않는다). 최근에 들은 생성 문항은 연습 기록에 있다
@@ -6415,6 +6466,7 @@ async def listen_stage_content(n: int, current_user=Depends(get_current_user), d
         out["conditions"] = list(_listencur.CONVO_CONDITIONS)
         out["room_rt60"] = list(_listencur.ROOM_RT60)
         out["noise_types"] = list(_listencur.TRAIN_NOISES)
+    out["quota"] = await _listen_quota(current_user.id, db, n)
     return out
 
 
@@ -6629,6 +6681,7 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
 
     async def work():
         out = dict(res)
+        out.update({"batch_completed": False, "xp_gained": 0})
         level = level_in
         if pm is not None:
             # 연습 모드: 기록·채점만. 정답 단서를 본 뒤 다시 쓴 답(practice)은 예전처럼 'practice'로 남겨 복습·혼동에서도 뺀다
@@ -6652,6 +6705,7 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
                 out.update({"stair": {_listencur.PRACTICE_STAIR_CONDITION: _listencur.stair_state(trials)},
                             "next_condition": _listencur.PRACTICE_STAIR_CONDITION})
             await db.flush()
+            out["quota"] = await _listen_quota(uid, db, n)
             return out
         sp_map = await _listen_progress_map(uid, db)
         counted = not req.practice and not generated and _listen_open(n, sp_map, who)
@@ -6698,6 +6752,12 @@ async def listen_answer(req: ListenAnswer, current_user=Depends(get_current_user
                 _settle_mastery(sp, sp.attempts >= cfg["min_attempts"] and sp.mastery_score >= cfg["mastery"])
             await _listen_sp_save(db, sp)
             out.update({"mastery_score": round(sp.mastery_score, 1), "status": sp.status})
+        await db.flush()
+        quota = await _listen_quota(uid, db, n)
+        out["quota"] = quota
+        if counted and quota["today_answers"] > 0 and quota["partial_n"] == 0:
+            out.update(await _listen_batch_award(uid, db))
+            out["batch_completed"] = True
         return out
 
     return await _listen_with_retry(db, work)
@@ -6741,7 +6801,10 @@ async def listen_ling(req: ListenLingReq, current_user=Depends(get_current_user)
         sp.mastery_score = 100.0
         _settle_mastery(sp, True)
         await _listen_sp_save(db, sp)
-        return {"summary": _listencur.ling_summary({**results, "silent_false_alarms": fa}, prev), "session": session}
+        await db.flush()
+        award = await _listen_batch_award(uid, db)
+        return {"summary": _listencur.ling_summary({**results, "silent_false_alarms": fa}, prev), "session": session,
+                "counted": True, "batch_completed": True, "quota": await _listen_quota(uid, db, 0), **award}
 
     return await _listen_with_retry(db, work)
 
@@ -6982,7 +7045,10 @@ async def listen_today(current_user=Depends(get_current_user), db: AsyncSession 
     today_row = next((d for d in summ_days if d.get("date") == today.isoformat()), {})
     rw, rs = await _listen_review_due(current_user.id, db)
     both = bool(_listen_placement_mode()) and await _listen_placed(current_user.id, db)
+    path = await listen_curriculum_stages(current_user, db)
     return {"blocks": _listencur.today_plan(status, ling_today, both_leveled=both), "target_min": 15,
+            "recommended": path["recommended"], "quotas": {str(s["stage"]): s["quota"] for s in path["stages"]},
+            "next_node": path["next_node"],
             "done_today": {"n": today_row.get("n", 0), "minutes": today_row.get("minutes")},
             "review_due": len(rw) + len(rs)}
 

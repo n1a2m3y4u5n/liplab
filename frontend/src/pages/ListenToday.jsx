@@ -4,6 +4,8 @@ import { listenAPI } from '../api'
 import { stopAll } from '../lib/listenAudio'
 import { TASK_TITLE, blockData, fmtGoalMinutes, todayTotals, pct } from '../lib/listenFlow'
 import BottomBar from '../components/listen/BottomBar'
+import { QuotaBar } from '../components/listen/QuotaProgress'
+import { quotaView } from '../lib/listenQuota'
 import ListenBlocks from '../components/listen/ListenBlocks'
 import ListenComplete from '../components/listen/ListenComplete'
 import ListenFrame from '../components/listen/ListenFrame'
@@ -49,15 +51,14 @@ function TodayBlock({ block, ctx, onDone }) {
 
 /** 시작 전: 오늘 한 분(15분 목표 막대)과 블록 목록. */
 function TodayIntro({ plan, onStart, active }) {
-  const total = plan.blocks.reduce((a, b) => a + (b.minutes || 0), 0)
   const doneMin = plan.done_today?.minutes || 0
   const target = plan.target_min || 15
   return (
     <div className="flex animate-fade-in flex-col gap-4 lg:gap-5">
-      <Heading title="오늘의 듣기" sub={`하루 ${target}분, 아래 순서대로 이어서 해요. 블록 사이에 쉬어 가도 돼요.`} />
+      <Heading title="오늘의 듣기 ⤨" />
       <Card className="flex flex-col gap-2.5">
         <div className="flex items-baseline justify-between gap-3 leading-figma">
-          <p className="text-[14px] font-bold text-ink-muted">오늘 연습한 시간</p>
+          <p className="text-[14px] font-bold text-ink-muted">들은 시간</p>
           <p className="text-[15px] font-bold text-track-dark">{fmtGoalMinutes(doneMin)}<span className="font-normal text-ink-faint"> / {target}분</span></p>
         </div>
         <div className="h-2.5 overflow-hidden rounded-full bg-fill">
@@ -66,17 +67,17 @@ function TodayIntro({ plan, onStart, active }) {
       </Card>
       <ol className="flex flex-col overflow-hidden rounded-18 border-2 border-line bg-white lg:rounded-22">
         {plan.blocks.map((b, i) => (
-          <li key={`${b.stage}-${i}`} className={`flex items-center gap-4 px-5 py-4 ${i ? 'border-t-1.5 border-line' : ''}`}>
-            <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-track-tint text-[14px] font-bold text-track-dark">{i + 1}</span>
+          <li key={`${b.stage}-${i}`} aria-current={b.stage === plan.recommended ? "step" : undefined} className={`flex items-center gap-4 px-5 py-4 ${b.stage === plan.recommended ? "bg-track-tint" : ""} ${i ? 'border-t-1.5 border-line' : ''}`}>
+            <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-track-tint text-[14px] font-bold text-track-dark">{b.stage === plan.recommended ? "▶" : b.stage === 0 && plan.quotas?.[0]?.today_n > 0 ? "✓" : "◷"}</span>
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 leading-figma">
               <p className="text-[16px] font-bold text-ink">{TASK_TITLE[b.mode] || `${b.stage + 1}단계`}</p>
-              {b.why && b.why !== TASK_TITLE[b.mode] && <p className="break-keep text-[13px] text-ink-muted">{b.why}</p>}
+              {b.stage === plan.recommended ? <div className="mt-2 flex items-center gap-2"><QuotaBar quota={plan.quotas?.[b.stage]} /><span className="text-[12px] font-bold text-track-dark">{quotaView(plan.quotas?.[b.stage]).filled} / 2</span></div> : b.stage !== 0 && <span className="mt-1 text-[12px] text-ink-muted">⤨ {b.n === plan.quotas?.[b.stage]?.batch_n ? "1묶음" : `${b.n}문제`}</span>}
             </div>
             <span className="shrink-0 text-[13px] font-bold text-ink-muted">{b.mode === 'ling' ? '1분' : `약 ${Math.max(1, Math.round(b.minutes || 0))}분`}</span>
           </li>
         ))}
       </ol>
-      <BottomBar active={active} hint={`모두 약 ${Math.max(1, Math.round(total))}분`} primary={{ label: '시작하기', onClick: onStart }} />
+      <BottomBar active={active} primary={{ label: '시작하기', onClick: onStart }} />
     </div>
   )
 }
@@ -120,7 +121,7 @@ export default function ListenToday() {
   const cur = blocks[step.idx]
   const kicker = step.phase === 'run' && cur ? `오늘의 듣기 · ${step.idx + 1} / ${blocks.length} ${cur.title}` : '오늘의 듣기'
   return (
-    <ListenFrame kicker={kicker} onExit={exit} exitAria="나가기">
+    <ListenFrame kicker={step.phase === "intro" ? null : kicker} onExit={exit} showProgress={step.phase === "run"} exitAria="나가기">
       {(ctx) => (
         err ? (
           <StateCard title={err === 'missing' ? '오늘의 듣기를 준비하고 있어요' : '오늘의 계획을 가져오지 못했어요'}
@@ -138,10 +139,8 @@ export default function ListenToday() {
               const target = plan.target_min || 15
               return (
                 <ListenComplete title={t.reached ? `오늘 ${target}분을 채웠어요` : '오늘의 듣기를 마쳤어요'}
-                  sub={t.reached ? '내일도 비슷한 시간에 이어 해요. 일주일에 5일쯤이 알맞아요.' : `${target}분까지 ${Math.max(1, t.left)}분쯤 남았어요. 남은 시간은 연습 탭에서 채워도 돼요.`}
                   stats={[{ label: '오늘 연습', value: `${fmtGoalMinutes(t.minutes)} / ${target}분`, main: true },
                     { label: '푼 문제', value: `${t.n}문제` }, { label: '정답률', value: pct(t.c, t.n) }]}
-                  notes={[plan.review_due > 0 && `다시 들어 볼 낱말·문장이 ${plan.review_due}개 있어요. 복습 탭의 듣기 복습에서 할 수 있어요.`]}
                   primary={{ label: '돌아가기', onClick: leave }} secondary={{ label: '결과 보기', onClick: () => navigate('/analysis/listening') }}>
                   <div className="h-2.5 w-full overflow-hidden rounded-full bg-fill" role="img" aria-label={`목표 ${target}분 중 ${fmtGoalMinutes(t.minutes)}`}>
                     <div className="h-full rounded-full bg-track" style={{ width: `${t.goalPct}%` }} />

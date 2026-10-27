@@ -245,6 +245,8 @@ with TestClient(main.app) as c:
                headers=h).json()
     out["ans_practice"] = [a["correct"], a["generated"], a["line"] == g["line"], a["counted"]]
     # 5단계: 생성 문항은 8개 중 2개까지, 답은 숙달에 넣지 않는다
+    for n in range(1, 6):
+        c.post("/api/listen/skip", json={"stage": n}, headers=h).raise_for_status()
     s5 = c.get("/api/listen/stage/5", headers=h).json()
     g5 = [i for i in s5["items"] if i.get("generated")]
     out["stage5"] = [len(s5["items"]), len(g5)]

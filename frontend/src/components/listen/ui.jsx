@@ -22,12 +22,10 @@ export function Card({ children, className = '' }) {
 }
 
 /** 문항 질문(독화 레슨 91:19와 같은 크기). meta는 질문 아래 작은 줄(수준·보기 수 등). */
-export function Heading({ title, meta, sub }) {
+export function Heading({ title }) {
   return (
     <div className="flex flex-col gap-1.5 leading-figma lg:gap-2">
       <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[28px] lg:tracking-[-0.7px]">{title}</h1>
-      {meta && <p className="text-[13px] font-bold text-track-dark">{meta}</p>}
-      {sub && <p className="text-[14px] leading-[1.6] text-ink-muted">{sub}</p>}
     </div>
   )
 }
@@ -64,7 +62,7 @@ export function ProgressLine({ phase, run, totalMs }) {
 }
 
 // 보기(독화 레슨 91:29와 같은 결). 정답·오답 공개는 2.5px 테두리(높이를 맞추려고 위 패딩 2px 더함).
-const OPTION_BASE = 'flex min-h-[56px] w-full items-center gap-3.5 rounded-14 px-[18px] py-[13px] text-left transition-colors lg:gap-4 lg:rounded-16 lg:px-5 lg:py-4'
+const OPTION_BASE = 'flex min-h-[56px] w-full items-center gap-2 rounded-14 px-3 py-[13px] text-left transition-colors lg:gap-4 lg:rounded-16 lg:px-5 lg:py-4'
 const OPTION_CLASS = {
   idle: `${OPTION_BASE} border-2 border-b-5 border-line bg-white text-ink enabled:hover:border-track enabled:active:scale-[0.99] disabled:cursor-not-allowed`,
   selected: `${OPTION_BASE} border-2 border-b-5 border-track bg-track-tint text-ink`,

@@ -58,7 +58,7 @@ export default function AxDrill({ data, settings, voices, onProgress, finish, ac
       const r = await listenAPI.answer({ stage: 1, item_key: it.key, same: picked === 0, plays, rt_ms: Date.now() - t0.current, voice: v1, route: settings.route,
         pick: it.pick, ...(answerExtra || {}) })
       setRes(r)
-      tally.add(r.correct, r.status)
+      tally.add(r.correct, r.status, r)
       if (r.level != null && leveled) { setChange(levelChangeText(level, r.level, data.levels)); setLevel(r.level) }
     } catch { setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
     setSending(false)
@@ -69,7 +69,7 @@ export default function AxDrill({ data, settings, voices, onProgress, finish, ac
     onEnter: res ? next : clipState === 'missing' ? skip : confirm, canEnter: res ? true : clipState === 'missing' || (canAnswer && picked != null) })
 
   if (!it) {
-    const result = { stage: 1, n: tally.n, c: tally.c, skipped: tally.skipped, mastered: tally.mastered, elapsed: tally.elapsed(), level, levels: data.levels }
+    const result = { reward: tally.reward, stage: 1, n: tally.n, c: tally.c, skipped: tally.skipped, mastered: tally.mastered, elapsed: tally.elapsed(), level, levels: data.levels }
     return (
       <TaskEnd finish={finish} result={result}
         title={tally.n ? '이번 묶음을 마쳤어요' : '소리가 아직 준비되지 않았어요'} sub={tally.mastered ? '소리 구별을 숙달했어요. 다음 단계가 열렸어요.' : null}
@@ -88,6 +88,7 @@ export default function AxDrill({ data, settings, voices, onProgress, finish, ac
       {clipState === 'missing' ? missingCard(a.state === 'missing' ? a : b, skip) : (
         <>
           <SoundCard player={player} onPlay={play} clipState={clipState} label={res ? '두 소리 다시 듣기' : '두 소리 듣기'} plays={plays} />
+          {res && <div className="flex gap-2">{[[it.first,a.clip],[it.second,b.clip]].map(([text,clip],i) => <button key={i} onClick={() => player.play([{clip,opts:{gainDb:settings.gainDb}}])} disabled={player.busy} className="btn-secondary min-h-11 flex-1 text-[14px] text-track-dark">{text} 듣기</button>)}</div>}
           <div className="grid grid-cols-2 gap-2.5 lg:gap-3">
             {['같아요', '달라요'].map((l, i) => (
               <Option key={l} index={i} label={l} big state={optionState(i, { picked, result: res, answer: answerIdx })}
@@ -98,8 +99,8 @@ export default function AxDrill({ data, settings, voices, onProgress, finish, ac
       )}
       {clipState !== 'missing' && (
         <BottomBar active={active} tone={res ? (res.correct ? 'good' : 'bad') : null}
-          title={res ? (res.correct ? '정답이에요!' : '아쉬워요') : null}
-          sub={res ? [res.same ? '같은 소리였어요' : `다른 소리였어요 · ${it.first} / ${it.second}`, change].filter(Boolean).join(' · ') : null}
+          title={res ? (res.correct ? '✓ 정답' : '× 오답') : null}
+          sub={res ? `${it.first} ${res.same ? '=' : '≠'} ${it.second}` : null}
           hint={!plays ? '먼저 두 소리를 들어요' : picked == null ? '같은지 다른지 골라요 · 1·2 키' : 'Enter로 확인해요'}
           alert={err}
           primary={res ? { label: '계속하기', onClick: next } : { label: sending ? '보내는 중' : '확인', onClick: confirm, disabled: !canAnswer || picked == null }} />

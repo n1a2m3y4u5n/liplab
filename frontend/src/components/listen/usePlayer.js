@@ -1,3 +1,4 @@
+import { batchReward } from '../../lib/listenQuota'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { playClip, silence, stopAll } from '../../lib/listenAudio'
 import { listenKeyAction, sequenceMs } from '../../lib/listenView'
@@ -77,13 +78,14 @@ export function useListenKeys(cfg) {
  * onAnswered(correct)를 주면 답마다 알린다(엔드리스 연습이 묶음을 넘어 합계를 낸다).
  */
 export function useStageTally(initialStatus, onAnswered = null) {
-  const [t, setT] = useState({ n: 0, c: 0, skipped: 0, mastered: false })
+  const [t, setT] = useState({ n: 0, c: 0, skipped: 0, mastered: false, reward: { xp: 0 } })
   const start = useRef(Date.now())
   const cb = useRef(onAnswered)
   cb.current = onAnswered
-  const add = (correct, status) => {
+  const add = (correct, status, response = null) => {
     setT((s) => ({ ...s, n: s.n + 1, c: s.c + (correct ? 1 : 0),
-      mastered: s.mastered || (status === 'mastered' && initialStatus !== 'mastered') }))
+      mastered: s.mastered || (status === 'mastered' && initialStatus !== 'mastered'),
+      reward: batchReward(s.reward, response) }))
     cb.current?.(!!correct)
   }
   const skip = () => setT((s) => ({ ...s, skipped: s.skipped + 1 }))

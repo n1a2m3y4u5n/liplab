@@ -55,7 +55,7 @@ export default function WordId({ data, settings, voices, onProgress, finish, act
       const r = await listenAPI.answer({ stage: 2, item_key: it.key, answer: pickedWord, level: it.level, plays, rt_ms: Date.now() - t0.current,
         voice, route: settings.route, pick: it.pick, ...(answerExtra || {}) })
       setRes(r)
-      tally.add(r.correct, r.status)
+      tally.add(r.correct, r.status, r)
       if (r.level != null && leveled) { setChange(levelChangeText(level, r.level, data.levels)); setLevel(r.level) }
     } catch { setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
     setSending(false)
@@ -67,7 +67,7 @@ export default function WordId({ data, settings, voices, onProgress, finish, act
     onEnter: res ? next : target.state === 'missing' ? skip : confirm, canEnter: res ? true : target.state === 'missing' || (canAnswer && picked != null) })
 
   if (!it) {
-    const result = { stage: 2, n: tally.n, c: tally.c, skipped: tally.skipped, mastered: tally.mastered, elapsed: tally.elapsed(), level, levels: data.levels }
+    const result = { reward: tally.reward, stage: 2, n: tally.n, c: tally.c, skipped: tally.skipped, mastered: tally.mastered, elapsed: tally.elapsed(), level, levels: data.levels }
     return (
       <TaskEnd finish={finish} result={result}
         title={tally.n ? '이번 묶음을 마쳤어요' : '소리가 아직 준비되지 않았어요'} sub={tally.mastered ? '낱말 고르기를 숙달했어요. 다음 단계가 열렸어요.' : null}

@@ -134,7 +134,7 @@ export default function SentenceTask({ data, settings, voices, onProgress, onExi
       if (!first) {
         const r = await listenAPI.answer(body)
         setFirst(r)
-        tally.add(r.passed, r.status)
+        tally.add(r.passed, r.status, r)
         setScores((s) => [...s, r.score || 0])
         if (r.stair) setStair(normalizeStair(r.stair))
         if (r.next_condition) setNextCond(r.next_condition)
@@ -150,7 +150,7 @@ export default function SentenceTask({ data, settings, voices, onProgress, onExi
 
   if (!it) {
     const avgWords = scores.length ? `${Math.round((scores.reduce((x, y) => x + y, 0) / scores.length) * 100)}%` : '–'
-    const result = { stage: noisy ? 4 : 3, n: tally.n, c: tally.c, skipped: tally.skipped, mastered: tally.mastered, elapsed: tally.elapsed(),
+    const result = { reward: tally.reward, stage: noisy ? 4 : 3, n: tally.n, c: tally.c, skipped: tally.skipped, mastered: tally.mastered, elapsed: tally.elapsed(),
       stair, trace, avgWords }
     return (
       <TaskEnd finish={finish} result={result}

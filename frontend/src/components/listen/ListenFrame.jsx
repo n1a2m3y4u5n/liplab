@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { loadVoices, setSimMode, stopAll } from '../../lib/listenAudio'
 import { voiceRoles } from '../../lib/listenMix'
 import ListenSetup from './ListenSetup'
+import ListenNotice from './ListenNotice'
 import { useListenSettings } from './useClip'
-import { IC, NOTICE, releaseClickFocus } from './ui'
+import { IC, releaseClickFocus, SpeakerIcon } from './ui'
 
 /**
  * 소리 듣기 화면의 틀(레슨 집중 모드, 핸드오프 §3.4). 단계 레슨·연습 모드·오늘의 듣기·복습·소리 교실이 모두 이 틀을 쓴다.
@@ -17,6 +18,7 @@ import { IC, NOTICE, releaseClickFocus } from './ui'
 export default function ListenFrame({ kicker, onExit, exitAria = '나가기', showProgress = true, children }) {
   const [settings, saveSettings] = useListenSettings()
   const [editing, setEditing] = useState(false)
+  const [notice, setNotice] = useState(() => localStorage.getItem('liplab_listen_notice') !== '1')
   const [voiceList, setVoiceList] = useState(null)
   const [prog, setProg] = useState({ cur: 0, total: 0, label: null })
   const voices = useMemo(() => voiceRoles(voiceList || []), [voiceList])
@@ -28,7 +30,7 @@ export default function ListenFrame({ kicker, onExit, exitAria = '나가기', sh
   const barPct = prog.total ? (prog.cur / prog.total) * 100 : 0
   const counter = prog.label || (prog.total > 0 ? `${Math.min(prog.cur + 1, prog.total)} / ${prog.total}` : null)
   const exit = () => { stopAll(); onExit() }
-  const ctx = { settings, voices, voiceList, onProgress, active: !setup, ready: !!settings && !!voiceList }
+  const ctx = { settings, voices, voiceList, onProgress, active: !setup && !notice, ready: !!settings && !!voiceList }
   return (
     <div data-track="listen" className="flex min-h-[100dvh] flex-col bg-page" style={{ paddingBottom: 'var(--listen-bar-h, 0px)' }}
       onClick={releaseClickFocus}>
@@ -47,24 +49,23 @@ export default function ListenFrame({ kicker, onExit, exitAria = '나가기', sh
               <span className="min-w-[3.5em] shrink-0 text-right text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{!setup && counter}</span>
             </>
           ) : <span className="flex-1" />}
+          {settings && !editing && <button type="button" onClick={() => { stopAll(); setEditing(true) }} aria-label="소리 크기" className="flex size-11 shrink-0 items-center justify-center rounded-14 border-2 border-line bg-white text-track-dark"><SpeakerIcon playing size={22} /></button>}
+          <button type="button" onClick={() => { stopAll(); setNotice(true) }} aria-label="소리 듣기 안내" className="size-11 shrink-0 rounded-14 text-xl text-track-dark">ⓘ</button>
         </div>
 
         <main className="mt-6 flex flex-1 flex-col gap-4 pb-6 lg:mt-5 lg:gap-5 lg:[@media(max-height:860px)]:mt-3.5">
-          <div className="flex min-h-[44px] items-center justify-between gap-3">
+          {kicker && <div className="flex items-center gap-3">
             <p className="min-w-0 truncate text-[12px] font-bold text-track-dark lg:text-[13px]">{kicker}</p>
-            {settings && !editing && (
-              <button type="button" onClick={() => { stopAll(); setEditing(true) }} className="btn-secondary min-h-[44px] shrink-0 px-3.5 py-2 text-[13px]">소리 크기</button>
-            )}
-          </div>
+          </div>}
           {setup && (
             <ListenSetup initial={settings} onSave={(v) => { saveSettings(v); setEditing(false) }} onCancel={settings ? () => setEditing(false) : null} />
           )}
           <div hidden={setup} className="flex flex-col gap-4 lg:gap-5">
             {settings ? children(ctx) : null}
           </div>
-          <p className="mt-auto break-keep pt-2 text-center text-[12px] leading-[1.6] text-ink-faint">{NOTICE}</p>
         </main>
       </div>
+      {notice && <ListenNotice onClose={() => { localStorage.setItem('liplab_listen_notice', '1'); setNotice(false) }} />}
     </div>
   )
 }

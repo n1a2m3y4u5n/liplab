@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { listenAPI } from '../api'
 import { stopAll } from '../lib/listenAudio'
-import { completeActions } from '../lib/listenFlow'
+import ListenStart from '../components/listen/ListenStart'
+import ListenBatchComplete from '../components/listen/ListenBatchComplete'
+import SentenceTask from '../components/listen/SentenceTask'
 import ListenFrame from '../components/listen/ListenFrame'
 import StateCard from '../components/listen/StateCard'
 import { Skeleton } from '../components/listen/ui'
@@ -26,10 +28,13 @@ export default function ListeningPractice() {
   const [data, setData] = useState(null)
   const [err, setErr] = useState(null)
   const [nonce, setNonce] = useState(0)
+  const [started, setStarted] = useState(false)
+  const [condition, setCondition] = useState('quiet')
 
   useEffect(() => {
     let on = true
     setData(null)
+    setStarted(false)
     setErr(null)
     listenAPI.getStage(stage).then((d) => { if (on) setData(d) }).catch(() => { if (on) setErr(true) })
     return () => { on = false }
@@ -37,9 +42,9 @@ export default function ListeningPractice() {
   const exit = () => { stopAll(); navigate('/learn/path?track=listen') }
   const reload = () => { stopAll(); setNonce((n) => n + 1) }
   const goStage = (n) => { stopAll(); navigate(`/learn/listening?stage=${n}`) }
-  const finish = { actions: (r) => completeActions({ stage, mastered: r.mastered, reload, onExit: exit, onStage: goStage }) }
+  const finish = { render: (result) => <ListenBatchComplete result={result} data={data} onExit={exit} onMore={reload} onStage={goStage} /> }
 
-  const Task = data ? STAGE_TASK[data.mode] : null
+  const Task = data ? (data.mode === 'noise' && params.get('test') !== '1' ? SentenceTask : STAGE_TASK[data.mode]) : null
   const wordTest = stage === 2 && params.get('wordtest') === '1'
   // 시작 단계 정하기(?placement=1). 학습 화면은 서버가 플래그를 켰다고 알릴 때만 이 주소로 보낸다(꺼져 있으면 API가 404)
   if (params.get('placement') === '1') {
@@ -52,7 +57,7 @@ export default function ListeningPractice() {
     )
   }
   return (
-    <ListenFrame key={stage} kicker={`소리 듣기 · ${stage + 1}단계${data?.title ? ` ${data.title}` : ''}`} onExit={exit} exitAria="나가기, 학습 화면으로">
+    <ListenFrame key={stage} kicker={started ? `${data?.title || "소리 듣기"} · ${Math.min(2, (data?.quota?.today_n || 0) + 1)}번째 묶음` : null} onExit={exit} showProgress={started} exitAria="나가기, 학습 화면으로">
       {({ settings, voices, voiceList, onProgress, active }) => (
         err ? (
           <StateCard title="단계를 가져오지 못했어요" body="인터넷 연결을 확인하고 다시 가져와 주세요."
@@ -64,11 +69,13 @@ export default function ListeningPractice() {
             actions={[{ label: '학습 화면으로', onClick: exit }]} />
         ) : !Task ? (
           <StateCard title="이 단계를 열 수 없어요" actions={[{ label: '학습 화면으로', onClick: exit }]} />
+        ) : !started && !wordTest ? (
+          <ListenStart data={{ ...data, stage }} active={active} onStart={(c) => { setCondition(c); setStarted(true) }} />
         ) : wordTest ? (
           <WordTest settings={settings} voices={voices} onProgress={onProgress} onExit={exit} active={active} />
         ) : (
           <Task key={`${stage}:${nonce}`} data={data} settings={settings} voices={voices} onProgress={onProgress} onExit={exit} finish={finish}
-            reload={reload} noisy={data.mode === 'noise'} active={active} />
+            reload={reload} noisy={data.mode === 'noise'} condition={data.mode === 'convo' ? { kind: condition } : undefined} active={active} />
         )
       )}
     </ListenFrame>
