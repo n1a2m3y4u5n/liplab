@@ -2,6 +2,7 @@ import axios from 'axios'
 import useStore from './store/useStore'
 import { createInflight } from './lib/sharedRequest'
 import { handleUnauthorized } from './lib/authFailure'
+import { usageHeaders } from './lib/track'
 
 /**
  * Axios instance with JWT token management and interceptors
@@ -23,6 +24,7 @@ const sharedGet = (name, fetcher) => inflight(`${name}:${useStore.getState().tok
 // Request interceptor: attach JWT token
 api.interceptors.request.use(
   (config) => {
+    Object.assign(config.headers, usageHeaders())
     const token = useStore.getState().token
     if (token) {
       config.headers.Authorization = `Bearer ${token}`

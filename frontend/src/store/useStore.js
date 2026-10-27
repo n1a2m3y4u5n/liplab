@@ -1,4 +1,4 @@
-import { flushTrack } from '../lib/track'
+import { flushTrack, usageHeaders } from '../lib/track'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { clearSignExplored } from '../lib/badges'
@@ -43,7 +43,7 @@ const useStore = create(
         try {
           const token = get().token
           void flushTrack(true)
-          if (token) void fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, keepalive: true }).catch(() => {})
+          if (token) void fetch('/api/auth/logout', { method: 'POST', headers: { ...usageHeaders(), Authorization: `Bearer ${token}` }, keepalive: true }).catch(() => {})
         } catch { /* Ignore telemetry errors. */ }
         clearUserLocalData()
         get().resetPractice()

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import useStore from '../store/useStore'
 import { authAPI, seedAPI } from '../api'
 import Logo from '../components/Logo'
+import { track, flushTrack } from '../lib/track'
 
 /**
  * 로그인 · 회원가입 (Figma 227:35 / 227:74, 모바일 243:34 / 244:34 — lg 미만 반응형).
@@ -78,9 +79,11 @@ export default function Login({ initialMode = 'login' }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const signup = mode === 'signup'
+  useEffect(() => { track(signup ? 'signup_view' : 'login_view') }, [signup])
 
   // 데모 기록 채우기는 공용 데모 계정에만 한다(로그인·회원가입 계정에 부르면 가짜 기록이 들어가고 예전 기록이 지워졌다).
   const enter = async (data, { demo = false } = {}) => {
+    void flushTrack(true)
     setAuth(data.user, data.access_token)
     if (demo) { try { await seedAPI.seedDemo() } catch { /* 무시 */ } }
     navigate('/')
@@ -98,6 +101,8 @@ export default function Login({ initialMode = 'login' }) {
     } finally { setBusy(false) }
   }
   const demo = async () => {
+    track('demo_start')
+    void flushTrack(true)
     setBusy(true); setErr('')
     try { await enter(await authAPI.demoLogin(), { demo: true }) }
     catch { setErr('둘러보기를 시작하지 못했어요.') } finally { setBusy(false) }
