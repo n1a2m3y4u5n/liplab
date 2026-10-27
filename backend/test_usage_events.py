@@ -1,4 +1,4 @@
-﻿"""임시 DB에서 수집 경계, 개인정보 필터, 권한, 파기 검증."""
+"""임시 DB에서 수집 경계, 개인정보 필터, 권한, 파기 검증."""
 import os
 import subprocess
 import sys
@@ -39,11 +39,13 @@ with TestClient(main.app) as c:
     assert c.get('/api/admin/usage',headers=h).status_code==403
     os.environ['LIPLAB_ADMIN_EMAILS']='admin@example.com'
     data=c.get('/api/admin/usage',headers=a,params={'user_id':uid}).json()
+    assert {'login', 'logout', 'lesson_complete'} <= {r['event'] for r in data['timeline']}
     row=next(r for r in data['timeline'] if r['event']=='lesson_complete')
     assert row['props']=={'duration_ms':1250,'action':'done'},row
     assert row['route'] is None
     assert set(row['ua'])=={'browser','os','mobile'}
     assert data['aggregate'] and data['daily']
+    assert data['daily'][0]['connection_times'] and data['daily'][0]['recorded_duration_ms']==1250
     csv=c.get('/api/admin/usage',headers=a,params={'format':'csv'})
     assert csv.status_code==200 and 'attachment' in csv.headers['content-disposition']
     assert 'lesson_complete' in csv.text and 'private' not in csv.text
