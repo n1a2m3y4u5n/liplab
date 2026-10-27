@@ -1,3 +1,5 @@
+import Feedback from './components/Feedback'
+import AdminFeedback from './pages/AdminFeedback'
 import { initTrack, track, trackRoute } from './lib/track'
 import { Component, lazy, Suspense, useState, useEffect, useLayoutEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
@@ -272,6 +274,7 @@ function App() {
         <Route path="/analysis/history" element={<AnalysisDetail mode="history" />} />
         <Route path="/analysis/eval" element={<EvalReport />} />
         <Route path="/analysis/listening" element={<ListeningReport />} />
+        <Route path="/admin/feedback" element={<AdminFeedback />} />
         <Route path="/admin/content-review" element={<ContentReview />} />
         <Route path="/practice/hub" element={<PracticeHub />} />
         <Route path="/tasks" element={<TasksPage />} />
@@ -296,6 +299,7 @@ function App() {
       </div>
       {/* 앱 어디서나 문장 선택 → 수어 번역 (수어 탭 이동 불필요) + 접근성 설정 */}
       <GlobalOverlays />
+      <Feedback />
       </>
       </AuthGate>
     </Router>

@@ -5,9 +5,9 @@ import { initTrack, track, flushTrack, trackRoute, requestTrackedMedia, startUsa
 test('이용 기록: 인증·끄기·50개 묶음·민감 필드·장치 오류·beacon', async () => {
   const original = { fetch: globalThis.fetch, window: globalThis.window, document: globalThis.document, navigator: Object.getOwnPropertyDescriptor(globalThis, 'navigator'), interval: globalThis.setInterval }
   let token = null, enabled = true
-  const sent = [], beacons = [], listeners = {}
+  const sent = [], beacons = [], listeners = {}, sessionEnds = []
   try {
-    globalThis.window = { location: { pathname: '/learn/word' }, addEventListener: (k, fn) => { listeners[k] = fn } }
+    globalThis.window = { location: { pathname: '/learn/word' }, addEventListener: (k, fn) => { listeners[k] = fn }, dispatchEvent: e => sessionEnds.push(e.type) }
     globalThis.document = { addEventListener() {} }
     globalThis.setInterval = () => 0
     Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { sendBeacon: (...args) => { beacons.push(args); return true }, mediaDevices: { getUserMedia: async () => { throw Object.assign(Error('private@example.com'), { name: 'NotAllowedError' }) } } } })
@@ -21,6 +21,9 @@ test('이용 기록: 인증·끄기·50개 묶음·민감 필드·장치 오류�
     token = 'first-user'
     trackRoute('/learn/word?answer=private')
     startUsage('lesson', 'word'); endUsage(true)
+    assert.deepEqual(sessionEnds, ['liplab:session-complete'])
+    startUsage('lesson', 'word'); endUsage(false)
+    assert.equal(sessionEnds.length, 1)
     for (let i = 0; i < 55; i++) track('control', { action: 'volume', email: 'private@example.com', answer: 'private' })
     await assert.rejects(requestTrackedMedia({ video: true }), { name: 'NotAllowedError' })
     await flushTrack()
