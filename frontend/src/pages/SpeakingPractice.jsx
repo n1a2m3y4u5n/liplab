@@ -13,6 +13,7 @@ import { scoreTone } from '../lib/scoreTone'
 import { VOWEL_IDS } from '../lib/vtlShapes'
 import { mediaErrorMessage } from '../lib/mediaError'
 import { loadCoachingResult } from '../lib/speakCoaching'
+import { startRecorder } from '../lib/speakRecorder'
 import { finalTone, riseFallTone, toneDirection, toneMissed } from '../lib/speakTone'
 import { SOFT_BAND, loudnessRms, metricVerdict, volumeCurveNote, volumeFeedback } from '../lib/speakFeedback'
 import { longestVoicedRun } from '../lib/voicing'
@@ -394,18 +395,16 @@ export default function SpeakingPractice() {
       if (DGOP_STREAM_ENABLED && !metricMode) {
         try { speakStreamRef.current = startSpeakStream({ ac, source: src, api: speakAPI }) } catch { speakStreamRef.current = null }
       }
-      try {
-        const rec = new MediaRecorder(stream)
-        rec.ondataavailable = (e) => { if (e.data && e.data.size) chunksRef.current.push(e.data) }
-        rec.onstop = () => onRecStop(attempt)
-        rec.start()
-        recorderRef.current = rec
-      } catch { recorderRef.current = null }
+      recorderRef.current = startRecorder(stream,
+        (e) => { if (e.data && e.data.size) chunksRef.current.push(e.data) },
+        () => onRecStop(attempt))
       startRef.current = performance.now()
       setRecording(true)
       loop()
     } catch (e) {
       // 마이크는 열렸는데 그 뒤(AudioContext·분석기)에서 실패해도 연 장치를 닫는다
+      recorderRef.current = null
+      if (speakStreamRef.current) { speakStreamRef.current.end(); speakStreamRef.current = null }
       if (stream) stream.getTracks().forEach((t) => t.stop())
       closeAudio()
       if (gen === mediaGenRef.current) setErr(mediaErrorMessage(e, 'mic'))
