@@ -133,3 +133,12 @@ fly ssh console -C "python /app/scripts/pilot_retention.py --study-end 2026-12-3
 익명 수집은 10개/요청, 기기 30개/분·IP 해시 60개/분으로 제한한다. 관리자 통계는 기본 점검 계정을 제외하고 test_aggregate에 별도로 표시한다. `include_tests=true`로 포함하더라도 audience=test로 구별한다. @example.com, smoke/deploy-smoke/rehearsal 계열과 LIPLAB_USAGE_TEST_EMAILS의 계정을 점검 대상으로 판정한다. 사용자별 및 device_id별 타임라인을 제공하며 과거 학습 답 기록을 기기에 추정 배정하지 않는다.
 
 기존 이용 표의 user_id NOT NULL은 SQLite 표 이행·PostgreSQL ALTER로 해제하고 기존 행을 보존한다. 과거 식별자 없는 기록은 unknown으로 표시한다. 학습 기록과 같은 보관 기한을 적용하며, 연구 전체 보관 만료 파기 시 `scripts/pilot_retention.py --study-end YYYY-MM-DD --retain-days N --include-usage --apply --mode delete`로 익명·공용 데모를 포함해 연구 종료일까지의 이용 기록도 파기한다. 기한 전 파기·개인 철회/집단만 처리하는 범위와의 혼용은 거부한다. 계정 삭제는 그 계정의 user_id 기록만 지우며 다른 방문자의 공유 기기·익명 기록을 함께 지우지 않는다.
+
+
+### 앱 내 불편 신고·긍정판 SUS (2026-10-28)
+
+`usage_events`에 feedback_report(자유 서술 최대 500자), sus_prompt(하루 표시), sus_response(10개 1~5 응답과 0~100 점수·문항판), sus_skip을 저장한다. 이들 이벤트만 자유 서술 저장의 예외이며 일반 이용 기록의 입력 글 금지는 유지한다. 화면 경로(허용 목록만), 화면 크기, UA 요약, 기존 user_id·device_id·anon_session_id와 연결한다. 이름·이메일·원시 IP는 별도로 받지 않으며 자유 서술에는 개인정보를 쓰지 말라는 자리표시자를 제공한다. 관리자도 자유 서술을 개인정보가 포함될 수 있는 자료로 취급한다.
+
+기존 endUsage(true)가 호출되는 읽기 레슨 완료(EffortCheck) 및 말하기 단계 숙달을 세션 끝의 대리 시점으로 삼는다. 탭 닫기·네트워크 단절에서는 설문을 강제로 열지 않는다. 같은 계정은 KST 하루 한 번만 묻고, 건너뛰거나 화면을 떠나도 그날 다시 묻지 않는다. feedback_daily의 계정·날짜·구분 고유 제약으로 동시 요청에서도 표시·응답을 한 번으로 제한한다. 긍정판 초안 S1~S10을 그대로 사용하며 모든 응답이 있어야 (응답−1)의 합×2.5를 저장한다. 번역·역번역·인지 면접이 완료되었다는 의미는 없으며 연구 검증판이나 임상 결과로 해석하지 않는다. LIPLAB_USAGE_LOG 기본 꺼짐을 그대로 따른다.
+
+보관 기간은 기존 이용·학습 기록과 동일하다. user_id 기반 계정 열람·삭제 및 pilot_data.purge에 usage_events와 feedback_daily가 함께 포함된다. --include-usage 연구 전체 보관 만료 삭제에 이용 기록과 feedback_daily도 포함된다. 데모 공유 계정은 개인 구별을 보장하지 않는다. CSV도 동일 기한으로 보관·삭제하며, 관리자 /admin/feedback 및 /api/admin/feedback은 LIPLAB_ADMIN_EMAILS 권한을 따른다. 이전 기록은 /api/admin/usage의 기간 필터와 CSV로 조회할 수 있다.

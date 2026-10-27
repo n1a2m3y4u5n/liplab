@@ -71,6 +71,7 @@ export function startUsage(kind = 'lesson', id = '') {
 }
 export function endUsage(complete = false) {
   try {
+    if (complete && getToken() && (!active || active.token === getToken())) globalThis.window?.dispatchEvent?.(new Event('liplab:session-complete'))
     if (!active) return
     const old = active; active = null
     if (old.token !== (getToken() || null)) return

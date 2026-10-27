@@ -982,3 +982,14 @@ async def _usage_nullable_user(conn):
     # 이전 버전 행도 관리자 통계에서 테스트·데모로 분류한다. 이메일은 표에 복사하지 않는다.
     await conn.exec_driver_sql("UPDATE usage_events SET is_demo = true WHERE user_id IN (SELECT id FROM users WHERE lower(email) = 'demo@liplab.app')")
     await conn.exec_driver_sql("UPDATE usage_events SET is_test = true WHERE user_id IN (SELECT id FROM users WHERE lower(email) LIKE '%@example.com' OR lower(email) LIKE 'smoke%@%' OR lower(email) LIKE 'deploy-smoke%@%' OR lower(username) LIKE 'smoke%')")
+
+
+class FeedbackDaily(Base):
+    """계정별 KST 하루 표시·응답 중복 방지. 계정 삭제에 포함한다."""
+    __tablename__ = 'feedback_daily'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    day = Column(String(10), nullable=False)
+    kind = Column(String(12), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    __table_args__ = (UniqueConstraint('user_id', 'day', 'kind', name='uq_feedback_daily'),)
