@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import useFocusTrap from '../hooks/useFocusTrap'
+import { SIGN_INTRO_CLOSED } from '../hooks/useSignIntroPending'
 
 // SignPanel(→수어 영상, 무거움)은 모달을 열 때만 로드 → 초기 번들에 안 실림.
 const SignPanel = lazy(() => import('./SignPanel'))
@@ -23,6 +24,7 @@ export default function SignSelectionOverlay() {
   const dismissIntro = useCallback(() => {
     setShowIntro(false)
     try { localStorage.setItem('liplab_sign_intro_seen', '1') } catch { /* noop */ }
+    window.dispatchEvent(new Event(SIGN_INTRO_CLOSED))
   }, [])
   const closeModal = useCallback(() => setModalText(null), [])
 

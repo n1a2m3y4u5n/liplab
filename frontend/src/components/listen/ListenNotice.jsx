@@ -1,8 +1,16 @@
 import { useEffect, useRef } from 'react'
+import useSignIntroPending from '../../hooks/useSignIntroPending'
 
 export default function ListenNotice({ onClose }) {
   const dialog = useRef(null)
-  useEffect(() => { dialog.current?.showModal(); return () => dialog.current?.close() }, [])
+  const pending = useSignIntroPending()
+  useEffect(() => {
+    if (pending) return undefined
+    const node = dialog.current
+    node?.showModal()
+    return () => node?.close()
+  }, [pending])
+  if (pending) return null
   return <dialog ref={dialog} onCancel={(e) => { e.preventDefault(); onClose() }} aria-labelledby="listen-notice-title"
     className="listen-notice mb-0 mt-auto w-full max-w-[480px] rounded-t-24 border-0 bg-white p-6 text-ink shadow-modal backdrop:bg-black/40 lg:m-auto lg:rounded-24" data-track="listen">
     <div className="flex items-center justify-between gap-4"><h2 id="listen-notice-title" className="text-[23px] font-bold">소리 듣기 안내</h2><button onClick={onClose} aria-label="안내 닫기" className="size-11 text-2xl">×</button></div>
