@@ -530,12 +530,16 @@ def check_closure(display: str, answer: str, options: List[str], hint: Optional[
     options = [str(o).strip() for o in (options or []) if str(o).strip()]
     if "___" not in (display or ""):
         return False, None, "display에 빈칸(___) 없음"
+    if display.count("___") != 1:
+        return False, None, "빈칸은 정확히 1개여야 함"
     if not is_hangul_word(answer):
         return False, None, "정답이 한글 단어가 아님"
     if answer not in options:
         return False, None, "정답이 보기 목록에 없음"
     if len(options) < 3:
         return False, None, "보기가 3개 미만(2지선다는 추측 확률 50%로 문맥 훈련이 약함)"
+    if len(set(options)) != len(options):
+        return False, None, "중복 보기 포함(정답·오답은 각각 서로 달라야 함)"
     distractors = [o for o in options if o != answer and is_hangul_word(o)]
     if not distractors:
         return False, None, "유효한 오답 보기가 없음"
