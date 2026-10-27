@@ -75,6 +75,8 @@ def video(r):
     while counts.get(r['video_file'],0)<2:
         prior=counts.get(r['video_file'],0)
         cap=(4 if prior else 2)*2**30
+        if 'source_offset' in r:
+            cap=r['source_offset']+r['source_bytes']+2**20
         if last and Path(last['name']).name==r['Video_info']['video_Name']:
             cap=min(8*2**30,last['offset']+last['size']+2**20)
         counts[r['video_file']]=prior+1
@@ -93,22 +95,27 @@ def acquire():
     assert hashlib.sha256(excluded.read_bytes()).hexdigest()==EXHASH
     ex=set(excluded.read_text().splitlines());ff=imageio_ffmpeg.get_ffmpeg_exe()
     plan=json.loads((ROOT/'plan.json').read_text(encoding='utf-8'))
+    frozen=json.loads((ROOT/'cohort-frozen.json').read_text(encoding='utf-8'))
+    if frozen.get('rule_commit'):
+        assert frozen['plan_sha256']==hashlib.sha256((ROOT/'plan.json').read_bytes()).hexdigest()
     manifest=(ROOT/'manifest.tsv').read_text(encoding='utf-8').splitlines()
     details=json.loads((ROOT/'manifest-meta.json').read_text(encoding='utf-8'))
     done={d['spk'] for d in details};failures=[]
     for r in plan:
         if r['spk'] in done:continue
+        if all(sum(zlib.crc32(s.encode())%2==h for s in done)>=15 for h in (0,1)):break
         assert r['spk'] not in ex and r['person'] not in ex and r['half']==zlib.crc32(r['spk'].encode())%2
         base=Path(r['Video_info']['video_Name']).stem
         assert re.search(r'_[CE]\d+_A_\d+$',base)
         rows=sorted(parse_sentences.sentences(r),key=lambda x:f'{base}_s{x[0]:03d}')
         random.Random(0).shuffle(rows);rows=rows[:12]
+        if len(rows)!=12:raise ValueError('insufficient metadata sentences: '+r['spk'])
         try:
             source=video(r)
             def cut(row):
                 idx,sid,rs,re_,start,dur,tx=row;name=f'{base}_s{idx:03d}';mp4=ROOT/'clips'/(name+'.mp4');wav=mp4.with_suffix('.wav')
-                # 완결 MP4만 사용하고 출력 탐색으로 시각을 고정한다.
-                cmd=[ff,'-v','error','-y','-i',str(source),'-ss',start,'-t',dur,'-map','0:v:0','-map','0:a:0','-vf','scale=640:-2','-r','30','-c:v','libx264','-preset','ultrafast','-crf','23','-threads','2','-c:a','aac','-ac','1',str(mp4),'-ss',start,'-t',dur,'-vn','-ac','1','-ar','16000','-c:a','pcm_s16le',str(wav)]
+                # 잘린 MP4는 버렸으므로 완결 입력에 한해 빠른 입력 탐색을 쓴다.
+                cmd=[ff,'-v','error','-y','-ss',start,'-i',str(source),'-t',dur,'-map','0:v:0','-map','0:a:0','-vf','scale=640:-2','-r','30','-c:v','libx264','-preset','ultrafast','-crf','23','-threads','2','-c:a','aac','-ac','1',str(mp4),'-t',dur,'-vn','-ac','1','-ar','16000','-c:a','pcm_s16le',str(wav)]
                 subprocess.run(cmd,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
                 return name,tx,{'clip':name,'spk':r['spk'],'person':r['person'],'half':r['half'],'start':float(start),'duration':float(dur),'sentence_ID':sid}
             try:

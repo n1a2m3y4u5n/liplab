@@ -45,6 +45,8 @@ def audit():
         for path in (mp4, wav):
             files.append({'file': str(path.relative_to(ROOT)), 'bytes': path.stat().st_size, 'sha256': sha(path)})
     halves = [sum(zlib.crc32(s.encode()) % 2 == h for s in counts) for h in (0, 1)]
+    cohort = [{'spk': s, 'person': persons[s], 'half': zlib.crc32(s.encode()) % 2, 'clips': counts[s]} for s in sorted(counts)]
+    (ROOT / 'cohort-acquired.json').write_text(json.dumps(cohort, ensure_ascii=False, indent=2), encoding='utf-8')
     if len(counts) > 40 or any(n != 12 for n in counts.values()):
         errors.append('cohort counts')
     if len({row[0] for row in rows}) != len(rows):
@@ -62,6 +64,8 @@ def audit():
         'download_seconds': sum(t['seconds'] for t in transfers) + sum(float(p['stats'].split('|')[2]) for p in probes),
         'manifest_sha256': sha(ROOT / 'manifest.tsv'), 'plan_sha256': sha(ROOT / 'plan.json'),
         'excluded_sha256': sha(excluded), 'files': files, 'errors': errors,
+        'cohort_sha256': sha(ROOT / 'cohort-acquired.json'),
+        'download_totals_are_lower_bounds': any(t.get('cancelled') for t in transfers),
         'minimum_cohort_met': min(halves) >= 15, 'target_cohort_met': halves == [20, 20],
         'selection_executed': False, 'confirmation_executed': False,
     }
