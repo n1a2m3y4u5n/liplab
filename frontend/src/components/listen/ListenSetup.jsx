@@ -66,7 +66,6 @@ export default function ListenSetup({ initial, onSave, onCancel }) {
           </label>
         )}
       </Card>
-      <p className="break-keep text-[12px] leading-[1.6] text-ink-faint">{SYNTH} 기기 정보는 이 기기에만 저장돼요. {NOTICE}</p>
       <BottomBar hint="편안한 크기를 고른 뒤 시작해요"
         primary={{ label: initial ? '이 크기로 바꾸기' : '이 크기로 시작', onClick: save }}
         secondary={onCancel ? { label: '취소', onClick: () => { player.stop(); onCancel() } } : null} />

@@ -33,7 +33,7 @@ export default function BottomBar({ active = true, tone = null, title, sub, hint
               <p className="text-[19px] font-bold tracking-[-0.38px] lg:text-[22px] lg:tracking-[-0.44px]">{title}</p>
               {sub && <p className="break-keep text-[13px] font-bold leading-snug opacity-80 lg:text-[14px]">{sub}</p>}
             </>
-          ) : hint ? <span className="text-[15px] text-ink-faint">{hint}</span> : null}
+          ) : null}
         </div>
         {(primary || secondary) && (
           <div className="flex gap-2 max-lg:flex-col-reverse lg:shrink-0">

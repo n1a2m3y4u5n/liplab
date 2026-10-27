@@ -40,7 +40,6 @@ export default function ListenComplete({ title, sub, stats = [], notes = [], pri
           {primary && <button type="button" onClick={primary.onClick} className="btn-primary btn-lg w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]">{primary.label}</button>}
           {secondary && <button type="button" onClick={secondary.onClick} className="btn-secondary btn-lg w-full text-track-dark max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]">{secondary.label}</button>}
         </div>
-        <p className="break-keep text-center text-[12px] leading-[1.6] text-ink-faint">{NOTICE}</p>
       </div>
     </div>
   )

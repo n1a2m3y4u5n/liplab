@@ -57,7 +57,7 @@ export default function ListeningPractice() {
     )
   }
   return (
-    <ListenFrame key={stage} kicker={`소리 듣기 · ${stage + 1}단계${data?.title ? ` ${data.title}` : ''}`} onExit={exit} showProgress={started} exitAria="나가기, 학습 화면으로">
+    <ListenFrame key={stage} kicker={started ? `${data?.title || "소리 듣기"} · ${Math.min(2, (data?.quota?.today_n || 0) + 1)}번째 묶음` : null} onExit={exit} showProgress={started} exitAria="나가기, 학습 화면으로">
       {({ settings, voices, voiceList, onProgress, active }) => (
         err ? (
           <StateCard title="단계를 가져오지 못했어요" body="인터넷 연결을 확인하고 다시 가져와 주세요."

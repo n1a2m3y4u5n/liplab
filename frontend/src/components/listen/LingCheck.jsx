@@ -101,7 +101,6 @@ export default function LingCheck({ data, settings, onProgress, onExit, finish, 
           <Option key={l} index={i} label={l} big disabled={!heardOnce || player.busy} waiting={!heardOnce} onClick={() => answer(i === 0)} />
         ))}
       </div>
-      <p className="hidden text-center text-[13px] text-ink-faint lg:block">스페이스 키로 듣고, 1·2 키로 골라요</p>
     </div>
   )
 }

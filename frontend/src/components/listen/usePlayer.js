@@ -1,3 +1,4 @@
+import { batchReward } from '../../lib/listenQuota'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { playClip, silence, stopAll } from '../../lib/listenAudio'
 import { listenKeyAction, sequenceMs } from '../../lib/listenView'
@@ -84,7 +85,7 @@ export function useStageTally(initialStatus, onAnswered = null) {
   const add = (correct, status, response = null) => {
     setT((s) => ({ ...s, n: s.n + 1, c: s.c + (correct ? 1 : 0),
       mastered: s.mastered || (status === 'mastered' && initialStatus !== 'mastered'),
-      reward: { xp: s.reward.xp + (response?.xp_gained || 0), quota: response?.quota || s.reward.quota, streak: response?.streak_count ?? s.reward.streak } }))
+      reward: batchReward(s.reward, response) }))
     cb.current?.(!!correct)
   }
   const skip = () => setT((s) => ({ ...s, skipped: s.skipped + 1 }))

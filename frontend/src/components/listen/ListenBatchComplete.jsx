@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { authAPI, listenAPI, tasksAPI } from '../../api'
 import useStore from '../../store/useStore'
-import { quotaView } from '../../lib/listenQuota'
+import { quotaView, batchNext } from '../../lib/listenQuota'
 import { QuotaBar, QuotaRing } from './QuotaProgress'
 import { useListenKeys } from './usePlayer'
 
@@ -20,9 +20,8 @@ export default function ListenBatchComplete({ result, data, onExit, onMore, onSt
   }, [data.stage])
   const quota = result.reward?.quota || fresh || data.quota
   const q = quotaView(quota)
-  const next = result.mastered && data.stage < 5 ? { label: `${data.stage + 2}단계 보러 가기`, onClick: () => onStage(data.stage + 1) }
-    : q.met ? { label: '학습 화면으로', onClick: onExit }
-      : { label: `다음 묶음 듣기 (${q.filled + 1}/${q.total})`, onClick: onMore }
+  const action = batchNext({ quota, stage: data.stage, mastered: result.mastered })
+  const next = { label: action.label, onClick: action.kind === 'stage' ? () => onStage(action.stage) : action.kind === 'exit' ? onExit : onMore }
   useListenKeys({ onEnter: next.onClick })
   return <div className="fixed inset-0 z-50 overflow-auto bg-page" data-track="listen">
     <div className="mx-auto flex min-h-[100dvh] max-w-[640px] flex-col items-center gap-5 px-[18px] py-10 lg:justify-center">

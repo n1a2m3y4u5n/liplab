@@ -63,7 +63,7 @@ export default function ListenPath() {
             <div className="relative flex items-center">
               {['prev', 'next'].map((dir, i) => <button key={dir} aria-label={i ? '다음 단계' : '이전 단계'} disabled={i ? index >= stages.length - 1 : index <= 0}
                 onClick={() => setParams({ track: 'listen', stage: stages[index + (i ? 1 : -1)].stage })}
-                className={`absolute top-4 size-11 disabled:opacity-30 lg:top-7 ${i ? 'left-[115px] lg:left-[160px]' : 'right-[115px] lg:right-[100px]'}`}><img src={`/ui/listen-stage-arrow-${dir}.svg`} alt="" className="size-full" /></button>)}
+                className={`absolute top-4 size-11 disabled:opacity-30 lg:top-7 ${i ? 'left-[115px] lg:left-[124px]' : 'right-[115px] lg:right-[100px]'}`}><img src={`/ui/listen-stage-arrow-${dir}.svg`} alt="" className="size-full" /></button>)}
               <DayNode label={locked ? `${stage.title} · 잠김` : '오늘'} quota={stage.quota} current={!locked && stage.stage === rec} state={locked ? 'locked' : q.met ? 'mastered' : 'skip'} onClick={locked ? null : () => document.getElementById('listen-start')?.focus()} />
             </div>
             <span className="my-1 h-7 w-[5px] rounded-full bg-fill-strong lg:h-10" /><DayNode label="내일" state="locked" />
@@ -78,7 +78,7 @@ export default function ListenPath() {
           </section>
         </div>
       </>}
-      {guide && <GuideModal open onClose={() => setGuide(false)} initialKey="listen" />}
+      {guide && <GuideModal open onClose={() => setGuide(false)} initialKey="listening" />}
       {notice && <ListenNotice onClose={closeNotice} />}
     </div>
   </AppShell>

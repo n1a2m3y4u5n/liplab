@@ -17,3 +17,18 @@ export function recommendedStage(data) {
   if (Number.isInteger(data?.recommended)) return data.recommended
   return (data?.stages || []).find((s) => s.status !== 'locked' && s.status !== 'mastered')?.stage ?? 0
 }
+
+export function batchReward(previous, response) {
+  return {
+    xp: (previous?.xp || 0) + (response?.xp_gained || 0),
+    quota: response?.quota || previous?.quota,
+    streak: response?.streak_count ?? previous?.streak,
+  }
+}
+
+export function batchNext({ quota, mastered, stage }) {
+  const q = quotaView(quota)
+  if (mastered && stage < 5) return { kind: 'stage', stage: stage + 1, label: `${stage + 2}단계 보러 가기` }
+  if (q.met) return { kind: 'exit', label: '학습 화면으로' }
+  return { kind: 'more', label: `다음 묶음 듣기 (${q.filled + 1}/${q.total})` }
+}

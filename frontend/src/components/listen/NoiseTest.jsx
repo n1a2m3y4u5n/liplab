@@ -151,13 +151,13 @@ export function NoiseTest({ settings, voices, onProgress, onDone, onCancel, acti
 export default function NoiseStage({ data, settings, voices, onProgress, onExit, finish, reload, active }) {
   // 연구용: ?testnoise=talker2면 훈련에 안 쓴 잡음으로 검사만 한다(청인 파일럿 일반화 검사)
   const testNoise = (() => { try { return new URLSearchParams(window.location.search).get('testnoise') } catch { return null } })()
-  const [mode, setMode] = useState(testNoise === 'talker2' ? 'test' : data.needs_pretest ? 'intro' : 'train')
+  const [mode, setMode] = useState(testNoise === 'talker2' ? 'test' : new URLSearchParams(window.location.search).get('test') === '1' ? 'intro' : 'train')
   useEffect(() => { if (mode === 'intro') onProgress(0, 0) }, [mode, onProgress])
   useListenKeys({ active: active && mode === 'intro', onEnter: () => setMode('test') })
   if (mode === 'intro') {
     return (
       <div className="flex flex-col gap-4 lg:gap-5">
-        <Heading title="먼저 소음 속 듣기 검사를 해요"
+        <Heading title="소음 속 듣기 검사"
           sub="여러 사람이 떠드는 소리 속에서 문장을 한 번씩 듣고 받아써요. 연습 문장 5개 뒤에 검사 문장 20개가 나와요(약 7분). 훈련 전의 기준을 측정해 두면 나중에 다시 검사해서 비교할 수 있어요." />
         <Card>
           <ul className="flex list-disc flex-col gap-2 pl-5 text-[14px] leading-[1.6] text-ink marker:text-ink-faint">
@@ -167,7 +167,7 @@ export default function NoiseStage({ data, settings, voices, onProgress, onExit,
           </ul>
         </Card>
         <BottomBar active={active} hint="조용한 곳에서 해요" primary={{ label: '검사 시작', onClick: () => setMode('test') }}
-          secondary={{ label: '나중에 하고 훈련하기', onClick: () => setMode('train') }} />
+          secondary={{ label: '학습 화면으로', onClick: onExit }} />
       </div>
     )
   }

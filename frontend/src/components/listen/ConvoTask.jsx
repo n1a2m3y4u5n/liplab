@@ -95,18 +95,8 @@ export default function ConvoTask({ data, settings, voices, onProgress, onExit, 
   }
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
-      {!condition && (
-        <div className="flex gap-1 rounded-13 bg-surface-sunken p-1" role="radiogroup" aria-label="듣기 조건">
-          {(data.conditions || ['quiet']).map((c) => (
-            <button key={c} type="button" role="radio" aria-checked={cond === c} disabled={plays > 0 && cond !== c} onClick={() => setCond(c)}
-              className={`min-h-[44px] flex-1 rounded-10 px-1 text-[14px] font-bold disabled:cursor-not-allowed disabled:opacity-50 ${cond === c ? 'bg-white text-track-dark shadow-seg' : 'text-ink-muted'}`}>
-              {COND_LABEL[c]}
-            </button>
-          ))}
-        </div>
-      )}
       <Heading title={it.question}
-        meta={[it.place, cond === 'noise' ? NOISE_LABEL[noiseName] || '소음' : condition ? COND_LABEL[cond] : null].filter(Boolean).join(' · ') || null}
+        meta={null}
         sub={k === 0 && !plays ? (condition ? '못 알아들으면 되물어도 돼요. 되묻기는 감점이 없어요.' : '듣기 조건은 처음 듣기 전에 골라요. 못 알아들으면 되물어도 돼요.') : null} />
       {line.state === 'missing' ? missingCard(line, skip) : cond === 'noise' && nz.state === 'missing' ? noiseMissingCard(nz, onExit, exitLabel) : (
         <>
@@ -132,8 +122,8 @@ export default function ConvoTask({ data, settings, voices, onProgress, onExit, 
             </Card>
           )}
           <BottomBar active={active} tone={res ? (res.correct ? 'good' : 'bad') : null}
-            title={res ? (res.correct ? '정답이에요!' : '아쉬워요') : null}
-            sub={res ? `정답은 ${res.answer + 1}번이에요` : null}
+            title={res ? (res.correct ? '✓ 정답' : '× 오답') : null}
+            sub={res ? `정답: ${it.options[res.answer]}${!res.correct && picked != null ? ` · 선택: ${it.options[picked]}` : ""}` : null}
             hint={!plays ? '먼저 말을 들어요' : picked == null ? `답을 골라요 · 1~${it.options.length} 키` : 'Enter로 확인해요'}
             alert={err}
             primary={res ? { label: '계속하기', onClick: next } : { label: sending ? '보내는 중' : '확인', onClick: confirm, disabled: !canAnswer || picked == null }} />
