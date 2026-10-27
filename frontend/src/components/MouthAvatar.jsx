@@ -68,7 +68,7 @@ export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300,
         const tr = frames[i]?.transition_ms
         setVid(frames[i]?.viseme ?? 15)
         setSyl(Number.isInteger(frames[i]?.text_index) ? frames[i].text_index : null)
-        setTiming({ t: Number.isFinite(tr) ? tr / k : tr, d: dur, lv: frames[i]?.coart_v })
+        setTiming({ t: Number.isFinite(tr) ? tr / k : tr, d: dur, lv: frames[i]?.coart_v, curve: frames[i]?.coart_curve })
         i += 1
         if (i >= frames.length) {
           if (once) {   // 한 번만: 마지막 프레임을 다 보인 뒤 중립에서 멈춘다
@@ -107,12 +107,12 @@ export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300,
 
   const shownVid = overriding ? (override.viseme ?? 15) : vid
   const shownSyl = overriding ? (Number.isInteger(override.text_index) ? override.text_index : null) : syl
-  const shownTiming = overriding ? { t: override.transition_ms, d: override.duration_ms, lv: override.coart_v } : timing
+  const shownTiming = overriding ? { t: override.transition_ms, d: override.duration_ms, lv: override.coart_v, curve: override.coart_curve } : timing
   const active = shownSyl != null ? cues.filter((c) => c.syllable_index === shownSyl && (c.strength ?? 1) > 0.05) : []
   return (
     <div className={`relative w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-slate-800 to-slate-900 [container-type:size] ${className}`}
          style={height != null ? { height } : undefined}>
-      <AvatarVRM visemeId={shownVid} modelUrl={modelUrl} flat={flat} transitionMs={shownTiming.t} durationMs={shownTiming.d} talker={talker} lipVowel={shownTiming.lv} />
+      <AvatarVRM visemeId={shownVid} modelUrl={modelUrl} flat={flat} transitionMs={shownTiming.t} durationMs={shownTiming.d} talker={talker} lipVowel={shownTiming.lv} lipCurve={shownTiming.curve} />
       {showTalker && <TalkerChip talker={talker} />}
       {/* 기호는 오른쪽 입꼬리 옆 — 카메라 세로 화각이 고정이라 입 높이는 캔버스 높이의 약 68%, 입 반폭은 높이의 약 25% */}
       {active.length > 0 && (

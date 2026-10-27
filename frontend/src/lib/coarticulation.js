@@ -17,7 +17,9 @@
 
 // 빌드 시 Vite가 import.meta.env를 채운다. node 테스트에서는 비어 있어 꺼진다.
 const ENV = (typeof import.meta !== 'undefined' && import.meta.env) || {}
-export const COART_E_ENABLED = ENV.VITE_COART_E === '1'
+export const E2_CANDIDATES = Object.freeze({ low: 0.3, curve: 0.6, both: 0.3 })
+export const COART_E2 = Object.hasOwn(E2_CANDIDATES, ENV.VITE_COART_E2) ? ENV.VITE_COART_E2 : null
+export const COART_E_ENABLED = ENV.VITE_COART_E === '1' || COART_E2 != null
 
 // 섞는 대상: 입 안쪽 자음과 그 전환 프레임. 양순(1)·양순 전환(11)은 입술을 닫아야 해서 뺀다.
 export const COART_TARGETS = new Set([6, 7, 8, 10, 12, 13])
@@ -34,37 +36,64 @@ export const COART_W = 0.6
 export const COART_W_MAX = 0.85
 
 /** 가상 화자(lib/talkers)의 동시조음 강도(coart)를 곱한 섞는 비율. 화자가 없으면 기본값. */
-export function coartWeight(talker) {
+export function coartWeight(talker, candidate = COART_E2) {
   const c = talker && Number.isFinite(talker.coart) ? talker.coart : 1
-  return Math.max(0, Math.min(COART_W_MAX, COART_W * c))
+  return Math.max(0, Math.min(COART_W_MAX, (E2_CANDIDATES[candidate] ?? COART_W) * c))
+}
+
+/** E2: 모음 시작 전 120ms(원순 150ms) 상승, 모음 75%까지 유지, 이후 120ms 하강. */
+export function lipEnvelope(t, start, duration, rounded = false) {
+  const lead = rounded ? 150 : 120
+  const end = start + duration * 0.75
+  return Math.max(0, Math.min(1, (t - start + lead) / lead, (end + 120 - t) / 120))
+}
+
+// 렌더러와 평가기 모두 자음의 원래 궤적 위에 입술 증가분만 얹는다.
+export function curveLip(base, full, curve, elapsed = 0) {
+  if (!curve) return full
+  const a = lipEnvelope(curve.offset + elapsed, curve.start, curve.duration, curve.rounded)
+  const out = { ...base }
+  for (const k of LIP_KEYS) out[k] = (base[k] || 0) + ((full[k] || 0) - (base[k] || 0)) * a
+  return out
 }
 
 /**
  * 프레임 배열에 섞을 모음(coart_v)을 붙인 새 배열. 꺼져 있거나 붙일 프레임이 없으면 frames를 그대로 돌려준다.
  * 같은 단어 안의 다음 모음을 먼저 보고(선행), 없으면 앞 모음을 쓴다(단어 끝 받침의 잔류). 프레임을 받을 때 한 번만 돈다.
  */
-export function applyCoarticulation(frames, enabled = COART_E_ENABLED) {
+export function applyCoarticulation(frames, enabled = COART_E_ENABLED, candidate = COART_E2) {
   if (!enabled || !Array.isArray(frames) || frames.length === 0) return frames
   const n = frames.length
   const next = new Array(n)
+  const nextIndex = new Array(n)
+  const starts = []
+  let clock = 0
+  frames.forEach(f => { starts.push(clock); clock += Math.max(f?.duration_ms || 180, 120) })
   let nv = null
+  let ni = null
   for (let i = n - 1; i >= 0; i--) {
     const v = frames[i]?.viseme
-    if (COART_STOPS.has(v)) nv = null
-    else if (COART_VOWELS.has(v)) nv = v
+    if (COART_STOPS.has(v)) { nv = null; ni = null }
+    else if (COART_VOWELS.has(v)) { nv = v; ni = i }
     next[i] = nv
+    nextIndex[i] = ni
   }
   let pv = null
+  let pi = null
   let changed = false
   const out = frames.map((f, i) => {
     const v = f?.viseme
-    if (COART_STOPS.has(v)) pv = null
-    else if (COART_VOWELS.has(v)) pv = v
+    if (COART_STOPS.has(v)) { pv = null; pi = null }
+    else if (COART_VOWELS.has(v)) { pv = v; pi = i }
     if (!f || !COART_TARGETS.has(v)) return f
     const lv = next[i] ?? pv
     if (lv == null) return f
     changed = true
-    return { ...f, coart_v: LIP_OF[lv] ?? lv }
+    const j = nextIndex[i] ?? pi
+    const curve = candidate === 'curve' || candidate === 'both'
+      ? { offset: starts[i], frameDuration: Math.max(f.duration_ms || 180, 120), start: starts[j], duration: Math.max(frames[j].duration_ms || 180, 120), rounded: lv === 4 || lv === 9 }
+      : null
+    return { ...f, coart_v: LIP_OF[lv] ?? lv, ...(curve ? { coart_curve: curve } : {}) }
   })
   return changed ? out : frames
 }

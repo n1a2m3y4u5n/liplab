@@ -33,6 +33,8 @@ from concurrent.futures import ProcessPoolExecutor
 HERE = os.path.dirname(os.path.abspath(__file__))
 FEATS = ("R", "S", "J")                 # 둥글림 funnel+pucker, 당김 smile+stretch(좌우 평균), 벌림 jawOpen
 W_GRID = (0.5, 0.6, 0.7)                # 탐색 절반에서 고르는 섞는 비율(앱 기본 COART_W는 JSON의 coart.w)
+E2_CONDITIONS = {"low": 0.3, "curve": 0.6, "both": 0.3}
+E2_ELIGIBLE = ("curve",)  # low·both는 측정 전 판별 기준 (d) 미달; 진단 궤적만 보존
 LAGS_MS = tuple(range(-132, 133, 33))   # 영상이 음성보다 앞서는 만큼(음수 = 실제 입이 먼저 움직임), 탐색 절반에서 고른다
 MIN_SAMPLES = 15
 MIN_FACE_RATIO = 0.8
@@ -301,28 +303,46 @@ def ease(x):
     return 4 * x * x * x if x < 0.5 else 1 - ((-2 * x + 2) ** 3) / 2
 
 
+def lip_envelope(t, start, duration, rounded=False):
+    lead = 0.150 if rounded else 0.120
+    end = start + duration * 0.75
+    return max(0.0, min(1.0, (t - start + lead) / lead, (end + 0.120 - t) / 0.120))
+
+
 def simulate(events, ts):
     """events: [(시작 초, 목표 (R,S,J), transition_ms)] 시간순. ts: 표본 시각 배열 → (len(ts), 3)."""
     import numpy as np
     out = np.zeros((len(ts), 3))
     cur = (0.0, 0.0, 0.0)
     segs = []
-    for k, (t0, tgt, tr) in enumerate(events):
+    for k, event in enumerate(events):
+        t0, tgt, tr = event[:3]
+        curve = event[3] if len(event) > 3 else None
         dur = (events[k + 1][0] - t0) if k + 1 < len(events) else 0.3
         T = max(0.016, min(tr / 1000.0, 0.6 * dur)) if dur > 0 else 0.016
-        segs.append((t0, cur, tgt, T))
+        segs.append((t0, cur, tgt, T, curve))
         e = ease(dur / T) if dur > 0 else 1.0
-        cur = tuple(a + (b - a) * e for a, b in zip(cur, tgt))
+        endpoint = curve_target(tgt, curve, t0 + dur)
+        cur = tuple(a + (b - a) * e for a, b in zip(cur, endpoint))
     j = -1
     for i, t in enumerate(ts):
         while j + 1 < len(segs) and segs[j + 1][0] <= t:
             j += 1
         if j < 0:
             continue
-        t0, a, b, T = segs[j]
+        t0, a, b, T, curve = segs[j]
+        b = curve_target(b, curve, t)
         e = ease((t - t0) / T)
         out[i] = [x + (y - x) * e for x, y in zip(a, b)]
     return out
+
+
+def curve_target(full, curve, t):
+    if curve is None:
+        return full
+    base, start, duration, rounded = curve
+    a = lip_envelope(t, start, duration, rounded)
+    return tuple(x + (y - x) * a for x, y in zip(base, full))
 
 
 # ── MediaPipe ───────────────────────────────────────────────────────────────────────────────────────────────
@@ -400,18 +420,37 @@ def clip_job(args):
         t_first = min(s["on"][0] if s["on"] else s["nu"][0] for s in syls)
         t_last = max((s["co"] or s["nu"])[1] for s in syls)
         conds = {"off": None, **{f"on{w}": w for w in W_GRID}}
+        if a.get("experiment") == "e2":
+            conds.update(E2_CONDITIONS)
+        links = []
+        for i in range(len(vis)):
+            js = []
+            for j in range(i + 1, len(vis)):
+                if vis[j] in cfg["stops"]: break
+                if vis[j] in cfg["vowels"]: js = [j]; break
+            if not js:
+                for j in range(i - 1, -1, -1):
+                    if vis[j] in cfg["stops"]: break
+                    if vis[j] in cfg["vowels"]: js = [j]; break
+            links.append(js[0] if js else None)
 
-        def events(w):
+        def events(w, condition):
             ev = []
             for i in keep:
                 v = vis[i]
                 shp = shape_of(table, cfg, v, lip[i] if w is not None else None, w or 0)
                 tr = frames[i].get("transition_ms")
-                ev.append((starts[i], feat_vec(shp), 30 if tr is None else tr))
+                curve = None
+                j = links[i]
+                if condition in ("curve", "both") and lip[i] is not None and j in keep:
+                    following = [starts[k] for k in keep if k > j and starts[k] > starts[j]]
+                    duration = (following[0] if following else t_last) - starts[j]
+                    curve = (feat_vec(table.get(v, {})), starts[j], max(0, duration), lip[i] == 4)
+                ev.append((starts[i], feat_vec(shp), 30 if tr is None else tr, curve))
             ev.append((t_last + 0.1, (0.0, 0.0, 0.0), 150))   # 끝나면 쉼 자세로(MouthAvatar의 중립 복귀)
             return ev
 
-        ev = {c: events(w) for c, w in conds.items()}
+        ev = {c: events(w, c) for c, w in conds.items()}
         if a["face"] == "stub":
             # 스모크 전용(맥은 MediaPipe 파이썬이 Metal 오류로 죽는다): '실제' 궤적을 켬(0.6) 흉내에 잡음을 더해 만든다.
             # 분석 배관(정렬·흉내·상관·집계)이 켬 쪽 향상을 제대로 잡는지만 본다. 판정에는 쓰지 않는다.
@@ -487,6 +526,7 @@ def rbar(clips, cond, feat, li, spks=None):
 
 
 def delta(clips, cond, feat, li, spks=None):
+    clips = [c for c in clips if c["r"]["off"][feat][li] is not None and c["r"][cond][feat][li] is not None]
     on, n = rbar(clips, cond, feat, li, spks)
     off, _ = rbar(clips, "off", feat, li, spks)
     return (None if on is None or off is None else on - off), n
@@ -523,11 +563,18 @@ def premise(clips, li, cond=None):
     return (round(sum(d) / len(d), 4), len(d)) if d else (None, 0)
 
 
-def summarize(results):
+def summarize(results, experiment="e", explore_only=False, selection=None):
     ok = [c for c in results if "error" not in c and c["n"] >= MIN_SAMPLES and c["face_ratio"] >= MIN_FACE_RATIO]
     halves = {h: [c for c in ok if half_of(c["spk"]) == h] for h in (0, 1)}
     s = {"n_clips": len(results), "n_ok": len(ok), "errors": {},
          "halves": {h: {"clips": len(v), "speakers": len({c["spk"] for c in v})} for h, v in halves.items()}}
+    smoke = any(c.get("align") == "uniform" or c.get("face") == "stub" for c in results)
+    if experiment == "e2":
+        s["candidate_eligibility"] = {c: c in E2_ELIGIBLE for c in E2_CONDITIONS}
+        required = (1,) if selection else (0,) if explore_only else (0, 1)
+        if not smoke and any(s["halves"][h]["speakers"] < 15 for h in required):
+            s["verdict"] = "insufficient new speakers: minimum 15 per required half; no decision"
+            return s
     for c in results:
         if "error" in c:
             k = c["error"].split(":")[0][:40]
@@ -536,35 +583,43 @@ def summarize(results):
     # 1) 지연: 끔 조건의 벌림(J) 상관이 가장 큰 지연(벌림은 동시조음이 바꾸지 않아 두 조건에 중립)
     lag_r = [rbar(ex, "off", "J", li)[0] for li in range(len(LAGS_MS))]
     cand = [(r, li) for li, r in enumerate(lag_r) if r is not None]
-    if not cand:
+    if not cand and selection is None:
         s["verdict"] = "탐색 절반에 쓸 클립이 없다"
         return s
-    li = max(cand)[1]
+    li = LAGS_MS.index(selection["lag_ms"]) if selection else max(cand)[1]
     s["explore"] = {"lag_ms": LAGS_MS[li], "off_J_by_lag": dict(zip(LAGS_MS, [None if r is None else round(r, 4) for r in lag_r])),
                     "by_w": {}}
     best = None
-    for w in W_GRID:
-        c = f"on{w}"
+    conditions = E2_CONDITIONS if experiment == "e2" else {f"on{w}": w for w in W_GRID}
+    for c, w in conditions.items():
         row = {f: delta(ex, c, f, li)[0] for f in FEATS}
         row["off_R"] = rbar(ex, "off", "R", li)[0]
         row["on_R"] = rbar(ex, c, "R", li)[0]
-        s["explore"]["by_w"][str(w)] = {k: (None if v is None else round(v, 4)) for k, v in row.items()}
+        key = c if experiment == "e2" else str(w)
+        s["explore"]["by_w"][key] = {k: (None if v is None else round(v, 4)) for k, v in row.items()}
         guard = all(row[f] is not None and row[f] >= -GUARD_DROP for f in ("S", "J"))
-        if row["R"] is not None and guard and (best is None or row["R"] > best[1]):
-            best = (w, row["R"])
+        eligible = experiment != "e2" or c in E2_ELIGIBLE
+        if row["R"] is not None and guard and eligible and (best is None or row["R"] > best[1]):
+            best = (c, row["R"])
     s["explore"]["premise_real"] = premise(ex, li)
     s["explore"]["premise_off"] = premise(ex, li, "off")
     s["explore"]["premise_on0.6"] = premise(ex, li, "on0.6")
+    if selection:
+        best = (selection["condition"], None)
     if best is None:
         s["verdict"] = "탐색 절반에서 지킴 조건을 만족하는 w가 없다(확인 안 함)"
         return s
-    w = best[0]
+    c = best[0]
+    w = conditions[c]
     s["explore"]["w"] = w
+    s["explore"]["condition"] = c
+    if explore_only:
+        s["verdict"] = "exploration only; freeze condition and lag before confirmation"
+        return s
     # 2) 확인 절반: 고른 지연·w 하나만 본다
     cf = halves[1]
-    c = f"on{w}"
     d = {f: delta(cf, c, f, li) for f in FEATS}
-    s["confirm"] = {"lag_ms": LAGS_MS[li], "w": w,
+    s["confirm"] = {"lag_ms": LAGS_MS[li], "w": w, "condition": c,
                     "delta": {f: (None if v[0] is None else round(v[0], 4)) for f, v in d.items()},
                     "speakers": {f: v[1] for f, v in d.items()},
                     "off_R": rbar(cf, "off", "R", li)[0], "on_R": rbar(cf, c, "R", li)[0],
@@ -573,6 +628,8 @@ def summarize(results):
     dr, ds, dj = (d[f][0] for f in FEATS)
     passed = dr is not None and dr >= DELTA_R_MIN and ds is not None and ds >= -GUARD_DROP and dj is not None and dj >= -GUARD_DROP
     s["verdict"] = ("통과: 플래그를 켜고 COART_W를 %s로" % w) if passed else "불통과: 플래그를 끈 채 둔다"
+    if experiment == "e2":
+        s["verdict"] = "통과: 별도 제품 검토까지 기본 끔 유지" if passed else "불통과: 기본 끔 유지"
     if any(c.get("align") == "uniform" or c.get("face") == "stub" for c in results):
         s["verdict"] += " (uniform 정렬·가짜 궤적 스모크라 판정에 쓰지 않는다)"
     return s
@@ -593,11 +650,37 @@ def main():
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--experiment", choices=("e", "e2"), default="e")
+    ap.add_argument("--local-cpu", action="store_true", help="Windows 로컬 CPU, CUDA 숨김·작업자 1개")
+    ap.add_argument("--e-speakers", help="E 두 실행의 전체 화자 ID 합집합, 줄마다 하나 (E2 필수)")
+    ap.add_argument("--explore-only", action="store_true")
+    ap.add_argument("--selection-json", help="탐색 summary.json; E2 확인은 고정 condition·lag만 사용")
     a = ap.parse_args()
     if not selftest(a.shapes):
         sys.exit("viseme_shapes.json 이식 불일치: node scripts/export_viseme_shapes.mjs 로 다시 만들고 이 스크립트의 규칙을 확인한다")
     if a.selftest:
         return
+    if a.local_cpu:
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+        os.environ["OMP_NUM_THREADS"] = "2"
+        a.workers = 1
+    if a.experiment == "e2" and not a.e_speakers:
+        ap.error("E2 requires --e-speakers (E 전체 화자 제외 목록)")
+    old_speakers = set()
+    selection = None
+    if a.experiment == "e2" and not a.explore_only:
+        if not a.selection_json:
+            ap.error("E2 확인에는 --selection-json 필요 (탐색은 --explore-only)")
+        with open(a.selection_json, encoding="utf-8") as fi:
+            selected = json.load(fi)
+        selection = selected["explore"]
+        if selected.get("smoke_only") or selection.get("condition") not in E2_ELIGIBLE or selection.get("lag_ms") not in LAGS_MS:
+            ap.error("실제 E2 탐색 결과의 고정 후보·지연이 필요합니다")
+    if a.e_speakers:
+        with open(a.e_speakers, encoding="utf-8-sig") as fi:
+            old_speakers = {s.strip() for s in fi if s.strip()}
+        if a.experiment == "e2" and not old_speakers:
+            ap.error("E 화자 목록이 비었습니다")
     if not a.root:
         sys.exit("--root 필요")
     if a.face == "mediapipe" and not os.path.exists(a.face_model):
@@ -615,6 +698,10 @@ def main():
             if len(parts) < 3 or parts[0].startswith("#"):
                 continue
             clip, spk, text = parts[0], parts[1], parts[2]
+            if a.experiment == "e2" and (spk in old_speakers or (a.explore_only and half_of(spk) == 1)):
+                continue
+            if selection and half_of(spk) == 0:
+                continue
             name = os.path.splitext(clip)[0]
             if name in seen:
                 continue
@@ -635,7 +722,7 @@ def main():
     if a.limit:
         jobs = jobs[:a.limit]
     conf = {"backend": backend, "shapes": os.path.abspath(a.shapes), "face_model": os.path.abspath(a.face_model),
-            "aligner": aligner, "align": a.align, "face": a.face, "out": os.path.abspath(a.out)}
+            "aligner": aligner, "align": a.align, "face": a.face, "out": os.path.abspath(a.out), "experiment": a.experiment}
     print(f"클립 {len(jobs)}개, 화자 {len({j[2] for j in jobs})}명, 정렬 {a.align}", flush=True)
     results = []
     with open(os.path.join(a.out, "clips.jsonl"), "w", encoding="utf-8") as fo:
@@ -649,7 +736,9 @@ def main():
             fo.write(json.dumps(r, ensure_ascii=False) + "\n")
             if k % 20 == 0 or k == len(jobs):
                 print(f"  {k}/{len(jobs)} (오류 {sum('error' in x for x in results)})", flush=True)
-    s = summarize(results)
+    s = summarize(results, a.experiment, a.explore_only, selection)
+    s["experiment"] = a.experiment
+    s["smoke_only"] = a.align == "uniform" or a.face == "stub"
     json.dump(s, open(os.path.join(a.out, "summary.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(json.dumps(s, ensure_ascii=False, indent=1))
 
