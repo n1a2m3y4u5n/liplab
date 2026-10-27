@@ -4,11 +4,13 @@ import { speakTrendView, SPEAK_TREND_MIN_N } from './speakTrend.js'
 
 const wk = (n, mean = null) => ({ start: '2026-10-03', n, mean })
 
-test('기록이 없거나 예전 서버면 줄을 그리지 않는다', () => {
+test('예전 서버면 카드를 그리지 않고, 기록이 없으면 빈 상태 카드다', () => {
   assert.equal(speakTrendView(null).show, false)
   assert.equal(speakTrendView({}).show, false)
   assert.equal(speakTrendView({ speak_trend: null }).show, false)
-  assert.equal(speakTrendView({ speak_trend: { weeks: [wk(0), wk(0)], min_n: 5, n: 0 } }).show, false)
+  const e = speakTrendView({ speak_trend: { weeks: [wk(0), wk(0)], min_n: 5, n: 0 } })
+  assert.equal(e.show, true)
+  assert.equal(e.enough, false)
 })
 
 test('주 평균을 0~1로 바꾸고, 5문장 미만인 주는 비운다', () => {
@@ -16,6 +18,7 @@ test('주 평균을 0~1로 바꾸고, 5문장 미만인 주는 비운다', () =>
   assert.equal(v.show, true)
   assert.deepEqual(v.weeks.map((w) => w.accuracy), [null, null, 0.614, 0.726])
   assert.equal(v.shown, 2)
+  assert.equal(v.enough, true)
   assert.equal(v.last, 73)
   assert.equal(v.lastN, 7)
 })
@@ -29,4 +32,10 @@ test('평균이 없는 주만 있어도 줄은 보이고(안내 글), 서버가 
   assert.equal(SPEAK_TREND_MIN_N, 5)
   const c = speakTrendView({ speak_trend: { weeks: [wk(9, 130)] } })
   assert.equal(c.weeks[0].accuracy, 1, '0~100으로 자른다')
+})
+
+test('평균이 있는 주가 1주뿐이면 추세로 보이지 않는다', () => {
+  const v = speakTrendView({ speak_trend: { min_n: 5, n: 6, weeks: [wk(0), wk(6, 70)] } })
+  assert.equal(v.shown, 1)
+  assert.equal(v.enough, false)
 })

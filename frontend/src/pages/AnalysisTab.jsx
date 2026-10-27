@@ -25,7 +25,7 @@ import { speakTrendView } from '../lib/speakTrend'
  * 10월: 차트 아래 '소리 듣기' 칸(최근 역치 · 이번 주 듣기 분 · 소리 구별 정답률)과 결과 화면(/analysis/listening) 진입을 더했다.
  * 값은 overview의 listen 칸을 쓰고, 그 칸이 아직 없으면 /api/listen/summary에서 계산한다(lib/listenFlow.listenOverview).
  * 듣기 기록이 하나도 없으면 칸을 그리지 않는다(독화·발화만 하는 학습자 화면을 늘리지 않게).
- * 10/9: '말하기 문장 점수' 줄(주 평균, 참고 · 기계 채점 기준)을 더했다. 값은 overview의 speak_trend(lib/speakTrend), 합격·숙달에는 쓰지 않는다.
+ * 10/9: 말하기 문장 점수 주 평균 줄을 더했고, 10/28에 '문장 점수 주 평균 추세(참고, 기계 전사 기준)' 카드로 바꿨다. 값은 overview의 speak_trend(lib/speakTrend), 합격·숙달에는 쓰지 않는다.
  * 10/15: 소리 듣기 칸 아래 '함께 하면 좋은 연습'(TrackLinks, 소리 듣기 ↔ 독화)을 더했다.
  */
 
@@ -143,7 +143,7 @@ export function TrackLinks({ enabled, navigate }) {
   )
 }
 
-/** 차트 카드(197:21 / 240:133) — 머리(제목·'최근 7주') + 플롯. tag는 제목 옆 작은 글(말하기 문장 점수의 '참고 · 기계 채점 기준'). */
+/** 차트 카드(197:21 / 240:133) — 머리(제목·'최근 7주') + 플롯. tag는 제목 옆 작은 글(문장 점수 추세 카드의 '참고, 기계 전사 기준'). */
 function ChartCard({ title, tag = null, track = null, children }) {
   return (
     <section data-track={track || undefined} className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
@@ -255,19 +255,15 @@ function LineChart({ weeks, empty = '아직 채점된 기록이 없어요', tone
 }
 
 /**
- * 말하기 문장 점수 주 평균(10/9, S20 제안). 참고용 기계 채점 점수라 합격·숙달에는 쓰지 않고, 문장이 5개보다 적은 주는 점을 두지 않는다.
- * 지난 7주에 말하기 문장 기록이 없으면 그리지 않는다.
+ * 문장 점수 주 평균 추세 카드(10/9 줄 → 10/28 카드, S20 채택안). 이미 있는 말하기 문장 점수의 주 평균만 보이고 새 지수는 없다.
+ * 합격·숙달에는 쓰지 않고, 문장이 5개보다 적은 주는 점을 두지 않는다. 평균이 있는 주가 2주보다 적으면 짧은 빈 상태만 보인다. 안내줄은 두지 않는다.
  */
 function SpeakTrend({ ov }) {
   const v = speakTrendView(ov)
   if (!v.show) return null
   return (
-    <ChartCard title="말하기 문장 점수" tag="참고 · 기계 채점 기준" track="speak">
-      <LineChart weeks={v.weeks} tone="track" empty={`한 주에 문장을 ${v.minN}개 이상 말하면 그 주 평균이 보여요`} />
-      <p className="break-keep text-[12px] leading-figma text-ink-muted lg:text-[13px]">
-        주마다 말하기 문장 점수를 평균했어요. 기계가 매긴 점수라 참고로만 보고, 단계 통과와 숙달에는 쓰지 않아요.
-        문장이 {v.minN}개보다 적은 주는 비워 둬요.
-      </p>
+    <ChartCard title="문장 점수 주 평균 추세" tag="참고, 기계 전사 기준" track="speak">
+      <LineChart weeks={v.enough ? v.weeks : []} tone="track" empty="아직 추세를 보일 기록이 없어요" />
     </ChartCard>
   )
 }
