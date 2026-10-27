@@ -176,12 +176,12 @@ def test_daily_tasks_listen():
     from datetime import date
     import daily_tasks as D
     t = date(2030, 1, 9)
-    st = D.stats([], t, 0, listen_minutes=15.2)
+    st = D.stats([], t, 0, listen_minutes=0, listen_batches=2)
     keys = [r["key"] for r in D.board(st, t, [])]
     assert "listen_15" not in keys
     rows = {r["key"]: r for r in D.board(st, t, [], listen=True)}
-    assert rows["listen_15"]["cur"] == 15 and rows["listen_15"]["done"] and rows["listen_15"]["period_key"] == t.isoformat()
-    assert not {r["key"]: r for r in D.board(D.stats([], t, 0, listen_minutes=14.9), t, [], listen=True)}["listen_15"]["done"]
+    assert rows["listen_15"]["cur"] == 2 and rows["listen_15"]["done"] and rows["listen_15"]["period_key"] == t.isoformat()
+    assert not {r["key"]: r for r in D.board(D.stats([], t, 0, listen_minutes=30, listen_batches=1), t, [], listen=True)}["listen_15"]["done"]
     assert [t_["key"] for t_ in D.tasks_for(True)][-1] == "week_5days"
 
 
@@ -452,8 +452,8 @@ def test_listen_review_flow():
 
 def test_tasks_overview_contrasts_export():
     r = _run()
-    assert r["task"][0] == 15 and r["task"][1] >= 15 and r["task"][2] is True and r["task"][4] == 15
-    assert "listen_15" in r["claim"]
+    assert r["task"][0] == 2 and r["task"][1] == 0 and r["task"][2] is False and r["task"][4] == 15
+    assert "listen_15" not in r["claim"]
     assert "listen_15" not in r["tasks_other"]
     assert r["overview"][0] and r["overview"][1] == 1 and r["overview"][2] == 1.0
     assert r["overview"][3] is None and r["overview"][4] == 0 and r["overview"][5] and r["overview"][6]
@@ -590,5 +590,5 @@ def test_kst_day_boundary_same_minutes_everywhere():
     """요약 days·오늘의 듣기·과제 listen_15·분석 week_minutes가 같은 KST 날짜와 같은 분을 쓴다. 자정을 가로지르는 간격은 어느 날에도 넣지 않는다."""
     r = _run2()
     yday, today = r["boundary_dates"]
-    assert r["boundary"] == [yday, 1, 0.5, today, 8, 14.5, 8, 14.5, 14, False, 15.0, 2]
-    assert r["boundary2"] == [yday, 1, 0.5, today, 9, 16.5, 9, 16.5, 15, True, 17.0, 2]
+    assert r["boundary"] == [yday, 1, 0.5, today, 8, 14.5, 8, 14.5, 0, False, 15.0, 2]
+    assert r["boundary2"] == [yday, 1, 0.5, today, 9, 16.5, 9, 16.5, 0, False, 17.0, 2]

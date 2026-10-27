@@ -307,7 +307,9 @@ with TestClient(main.app) as c:
         out["apply_again"] = c.post("/api/listen/placement/apply", json={"session": sess, "answers": answers}, headers=h).status_code
         out["attempts_after"] = sql("select count(*) from listen_attempts where stage > 0")[0][0]
         out["runs"] = sql("select session, version, applied from listen_placement_runs")
-        st = {s["stage"]: s for s in c.get("/api/listen/curriculum", headers=h).json()["stages"]}
+        path = c.get("/api/listen/curriculum", headers=h).json()
+        out["recommended"] = path["recommended"]
+        st = {s["stage"]: s for s in path["stages"]}
         out["status"] = {n: [st[n]["status"], st[n].get("level")] for n in range(6)}
         s1 = c.get("/api/listen/stage/1", headers=h).json()
         s2 = c.get("/api/listen/stage/2", headers=h).json()
@@ -343,7 +345,7 @@ def _run(flag):
 @pytest.mark.parametrize("flag", [None, "off", "C", "0"])
 def test_api_flag_off_is_unchanged(flag):
     r = _run(flag)
-    assert r["cur_keys"] == ["stages"] and r["placement0"] is None
+    assert "stages" in r["cur_keys"] and "placement" not in r["cur_keys"] and r["placement0"] is None
     assert r["next0"] == 404 and r["apply0"] == 404
 
 
@@ -354,10 +356,11 @@ def _run_on():
 
 def test_api_flag_on_flow():
     r = _run_on()
-    assert r["cur_keys"] == ["placement", "stages"] and r["placement0"] == {"available": False, "reason": "ling_first", "version": P.VERSION}
+    assert {"placement", "stages", "recommended", "ling_today", "next_node"} <= set(r["cur_keys"]) and r["placement0"] == {"available": False, "reason": "ling_first", "version": P.VERSION}
     assert r["next0"] == 409 and r["apply0"] == 409 and r["not_ready"] == 409
     assert r["placement1"] == {"available": True, "reason": None, "version": P.VERSION}
     res = r["result"]
+    assert r["recommended"] == res["upper"]
     assert 4 <= res["items"] <= 16 and res["version"] == P.VERSION
     assert res["level2"] in (1, 2, 3) and res["level1"] in (1, 2, 3, 4) and res["upper"] in (3, 4, 5) and len(r["kinds"]) == res["items"]
     assert r["bad_key"] == 400

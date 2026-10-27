@@ -7,8 +7,8 @@
   - 오늘의 복습 정리: 오늘까지 예정된 복습(독화·말하기)이 남지 않았고 오늘 학습 기록이 있으면 달성.
     학습 기록 조건이 없으면 예정 복습이 없는 사용자가 아무것도 하지 않고 보상을 받는다
   - 이번 주 5일 학습하기(특별 과제): 이번 주(월요일 시작) 학습한 날 수
-  - 소리 듣기 15분(10/7): 오늘 소리 듣기 연습 분(listen_curriculum.practice_minutes, 듣기 요약 days의 minutes와 같은 추정)이
-    15분 이상이면 달성. 듣기 트랙을 시작한 사용자(듣기 시행이나 단계 행이 있음)에게만 낸다(board의 listen)
+  - 소리 듣기 오늘 몫: 소리 확인을 제외한 학습 단계에서 오늘 마친 묶음이 합계 2개면 달성.
+    듣기 트랙을 시작한 사용자(듣기 시행이나 단계 행이 있음)에게만 낸다(board의 listen)
 날짜는 한국 시간(KST)으로 고정한다. 보상은 과제마다 기간(하루·한 주)에 한 번만 준다(task_claims 표).
 """
 from datetime import date, datetime, timedelta
@@ -24,8 +24,8 @@ TASKS: Tuple[Dict, ...] = (
     {"key": "two_sessions", "label": "학습 2회 채우기", "total": 2, "xp": 20, "period": "day"},
     {"key": "week_5days", "label": "이번 주 5일 학습하기", "total": 5, "xp": 100, "period": "week"},
 )
-# 듣기 트랙을 시작한 사용자에게만 더하는 과제. 권장 용량(하루 15~20분, docs/auditory-training-design.md)의 아래 끝
-LISTEN_TASK: Dict = {"key": "listen_15", "label": "소리 듣기 15분", "total": 15, "xp": 15, "period": "day"}
+# 기존 키는 수령 기록 호환을 위해 유지한다(2026-10-19 사용자 결정).
+LISTEN_TASK: Dict = {"key": "listen_15", "label": "소리 듣기 오늘 몫", "total": 2, "xp": 15, "period": "day"}
 
 
 def tasks_for(listen: bool = False) -> Tuple[Dict, ...]:
@@ -53,7 +53,8 @@ def events_since(today: date) -> datetime:
     return start_local + timedelta(minutes=KST_OFFSET_MIN)
 
 
-def stats(events: Sequence[_an.Event], today: date, due_left: int, listen_minutes: float = 0.0) -> Dict[str, int]:
+def stats(events: Sequence[_an.Event], today: date, due_left: int, listen_minutes: float = 0.0,
+          listen_batches: int = 0) -> Dict[str, int]:
     """기록 → 과제 진행 값. events는 events_since 뒤의 활동(analytics.Event). listen_minutes는 오늘 소리 듣기 연습 분."""
     tz = KST_OFFSET_MIN
     local_dates = [_an.to_local(e.ts, tz).date() for e in events]
@@ -66,6 +67,7 @@ def stats(events: Sequence[_an.Event], today: date, due_left: int, listen_minute
         "week_days": len({d for d in local_dates if monday <= d <= today}),
         "due_left": max(0, int(due_left)),
         "listen_minutes": max(0.0, float(listen_minutes or 0.0)),
+        "listen_batches": max(0, int(listen_batches)),
     }
 
 
@@ -79,7 +81,7 @@ def progress(key: str, st: Dict[str, int]) -> int:
     if key == "week_5days":
         return st["week_days"]
     if key == "listen_15":
-        return int(st.get("listen_minutes", 0.0))     # 분은 내림(14.9분은 14)
+        return int(st.get("listen_batches", 0))
     raise KeyError(key)
 
 
