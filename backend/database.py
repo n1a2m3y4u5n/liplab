@@ -704,6 +704,9 @@ class ConsentRecord(Base):
 # 괜찮았지만 PostgreSQL은 한 문장이 실패하면 그 트랜잭션의 뒤 문장이 모두 실패해(current transaction is aborted), 첫 ALTER가 '이미 있음'으로
 # 실패하면 뒤에 새로 더한 컬럼이 조용히 빠졌다. 지금은 있는 컬럼을 먼저 읽어 없는 것만 ALTER하고, 문장마다 SAVEPOINT로 실패를 가둔다.
 _ADD_COLUMNS = (
+    ("usage_events", "device_id", "VARCHAR(36)"),
+    ("usage_events", "is_demo", "BOOLEAN NOT NULL DEFAULT false"),
+    ("usage_events", "is_test", "BOOLEAN NOT NULL DEFAULT false"),
     ("listen_attempts", "output_latency_ms", "INTEGER"),
     ("listen_attempts", "av_offset_ms", "INTEGER"),
     ("listen_attempts", "pick_mode", "VARCHAR(12)"),
@@ -787,6 +790,7 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await _add_missing_columns(conn)
+        await _usage_nullable_user(conn)
         await _dedupe_and_index(conn)
         await _pilot_seq_index(conn)
         await _listen_test_index(conn)
@@ -940,7 +944,10 @@ class UsageEvent(Base):
     """서비스 이용 기록. 신규 표는 init_db/create_all로 두 DB 모두 생성한다."""
     __tablename__ = "usage_events"
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    device_id = Column(String(36), nullable=True, index=True)
+    is_demo = Column(Boolean, nullable=False, default=False, server_default="false")
+    is_test = Column(Boolean, nullable=False, default=False, server_default="false")
     anon_session_id = Column(String(64), nullable=True)
     ts = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     event = Column(String(48), nullable=False, index=True)
@@ -949,3 +956,29 @@ class UsageEvent(Base):
     props = Column(JSON, default=dict)
     app_version = Column(String(40), nullable=True)
     ua = Column(JSON, default=dict)
+
+
+async def _usage_nullable_user(conn):
+    """기존 이용 표의 user_id를 익명 수집용 NULL 허용으로 이행하며 이전 행을 보존한다."""
+    from sqlalchemy import inspect, MetaData, Table
+    info = await conn.run_sync(lambda c: inspect(c).get_columns("usage_events"))
+    if not next(c for c in info if c["name"] == "user_id")["nullable"]:
+        if conn.dialect.name == "sqlite":
+            # SQLite는 NOT NULL을 ALTER로 없앨 수 없어 같은 스키마 표로 옮긴다.
+            def rebuild(c):
+                copied = UsageEvent.__table__.to_metadata(MetaData(), name="usage_events_nullable")
+                Table("users", copied.metadata, Column("id", Integer, primary_key=True))
+                copied.indexes.clear()
+                copied.create(c)
+                columns = ", ".join(col.name for col in UsageEvent.__table__.columns)
+                c.exec_driver_sql(f"INSERT INTO usage_events_nullable ({columns}) SELECT {columns} FROM usage_events")
+                c.exec_driver_sql("DROP TABLE usage_events")
+                c.exec_driver_sql("ALTER TABLE usage_events_nullable RENAME TO usage_events")
+            await conn.run_sync(rebuild)
+        else:
+            await conn.exec_driver_sql("ALTER TABLE usage_events ALTER COLUMN user_id DROP NOT NULL")
+    for column in ("user_id", "ts", "event", "device_id"):
+        await conn.exec_driver_sql(f"CREATE INDEX IF NOT EXISTS ix_usage_events_{column} ON usage_events ({column})")
+    # 이전 버전 행도 관리자 통계에서 테스트·데모로 분류한다. 이메일은 표에 복사하지 않는다.
+    await conn.exec_driver_sql("UPDATE usage_events SET is_demo = true WHERE user_id IN (SELECT id FROM users WHERE lower(email) = 'demo@liplab.app')")
+    await conn.exec_driver_sql("UPDATE usage_events SET is_test = true WHERE user_id IN (SELECT id FROM users WHERE lower(email) LIKE '%@example.com' OR lower(email) LIKE 'smoke%@%' OR lower(email) LIKE 'deploy-smoke%@%' OR lower(username) LIKE 'smoke%')")

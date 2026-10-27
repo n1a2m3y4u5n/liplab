@@ -27,7 +27,7 @@ import asyncio
 import json
 import os
 import sys
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_HERE)
@@ -42,6 +42,7 @@ def _parse(argv):
     ap.add_argument("--study-end", type=date.fromisoformat, help="연구 종료일 YYYY-MM-DD")
     ap.add_argument("--retain-days", type=int, help="연구 종료 뒤 보관 일수(연구 계획에서 정한 값)")
     ap.add_argument("--withdraw", action="append", default=[], help="동의 철회한 참여자의 가명(pid), 여러 번 줄 수 있다")
+    ap.add_argument("--include-usage", action="store_true", help="전체 연구 기간 이용 기록(익명·공용 데모 포함)도 보관 만료 뒤 파기")
     ap.add_argument("--cohort", default=None, help="이 집단만")
     ap.add_argument("--mode", choices=("unlink", "delete"), default=None)
     ap.add_argument("--apply", action="store_true", help="실제로 처리한다(없으면 보고만)")
@@ -52,6 +53,8 @@ def _parse(argv):
         ap.error("--study-end와 --retain-days가 필요하다(동의 철회 처리는 --withdraw)")
     if a.apply and not a.mode:
         ap.error("--apply에는 --mode unlink|delete가 필요하다")
+    if a.include_usage and (a.withdraw or a.cohort or a.mode == "unlink"):
+        ap.error("--include-usage는 전체 연구 보관 만료 delete에만 사용할 수 있다")
     return a
 
 
@@ -75,6 +78,11 @@ async def run(argv) -> dict:
             rows.append({"pid": PD.pseudonym(p.user_id), "cohort": p.cohort, "rows": await PD.count_rows(db, p.user_id)})
         out = {"reason": reason, "today": today.isoformat(), "due": due.isoformat() if due else None,
                "cohort": a.cohort, "participants": rows, "missing_pids": missing, "applied": False}
+        if a.include_usage:
+            from sqlalchemy import func, select
+            from database import UsageEvent
+            cutoff = datetime.combine(a.study_end + timedelta(days=1), datetime.min.time())
+            out['usage_rows'] = (await db.execute(select(func.count()).select_from(UsageEvent).where(UsageEvent.ts < cutoff))).scalar()
         if not a.apply:
             return out
         if due and today < due:
@@ -88,11 +96,17 @@ async def run(argv) -> dict:
             else:
                 PD.unlink(p)
                 db.add(p)
+        if a.include_usage:
+            from sqlalchemy import delete
+            from database import UsageEvent
+            cutoff = datetime.combine(a.study_end + timedelta(days=1), datetime.min.time())
+            result = await db.execute(delete(UsageEvent).where(UsageEvent.ts < cutoff))
+            removed['usage_events'] = removed.get('usage_events', 0) + result.rowcount
         await db.commit()
     out.update(applied=True, mode=a.mode, removed=removed)
     entry = {"at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
              "reason": reason, "mode": a.mode, "study_end": a.study_end.isoformat() if a.study_end else None,
-             "retain_days": a.retain_days, "due": out["due"], "cohort": a.cohort,
+             "retain_days": a.retain_days, "include_usage": a.include_usage, "due": out["due"], "cohort": a.cohort,
              "pids": [r["pid"] for r in rows], "rows_removed": removed}
     with open(a.ledger, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")

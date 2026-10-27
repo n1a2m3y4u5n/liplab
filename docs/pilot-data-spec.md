@@ -124,3 +124,12 @@ fly ssh console -C "python /app/scripts/pilot_retention.py --study-end 2026-12-3
 `usage_events`는 접속·기능 사용 시각(UTC), 화면 경로, 트랙, 레슨 소요 시간과 브라우저·OS·모바일 여부를 수집한다. 음성·영상·사진·입력 글·이메일·이름·IP 원문·정답은 수집하지 않는다. 예외 메시지는 알려진 오류 종류로 제한한다. `LIPLAB_USAGE_LOG`는 기본 꺼짐이며 dev에서만 켠다. 관리자 조회는 기존 `LIPLAB_ADMIN_EMAILS` 권한을 사용한다.
 
 보관 기간과 파기 기한은 기존 학습 기록과 같다. `pilot_data.user_data_models()`가 user_id 표를 자동 발견하므로 계정 열람·삭제 및 연구 종료 후 보관 만료 파기(`pilot_data.purge`)에 이 표도 포함된다. 내보낸 CSV도 동일한 보관·파기 규칙으로 관리한다.
+
+
+### 익명·공용 데모와 점검 기록 확장 (2026-10-27)
+
+브라우저의 무작위 기기 UUID(localStorage)와 탭·접속별 UUID(메모리)를 저장하며 기기 지문은 생성하지 않는다. 로그인 전 첫 화면·로그인·가입 진입 및 체험 시작 클릭은 user_id 없이 저장한다. 로그인 후에도 같은 기기·접속 ID로 이어지되 이전 익명 이벤트에 사용자 ID를 소급해 붙이지 않는다. is_demo/is_test는 서버가 계정으로 판정한다. IP 원문은 저장하지 않으며 익명 속도 제한에는 프로세스별 비밀키로 HMAC한 IP 값만 최대 60초 메모리에 둔다.
+
+익명 수집은 10개/요청, 기기 30개/분·IP 해시 60개/분으로 제한한다. 관리자 통계는 기본 점검 계정을 제외하고 test_aggregate에 별도로 표시한다. `include_tests=true`로 포함하더라도 audience=test로 구별한다. @example.com, smoke/deploy-smoke/rehearsal 계열과 LIPLAB_USAGE_TEST_EMAILS의 계정을 점검 대상으로 판정한다. 사용자별 및 device_id별 타임라인을 제공하며 과거 학습 답 기록을 기기에 추정 배정하지 않는다.
+
+기존 이용 표의 user_id NOT NULL은 SQLite 표 이행·PostgreSQL ALTER로 해제하고 기존 행을 보존한다. 과거 식별자 없는 기록은 unknown으로 표시한다. 학습 기록과 같은 보관 기한을 적용하며, 연구 전체 보관 만료 파기 시 `scripts/pilot_retention.py --study-end YYYY-MM-DD --retain-days N --include-usage --apply --mode delete`로 익명·공용 데모를 포함해 연구 종료일까지의 이용 기록도 파기한다. 기한 전 파기·개인 철회/집단만 처리하는 범위와의 혼용은 거부한다. 계정 삭제는 그 계정의 user_id 기록만 지우며 다른 방문자의 공유 기기·익명 기록을 함께 지우지 않는다.
