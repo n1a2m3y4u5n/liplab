@@ -37,3 +37,6 @@
 
 ## 잠금 환경변수 확인(기준 8c6844db)
 `fly.dev.toml` 19행은 `LIPLAB_UNLOCK_ALL="demo"`를 지정한다. `fly.toml`, `Dockerfile`, `.env.example`에는 이 변수가 없다. 배포 서버 secrets 값은 조회하지 않았다. 공통 `_unlock_all_for`의 기본값 `"1"`과 독화·발화 동작은 보존하며, 듣기 `_listen_open`만 체험 계정 판별로 분리했다. 따라서 듣기는 변수 값과 무관하게 데모만 전체 열리고 일반 계정은 순차 잠금·명시적 건너뛰기·배치검사 규칙을 따른다.
+
+## dev 베타 기간 예외(2026-10-27 후속 결정)
+`LIPLAB_LISTEN_BETA_OPEN=1`일 때 일반 계정도 듣기 전 단계가 열린다. 코드 기본값은 0이고 `fly.dev.toml`에서만 1로 지정한다. 일반 계정 응답은 `is_beta=true`, `all_stages_open=true`, `beta_label="베타 한정 · 모든 단계 열림"`, `experience_label=null`이며 경로에 배지 하나만 표시한다. 데모는 기존 체험 배지가 우선하고 `is_beta=false`이다. 플래그를 끄면 위 순차 잠금 규칙으로 돌아간다. 독화·발화 잠금, 숙달·추천·하루 몫 계산 규칙은 그대로다.

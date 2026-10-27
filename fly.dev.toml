@@ -17,6 +17,7 @@ primary_region = "nrt"
   DATABASE_URL = "sqlite+aiosqlite:////data/liplab.db"
   LIPLAB_AI_ITEMS = "0"   # dev: static curriculum (no live LLM key). Rule-based features work fully.
   LIPLAB_UNLOCK_ALL = "demo"   # 둘러보기 데모 계정만 전 단계 열기, 실사용·파일럿 계정은 숙달 순서대로
+  LIPLAB_LISTEN_BETA_OPEN = "1"   # dev 실사용 테스트 기간에만 듣기 전 단계 열기
   # D-GOP 발음채점: 자체 학습 정렬기·채점기와 그 앵커. 공개 kresnik으로 되돌리려면 DGOP_MODEL = "kresnik"으로 빌드하고
   # DGOP_ALIGNER_ID = "kresnik/wav2vec2-large-xlsr-korean"만 남긴다(앵커는 dgop_calibration_kresnik.json 자동)
   # 체크포인트는 미리 변환한 int8 파일(model.int8.safetensors, 9/26, scripts/export_int8.py)이라 켜질 때 읽는 양이 1/3.5

@@ -6119,7 +6119,7 @@ async def _listen_progress_map(user_id: int, db) -> dict:
 
 def _listen_open(n: int, sp_map: dict, user) -> bool:
     """0단계는 늘 열림. N단계는 N-1을 숙달했거나 그 단계 행이 있으면(건너뛰기로 연 단계) 열림."""
-    if n == 0 or _listen_demo(user):
+    if n == 0 or _listen_demo(user) or _listen_beta_open():
         return True
     prev = sp_map.get(n - 1)
     return (prev is not None and prev.status == "mastered") or n in sp_map
@@ -6128,6 +6128,10 @@ def _listen_open(n: int, sp_map: dict, user) -> bool:
 def _listen_demo(user) -> bool:
     """듣기는 환경 변수와 무관하게 체험 계정만 전 단계가 열린다."""
     return (getattr(user, "email", "") or "").lower() == _DEMO_EMAIL
+
+
+def _listen_beta_open() -> bool:
+    return os.getenv("LIPLAB_LISTEN_BETA_OPEN", "0").strip() == "1"
 
 
 async def _listen_quota(user_id, db, stage):
@@ -6207,8 +6211,10 @@ async def listen_curriculum_stages(current_user=Depends(get_current_user), db: A
                                               stages[0]["status"] == "mastered")
     quota = stages[recommended]["quota"]
     demo = _listen_demo(current_user)
+    beta = _listen_beta_open() and not demo
     out = {"stages": stages, "recommended": recommended, "ling_today": ling_today,
-           "is_demo": demo, "all_stages_open": demo,
+           "is_demo": demo, "all_stages_open": demo or beta,
+           "is_beta": beta, "beta_label": "베타 한정 · 모든 단계 열림" if beta else None,
            "experience_label": "체험용 · 모든 단계 열림" if demo else None,
            "next_node": {"stage": recommended, "kind": "tomorrow" if quota["met"] else "today",
                          "batch": 1 if quota["met"] else quota["today_n"] + 1}}

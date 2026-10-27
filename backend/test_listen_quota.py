@@ -79,13 +79,24 @@ with TestClient(main.app) as c:
         assert [s['status'] for s in path()['stages']] == ['unlocked'] + ['locked'] * 5
     os.environ.pop('LIPLAB_UNLOCK_ALL', None)
     assert path()['recommended'] == 0 and not path()['is_demo']
+    os.environ['LIPLAB_LISTEN_BETA_OPEN'] = '1'
+    beta = path()
+    assert beta['is_beta'] and beta['all_stages_open'] and beta['beta_label'] == '베타 한정 · 모든 단계 열림'
+    assert beta['experience_label'] is None and not beta['is_demo']
+    assert all(s['status'] == 'unlocked' for s in beta['stages']) and beta['recommended'] == 0
+    os.environ['LIPLAB_LISTEN_BETA_OPEN'] = '0'
+    assert not path()['is_beta'] and path()['beta_label'] is None
+    assert [s['status'] for s in path()['stages']] == ['unlocked'] + ['locked'] * 5
     demo = c.post('/api/auth/demo').json()
     dh = {'Authorization':'Bearer '+demo['access_token']}
+    os.environ['LIPLAB_LISTEN_BETA_OPEN'] = '1'
     for flag in ('1', 'demo', '0'):
         os.environ['LIPLAB_UNLOCK_ALL'] = flag
         dp = c.get('/api/listen/curriculum', headers=dh).json()
         assert dp['is_demo'] and dp['all_stages_open'] and dp['experience_label'] == '체험용 · 모든 단계 열림'
         assert all(s['status'] != 'locked' for s in dp['stages']) and dp['recommended'] == 0
+        assert not dp['is_beta'] and dp['beta_label'] is None
+    os.environ.pop('LIPLAB_LISTEN_BETA_OPEN', None)
     ling = c.post('/api/listen/ling', headers=h, json={'results':dict.fromkeys(['m','u','a','i','sh','s'], True)}).json()
     assert ling['batch_completed'] and ling['xp_gained'] > 0 and ling['quota']['today_n'] == 1
     assert path()['recommended'] == 1 and path()['ling_today']
@@ -139,7 +150,7 @@ print('RESULT OK')
 def test_quota_api_rewards_and_concurrency():
     with tempfile.TemporaryDirectory() as d:
         env = dict(os.environ, DATABASE_URL=f'sqlite+aiosqlite:///{d}/t.db', T_DB=f'{d}/t.db', PYTHONUTF8='1')
-        for key in ('ANTHROPIC_API_KEY', 'LISTEN_PLACEMENT', 'LIPLAB_LISTEN_GEN'):
+        for key in ('ANTHROPIC_API_KEY', 'LISTEN_PLACEMENT', 'LIPLAB_LISTEN_GEN', 'LIPLAB_LISTEN_BETA_OPEN'):
             env.pop(key, None)
         p = subprocess.run([sys.executable, '-c', FLOW], cwd=os.path.dirname(__file__), env=env,
                            capture_output=True, text=True, timeout=300)
