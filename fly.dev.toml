@@ -10,6 +10,9 @@ primary_region = "nrt"
     # S4 스트리밍 채점(10/17 판정 통과, 10/21 켬, 사용자 결정 10/18). "1"이면 프론트 VITE_DGOP_STREAM과 서버 DGOP_STREAM을 함께 켜고, 학생 ONNX와 보정
     # (backend/models/dgop_stream/, git 제외)이 없으면 빌드가 멈춘다. 켜는 절차·되돌리기는 DEPLOY.md 10항
     DGOP_STREAM = "1"
+    # 독화 ① 화소 입술 ROI(R2 s0, 10/21 판정 통과 4지 58.7%, 10/28 사용자 결정으로 dev만 켬). 모델(frontend/public/models/roi/, git 제외)이
+    # 없으면 빌드가 멈춘다. 되돌리기는 "0"으로 다시 빌드(DEPLOY.md 11항)
+    LIPREAD_ROI = "1"
 
 [env]
   LIPLAB_USAGE_LOG = "1"

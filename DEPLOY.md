@@ -206,7 +206,7 @@
       rm -rf frontend/public/models/roi && cp -cR ~/Downloads/LIPLAB_ALL/liplab-lab/models/lipread_roi_R2s0_2026-10-21 frontend/public/models/roi
       shasum -a 256 frontend/public/models/roi/kr_lipread_roi.web.onnx   # d3c01830f4397955d658545a623df0f0aa662fce86dca51803c1198df9acaa36
       ```
-    - 켜기: 빌드 인자 `LIPREAD_ROI = "1"`을 넣어 빌드한다(liplab-dev면 `fly.dev.toml` [build.args], 아직 넣지 않았다). 로컬 확인은
+    - 켜기: 빌드 인자 `LIPREAD_ROI = "1"`을 넣어 빌드한다(liplab-dev면 `fly.dev.toml` [build.args], 10/28 사용자 결정으로 넣었다). 로컬 확인은
       `cd frontend && VITE_LIPREAD_ROI=1 npm run dev`. 빌드는 모델이 없으면 멈춘다.
     - 크기: 처음 카메라를 켤 때 모델 6.1MB를 더 받는다(지금 모델 10.8MB 대신, 켜면 지금 모델은 받지 않는다). 지연·메모리는
       `docs/lipread-roi-2026-10.md` 13.3절.
