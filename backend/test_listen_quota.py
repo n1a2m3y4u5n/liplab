@@ -117,6 +117,7 @@ with TestClient(main.app) as c:
     assert td['quotas']['1'] == p['stages'][1]['quota'] and td['next_node'] == p['next_node']
     task = next(t for t in c.get('/api/tasks', headers=h).json()['daily'] if t['key'] == 'listen_15')
     assert task['label'] == '소리 듣기 오늘 몫' and task['total'] == 2 and task['cur'] == 2 and task['done']
+    assert task['unit'] == '묶음'
     first = c.post('/api/tasks/claim', headers=h).json()
     second = c.post('/api/tasks/claim', headers=h).json()
     assert 'listen_15' in [t['key'] for t in first['claimed']]

@@ -2755,6 +2755,9 @@ async def _listen_today_minutes(user_id: int, db, today=None) -> tuple:
 def _task_payload(today, rows) -> dict:
     import daily_tasks as _dt
     public = [{k: r[k] for k in ("key", "label", "total", "xp", "period", "cur", "done", "claimed")} for r in rows]
+    for task, row in zip(public, rows):
+        if "unit" in row:
+            task["unit"] = row["unit"]
     return {"day": today.isoformat(), "week_start": _dt.week_start(today).isoformat(),
             "daily": [r for r in public if r["period"] == "day"],
             "weekly": [r for r in public if r["period"] == "week"],
