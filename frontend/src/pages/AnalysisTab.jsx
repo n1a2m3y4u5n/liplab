@@ -1,3 +1,5 @@
+import ErrorScreen from '../components/ErrorScreen'
+import LoadingScreen from '../components/LoadingScreen'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
@@ -293,20 +295,29 @@ function DetailLink({ label, onClick }) {
 
 export default function AnalysisTab() {
   const navigate = useNavigate()
+  const [loadState, setLoadState] = useState('loading')
+  const [reload, setReload] = useState(0)
   const [modal, setModal] = useState(null)   // 'calendar' | 'history' | 'stats'
   const [detailRow, setDetailRow] = useState(null)   // 회차 상세(212:24)로 연 히스토리 행
   const [cal, setCal] = useState(null)
   const [acts, setActs] = useState(null)   // 날짜별 학습 내용(활동 캘린더·회차 히스토리)
   const [ov, setOv] = useState(null)       // 요약·주별 추이·배지(/api/analysis/overview)
   useEffect(() => {
-    // /api/calendar는 활동 요약을 못 받았을 때만 부른다(dayCounts·historyDates가 acts가 없을 때만 읽는다).
-    // 예전에는 늘 받고 버려 이 화면 요청이 패널 포함 6개였다(지금 4개).
-    learningAPI.getCalendarActivities().then(setActs).catch(() => {
-      setActs(null)
-      learningAPI.getCalendar().then(setCal).catch(() => setCal({}))
-    })
-    learningAPI.getAnalysisOverview().then(setOv).catch(() => setOv(null))
-  }, [])
+    let on = true
+    setLoadState('loading')
+    Promise.all([
+      learningAPI.getCalendarActivities().then((activities) => ({ activities }))
+        .catch(() => learningAPI.getCalendar().then((calendar) => ({ calendar }))),
+      learningAPI.getAnalysisOverview(),
+    ]).then(([data, overview]) => {
+      if (!on) return
+      setActs(data.activities || null)
+      setCal(data.calendar || null)
+      setOv(overview)
+      setLoadState('ready')
+    }).catch(() => { if (on) setLoadState('error') })
+    return () => { on = false }
+  }, [reload])
 
   const weeks = ov?.weekly?.length ? ov.weekly : EMPTY_WEEKS
   const sign = (v) => (v > 0 ? '+' : v < 0 ? '−' : '±')
@@ -318,6 +329,14 @@ export default function AnalysisTab() {
     : null
   const counts = dayCounts(cal, acts)
   const history = historyRows(cal, acts)
+
+  if (loadState !== 'ready') return (
+    <AppShell active="analysis" title="분석">
+      {loadState === 'error'
+        ? <ErrorScreen onRetry={() => setReload((n) => n + 1)} onHome={() => navigate('/learn/path')} />
+        : <LoadingScreen variant="inline" />}
+    </AppShell>
+  )
 
   return (
     <AppShell active="analysis" title="분석">

@@ -1,3 +1,5 @@
+import ErrorScreen from '../components/ErrorScreen'
+import LoadingScreen from '../components/LoadingScreen'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
@@ -140,6 +142,8 @@ function EraseButton({ onClick, className = '' }) {
 
 export default function ReviewTab() {
   const navigate = useNavigate()
+  const [loadState, setLoadState] = useState('loading')
+  const [reload, setReload] = useState(0)
   const [due, setDue] = useState({ read: 0, speak: 0 })   // 예정 복습: 독화(간격 반복 세션) · 말하기(말하기 복습)
   const [wrong, setWrong] = useState(0)
   const [marks, setMarks] = useState(0)
@@ -152,11 +156,12 @@ export default function ReviewTab() {
 
   useEffect(() => {
     let on = true
+    setLoadState('loading')
     Promise.all([
-      reviewAPI.getDue().catch(() => ({ items: [] })),
-      learningAPI.getReviewSentences().catch(() => []),
-      learningAPI.getBookmarks().catch(() => []),
-      listenAPI.review().then((r) => ({ ok: true, r })).catch((e) => ({ ok: false, missing: e?.response?.status === 404 })),
+      reviewAPI.getDue(),
+      learningAPI.getReviewSentences(),
+      learningAPI.getBookmarks(),
+      listenAPI.review().then((r) => ({ ok: true, r })).catch((e) => { if (e?.response?.status === 404) return { ok: false, missing: true }; throw e }),
     ]).then(([dueRes, wrongRes, bmRes, lsRes]) => {
       if (!on) return
       // 말하기 예정(kind 'speak')은 /api/review/due의 speak로 따로 온다. 목록에서는 발화 배지로 보인다
@@ -190,9 +195,10 @@ export default function ReviewTab() {
         ...lsent.map((x, i) => ({ id: `listen-s-${x.key ?? x.id ?? i}`, track: '듣기', word: x.text, meta: '다시 들어 볼 문장', rel: null, kind: 'listen', raw: x })),
       ]
       setItems([...norm(wrongArr, 'wrong'), ...norm(dueItems, 'due'), ...listenItems, ...norm(bmArr, 'bookmark')])
-    })
+      setLoadState('ready')
+    }).catch(() => { if (on) setLoadState('error') })
     return () => { on = false }
-  }, [])
+  }, [reload])
 
   const shown = items.filter((it) => filter === 'all' || (filter === 'wrong' ? it.kind !== 'bookmark' : it.kind === 'bookmark'))
   const chips = [
@@ -247,6 +253,14 @@ export default function ReviewTab() {
     // 발화 북마크는 말하기 복습(/api/speak/review가 발화 북마크를 함께 모은다)으로 간다.
     return navigate(it.track === '발화' ? '/review/speaking' : '/review/saved')
   }
+
+  if (loadState !== 'ready') return (
+    <AppShell active="review" title="복습" rail="review">
+      {loadState === 'error'
+        ? <ErrorScreen onRetry={() => setReload((n) => n + 1)} onHome={() => navigate('/learn/path')} />
+        : <LoadingScreen variant="inline" />}
+    </AppShell>
+  )
 
   return (
     <AppShell active="review" title="복습" rail="review">

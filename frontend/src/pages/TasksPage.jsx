@@ -1,3 +1,5 @@
+import ErrorScreen from '../components/ErrorScreen'
+import LoadingScreen from '../components/LoadingScreen'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
@@ -168,6 +170,8 @@ function RewardToast({ text }) {
 
 export default function TasksPage() {
   const navigate = useNavigate()
+  const [loadState, setLoadState] = useState('loading')
+  const [reload, setReload] = useState(0)
   const [due, setDue] = useState(null)
   const [ov, setOv] = useState(null)
   const [tasks, setTasks] = useState(null)
@@ -188,14 +192,20 @@ export default function TasksPage() {
 
   useEffect(() => {
     let on = true
-    reviewAPI.getDue().then((d) => on && setDue(dueCounts(d))).catch(() => on && setDue(null))
-    learningAPI.getAnalysisOverview().then((o) => on && setOv(o)).catch(() => on && setOv(null))
-    // 받기에 실패하면(요청 제한 등) 목록만 읽는다. 못 받은 보상은 칩의 '받기'로 다시 받는다.
-    // 받은 응답은 on과 상관없이 반영한다(개발 모드 StrictMode의 두 번째 요청은 이미 받아 0 XP라 첫 응답을 버리면 토스트가 사라진다)
-    tasksAPI.claim().then(applyClaim)
-      .catch(() => tasksAPI.get().then((t) => on && setTasks(t)).catch(() => {}))
+    setLoadState('loading')
+    Promise.all([
+      reviewAPI.getDue(),
+      learningAPI.getAnalysisOverview(),
+      tasksAPI.claim().then((res) => { applyClaim(res); return res }).catch(() => tasksAPI.get()),
+    ]).then(([d, o, t]) => {
+      if (!on) return
+      setDue(dueCounts(d))
+      setOv(o)
+      setTasks(t)
+      setLoadState('ready')
+    }).catch(() => { if (on) setLoadState('error') })
     return () => { on = false }
-  }, [])
+  }, [reload])
   useEffect(() => {
     if (!toast) return undefined
     const t = setTimeout(() => setToast(''), 3200)
@@ -208,6 +218,14 @@ export default function TasksPage() {
   const weekTotal = week?.total || 5
   const badges = mergeBadges(ov?.badges)
   const earned = badges.filter((b) => b.earned).length
+
+  if (loadState !== 'ready') return (
+    <AppShell active="task" title="과제" rail="tasks">
+      {loadState === 'error'
+        ? <ErrorScreen onRetry={() => setReload((n) => n + 1)} onHome={() => navigate('/learn/path')} />
+        : <LoadingScreen variant="inline" />}
+    </AppShell>
+  )
 
   return (
     <AppShell active="task" title="과제" rail="tasks">
