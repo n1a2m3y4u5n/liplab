@@ -190,7 +190,7 @@ async def collect(request: Request, db=Depends(get_db)):
                 pass
         cleaned = clean_props(item.get('props', {}))
         rows.append(UsageEvent(user_id=user.id if user else None, device_id=device, is_demo=demo, is_test=test, ts=ts, event=item['event'], route=route,
-            anon_session_id=session, track=item.get('track') if item.get('track') in {'read', 'speak', 'listen', 'test', 'perception', 'language'} else None,
+            anon_session_id=session, track=item.get('track') if isinstance(item.get('track'), str) and item.get('track') in {'read', 'speak', 'listen', 'test', 'perception', 'language'} else None,
             props=cleaned if user else {}, app_version=identifier(item.get('app_version'), 40), ua=ua_summary(request)))
     limit_events(keys, len(rows))
     db.add_all(rows)
