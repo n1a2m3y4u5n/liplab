@@ -79,7 +79,7 @@ def write_report(error, started, log):
         f"화자 {len(speakers)}명, 클립 {len(rows)}개, 절반별 {halves[0]}/{halves[1]}명; 저장 {media_bytes / 1e9:.6f} GB.\n"
         f"누적 수신 최소 {download_bytes / 1e9:.6f} GB, 기록 수신시간 최소 {seconds:.1f}초; 중단 요청의 일부 계측 누락으로 하한값.\n"
         f"실패 파일: {', '.join(failed_names) or '없음'}; 미수신 계획 화자: {', '.join(missing) or '없음'}; 실행 오류: {error or '없음'}.\n"
-        f"최소 15/15명까지 {max(0, 15 - halves[0])}/{max(0, 15 - halves[1])}명 부족; 남은 받기는 듣기 개편 뒤. 탐색·확인 판정 미실행.\n"
+        f"최소 15/15명까지 {max(0, 15 - halves[0])}/{max(0, 15 - halves[1])}명 부족; 대체 화자는 같은 규칙으로 남은 요청 1회에 tar 끝까지 읽어 계속 받는다. 탐색·확인 판정 미실행.\n"
         f"시작 {started}; 종료 {datetime.now().isoformat(timespec='seconds')}.\n"
     )
     outbox = OUTBOX / (datetime.now().strftime('%Y%m%d-%H%M') + '-liplab-538-download.md')
