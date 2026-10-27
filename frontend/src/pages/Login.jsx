@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import { authAPI, seedAPI } from '../api'
 import Logo from '../components/Logo'
 import { track, flushTrack } from '../lib/track'
+import { authErrorMessage } from '../lib/authMessage'
 
 /**
  * 로그인 · 회원가입 (Figma 227:35 / 227:74, 모바일 243:34 / 244:34 — lg 미만 반응형).
@@ -18,23 +19,6 @@ const INPUT = 'input-field h-[50px] rounded-13 bg-white px-[14px] py-0 text-[15p
 const LABEL = 'text-[12.5px] font-bold leading-figma text-ink-muted lg:text-[13px]'
 // 주 버튼(227:67 r15·py17·17px / 모바일 243:58 r14·py16·16px)
 const BTN = 'w-full py-4 text-[16px] lg:rounded-15 lg:py-[17px] lg:text-[17px]'
-
-// 서버 오류 → 한국어 안내. FastAPI 422는 detail이 배열({loc, msg})이라 그대로 렌더하면 React가 깨진다.
-const AUTH_ERR = {
-  'Incorrect email or password': '이메일·비밀번호를 확인해 주세요.',
-  'Email already registered': '이미 가입된 이메일이에요.',
-  'Username already taken': '이미 쓰고 있는 사용자명이에요.',
-}
-function authErrorMessage(detail, mode) {
-  if (typeof detail === 'string') return AUTH_ERR[detail] || detail
-  if (Array.isArray(detail)) {
-    const field = detail.map((d) => (Array.isArray(d?.loc) ? d.loc[d.loc.length - 1] : null)).find(Boolean)
-    if (field === 'password') return '비밀번호는 6자 이상 입력해주세요.'
-    if (field === 'username') return '사용자명은 2~50자로 입력해주세요.'
-    if (field === 'email') return '이메일 형식을 확인해 주세요.'
-  }
-  return mode === 'login' ? '이메일·비밀번호를 확인해 주세요.' : '가입에 실패했어요.'
-}
 
 // lg(1024px) 이상인지 — 비밀번호 placeholder가 데스크톱(227:107)과 모바일(244:52)에서 다르다.
 function useIsDesktop() {
@@ -88,24 +72,39 @@ export default function Login({ initialMode = 'login' }) {
     if (demo) { try { await seedAPI.seedDemo() } catch { /* 무시 */ } }
     navigate('/')
   }
+  // 사용자명을 비워 두면 이메일 앞부분을 쓴다. 겹치거나(같은 앞부분의 다른 주소) 1자라 짧으면 숫자를 붙여 다시 건다.
+  const register = async () => {
+    const consent = { agree_terms: agree, age_confirmed: guardianOk }
+    const typed = username.trim()
+    if (typed) return authAPI.register(email, typed, password, consent)
+    const base = (email.split('@')[0] || 'user').padEnd(2, '0').slice(0, 44)
+    for (let i = 0; ; i++) {
+      try { return await authAPI.register(email, i ? `${base}${i + 1}` : base, password, consent) }
+      catch (e) {
+        if (i >= 4 || e?.response?.data?.detail !== 'Username already taken') throw e
+      }
+    }
+  }
   const submit = async (e) => {
-    e.preventDefault(); setBusy(true); setErr('')
+    e.preventDefault()
+    if (busy) return
+    setBusy(true); setErr('')
     try {
       const data = mode === 'login'
         ? await authAPI.login(email, password)
-        : await authAPI.register(email, username || email.split('@')[0], password,
-            { agree_terms: agree, age_confirmed: guardianOk })
+        : await register()
       await enter(data)
     } catch (e2) {
-      setErr(authErrorMessage(e2?.response?.data?.detail, mode))
+      setErr(authErrorMessage(e2?.response?.data?.detail, mode, e2))
     } finally { setBusy(false) }
   }
   const demo = async () => {
+    if (busy) return
     track('demo_start')
     void flushTrack(true)
     setBusy(true); setErr('')
     try { await enter(await authAPI.demoLogin(), { demo: true }) }
-    catch { setErr('둘러보기를 시작하지 못했어요.') } finally { setBusy(false) }
+    catch (e2) { setErr(e2?.response ? '둘러보기를 시작하지 못했어요.' : authErrorMessage(null, 'login', e2)) } finally { setBusy(false) }
   }
   const toggle = () => {
     setErr(''); setAgree(false); setGuardianOk(false)
