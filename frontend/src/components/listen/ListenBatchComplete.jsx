@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { endUsage } from '../../lib/track'
 import { authAPI, listenAPI, tasksAPI } from '../../api'
 import useStore from '../../store/useStore'
 import { quotaView, batchNext } from '../../lib/listenQuota'
@@ -6,6 +7,7 @@ import { QuotaBar, QuotaRing } from './QuotaProgress'
 import { useListenKeys } from './usePlayer'
 
 export default function ListenBatchComplete({ result, data, onExit, onMore, onStage }) {
+  useEffect(() => { endUsage(true) }, [])
   const [fresh, setFresh] = useState(null)
   const [task, setTask] = useState(null)
   const heading = useRef(null)

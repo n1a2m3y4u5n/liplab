@@ -1,3 +1,4 @@
+import { requestTrackedMedia } from '../lib/track'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import AvatarVRM from './AvatarVRM'
 import { avatarAPI } from '../api'
@@ -152,7 +153,7 @@ export default function Audio2FaceAvatar() {
     setErr(null); chunksRef.current = []
     let stream = null
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
+      stream = await requestTrackedMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       })
       // 권한을 기다리는 사이 화면을 떠났다 → 연 마이크를 바로 닫는다

@@ -1,3 +1,4 @@
+import { requestTrackedMedia, startUsage, endUsage } from '../lib/track'
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -75,6 +76,7 @@ const closeContext = (ac) => {
 }
 
 export default function SpeakingPractice() {
+  useEffect(() => { startUsage('lesson', 'speaking'); return () => endUsage(false) }, [])
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
@@ -89,6 +91,7 @@ export default function SpeakingPractice() {
   const [reviewItems, setReviewItems] = useState(null)  // null=로딩, []=비어있음
   const [itemIdx, setItemIdx] = useState(0)
   const [progress, setProgress] = useState(null)     // 단계 진행률(마지막 채점 결과)
+  useEffect(() => { if (progress?.mastered) endUsage(true) }, [progress?.mastered])
   const [recording, setRecording] = useState(false)
   const [vol, setVol] = useState(0)
   const [pitch, setPitch] = useState(null)
@@ -174,7 +177,7 @@ export default function SpeakingPractice() {
       mirrorBusyRef.current = true; setMirrorBusy(true)
       const gen = mediaGenRef.current
       try {
-        const vs = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+        const vs = await requestTrackedMedia({ video: { facingMode: 'user' } })
         // 권한을 기다리는 사이 화면을 떠났거나 단계가 바뀌었다 → 켠 카메라를 바로 끈다
         if (gen !== mediaGenRef.current) { vs.getTracks().forEach((t) => t.stop()); return }
         videoStreamRef.current = vs
@@ -375,7 +378,7 @@ export default function SpeakingPractice() {
       // 크기를 재는 단계(발성, 운율 '크게'·'작게')는 자동 음량 조절(AGC)을 끈다. 켜 두면 브라우저가 작은 소리는 키우고
       // 큰 소리는 줄여 크기 점수가 실제 목소리와 달라진다. 나머지 단계는 예전 설정 그대로다.
       const measuresLoudness = mode === 'voicing' || drill === 'loud' || drill === 'soft'
-      stream = await navigator.mediaDevices.getUserMedia({
+      stream = await requestTrackedMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: !measuresLoudness },
       })
       // 권한을 기다리는 사이 화면을 떠났거나 단계가 바뀌었다 → 연 마이크를 바로 닫는다

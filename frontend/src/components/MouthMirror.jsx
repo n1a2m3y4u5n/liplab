@@ -1,3 +1,4 @@
+import { requestTrackedMedia } from '../lib/track'
 import { useRef, useState, useCallback, useEffect } from 'react'
 import AvatarVRM from './AvatarVRM'
 import useFaceLandmarker from '../hooks/useFaceLandmarker'
@@ -57,7 +58,7 @@ export default function MouthMirror({ compareVisemeId = null, compareLabel = '' 
   const start = useCallback(async () => {
     if (!landmarkerRef.current) return
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const stream = await requestTrackedMedia({
         video: { facingMode: 'user', width: 480, height: 360 },
       })
       streamRef.current = stream

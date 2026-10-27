@@ -1,3 +1,4 @@
+import { requestTrackedMedia } from '../lib/track'
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { toBlendshapeMap, pickCalibrationFrame, saveCalibration } from '../lib/mouthScore'
 import { mediaErrorMessage } from '../lib/mediaError'
@@ -72,7 +73,7 @@ export default function MouthCalibration({ landmarkerRef, modelStatus, onDone, o
     let cancelled = false
     ;(async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
+        const stream = await requestTrackedMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
         if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return }
         streamRef.current = stream
         videoRef.current.srcObject = stream

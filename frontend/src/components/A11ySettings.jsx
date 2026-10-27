@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { track } from '../lib/track'
 import { useLocation } from 'react-router-dom'
 import { accountAPI, authAPI } from '../api'
 import useStore from '../store/useStore'
@@ -63,6 +64,7 @@ export default function A11ySettings() {
   useEffect(() => { apply(load()) }, [])
 
   const toggle = useCallback((key) => {
+    if (key === 'large') track('font_size')
     setState((s) => {
       const next = { ...s, [key]: !s[key] }
       try { localStorage.setItem(LS_KEY, JSON.stringify(next)) } catch { /* 사생활 모드 등 무시 */ }

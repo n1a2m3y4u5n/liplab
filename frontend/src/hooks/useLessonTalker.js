@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react'
+import { startUsage, endUsage } from '../lib/track'
+import { useCallback, useState, useEffect } from 'react'
 import useStore from '../store/useStore'
 import { lessonTalker, lessonSeed } from '../lib/talkers'
 import { resetRenderTiming } from '../lib/frameClock'
@@ -36,6 +37,10 @@ export function startLesson(userKey, stage) {
 export default function useLessonTalker(stage) {
   const uid = useStore((s) => s.user?.id ?? 'guest')
   const [lesson, setLesson] = useState(() => startLesson(uid, stage))
+  useEffect(() => {
+    startUsage('lesson', stage)
+    return () => endUsage(false)
+  }, [stage, lesson.index])
   const next = useCallback(() => setLesson(startLesson(uid, stage)), [uid, stage])
   return [lesson, next]
 }

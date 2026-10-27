@@ -1,3 +1,4 @@
+import { requestTrackedMedia } from '../lib/track'
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { toBlendshapeMap } from '../lib/mouthScore'
 import { predictLipread, loadLipread, lipreadAvailable } from '../lib/lipreadModel'
@@ -105,7 +106,7 @@ export default function LipReadCheck({ target, candidates = [] }) {
       const [fl, lip] = await Promise.all([ensureLandmarker(gen).catch(() => null), ROI ? loadLipreadRoi() : loadLipread()])
       if (gen !== camGenRef.current) return
       if (!fl || !lip) { setStatus('error'); setErrMsg('입모양 모델을 가져오지 못했어요. 다시 눌러 보세요.'); return }
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
+      stream = await requestTrackedMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
       // 권한을 기다리는 사이 화면을 떠났다 → 켠 카메라를 바로 끈다
       const video = videoRef.current
       if (gen !== camGenRef.current || !video) { stream.getTracks().forEach((t) => t.stop()); return }

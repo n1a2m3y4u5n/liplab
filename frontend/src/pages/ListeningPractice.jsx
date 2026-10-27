@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { startUsage, endUsage } from '../lib/track'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { listenAPI } from '../api'
 import { stopAll } from '../lib/listenAudio'
@@ -29,6 +30,11 @@ export default function ListeningPractice() {
   const [err, setErr] = useState(null)
   const [nonce, setNonce] = useState(0)
   const [started, setStarted] = useState(false)
+  useEffect(() => {
+    if (!started) return
+    startUsage('bundle', `listen-${stage}`)
+    return () => endUsage(false)
+  }, [started, stage, nonce])
   const [condition, setCondition] = useState('quiet')
 
   useEffect(() => {

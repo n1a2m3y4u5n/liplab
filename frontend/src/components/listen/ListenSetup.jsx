@@ -1,3 +1,4 @@
+import { track } from '../../lib/track'
 import { useState } from 'react'
 import { lingClip } from '../../lib/listenAudio'
 import { clampGainDb, DEVICES, ROUTES, GAIN_MIN_DB, GAIN_MAX_DB } from '../../lib/listenMix'
@@ -30,7 +31,7 @@ export default function ListenSetup({ initial, onSave, onCancel }) {
     const c = sample.clip || await lingClip('a')
     await player.play([{ clip: c, opts: { gainDb, sim: sim ? 'ci' : null } }])
   }
-  const step = (d) => setGainDb((g) => clampGainDb(g + d))
+  const step = (d) => { track('control', { action: 'volume' }); setGainDb((g) => clampGainDb(g + d)) }
   const save = () => { player.stop(); onSave({ gainDb, device, route, ...(sim && showSim ? { sim: 'ci' } : {}) }) }
   useListenKeys({ onPlay: test, canPlay: sample.state !== 'loading' && !player.busy, onEnter: save })
   const level = Math.round(((gainDb - GAIN_MIN_DB) / (GAIN_MAX_DB - GAIN_MIN_DB)) * 100)
@@ -47,7 +48,7 @@ export default function ListenSetup({ initial, onSave, onCancel }) {
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => step(-1)} disabled={gainDb <= GAIN_MIN_DB} aria-label="한 칸 작게"
             className="btn-secondary flex size-11 shrink-0 items-center justify-center p-0 text-[20px]">−</button>
-          <input type="range" min={GAIN_MIN_DB} max={GAIN_MAX_DB} step={1} value={gainDb} onChange={(e) => setGainDb(Number(e.target.value))}
+          <input type="range" min={GAIN_MIN_DB} max={GAIN_MAX_DB} step={1} value={gainDb} onChange={(e) => { track('control', { action: 'volume' }); setGainDb(Number(e.target.value)) }}
             aria-labelledby="listen-gain-label" aria-valuetext={`100 중 ${level}`} className="h-11 min-w-0 flex-1 accent-[var(--track)]" />
           <button type="button" onClick={() => step(1)} disabled={gainDb >= GAIN_MAX_DB} aria-label="한 칸 크게"
             className="btn-secondary flex size-11 shrink-0 items-center justify-center p-0 text-[20px]">+</button>

@@ -1,3 +1,4 @@
+import { startUsage, endUsage } from '../../lib/track'
 import { useEffect, useState } from 'react'
 import { josa, lingNotes, pct } from '../../lib/listenFlow'
 import BottomBar from './BottomBar'
@@ -19,6 +20,11 @@ export default function ListenBlocks({ blocks, intro = null, renderSummary, onSt
   const [idx, setIdx] = useState(0)
   const [phase, setPhase] = useState(intro ? 'intro' : 'run')
   const [results, setResults] = useState([])
+  useEffect(() => {
+    if (phase !== 'run') return
+    startUsage('bundle', blocks[idx]?.key || 'listen')
+    return () => endUsage(false)
+  }, [idx, phase])
   const n = blocks.length
   useEffect(() => { onStep?.({ idx, phase }) }, [idx, phase, onStep])
   useEffect(() => { onResults?.(results.length) }, [results.length, onResults])
@@ -30,6 +36,7 @@ export default function ListenBlocks({ blocks, intro = null, renderSummary, onSt
   }, [phase, idx, n, onProgress, results.length])
   const last = idx >= blocks.length - 1
   const done = (result) => {
+    endUsage(Boolean(result))
     setResults((rs) => [...rs, { block: blocks[idx], result: result || null }])
     setPhase(last ? 'end' : 'break')
   }

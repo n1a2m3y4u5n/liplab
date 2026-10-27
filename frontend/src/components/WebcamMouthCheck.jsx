@@ -1,3 +1,4 @@
+import { requestTrackedMedia } from '../lib/track'
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { toBlendshapeMap, scorePercent, coachHint, loadCalibration } from '../lib/mouthScore'
 import { faceSignals, FACE_SIGNAL_LABELS } from '../lib/faceCues'
@@ -227,7 +228,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
     const gen = camGenRef.current
     let stream = null
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
+      stream = await requestTrackedMedia({ video: { facingMode: 'user', width: 480, height: 360 } })
       // 권한을 기다리는 사이 멈춤·본뜨기 전환·언마운트가 있었다 → 켠 카메라를 바로 끈다
       const video = videoRef.current
       if (gen !== camGenRef.current || !video) { stream.getTracks().forEach((t) => t.stop()); return }

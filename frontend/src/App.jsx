@@ -1,3 +1,4 @@
+import { initTrack, track, trackRoute } from './lib/track'
 import { Component, lazy, Suspense, useState, useEffect, useLayoutEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { MotionConfig } from 'framer-motion'
@@ -36,6 +37,11 @@ import Landing from './pages/Landing'
 // 탭·학습 단계 등 라우트가 바뀌면 이전 페이지의 스크롤 위치를 이어받지 않는다.
 function ScrollToTop() {
   const location = useLocation()
+  useEffect(() => {
+    trackRoute(location.pathname)
+    const stage = new URLSearchParams(location.search).get('stage')
+    if (/^\d{1,2}$/.test(stage || '')) track('stage_enter', { stage: Number(stage) })
+  }, [location.pathname, location.search])
 
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
@@ -213,6 +219,7 @@ function NotFound() {
  * Main App component with routing
  */
 function App() {
+  initTrack(() => useStore.getState().token)
   return (
     <ErrorBoundary>
     {/* 동작 최소화 설정 시 framer-motion 애니메이션을 OS 설정에 맞춰 자동 축소(접근성) */}

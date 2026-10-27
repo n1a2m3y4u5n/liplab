@@ -1,3 +1,4 @@
+import { endUsage } from '../lib/track'
 import { useEffect, useRef, useState } from 'react'
 import { curriculumAPI } from '../api'
 import { EFFORT_POINTS, EFFORT_ANCHORS, newSessionId } from '../lib/measurement'
@@ -12,6 +13,7 @@ import { buildRenderLog, hasWebGL } from '../lib/pilotBattery'
  * props: lessonKind('viseme' | 'word' | 'sentence' | 'closure' | 'review'), stage(읽기 단계, 복습은 없음), nItems, accuracy(0~1)
  */
 export default function EffortCheck({ lessonKind, stage = null, nItems = null, accuracy = null }) {
+  useEffect(() => { endUsage(true) }, [])
   const [sessionId] = useState(() => newSessionId())
   const [rating, setRating] = useState(null)
   const [state, setState] = useState('ask')   // ask | answered | skipped

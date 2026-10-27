@@ -1,3 +1,4 @@
+import { flushTrack } from '../lib/track'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { clearSignExplored } from '../lib/badges'
@@ -39,6 +40,11 @@ const useStore = create(
       // Clear auth state on logout. 이 계정의 연습 세션(메모리)·통계 캐시·계정별 브라우저 저장값도 함께 지운다
       // (토큰 만료로 풀린 경우도 같다. 다음에 로그인하는 사람이 앞사람의 시나리오·배지를 이어받지 않게).
       logout: () => {
+        try {
+          const token = get().token
+          void flushTrack(true)
+          if (token) void fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, keepalive: true }).catch(() => {})
+        } catch { /* Ignore telemetry errors. */ }
         clearUserLocalData()
         get().resetPractice()
         set({
