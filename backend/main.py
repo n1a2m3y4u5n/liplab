@@ -5414,16 +5414,17 @@ class _CoachingJobs:
         self.ttl_s, self.total = ttl_s, total
         self._jobs = {}
 
-    def _sweep(self):
+    def _sweep(self, *, reserve=False):
         now = time.monotonic()
-        for k in [k for k, j in self._jobs.items() if now - j["t"] > self.ttl_s]:
+        for k in [k for k, j in self._jobs.items() if now - j["t"] >= self.ttl_s]:
             del self._jobs[k]
-        while len(self._jobs) >= self.total:
+        # 조회는 만료만 정리한다. 새 작업을 넣을 때만 한 자리 비운다.
+        while reserve and len(self._jobs) >= self.total:
             del self._jobs[min(self._jobs, key=lambda k: self._jobs[k]["t"])]
 
     def start(self, user_id, attempt_id, coach_args) -> str:
         import uuid as _uuid
-        self._sweep()
+        self._sweep(reserve=True)
         cid = _uuid.uuid4().hex
         task = asyncio.create_task(self._run(attempt_id, coach_args))
         self._jobs[cid] = {"user": user_id, "task": task, "t": time.monotonic()}
@@ -5448,6 +5449,7 @@ class _CoachingJobs:
         return coaching
 
     def get(self, cid, user_id):
+        self._sweep()
         j = self._jobs.get(cid or "")
         return j if j is not None and j["user"] == user_id else None
 
