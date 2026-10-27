@@ -11,6 +11,7 @@ import bcrypt as bcrypt_lib
 from jose import JWTError, jwt
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import User, get_db
@@ -204,7 +205,11 @@ async def register_user(user_data: UserRegister, db: AsyncSession) -> User:
     )
 
     db.add(new_user)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:   # 같은 이메일로 동시에 두 번 눌렀을 때 유니크 충돌이 500으로 새지 않게 한다
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
     await db.refresh(new_user)
 
     return new_user
