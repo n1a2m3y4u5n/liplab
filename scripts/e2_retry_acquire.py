@@ -27,7 +27,7 @@ class Stream:
                 (ROOT/'AUTH_STOP').write_text('Authentication failure: do not retry.');raise AuthFailure('authentication failed; stopped')
             headers=Path(self.response).read_text(errors='replace')
             codes=re.findall(r'HTTP/\S+\s+(\d+)',headers)
-            if codes and codes[-1] in ('401','403'):
+            if codes and codes[-1] in ('401','403','502'):   # 502는 키 오류에서도 나므로 즉시 멈춘다(10/27 지시)
                 (ROOT/'AUTH_STOP').write_text('Authentication HTTP failure: do not retry.');raise AuthFailure('authentication failed; stopped')
             if not codes or codes[-1]!='200': raise RuntimeError('download HTTP '+str(codes[-1:] or 'unknown'))
         return b
@@ -76,7 +76,7 @@ def video(r):
     attempts_path=ROOT/'request-counts.json'
     counts=json.loads(attempts_path.read_text()) if attempts_path.exists() else {'TS131.tar':1}
     dest=ROOT/'source.mp4';last=None
-    while counts.get(r['video_file'],0)<2:
+    while counts.get(r['video_file'],0)<r.get('max_requests',2):
         prior=counts.get(r['video_file'],0)
         cap=(4 if prior else 2)*2**30
         if 'source_cap' in r:cap=min(cap,r['source_cap'])

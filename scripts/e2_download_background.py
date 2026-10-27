@@ -147,7 +147,8 @@ def front_label(record, person, files):
     from e2_front_plan import request
     from e2_retry_acquire import JoinedParts
     source = dict(record, video_file=record['label_file'], video_fileSn=files[record['label_file']][1])
-    stream = request(source, 512 * 2**20, initial=0)
+    # 라벨 tar는 500~900MB라 512MiB에서 끊으면 못 찾는다. tar 전체 크기까지 읽는다.
+    stream = request(source, files[record['label_file']][0] + 2**20, initial=0)
     try:
         with tarfile.open(fileobj=stream, mode='r|') as outer:
             with tarfile.open(fileobj=JoinedParts(outer), mode='r|') as inner:
@@ -204,7 +205,7 @@ def extend_skipped_deep(budget_gib, target, env):
                 m = re.search(r'_([CE]\d+)_[A-Z]_\d+\.mp4$', filename)
                 label_file = video_file.replace('TS', 'TL').replace('VS', 'VL')
                 if (zlib.crc32(spk.encode()) % 2 != half or not m or spk in done or spk in ex or m[1] in ex or m[1] in persons
-                        or counts.get(video_file, 0) >= 2 or counts.get(label_file, 0) >= 2 or video_file not in files or label_file not in files):
+                        or counts.get(video_file, 0) >= (3 if half == 1 else 2) or counts.get(label_file, 0) >= 2 or video_file not in files or label_file not in files):
                     continue
                 pick = (spk, m[1], half, video_file, label_file)
                 break
@@ -226,7 +227,8 @@ def extend_skipped_deep(budget_gib, target, env):
             continue
         assert data['speaker_info']['speaker_ID'] == person
         record.update({k: data[k] for k in ('Video_info', 'Sentence_info', 'speaker_info')})
-        record.update(person=person, front_only=False, source_cap=4 * 2**30, selection_basis='skipped first header; same frozen rule, half-first order; bounded deeper prefix')
+        # 10/27 승인: 절반 1 영상 tar만 정상 응답에서 깊게 읽는 3번째 요청을 연다(1명당 4GiB).
+        record.update(person=person, front_only=False, source_cap=4 * 2**30, max_requests=3 if half == 1 else 2, selection_basis='skipped first header; same frozen rule, half-first order; bounded deeper prefix')
         plan = [r for r in plan if r['spk'] != spk] + [record]
         (ROOT / 'plan.json').write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding='utf-8')
         frozen = dict(speakers=[{k: r[k] for k in ('spk', 'person', 'half')} for r in plan], plan_sha256=hashlib.sha256((ROOT / 'plan.json').read_bytes()).hexdigest(), excluded_sha256=EXHASH, rule_commit='9922f006', selection_executed=False, confirmation_executed=False)
