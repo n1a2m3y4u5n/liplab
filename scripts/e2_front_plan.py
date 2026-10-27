@@ -35,10 +35,10 @@ def front(record):
     raise ValueError('no front mp4 header')
 
 
-def label(record, target, files):
+def label(record, target, files, initial=1):
     source = dict(record, video_file=record['label_file'], video_fileSn=files[record['label_file']][1])
     # 이전 조사에서 라벨을 한 번 요청한 것으로 보수적으로 계산한다.
-    stream = request(source, 512 * 2**20, initial=1)
+    stream = request(source, 512 * 2**20, initial=initial)
     try:
         with tarfile.open(fileobj=stream, mode='r|') as outer:
             with tarfile.open(fileobj=JoinedParts(outer), mode='r|') as inner:

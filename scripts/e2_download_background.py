@@ -68,7 +68,7 @@ def write_report(error, started, log):
         failure['file'] = names.get(failure['spk'], failure.get('file', 'unknown'))
     failed_names = sorted({r['file'] for r in failures if r['spk'] in names})
     missing = sorted(set(names) - speakers)
-    status = 'done' if min(halves) >= 15 and not error and not missing else 'blocked'
+    status = 'done' if min(halves) >= 20 and not error else 'blocked'
     transfers = [json.loads(line) for line in (ROOT / 'transfers.jsonl').read_text(encoding='utf-8').splitlines()]
     audit = json.loads((ROOT / 'audit.json').read_text(encoding='utf-8')) if (ROOT / 'audit.json').exists() else {}
     download_bytes = audit.get('consumed_download_bytes', sum(t['bytes'] for t in transfers))
@@ -140,6 +140,83 @@ def extend_known_plan(budget_gib, target, env):
     target.flush()
 
 
+
+def extend_next_tars(target, env):
+    """?? ?? ? ??(?? ??): ?? tar ??/?? ??? ???? ??."""
+    import hashlib
+    import zlib
+    from e2_front_plan import front, label
+    from e2_retry_acquire import AuthFailure
+    excluded = REPO / 'docs/e2-excluded-speakers-2026-10-27.txt'
+    assert hashlib.sha256(excluded.read_bytes()).hexdigest() == EXHASH
+    ex = set(excluded.read_text().splitlines())
+    assert len(ex) == 249
+    files = {m[0]: (int(m[1].replace(',', '')) * {'MB': 2**20, 'GB': 2**30, 'KB': 1024, 'B': 1}[m[2]], m[3]) for m in re.findall(r'([TV][LS]\d+\.tar)\s*\|\s*([\d,]+)\s*(GB|MB|KB|B)\s*\|\s*(\d+)', (REPO / 'out/aihub538-filetree-retry.txt').read_text(encoding='utf-8'))}
+    for name in sorted((n for n in files if n.startswith(('TL', 'VL'))), key=lambda n: (files[n][0], n)):
+        if (ROOT / 'AUTH_STOP').exists():
+            raise AuthFailure('authentication stop')
+        meta = json.loads((ROOT / 'manifest-meta.json').read_text(encoding='utf-8'))
+        done = {r['spk'] for r in meta}
+        halves = [sum(zlib.crc32(s.encode()) % 2 == h for s in done) for h in (0, 1)]
+        if min(halves) >= 20:
+            break
+        number = int(re.search(r'\d+', name)[0])
+        spk = 'spk' + str(number + (296 if name.startswith('TL') else 600))
+        half = zlib.crc32(spk.encode()) % 2
+        video = name.replace('TL', 'TS').replace('VL', 'VS')
+        counts = json.loads((ROOT / 'request-counts.json').read_text())
+        if spk in done or spk in ex or halves[half] >= 20 or counts.get(video, 0) >= 2:
+            continue
+        record = dict(spk=spk, half=half, label_file=name, video_file=video, video_fileSn=files[video][1])
+        target.write('NEXT_TAR ' + video + ' halves=' + str(halves) + '\n'); target.flush()
+        try:
+            # A failed header request gets at most one retry, shared with acquisition.
+            while True:
+                try:
+                    filename, offset, size = front(record)
+                    break
+                except AuthFailure:
+                    raise
+                except Exception:
+                    if json.loads((ROOT / 'request-counts.json').read_text()).get(video, 0) >= 2:
+                        raise
+            match = re.search(r'_([CE]\d+)_A_\d+\.mp4$', filename)
+            if not match or match[1] in ex or match[1] in {r['person'] for r in meta}:
+                target.write('NEXT_SKIP ' + spk + ' ' + filename + '\n'); target.flush()
+                continue
+            while True:
+                try:
+                    data = label(record, filename, files, initial=0)
+                    break
+                except AuthFailure:
+                    raise
+                except Exception:
+                    if json.loads((ROOT / 'request-counts.json').read_text()).get(name, 0) >= 2:
+                        raise
+            assert data['speaker_info']['speaker_ID'] == match[1]
+            assert data['Video_info']['video_Name'] == filename
+            record.update({k: data[k] for k in ('Video_info', 'Sentence_info', 'speaker_info')})
+            record.update(person=match[1], source_offset=offset, source_bytes=size, selection_basis='?? ?? ? ??(?? ??): first MP4 header and matching label')
+            plan = json.loads((ROOT / 'plan.json').read_text(encoding='utf-8'))
+            plan = [r for r in plan if r['spk'] != spk]
+            plan.append(record)
+            (ROOT / 'plan.json').write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding='utf-8')
+            frozen = dict(speakers=[{k:r[k] for k in ('spk','person','half')} for r in plan], plan_sha256=hashlib.sha256((ROOT / 'plan.json').read_bytes()).hexdigest(), excluded_sha256=EXHASH, rule_commit='9922f006', selection_executed=False, confirmation_executed=False)
+            (ROOT / 'cohort-frozen.json').write_text(json.dumps(frozen, ensure_ascii=False, indent=2), encoding='utf-8')
+            target.write('NEXT_PLAN ' + spk + ' ' + match[1] + '\n'); target.flush()
+            result = subprocess.run([sys.executable, '-u', str(REPO / 'scripts/e2_retry_acquire.py')], cwd=REPO, env=env, stdout=target, stderr=target)
+            if (ROOT / 'AUTH_STOP').exists():
+                raise AuthFailure('authentication stop')
+            if result.returncode:
+                raise RuntimeError('acquirer exit ' + str(result.returncode))
+        except AuthFailure:
+            raise
+        except Exception as error:
+            with (ROOT / 'next-tar-failures.jsonl').open('a', encoding='utf-8') as failures:
+                failures.write(json.dumps(dict(file=video, label=name, spk=spk, error=str(error)[:300]), ensure_ascii=False) + '\n')
+            target.write('NEXT_ERROR ' + video + ' ' + str(error)[:200] + '\n'); target.flush()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--wait-pid', type=int)
@@ -169,6 +246,8 @@ def main():
             result = subprocess.run([sys.executable, '-u', str(REPO / 'scripts/e2_retry_acquire.py')], cwd=REPO, env=env, stdout=target, stderr=target)
             if result.returncode:
                 error = 'acquirer exit ' + str(result.returncode)
+            if not error:
+                extend_next_tars(target, env)
             if not error and args.deep_budget_gib > 0:
                 extend_known_plan(args.deep_budget_gib, target, env)
     except Exception as exception:

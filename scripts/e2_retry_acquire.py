@@ -27,6 +27,8 @@ class Stream:
                 (ROOT/'AUTH_STOP').write_text('Authentication failure: do not retry.');raise AuthFailure('authentication failed; stopped')
             headers=Path(self.response).read_text(errors='replace')
             codes=re.findall(r'HTTP/\S+\s+(\d+)',headers)
+            if codes and codes[-1] in ('401','403'):
+                (ROOT/'AUTH_STOP').write_text('Authentication HTTP failure: do not retry.');raise AuthFailure('authentication failed; stopped')
             if not codes or codes[-1]!='200': raise RuntimeError('download HTTP '+str(codes[-1:] or 'unknown'))
         return b
     def close(self):
@@ -86,6 +88,10 @@ def video(r):
         attempts_path.write_text(json.dumps(counts,indent=2))
         s=Stream(r,cap)
         try:source,last=extract_target(s,r['Video_info']['video_Name'],dest,r.get('front_only',False))
+        except AuthFailure:raise
+        except Exception as error:
+            print('TAR_ERROR',r['video_file'],type(error).__name__,str(error)[:180],flush=True)
+            source=None
         finally:s.close()
         print('STREAM',r['spk'],s.n,'last',last,flush=True)
         if source:return source
@@ -108,7 +114,8 @@ def acquire():
     failures=json.loads(failure_path.read_text(encoding='utf-8')) if failure_path.exists() else []
     for r in plan:
         if r['spk'] in done:continue
-        if all(sum(zlib.crc32(s.encode())%2==h for s in done)>=15 for h in (0,1)):break
+        if all(sum(zlib.crc32(s.encode())%2==h for s in done)>=20 for h in (0,1)):break
+        if sum(zlib.crc32(s.encode())%2==r['half'] for s in done)>=20:continue
         assert r['spk'] not in ex and r['person'] not in ex and r['half']==zlib.crc32(r['spk'].encode())%2
         base=Path(r['Video_info']['video_Name']).stem
         assert re.search(r'_[CE]\d+_A_\d+$',base)
