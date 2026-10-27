@@ -12,6 +12,8 @@ import { toBlendshapeMap, scorePercent, loadCalibration } from '../lib/mouthScor
 import { scoreTone } from '../lib/scoreTone'
 import { VOWEL_IDS } from '../lib/vtlShapes'
 import { mediaErrorMessage } from '../lib/mediaError'
+import { loadCoachingResult } from '../lib/speakCoaching'
+import { startRecorder } from '../lib/speakRecorder'
 import { finalTone, riseFallTone, toneDirection, toneMissed } from '../lib/speakTone'
 import { SOFT_BAND, loudnessRms, metricVerdict, volumeCurveNote, volumeFeedback } from '../lib/speakFeedback'
 import { longestVoicedRun } from '../lib/voicing'
@@ -393,18 +395,16 @@ export default function SpeakingPractice() {
       if (DGOP_STREAM_ENABLED && !metricMode) {
         try { speakStreamRef.current = startSpeakStream({ ac, source: src, api: speakAPI }) } catch { speakStreamRef.current = null }
       }
-      try {
-        const rec = new MediaRecorder(stream)
-        rec.ondataavailable = (e) => { if (e.data && e.data.size) chunksRef.current.push(e.data) }
-        rec.onstop = () => onRecStop(attempt)
-        rec.start()
-        recorderRef.current = rec
-      } catch { recorderRef.current = null }
+      recorderRef.current = startRecorder(stream,
+        (e) => { if (e.data && e.data.size) chunksRef.current.push(e.data) },
+        () => onRecStop(attempt))
       startRef.current = performance.now()
       setRecording(true)
       loop()
     } catch (e) {
       // 마이크는 열렸는데 그 뒤(AudioContext·분석기)에서 실패해도 연 장치를 닫는다
+      recorderRef.current = null
+      if (speakStreamRef.current) { speakStreamRef.current.end(); speakStreamRef.current = null }
       if (stream) stream.getTracks().forEach((t) => t.stop())
       closeAudio()
       if (gen === mediaGenRef.current) setErr(mediaErrorMessage(e, 'mic'))
@@ -465,13 +465,11 @@ export default function SpeakingPractice() {
     }
   }
 
-  // assess가 coaching_pending으로 돌려준 코칭을 받아 지금 시도의 결과에 채운다. 실패하면 한마디 칸을 비운다(점수·칩은 그대로)
+  // 점수는 유지하고 코칭만 재조회한다. 다른 시도로 넘어간 뒤 도착한 응답은 버린다.
   const loadCoaching = async (id, attempt) => {
-    let text = null
-    try { text = (await speakAPI.coaching(id))?.coaching ?? null } catch { text = null }
+    await loadCoachingResult({ id, request: speakAPI.coaching,
+      isCurrent: () => attempt === attemptRef.current, update: setAssessment })
     speakMark('speak:coaching')
-    if (attempt !== attemptRef.current) return
-    setAssessment((a) => (a && !a.error && a.coaching_id === id ? { ...a, coaching: text, coaching_pending: false } : a))
   }
 
   const stop = () => {
@@ -975,6 +973,15 @@ export default function SpeakingPractice() {
               <p className="shrink-0 whitespace-nowrap text-[14px] font-bold leading-figma text-track-dark">DOKA의 한마디</p>
               <span aria-hidden className="h-4 w-[1.5px] shrink-0 rounded-[1px] bg-speak-dark/30" />
               <p className="min-w-0 flex-1 text-[14px] leading-[1.6] text-track-dark">한마디를 쓰고 있어요…</p>
+            </div>
+          )}
+          {assessment?.coaching_error && (
+            <div className="flex flex-wrap items-center gap-2.5 rounded-14 bg-track-tint px-4 py-3.5 text-[14px] text-track-dark" aria-live="polite">
+              <span className="font-bold">DOKA의 한마디</span>
+              <span>{assessment.coaching_error}</span>
+              {assessment.coaching_retry && (
+                <button type="button" className="font-bold underline" onClick={() => loadCoaching(assessment.coaching_id, attemptRef.current)}>다시 받기</button>
+              )}
             </div>
           )}
           {assessment?.coaching && (

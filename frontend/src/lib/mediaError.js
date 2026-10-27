@@ -7,6 +7,7 @@
  * kind: 'camera' | 'mic'
  */
 export function mediaErrorMessage(err, kind = 'camera') {
+  if (err?.name === 'RecordingError') return '녹음 시작 실패'
   const dev = kind === 'mic' ? '마이크' : '카메라'
   // 안전하지 않은 컨텍스트(http 주소)에는 navigator.mediaDevices 자체가 없어 TypeError로 온다
   if (typeof window !== 'undefined' && window.isSecureContext === false) {

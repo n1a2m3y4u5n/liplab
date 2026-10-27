@@ -18,6 +18,7 @@ LIPLAB 콘텐츠 규칙 검사 게이트 — LLM 대량 생성물의 '자동 1�
 import math
 import re
 from collections import defaultdict
+from functools import lru_cache
 from itertools import combinations
 from typing import Dict, List, Optional, Tuple
 
@@ -149,8 +150,10 @@ def word_visemes(word: str) -> List[int]:
     return visemes
 
 
+@lru_cache(maxsize=2048)
 def viseme_signature(word: str) -> Tuple[int, ...]:
     """단어의 보이는 입모양 순열(동구형이음 비교용). 같으면 눈으로 구별 불가."""
+    # 후보 쌍마다 같은 단어를 다시 변환하지 않는다. 불변 튜플만 최대 2,048개 보관한다.
     return tuple(word_visemes(word))
 
 
@@ -527,12 +530,16 @@ def check_closure(display: str, answer: str, options: List[str], hint: Optional[
     options = [str(o).strip() for o in (options or []) if str(o).strip()]
     if "___" not in (display or ""):
         return False, None, "display에 빈칸(___) 없음"
+    if display.count("___") != 1:
+        return False, None, "빈칸은 정확히 1개여야 함"
     if not is_hangul_word(answer):
         return False, None, "정답이 한글 단어가 아님"
     if answer not in options:
         return False, None, "정답이 보기 목록에 없음"
     if len(options) < 3:
         return False, None, "보기가 3개 미만(2지선다는 추측 확률 50%로 문맥 훈련이 약함)"
+    if len(set(options)) != len(options):
+        return False, None, "중복 보기 포함(정답·오답은 각각 서로 달라야 함)"
     distractors = [o for o in options if o != answer and is_hangul_word(o)]
     if not distractors:
         return False, None, "유효한 오답 보기가 없음"
