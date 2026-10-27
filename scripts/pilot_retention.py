@@ -80,9 +80,10 @@ async def run(argv) -> dict:
                "cohort": a.cohort, "participants": rows, "missing_pids": missing, "applied": False}
         if a.include_usage:
             from sqlalchemy import func, select
-            from database import UsageEvent
+            from database import UsageEvent, FeedbackDaily
             cutoff = datetime.combine(a.study_end + timedelta(days=1), datetime.min.time())
             out['usage_rows'] = (await db.execute(select(func.count()).select_from(UsageEvent).where(UsageEvent.ts < cutoff))).scalar()
+            out['feedback_daily_rows'] = (await db.execute(select(func.count()).select_from(FeedbackDaily).where(FeedbackDaily.created_at < cutoff))).scalar()
         if not a.apply:
             return out
         if due and today < due:
@@ -98,10 +99,12 @@ async def run(argv) -> dict:
                 db.add(p)
         if a.include_usage:
             from sqlalchemy import delete
-            from database import UsageEvent
+            from database import UsageEvent, FeedbackDaily
             cutoff = datetime.combine(a.study_end + timedelta(days=1), datetime.min.time())
             result = await db.execute(delete(UsageEvent).where(UsageEvent.ts < cutoff))
             removed['usage_events'] = removed.get('usage_events', 0) + result.rowcount
+            result = await db.execute(delete(FeedbackDaily).where(FeedbackDaily.created_at < cutoff))
+            removed['feedback_daily'] = removed.get('feedback_daily', 0) + result.rowcount
         await db.commit()
     out.update(applied=True, mode=a.mode, removed=removed)
     entry = {"at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),

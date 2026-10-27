@@ -285,6 +285,8 @@ def _row_to_dict(row) -> dict:
 # ============================================
 from usage_events import router as usage_router
 app.include_router(usage_router)
+from feedback import router as feedback_router
+app.include_router(feedback_router)
 
 # Authentication Endpoints
 # ============================================
