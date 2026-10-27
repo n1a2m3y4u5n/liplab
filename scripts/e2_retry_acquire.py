@@ -50,7 +50,7 @@ class JoinedParts:
             if not b:self.current=None;continue
             chunks.append(b);remaining-=len(b)
         return b''.join(chunks)
-def extract_target(stream,target,dest):
+def extract_target(stream,target,dest,front_only=False):
     """잘린 마지막 멤버와 ReadError는 버리고 완결 목표 파일만 반환한다."""
     last=None
     try:
@@ -59,6 +59,8 @@ def extract_target(stream,target,dest):
                 for m in inner:
                     if not m.isfile():continue
                     last={'name':m.name,'offset':m.offset,'size':m.size}
+                    if front_only and m.name.endswith('.mp4') and Path(m.name.replace('\\','/')).name!=target:
+                        return None,last
                     if Path(m.name.replace('\\','/')).name!=target:continue
                     tmp=dest.with_suffix('.partial')
                     try:
@@ -82,7 +84,7 @@ def video(r):
         counts[r['video_file']]=prior+1
         attempts_path.write_text(json.dumps(counts,indent=2))
         s=Stream(r,cap)
-        try:source,last=extract_target(s,r['Video_info']['video_Name'],dest)
+        try:source,last=extract_target(s,r['Video_info']['video_Name'],dest,r.get('front_only',False))
         finally:s.close()
         print('STREAM',r['spk'],s.n,'last',last,flush=True)
         if source:return source

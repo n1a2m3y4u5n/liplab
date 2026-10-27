@@ -22,6 +22,8 @@ def test_split_boundary_and_truncated_member(tmp_path):
     result, _ = extract_target(io.BytesIO(split), 'target.mp4', dest)
     assert result and dest.read_bytes() == b'b' * 4000
     dest.unlink()
+    result, _ = extract_target(io.BytesIO(split), 'target.mp4', dest, front_only=True)
+    assert result is None and not dest.exists()
     truncated = archive([('x.tar.part0', raw[:6000])])
     result, _ = extract_target(io.BytesIO(truncated), 'target.mp4', dest)
     assert result is None and not dest.exists()
