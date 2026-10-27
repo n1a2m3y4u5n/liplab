@@ -25,7 +25,7 @@ TASKS: Tuple[Dict, ...] = (
     {"key": "week_5days", "label": "이번 주 5일 학습하기", "total": 5, "xp": 100, "period": "week"},
 )
 # 기존 키는 수령 기록 호환을 위해 유지한다(2026-10-19 사용자 결정).
-LISTEN_TASK: Dict = {"key": "listen_15", "label": "소리 듣기 오늘 몫", "total": 2, "xp": 15, "period": "day"}
+LISTEN_TASK: Dict = {"key": "listen_15", "label": "소리 듣기 오늘 몫", "total": 2, "unit": "묶음", "xp": 15, "period": "day"}
 
 
 def tasks_for(listen: bool = False) -> Tuple[Dict, ...]:
