@@ -1,4 +1,5 @@
 import { requestTrackedMedia } from '../lib/track'
+import { mediaErrorMessage } from '../lib/mediaError'
 import { useRef, useState, useCallback, useEffect } from 'react'
 import AvatarVRM from './AvatarVRM'
 import useFaceLandmarker from '../hooks/useFaceLandmarker'
@@ -57,8 +58,9 @@ export default function MouthMirror({ compareVisemeId = null, compareLabel = '' 
 
   const start = useCallback(async () => {
     if (!landmarkerRef.current) return
+    let stream = null
     try {
-      const stream = await requestTrackedMedia({
+      stream = await requestTrackedMedia({
         video: { facingMode: 'user', width: 480, height: 360 },
       })
       streamRef.current = stream
@@ -66,9 +68,12 @@ export default function MouthMirror({ compareVisemeId = null, compareLabel = '' 
       await videoRef.current.play()
       setCamStatus('running')
       rafRef.current = requestAnimationFrame(loop)
-    } catch {
+    } catch (e) {
+      // 카메라는 열렸는데 재생에서 실패한 경우에도 연 장치를 닫는다
+      if (stream) stream.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
       setCamStatus('error')
-      setCamErr('카메라를 사용할 수 없어요. 권한을 허용해 주세요.')
+      setCamErr(mediaErrorMessage(e, 'camera'))
     }
   }, [loop, landmarkerRef])
 

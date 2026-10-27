@@ -1,7 +1,7 @@
 /* LIPLAB 서비스워커 — 설치·앱셸 오프라인(계획서 트랙2 PWA).
  * 보수적 전략: API는 절대 캐시하지 않고, 페이지 이동은 네트워크 우선(끊기면 캐시 셸),
  * 정적 자산(JS/CSS/이미지/폰트)은 stale-while-revalidate. 버전 올리면 옛 캐시 정리. */
-const CACHE = 'liplab-v5'  // v5: 음성 구동·웹캠 거울의 리그 보정 사상과 V15 입모양 표(플래그) 코드(2026-10-07). v4: 3D 얼굴 GLB 경량화(2026-09-29, 같은 URL). v3: 앱 아이콘을 Figma 로고 캐릭터로(2026-09-25), 같은 URL의 옛 icon.svg 캐시 폐기. v2: 3D 입모양 모델 교체(9/21)
+const CACHE = 'liplab-v6'  // v6: 이름이 그대로인 자산(모델·아이콘·표)은 네트워크 우선으로 바꿔 옛 판이 먼저 뜨지 않게(2026-10-27). v5: 음성 구동·웹캠 거울의 리그 보정 사상과 V15 입모양 표(플래그) 코드(2026-10-07). v4: 3D 얼굴 GLB 경량화(2026-09-29, 같은 URL). v3: 앱 아이콘을 Figma 로고 캐릭터로(2026-09-25), 같은 URL의 옛 icon.svg 캐시 폐기. v2: 3D 입모양 모델 교체(9/21)
 const SHELL = ['/', '/index.html', '/icon.svg', '/manifest.webmanifest']
 
 self.addEventListener('install', (e) => {
@@ -28,7 +28,20 @@ self.addEventListener('fetch', (e) => {
     )
     return
   }
-  // 정적 자산: 캐시 우선 + 백그라운드 갱신(stale-while-revalidate)
+  // 이름이 그대로인 자산(/assets/ 밖: 모델·아이콘·JSON): 배포로 내용이 바뀌므로 네트워크 우선, 끊기면 캐시
+  if (!url.pathname.startsWith('/assets/')) {
+    e.respondWith(
+      fetch(req).then((res) => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          const copy = res.clone()
+          caches.open(CACHE).then((c) => c.put(req, copy))
+        }
+        return res
+      }).catch(() => caches.match(req).then((r) => r || Response.error()))
+    )
+    return
+  }
+  // 해시 이름 정적 자산(/assets/): 캐시 우선 + 백그라운드 갱신(stale-while-revalidate)
   e.respondWith(
     caches.match(req).then((cached) => {
       const fetching = fetch(req).then((res) => {

@@ -15,3 +15,13 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {})
   })
 }
+
+// 배포 뒤 열려 있던 옛 화면이 사라진 조각 파일을 못 받으면 한 번만 새로 불러온다(무한 새로고침 방지).
+window.addEventListener('vite:preloadError', (e) => {
+  try {
+    if (sessionStorage.getItem('liplab_chunk_reload')) return
+    sessionStorage.setItem('liplab_chunk_reload', '1')
+    e.preventDefault()
+    window.location.reload()
+  } catch { /* 저장소 사용 불가면 기존 오류 화면에 맡긴다 */ }
+})
