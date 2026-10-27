@@ -117,3 +117,10 @@ fly ssh console -C "python /app/scripts/pilot_retention.py --study-end 2026-12-3
 - 참여·가명 내보내기: `backend/main.py`(`/api/pilot/*`), 가명·파기 공용 함수 `backend/pilot_data.py`
 - 파기 스크립트와 테스트: `scripts/pilot_retention.py`, `backend/test_pilot_retention.py`
 - 처리방침 문구: `frontend/src/pages/Legal.jsx`(수집 항목, 웹캠·음성 처리)
+
+
+## 서비스 이용 기록 (2026-10-27)
+
+`usage_events`는 접속·기능 사용 시각(UTC), 화면 경로, 트랙, 레슨 소요 시간과 브라우저·OS·모바일 여부를 수집한다. 음성·영상·사진·입력 글·이메일·이름·IP 원문·정답은 수집하지 않는다. 예외 메시지는 알려진 오류 종류로 제한한다. `LIPLAB_USAGE_LOG`는 기본 꺼짐이며 dev에서만 켠다. 관리자 조회는 기존 `LIPLAB_ADMIN_EMAILS` 권한을 사용한다.
+
+보관 기간과 파기 기한은 기존 학습 기록과 같다. `pilot_data.user_data_models()`가 user_id 표를 자동 발견하므로 계정 열람·삭제 및 연구 종료 후 보관 만료 파기(`pilot_data.purge`)에 이 표도 포함된다. 내보낸 CSV도 동일한 보관·파기 규칙으로 관리한다.

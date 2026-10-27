@@ -283,12 +283,15 @@ def _row_to_dict(row) -> dict:
 
 
 # ============================================
+from usage_events import router as usage_router
+app.include_router(usage_router)
+
 # Authentication Endpoints
 # ============================================
 
 @app.post("/api/auth/register", response_model=Token, status_code=status.HTTP_201_CREATED,
           dependencies=[Depends(ratelimit.rate_limit(10, 60, "auth"))])
-async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
+async def register(user_data: UserRegister, request: Request, db: AsyncSession = Depends(get_db)):
     """회원가입. 약관·처리방침 동의와 연령(만 14세 이상 또는 법정대리인 동의) 확인을 서버에서도
     검사하고, 동의한 판본·시각을 ConsentRecord로 남긴다(§4.9 표11 ②)."""
     if not (user_data.agree_terms and user_data.age_confirmed):
@@ -299,12 +302,15 @@ async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
     db.add(ConsentRecord(user_id=user.id, terms_version=_TERMS_VERSION,
                          privacy_version=_PRIVACY_VERSION, age_confirmed=True))
     await db.commit()
-    return create_token_response(user)
+    token_response = create_token_response(user)
+    from usage_events import record_auth
+    await record_auth(db, user.id, 'register', request)
+    return token_response
 
 
 @app.post("/api/auth/login", response_model=Token,
           dependencies=[Depends(ratelimit.rate_limit(10, 60, "auth"))])
-async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
+async def login(credentials: UserLogin, request: Request, db: AsyncSession = Depends(get_db)):
     """Authenticate user and return JWT token"""
     user = await authenticate_user(credentials.email, credentials.password, db)
 
@@ -315,12 +321,15 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return create_token_response(user)
+    token_response = create_token_response(user)
+    from usage_events import record_auth
+    await record_auth(db, user.id, 'login', request)
+    return token_response
 
 
 @app.post("/api/auth/demo", response_model=Token,
           dependencies=[Depends(ratelimit.rate_limit(30, 60, "auth"))])
-async def demo_login(db: AsyncSession = Depends(get_db)):
+async def demo_login(request: Request, db: AsyncSession = Depends(get_db)):
     """로그인 없이 데모 계정으로 즉시 입장(멱등). 심사·데모 편의를 위해 계정이 없으면
     생성하고 토큰을 발급한다. 인증 체계 자체는 그대로라 진행도·북마크 등은 정상 동작한다."""
     from sqlalchemy import select
@@ -343,7 +352,10 @@ async def demo_login(db: AsyncSession = Depends(get_db)):
             user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=500, detail="Demo login failed")
-    return create_token_response(user)
+    token_response = create_token_response(user)
+    from usage_events import record_auth
+    await record_auth(db, user.id, 'login', request)
+    return token_response
 
 
 @app.get("/api/auth/me", response_model=UserResponse)
@@ -3676,6 +3688,10 @@ async def pilot_join(req: PilotJoinReq, current_user=Depends(get_current_user), 
 def _pilot_admin_gate(user):
     if os.getenv("LIPLAB_PILOT") != "1":
         raise HTTPException(status_code=403, detail="파일럿 기능이 비활성화되어 있습니다(운영자 전용).")
+    _admin_email_gate(user)
+
+
+def _admin_email_gate(user):
     admins = {e.strip().lower() for e in os.getenv("LIPLAB_ADMIN_EMAILS", "").split(",") if e.strip()}
     email = (getattr(user, "email", "") or "").lower()
     if not email or email == _DEMO_EMAIL or email not in admins:

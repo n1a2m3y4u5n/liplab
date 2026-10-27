@@ -934,3 +934,18 @@ async def _user_indexes(conn) -> None:
 async def close_db():
     """Close database connections"""
     await engine.dispose()
+
+
+class UsageEvent(Base):
+    """서비스 이용 기록. 신규 표는 init_db/create_all로 두 DB 모두 생성한다."""
+    __tablename__ = "usage_events"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    anon_session_id = Column(String(64), nullable=True)
+    ts = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    event = Column(String(48), nullable=False, index=True)
+    route = Column(String(160), nullable=True)
+    track = Column(String(24), nullable=True)
+    props = Column(JSON, default=dict)
+    app_version = Column(String(40), nullable=True)
+    ua = Column(JSON, default=dict)
