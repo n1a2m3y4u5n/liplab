@@ -21,7 +21,7 @@ import { markContextLost } from '../lib/gpuBudget'
 import { guardRendererFactory } from '../lib/safeRenderer'
 import { transitionProgress } from '../lib/visemeTiming'
 import { talkerShapes } from '../lib/talkers'
-import { coartShape, coartWeight } from '../lib/coarticulation'
+import { coartShape, coartWeight, curveLip } from '../lib/coarticulation'
 import { mapRawFrame } from '../lib/rigMap'
 
 const EMPTY = {}
@@ -49,7 +49,7 @@ const RIG_MAP_ON = import.meta.env?.VITE_RIG_MAP !== '0'
  *  깨진 머지로 파일에 두 벌 복제돼 빌드가 깨져 있었다 → 두 기능을 모두 살려 단일화.)
  */
 function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null, modelUrl = MODEL_URL,
-  transitionMs, durationMs, speed = 1, talker = null, lipVowel = null }) {
+  transitionMs, durationMs, speed = 1, talker = null, lipVowel = null, lipCurve = null }) {
   const { scene: shared } = useGLTF(modelUrl, false, false, withMeshopt)
   // useGLTF는 캐시된 같은 scene 객체를 돌려준다. three.js 객체는 부모를 하나만 가질 수 있어, 그대로
   // <primitive>로 쓰면 한 화면에 아바타가 둘 이상일 때(다자 대화·웹캠 거울) 마지막 것만 보였다.
@@ -81,7 +81,7 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
   const textTargetRef = useRef(EMPTY)
   textTargetRef.current = coartShape(shapesRef.current, visemeId, lipVowel, coartWeight(talker)) || EMPTY
   // 전환 출발점을 다시 잡는 기준: 같은 입모양이라도 섞을 모음이 바뀌면 목표가 달라진다.
-  const shapeKey = lipVowel == null ? visemeId : `${visemeId}|${lipVowel}`
+  const shapeKey = lipCurve ? JSON.stringify([visemeId, lipVowel, lipCurve]) : lipVowel == null ? visemeId : `${visemeId}|${lipVowel}`
   const skinMatsRef = useRef([])   // 투명(X-ray) 모드에서 반투명화할 피부 재질
   const xrayAppliedRef = useRef(null)
 
@@ -113,7 +113,7 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
   // 텍스트 입모양은 쉴 때 그리지 않는다(Canvas frameloop="demand"). 입모양·시간·투명 모드가 바뀌면 여기서 깨우고, 전환이 끝나
   // 모든 가중치가 목표에 닿으면 useFrame이 다음 화면을 더 요청하지 않는다. 예전에는 멈춰 있어도 초당 60번 다시 그렸다.
   const invalidate = useThree((st) => st.invalidate)
-  useEffect(() => { invalidate() }, [visemeId, lipVowel, xray, transitionMs, durationMs, speed, talker, invalidate])
+  useEffect(() => { invalidate() }, [visemeId, lipVowel, lipCurve, xray, transitionMs, durationMs, speed, talker, invalidate])
 
   // 아이들 모션 D(9/28): 눈 깜빡임. 쉴 때 그리지 않는 원칙(frameloop demand)을 지키려고 호흡처럼 계속 움직이는 모션은 넣지 않고,
   // 2.5~6초마다 깜빡이는 약 0.19초 동안만 화면을 요청한다. 텍스트 입모양에만 적용(음성구동·거울은 원본 계수를 그대로 쓴다).
@@ -148,7 +148,7 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
     //   ③ 텍스트→비심 매핑 VISEME_BLENDSHAPES(가상 화자면 그 배율을 곱한 표, 동시조음이 켜져 있으면 입술을 섞은 모양)
     const rawFrame = bsFrameRef?.current ? (RIG_MAP_ON ? mapRawFrame(bsFrameRef.current) : bsFrameRef.current) : null
     const mirror = !rawFrame ? (mirrorRef?.current || null) : null
-    const target = rawFrame || mirror || textTargetRef.current
+    let target = rawFrame || mirror || textTargetRef.current
     // A4 프레임은 이미 30fps 시퀀스라 빠르게 따라가고, 나머지는 부드럽게 전환(~45ms).
     const LERP = Math.min(1, delta * (rawFrame ? 34 : 22))
     // 텍스트 입모양(음성구동·거울이 아닐 때)은 프레임의 전환 시간으로 옮긴다: 입모양이 바뀌면 지금 가중치를 출발점으로 잡고,
@@ -166,6 +166,10 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
       eased = transitionProgress(elapsedRef.current, tm.transitionMs, tm.durationMs, tm.speed)
     } else {
       lastVisemeRef.current = null   // 음성구동·거울이 끝나고 텍스트로 돌아오면 그때 가중치에서 새로 출발
+    }
+    if (!rawFrame && !mirror && lipCurve) {
+      const rate = durationMs > 0 ? lipCurve.frameDuration / durationMs : 1
+      target = curveLip(shapesRef.current[visemeId] || EMPTY, target, lipCurve, elapsedRef.current * rate)
     }
     const nextWeight = (key, tgt) => (eased == null
       ? THREE.MathUtils.lerp(currentWeightsRef.current[key] || 0, tgt, LERP)
@@ -252,7 +256,8 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
 
     // 아직 움직이는 중이면 다음 화면을 요청한다(음성구동·거울은 Canvas가 늘 그리므로 해당 없음).
     if (!rawFrame && !mirror) {
-      let moving = blinking || extra.size > 0 || (eased != null && eased < 1)
+      const curveMoving = lipCurve && elapsedRef.current < (durationMs || lipCurve.frameDuration)
+      let moving = blinking || curveMoving || extra.size > 0 || (eased != null && eased < 1)
       if (!moving) {
         for (const key of baseKeys) {
           if (Math.abs((currentWeightsRef.current[key] || 0) - (target[key] || 0)) > 1e-3) { moving = true; break }
@@ -359,7 +364,7 @@ class GLErrorBoundary extends Component {
 // lipVowel: 선행 동시조음(lib/coarticulation)에서 이 프레임이 입술을 섞을 모음 입모양(프레임의 coart_v). 없으면 섞지 않는다.
 // flat: true면 캔버스를 만들지 않고 2D 입모양만 그린다(여러 명 대화의 저사양 모드, lib/gpuBudget).
 export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null, modelUrl = MODEL_URL,
-  transitionMs, durationMs, speed, view = 'front', talker = null, lipVowel = null, flat = false }) {
+  transitionMs, durationMs, speed, view = 'front', talker = null, lipVowel = null, lipCurve = null, flat = false }) {
   const [webglOK] = useState(detectWebGL)
   // GPU 메모리가 모자라 브라우저가 컨텍스트를 거두면 캔버스가 까맣게 멈춘다. 그때는 이 아바타를 2D로 바꾸고
   // (캔버스를 내려 남은 GPU 메모리도 돌려준다) 여러 캔버스를 띄우는 화면이 2D로 가도록 알린다.
@@ -403,7 +408,7 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
 
           <Suspense fallback={null}>
             <RealisticFace visemeId={visemeId} xray={xray} bsFrameRef={bsFrameRef} mirrorRef={mirrorRef} modelUrl={modelUrl}
-              transitionMs={transitionMs} durationMs={durationMs} speed={speed} talker={talker} lipVowel={lipVowel} />
+              transitionMs={transitionMs} durationMs={durationMs} speed={speed} talker={talker} lipVowel={lipVowel} lipCurve={lipCurve} />
           </Suspense>
 
           <CameraRig view={view} />

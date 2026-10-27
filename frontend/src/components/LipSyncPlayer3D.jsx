@@ -230,7 +230,7 @@ export default function LipSyncPlayer3D({
           durationMs={shown?.duration_ms}
           speed={override != null ? 1 : speed}
           talker={talker}
-          lipVowel={shown?.coart_v}
+          lipVowel={shown?.coart_v} lipCurve={shown?.coart_curve}
         />
         <TalkerChip talker={talker} />
 
