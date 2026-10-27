@@ -73,7 +73,7 @@ export default function ConvoTask({ data, settings, voices, onProgress, onExit, 
         repairs, plays, rt_ms: Date.now() - t0.current, voice, route: settings.route, ...(cond === 'noise' ? { noise: noiseName } : {}),
         ...(answerExtra || {}) })
       setRes(r)
-      tally.add(r.correct, r.status)
+      tally.add(r.correct, r.status, r)
     } catch { setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
     setSending(false)
   }
@@ -84,7 +84,7 @@ export default function ConvoTask({ data, settings, voices, onProgress, onExit, 
     onEnter: res ? next : line.state === 'missing' ? skip : confirm, canEnter: res ? true : line.state === 'missing' || (canAnswer && picked != null) })
 
   if (!it) {
-    const result = { stage: 5, n: tally.n, c: tally.c, skipped: tally.skipped, mastered: tally.mastered, elapsed: tally.elapsed(), repairs: repairTotal }
+    const result = { reward: tally.reward, stage: 5, n: tally.n, c: tally.c, skipped: tally.skipped, mastered: tally.mastered, elapsed: tally.elapsed(), repairs: repairTotal }
     return (
       <TaskEnd finish={finish} result={result}
         title={tally.n ? '이번 대화를 마쳤어요' : '소리가 아직 준비되지 않았어요'} sub={tally.mastered ? '대화 듣기를 숙달했어요.' : null}

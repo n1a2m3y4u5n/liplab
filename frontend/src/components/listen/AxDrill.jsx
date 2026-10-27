@@ -58,7 +58,7 @@ export default function AxDrill({ data, settings, voices, onProgress, finish, ac
       const r = await listenAPI.answer({ stage: 1, item_key: it.key, same: picked === 0, plays, rt_ms: Date.now() - t0.current, voice: v1, route: settings.route,
         pick: it.pick, ...(answerExtra || {}) })
       setRes(r)
-      tally.add(r.correct, r.status)
+      tally.add(r.correct, r.status, r)
       if (r.level != null && leveled) { setChange(levelChangeText(level, r.level, data.levels)); setLevel(r.level) }
     } catch { setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
     setSending(false)
@@ -69,7 +69,7 @@ export default function AxDrill({ data, settings, voices, onProgress, finish, ac
     onEnter: res ? next : clipState === 'missing' ? skip : confirm, canEnter: res ? true : clipState === 'missing' || (canAnswer && picked != null) })
 
   if (!it) {
-    const result = { stage: 1, n: tally.n, c: tally.c, skipped: tally.skipped, mastered: tally.mastered, elapsed: tally.elapsed(), level, levels: data.levels }
+    const result = { reward: tally.reward, stage: 1, n: tally.n, c: tally.c, skipped: tally.skipped, mastered: tally.mastered, elapsed: tally.elapsed(), level, levels: data.levels }
     return (
       <TaskEnd finish={finish} result={result}
         title={tally.n ? '이번 묶음을 마쳤어요' : '소리가 아직 준비되지 않았어요'} sub={tally.mastered ? '소리 구별을 숙달했어요. 다음 단계가 열렸어요.' : null}

@@ -59,6 +59,7 @@ export function TaskEnd({ finish, result, ...complete }) {
     if (onDone && !sent.current) { sent.current = true; onDone(result) }
   }, [onDone, result])
   if (onDone) return null
+  if (finish?.render) return finish.render(result)
   const acts = finish?.actions ? finish.actions(result) : {}
   return <ListenComplete {...complete} {...acts} />
 }

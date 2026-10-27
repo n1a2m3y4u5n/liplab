@@ -18,6 +18,7 @@ export default function LingCheck({ data, settings, onProgress, onExit, finish, 
   const [k, setK] = useState(0)
   const res = useRef({ results: {}, fa: 0 })
   const [summary, setSummary] = useState(null)
+  const [reward, setReward] = useState(null)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState(null)
   const player = usePlayer()
@@ -44,7 +45,7 @@ export default function LingCheck({ data, settings, onProgress, onExit, finish, 
     setErr(null)
     try {
       const r = await listenAPI.ling({ results: res.current.results, false_alarms: res.current.fa, route: settings.route })
-      setSummary(r.summary)
+      setReward({ xp: r.xp_gained || 0, quota: r.quota, streak: r.streak_count }); setSummary(r.summary)
     } catch { setErr('결과를 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
     setSaving(false)
   }
@@ -62,7 +63,7 @@ export default function LingCheck({ data, settings, onProgress, onExit, finish, 
   if (summary) {
     const { sub, notes } = lingNotes(summary)
     return (
-      <TaskEnd finish={finish} result={{ stage: 0, n: 0, c: 0, skipped: 0, mastered: false, summary, elapsed: Math.floor((Date.now() - t0.current) / 1000) }}
+      <TaskEnd finish={finish} result={{ reward, stage: 0, n: 0, c: 0, skipped: 0, mastered: false, summary, elapsed: Math.floor((Date.now() - t0.current) / 1000) }}
         title="오늘의 소리 확인" sub={sub} notes={notes}>
         <div className="grid w-full grid-cols-3 gap-2 sm:grid-cols-6">
           {(data.sounds || []).map((s) => {
