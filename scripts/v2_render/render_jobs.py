@@ -51,7 +51,7 @@ def write_mp4(images, path):
 
 
 def open_page(pw, a, port):
-    br = pw.chromium.launch(headless=True, args=GL_ARGS[a.gl] + ["--no-sandbox", "--disable-dev-shm-usage"])
+    br = pw.chromium.launch(channel=os.environ.get("PW_CHANNEL") or None, headless=True, args=GL_ARGS[a.gl] + ["--no-sandbox", "--disable-dev-shm-usage"])
     pg = br.new_page(viewport={"width": 700, "height": 400})
     pg.goto(f"http://127.0.0.1:{port}/index.html")
     pg.wait_for_function("window.__v2ready === true", timeout=60000)
