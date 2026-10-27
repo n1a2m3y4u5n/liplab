@@ -239,6 +239,44 @@ def extend_skipped_deep(budget_gib, target, env):
             raise RuntimeError('skipped-deep acquirer exit ' + str(result.returncode))
 
 
+def extend_retry_deep(each_gib, budget_gib, target, env):
+    """10/27 승인: 4GiB에서 정면 영상을 못 찾은 절반 1 화자를 1명당 12GiB로 한 번 더 받는다(요청 1회 추가)."""
+    import zlib
+    from e2_retry_acquire import AuthFailure
+    failures = json.loads((ROOT / 'acquire-failures.json').read_text())
+    tried = [f['spk'] for f in failures if 'bounded requests exhausted' in f['error']]
+    start = len((ROOT / 'transfers.jsonl').read_text(encoding='utf-8').splitlines())
+    for spk in tried:
+        if (ROOT / 'AUTH_STOP').exists():
+            raise AuthFailure('authentication stop')
+        done = {r['spk'] for r in json.loads((ROOT / 'manifest-meta.json').read_text(encoding='utf-8'))}
+        halves = [sum(zlib.crc32(s.encode()) % 2 == h for s in done) for h in (0, 1)]
+        if halves[1] >= 20:
+            break
+        transfers = [json.loads(line) for line in (ROOT / 'transfers.jsonl').read_text(encoding='utf-8').splitlines()][start:]
+        if sum(r.get('bytes', 0) for r in transfers) + each_gib * 2**30 > budget_gib * 2**30:
+            target.write('RETRY_DEEP_BUDGET_END\n'); target.flush()
+            break
+        plan = json.loads((ROOT / 'plan.json').read_text(encoding='utf-8'))
+        record = next((r for r in plan if r['spk'] == spk), None)
+        counts = json.loads((ROOT / 'request-counts.json').read_text())
+        if spk in done or not record or record['half'] != 1 or record.get('deep_retry'):
+            continue
+        target.write('RETRY_DEEP_TRY ' + spk + ' ' + record['person'] + ' halves=' + str(halves) + '\n'); target.flush()
+        record.update(front_only=False, source_cap=int(each_gib * 2**30), max_requests=counts.get(record['video_file'], 0) + 1, deep_retry=True)
+        (ROOT / 'plan.json').write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding='utf-8')
+        frozen = json.loads((ROOT / 'cohort-frozen.json').read_text(encoding='utf-8'))
+        import hashlib
+        frozen['plan_sha256'] = hashlib.sha256((ROOT / 'plan.json').read_bytes()).hexdigest()
+        (ROOT / 'cohort-frozen.json').write_text(json.dumps(frozen, ensure_ascii=False, indent=2), encoding='utf-8')
+        result = subprocess.run([sys.executable, '-u', str(REPO / 'scripts/e2_retry_acquire.py')], cwd=REPO, env=env, stdout=target, stderr=target)
+        if (ROOT / 'AUTH_STOP').exists():
+            raise AuthFailure('authentication stop')
+        if result.returncode:
+            raise RuntimeError('retry-deep acquirer exit ' + str(result.returncode))
+    target.write('RETRY_DEEP_COMPLETE\n'); target.flush()
+
+
 def extend_next_tars(target, env):
     """?? ?? ? ??(?? ??): ?? tar ??/?? ??? ???? ??."""
     import hashlib
@@ -322,6 +360,8 @@ def main():
     parser.add_argument('--deep-budget-gib', type=float, default=0)
     # 주면 이 단계만 돈다(앞 단계를 다시 돌면 건너뛴 tar의 남은 요청 1회를 헤더 재요청에 써 버린다).
     parser.add_argument('--skipped-deep-gib', type=float, default=0)
+    parser.add_argument('--retry-deep-each-gib', type=float, default=0)
+    parser.add_argument('--retry-deep-budget-gib', type=float, default=80)
     args = parser.parse_args()
     started = datetime.now().isoformat(timespec='seconds')
     lock = (ROOT / 'downloader.lock').open('a+b')
@@ -343,6 +383,9 @@ def main():
         env = dict(os.environ, PYTHONIOENCODING='utf-8', PYTHONUTF8='1')
         with log.open('a', encoding='utf-8', buffering=1) as target:
             target.write('\nBACKGROUND_RESUME ' + datetime.now().isoformat(timespec='seconds') + '\n')
+            if args.retry_deep_each_gib > 0:
+                extend_retry_deep(args.retry_deep_each_gib, args.retry_deep_budget_gib, target, env)
+                return
             if args.skipped_deep_gib > 0:
                 extend_skipped_deep(args.skipped_deep_gib, target, env)
                 return

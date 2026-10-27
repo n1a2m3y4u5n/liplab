@@ -79,7 +79,7 @@ def video(r):
     while counts.get(r['video_file'],0)<r.get('max_requests',2):
         prior=counts.get(r['video_file'],0)
         cap=(4 if prior else 2)*2**30
-        if 'source_cap' in r:cap=min(cap,r['source_cap'])
+        if 'source_cap' in r:cap=r['source_cap'] if r.get('deep_retry') else min(cap,r['source_cap'])   # 10/27 12GiB 재시도만 4GiB를 넘긴다
         if 'source_offset' in r:
             cap=r['source_offset']+r['source_bytes']+2**20
         if last and Path(last['name']).name==r['Video_info']['video_Name']:
