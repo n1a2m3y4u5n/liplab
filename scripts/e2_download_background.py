@@ -141,6 +141,102 @@ def extend_known_plan(budget_gib, target, env):
 
 
 
+def front_label(record, person, files):
+    """라벨 tar에서 그 인물의 첫 정면 A 라벨을 찾는다(첫 MP4가 다른 각도였던 화자용)."""
+    import tarfile
+    from e2_front_plan import request
+    from e2_retry_acquire import JoinedParts
+    source = dict(record, video_file=record['label_file'], video_fileSn=files[record['label_file']][1])
+    stream = request(source, 512 * 2**20, initial=0)
+    try:
+        with tarfile.open(fileobj=stream, mode='r|') as outer:
+            with tarfile.open(fileobj=JoinedParts(outer), mode='r|') as inner:
+                for member in inner:
+                    name = member.name.replace('\\', '/').rsplit('/', 1)[-1]
+                    if member.isfile() and re.search(r'_' + person + r'_A_\d+\.json$', name):
+                        data = json.load(inner.extractfile(member))
+                        return data[0] if isinstance(data, list) else data
+    finally:
+        stream.close()
+    raise ValueError('front A label absent: ' + person)
+
+
+def extend_skipped_deep(budget_gib, target, env):
+    """첫 MP4가 다른 각도라 건너뛴 화자를 모자란 절반부터 깊게 받는다. 선정 규칙은 같고 받는 순서만 바꾼다."""
+    import hashlib
+    import zlib
+    from e2_retry_acquire import AuthFailure
+    excluded = REPO / 'docs/e2-excluded-speakers-2026-10-27.txt'
+    assert hashlib.sha256(excluded.read_bytes()).hexdigest() == EXHASH
+    ex = set(excluded.read_text().splitlines())
+    files = {m[0]: (int(m[1].replace(',', '')) * {'MB': 2**20, 'GB': 2**30, 'KB': 1024, 'B': 1}[m[2]], m[3]) for m in re.findall(r'([TV][LS]\d+\.tar)\s*\|\s*([\d,]+)\s*(GB|MB|KB|B)\s*\|\s*(\d+)', (REPO / 'out/aihub538-filetree-retry.txt').read_text(encoding='utf-8'))}
+    skipped, tar = {}, None   # spk → (첫 MP4 이름, 영상 tar): NEXT_TAR 바로 뒤의 NEXT_SKIP만 짝짓는다
+    for line in (ROOT / 'download.log').read_text(encoding='utf-8').splitlines():
+        m = re.match(r'NEXT_TAR (\S+\.tar)', line)
+        if m:
+            tar = m[1]
+            continue
+        m = re.match(r'NEXT_SKIP (spk\d+) (\S+\.mp4)$', line)
+        if m and tar:
+            skipped[m[1]] = (m[2], tar)
+        tar = None
+    start = len((ROOT / 'transfers.jsonl').read_text(encoding='utf-8').splitlines())
+    while True:
+        if (ROOT / 'AUTH_STOP').exists():
+            raise AuthFailure('authentication stop')
+        meta = json.loads((ROOT / 'manifest-meta.json').read_text(encoding='utf-8'))
+        done = {r['spk'] for r in meta}
+        halves = [sum(zlib.crc32(s.encode()) % 2 == h for s in done) for h in (0, 1)]
+        if min(halves) >= 20:
+            break
+        transfers = [json.loads(line) for line in (ROOT / 'transfers.jsonl').read_text(encoding='utf-8').splitlines()][start:]
+        if sum(r.get('bytes', 0) for r in transfers) >= budget_gib * 2**30:
+            target.write('SKIPPED_DEEP_BUDGET_END\n'); target.flush()
+            break
+        plan = json.loads((ROOT / 'plan.json').read_text(encoding='utf-8'))
+        persons = {r['person'] for r in plan} | {r['person'] for r in meta}
+        counts = json.loads((ROOT / 'request-counts.json').read_text())
+        pick = None
+        for half in sorted((0, 1), key=lambda h: halves[h]):   # 모자란 절반부터
+            if halves[half] >= 20:
+                continue
+            for spk, (filename, video_file) in sorted(skipped.items()):
+                m = re.search(r'_([CE]\d+)_[A-Z]_\d+\.mp4$', filename)
+                label_file = video_file.replace('TS', 'TL').replace('VS', 'VL')
+                if (zlib.crc32(spk.encode()) % 2 != half or not m or spk in done or spk in ex or m[1] in ex or m[1] in persons
+                        or counts.get(video_file, 0) >= 2 or counts.get(label_file, 0) >= 2 or video_file not in files or label_file not in files):
+                    continue
+                pick = (spk, m[1], half, video_file, label_file)
+                break
+            if pick:
+                break
+        if not pick:
+            target.write('SKIPPED_DEEP_COMPLETE halves=' + str(halves) + '\n'); target.flush()
+            break
+        spk, person, half, video_file, label_file = pick
+        record = dict(spk=spk, half=half, label_file=label_file, video_file=video_file, video_fileSn=files[video_file][1])
+        target.write('SKIPPED_DEEP_TRY ' + spk + ' ' + person + ' half=' + str(half) + ' halves=' + str(halves) + '\n'); target.flush()
+        try:
+            data = front_label(record, person, files)
+        except AuthFailure:
+            raise
+        except Exception as error:
+            target.write('SKIPPED_DEEP_NOLABEL ' + spk + ' ' + str(error)[:120] + '\n'); target.flush()
+            skipped.pop(spk, None)
+            continue
+        assert data['speaker_info']['speaker_ID'] == person
+        record.update({k: data[k] for k in ('Video_info', 'Sentence_info', 'speaker_info')})
+        record.update(person=person, front_only=False, source_cap=4 * 2**30, selection_basis='skipped first header; same frozen rule, half-first order; bounded deeper prefix')
+        plan = [r for r in plan if r['spk'] != spk] + [record]
+        (ROOT / 'plan.json').write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding='utf-8')
+        frozen = dict(speakers=[{k: r[k] for k in ('spk', 'person', 'half')} for r in plan], plan_sha256=hashlib.sha256((ROOT / 'plan.json').read_bytes()).hexdigest(), excluded_sha256=EXHASH, rule_commit='9922f006', selection_executed=False, confirmation_executed=False)
+        (ROOT / 'cohort-frozen.json').write_text(json.dumps(frozen, ensure_ascii=False, indent=2), encoding='utf-8')
+        skipped.pop(spk, None)
+        result = subprocess.run([sys.executable, '-u', str(REPO / 'scripts/e2_retry_acquire.py')], cwd=REPO, env=env, stdout=target, stderr=target)
+        if result.returncode:
+            raise RuntimeError('skipped-deep acquirer exit ' + str(result.returncode))
+
+
 def extend_next_tars(target, env):
     """?? ?? ? ??(?? ??): ?? tar ??/?? ??? ???? ??."""
     import hashlib
@@ -222,6 +318,8 @@ def main():
     parser.add_argument('--wait-pid', type=int)
     parser.add_argument('--wait-log', type=Path, default=REPO / 'out/e2-acquire-front.log')
     parser.add_argument('--deep-budget-gib', type=float, default=0)
+    # 주면 이 단계만 돈다(앞 단계를 다시 돌면 건너뛴 tar의 남은 요청 1회를 헤더 재요청에 써 버린다).
+    parser.add_argument('--skipped-deep-gib', type=float, default=0)
     args = parser.parse_args()
     started = datetime.now().isoformat(timespec='seconds')
     lock = (ROOT / 'downloader.lock').open('a+b')
@@ -243,6 +341,9 @@ def main():
         env = dict(os.environ, PYTHONIOENCODING='utf-8', PYTHONUTF8='1')
         with log.open('a', encoding='utf-8', buffering=1) as target:
             target.write('\nBACKGROUND_RESUME ' + datetime.now().isoformat(timespec='seconds') + '\n')
+            if args.skipped_deep_gib > 0:
+                extend_skipped_deep(args.skipped_deep_gib, target, env)
+                return
             result = subprocess.run([sys.executable, '-u', str(REPO / 'scripts/e2_retry_acquire.py')], cwd=REPO, env=env, stdout=target, stderr=target)
             if result.returncode:
                 error = 'acquirer exit ' + str(result.returncode)
