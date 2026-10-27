@@ -114,12 +114,20 @@ async def lifespan(app: FastAPI):
     print("[OK] Database connections closed")
 
 
+# 배포(Fly·ENVIRONMENT=production)에서는 API 문서(/docs·/redoc·/openapi.json)를 닫는다. 전 엔드포인트 목록이 누구에게나 보이던 문제.
+# 필요하면 LIPLAB_API_DOCS=1로 연다.
+_docs_open = (not (os.getenv("FLY_APP_NAME") or os.getenv("ENVIRONMENT", "").lower() == "production")
+              or os.getenv("LIPLAB_API_DOCS") == "1")
+
 # Initialize FastAPI app
 app = FastAPI(
     title="LIPLAB API",
     description="AI-Powered Speechreading Training Platform for the Deaf",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url="/docs" if _docs_open else None,
+    redoc_url="/redoc" if _docs_open else None,
+    openapi_url="/openapi.json" if _docs_open else None,
 )
 
 # CORS configuration
