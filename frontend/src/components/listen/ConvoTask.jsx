@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { listenAPI } from '../../api'
 import { voiceFor } from '../../lib/listenMix'
-import { NOISE_TYPES, pct, skippedNote } from '../../lib/listenFlow'
+import { pct, skippedNote } from '../../lib/listenFlow'
 import { fmtDuration } from '../../lib/listenView'
 import BottomBar from './BottomBar'
 import { TaskEnd } from './ListenComplete'
@@ -16,15 +16,12 @@ import { Card, Heading, Option, optionState } from './ui'
  * 단계 레슨에서는 듣기 조건(조용함·소음·전화·울리는 방)을 처음 듣기 전에 고른다. 상황별 대화 듣기·듣기 조건 연습·오늘의 듣기에서도 쓴다.
  *  - condition을 주면 조건을 고정하고 고르는 줄을 숨긴다(듣기 조건 연습). {kind, noise?, rt60?, snrDb?}
  */
-const NOISE_LABEL = { ...Object.fromEntries(NOISE_TYPES.map((n) => [n.key, n.label])), talker2: '두 사람 말소리' }
-const COND_LABEL = { quiet: '조용함', noise: '소음', phone: '전화', room: '울리는 방' }
 
 export default function ConvoTask({ data, settings, voices, onProgress, onExit, finish, active, exitLabel = '학습 화면으로',
   answerExtra = null, onAnswered = null, condition = null }) {
   const items = data.items || []
   const [k, setK] = useState(0)
-  const [condPick, setCond] = useState('quiet')
-  const cond = condition?.kind || condPick
+  const cond = condition?.kind || 'quiet'
   const [picked, setPicked] = useState(null)
   const [res, setRes] = useState(null)
   const [err, setErr] = useState(null)
@@ -95,9 +92,7 @@ export default function ConvoTask({ data, settings, voices, onProgress, onExit, 
   }
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
-      <Heading title={it.question}
-        meta={null}
-        sub={k === 0 && !plays ? (condition ? '못 알아들으면 되물어도 돼요. 되묻기는 감점이 없어요.' : '듣기 조건은 처음 듣기 전에 골라요. 못 알아들으면 되물어도 돼요.') : null} />
+      <Heading title={it.question} />
       {line.state === 'missing' ? missingCard(line, skip) : cond === 'noise' && nz.state === 'missing' ? noiseMissingCard(nz, onExit, exitLabel) : (
         <>
           <SoundCard player={player} onPlay={() => play(line.clip)} clipState={ready ? 'ready' : 'loading'} label={res ? '글을 보며 다시 듣기' : plays ? '처음 말 다시 듣기' : '말 듣기'} plays={plays}>

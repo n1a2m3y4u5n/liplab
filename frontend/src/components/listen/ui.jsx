@@ -22,7 +22,7 @@ export function Card({ children, className = '' }) {
 }
 
 /** 문항 질문(독화 레슨 91:19와 같은 크기). meta는 질문 아래 작은 줄(수준·보기 수 등). */
-export function Heading({ title, meta, sub }) {
+export function Heading({ title }) {
   return (
     <div className="flex flex-col gap-1.5 leading-figma lg:gap-2">
       <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[28px] lg:tracking-[-0.7px]">{title}</h1>

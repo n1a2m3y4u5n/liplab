@@ -5,7 +5,7 @@ import BottomBar from './BottomBar'
 import SoundCard from './SoundCard'
 import { useClip } from './useClip'
 import { useListenKeys, usePlayer } from './usePlayer'
-import { Card, ChoiceGroup, Heading, NOTICE, SYNTH } from './ui'
+import { Card, ChoiceGroup, Heading } from './ui'
 
 /**
  * 소리 크기 맞추기: 편안한 크기·쓰는 기기·듣는 방법. 소리 듣기의 어느 화면이든 처음에 거친다(ListenFrame).

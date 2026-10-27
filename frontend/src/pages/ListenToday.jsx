@@ -51,7 +51,6 @@ function TodayBlock({ block, ctx, onDone }) {
 
 /** 시작 전: 오늘 한 분(15분 목표 막대)과 블록 목록. */
 function TodayIntro({ plan, onStart, active }) {
-  const total = plan.blocks.reduce((a, b) => a + (b.minutes || 0), 0)
   const doneMin = plan.done_today?.minutes || 0
   const target = plan.target_min || 15
   return (
@@ -69,10 +68,10 @@ function TodayIntro({ plan, onStart, active }) {
       <ol className="flex flex-col overflow-hidden rounded-18 border-2 border-line bg-white lg:rounded-22">
         {plan.blocks.map((b, i) => (
           <li key={`${b.stage}-${i}`} aria-current={b.stage === plan.recommended ? "step" : undefined} className={`flex items-center gap-4 px-5 py-4 ${b.stage === plan.recommended ? "bg-track-tint" : ""} ${i ? 'border-t-1.5 border-line' : ''}`}>
-            <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-track-tint text-[14px] font-bold text-track-dark">{b.stage === plan.recommended ? "▶" : b.stage === 0 ? "✓" : "◷"}</span>
+            <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-track-tint text-[14px] font-bold text-track-dark">{b.stage === plan.recommended ? "▶" : b.stage === 0 && plan.quotas?.[0]?.today_n > 0 ? "✓" : "◷"}</span>
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 leading-figma">
               <p className="text-[16px] font-bold text-ink">{TASK_TITLE[b.mode] || `${b.stage + 1}단계`}</p>
-              {b.stage === plan.recommended ? <div className="mt-2 flex items-center gap-2"><QuotaBar quota={plan.quotas?.[b.stage]} /><span className="text-[12px] font-bold text-track-dark">{quotaView(plan.quotas?.[b.stage]).filled} / 2</span></div> : b.stage !== 0 && <span className="mt-1 text-[12px] text-ink-muted">⤨ 1묶음</span>}
+              {b.stage === plan.recommended ? <div className="mt-2 flex items-center gap-2"><QuotaBar quota={plan.quotas?.[b.stage]} /><span className="text-[12px] font-bold text-track-dark">{quotaView(plan.quotas?.[b.stage]).filled} / 2</span></div> : b.stage !== 0 && <span className="mt-1 text-[12px] text-ink-muted">⤨ {b.n === plan.quotas?.[b.stage]?.batch_n ? "1묶음" : `${b.n}문제`}</span>}
             </div>
             <span className="shrink-0 text-[13px] font-bold text-ink-muted">{b.mode === 'ling' ? '1분' : `약 ${Math.max(1, Math.round(b.minutes || 0))}분`}</span>
           </li>
@@ -122,7 +121,7 @@ export default function ListenToday() {
   const cur = blocks[step.idx]
   const kicker = step.phase === 'run' && cur ? `오늘의 듣기 · ${step.idx + 1} / ${blocks.length} ${cur.title}` : '오늘의 듣기'
   return (
-    <ListenFrame kicker={kicker} onExit={exit} showProgress={step.phase === "run"} exitAria="나가기">
+    <ListenFrame kicker={step.phase === "intro" ? null : kicker} onExit={exit} showProgress={step.phase === "run"} exitAria="나가기">
       {(ctx) => (
         err ? (
           <StateCard title={err === 'missing' ? '오늘의 듣기를 준비하고 있어요' : '오늘의 계획을 가져오지 못했어요'}

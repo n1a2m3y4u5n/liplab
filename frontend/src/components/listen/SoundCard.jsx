@@ -15,7 +15,6 @@ export default function SoundCard({ player, onPlay, clipState = 'ready', label, 
   const text = statusText || soundStatusText(phase, { part: player.part, parts: player.parts })
   // 재생 중에는 버튼을 회색으로 끄지 않고 눌린 모양(트랙색)으로 둔다. 회색은 '지금 들을 수 없음'일 때만
   const off = disabled || clipState !== 'ready' || limit
-  const left = maxPlays != null && !limit ? ` · ${maxPlays - plays}번 더 들을 수 있어요` : ''
   return (
     <div className="rounded-18 border-2 border-line bg-white px-4 py-4 lg:rounded-22 lg:px-6 lg:py-5">
       <div className="flex items-center gap-4 lg:gap-5">

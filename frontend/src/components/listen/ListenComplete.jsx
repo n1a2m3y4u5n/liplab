@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useListenKeys } from './usePlayer'
-import { NOTICE, OVERFLOW, releaseClickFocus } from './ui'
+import { OVERFLOW, releaseClickFocus } from './ui'
 
 /**
  * 묶음 끝 화면(독화 레슨 완료 93:12와 같은 결): 소리 듣기 DOKA + 스탯 칸 + 버튼 2개. 화면 전체를 덮는다.
