@@ -7,6 +7,7 @@ REPO=Path(__file__).resolve().parents[1]
 KEY=Path(r'D:\work\hq\projects\liplab-lab\.aihub.key')
 EXHASH='a826028983d56eab1a3d9017ee647dc875854fdfb607bdb4ed3beccf9f2a233f'
 class AuthFailure(Exception): pass
+class SlowStop(AuthFailure): pass   # 인증 실패와 같은 길로 즉시 멈추되 AUTH_STOP은 남기지 않는다
 class Stream:
     def __init__(self, r, cap):
         self.r=r; self.cap=cap; self.n=0; self.t=time.time()
@@ -21,12 +22,17 @@ class Stream:
         n=min(n if n>=0 else 1024*1024,self.cap-self.n)
         if n<=0:return b''
         b=self.p.stdout.read(n);self.n+=len(b)
+        el=time.time()-self.t
+        if el>180 and self.n/el<512*1024:   # 10/27 오후 서버가 100KB/s로 느려져 요청만 날렸다. 느리면 전체를 멈춘다
+            (ROOT/'SLOW_STOP').write_text(time.strftime('%Y-%m-%dT%H:%M:%S')+' '+self.r['video_file']+' '+str(self.n));raise SlowStop('server too slow; stopped')
         if self.first:
             self.first=False
             if '인증실패'.encode() in b or '인증실패'.encode('cp949') in b:
                 (ROOT/'AUTH_STOP').write_text('Authentication failure: do not retry.');raise AuthFailure('authentication failed; stopped')
             headers=Path(self.response).read_text(errors='replace')
             codes=re.findall(r'HTTP/\S+\s+(\d+)',headers)
+            if codes and codes[-1] in ('401','403','502'):   # 502는 키 오류에서도 나므로 즉시 멈춘다(10/27 지시)
+                (ROOT/'AUTH_STOP').write_text('Authentication HTTP failure: do not retry.');raise AuthFailure('authentication failed; stopped')
             if not codes or codes[-1]!='200': raise RuntimeError('download HTTP '+str(codes[-1:] or 'unknown'))
         return b
     def close(self):
@@ -74,9 +80,10 @@ def video(r):
     attempts_path=ROOT/'request-counts.json'
     counts=json.loads(attempts_path.read_text()) if attempts_path.exists() else {'TS131.tar':1}
     dest=ROOT/'source.mp4';last=None
-    while counts.get(r['video_file'],0)<2:
+    while counts.get(r['video_file'],0)<r.get('max_requests',2):
         prior=counts.get(r['video_file'],0)
         cap=(4 if prior else 2)*2**30
+        if 'source_cap' in r:cap=r['source_cap'] if r.get('deep_retry') else min(cap,r['source_cap'])   # 10/27 12GiB 재시도만 4GiB를 넘긴다
         if 'source_offset' in r:
             cap=r['source_offset']+r['source_bytes']+2**20
         if last and Path(last['name']).name==r['Video_info']['video_Name']:
@@ -85,6 +92,10 @@ def video(r):
         attempts_path.write_text(json.dumps(counts,indent=2))
         s=Stream(r,cap)
         try:source,last=extract_target(s,r['Video_info']['video_Name'],dest,r.get('front_only',False))
+        except AuthFailure:raise
+        except Exception as error:
+            print('TAR_ERROR',r['video_file'],type(error).__name__,str(error)[:180],flush=True)
+            source=None
         finally:s.close()
         print('STREAM',r['spk'],s.n,'last',last,flush=True)
         if source:return source
@@ -102,10 +113,13 @@ def acquire():
         assert frozen['plan_sha256']==hashlib.sha256((ROOT/'plan.json').read_bytes()).hexdigest()
     manifest=(ROOT/'manifest.tsv').read_text(encoding='utf-8').splitlines()
     details=json.loads((ROOT/'manifest-meta.json').read_text(encoding='utf-8'))
-    done={d['spk'] for d in details};failures=[]
+    done={d['spk'] for d in details}
+    failure_path=ROOT/'acquire-failures.json'
+    failures=json.loads(failure_path.read_text(encoding='utf-8')) if failure_path.exists() else []
     for r in plan:
         if r['spk'] in done:continue
-        if all(sum(zlib.crc32(s.encode())%2==h for s in done)>=15 for h in (0,1)):break
+        if all(sum(zlib.crc32(s.encode())%2==h for s in done)>=20 for h in (0,1)):break
+        if sum(zlib.crc32(s.encode())%2==r['half'] for s in done)>=20:continue
         assert r['spk'] not in ex and r['person'] not in ex and r['half']==zlib.crc32(r['spk'].encode())%2
         base=Path(r['Video_info']['video_Name']).stem
         assert re.search(r'_[CE]\d+_A_\d+$',base)
@@ -130,7 +144,8 @@ def acquire():
             print('VIDEO_DONE',r['spk'],'speakers',len(done),'halves',[sum(zlib.crc32(s.encode())%2==h for s in done) for h in (0,1)],flush=True)
         except AuthFailure:raise
         except Exception as e:
-            failures.append({'spk':r['spk'],'error':str(e)[:300]});print('VIDEO_ERROR',r['spk'],type(e).__name__,str(e)[:180],flush=True)
+            failures=[f for f in failures if f['spk']!=r['spk']]
+            failures.append({'spk':r['spk'],'file':r['video_file'],'error':str(e)[:300]});print('VIDEO_ERROR',r['spk'],type(e).__name__,str(e)[:180],flush=True)
         (ROOT/'acquire-failures.json').write_text(json.dumps(failures,indent=2))
     print('ACQUIRE_DONE',len(done),flush=True)
 if __name__=='__main__':acquire()
