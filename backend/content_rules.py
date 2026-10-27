@@ -18,6 +18,7 @@ LIPLAB 콘텐츠 규칙 검사 게이트 — LLM 대량 생성물의 '자동 1�
 import math
 import re
 from collections import defaultdict
+from functools import lru_cache
 from itertools import combinations
 from typing import Dict, List, Optional, Tuple
 
@@ -149,8 +150,10 @@ def word_visemes(word: str) -> List[int]:
     return visemes
 
 
+@lru_cache(maxsize=2048)
 def viseme_signature(word: str) -> Tuple[int, ...]:
     """단어의 보이는 입모양 순열(동구형이음 비교용). 같으면 눈으로 구별 불가."""
+    # 후보 쌍마다 같은 단어를 다시 변환하지 않는다. 불변 튜플만 최대 2,048개 보관한다.
     return tuple(word_visemes(word))
 
 
