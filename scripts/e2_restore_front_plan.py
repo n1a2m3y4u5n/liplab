@@ -10,6 +10,9 @@ from e2_retry_acquire import ROOT, REPO, EXHASH, Stream, JoinedParts, AuthFailur
 
 
 def main():
+    frozen_before = json.loads((ROOT / 'cohort-frozen.json').read_text(encoding='utf-8'))
+    if frozen_before.get('minimum_not_met'):
+        raise SystemExit('restore already completed; use e2_retry_acquire.py')
     original = json.loads((ROOT / 'plan.json').read_text(encoding='utf-8'))
     by_spk = {r['spk']: r for r in original}
     visited = set(json.loads((ROOT / 'original-label-requests.json').read_text()))
@@ -22,12 +25,14 @@ def main():
     counts = json.loads(counts_path.read_text())
     corrections = []
     # 첫 조사 43회와 정확히 일치하는 재현 결과로 미요청 라벨의 보수적 가산 1만 취소한다.
-    for name in list(counts):
-        if name.startswith(('TL', 'VL')) and name not in visited and counts[name] == 2:
-            corrections.append(name)
-            counts[name] = 1
-    counts_path.write_text(json.dumps(counts, indent=2))
-    (ROOT / 'request-count-corrections.json').write_text(json.dumps({'original_survey_count': len(visited), 'removed_assumed_prior_request': corrections}, indent=2))
+    correction_path = ROOT / 'request-count-corrections.json'
+    if not correction_path.exists():
+        for name in list(counts):
+            if name.startswith(('TL', 'VL')) and name not in visited and counts[name] == 2:
+                corrections.append(name)
+                counts[name] = 1
+        counts_path.write_text(json.dumps(counts, indent=2))
+        correction_path.write_text(json.dumps({'original_survey_count': len(visited), 'removed_assumed_prior_request': corrections}, indent=2))
     cache = ROOT / 'front-label-cache'
     cache.mkdir(exist_ok=True)
     failures = []
