@@ -77,6 +77,7 @@ def video(r):
     while counts.get(r['video_file'],0)<2:
         prior=counts.get(r['video_file'],0)
         cap=(4 if prior else 2)*2**30
+        if 'source_cap' in r:cap=min(cap,r['source_cap'])
         if 'source_offset' in r:
             cap=r['source_offset']+r['source_bytes']+2**20
         if last and Path(last['name']).name==r['Video_info']['video_Name']:
@@ -102,7 +103,9 @@ def acquire():
         assert frozen['plan_sha256']==hashlib.sha256((ROOT/'plan.json').read_bytes()).hexdigest()
     manifest=(ROOT/'manifest.tsv').read_text(encoding='utf-8').splitlines()
     details=json.loads((ROOT/'manifest-meta.json').read_text(encoding='utf-8'))
-    done={d['spk'] for d in details};failures=[]
+    done={d['spk'] for d in details}
+    failure_path=ROOT/'acquire-failures.json'
+    failures=json.loads(failure_path.read_text(encoding='utf-8')) if failure_path.exists() else []
     for r in plan:
         if r['spk'] in done:continue
         if all(sum(zlib.crc32(s.encode())%2==h for s in done)>=15 for h in (0,1)):break
@@ -130,7 +133,8 @@ def acquire():
             print('VIDEO_DONE',r['spk'],'speakers',len(done),'halves',[sum(zlib.crc32(s.encode())%2==h for s in done) for h in (0,1)],flush=True)
         except AuthFailure:raise
         except Exception as e:
-            failures.append({'spk':r['spk'],'error':str(e)[:300]});print('VIDEO_ERROR',r['spk'],type(e).__name__,str(e)[:180],flush=True)
+            failures=[f for f in failures if f['spk']!=r['spk']]
+            failures.append({'spk':r['spk'],'file':r['video_file'],'error':str(e)[:300]});print('VIDEO_ERROR',r['spk'],type(e).__name__,str(e)[:180],flush=True)
         (ROOT/'acquire-failures.json').write_text(json.dumps(failures,indent=2))
     print('ACQUIRE_DONE',len(done),flush=True)
 if __name__=='__main__':acquire()
