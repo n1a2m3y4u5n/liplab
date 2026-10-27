@@ -711,4 +711,41 @@ class Progress(Base):
 
 ---
 
+## liplab-dev 배포 관문·되돌리기 (2026-10-27)
+
+Windows 공식 설치: `iwr https://fly.io/install.ps1 -useb | iex`
+([공식 안내](https://fly.io/docs/flyctl/install/)). 새 터미널에서 `fly version`으로 확인한다.
+이 PC에는 flyctl v0.4.123을 설치했으며 인증은 시도하지 않았다. 토큰 값은 출력하거나 파일에 쓰지 않는다.
+
+별도 worktree `D:\work\hq\projects\liplab-wt\deploy`의 `deploy-2026-10-27`에서 실행한다.
+`integrate/2026-09-23`에서 시작해 `motion-2026-10-27`을 반영했다. 메인 체크아웃의 `.venv`,
+`frontend/node_modules`, `backend/models`를 junction으로 연결했다. 모델은 `.dockerignore`에서 제외하지 않으며,
+공유한 모델·의존성은 이 worktree에서 수정하지 않는다. 나머지 배포 자산은 git 추적본을 사용한다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\predeploy_dev.ps1
+# 필요하면 -Python <메인 .venv\Scripts\python.exe> -ReportDirectory <보고서 폴더>
+```
+
+스크립트는 UTF-8 백엔드 pytest 전체 → 프론트 `npm test` → `npx vite build` →
+`scoring_regress.py --quick`(차이 0)을 실행하며, 하나라도 실패하면 종료 코드 1이다.
+먼저 int8 정렬기·채점기, S4 학생·보정, A4 파일과 dev 빌드 인자를 확인한다.
+v16의 `WITH_ML=1`, `DGOP_MODEL=ours`, `DGOP_STREAM=1`을 유지하고 로컬 Vite 빌드에도
+`VITE_DGOP_STREAM=1`을 적용한다. E/E2·V15·ROI 등 기본 꺼진 실험 플래그는 켜지 않는다.
+
+토큰이 주입되고 관문이 통과한 뒤, 배포 전 `fly releases -a liplab-dev --image`로 직전 이미지 전체 주소를 기록한다.
+배포 및 이미지 되돌리기는 모두 dev 앱을 명시한다(볼륨·DB 변경은 이미지 되돌리기에 포함되지 않는다).
+
+```powershell
+fly releases -a liplab-dev --image
+fly deploy -c fly.dev.toml -a liplab-dev --remote-only
+# 이상이 있으면 위에서 기록한 직전 이미지 전체 주소를 넣는다.
+fly deploy -c fly.dev.toml -a liplab-dev --remote-only --image <직전-이미지-전체-주소>
+```
+
+배포 및 되돌리기 후 스모크: `https://liplab-dev.fly.dev/health` 200, 비로그인 `/` 랜딩,
+둘러보기 데모 로그인(`/api/auth/demo`), `/learn/path` 학습 경로와 단계 진입, 말하기 채점 1회
+(점수·음소·비동기 코칭 도착, `dgop.stream`, 오류 없음)를 확인한다. 듣기 재생은 음소거 상태로 점검한다.
+2026-10-27 준비 단계에서는 `FLY_API_TOKEN`이 없어 배포·원격 스모크·릴리스 조회를 실행하지 않았다.
+
 **배포 성공을 기원합니다! 🚀**
