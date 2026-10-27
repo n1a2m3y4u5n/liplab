@@ -23,7 +23,7 @@ export default function LessonRunner({ track: trackId, title, description, progr
     : null
 
   return (
-    <div className="lesson-runner min-h-screen bg-slate-50">
+    <div className="lesson-runner min-h-[100dvh] bg-slate-50">
       <LearnHeader
         accent={track.accent}
         title={title || `${track.label} 레슨`}

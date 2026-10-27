@@ -24,6 +24,8 @@ import { rateCueView } from '../lib/speakCue'
 import { phoneChipView, phoneTone, phoneValue } from '../lib/phoneChips'
 import { DGOP_STREAM_ENABLED, startSpeakStream } from '../lib/speakStream'
 
+const MAX_REC_MS = 60000   // 녹음 한 번의 상한(끄는 걸 잊어도 메모리·업로드가 끝없이 커지지 않게)
+
 // 녹음 뒤 지연 측정용 표시(개발자 도구 Performance, docs/scorer-stream-latency-2026-10.md 10절). 'speak:stop'부터 잰다
 function speakMark(name, start = false) {
   try {
@@ -140,6 +142,8 @@ export default function SpeakingPractice() {
   const mediaGenRef = useRef(0)          // teardown마다 올린다. 그 전에 요청한 마이크·카메라·모델이 늦게 오면 닫고 버린다
   const attemptRef = useRef(0)           // 녹음 시도 번호(늦게 온 채점 결과가 지금 시도를 덮지 않게)
   const startingRef = useRef(false)
+  const stopRef = useRef(null)           // 마이크 끊김·시간 초과 때 최신 stop을 부른다
+  const autoStopRef = useRef(null)
   const mirrorBusyRef = useRef(false)
 
   // 미러가 켜지면 FaceLandmarker를 지연 로드(발음채점 시 입모양 신뢰도 산출 → AV 후기융합).
@@ -352,6 +356,7 @@ export default function SpeakingPractice() {
   }
 
   const teardown = () => {
+    clearTimeout(autoStopRef.current)
     mediaGenRef.current += 1   // 아직 열리는 중인 마이크·카메라·모델은 도착하는 대로 닫힌다
     attemptRef.current += 1    // 채점 중이던 결과도 버린다
     landmarkerLoadRef.current = null
@@ -403,6 +408,10 @@ export default function SpeakingPractice() {
         () => onRecStop(attempt))
       startRef.current = performance.now()
       setRecording(true)
+      // 블루투스 끊김·통화 가로채기로 마이크가 끊기거나, 끄는 걸 잊고 오래 두면 지금까지 녹음분으로 마무리한다
+      const endNow = () => { if (gen === mediaGenRef.current && recorderRef.current && recorderRef.current.state !== 'inactive') stopRef.current?.() }
+      stream.getAudioTracks().forEach((t) => t.addEventListener('ended', endNow))
+      clearTimeout(autoStopRef.current); autoStopRef.current = setTimeout(endNow, MAX_REC_MS)
       loop()
     } catch (e) {
       // 마이크는 열렸는데 그 뒤(AudioContext·분석기)에서 실패해도 연 장치를 닫는다
@@ -477,6 +486,7 @@ export default function SpeakingPractice() {
 
   const stop = () => {
     speakMark('speak:stop', true)
+    clearTimeout(autoStopRef.current)
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     rafRef.current = null
     setRecording(false); setVol(0); setPitch(null)
@@ -488,6 +498,8 @@ export default function SpeakingPractice() {
     if (rec && rec.state !== 'inactive') rec.stop()   // → onRecStop → 서버 분석
     else closeAudio()
   }
+
+  stopRef.current = stop
 
   const computeSummary = () => {
     const raw = volHist.current, ps = pitchHist.current
