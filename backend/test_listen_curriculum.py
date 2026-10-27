@@ -648,13 +648,14 @@ async def run():
             r = await c.post("/api/auth/register", json={"email": "race@example.com", "username": "race1", "password": "pw-123456",
                                                          "agree_terms": True, "age_confirmed": True})
             h = {"Authorization": f"Bearer {r.json()['access_token']}"}
-            # 일반 계정은 환경변수 1이어도 잠긴다. 동시성 검증 대상 단계만 시험 데이터로 연다.
+            # 일반 계정은 환경변수 1이어도 잠긴다. 동시성·수준 검증 대상 단계만 시험 데이터로 연다.
             from database import AsyncSessionLocal, ListenStageProgress, User
             from sqlalchemy import select
             async with AsyncSessionLocal() as db:
                 uid = (await db.execute(select(User.id).where(User.email == "race@example.com"))).scalar_one()
-                db.add(ListenStageProgress(user_id=uid, stage=3, status="unlocked", attempts=0,
-                                          correct=0, mastery_score=0.0))
+                for stage in (2, 3):
+                    db.add(ListenStageProgress(user_id=uid, stage=stage, status="unlocked", attempts=0,
+                                              correct=0, mastery_score=0.0))
                 await db.commit()
             its = (await c.get("/api/listen/stage/3", headers=h)).json()["items"]
             post = lambda it: c.post("/api/listen/answer", json={"stage": 3, "item_key": it["key"], "answer": it["text"]}, headers=h)
