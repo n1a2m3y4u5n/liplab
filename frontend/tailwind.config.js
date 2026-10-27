@@ -6,10 +6,10 @@ export default {
   ],
   theme: {
     extend: {
-      // 디자인 토큰 — Figma 변수(get_variable_defs) + Figma 화면에 반복되는 고정 hex.
+      // 디자인 토큰 — Figma 구조를 유지하고 작은 글자·버튼의 명도는 AA 대비에 맞춘다.
       // 같은 값은 index.css :root의 CSS 변수로도 있다(인라인 style·SVG용). 임의 hex를 새로 쓰지 말고 여기서 고른다.
       colors: {
-        // 브랜드 주색 — Figma 디자인 토큰(brand/primary #7d53de) 기반 보라 팔레트.
+        // 브랜드 주색 — Figma 보라 팔레트의 AA 대비 보정값.
         // 기존 primary-* 사용부(하늘색)가 이 리맵으로 전부 보라로 전환된다.
         primary: {
           50: '#f6f3fe',
@@ -17,7 +17,7 @@ export default {
           200: '#ddd3f7',
           300: '#c4b5fd',
           400: '#a689ee',
-          500: '#7d53de',  // brand/primary
+          500: '#7446ce',  // brand/primary
           600: '#6d3fc4',
           700: '#5f3ab8',  // brand/primary-dark
           800: '#4c2e93',
@@ -30,12 +30,12 @@ export default {
         ink: {
           DEFAULT: '#1a1a2e',  // text/primary
           muted: '#5a5a6e',    // text/secondary
-          soft: '#7a7a8c',     // 스탯 카드 라벨(93:22)
-          faint: '#8a8a9b',    // 캡션·힌트(130:19, 178:23)
-          ghost: '#a8a8b8',    // 축 눈금·보조 숫자
-          hint: '#a4a4b4',     // 가이드 모달 그룹 머리(338:57)
+          soft: '#68687b',     // 스탯 카드 라벨(93:22)
+          faint: '#68687b',    // 캡션·힌트(130:19, 178:23)
+          ghost: '#68687b',    // 축 눈금·보조 숫자
+          hint: '#68687b',     // 가이드 모달 그룹 머리(338:57)
           pale: '#b9b9c8',     // 가이드 독화 요령 '사과'의 뒷글자(370:142)
-          tick: '#b0b0c0',     // 슬라이더 눈금 숫자(아직 안 지난 칸, 449:91)
+          tick: '#68687b',     // 슬라이더 눈금 숫자(아직 안 지난 칸, 449:91)
         },
         line: {
           DEFAULT: '#e2e2e8',  // border/default
@@ -65,22 +65,22 @@ export default {
           tint: 'var(--track-tint)',
           hover: 'var(--track-hover)',
         },
-        speak: { DEFAULT: '#ec4899', dark: '#be185d', tint: '#ffe4e9', hover: '#db2777' },  // 발화 트랙(171:38)
+        speak: { DEFAULT: '#c02670', dark: '#be185d', tint: '#ffe4e9', hover: '#a21c5b' },  // 발화 트랙(171:38)
         listen: { DEFAULT: '#117a7e', dark: '#0c5e66', tint: '#d5f3f4', hover: '#0c5e66' },  // 소리 듣기 트랙
         bookmark: { DEFAULT: '#2563eb', dark: '#1d4ed8', light: '#60a5fa', line: '#c3dafb' },  // §3.1 북마크 고정색(199:29)
         // 점수·피드백(§3.2) — 94:98 정답 / 94:140 오답 / 182:92 음소 칩
-        good: { DEFAULT: '#16a34a', dark: '#0f7a36', text: '#15803d', tint: '#e7f8ef', line: '#cde7d7' },
+        good: { DEFAULT: '#15803d', dark: '#0f7a36', text: '#15803d', tint: '#e7f8ef', line: '#cde7d7' },
         warn: { DEFAULT: '#f59e0b', strong: '#d97706', text: '#b45309', tint: '#fef3c7' },
         bad: { DEFAULT: '#dc2626', dark: '#991b1b', text: '#b91c1c', tint: '#feecec', line: '#f3c8c8' },
         // 스탯 칩 고정색(§3.1) — 불꽃·별(XP)·레벨·정확도
         stat: { streak: '#b45309', xp: '#5f3ab8', level: '#0369a1', accuracy: '#047857' },
         // 비활성 버튼(130:20 "확인 (비활성)")
         inactive: { DEFAULT: '#e4e4ec', line: '#d2d2de', text: '#a0a0b0', bg: '#f1f1f5', glyph: '#c2c2ce' },  // bg·glyph = 잠긴 배지(313:130)
-        placeholder: '#c9c9d6',   // 입력칸 안내 문구(227:59·243:52 로그인, 입력 화면 공통)
+        placeholder: '#68687b',   // 입력칸 안내 문구(227:59·243:52 로그인, 입력 화면 공통)
         // 파스텔 바탕 — 연습 탭 카드 아이콘 칩(96:120)·수어 칸(226:161)·획득 배지 원(313:130)
         pastel: { sky: '#e0f2fe', pink: '#ffe4e9', amber: '#fff3d6', mint: '#dff7ec', indigo: '#e0e7ff', violet: '#ede9fe' },
         // 분석 탭 정확도 추이(96:66) — 선·점 초록, 마지막 주가 아닌 수치 글자. 어두운 딤 위 강조 초록(313:33 희귀도)
-        chart: { accuracy: '#10b981', label: '#7a9a8c', onDark: '#6ee7b7' },
+        chart: { accuracy: '#10b981', label: '#496f60', onDark: '#6ee7b7' },
         // 활동 캘린더 5단계(207:29) — 0 = 기록 없음
         heat: { 0: '#ededf3', 1: '#ddd3f7', 2: '#b49bec', 3: '#8b5cf6', 4: '#5f3ab8' },
         // 랜딩(9:12) 그림에만 나오는 고정색 — 단계 막대(54:8·54:9·54:10), 출석 칸(54:18·54:21), 기기 테두리(19:37)
