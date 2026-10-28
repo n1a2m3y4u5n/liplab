@@ -225,3 +225,17 @@ def test_frozen_queue_respects_registered_exclusions():
     spks = {r['spk'] for r in q}
     assert not spks & blocked and not {t for r in q for t in (r['video_file'], r['label_file'])} & overlap
     assert len(persons) == 55 and {'C013', 'E261'} <= persons and len(q) == 92
+
+
+def test_rebuild_guard_blocks_e2_clips_and_persons(tmp_path):
+    import train538_rebuild_prep as R
+    e2 = tmp_path / 'e2'; e2.mkdir()
+    (e2 / 'manifest-meta.json').write_text(json.dumps([{'clip': 'lip_J_1_F_04_C777_A_001_s003', 'person': 'C777', 'spk': 'spk999'}]))
+    data = tmp_path / 'd'; (data / 'clips').mkdir(parents=True)
+    (data / 'manifest.tsv').write_text('lip_J_1_F_04_C111_A_001_0.mp4\tspk301\t안녕\nlip_J_1_F_04_C111_B_001_0.mp4\tspk301\t안녕\n', encoding='utf-8')
+    assert R.guard(data, e2) == []
+    todo, items = R.lists(data, tmp_path / 'o', 2, tmp_path / 'bs')
+    assert len(todo) == 1 and json.loads(items[0])['key'] == 'real:lip_J_1_F_04_C111_A_001_0'
+    with (data / 'manifest.tsv').open('a', encoding='utf-8') as f:
+        f.write('lip_J_1_F_04_C777_A_002_0.mp4\tspk302\t안녕\nlip_J_1_F_04_C013_A_001_0.mp4\tspk303\t안녕\n')
+    assert R.guard(data, e2) == ['lip_J_1_F_04_C777_A_002_0', 'lip_J_1_F_04_C013_A_001_0']   # E2 인물, cohort 인물
