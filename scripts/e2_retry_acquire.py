@@ -12,17 +12,17 @@ class Stream:
     def __init__(self, r, cap):
         self.r=r; self.cap=cap; self.n=0; self.t=time.time()
         fd,self.header=tempfile.mkstemp(dir=ROOT,suffix='.header');os.close(fd)
-        self.response=self.header+'.response'
+        self.response=self.header+'.response';self.errf=open(self.header+'.curlerr','wb')
         key=KEY.read_text(encoding='utf-8-sig').strip()
         if not key or len(key.splitlines())!=1: raise ValueError('single key required')
         Path(self.header).write_text('apikey:'+key,encoding='utf-8'); del key
         self.p=subprocess.Popen(['curl.exe','-sS','-L','--connect-timeout','30','--max-time',str(max(900,cap//(2*2**20))),   # 10/28: 4GiB 이상은 900초 안에 못 닿아 잘렸다(2MB/s 아래면 시간 초과)
-            '-H','@'+self.header,'-D',self.response,'https://api.aihub.or.kr/down/0.6/538.do?fileSn='+r['video_fileSn']],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
-        self.first=True
+            '-H','@'+self.header,'-D',self.response,'https://api.aihub.or.kr/down/0.6/538.do?fileSn='+r['video_fileSn']],stdout=subprocess.PIPE,stderr=self.errf)
+        self.first=True;self.eof=False
     def read(self,n=-1):
         n=min(n if n>=0 else 1024*1024,self.cap-self.n)
         if n<=0:return b''
-        b=self.p.stdout.read(n);self.n+=len(b)
+        b=self.p.stdout.read(n);self.n+=len(b);self.eof=self.eof or len(b)<n
         el=time.time()-self.t
         if el>180 and self.n/el<512*1024:   # 10/27 오후 서버가 100KB/s로 느려져 요청만 날렸다. 느리면 전체를 멈춘다
             (ROOT/'SLOW_STOP').write_text(time.strftime('%Y-%m-%dT%H:%M:%S')+' '+self.r['video_file']+' '+str(self.n));raise SlowStop('server too slow; stopped')
@@ -37,9 +37,14 @@ class Stream:
             if not codes or codes[-1]!='200': raise RuntimeError('download HTTP '+str(codes[-1:] or 'unknown'))
         return b
     def close(self):
+        if self.eof:   # 10/28: 끝까지 읽혔으면 curl이 스스로 끝나기를 기다려 진짜 종료 코드를 받는다
+            try:self.p.wait(15)
+            except subprocess.TimeoutExpired:pass
         rc=self.p.poll();self.p.terminate();self.p.stdout.close();self.p.wait();self.p.returncode=rc if rc is not None else 'killed'
-        Path(self.header).unlink(missing_ok=True);Path(self.response).unlink(missing_ok=True)
-        with (ROOT/'transfers.jsonl').open('a') as f:f.write(json.dumps({'file':self.r['video_file'],'bytes':self.n,'seconds':round(time.time()-self.t,3),'cap':self.cap,'curl_rc':self.p.returncode})+'\n')   # 10/28: 서버가 일찍 끊는지(18·56) 남긴다
+        self.errf.close()
+        err=Path(self.header+'.curlerr').read_text(errors='replace')[:200] if Path(self.header+'.curlerr').exists() else ''
+        Path(self.header).unlink(missing_ok=True);Path(self.response).unlink(missing_ok=True);Path(self.header+'.curlerr').unlink(missing_ok=True)
+        with (ROOT/'transfers.jsonl').open('a') as f:f.write(json.dumps({'file':self.r['video_file'],'bytes':self.n,'seconds':round(time.time()-self.t,3),'cap':self.cap,'curl_rc':self.p.returncode,'eof':self.eof,'curl_err':err.strip()})+'\n')   # 10/28: 서버가 일찍 끊는지(18·56) 남긴다
 class JoinedParts:
     """외부 tar의 .partN을 이어 내부 tar의 1GiB 경계 절단을 없앤다."""
     def __init__(self, outer):self.outer=outer;self.current=None;self.eof=False
@@ -75,7 +80,7 @@ def extract_target(stream,target,dest,front_only=False):
                         if tmp.stat().st_size!=m.size:return None,last
                         tmp.replace(dest);return dest,last
                     finally:tmp.unlink(missing_ok=True)
-    except (tarfile.ReadError,EOFError):pass
+    except (tarfile.ReadError,EOFError) as error:print('TAR_STOP',type(error).__name__,str(error)[:120],flush=True)
     return None,last
 def video(r):
     attempts_path=ROOT/'request-counts.json'
