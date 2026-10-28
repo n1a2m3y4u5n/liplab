@@ -1,0 +1,74 @@
+{
+ "n_clips": 228,
+ "n_ok": 228,
+ "errors": {},
+ "halves": {
+  "0": {
+   "clips": 228,
+   "speakers": 19
+  },
+  "1": {
+   "clips": 0,
+   "speakers": 0
+  }
+ },
+ "candidate_eligibility": {
+  "low": false,
+  "curve": true,
+  "both": false
+ },
+ "explore": {
+  "lag_ms": -99,
+  "off_J_by_lag": {
+   "-132": 0.2285,
+   "-99": 0.2621,
+   "-66": 0.2459,
+   "-33": 0.1887,
+   "0": 0.1152,
+   "33": 0.0558,
+   "66": 0.0208,
+   "99": 0.0023,
+   "132": -0.0083
+  },
+  "by_w": {
+   "low": {
+    "R": 0.0271,
+    "S": 0.0022,
+    "J": 0.0,
+    "off_R": 0.2964,
+    "on_R": 0.3235
+   },
+   "curve": {
+    "R": 0.0357,
+    "S": 0.0038,
+    "J": 0.0,
+    "off_R": 0.2964,
+    "on_R": 0.3321
+   },
+   "both": {
+    "R": 0.0235,
+    "S": 0.0026,
+    "J": 0.0,
+    "off_R": 0.2964,
+    "on_R": 0.3199
+   }
+  },
+  "premise_real": [
+   0.6632,
+   19
+  ],
+  "premise_off": [
+   -0.0395,
+   19
+  ],
+  "premise_on0.6": [
+   1.5875,
+   19
+  ],
+  "w": 0.6,
+  "condition": "curve"
+ },
+ "verdict": "exploration only; freeze condition and lag before confirmation",
+ "experiment": "e2",
+ "smoke_only": false
+}
