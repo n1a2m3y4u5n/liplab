@@ -32,7 +32,7 @@ class Stream:
                 (ROOT/'AUTH_STOP').write_text('Authentication failure: do not retry.');raise AuthFailure('authentication failed; stopped')
             headers=Path(self.response).read_text(errors='replace')
             codes=re.findall(r'HTTP/\S+\s+(\d+)',headers)
-            if codes and codes[-1] in ('401','403','502'):   # 502는 키 오류에서도 나므로 즉시 멈춘다(10/27 지시)
+            if codes and codes[-1] in ('401','403','429','502'):   # 502는 키 오류에서도 나므로 즉시 멈춘다(10/27 지시), 429는 10/28 개정 승인 조건
                 (ROOT/'AUTH_STOP').write_text('Authentication HTTP failure: do not retry.');raise AuthFailure('authentication failed; stopped')
             if not codes or codes[-1]!='200': raise RuntimeError('download HTTP '+str(codes[-1:] or 'unknown'))
         return b
