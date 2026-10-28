@@ -1,0 +1,107 @@
+{
+ "n_clips": 180,
+ "n_ok": 180,
+ "errors": {},
+ "halves": {
+  "0": {
+   "clips": 0,
+   "speakers": 0
+  },
+  "1": {
+   "clips": 180,
+   "speakers": 15
+  }
+ },
+ "candidate_eligibility": {
+  "low": false,
+  "curve": true,
+  "both": false
+ },
+ "explore": {
+  "lag_ms": -99,
+  "off_J_by_lag": {
+   "-132": null,
+   "-99": null,
+   "-66": null,
+   "-33": null,
+   "0": null,
+   "33": null,
+   "66": null,
+   "99": null,
+   "132": null
+  },
+  "by_w": {
+   "low": {
+    "R": null,
+    "S": null,
+    "J": null,
+    "off_R": null,
+    "on_R": null
+   },
+   "curve": {
+    "R": null,
+    "S": null,
+    "J": null,
+    "off_R": null,
+    "on_R": null
+   },
+   "both": {
+    "R": null,
+    "S": null,
+    "J": null,
+    "off_R": null,
+    "on_R": null
+   }
+  },
+  "premise_real": [
+   null,
+   0
+  ],
+  "premise_off": [
+   null,
+   0
+  ],
+  "premise_on0.6": [
+   null,
+   0
+  ],
+  "w": 0.6,
+  "condition": "curve"
+ },
+ "confirm": {
+  "lag_ms": -99,
+  "w": 0.6,
+  "condition": "curve",
+  "delta": {
+   "R": 0.0195,
+   "S": 0.0059,
+   "J": 0.0
+  },
+  "speakers": {
+   "R": 15,
+   "S": 15,
+   "J": 15
+  },
+  "off_R": 0.2696377218997875,
+  "on_R": 0.2891747857718614,
+  "delta_R_ci95": [
+   0.012,
+   0.0265
+  ],
+  "premise_real": [
+   0.441,
+   15
+  ],
+  "premise_off": [
+   -0.0448,
+   15
+  ],
+  "premise_on0.6": [
+   1.653,
+   15
+  ]
+ },
+ "verdict": "불통과: 기본 끔 유지",
+ "experiment": "e2",
+ "smoke_only": false
+}
