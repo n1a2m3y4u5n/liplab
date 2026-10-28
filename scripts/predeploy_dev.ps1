@@ -11,7 +11,7 @@ $Python = (Resolve-Path -LiteralPath $Python).Path
 New-Item -ItemType Directory -Force -Path $ReportDirectory | Out-Null
 $ReportDirectory = (Resolve-Path -LiteralPath $ReportDirectory).Path
 $savedEnv = @{}
-$settings = @{ PYTHONUTF8 = '1'; PYTHONIOENCODING = 'utf-8'; VITE_DGOP_STREAM = '1' }
+$settings = @{ PYTHONUTF8 = '1'; PYTHONIOENCODING = 'utf-8'; VITE_DGOP_STREAM = '1'; VITE_LIPREAD_ROI = '1' }
 
 function Invoke-Gate([string]$Name, [scriptblock]$Command) {
     Write-Host "=== $Name ==="
@@ -31,14 +31,14 @@ import os, pathlib, re, tomllib
 root = pathlib.Path.cwd()
 cfg = tomllib.loads((root / 'fly.dev.toml').read_text(encoding='utf-8'))
 assert cfg['app'] == 'liplab-dev', 'wrong app'
-assert cfg['build']['args'] == {'WITH_ML': '1', 'DGOP_MODEL': 'ours', 'DGOP_STREAM': '1'}, 'review changed build args'
+assert cfg['build']['args'] == {'WITH_ML': '1', 'DGOP_MODEL': 'ours', 'DGOP_STREAM': '1', 'LIPREAD_ROI': '1'}, 'review changed build args'
 assert cfg['env']['BACKBONE_QUANT'] == 'int8'
 experimental = {'VITE_COART_E', 'VITE_COART_E2', 'VITE_VISEME_V15', 'VITE_LIPREAD_ROI'}
 source = root / 'frontend' / 'src'
 for p in source.rglob('*'):
     if p.suffix in {'.js', '.jsx', '.mjs'}:
         experimental.update(re.findall(r'VITE_[A-Z0-9_]+', p.read_text(encoding='utf-8')))
-experimental -= {'VITE_DGOP_STREAM'}
+experimental -= {'VITE_DGOP_STREAM', 'VITE_LIPREAD_ROI'}
 for key in experimental:
     assert os.environ.get(key, '') in {'', '0'}, f'{key} must stay off/unset'
 for p in (root / 'frontend').glob('.env*'):
@@ -52,11 +52,13 @@ for rel in ['backend/models/dgop_ours/aligner/model.int8.safetensors',
             'backend/models/dgop_ours/scorer/model.int8.safetensors',
             'backend/models/dgop_stream/student_w8.onnx',
             'backend/models/dgop_stream/calibration.json',
-            'backend/models/kr_a4_wavlm.pt']:
+            'backend/models/kr_a4_wavlm.pt',
+            'frontend/public/models/roi/kr_lipread_roi.web.onnx',
+            'frontend/public/models/roi/kr_lipread_roi.web.meta.json']:
     p = root / rel
     assert p.is_file() and p.stat().st_size > 0, f'missing/empty asset: {rel}'
     print(f'{rel}: {p.stat().st_size} bytes')
-print('liplab-dev config OK; DGOP_STREAM=1; experimental flags off/unset')
+print('liplab-dev config OK; DGOP_STREAM=1; LIPREAD_ROI=1; experimental flags off/unset')
 '@ | & $Python -X utf8 -
     }
     Push-Location (Join-Path $root 'backend')
@@ -65,7 +67,7 @@ print('liplab-dev config OK; DGOP_STREAM=1; experimental flags off/unset')
     Push-Location (Join-Path $root 'frontend')
     try {
         Invoke-Gate 'frontend npm test' { & npm.cmd test }
-        Invoke-Gate 'frontend vite build (DGOP_STREAM=1)' { & npx.cmd --no-install vite build }
+        Invoke-Gate 'frontend vite build (DGOP_STREAM=1, LIPREAD_ROI=1)' { & npx.cmd --no-install vite build }
     } finally { Pop-Location }
     Invoke-Gate 'scoring regression quick' {
         & $Python -X utf8 scripts/scoring_regress.py --quick --report (Join-Path $ReportDirectory 'scoring-regress-quick.md')
