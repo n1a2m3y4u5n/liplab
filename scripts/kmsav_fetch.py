@@ -27,7 +27,7 @@ E2_TRANSFERS = Path(r'D:\work\hq\projects\liplab-lab\data\e2_538\transfers.jsonl
 YT_DLP_PY = Path(r'D:\work\hq\projects\liplab-lab\venv-kmsav\Scripts\python.exe')
 YIELD_DROP = 0.30
 YIELD_WAIT = 1800
-FATAL = re.compile(r'HTTP Error 429|Too Many Requests|Sign in to confirm', re.I)
+FATAL = re.compile(r"HTTP Error 429|Too Many Requests|Sign in to confirm you(?:'|’)?re not a bot", re.I)   # 10/28: 연령 제한('confirm your age')은 쿠키 없이 못 받으니 건너뛴다
 GONE = [
     (re.compile(r'Video unavailable|has been removed|account.*terminated|no longer available', re.I), 'removed'),
     (re.compile(r'private video', re.I), 'private'),
