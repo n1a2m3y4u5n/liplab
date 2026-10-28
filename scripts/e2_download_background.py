@@ -79,7 +79,7 @@ def write_report(error, started, log):
         f"화자 {len(speakers)}명, 클립 {len(rows)}개, 절반별 {halves[0]}/{halves[1]}명; 저장 {media_bytes / 1e9:.6f} GB.\n"
         f"누적 수신 최소 {download_bytes / 1e9:.6f} GB, 기록 수신시간 최소 {seconds:.1f}초; 중단 요청의 일부 계측 누락으로 하한값.\n"
         f"실패 파일: {', '.join(failed_names) or '없음'}; 미수신 계획 화자: {', '.join(missing) or '없음'}; 실행 오류: {error or '없음'}.\n"
-        f"최소 15/15명까지 {max(0, 15 - halves[0])}/{max(0, 15 - halves[1])}명 부족; 남은 받기는 듣기 개편 뒤. 탐색·확인 판정 미실행.\n"
+        f"최소 15/15명까지 {max(0, 15 - halves[0])}/{max(0, 15 - halves[1])}명 부족; 대체 화자는 같은 규칙으로 남은 요청 1회에 tar 끝까지 읽어 계속 받는다. 탐색·확인 판정 미실행.\n"
         f"시작 {started}; 종료 {datetime.now().isoformat(timespec='seconds')}.\n"
     )
     outbox = OUTBOX / (datetime.now().strftime('%Y%m%d-%H%M') + '-liplab-538-download.md')
@@ -277,6 +277,43 @@ def extend_retry_deep(each_gib, budget_gib, target, env):
     target.write('RETRY_DEEP_COMPLETE\n'); target.flush()
 
 
+def extend_retry_full(budget_gib, target, env):
+    """10/28 사용자 승인(선택지 1): 라벨까지 있는 절반 1 미수신 화자에게 영상 tar 요청 1회를 더 주고, 그 1회는 tar 끝까지 흘려 읽는다."""
+    import hashlib
+    import zlib
+    from e2_retry_acquire import AuthFailure
+    files = {m[0]: int(m[1].replace(',', '')) * {'MB': 2**20, 'GB': 2**30, 'KB': 1024, 'B': 1}[m[2]] for m in re.findall(r'([TV][LS]\d+\.tar)\s*\|\s*([\d,]+)\s*(GB|MB|KB|B)\s*\|\s*(\d+)', (REPO / 'out/aihub538-filetree-retry.txt').read_text(encoding='utf-8'))}
+    start = len((ROOT / 'transfers.jsonl').read_text(encoding='utf-8').splitlines())
+    while True:
+        if (ROOT / 'AUTH_STOP').exists():
+            raise AuthFailure('authentication stop')
+        done = {r['spk'] for r in json.loads((ROOT / 'manifest-meta.json').read_text(encoding='utf-8'))}
+        halves = [sum(zlib.crc32(s.encode()) % 2 == h for s in done) for h in (0, 1)]
+        if halves[1] >= 20:
+            break
+        plan = json.loads((ROOT / 'plan.json').read_text(encoding='utf-8'))
+        record = next((r for r in plan if r['half'] == 1 and r['spk'] not in done and 'Video_info' in r and not r.get('full_retry') and r['video_file'] in files), None)
+        if not record:
+            break
+        transfers = [json.loads(line) for line in (ROOT / 'transfers.jsonl').read_text(encoding='utf-8').splitlines()][start:]
+        if sum(r.get('bytes', 0) for r in transfers) + files[record['video_file']] > budget_gib * 2**30:
+            target.write('RETRY_FULL_BUDGET_END\n'); target.flush()
+            break
+        counts = json.loads((ROOT / 'request-counts.json').read_text())
+        target.write('RETRY_FULL_TRY ' + record['spk'] + ' ' + record['person'] + ' ' + record['video_file'] + ' halves=' + str(halves) + '\n'); target.flush()
+        record.update(front_only=False, source_cap=files[record['video_file']] + 2**30, max_requests=counts.get(record['video_file'], 0) + 1, deep_retry=True, full_retry=True)
+        (ROOT / 'plan.json').write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding='utf-8')
+        frozen = json.loads((ROOT / 'cohort-frozen.json').read_text(encoding='utf-8'))
+        frozen['plan_sha256'] = hashlib.sha256((ROOT / 'plan.json').read_bytes()).hexdigest()
+        (ROOT / 'cohort-frozen.json').write_text(json.dumps(frozen, ensure_ascii=False, indent=2), encoding='utf-8')
+        result = subprocess.run([sys.executable, '-u', str(REPO / 'scripts/e2_retry_acquire.py')], cwd=REPO, env=env, stdout=target, stderr=target)
+        if (ROOT / 'AUTH_STOP').exists() or (ROOT / 'SLOW_STOP').exists():
+            raise AuthFailure('authentication or slow stop')
+        if result.returncode:
+            raise RuntimeError('retry-full acquirer exit ' + str(result.returncode))
+    target.write('RETRY_FULL_COMPLETE halves=' + str(halves) + '\n'); target.flush()
+
+
 def extend_next_tars(target, env):
     """?? ?? ? ??(?? ??): ?? tar ??/?? ??? ???? ??."""
     import hashlib
@@ -362,6 +399,7 @@ def main():
     parser.add_argument('--skipped-deep-gib', type=float, default=0)
     parser.add_argument('--retry-deep-each-gib', type=float, default=0)
     parser.add_argument('--retry-deep-budget-gib', type=float, default=80)
+    parser.add_argument('--retry-full-gib', type=float, default=0)   # 10/28 선택지 1: 절반 1 화자당 1회 tar 전체 읽기, 전체 예산
     args = parser.parse_args()
     started = datetime.now().isoformat(timespec='seconds')
     lock = (ROOT / 'downloader.lock').open('a+b')
@@ -383,6 +421,9 @@ def main():
         env = dict(os.environ, PYTHONIOENCODING='utf-8', PYTHONUTF8='1')
         with log.open('a', encoding='utf-8', buffering=1) as target:
             target.write('\nBACKGROUND_RESUME ' + datetime.now().isoformat(timespec='seconds') + '\n')
+            if args.retry_full_gib > 0:
+                extend_retry_full(args.retry_full_gib, target, env)
+                return
             if args.retry_deep_each_gib > 0:
                 extend_retry_deep(args.retry_deep_each_gib, args.retry_deep_budget_gib, target, env)
                 return

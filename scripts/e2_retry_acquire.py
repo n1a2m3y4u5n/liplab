@@ -16,7 +16,8 @@ class Stream:
         key=KEY.read_text(encoding='utf-8-sig').strip()
         if not key or len(key.splitlines())!=1: raise ValueError('single key required')
         Path(self.header).write_text('apikey:'+key,encoding='utf-8'); del key
-        self.p=subprocess.Popen(['curl.exe','-sS','-L','--connect-timeout','30','--max-time','900','-H','@'+self.header,'-D',self.response,'https://api.aihub.or.kr/down/0.6/538.do?fileSn='+r['video_fileSn']],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+        self.p=subprocess.Popen(['curl.exe','-sS','-L','--connect-timeout','30','--max-time',str(max(900,cap//(2*2**20))),   # 10/28: 4GiB 이상은 900초 안에 못 닿아 잘렸다(2MB/s 아래면 시간 초과)
+            '-H','@'+self.header,'-D',self.response,'https://api.aihub.or.kr/down/0.6/538.do?fileSn='+r['video_fileSn']],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
         self.first=True
     def read(self,n=-1):
         n=min(n if n>=0 else 1024*1024,self.cap-self.n)
@@ -36,9 +37,9 @@ class Stream:
             if not codes or codes[-1]!='200': raise RuntimeError('download HTTP '+str(codes[-1:] or 'unknown'))
         return b
     def close(self):
-        self.p.terminate();self.p.stdout.close();self.p.wait()
+        rc=self.p.poll();self.p.terminate();self.p.stdout.close();self.p.wait();self.p.returncode=rc if rc is not None else 'killed'
         Path(self.header).unlink(missing_ok=True);Path(self.response).unlink(missing_ok=True)
-        with (ROOT/'transfers.jsonl').open('a') as f:f.write(json.dumps({'file':self.r['video_file'],'bytes':self.n,'seconds':round(time.time()-self.t,3),'cap':self.cap})+'\n')
+        with (ROOT/'transfers.jsonl').open('a') as f:f.write(json.dumps({'file':self.r['video_file'],'bytes':self.n,'seconds':round(time.time()-self.t,3),'cap':self.cap,'curl_rc':self.p.returncode})+'\n')   # 10/28: 서버가 일찍 끊는지(18·56) 남긴다
 class JoinedParts:
     """외부 tar의 .partN을 이어 내부 tar의 1GiB 경계 절단을 없앤다."""
     def __init__(self, outer):self.outer=outer;self.current=None;self.eof=False
@@ -84,6 +85,10 @@ def video(r):
         prior=counts.get(r['video_file'],0)
         cap=(4 if prior else 2)*2**30
         if 'source_cap' in r:cap=r['source_cap'] if r.get('deep_retry') else min(cap,r['source_cap'])   # 10/27 12GiB 재시도만 4GiB를 넘긴다
+        if r.get('selection_basis','').startswith('skipped first header') and not r.get('deep_retry') and prior>=2:
+            # 10/28: 정면 A가 tar 깊숙이 있어 4GiB 앞부분으론 못 닿았다. 남은 한 번은 tar 끝까지 흘려 읽는다(디스크에 tar를 두지 않음)
+            m=re.search(re.escape(r['video_file'])+r'\s*\|\s*([\d,]+)\s*(GB|MB|KB|B)',(REPO/'out/aihub538-filetree-retry.txt').read_text(encoding='utf-8'))
+            if m:cap=int(m[1].replace(',',''))*{'MB':2**20,'GB':2**30,'KB':1024,'B':1}[m[2]]+2**30
         if 'source_offset' in r:
             cap=r['source_offset']+r['source_bytes']+2**20
         if last and Path(last['name']).name==r['Video_info']['video_Name']:
