@@ -83,6 +83,7 @@ def extract_target(stream,target,dest,front_only=False):
     except (tarfile.ReadError,EOFError) as error:print('TAR_STOP',type(error).__name__,str(error)[:120],flush=True)
     return None,last
 def video(r):
+    if r.get('resume_source') and Path(r['resume_source']).is_file():return Path(r['resume_source'])   # 10/28 이어받기로 이미 꺼낸 정면 A
     attempts_path=ROOT/'request-counts.json'
     counts=json.loads(attempts_path.read_text()) if attempts_path.exists() else {'TS131.tar':1}
     dest=ROOT/'source.mp4';last=None
@@ -126,7 +127,9 @@ def acquire():
     done={d['spk'] for d in details}
     failure_path=ROOT/'acquire-failures.json'
     failures=json.loads(failure_path.read_text(encoding='utf-8')) if failure_path.exists() else []
+    only=os.environ.get('E2_ONLY_SPK')   # 10/28 이어받기: 그 화자 하나만 자르고 다른 화자는 요청하지 않는다
     for r in plan:
+        if only and r['spk']!=only:continue
         if r['spk'] in done:continue
         if all(sum(zlib.crc32(s.encode())%2==h for s in done)>=20 for h in (0,1)):break
         if sum(zlib.crc32(s.encode())%2==r['half'] for s in done)>=20:continue
