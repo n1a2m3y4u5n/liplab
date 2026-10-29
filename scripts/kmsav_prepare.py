@@ -8,7 +8,9 @@ r"""kmsav_prepare.py: 받은 KMSAV 원본(C:\liplab-raw\kmsav\<id>.mp4)에서 �
 원자료·영상은 앱·공개 저장소에 넣지 않는다.
 """
 import argparse
+import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -86,10 +88,19 @@ def main(argv=None):
     ap.add_argument('--delete-raw', action='store_true')
     ap.add_argument('--workers', type=int, default=2)
     a = ap.parse_args(argv)
-    ids = a.ids.split(',') if a.ids else sorted(p.stem for p in RAW.glob('*.mp4'))
+    # 10/29: 받다 건너뛴 영상의 반쪽 파일(<id>.f298.mp4 등)은 ID가 아니므로 뺀다. 유튜브 ID는 11자다.
+    ids = a.ids.split(',') if a.ids else sorted(p.stem for p in RAW.glob('*.mp4') if re.fullmatch(r'[\w-]{11}', p.stem))
+    failed_path = DATA / 'prepare-failed.json'
+    failed = json.loads(failed_path.read_text(encoding='utf-8')) if failed_path.exists() else {}
     done = []
     for vid in ids:
-        r = crop_one(vid, a.keep_frames)
+        try:
+            r = crop_one(vid, a.keep_frames)
+        except (subprocess.CalledProcessError, OSError) as e:   # 영상 하나가 깨져도 나머지는 계속한다
+            r = 'fail: ' + str(e)[-200:]
+        if r.startswith('fail'):
+            failed[vid] = r
+            failed_path.write_text(json.dumps(failed, ensure_ascii=False, indent=1), encoding='utf-8')
         n = link_roi_inputs(vid) if r in ('ok', 'skip') else 0
         print(vid, r, 'utts', n, flush=True)
         if r in ('ok', 'skip'):
