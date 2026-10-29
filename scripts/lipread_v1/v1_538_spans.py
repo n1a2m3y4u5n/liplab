@@ -13,7 +13,7 @@ build_cd.py(liplab-lab/tools)의 매니페스트·텍스트 정규화·건너뛰
     build_cd의 글자 CER 대신 자모 CER이다. 잘린 클립을 거르는 기준(> 0.6)은 그대로 둔다.
   - align_lp: 정렬 경로 프레임별 로그확률 평균, align_lp_tok: 그중 blank가 아닌 프레임 평균.
 사용(liplab backend .venv, GPU 금지):
-  set CUDA_VISIBLE_DEVICES= & set DGOP_DEVICE=cpu
+  (CUDA_VISIBLE_DEVICES는 스크립트가 '-1'로 둔다. Windows는 빈 값을 지운다)
   python v1_538_spans.py --tools <liplab-lab/tools> --backend <liplab/backend> --threads 4 -- \
       --data <train538> --out <out/d.k> --manifest <manifest.k.tsv> --bs <rebuild/real_bs> --clips <train538/clips>
   ('--' 뒤는 build_cd.py 인자 그대로)
@@ -35,14 +35,17 @@ def main():
     ap.add_argument('rest', nargs=argparse.REMAINDER)
     a = ap.parse_args()
     rest = a.rest[1:] if a.rest[:1] == ['--'] else a.rest
-    if os.environ.get('CUDA_VISIBLE_DEVICES', None) != '':
-        print('V1_538_SPANS_FAIL CUDA_VISIBLE_DEVICES를 빈 값으로 두고 실행(GPU 금지)', flush=True)
-        return 1
+    # GPU 금지. Windows는 빈 환경변수를 지우므로 '-1'(GPU 없음)로 둔다. 다른 값이 있어도 덮어쓴다.
+    if os.environ.get('CUDA_VISIBLE_DEVICES') not in ('', '-1'):
+        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
     os.environ['DGOP_DEVICE'] = 'cpu'
     os.environ.setdefault('HF_HUB_OFFLINE', '1')
     sys.path[:0] = [os.path.abspath(a.tools), os.path.join(os.path.dirname(HERE)), os.path.abspath(a.backend)]
     import numpy as np
     import torch
+    if torch.cuda.is_available():
+        print('V1_538_SPANS_FAIL torch가 GPU를 본다(GPU 금지)', flush=True)
+        return 1
     torch.set_num_threads(a.threads)
     import build_cd as BC
     import coart_pod_eval as C
