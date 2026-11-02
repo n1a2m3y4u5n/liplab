@@ -18,6 +18,8 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 
 // 배포 뒤 열려 있던 옛 화면이 사라진 조각 파일을 못 받으면 한 번만 새로 불러온다(무한 새로고침 방지).
 window.addEventListener('vite:preloadError', (e) => {
+  // 연결이 끊기면 새로고침도 실패하므로 앱의 오류 화면을 그대로 남긴다.
+  if (navigator.onLine === false) return
   try {
     if (sessionStorage.getItem('liplab_chunk_reload')) return
     sessionStorage.setItem('liplab_chunk_reload', '1')
