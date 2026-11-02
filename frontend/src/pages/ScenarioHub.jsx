@@ -1,5 +1,6 @@
+import { useLocation as useEntryLocation } from 'react-router-dom'
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { curriculumAPI, learningAPI } from '../api'
 import useStore from '../store/useStore'
 import AppShell from '../components/AppShell'
@@ -69,6 +70,7 @@ function LevelSlider({ value, onChange }) {
 
 export default function ScenarioHub() {
   const navigate = useNavigate()
+  const entryLocation = useEntryLocation()
   const [searchParams] = useSearchParams()
   const user = useStore((state) => state.user)
   const setScenario = useStore((state) => state.setScenario)
@@ -138,7 +140,7 @@ export default function ScenarioHub() {
   }
 
   return (
-    <AppShell active="practice" title="상황별 시나리오" closeTo="/practice/hub">
+    <AppShell active="learn" title="상황별 연습" backTo={entryLocation.state?.from === 'path' ? '/learn/path' : '/learn/path?section=free'} backLabel={entryLocation.state?.from === 'path' ? '단계' : '자유 연습'}>
       {notice && (
         <div role="status" aria-live="polite"
           className="fixed left-1/2 top-4 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl bg-warn-tint px-4 py-2 text-sm font-medium text-warn-text shadow-lg">

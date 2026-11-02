@@ -46,7 +46,7 @@ export default function Bookmarks() {
   }
 
   return (
-    <AppShell active="review" title="북마크한 문장" description="어려웠던 문장들을 다시 연습해보세요">
+    <AppShell backTo="/records" backLabel="기록" active="records" title="북마크한 문장" description="어려웠던 문장들을 다시 연습해보세요">
       <div className="w-full">
         {loading ? (
           <LoadingScreen variant="inline" />
@@ -54,7 +54,7 @@ export default function Bookmarks() {
           <div className="card text-center py-16">
             <p className="text-ink-muted font-medium">북마크한 문장이 없습니다.</p>
             <p className="text-sm text-ink-faint mt-1">연습 중 어려운 문장은 질문 옆 북마크 버튼을 눌러 저장하세요.</p>
-            <button onClick={() => navigate('/dashboard')} className="btn-primary mt-6">
+            <button onClick={() => navigate('/learn/path')} className="btn-primary mt-6">
               연습 시작하기
             </button>
           </div>

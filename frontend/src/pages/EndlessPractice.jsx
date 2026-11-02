@@ -31,7 +31,7 @@ export default function EndlessPractice() {
   }, [])
 
   return (
-    <AppShell active="practice" title="엔드리스 학습" closeTo="/practice/hub">
+    <AppShell active="learn" title="엔드리스 학습" backTo="/learn/path?section=free" backLabel="자유 연습">
       {/* 엔드리스 시작 — Figma 인디고 그라데이션 히어로(3D 하단테두리) */}
       <section className="relative w-full overflow-hidden rounded-[20px] border-2 border-b-[5px] border-endless-dark p-6 sm:p-[26px]"
         style={{ backgroundImage: 'linear-gradient(166deg, var(--endless) 0%, var(--endless-dark) 100%)' }}>

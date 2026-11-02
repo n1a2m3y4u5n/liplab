@@ -598,7 +598,7 @@ function SpeakMock({ result = false, scene, tick, running }) {
 
 // ── 06 연습 ──────────────────────────────────────────────────────────────────
 const PRACTICE = [
-  ['free', '자유 발화', '내가 쓴 문장을 소리 내어 확인해요', '/ui/card-free.svg', 'bg-pastel-pink'],
+  ['free', '내 문장 입모양 보기', '내가 쓴 문장을 소리 내어 확인해요', '/ui/card-free.svg', 'bg-pastel-pink'],
   ['scenario', '상황별 시나리오', '카페·병원 등 상황을 골라 연습해요', '/ui/card-scenario.svg', 'bg-pastel-amber'],
   ['sign', '수어 보기', '문장을 수어로도 확인할 수 있어요', '/ui/card-sign.svg', 'bg-pastel-mint'],
   ['endless', '엔드리스 학습', '틀렸던 유형이 계속 나와요', '/ui/tab-card-endless.svg', 'bg-pastel-indigo'],
@@ -915,7 +915,7 @@ export const MOCKS = {
   overview: { design: [1440, 760], C: OverviewMock, areas: ['stats', 'rail', 'logo'],
     alt: '데스크톱 학습 화면 그림. 왼쪽 메뉴, 가운데 단계 목록과 레슨 카드, 오른쪽 오늘의 과제와 복습 카드.' },
   learn: { design: [520, 653], C: LearnMock, areas: ['switch', 'guideBtn', 'nodes', 'arrows', 'sheet'],
-    alt: '휴대폰 학습 탭 그림. 독화·발화 전환, 단계 이름과 가이드 버튼, DOKA 단계 노드와 아래 레슨 카드.' },
+    alt: '휴대폰 학습 탭 그림. 입모양 읽기·말하기 전환, 단계 이름과 가이드 버튼, DOKA 단계 노드와 아래 레슨 카드.' },
   readQuestion: { design: [375, 564], C: (p) => <ReadMock {...p} />, areas: ['bookmark', 'stage', 'options'],
     alt: '단어 독화 문제 그림. 왼쪽 위에 가상 인물 이름이 붙은 입모양 영상이 있다. 보기를 고르고 확인을 누르면 초록 결과 바에 \'정답이에요\'가 나온다.' },
   readWrong: { design: [375, 564], C: (p) => <ReadMock wrong {...p} />, areas: ['resultBar'],
@@ -925,15 +925,15 @@ export const MOCKS = {
   speakResult: { design: [375, 564], C: (p) => <SpeakMock result {...p} />, areas: ['score', 'chips', 'detail'],
     alt: '발화 결과 그림. 발음 점수 84%, 소리별 칩 네 개 중 ㄷ은 주황, 아래 초록 결과 바 잘했어요.' },
   practice: { design: [520, 653], C: PracticeMock, areas: ['free', 'scenario', 'sign', 'endless', 'mouth'],
-    alt: '연습 탭 그림. 자유 발화, 상황별 시나리오, 수어 보기, 엔드리스 학습, 입모양 교실 카드.' },
+    alt: '학습의 자유 연습 그림. 내 문장 입모양 보기, 상황별 시나리오, 수어 보기, 엔드리스 학습, 입모양 교실 카드.' },
   task: { design: [700, 606], C: TaskMock, areas: ['today', 'special', 'badges'],
-    alt: '과제 탭 그림. 오늘의 과제 세 줄, 특별 과제 카드, 배지 목록.' },
+    alt: '오늘 그림. 오늘의 과제 세 줄, 특별 과제 카드, 배지 목록.' },
   review: { design: [520, 653], C: ReviewMock, areas: ['ctaWrong', 'ctaMark', 'items', 'erase'],
-    alt: '복습 탭 그림. 틀린 문제·북마크 복습 카드와 복습 목록, 지우기 버튼.' },
+    alt: '오늘 복습 그림. 틀린 문제·북마크 복습 카드와 복습 목록, 지우기 버튼.' },
   analysis: { design: [640, 804], C: AnalysisMock, areas: ['stats', 'bars', 'line', 'calendar', 'history', 'fullStats'],
-    alt: '분석 탭 그림. 맨 위에 총 학습, 평균 정답률, 연속 학습 세 칸. 가운데에 학습 시간과 정답률 변화 그래프. 아래에 활동 캘린더, 회차 히스토리, 전체 통계 링크.' },
+    alt: '기록 그림. 맨 위에 총 학습, 평균 정답률, 연속 학습 세 칸. 가운데에 학습 시간과 정답률 변화 그래프. 아래에 활동 캘린더, 회차 히스토리, 전체 통계 링크.' },
   profile: { design: [520, 653], C: ProfileMock, areas: ['placement', 'account', 'reset', 'a11y'],
-    alt: '프로필 탭 그림. 이름과 레벨 카드. 자가진단 다시 하기, 계정 설정, 학습 초기화 메뉴. 왼쪽 아래 접근성 설정 Aa 버튼.' },
+    alt: '내 정보 그림. 이름과 레벨 카드. 자가진단 다시 하기, 계정 설정, 학습 초기화 메뉴. 왼쪽 아래 접근성 설정 Aa 버튼.' },
 }
 
 /**

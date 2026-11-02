@@ -59,7 +59,7 @@ function ListenPanel({ item, lip, settings, voices, voiceList, active }) {
   const b = useClip(item.b, voice)
   const player = usePlayer()
   const [what, setWhat] = useState(null)
-  // 여러 목소리 소리를 받는 동안 짝·목소리를 바꾸거나 화면을 떠나면 받은 뒤에 틀지 않는다(예전에는 다른 짝을 고른 뒤나 연습 탭으로
+  // 여러 목소리 소리를 받는 동안 짝·목소리를 바꾸거나 화면을 떠나면 받은 뒤에 틀지 않는다(예전에는 다른 짝을 고른 뒤나 자료로
   // 나간 뒤에 앞 짝의 소리가 나왔다). 짝이 바뀌면 이 판이 새로 그려지고(key), 목소리가 바뀌면 세대가 오른다
   const gen = useRef(0)
   useEffect(() => () => { gen.current += 1 }, [])
@@ -166,7 +166,7 @@ export default function ListenClassroom() {
         .catch(() => setLips((m) => ({ ...m, [key]: null })))
     }
   }, [kind?.kind, items.length])   // eslint-disable-line react-hooks/exhaustive-deps
-  const exit = () => { stopAll(); navigate('/practice/hub') }
+  const exit = () => { stopAll(); navigate('/learn/path?track=listen&section=res') }
   // 연습으로: 종류 전체(practice_key 'kind:…'), 낱말 짝을 골랐으면 그 대조만(words[].contrast 'onset:ㅂ:ㅍ' 꼴)도 고를 수 있다
   const practice = (contrast) => { stopAll(); navigate(`/listen/practice/contrast?contrast=${encodeURIComponent(contrast)}`) }
   const pickKind = (k) => { stopAll(); setSel(null); setParams({ kind: k }, { replace: true }) }
@@ -176,14 +176,14 @@ export default function ListenClassroom() {
   const lipOf = (it) => (uniform ? null : lips[`${it.a}|${it.b}`] ?? null)
   const words = items.filter((x) => x.group === 'word')
   return (
-    <ListenFrame kicker="소리 교실 · 채점하지 않아요" onExit={exit} exitAria="나가기, 연습 탭으로" showProgress={false}>
+    <ListenFrame kicker="소리 교실 · 채점하지 않아요" onExit={exit} exitAria="나가기, 자료로" showProgress={false}>
       {(ctx) => (
         err ? (
           <StateCard title={err === 'missing' ? '소리 교실은 준비 중이에요' : '소리 짝을 가져오지 못했어요'}
             body={err === 'missing' ? '곧 열려요. 지금은 학습 화면의 소리 구별 단계로 들어 볼 수 있어요.' : '인터넷 연결을 확인하고 다시 가져와 주세요.'}
-            actions={err === 'missing' ? [{ label: '연습 탭으로', onClick: exit }] : [{ label: '다시 가져오기', onClick: () => setNonce((n) => n + 1) }, { label: '연습 탭으로', onClick: exit }]} />
+            actions={err === 'missing' ? [{ label: '자료로', onClick: exit }] : [{ label: '다시 가져오기', onClick: () => setNonce((n) => n + 1) }, { label: '자료로', onClick: exit }]} />
         ) : !kinds || !ctx.voiceList ? <Skeleton /> : !kind ? (
-          <StateCard title="들어 볼 소리 짝이 없어요" actions={[{ label: '연습 탭으로', onClick: exit }]} />
+          <StateCard title="들어 볼 소리 짝이 없어요" actions={[{ label: '자료로', onClick: exit }]} />
         ) : (
           <div className="flex animate-fade-in flex-col gap-4 lg:gap-5">
             <Heading title="소리 교실" sub="헷갈리기 쉬운 소리 짝을 골라 마음껏 들어 봐요. 같은 말을 여러 목소리로 들으면 목소리가 바뀌어도 알아듣기 쉬워져요." />

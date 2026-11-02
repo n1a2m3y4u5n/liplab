@@ -260,7 +260,7 @@ function LineChart({ weeks, empty = '아직 채점된 기록이 없어요', tone
  * 문장 점수 주 평균 추세 카드(10/9 줄 → 10/28 카드, S20 채택안). 이미 있는 말하기 문장 점수의 주 평균만 보이고 새 지수는 없다.
  * 합격·숙달에는 쓰지 않고, 문장이 5개보다 적은 주는 점을 두지 않는다. 평균이 있는 주가 2주보다 적으면 짧은 빈 상태만 보인다. 안내줄은 두지 않는다.
  */
-function SpeakTrend({ ov }) {
+export function SpeakTrend({ ov }) {
   const v = speakTrendView(ov)
   if (!v.show) return null
   return (

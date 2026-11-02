@@ -33,7 +33,7 @@ const QUIZ_LEN = 12
 const INTRO_MS = 1000
 
 // 나가기·완료 뒤 돌아갈 곳: 엔드리스 혼합 세션이면 엔드리스 화면, 아니면 연습 탭(완료 화면의 '연습으로 돌아가기'와 같다)
-const hubOf = (endless) => (endless ? '/learn/endless' : '/practice/hub')
+const hubOf = (endless) => (endless ? '/learn/endless' : '/learn/path?section=free')
 
 export default function Closure() {
   const navigate = useNavigate()

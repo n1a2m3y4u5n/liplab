@@ -49,13 +49,13 @@ export default function Review() {
   useEffect(() => { load() }, [load])
 
   if (state === 'loading') return <LoadingScreen variant="brand" track="perception" />
-  if (state === 'error') return <LoadFailed onRetry={load} onExit={() => navigate('/review')} />
+  if (state === 'error') return <LoadFailed onRetry={load} onExit={() => navigate('/today')} />
   if (state === 'empty') {
     return (
       <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-page px-6 text-center">
         <h1 className="text-[24px] font-bold leading-figma text-ink">오늘 복습할 항목이 없어요</h1>
         <p className="text-[15px] text-ink-muted">틀린 입모양·단어·문장은 다음 날부터 여기서 다시 만나요.</p>
-        <button type="button" onClick={() => navigate('/review')} className="btn-primary px-6 py-3 text-[15px]">복습으로 돌아가기</button>
+        <button type="button" onClick={() => navigate('/today')} className="btn-primary px-6 py-3 text-[15px]">복습으로 돌아가기</button>
       </div>
     )
   }
@@ -160,7 +160,7 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
     const accuracy = tally.n ? Math.round((tally.correct / tally.n) * 100) : null
     return (
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
-        onNext={() => navigate('/learn/path')} onHome={() => navigate('/review')} homeLabel="복습으로 돌아가기"
+        onNext={() => navigate('/today')} onHome={() => navigate('/today')} homeLabel="복습으로 돌아가기"
         effort={{ lessonKind: 'review', stage: null, nItems: tally.n, accuracy: tally.n ? tally.correct / tally.n : null }} />
     )
   }
@@ -178,7 +178,7 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
     <>
       <div className="mx-auto flex w-full max-w-[676px] flex-col px-[18px] pb-[200px] pt-[18px] lg:pb-[150px] lg:pt-7">
         <div className="flex items-center gap-3 lg:gap-[18px]">
-          <button type="button" onClick={() => navigate('/review')} aria-label="나가기" className="shrink-0">
+          <button type="button" onClick={() => navigate('/today')} aria-label="나가기" className="shrink-0">
             <img src="/ui/lp-91-12-close.svg" alt="" className="size-8 lg:size-9" />
           </button>
           <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">

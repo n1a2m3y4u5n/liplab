@@ -49,7 +49,7 @@ export default function SpeakingReviewLanding() {
   }, [reloadKey])
 
   return (
-    <AppShell active="review" title="말하기 복습" description="다시 연습할 발음과 문장을 확인한 뒤 복습을 시작하세요">
+    <AppShell backTo="/today" backLabel="오늘" active="today" title="말하기 복습" description="다시 연습할 발음과 문장을 확인한 뒤 복습을 시작하세요">
       <div className="w-full space-y-5">
         {loading ? (
           <LoadingScreen variant="inline" />

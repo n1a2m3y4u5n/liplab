@@ -249,7 +249,7 @@ export default function EvalReport() {
     <>
       {report && <PrintReport r={report} />}
       <div className="print:hidden">
-      <AppShell active="analysis" title="학습 효과 리포트"
+      <AppShell backTo="/records" backLabel="기록" active="records" title="학습 효과 리포트"
         description="문제를 푼 기록으로 학습곡선, 단계마다 숙달까지 걸린 시도 수, 처음보다 최근에 얼마나 늘었는지를 봐요.">
       <div className="flex w-full flex-col gap-5">
         {/* 표준검사 진입(축 I) — 난이도를 맞춘 동형 폼 A(사전)·B(사후). 훈련 전 A, 훈련 뒤 B를 보면

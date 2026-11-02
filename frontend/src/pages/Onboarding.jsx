@@ -30,7 +30,7 @@ export default function Onboarding() {
   const startLater = async () => {
     setBusy(true)
     try { await curriculumAPI.setTrack('perception') } catch { /* 실패해도 이동 */ }
-    navigate('/learn/path')
+    navigate('/today')
   }
 
   if (step === 'info') {

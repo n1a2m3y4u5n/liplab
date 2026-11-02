@@ -1,3 +1,5 @@
+import useStore from '../store/useStore'
+import { loadLastTrack, learnHref } from '../lib/lastTrack'
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -155,7 +157,7 @@ export default function VisemeLiteracy() {
   // 학습 자료는 ?tab=learn 또는 ?v=그룹(약점 입모양 바로가기)일 때만 — 기본은 레슨(인지퀴즈)
   const learnMode = params.get('tab') === 'learn' || params.get('v') != null
   // 나가기: 연습 탭 '입모양 교실' 카드(?tab=learn, PracticeHub)로 들어왔으면 연습 탭으로, 그 밖(레슨·약점 바로가기 ?v=)은 학습 경로로
-  const exitTo = params.get('tab') === 'learn' ? '/practice/hub' : '/learn/path'
+  const exitTo = params.get('tab') === 'learn' ? learnHref(loadLastTrack(useStore.getState().user?.id) === 'speak' ? 'speak' : 'read', 'res') : '/learn/path'
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [introDone, setIntroDone] = useState(false)

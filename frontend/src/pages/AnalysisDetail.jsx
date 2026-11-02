@@ -19,11 +19,11 @@ const PAGE_META = {
 
 // 보기 전환 칩 — '개요'는 분석 탭 자체, 나머지는 이 화면의 모드
 const ANALYSIS_TABS = [
-  { to: '/analysis', label: '개요' },
+  { to: '/records', label: '요약' },
   { mode: 'activity', label: '활동' },
   { mode: 'visemes', label: '약한 입모양' },
   { mode: 'scores', label: '점수' },
-  { mode: 'history', label: '기록' },
+  { mode: 'history', label: '회차' },
 ]
 
 // 90일 활동 칸 색(분석 탭 활동 캘린더와 같은 heat 토큰) — 0 · 1~2 · 3~5 · 6 이상
@@ -214,7 +214,7 @@ export default function AnalysisDetail({ mode = 'activity' }) {
   }
 
   return (
-    <AppShell active="analysis" title={meta.title} description={meta.description}>
+    <AppShell backTo="/records" backLabel="기록" active="records" title={meta.title} description={meta.description}>
       <div className="flex w-full flex-col gap-5">
         <nav aria-label="분석 보기 전환" className="flex flex-wrap gap-2">
           {ANALYSIS_TABS.map((tab) => {

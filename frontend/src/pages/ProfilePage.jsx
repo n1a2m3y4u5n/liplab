@@ -172,7 +172,7 @@ export default function ProfilePage() {
     try {
       await accountAPI.deleteAccount(form.delPw)
       learnerInfo.clear()   // 이 기기에 남은 학습자 정보도 함께 지운다
-      logout(); navigate('/learn/path')
+      logout(); navigate('/today')
     } catch (e) { setMsg(e?.response?.data?.detail || '지우지 못했어요.') } finally { setBusy(false) }
   }
 
@@ -198,7 +198,7 @@ export default function ProfilePage() {
   ]
 
   return (
-    <AppShell active="profile" title="프로필">
+    <AppShell active="me" title="내 정보">
       {/* 내 프로필 — 그라데이션 3D 카드(107:145 / 241:121) */}
       <section className="flex h-[150px] w-full items-start gap-3.5 overflow-hidden rounded-18 border-2 border-b-5 border-primary-600 bg-hero-brand pl-[18px] pr-4 pt-[22px] lg:h-[176px] lg:items-center lg:gap-6 lg:rounded-22 bg-hero-brand lg:px-[30px] lg:pt-[3px]">
         <div className="flex size-16 shrink-0 items-center justify-center rounded-full border-[3px] border-white/90 bg-white/[0.08] text-2xl font-black text-white lg:size-[100px] lg:border-4 lg:text-4xl lg:shadow-[0px_4px_12px_0px_rgba(38,13,89,0.25)]">
@@ -231,13 +231,18 @@ export default function ProfilePage() {
 
       {/* 설정(107:175 / 241:145) */}
       <section className="w-full overflow-hidden rounded-16 border-2 border-line bg-white lg:rounded-18">
-        <MenuRow first title="사용법 가이드" sub="처음이라면 여기부터" onClick={() => setGuideOpen(true)} />
-        <MenuRow title="자가진단 다시 하기" sub="지금 수준으로 단계 재추천" onClick={() => navigate('/learn/placement')} />
-        <MenuRow title="계정 설정" sub="이름 · 이메일 · 비밀번호 · 로그아웃" onClick={openAccount} />
-        <MenuRow title="나에게 맞춘 안내" sub={hasAnswers(learnerInfo.answers) ? '답한 내용으로 맞춰 두었어요 · 이 기기에만 저장' : '선택 질문 3개 · 이 기기에만 저장'}
-          onClick={() => setModal('learner')} />
-        <MenuRow title="소리와 함께 다시 보기" onClick={() => setModal('sound')}
-          sub={sound.enabled ? '켜짐 · 답한 뒤 소리와 함께 한 번 더' : sound.recommended ? '꺼짐 · 보청기·인공와우를 쓰신다면 권해요' : '꺼짐 · 답한 뒤 소리와 함께 한 번 더'} />
+        <h2 className="px-5 pt-4 font-bold">프로필</h2>
+        <MenuRow first title="계정 설정" sub="이름 · 이메일 · 비밀번호 · 로그아웃" onClick={openAccount} />
+        <MenuRow title="나에게 맞춘 안내" onClick={() => setModal('learner')} />
+        <MenuRow title="자가진단 다시 하기" onClick={() => navigate('/learn/placement')} />
+        <h2 className="px-5 pt-4 font-bold">설정</h2>
+        <MenuRow title="접근성 설정" onClick={() => window.dispatchEvent(new Event('liplab:a11y-toggle'))} />
+        <MenuRow title="소리와 함께 다시 보기" onClick={() => setModal('sound')} sub={sound.enabled ? '켜짐' : '꺼짐'} />
+        <MenuRow title="소리 확인" onClick={() => navigate('/learn/listening?stage=0')} />
+        <h2 className="px-5 pt-4 font-bold">도움말</h2>
+        <MenuRow title="사용법 가이드" onClick={() => setGuideOpen(true)} />
+        <MenuRow title="이용약관" onClick={() => navigate('/terms')} />
+        <MenuRow title="개인정보처리방침" onClick={() => navigate('/privacy')} />
         {pilot?.enabled && (
           <MenuRow title="파일럿 참여" sub={pilot.joined ? '참여 중이에요' : '받은 참여 코드를 입력해요'} onClick={() => { setPilotMsg(''); setModal('pilot') }} />
         )}
@@ -350,7 +355,7 @@ export default function ProfilePage() {
         {/* Danger zone(220:220) — 로그아웃 · 계정 삭제 */}
         <div className="flex w-full gap-2.5">
           {/* 스토어 logout이 연습 세션(메모리)과 계정별 브라우저 저장값까지 지운다(store/useStore.js) */}
-          <button type="button" onClick={() => { logout(); navigate('/learn/path') }}
+          <button type="button" onClick={() => { logout(); navigate('/today') }}
             className="btn-secondary flex-1 py-[15px] text-[15px]">
             로그아웃
           </button>

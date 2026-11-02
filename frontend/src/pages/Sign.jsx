@@ -43,7 +43,7 @@ export default function Sign() {
   }
 
   return (
-    <AppShell active="practice" title="수어 보기" closeTo="/practice/hub">
+    <AppShell active="learn" title="수어 보기" backTo="/learn/path?section=res" backLabel="자료">
       {/* 어떤 문장을 볼까요? (226:142) */}
       <section className={CARD}>
         <p className="text-[17px] font-bold leading-figma text-ink">어떤 문장을 볼까요?</p>

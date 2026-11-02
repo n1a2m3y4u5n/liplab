@@ -77,7 +77,7 @@ export default function ContentReview() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-muted to-primary-50">
       <LearnHeader accent="etc" title="콘텐츠 검수" description="AI가 생성하고 규칙을 통과한 후보를 사람이 최종 승인합니다 (운영자용)."
-        maxWidth="max-w-3xl" onExit={() => navigate('/dashboard')} />
+        maxWidth="max-w-3xl" onExit={() => navigate('/today')} />
       <main className="mx-auto max-w-3xl px-4 py-8 space-y-5">
         {loading ? (
           <LoadingScreen variant="inline" />

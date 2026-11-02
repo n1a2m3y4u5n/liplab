@@ -85,7 +85,7 @@ function TodayIntro({ plan, onStart, active }) {
 export default function ListenToday() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const back = params.get('from') === 'tasks' ? '/tasks' : '/learn/path?track=listen'
+  const back = ['today', 'tasks'].includes(params.get('from')) ? '/today' : '/learn/path?track=listen'
   const [plan, setPlan] = useState(null)
   const [err, setErr] = useState(null)   // 'missing'(아직 없는 API) | 'network'
   const [nonce, setNonce] = useState(0)

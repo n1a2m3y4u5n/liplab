@@ -1420,3 +1420,7 @@ E1에서 **naive를 유의하게 이긴 변형이 하나도 없었다**(naive·m
 | `docs/deaf-speech-data-research.md` | 데이터 확보 경로 7개 축 + 채점식 결함의 근거 |
 | `DEVELOPMENT_SUMMARY.md` | 전체 개발 이력 요약 |
 | `CLAUDE.md` | 프로젝트 오리엔테이션(커리큘럼·잠금 규칙·컨벤션) |
+
+
+## 2026-11-02 내부 구조 개편
+탭은 오늘(`/today`)·학습(`/learn/path`)·기록(`/records`)·내 정보(`/profile`)다. 이용 기록의 옛 경로는 보존한다. 분석 시 `/dashboard`, `/tasks`, `/review`, `/review/hub`, `/review/today`는 오늘으로, `/analysis`, `/analysis/hub`, `/analysis/overview`, `/analysis/listening`은 기록으로 묶는다. `/practice/hub`는 학습의 자유 연습으로 묶는다. 과거 사건을 DB에서 다시 쓰지 않는다. 쿼리는 기존 route 계약에 따라 수집하지 않으며 기존 track 추정 규칙도 유지한다.

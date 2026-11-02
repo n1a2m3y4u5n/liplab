@@ -61,7 +61,7 @@ export default function ReviewLanding({ mode = 'today' }) {
   if (mode === 'mistakes') {
     // 모바일은 카드 안쪽 여백을 줄여 오답 네댓 개가 한 화면에 들어오게 한다
     return (
-      <AppShell active="review" title="독화 복습" description="독화 테스트에서 놓친 문장만 모아 다시 확인합니다">
+      <AppShell backTo="/records" backLabel="기록" active="records" title="독화 복습" description="독화 테스트에서 놓친 문장만 모아 다시 확인합니다">
         <div className="w-full space-y-5">
           {loading ? (
             <LoadingScreen variant="inline" />
@@ -107,7 +107,7 @@ export default function ReviewLanding({ mode = 'today' }) {
   const total = counts ? Object.values(counts).reduce((sum, value) => sum + value, 0) : 0
 
   return (
-    <AppShell active="review" title="오늘의 복습" description="독화·말하기별 복습 내용을 확인하고 원하는 영역으로 이동하세요">
+    <AppShell backTo="/records" backLabel="기록" active="records" title="오늘의 복습" description="독화·말하기별 복습 내용을 확인하고 원하는 영역으로 이동하세요">
       <div className="w-full space-y-5">
         <section className="rounded-[24px] p-6 text-white" style={{ backgroundImage: 'linear-gradient(160deg, var(--brand-light) 0%, var(--brand) 71%)' }}>
           <div>

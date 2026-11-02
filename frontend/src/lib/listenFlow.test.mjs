@@ -188,7 +188,7 @@ test('연습 끝 버튼·고른 것 이름·장소 목록·조사', () => {
   assert.equal(a.secondary.label, '다른 장소 고르기')
   a.primary.onClick(); a.secondary.onClick()
   const b = practiceActions({ mode: 'dictation', reload: () => {}, onChoose: () => {}, onExit: () => calls.push('x') })
-  assert.equal(b.secondary.label, '연습 탭으로')
+  assert.equal(b.secondary.label, '자유 연습으로')
   b.secondary.onClick()
   assert.deepEqual(calls, ['r', 'c', 'x'])
   assert.equal(choiceLabel('contrast', { weak: 1 }), '자주 헷갈린 짝')

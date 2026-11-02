@@ -148,3 +148,7 @@ fly ssh console -C "python /app/scripts/pilot_retention.py --study-end 2026-12-3
 기존 endUsage(true)가 호출되는 읽기 레슨 완료(EffortCheck) 및 말하기 단계 숙달을 세션 끝의 대리 시점으로 삼는다. 탭 닫기·네트워크 단절에서는 설문을 강제로 열지 않는다. 같은 계정은 KST 하루 한 번만 묻고, 건너뛰거나 화면을 떠나도 그날 다시 묻지 않는다. feedback_daily의 계정·날짜·구분 고유 제약으로 동시 요청에서도 표시·응답을 한 번으로 제한한다. 긍정판 초안 S1~S10을 그대로 사용하며 모든 응답이 있어야 (응답−1)의 합×2.5를 저장한다. 번역·역번역·인지 면접이 완료되었다는 의미는 없으며 연구 검증판이나 임상 결과로 해석하지 않는다. LIPLAB_USAGE_LOG 기본 꺼짐을 그대로 따른다.
 
 보관 기간은 기존 이용·학습 기록과 동일하다. user_id 기반 계정 열람·삭제 및 pilot_data.purge에 usage_events와 feedback_daily가 함께 포함된다. --include-usage 연구 전체 보관 만료 삭제에 이용 기록과 feedback_daily도 포함된다. 데모 공유 계정은 개인 구별을 보장하지 않는다. CSV도 동일 기한으로 보관·삭제하며, 관리자 /admin/feedback 및 /api/admin/feedback은 LIPLAB_ADMIN_EMAILS 권한을 따른다. 이전 기록은 /api/admin/usage의 기간 필터와 CSV로 조회할 수 있다.
+
+
+## 2026-11-02 내부 구조 개편
+탭은 오늘(`/today`)·학습(`/learn/path`)·기록(`/records`)·내 정보(`/profile`)다. 이용 기록의 옛 경로는 보존한다. 분석 시 `/dashboard`, `/tasks`, `/review`, `/review/hub`, `/review/today`는 오늘으로, `/analysis`, `/analysis/hub`, `/analysis/overview`, `/analysis/listening`은 기록으로 묶는다. `/practice/hub`는 학습의 자유 연습으로 묶는다. 과거 사건을 DB에서 다시 쓰지 않는다. 쿼리는 기존 route 계약에 따라 수집하지 않으며 기존 track 추정 규칙도 유지한다.

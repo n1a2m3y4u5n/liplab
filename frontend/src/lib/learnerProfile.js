@@ -82,7 +82,7 @@ export function describeDefaults(d) {
   if (d.readingLoad === 'reduced') out.push('글을 덜 읽는 그림 보기는 준비되면 먼저 켜 둘게요.')
   if (d.signView) out.push('단어를 틀리면 수어 뜻을 바로 펼쳐 보여요.')
   if (d.speakFocus.length) out.push('말하기는 운율 조절(크기·길이·높낮이)과 ㅅ·ㅈ·ㅊ·ㅎ 소리부터 연습해 보세요.')
-  if (d.soundCondition) out.push('답한 뒤 소리와 함께 다시 보기를 권해요. 프로필에서 켜고 끌 수 있어요.')
+  if (d.soundCondition) out.push('답한 뒤 소리와 함께 다시 보기를 권해요. 내 정보에서 켜고 끌 수 있어요.')
   return out
 }
 

@@ -30,7 +30,7 @@ export default function ListenReview() {
       .catch((e) => { if (on) setErr(e?.response?.status === 404 ? 'missing' : 'network') })
     return () => { on = false }
   }, [nonce])
-  const exit = () => { stopAll(); navigate('/review') }
+  const exit = () => { stopAll(); navigate('/today') }
 
   const blocks = useMemo(() => {
     if (!rev) return []
@@ -41,14 +41,14 @@ export default function ListenReview() {
   }, [rev])
 
   return (
-    <ListenFrame kicker="듣기 복습" onExit={exit} exitAria="나가기, 복습 탭으로">
+    <ListenFrame kicker="듣기 복습" onExit={exit} exitAria="나가기, 오늘로">
       {(ctx) => (
         err ? (
           <StateCard title={err === 'missing' ? '듣기 복습을 준비하고 있어요' : '복습할 소리를 가져오지 못했어요'}
             body={err === 'missing' ? '곧 열려요.' : '인터넷 연결을 확인하고 다시 가져와 주세요.'}
-            actions={err === 'missing' ? [{ label: '복습 탭으로', onClick: exit }] : [{ label: '다시 가져오기', onClick: () => setNonce((n) => n + 1) }, { label: '복습 탭으로', onClick: exit }]} />
+            actions={err === 'missing' ? [{ label: '오늘로', onClick: exit }] : [{ label: '다시 가져오기', onClick: () => setNonce((n) => n + 1) }, { label: '오늘로', onClick: exit }]} />
         ) : !rev || !ctx.voiceList ? <Skeleton /> : blocks.length === 0 ? (
-          <StateCard title="다시 들을 소리가 없어요" body="소리 듣기에서 놓친 낱말과 문장이 며칠 뒤 여기에 모여요." actions={[{ label: '복습 탭으로', onClick: exit }]} />
+          <StateCard title="다시 들을 소리가 없어요" body="소리 듣기에서 놓친 낱말과 문장이 며칠 뒤 여기에 모여요." actions={[{ label: '오늘로', onClick: exit }]} />
         ) : (
           <ListenBlocks active={ctx.active} onProgress={ctx.onProgress}
             blocks={blocks.map((b) => ({
@@ -56,13 +56,13 @@ export default function ListenReview() {
               run: ({ onDone }) => (b.kind === 'words'
                 ? <WordId data={b.data} settings={ctx.settings} voices={ctx.voices} onProgress={ctx.onProgress} finish={{ onDone }} active={ctx.active}
                   answerExtra={EXTRA} metaLabel="다시 듣는 낱말" />
-                : <SentenceTask data={b.data} settings={ctx.settings} voices={ctx.voices} onProgress={ctx.onProgress} onExit={exit} exitLabel="복습 탭으로"
+                : <SentenceTask data={b.data} settings={ctx.settings} voices={ctx.voices} onProgress={ctx.onProgress} onExit={exit} exitLabel="오늘로"
                   finish={{ onDone }} active={ctx.active} answerExtra={EXTRA} metaLabel="다시 듣는 문장" />),
             }))}
             renderSummary={(results) => (
               <ListenComplete title="듣기 복습을 마쳤어요" sub="다시 놓친 소리는 며칠 뒤에 한 번 더 나와요."
                 stats={results.filter((x) => x.result).map(({ block, result }) => ({ label: block.title, value: `${result.c} / ${result.n}`, main: block.kind === 'words' }))}
-                primary={{ label: '복습 탭으로', onClick: exit }} />
+                primary={{ label: '오늘로', onClick: exit }} />
             )} />
         )
       )}

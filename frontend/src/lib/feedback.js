@@ -17,6 +17,6 @@ export function susScore(answers) {
 }
 
 export function screenName(path) {
-  const names = { '/learn/path': '학습', '/practice/hub': '연습', '/learn/viseme': '입모양 학습', '/learn/word': '단어 학습', '/practice': '문장 연습', '/conversation': '대화 연습', '/tasks': '과제', '/profile': '프로필', '/learn/speaking': '말하기 연습', '/learn/listening': '듣기 연습' }
+  const names = { '/learn/path': '학습', '/learn/viseme': '입모양 학습', '/learn/word': '단어 학습', '/practice': '문장 연습', '/conversation': '대화 연습', '/today': '오늘', '/records': '기록', '/profile': '내 정보', '/learn/speaking': '말하기 연습', '/learn/listening': '듣기 연습' }
   return names[path] || (path.startsWith('/analysis') ? '분석' : path.startsWith('/review') ? '복습' : path.startsWith('/listen') ? '듣기' : path.startsWith('/learn') ? '학습' : '현재 화면')
 }

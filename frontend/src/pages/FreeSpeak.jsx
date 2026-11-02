@@ -8,7 +8,7 @@ import AppShell from '../components/AppShell'
 import { VISEME_TO_VTL } from '../lib/vtlShapes'
 
 /**
- * 자유 발화 (Figma 225:30 / 225:73): 자유 입력 → 3D 입모양 + 성도 옆모습
+ * 내 문장 입모양 보기 (Figma 225:30 / 225:73): 자유 입력 → 3D 입모양 + 성도 옆모습
  * ------------------------------------------------------------------
  * 사용자가 아무 글자·문장이나 입력하면 백엔드 /api/viseme로 입모양 프레임을 받아
  * 3D 얼굴(LipSyncPlayer3D)이 그대로 '발음'하는 모습을 보여준다(반복 재생).
@@ -64,8 +64,8 @@ export default function FreeSpeak() {
   }
 
   return (
-    <AppShell active="practice" title="자유 발화" closeTo="/practice/hub">
-      {/* Card / 자유 발화 (445:82): 입력 · 구분선 · 입모양|성도 옆모습 · 구분선 · 지금 발음 중 */}
+    <AppShell active="learn" title="내 문장 입모양 보기" backTo="/learn/path?track=speak&section=free" backLabel="자유 연습">
+      {/* Card / 내 문장 입모양 보기 (445:82): 입력 · 구분선 · 입모양|성도 옆모습 · 구분선 · 지금 발음 중 */}
       <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         className="flex w-full flex-col gap-[18px] rounded-18 border-2 border-line bg-white p-[18px] lg:p-[22px]">
         <p className="text-[17px] font-bold leading-figma text-ink">무엇을 발음해 볼까요?</p>

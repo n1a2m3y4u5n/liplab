@@ -28,7 +28,7 @@ import { Card, ChoiceGroup, Heading, Skeleton } from '../components/listen/ui'
  * lib/listenFlow.practiceApiParams가 바꾼다(docs/listen-integration-api-2026-10.md).
  */
 
-const HUB = '/practice/hub'
+const HUB = '/learn/path?track=listen&section=free'
 
 function Row({ title, desc, right, onClick, tone = null }) {
   return (
@@ -120,13 +120,13 @@ function NotReady({ kind, onRetry, onExit, reason }) {
   const navigate = useNavigate()
   if (kind === 'ling') {
     return <StateCard title="먼저 오늘의 소리 확인을 해요" body="음·우·아·이·쉬·스가 들리는지 한 번 확인하면 연습이 열려요. 1분쯤 걸려요."
-      actions={[{ label: '소리 확인 하러 가기', onClick: () => { stopAll(); navigate('/learn/listening?stage=0') } }, { label: '연습 탭으로', onClick: onExit }]} />
+      actions={[{ label: '소리 확인 하러 가기', onClick: () => { stopAll(); navigate('/learn/listening?stage=0') } }, { label: '자유 연습으로', onClick: onExit }]} />
   }
   return kind === 'missing' || kind === 'unavailable' ? (
-    <StateCard title="이 연습은 준비 중이에요" body={reason || '곧 열려요. 지금은 학습 화면의 소리 듣기 단계로 연습해 주세요.'} actions={[{ label: '연습 탭으로', onClick: onExit }]} />
+    <StateCard title="이 연습은 준비 중이에요" body={reason || '곧 열려요. 지금은 학습 화면의 소리 듣기 단계로 연습해 주세요.'} actions={[{ label: '자유 연습으로', onClick: onExit }]} />
   ) : (
     <StateCard title="연습을 가져오지 못했어요" body="인터넷 연결을 확인하고 다시 가져와 주세요."
-      actions={[{ label: '다시 가져오기', onClick: onRetry }, { label: '연습 탭으로', onClick: onExit }]} />
+      actions={[{ label: '다시 가져오기', onClick: onRetry }, { label: '자유 연습으로', onClick: onExit }]} />
   )
 }
 
@@ -169,10 +169,10 @@ function PracticeSession({ mode, query, ctx, onExit, onChoose, summaryOpen, tall
   const Task = task === 'contrast' ? ContrastRun : task ? TRAIN_TASK[task] : null
   if (!res.items?.length || !Task) {
     if (meta.endless && tally.n > 0) {
-      return <StateCard title="오늘 준비한 문장을 다 들었어요" body="내일 새 문장으로 이어 해요." actions={[{ label: '연습 탭으로', onClick: onExit }]} />
+      return <StateCard title="오늘 준비한 문장을 다 들었어요" body="내일 새 문장으로 이어 해요." actions={[{ label: '자유 연습으로', onClick: onExit }]} />
     }
     return <StateCard title="지금 낼 문제가 없어요" body={res.reason || EMPTY_BODY[mode] || '나중에 다시 해 주세요.'}
-      actions={[...(meta.chooseAgain ? [{ label: meta.chooseAgain, onClick: onChoose }] : []), { label: '연습 탭으로', onClick: onExit }]} />
+      actions={[...(meta.chooseAgain ? [{ label: meta.chooseAgain, onClick: onChoose }] : []), { label: '자유 연습으로', onClick: onExit }]} />
   }
   // 소음 속 듣기 연습은 계단 이름이 practice_ao다(응답 condition). 문장 과제가 그 이름의 계단에서 다음 SNR을 읽는다
   const data = { ...res, stair: res.stair || carry.current.stair, trace: carry.current.trace, status: undefined,
@@ -184,7 +184,7 @@ function PracticeSession({ mode, query, ctx, onExit, onChoose, summaryOpen, tall
   } : null
   return (
     <Task key={`${mode}:${qkey}:${batch}`} data={data} settings={ctx.settings} voices={ctx.voices} onProgress={onProgress} onExit={onExit}
-      exitLabel="연습 탭으로" finish={finish} active={ctx.active && !summaryOpen} answerExtra={{ practice_mode: mode }} onAnswered={onAnswered}
+      exitLabel="자유 연습으로" finish={finish} active={ctx.active && !summaryOpen} answerExtra={{ practice_mode: mode }} onAnswered={onAnswered}
       noisy={task === 'noise'} showStair={mode === 'noise_endless'} condition={condition}
       segments={segments} label={res.contrast?.label} />
   )
@@ -217,7 +217,7 @@ export default function ListenPractice() {
   if (!meta) {
     return (
       <ListenFrame kicker="소리 듣기 연습" onExit={toHub} showProgress={false}>
-        {() => <StateCard title="없는 연습이에요" actions={[{ label: '연습 탭으로', onClick: toHub }]} />}
+        {() => <StateCard title="없는 연습이에요" actions={[{ label: '자유 연습으로', onClick: toHub }]} />}
       </ListenFrame>
     )
   }
@@ -225,7 +225,7 @@ export default function ListenPractice() {
     : mode === 'scenario' ? places.find((p) => p.key === query.place)?.label || query.place
       : (mode === 'contrast' && !query.weak && metaLabel) || choiceLabel(mode, query, kinds)
   return (
-    <ListenFrame key={`${mode}:${ready}`} kicker={`소리 듣기 연습 · ${meta.title}${label ? ` · ${label}` : ''}`} onExit={exit} exitAria="나가기, 연습 탭으로"
+    <ListenFrame key={`${mode}:${ready}`} kicker={`소리 듣기 연습 · ${meta.title}${label ? ` · ${label}` : ''}`} onExit={exit} exitAria="나가기, 자유 연습으로"
       showProgress={ready}>
       {(ctx) => (
         <>
@@ -240,7 +240,7 @@ export default function ListenPractice() {
             <ListenComplete title={`${josa(meta.title, '을', '를')} 멈췄어요`} sub="원할 때 다시 이어서 하면 돼요."
               stats={[{ label: '푼 문제', value: `${tally.n}문제`, main: true }, { label: '통과', value: pct(tally.c, tally.n) },
                 { label: '연습한 시간', value: fmtMinutes((Date.now() - tally.start) / 60000) }]}
-              primary={{ label: '계속하기', onClick: () => setSummaryOpen(false) }} secondary={{ label: '연습 탭으로', onClick: toHub }} />
+              primary={{ label: '계속하기', onClick: () => setSummaryOpen(false) }} secondary={{ label: '자유 연습으로', onClick: toHub }} />
           )}
         </>
       )}

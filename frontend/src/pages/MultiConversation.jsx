@@ -175,7 +175,7 @@ export default function MultiConversation() {
 
   if (loading || !conv) {
     return (
-      <AppShell active="practice" title="여러 명 대화" closeTo="/practice/hub">
+      <AppShell active="learn" title="여러 명 대화" backTo="/learn/scenario" backLabel="상황별 연습">
         <div className="flex justify-end">{speakerToggle}</div>
         <div className="card flex flex-col items-center gap-3 py-16 text-center">
           {loading ? (
@@ -200,7 +200,7 @@ export default function MultiConversation() {
   const nDone = conv.turns.filter((_, i) => turnDone(i)).length
 
   return (
-    <AppShell active="practice" title="여러 명 대화" closeTo="/practice/hub">
+    <AppShell active="learn" title="여러 명 대화" backTo="/learn/scenario" backLabel="상황별 연습">
       {/* 안내 + 화자 수 토글(난이도) */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <p className="text-[15px] text-ink-muted">장면 <b className="text-ink">{conv.scene}</b> · <b className="text-ink">누가 말하는지</b> 찾은 뒤, 앞 대화 흐름으로 <b className="text-ink">무슨 말인지</b> 골라 보세요.</p>

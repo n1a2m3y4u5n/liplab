@@ -252,3 +252,7 @@ frontend/src/
   미리 합성한 서버 음성(`backend/data/sound/`)과 D-GOP 정렬기로 얻은 음절 시각에 아바타를 맞춘다. 기본 끔, 보청기·인공와우 사용자에게만 권함
   (`docs/sound-condition.md`, `hooks/useSoundReplay.js`, `lib/soundSync.js`, `backend/sound_clips.py`).
 - **일일 챌린지/배지/스트릭 강화**, **PWA 오프라인 모드**(설치와 앱 셸 오프라인은 `public/sw.js`에 있고, API·학습 데이터는 캐시하지 않는다).
+
+
+## 2026-11-02 내부 구조 개편
+탭은 오늘(`/today`)·학습(`/learn/path`)·기록(`/records`)·내 정보(`/profile`)다. 이용 기록의 옛 경로는 보존한다. 분석 시 `/dashboard`, `/tasks`, `/review`, `/review/hub`, `/review/today`는 오늘으로, `/analysis`, `/analysis/hub`, `/analysis/overview`, `/analysis/listening`은 기록으로 묶는다. `/practice/hub`는 학습의 자유 연습으로 묶는다. 과거 사건을 DB에서 다시 쓰지 않는다. 쿼리는 기존 route 계약에 따라 수집하지 않으며 기존 track 추정 규칙도 유지한다.

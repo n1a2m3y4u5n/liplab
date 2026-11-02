@@ -37,14 +37,14 @@ export const PRACTICE_MODES = {
 export const PRACTICE_KEYS = Object.keys(PRACTICE_MODES)
 
 /**
- * 연습 모드 묶음 끝의 버튼: 한 묶음 더 / 다른 것 고르기(고르는 모드) 또는 연습 탭으로.
+ * 연습 모드 묶음 끝의 버튼: 한 묶음 더 / 다른 것 고르기(고르는 모드) 또는 자유 연습으로.
  * 반환: {primary, secondary}
  */
 export function practiceActions({ mode, reload, onChoose, onExit }) {
   const m = PRACTICE_MODES[mode]
   return {
     primary: { label: '한 묶음 더 하기', onClick: reload },
-    secondary: m?.chooseAgain && onChoose ? { label: m.chooseAgain, onClick: onChoose } : { label: '연습 탭으로', onClick: onExit },
+    secondary: m?.chooseAgain && onChoose ? { label: m.chooseAgain, onClick: onChoose } : { label: '자유 연습으로', onClick: onExit },
   }
 }
 
