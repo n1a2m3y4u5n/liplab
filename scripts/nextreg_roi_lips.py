@@ -6,9 +6,9 @@ import math
 import os
 from pathlib import Path
 
-os.environ.setdefault('OMP_NUM_THREADS', '2')
-os.environ.setdefault('MKL_NUM_THREADS', '2')
-os.environ.setdefault('OPENBLAS_NUM_THREADS', '2')
+os.environ['OMP_NUM_THREADS'] = '2'
+os.environ['MKL_NUM_THREADS'] = '2'
+os.environ['OPENBLAS_NUM_THREADS'] = '2'
 import numpy as np
 import roi_train as R
 from extract_blendshapes import LIPS_MIRROR
@@ -141,6 +141,7 @@ def install(lips_root):
     torch.set_num_threads(2)
     torch.set_num_interop_threads(1)
     manifest = json.loads((Path(lips_root) / 'manifest.json').read_text(encoding='utf-8'))
+    assert sha(Path(lips_root) / 'lips_f32.bin') == manifest['pack_sha256']
 
     class InputRun(_run):
         def __init__(self, path):
@@ -214,6 +215,9 @@ def smoke(a):
     assert all(torch.equal(v, head.state_dict()[k]) for k, v in bh.state_dict().items())
     extra = sum(p.numel() for p in front.lips.parameters())
     assert extra == 21984
+    front.ckpt = True
+    assert front.pixel.ckpt is True
+    front.ckpt = False
     del base, bh
     ff[:] = True
     mm[:] = False
@@ -231,12 +235,16 @@ def smoke(a):
         logits = forward_packed(head, feat, torch.from_numpy(ll))
     assert tuple(feat.shape) == (2, 8, 256) and tuple(logits.shape) == (2, 8, 53)
     assert torch.isfinite(feat).all() and feat[0, 3:].abs().sum() == 0
+    feat = R.run_front(front, norm, torch.from_numpy(ll), 0)
+    feat.square().mean().backward()
+    assert front.lips[-1].weight.grad.abs().sum() > 0
     print('FUSION_SMOKE_OK', 'additional_params', extra, 'sent', len(run.sent),
           'words', len(run.words), 'val_items', len(run.val_items), flush=True)
 
 
 def compare(a):
     import torch
+    torch.set_num_threads(2)
     d = allowed(a.run)
     if Path(a.out).exists():
         raise ValueError('Refuse duplicate development selection')
@@ -247,8 +255,12 @@ def compare(a):
     assert candidate['n_words'] == baseline['n_words'] == len(d['words'])
     assert candidate['n_val_items'] == baseline['n_val_items'] == len(d['val_items'])
     for root, fused in [(a.baseline, False), (a.candidate, True)]:
+        summary = candidate if fused else baseline
         ck = torch.load(Path(root) / 'model.pt', map_location='cpu', weights_only=False)
         assert ck['meta']['seed'] == a.seed and ck['meta']['bench_id'] == d['meta']['bench_id']
+        assert ck['meta']['epoch'] == summary['best_epoch']
+        assert ck['meta']['val_4way_mean'] == summary['best_val_4way_mean']
+        assert ck['meta']['val_cer'] == summary['best']['val_cer']
         assert bool(ck.get('fusion_architecture')) == fused
         assert ck['meta']['init'] is None
         if fused:
