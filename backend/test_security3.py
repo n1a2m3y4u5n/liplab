@@ -94,10 +94,12 @@ with TestClient(main.app) as c:
     os.environ["LIPLAB_REVIEW"]="1"; os.environ["LIPLAB_ADMIN_EMAILS"]="alice@example.com"
     assert c.get("/api/pilot/export",headers=b).status_code==403
     assert c.post("/api/pilot/lookup",json={"email":"alice@example.com"},headers=b).status_code==403
+    os.environ["LIPLAB_KMSAV_REVIEW"]="1"  # 기본 끔 플래그 뒤의 관리자 라우트도 일반 사용자에게 403인지 본다.
     for route in routes:
         if isinstance(route,APIRoute) and route.path.startswith("/api/admin/"):
             for method in route.methods:
-                r=c.request(method,route.path,json={"kind":"words","item":{},"decision":"approve"},headers=b)
+                body={"video_id":"abcdefghijk","source":"https://youtu.be/abcdefghijk","license_label":"CC BY","evidence":"x","decision":"pending"} if route.path=="/api/admin/kmsav" else {"kind":"words","item":{},"decision":"approve"}
+                r=c.request(method,route.path,json=body,headers=b)
                 assert r.status_code==403, (route.path,r.status_code)
     # CORS는 필요한 헤더만 허용한다.
     origin={"Origin":"http://localhost:5173","Access-Control-Request-Method":"POST","Access-Control-Request-Headers":"authorization,content-type,x-usage-device-id"}
