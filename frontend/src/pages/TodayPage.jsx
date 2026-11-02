@@ -168,7 +168,7 @@ export default function TodayPage() {
             : listen && !t.done ? () => navigate(t.to && t.to.startsWith('/listen/') ? t.to : '/listen/today?from=tasks') : undefined
           return (
             <TaskRow key={t.key} label={taskLabel(t)} cur={Math.round(t.cur)} total={t.total} xp={t.xp} claimed={t.claimed} listen={listen}
-              unit={t.unit || (listen ? '분' : '')} onClick={open} onClaim={() => claim().catch(() => {})} />
+              unit={t.unit || (listen ? '분' : '')} onClick={open} onClaim={() => claim().catch(() => setToast('보상을 받지 못했어요. 다시 눌러 주세요.'))} />
           )
         })}
         {tasks && daily.length === 0 && <p className="text-sm text-ink-muted">오늘의 과제가 없어요.</p>}
