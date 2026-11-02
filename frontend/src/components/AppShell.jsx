@@ -1,31 +1,12 @@
-import { useEffect, useState } from 'react'
+import { learnHref, loadLastTrack } from '../lib/lastTrack'
+import { useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import useStore from '../store/useStore'
-import { authAPI, reviewAPI, learningAPI, tasksAPI } from '../api'
-import { dueCounts, dueStartPath, mistakeCount } from '../lib/reviewDue'
+import { authAPI } from '../api'
 import Logo from './Logo'
-import { Button, Progress } from './UI'
-import { levelProgress } from '../lib/level'
+import { Button } from './UI'
 
-/**
- * 앱 셸 (핸드오프 §3.3, Figma 58:12 사이드바 · 59:12 오른쪽 패널 · 232:36 모바일 상단 바 · 232:52 하단 탭).
- * 데스크톱(lg+): 좌측 사이드바 6탭 + 본문 + 오른쪽 패널(xl 이상 — lg~xl에서는 본문 폭이 모자라 숨긴다).
- * 모바일(lg 미만): 상단 바(로고 + 불꽃·별·프로필) + 본문 + 하단 탭 5개. 페이지 배경은 surface/background라
- * 상단 바가 흰 띠 없이 본문과 이어진다.
- * 발화 트랙(/learn/path?track=speak)이면 루트에 data-track="speak"를 달아 셸과 본문의 트랙색
- * (text-track·bg-track·.btn-primary·사이드바 활성·하단 탭 활성)을 분홍으로 바꾼다(§3.1).
- *
- * props
- *   active       사이드바·하단 탭 활성 key(learn·practice·task·review·analysis·profile). 없으면 경로로 찾는다.
- *   title        탭 제목(모바일 25px / lg 30px).
- *   description  제목 아래 부제. 9/26 Figma에서 연습 기능 화면의 부제는 모두 빠졌고, 복습·분석 쪽 일부 화면만 넘긴다.
- *   closeTo      주면 제목 줄 오른쪽 끝에 나가기 X(40px 원, 453:83)를 두고 누르면 그 경로로 간다(연습 기능 화면 → /practice/hub,
- *                변경 내역 §4-4).
- *   rail         오른쪽 패널 구성: 'default'(스탯 + 오늘의 과제 + 복습할 항목, 59:12)
- *                | 'tasks'(스탯 + 레벨 진행 + 복습할 항목, 137:151) | 'review'(스탯 + 오늘의 과제 + 이번 주 복습, 100:113)
- *   rightRail    직접 만든 패널 노드(rail보다 우선). 아래 Rail* 조각을 조합해 쓸 수 있다.
- * data: 스탯은 useStore.user(셸이 뜰 때 /auth/me로 새로 고침), 패널 카드는 reviewAPI·learningAPI(틀린 문장·북마크·활동 날짜)·tasksAPI(오늘의 과제).
- */
+/** 폰·아이패드·컴퓨터 공통 4탭. 1024px부터 왼쪽 메뉴, 그 아래는 하단 메뉴. */
 const NAV = [
   { key: 'today', label: '오늘', to: '/today', icon: '/ui/nav-learn.svg' },
   { key: 'learn', label: '학습', to: '/learn/path', icon: '/ui/nav-practice.svg' },
@@ -39,19 +20,6 @@ function useLearnTrack() {
   if (!location.pathname.startsWith('/learn/path')) return null
   const t = new URLSearchParams(location.search).get('track')
   return t === 'speak' || t === 'listen' ? t : null
-}
-
-function useMinWidth(px) {
-  const query = `(min-width: ${px}px)`
-  const [ok, setOk] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches)
-  useEffect(() => {
-    const m = window.matchMedia(query)
-    const sync = () => setOk(m.matches)
-    sync()
-    m.addEventListener('change', sync)
-    return () => m.removeEventListener('change', sync)
-  }, [query])
-  return ok
 }
 
 // 스탯(불꽃·XP·레벨)은 user에서 읽는다. 레슨에서 XP가 바뀌어도 스토어는 모르므로, 셸이 뜰 때
@@ -79,16 +47,6 @@ function useStats() {
 /** 마스크 아이콘 — 글자색(currentColor)으로 칠한다(활성·트랙색). index.css .mask-icon */
 function MaskIcon({ src, className = '' }) {
   return <span aria-hidden className={`mask-icon ${className}`} style={{ '--icon': `url(${src})` }} />
-}
-
-/** 아바타 — 프로필 사진 기능이 없어(220:202 사진 변경 미구현) 이름 첫 글자로 대신한다. */
-function Avatar({ className = '' }) {
-  const user = useStore((s) => s.user)
-  return (
-    <span className={`flex shrink-0 items-center justify-center rounded-full border-2 border-primary-200 bg-primary-100 font-black text-primary-600 ${className}`}>
-      {(user?.username || '게')[0]}
-    </span>
-  )
 }
 
 /** 스탯 한 칸 — 아이콘 상자(box) 안에 SVG를 원래 비율(w×h)로 위·가운데 정렬(Figma 인셋 그대로). */
@@ -132,7 +90,7 @@ function MobileTabBar({ activeKey }) {
       {tabs.map((n) => {
         const on = activeKey === n.key
         return (
-          <button key={n.key} type="button" onClick={() => navigate(n.to)}
+          <button key={n.key} type="button" onClick={() => navigate(n.key === 'learn' ? learnHref(loadLastTrack(useStore.getState().user?.id)) : n.to)}
             aria-current={on ? 'page' : undefined}
             className={`flex min-w-0 flex-1 flex-col items-center gap-[5px] py-1.5 text-[11px] font-bold leading-figma ${on ? 'text-track' : 'text-ink-muted'}`}>
             <MaskIcon src={n.icon} className="size-[23px]" />
@@ -144,12 +102,12 @@ function MobileTabBar({ activeKey }) {
   )
 }
 
-export default function AppShell({ children, active, rail = 'default', rightRail, title, description, closeTo, backTo, backLabel = '돌아가기' }) {
+export default function AppShell({ children, active, title, description, closeTo, backTo, backLabel = '돌아가기' }) {
   const navigate = useNavigate()
   const location = useLocation()
   const learnTrack = useLearnTrack()
+  const stats = useStats()
   const speak = learnTrack === 'speak'
-  const showRail = false
   useUserSync()
   // 셸 안에서는 모바일 접근성 버튼을 상단 바로 옮긴다(A11ySettings가 이 표시를 본다)
   useEffect(() => {
@@ -171,7 +129,7 @@ export default function AppShell({ children, active, rail = 'default', rightRail
         {NAV.map((n) => {
           const on = activeKey === n.key
           return (
-            <button key={n.key} type="button" onClick={() => navigate(n.to)}
+            <button key={n.key} type="button" onClick={() => navigate(n.key === 'learn' ? learnHref(loadLastTrack(useStore.getState().user?.id)) : n.to)}
               aria-current={on ? 'page' : undefined}
               className={`side-item ${on ? 'side-item-active' : ''}`}>
               <MaskIcon src={n.icon} className="size-6" />
@@ -179,12 +137,17 @@ export default function AppShell({ children, active, rail = 'default', rightRail
             </button>
           )
         })}
+        <div className="mt-auto flex flex-wrap gap-3 pt-8 text-sm">
+          <Stat icon="/ui/stat-streak.svg" box={18} value={stats.streak} className="gap-1 text-stat-streak" />
+          <Stat icon="/ui/stat-xp.svg" box={18} value={stats.xp.toLocaleString()} className="gap-1 text-stat-xp" />
+          <Stat icon="/ui/stat-level.svg" box={18} value={`Lv.${stats.level}`} className="gap-1 text-stat-level" />
+        </div>
       </nav>
 
       {/* 본문: 모바일 232:51(좌우 18 · 간격 14), 데스크톱 58:11(32 · 20). 모바일 하단은 탭 바 높이만큼 비운다.
           세로 860px 이하 데스크톱(1366×768 등)은 위아래 여백·간격을 줄여 분석·과제가 한 화면에 들어오게 한다. */}
       {/* id="main-content"는 '본문으로 건너뛰기'(App.jsx SkipLink)의 대상이다. */}
-      <main id="main-content" className="mx-auto flex w-full min-w-0 max-w-[1120px] flex-1 flex-col gap-3.5 pl-[max(18px,env(safe-area-inset-left))] pr-[max(18px,env(safe-area-inset-right))] pb-[calc(var(--tabbar-h)+18px+env(safe-area-inset-bottom))] pt-5 lg:gap-5 lg:px-8 lg:pb-10 lg:pt-8 lg:[@media(max-height:860px)]:gap-4 lg:[@media(max-height:860px)]:pb-5 lg:[@media(max-height:860px)]:pt-6">
+      <main id="main-content" className="mx-auto flex w-full min-w-0 max-w-[816px] flex-1 flex-col gap-3.5 pl-[max(18px,env(safe-area-inset-left))] pr-[max(18px,env(safe-area-inset-right))] pb-[calc(var(--tabbar-h)+18px+env(safe-area-inset-bottom))] pt-5 lg:gap-5 lg:px-8 lg:pb-10 lg:pt-8 lg:[@media(max-height:860px)]:gap-4 lg:[@media(max-height:860px)]:pb-5 lg:[@media(max-height:860px)]:pt-6">
         {(backTo || closeTo) && <Link to={backTo || closeTo} className="inline-flex min-h-11 items-center gap-2 self-start font-bold text-track">‹ {backLabel}</Link>}
         {(title || description) && (
           <header className="flex flex-col gap-2 leading-figma">

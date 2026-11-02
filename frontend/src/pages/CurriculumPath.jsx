@@ -184,7 +184,7 @@ export default function CurriculumPath() {
   const skipStage = list.find((s) => s.key === skipTarget) || null
   // 뜻 없는 말 짝 맞추기(C10): 1·2단계 사이의 하루 10분 과제. 2단계가 열린 뒤 1·2단계 카드에 보조 버튼으로 둔다(숙달에는 들어가지 않음)
   const wordStage = track === 'read' ? list.find((s) => s.key === 'word') : null
-  const showNonsense = !!wordStage && wordStage.status !== 'locked' && (view?.key === 'viseme' || view?.key === 'word')
+  const showNonsense = false
   // 소리 듣기: 단계를 하나라도 열었으면 오늘의 듣기(블록 회기)를 보조 버튼으로 둔다. 오늘 한 분을 함께 적는다
   const showToday = track === 'listen' && list.some((s) => s.status !== 'locked')
   const todayMin = goalMinutes(today?.done_today?.minutes)   // 과제 '소리 듣기 15분'처럼 내림(반올림하면 14.6분이 15 / 15로 보였다)
@@ -235,7 +235,7 @@ export default function CurriculumPath() {
     <AppShell active="learn">
       <div className="mx-auto flex w-full max-w-[752px] flex-col items-center gap-3.5 lg:gap-6">
         {/* 트랙 스위처(171:18 / 모바일 233:34 전체 폭) */}
-        <LearnHeader />
+        <LearnHeader /><h1 className="sr-only">{TRACK_LABEL[track]} · 단계</h1>
 
         {/* 유닛 헤더(61:12 / 모바일 233:39) — 트랙색 + 3D 하단테두리 + 가이드(사용법 가이드 모달) */}
         <div className="flex w-full items-center gap-3.5 rounded-16 border-b-4 border-track-dark bg-track py-[15px] pl-[17px] pr-[13px] text-white lg:rounded-18 lg:border-b-5 lg:py-5 lg:pl-[26px] lg:pr-5">
@@ -298,7 +298,7 @@ export default function CurriculumPath() {
               const clickable = st !== 'locked'
               const onClick = () => {
                 if (st === 'skip') { setViewIdx(i); setSkipTarget(s.key) }
-                else if (clickable) navigate(s.route)
+                else if (clickable) navigate(s.route, { state: track === 'read' && s.stage >= 3 ? { from: 'path' } : undefined })
               }
               return (
                 <Fragment key={s.key}>
@@ -349,7 +349,7 @@ export default function CurriculumPath() {
                           </div>
                         </div>
                         {/* 처음이면 80:125 "학습 시작하기"(r15·py17·17px), 이어서면 75:23 "이어서 학습하기"(btn-lg) */}
-                        <button type="button" onClick={() => navigate(s.route)}
+                        <button type="button" onClick={() => navigate(s.route, { state: track === 'read' && s.stage >= 3 ? { from: 'path' } : undefined })}
                           className={(s.attempts ?? 0) === 0 ? 'btn-primary w-full rounded-15 py-[17px] text-[17px]' : 'btn-primary btn-lg w-full'}>
                           {startLabel}
                         </button>
@@ -381,7 +381,7 @@ export default function CurriculumPath() {
             <div className="h-[9px] overflow-hidden rounded-full bg-fill">
               <div className="h-full rounded-full bg-track" style={{ width: `${progPct}%` }} />
             </div>
-            <button type="button" onClick={() => navigate(view.route)} className="btn-primary w-full py-4 text-[16px]">{startLabel}</button>
+            <button type="button" onClick={() => navigate(view.route, { state: track === 'read' && view.stage >= 3 ? { from: 'path' } : undefined })} className="btn-primary w-full py-4 text-[16px]">{startLabel}</button>
             {extraBtn('py-3 text-[15px]')}
           </div>
         )}

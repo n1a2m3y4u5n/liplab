@@ -160,7 +160,7 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
     const accuracy = tally.n ? Math.round((tally.correct / tally.n) * 100) : null
     return (
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
-        onNext={() => navigate('/today')} onHome={() => navigate('/today')} homeLabel="복습으로 돌아가기"
+        onNext={() => navigate('/today')} onHome={() => navigate('/today')} homeLabel="오늘로"
         effort={{ lessonKind: 'review', stage: null, nItems: tally.n, accuracy: tally.n ? tally.correct / tally.n : null }} />
     )
   }

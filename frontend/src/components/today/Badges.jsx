@@ -40,7 +40,7 @@ function Badge({ b, onSelect }) {
     <button type="button" onClick={() => onSelect(b)}
       className="flex min-w-0 flex-col items-center gap-[9px] rounded-2xl outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary-400">
       <span className={dim ? 'opacity-50 grayscale' : ''}><BadgeMedal b={b} size="size-14" /></span>
-      <span className={`text-center text-[11.5px] font-bold leading-figma ${b.earned ? 'text-ink' : 'text-ink-muted'}`}>{b.label}</span>
+      <span className={`text-center text-[11.5px] font-bold leading-figma ${b.earned ? 'text-ink' : 'text-ink-muted'}`}>{b.key === 'free' ? '내 문장 입모양 보기' : b.label}</span>
     </button>
   )
 }

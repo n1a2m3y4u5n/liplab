@@ -11,9 +11,7 @@ import AppShell from '../components/AppShell'
 import WatermarkCard from '../components/WatermarkCard'
 import { reviewAPI, learningAPI, tasksAPI, curriculumAPI, speakAPI, listenAPI } from '../api'
 import useStore from '../store/useStore'
-import { mergeBadges } from '../lib/badges'
-import { dueCounts, dueStartPath, rewardMessage } from '../lib/reviewDue'
-import useFocusTrap from '../hooks/useFocusTrap'
+import { rewardMessage } from '../lib/reviewDue'
 
 /**
  * 과제 탭 (Figma 137:17 · 모바일 238:160) — 일일 과제 진행/보상 + 주간 도전 + 배지.
@@ -49,10 +47,10 @@ function TaskRow({ label, cur, total, xp, claimed, onClick, onClaim, listen = fa
         <span className="size-6 shrink-0 rounded-full border-2 border-line lg:size-[26px]" />
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 lg:gap-[7px]">
-        <div className="flex items-center justify-between font-bold leading-figma">
+        <div className="flex items-start justify-between gap-2 font-bold leading-figma">
           {/* 완료한 과제 제목은 모바일(238:259)만 흐린 글자, 데스크톱(139:23)은 그대로 */}
-          <span className={`text-[14px] lg:text-[15px] ${done ? 'text-ink-muted lg:text-ink' : 'text-ink'}`}>{label}</span>
-          <span className={`text-[12px] lg:text-[13px] ${listen ? 'text-listen-dark' : 'text-primary-500'}`}>{cur} / {total}{unit}</span>
+          <span className={`min-w-0 flex-1 break-keep text-[14px] lg:text-[15px] ${done ? 'text-ink-muted lg:text-ink' : 'text-ink'}`}>{label}</span>
+          <span className={`shrink-0 whitespace-nowrap text-[12px] lg:text-[13px] ${listen ? 'text-listen-dark' : 'text-primary-500'}`}>{cur} / {total}{unit}</span>
         </div>
         <div className="h-[7px] overflow-hidden rounded-full bg-fill lg:h-2">
           <div className={`h-full rounded-full ${listen ? 'bg-listen' : 'bg-primary-500'}`} style={{ width: `${Math.min(100, (cur / total) * 100)}%` }} />
@@ -86,10 +84,8 @@ export default function TodayPage() {
   const [loadState, setLoadState] = useState('loading')
   const [reload, setReload] = useState(0)
   const [due, setDue] = useState(null)
-  const [ov, setOv] = useState(null)
   const [tasks, setTasks] = useState(null)
   const [toast, setToast] = useState('')
-  const [selectedBadge, setSelectedBadge] = useState(null)
 
   // 받은 보상을 화면 스탯(XP·레벨)에 바로 반영하고 토스트를 띄운다
   const applyClaim = (res) => {
@@ -107,9 +103,9 @@ export default function TodayPage() {
     let on = true
     setLoadState('loading')
     Promise.all([
-      reviewAPI.getDue(),
+      reviewAPI.getDue().catch(() => null),
       Promise.allSettled([curriculumAPI.getStages(), speakAPI.getCurriculum(), listenAPI.getCurriculum(), listenAPI.links()]),
-      tasksAPI.claim().then((res) => { applyClaim(res); return res }).catch(() => tasksAPI.get()),
+      tasksAPI.claim().then((res) => { applyClaim(res); return res }).catch(() => tasksAPI.get().catch(() => null)),
     ]).then(([d, o, t]) => {
       if (!on) return
       setDue(d)
@@ -159,7 +155,7 @@ export default function TodayPage() {
       {nextData.links?.listen_started && <button className="card-flat min-h-11 text-left font-bold" onClick={() => navigate('/listen/today?from=today')}>오늘의 듣기 · 15분</button>}
       {/* 오늘의 과제 (137:187 / 238:250) */}
       <section id="tasks" className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px]">
-        <div className="flex items-center justify-between font-bold leading-figma">
+        <div className="flex items-start justify-between gap-2 font-bold leading-figma">
           <p className="text-[16px] text-ink lg:text-[17px]">오늘의 과제</p>
           <span className="text-[12px] text-ink-muted lg:text-[13px]">오늘 남은 시간 {hoursLeftToday()}시간</span>
         </div>
@@ -173,11 +169,11 @@ export default function TodayPage() {
               unit={t.unit || (listen ? '분' : '')} onClick={open} onClaim={() => claim().catch(() => {})} />
           )
         })}
-        {!tasks && <p className="py-3 text-center text-[13px] text-ink-muted">과제를 가져오는 중…</p>}
+        {!tasks && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted"><p>과제를 가져오지 못했어요.</p><button className="btn-secondary min-h-11 px-3" onClick={() => setReload((n) => n + 1)}>다시 가져오기</button></div>}
       </section>
 
       {/* 이번 주 도전 (141:18 / 238:285) — 워터마크 DOKA(306:32 / 306:39, -20°, 잘림) */}
-      <WatermarkCard as="section"
+      {week && <WatermarkCard as="section"
         deco={{
           src: '/ui/lp-137-17-deco-doka.svg', size: 165, top: -61.22, right: -61.21, inset: [-7, -12, -17, -12],
           lg: { size: 198, top: -73.06, right: -73.06 },
@@ -194,7 +190,7 @@ export default function TodayPage() {
             <div className="h-full rounded-full bg-white" style={{ width: `${Math.min(100, (weekCur / weekTotal) * 100)}%` }} />
           </div>
         </div>
-      </WatermarkCard>
+      </WatermarkCard>}
 
       <RewardToast text={toast} />
     </AppShell>

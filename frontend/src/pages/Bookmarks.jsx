@@ -46,7 +46,7 @@ export default function Bookmarks() {
   }
 
   return (
-    <AppShell backTo="/records" backLabel="기록" active="records" title="북마크한 문장" description="어려웠던 문장들을 다시 연습해보세요">
+    <AppShell backTo="/records?view=saved" backLabel="저장한 문장" active="records" title="북마크한 문장" description="어려웠던 문장들을 다시 연습해보세요">
       <div className="w-full">
         {loading ? (
           <LoadingScreen variant="inline" />

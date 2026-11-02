@@ -70,6 +70,16 @@ function ReviewItem({ track, word, meta, rel, onClick, first, selectMode, checke
   )
 }
 
+function EraseButton({ onClick, className = '' }) {
+  return (
+    <button type="button" onClick={onClick}
+      className={`items-center gap-1.5 rounded-full border-1.5 border-line py-[7px] pl-3 pr-3.5 text-[12.5px] font-bold leading-figma text-ink-muted lg:py-2 lg:text-[13.5px] ${className}`}>
+      <img src="/ui/lp-100-15-trash.svg" alt="" className="size-3.5 lg:size-[15px]" />
+      지우기
+    </button>
+  )
+}
+
 export default function ReviewItems({ view = 'wrong', track = 'all' }) {
   const navigate = useNavigate()
   const [loadState, setLoadState] = useState('loading')

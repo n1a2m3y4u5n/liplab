@@ -195,11 +195,10 @@ function StageArrow({ src, className, style }) {
 
 // ── 모바일 셸(AppShell lg 미만): 상단 바 + 본문 + 하단 탭 ─────────────────────
 const TABS = [
-  { key: 'learn', label: '학습', icon: '/ui/nav-learn.svg' },
-  { key: 'practice', label: '연습', icon: '/ui/nav-practice.svg' },
-  { key: 'task', label: '과제', icon: '/ui/nav-task.svg' },
-  { key: 'review', label: '복습', icon: '/ui/nav-review.svg' },
-  { key: 'analysis', label: '분석', icon: '/ui/nav-analytics.svg' },
+  { key: 'today', label: '오늘', icon: '/ui/nav-learn.svg' },
+  { key: 'learn', label: '학습', icon: '/ui/nav-practice.svg' },
+  { key: 'records', label: '기록', icon: '/ui/nav-analytics.svg' },
+  { key: 'me', label: '내 정보', icon: '/ui/nav-profile.svg' },
 ]
 
 function MobileShell({ active, title, children, overlay }) {
@@ -231,14 +230,7 @@ function MobileShell({ active, title, children, overlay }) {
 }
 
 // ── 01 화면 둘러보기: 데스크톱 전체(사이드바 · 학습 경로 · 오른쪽 패널) ──────────
-const SIDE = [
-  { key: 'learn', label: '학습', icon: '/ui/nav-learn.svg' },
-  { key: 'practice', label: '연습', icon: '/ui/nav-practice.svg' },
-  { key: 'task', label: '과제', icon: '/ui/nav-task.svg' },
-  { key: 'review', label: '복습', icon: '/ui/nav-review.svg' },
-  { key: 'analysis', label: '분석', icon: '/ui/nav-analytics.svg' },
-  { key: 'profile', label: '프로필', icon: '/ui/nav-profile.svg' },
-]
+const SIDE = TABS
 
 function RailTask({ label, cur, total }) {
   return (
@@ -252,108 +244,8 @@ function RailTask({ label, cur, total }) {
   )
 }
 
-function OverviewMock({ motion }) {
-  const path = ['mastered', 'mastered', 'current', 'skip']
-  return (
-    <div className="flex h-full bg-white text-ink">
-      {/* 사이드바 */}
-      <div className="flex w-[256px] shrink-0 flex-col gap-2 border-r border-line bg-white px-4 pb-6 pt-7">
-        <span {...area('logo')} className="self-start"><Logo size={30} /></span>
-        <div className="h-5" />
-        {SIDE.map((n) => (
-          <span key={n.key} className={`side-item ${n.key === 'learn' ? 'side-item-active' : ''}`}>
-            <MaskIcon src={n.icon} className="size-6" />
-            {n.label}
-          </span>
-        ))}
-      </div>
-
-      {/* 본문: 학습 경로 */}
-      <div className="flex min-w-0 flex-1 flex-col px-8 pt-8">
-        <div className="mx-auto flex w-full max-w-[752px] flex-col items-center gap-6">
-          <div className="flex gap-1 rounded-14 bg-surface-sunken p-1">
-            <span className="rounded-10 bg-white px-[26px] py-2.5 text-[15px] font-bold leading-figma text-track shadow-[0px_2px_5px_0px_rgba(26,13,64,0.1)]">독화</span>
-            <span className="rounded-10 px-[26px] py-2.5 text-[15px] font-bold leading-figma text-ink-faint">발화</span>
-          </div>
-          <div className="flex w-full items-center gap-3.5 rounded-18 border-b-5 border-track-dark bg-track py-5 pl-[26px] pr-5 text-white">
-            <div className="flex min-w-0 flex-1 flex-col gap-1 font-bold leading-figma">
-              <span className="text-[13px] opacity-[0.85]">독화 · 3단계</span>
-              <span className="text-[24px] tracking-[-0.48px]">문장 (상황별)</span>
-            </div>
-            <span className="shrink-0 rounded-[12px] border-2 border-white/40 bg-white/[0.18] px-[18px] py-3 text-[14px] font-bold leading-figma">가이드</span>
-          </div>
-
-          <div className="relative w-full py-2">
-            <StageArrow src="/ui/stage-arrow-prev.svg" className="left-[27px] top-1/2 size-11 -translate-y-1/2" />
-            <StageArrow src="/ui/stage-arrow-next.svg" className="right-[52px] top-1/2 size-11 -translate-y-1/2" />
-            <div className="ml-[130px] flex w-[76px] flex-col items-center">
-              {path.map((st, i) => (
-                <Fragment key={i}>
-                  {i > 0 && <Connector size="d" done={path[i - 1] === 'mastered'} />}
-                  <div className="relative">
-                    <Node status={st} size="d" glow={motion} />
-                    {st === 'current' && (
-                      <div className="absolute left-full z-10 ml-[34px] flex w-[360px] flex-col gap-3.5 rounded-20 border-2 border-line bg-white px-6 py-[22px] shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)]"
-                        style={{ bottom: 'calc(50% - 37.5px)' }}>
-                        <TailLeft className="bottom-[24.5px] left-[-15px]" />
-                        <p className="text-[22px] font-bold leading-figma tracking-[-0.44px] text-ink">문장 (상황별)</p>
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center justify-between text-[13px] font-bold leading-figma">
-                            <span className="text-ink-muted">진행률</span>
-                            <span className="text-track">3 / 5</span>
-                          </div>
-                          <div className="h-[10px] overflow-hidden rounded-full bg-fill">
-                            <div className="h-full w-[60%] rounded-full bg-track" />
-                          </div>
-                        </div>
-                        <span className="btn-primary btn-lg w-full text-center">이어서 학습하기</span>
-                      </div>
-                    )}
-                    {st === 'skip' && (
-                      <span className="absolute left-full top-1/2 z-10 ml-[34px] -translate-y-1/2 whitespace-nowrap rounded-14 border-2 border-line bg-white px-5 py-3 text-[15px] font-bold leading-figma text-track-dark shadow-[0px_6px_16px_-2px_rgba(26,13,64,0.1)]">
-                        여기로 건너뛸까요?
-                        <TailLeft className="left-[-15px] top-1/2 -translate-y-1/2" />
-                      </span>
-                    )}
-                  </div>
-                </Fragment>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 오른쪽 패널 */}
-      <div className="flex w-[368px] shrink-0 flex-col gap-4 bg-white p-6">
-        <div {...area('stats')} className="flex items-center justify-center gap-[18px] pb-2">
-          <Avatar className="size-[34px] text-[14px]" />
-          <span className="h-[22px] w-[1.5px] shrink-0 bg-line" />
-          <Stat icon="/ui/stat-streak.svg" box={21} value={USER.streak} className="gap-1.5 text-[15px] text-stat-streak" />
-          <Stat icon="/ui/stat-xp.svg" box={18} w={17.12} h={16.28} value={USER.xp} className="gap-1.5 text-[15px] text-stat-xp" />
-          <Stat icon="/ui/stat-level.svg" box={18} w={15.59} h={18} value={`Lv.${USER.level}`} className="gap-1.5 text-[15px] text-stat-level" />
-        </div>
-        <div {...area('rail')} className="flex flex-col gap-4">
-          <div className="card-flat flex flex-col gap-4">
-            <div className="flex items-center justify-between font-bold leading-figma">
-              <p className="text-[17px] text-ink">오늘의 과제</p>
-              <span className="text-[14px] text-track">모두 보기</span>
-            </div>
-            <RailTask label="오늘의 복습 정리" cur={0} total={1} />
-            <RailTask label="독화 학습 1회" cur={1} total={1} />
-            <RailTask label="학습 2회 채우기" cur={1} total={2} />
-          </div>
-          <div className="card-flat flex flex-col items-center gap-3.5">
-            <div className="flex items-baseline gap-3 font-bold leading-figma">
-              <p className="text-[17px] text-ink">틀린 문제 <span className="text-[22px] text-primary-500">5</span><span className="text-primary-500">개</span></p>
-              <span className="h-[18px] w-[1.5px] shrink-0 rounded-[1px] bg-line" />
-              <p className="text-[17px] text-ink">북마크 <span className="text-[22px] text-bookmark">3</span><span className="text-bookmark">개</span></p>
-            </div>
-            <span className="btn-primary btn-md w-full text-center">복습하기</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+function OverviewMock() {
+  return <div className="flex h-full bg-page text-ink"><div className="flex w-[256px] shrink-0 flex-col gap-2 border-r border-line bg-white p-6"><span {...area('logo')}><Logo size={30} /></span>{SIDE.map((n) => <span key={n.key} className={`side-item ${n.key === 'today' ? 'side-item-active' : ''}`}><MaskIcon src={n.icon} className="size-6" />{n.label}</span>)}<div {...area('stats')} className="mt-auto flex gap-3 font-bold"><span>🔥 {USER.streak}</span><span>★ {USER.xp}</span><span>Lv.{USER.level}</span></div></div><div className="mx-auto flex w-[816px] flex-col gap-5 p-8"><h2 className="text-[30px] font-bold">오늘</h2><div className="card-flat"><p className="mb-3">입모양 읽기 · 3단계 문장</p><span className="btn-primary btn-lg flex justify-center">이어서 학습하기</span></div><div {...area('rail')} className="card-flat"><h3 className="mb-4 text-xl font-bold">오늘 복습 5개</h3><span className="btn-secondary btn-md">복습 시작하기</span></div><div className="card-flat"><h3 className="mb-4 text-xl font-bold">오늘의 과제</h3><RailTask label="입모양 읽기 1회" cur={1} total={1} /><RailTask label="학습 2회 채우기" cur={1} total={2} /></div></div></div>
 }
 
 // ── 02 학습 탭(모바일 학습 경로) ─────────────────────────────────────────────
@@ -606,24 +498,7 @@ const PRACTICE = [
 ]
 
 function PracticeMock() {
-  return (
-    <MobileShell active="practice" title="연습">
-      <div className="flex flex-col gap-2.5">
-        {PRACTICE.map(([key, t, d, icon, chip]) => (
-          <div key={key} {...area(key)} className="flex items-center gap-3.5 rounded-16 border-2 border-b-5 border-line bg-white p-4">
-            <span className={`icon-chip-sm ${chip}`}><img src={icon} alt="" className="size-[22px]" /></span>
-            <span className="flex min-w-0 flex-1 flex-col gap-[3px] leading-figma">
-              <span className="text-[16px] font-bold text-ink">{t}</span>
-              <span className="truncate text-[12.5px] text-ink-muted">{d}</span>
-            </span>
-            <span className="relative h-3 w-1.5 shrink-0">
-              <img src="/ui/review-arrow.svg" alt="" className="absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2" />
-            </span>
-          </div>
-        ))}
-      </div>
-    </MobileShell>
-  )
+ return <MobileShell active="learn" title="학습"><div {...area('scenario')} className="rounded-13 bg-surface-sunken p-3 text-center font-bold">입모양 읽기　말하기　소리 듣기</div><div className="flex justify-around py-3 font-bold"><span>단계</span><span className="text-track">자유 연습</span><span>자료</span></div><div className="card-flat font-bold">상황별 연습</div><div {...area('endless')} className="card-flat font-bold">틀린 유형 계속 풀기</div><div className="card-flat font-bold">뜻 없는 말 짝 맞추기</div><div {...area('mouth')} className="card-flat"><b>자료</b><p>입모양 교실 · 수어 보기</p></div><span {...area('free')} /><span {...area('sign')} /></MobileShell>
 }
 
 // ── 07 과제(데스크톱 본문 열) ────────────────────────────────────────────────
@@ -654,53 +529,7 @@ const BADGES = [
 ]
 
 function TaskMock() {
-  return (
-    <div className="flex h-full flex-col gap-4 overflow-hidden bg-white px-8 pt-5 text-ink">
-      <section {...area('today')} className="flex flex-col gap-[18px] rounded-18 border-2 border-line bg-white p-[22px]">
-        <div className="flex items-center justify-between font-bold leading-figma">
-          <p className="text-[17px] text-ink">오늘의 과제</p>
-          <span className="text-[13px] text-ink-muted">오늘 남은 시간 6시간</span>
-        </div>
-        <TaskRow label="오늘의 복습 정리" cur={0} total={1} xp={10} />
-        <TaskRow label="독화 학습 1회" cur={1} total={1} xp={15} />
-        <TaskRow label="학습 2회 채우기" cur={1} total={2} xp={20} />
-      </section>
-      <section {...area('special')} className="relative isolate h-[158px] shrink-0 overflow-hidden rounded-20 border-2 border-b-5 border-primary-600 bg-[linear-gradient(167.63deg,var(--brand-light)_0%,var(--brand)_70.92%)] pl-[26px] pt-[26px]">
-        <WatermarkDeco src="/ui/lp-137-17-deco-doka.svg" size={198} top={-73.06} right={-73.06} inset={[-7, -12, -17, -12]} />
-        <div className="flex w-[462px] flex-col gap-2.5 font-bold leading-figma text-white">
-          <p className="text-[13px] tracking-[0.26px] opacity-80">특별 과제</p>
-          <p className="text-[23px] tracking-[-0.46px]">이번 주 5일 학습하기</p>
-          <div className="flex justify-between text-[14px]">
-            <span className="opacity-90">3 / 5일</span>
-            <span className="opacity-90">+100 경험치</span>
-          </div>
-          <div className="h-3 overflow-hidden rounded-full bg-white/30">
-            <div className="h-full w-[60%] rounded-full bg-white" />
-          </div>
-        </div>
-      </section>
-      <section {...area('badges')} className="flex flex-col gap-[18px] rounded-18 border-2 border-line bg-white p-[22px]">
-        <div className="flex items-center justify-between font-bold leading-figma">
-          <p className="text-[17px] text-ink">배지</p>
-          <span className="text-[13px] text-ink-muted">4 / 12개 받음</span>
-        </div>
-        <div className="grid grid-cols-6 gap-x-3">
-          {BADGES.map(([label, icon, earned]) => (
-            <div key={label} className="flex min-w-0 flex-col items-center gap-[9px]">
-              <span className={earned ? '' : 'opacity-50 grayscale'}>
-                {icon ? <img src={icon} alt="" className="size-14 max-w-none" /> : (
-                  <span className="flex size-14 items-center justify-center rounded-full bg-pastel-mint">
-                    <span className="size-[39.3%] rotate-45 rounded-[18%] bg-good" />
-                  </span>
-                )}
-              </span>
-              <span className={`text-center text-[11.5px] font-bold leading-figma ${earned ? 'text-ink' : 'text-ink-muted opacity-55'}`}>{label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  )
+ return <div className="flex h-full flex-col gap-5 bg-page p-7 text-ink"><h2 className="text-2xl font-bold">오늘</h2><div className="card-flat"><p className="mb-3">입모양 읽기 · 3단계 문장</p><span className="btn-primary btn-lg flex justify-center">이어서 학습하기</span></div><div {...area('today')} className="card-flat"><h3 className="mb-4 font-bold">오늘의 과제</h3><RailTask label="입모양 읽기 1회" cur={1} total={1} /><RailTask label="학습 2회 채우기" cur={1} total={2} /></div><div {...area('special')} className="card-flat font-bold">특별 과제 · 이번 주 5일 학습하기</div></div>
 }
 
 // ── 08 복습 ──────────────────────────────────────────────────────────────────
@@ -725,47 +554,7 @@ const REVIEW_ITEMS = [
 ]
 
 function ReviewMock() {
-  return (
-    <MobileShell active="review" title="복습">
-      <div className="flex w-full gap-2.5">
-        <ReviewCta id="ctaWrong" title="복습할 틀린 문제 5개" sub="약 3분이면 끝나요" btn="틀린 문제 복습하기" btnCls="text-primary-700"
-          card="border-primary-700 bg-[linear-gradient(137.7deg,var(--brand-light)_0%,var(--brand)_70.92%)]" />
-        <ReviewCta id="ctaMark" title="복습할 북마크 3개" sub="북마크해 둔 문장이에요" btn="북마크 복습하기" btnCls="text-bookmark-dark"
-          card="border-bookmark-dark bg-[linear-gradient(137.7deg,var(--bookmark-light)_0%,var(--bookmark)_70.92%)]" />
-      </div>
-      <section className="flex w-full flex-col gap-3 rounded-16 border-2 border-line bg-white px-[18px] pb-[18px] pt-[18px]">
-        <div className="flex items-center justify-between">
-          <p className="text-[16px] font-bold leading-figma text-ink">복습 목록</p>
-          <span {...area('erase')} className="flex items-center gap-1.5 rounded-full border-1.5 border-line py-[7px] pl-3 pr-3.5 text-[12.5px] font-bold leading-figma text-ink-muted">
-            <img src="/ui/lp-100-15-trash.svg" alt="" className="size-3.5" />
-            지우기
-          </span>
-        </div>
-        <div className="flex gap-[7px]">
-          {[['전체', 8, true], ['틀린 문제', 5], ['북마크', 3]].map(([l, n, on]) => (
-            <span key={l} className={`flex items-center gap-[5px] rounded-full px-[13px] py-2 font-bold leading-figma ${on ? 'bg-primary-500 text-white' : 'bg-surface-sunken text-ink-muted'}`}>
-              <span className="text-[12.5px]">{l}</span>
-              <span className={`text-[11px] ${on ? 'text-white/75' : 'text-ink-ghost'}`}>{n}</span>
-            </span>
-          ))}
-        </div>
-        <div {...area('items')} className="flex flex-col">
-          {REVIEW_ITEMS.map(([track, word, meta], i) => (
-            <div key={word} className={`flex items-center gap-[11px] py-3 ${i ? 'border-t-1.5 border-line' : ''}`}>
-              <span className={`flex w-[46px] shrink-0 items-center justify-center rounded-[7px] py-1 text-[11px] font-bold leading-figma ${track === '발화' ? 'bg-speak-tint text-speak-dark' : 'bg-primary-100 text-primary-700'}`}>{track}</span>
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5 leading-figma">
-                <span className="truncate text-[15px] font-bold text-ink">{word}</span>
-                <span className="text-[11.5px] text-ink-muted">{meta}</span>
-              </span>
-              <span className="relative h-2.5 w-[5px] shrink-0">
-                <img src="/ui/lp-239-34-arrow.svg" alt="" className="absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2" />
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
-    </MobileShell>
-  )
+ return <MobileShell active="records" title="기록"><div {...area('ctaWrong')} className="flex justify-around rounded-13 bg-surface-sunken p-3 font-bold"><span>요약</span><span className="text-track">틀린 문장</span><span {...area('ctaMark')}>저장한 문장</span></div><div className="py-3 font-bold">전체　입모양 읽기　말하기</div><div {...area('items')} className="card-flat"><div className="mb-4 flex justify-between font-bold"><span>문장 목록</span><span {...area('erase')}>지우기</span></div><p>입모양 읽기 · 바다에 가요</p><p className="mt-2 text-sm text-ink-muted">1회 틀렸어요</p><hr className="my-4" /><p>말하기 · 안녕하세요</p></div></MobileShell>
 }
 
 // ── 09 분석(데스크톱 본문 열, 상세 링크까지 보이게) ─────────────────────────────
@@ -913,7 +702,7 @@ function ProfileMock() {
 // 목업 목록. design = 설계 크기(px, 가이드 사진 상자와 같은 비율). areas = 이 목업에 번호 배지를 다는 영역.
 export const MOCKS = {
   overview: { design: [1440, 760], C: OverviewMock, areas: ['stats', 'rail', 'logo'],
-    alt: '데스크톱 학습 화면 그림. 왼쪽 메뉴, 가운데 단계 목록과 레슨 카드, 오른쪽 오늘의 과제와 복습 카드.' },
+    alt: '오늘 화면 그림. 왼쪽 오늘·학습·기록·내 정보 메뉴, 가운데 이어서 학습과 오늘 복습·과제.' },
   learn: { design: [520, 653], C: LearnMock, areas: ['switch', 'guideBtn', 'nodes', 'arrows', 'sheet'],
     alt: '휴대폰 학습 탭 그림. 입모양 읽기·말하기 전환, 단계 이름과 가이드 버튼, DOKA 단계 노드와 아래 레슨 카드.' },
   readQuestion: { design: [375, 564], C: (p) => <ReadMock {...p} />, areas: ['bookmark', 'stage', 'options'],
@@ -926,7 +715,7 @@ export const MOCKS = {
     alt: '발화 결과 그림. 발음 점수 84%, 소리별 칩 네 개 중 ㄷ은 주황, 아래 초록 결과 바 잘했어요.' },
   practice: { design: [520, 653], C: PracticeMock, areas: ['free', 'scenario', 'sign', 'endless', 'mouth'],
     alt: '학습의 자유 연습 그림. 내 문장 입모양 보기, 상황별 시나리오, 수어 보기, 엔드리스 학습, 입모양 교실 카드.' },
-  task: { design: [700, 606], C: TaskMock, areas: ['today', 'special', 'badges'],
+  task: { design: [700, 606], C: TaskMock, areas: ['today', 'special'],
     alt: '오늘 그림. 오늘의 과제 세 줄, 특별 과제 카드, 배지 목록.' },
   review: { design: [520, 653], C: ReviewMock, areas: ['ctaWrong', 'ctaMark', 'items', 'erase'],
     alt: '오늘 복습 그림. 틀린 문제·북마크 복습 카드와 복습 목록, 지우기 버튼.' },

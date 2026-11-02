@@ -1,3 +1,4 @@
+import { RailLevelCard, RailWeekCard } from './ProgressCards'
 import Badges from '../today/Badges'
 import TrackSummary from './TrackSummary'
 import ErrorScreen from '../../components/ErrorScreen'
@@ -116,7 +117,7 @@ export function TrackLinks({ enabled, navigate }) {
   }, [enabled])
   const groups = [
     { key: 'listen', title: '소리 듣기에서 헷갈린 소리', items: d?.from_listen || [] },
-    { key: 'read', title: '독화에서 헷갈린 입모양', items: d?.from_lipread || [] },
+    { key: 'read', title: '입모양 읽기에서 헷갈린 입모양', items: d?.from_lipread || [] },
   ].filter((g) => g.items.length)
   if (!enabled || !d?.listen_started || !groups.length) return null
   return (
@@ -361,6 +362,7 @@ export default function SummaryBody({ track = 'all' }) {
         <DetailLink label="전체 통계" onClick={() => setModal('stats')} />
       </div>
 
+      <RailLevelCard /><RailWeekCard activeDays={new Set(Object.keys(acts || cal || {}))} />
       <Modal open={modal === 'calendar'} onClose={() => setModal(null)} title="활동 캘린더"
         subtitle={calSubtitle(counts, ov?.session_days)} maxW="max-w-[900px]">
         <ActivityCalendar counts={counts} />
@@ -477,8 +479,8 @@ function historyRows(cal, acts) {
 }
 // 트랙 칩(209:356 · 209:363 · 209:377) — 독화 보라 · 발화 분홍 · 복습 파랑
 const TRACK_CHIP = {
-  read: { label: '독화', cls: 'bg-primary-100 text-primary-700' },
-  speak: { label: '발화', cls: 'bg-speak-tint text-speak-dark' },
+  read: { label: '입모양 읽기', cls: 'bg-primary-100 text-primary-700' },
+  speak: { label: '말하기', cls: 'bg-speak-tint text-speak-dark' },
   review: { label: '복습', cls: 'bg-bookmark-tint text-bookmark-dark' },
 }
 const isReview = (r) => r.kind === 'sentence' && /복습/.test(r.topic || '')
@@ -651,7 +653,7 @@ function SessionDetail({ row, onClose, onGo }) {
   const lesson = row.kind === 'sentence' ? (row.label || row.topic_label) : row.topic_label
   const title = speak ? `${lesson} 발음 연습` : lesson
   const acc = row.accuracy == null ? null : Math.round(Number(row.accuracy) * 100)
-  const trackLabel = isReview(row) ? '복습' : speak ? '발화' : '독화'
+  const trackLabel = isReview(row) ? '복습' : speak ? '말하기' : '입모양 읽기'
   const subtitle = `${relDay(row.date)} · ${trackLabel} · ${row.kind === 'assessment' ? `${row.n}회` : `${row.n}문제`}${acc != null ? ` · 정답률 ${acc}%` : ''}`
   const sm = data?.summary || {}
   const items = data?.items || []
@@ -734,8 +736,8 @@ function FullStats({ ov, onGo }) {
   const pct = (a) => (a == null ? '–' : Math.round(a * 100))
   const tr = ov?.tracks || {}
   const tracks = [
-    { name: '독화', acc: pct(tr.read?.accuracy), done: tr.read?.done ?? 0, total: tr.read?.total || 5, card: 'bg-primary-100 text-primary-700', fill: 'bg-primary-500' },
-    { name: '발화', acc: pct(tr.speak?.accuracy), done: tr.speak?.done ?? 0, total: tr.speak?.total || 6, card: 'bg-speak-tint text-speak-dark', fill: 'bg-speak' },
+    { name: '입모양 읽기', acc: pct(tr.read?.accuracy), done: tr.read?.done ?? 0, total: tr.read?.total || 5, card: 'bg-primary-100 text-primary-700', fill: 'bg-primary-500' },
+    { name: '말하기', acc: pct(tr.speak?.accuracy), done: tr.speak?.done ?? 0, total: tr.speak?.total || 6, card: 'bg-speak-tint text-speak-dark', fill: 'bg-speak' },
     // 소리 듣기 진도는 서버가 overview tracks에 listen을 실을 때만(10월 계약)
     ...(tr.listen ? [{ name: '소리 듣기', acc: pct(tr.listen.accuracy), done: tr.listen.done ?? 0, total: tr.listen.total || 6, card: 'bg-listen-tint text-listen-dark', fill: 'bg-listen' }] : []),
   ]

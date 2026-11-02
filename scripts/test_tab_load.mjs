@@ -36,29 +36,30 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     await page.goto(`${base}/listen/today`)
     await page.getByRole('dialog', { name: '수어 번역 사용법 안내' }).waitFor()
     assert.equal(await page.locator('dialog[open]').count(), 0)
-    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: '알겠어요', exact: true }).click()
     await page.getByRole('dialog', { name: '소리 듣기 안내', exact: true }).waitFor()
     await page.keyboard.press('Escape')
     await page.getByRole('dialog').waitFor({ state: 'detached' })
     console.log(`${name}: lesson-frame queue and Escape dismissal OK`)
     const cases = [
-      ['/review', ['/api/review/due'], '복습할 것이 없어요. 잘하고 있어요!'],
-      ['/review', ['/api/review-sentences'], '복습할 것이 없어요. 잘하고 있어요!'],
-      ['/review', ['/api/bookmarks'], '복습할 것이 없어요. 잘하고 있어요!'],
-      ['/review', ['/api/listen/review'], '복습할 것이 없어요. 잘하고 있어요!'],
-      ['/tasks', ['/api/tasks'], '오늘의 과제'],
-      ['/analysis', ['/api/analysis/overview'], '학습 시간 변화'],
-      ['/analysis', ['/api/calendar'], '학습 시간 변화'],
+      ['/records?view=wrong', ['/api/review/due'], '문장 목록'],
+      ['/records?view=wrong', ['/api/review-sentences'], '문장 목록'],
+      ['/records?view=wrong', ['/api/bookmarks'], '문장 목록'],
+      ['/records?view=wrong', ['/api/listen/review'], '문장 목록'],
+      ['/today', ['/api/tasks'], '오늘의 과제'],
+      ['/records', ['/api/analysis/overview'], '학습 시간 변화'],
+      ['/records', ['/api/calendar'], '학습 시간 변화'],
       ['/listen/today', ['/api/listen/today'], '오늘'],
-      ['/review', ['/api/'], '복습할 것이 없어요. 잘하고 있어요!'],
-      ['/tasks', ['/api/'], '오늘의 과제'],
-      ['/analysis', ['/api/'], '학습 시간 변화'],
+      ['/records?view=wrong', ['/api/'], '문장 목록'],
+      ['/today', ['/api/'], '오늘의 과제'],
+      ['/records', ['/api/'], '학습 시간 변화'],
     ]
     for (const [path, endpoints, ready] of cases) {
+      console.log(`${name}: checking ${path} ${endpoints.join()}`)
       const fail = (route) => endpoints.some((s) => new URL(route.request().url()).pathname.startsWith(s)) ? route.abort() : route.continue()
       await page.route('**/api/**', fail)
       await page.goto(base + path)
-      const retry = page.getByRole('button', { name: path === '/listen/today' ? '다시 가져오기' : '다시 시도', exact: true })
+      const retry = page.getByRole('button', { name: ['/listen/today','/today'].includes(path) ? '다시 가져오기' : '다시 시도', exact: true }).first()
       await retry.waitFor()
       assert.equal(await page.getByText('복습할 것이 없어요. 잘하고 있어요!', { exact: true }).count(), 0)
       await page.unroute('**/api/**', fail)
