@@ -2,13 +2,17 @@
 import argparse
 import ast
 import json
+import re
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def inventory():
     rows = []
-    for filename, prefix in [("main.py", ""), ("usage_events.py", ""), ("feedback.py", "")]:
+    # main.py가 include_router하는 모듈을 모두 표에 넣는다. 새 라우터가 표에서 빠지지 않게 한다.
+    main_source = (ROOT / "backend" / "main.py").read_text(encoding="utf-8")
+    routers = re.findall(r"^from (\w+) import router as \w+\s*$", main_source, re.M)
+    for filename, prefix in [(name + ".py", "") for name in ["main", *routers]]:
         source = (ROOT / "backend" / filename).read_text(encoding="utf-8")
         tree = ast.parse(source)
         functions = {n.name: n for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}

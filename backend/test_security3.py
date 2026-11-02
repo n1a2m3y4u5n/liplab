@@ -103,6 +103,7 @@ with TestClient(main.app) as c:
     origin={"Origin":"http://localhost:5173","Access-Control-Request-Method":"POST","Access-Control-Request-Headers":"authorization,content-type,x-usage-device-id"}
     assert c.options("/api/auth/login",headers=origin).status_code==200
     assert c.options("/api/auth/login",headers={**origin,"Access-Control-Request-Method":"TRACE"}).status_code==400
+    assert c.options("/api/admin/kmsav",headers={**origin,"Access-Control-Request-Method":"PUT"}).status_code==200
     assert c.options("/api/auth/login",headers={**origin,"Access-Control-Request-Headers":"x-evil"}).status_code==400
     # IP를 바꿔도 계정 잠금이 적용되고 만료 후 정상 로그인할 수 있다.
     for n in range(5):

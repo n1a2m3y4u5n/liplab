@@ -36,7 +36,7 @@ with TestClient(main.app) as c:
     def reg(name):
         r=c.post('/api/auth/register',json={'email':name+'@example.com','username':name,'password':'test-password-123','agree_terms':True,'age_confirmed':True})
         return {'Authorization':'Bearer '+r.json()['access_token']},r.json()['user']['id']
-    h,uid=reg('participant'); other,_=reg('other')
+    h,uid=reg('participant'); other,other_id=reg('other')
     base='/api/pilot/av-comparison'
     os.environ.pop('LIPLAB_AV_COMPARISON',None)
     assert c.get(base,headers=h).status_code==404
@@ -57,6 +57,16 @@ with TestClient(main.app) as c:
     assert again['session_id']==sid and again['snr_db']==-3
     assert c.post(base+'/finish',headers=h,json=dict(session_id=sid)).status_code==409
     assert c.get('/api'+run['items'][0]['media'],headers=other).status_code==403
+    # 같은 파일럿의 다른 참여자도 남의 회차에는 닿지 못한다.
+    async def join_other():
+        async with AsyncSessionLocal() as db:
+            p=(await db.execute(select(LearningProfile).where(LearningProfile.user_id==other_id))).scalars().first()
+            p.pilot_code='test'; await db.commit()
+    asyncio.run(join_other())
+    assert c.get('/api'+run['items'][0]['media'],headers=other).status_code==404
+    assert c.get(base+'/noise/'+sid,headers=other).status_code==404
+    assert c.post(base+'/answer',headers=other,json=dict(session_id=sid,item_id=run['items'][0]['id'],answer_text='x',plays=1,rt_ms=1)).status_code==404
+    assert c.post(base+'/finish',headers=other,json=dict(session_id=sid)).status_code==404
     for it in run['items']:
         body=dict(session_id=sid,item_id=it['id'],answer_text='문장 '+it['id'],plays=1,rt_ms=10)
         assert c.post(base+'/answer',headers=h,json=body).json()=={'recorded':True}
