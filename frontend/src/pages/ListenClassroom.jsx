@@ -1,3 +1,4 @@
+import { MotionPanel } from '../components/UI'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { learningAPI, listenAPI } from '../api'
@@ -32,7 +33,7 @@ function Chip({ on, onClick, children }) {
   useEffect(() => { if (on) ref.current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }) }, [on])
   return (
     <button ref={ref} type="button" onClick={onClick} aria-pressed={on}
-      className={`min-h-[40px] shrink-0 rounded-full px-4 py-2 text-[14px] font-bold leading-figma transition-colors ${on ? 'bg-track text-white' : 'bg-surface-sunken text-ink-muted hover:text-ink'}`}>
+      className={`min-h-11 shrink-0 rounded-full px-4 py-2 text-[14px] font-bold leading-figma transition-colors ${on ? 'bg-track text-white' : 'bg-surface-sunken text-ink-muted hover:text-ink'}`}>
       {children}
     </button>
   )
@@ -185,8 +186,8 @@ export default function ListenClassroom() {
         ) : !kinds || !ctx.voiceList ? <Skeleton /> : !kind ? (
           <StateCard title="들어 볼 소리 짝이 없어요" actions={[{ label: '자료로', onClick: exit }]} />
         ) : (
-          <div className="flex animate-fade-in flex-col gap-4 lg:gap-5">
-            <Heading title="소리 교실" sub="헷갈리기 쉬운 소리 짝을 골라 마음껏 들어 봐요. 같은 말을 여러 목소리로 들으면 목소리가 바뀌어도 알아듣기 쉬워져요." />
+          <div className="flex flex-col gap-4 lg:gap-5">
+            <MotionPanel kind="page"><Heading title="소리 교실" sub="헷갈리기 쉬운 소리 짝을 골라 마음껏 들어 봐요. 같은 말을 여러 목소리로 들으면 목소리가 바뀌어도 알아듣기 쉬워져요." /></MotionPanel>
             <div className="-mx-[18px] flex gap-2 overflow-x-auto px-[18px] pb-1 [scrollbar-width:none] lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0" role="group" aria-label="소리 짝 종류">
               {kinds.map((k) => <Chip key={k.kind} on={k.kind === kind.kind} onClick={() => pickKind(k.kind)}>{k.label}</Chip>)}
             </div>

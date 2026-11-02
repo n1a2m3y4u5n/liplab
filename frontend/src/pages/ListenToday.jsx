@@ -1,3 +1,4 @@
+import { MotionPanel, Progress } from '../components/UI'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { listenAPI } from '../api'
@@ -54,16 +55,14 @@ function TodayIntro({ plan, onStart, active }) {
   const doneMin = plan.done_today?.minutes || 0
   const target = plan.target_min || 15
   return (
-    <div className="flex animate-fade-in flex-col gap-4 lg:gap-5">
+    <><MotionPanel kind="page" className="flex flex-col gap-4 lg:gap-5">
       <Heading title="오늘의 듣기 ⤨" />
       <Card className="flex flex-col gap-2.5">
         <div className="flex items-baseline justify-between gap-3 leading-figma">
           <p className="text-[14px] font-bold text-ink-muted">들은 시간</p>
           <p className="text-[15px] font-bold text-track-dark">{fmtGoalMinutes(doneMin)}<span className="font-normal text-ink-faint"> / {target}분</span></p>
         </div>
-        <div className="h-2.5 overflow-hidden rounded-full bg-fill">
-          <div className="h-full rounded-full bg-track" style={{ width: `${Math.min(100, (doneMin / target) * 100)}%` }} />
-        </div>
+        <Progress value={(doneMin / target) * 100} label="오늘 들은 시간" valueText={`${fmtGoalMinutes(doneMin)} / ${target}분`} animated />
       </Card>
       <ol className="flex flex-col overflow-hidden rounded-18 border-2 border-line bg-white lg:rounded-22">
         {plan.blocks.map((b, i) => (
@@ -77,8 +76,9 @@ function TodayIntro({ plan, onStart, active }) {
           </li>
         ))}
       </ol>
+      </MotionPanel>
       <BottomBar active={active} primary={{ label: '시작하기', onClick: onStart }} />
-    </div>
+    </>
   )
 }
 

@@ -1,3 +1,4 @@
+import { MotionPanel } from '../UI'
 import { startUsage, endUsage } from '../../lib/track'
 import { useEffect, useState } from 'react'
 import { josa, lingNotes, pct } from '../../lib/listenFlow'
@@ -61,7 +62,7 @@ function BlockBreak({ done, no, total, next, onNext, onStop, active }) {
       : r.n ? `${r.n}문제 중 ${r.c}문제 · 정답률 ${pct(r.c, r.n)}` : '소리를 받지 못해 세지 않고 넘겼어요'
   const notes = r?.summary ? lingNotes(r.summary).notes.filter(Boolean) : []
   return (
-    <div className="flex animate-fade-in flex-col gap-4 lg:gap-5">
+    <><MotionPanel kind="page" className="flex flex-col gap-4 lg:gap-5">
       <Heading title={`${josa(done?.block?.title || '연습', '을', '를')} 마쳤어요`} meta={`${no} / ${total} 마침`} sub={line} />
       {notes.map((n) => (
         <p key={n} className="break-keep rounded-14 bg-surface-sunken px-4 py-3 text-[14px] leading-[1.6] text-ink">{n}</p>
@@ -78,7 +79,8 @@ function BlockBreak({ done, no, total, next, onNext, onStop, active }) {
           </div>
         </Card>
       )}
+      </MotionPanel>
       <BottomBar active={active} hint="잠깐 쉬어도 돼요" primary={{ label: '다음 연습 시작', onClick: onNext }} secondary={{ label: '여기까지 하기', onClick: onStop }} />
-    </div>
+    </>
   )
 }

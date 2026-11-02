@@ -1,3 +1,4 @@
+import { MotionPanel } from '../components/UI'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { listenAPI } from '../api'
@@ -45,7 +46,7 @@ function Row({ title, desc, right, onClick, tone = null }) {
 }
 
 function RowList({ children }) {
-  return <div className="flex flex-col divide-y-[1.5px] divide-line overflow-hidden rounded-18 border-2 border-line bg-white lg:rounded-22">{children}</div>
+  return <Card className="flex flex-col divide-y-[1.5px] divide-line overflow-hidden !p-0">{children}</Card>
 }
 
 const failState = (e) => (e?.response?.status === 404 ? 'missing' : e?.response?.status === 409 ? 'ling' : 'network')
@@ -56,7 +57,7 @@ function ContrastChooser({ onPick, onClassroom }) {
   const [err, setErr] = useState(null)
   useEffect(() => { listenAPI.contrasts().then((k) => setKinds(Array.isArray(k) ? k : k?.kinds || [])).catch((e) => setErr(failState(e))) }, [])
   return (
-    <div className="flex animate-fade-in flex-col gap-4 lg:gap-5">
+    <MotionPanel kind="page" className="flex flex-col gap-4 lg:gap-5">
       <Heading title="어떤 소리 짝을 연습할까요?" sub="고른 종류의 짝만 이어서 나와요. 들어 보고 싶으면 소리 교실에서 먼저 들어 봐도 돼요." />
       <RowList>
         <Row tone="track" title="내가 자주 헷갈린 짝" desc="낱말 고르기에서 자주 틀린 소리부터 나와요" onClick={() => onPick({ weak: '1' })} />
@@ -69,7 +70,7 @@ function ContrastChooser({ onPick, onClassroom }) {
       <button type="button" onClick={onClassroom} className="min-h-[44px] self-center rounded-13 px-4 text-[13px] font-bold text-track-dark underline-offset-4 hover:underline">
         소리 교실에서 먼저 들어 보기
       </button>
-    </div>
+    </MotionPanel>
   )
 }
 
@@ -85,7 +86,7 @@ function PlaceChooser({ onPick, onExit }) {
   if (err) return <NotReady kind={err} onRetry={() => setNonce((n) => n + 1)} onExit={onExit} />
   if (!places) return <Skeleton />
   return (
-    <div className="flex animate-fade-in flex-col gap-4 lg:gap-5">
+    <MotionPanel kind="page" className="flex flex-col gap-4 lg:gap-5">
       <Heading title="어디에서 듣는 말일까요?" sub="장소를 고르면 그곳에서 들을 법한 말이 나와요. 못 알아들으면 다시·천천히·다른 말로 되물어도 돼요." />
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:gap-3">
         {places.map((p) => (
@@ -96,7 +97,7 @@ function PlaceChooser({ onPick, onExit }) {
           </button>
         ))}
       </div>
-    </div>
+    </MotionPanel>
   )
 }
 
@@ -105,14 +106,15 @@ function ConditionChooser({ onPick, active }) {
   const [cond, setCond] = useState('phone')
   const [noise, setNoise] = useState('babble')
   return (
-    <div className="flex animate-fade-in flex-col gap-4 lg:gap-5">
+    <><MotionPanel kind="page" className="flex flex-col gap-4 lg:gap-5">
       <Heading title="어떤 조건에서 들어 볼까요?" sub="일상에서 듣기 어려운 조건을 하나 골라 그 조건으로만 연습해요. 전체 소리 크기는 맞춘 크기를 넘지 않아요." />
       <Card className="flex flex-col gap-5">
         <ChoiceGroup legend="듣기 조건" options={CONDITIONS} value={cond} onChange={setCond} cols="grid-cols-1" />
         {cond === 'noise' && <ChoiceGroup legend="잡음 종류" options={NOISE_TYPES} value={noise} onChange={setNoise} cols="grid-cols-1 sm:grid-cols-2" />}
       </Card>
+      </MotionPanel>
       <BottomBar active={active} hint="고른 뒤 시작해요" primary={{ label: '시작하기', onClick: () => onPick(cond === 'noise' ? { condition: cond, noise } : { condition: cond }) }} />
-    </div>
+    </>
   )
 }
 
