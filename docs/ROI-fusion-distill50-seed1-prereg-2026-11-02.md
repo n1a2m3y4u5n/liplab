@@ -45,3 +45,11 @@ main 작업 폴더는 `D:\work\hq\projects\liplab-gpu2\nextreg_fill3_2026-11\fus
 ## 실행 확인 (21:35 KST)
 
 d5301f6d를시작전에커밋한뒤main S4U liplab-nextreg-fusion-distill50-s1이21:33:53 시작했다.부모PID6896/실제학습자식48756,21:34 GPU48%878MiB·paired train-onlycache201/981을확인했다.21:35:43첫검증에폭까지생존했고GPU76%4258MiB였다.이는실행생존확인이지정확도관문통과선언은아니다.학습seed1/선생seed0·같은시드B33s1·batch/split/loss/threshold고정,기술실패/재시도없음.코드abcfd782는조건부최종해석과C0<C1<D0<D1원시시간순서를검사한다.
+
+## D1 최종 기록 전용 결과 (22:03 KST)
+
+D1은40에폭/best31,같은시드B33s1대비4지차+.024160808901155517·CER차−.0018000000000000238·FP32파일비율.5031875758201588·WASM비율.16271958345015122로개별네관문을통과했다.큰선생442.81855→학생72.05525ms,1스레드5예열20교대쌍원시시간·모델/입력SHA를보존했다.측정중local C65s0 CPU4/GPU학습이있었고관측파일에기록했으며재측정없음이다.
+
+**D0가미달했으므로D1은기록전용이고안정성근거/선택성공시드가아니다.** abcfd782집계는실제PT/ONNX/선택메타/sourceJSON해시와WASM C0<C1<D0<D1순서를검증해record_only_D0_failed,seed1_reproduced=null,seed1_record_only=true를남겼다. D0실패를더좋은seed1으로뒤집지않는다.
+
+학생PT SHA3562f2598ecda4d212fbf70bef0206f3c8f508c8b610af9bf83284b21515b955. out/fusion_distill50_s1에모델/요약/구조·캐시meta/선택/ONNX/내보내기/원시시간/로그를회수했고main종료0·GPU해제를확인한뒤자기입술/선생/B33s1기준/cache사본을삭제·완료작업비활성화했다. 공유원본보존/검증12명개발선택/봉인평가추론0/앱·배포·푸시없음.
