@@ -1,0 +1,20 @@
+# V1-538 평가 화자 19명(docs/lipread-v1-538-prereg-2026-10-29.md 4절, sha256("liplab-train538-eval:"+spk) 앞 8자리 < 0.30*2^32)
+spk303
+spk315
+spk316
+spk326
+spk327
+spk328
+spk329
+spk341
+spk342
+spk348
+spk349
+spk371
+spk376
+spk381
+spk414
+spk477
+spk494
+spk606
+spk621

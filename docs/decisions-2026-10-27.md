@@ -35,3 +35,11 @@
 - Claude Max·Figma 갱신, 예산 재배정(3D 성도 모델·CC5 여유분 → GPU), GPU 잔액 확인
 - 공개 채널과 저자(DOI, Hugging Face)
 - 식약처 의료기기 해당 여부 질의, 당사자 검증 협력 기관 찾기
+
+## KMSAV 외부 자료 받기 준비 (2026-10-28, 사용자 승인)
+
+- 자료: ETRI KMSAV(한국어 시청각, 유튜브 영상 ID 기반). 라이선스 CC BY-NC-SA 4.0(비상업·연구용). 출처 https://github.com/etri/kmsav.
+- 용도: 학습 전용(F 후보 3 독화 증강·화자 정규화·웹캠 강건성). E2·V1 평가 자료로 쓰지 않고 538 평가 화자와 섞지 않는다. 이 데이터로 학습한 모델은 모델 카드에 'NC 데이터 포함'을 표시한다.
+- OLKAVS 공개 사전학습 모델은 538 학습 화자를 포함하므로 E2·V1 평가 경로에 쓰지 않는다.
+- 원자료·영상은 앱·공개 저장소에 넣지 않는다(저장 위치: C:\liplab-raw\kmsav, liplab-lab\data\kmsav).
+- 받기 규칙: 로그인·쿠키 없음, 동시 1개, 5M 제한, 영상 사이 5~15초 쉼, 429·봇 확인 한 번이면 KMSAV_STOP으로 전체 멈춤, 538 E2 속도 30% 하락 시 30분 양보(`scripts/kmsav_fetch.py`, `scripts/kmsav_prepare.py`).
