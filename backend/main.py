@@ -6369,12 +6369,12 @@ async def _listen_placement_run(req: ListenPlacementReq, user, db, new_session: 
     if session is None and new_session and not req.answers:
         session = _secrets.token_hex(8)
     if not session or not _re.fullmatch(r"[0-9a-f]{8,40}", session):
-        raise HTTPException(status_code=400, detail="session이 필요합니다.")
+        raise HTTPException(status_code=400, detail="검사를 처음부터 다시 시작해 주세요.")
     raw = [a.model_dump() if hasattr(a, "model_dump") else a.dict() for a in req.answers]
     try:
         out = await asyncio.to_thread(_lp.replay, f"{user.id}:{session}", raw)
     except ValueError:
-        raise HTTPException(status_code=400, detail="답이 검사 문항과 맞지 않아요. 검사를 처음부터 다시 해 주세요.")
+        raise HTTPException(status_code=400, detail="문제와 답이 서로 달라요. 검사를 처음부터 다시 해 주세요.")
     return session, out
 
 

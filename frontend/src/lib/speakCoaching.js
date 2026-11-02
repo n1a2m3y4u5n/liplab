@@ -15,7 +15,7 @@ export async function loadCoachingResult({ id, request, isCurrent, update }) {
     const retry = !status || [408, 429, 502, 503, 504].includes(status)
     const message = status === 404
       ? '코칭 만료'
-      : retry ? '수신 지연' : '코칭 실패'
+      : retry ? '아직 받지 못했어요' : '코칭 실패'
     patch = { coaching: null, coaching_error: message, coaching_retry: retry }
   }
   apply({ ...patch, coaching_pending: false })
