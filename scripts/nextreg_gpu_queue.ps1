@@ -17,7 +17,8 @@ function IdleGPU {
     if($Mode -eq 'black') {
         if(Get-Process -Name 'Overwatch*','League*','VALORANT*' -ErrorAction SilentlyContinue){return $false}
         $sessions=& cmd.exe /c 'query user 2>nul'
-        if($sessions -match '\bActive\b|활성'){return $false}
+        $activeKorean=([char]0xD65C).ToString()+[char]0xC131
+        if($sessions -match "\bActive\b|$activeKorean"){return $false}
     }
     return $true
 }
