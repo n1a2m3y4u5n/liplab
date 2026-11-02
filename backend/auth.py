@@ -111,6 +111,11 @@ def get_password_hash(password: str) -> str:
 
 
 # Token utilities
+def token_fingerprint(token: str) -> str:
+    # 서명 Base64의 패딩만 바꿔도 같은 서명으로 검증된다. 서명된 본문을 식별자로 써 폐기 우회를 막는다.
+    return hashlib.sha256(token.rsplit(".", 1)[0].encode("utf-8")).hexdigest()
+
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Create JWT access token"""
     to_encode = data.copy()
@@ -150,7 +155,7 @@ async def get_current_user(
         raise credentials_exception
 
     # Fetch user from database
-    if await db.get(RevokedToken, hashlib.sha256(token.encode("utf-8")).hexdigest()):
+    if await db.get(RevokedToken, token_fingerprint(token)):
         raise credentials_exception
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
@@ -244,7 +249,7 @@ async def revoke_access_token(token: str, db: AsyncSession) -> None:
     from sqlalchemy import delete
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
     await db.execute(delete(RevokedToken).where(RevokedToken.expires_at < datetime.utcnow()))
-    db.add(RevokedToken(token_hash=hashlib.sha256(token.encode("utf-8")).hexdigest(),
+    db.add(RevokedToken(token_hash=token_fingerprint(token),
                         expires_at=datetime.utcfromtimestamp(payload["exp"])))
     try:
         await db.commit()
