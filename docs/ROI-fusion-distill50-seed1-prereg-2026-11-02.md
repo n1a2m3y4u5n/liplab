@@ -41,3 +41,7 @@ main 작업 폴더는 `D:\work\hq\projects\liplab-gpu2\nextreg_fill3_2026-11\fus
 ## 결과
 
 미실행. 시작 전 합성 CPU 점검으로 seed1 초기 설정/실제 학습 인자/학생 provenance와 teacher_seed0 고정, 구조·paired 캐시·KL 계약을 확인한다.
+
+## 실행 확인 (21:35 KST)
+
+d5301f6d를시작전에커밋한뒤main S4U liplab-nextreg-fusion-distill50-s1이21:33:53 시작했다.부모PID6896/실제학습자식48756,21:34 GPU48%878MiB·paired train-onlycache201/981을확인했다.21:35:43첫검증에폭까지생존했고GPU76%4258MiB였다.이는실행생존확인이지정확도관문통과선언은아니다.학습seed1/선생seed0·같은시드B33s1·batch/split/loss/threshold고정,기술실패/재시도없음.코드abcfd782는조건부최종해석과C0<C1<D0<D1원시시간순서를검사한다.
