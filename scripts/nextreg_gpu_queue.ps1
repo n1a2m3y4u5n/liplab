@@ -14,7 +14,7 @@ function IdleGPU {
     if($apps -match 'python'){return $false}
     $busy=Get-CimInstance Win32_Process | Where-Object { $_.Name -like '*python*' -and $_.CommandLine -match '(roi_train\.py|nextreg_roi\.py|nextreg_bs_lips\.py)' }
     if($busy){return $false}
-    if($Mode -eq 'black') {
+    if($Mode -eq 'black' -or $Root.StartsWith('D:\work\liplab-gpu3\')) {
         if(Get-Process -Name 'Overwatch*','League*','VALORANT*' -ErrorAction SilentlyContinue){return $false}
         $sessions=& cmd.exe /c 'query user 2>nul'
         $activeKorean=([char]0xD65C).ToString()+[char]0xC131
