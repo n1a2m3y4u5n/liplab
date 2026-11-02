@@ -852,8 +852,8 @@ async def get_scenario(
 def _kst_today():
     """오늘 날짜(한국 시간). 서버(fly)는 UTC라 date.today()를 쓰면 오전 9시 전 학습이 전날로 잡혀, 스트릭·복습일이
     기기 시간을 쓰는 분석 탭과 어긋났다. 서비스 대상이 한국이라 KST(UTC+9)로 고정한다."""
-    from datetime import datetime as _dtm, timedelta as _td
-    return (_dtm.utcnow() + _td(hours=9)).date()
+    from datetime import datetime as _dtm, timedelta as _td, timezone as _tz
+    return _dtm.now(_tz(_td(hours=9))).date()
 
 
 def _add_xp(user, xp: int) -> None:
