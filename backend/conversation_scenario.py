@@ -234,5 +234,5 @@ async def generate_multi_conversation(speakers: int = 2, turns: int = 6,
         return enrich({"scene": scene, "speakers": speakers, "turns": out_turns}, rng)
     except Exception as e:
         # 키 없음·네트워크·파싱 실패 → 결정론적 대화로 폴백(엔드포인트 500·프론트 무한로딩 방지)
-        print(f"[WARN] multi-conversation LLM failed, using fallback: {e}")
+        print(f"[WARN] multi-conversation LLM failed, using fallback: {type(e).__name__}")
         return enrich(_fallback_conversation(speakers, turns, scene, rng), rng)
