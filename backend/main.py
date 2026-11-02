@@ -3971,7 +3971,7 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
             "reading_days": await reading_days(uid),
             "listen": await listen_export(uid, trials),
             "battery": await battery(uid),
-            "transfer": await export_transfer(db, uid),
+            "transfer": await export_transfer(db, uid, tz),
             # 유지 검사(R) 예정과 상태(B를 마친 날 + LIPLAB_RETENTION_DAYS). 날짜만
             "battery_schedule": _battery_retention_schedule(await _battery_rows(uid, db)),
             **(await measurement(uid)),

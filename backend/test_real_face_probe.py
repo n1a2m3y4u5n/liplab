@@ -49,8 +49,12 @@ with TestClient(main.app) as c:
             row=await db.get(RealFaceProbe,it['id'])
             assert row.correct is False and row.chosen=='나' and row.rt_ms==10
             from transfer_export import export_transfer
+            from datetime import datetime
+            row.created_at=datetime(2026,1,1,18,0); await db.commit()
             exported=await export_transfer(db,uid)
             assert exported['real_face_probes'][0]['correct'] is False
+            assert exported['real_face_probes'][0]['day']=='2026-01-02'
+            assert (await export_transfer(db,uid,0))['real_face_probes'][0]['day']=='2026-01-01'
             assert 'snapshot' not in json.dumps(exported) and 'video.mp4' not in json.dumps(exported)
             result=await purge(db,uid); await db.commit()
             assert result['real_face_probes']==1

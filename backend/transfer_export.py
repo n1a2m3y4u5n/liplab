@@ -2,8 +2,9 @@
 from sqlalchemy import select
 from database import RealFaceProbe, AvComparison, AvComparisonAnswer
 from av_comparison import gains
+from analytics import to_local
 
-async def export_transfer(db, uid):
+async def export_transfer(db, uid, tz_offset_min=-540):
     probes = list((await db.execute(select(RealFaceProbe).where(RealFaceProbe.user_id == uid).order_by(RealFaceProbe.created_at))).scalars())
     sessions = list((await db.execute(select(AvComparison).where(AvComparison.user_id == uid).order_by(AvComparison.created_at))).scalars())
     answers = list((await db.execute(select(AvComparisonAnswer).where(AvComparisonAnswer.user_id == uid).order_by(AvComparisonAnswer.id))).scalars())
@@ -17,4 +18,4 @@ async def export_transfer(db, uid):
             **(gains(rows) if session.completed else {})})
     return {'real_face_probes': [{'item_id': r.item_id, 'version': r.version, 'talker': r.snapshot['talker'],
                 'answered': r.answered_at is not None, 'correct': r.correct, 'rt_ms': r.rt_ms,
-                'day': r.created_at.date().isoformat()} for r in probes], 'av_comparisons': comparisons}
+                'day': to_local(r.created_at, tz_offset_min).date().isoformat()} for r in probes], 'av_comparisons': comparisons}
