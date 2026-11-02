@@ -29,11 +29,8 @@ import { pathNodeState } from '../lib/pathNodes'
 // 문장·대화 단계는 시나리오 선택(ScenarioHub)을 거쳐야 currentScenario가 세팅된 뒤 레슨(/practice·/conversation)이 뜬다.
 // 바로 보내면 시나리오가 없어 레슨이 되돌려보내므로(9/25 '학습 시작하기를 눌러도 아무 일 없음') /learn/scenario로 진입하고,
 // 대화 단계는 연습 방법을 'AI 대화'로 골라 둔다.
-const READ_ROUTE = { viseme: '/learn/viseme', word: '/learn/word', sentence: '/learn/scenario', conversation: '/learn/scenario?mode=conversation' }
-// 단계별 숙달 최소 시도수 — 진행률 표시의 분모(backend/main.py _STAGE1~4_MIN_ATTEMPTS = 8·6·5·4와 같게).
-// 9/28부터 서버가 단계마다 min_attempts·mastery(·pass)를 실어 보내므로 이 표는 응답에 없을 때만 쓴다.
-const READ_TOTAL = { viseme: 8, word: 6, sentence: 5, conversation: 4 }
-const TRACK_LABEL = { read: '독화', speak: '발화', listen: '소리 듣기' }
+import { TRACK_LABEL } from '../lib/iaLabels'
+import { normalizeRead, normalizeSpeak } from '../lib/trackPath'
 const TRACKS = Object.keys(TRACK_LABEL)
 
 // 단계 이동 화살표 에셋 — 데스크톱 44 슬롯(58:11) / 모바일 38 슬롯(232:35). 둘 다 그림자 여백만큼 위 4·좌우 7 넘친다.
@@ -87,24 +84,6 @@ function TailLeft({ className = '', edgeClass = '' }) {
 
 /** 두 트랙의 단계 목록을 같은 모양으로 정규화: { key, stage, no, title, route, status, attempts, total }
  *  + 사용법 가이드 '지금 내 상태' 카드용 desc·guide·mastery·pass(서버가 보내는 값을 버리지 않고 싣는다). */
-function normalizeRead(stages) {
-  return (stages || []).filter((s) => s.stage >= 1 && READ_ROUTE[s.key]).map((s) => ({
-    key: s.key, stage: s.stage, no: s.stage, title: s.title, route: READ_ROUTE[s.key],
-    status: s.status, attempts: s.attempts ?? 0, total: s.min_attempts || READ_TOTAL[s.key] || 8,
-    desc: s.desc || '', mastery: s.mastery ?? null, pass: s.pass ?? null,
-  }))
-}
-// 발화는 0단계(발성)부터 싣는다 — 백엔드가 0단계를 항상 열고 N단계는 N-1 숙달 시 해금하므로
-// 빼면 새 사용자의 첫 노드가 잠긴 1단계가 된다. 표시 번호(no)는 1부터.
-function normalizeSpeak(stages) {
-  return (stages || []).map((s, i) => ({
-    key: `speak-${s.stage}`, stage: s.stage, no: i + 1, title: s.title, route: `/learn/speaking?stage=${s.stage}`,
-    status: s.status, attempts: s.attempts ?? 0, total: s.min_attempts || 8,
-    desc: s.desc || '', guide: s.guide || '', mastery: s.mastery ?? null, pass: s.pass ?? null,
-    probe: s.probe || null, gain: s.gain || null,   // 모음·자음 낱말 속 확인, 4·5단계 개인 향상 경로(speak_curriculum)
-  }))
-}
-
 // 소리 듣기(청능훈련)도 0단계(소리 확인)부터. 단계마다 숙달 방식이 달라 진행 글과 막대를 단계별로 정한다(backend listen_curriculum):
 //  - 0 소리 확인: 한 번 하면 숙달(매일 점검용) → '확인 n번', 막대는 했으면 가득
 //  - 1·2 수준 단계: 맨 위 수준에서 10번 중 9·8번 → '수준 L / N', 막대는 수준 비율(시작 전은 '시작 전')

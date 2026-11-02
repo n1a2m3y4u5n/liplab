@@ -28,3 +28,11 @@ export function rewardMessage(claimed) {
   const xp = list.reduce((s, c) => s + (c.xp || 0), 0)
   return list.length === 1 ? `'${list[0].label}' 과제를 마쳤어요 · 경험치 +${xp}` : `과제 ${list.length}개를 마쳤어요 · 경험치 +${xp}`
 }
+
+export function todayReviewStart(due) {
+  const counts = dueCounts(due)
+  return dueStartPath(counts, (due?.listen_count ?? 0) > 0 ? '/listen/review' : '/records?view=wrong')
+}
+export function todayReviewCount(due) {
+  return due?.total_with_listen ?? (dueCounts(due).total + (due?.listen_count ?? 0))
+}

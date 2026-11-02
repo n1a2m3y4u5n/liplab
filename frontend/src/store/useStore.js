@@ -10,6 +10,7 @@ import { clearSignExplored } from '../lib/badges'
  */
 export function clearUserLocalData() {
   clearSignExplored()
+  try { localStorage.removeItem(`liplab_last_track:${useStore.getState().user?.id ?? 'guest'}`) } catch {}
   try { localStorage.removeItem('liplab_onboarded') } catch { /* 저장소 차단 시 무시 */ }
 }
 

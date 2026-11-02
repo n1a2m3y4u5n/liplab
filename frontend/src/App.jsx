@@ -1,3 +1,4 @@
+import LegacyRedirect from './components/LegacyRedirect'
 import Feedback from './components/Feedback'
 import AdminFeedback from './pages/AdminFeedback'
 import { initTrack, track, trackRoute } from './lib/track'
@@ -17,7 +18,7 @@ class ErrorBoundary extends Component {
     // 화면(438:103 / 438:143). 이 경계는 라우터 밖이라 버튼은 주소를 직접 바꾼다. 개발 모드에서만 상세 스택을 보여준다.
     return (
       <ErrorScreen kind="error" onRetry={() => window.location.reload()}
-        onHome={() => window.location.assign('/learn/path')}>
+        onHome={() => window.location.assign('/today')}>
         {import.meta.env?.DEV && (
           <pre className="mt-2 max-h-[200px] w-full overflow-auto whitespace-pre-wrap text-left text-[11px] text-bad">
             {err?.message}{'\n'}{err?.stack}
@@ -86,7 +87,7 @@ const ListeningReport = lazy(() => import('./pages/ListeningReport'))
 const EvalReport = lazy(() => import('./pages/EvalReport'))
 const ContentReview = lazy(() => import('./pages/ContentReview'))
 const PracticeHub = lazy(() => import('./pages/PracticeHub'))
-const TasksPage = lazy(() => import('./pages/TasksPage'))
+const TodayPage = lazy(() => import('./pages/TodayPage'))
 const ReviewTab = lazy(() => import('./pages/ReviewTab'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const AnalysisTab = lazy(() => import('./pages/AnalysisTab'))
@@ -171,8 +172,8 @@ function HomeRedirect() {
     let cancelled = false
     setTo(null)
     curriculumAPI.getStages()
-      .then((data) => { if (!cancelled) setTo(data?.placed === false ? '/onboarding' : '/learn/path') })
-      .catch(() => { if (!cancelled) setTo('/learn/path') })
+      .then((data) => { if (!cancelled) setTo(data?.placed === false ? '/onboarding' : '/today') })
+      .catch(() => { if (!cancelled) setTo('/today') })
     return () => { cancelled = true }
   }, [key])
   if (!to) return <LoadingScreen />
@@ -238,7 +239,8 @@ function App() {
       <div id="app-content" className="app-shell">
       <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        <Route path="/dashboard" element={<Navigate to="/learn/path" replace />} />
+        <Route path="/dashboard" element={<LegacyRedirect to="/today" />} />
+        <Route path="/today" element={<TodayPage />} />
         <Route path="/practice" element={<StageGate stage={3}><Practice /></StageGate>} />
         <Route path="/conversation" element={<StageGate stage={4}><Conversation /></StageGate>} />
         <Route path="/sign" element={<Sign />} />
@@ -259,11 +261,11 @@ function App() {
         <Route path="/listen/review" element={<ListenReview />} />
         <Route path="/learn/sign" element={<Sign />} />
         {/* 복습·분석 탭 — 새 Figma 화면을 대표 경로로 */}
-        <Route path="/review" element={<ReviewTab />} />
+        <Route path="/review" element={<LegacyRedirect to="/today#review" />} />
         <Route path="/analysis" element={<AnalysisTab />} />
         {/* 구 경로 → 새 대표 경로 리다이렉트(신구 화면 혼재 방지) */}
-        <Route path="/review/hub" element={<Navigate to="/review" replace />} />
-        <Route path="/review/today" element={<Navigate to="/review" replace />} />
+        <Route path="/review/hub" element={<LegacyRedirect to="/today#review" />} />
+        <Route path="/review/today" element={<LegacyRedirect to="/today#review" />} />
         <Route path="/analysis/hub" element={<Navigate to="/analysis" replace />} />
         <Route path="/analysis/overview" element={<Navigate to="/analysis" replace />} />
         {/* 새 화면 안에서 '더 보기'로 진입하는 상세 경로 — 유지 */}
@@ -282,7 +284,7 @@ function App() {
         {import.meta.env.VITE_KMSAV_REVIEW === '1' && <Route path="/admin/kmsav" element={<KmsavReview />} />}
         <Route path="/admin/content-review" element={<ContentReview />} />
         <Route path="/practice/hub" element={<PracticeHub />} />
-        <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/tasks" element={<LegacyRedirect to="/today#tasks" />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/learn/path" element={<CurriculumPath />} />
         <Route path="/learn/endless" element={<EndlessPractice />} />
