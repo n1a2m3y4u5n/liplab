@@ -72,6 +72,7 @@ function MobileTopBar({ pink }) {
           className="grid size-11 shrink-0 place-items-center rounded-full border-0 bg-surface-inverse p-0 text-[12px] font-bold tracking-tight text-white">
           Aa
         </Button>
+        <div data-feedback-slot className="inline-flex shrink-0" />
 
       </div>
     </header>
@@ -134,6 +135,7 @@ export default function AppShell({ children, active, title, description, closeTo
             </button>
           )
         })}
+        <div data-feedback-slot className="inline-flex self-start" />
         <div className="mt-auto flex flex-wrap gap-3 pt-8 text-sm">
           <Stat icon="/ui/stat-streak.svg" box={18} value={stats.streak} className="gap-1 text-stat-streak" />
           <Stat icon="/ui/stat-xp.svg" box={18} value={stats.xp.toLocaleString()} className="gap-1 text-stat-xp" />
