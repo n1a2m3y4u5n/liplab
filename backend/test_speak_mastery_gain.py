@@ -60,7 +60,7 @@ with TestClient(main.app) as c:
     for i in range(10):
         rr = c.post("/api/speak/assess", headers=h,
                     data={"target": "사과", "stage": "4", "review": "1", "loudness": "0", "voiced_duration": "0"},
-                    files={"audio": ("a.webm", b"\x00" * 2000, "audio/webm")})
+                    files={"audio": ("a.webm", b"\x1a\x45\xdf\xa3" + b"\x00" * 1996, "audio/webm")})
         assert rr.status_code == 200, rr.text
 
     async def reset():

@@ -45,7 +45,7 @@ with TestClient(main.app) as c:
     def assess(target, stage, text, loud, vd):
         heard["text"] = text
         before = dict(calls)
-        res = c.post("/api/speak/assess", headers=h, files={"audio": ("a.webm", b"\x00" * 2048, "audio/webm")},
+        res = c.post("/api/speak/assess", headers=h, files={"audio": ("a.webm", b"\x1a\x45\xdf\xa3" + b"\x00" * 2044, "audio/webm")},
                      data={"target": target, "stage": str(stage), "loudness": str(loud), "duration": "1.0",
                            "voiced_duration": str(vd)})
         body = res.json()

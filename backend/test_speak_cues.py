@@ -90,7 +90,7 @@ with TestClient(main.app) as c:
     h = {"Authorization": "Bearer " + r.json()["access_token"]}
     def assess(target, stage):
         res = c.post("/api/speak/assess", data={"target": target, "stage": str(stage), "loudness": "50", "duration": "2"},
-                     files={"audio": ("a.webm", b"\x00" * 2048, "audio/webm")}, headers=h)
+                     files={"audio": ("a.webm", b"\x1a\x45\xdf\xa3" + b"\x00" * 2044, "audio/webm")}, headers=h)
         return res.status_code, res.json().get("sound_cue")
     out["sentence"] = assess("오늘 날씨가 좋아요.", 5)
     out["consonant"] = assess("사", 3)

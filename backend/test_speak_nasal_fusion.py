@@ -49,7 +49,7 @@ with TestClient(main.app) as c:
         data = {"target": "밥 마셔", "mouth_confidence": "0.6"}
         if track is not None:
             data["mouth_track"] = json.dumps(track)
-        res = c.post("/api/speak/assess", data=data, files={"audio": ("a.webm", b"\x00" * 2048, "audio/webm")},
+        res = c.post("/api/speak/assess", data=data, files={"audio": ("a.webm", b"\x1a\x45\xdf\xa3" + b"\x00" * 2044, "audio/webm")},
                      headers=h)
         return res.status_code, res.json()
 

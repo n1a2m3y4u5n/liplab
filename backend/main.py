@@ -203,6 +203,15 @@ async def _limit_body(request, call_next):
         cap = _MAX_BODY_MULTIPART if request.headers.get("content-type", "").startswith("multipart/") else _MAX_BODY_OTHER
         if int(cl) > cap:
             return _JSONResponse(status_code=413, content={"detail": "요청이 너무 커요."})
+    # Content-Length 없는 요청도 실제 받은 바이트를 제한한다.
+    cap = _MAX_BODY_MULTIPART if request.headers.get("content-type", "").startswith("multipart/") else _MAX_BODY_OTHER
+    chunks, size = [], 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > cap:
+            return _JSONResponse(status_code=413, content={"detail": "요청이 너무 커요."})
+        chunks.append(chunk)
+    request._body = b"".join(chunks)
     return await call_next(request)
 
 
@@ -240,13 +249,15 @@ _MAX_AUDIO_BYTES = 10 * 1024 * 1024  # 10MB
 async def _read_audio_limited(audio: UploadFile, max_bytes: int = _MAX_AUDIO_BYTES) -> bytes:
     """오디오 업로드를 상한까지만 읽고, 초과·빈 파일·비오디오 타입을 거부한다."""
     ctype = (audio.content_type or "").lower()
-    if ctype and not (ctype.startswith("audio/") or ctype in ("application/octet-stream", "video/webm")):
+    if ctype and not (ctype.startswith("audio/") or ctype in ("application/octet-stream", "video/webm", "video/mp4")):
         raise HTTPException(status_code=415, detail="오디오 파일만 업로드할 수 있습니다.")
     data = await audio.read(max_bytes + 1)
     if not data:
         raise HTTPException(status_code=400, detail="empty audio")
     if len(data) > max_bytes:
         raise HTTPException(status_code=413, detail=f"오디오가 너무 큽니다(최대 {max_bytes // (1024 * 1024)}MB).")
+    from upload_security import validate_audio
+    validate_audio(data)
     return data
 
 

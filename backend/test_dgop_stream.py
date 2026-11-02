@@ -260,7 +260,7 @@ with TestClient(main.app) as c:
             out.setdefault("chunks", []).append(rr.json())
         out["other_user_chunk"] = c.post(f"/api/speak/stream/nope/chunk", content=b"\x00\x00", headers=h).status_code
         res = c.post("/api/speak/assess", data={"target": "오늘 날씨", "stream_id": sid},
-                     files={"audio": ("a.webm", b"\x00" * 2048, "audio/webm")}, headers=h)
+                     files={"audio": ("a.webm", b"\x1a\x45\xdf\xa3" + b"\x00" * 2044, "audio/webm")}, headers=h)
         j = res.json()
         out["assess"] = [res.status_code, j.get("assessment_method"), (j.get("dgop") or {}).get("stream")]
 print("RESULT " + json.dumps(out, ensure_ascii=False))
@@ -320,7 +320,7 @@ with TestClient(main.app) as c:
         for i in range(0, last, step):
             c.post(f"/api/speak/stream/{sid}/chunk", content=y16[i:i + step], headers=h)
         d = {"target": "오늘 날씨", "stage": "5", "stream_id": sid, "loudness": "60", "duration": "6.5"}
-        files = {"audio": ("a.webm", b"\x00" * 2048, "audio/webm")}
+        files = {"audio": ("a.webm", b"\x1a\x45\xdf\xa3" + b"\x00" * 2044, "audio/webm")}
         if kind == "chunk":
             c.post(f"/api/speak/stream/{sid}/chunk", content=y16[last:], headers=h)
         else:

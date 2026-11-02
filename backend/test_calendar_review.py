@@ -28,7 +28,7 @@ with TestClient(main.app) as c:
     del2 = c.request("DELETE", "/api/review/item", params={"kind": "word", "ref": item["answer"]}, headers=h).json()
     today_kst = (dt.datetime.utcnow() + dt.timedelta(hours=9)).date().isoformat()
     # 말하기(발성 단계, 전사 없이 지표 채점) + 웹캠 입모양 신뢰도 → 소리·입모양·융합이 시도 기록에 남는다
-    sp = c.post("/api/speak/assess", headers=h, files={"audio": ("a.webm", b"0" * 2000, "audio/webm")},
+    sp = c.post("/api/speak/assess", headers=h, files={"audio": ("a.webm", b"\x1a\x45\xdf\xa3" + b"0" * 1996, "audio/webm")},
                 data={"target": "아", "loudness": "70", "pitch_range": "30", "duration": "1.2", "stage": "0",
                       "mouth_confidence": "0.8"})
     sdet = c.get("/api/analysis/activity-detail", params={"day": today_kst, "kind": "speak", "topic": "voicing",
