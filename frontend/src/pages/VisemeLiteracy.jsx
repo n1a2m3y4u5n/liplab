@@ -382,6 +382,11 @@ function QuizPanel({ data }) {
   useEffect(() => { onsetRef.current = q ? Date.now() : null }, [q])
   const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계, 고르기 문항)
   const [result, setResult] = useState(null)
+  const continueRef = useRef(null)
+  const firstChoiceRef = useRef(null)
+  // 답 공개 때 비활성화된 보기에서 다음 행동으로 초점을 옮긴다.
+  useEffect(() => { if (result) continueRef.current?.focus({ preventScroll: true }) }, [result])
+  useEffect(() => { if (q) firstChoiceRef.current?.focus({ preventScroll: true }) }, [q])
   // 소리 조건(C17): 답한 뒤에만 소리와 함께 다시 보기. 고르기는 그 무리의 대표 음절, AX는 두 음절(문항과 같은 600ms 쉼)
   const sound = useSoundCondition()
   const replay = useSoundReplay({
@@ -568,7 +573,7 @@ function QuizPanel({ data }) {
             // AX(같은지 다른지): 큰 버튼 둘, 누르면 바로 채점
             <div className="grid grid-cols-2 gap-2.5 lg:gap-3">
               {AX_CHOICES.map((c, i) => (
-                <button key={c.key} type="button" disabled={!!result || submitting || !q.frames} onClick={() => answerAx(c.key)}
+                <button ref={i === 0 ? firstChoiceRef : undefined} key={c.key} type="button" disabled={!!result || submitting || !q.frames} onClick={() => answerAx(c.key)}
                   aria-label={c.label} className={`${AX_BTN_CLASS[axState(c)]} disabled:cursor-default`}>
                   <span className="text-[44px] font-bold leading-none lg:text-[52px]" aria-hidden>{c.mark}</span>
                   <span className="text-[17px] font-bold leading-figma lg:text-[19px]">{c.label}</span>
@@ -580,7 +585,7 @@ function QuizPanel({ data }) {
             // 4지선다(91:28 / 모바일 235:51) — 선택 → 확인
             <div className={LESSON_OPTIONS}>
               {q.choices.map((c, i) => (
-                <button key={c.viseme_id} type="button" disabled={!!result || submitting} onClick={() => setSelected(c.viseme_id)}
+                <button ref={i === 0 ? firstChoiceRef : undefined} key={c.viseme_id} type="button" disabled={!!result || submitting} onClick={() => setSelected(c.viseme_id)}
                   aria-pressed={!result ? selected === c.viseme_id : undefined} className={OPTION_CLASS[optionState(c)]}>
                   <span className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold leading-figma text-ink-muted lg:size-7 lg:rounded-lg lg:text-[13px]">{i + 1}</span>
                   <span className="flex-1 text-[18px] font-bold leading-figma lg:text-[20px]">{c.name}</span>
@@ -631,7 +636,7 @@ function QuizPanel({ data }) {
             <span className="hidden text-[15px] leading-figma text-ink-faint lg:inline">{selected == null ? '보기를 선택해주세요' : '정답을 확인해보세요'}</span>
           )}
           {result ? (
-            <button type="button" onClick={next} className={`${result.correct ? 'btn-good' : 'btn-bad'} btn-bar ${BAR_BTN}`}>계속하기</button>
+            <button ref={continueRef} type="button" onClick={next} className={`${result.correct ? 'btn-good' : 'btn-bad'} btn-bar ${BAR_BTN}`}>계속하기</button>
           ) : !isAx && (
             <button type="button" onClick={confirm} disabled={selected == null || submitting} className={`btn-primary btn-bar ${BAR_BTN}`}>확인</button>
           )}
