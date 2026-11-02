@@ -43,7 +43,7 @@ export default function EffortCheck({ lessonKind, stage = null, nItems = null, a
 
   if (state === 'skipped') return null
   return (
-    <section aria-labelledby="effort-q" className="flex w-full max-w-[640px] flex-col gap-3 rounded-18 border-2 border-line bg-white px-4 py-3.5 lg:px-5 lg:py-4">
+    <section aria-labelledby="effort-q" className="flex min-w-0 w-full max-w-[640px] flex-col gap-3 rounded-18 border-2 border-line bg-white px-4 py-3.5 lg:px-5 lg:py-4">
       <div className="flex items-start justify-between gap-3">
         <p id="effort-q" className="text-[15px] font-bold leading-figma text-ink lg:text-[16px]">
           {state === 'answered' ? '고마워요. 기록했어요.' : '이번 레슨, 머리를 얼마나 많이 썼나요?'}
@@ -54,6 +54,8 @@ export default function EffortCheck({ lessonKind, stage = null, nItems = null, a
           </button>
         )}
       </div>
+      <div role="region" aria-label="1점부터 9점까지" tabIndex={0} className="max-w-full overflow-x-auto pb-2">
+      <div className="min-w-[444px]">
       <div role="radiogroup" aria-labelledby="effort-q" className="flex items-end gap-1 lg:gap-1.5">
         {EFFORT_POINTS.map((v) => {
           const on = rating === v
@@ -72,6 +74,8 @@ export default function EffortCheck({ lessonKind, stage = null, nItems = null, a
         <span>{EFFORT_ANCHORS[1]}</span>
         <span>{EFFORT_ANCHORS[5]}</span>
         <span>{EFFORT_ANCHORS[9]}</span>
+      </div>
+      </div>
       </div>
     </section>
   )
