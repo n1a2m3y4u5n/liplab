@@ -4,6 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import useStore from '../store/useStore'
 import { authAPI } from '../api'
 import Logo from './Logo'
+import NavIcon from './NavIcon'
 import { Button } from './UI'
 
 /** 폰·아이패드·컴퓨터 공통 4탭. 1024px부터 왼쪽 메뉴, 그 아래는 하단 메뉴. */
@@ -44,10 +45,6 @@ function useStats() {
   }
 }
 
-/** 마스크 아이콘 — 글자색(currentColor)으로 칠한다(활성·트랙색). index.css .mask-icon */
-function MaskIcon({ src, className = '' }) {
-  return <span aria-hidden className={`mask-icon ${className}`} style={{ '--icon': `url(${src})` }} />
-}
 
 /** 스탯 한 칸 — 아이콘 상자(box) 안에 SVG를 원래 비율(w×h)로 위·가운데 정렬(Figma 인셋 그대로). */
 function Stat({ icon, box, w = box, h = box, value, className }) {
@@ -93,7 +90,7 @@ function MobileTabBar({ activeKey }) {
           <button key={n.key} type="button" onClick={() => navigate(n.key === 'learn' ? learnHref(loadLastTrack(useStore.getState().user?.id)) : n.to)}
             aria-current={on ? 'page' : undefined}
             className={`flex min-w-0 flex-1 flex-col items-center gap-[5px] py-1.5 text-[11px] font-bold leading-figma ${on ? 'text-track' : 'text-ink-muted'}`}>
-            <MaskIcon src={n.icon} className="size-[23px]" />
+            <NavIcon name={n.key} className="size-[23px]" />
             {n.label}
           </button>
         )
@@ -132,7 +129,7 @@ export default function AppShell({ children, active, title, description, closeTo
             <button key={n.key} type="button" onClick={() => navigate(n.key === 'learn' ? learnHref(loadLastTrack(useStore.getState().user?.id)) : n.to)}
               aria-current={on ? 'page' : undefined}
               className={`side-item ${on ? 'side-item-active' : ''}`}>
-              <MaskIcon src={n.icon} className="size-6" />
+              <NavIcon name={n.key} className="size-6" />
               {n.label}
             </button>
           )

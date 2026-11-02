@@ -85,6 +85,7 @@ export default function ListenPath() {
             <button id="listen-start" disabled={locked} onClick={q.met ? () => navigate('/records?track=listen') : start} className="btn-primary min-h-[56px] w-full rounded-16 text-[17px]">{locked ? '잠김' : q.met ? '결과 보기' : q.done || stage.quota?.partial_n ? `다음 묶음 듣기 (${q.filled + 1}/${q.total})` : '오늘 몫 시작하기'}</button>
             {locked && <button onClick={() => setSkip(true)} className="btn-secondary btn-md">건너뛰기</button>}
             {q.met && <button onClick={start} className="btn-secondary btn-md">한 묶음 더 하기</button>}
+            <button onClick={() => navigate('/listen/classroom')} className="btn-secondary min-h-11 w-full">소리 교실</button>
           </section>
         </div>
       </>}
