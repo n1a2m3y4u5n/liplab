@@ -16,7 +16,7 @@ test('서비스워커 캐시 이름이 v5에서 올라갔다', () => {
 })
 
 test('녹음 화면은 마이크 끊김과 시간 상한으로 마무리한다', () => {
-  const src = readFileSync(new URL('../pages/SpeakingPractice.jsx', import.meta.url), 'utf8')
+  const src = readFileSync(new URL('../hooks/useSpeakingLesson.js', import.meta.url), 'utf8')
   assert.match(src, /addEventListener\('ended', endNow\)/)
   assert.match(src, /MAX_REC_MS/)
 })
