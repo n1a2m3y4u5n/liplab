@@ -1,4 +1,4 @@
-"""Audit the seven registered WASM JSON measurements; never open a model or run it."""
+"""Audit the eight registered WASM JSON measurements; never open a model or run it."""
 import argparse
 import copy
 from datetime import datetime
@@ -9,8 +9,8 @@ from pathlib import Path
 import re
 import statistics
 
-ORDER = ('C0', 'C1', 'D0', 'D1', 'C65s0', 'C65s1', 'D65s0')
-PAIRED = {'D0', 'D1', 'D65s0'}
+ORDER = ('C0', 'C1', 'D0', 'D1', 'C65s0', 'C65s1', 'D65s0', 'D65s1')
+PAIRED = {'D0', 'D1', 'D65s0', 'D65s1'}
 ROI_SHA = '3b2b48ccab377f037ed82015d9cbc84f811392a4c3fa7fa7539a744534c8ccc7'
 PAIR_SHA = {'roi': ROI_SHA, 'lips': '7c8383e4a505b00880d73e2079d59cb4167efba8aa112109c8affb14b8ce9ad3',
             'combined': '0fe46e1232254fb6193d2fd25d295893394894f2058337f67d018fe771b6c2a8'}
@@ -80,11 +80,11 @@ def record(label, w):
 
 
 def audit(payloads):
-    require(len(payloads) == len(ORDER), 'Exactly seven ordered JSON records required')
+    require(len(payloads) == len(ORDER), 'Exactly eight ordered JSON records required')
     rows = [record(label, payload) for label, payload in zip(ORDER, payloads)]
     require(all(row['environment'] == rows[0]['environment'] for row in rows), 'WASM host/CPU/exact Node/ORT/threads/provider differ')
     require(all(rows[i]['_stamp'] < rows[i + 1]['_stamp'] for i in range(len(rows) - 1)),
-            'WASM timestamps must be strictly ordered C0<C1<D0<D1<C65s0<C65s1<D65s0')
+            'WASM timestamps must be strictly ordered C0<C1<D0<D1<C65s0<C65s1<D65s0<D65s1')
     for row in rows:
         row.pop('_stamp')
     return {'status': 'registered_wasm_order_verified_only', 'order_verified': True,
@@ -96,7 +96,7 @@ def audit(payloads):
 
 
 def run(paths, output):
-    require(len(paths) == len(ORDER), 'Exactly seven ordered JSON paths required')
+    require(len(paths) == len(ORDER), 'Exactly eight ordered JSON paths required')
     output = Path(output).resolve()
     require(not output.exists(), 'Refuse existing audit output')
     payloads, sources = [], []
@@ -128,8 +128,8 @@ def self_test():
                          names[0]+'_median_ms': 100., names[1]+'_median_ms': 55.,
                          'latency_ratio': .55, 'latency_ok': False,
                          'time': f'2026-11-02T12:0{i}:00.000Z'})
-    require(audit(fixtures)['order_verified'], 'valid seven-record audit failed')
-    tests = ['valid_seven_records_legacy_boolean_ignored']
+    require(audit(fixtures)['order_verified'], 'valid eight-record audit failed')
+    tests = ['valid_eight_records_legacy_boolean_ignored']
 
     def rejected(name, mutate):
         data = copy.deepcopy(fixtures)
@@ -143,6 +143,7 @@ def self_test():
 
     rejected('wrong_time_order_rejected', lambda d: d[5].update(time='2026-11-02T12:03:00Z'))
     rejected('wrong_input_rejected', lambda d: d[6]['input_sha256'].update(lips='c'*64))
+    rejected('D65s1_roi_only_contract_rejected', lambda d: d[7].update(input_sha256=ROI_SHA, protocol=ROI_PROTOCOL))
     rejected('different_cpu_rejected', lambda d: d[4].update(cpu='other CPU'))
     rejected('wrong_threads_rejected', lambda d: d[3].update(num_threads=2))
     rejected('malformed_raw_samples_rejected', lambda d: d[0]['samples_ms']['student'].pop())
@@ -154,14 +155,14 @@ def self_test():
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--wasm', nargs=7, metavar='JSON')
+    p.add_argument('--wasm', nargs=8, metavar='JSON')
     p.add_argument('--out')
     p.add_argument('--self-test', action='store_true')
     a = p.parse_args()
     if a.self_test:
         result = self_test()
     else:
-        require(a.wasm is not None and a.out is not None, '--wasm with seven paths and --out are required')
+        require(a.wasm is not None and a.out is not None, '--wasm with eight paths and --out are required')
         result = run(a.wasm, a.out)
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
