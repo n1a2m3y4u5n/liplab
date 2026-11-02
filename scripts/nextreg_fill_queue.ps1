@@ -1,4 +1,4 @@
-param([ValidateSet('fusion','distill')][string]$Kind,[string]$Root,[string]$Python,[string]$Code,[string]$Run,[string]$Lips,[string]$Teacher)
+param([ValidateSet('fusion','distill')][string]$Kind,[string]$Root,[string]$Python,[string]$Code,[string]$Run,[string]$Lips,[string]$Teacher,[ValidateSet('25','38')][string]$Size)
 $ErrorActionPreference='Stop'
 $threads=if($Kind -eq 'fusion'){2}else{4}
 $env:OMP_NUM_THREADS="$threads"; $env:MKL_NUM_THREADS="$threads"; $env:OPENBLAS_NUM_THREADS="$threads"
@@ -27,6 +27,10 @@ function Train($tag,$arguments){
     $p.WaitForExit(); Log "GPU_END $tag exit=$($p.ExitCode)"
     if($p.ExitCode -ne 0){throw "$tag failed; no retry"}
 }
+if($env:COMPUTERNAME -eq 'CNSAI'){
+    $body=@{model='qwen3.6:35b-a3b';keep_alive=0;stream=$false}|ConvertTo-Json
+    Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:11434/api/generate' -Body $body -ContentType 'application/json' -TimeoutSec 30|ConvertTo-Json|Set-Content "$Root\ollama-stop.log"
+}
 $stable=0
 while($stable -lt 3){if(Idle){$stable++}else{$stable=0}; Log "idle_checks=$stable"; if($stable -lt 3){Start-Sleep 30}}
 if($Kind -eq 'fusion'){
@@ -41,8 +45,11 @@ if($Kind -eq 'fusion'){
         if(-not $s.keep_path){break}
     }
 }else{
-    Train 'student' @('-u',"$Root\nextreg_roi_distill.py",'train','--run',$Run,'--teacher',$Teacher,'--out',"$Root\student")
-    Train 'finish' @('-u',"$Root\nextreg_roi_distill.py",'finish','--run',$Run,'--teacher',$Teacher,'--student',"$Root\student\model.pt",'--out',"$Root\result")
+    $entry=if($Size){"$Root\nextreg_roi_distill_capacity.py"}else{"$Root\nextreg_roi_distill.py"}
+    $extra=@()
+    if($Size){$fraction=if($Size -eq '38'){'0.45'}else{'0.92'};$extra=@('--size',$Size,'--gpu-frac',$fraction)}
+    Train 'student' (@('-u',$entry,'train','--run',$Run,'--teacher',$Teacher,'--out',"$Root\student")+$extra)
+    Train 'finish' (@('-u',$entry,'finish','--run',$Run,'--teacher',$Teacher,'--student',"$Root\student\model.pt",'--out',"$Root\result")+$extra)
 }
 'done'|Set-Content "$Root\done.txt"
 Log 'DONE'
