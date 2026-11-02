@@ -50,7 +50,7 @@ def main():
     d = json.loads((Path(a.run)/'prep.json').read_text(encoding='utf-8'))
     assert len(d['meta']['train_spk']) == 33 and len(d['meta']['val_spk']) == 12
     assert {c['role'] for c in d['clips']} <= {'train', 'val'}
-    assert not any(c.get('source') == 'kmsav' for c in d['clips'])
+    assert not any(c.get('src') == 'kmsav' or c.get('source') == 'kmsav' for c in d['clips'])
     original = R.make_batch
     if a.cmd == 'train':
         arng = np.random.default_rng(a.seed + 20261102)
