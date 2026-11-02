@@ -54,6 +54,12 @@ def main():
                      'B33_exact_train_text_matches':sum(norm(texts[r['clip']]) in packs['B33']['texts_train'] for r in rs),
                      'K_exact_train_text_matches':sum(norm(texts[r['clip']]) in packs['K1_K2']['texts_train'] for r in rs),
                      'R2_training_overlap':'unknown', 'lipread_eval_history':'not found in inspected V1/ROI registered cohorts'})
+    for r in rows:
+        union_texts = packs['B33']['texts_train'] | packs['K1_K2']['texts_train']
+        person_clips = [c for c in meta if c['person'] == r['person']]
+        r['union_exact_train_text_matches'] = sum(norm(texts[c['clip']]) in union_texts for c in person_clips)
+        r['retained_nonshared_clips'] = r['clips'] - r['union_exact_train_text_matches']
+        r['eligible_at_min3'] = r['retained_nonshared_clips'] >= 3
     with (OUT/'e2-reuse-person.csv').open('w',encoding='utf-8-sig',newline='') as f:
         w=csv.DictWriter(f,fieldnames=list(rows[0]));w.writeheader();w.writerows(rows)
     names={r['clip'] for r in meta}
@@ -76,6 +82,11 @@ def main():
             'overlap_K1_K2_538':sorted(e2people & packs['K1_K2']['person_train']),
             'B33_shared_text_clips':sum(r['B33_exact_train_text_matches'] for r in rows),
             'K_shared_text_clips':sum(r['K_exact_train_text_matches'] for r in rows),
+            'union_shared_text_clips':sum(r['union_exact_train_text_matches'] for r in rows),
+            'after_min3_persons':sum(r['eligible_at_min3'] for r in rows),
+            'after_min3_halves':dict(collections.Counter(r['half'] for r in rows if r['eligible_at_min3'])),
+            'after_min3_clips':sum(r['retained_nonshared_clips'] for r in rows if r['eligible_at_min3']),
+            'min3_excluded_persons':[{'person':r['person'],'spk':r['spk'],'half':r['half'],'clips':r['retained_nonshared_clips']} for r in rows if not r['eligible_at_min3']],
             'known_E2_use_clips':sum(n in uses for n in names),
             'new_inference':0,'network_requests':0,'sources':sources}
     (OUT/'e2-reuse-audit.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
