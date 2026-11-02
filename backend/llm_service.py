@@ -348,7 +348,7 @@ async def generate_adaptive_scenario(
         weak_visemes = await get_user_weak_visemes(user_id, db, limit=3)
         target_viseme_ids = [wv["viseme_id"] for wv in weak_visemes]
     except Exception as e:
-        print(f"[WARN] get_user_weak_visemes failed: {e}")
+        print(f"[WARN] get_user_weak_visemes failed: {type(e).__name__}")
         target_viseme_ids = []
 
     # 캐시 재사용은 '매번 같은 문장'의 주범이라 의도적으로 끈다(변주 우선).
@@ -359,7 +359,7 @@ async def generate_adaptive_scenario(
             if cached_scenario:
                 return cached_scenario
         except Exception as e:
-            print(f"[WARN] check_scenario_cache failed: {e}")
+            print(f"[WARN] check_scenario_cache failed: {type(e).__name__}")
 
     # Get situation context
     context = SITUATION_CONTEXTS.get(situation, {
@@ -510,7 +510,7 @@ async def generate_adaptive_scenario(
 
     except Exception as e:
         # Fallback to default sentences if API fails
-        print(f"LLM API Error: {e}")
+        print(f"LLM API Error: {type(e).__name__}")
         return await _fallback_scenario(situation, level, db)
 
 
@@ -544,7 +544,7 @@ async def _fallback_scenario(situation: str, level: int, db: AsyncSession) -> Di
                 return {"situation": situation, "level": level, "sentences": ok[:5],
                         "scenario_id": f"cache_{row.id}_{ts}", "fallback": "cache"}
     except Exception as e:
-        print(f"[WARN] scenario cache fallback failed: {e}")
+        print(f"[WARN] scenario cache fallback failed: {type(e).__name__}")
     if level <= 1 and situation in _SITUATION_DEFAULTS:
         sentences = list(_SITUATION_DEFAULTS[situation])
     else:
@@ -614,7 +614,7 @@ async def rephrase_turn(text: str, situation: str, level: int) -> Optional[str]:
         )
         out = str(llm_json.extract_json(response).get("text", "")).strip()
     except Exception as e:
-        print(f"Rephrase API error: {e}")
+        print(f"Rephrase API error: {type(e).__name__}")
         return None
     out = "".join(ch for ch in out if ch >= " ")[:300].strip()
     if not out or re.search(r"[A-Za-z]", out) or _norm_turn(out) == _norm_turn(src) or not conv_turn_ok(out, level):
@@ -731,7 +731,7 @@ async def generate_conversation_turn(
         return {"text": min(cands, key=lambda t: (_norm_turn(t) in prev_lines, bool(re.search(r"[A-Za-z]", t)), len(t)))}
 
     except Exception as e:
-        print(f"Conversation API error: {e}")
+        print(f"Conversation API error: {type(e).__name__}")
         # 대체 대사: 온전한 문장으로 잇는다. 예전에는 '자주 쓰이는 표현'(주세요 같은 조각)을 썼고,
         # 목록에 없는 상황(상황별 시나리오의 자유 입력)은 빈 목록이라 0으로 나눠 500이 났다.
         return {"text": fallback_turn(situation, level, history)}
@@ -764,6 +764,6 @@ async def generate_listen_convo_item(scene: str, places: List[str], existing: Li
         )
         out = llm_json.extract_json(response)
     except Exception as e:
-        print(f"Listen convo item API error: {type(e).__name__}: {e}")
+        print(f"Listen convo item API error: {type(e).__name__}")
         return None
     return out if isinstance(out, dict) else None

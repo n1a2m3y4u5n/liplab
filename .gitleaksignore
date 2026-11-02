@@ -1,0 +1,3 @@
+# Reviewed non-secrets only: public Figma file identifier and isolated test fixture.
+LIPLAB_UI_HANDOFF.md:generic-api-key:7
+backend/test_pilot_retention.py:generic-api-key:73

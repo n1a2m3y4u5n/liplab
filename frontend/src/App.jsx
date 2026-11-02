@@ -95,6 +95,8 @@ const EndlessPractice = lazy(() => import('./pages/EndlessPractice'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
 const Legal = lazy(() => import('./pages/Legal'))
 const CueVideoDemo = lazy(() => import('./pages/CueVideoDemo'))
+const KmsavReview = lazy(() => import('./pages/KmsavReview'))
+const AvComparison = lazy(() => import('./pages/AvComparison'))
 
 /**
  * AuthGate — 로그인 화면 없이 데모 계정으로 자동 입장.
@@ -247,6 +249,7 @@ function App() {
         <Route path="/learn/conversation-multi" element={<MultiConversation />} />
         <Route path="/learn/placement" element={<Placement />} />
         <Route path="/pilot/battery" element={<PilotBattery />} />
+        {import.meta.env.VITE_AV_COMPARISON === '1' && <Route path="/pilot/av-comparison" element={<AvComparison />} />}
         <Route path="/learn/scenario" element={<ScenarioHub />} />
         <Route path="/learn/speaking" element={<SpeakingPractice />} />
         <Route path="/learn/listening" element={<ListeningPractice />} />
@@ -276,6 +279,7 @@ function App() {
         <Route path="/analysis/eval" element={<EvalReport />} />
         <Route path="/analysis/listening" element={<ListeningReport />} />
         <Route path="/admin/feedback" element={<AdminFeedback />} />
+        {import.meta.env.VITE_KMSAV_REVIEW === '1' && <Route path="/admin/kmsav" element={<KmsavReview />} />}
         <Route path="/admin/content-review" element={<ContentReview />} />
         <Route path="/practice/hub" element={<PracticeHub />} />
         <Route path="/tasks" element={<TasksPage />} />

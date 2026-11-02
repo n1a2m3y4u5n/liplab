@@ -6,6 +6,8 @@ import os
 import asyncio
 import time
 import logging
+import security_logging
+security_logging.install()
 import ratelimit
 import llm_budget
 from contextlib import asynccontextmanager
@@ -77,7 +79,7 @@ def _warmup_models():
                 sound_tts.warm()    # 서버 합성(LIPLAB_SOUND_DYNAMIC=1)이 켜졌을 때만: 엔진을 올리고 한 번 합성해 둔다
             print("[OK] 서버 추론 모델 예열 끝")
         except Exception as e:
-            print(f"[WARN] 모델 예열 실패(요청 때 다시 시도): {type(e).__name__}: {e}")
+            print(f"[WARN] 모델 예열 실패(요청 때 다시 시도): {type(e).__name__}")
 
     threading.Thread(target=run, daemon=True, name="model-warmup").start()
 
@@ -93,7 +95,7 @@ def _warmup_content():
             _training_closures()
             print("[OK] 콘텐츠 표 예열 끝")
         except Exception as e:
-            print(f"[WARN] 콘텐츠 표 예열 실패(요청 때 다시 만든다): {type(e).__name__}: {e}")
+            print(f"[WARN] 콘텐츠 표 예열 실패(요청 때 다시 만든다): {type(e).__name__}")
 
     threading.Thread(target=run, daemon=True, name="content-warmup").start()
 
@@ -144,8 +146,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_allow_origins,
     allow_credentials=_allow_credentials,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Usage-Device-Id", "X-Usage-Session-Id"],
 )
 
 
@@ -153,7 +155,7 @@ from fastapi.responses import JSONResponse as _JSONResponse
 
 @app.exception_handler(Exception)
 async def _unhandled_exception(request, exc):
-    logging.getLogger("liplab").exception("unhandled: %s %s", request.method, request.url.path)
+    logging.getLogger("liplab").error("unhandled: %s %s", request.method, type(exc).__name__)
     return _JSONResponse(status_code=500, content={"detail": "서버 오류가 발생했습니다."})
 
 
@@ -203,6 +205,15 @@ async def _limit_body(request, call_next):
         cap = _MAX_BODY_MULTIPART if request.headers.get("content-type", "").startswith("multipart/") else _MAX_BODY_OTHER
         if int(cl) > cap:
             return _JSONResponse(status_code=413, content={"detail": "요청이 너무 커요."})
+    # Content-Length 없는 요청도 실제 받은 바이트를 제한한다.
+    cap = _MAX_BODY_MULTIPART if request.headers.get("content-type", "").startswith("multipart/") else _MAX_BODY_OTHER
+    chunks, size = [], 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > cap:
+            return _JSONResponse(status_code=413, content={"detail": "요청이 너무 커요."})
+        chunks.append(chunk)
+    request._body = b"".join(chunks)
     return await call_next(request)
 
 
@@ -240,19 +251,21 @@ _MAX_AUDIO_BYTES = 10 * 1024 * 1024  # 10MB
 async def _read_audio_limited(audio: UploadFile, max_bytes: int = _MAX_AUDIO_BYTES) -> bytes:
     """오디오 업로드를 상한까지만 읽고, 초과·빈 파일·비오디오 타입을 거부한다."""
     ctype = (audio.content_type or "").lower()
-    if ctype and not (ctype.startswith("audio/") or ctype in ("application/octet-stream", "video/webm")):
+    if ctype and not (ctype.startswith("audio/") or ctype in ("application/octet-stream", "video/webm", "video/mp4")):
         raise HTTPException(status_code=415, detail="오디오 파일만 업로드할 수 있습니다.")
     data = await audio.read(max_bytes + 1)
     if not data:
         raise HTTPException(status_code=400, detail="empty audio")
     if len(data) > max_bytes:
         raise HTTPException(status_code=413, detail=f"오디오가 너무 큽니다(최대 {max_bytes // (1024 * 1024)}MB).")
+    from upload_security import validate_audio
+    validate_audio(data)
     return data
 
 
 def _server_error(exc: Exception, where: str) -> HTTPException:
     """500 오류를 서버 로그로만 남기고 클라이언트엔 고정 문구를 준다(§4.9 내부정보 노출 차단)."""
-    logging.getLogger("liplab").exception("server error @ %s", where)
+    logging.getLogger("liplab").error("server error @ %s: %s", where, type(exc).__name__)
     return HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다.")
 
 
@@ -307,6 +320,12 @@ from usage_events import router as usage_router
 app.include_router(usage_router)
 from feedback import router as feedback_router
 app.include_router(feedback_router)
+from kmsav_review import router as kmsav_review_router
+app.include_router(kmsav_review_router)
+from real_face_probe import router as real_face_probe_router
+app.include_router(real_face_probe_router)
+from av_comparison import router as av_comparison_router
+app.include_router(av_comparison_router)
 
 # Authentication Endpoints
 # ============================================
@@ -334,6 +353,8 @@ async def register(user_data: UserRegister, request: Request, db: AsyncSession =
           dependencies=[Depends(ratelimit.rate_limit(10, 60, "auth"))])
 async def login(credentials: UserLogin, request: Request, db: AsyncSession = Depends(get_db)):
     """Authenticate user and return JWT token"""
+    from login_guard import reserve_attempt, clear_attempts
+    await reserve_attempt(str(credentials.email), db)
     user = await authenticate_user(credentials.email, credentials.password, db)
 
     if not user:
@@ -343,6 +364,7 @@ async def login(credentials: UserLogin, request: Request, db: AsyncSession = Dep
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    await clear_attempts(str(credentials.email), db)
     token_response = create_token_response(user)
     from usage_events import record_auth
     await record_auth(db, user.id, 'login', request)
@@ -686,7 +708,7 @@ async def sound_lookup(text: str, voice: Optional[str] = None, current_user=Depe
         async with _ml_slot():
             clip = await asyncio.to_thread(_ss.generate, text, vid)
     except Exception as e:
-        print(f"[WARN] 동적 소리 합성 실패: {type(e).__name__}: {e}")
+        print(f"[WARN] 동적 소리 합성 실패: {type(e).__name__}")
         clip = None
     if not clip:
         return _sound_missing("not_prepared")
@@ -791,7 +813,7 @@ async def avatar_audio2face(audio: UploadFile = File(...), current_user=Depends(
         async with _ml_slot():
             result = await asyncio.to_thread(audio2face.blendshapes_from_audio, data)
     except Exception as e:
-        logging.getLogger("liplab").exception("audio2face 추론 실패")
+        logging.getLogger("liplab").error("audio2face 추론 실패")
         raise HTTPException(status_code=500, detail="음성구동 처리에 실패했습니다.")
     return result
 
@@ -830,8 +852,8 @@ async def get_scenario(
 def _kst_today():
     """오늘 날짜(한국 시간). 서버(fly)는 UTC라 date.today()를 쓰면 오전 9시 전 학습이 전날로 잡혀, 스트릭·복습일이
     기기 시간을 쓰는 분석 탭과 어긋났다. 서비스 대상이 한국이라 KST(UTC+9)로 고정한다."""
-    from datetime import datetime as _dtm, timedelta as _td
-    return (_dtm.utcnow() + _td(hours=9)).date()
+    from datetime import datetime as _dtm, timedelta as _td, timezone as _tz
+    return _dtm.now(_tz(_td(hours=9))).date()
 
 
 def _add_xp(user, xp: int) -> None:
@@ -940,7 +962,7 @@ async def _sentence_option_pool(db: AsyncSession) -> List[str]:
         for ss in rows:
             pool += [x for x in (ss or []) if isinstance(x, str) and check_sentence(x, max_chars=longest)[0]]
     except Exception as e:
-        print(f"[WARN] sentence option pool (cache) failed: {e}")
+        print(f"[WARN] sentence option pool (cache) failed: {type(e).__name__}")
     _SENTENCE_POOL.update(at=now, pool=list(dict.fromkeys(pool)))
     return _SENTENCE_POOL["pool"]
 
@@ -1249,7 +1271,7 @@ async def get_analysis(current_user=Depends(get_current_user), db: AsyncSession 
                 for v in sentence_visemes:
                     viseme_score_map.setdefault(v, []).append(prog.score)
             except Exception as e:
-                print(f"[WARN] viseme scoring failed for sentence '{prog.sentence}': {e}")
+                print(f"[WARN] viseme scoring failed for sentence: {type(e).__name__}")
                 continue
 
         viseme_stats = []
@@ -1289,7 +1311,7 @@ async def get_analysis(current_user=Depends(get_current_user), db: AsyncSession 
                         key = (cs[1], us[1])
                         confusion_map[key] = confusion_map.get(key, 0) + 1
             except Exception as e:
-                print(f"[WARN] confusion analysis failed: {e}")
+                print(f"[WARN] confusion analysis failed: {type(e).__name__}")
                 continue
 
         top_confusions = sorted(confusion_map.items(), key=lambda x: -x[1])[:8]
@@ -1305,7 +1327,7 @@ async def get_analysis(current_user=Depends(get_current_user), db: AsyncSession 
         }
 
     except Exception as e:
-        print(f"[ERROR] get_analysis failed: {e}")
+        print(f"[ERROR] get_analysis failed: {type(e).__name__}")
         traceback.print_exc()
         raise _server_error(e, "분석 데이터 로드 실패")
 
@@ -1892,7 +1914,7 @@ def _fsrs_first(quality: int, log: dict = None) -> dict:
         lg = log or {}
         return _fs.step(None, _fs.grade_for(quality, lg.get("answer_mode"), lg.get("speed")), None)
     except Exception as e:   # 그림자 모드라 간격 계산을 막지 않는다
-        print(f"[WARN] fsrs first state failed: {e}")
+        print(f"[WARN] fsrs first state failed: {type(e).__name__}")
         return {}
 
 
@@ -1932,7 +1954,7 @@ def _fsrs_shadow(user_id: int, item, quality: int, db, log: dict = None) -> None
         item.fsrs_difficulty = st["difficulty"]
         item.last_review_on = today.isoformat()
     except Exception as e:   # 그림자 모드라 간격 계산을 막지 않는다
-        print(f"[WARN] fsrs shadow failed: {e}")
+        print(f"[WARN] fsrs shadow failed: {type(e).__name__}")
 
 
 async def _count_review_done(user_id: int, db) -> None:
@@ -3130,7 +3152,7 @@ async def mastery_probes_today(lesson_len: int = 12, used: int = 0, current_user
             await db.rollback()   # 동시에 온 다른 요청이 먼저 만들었다
         except Exception as e:   # 탐침 실패가 레슨을 막지 않게
             await db.rollback()
-            print(f"[WARN] mastery probe build failed: {e}")
+            print(f"[WARN] mastery probe build failed: {type(e).__name__}")
     quota = _mp.lesson_quota(max(1, min(int(lesson_len), 40)), max(0, int(used)))
     pending = []
     for stage, wave, _mon, _due in waves:
@@ -3720,7 +3742,7 @@ def _admin_email_gate(user):
         raise HTTPException(status_code=403, detail="운영자 계정만 파일럿 자료를 내보낼 수 있습니다.")
 
 
-PILOT_EXPORT_VERSION = 7   # 7(10/7 밤): 날마다 학습량(reading_days, listen.days: 시행 수와 분, 용량·준수 분석), P3 SNR 계단 추정 방식·반전 수
+PILOT_EXPORT_VERSION = 8   # 8(11/02): 전이 탐침·소음 속 세 조건 비교. 경로·답 원문 없이 판본·조건·채점 수·반응 시간만.
 #   (battery[].snr_estimate_kind·snr_reversals, SNR 실패 제외 규칙), 유지 검사 예정(battery_schedule). docs/pilot/log-spec-audit-2026-10-07.md
 #   소리 듣기 연습 탭·복습 탭 답은 listen.practice_by_mode(session 'practice:*')로 따로 싣고 trials_by_stage에 넣지 않는다.
 # 6(10/7): 소리 듣기(listen: 검사 역치·잡음·모의 청취, 낱말 일반화 검사, 단계별 시행 수, trials=true면 시행 기록).
@@ -3932,6 +3954,7 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
 
     import assessment as _asmt
     profs = (await db.execute(select(LearningProfile).where(LearningProfile.pilot_code.is_not(None)))).scalars().all()
+    from transfer_export import export_transfer
     rows = []
     for pf in profs:
         uid = pf.user_id
@@ -3964,6 +3987,7 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
             "reading_days": await reading_days(uid),
             "listen": await listen_export(uid, trials),
             "battery": await battery(uid),
+            "transfer": await export_transfer(db, uid, tz),
             # 유지 검사(R) 예정과 상태(B를 마친 날 + LIPLAB_RETENTION_DAYS). 날짜만
             "battery_schedule": _battery_retention_schedule(await _battery_rows(uid, db)),
             **(await measurement(uid)),
@@ -4382,7 +4406,7 @@ async def pilot_battery_answer(req: BatteryAnswerReq, current_user=Depends(get_c
                 sr = await calculate_score(correct=target, user_answer=answer, db=db, mode="visual")
                 app_score, app_acc = float(sr.get("score") or 0.0), sr.get("phoneme_accuracy")
             except Exception as e:   # 앱 점수 실패는 원문 저장을 막지 않는다(원문으로 다시 채점할 수 있다)
-                print(f"[WARN] battery app score failed: {e}")
+                print(f"[WARN] battery app score failed: {type(e).__name__}")
                 app_score = None
         strict = _pb.strict_score(target, answer)
         sf = _pb.strict_fields(strict)
@@ -4613,7 +4637,7 @@ async def assessment_score(data: PlacementScoreReq, current_user=Depends(get_cur
         await db.commit()
     except Exception as e:
         await db.rollback()  # 채점 결과 반환은 저장 실패와 무관하게 보장
-        print(f"[WARN] placement result save failed: {e}")
+        print(f"[WARN] placement result save failed: {type(e).__name__}")
     return result
 
 
@@ -5343,7 +5367,7 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user), db
             focus = _speakcur.weak_sounds([{"phones": r[0], "confusions": r[1]} for r in rows])
             items = _speakcur.focus_order(items, focus, lead=3 if stg["mode"] == "word" else 0)
         except Exception as e:
-            print(f"[WARN] speak focus failed (stage {n}): {e}")
+            print(f"[WARN] speak focus failed (stage {n}): {type(e).__name__}")
     # 낱말 속 소리 확인(계획 2-5): 모음·자음 이동 평균이 문턱에 닿았는데 아직 숙달하지 않았으면 4단계 단어 풀에서 목표 소리가 첫 음절에
     # 든 낱말 4개를 따로 준다(약한 소리부터, (사용자, 날짜) seed). 화면은 이것을 먼저 내고, 채점은 단어 규칙(합격 65)으로 한다.
     carryover = _speak_carryover(sp, stg)
@@ -5362,7 +5386,7 @@ async def speak_stage_content(n: int, current_user=Depends(get_current_user), db
                 # AI 생성분을 앞에, 기존 풀을 뒤에 섞어 다양성 + 안정성 확보
                 items = ai_items + items
         except Exception as e:
-            print(f"[WARN] speak AI items gen failed (stage {n}): {e}")
+            print(f"[WARN] speak AI items gen failed (stage {n}): {type(e).__name__}")
 
     return {
         "stage": stg["stage"], "title": stg["title"], "mode": stg["mode"],
@@ -5488,7 +5512,7 @@ class _CoachingJobs:
                                     .values(coaching=str(coaching)[:600]))
                     await s.commit()
             except Exception as e:
-                print(f"[WARN] coaching save failed: {e}")
+                print(f"[WARN] coaching save failed: {type(e).__name__}")
         print(f"[TIMING] speak_coaching llm={dt * 1000:.1f}ms total={(time.perf_counter() - t0) * 1000:.1f}ms")
         return coaching
 
@@ -5518,7 +5542,7 @@ async def speak_stream_start(current_user=Depends(get_current_user)):
     try:
         sess = await asyncio.to_thread(dgop_stream.SESSIONS.create, current_user.id)
     except Exception as e:
-        print(f"[WARN] 스트리밍 채점 세션을 열지 못했습니다: {type(e).__name__}: {e}")
+        print(f"[WARN] 스트리밍 채점 세션을 열지 못했습니다: {type(e).__name__}")
         raise HTTPException(status_code=503, detail="스트리밍 채점을 쓸 수 없어요.")
     cfg = sess.stitcher.cfg
     return {"stream_id": sess.id, "sample_rate": dgop_stream.SR, "format": "pcm_s16le",
@@ -5650,7 +5674,7 @@ async def speak_assess(
                             result = await asyncio.to_thread(stream_sess.assess, target)
                             tm.mark("stream_assess")
                         except Exception as e:
-                            print(f"[WARN] 스트리밍 채점 실패: {type(e).__name__}: {e}")
+                            print(f"[WARN] 스트리밍 채점 실패: {type(e).__name__}")
                             result = None
                         if (result is None or result.get("score") is None) and not dgop_aligner_id:
                             raise RuntimeError("스트리밍 채점 실패, 정렬기 미설정")
@@ -5667,7 +5691,7 @@ async def speak_assess(
                         import phone_reliability
                         phone_reliability.annotate(dgop_result.get("phones") or [])
                     except Exception as e:
-                        print(f"[WARN] 음소 신뢰도 표시 실패: {type(e).__name__}: {e}")
+                        print(f"[WARN] 음소 신뢰도 표시 실패: {type(e).__name__}")
                     # 표시용 보정 점수를 쓴다 — 원점수는 깨끗한 발화도 10점 안쪽이라
                     # 합격선(50·65)과 비교조차 되지 않는다. 보정 전 값은 응답의
                     # dgop.raw_score로 함께 나간다(축 A 한계 ② 대응).
@@ -5678,7 +5702,7 @@ async def speak_assess(
                 # (duadnwls/liplab-dgop-*)는 HF_TOKEN 없이는 로드에 실패하는데, 그때
                 # 전사 경로로 소리 없이 떨어지면 D-GOP가 꺼진 줄도 모르고 배포된다.
                 print(f"[WARN] D-GOP 경로 실패 — 전사 경로로 폴백합니다 "
-                      f"(aligner={dgop_aligner_id}): {type(e).__name__}: {e}")
+                      f"(aligner={dgop_aligner_id}): {type(e).__name__}")
                 dgop_result = None
 
         if assessment_method != "dgop" and _speakcur.no_voice(metrics):
@@ -5825,7 +5849,7 @@ async def speak_assess(
                 _y = await asyncio.to_thread(_fm.decode_mono16k, data)
                 vowel_fb = await asyncio.to_thread(_fm.vowel_feedback, _y, _v) if _y is not None else None
             except Exception as e:  # 교정 실패는 채점 결과와 무관
-                print(f"[WARN] vowel formant feedback failed: {e}")
+                print(f"[WARN] vowel formant feedback failed: {type(e).__name__}")
         tm.mark("formants")
 
     # 발성·운율은 규칙 기반 note가 곧 구체 코칭, 모음~문장은 Claude 코칭(+억양 note)
@@ -5855,7 +5879,7 @@ async def speak_assess(
             await db.commit()
         except Exception as e:
             await db.rollback()
-            print(f"[WARN] coaching save failed: {e}")
+            print(f"[WARN] coaching save failed: {type(e).__name__}")
         tm.mark("coaching_save")
 
     # 프론트 음소 칩(SpeakingPractice)이 읽는 acoustic_dgop. 채점은 위 assess_text(naive)가 끝냈고,

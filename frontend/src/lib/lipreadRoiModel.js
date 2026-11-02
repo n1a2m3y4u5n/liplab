@@ -1,3 +1,4 @@
+import { canLoadOptionalModel, configureWasm } from './modelCapability.js'
 /**
  * 독화 ① 화소 입술 ROI 모델(빌드 플래그 VITE_LIPREAD_ROI=1일 때만, docs/lipread-roi-2026-10.md 13절).
  * 웹캠 프레임 → 입술 88×88 흑백(lipRoi.js, 학습 추출과 같은 계산) → int8 ONNX(onnxruntime-web, 판정 모델에서 앞단 정규화만 뺀 그래프) → 후보 단어를 CTC 로그우도로 채점
@@ -29,14 +30,14 @@ export function lipreadRoiAvailable() {
 }
 
 export async function loadLipreadRoi() {
+  if (!canLoadOptionalModel()) return null
   if (session && meta) return { session, meta }
   if (!loading) {
     loading = (async () => {
       try {
         if (!ort) {
           ort = await import('onnxruntime-web')
-          ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/'
-          ort.env.logLevel = 'error'
+          configureWasm(ort)
         }
         const m = meta || await fetch(META_URL).then((r) => r.json())
         const s = await ort.InferenceSession.create(ONNX_URL, { executionProviders: ['wasm'] })

@@ -75,6 +75,9 @@ k='kresnik/wav2vec2-large-xlsr-korean'; \
 AutoModel.from_pretrained('microsoft/wavlm-large')"; \
     fi
 
+# torch CPU 색인이 주는 setuptools 78.1은 알려진 취약점이 있다(pip-audit 관문). 위 층의 캐시를 비우지 않게 따로 올린다.
+RUN if [ "$WITH_ML" = "1" ]; then pip install --no-cache-dir --upgrade "setuptools>=84.1.0"; fi
+
 # Copy backend source
 COPY backend/ ./
 # 자체 학습 채점 모델로 빌드할 때는 체크포인트가 빌드 폴더에 있어야 한다(없으면 D-GOP가 전사로 폴백하므로 빌드를 멈춘다).

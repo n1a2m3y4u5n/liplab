@@ -1,3 +1,4 @@
+import { canLoadOptionalModel, configureWasm } from './modelCapability.js'
 /**
  * 축 K — 얼굴 표면신호 → 유성성/비음성 추정(학습된 분류기, onnxruntime-web).
  * korean_ds로 학습(미학습화자 비음 AUC≈0.64, 유성 AUC≈0.55). 브라우저에서 30프레임(1초) 창의
@@ -6,8 +7,7 @@
 import * as ort from 'onnxruntime-web'
 
 // WASM은 CDN에서(번들 비대화 방지). 실패해도 컴포넌트는 폴백.
-ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/'
-ort.env.logLevel = 'error'
+configureWasm(ort)
 
 export const K_FACE_KEYS = ['jawOpen', 'cheekPuff', 'cheekSquintLeft', 'cheekSquintRight',
   'noseSneerLeft', 'noseSneerRight', 'mouthPressLeft', 'mouthPressRight']
@@ -17,6 +17,7 @@ let session = null
 let loading = null
 
 export async function loadK() {
+  if (!canLoadOptionalModel()) return null
   if (session) return session
   if (!loading) {
     loading = ort.InferenceSession

@@ -94,7 +94,7 @@ with TestClient(main.app) as c:
 
     def assess(target, stage, text, probe=0, review=0, loud="50"):
         heard["text"] = text
-        res = c.post("/api/speak/assess", headers=h, files={"audio": ("a.webm", b"\x00" * 2048, "audio/webm")},
+        res = c.post("/api/speak/assess", headers=h, files={"audio": ("a.webm", b"\x1a\x45\xdf\xa3" + b"\x00" * 2044, "audio/webm")},
                      data={"target": target, "stage": str(stage), "loudness": loud, "duration": "1.0",
                            "voiced_duration": "0.8", "probe": str(probe), "review": str(review)})
         b = res.json()

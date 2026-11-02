@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { curriculumAPI } from '../api'
+import api from '../api'
 import { probeInsertAfter, shouldOpenProbes } from '../lib/measurement'
 
 /**
@@ -24,7 +25,17 @@ export default function useMasteryProbes(lessonLen) {
     setItems([])
     const seq = ++seqRef.current
     curriculumAPI.getMasteryProbes(lessonLen)
-      .then((d) => { if (seq === seqRef.current) setItems(Array.isArray(d?.items) ? d.items : []) })
+      .then(async (d) => {
+        const mastery = Array.isArray(d?.items) ? d.items : []
+        let real = []
+        if (seq === seqRef.current && import.meta.env.VITE_REAL_FACE_PROBES === '1' && lessonLen > 0) {
+          try {
+            const r = await api.post('/probes/real-face', { lesson_id: crypto.randomUUID(), lesson_len: lessonLen, used: mastery.length })
+            real = r.data.items || []
+          } catch { /* 촬영 자료·서버가 없으면 기존 레슨을 계속한다. */ }
+        }
+        if (seq === seqRef.current) setItems([...mastery, ...real])
+      })
       .catch(() => {})
   }, [lessonLen])
 

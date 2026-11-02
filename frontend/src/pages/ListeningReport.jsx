@@ -1,3 +1,4 @@
+import { TableRegion } from '../components/UI'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listenAPI } from '../api'
@@ -108,8 +109,8 @@ export default function ListeningReport() {
                     </div>
                   )}
                   {rows.length > 0 && (
-                    <div className="overflow-hidden rounded-14 border-2 border-line">
-                      <table className="w-full text-left text-[14px]">
+                    <TableRegion label="검사 기록, 최근 것부터">
+                      <table className="w-full min-w-[420px] text-left text-[14px]">
                         <caption className="sr-only">검사 기록, 최근 것부터</caption>
                         <thead className="bg-surface-sunken text-[12px] text-ink-muted">
                           <tr><th scope="col" className="px-3 py-2 font-bold">차례</th><th scope="col" className="px-3 py-2 font-bold">날짜</th>
@@ -131,7 +132,7 @@ export default function ListeningReport() {
                           {showAll ? '최근 것만 보기' : `가운데 ${hidden}번 더 보기`}
                         </button>
                       )}
-                    </div>
+                    </TableRegion>
                   )}
                   {(other.length > 0 || wordTests.length > 0) && (
                     <div className="flex flex-col gap-1.5">
@@ -172,8 +173,8 @@ export default function ListeningReport() {
               ) : (
                 <>
                   {conf.length > 0 && (
-                    <div className="overflow-hidden rounded-14 border-2 border-line">
-                      <table className="w-full text-left text-[14px]">
+                    <TableRegion label="낱말 고르기에서 헷갈린 소리 짝, 많은 순">
+                      <table className="w-full min-w-[360px] text-left text-[14px]">
                         <caption className="sr-only">낱말 고르기에서 헷갈린 소리 짝, 많은 순</caption>
                         <thead className="bg-surface-sunken text-[12px] text-ink-muted">
                           <tr><th scope="col" className="px-3 py-2 font-bold">자리</th><th scope="col" className="px-3 py-2 font-bold">들려준 소리 → 고른 소리</th>
@@ -189,7 +190,7 @@ export default function ListeningReport() {
                           ))}
                         </tbody>
                       </table>
-                    </div>
+                    </TableRegion>
                   )}
                   {(d.recommendations || []).map((r, i) => (
                     <div key={i} className="flex flex-col gap-2.5 rounded-14 bg-surface-sunken p-4">

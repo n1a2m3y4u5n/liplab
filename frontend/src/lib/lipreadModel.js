@@ -1,3 +1,4 @@
+import { canLoadOptionalModel, configureWasm } from './modelCapability.js'
 /**
  * 축 D — 자체 립리딩(입모양 시퀀스 → 자모 CTC → 단어). onnxruntime-web 브라우저 추론.
  * OLKAVS로 학습한 경량 모델(LayerNorm→BiGRU→Linear, 입 27차원→자모 53). 영상·계수는 기기 밖으로
@@ -47,14 +48,14 @@ export function lipreadAvailable() {
 }
 
 export async function loadLipread() {
+  if (!canLoadOptionalModel()) return null
   if (session && meta) return { session, meta }
   if (!loading) {
     loading = (async () => {
       try {
         if (!ort) {
           ort = await import('onnxruntime-web')
-          ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/'
-          ort.env.logLevel = 'error'
+          configureWasm(ort)
         }
         const m = meta || await fetch(META_URL).then((r) => r.json())
         const s = await ort.InferenceSession.create(ONNX_URL, { executionProviders: ['wasm'] })

@@ -311,7 +311,7 @@ export default function CurriculumPath() {
         )}
 
         {/* 경로(61:18 / 모바일 233:45) — 모바일은 가운데, 데스크톱은 왼쪽(x 130)에 노드 열을 두고 오른쪽에 카드 */}
-        <div className={`relative w-full py-2 ${hasExtra ? 'max-lg:pb-[226px]' : 'max-lg:pb-[170px]'} ${loadFailed ? 'hidden' : ''}`}
+        <div className={`device-mobile-path relative w-full py-2 ${hasExtra ? 'max-lg:pb-[226px]' : 'max-lg:pb-[170px]'} ${loadFailed ? 'hidden' : ''}`}
           style={{ '--arrow-top': `${8 + vIdx * PITCH_MOBILE + 9}px` }}>
           {list.length > 1 && (
             <>
@@ -393,7 +393,7 @@ export default function CurriculumPath() {
 
         {/* 레슨 시트(모바일 233:61) — 탭 바 바로 위. 건너뛰기 확인 중이면 확인(79:100)을 이 자리에 띄운다. */}
         {skipStage ? (
-          <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 flex flex-col gap-[11px] rounded-t-22 border-t-2 border-warn bg-white px-[18px] pb-5 pt-[18px] shadow-sheet lg:hidden">
+          <div className="device-mobile-sheet fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 flex flex-col gap-[11px] rounded-t-22 border-t-2 border-warn bg-white px-[18px] pb-5 pt-[18px] shadow-sheet lg:hidden">
             <p className="text-[17px] font-bold leading-figma text-ink">정말로 건너뛰시겠어요?</p>
             <div className="flex gap-2.5">
               <button type="button" onClick={() => setSkipTarget(null)} className="btn-secondary flex-1 whitespace-nowrap px-2 py-4 text-[16px]">아니오</button>
@@ -401,7 +401,7 @@ export default function CurriculumPath() {
             </div>
           </div>
         ) : view && viewOpen && (
-          <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 flex flex-col gap-[11px] rounded-t-22 border-t-2 border-line bg-white px-[18px] pb-5 pt-[18px] shadow-sheet lg:hidden">
+          <div className="device-mobile-sheet fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 flex flex-col gap-[11px] rounded-t-22 border-t-2 border-line bg-white px-[18px] pb-5 pt-[18px] shadow-sheet lg:hidden">
             <div className="flex items-center justify-between gap-3 font-bold leading-figma">
               <p className="min-w-0 truncate text-[17px] text-ink">{view.title}</p>
               <span className="shrink-0 text-[13px] text-track">{progLabel}</span>

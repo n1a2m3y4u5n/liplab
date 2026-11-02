@@ -5,7 +5,6 @@ Supports both SQLite (development) and PostgreSQL (production)
 import os
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, ForeignKey, Boolean, UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base as async_declarative_base
@@ -34,6 +33,14 @@ AsyncSessionLocal = sessionmaker(
 )
 
 Base = async_declarative_base()
+
+
+class LoginAttempt(Base):
+    """이메일 대신 HMAC만 저장하는 로그인 잠금. 15분 뒤 자동 만료된다."""
+    __tablename__ = "login_attempts"
+    key = Column(String(64), primary_key=True)
+    attempts = Column(Integer, nullable=False, default=0)
+    expires_at = Column(DateTime, nullable=False, index=True)
 
 
 class RevokedToken(Base):
@@ -1000,3 +1007,61 @@ class FeedbackDaily(Base):
     kind = Column(String(12), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     __table_args__ = (UniqueConstraint('user_id', 'day', 'kind', name='uq_feedback_daily'),)
+
+
+class KmsavReview(Base):
+    """영상 파일 없이 영상별 검수 메타만 보관한다."""
+    __tablename__ = 'kmsav_reviews'
+    video_id = Column(String(11), primary_key=True)
+    source = Column(String(500), nullable=False)
+    license_label = Column(String(100), nullable=False)
+    evidence = Column(String(1000), nullable=False)
+    decision = Column(String(16), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class RealFaceProbe(Base):
+    """C8 제시 시점의 문항·판본과 답. 숙달·XP·복습과 분리한다."""
+    __tablename__ = 'real_face_probes'
+    __table_args__ = (UniqueConstraint('user_id', 'item_id', name='uq_real_face_user_item'),)
+    id = Column(String(36), primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    lesson_id = Column(String(36), nullable=False, index=True)
+    item_id = Column(String(40), nullable=False)
+    version = Column(String(64), nullable=False)
+    snapshot = Column(JSON, nullable=False)
+    chosen = Column(String(300), nullable=True)
+    correct = Column(Boolean, nullable=True)
+    rt_ms = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    answered_at = Column(DateTime, nullable=True)
+
+
+class AvComparison(Base):
+    """P17: 고정 SNR·셋 조건의 문항 배정과 서버 채점 결과."""
+    __tablename__ = 'av_comparisons'
+    id = Column(String(36), primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True)
+    snapshot = Column(JSON, nullable=False)
+    snr_db = Column(Float, nullable=False)
+    headphone_check = Column(Boolean, nullable=False)
+    volume_fixed = Column(Boolean, nullable=False)
+    completed = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class AvComparisonAnswer(Base):
+    __tablename__ = 'av_comparison_answers'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    session_id = Column(String(36), ForeignKey('av_comparisons.id', ondelete='CASCADE'), nullable=False)
+    item_id = Column(String(40), nullable=False)
+    condition = Column(String(8), nullable=False)
+    answer_text = Column(String(300), nullable=False)
+    matched = Column(Integer, nullable=False)
+    total = Column(Integer, nullable=False)
+    rt_ms = Column(Integer, nullable=True)
+    plays = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    __table_args__ = (UniqueConstraint('session_id', 'item_id', name='uq_av_comparison_answer'),)
