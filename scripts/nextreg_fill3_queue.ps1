@@ -1,4 +1,4 @@
-﻿param([ValidateSet('C','D')][string]$Mode,[int]$Seed=0,[string]$Root,[string]$Python,[string]$Code,[string]$Run)
+param([ValidateSet('C','D')][string]$Mode,[int]$Seed=0,[string]$Root,[string]$Python,[string]$Code,[string]$Run)
 $ErrorActionPreference='Stop'
 $threads=4
 $env:OMP_NUM_THREADS="$threads";$env:MKL_NUM_THREADS="$threads";$env:OPENBLAS_NUM_THREADS="$threads"
@@ -39,6 +39,10 @@ if($Mode -eq 'C'){
  if($env:COMPUTERNAME -eq 'CNSAI2025'){'export_on_main_required'|Set-Content "$Root\export-pending.txt"}else{
  Step 'finish' @('-u',$entry,'finish','--run',$Run,'--teacher',"$Root\teacher_b33s0.pt",'--student',"$Root\student\model.pt",'--out',"$Root\result",'--seed',"$Seed")
  }
-}else{throw 'D pending registered controller'}
+}else{
+ $entry="$Root\nextreg_fusion_distill50.py"
+ Step 'student' @('-u',$entry,'train','--run',$Run,'--teacher',"$Root\full_fusion_s0.pt",'--lips',"$Root\lips",'--baseline',"$Root\baseline_B33s0",'--out',"$Root\seed0")
+ Step 'finish' @('-u',$entry,'finish','--run',$Run,'--teacher',"$Root\full_fusion_s0.pt",'--lips',"$Root\lips",'--baseline',"$Root\baseline_B33s0",'--student',"$Root\seed0\model.pt",'--out',"$Root\result")
+}
 'done'|Set-Content "$Root\done.txt"
 Log 'DONE compute; local finalization may remain'
