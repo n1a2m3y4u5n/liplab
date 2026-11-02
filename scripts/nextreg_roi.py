@@ -43,6 +43,7 @@ def main():
     t.add_argument('--out', required=True)
     t.add_argument('--seed', type=int, default=0)
     t.add_argument('--resume', action='store_true')
+    t.add_argument('--gpu-frac', type=float, default=.45)
     e = sub.add_parser('compare')
     e.add_argument('--run', required=True)
     e.add_argument('--candidate', required=True)
@@ -82,7 +83,7 @@ def main():
         R.make_batch = batch
         argv = ['train', '--run', a.run, '--out', a.out, '--cand', 'R1', '--seed', str(a.seed),
                 '--epochs', '40', '--patience', '6', '--batch', '32', '--max-frames', '4000',
-                '--gpu-frac', '.45', '--log-every', '100', '--amp', '1']
+                '--gpu-frac', str(a.gpu_frac), '--log-every', '100', '--amp', '1']
         if a.resume:
             argv.append('--resume')
         return R.main(argv)

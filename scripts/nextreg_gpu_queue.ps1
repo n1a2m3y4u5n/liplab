@@ -52,8 +52,10 @@ if($Mode -eq 'black') {
     }
     $stable=0
     while($stable -lt 3){if(IdleGPU){$stable++}else{$stable=0}; Log "waiting GPU idle checks=$stable"; if($stable -lt 3){Start-Sleep 30}}
+    $fraction='0.45'
+    if($Root.StartsWith('D:\work\liplab-gpu3\')){$fraction='0.7'}
     foreach($seed in @(0,1)) {
-        $p=Start-Process -FilePath $Python -ArgumentList @('-u',"$Root\code\tools\nextreg_roi.py",'train','--run',$run,'--out',"$Root\roi_s$seed",'--seed',"$seed") -WindowStyle Hidden -PassThru -RedirectStandardOutput "$Root\roi_s$seed.log" -RedirectStandardError "$Root\roi_s$seed.err"
+        $p=Start-Process -FilePath $Python -ArgumentList @('-u',"$Root\code\tools\nextreg_roi.py",'train','--run',$run,'--out',"$Root\roi_s$seed",'--seed',"$seed",'--gpu-frac',$fraction) -WindowStyle Hidden -PassThru -RedirectStandardOutput "$Root\roi_s$seed.log" -RedirectStandardError "$Root\roi_s$seed.err"
         $null=$p.Handle
         Log "GPU_START roi_s$seed PID=$($p.Id) run=$run"
         $p.WaitForExit(); Log "GPU_END roi_s$seed exit=$($p.ExitCode)"
