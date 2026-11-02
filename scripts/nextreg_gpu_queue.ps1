@@ -5,6 +5,7 @@ $env:PYTHONPATH="$Root\code\tools"; $env:LIPLAB_TOOLS="$Root\code\tools"
 function Log($s) { Add-Content -Encoding UTF8 "$Root\queue-$Mode.log" "$(Get-Date -Format o) $s" }
 trap { Log "FAILED $($_.Exception.Message)"; 'failed' | Set-Content "$Root\$Mode-failed.txt"; exit 1 }
 function IdleGPU {
+    if($Mode -eq 'roi' -and (Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory -lt 16777216){return $false}
     $g=& nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader,nounits 2>$null
     if($LASTEXITCODE -ne 0 -or -not $g){return $false}
     $v=($g | Select-Object -First 1).Split(',')
@@ -33,14 +34,29 @@ if($Mode -eq 'black') {
         Log "GPU_END $kind exit=$($p.ExitCode)"
         if($p.ExitCode -ne 0){throw "$kind training failed"}
     }
+    $b=Get-Content -Raw -Encoding UTF8 "$Root\bs27\train_summary.json" | ConvertFrom-Json
+    $c=Get-Content -Raw -Encoding UTF8 "$Root\bs107\train_summary.json" | ConvertFrom-Json
+    $delta=$c.best_val_4way_mean-$b.best_val_4way_mean
+    $cer=$c.best.val_cer-$b.best.val_cer
+    @{status='validation_selection_only_no_adjudication'; accuracy_delta=$delta; cer_delta=$cer; keep_path=($delta -ge 0.03 -and $cer -le 0.02)} | ConvertTo-Json | Set-Content -Encoding UTF8 "$Root\bs-selection.json"
     'done' | Set-Content "$Root\bs-done.txt"
 } else {
     $run=Join-Path (Split-Path $Root) 'data\run_base'
     if($env:COMPUTERNAME -eq 'CNSAI2025'){$run='D:\work\hq\projects\liplab-lab\data\roi-kmsav\run_base'}
-    $p=Start-Process -FilePath $Python -ArgumentList @('-u',"$Root\code\tools\nextreg_roi.py",'train','--run',$run,'--out',"$Root\roi_s0",'--seed','0') -WindowStyle Hidden -PassThru -RedirectStandardOutput "$Root\roi_s0.log" -RedirectStandardError "$Root\roi_s0.err"
-    $null=$p.Handle
-    Log "GPU_START roi_s0 PID=$($p.Id) run=$run"
-    $p.WaitForExit(); Log "GPU_END roi_s0 exit=$($p.ExitCode)"
-    if($p.ExitCode -ne 0){throw 'ROI training failed'}
-    'trained' | Set-Content "$Root\roi-trained.txt"
+    $stable=0
+    while($stable -lt 3){if(IdleGPU){$stable++}else{$stable=0}; Log "waiting GPU idle checks=$stable"; if($stable -lt 3){Start-Sleep 30}}
+    foreach($seed in @(0,1)) {
+        $p=Start-Process -FilePath $Python -ArgumentList @('-u',"$Root\code\tools\nextreg_roi.py",'train','--run',$run,'--out',"$Root\roi_s$seed",'--seed',"$seed") -WindowStyle Hidden -PassThru -RedirectStandardOutput "$Root\roi_s$seed.log" -RedirectStandardError "$Root\roi_s$seed.err"
+        $null=$p.Handle
+        Log "GPU_START roi_s$seed PID=$($p.Id) run=$run"
+        $p.WaitForExit(); Log "GPU_END roi_s$seed exit=$($p.ExitCode)"
+        if($p.ExitCode -ne 0){throw 'ROI training failed'}
+        while(-not(Test-Path "$Root\baseline_s$seed.pt")){Log "waiting same-seed B33 baseline $seed"; Start-Sleep 30}
+        & $Python "$Root\code\tools\nextreg_roi.py" compare --run $run --candidate "$Root\roi_s$seed\model.pt" --baseline "$Root\baseline_s$seed.pt" --out "$Root\roi-selection-s$seed.json" *> "$Root\roi-compare-s$seed.log"
+        if($LASTEXITCODE){throw 'ROI comparison failed'}
+        $result=Get-Content -Raw -Encoding UTF8 "$Root\roi-selection-s$seed.json" | ConvertFrom-Json
+        Log "SELECTION seed=$seed clean=$($result.clean_delta) degraded=$($result.degraded_delta) keep=$($result.keep_path)"
+        if(-not $result.keep_path){break}
+    }
+    'done' | Set-Content "$Root\roi-done.txt"
 }
