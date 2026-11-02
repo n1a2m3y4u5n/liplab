@@ -89,7 +89,7 @@ export default function PracticeHub() {
   const offReason = (key) => (avail[key] && !avail[key].available ? (shared != null ? true : avail[key].reason || '곧 열려요') : null)
   return (
     <AppShell active="practice" title="연습">
-      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 lg:gap-4">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:gap-4">
         {CARDS.map((c) => (
           <PracticeCard key={c.key} card={c} onClick={() => navigate(c.to)} />
         ))}
@@ -107,7 +107,7 @@ export default function PracticeHub() {
             )}
           </div>
         )}
-        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 lg:gap-4">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:gap-4">
           {LISTEN_CARDS.map((c) => (
             <PracticeCard key={c.key} card={c} off={offReason(c.key)} onClick={() => navigate(c.to)} />
           ))}

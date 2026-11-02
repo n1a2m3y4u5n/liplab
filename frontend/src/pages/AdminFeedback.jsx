@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
 import useStore from '../store/useStore'
+import { Button, TableRegion } from '../components/UI'
 
 export default function AdminFeedback() {
   const token = useStore(s => s.token)
@@ -26,17 +27,19 @@ export default function AdminFeedback() {
   }
   return <main className="p-6">
     <h1>신고·SUS</h1>
-    <label className="mr-3">시작일 (UTC) <input type="date" value={start} onChange={e => setStart(e.target.value)} /></label>
-    <label className="mr-3">종료일 (UTC) <input type="date" value={end} onChange={e => setEnd(e.target.value)} /></label>
-    <label><input type="checkbox" checked={includeTests} onChange={e => setIncludeTests(e.target.checked)} /> 점검 계정 포함</label>
-    <button className="ml-4" onClick={download}>CSV 받기</button>
+    <div className="my-3 flex flex-wrap items-center gap-3">
+    <label className="inline-flex min-h-11 flex-wrap items-center gap-2">시작일 (UTC) <input type="date" value={start} onChange={e => setStart(e.target.value)} /></label>
+    <label className="inline-flex min-h-11 flex-wrap items-center gap-2">종료일 (UTC) <input type="date" value={end} onChange={e => setEnd(e.target.value)} /></label>
+    <label className="inline-flex min-h-11 items-center gap-2"><input type="checkbox" checked={includeTests} onChange={e => setIncludeTests(e.target.checked)} /> 점검 계정 포함</label>
+    <Button variant="secondary" onClick={download}>CSV 받기</Button>
+    </div>
     <p role="status">{error}</p>
-    <div className="overflow-auto"><table className="w-full text-left text-sm"><thead><tr>
+    <TableRegion label="신고·SUS"><table className="w-full min-w-[640px] text-left text-sm"><thead><tr>
       {['시각', '사용자', '기기 / 세션', '화면', '종류', '내용'].map(v => <th key={v}>{v}</th>)}
     </tr></thead><tbody>{rows.map(r => <tr key={r.id}>
       <td>{r.ts}</td><td>{r.user_id}{r.is_demo ? ' (데모)' : ''}{r.is_test ? ' (점검)' : ''}</td>
       <td>{r.device_id}<br />{r.session_id}</td><td>{r.route}</td><td>{r.event}</td>
       <td className="whitespace-pre-wrap">{r.props.text || (r.props.score != null ? `${r.props.score} / 100 · ${r.props.answers.join(', ')}` : '—')}<br />{JSON.stringify(r.ua)} · {r.props.width}×{r.props.height}</td>
-    </tr>)}</tbody></table></div>
+    </tr>)}</tbody></table></TableRegion>
   </main>
 }
