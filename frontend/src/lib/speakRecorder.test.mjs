@@ -1,7 +1,16 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { startRecorder } from './speakRecorder.js'
+import { startRecorder, recorderOptions, recordingFilename } from './speakRecorder.js'
 import { mediaErrorMessage } from './mediaError.js'
+
+test('Safari MP4와 Chromium Opus 녹음 형식과 업로드 확장자를 일치시킨다', () => {
+  const safari = { isTypeSupported: type => type === 'audio/mp4' }
+  assert.deepEqual(recorderOptions(safari), { mimeType: 'audio/mp4' })
+  assert.equal(recordingFilename({ type: 'audio/mp4;codecs=mp4a.40.2' }), 'speech.m4a')
+  assert.deepEqual(recorderOptions({ isTypeSupported: () => true }), { mimeType: 'audio/webm;codecs=opus' })
+  assert.equal(recordingFilename({ type: 'audio/webm;codecs=opus' }), 'speech.webm')
+  assert.equal(recorderOptions({ isTypeSupported: () => false }), undefined)
+})
 
 test('녹음기 미지원·생성 실패를 삼키지 않는다', () => {
   for (const Recorder of [null, class { constructor() { throw Error('unsupported') } }]) {

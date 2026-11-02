@@ -1,3 +1,4 @@
+import { createRecorder } from '../lib/speakRecorder.js'
 import { requestTrackedMedia } from '../lib/track'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import AvatarVRM from './AvatarVRM'
@@ -159,7 +160,7 @@ export default function Audio2FaceAvatar() {
       // 권한을 기다리는 사이 화면을 떠났다 → 연 마이크를 바로 닫는다
       if (!aliveRef.current) { stream.getTracks().forEach((t) => t.stop()); return }
       streamRef.current = stream
-      const rec = new MediaRecorder(stream)
+      const rec = createRecorder(stream)
       rec.ondataavailable = (e) => { if (e.data && e.data.size) chunksRef.current.push(e.data) }
       rec.onstop = () => {
         recorderRef.current = null

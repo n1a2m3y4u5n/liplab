@@ -1,3 +1,4 @@
+import { recordingFilename } from './lib/speakRecorder.js'
 import axios from 'axios'
 import useStore from './store/useStore'
 import { createInflight } from './lib/sharedRequest'
@@ -319,7 +320,7 @@ export const speakAPI = {
   assess: async (target, blob, metrics = {}, opts = {}) => {
     const fd = new FormData()
     fd.append('target', target)
-    fd.append('audio', blob, 'speech.webm')
+    fd.append('audio', blob, recordingFilename(blob))
     for (const k of ['loudness', 'pitch_range', 'duration', 'pitch_start', 'pitch_end', 'pitch_ref', 'pitch_final', 'pitch_frames', 'voiced_duration']) {
       if (metrics[k] != null) fd.append(k, String(metrics[k]))
     }
@@ -384,7 +385,7 @@ export const avatarAPI = {
   audio2faceStatus: async () => (await api.get('/avatar/audio2face/status')).data,
   audio2face: async (blob) => {
     const fd = new FormData()
-    fd.append('audio', blob, 'speech.webm')
+    fd.append('audio', blob, recordingFilename(blob))
     const res = await api.post('/avatar/audio2face', fd, {
       headers: { 'Content-Type': undefined }, timeout: 120000,
     })
