@@ -1,3 +1,4 @@
+import LearnHeader from '../components/learn/LearnHeader'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import AppShell from '../components/AppShell'
@@ -53,10 +54,7 @@ export default function ListenPath() {
   }
   return <AppShell active="learn">
     <div className="mx-auto flex w-full max-w-[752px] flex-col items-center gap-3 lg:gap-6">
-      <div className="flex w-full gap-1 rounded-13 bg-surface-sunken p-1 lg:w-auto">
-        {[['read', '독화'], ['speak', '발화'], ['listen', '소리 듣기']].map(([key, label]) => <button key={key} aria-pressed={key === 'listen'} onClick={() => navigate(`/learn/path?track=${key}`)}
-          className={`min-h-11 flex-1 rounded-10 px-4 text-[14px] font-bold lg:flex-none lg:px-[26px] ${key === 'listen' ? 'bg-white text-track shadow-seg' : 'text-ink-muted'}`}>{label}</button>)}
-      </div>
+      <LearnHeader />
       {data?.is_demo && <span className="self-start rounded-full bg-track-tint px-3 py-1.5 text-[12px] font-bold text-track-dark">체험용 · 모든 단계 열림</span>}
       {!data?.is_demo && data?.is_beta && <span className="self-start rounded-full bg-track-tint px-3 py-1.5 text-[12px] font-bold text-track-dark">베타 한정 · 모든 단계 열림</span>}
       {error ? <div role="alert" className="rounded-20 border-2 border-line bg-white p-5"><h1>경로를 가져오지 못했어요</h1><button className="btn-secondary btn-md mt-3" onClick={() => setRetry((n) => n + 1)}>다시 가져오기</button></div> : !stage ? <p role="status">불러오는 중</p> : <>
@@ -80,15 +78,13 @@ export default function ListenPath() {
             </div>
             <span className="my-1 h-7 w-[5px] rounded-full bg-fill-strong lg:h-10" /><DayNode label="내일" state="locked" />
             <span className="my-1 h-7 w-[5px] rounded-full bg-fill-strong lg:h-10" /><DayNode label="숙달" state={stage.status === 'mastered' ? 'mastered' : 'locked'} />
-            <div className="mt-6 flex gap-4 text-[13px] font-bold text-track-dark"><button onClick={() => navigate('/listen/classroom')} className="min-h-11">소리 교실</button><button onClick={() => navigate('/analysis/listening')} className="min-h-11">결과 보기</button></div>
           </div>
           <section aria-label="오늘 몫" className="device-mobile-sheet fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 flex max-h-[65dvh] flex-col gap-3 overflow-y-auto rounded-t-22 bg-white px-[18px] pb-2 pt-[18px] shadow-sheet lg:absolute lg:inset-x-auto lg:bottom-auto lg:left-[300px] lg:top-[var(--card-top)] lg:w-[310px] lg:rounded-20 lg:border-2 lg:border-line lg:p-5 lg:shadow-card">
             <div className="flex items-center justify-between gap-2"><h2 className="text-[20px] font-black">오늘 몫 {q.filled} / {q.total}</h2><button onClick={() => navigate('/learn/listening?stage=0')} className="btn-secondary min-h-11 px-2 text-[12px] text-track-dark">{data.ling_today ? '✓ 소리 확인' : '소리 확인 · 1분'}</button></div>
             <div className="flex items-center gap-3"><QuotaBar quota={stage.quota} /><span className="text-[14px] font-bold text-ink-muted">◷ {Math.max(0, (q.total - q.filled) * 4)}분</span></div>
-            <button id="listen-start" disabled={locked} onClick={q.met ? () => navigate('/analysis/listening') : start} className="btn-primary min-h-[56px] w-full rounded-16 text-[17px]">{locked ? '잠김' : q.met ? '결과 보기' : q.done || stage.quota?.partial_n ? `다음 묶음 듣기 (${q.filled + 1}/${q.total})` : '오늘 몫 시작하기'}</button>
+            <button id="listen-start" disabled={locked} onClick={q.met ? () => navigate('/records?track=listen') : start} className="btn-primary min-h-[56px] w-full rounded-16 text-[17px]">{locked ? '잠김' : q.met ? '결과 보기' : q.done || stage.quota?.partial_n ? `다음 묶음 듣기 (${q.filled + 1}/${q.total})` : '오늘 몫 시작하기'}</button>
             {locked && <button onClick={() => setSkip(true)} className="btn-secondary btn-md">건너뛰기</button>}
             {q.met && <button onClick={start} className="btn-secondary btn-md">한 묶음 더 하기</button>}
-            <button onClick={() => navigate('/listen/today')} className="min-h-11 text-[15px] font-bold text-track-dark">⤨ 오늘의 듣기 · 15분</button>
           </section>
         </div>
       </>}

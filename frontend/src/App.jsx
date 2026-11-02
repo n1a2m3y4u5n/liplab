@@ -1,3 +1,5 @@
+import PracticeRedirect from './components/PracticeRedirect'
+import { saveLastTrack } from './lib/lastTrack'
 import LegacyRedirect from './components/LegacyRedirect'
 import Feedback from './components/Feedback'
 import AdminFeedback from './pages/AdminFeedback'
@@ -43,6 +45,10 @@ function ScrollToTop() {
   const location = useLocation()
   useEffect(() => {
     trackRoute(location.pathname)
+    const path = location.pathname
+    const params = new URLSearchParams(location.search)
+    const track = path === '/learn/speaking' ? 'speak' : path === '/learn/listening' ? 'listen' : ['/learn/word', '/practice', '/conversation'].includes(path) || (path === '/learn/viseme' && params.get('tab') !== 'learn') ? 'read' : null
+    if (track) saveLastTrack(useStore.getState().user?.id, track)
     const stage = new URLSearchParams(location.search).get('stage')
     if (/^\d{1,2}$/.test(stage || '')) track('stage_enter', { stage: Number(stage) })
   }, [location.pathname, location.search])
@@ -86,7 +92,6 @@ const AnalysisDetail = lazy(() => import('./pages/AnalysisDetail'))
 const ListeningReport = lazy(() => import('./pages/ListeningReport'))
 const EvalReport = lazy(() => import('./pages/EvalReport'))
 const ContentReview = lazy(() => import('./pages/ContentReview'))
-const PracticeHub = lazy(() => import('./pages/PracticeHub'))
 const TodayPage = lazy(() => import('./pages/TodayPage'))
 const ReviewTab = lazy(() => import('./pages/ReviewTab'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
@@ -243,7 +248,7 @@ function App() {
         <Route path="/today" element={<TodayPage />} />
         <Route path="/practice" element={<StageGate stage={3}><Practice /></StageGate>} />
         <Route path="/conversation" element={<StageGate stage={4}><Conversation /></StageGate>} />
-        <Route path="/sign" element={<Sign />} />
+        <Route path="/sign" element={<LegacyRedirect to="/learn/sign" />} />
         <Route path="/learn/viseme" element={<VisemeLiteracy />} />
         <Route path="/learn/word" element={<StageGate stage={2}><WordStage /></StageGate>} />
         {/* 뜻 없는 말 짝 맞추기(C10): 1·2단계 사이 과제라 1단계를 숙달해야(2단계가 열려야) 연다 */}
@@ -283,7 +288,7 @@ function App() {
         <Route path="/admin/feedback" element={<AdminFeedback />} />
         {import.meta.env.VITE_KMSAV_REVIEW === '1' && <Route path="/admin/kmsav" element={<KmsavReview />} />}
         <Route path="/admin/content-review" element={<ContentReview />} />
-        <Route path="/practice/hub" element={<PracticeHub />} />
+        <Route path="/practice/hub" element={<PracticeRedirect />} />
         <Route path="/tasks" element={<LegacyRedirect to="/today#tasks" />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/learn/path" element={<CurriculumPath />} />

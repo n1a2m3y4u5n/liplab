@@ -1,3 +1,4 @@
+import LearnHeader from '../components/learn/LearnHeader'
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import AppShell from '../components/AppShell'
@@ -234,15 +235,7 @@ export default function CurriculumPath() {
     <AppShell active="learn">
       <div className="mx-auto flex w-full max-w-[752px] flex-col items-center gap-3.5 lg:gap-6">
         {/* 트랙 스위처(171:18 / 모바일 233:34 전체 폭) */}
-        <div className="flex w-full gap-1 rounded-13 bg-surface-sunken p-1 lg:w-auto lg:rounded-14">
-          {Object.entries(TRACK_LABEL).map(([k, label]) => (
-            <button key={k} type="button" onClick={() => switchTrack(k)} aria-pressed={track === k}
-              className={`flex-1 rounded-10 py-[9px] text-[14px] font-bold leading-figma transition lg:flex-none lg:px-[26px] lg:py-2.5 lg:text-[15px] ${
-                track === k ? 'bg-white text-track shadow-[0px_2px_5px_0px_rgba(26,13,64,0.1)]' : 'text-ink-faint'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
+        <LearnHeader />
 
         {/* 유닛 헤더(61:12 / 모바일 233:39) — 트랙색 + 3D 하단테두리 + 가이드(사용법 가이드 모달) */}
         <div className="flex w-full items-center gap-3.5 rounded-16 border-b-4 border-track-dark bg-track py-[15px] pl-[17px] pr-[13px] text-white lg:rounded-18 lg:border-b-5 lg:py-5 lg:pl-[26px] lg:pr-5">
