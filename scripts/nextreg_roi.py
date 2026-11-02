@@ -10,6 +10,8 @@ import cv2
 import numpy as np
 import roi_train as R
 
+cv2.setNumThreads(1)
+
 
 def degrade(x, cond, rng):
     x = x.copy()
