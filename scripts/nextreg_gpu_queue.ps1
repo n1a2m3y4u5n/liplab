@@ -45,6 +45,10 @@ if($Mode -eq 'black') {
 } else {
     $run=Join-Path (Split-Path $Root) 'data\run_base'
     if($env:COMPUTERNAME -eq 'CNSAI2025'){$run='D:\work\hq\projects\liplab-lab\data\roi-kmsav\run_base'}
+    if($env:COMPUTERNAME -eq 'CNSAI') {
+        & ollama stop qwen3.6:35b-a3b *> "$Root\ollama-stop.log"
+        if($LASTEXITCODE){throw 'Ollama stop failed; do not start GPU training'}
+    }
     $stable=0
     while($stable -lt 3){if(IdleGPU){$stable++}else{$stable=0}; Log "waiting GPU idle checks=$stable"; if($stable -lt 3){Start-Sleep 30}}
     foreach($seed in @(0,1)) {
