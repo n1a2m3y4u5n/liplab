@@ -8,7 +8,7 @@ import useLearnerInfo from '../hooks/useLearnerInfo'
  * 온보딩 — 자가진단 안내 (Figma 84:7 / 모바일 243:65, lg 미만 반응형).
  * 트랙 선택 화면 대신, 자가진단(배치검사)으로 바로 갈지 나중에 할지만 고르는 화면.
  * - 시작하기: 배치검사로 이동. 결과에서 '학습하러 가기'를 누르면 추천 시작 단계로 배치된다(Placement).
- * - 나중에 할게요: 기본 트랙(독화=perception)으로 배치(setTrack)한 뒤 학습 경로로 간다.
+ * - 1단계부터 시작하기: 같은 기본 배치(setTrack) 뒤 첫 레슨으로 간다.
  *   배치(placed) 전에는 /api/curriculum/stages가 1단계를 잠김으로 돌려준다.
  * 온보딩을 마쳤는지는 서버의 배치 여부(placed)로 판단한다(App.jsx HomeRedirect). 예전에는 브라우저 전체에 하나인
  * localStorage 표시를 남겨, 공용 기기의 다음 사람이 온보딩을 건너뛰었다. 발화 경로는 학습 탭의 트랙 전환(?track=speak)으로 연다.
@@ -24,13 +24,18 @@ const BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-
 export default function Onboarding() {
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
   const { answers, save } = useLearnerInfo()
   const [step, setStep] = useState(() => (answers ? 'start' : 'info'))
   const goPlacement = () => navigate('/learn/placement')
   const startLater = async () => {
-    setBusy(true)
-    try { await curriculumAPI.setTrack('perception') } catch { /* 실패해도 이동 */ }
-    navigate('/today')
+    setBusy(true); setError('')
+    try {
+      await curriculumAPI.setTrack('perception')
+      navigate('/learn/viseme')
+    } catch {
+      setError('시작하지 못했어요. 연결을 확인하고 다시 눌러 주세요.')
+    } finally { setBusy(false) }
   }
 
   if (step === 'info') {
@@ -66,8 +71,10 @@ export default function Onboarding() {
             시작하기
           </button>
           <button type="button" onClick={startLater} disabled={busy} className={`btn-secondary btn-lg text-track ${BTN}`}>
-            나중에 할게요
+            {busy ? '준비 중…' : '1단계부터 시작하기'}
           </button>
+          {error && <p role="alert" className="text-sm text-bad-text">{error}</p>}
+          <button type="button" disabled={busy} onClick={() => setStep('info')} className="min-h-11 text-sm font-bold text-ink-muted">이전으로</button>
         </div>
       </div>
     </div>

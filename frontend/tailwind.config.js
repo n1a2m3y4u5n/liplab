@@ -98,8 +98,8 @@ export default {
         },
       },
       fontFamily: {
-        // 본문·UI = Noto Sans KR, 로고·디스플레이 = Rowdies (index.css에서 Google Fonts 로드)
-        sans: ['"Noto Sans KR"', 'system-ui', '-apple-system', 'sans-serif'],
+        // 설치된 한글 글꼴은 오프라인에도 굵기를 제공한다. 일부 WebKit의 웹 글꼴 굵기 누락도 피한다.
+        sans: ['"Apple SD Gothic Neo"', '"Malgun Gothic"', '"Noto Sans KR"', 'system-ui', '-apple-system', 'sans-serif'],
         display: ['Rowdies', '"Noto Sans KR"', 'sans-serif'],
       },
       // Figma 글자 상자의 "leading normal" — Noto Sans KR에서 글자 크기의 1.2배(16px→19, 30px→36).
