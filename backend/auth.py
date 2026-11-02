@@ -240,7 +240,7 @@ def create_token_response(user: User) -> Token:
 
 
 async def revoke_access_token(token: str, db: AsyncSession) -> None:
-    """?? ??? ?? ????? ?? ?? ?? ??? ????."""
+    """같은 계정의 다른 방문자에게 영향 없이 현재 토큰만 폐기한다."""
     from sqlalchemy import delete
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
     await db.execute(delete(RevokedToken).where(RevokedToken.expires_at < datetime.utcnow()))
@@ -248,5 +248,5 @@ async def revoke_access_token(token: str, db: AsyncSession) -> None:
                         expires_at=datetime.utcfromtimestamp(payload["exp"])))
     try:
         await db.commit()
-    except IntegrityError:  # ??? ?? ??? ??? ??
+    except IntegrityError:  # 동시에 같은 토큰을 폐기한 요청
         await db.rollback()
