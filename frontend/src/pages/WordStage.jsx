@@ -338,7 +338,7 @@ function WordQuiz({ data: incomingData, reload }) {
       // 같은 진입점), 아니면 이 단계의 다음 12문항. 엔드리스(?endless=1)에서는 문맥 레슨과 번갈아 이어진다(G-6).
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
         onNext={() => (endless ? navigate('/learn/closure?endless=1') : stat.mastered ? navigate('/learn/scenario') : (reload ? (clearCheckpoint(), reload()) : restart()))}
-        onHome={() => navigate(endless ? '/learn/endless' : '/learn/path')}
+        onHome={() => { clearCheckpoint(); navigate(endless ? '/learn/endless' : '/learn/path') }}
         homeLabel={endless ? '엔드리스 학습으로' : undefined}
         effort={{ lessonKind: 'word', stage: 2, nItems: tally.n, accuracy: tally.n ? tally.correct / tally.n : null }} />
     )

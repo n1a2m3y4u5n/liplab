@@ -253,7 +253,7 @@ function QuizPanel({ data: incomingData }) {
     return (
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
         onNext={() => (stat.mastered ? navigate('/learn/word') : restart())}
-        onHome={() => navigate('/learn/path')}
+        onHome={() => { clearCheckpoint(); navigate('/learn/path') }}
         effort={{ lessonKind: 'viseme', stage: 1, nItems: tally.n, accuracy: tally.n ? tally.correct / tally.n : null }} />
     )
   }
