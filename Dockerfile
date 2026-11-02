@@ -1,6 +1,6 @@
 # Multi-stage Docker build for LIPLAB
 # Stage 1: Build React frontend with Node.js
-FROM node:18-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 
 WORKDIR /frontend
 
