@@ -311,7 +311,7 @@ export default function CurriculumPath() {
         )}
 
         {/* 경로(61:18 / 모바일 233:45) — 모바일은 가운데, 데스크톱은 왼쪽(x 130)에 노드 열을 두고 오른쪽에 카드 */}
-        <div className={`relative w-full py-2 ${hasExtra ? 'max-lg:pb-[226px]' : 'max-lg:pb-[170px]'} ${loadFailed ? 'hidden' : ''}`}
+        <div className={`device-mobile-path relative w-full py-2 ${hasExtra ? 'max-lg:pb-[226px]' : 'max-lg:pb-[170px]'} ${loadFailed ? 'hidden' : ''}`}
           style={{ '--arrow-top': `${8 + vIdx * PITCH_MOBILE + 9}px` }}>
           {list.length > 1 && (
             <>
