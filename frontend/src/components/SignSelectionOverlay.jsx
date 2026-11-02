@@ -29,15 +29,16 @@ export default function SignSelectionOverlay() {
   const closeModal = useCallback(() => setModalText(null), [])
 
   // 모달 접근성 — 포커스 가두기 + Esc 닫기 + 포커스 복원
-  const modalRef = useFocusTrap(!!modalText, closeModal)
-  const introRef = useFocusTrap(showIntro, dismissIntro)
+  const introOpen = showIntro && !!modalText
+  const modalRef = useFocusTrap(!!modalText && !introOpen, closeModal)
+  const introRef = useFocusTrap(introOpen, dismissIntro)
 
   useEffect(() => {
     // 선택된 한국어 텍스트를 감지해 '수어로 보기' 버튼을 띄운다.
     // 데스크톱(mouseup)뿐 아니라 모바일 롱프레스 선택도 지원 — touchend + selectionchange(디바운스).
     let debTimer = null
     function detect() {
-      if (modalText) return                   // 모달 열려있으면 무시
+      if (modalText || document.querySelector('dialog[open], [aria-modal="true"]')) return
       const selection = window.getSelection()
       const text = selection ? selection.toString().trim() : ''
       if (text && text.length >= 2 && text.length <= 200 && hasKorean(text)) {
@@ -88,7 +89,7 @@ export default function SignSelectionOverlay() {
         </button>
       )}
 
-      {modalText && (
+      {modalText && !introOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex justify-end" onClick={() => setModalText(null)}>
           <div
             ref={modalRef}
@@ -120,8 +121,8 @@ export default function SignSelectionOverlay() {
         </div>
       )}
 
-      {/* 첫 접속 — 수어 번역 사용법 안내(드래그 제스처가 숨어 있어 처음엔 모름) */}
-      {showIntro && (
+      {/* 수어로 보기를 처음 누를 때 안내한다. 첫 화면의 학습 행동은 가리지 않는다. */}
+      {introOpen && (
         <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4" onClick={dismissIntro}>
           <div ref={introRef} role="dialog" aria-modal="true" aria-label="수어 번역 사용법 안내" tabIndex={-1}
             className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 outline-none" onClick={(e) => e.stopPropagation()}>

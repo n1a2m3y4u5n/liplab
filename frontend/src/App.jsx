@@ -47,8 +47,8 @@ function ScrollToTop() {
     trackRoute(location.pathname)
     const path = location.pathname
     const params = new URLSearchParams(location.search)
-    const track = path === '/learn/speaking' ? 'speak' : path === '/learn/listening' ? 'listen' : ['/learn/word', '/practice', '/conversation'].includes(path) || (path === '/learn/viseme' && params.get('tab') !== 'learn') ? 'read' : null
-    if (track) saveLastTrack(useStore.getState().user?.id, track)
+    const learnTrack = path === '/learn/speaking' ? 'speak' : path === '/learn/listening' ? 'listen' : ['/learn/word', '/practice', '/conversation'].includes(path) || (path === '/learn/viseme' && params.get('tab') !== 'learn') ? 'read' : null
+    if (learnTrack) saveLastTrack(useStore.getState().user?.id, learnTrack)
     const stage = new URLSearchParams(location.search).get('stage')
     if (/^\d{1,2}$/.test(stage || '')) track('stage_enter', { stage: Number(stage) })
   }, [location.pathname, location.search])
