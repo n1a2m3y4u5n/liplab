@@ -19,3 +19,5 @@ test('today rules 7 and 8: all mastered', () => { const input = { ...base, stage
 test('today rules 9 and 10: start or continue', () => { assert.equal(todayNext(base).label, '학습 시작하기'); assert.equal(todayNext({ ...base, stages: { ...stages, stages: [{ ...stages.stages[0], attempts: 2 }] } }).label, '이어서 학습하기') })
 test('redirect preserves query and destination priority', () => assert.equal(legacyTarget('/records?track=listen', '?track=speak&source=old'), '/records?track=listen&source=old'))
 test('track memory is per account and bare path never uses memory', () => { const data = new Map(); const storage = { setItem: (k,v) => data.set(k,v), getItem: (k) => data.get(k) }; saveLastTrack(1, 'listen', storage); assert.equal(loadLastTrack(1, {}, storage), 'listen'); assert.equal(loadLastTrack(2, {}, storage), 'read') })
+
+test('redirect retains repeated query values and hash', () => assert.equal(legacyTarget('/today#tasks', '?source=one&source=two'), '/today?source=one&source=two#tasks'))

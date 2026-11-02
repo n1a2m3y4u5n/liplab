@@ -7,7 +7,7 @@ assert.ok(['127.0.0.1', 'localhost'].includes(new URL(base).hostname))
 for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
   const browser = await engine.launch()
   try {
-    const context = await browser.newContext({ viewport: { width: 390, height: 844 } })
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' })
     const auth = await (await context.request.post(`${base}/api/auth/demo`)).json()
     assert.ok(auth.access_token)
     await context.addInitScript((auth) => {
@@ -60,7 +60,7 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
       await page.route('**/api/**', fail)
       await page.goto(base + path)
       const retry = page.getByRole('button', { name: ['/listen/today','/today'].includes(path) ? '다시 가져오기' : '다시 시도', exact: true }).first()
-      await retry.waitFor()
+      await retry.waitFor({ timeout: 10000 }).catch(async (e) => { console.log('Failure state:', (await page.locator('body').innerText()).slice(0, 1500)); throw e })
       assert.equal(await page.getByText('복습할 것이 없어요. 잘하고 있어요!', { exact: true }).count(), 0)
       await page.unroute('**/api/**', fail)
       await retry.click()
