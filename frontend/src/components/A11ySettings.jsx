@@ -135,7 +135,7 @@ export default function A11ySettings() {
             </button>
             <button type="button" onClick={deleteAccount}
               className="flex w-full items-center gap-2 rounded-lg border border-bad-line px-3 py-2 text-left text-sm font-medium text-bad-dark hover:bg-bad-tint">
-              계정·데이터 삭제 <span className="text-[11px] text-rose-400">(내 정보 → 계정 설정)</span>
+              계정·데이터 삭제 <span className="text-[11px] text-bad-text">(내 정보 → 계정 설정)</span>
             </button>
             <p className="mt-1.5 text-[11px] leading-snug text-ink-caption">웹캠 영상은 기기 안에서만 처리돼요. 목소리 녹음은 채점할 때만 서버로 보내 메모리에서 처리하고, 저장하지 않아요. 녹음을 글로 옮긴 것과 소리 수치는 학습 기록으로 저장돼요.</p>
           </div>
