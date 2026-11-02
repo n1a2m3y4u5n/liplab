@@ -26,7 +26,7 @@ export default function AdminFeedback() {
     } catch { setError('CSV를 받지 못했어요.') }
   }
   return <main className="p-6">
-    <h1>신고·SUS</h1>
+    <h1>피드백·SUS</h1>
     <div className="my-3 flex flex-wrap items-center gap-3">
     <label className="inline-flex min-h-11 flex-wrap items-center gap-2">시작일 (UTC) <input type="date" value={start} onChange={e => setStart(e.target.value)} /></label>
     <label className="inline-flex min-h-11 flex-wrap items-center gap-2">종료일 (UTC) <input type="date" value={end} onChange={e => setEnd(e.target.value)} /></label>
@@ -34,7 +34,7 @@ export default function AdminFeedback() {
     <Button variant="secondary" onClick={download}>CSV 받기</Button>
     </div>
     <p role="status">{error}</p>
-    <TableRegion label="신고·SUS"><table className="w-full min-w-[640px] text-left text-sm"><thead><tr>
+    <TableRegion label="피드백·SUS"><table className="w-full min-w-[640px] text-left text-sm"><thead><tr>
       {['시각', '사용자', '기기 / 세션', '화면', '종류', '내용'].map(v => <th key={v}>{v}</th>)}
     </tr></thead><tbody>{rows.map(r => <tr key={r.id}>
       <td>{r.ts}</td><td>{r.user_id}{r.is_demo ? ' (데모)' : ''}{r.is_test ? ' (점검)' : ''}</td>

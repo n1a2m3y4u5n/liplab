@@ -22,19 +22,19 @@ export default function Feedback() {
     try {
       const r = await api.post('/feedback', { kind: 'report', text, ...context() })
       if (!r.data.accepted) throw new Error()
-      setOpen(false); setText(''); setState('신고를 보냈어요.')
+      setOpen(false); setText(''); setState('피드백을 보냈어요.')
     } catch { setState('보내지 못했어요. 다시 시도해 주세요.') }
     finally { setBusy(false) }
   }
   return <><SusCheck /><aside className="fixed bottom-20 right-3 z-40 text-sm">
     {open && <form onSubmit={send} className="mb-2 flex max-w-[90vw] flex-col gap-2 rounded-xl border bg-white p-4 shadow-lg">
-      <label htmlFor="feedback-text">불편 신고 · {screenName(pathname)}</label>
+      <label htmlFor="feedback-text">피드백 · {screenName(pathname)}</label>
       <textarea id="feedback-text" autoFocus required maxLength={500} value={text} onChange={e => setText(e.target.value)} placeholder="개인정보는 쓰지 마세요 (최대 500자)" className="border p-2" />
       <button disabled={busy || !text.trim()} type="submit">보내기</button>
       <button type="button" onClick={() => setOpen(false)}>닫기</button>
     </form>}
     <span role="status">{state}</span>
-    <button type="button" onClick={() => setOpen(v => !v)} className="rounded-lg border bg-white px-3 py-2 text-ink-muted">불편 신고</button>
+    <button type="button" onClick={() => setOpen(v => !v)} className="rounded-lg border bg-white px-3 py-2 text-ink-muted">피드백</button>
   </aside></>
 }
 
