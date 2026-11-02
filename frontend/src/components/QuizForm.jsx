@@ -175,8 +175,8 @@ export default function QuizForm({
               <MotionPanel kind="complete"
                 className="card bg-track-tint text-track-dark text-center"
               >
-                <p className="text-xl font-bold">레벨 업!</p>
-                <p className="text-lg">레벨 {result.new_level} 달성</p>
+                <p className="text-xl font-bold">학습 수준 상승!</p>
+                <p className="text-lg">학습 수준 {result.new_level} 달성</p>
               </MotionPanel>
             )}
 

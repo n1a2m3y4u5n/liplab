@@ -100,5 +100,5 @@ function BadgeDetailModal({ badge, onClose }) {
 export default function Badges({ data }) {
   const [selected, setSelected] = useState(null)
   const badges = mergeBadges(data)
-  return <section className="card-flat"><h2 className="mb-4 font-bold">배지</h2><div className="grid grid-cols-4 gap-4 sm:grid-cols-6">{badges.map((b) => <Badge key={b.key} b={b} onSelect={setSelected} />)}</div><BadgeDetailModal badge={selected} onClose={() => setSelected(null)} /></section>
+  return <section className="card-flat"><h2 className="mb-4 font-bold">학습 상</h2><div className="grid grid-cols-4 gap-4 sm:grid-cols-6">{badges.map((b) => <Badge key={b.key} b={b} onSelect={setSelected} />)}</div><BadgeDetailModal badge={selected} onClose={() => setSelected(null)} /></section>
 }

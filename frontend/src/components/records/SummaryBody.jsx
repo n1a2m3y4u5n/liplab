@@ -28,7 +28,7 @@ import { speakTrendView } from '../../lib/speakTrend'
  * 10월: 차트 아래 '소리 듣기' 칸(최근 역치 · 이번 주 듣기 분 · 소리 구별 정답률)과 결과 화면(/analysis/listening) 진입을 더했다.
  * 값은 overview의 listen 칸을 쓰고, 그 칸이 아직 없으면 /api/listen/summary에서 계산한다(lib/listenFlow.listenOverview).
  * 듣기 기록이 하나도 없으면 칸을 그리지 않는다(독화·발화만 하는 학습자 화면을 늘리지 않게).
- * 10/9: 말하기 문장 점수 주 평균 줄을 더했고, 10/28에 '문장 점수 주 평균 추세(참고, 기계 전사 기준)' 카드로 바꿨다. 값은 overview의 speak_trend(lib/speakTrend), 합격·숙달에는 쓰지 않는다.
+ * 10/9: 말하기 문장 점수 주 평균 줄을 더했고, 10/28에 '문장 점수 주 평균 변화(참고, 기계 전사 기준)' 카드로 바꿨다. 값은 overview의 speak_trend(lib/speakTrend), 합격·숙달에는 쓰지 않는다.
  * 10/15: 소리 듣기 칸 아래 '함께 하면 좋은 연습'(TrackLinks, 소리 듣기 ↔ 독화)을 더했다.
  */
 
@@ -258,15 +258,15 @@ function LineChart({ weeks, empty = '아직 채점된 기록이 없어요', tone
 }
 
 /**
- * 문장 점수 주 평균 추세 카드(10/9 줄 → 10/28 카드, S20 채택안). 이미 있는 말하기 문장 점수의 주 평균만 보이고 새 지수는 없다.
+ * 문장 점수 주 평균 변화 카드(10/9 줄 → 10/28 카드, S20 채택안). 이미 있는 말하기 문장 점수의 주 평균만 보이고 새 지수는 없다.
  * 합격·숙달에는 쓰지 않고, 문장이 5개보다 적은 주는 점을 두지 않는다. 평균이 있는 주가 2주보다 적으면 짧은 빈 상태만 보인다. 안내줄은 두지 않는다.
  */
 export function SpeakTrend({ ov }) {
   const v = speakTrendView(ov)
   if (!v.show) return null
   return (
-    <ChartCard title="문장 점수 주 평균 추세" tag="참고, 기계 전사 기준" track="speak">
-      <LineChart weeks={v.enough ? v.weeks : []} tone="track" empty="아직 추세를 보일 기록이 없어요" />
+    <ChartCard title="문장 점수 주 평균 변화" tag="참고, 기계 전사 기준" track="speak">
+      <LineChart weeks={v.enough ? v.weeks : []} tone="track" empty="아직 변화를 보일 기록이 없어요" />
     </ChartCard>
   )
 }
@@ -412,7 +412,7 @@ function buildCalWeeks(counts) {
   }))
 }
 /** 모달 부제(207:26) — 최근 20주 · 총 N회 학습 · 최장 연속 N일.
- *  N은 회차 수다. 회차 히스토리 부제·전체 통계 '총 학습 회차'와 같은 정의(30분 공백 = 새 회차, 요약 API의
+ *  N은 회차 수다. 회차 히스토리 부제·전체 통계 '학습한 횟수'와 같은 정의(30분 공백 = 새 회차, 요약 API의
  *  session_days)를 20주 창만큼 더한다. 요약을 못 불러왔을 때만 날짜별 활동 수 합으로 대신한다. */
 function calSubtitle(counts, sessionDays) {
   const days = buildCalWeeks(counts).flat().filter((d) => !d.future)
@@ -515,7 +515,7 @@ function HistoryList({ rows, onOpen }) {
         // 한 글자와 '…'만 보였다. 그 폭에서는 레슨 이름을 첫 줄에 따로 두고(order-first·basis-full), 나머지를 둘째 줄에 둔다.
         return (
           <button key={`${r.date}-${r.kind}-${r.topic ?? i}`} type="button" onClick={() => onOpen(r)}
-            aria-label={`${day} ${chip.label} ${lesson} 회차 상세 보기`}
+            aria-label={`${day} ${chip.label} ${lesson} 학습 내용 보기`}
             className={`flex w-full items-center gap-3 py-[15px] pr-0.5 text-left leading-figma hover:bg-surface-muted max-sm:flex-wrap max-sm:gap-y-1.5 lg:gap-4 ${i ? 'border-t-1.5 border-line' : ''}`}>
             <span className="w-12 shrink-0 text-[12.5px] text-ink-muted lg:w-[70px]" title={r.date}>{day}</span>
             <span className={`flex w-[54px] shrink-0 items-center justify-center rounded-lg py-[5px] text-[11.5px] font-bold ${chip.cls}`}>{chip.label}</span>
@@ -695,7 +695,7 @@ function SessionDetail({ row, onClose, onGo }) {
           <p className="text-[14px] font-bold leading-figma text-ink">문제별 분석</p>
           {/* Item list(212:263): 최대 369(문제 313 + 안내 56) 안에서 스크롤, 바닥에 스크롤 안내(213:27, 버튼 아님) */}
           {items.length === 0
-            ? <p className="py-6 text-center text-sm text-ink-muted">이 회차의 문제 기록이 없어요.</p>
+            ? <p className="py-6 text-center text-sm text-ink-muted">이 학습의 문제 기록이 없어요.</p>
             : (
               <ScrollHintList maxHeightClass="max-h-[369px]" hintHeight={56} iconSize={36} iconTop={12} label="이 회차 문제">
                 <div className="flex w-full flex-col">
@@ -729,9 +729,9 @@ function FullStats({ ov, onGo }) {
   const num = (v) => (typeof v === 'number' ? v.toLocaleString() : '–')
   const badgeCount = ov ? mergeBadges(ov.badges).filter((b) => b.earned).length : null
   const metrics = [
-    { label: '총 학습 회차', value: num(ov?.sessions), unit: '회', color: 'text-primary-500' },
+    { label: '학습한 횟수', value: num(ov?.sessions), unit: '회', color: 'text-primary-500' },
     { label: '푼 문제', value: num(ov?.questions), unit: '개', color: 'text-primary-500' },
-    { label: '받은 배지', value: num(badgeCount), unit: '개', color: 'text-speak' },
+    { label: '받은 상', value: num(badgeCount), unit: '개', color: 'text-speak' },
   ]
   const pct = (a) => (a == null ? '–' : Math.round(a * 100))
   const tr = ov?.tracks || {}
@@ -772,7 +772,7 @@ function FullStats({ ov, onGo }) {
         ))}
       </div>
       {/* 상세 화면 진입 — Figma 210:23 밖의 추가 링크. 약점 입모양·혼동 지도(/analysis/visemes)와
-          학습 효과 리포트(/analysis/eval, 사전·사후 검사 시작 포함)는 다른 진입점이 없어 여기 둔다. */}
+          학습 변화 보고서(/analysis/eval, 사전·사후 검사 시작 포함)는 다른 진입점이 없어 여기 둔다. */}
       {onGo && (
         <div className="flex flex-col gap-2 border-t-1.5 border-line pt-4 sm:flex-row">
           <button type="button" onClick={() => onGo('/analysis/visemes')}
@@ -781,7 +781,7 @@ function FullStats({ ov, onGo }) {
           </button>
           <button type="button" onClick={() => onGo('/analysis/eval')}
             className="flex flex-1 items-center justify-between rounded-[12px] px-3 py-2.5 text-[14px] font-bold text-ink hover:bg-surface-sunken">
-            학습 효과 리포트(사전·사후 검사) <img src="/ui/review-arrow.svg" alt="" className="max-w-none" />
+            학습 변화 보고서(사전·사후 검사) <img src="/ui/review-arrow.svg" alt="" className="max-w-none" />
           </button>
           <button type="button" onClick={() => onGo('/analysis/listening')}
             className="flex flex-1 items-center justify-between rounded-[12px] px-3 py-2.5 text-[14px] font-bold text-ink hover:bg-surface-sunken">

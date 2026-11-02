@@ -73,7 +73,7 @@ export default function Bookmarks() {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-ink text-lg">{bm.sentence}</p>
                     <p className="text-xs text-ink-faint mt-0.5">
-                      {bm.situation || '상황 미지정'} · 레벨 {bm.level}
+                      {bm.situation || '상황 미지정'} · 어려운 정도 {bm.level}
                     </p>
                   </div>
                   <div className="flex gap-2 shrink-0">

@@ -691,7 +691,7 @@ function ProfileMock() {
         </div>
       </section>
       <section className="w-full overflow-hidden rounded-16 border-2 border-line bg-white">
-        <MenuRow first id="placement" title="자가진단 다시 하기" sub="지금 수준으로 단계 재추천" />
+        <MenuRow first id="placement" title="시작 단계 다시 정하기" sub="지금 수준으로 단계 재추천" />
         <MenuRow id="account" title="계정 설정" sub="이름 · 이메일 · 비밀번호 · 로그아웃" />
         <MenuRow id="reset" danger title="학습 초기화" sub="기록을 모두 지우고 처음부터" />
       </section>
@@ -722,7 +722,7 @@ export const MOCKS = {
   analysis: { design: [640, 804], C: AnalysisMock, areas: ['stats', 'bars', 'line', 'calendar', 'history', 'fullStats'],
     alt: '기록 그림. 맨 위에 총 학습, 평균 정답률, 연속 학습 세 칸. 가운데에 학습 시간과 정답률 변화 그래프. 아래에 활동 캘린더, 회차 히스토리, 전체 통계 링크.' },
   profile: { design: [520, 653], C: ProfileMock, areas: ['placement', 'account', 'reset', 'a11y'],
-    alt: '내 정보 그림. 이름과 레벨 카드. 자가진단 다시 하기, 계정 설정, 학습 초기화 메뉴. 왼쪽 아래 접근성 설정 Aa 버튼.' },
+    alt: '내 정보 그림. 이름과 레벨 카드. 시작 단계 다시 정하기, 계정 설정, 학습 초기화 메뉴. 왼쪽 아래 접근성 설정 Aa 버튼.' },
 }
 
 /**
