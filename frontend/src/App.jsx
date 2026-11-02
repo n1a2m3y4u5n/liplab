@@ -89,13 +89,11 @@ const ScenarioHub = lazy(() => import('./pages/ScenarioHub'))
 const ReviewLanding = lazy(() => import('./pages/ReviewLanding'))
 const SpeakingReviewLanding = lazy(() => import('./pages/SpeakingReviewLanding'))
 const AnalysisDetail = lazy(() => import('./pages/AnalysisDetail'))
-const ListeningReport = lazy(() => import('./pages/ListeningReport'))
 const EvalReport = lazy(() => import('./pages/EvalReport'))
 const ContentReview = lazy(() => import('./pages/ContentReview'))
 const TodayPage = lazy(() => import('./pages/TodayPage'))
-const ReviewTab = lazy(() => import('./pages/ReviewTab'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
-const AnalysisTab = lazy(() => import('./pages/AnalysisTab'))
+const RecordsPage = lazy(() => import('./pages/RecordsPage'))
 const CurriculumPath = lazy(() => import('./pages/LearnPath'))
 const EndlessPractice = lazy(() => import('./pages/EndlessPractice'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
@@ -246,6 +244,7 @@ function App() {
       <Routes>
         <Route path="/dashboard" element={<LegacyRedirect to="/today" />} />
         <Route path="/today" element={<TodayPage />} />
+        <Route path="/records" element={<RecordsPage />} />
         <Route path="/practice" element={<StageGate stage={3}><Practice /></StageGate>} />
         <Route path="/conversation" element={<StageGate stage={4}><Conversation /></StageGate>} />
         <Route path="/sign" element={<LegacyRedirect to="/learn/sign" />} />
@@ -267,12 +266,12 @@ function App() {
         <Route path="/learn/sign" element={<Sign />} />
         {/* 복습·분석 탭 — 새 Figma 화면을 대표 경로로 */}
         <Route path="/review" element={<LegacyRedirect to="/today#review" />} />
-        <Route path="/analysis" element={<AnalysisTab />} />
+        <Route path="/analysis" element={<LegacyRedirect to="/records" />} />
         {/* 구 경로 → 새 대표 경로 리다이렉트(신구 화면 혼재 방지) */}
         <Route path="/review/hub" element={<LegacyRedirect to="/today#review" />} />
         <Route path="/review/today" element={<LegacyRedirect to="/today#review" />} />
-        <Route path="/analysis/hub" element={<Navigate to="/analysis" replace />} />
-        <Route path="/analysis/overview" element={<Navigate to="/analysis" replace />} />
+        <Route path="/analysis/hub" element={<LegacyRedirect to="/records" />} />
+        <Route path="/analysis/overview" element={<LegacyRedirect to="/records" />} />
         {/* 새 화면 안에서 '더 보기'로 진입하는 상세 경로 — 유지 */}
         <Route path="/review/scheduled" element={<Review />} />
         <Route path="/review/mistakes" element={<ReviewLanding mode="mistakes" />} />
@@ -284,7 +283,7 @@ function App() {
         <Route path="/analysis/scores" element={<AnalysisDetail mode="scores" />} />
         <Route path="/analysis/history" element={<AnalysisDetail mode="history" />} />
         <Route path="/analysis/eval" element={<EvalReport />} />
-        <Route path="/analysis/listening" element={<ListeningReport />} />
+        <Route path="/analysis/listening" element={<LegacyRedirect to="/records?track=listen" />} />
         <Route path="/admin/feedback" element={<AdminFeedback />} />
         {import.meta.env.VITE_KMSAV_REVIEW === '1' && <Route path="/admin/kmsav" element={<KmsavReview />} />}
         <Route path="/admin/content-review" element={<ContentReview />} />
