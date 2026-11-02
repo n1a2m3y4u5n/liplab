@@ -5,11 +5,15 @@ from concurrent.futures import ThreadPoolExecutor
 ROOT=Path(r'D:\work\hq\projects\liplab-lab\data\e2_538')
 REPO=Path(__file__).resolve().parents[1]
 KEY=Path(r'D:\work\hq\projects\liplab-lab\.aihub.key')
+GLOBAL_AUTH_STOP=Path(r'D:\work\hq\shared\AIHUB_AUTH_STOP')
 EXHASH='a826028983d56eab1a3d9017ee647dc875854fdfb607bdb4ed3beccf9f2a233f'
 class AuthFailure(Exception): pass
 class SlowStop(AuthFailure): pass   # 인증 실패와 같은 길로 즉시 멈추되 AUTH_STOP은 남기지 않는다
 class Stream:
     def __init__(self, r, cap):
+        # Cross-dataset stop: refuse before reading a key or creating a curl process.
+        if GLOBAL_AUTH_STOP.exists():
+            raise AuthFailure('global AI Hub authentication stop; user clearance required')
         self.r=r; self.cap=cap; self.n=0; self.t=time.time()
         fd,self.header=tempfile.mkstemp(dir=ROOT,suffix='.header');os.close(fd)
         self.response=self.header+'.response';self.errf=open(self.header+'.curlerr','wb')
