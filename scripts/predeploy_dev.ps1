@@ -25,6 +25,23 @@ try {
         $savedEnv[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
         [Environment]::SetEnvironmentVariable($name, $settings[$name], 'Process')
     }
+    Invoke-Gate 'API security inventory' { & $Python -X utf8 scripts/api_security_inventory.py --check }
+    Invoke-Gate 'installed runtime dependency closure' {
+        & $Python -X utf8 scripts/runtime_audit_requirements.py --inference --output (Join-Path $ReportDirectory 'runtime-audit-requirements.txt')
+    }
+    Invoke-Gate 'pip-audit (runtime dependency closure)' {
+        & $Python -X utf8 -m pip_audit --disable-pip --no-deps -r (Join-Path $ReportDirectory 'runtime-audit-requirements.txt') --format json --output (Join-Path $ReportDirectory 'pip-audit.json')
+    }
+    Push-Location (Join-Path $root 'frontend')
+    try { Invoke-Gate 'npm audit (including build dependencies)' { & npm.cmd audit --audit-level=moderate } }
+    finally { Pop-Location }
+    Invoke-Gate 'gitleaks working tree' {
+        $scanner = Get-Command gitleaks -ErrorAction SilentlyContinue
+        if ($scanner) { $scannerPath = $scanner.Source }
+        elseif (Test-Path -LiteralPath 'D:\tools\gitleaks\gitleaks.exe') { $scannerPath = 'D:\tools\gitleaks\gitleaks.exe' }
+        else { throw 'gitleaks is required' }
+        & $scannerPath dir . --redact --exit-code 1 --report-format json --report-path (Join-Path $ReportDirectory 'gitleaks.json')
+    }
     Invoke-Gate 'dev config / assets / default-off flags' {
         @'
 import os, pathlib, re, tomllib
