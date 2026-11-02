@@ -227,7 +227,7 @@ function AnalysisMock() {
         </div>
       </ChartCard>
       <div className="flex w-full gap-3">
-        {[['calendar', '활동 캘린더'], ['history', '회차 히스토리'], ['fullStats', '전체 통계']].map(([k, label]) => (
+        {[['calendar', '활동 캘린더'], ['history', '학습 내역'], ['fullStats', '전체 통계']].map(([k, label]) => (
           <span key={k} {...area(k)} className="flex flex-1 items-center justify-between rounded-16 border-2 border-b-5 border-line bg-white py-[18px] pl-5 pr-[18px] text-[15px] font-bold leading-figma text-ink">
             {label}
             <span className="relative h-3.5 w-[7px] shrink-0">
@@ -308,7 +308,7 @@ export const MOCKS = {
   review: { design: [520, 653], C: ReviewMock, areas: ['ctaWrong', 'ctaMark', 'items', 'erase'],
     alt: '오늘 복습 그림. 틀린 문제·북마크 복습 카드와 복습 목록, 지우기 버튼.' },
   analysis: { design: [640, 804], C: AnalysisMock, areas: ['stats', 'bars', 'line', 'calendar', 'history', 'fullStats'],
-    alt: '기록 그림. 맨 위에 총 학습, 평균 정답률, 연속 학습 세 칸. 가운데에 학습 시간과 정답률 변화 그래프. 아래에 활동 캘린더, 회차 히스토리, 전체 통계 링크.' },
+    alt: '기록 그림. 맨 위에 총 학습, 평균 정답률, 연속 학습 세 칸. 가운데에 학습 시간과 정답률 변화 그래프. 아래에 활동 캘린더, 학습 내역, 전체 통계 링크.' },
   profile: { design: [520, 653], C: ProfileMock, areas: ['placement', 'account', 'reset', 'a11y'],
     alt: '내 정보 그림. 이름과 레벨 카드. 시작 단계 다시 정하기, 계정 설정, 학습 초기화 메뉴. 왼쪽 아래 접근성 설정 Aa 버튼.' },
 }

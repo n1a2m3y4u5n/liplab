@@ -1,3 +1,4 @@
+import usePageLoad from '../hooks/usePageLoad'
 import { useLocation } from 'react-router-dom'
 import { todayNext } from '../lib/todayNext'
 import { todayReviewCount, todayReviewStart } from '../lib/reviewDue'
@@ -9,7 +10,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
 import WatermarkCard from '../components/WatermarkCard'
-import { reviewAPI, learningAPI, tasksAPI, curriculumAPI, speakAPI, listenAPI } from '../api'
+import { reviewAPI, tasksAPI, curriculumAPI, speakAPI, listenAPI } from '../api'
 import useStore from '../store/useStore'
 import { rewardMessage } from '../lib/reviewDue'
 
@@ -81,8 +82,6 @@ export default function TodayPage() {
   const location = useLocation()
   const uid = useStore((s) => s.user?.id)
   const [nextData, setNextData] = useState({})
-  const [loadState, setLoadState] = useState('loading')
-  const [reload, setReload] = useState(0)
   const [due, setDue] = useState(null)
   const [tasks, setTasks] = useState(null)
   const [toast, setToast] = useState('')
@@ -99,23 +98,16 @@ export default function TodayPage() {
   }
   const claim = () => tasksAPI.claim().then(applyClaim)
 
-  useEffect(() => {
-    let on = true
-    setLoadState('loading')
-    Promise.all([
+  const { loadState, retry: retryLoad } = usePageLoad(() => Promise.all([
       reviewAPI.getDue().catch(() => null),
       Promise.allSettled([curriculumAPI.getStages(), speakAPI.getCurriculum(), listenAPI.getCurriculum(), listenAPI.links()]),
       tasksAPI.claim().then((res) => { applyClaim(res); return res }).catch(() => tasksAPI.get().catch(() => null)),
-    ]).then(([d, o, t]) => {
-      if (!on) return
+    ]), ([d, o, t]) => {
       setDue(d)
       const [read, speak, listen, links] = o.map((r) => r.status === 'fulfilled' ? r.value : null)
       setNextData({ stages: read, speak, listen, links, lastTrack: loadLastTrack(uid, { read, speak, listen }) })
       setTasks(t)
-      setLoadState('ready')
-    }).catch(() => { if (on) setLoadState('error') })
-    return () => { on = false }
-  }, [reload])
+  })
   useEffect(() => {
     if (!toast) return undefined
     const t = setTimeout(() => setToast(''), 3200)
@@ -135,7 +127,7 @@ export default function TodayPage() {
   if (loadState !== 'ready') return (
     <AppShell active="today" title="오늘">
       {loadState === 'error'
-        ? <ErrorScreen onRetry={() => setReload((n) => n + 1)} onHome={() => navigate('/learn/path')} />
+        ? <ErrorScreen onRetry={retryLoad} onHome={() => navigate('/learn/path')} />
         : <LoadingScreen variant="inline" />}
     </AppShell>
   )
@@ -144,11 +136,11 @@ export default function TodayPage() {
     <AppShell active="today" title="오늘">
       <section className="card-flat flex flex-col gap-3">
         {next.line && <p className="text-sm text-ink-muted">{next.line}</p>}
-        {next.retry && <button className="btn-secondary min-h-11" onClick={() => setReload((n) => n + 1)}>다시 가져오기</button>}
+        {next.retry && <button className="btn-secondary min-h-11" onClick={retryLoad}>다시 가져오기</button>}
         <button className="btn-primary btn-lg w-full" onClick={() => navigate(next.to, { state: next.state })}>{next.label}</button>
       </section>
       <div className="today-grid contents">
-      {!due && <section className="card-flat flex flex-wrap items-center justify-between gap-2" role="alert"><p className="text-sm text-ink-muted">복습할 것을 가져오지 못했어요.</p><button className="btn-secondary min-h-11 px-3" onClick={() => setReload((n) => n + 1)}>다시 가져오기</button></section>}
+      {!due && <section className="card-flat flex flex-wrap items-center justify-between gap-2" role="alert"><p className="text-sm text-ink-muted">복습할 것을 가져오지 못했어요.</p><button className="btn-secondary min-h-11 px-3" onClick={retryLoad}>다시 가져오기</button></section>}
       {!next.review && todayReviewCount(due) > 0 && <section id="review" className="card-flat flex flex-col gap-3">
         <h2 className="font-bold">오늘 복습 {todayReviewCount(due)}개</h2>
         <div className="flex flex-wrap gap-2">{[['입모양 읽기', due?.count, '/review/scheduled'], ['말하기', due?.speak_count, '/review/speaking'], ...(nextData.links?.listen_started ? [['소리 듣기', due?.listen_count, '/listen/review']] : [])].filter(([, n]) => n > 0).map(([label, n, to]) => <button key={to} className="btn-secondary min-h-11 px-3" onClick={() => navigate(to)}>{label} {n}개</button>)}</div>
@@ -172,7 +164,7 @@ export default function TodayPage() {
           )
         })}
         {tasks && daily.length === 0 && <p className="text-sm text-ink-muted">오늘의 과제가 없어요.</p>}
-        {!tasks && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted"><p>과제를 가져오지 못했어요.</p><button className="btn-secondary min-h-11 px-3" onClick={() => setReload((n) => n + 1)}>다시 가져오기</button></div>}
+        {!tasks && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted"><p>과제를 가져오지 못했어요.</p><button className="btn-secondary min-h-11 px-3" onClick={retryLoad}>다시 가져오기</button></div>}
       </section>
 
       {/* 이번 주 도전 (141:18 / 238:285) — 워터마크 DOKA(306:32 / 306:39, -20°, 잘림) */}

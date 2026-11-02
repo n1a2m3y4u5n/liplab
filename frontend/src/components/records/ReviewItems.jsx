@@ -1,14 +1,13 @@
+import usePageLoad from '../../hooks/usePageLoad'
 import { trackLabel } from '../../lib/iaLabels'
 import ErrorScreen from '../../components/ErrorScreen'
 import LoadingScreen from '../../components/LoadingScreen'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import AppShell from '../../components/AppShell'
-import WatermarkCard from '../../components/WatermarkCard'
 import ScrollHintList from '../../components/ScrollHintList'
 import { reviewAPI, learningAPI, listenAPI } from '../../api'
 import { relDay } from '../../lib/relDay'
-import { dueCounts, dueStartPath } from '../../lib/reviewDue'
+import { dueCounts } from '../../lib/reviewDue'
 
 /**
  * 복습 탭 (Figma 100:15 · 선택 모드 318:33 · 모바일 239:34 / 318:233) — 오답·북마크 복습 진입 + 복습 항목 리스트.
@@ -82,8 +81,6 @@ function EraseButton({ onClick, className = '' }) {
 
 export default function ReviewItems({ view = 'wrong', track = 'all' }) {
   const navigate = useNavigate()
-  const [loadState, setLoadState] = useState('loading')
-  const [reload, setReload] = useState(0)
   const [due, setDue] = useState({ read: 0, speak: 0 })   // 예정 복습: 독화(간격 반복 세션) · 말하기(말하기 복습)
   const [wrong, setWrong] = useState(0)
   const [marks, setMarks] = useState(0)
@@ -94,17 +91,13 @@ export default function ReviewItems({ view = 'wrong', track = 'all' }) {
   const [selected, setSelected] = useState(new Set())  // 선택된 항목 id 집합
   const [listen, setListen] = useState({ state: 'loading', words: 0, sentences: 0 })   // 듣기 복습(GET /api/listen/review)
 
-  useEffect(() => {
-    let on = true
-    setLoadState('loading')
-    Promise.all([
+  const { loadState, retry: retryLoad } = usePageLoad(() => Promise.all([
       view === 'saved' ? Promise.resolve({}) : reviewAPI.getDue(),
       view === 'saved' ? Promise.resolve([]) : learningAPI.getReviewSentences(),
       view === 'saved' ? learningAPI.getBookmarks() : Promise.resolve([]),
       view === 'saved' || !['all', 'listen'].includes(track) ? Promise.resolve({ ok: true, r: {} })
         : listenAPI.review().then((r) => ({ ok: true, r })).catch((e) => { if (e?.response?.status === 404) return { ok: false, missing: true }; throw e }),
-    ]).then(([dueRes, wrongRes, bmRes, lsRes]) => {
-      if (!on) return
+    ]), ([dueRes, wrongRes, bmRes, lsRes]) => {
       // 말하기 예정(kind 'speak')은 /api/review/due의 speak로 따로 온다. 목록에서는 발화 배지로 보인다
       const dueItems = [...(dueRes.items || []), ...(dueRes.speak || [])]
       const wrongArr = Array.isArray(wrongRes) ? wrongRes : (wrongRes.items || [])
@@ -136,10 +129,7 @@ export default function ReviewItems({ view = 'wrong', track = 'all' }) {
         ...lsent.map((x, i) => ({ id: `listen-s-${x.key ?? x.id ?? i}`, track: '듣기', word: x.text, meta: '다시 들어 볼 문장', rel: null, kind: 'listen', raw: x })),
       ]
       setItems([...norm(wrongArr, 'wrong'), ...norm(dueItems, 'due'), ...listenItems, ...norm(bmArr, 'bookmark')])
-      setLoadState('ready')
-    }).catch(() => { if (on) setLoadState('error') })
-    return () => { on = false }
-  }, [reload])
+  })
 
   const shown = items.filter((it) => (view === 'saved' ? it.kind === 'bookmark' : it.kind !== 'bookmark') && (track === 'all' || it.track === ({ read: '독화', speak: '발화', listen: '듣기' }[track])))
   const chips = [
@@ -198,7 +188,7 @@ export default function ReviewItems({ view = 'wrong', track = 'all' }) {
   if (loadState !== 'ready') return (
     <>
       {loadState === 'error'
-        ? <ErrorScreen onRetry={() => setReload((n) => n + 1)} onHome={() => navigate('/learn/path')} />
+        ? <ErrorScreen onRetry={retryLoad} onHome={() => navigate('/learn/path')} />
         : <LoadingScreen variant="inline" />}
     </>
   )

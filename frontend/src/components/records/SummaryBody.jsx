@@ -1,3 +1,4 @@
+import usePageLoad from '../../hooks/usePageLoad'
 import { dayCounts, historyRows, calSubtitle, ActivityCalendar, HistoryList, SessionDetail, FullStats } from './RecordDetails'
 import { RailLevelCard, RailWeekCard } from './ProgressCards'
 import Badges from '../today/Badges'
@@ -290,29 +291,20 @@ function DetailLink({ label, onClick }) {
 
 export default function SummaryBody({ track = 'all' }) {
   const navigate = useNavigate()
-  const [loadState, setLoadState] = useState('loading')
-  const [reload, setReload] = useState(0)
   const [modal, setModal] = useState(null)   // 'calendar' | 'history' | 'stats'
   const [detailRow, setDetailRow] = useState(null)   // 회차 상세(212:24)로 연 히스토리 행
   const [cal, setCal] = useState(null)
   const [acts, setActs] = useState(null)   // 날짜별 학습 내용(활동 캘린더·회차 히스토리)
   const [ov, setOv] = useState(null)       // 요약·주별 추이·배지(/api/analysis/overview)
-  useEffect(() => {
-    let on = true
-    setLoadState('loading')
-    Promise.all([
+  const { loadState, retry: retryLoad } = usePageLoad(() => Promise.all([
       learningAPI.getCalendarActivities().then((activities) => ({ activities }))
         .catch(() => learningAPI.getCalendar().then((calendar) => ({ calendar }))),
       learningAPI.getAnalysisOverview(),
-    ]).then(([data, overview]) => {
-      if (!on) return
+    ]), ([data, overview]) => {
       setActs(data.activities || null)
       setCal(data.calendar || null)
       setOv(overview)
-      setLoadState('ready')
-    }).catch(() => { if (on) setLoadState('error') })
-    return () => { on = false }
-  }, [reload])
+  })
 
   const weeks = ov?.weekly?.length ? ov.weekly : EMPTY_WEEKS
   const sign = (v) => (v > 0 ? '+' : v < 0 ? '−' : '±')
@@ -328,7 +320,7 @@ export default function SummaryBody({ track = 'all' }) {
   if (loadState !== 'ready') return (
     <>
       {loadState === 'error'
-        ? <ErrorScreen onRetry={() => setReload((n) => n + 1)} onHome={() => navigate('/learn/path')} />
+        ? <ErrorScreen onRetry={retryLoad} onHome={() => navigate('/learn/path')} />
         : <LoadingScreen variant="inline" />}
     </>
   )
@@ -356,7 +348,7 @@ export default function SummaryBody({ track = 'all' }) {
 
       <div className="flex w-full flex-col gap-[9px] lg:flex-row lg:gap-3">
         <DetailLink label="활동 캘린더" onClick={() => setModal('calendar')} />
-        <DetailLink label="회차 히스토리" onClick={() => setModal('history')} />
+        <DetailLink label="학습 내역" onClick={() => setModal('history')} />
         <DetailLink label="전체 통계" onClick={() => setModal('stats')} />
       </div>
 
@@ -365,7 +357,7 @@ export default function SummaryBody({ track = 'all' }) {
         subtitle={calSubtitle(counts, ov?.session_days)} maxW="max-w-[900px]">
         <ActivityCalendar counts={counts} />
       </Modal>
-      <Modal open={modal === 'history'} onClose={() => setModal(null)} title="회차 히스토리"
+      <Modal open={modal === 'history'} onClose={() => setModal(null)} title="학습 내역"
         subtitle={`최근 학습 기록 · 총 ${(ov?.sessions ?? history.length).toLocaleString()}회`} maxW="max-w-[820px]">
         <HistoryList rows={history} onOpen={(r) => { setModal(null); setDetailRow(r) }} />
       </Modal>
