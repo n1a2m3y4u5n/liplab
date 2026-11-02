@@ -24,7 +24,7 @@ if ($LASTEXITCODE -ne 0) { 'V3C_FAIL tables'; exit 1 }
 if ($LASTEXITCODE -ne 0) { 'V3C_FAIL jobs'; exit 1 }
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Scripts 'v3_538_render.ps1') -Name cf -Jobs $Jobs -Tables $Tables -Port 5296
 if ($LASTEXITCODE -ne 0) { 'V3C_FAIL render'; exit 1 }
-$need = @(Get-Content $Jobs -Raw -Encoding utf8 | ConvertFrom-Json).Count
+$need = [int](& $Python -c "import json,sys; print(len(json.load(open(sys.argv[1], encoding='utf-8'))))" $Jobs)
 $nr = (Get-ChildItem (Join-Path $W 'cf\renders') -Filter *.sched.json).Count
 $nb = (Get-ChildItem (Join-Path $W 'cf\bs') -Filter *.json).Count
 if ($nr -ne $need -or $nb -ne $need) { "V3C_FAIL 렌더 수 need=$need renders=$nr bs=$nb (지표 계산 전이라 다시 돌려도 된다)"; exit 1 }
