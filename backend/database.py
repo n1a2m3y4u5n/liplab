@@ -36,6 +36,13 @@ AsyncSessionLocal = sessionmaker(
 Base = async_declarative_base()
 
 
+class RevokedToken(Base):
+    """로그아웃한 토큰의 해시만 보관한다(원문·계정 정보는 저장하지 않는다)."""
+    __tablename__ = "revoked_tokens"
+    token_hash = Column(String(64), primary_key=True)
+    expires_at = Column(DateTime, nullable=False, index=True)
+
+
 class User(Base):
     """User account model with authentication and progress tracking"""
     __tablename__ = "users"

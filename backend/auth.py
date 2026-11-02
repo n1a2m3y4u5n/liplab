@@ -3,18 +3,21 @@ JWT-based authentication system for LIPLAB
 Handles user registration, login, token generation and validation
 """
 import os
+import hashlib
+import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import bcrypt as bcrypt_lib
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError as JWTError
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import User, get_db
+from database import User, RevokedToken, get_db
 
 # Security configuration
 # JWT 서명키. 공개 기본값으로 서명되면 임의 user_id 토큰을 위조해 전 계정을 사칭할 수 있다.
@@ -108,6 +111,11 @@ def get_password_hash(password: str) -> str:
 
 
 # Token utilities
+def token_fingerprint(token: str) -> str:
+    # 서명 Base64의 패딩만 바꿔도 같은 서명으로 검증된다. 서명된 본문을 식별자로 써 폐기 우회를 막는다.
+    return hashlib.sha256(token.rsplit(".", 1)[0].encode("utf-8")).hexdigest()
+
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Create JWT access token"""
     to_encode = data.copy()
@@ -116,7 +124,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "jti": uuid.uuid4().hex})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt if isinstance(encoded_jwt, str) else encoded_jwt.decode("utf-8")
 
@@ -147,6 +155,8 @@ async def get_current_user(
         raise credentials_exception
 
     # Fetch user from database
+    if await db.get(RevokedToken, token_fingerprint(token)):
+        raise credentials_exception
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
@@ -232,3 +242,16 @@ def create_token_response(user: User) -> Token:
             "streak_count": user.streak_count or 0,
         }
     )
+
+
+async def revoke_access_token(token: str, db: AsyncSession) -> None:
+    """같은 계정의 다른 방문자에게 영향 없이 현재 토큰만 폐기한다."""
+    from sqlalchemy import delete
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
+    await db.execute(delete(RevokedToken).where(RevokedToken.expires_at < datetime.utcnow()))
+    db.add(RevokedToken(token_hash=token_fingerprint(token),
+                        expires_at=datetime.utcfromtimestamp(payload["exp"])))
+    try:
+        await db.commit()
+    except IntegrityError:  # 동시에 같은 토큰을 폐기한 요청
+        await db.rollback()

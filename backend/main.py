@@ -167,7 +167,19 @@ async def _security_headers(request, call_next):
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-    resp.headers.setdefault("Content-Security-Policy", "object-src 'none'; frame-ancestors 'self'; base-uri 'self'")
+    # Vite 빌드: MediaPipe/ONNX WASM은 jsDelivr, 얼굴 모델은 Google Storage에서 받는다.
+    # WASM 컴파일만 허용하고 일반 JS eval/인라인 스크립트는 허용하지 않는다.
+    resp.headers.setdefault("Content-Security-Policy", "; ".join([
+        "default-src 'self'",
+        "script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net",
+        "worker-src 'self' blob:",
+        "connect-src 'self' blob: data: https://cdn.jsdelivr.net https://storage.googleapis.com",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: blob:",
+        "media-src 'self' data: blob:",
+        "object-src 'none'", "frame-ancestors 'self'", "base-uri 'self'", "form-action 'self'",
+    ]))
     # HSTS는 HTTPS에서만 의미(브라우저가 http에선 무시). fly는 force_https라 실서비스에서 적용됨.
     resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
     return resp
@@ -5005,7 +5017,7 @@ async def conversation_multi(speakers: int = 2, turns: int = 6, scene: Optional[
     from database import WeakViseme
     from sqlalchemy import select as _select
     from auth import SECRET_KEY, ALGORITHM
-    from jose import jwt as _jwt
+    import jwt as _jwt
     from datetime import datetime as _dt, timedelta as _td
     try:
         rows = (await db.execute(_select(WeakViseme).where(WeakViseme.user_id == current_user.id))).scalars().all()
@@ -5062,7 +5074,8 @@ async def conversation_multi_result(req: MultiConvResultReq,
     if req.answer_key:
         import conversation_scenario as _conv
         from auth import SECRET_KEY, ALGORITHM
-        from jose import jwt as _jwt, JWTError as _JWTError
+        import jwt as _jwt
+        from jwt import InvalidTokenError as _JWTError
         try:
             key = _jwt.decode(req.answer_key, SECRET_KEY, algorithms=[ALGORITHM])
         except _JWTError:

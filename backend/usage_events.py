@@ -200,6 +200,8 @@ async def collect(request: Request, db=Depends(get_db)):
 
 @router.post('/api/auth/logout')
 async def logout(request: Request, user=Depends(get_current_user), db=Depends(get_db)):
+    from auth import revoke_access_token
+    await revoke_access_token(request.headers['authorization'].split()[1], db)
     await record_auth(db, user.id, 'logout', request)
     return {'ok': True}
 

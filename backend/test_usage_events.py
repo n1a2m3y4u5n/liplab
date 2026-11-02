@@ -30,6 +30,9 @@ with TestClient(main.app) as c:
     os.environ['LIPLAB_USAGE_LOG']='1'
     assert c.post('/api/auth/login',json={'email':'user@example.com','password':'test-password-123'}).status_code==200
     assert c.post('/api/auth/logout',headers=h).status_code==200
+    assert c.get('/api/auth/me',headers=h).status_code==401
+    fresh=c.post('/api/auth/login',json={'email':'user@example.com','password':'test-password-123'}).json()
+    h={'Authorization':'Bearer '+fresh['access_token']}
     assert c.post('/api/events',headers=h,json={'events':[{'event':'route'}]*51}).status_code==422
     assert c.post('/api/events',headers=h,content='x'*32769).status_code==413
     assert c.post('/api/events',headers=h,json={'events':[{'event':'route','props':{'x':'a'*2049}}]}).status_code==413
@@ -112,7 +115,9 @@ with TestClient(main.app) as c:
     demo={'Authorization':'Bearer '+r.json()['access_token']}
     assert c.post('/api/events',headers=demo,json={'events':[ev('route')]}).status_code==200
     assert c.post('/api/auth/logout',headers={**demo,**ids()}).status_code==200
-    assert c.post('/api/auth/demo',headers=ids(D2,S2)).status_code==200
+    renewed=c.post('/api/auth/demo',headers=ids(D2,S2))
+    assert renewed.status_code==200
+    demo={'Authorization':'Bearer '+renewed.json()['access_token']}
     assert c.post('/api/events',headers=demo,json={'events':[ev('route',D2,S2)]}).status_code==200
     data=c.get('/api/admin/usage',headers=admin).json()
     assert data['test_aggregate'] and not any(r['is_test'] for r in data['timeline'])
