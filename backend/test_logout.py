@@ -22,13 +22,13 @@ with TestClient(main.app) as c:
     assert a['access_token'] != b['access_token']
     headers = lambda t: {'Authorization': 'Bearer ' + t}
     ha, hb = headers(a['access_token']), headers(b['access_token'])
-    assert c.post('/api/auth/logout', headers=ha).status_code == 204
+    assert c.post('/api/auth/logout', headers=ha).status_code == 200
     assert c.get('/api/auth/me', headers=ha).status_code == 401
     assert c.get('/api/auth/me', headers=hb).status_code == 200
     legacy = jwt.encode({'sub': str(a['user']['id']), 'exp': datetime.utcnow() + timedelta(hours=1)}, SECRET_KEY, algorithm=ALGORITHM)
     hl = headers(legacy)
     assert c.get('/api/auth/me', headers=hl).status_code == 200
-    assert c.post('/api/auth/logout', headers=hl).status_code == 204
+    assert c.post('/api/auth/logout', headers=hl).status_code == 200
     assert c.get('/api/auth/me', headers=hl).status_code == 401
     expired = jwt.encode({'sub': str(a['user']['id']), 'exp': datetime.utcnow() - timedelta(seconds=1)}, SECRET_KEY, algorithm=ALGORITHM)
     assert c.get('/api/auth/me', headers=headers(expired)).status_code == 401

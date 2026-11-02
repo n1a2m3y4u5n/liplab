@@ -237,3 +237,16 @@ def create_token_response(user: User) -> Token:
             "streak_count": user.streak_count or 0,
         }
     )
+
+
+async def revoke_access_token(token: str, db: AsyncSession) -> None:
+    """?? ??? ?? ????? ?? ?? ?? ??? ????."""
+    from sqlalchemy import delete
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
+    await db.execute(delete(RevokedToken).where(RevokedToken.expires_at < datetime.utcnow()))
+    db.add(RevokedToken(token_hash=hashlib.sha256(token.encode("utf-8")).hexdigest(),
+                        expires_at=datetime.utcfromtimestamp(payload["exp"])))
+    try:
+        await db.commit()
+    except IntegrityError:  # ??? ?? ??? ??? ??
+        await db.rollback()
