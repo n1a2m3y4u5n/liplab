@@ -1,0 +1,32 @@
+﻿11:51:17 [train] cand=K2pre seed=0 params front=2.86M head=3.18M sent=886 words=9112 val_items=2238 dev=cuda amp=1
+11:52:53   ep0 b100 ctc=3.369 5863 fr/s gpu_peak=3.37G reserved=4.97G
+11:54:28   ep0 b200 ctc=3.298 5916 fr/s gpu_peak=3.37G reserved=4.97G
+11:55:29 ep  0 ctc=3.279 ep 251s gpu_peak=3.37G reserved=4.97G
+11:57:04   ep1 b100 ctc=3.204 5954 fr/s gpu_peak=3.35G reserved=4.97G
+11:58:42   ep1 b200 ctc=3.195 5860 fr/s gpu_peak=3.41G reserved=4.97G
+12:00:10 ep  1 ctc=3.194 val4 dup2=0.228 dup1=0.219 mean=0.224 cer=0.979 ep 254s val 27s gpu_peak=3.41G reserved=4.99G
+12:01:45   ep2 b100 ctc=3.190 5855 fr/s gpu_peak=3.37G reserved=4.99G
+12:03:20   ep2 b200 ctc=3.111 5972 fr/s gpu_peak=3.37G reserved=4.99G
+12:04:19 ep  2 ctc=3.070 ep 248s gpu_peak=3.38G reserved=4.99G
+12:05:54   ep3 b100 ctc=2.893 6101 fr/s gpu_peak=3.38G reserved=4.98G
+12:07:26   ep3 b200 ctc=2.917 6071 fr/s gpu_peak=3.38G reserved=4.98G
+12:08:59 ep  3 ctc=2.911 val4 dup2=0.245 dup1=0.233 mean=0.239 cer=0.804 ep 253s val 27s gpu_peak=3.38G reserved=4.98G
+12:10:46   ep4 b100 ctc=2.901 5539 fr/s gpu_peak=3.34G reserved=4.98G
+12:12:20   ep4 b200 ctc=2.894 5762 fr/s gpu_peak=3.37G reserved=4.98G
+12:13:19 ep  4 ctc=2.892 ep 256s gpu_peak=3.37G reserved=4.98G
+12:14:55   ep5 b100 ctc=2.863 5961 fr/s gpu_peak=3.37G reserved=4.98G
+12:16:28   ep5 b200 ctc=2.864 5950 fr/s gpu_peak=3.37G reserved=4.98G
+12:17:58 ep  5 ctc=2.862 val4 dup2=0.252 dup1=0.245 mean=0.248 cer=0.772 ep 250s val 29s gpu_peak=3.37G reserved=4.98G
+12:19:33   ep6 b100 ctc=2.860 5984 fr/s gpu_peak=3.35G reserved=4.96G
+12:21:07   ep6 b200 ctc=2.876 6000 fr/s gpu_peak=3.37G reserved=4.98G
+12:22:06 ep  6 ctc=2.879 ep 248s gpu_peak=3.40G reserved=4.98G
+12:23:41   ep7 b100 ctc=2.862 5995 fr/s gpu_peak=3.36G reserved=4.98G
+12:25:17   ep7 b200 ctc=2.865 5981 fr/s gpu_peak=3.36G reserved=4.99G
+12:26:42 ep  7 ctc=2.860 val4 dup2=0.246 dup1=0.241 mean=0.243 cer=0.779 ep 249s val 27s gpu_peak=3.36G reserved=4.99G
+12:28:15   ep8 b100 ctc=2.835 6027 fr/s gpu_peak=3.34G reserved=4.97G
+12:29:49   ep8 b200 ctc=2.838 6029 fr/s gpu_peak=3.39G reserved=4.98G
+12:30:49 ep  8 ctc=2.845 ep 247s gpu_peak=3.39G reserved=4.98G
+12:32:24   ep9 b100 ctc=2.866 5999 fr/s gpu_peak=3.34G reserved=4.98G
+12:33:57   ep9 b200 ctc=2.859 6003 fr/s gpu_peak=3.34G reserved=4.98G
+12:35:24 ep  9 ctc=2.865 val4 dup2=0.238 dup1=0.235 mean=0.237 cer=0.761 ep 248s val 27s gpu_peak=3.34G reserved=4.98G
+ROI_TRAIN_DONE cand=K2pre seed=0 best_ep=5 val4_mean=0.2484 → D:\work\hq\projects\liplab-gpu2\data\run_k\run_K2pre0/model.pt

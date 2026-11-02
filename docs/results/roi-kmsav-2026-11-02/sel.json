@@ -1,0 +1,78 @@
+{
+ "rule": "각 실행 최고 체크포인트에서 (실행, dup) 중 검증 4지 최대, 동점은 R1 s0, s1, R2 s0, s1 순서·dup2 먼저",
+ "selected": {
+  "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K1s0",
+  "model": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K1s0\\model.pt",
+  "dup": 1,
+  "cand": "K1",
+  "seed": 0,
+  "epoch": 29,
+  "val_4way": 0.4202
+ },
+ "table": [
+  {
+   "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K1s0",
+   "cand": "K1",
+   "seed": 0,
+   "dup": 2,
+   "epoch": 29,
+   "val_4way": 0.3265
+  },
+  {
+   "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K1s0",
+   "cand": "K1",
+   "seed": 0,
+   "dup": 1,
+   "epoch": 29,
+   "val_4way": 0.4202
+  },
+  {
+   "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K1s1",
+   "cand": "K1",
+   "seed": 1,
+   "dup": 2,
+   "epoch": 27,
+   "val_4way": 0.3235
+  },
+  {
+   "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K1s1",
+   "cand": "K1",
+   "seed": 1,
+   "dup": 1,
+   "epoch": 27,
+   "val_4way": 0.3641
+  },
+  {
+   "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K2s0",
+   "cand": "K2",
+   "seed": 0,
+   "dup": 2,
+   "epoch": 15,
+   "val_4way": 0.2336
+  },
+  {
+   "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K2s0",
+   "cand": "K2",
+   "seed": 0,
+   "dup": 1,
+   "epoch": 15,
+   "val_4way": 0.1611
+  },
+  {
+   "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K2s1",
+   "cand": "K2",
+   "seed": 1,
+   "dup": 2,
+   "epoch": 3,
+   "val_4way": 0.2492
+  },
+  {
+   "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K2s1",
+   "cand": "K2",
+   "seed": 1,
+   "dup": 1,
+   "epoch": 3,
+   "val_4way": 0.1387
+  }
+ ]
+}

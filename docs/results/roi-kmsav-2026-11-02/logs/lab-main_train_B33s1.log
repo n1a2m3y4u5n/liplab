@@ -1,0 +1,167 @@
+﻿10:08:56 [train] cand=B33 seed=1 params front=2.86M head=3.18M sent=886 words=9112 val_items=2238 dev=cuda amp=1
+10:09:31   ep0 b100 ctc=4.185 5525 fr/s gpu_peak=2.19G reserved=4.68G
+10:10:04   ep0 b200 ctc=3.863 5628 fr/s gpu_peak=2.50G reserved=4.68G
+10:10:37   ep0 b300 ctc=3.728 5626 fr/s gpu_peak=2.50G reserved=4.68G
+10:10:41 ep  0 ctc=3.714 ep 104s gpu_peak=2.50G reserved=4.68G
+10:11:12   ep1 b100 ctc=3.302 5845 fr/s gpu_peak=2.46G reserved=4.61G
+10:11:45   ep1 b200 ctc=3.251 5762 fr/s gpu_peak=2.49G reserved=4.76G
+10:12:18   ep1 b300 ctc=3.210 5745 fr/s gpu_peak=2.49G reserved=4.76G
+10:12:49 ep  1 ctc=3.208 val4 dup2=0.225 dup1=0.166 mean=0.196 cer=0.957 ep 100s val 27s gpu_peak=2.49G reserved=4.76G
+10:13:22   ep2 b100 ctc=3.090 5658 fr/s gpu_peak=2.25G reserved=4.67G
+10:13:54   ep2 b200 ctc=3.074 5715 fr/s gpu_peak=2.39G reserved=4.79G
+10:14:26   ep2 b300 ctc=3.063 5720 fr/s gpu_peak=2.64G reserved=4.79G
+10:14:30 ep  2 ctc=3.061 ep 101s gpu_peak=2.64G reserved=4.79G
+10:15:03   ep3 b100 ctc=3.037 5667 fr/s gpu_peak=2.31G reserved=4.75G
+10:15:35   ep3 b200 ctc=3.015 5737 fr/s gpu_peak=2.31G reserved=4.75G
+10:16:07   ep3 b300 ctc=3.005 5745 fr/s gpu_peak=2.31G reserved=4.75G
+10:16:39 ep  3 ctc=3.006 val4 dup2=0.214 dup1=0.151 mean=0.183 cer=0.838 ep 101s val 27s gpu_peak=2.31G reserved=4.75G
+10:17:11   ep4 b100 ctc=2.960 5743 fr/s gpu_peak=2.35G reserved=4.69G
+10:17:44   ep4 b200 ctc=2.961 5715 fr/s gpu_peak=2.35G reserved=4.69G
+10:18:17   ep4 b300 ctc=2.959 5710 fr/s gpu_peak=2.49G reserved=4.72G
+10:18:21 ep  4 ctc=2.958 ep 102s gpu_peak=2.49G reserved=4.72G
+10:18:53   ep5 b100 ctc=2.927 5748 fr/s gpu_peak=2.40G reserved=4.68G
+10:19:25   ep5 b200 ctc=2.938 5740 fr/s gpu_peak=2.44G reserved=4.79G
+10:19:58   ep5 b300 ctc=2.934 5720 fr/s gpu_peak=2.44G reserved=4.79G
+10:20:29 ep  5 ctc=2.934 val4 dup2=0.203 dup1=0.148 mean=0.175 cer=0.803 ep 101s val 28s gpu_peak=2.44G reserved=4.79G
+10:21:01   ep6 b100 ctc=2.921 5675 fr/s gpu_peak=2.43G reserved=4.68G
+10:21:34   ep6 b200 ctc=2.913 5695 fr/s gpu_peak=2.43G reserved=4.70G
+10:22:06   ep6 b300 ctc=2.910 5719 fr/s gpu_peak=2.43G reserved=4.70G
+10:22:10 ep  6 ctc=2.911 ep 101s gpu_peak=2.43G reserved=4.70G
+10:22:43   ep7 b100 ctc=2.893 5700 fr/s gpu_peak=2.16G reserved=4.66G
+10:23:16   ep7 b200 ctc=2.894 5730 fr/s gpu_peak=2.28G reserved=4.66G
+10:23:47   ep7 b300 ctc=2.891 5719 fr/s gpu_peak=2.28G reserved=4.69G
+10:24:19 ep  7 ctc=2.892 val4 dup2=0.196 dup1=0.150 mean=0.173 cer=0.771 ep 101s val 28s gpu_peak=2.28G reserved=4.69G
+10:24:52   ep8 b100 ctc=2.885 5543 fr/s gpu_peak=2.15G reserved=4.66G
+10:25:25   ep8 b200 ctc=2.877 5620 fr/s gpu_peak=2.56G reserved=4.68G
+10:25:58   ep8 b300 ctc=2.876 5662 fr/s gpu_peak=2.56G reserved=4.68G
+10:26:02 ep  8 ctc=2.875 ep 103s gpu_peak=2.56G reserved=4.68G
+10:26:35   ep9 b100 ctc=2.867 5674 fr/s gpu_peak=2.47G reserved=4.77G
+10:27:07   ep9 b200 ctc=2.857 5730 fr/s gpu_peak=2.47G reserved=4.77G
+10:27:40   ep9 b300 ctc=2.855 5713 fr/s gpu_peak=2.47G reserved=4.77G
+10:28:12 ep  9 ctc=2.854 val4 dup2=0.208 dup1=0.165 mean=0.187 cer=0.757 ep 102s val 28s gpu_peak=2.47G reserved=4.77G
+10:28:44   ep10 b100 ctc=2.802 5706 fr/s gpu_peak=2.46G reserved=4.73G
+10:29:18   ep10 b200 ctc=2.819 5657 fr/s gpu_peak=2.46G reserved=4.73G
+10:29:51   ep10 b300 ctc=2.816 5631 fr/s gpu_peak=2.46G reserved=4.73G
+10:29:55 ep 10 ctc=2.817 ep 104s gpu_peak=2.46G reserved=4.73G
+10:30:34   ep11 b100 ctc=2.790 4735 fr/s gpu_peak=2.30G reserved=4.69G
+10:31:08   ep11 b200 ctc=2.793 5079 fr/s gpu_peak=2.30G reserved=4.69G
+10:31:42   ep11 b300 ctc=2.789 5267 fr/s gpu_peak=2.30G reserved=4.69G
+10:32:14 ep 11 ctc=2.787 val4 dup2=0.242 dup1=0.225 mean=0.233 cer=0.749 ep 111s val 28s gpu_peak=2.30G reserved=4.69G
+10:32:48   ep12 b100 ctc=2.755 5587 fr/s gpu_peak=2.37G reserved=4.71G
+10:33:21   ep12 b200 ctc=2.757 5600 fr/s gpu_peak=2.37G reserved=4.71G
+10:33:55   ep12 b300 ctc=2.753 5575 fr/s gpu_peak=2.37G reserved=4.71G
+10:33:59 ep 12 ctc=2.750 ep 104s gpu_peak=2.37G reserved=4.71G
+10:34:32   ep13 b100 ctc=2.725 5538 fr/s gpu_peak=2.36G reserved=4.68G
+10:35:05   ep13 b200 ctc=2.716 5563 fr/s gpu_peak=2.36G reserved=4.69G
+10:35:39   ep13 b300 ctc=2.707 5535 fr/s gpu_peak=2.36G reserved=4.69G
+10:36:12 ep 13 ctc=2.705 val4 dup2=0.257 dup1=0.238 mean=0.247 cer=0.733 ep 104s val 29s gpu_peak=2.36G reserved=4.69G
+10:36:47   ep14 b100 ctc=2.670 5465 fr/s gpu_peak=2.15G reserved=4.67G
+10:37:21   ep14 b200 ctc=2.664 5457 fr/s gpu_peak=2.30G reserved=4.67G
+10:37:54   ep14 b300 ctc=2.661 5516 fr/s gpu_peak=2.38G reserved=4.67G
+10:37:58 ep 14 ctc=2.659 ep 106s gpu_peak=2.38G reserved=4.67G
+10:38:33   ep15 b100 ctc=2.614 5419 fr/s gpu_peak=2.20G reserved=4.67G
+10:39:06   ep15 b200 ctc=2.613 5463 fr/s gpu_peak=2.28G reserved=4.67G
+10:39:42   ep15 b300 ctc=2.608 5419 fr/s gpu_peak=2.50G reserved=4.67G
+10:40:18 ep 15 ctc=2.607 val4 dup2=0.250 dup1=0.281 mean=0.265 cer=0.754 ep 107s val 32s gpu_peak=2.50G reserved=4.67G
+10:40:53   ep16 b100 ctc=2.561 5272 fr/s gpu_peak=2.25G reserved=4.68G
+10:41:26   ep16 b200 ctc=2.567 5425 fr/s gpu_peak=2.40G reserved=4.74G
+10:42:02   ep16 b300 ctc=2.562 5332 fr/s gpu_peak=2.40G reserved=4.74G
+10:42:06 ep 16 ctc=2.560 ep 108s gpu_peak=2.40G reserved=4.74G
+10:42:59   ep17 b100 ctc=2.532 3493 fr/s gpu_peak=2.32G reserved=4.65G
+10:53:14 [train] cand=B33 seed=1 params front=2.86M head=3.18M sent=886 words=9112 val_items=2238 dev=cuda amp=1
+10:53:16 [train] 이어 하기: ep17부터 (best ep15 0.2654, bad=0)
+11:06:14 [train] cand=B33 seed=1 params front=2.86M head=3.18M sent=886 words=9112 val_items=2238 dev=cuda amp=1
+11:06:19 [train] 이어 하기: ep17부터 (best ep15 0.2654, bad=0)
+11:06:54   ep17 b100 ctc=2.521 5237 fr/s gpu_peak=2.33G reserved=4.68G
+11:07:29   ep17 b200 ctc=2.525 5315 fr/s gpu_peak=2.59G reserved=4.68G
+11:08:01   ep17 b300 ctc=2.518 5415 fr/s gpu_peak=2.59G reserved=4.69G
+11:08:33 ep 17 ctc=2.516 val4 dup2=0.294 dup1=0.320 mean=0.307 cer=0.718 ep 107s val 28s gpu_peak=2.59G reserved=4.69G
+11:09:06   ep18 b100 ctc=2.479 5674 fr/s gpu_peak=2.12G reserved=4.65G
+11:09:39   ep18 b200 ctc=2.472 5703 fr/s gpu_peak=2.47G reserved=4.71G
+11:10:11   ep18 b300 ctc=2.461 5719 fr/s gpu_peak=2.47G reserved=4.71G
+11:10:15 ep 18 ctc=2.461 ep 102s gpu_peak=2.47G reserved=4.71G
+11:10:48   ep19 b100 ctc=2.434 5712 fr/s gpu_peak=2.20G reserved=4.68G
+11:11:20   ep19 b200 ctc=2.413 5779 fr/s gpu_peak=2.30G reserved=4.68G
+11:11:51   ep19 b300 ctc=2.402 5812 fr/s gpu_peak=2.36G reserved=4.68G
+11:12:24 ep 19 ctc=2.400 val4 dup2=0.320 dup1=0.375 mean=0.348 cer=0.712 ep 100s val 29s gpu_peak=2.36G reserved=4.68G
+11:12:58   ep20 b100 ctc=2.344 5645 fr/s gpu_peak=2.33G reserved=4.62G
+11:13:29   ep20 b200 ctc=2.356 5706 fr/s gpu_peak=2.44G reserved=4.62G
+11:14:01   ep20 b300 ctc=2.361 5739 fr/s gpu_peak=2.48G reserved=4.78G
+11:14:05 ep 20 ctc=2.361 ep 101s gpu_peak=2.48G reserved=4.78G
+11:14:38   ep21 b100 ctc=2.327 5684 fr/s gpu_peak=2.40G reserved=4.69G
+11:15:10   ep21 b200 ctc=2.322 5725 fr/s gpu_peak=2.40G reserved=4.69G
+11:15:42   ep21 b300 ctc=2.314 5739 fr/s gpu_peak=2.40G reserved=4.71G
+11:16:13 ep 21 ctc=2.313 val4 dup2=0.317 dup1=0.394 mean=0.355 cer=0.705 ep 101s val 27s gpu_peak=2.40G reserved=4.71G
+11:16:45   ep22 b100 ctc=2.291 5829 fr/s gpu_peak=2.31G reserved=4.65G
+11:17:17   ep22 b200 ctc=2.277 5808 fr/s gpu_peak=2.45G reserved=4.70G
+11:17:48   ep22 b300 ctc=2.274 5820 fr/s gpu_peak=2.45G reserved=4.70G
+11:17:52 ep 22 ctc=2.276 ep 99s gpu_peak=2.45G reserved=4.70G
+11:18:23   ep23 b100 ctc=2.251 5947 fr/s gpu_peak=2.46G reserved=4.64G
+11:18:55   ep23 b200 ctc=2.242 5900 fr/s gpu_peak=2.46G reserved=4.65G
+11:19:27   ep23 b300 ctc=2.249 5875 fr/s gpu_peak=2.46G reserved=4.69G
+11:19:57 ep 23 ctc=2.249 val4 dup2=0.331 dup1=0.425 mean=0.378 cer=0.701 ep 98s val 26s gpu_peak=2.46G reserved=4.69G
+11:20:29   ep24 b100 ctc=2.182 5876 fr/s gpu_peak=2.42G reserved=4.67G
+11:21:00   ep24 b200 ctc=2.198 5897 fr/s gpu_peak=2.42G reserved=4.72G
+11:21:32   ep24 b300 ctc=2.201 5868 fr/s gpu_peak=2.42G reserved=4.72G
+11:21:36 ep 24 ctc=2.203 ep 100s gpu_peak=2.42G reserved=4.72G
+11:22:09   ep25 b100 ctc=2.174 5785 fr/s gpu_peak=2.53G reserved=4.69G
+11:22:40   ep25 b200 ctc=2.152 5805 fr/s gpu_peak=2.53G reserved=4.69G
+11:23:30   ep25 b300 ctc=2.159 4930 fr/s gpu_peak=2.53G reserved=4.69G
+11:24:01 ep 25 ctc=2.156 val4 dup2=0.337 dup1=0.436 mean=0.386 cer=0.713 ep 117s val 27s gpu_peak=2.53G reserved=4.69G
+11:24:34   ep26 b100 ctc=2.150 5678 fr/s gpu_peak=2.41G reserved=4.72G
+11:25:06   ep26 b200 ctc=2.137 5756 fr/s gpu_peak=2.50G reserved=4.72G
+11:25:37   ep26 b300 ctc=2.136 5797 fr/s gpu_peak=2.50G reserved=4.72G
+11:25:41 ep 26 ctc=2.137 ep 100s gpu_peak=2.50G reserved=4.72G
+11:26:14   ep27 b100 ctc=2.085 5642 fr/s gpu_peak=2.43G reserved=4.69G
+11:26:53   ep27 b200 ctc=2.102 5124 fr/s gpu_peak=2.43G reserved=4.69G
+11:27:26   ep27 b300 ctc=2.104 5314 fr/s gpu_peak=2.55G reserved=4.69G
+11:27:57 ep 27 ctc=2.101 val4 dup2=0.331 dup1=0.457 mean=0.394 cer=0.683 ep 108s val 27s gpu_peak=2.55G reserved=4.69G
+11:28:29   ep28 b100 ctc=2.055 5803 fr/s gpu_peak=2.26G reserved=4.69G
+11:29:01   ep28 b200 ctc=2.060 5740 fr/s gpu_peak=2.60G reserved=4.79G
+11:29:33   ep28 b300 ctc=2.068 5751 fr/s gpu_peak=2.60G reserved=4.79G
+11:29:37 ep 28 ctc=2.067 ep 100s gpu_peak=2.60G reserved=4.79G
+11:30:09   ep29 b100 ctc=2.031 5805 fr/s gpu_peak=2.38G reserved=4.60G
+11:30:43   ep29 b200 ctc=2.045 5712 fr/s gpu_peak=2.38G reserved=4.73G
+11:31:14   ep29 b300 ctc=2.046 5759 fr/s gpu_peak=2.57G reserved=4.73G
+11:31:45 ep 29 ctc=2.045 val4 dup2=0.360 dup1=0.455 mean=0.408 cer=0.682 ep 100s val 28s gpu_peak=2.57G reserved=4.73G
+11:32:19   ep30 b100 ctc=2.019 5667 fr/s gpu_peak=2.27G reserved=4.66G
+11:32:51   ep30 b200 ctc=2.029 5717 fr/s gpu_peak=2.28G reserved=4.68G
+11:33:23   ep30 b300 ctc=2.037 5720 fr/s gpu_peak=2.47G reserved=4.68G
+11:33:28 ep 30 ctc=2.035 ep 102s gpu_peak=2.47G reserved=4.68G
+11:34:01   ep31 b100 ctc=1.984 5715 fr/s gpu_peak=2.46G reserved=4.75G
+11:34:33   ep31 b200 ctc=1.988 5745 fr/s gpu_peak=2.46G reserved=4.75G
+11:35:05   ep31 b300 ctc=1.990 5751 fr/s gpu_peak=2.46G reserved=4.75G
+11:35:37 ep 31 ctc=1.990 val4 dup2=0.364 dup1=0.447 mean=0.405 cer=0.686 ep 101s val 28s gpu_peak=2.46G reserved=4.75G
+11:36:10   ep32 b100 ctc=1.961 5629 fr/s gpu_peak=2.42G reserved=4.64G
+11:36:46   ep32 b200 ctc=1.969 5360 fr/s gpu_peak=2.42G reserved=4.70G
+11:37:18   ep32 b300 ctc=1.973 5497 fr/s gpu_peak=2.44G reserved=4.70G
+11:37:22 ep 32 ctc=1.972 ep 105s gpu_peak=2.44G reserved=4.70G
+11:37:54   ep33 b100 ctc=1.929 5806 fr/s gpu_peak=2.38G reserved=4.63G
+11:38:26   ep33 b200 ctc=1.940 5761 fr/s gpu_peak=2.39G reserved=4.75G
+11:38:57   ep33 b300 ctc=1.938 5773 fr/s gpu_peak=2.39G reserved=4.75G
+11:39:28 ep 33 ctc=1.935 val4 dup2=0.369 dup1=0.473 mean=0.421 cer=0.675 ep 99s val 27s gpu_peak=2.39G reserved=4.75G
+11:40:01   ep34 b100 ctc=1.913 5730 fr/s gpu_peak=2.12G reserved=4.66G
+11:40:32   ep34 b200 ctc=1.915 5790 fr/s gpu_peak=2.20G reserved=4.71G
+11:41:05   ep34 b300 ctc=1.927 5757 fr/s gpu_peak=2.27G reserved=4.71G
+11:41:09 ep 34 ctc=1.927 ep 101s gpu_peak=2.27G reserved=4.71G
+11:41:42   ep35 b100 ctc=1.895 5742 fr/s gpu_peak=2.39G reserved=4.64G
+11:42:13   ep35 b200 ctc=1.890 5793 fr/s gpu_peak=2.39G reserved=4.70G
+11:42:46   ep35 b300 ctc=1.895 5767 fr/s gpu_peak=2.42G reserved=4.70G
+11:43:17 ep 35 ctc=1.892 val4 dup2=0.360 dup1=0.465 mean=0.412 cer=0.679 ep 100s val 27s gpu_peak=2.42G reserved=4.70G
+11:43:49   ep36 b100 ctc=1.866 5787 fr/s gpu_peak=2.29G reserved=4.61G
+11:44:21   ep36 b200 ctc=1.883 5776 fr/s gpu_peak=2.35G reserved=4.67G
+11:44:53   ep36 b300 ctc=1.877 5758 fr/s gpu_peak=2.55G reserved=4.67G
+11:44:57 ep 36 ctc=1.876 ep 100s gpu_peak=2.55G reserved=4.67G
+11:45:30   ep37 b100 ctc=1.860 5720 fr/s gpu_peak=2.48G reserved=4.66G
+11:46:02   ep37 b200 ctc=1.870 5778 fr/s gpu_peak=2.48G reserved=4.71G
+11:46:35   ep37 b300 ctc=1.861 5756 fr/s gpu_peak=2.48G reserved=4.74G
+11:47:05 ep 37 ctc=1.861 val4 dup2=0.373 dup1=0.477 mean=0.425 cer=0.681 ep 101s val 27s gpu_peak=2.48G reserved=4.74G
+11:47:38   ep38 b100 ctc=1.820 5701 fr/s gpu_peak=2.30G reserved=4.67G
+11:48:10   ep38 b200 ctc=1.813 5715 fr/s gpu_peak=2.30G reserved=4.68G
+11:48:42   ep38 b300 ctc=1.827 5712 fr/s gpu_peak=2.54G reserved=4.68G
+11:48:46 ep 38 ctc=1.826 ep 101s gpu_peak=2.54G reserved=4.68G
+11:49:19   ep39 b100 ctc=1.814 5674 fr/s gpu_peak=2.46G reserved=4.70G
+11:49:52   ep39 b200 ctc=1.811 5687 fr/s gpu_peak=2.46G reserved=4.72G
+11:50:24   ep39 b300 ctc=1.817 5716 fr/s gpu_peak=2.46G reserved=4.72G
+11:50:56 ep 39 ctc=1.817 val4 dup2=0.342 dup1=0.473 mean=0.408 cer=0.665 ep 102s val 28s gpu_peak=2.46G reserved=4.72G
+ROI_TRAIN_DONE cand=B33 seed=1 best_ep=37 val4_mean=0.4252 → D:\work\hq\projects\liplab-gpu2\data\run_base\run_B33s1/model.pt

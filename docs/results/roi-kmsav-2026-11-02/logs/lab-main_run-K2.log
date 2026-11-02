@@ -1,0 +1,20 @@
+﻿2026-11-02 10:08:54 === start role=K2
+2026-11-02 10:08:54 START train_B33s1 free_gb=53.8
+2026-11-02 10:42:58 LOW_MEM free_gb=9.1, stopping own process 26872; resumes from last.pt
+2026-11-02 10:43:07 WAIT gpu=[] free_gb=13.6
+2026-11-02 10:48:09 WAIT gpu=[59836, C:\Users\korea\AppData\Local\Programs\Python\Python312\python.exe; 27132, C:\Users\korea\AppData\Roaming\uv\python\cpython-3.11.18-windows-x86_64-none\python.exe] free_gb=32.9
+2026-11-02 10:53:09 START train_B33s1 free_gb=31.4
+2026-11-02 10:54:09 LOW_MEM free_gb=12.6, stopping own process 10720; resumes from last.pt
+2026-11-02 10:54:10 WAIT gpu=[27024, C:\Users\korea\AppData\Local\Programs\Python\Python312\python.exe; 35836, C:\Users\korea\AppData\Roaming\uv\python\cpython-3.11.18-windows-x86_64-none\python.exe; 55428, C:\Users\korea\AppData\Local\Programs\Python\Python312\python.exe] free_gb=14.1
+2026-11-02 11:06:10 === start role=K2
+2026-11-02 11:06:10 START train_B33s1 free_gb=51.7
+2026-11-02 11:51:14 DONE train_B33s1
+2026-11-02 11:51:14 START train_K2pre0 free_gb=54.1
+2026-11-02 12:36:19 DONE train_K2pre0
+2026-11-02 12:36:19 START train_K2s0 free_gb=55.6
+2026-11-02 13:53:28 DONE train_K2s0
+2026-11-02 13:53:28 START train_K2pre1 free_gb=55.4
+2026-11-02 14:37:33 DONE train_K2pre1
+2026-11-02 14:37:33 START train_K2s1 free_gb=54.3
+2026-11-02 15:39:39 DONE train_K2s1
+2026-11-02 15:39:39 KMS_RUN_DONE

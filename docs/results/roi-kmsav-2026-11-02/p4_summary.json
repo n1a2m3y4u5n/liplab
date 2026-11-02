@@ -1,0 +1,182 @@
+﻿[
+    {
+        "model":  "cand",
+        "cond":  "clean",
+        "dup1":  0.4751542011577205,
+        "dup2":  0.3311210126068818,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K1s0\\model.pt"
+    },
+    {
+        "model":  "cand",
+        "cond":  "low",
+        "dup1":  0.46836792294878554,
+        "dup2":  0.31609051079056777,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K1s0\\model.pt"
+    },
+    {
+        "model":  "cand",
+        "cond":  "jpeg",
+        "dup1":  0.4610523117514888,
+        "dup2":  0.3105451641519589,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K1s0\\model.pt"
+    },
+    {
+        "model":  "cand",
+        "cond":  "geo",
+        "dup1":  0.33470792537551175,
+        "dup2":  0.278203146007108,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K1s0\\model.pt"
+    },
+    {
+        "model":  "cand",
+        "cond":  "bright",
+        "dup1":  0.43638185682855885,
+        "dup2":  0.29744280205653356,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K1s0\\model.pt"
+    },
+    {
+        "model":  "cand",
+        "cond":  "all",
+        "dup1":  0.2862574553293885,
+        "dup2":  0.2656827035552001,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_k\\run_K1s0\\model.pt"
+    },
+    {
+        "model":  "b33",
+        "cond":  "clean",
+        "dup1":  0.5340174284228357,
+        "dup2":  0.3985872182336842,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_base\\run_B33s0\\model.pt"
+    },
+    {
+        "model":  "b33",
+        "cond":  "low",
+        "dup1":  0.5364418103746577,
+        "dup2":  0.40787513249006563,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_base\\run_B33s0\\model.pt"
+    },
+    {
+        "model":  "b33",
+        "cond":  "jpeg",
+        "dup1":  0.5216994057412604,
+        "dup2":  0.3727302737349821,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_base\\run_B33s0\\model.pt"
+    },
+    {
+        "model":  "b33",
+        "cond":  "geo",
+        "dup1":  0.46521917854758926,
+        "dup2":  0.32864901617121334,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_base\\run_B33s0\\model.pt"
+    },
+    {
+        "model":  "b33",
+        "cond":  "bright",
+        "dup1":  0.4860697413679064,
+        "dup2":  0.38191320525091826,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_base\\run_B33s0\\model.pt"
+    },
+    {
+        "model":  "b33",
+        "cond":  "all",
+        "dup1":  0.4031263784439318,
+        "dup2":  0.3049011688642488,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_base\\run_B33s0\\model.pt"
+    },
+    {
+        "model":  "r2s0",
+        "cond":  "clean",
+        "dup1":  0.7568178867223104,
+        "dup2":  NaN,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\models\\lipread_roi_R2s0_2026-10-21\\kr_lipread_roi.web.onnx"
+    },
+    {
+        "model":  "r2s0",
+        "cond":  "low",
+        "dup1":  0.7494411378191047,
+        "dup2":  NaN,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\models\\lipread_roi_R2s0_2026-10-21\\kr_lipread_roi.web.onnx"
+    },
+    {
+        "model":  "r2s0",
+        "cond":  "jpeg",
+        "dup1":  0.7163270195599951,
+        "dup2":  NaN,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\models\\lipread_roi_R2s0_2026-10-21\\kr_lipread_roi.web.onnx"
+    },
+    {
+        "model":  "r2s0",
+        "cond":  "geo",
+        "dup1":  0.35138721759645736,
+        "dup2":  NaN,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\models\\lipread_roi_R2s0_2026-10-21\\kr_lipread_roi.web.onnx"
+    },
+    {
+        "model":  "r2s0",
+        "cond":  "bright",
+        "dup1":  0.6796967492277513,
+        "dup2":  NaN,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\models\\lipread_roi_R2s0_2026-10-21\\kr_lipread_roi.web.onnx"
+    },
+    {
+        "model":  "r2s0",
+        "cond":  "all",
+        "dup1":  0.29770920358918856,
+        "dup2":  NaN,
+        "n_items":  3432,
+        "unseg":  0,
+        "roi_missing":  0,
+        "model_path":  "D:\\work\\hq\\projects\\liplab-lab\\models\\lipread_roi_R2s0_2026-10-21\\kr_lipread_roi.web.onnx"
+    }
+]
