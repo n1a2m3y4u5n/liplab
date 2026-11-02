@@ -50,7 +50,7 @@ function ReviewItem({ track, word, meta, rel, onClick, first, selectMode, checke
   // 선택 모드(318:33): [체크박스][트랙배지][텍스트] · 화살표 제거 · 클릭=체크 토글.
   if (selectMode) {
     return (
-      <button type="button" onClick={onClick} aria-pressed={checked} className={row}>
+      <button data-print-record-item type="button" onClick={onClick} aria-pressed={checked} className={row}>
         {checked
           ? <img src="/ui/lp-318-33-checkbox-on.svg" alt="" className="size-[22px] shrink-0" />
           : <span className="size-[22px] shrink-0 rounded-[7px] border-2 border-line" />}
@@ -61,7 +61,7 @@ function ReviewItem({ track, word, meta, rel, onClick, first, selectMode, checke
   }
   // 기본 모드: 화살표 · 클릭=해당 복습 화면으로 이동.
   return (
-    <button type="button" onClick={onClick} className={row}>
+    <button data-print-record-item type="button" onClick={onClick} className={row}>
       {badge}
       {text}
       <RowArrow />

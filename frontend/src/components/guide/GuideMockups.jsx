@@ -262,7 +262,7 @@ function ProfileMock() {
   )
   return (
     <MobileShell title="프로필" overlay={aa}>
-      <section className="flex h-[150px] w-full items-start gap-3.5 overflow-hidden rounded-18 border-2 border-b-5 border-primary-600 bg-[linear-gradient(156.15deg,#a78bfa_0%,#7d53de_70.92%)] pl-[18px] pr-4 pt-[22px]">
+      <section className="flex h-[150px] w-full items-start gap-3.5 overflow-hidden rounded-18 border-2 border-b-5 border-primary-600 bg-[linear-gradient(156.15deg,var(--brand-light)_0%,var(--brand)_70.92%)] pl-[18px] pr-4 pt-[22px]">
         <div className="flex size-16 shrink-0 items-center justify-center rounded-full border-[3px] border-white/90 bg-white/20 text-2xl font-black text-white">{USER.initial}</div>
         <div className="mt-[19px] flex min-w-0 flex-1 flex-col gap-2 font-bold leading-figma text-white">
           <div className="flex items-center gap-2">

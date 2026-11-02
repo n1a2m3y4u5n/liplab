@@ -115,7 +115,7 @@ export default function AppShell({ children, active, title, description, closeTo
   const activeKey = ({ practice: 'learn', task: 'today', review: 'today', analysis: 'records', profile: 'me' }[active] || active) || NAV.find((n) => location.pathname.startsWith(n.to))?.key
 
   return (
-    <div data-track={learnTrack || undefined}
+    <div data-print-records={activeKey === 'records' ? '' : undefined} data-track={learnTrack || undefined}
       className="flex min-h-[100dvh] flex-col bg-page lg:flex-row lg:items-stretch lg:bg-white">
       {/* 상단 바 (모바일) */}
       <MobileTopBar pink={speak} />

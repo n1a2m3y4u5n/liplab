@@ -121,6 +121,9 @@ body,
 @media (min-width: 1180px) {
   .hub-main[data-hub] { max-width: 1240px; }
   .hub-main[data-hub] .hub-path { max-width: none; }
+  .hub-main[data-hub="records"] .listen-report { max-width: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .listen-report > :not(section), .listen-report > section:first-of-type { grid-column: 1 / -1; }
+  .listen-report > section { min-width: 0; }
   .hub-path .path-nodes { margin-left: 22%; }
   .hub-path .path-card { width: clamp(360px, 34vw, 480px); }
   .hub-path .listen-road { padding-left: 0; }
@@ -468,6 +471,30 @@ html.a11y-contrast [data-track="listen"] .bg-fill { background-color: var(--line
 @media print {
   @page { size: A4; margin: 14mm; }
   body { background: #fff; }
+  /* 기록 탭의 현재 선택·조회 결과만 인쇄한다. 숨긴 자료를 요청하거나 펼치지 않는다. */
+  body:has([data-print-records]) :is(nav, button, a[href], input, select, textarea, [role="dialog"], [data-feedback-slot]) { display: none !important; }
+  [data-print-records] { display: block !important; min-height: 0 !important; background: white !important; }
+  [data-print-records] > header, [data-print-records] .records-controls { display: none !important; }
+  [data-print-records] .records-print-context { display: block !important; color: var(--ink); }
+  [data-print-records] .hub-main { display: block !important; width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+  [data-print-records] .hub-main > * { margin-bottom: 4mm; }
+  [data-print-records] :is(.listen-report, .records-charts) { display: block !important; max-width: none !important; }
+  [data-print-records] :is(.listen-report, .records-charts) > * { margin-bottom: 4mm; }
+  [data-print-records] :is(.ui-card, article, section) { box-shadow: none !important; break-inside: avoid; }
+  [data-print-records] [role="region"] { overflow: visible !important; max-height: none !important; }
+  [data-print-records] .scroll-hint-list { overflow: visible !important; max-height: none !important; }
+  [data-print-records] .scroll-hint-list + [aria-hidden] { display: none !important; }
+  body:has([data-print-records]) [data-print-records] [data-print-record-item] { display: flex !important; break-inside: avoid; }
+  [data-print-records] [data-print-record-item] :is(img, svg) { display: none !important; }
+  [data-print-records] [data-print-record-item] .truncate { overflow: visible; white-space: normal; text-overflow: clip; }
+  [data-print-records] table { width: 100% !important; min-width: 0 !important; border-collapse: collapse; }
+  [data-print-records] thead { display: table-header-group; }
+  [data-print-records] tr { break-inside: avoid; }
+  [data-print-records] :is(th, td) { overflow-wrap: anywhere; }
+  [data-print-records] svg { max-width: 100%; }
+  [data-print-records] :is(.ui-card, table, svg) { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  [data-print-records] * { animation: none !important; transition: none !important; }
+
 }
 
 /* hover 없이도 현재 조작 위치를 찾는다. 기존 focus:outline-none보다 우선한다. */

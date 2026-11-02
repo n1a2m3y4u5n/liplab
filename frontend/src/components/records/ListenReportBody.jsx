@@ -83,7 +83,7 @@ export default function ListenReportBody() {
   const tr = d?.training || {}
   return (
     <>
-      <div data-track="listen" className="mx-auto flex w-full max-w-[752px] flex-col gap-4">
+      <div data-track="listen" className="listen-report mx-auto flex w-full max-w-[752px] flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <h2 className="min-w-0 text-[22px] font-bold text-ink lg:text-[26px]">소리 듣기 결과</h2>
           <button type="button" onClick={() => navigate('/learn/path?track=listen')} className="btn-primary min-h-[44px] shrink-0 px-4 py-2 text-[14px]">연습하러 가기</button>
