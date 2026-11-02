@@ -5026,7 +5026,7 @@ async def conversation_multi(speakers: int = 2, turns: int = 6, scene: Optional[
     from database import WeakViseme
     from sqlalchemy import select as _select
     from auth import SECRET_KEY, ALGORITHM
-    from jose import jwt as _jwt
+    import jwt as _jwt
     from datetime import datetime as _dt, timedelta as _td
     try:
         rows = (await db.execute(_select(WeakViseme).where(WeakViseme.user_id == current_user.id))).scalars().all()
@@ -5083,7 +5083,8 @@ async def conversation_multi_result(req: MultiConvResultReq,
     if req.answer_key:
         import conversation_scenario as _conv
         from auth import SECRET_KEY, ALGORITHM
-        from jose import jwt as _jwt, JWTError as _JWTError
+        import jwt as _jwt
+        from jwt import InvalidTokenError as _JWTError
         try:
             key = _jwt.decode(req.answer_key, SECRET_KEY, algorithms=[ALGORITHM])
         except _JWTError:
