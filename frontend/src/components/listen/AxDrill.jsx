@@ -65,7 +65,7 @@ export default function AxDrill({ data: incomingData, settings, voices, onProgre
       setRes(r)
       tally.add(r.correct, r.status, r)
       if (r.level != null && leveled) { setChange(levelChangeText(level, r.level, data.levels)); setLevel(r.level) }
-    } catch { submission.finish(); setK(n => n + 1); setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
+    } catch { setK(n => n + 1); setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
     setSending(false)
   }
   const next = () => { player.stop(); setK(k + 1) }
@@ -77,7 +77,7 @@ export default function AxDrill({ data: incomingData, settings, voices, onProgre
   useEffect(() => {
     if (submission.sent && !recoveredRef.current) {
       recoveredRef.current = true; submission.finish()
-      if (!res) setK(n => n + 1)
+      if (!res && submission.sent.question === k) setK(n => n + 1)
     }
   }, [])
   saveCheckpoint({ data, k, picked, res, plays, level, change, tally: tally.checkpoint })

@@ -477,7 +477,6 @@ function QuizPanel({ data: incomingData }) {
       setXpEarned((x) => x + (r.xp_gained || 0))
       setTally((t) => ({ n: t.n + 1, correct: t.correct + (r.correct ? 1 : 0) }))
     } catch {
-      submission.finish()
       advance()
       /* 네트워크 실패는 조용히 무시 — 다시 시도 가능 */
     } finally {
@@ -502,7 +501,6 @@ function QuizPanel({ data: incomingData }) {
       setXpEarned((x) => x + (r.xp_gained || 0))
       setTally((t) => ({ n: t.n + 1, correct: t.correct + (r.correct ? 1 : 0) }))
     } catch {
-      submission.finish()
       advance()
       /* 네트워크 실패는 조용히 무시 — 다시 시도 가능 */
     } finally {
@@ -535,7 +533,7 @@ function QuizPanel({ data: incomingData }) {
     if (submission.sent && !recoveredRef.current) {
       recoveredRef.current = true
       submission.finish()
-      if (!result) advance()
+      if (!result && submission.sent.question === qNum) advance()
     }
   }, [])
 

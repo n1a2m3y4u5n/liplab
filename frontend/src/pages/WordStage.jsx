@@ -275,7 +275,7 @@ function WordQuiz({ data: incomingData, reload }) {
         correct = !!rc.correct
         confusions = rc.confusions || []
         setXpEarned((x) => x + (rc.xp_gained || 0))
-      } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
+      } catch { advance(); return } finally { setSubmitting(false) }
       submission.finish()
       setResult({ correct, verdict: correct ? 'correct' : 'wrong', chosen: answer, confusions })
       setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
@@ -290,7 +290,7 @@ function WordQuiz({ data: incomingData, reload }) {
       confusions = rr.confusions || []
       if (typed && rr.verdict) { verdict = rr.verdict; correct = verdict === 'correct' }
       setXpEarned((x) => x + (rr.xp_gained || 0))
-    } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
+    } catch { advance(); return } finally { setSubmitting(false) }
     submission.finish()
     setResult({ correct, verdict, chosen: answer, confusions })
     setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
@@ -321,7 +321,7 @@ function WordQuiz({ data: incomingData, reload }) {
     if (submission.sent && !recoveredRef.current) {
       recoveredRef.current = true
       submission.finish()
-      if (!result) advance()
+      if (!result && submission.sent.question === qNum) advance()
     }
   }, [])
 

@@ -219,9 +219,9 @@ export default function Conversation() {
     try {
       const r = await scoreAPI.score(currentAIText, answer, { practiceOnly })
       turnScore = r.score
+      submission.finish()
     } catch { /* 채점 실패해도 대화는 진행 */ }
 
-    submission.finish()
     setMessages((prev) => [...prev, { role: 'user', text: answer, score: turnScore }])
     if (turnScore != null && !practiceOnly) {
       setScores((prev) => [...prev, turnScore])
@@ -264,7 +264,9 @@ export default function Conversation() {
     if (submission.sent && !recoveredRef.current) {
       recoveredRef.current = true
       const answer = submission.sent.answer
+      const sameTurn = submission.sent.question === turnCount
       submission.finish()
+      if (!sameTurn) return
       setUserInput('')
       setMessages(prev => [...prev, { role: 'user', text: answer, score: null }])
       setTurnCount(n => n + 1)

@@ -150,7 +150,7 @@ export default function SentenceTask({ data: incomingData, settings, voices, onP
         submission.finish()
         setRetry(response)
       }
-    } catch { submission.finish(); setK(n => n + 1); setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
+    } catch { setK(n => n + 1); setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
     setSending(false)
   }
   useListenKeys({ active: active && !!it, onPlay: play, canPlay: ready && !player.busy,
@@ -160,7 +160,7 @@ export default function SentenceTask({ data: incomingData, settings, voices, onP
   useEffect(() => {
     if (submission.sent && !recoveredRef.current) {
       recoveredRef.current = true; submission.finish()
-      if (!first) setK(n => n + 1)
+      if (!first && submission.sent.question === k) setK(n => n + 1)
     }
   }, [])
   saveCheckpoint({ data, k, answer, first, retry, plays, stair, nextCond, cond, snrNow, trace, scores, tally: tally.checkpoint })

@@ -475,7 +475,6 @@ export default function SpeakingPractice() {
         if (res.progress) { setProgress(res.progress); maybeAddProbes(res.progress, itemIdx) }
         if (res.coaching_pending && res.coaching_id) loadCoaching(res.coaching_id, attempt)
       } catch (e) {
-        submission.finish()
         if (attempt !== attemptRef.current) return
         setAssessment({ error: e?.response?.data?.detail || '발음 분석에 실패했어요. 잠시 후 다시 시도해 주세요.' })
       } finally {
@@ -657,7 +656,7 @@ export default function SpeakingPractice() {
   useEffect(() => {
     if (submission.sent && !recoveredRef.current) {
       recoveredRef.current = true; submission.finish()
-      if (!assessment) nextItem()
+      if ((!assessment || assessment.error) && submission.sent.question === itemIdx) nextItem()
     }
   }, [])
   if (target) saveCheckpoint({ words, target, frames, stageInfo, reviewItems, itemIdx, progress, summary, assessment })

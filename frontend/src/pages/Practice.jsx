@@ -193,9 +193,10 @@ export default function Practice() {
   const navigate = useNavigate()
   const user = useStore((state) => state.user)
   const currentScenario = useStore((state) => state.currentScenario)
-  const [checkpoint, saveCheckpoint, clearCheckpoint, submission] = useLessonCheckpoint('sentence')
-  const resumed = checkpoint?.scenarioId === currentScenario?.scenario_id ? checkpoint : null
   const currentSentence = useStore((state) => state.currentSentence)
+  const [checkpoint, saveCheckpoint, clearCheckpoint, submission] = useLessonCheckpoint('sentence')
+  const sessionCheckpoint = checkpoint?.scenarioId === currentScenario?.scenario_id ? checkpoint : null
+  const resumed = sessionCheckpoint?.sentence === currentSentence ? sessionCheckpoint : null
   const currentSentenceIndex = useStore((state) => state.currentSentenceIndex)
   const nextSentence = useStore((state) => state.nextSentence)
   const resetPractice = useStore((state) => state.resetPractice)
@@ -214,7 +215,7 @@ export default function Practice() {
   const loadedRef = useRef(resumed ? currentSentence : null)
   const [visemes, setVisemes] = useState([])
   const shownVisemes = useSlowWeak(visemes)   // 약한 입모양은 조금 천천히(연습 화면)
-  const [lesson] = useLessonTalker('sentence', resumed?.lesson)   // 상황(레슨)마다 가상 화자 한 명(계획 2-2)
+  const [lesson] = useLessonTalker('sentence', sessionCheckpoint?.lesson)   // 상황(레슨)마다 가상 화자 한 명(계획 2-2)
   // 숙달 지연 탐침(계획 C16): 레슨 가운데 문장 뒤에 한 번 끼운다. 틀린 문장 복습·북마크 연습 세션에는 내지 않는다(길이 0)
   const probes = useMasteryProbes(reviewReturn ? 0 : (currentScenario?.sentences?.length || 0))
   const [isPlaying, setIsPlaying] = useState(false)
@@ -235,10 +236,10 @@ export default function Practice() {
   const [bookmarks, setBookmarks] = useState({})             // 문장 텍스트 → 북마크 id (저장)
   const [booted, setBooted] = useState(false)                // 첫 문장 입모양을 받았는지(레슨 시작 전 로딩)
   const [introDone, setIntroDone] = useState(false)          // 레슨 시작 전 로딩 최소 표시 시간
-  const [tally, setTally] = useState(() => resumed && Object.hasOwn(resumed, 'tally') ? resumed.tally : ({ n: 0, correct: 0 }))   // 이번 레슨의 채점 문항·정답 수 → 완료 정답률
-  const [xpEarned, setXpEarned] = useState(() => resumed && Object.hasOwn(resumed, 'xpEarned') ? resumed.xpEarned : (0))                // 이번 레슨에서 서버가 준 XP 합(xp_gained)
-  const lessonStartRef = useRef(resumed?.lessonStartRef ?? (Date.now()))
-  const [elapsedSec, setElapsedSec] = useState(() => resumed && Object.hasOwn(resumed, 'elapsedSec') ? resumed.elapsedSec : (0))
+  const [tally, setTally] = useState(() => sessionCheckpoint && Object.hasOwn(sessionCheckpoint, 'tally') ? sessionCheckpoint.tally : ({ n: 0, correct: 0 }))   // 이번 레슨의 채점 문항·정답 수 → 완료 정답률
+  const [xpEarned, setXpEarned] = useState(() => sessionCheckpoint && Object.hasOwn(sessionCheckpoint, 'xpEarned') ? sessionCheckpoint.xpEarned : (0))                // 이번 레슨에서 서버가 준 XP 합(xp_gained)
+  const lessonStartRef = useRef(sessionCheckpoint?.lessonStartRef ?? (Date.now()))
+  const [elapsedSec, setElapsedSec] = useState(() => sessionCheckpoint && Object.hasOwn(sessionCheckpoint, 'elapsedSec') ? sessionCheckpoint.elapsedSec : (0))
   const [visemeError, setVisemeError] = useState(false)      // 입모양을 받지 못함 → 다시 받기 안내
   const visemeReqRef = useRef(0)                             // 입모양 요청 순번(늦게 온 이전 문장의 응답은 버린다)
   const answerShownRef = useRef(resumed?.answerShownRef ?? (false))                       // 이 문장의 정답을 이미 보였는지(채점 결과에 정답이 나온다)
@@ -401,7 +402,6 @@ export default function Practice() {
       if (response.xp_gained != null) updates.total_xp = (user?.total_xp || 0) + response.xp_gained
       if (Object.keys(updates).length > 0) updateUser(updates)
     } catch (error) {
-      submission.finish()
       advance()
       console.error('Failed to submit answer:', error)
     } finally {
@@ -489,7 +489,7 @@ export default function Practice() {
   useEffect(() => {
     if (submission.sent && !recoveredRef.current) {
       recoveredRef.current = true; submission.finish()
-      if (!result && !retry) advance()
+      if (!result && !retry && submission.sent.question === currentSentence) advance()
     }
   }, [])
 

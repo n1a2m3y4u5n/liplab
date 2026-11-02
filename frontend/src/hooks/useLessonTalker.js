@@ -36,7 +36,10 @@ export function startLesson(userKey, stage) {
 /** [{index, talker, seed}, 다음 레슨 시작 함수]. stage: 'viseme' | 'word' | 'closure' | 'sentence' | 'endless' | 'conversation' | 'review' */
 export default function useLessonTalker(stage, resumedLesson) {
   const uid = useStore((s) => s.user?.id ?? 'guest')
-  const [lesson, setLesson] = useState(() => resumedLesson || startLesson(uid, stage))
+  const [lesson, setLesson] = useState(() => {
+    if (resumedLesson) { resetRenderTiming(); return resumedLesson }
+    return startLesson(uid, stage)
+  })
   useEffect(() => {
     startUsage('lesson', stage)
     return () => endUsage(false)

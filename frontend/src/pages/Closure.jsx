@@ -124,7 +124,7 @@ function ClosureQuiz({ items: incomingItems }) {
       correct = !!r.correct
       confusions = r.confusions || []
       setXpEarned((x) => x + (r.xp_gained || 0))
-    } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
+    } catch { advance(); return } finally { setSubmitting(false) }
     submission.finish()
     setResult({ correct, chosen: selected, confusions })
     setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
@@ -154,7 +154,7 @@ function ClosureQuiz({ items: incomingItems }) {
   useEffect(() => {
     if (submission.sent && !recoveredRef.current) {
       recoveredRef.current = true; submission.finish()
-      if (!result) advance()
+      if (!result && submission.sent.question === qNum) advance()
     }
   }, [])
   saveCheckpoint({ items, choices, i, qNum, frames, selected, result, hint, tally, xpEarned, done, elapsedSec, lesson, startRef: startRef.current })
