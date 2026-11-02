@@ -3,6 +3,14 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 
+// Load optional web fonts after the first render without inline CSP handlers.
+const webFonts = document.getElementById('web-fonts')
+if (webFonts) {
+  const applyFonts = () => { webFonts.media = 'all' }
+  webFonts.addEventListener('load', applyFonts, { once: true })
+  if (webFonts.sheet) applyFonts()
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
