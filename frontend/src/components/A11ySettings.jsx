@@ -3,6 +3,7 @@ import { track } from '../lib/track'
 import { useLocation } from 'react-router-dom'
 import { accountAPI, authAPI } from '../api'
 import useStore from '../store/useStore'
+import useFocusTrap from '../hooks/useFocusTrap'
 
 const DEMO_EMAIL = 'demo@liplab.app'
 
@@ -34,6 +35,7 @@ function apply(state) {
 
 export default function A11ySettings() {
   const [open, setOpen] = useState(false)
+  const panelRef = useFocusTrap(open, () => setOpen(false))
   const [state, setState] = useState(load)
   const [isDemo, setIsDemo] = useState(true)  // 확인 전엔 안전하게 데모로 간주(내데이터 숨김)
   const token = useStore((s) => s.token)
@@ -101,7 +103,7 @@ export default function A11ySettings() {
         <span aria-hidden className="text-[15px] font-bold tracking-tight">Aa</span>
       </button>
       {open && (
-        <div role="dialog" aria-label="접근성 설정"
+        <div ref={panelRef} role="dialog" aria-modal="true" aria-label="접근성 설정" tabIndex={-1}
           className={`fixed z-40 w-64 overflow-y-auto overscroll-contain rounded-2xl border border-line bg-white p-3 shadow-xl lg:bottom-16 lg:left-4 lg:right-auto lg:top-auto lg:max-h-[calc(100dvh-88px)] ${inShell ? 'max-h-[calc(100dvh-88px-env(safe-area-inset-bottom))] right-4 top-[64px]' : 'max-h-[calc(100dvh-var(--tabbar-h)-80px-env(safe-area-inset-bottom))] bottom-[calc(var(--tabbar-h)+64px+env(safe-area-inset-bottom))] left-4'}`}>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-bold text-ink">접근성 설정</span>

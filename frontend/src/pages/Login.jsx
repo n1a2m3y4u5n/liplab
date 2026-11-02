@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import useStore from '../store/useStore'
 import { authAPI, seedAPI } from '../api'
 import Logo from '../components/Logo'
+import { loginDestination } from '../lib/loginDestination'
 import { track, flushTrack } from '../lib/track'
 import { authErrorMessage } from '../lib/authMessage'
 
@@ -52,6 +53,8 @@ function AgreeCheck({ checked, onChange, children }) {
 
 export default function Login({ initialMode = 'login' }) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const returnTo = loginDestination(location)
   const setAuth = useStore((s) => s.setAuth)
   const isDesktop = useIsDesktop()
   const mode = initialMode  // login | signup: 전환 시 주소와 브라우저 뒤로 가기도 함께 바뀐다.
@@ -70,7 +73,7 @@ export default function Login({ initialMode = 'login' }) {
     void flushTrack(true)
     setAuth(data.user, data.access_token)
     if (demo) { try { await seedAPI.seedDemo() } catch { /* 무시 */ } }
-    navigate('/')
+    navigate(returnTo, { replace: true })
   }
   // 사용자명을 비워 두면 이메일 앞부분을 쓴다. 겹치거나(같은 앞부분의 다른 주소) 1자라 짧으면 숫자를 붙여 다시 건다.
   const register = async () => {
@@ -107,7 +110,7 @@ export default function Login({ initialMode = 'login' }) {
     catch (e2) { setErr(e2?.response ? '둘러보기를 시작하지 못했어요.' : authErrorMessage(null, 'login', e2)) } finally { setBusy(false) }
   }
   const toggle = () => {
-    navigate(signup ? '/login' : '/signup')
+    navigate(signup ? '/login' : '/signup', { state: { loginReturnTo: returnTo } })
   }
 
   return (

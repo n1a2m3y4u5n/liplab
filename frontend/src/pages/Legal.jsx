@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
+import { Button } from '../components/UI'
 
 /**
  * 이용약관 · 개인정보 처리방침 · 미성년자 보호 안내 (§4.9 보안·개인정보 대응).
@@ -50,11 +51,11 @@ export default function Legal() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-page px-4 py-10">
+    <main className="min-h-[100dvh] bg-page px-4 py-10">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 rounded-22 border-2 border-line bg-white p-8 sm:p-10">
         <div className="flex items-center justify-between">
           <Logo size={24} />
-          <button type="button" onClick={close} className="text-[14px] font-bold text-primary-500">닫기</button>
+          <Button variant="secondary" onClick={close}>닫기</Button>
         </div>
 
         <h1 className="text-[25px] font-bold leading-figma tracking-[-0.625px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">
@@ -97,6 +98,6 @@ export default function Legal() {
           <Easy>어린 이용자의 정보는 공부에 꼭 필요한 만큼만 모아요. 보호자는 아이의 정보를 보거나 고치거나 지워 달라고 할 수 있어요.</Easy>
         </Section>
       </div>
-    </div>
+    </main>
   )
 }

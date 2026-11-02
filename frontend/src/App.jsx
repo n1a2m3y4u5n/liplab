@@ -1,5 +1,6 @@
 import PracticeRedirect from './components/PracticeRedirect'
 import { saveLastTrack } from './lib/lastTrack'
+import { loginDestination } from './lib/loginDestination'
 import LegacyRedirect from './components/LegacyRedirect'
 import Feedback from './components/Feedback'
 const AdminFeedback = lazy(() => import('./pages/AdminFeedback'))
@@ -224,6 +225,11 @@ function NotFound() {
   return <ErrorScreen kind="notfound" onHome={() => navigate('/learn/path')} />
 }
 
+function LoginRedirect() {
+  const location = useLocation()
+  return <Navigate to={loginDestination(location)} replace />
+}
+
 /**
  * Main App component with routing
  */
@@ -303,8 +309,8 @@ function App() {
         <Route path="/about" element={<Landing />} />
         <Route path="/" element={<HomeRedirect />} />
         {/* 로그인한 채 /login·/signup에 오면 첫 화면으로(로그인 뒤 이동 경로) */}
-        <Route path="/login" element={<Navigate to="/" replace />} />
-        <Route path="/signup" element={<Navigate to="/" replace />} />
+        <Route path="/login" element={<LoginRedirect />} />
+        <Route path="/signup" element={<LoginRedirect />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       </Suspense>
