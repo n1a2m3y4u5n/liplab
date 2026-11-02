@@ -10,6 +10,8 @@ function IdleGPU {
     if($LASTEXITCODE -ne 0 -or -not $g){return $false}
     $v=($g | Select-Object -First 1).Split(',')
     if([int]$v[0].Trim() -ge 20 -or [int]$v[1].Trim() -ge 1500){return $false}
+    $apps=& nvidia-smi --query-compute-apps=process_name --format=csv,noheader 2>$null
+    if($apps -match 'python'){return $false}
     $busy=Get-CimInstance Win32_Process | Where-Object { $_.Name -like '*python*' -and $_.CommandLine -match '(roi_train\.py|nextreg_roi\.py|nextreg_bs_lips\.py)' }
     if($busy){return $false}
     if($Mode -eq 'black') {
