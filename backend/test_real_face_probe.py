@@ -48,6 +48,10 @@ with TestClient(main.app) as c:
         async with AsyncSessionLocal() as db:
             row=await db.get(RealFaceProbe,it['id'])
             assert row.correct is False and row.chosen=='나' and row.rt_ms==10
+            from transfer_export import export_transfer
+            exported=await export_transfer(db,uid)
+            assert exported['real_face_probes'][0]['correct'] is False
+            assert 'snapshot' not in json.dumps(exported) and 'video.mp4' not in json.dumps(exported)
             result=await purge(db,uid); await db.commit()
             assert result['real_face_probes']==1
     asyncio.run(verify())

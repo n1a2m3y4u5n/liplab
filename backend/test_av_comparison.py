@@ -69,6 +69,11 @@ with TestClient(main.app) as c:
         async with AsyncSessionLocal() as db:
             rows=list((await db.execute(select(AvComparisonAnswer))).scalars())
             assert len(rows)==6 and all(r.matched==r.total for r in rows)
+            from transfer_export import export_transfer
+            exported=await export_transfer(db,uid)
+            text=json.dumps(exported)
+            assert len(exported['av_comparisons'])==1 and 'real.mp4' not in text and '문장' not in text
+            assert 'answer_text' not in text and 'user_id' not in text
     asyncio.run(verify())
     (root/'real.mp4').unlink()
     assert c.get(base,headers=h).json()['status']=='waiting_for_material'

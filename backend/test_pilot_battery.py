@@ -575,7 +575,7 @@ def test_battery_open_responses_snr_and_av():
 
 def test_battery_export_v5_and_training_fields():
     r = _run()
-    assert r["version"] == 7
+    assert r["version"] == 8
     # 판 7: B 전이라 유지 검사 예정이 없고, 학습량은 날마다 시행 수와 분
     assert r["schedule"]["state"] == "none"
     assert len(r["reading_days"]) == 1 and r["reading_days"][0]["n"] == 2 and r["reading_days"][0]["minutes"] >= 0
