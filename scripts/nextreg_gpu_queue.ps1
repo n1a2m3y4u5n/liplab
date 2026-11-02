@@ -51,7 +51,7 @@ if($Mode -eq 'black') {
         Log "GPU_START roi_s$seed PID=$($p.Id) run=$run"
         $p.WaitForExit(); Log "GPU_END roi_s$seed exit=$($p.ExitCode)"
         if($p.ExitCode -ne 0){throw 'ROI training failed'}
-        while(-not(Test-Path "$Root\baseline_s$seed.pt")){Log "waiting same-seed B33 baseline $seed"; Start-Sleep 30}
+        while(-not(Test-Path "$Root\baseline_s$seed.ready")){Log "waiting same-seed B33 baseline $seed"; Start-Sleep 30}
         & $Python "$Root\code\tools\nextreg_roi.py" compare --run $run --candidate "$Root\roi_s$seed\model.pt" --baseline "$Root\baseline_s$seed.pt" --out "$Root\roi-selection-s$seed.json" *> "$Root\roi-compare-s$seed.log"
         if($LASTEXITCODE){throw 'ROI comparison failed'}
         $result=Get-Content -Raw -Encoding UTF8 "$Root\roi-selection-s$seed.json" | ConvertFrom-Json
