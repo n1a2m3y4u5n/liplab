@@ -1,8 +1,9 @@
 # KMSAV ROI registered training (docs/lipread-roi-kmsav-prereg-2026-11-02.md section 5).
 # One training per GPU. Finished steps are skipped by marker; interrupted steps resume from last.pt.
 # Judging is NOT done here. Started by a scheduled task (S4U) on each PC.
-#   lab-sub   -Role K1   (K1 s0, K1 s1, B33 s0)
-#   lab-main  -Role K2   (K2 s0, K2 s1, B33 s1)
+#   lab-sub   -Role K1     (K1 s0, K1 s1; its B33 s0 step is skipped by a moved-marker log)
+#   lab-main  -Role K2     (B33 s1, K2 s0, K2 s1)
+#   lab-black -Role B33s0  (B33 s0)
 param(
     [Parameter(Mandatory = $true)][string]$Role,
     [Parameter(Mandatory = $true)][string]$Code,      # folder holding roi_train.py
@@ -79,12 +80,13 @@ switch ($Role) {
         }
         B33 '0'
     }
+    'B33s0' { B33 '0' }
     'K2' {
+        B33 '1'
         foreach ($s in '0', '1') {
             Step "train_K2pre$s" @('--run', $Data, '--seed', $s, '--cand', 'K2pre', '--out', "$Data\run_K2pre$s", '--epochs', '10', '--kms-frames', '1500000', '--kms-only')
             Step "train_K2s$s" @('--run', $Data, '--seed', $s, '--cand', 'K2', '--out', "$Data\run_K2s$s", '--epochs', '20', '--kms-frames', '600000', '--init', "$Data\run_K2pre$s\model.pt", '--init-head')
         }
-        B33 '1'
     }
     default { Say "bad role $Role"; exit 2 }
 }
