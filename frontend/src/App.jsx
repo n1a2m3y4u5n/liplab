@@ -19,7 +19,7 @@ class ErrorBoundary extends Component {
     // 코드분할(lazy) 청크 로드 실패(불안정 통신망)도 여기로 전파된다 → 원본 스택 대신 Figma '문제 발생'
     // 화면(438:103 / 438:143). 이 경계는 라우터 밖이라 버튼은 주소를 직접 바꾼다. 개발 모드에서만 상세 스택을 보여준다.
     return (
-      <ErrorScreen kind="error" onRetry={() => window.location.reload()}
+      <ErrorScreen kind="error" message={navigator.onLine === false ? '인터넷 연결을 확인한 뒤 다시 시도해 주세요.' : undefined} onRetry={() => window.location.reload()}
         onHome={() => window.location.assign('/today')}>
         {import.meta.env?.DEV && (
           <pre className="mt-2 max-h-[200px] w-full overflow-auto whitespace-pre-wrap text-left text-[11px] text-bad">

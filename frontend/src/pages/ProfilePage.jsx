@@ -234,7 +234,7 @@ export default function ProfilePage() {
         <h2 className="px-5 pt-4 font-bold">프로필</h2>
         <MenuRow first title="계정 설정" sub="이름 · 이메일 · 비밀번호 · 로그아웃" onClick={openAccount} />
         <MenuRow title="나에게 맞춘 안내" onClick={() => setModal('learner')} />
-        <MenuRow title="시작 단계 다시 정하기" onClick={() => navigate('/learn/placement')} />
+        <MenuRow title="시작 단계 다시 정하기" onClick={() => setModal('placement')} />
         <h2 className="px-5 pt-4 font-bold">설정</h2>
         <MenuRow title="접근성 설정" onClick={() => window.dispatchEvent(new Event('liplab:a11y-toggle'))} />
         <MenuRow title="소리와 함께 다시 보기" onClick={() => setModal('sound')} sub={sound.enabled ? '켜짐' : '꺼짐'} />
@@ -248,6 +248,14 @@ export default function ProfilePage() {
         )}
         <MenuRow danger title="학습 초기화" sub="기록을 모두 지우고 처음부터" onClick={openReset} />
       </section>
+
+      <Modal open={modal === 'placement'} onClose={() => setModal(null)} title="시작 단계를 다시 정할까요?" maxW="max-w-[480px]">
+        <p className="text-sm leading-relaxed text-ink-muted">검사를 마치면 시작 단계가 바뀔 수 있어요.</p>
+        <div className="flex w-full gap-2.5">
+          <button type="button" onClick={() => setModal(null)} className="btn-secondary flex-1">취소</button>
+          <button type="button" onClick={() => { setModal(null); navigate('/learn/placement') }} className="btn-primary flex-1">검사로 가기</button>
+        </div>
+      </Modal>
 
       {/* 파일럿 참여(§4.7) — 운영자가 나눠 준 코드로 집단을 정한다. 내보내기는 가명으로만 한다. */}
       <Modal open={modal === 'pilot'} onClose={() => setModal(null)} title="파일럿 참여" gap="gap-[14px]" maxW="max-w-[480px]">

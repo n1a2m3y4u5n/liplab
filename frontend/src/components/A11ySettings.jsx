@@ -102,7 +102,7 @@ export default function A11ySettings() {
       </button>
       {open && (
         <div role="dialog" aria-label="접근성 설정"
-          className={`fixed z-40 w-64 rounded-2xl border border-line bg-white p-3 shadow-xl lg:bottom-16 lg:left-4 lg:right-auto lg:top-auto ${inShell ? 'right-4 top-[64px]' : 'bottom-[calc(var(--tabbar-h)+64px+env(safe-area-inset-bottom))] left-4'}`}>
+          className={`fixed z-40 w-64 overflow-y-auto overscroll-contain rounded-2xl border border-line bg-white p-3 shadow-xl lg:bottom-16 lg:left-4 lg:right-auto lg:top-auto lg:max-h-[calc(100dvh-88px)] ${inShell ? 'max-h-[calc(100dvh-88px-env(safe-area-inset-bottom))] right-4 top-[64px]' : 'max-h-[calc(100dvh-var(--tabbar-h)-80px-env(safe-area-inset-bottom))] bottom-[calc(var(--tabbar-h)+64px+env(safe-area-inset-bottom))] left-4'}`}>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-bold text-ink">접근성 설정</span>
             <button onClick={() => setOpen(false)} aria-label="닫기" className="text-ink-caption hover:text-ink">✕</button>

@@ -38,7 +38,7 @@ function useIsDesktop() {
 // 그 옆에 Figma 모양을 그린다. 켜짐은 Figma 'Checkbox / on'(318:33) 에셋.
 function AgreeCheck({ checked, onChange, children }) {
   return (
-    <label className="flex cursor-pointer items-center gap-[9px] lg:gap-2.5">
+    <label className="flex min-h-11 cursor-pointer items-center gap-[9px] lg:gap-2.5">
       <input type="checkbox" checked={checked} onChange={onChange} className="peer sr-only" />
       <span aria-hidden className="flex size-[19px] shrink-0 rounded-md peer-focus-visible:ring-2 peer-focus-visible:ring-primary-300 peer-focus-visible:ring-offset-1 lg:size-5">
         {checked
@@ -54,7 +54,7 @@ export default function Login({ initialMode = 'login' }) {
   const navigate = useNavigate()
   const setAuth = useStore((s) => s.setAuth)
   const isDesktop = useIsDesktop()
-  const [mode, setMode] = useState(initialMode)  // login | signup (랜딩 '시작하기'는 /signup으로 와서 회원가입부터)
+  const mode = initialMode  // login | signup: 전환 시 주소와 브라우저 뒤로 가기도 함께 바뀐다.
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -107,8 +107,7 @@ export default function Login({ initialMode = 'login' }) {
     catch (e2) { setErr(e2?.response ? '둘러보기를 시작하지 못했어요.' : authErrorMessage(null, 'login', e2)) } finally { setBusy(false) }
   }
   const toggle = () => {
-    setErr(''); setAgree(false); setGuardianOk(false)
-    setMode(mode === 'login' ? 'signup' : 'login')
+    navigate(signup ? '/login' : '/signup')
   }
 
   return (
@@ -161,39 +160,32 @@ export default function Login({ initialMode = 'login' }) {
           <form onSubmit={submit} className={`flex w-full flex-col lg:gap-[18px] ${signup ? 'gap-[15px]' : 'gap-4'}`}>
             <label className="flex flex-col gap-1.5 lg:gap-[7px]">
               <span className={LABEL}>이메일</span>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} placeholder="you@example.com" />
+              <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} placeholder="you@example.com" />
             </label>
 
             {signup && (
               <label className="flex flex-col gap-1.5 lg:gap-[7px]">
-                <span className={LABEL}>사용자명</span>
-                <input value={username} onChange={(e) => setUsername(e.target.value)} minLength={2} maxLength={50} className={INPUT} placeholder="2~50자로 입력해주세요" />
+                <span className={LABEL}>사용자명 (선택)</span>
+                <input autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} minLength={2} maxLength={50} className={INPUT} placeholder="비워 두면 이메일 앞부분을 써요" />
               </label>
             )}
 
             <label className="flex flex-col gap-1.5 lg:gap-[7px]">
               <span className={LABEL}>비밀번호</span>
-              <input type="password" required minLength={signup ? 6 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} className={INPUT}
+              <input type="password" autoComplete={signup ? 'new-password' : 'current-password'} aria-describedby={signup ? 'password-help' : undefined} required minLength={signup ? 6 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} className={INPUT}
                 placeholder={signup && isDesktop ? '6자 이상 입력해주세요.' : '••••••••'} />
               {/* 모바일 회원가입만 아래 도움말(244:54) — 데스크톱은 placeholder로 안내(227:107) */}
               {signup && (
-                <span className="text-[11.5px] leading-figma text-ink-ghost lg:hidden">6자 이상 입력해주세요</span>
+                <span id="password-help" className="text-[12px] leading-relaxed text-ink-muted">6자 이상 · 최대 한글 약 24자, 영문 72자</span>
               )}
             </label>
-
-            {/* 비밀번호 찾기(227:65) — 데스크톱에만 있다(모바일 243:34에는 없음). 재설정 화면·API는 아직 없다. */}
-            {!signup && (
-              <div className="hidden justify-end lg:flex">
-                <span className="text-[13px] font-bold leading-figma text-primary-500">비밀번호를 잊으셨나요?</span>
-              </div>
-            )}
 
             {signup && (
               <div className="flex flex-col gap-2">
                 <AgreeCheck checked={agree} onChange={(e) => setAgree(e.target.checked)}>
-                  <a href="/terms" target="_blank" rel="noreferrer" className="font-bold text-primary-500 hover:underline">이용약관</a>
+                  <a href="/terms" target="_blank" rel="noreferrer" className="inline-flex items-center font-bold text-primary-500 hover:underline">이용약관</a>
                   {' 및 '}
-                  <a href="/privacy" target="_blank" rel="noreferrer" className="font-bold text-primary-500 hover:underline">개인정보 처리방침</a>
+                  <a href="/privacy" target="_blank" rel="noreferrer" className="inline-flex items-center font-bold text-primary-500 hover:underline">개인정보 처리방침</a>
                   에 동의해요
                 </AgreeCheck>
                 <AgreeCheck checked={guardianOk} onChange={(e) => setGuardianOk(e.target.checked)}>
@@ -205,7 +197,7 @@ export default function Login({ initialMode = 'login' }) {
             {err && <p role="alert" className="text-[13px] font-bold text-bad-text">{err}</p>}
 
             <button type="submit" disabled={busy || (signup && (!agree || !guardianOk))} className={`btn-primary ${BTN}`}>
-              {busy ? '…' : signup ? '회원가입' : '로그인'}
+              {busy ? '확인 중…' : signup ? '회원가입' : '로그인'}
             </button>
           </form>
 

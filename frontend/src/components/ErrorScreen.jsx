@@ -21,7 +21,7 @@ function Mascot() {
   )
 }
 
-export default function ErrorScreen({ kind = 'error', onRetry, onHome, children }) {
+export default function ErrorScreen({ kind = 'error', message, onRetry, onHome, children }) {
   const notFound = kind === 'notfound'
   return (
     <div className="flex min-h-[100dvh] w-full items-center justify-center bg-white px-[34px] py-10">
@@ -31,7 +31,7 @@ export default function ErrorScreen({ kind = 'error', onRetry, onHome, children 
           {notFound ? '페이지를 찾을 수 없어요' : '문제가 생겼어요'}
         </h1>
         <p className="text-[14px] leading-[1.65] text-ink-muted lg:text-[15.5px]">
-          {notFound ? '주소가 바뀌었거나 없는 페이지예요.' : (
+          {notFound ? '주소가 바뀌었거나 없는 페이지예요.' : message || (
             <>
               <span className="block">잠시 후 다시 시도해 주세요.</span>
               <span className="hidden lg:block">계속 안 되면 새로고침을 해보세요.</span>
