@@ -4,7 +4,7 @@ import useStore from '../store/useStore'
 import { authAPI, reviewAPI, learningAPI, tasksAPI } from '../api'
 import { dueCounts, dueStartPath, mistakeCount } from '../lib/reviewDue'
 import Logo from './Logo'
-import { Progress } from './UI'
+import { Button, Progress } from './UI'
 import { levelProgress } from '../lib/level'
 
 /**
@@ -287,18 +287,18 @@ function MobileTopBar({ pink }) {
   const navigate = useNavigate()
   const { xp, streak } = useStats()
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between bg-page px-[18px] pb-[14px] pt-4 lg:hidden">
-      <Link to="/about" aria-label="LIPLAB 소개" className="shrink-0"><Logo size={20} pink={pink} /></Link>
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-x-2 bg-page pl-[max(18px,env(safe-area-inset-left))] pr-[max(18px,env(safe-area-inset-right))] pb-[14px] pt-[max(16px,env(safe-area-inset-top))] lg:hidden">
+      <Link to="/about" aria-label="LIPLAB 소개" className="inline-flex min-h-11 shrink-0 items-center"><Logo size={20} pink={pink} /></Link>
+      <div className="ml-auto flex items-center gap-1 sm:gap-3">
         <Stat icon="/ui/stat-flame.svg" box={17} value={streak} className="gap-1 text-[14px] text-stat-streak" />
         <Stat icon="/ui/lp-232-48-star.svg" box={15} w={14.27} h={13.57} value={xp.toLocaleString()} className="gap-1 text-[14px] text-stat-xp" />
-        <button type="button" onClick={() => window.dispatchEvent(new Event('liplab:a11y-toggle'))} aria-label="접근성 설정"
-          className="grid size-[30px] shrink-0 place-items-center rounded-full bg-surface-inverse text-[12px] font-bold tracking-tight text-white">
+        <Button variant="secondary" onClick={() => window.dispatchEvent(new Event('liplab:a11y-toggle'))} aria-label="접근성 설정"
+          className="grid size-11 shrink-0 place-items-center rounded-full border-0 bg-surface-inverse p-0 text-[12px] font-bold tracking-tight text-white">
           Aa
-        </button>
-        <button type="button" onClick={() => navigate('/profile')} aria-label="프로필" className="shrink-0 rounded-full">
+        </Button>
+        <Button variant="secondary" onClick={() => navigate('/profile')} aria-label="프로필" className="grid size-11 shrink-0 place-items-center rounded-full border-0 bg-transparent p-0">
           <Avatar className="size-[30px] text-[13px]" />
-        </button>
+        </Button>
       </div>
     </header>
   )
@@ -309,7 +309,7 @@ function MobileTabBar({ activeKey }) {
   const navigate = useNavigate()
   const tabs = NAV.filter((n) => n.key !== 'profile')
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 flex min-h-[78px] items-center border-t-1.5 border-line bg-white px-2 pb-[env(safe-area-inset-bottom)] pt-2.5 lg:hidden" aria-label="주 메뉴">
+    <nav data-mobile-tabbar className="fixed inset-x-0 bottom-0 z-30 flex h-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] items-center border-t-1.5 border-line bg-white pl-[max(8px,env(safe-area-inset-left))] pr-[max(8px,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pt-2.5 lg:hidden" aria-label="주 메뉴">
       {tabs.map((n) => {
         const on = activeKey === n.key
         return (
@@ -347,7 +347,7 @@ export default function AppShell({ children, active, rail = 'default', rightRail
 
       {/* 좌측 사이드바 (데스크톱, 58:12) */}
       <nav className="hidden w-[256px] shrink-0 flex-col gap-2 border-r border-line bg-white px-4 pb-6 pt-7 lg:flex" aria-label="주 메뉴">
-        <Link to="/about" aria-label="LIPLAB 소개" className="self-start"><Logo size={30} pink={speak} /></Link>
+        <Link to="/about" aria-label="LIPLAB 소개" className="inline-flex min-h-11 self-start items-center"><Logo size={30} pink={speak} /></Link>
         <div className="h-5" />
         {NAV.map((n) => {
           const on = activeKey === n.key
@@ -365,17 +365,17 @@ export default function AppShell({ children, active, rail = 'default', rightRail
       {/* 본문: 모바일 232:51(좌우 18 · 간격 14), 데스크톱 58:11(32 · 20). 모바일 하단은 탭 바 높이만큼 비운다.
           세로 860px 이하 데스크톱(1366×768 등)은 위아래 여백·간격을 줄여 분석·과제가 한 화면에 들어오게 한다. */}
       {/* id="main-content"는 '본문으로 건너뛰기'(App.jsx SkipLink)의 대상이다. */}
-      <main id="main-content" className="flex min-w-0 flex-1 flex-col gap-3.5 px-[18px] pb-[calc(var(--tabbar-h)+18px+env(safe-area-inset-bottom))] pt-5 lg:gap-5 lg:px-8 lg:pb-10 lg:pt-8 lg:[@media(max-height:860px)]:gap-4 lg:[@media(max-height:860px)]:pb-5 lg:[@media(max-height:860px)]:pt-6">
+      <main id="main-content" className="flex min-w-0 flex-1 flex-col gap-3.5 pl-[max(18px,env(safe-area-inset-left))] pr-[max(18px,env(safe-area-inset-right))] pb-[calc(var(--tabbar-h)+18px+env(safe-area-inset-bottom))] pt-5 lg:gap-5 lg:px-8 lg:pb-10 lg:pt-8 lg:[@media(max-height:860px)]:gap-4 lg:[@media(max-height:860px)]:pb-5 lg:[@media(max-height:860px)]:pt-6">
         {(title || description) && (
           <header className="flex flex-col gap-2 leading-figma">
             {/* 제목 줄(453:82 Page head): 제목 + 오른쪽 끝 나가기 X */}
             <div className="flex items-center justify-between gap-3">
               {title && <h1 className="text-[25px] font-bold tracking-[-0.625px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">{title}</h1>}
               {closeTo && (
-                <button type="button" onClick={() => navigate(closeTo)} aria-label="나가기"
-                  className="size-10 shrink-0 rounded-full transition-opacity hover:opacity-80">
+                <Button variant="secondary" onClick={() => navigate(closeTo)} aria-label="나가기"
+                  className="grid size-11 shrink-0 place-items-center rounded-full border-0 bg-transparent p-0 transition-opacity hover:opacity-80">
                   <img src="/ui/lp-453-83-page-close.svg" alt="" className="size-10" />
-                </button>
+                </Button>
               )}
             </div>
             {description && <p className="text-[15px] text-ink-muted">{description}</p>}
