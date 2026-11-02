@@ -1,0 +1,46 @@
+{
+ "rule": "각 실행 최고 체크포인트에서 (실행, dup) 중 검증 4지 최대, 동점은 R1 s0, s1, R2 s0, s1 순서·dup2 먼저",
+ "selected": {
+  "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_base\\run_B33s0",
+  "model": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_base\\run_B33s0\\model.pt",
+  "dup": 1,
+  "cand": "B33",
+  "seed": 0,
+  "epoch": 39,
+  "val_4way": 0.4913
+ },
+ "table": [
+  {
+   "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_base\\run_B33s0",
+   "cand": "B33",
+   "seed": 0,
+   "dup": 2,
+   "epoch": 39,
+   "val_4way": 0.3926
+  },
+  {
+   "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_base\\run_B33s0",
+   "cand": "B33",
+   "seed": 0,
+   "dup": 1,
+   "epoch": 39,
+   "val_4way": 0.4913
+  },
+  {
+   "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_base\\run_B33s1",
+   "cand": "B33",
+   "seed": 1,
+   "dup": 2,
+   "epoch": 37,
+   "val_4way": 0.3735
+  },
+  {
+   "run": "D:\\work\\hq\\projects\\liplab-lab\\data\\roi-kmsav\\run_base\\run_B33s1",
+   "cand": "B33",
+   "seed": 1,
+   "dup": 1,
+   "epoch": 37,
+   "val_4way": 0.4769
+  }
+ ]
+}
