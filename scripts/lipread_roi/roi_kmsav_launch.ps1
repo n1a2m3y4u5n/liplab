@@ -1,9 +1,9 @@
 # KMSAV ROI registered training (docs/lipread-roi-kmsav-prereg-2026-11-02.md section 5).
 # One training per GPU. Finished steps are skipped by marker; interrupted steps resume from last.pt.
 # Judging is NOT done here. Started by a scheduled task (S4U) on each PC.
-#   lab-sub   -Role K1     (K1 s0, K1 s1; its B33 s0 step is skipped by a moved-marker log)
+#   lab-sub   -Role K1     (K1 s0, K1 s1, B33 s0; B33 s0 moved back from lab-black, prereg section 10)
 #   lab-main  -Role K2     (B33 s1, K2 s0, K2 s1)
-#   lab-black -Role B33s0  (B33 s0)
+#   lab-black -Role B33s0  (B33 s0, stopped and not used once lab-sub starts it)
 param(
     [Parameter(Mandatory = $true)][string]$Role,
     [Parameter(Mandatory = $true)][string]$Code,      # folder holding roi_train.py
