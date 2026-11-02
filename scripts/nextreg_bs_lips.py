@@ -17,6 +17,7 @@ def main():
     p.add_argument('--split', required=True)
     p.add_argument('--out', required=True)
     p.add_argument('--lips', action='store_true')
+    p.add_argument('--smoke', action='store_true')
     a = p.parse_args()
     mouth = list(T.MOUTH_KEYS)
     perm = T._mirror_perm()
@@ -62,6 +63,19 @@ def main():
     b = Bench(a.bench)
     assert {c['spk'] for c in b.clips} <= set(split['train']) | set(split['val'])
     assert len(split['train']) == 33 and len(split['val']) == 12
+    if a.smoke:
+        import torch
+        torch.set_num_threads(4)
+        data = V.Data(a.bench, a.split, 'B')
+        model = V.build(len(V.MOUTH_KEYS), len(V.VOCAB))
+        x = np.stack(data.val_seq[V.DUPS[0]][:2])
+        with torch.no_grad():
+            y = model(torch.from_numpy(x))
+        assert tuple(y.shape) == (len(x), x.shape[1], len(V.VOCAB))
+        q = post(x[0], np.random.default_rng(17), perm)
+        assert q.shape[1] == len(V.MOUTH_KEYS) and np.isfinite(q).all()
+        print('SMOKE_OK', len(V.MOUTH_KEYS), 'sent', len(data.sent), 'words', len(data.words), 'val_items', len(data.val_items), flush=True)
+        return 0
     # Both models use a new subset benchmark; no evaluation frames are present.
     opts = argparse.Namespace(bench=a.bench, split=a.split, out=a.out, cand='B', seed=0, threads=4,
                               epochs=40, batch=64, lr=3e-4, eval_every=2, patience=6, idle_p=.5,
