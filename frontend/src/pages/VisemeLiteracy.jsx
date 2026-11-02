@@ -565,7 +565,7 @@ function QuizPanel({ data }) {
           {/* 입모양 카드(91:22 560×370 / 모바일 235:45 전체 폭×214) — 아바타만, 무한 반복(다시 보기 없음).
               고르기는 입모양 하나를 되풀이하고, AX는 음절 둘을 쉼을 두고 차례로 되풀이한다(프레임을 받기 전에는 중립) */}
           <div className={LESSON_AVATAR_VISEME}>
-            <MouthAvatar frames={isAx ? q.frames : null} visemeId={isAx ? (q.frames ? null : 15) : q.target.viseme_id}
+            <MouthAvatar loadingHint frames={isAx ? q.frames : null} visemeId={isAx ? (q.frames ? null : 15) : q.target.viseme_id}
               height={null} className="h-full" talker={lesson.talker} talkerSeed={lesson.seed} override={replay.frame} />
           </div>
 

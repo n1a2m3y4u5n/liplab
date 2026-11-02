@@ -31,7 +31,7 @@ import { recordLateness } from '../lib/frameClock'
  * 컨텍스트·셰이더·모델 버퍼를 새로 만든다(9/27 측정: 문항마다 컨텍스트가 새로 생기고 첫 그리기까지 0.1~1.1초).
  */
 export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300, className = '', cueText = null, cueFocus = false, modelUrl, speed = 1,
-  talker = null, talkerSeed = 0, showTalker = true, flat = false, once = false, override = null }) {
+  talker = null, talkerSeed = 0, showTalker = true, flat = false, once = false, override = null, loadingHint = false }) {
   const overriding = override != null
   const frames = useMemo(() => applyCoarticulation(applyTalkerTiming(rawFrames, talker, talkerSeed)), [rawFrames, talker, talkerSeed])
   const [vid, setVid] = useState(15)
@@ -112,7 +112,7 @@ export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300,
   return (
     <div className={`relative w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-surface-inverse-muted to-surface-inverse [container-type:size] ${className}`}
          style={height != null ? { height } : undefined}>
-      <AvatarVRM visemeId={shownVid} modelUrl={modelUrl} flat={flat} transitionMs={shownTiming.t} durationMs={shownTiming.d} talker={talker} lipVowel={shownTiming.lv} lipCurve={shownTiming.curve} />
+      <AvatarVRM loadingHint={loadingHint} visemeId={shownVid} modelUrl={modelUrl} flat={flat} transitionMs={shownTiming.t} durationMs={shownTiming.d} talker={talker} lipVowel={shownTiming.lv} lipCurve={shownTiming.curve} />
       {showTalker && <TalkerChip talker={talker} />}
       {/* 기호는 오른쪽 입꼬리 옆 — 카메라 세로 화각이 고정이라 입 높이는 캔버스 높이의 약 68%, 입 반폭은 높이의 약 25% */}
       {active.length > 0 && (

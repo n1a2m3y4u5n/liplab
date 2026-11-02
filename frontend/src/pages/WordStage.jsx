@@ -366,7 +366,7 @@ function WordQuiz({ data, reload }) {
           <div className={LESSON_AVATAR}>
             {/* 시각증강 기호(축 J-3)는 답을 확인한 뒤에만 — 보기가 최소대립 짝이라 문제 중에 보이면 기호만으로 답이 드러난다.
                 확인 뒤에는 약한 표적 입모양 음절에만 입꼬리 옆에 겹쳐 무엇이 달랐는지 보여 준다(숙달되면 흐려짐). */}
-            <MouthAvatar frames={shownFrames} height={null} className="h-full" cueText={result && !isContext ? q.target : null} cueFocus speed={playSpeed}
+            <MouthAvatar loadingHint frames={shownFrames} height={null} className="h-full" cueText={result && !isContext ? q.target : null} cueFocus speed={playSpeed}
               talker={lesson.talker} talkerSeed={lesson.seed} override={replay.frame} />
           </div>
           {fastOk && (

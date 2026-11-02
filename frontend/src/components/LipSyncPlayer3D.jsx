@@ -9,6 +9,12 @@ import { applyTalkerTiming } from '../lib/talkers'
 import { applyCoarticulation } from '../lib/coarticulation'
 import { nextDelay, recordLateness } from '../lib/frameClock'
 
+function FrameIcon({ kind }) {
+  return <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-5">
+    {kind === 'replay' ? <><path d="M3 11a9 9 0 1 1 2.6 7" /><path d="M3 4v7h7" /></> : kind === 'previous' ? <><path d="M5 5v14M18 5l-9 7 9 7Z" /></> : <><path d="M19 5v14M6 5l9 7-9 7Z" /></>}
+  </svg>
+}
+
 /**
  * 3D LipSync Player - VRM-based avatar with full playback controls
  * - Auto play / pause
@@ -223,6 +229,7 @@ export default function LipSyncPlayer3D({
         style={{ height: `${stageHeight}px` }}
       >
         <AvatarVRM
+          loadingHint={showControls}
           visemeId={shown?.viseme ?? 15}
           xray={xray}
           view={side ? 'side' : 'front'}
@@ -293,7 +300,7 @@ export default function LipSyncPlayer3D({
           title="이전 입모양"
           aria-label="이전 입모양"
         >
-          <span aria-hidden="true">◀◀</span>
+          <FrameIcon kind="previous" />
         </button>
 
         {/* Play/Pause */}
@@ -312,7 +319,7 @@ export default function LipSyncPlayer3D({
           title="다음 입모양"
           aria-label="다음 입모양"
         >
-          <span aria-hidden="true">▶▶</span>
+          <FrameIcon kind="next" />
         </button>
 
         {/* Replay */}
@@ -322,12 +329,12 @@ export default function LipSyncPlayer3D({
           title="처음부터 재생"
           aria-label="처음부터 재생"
         >
-          <span aria-hidden="true">↺</span>
+          <FrameIcon kind="replay" />
         </button>
       </div>
 
       {/* Speed control */}
-      <div className="mt-3 flex items-center gap-3">
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
         <span className="text-xs text-ink-muted shrink-0">재생 속도</span>
         <div className="flex gap-1 flex-1">
           {/* 입모양 엔진은 실제 말보다 약 1.9배 느리게 만든다(docs/engine-duration-check.md) — 2x가 실제 말 빠르기에 가깝다 */}
@@ -335,6 +342,7 @@ export default function LipSyncPlayer3D({
             <button
               key={s}
               onClick={() => setSpeed(s)}
+              aria-pressed={speed === s}
               title={s === 2.0 ? '실제 말 빠르기에 가까워요' : undefined}
               className={`flex-1 py-1 text-xs rounded transition-colors ${
                 speed === s
@@ -352,6 +360,7 @@ export default function LipSyncPlayer3D({
       <div className="mt-2 flex gap-2">
         <button
           onClick={() => setXray((v) => !v)}
+          aria-pressed={xray}
           className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${xray ? 'bg-primary-500 text-white font-semibold' : 'bg-surface-sunken text-ink-muted hover:bg-fill-strong'}`}
           title="피부를 반투명하게 해 안 보이는 혀·치아를 드러냄"
         >
@@ -367,6 +376,7 @@ export default function LipSyncPlayer3D({
         </button>
         <button
           onClick={() => setShowTract((v) => !v)}
+          aria-pressed={showTract}
           className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${showTract ? 'bg-primary-500 text-white font-semibold' : 'bg-surface-sunken text-ink-muted hover:bg-fill-strong'}`}
           title="옆에서 자른 입 안 그림으로 혀·입술·턱 움직임 보기"
         >

@@ -25,6 +25,12 @@ import { coartShape, coartWeight, curveLip } from '../lib/coarticulation'
 import { mapRawFrame } from '../lib/rigMap'
 
 const EMPTY = {}
+
+// 준비 표시만 연결한다. 프레임·재생 시작 시각은 바꾸지 않는다.
+function ModelLoading({ onChange }) {
+  useEffect(() => { onChange(true); return () => onChange(false) }, [onChange])
+  return null
+}
 const ACTIVE_KEY_SET = new Set(ACTIVE_MORPH_KEYS)
 const MIRROR_KEY_SET = new Set(MIRROR_KEYS)
 // GLB 로드가 실패하면 이만큼 기다렸다가 다시 시도한다(회차마다 늘린다). 네트워크가 잠깐 끊긴 경우를 되살린다.
@@ -364,8 +370,9 @@ class GLErrorBoundary extends Component {
 // lipVowel: 선행 동시조음(lib/coarticulation)에서 이 프레임이 입술을 섞을 모음 입모양(프레임의 coart_v). 없으면 섞지 않는다.
 // flat: true면 캔버스를 만들지 않고 2D 입모양만 그린다(여러 명 대화의 저사양 모드, lib/gpuBudget).
 export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = null, mirrorRef = null, modelUrl = MODEL_URL,
-  transitionMs, durationMs, speed, view = 'front', talker = null, lipVowel = null, lipCurve = null, flat = false }) {
+  transitionMs, durationMs, speed, view = 'front', talker = null, lipVowel = null, lipCurve = null, flat = false, loadingHint = false }) {
   const [webglOK] = useState(detectWebGL)
+  const [loading, setLoading] = useState(false)
   // GPU 메모리가 모자라 브라우저가 컨텍스트를 거두면 캔버스가 까맣게 멈춘다. 그때는 이 아바타를 2D로 바꾸고
   // (캔버스를 내려 남은 GPU 메모리도 돌려준다) 여러 캔버스를 띄우는 화면이 2D로 가도록 알린다.
   const [ctxLost, setCtxLost] = useState(false)
@@ -388,7 +395,7 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
 
   return (
     <GLErrorBoundary url={modelUrl} fallback={<div className="w-full h-full">{fallback}</div>}>
-      <div className="w-full h-full">
+      <div className="relative w-full h-full">
         {/*
           카메라는 Canvas에 직접 지정한다. 예전처럼 <PerspectiveCamera makeDefault>를
           자식으로 두면, OrbitControls가 카메라 위치(입 클로즈업)가 설정되기 전에
@@ -406,7 +413,7 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
           <directionalLight position={[1, 2, 2]} intensity={1.0} />
           <directionalLight position={[-1, 0, 1]} intensity={0.4} />
 
-          <Suspense fallback={null}>
+          <Suspense fallback={loadingHint ? <ModelLoading onChange={setLoading} /> : null}>
             <RealisticFace visemeId={visemeId} xray={xray} bsFrameRef={bsFrameRef} mirrorRef={mirrorRef} modelUrl={modelUrl}
               transitionMs={transitionMs} durationMs={durationMs} speed={speed} talker={talker} lipVowel={lipVowel} lipCurve={lipCurve} />
           </Suspense>
@@ -422,6 +429,9 @@ export default function AvatarVRM({ visemeId = 15, xray = false, bsFrameRef = nu
             maxAzimuthAngle={SIDE_AZIMUTH + Math.PI / 12}
           />
         </Canvas>
+        {loadingHint && loading && <div role="status" className="pointer-events-none absolute inset-0 grid place-items-center bg-surface-inverse text-white">
+          <span className="rounded-lg border border-white/40 px-4 py-3 text-sm font-bold">입모양 준비 중…</span>
+        </div>}
       </div>
     </GLErrorBoundary>
   )

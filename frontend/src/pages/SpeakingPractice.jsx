@@ -702,7 +702,7 @@ export default function SpeakingPractice() {
                     세로 860px 이하 데스크톱은 위 여백·간격을 줄여 웹캠 버튼까지 하단 바 위에 보이게 한다. */}
                 <div className="mx-auto w-full max-w-[560px] overflow-hidden rounded-18 border-2 border-line bg-white lg:rounded-22">
                   <div className="px-4 pt-4 lg:pt-6 lg:[@media(max-height:860px)]:pt-4">
-                    <MouthAvatar frames={frames} height={null} className="h-[134px] lg:h-[209px]" />
+                    <MouthAvatar loadingHint frames={frames} height={null} className="h-[134px] lg:h-[209px]" />
                   </div>
                   <p className="pb-5 pt-2.5 text-center text-[13px] font-bold leading-figma text-ink-faint lg:pb-[34px] lg:pt-3 lg:text-[14px] lg:[@media(max-height:860px)]:pb-4">
                     {metricMode ? '아래 그래프로 목소리 크기·억양을 확인해요' : '입모양을 따라 해보세요'}
