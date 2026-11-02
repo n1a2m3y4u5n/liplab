@@ -87,7 +87,7 @@ export function trackRoute(path) {
     else if (route === '/login') track('login_view')
     track('route')
     track('track_enter')
-    if (/learn|practice|review|analysis|tasks|listen/.test(route)) track('feature_open', { action: route })
+    if (/learn|practice|review|analysis|tasks|today|records|listen/.test(route)) track('feature_open', { action: route })
     if (/learn\//.test(route)) track('stage_enter', { stage: route.split('/').pop() })
   } catch { /* 기록 실패는 무시 */ }
 }

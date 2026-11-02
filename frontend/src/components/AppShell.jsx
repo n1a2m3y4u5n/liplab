@@ -27,12 +27,10 @@ import { levelProgress } from '../lib/level'
  * data: 스탯은 useStore.user(셸이 뜰 때 /auth/me로 새로 고침), 패널 카드는 reviewAPI·learningAPI(틀린 문장·북마크·활동 날짜)·tasksAPI(오늘의 과제).
  */
 const NAV = [
-  { key: 'learn', label: '학습', to: '/learn/path', icon: '/ui/nav-learn.svg' },
-  { key: 'practice', label: '연습', to: '/practice/hub', icon: '/ui/nav-practice.svg' },
-  { key: 'task', label: '과제', to: '/tasks', icon: '/ui/nav-task.svg' },
-  { key: 'review', label: '복습', to: '/review', icon: '/ui/nav-review.svg' },
-  { key: 'analysis', label: '분석', to: '/analysis', icon: '/ui/nav-analytics.svg' },
-  { key: 'profile', label: '프로필', to: '/profile', icon: '/ui/nav-profile.svg' },
+  { key: 'today', label: '오늘', to: '/today', icon: '/ui/nav-learn.svg' },
+  { key: 'learn', label: '학습', to: '/learn/path', icon: '/ui/nav-practice.svg' },
+  { key: 'records', label: '기록', to: '/records', icon: '/ui/nav-analytics.svg' },
+  { key: 'me', label: '내 정보', to: '/profile', icon: '/ui/nav-profile.svg' },
 ]
 
 /** 학습 경로의 트랙(?track=speak·listen)이면 셸을 그 트랙색으로 테마링(발화 분홍, 소리 듣기 청록). 아니면 null. */
@@ -296,9 +294,7 @@ function MobileTopBar({ pink }) {
           className="grid size-11 shrink-0 place-items-center rounded-full border-0 bg-surface-inverse p-0 text-[12px] font-bold tracking-tight text-white">
           Aa
         </Button>
-        <Button variant="secondary" onClick={() => navigate('/profile')} aria-label="프로필" className="grid size-11 shrink-0 place-items-center rounded-full border-0 bg-transparent p-0">
-          <Avatar className="size-[30px] text-[13px]" />
-        </Button>
+
       </div>
     </header>
   )
@@ -307,7 +303,7 @@ function MobileTopBar({ pink }) {
 /** 모바일 하단 탭 바(232:52) — 프로필을 뺀 5탭. 활성은 트랙색, 비활성은 text/secondary. */
 function MobileTabBar({ activeKey }) {
   const navigate = useNavigate()
-  const tabs = NAV.filter((n) => n.key !== 'profile')
+  const tabs = NAV
   return (
     <nav data-mobile-tabbar className="fixed inset-x-0 bottom-0 z-30 flex h-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] items-center border-t-1.5 border-line bg-white pl-[max(8px,env(safe-area-inset-left))] pr-[max(8px,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pt-2.5 lg:hidden" aria-label="주 메뉴">
       {tabs.map((n) => {
@@ -325,19 +321,19 @@ function MobileTabBar({ activeKey }) {
   )
 }
 
-export default function AppShell({ children, active, rail = 'default', rightRail, title, description, closeTo }) {
+export default function AppShell({ children, active, rail = 'default', rightRail, title, description, closeTo, backTo, backLabel = '돌아가기' }) {
   const navigate = useNavigate()
   const location = useLocation()
   const learnTrack = useLearnTrack()
   const speak = learnTrack === 'speak'
-  const showRail = useMinWidth(1280)
+  const showRail = false
   useUserSync()
   // 셸 안에서는 모바일 접근성 버튼을 상단 바로 옮긴다(A11ySettings가 이 표시를 본다)
   useEffect(() => {
     document.documentElement.dataset.shell = '1'
     return () => { delete document.documentElement.dataset.shell }
   }, [])
-  const activeKey = active || NAV.find((n) => location.pathname.startsWith(n.to))?.key
+  const activeKey = ({ practice: 'learn', task: 'today', review: 'today', analysis: 'records', profile: 'me' }[active] || active) || NAV.find((n) => location.pathname.startsWith(n.to))?.key
 
   return (
     <div data-track={learnTrack || undefined}
@@ -365,18 +361,14 @@ export default function AppShell({ children, active, rail = 'default', rightRail
       {/* 본문: 모바일 232:51(좌우 18 · 간격 14), 데스크톱 58:11(32 · 20). 모바일 하단은 탭 바 높이만큼 비운다.
           세로 860px 이하 데스크톱(1366×768 등)은 위아래 여백·간격을 줄여 분석·과제가 한 화면에 들어오게 한다. */}
       {/* id="main-content"는 '본문으로 건너뛰기'(App.jsx SkipLink)의 대상이다. */}
-      <main id="main-content" className="flex min-w-0 flex-1 flex-col gap-3.5 pl-[max(18px,env(safe-area-inset-left))] pr-[max(18px,env(safe-area-inset-right))] pb-[calc(var(--tabbar-h)+18px+env(safe-area-inset-bottom))] pt-5 lg:gap-5 lg:px-8 lg:pb-10 lg:pt-8 lg:[@media(max-height:860px)]:gap-4 lg:[@media(max-height:860px)]:pb-5 lg:[@media(max-height:860px)]:pt-6">
+      <main id="main-content" className="mx-auto flex w-full min-w-0 max-w-[1120px] flex-1 flex-col gap-3.5 pl-[max(18px,env(safe-area-inset-left))] pr-[max(18px,env(safe-area-inset-right))] pb-[calc(var(--tabbar-h)+18px+env(safe-area-inset-bottom))] pt-5 lg:gap-5 lg:px-8 lg:pb-10 lg:pt-8 lg:[@media(max-height:860px)]:gap-4 lg:[@media(max-height:860px)]:pb-5 lg:[@media(max-height:860px)]:pt-6">
+        {(backTo || closeTo) && <Link to={backTo || closeTo} className="inline-flex min-h-11 items-center gap-2 self-start font-bold text-track">‹ {backLabel}</Link>}
         {(title || description) && (
           <header className="flex flex-col gap-2 leading-figma">
             {/* 제목 줄(453:82 Page head): 제목 + 오른쪽 끝 나가기 X */}
             <div className="flex items-center justify-between gap-3">
               {title && <h1 className="text-[25px] font-bold tracking-[-0.625px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">{title}</h1>}
-              {closeTo && (
-                <Button variant="secondary" onClick={() => navigate(closeTo)} aria-label="나가기"
-                  className="grid size-11 shrink-0 place-items-center rounded-full border-0 bg-transparent p-0 transition-opacity hover:opacity-80">
-                  <img src="/ui/lp-453-83-page-close.svg" alt="" className="size-10" />
-                </Button>
-              )}
+
             </div>
             {description && <p className="text-[15px] text-ink-muted">{description}</p>}
           </header>
