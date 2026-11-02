@@ -2,7 +2,7 @@ import PracticeRedirect from './components/PracticeRedirect'
 import { saveLastTrack } from './lib/lastTrack'
 import LegacyRedirect from './components/LegacyRedirect'
 import Feedback from './components/Feedback'
-import AdminFeedback from './pages/AdminFeedback'
+const AdminFeedback = lazy(() => import('./pages/AdminFeedback'))
 import { initTrack, track, trackRoute } from './lib/track'
 import { Component, lazy, Suspense, useState, useEffect, useLayoutEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
@@ -35,8 +35,8 @@ import { authAPI, curriculumAPI, seedAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
 import A11ySettings from './components/A11ySettings'
 import LoadingScreen from './components/LoadingScreen'
-import Login from './pages/Login'
-import Landing from './pages/Landing'
+const Login = lazy(() => import('./pages/Login'))
+const Landing = lazy(() => import('./pages/Landing'))
 // Bookmarks는 /review/saved에서만 쓰이므로 지연로딩 —
 // 랜딩(로그인) 진입 청크에서 빼 첫 로딩을 가볍게 한다(저사양·불안정 통신망 배려).
 
@@ -235,6 +235,7 @@ function App() {
     <MotionConfig reducedMotion="user" transition={{ duration: UI_MOTION.duration, ease: UI_MOTION.ease }}>
     <Router>
       <ScrollToTop />
+      <Suspense fallback={<LoadingScreen />}>
       <AuthGate>
       <>
       <SkipLink />
@@ -313,6 +314,7 @@ function App() {
       <Feedback />
       </>
       </AuthGate>
+      </Suspense>
     </Router>
     </MotionConfig>
     </ErrorBoundary>
