@@ -173,7 +173,7 @@ async def _security_headers(request, call_next):
         "default-src 'self'",
         "script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net",
         "worker-src 'self' blob:",
-        "connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com",
+        "connect-src 'self' blob: data: https://cdn.jsdelivr.net https://storage.googleapis.com",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob:",
@@ -384,27 +384,6 @@ async def demo_login(request: Request, db: AsyncSession = Depends(get_db)):
 async def get_me(current_user = Depends(get_current_user)):
     """Get current authenticated user information"""
     return current_user
-
-
-@app.post("/api/auth/logout", status_code=204)
-async def logout(request: Request, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """이 토큰만 폐기한다. 공용 데모 계정의 다른 방문자는 계속 사용할 수 있다."""
-    import hashlib
-    from datetime import datetime
-    from sqlalchemy import delete
-    from sqlalchemy.exc import IntegrityError
-    from auth import jwt, SECRET_KEY, ALGORITHM
-    from database import RevokedToken
-    token = request.headers["authorization"].split()[1]
-    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    await db.execute(delete(RevokedToken).where(RevokedToken.expires_at < datetime.utcnow()))
-    db.add(RevokedToken(token_hash=hashlib.sha256(token.encode("utf-8")).hexdigest(),
-                        expires_at=datetime.utcfromtimestamp(payload["exp"])))
-    try:
-        await db.commit()
-    except IntegrityError:  # 동시에 들어온 같은 토큰의 로그아웃
-        await db.rollback()
-    return Response(status_code=204)
 
 
 @app.get("/api/account/data", dependencies=[Depends(ratelimit.rate_limit(10, 60, "account-export"))])
