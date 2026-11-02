@@ -218,7 +218,7 @@ def card(row):
 
 - 용도: 등록된 두 시드 개발 선택. 학습33명·검증12명이며 검증 화자는 이전 선택에도 사용됐다. 독립 판정·제품 성능·앱 반영 없음, 깨끗한 평가 대기.
 - 구조: 파라미터3,940,973개(선생의65.1723%),40×40 내부입력, stem16, 잔차24·48·96·192,256특징, BiGRU2층332,53자모 CTC. FP32 ONNX.
-- 전단741,920·후단3,199,053개다. seed0 다음 seed1을 같은 lab-sub3060에서 필수 실행하며 두 시드를 골라 비교하지 않는다. 등록 학습은 AMP0·CPU4·cap0.45·배치32·4000프레임·최대40에폭이다.
+- 전단741,920·후단3,199,053개다. 초기 순차 계획은 d7068b06 부록으로 seed0 lab-sub/seed1 lab-main 병렬로 갱신했고 두 시드를 모두 실행했다. 더 좋은 시드를 고르지 않는다. 등록 학습은 AMP0·CPU4·cap0.45·배치32·4000프레임·최대40에폭이다.
 - 선생은 B33 seed0 SHA256 `{TEACHER_SHA}`다. 학생 seed{row['seed']} SHA256 `{row['student_checkpoint_sha256']}`. 고정 선생·같은 분할·증류·배치 규칙, 학생 시드만 다르다.
 - 검증4지: 선생{row['teacher_accuracy']:.9f}, 학생{row['student_accuracy']:.9f}, 차{row['accuracy_delta']:+.9f}; 기준≥−0.02, 통과={row['gates']['accuracy']}.
 - 검증 문장CER(보조): 선생{row['teacher_cer']:.9f}, 학생{row['student_cer']:.9f}. 별도 관문이 아니다.
@@ -394,5 +394,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
