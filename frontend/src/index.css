@@ -22,6 +22,13 @@
   --fill-strong: #e4e4ec;
   --focus-ring: var(--track-dark);
   --control-min: 44px;
+  --radius-control: 14px;
+  --radius-card: 18px;
+  --space-card: 20px;
+  --text-body: 16px;
+  --text-title: 25px;
+  --motion-duration: 180ms;
+  --motion-ease: cubic-bezier(.22, 1, .36, 1);
 
   /* 발화 트랙(171:38)·북마크(§3.1 고정색) */
   --speak: #c02670;
@@ -104,6 +111,29 @@ body,
 }
 
 @layer components {
+  /* 트랙과 무관하게 같은 간격·표면·글자 위계를 쓴다. */
+  .ui-card {
+    min-width: 0;
+    border-radius: var(--radius-card);
+    padding: var(--space-card);
+    @apply border-2 border-line bg-surface shadow-card;
+  }
+  .ui-chip {
+    @apply inline-flex max-w-full items-center gap-1.5 rounded-full bg-track-tint px-3 py-1.5 text-[13px] font-bold leading-snug text-track-dark;
+  }
+  .ui-progress {
+    @apply h-3 min-w-0 flex-1 overflow-hidden rounded-full bg-fill-strong;
+  }
+  .ui-lesson-frame {
+    @apply mx-auto flex w-full max-w-[676px] min-w-0 flex-1 flex-col px-[18px] pt-[18px] lg:pt-7;
+  }
+  .ui-lesson-title {
+    @apply break-keep text-[25px] font-bold leading-snug tracking-tight text-ink lg:text-[30px];
+  }
+  @screen lg {
+    .ui-card { --radius-card: 20px; --space-card: 24px; }
+  }
+
   /* ── 버튼 (Figma "Button / Primary" 75:23 계열) ─────────────────────────────
      3D 하단테두리 + 누르면 내려앉음. 색은 트랙 변수(--track)를 따른다: 셸(AppShell)이나
      레슨 루트에 data-track="speak"가 있으면 분홍(#EC4899 / #BE185D)이 된다(§3.1).
@@ -121,7 +151,7 @@ body,
     @apply px-6 py-3 rounded-14 border-2 border-b-5 font-bold leading-figma
            bg-track border-track-dark text-white
            hover:bg-track-hover focus:outline-none
-           transition-all duration-100 active:translate-y-[2px] active:border-b-2
+           transition-[color,background-color,border-color,transform] duration-[180ms] active:translate-y-[2px] active:border-b-2
            disabled:cursor-not-allowed disabled:bg-inactive disabled:border-inactive-line disabled:text-inactive-text;
   }
 
@@ -130,7 +160,7 @@ body,
   .btn-secondary {
     @apply px-6 py-3 rounded-14 border-2 border-b-5 border-line bg-white font-bold leading-figma text-ink-muted
            hover:bg-surface-muted focus:outline-none
-           transition-all duration-100 active:translate-y-[1px] active:border-b-2
+           transition-[color,background-color,border-color,transform] duration-[180ms] active:translate-y-[1px] active:border-b-2
            disabled:cursor-not-allowed disabled:opacity-60;
   }
 
@@ -139,12 +169,12 @@ body,
   .btn-good {
     @apply px-6 py-3 rounded-14 border-2 border-b-5 font-bold leading-figma
            bg-good border-good-dark text-white focus:outline-none
-           transition-all duration-100 active:translate-y-[2px] active:border-b-2;
+           transition-[color,background-color,border-color,transform] duration-[180ms] active:translate-y-[2px] active:border-b-2;
   }
   .btn-bad {
     @apply px-6 py-3 rounded-14 border-2 border-b-5 font-bold leading-figma
            bg-bad border-bad-dark text-white focus:outline-none
-           transition-all duration-100 active:translate-y-[2px] active:border-b-2;
+           transition-[color,background-color,border-color,transform] duration-[180ms] active:translate-y-[2px] active:border-b-2;
   }
 
   /* 크기 수정자 — 위 버튼 클래스 뒤에 둔다(같은 명시도라 나중 선언이 이긴다). lg:btn-lg처럼 반응형도 된다. */
@@ -160,7 +190,7 @@ body,
 
   .input-field {
     font-size: 16px; /* iOS 포커스 확대를 막고 입력 글자를 읽기 쉽게 한다. */
-    @apply w-full px-4 py-3 border-2 border-line rounded-[12px] bg-gray-50
+    @apply w-full px-4 py-3 border-2 border-line rounded-[12px] bg-surface-muted
            focus:outline-none focus:ring-2 focus:ring-primary-200
            focus:border-primary-400 focus:bg-white transition-all duration-200;
   }

@@ -4,6 +4,7 @@ import { initTrack, track, trackRoute } from './lib/track'
 import { Component, lazy, Suspense, useState, useEffect, useLayoutEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { MotionConfig } from 'framer-motion'
+import { UI_MOTION } from './lib/uiMotion'
 import ErrorScreen from './components/ErrorScreen'
 
 class ErrorBoundary extends Component {
@@ -225,7 +226,7 @@ function App() {
   return (
     <ErrorBoundary>
     {/* 동작 최소화 설정 시 framer-motion 애니메이션을 OS 설정에 맞춰 자동 축소(접근성) */}
-    <MotionConfig reducedMotion="user">
+    <MotionConfig reducedMotion="user" transition={{ duration: UI_MOTION.duration, ease: UI_MOTION.ease }}>
     <Router>
       <ScrollToTop />
       <AuthGate>

@@ -43,6 +43,8 @@ export default {
         },
         page: '#f3f3f3',       // surface/background — 모바일 페이지·레슨 배경
         surface: {
+          inverse: '#1a1a2e',
+          'inverse-muted': '#303048',
           DEFAULT: '#ffffff',  // surface/card
           muted: '#fafafc',    // 카드 안 무대(3D 아바타 자리)
           nav: '#f7f7fa',      // 가이드 모달 왼쪽 목차
@@ -67,7 +69,7 @@ export default {
         },
         speak: { DEFAULT: '#c02670', dark: '#be185d', tint: '#ffe4e9', hover: '#a21c5b' },  // 발화 트랙(171:38)
         listen: { DEFAULT: '#117a7e', dark: '#0c5e66', tint: '#d5f3f4', hover: '#0c5e66' },  // 소리 듣기 트랙
-        bookmark: { DEFAULT: '#2563eb', dark: '#1d4ed8', light: '#60a5fa', line: '#c3dafb' },  // §3.1 북마크 고정색(199:29)
+        bookmark: { DEFAULT: '#2563eb', dark: '#1d4ed8', light: '#60a5fa', line: '#c3dafb', tint: '#e0edff' },  // §3.1 북마크 고정색(199:29)
         // 점수·피드백(§3.2) — 94:98 정답 / 94:140 오답 / 182:92 음소 칩
         good: { DEFAULT: '#15803d', dark: '#0f7a36', text: '#15803d', tint: '#e7f8ef', line: '#cde7d7' },
         warn: { DEFAULT: '#f59e0b', strong: '#d97706', text: '#b45309', tint: '#fef3c7' },
