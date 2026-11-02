@@ -433,20 +433,20 @@ export default function EvalReport() {
               {data.trials_to_criterion?.length ? (
                 <div className="space-y-1">
                   {data.trials_to_criterion.map((s) => (
-                    <div key={s.stage} className="flex flex-wrap items-center gap-3 py-1.5 sm:flex-nowrap">
-                      <span className="w-24 shrink-0 text-xs font-semibold text-ink">{s.stage}. {s.name}</span>
-                      <div className="flex-1">
+                    <div key={s.stage} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 py-1.5 sm:flex">
+                      <span className="min-w-0 text-xs font-semibold text-ink sm:w-24 sm:shrink-0">{s.stage}. {s.name}</span>
+                      <div className="col-span-2 row-start-2 min-w-0 sm:flex-1">
                         <div className="h-2 rounded-full bg-fill">
                           <div className={`h-2 rounded-full ${s.mastered ? 'bg-good' : 'bg-primary-500'}`}
                                style={{ width: `${Math.round((s.progress ?? 0) * 100)}%` }} />
                         </div>
                       </div>
-                      <span className="w-28 shrink-0 text-right text-[11px] tabular-nums text-ink-muted">
+                      <span className="col-span-2 row-start-3 text-right text-[11px] tabular-nums text-ink-muted sm:w-28 sm:shrink-0">
                         {s.mastered
                           ? (s.trials_to_mastery ? `${s.trials_to_mastery}회째 숙달` : `${s.attempts}회 · 정답 ${s.correct}`)
                           : `점수 ${Math.round(s.mastery_score)}/${s.mastery_threshold ?? '—'} · ${s.attempts}회`}
                       </span>
-                      <span className={`w-14 shrink-0 text-right text-[11px] font-bold ${s.mastered ? 'text-good-text' : 'text-ink-faint'}`}>
+                      <span className={`col-start-2 row-start-1 text-right text-[11px] font-bold sm:w-14 sm:shrink-0 ${s.mastered ? 'text-good-text' : 'text-ink-faint'}`}>
                         {s.mastered ? '숙달' : s.status === 'in_progress' ? '진행중' : '—'}
                       </span>
                     </div>
