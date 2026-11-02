@@ -353,7 +353,7 @@ export default function EvalReport() {
               <Card title="초기 대비 최근 향상도" hint={bvr ? `각 ${bvr.n_each}시행` : '최소 9시행 필요'}>
                 {bvr ? (
                   <div>
-                    <div className="flex items-end gap-6">
+                    <div className="flex flex-wrap items-end gap-6">
                       <div>
                         <p className="text-[11px] font-bold text-ink-faint">초기 1/3</p>
                         <p className="text-2xl font-bold text-ink-muted">{bvr.baseline_acc}%</p>
@@ -433,7 +433,7 @@ export default function EvalReport() {
               {data.trials_to_criterion?.length ? (
                 <div className="space-y-1">
                   {data.trials_to_criterion.map((s) => (
-                    <div key={s.stage} className="flex items-center gap-3 py-1.5">
+                    <div key={s.stage} className="flex flex-wrap items-center gap-3 py-1.5 sm:flex-nowrap">
                       <span className="w-24 shrink-0 text-xs font-semibold text-ink">{s.stage}. {s.name}</span>
                       <div className="flex-1">
                         <div className="h-2 rounded-full bg-fill">
