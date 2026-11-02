@@ -1,3 +1,4 @@
+import { Progress } from '../components/UI'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -536,9 +537,7 @@ export default function Practice() {
           <button type="button" onClick={handleFinish} aria-label="나가기" className="shrink-0">
             <img src="/ui/lp-91-12-close.svg" alt="" className="size-8 lg:size-9" />
           </button>
-          <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
-            <div className="h-full rounded-full bg-track transition-all duration-500" style={{ width: `${(answered / total) * 100}%` }} />
-          </div>
+          <Progress value={(answered / total) * 100} label="레슨 진행률" animated className="lg:h-[14px]" />
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{currentSentenceIndex + 1} / {total}</span>
         </div>
 

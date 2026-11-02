@@ -53,7 +53,7 @@ export default function ListenPath() {
     finally { setSkipping(false) }
   }
   return <AppShell active="learn">
-    <div className="mx-auto flex w-full max-w-[752px] flex-col items-center gap-3 lg:gap-6">
+    <div className="mx-auto flex w-full max-w-[752px] hub-path flex-col items-center gap-3 lg:gap-6">
       <LearnHeader />
       {data?.is_demo && <span className="self-start rounded-full bg-track-tint px-3 py-1.5 text-[12px] font-bold text-track-dark">체험용 · 모든 단계 열림</span>}
       {!data?.is_demo && data?.is_beta && <span className="self-start rounded-full bg-track-tint px-3 py-1.5 text-[12px] font-bold text-track-dark">베타 · 모든 단계 열림</span>}
@@ -65,8 +65,8 @@ export default function ListenPath() {
           <div className="flex gap-2"><button className="min-h-11 rounded-14 border-2 border-white/50 px-3 text-[14px] font-bold" onClick={() => setGuide(true)}>가이드</button><button className="size-11 rounded-14 border-2 border-white/50 text-xl" aria-label="소리 듣기 안내" onClick={() => setNotice(true)}>ⓘ</button></div>
         </div>
         {data.placement?.available && !data.placement?.completed && <button className="btn-secondary btn-md w-full" onClick={() => navigate('/learn/listening?placement=1')}>시작 단계 정하기</button>}
-        <div className="relative flex w-full flex-col items-center justify-center pb-[285px] pt-1 lg:min-h-[550px] lg:flex-row lg:items-start lg:justify-start lg:pb-5 lg:pl-[110px]" style={{ '--card-top': `${Math.max(0, days.length * 124 - 24)}px` }}>
-          <div className="flex flex-col items-center">
+        <div className="listen-road relative flex w-full flex-col items-center justify-center pb-[285px] pt-1 lg:min-h-[550px] lg:flex-row lg:items-start lg:justify-start lg:pb-5 lg:pl-[110px]" style={{ '--card-top': `${Math.max(0, days.length * 124 - 24)}px` }}>
+          <div className="listen-days flex flex-col items-center">
             {days.length > 1 && <span className="mb-1 text-[13px] text-ink-muted lg:hidden">지나온 날 {stage.quota.days.filter((d) => d.date < kstDate() && d.met).length}일</span>}
             {days.map((day, i) => <div key={day.date} className={`${i < days.length - 1 ? 'hidden lg:flex' : 'flex'} flex-col items-center`}><DayNode label={day.date.slice(5).replace('-', '/')} state="mastered" /><span className="my-1 h-7 w-[5px] rounded-full bg-track lg:h-10" /></div>)}
             {stage.stage === 4 && <button className="btn-secondary btn-md mb-5 text-track-dark" onClick={() => navigate('/learn/listening?stage=4&test=1')}>◇ 처음 검사</button>}
