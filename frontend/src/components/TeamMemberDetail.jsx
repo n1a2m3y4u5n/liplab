@@ -1,6 +1,6 @@
 import Modal from './Modal'
 import TeamAvatar from './TeamAvatar'
-import { CONTACT_EMAIL } from '../config/team'
+export { default as ContactLine } from './ContactLine'
 
 // 팀원 상세(9/28 사용자 요청: 개발자 프로필을 누르면 상세 정보). 랜딩은 모달(TeamMemberModal), 사용법 가이드 11번 탭은
 // 이미 모달 안이라 겹치지 않게 그 자리에서 펼친다(TeamMemberDetail). 내용은 config/team.js의 detail.
@@ -46,15 +46,6 @@ function AwardList({ items, school }) {
 }
 
 /** 연락처 한 줄. 목록 위(랜딩 패널·가이드 개발자 소개)는 '대표 연락처', 개인 상세 안은 정의 목록을 쓴다. */
-export function ContactLine({ className = '', label = '대표 연락처' }) {
-  return (
-    <p className={`flex flex-wrap items-center gap-x-[10px] gap-y-1 font-bold leading-figma ${className}`}>
-      <span className="text-[13px] text-ink-faint">{label}</span>
-      <a href={`mailto:${CONTACT_EMAIL}`} className="text-[14px] text-primary-500 hover:underline">{CONTACT_EMAIL}</a>
-    </p>
-  )
-}
-
 export function TeamMemberDetail({ m }) {
   const d = m.detail || {}
   const awards = d.awards || []

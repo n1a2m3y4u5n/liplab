@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Button from '../components/Button'
 import useStore from '../store/useStore'
 import Logo from '../components/Logo'
 import TeamAvatar from '../components/TeamAvatar'
 import { TEAM, TEAM_ORG, AWARD, REPO_URL } from '../config/team'
-import TeamMemberModal, { ContactLine } from '../components/TeamMemberDetail'
+import ContactLine from '../components/ContactLine'
+const TeamMemberModal = lazy(() => import('../components/TeamMemberDetail'))
 
 /**
  * 랜딩 (Figma "02. Landing" 9:12 Landing, Desktop 1440). 로그인하지 않은 사람이 "/"에 오면 보인다(App.jsx AuthGate).
@@ -230,7 +231,9 @@ function Developers() {
           </ul>
         </div>
       </div>
-      <TeamMemberModal m={open} onClose={() => setOpen(null)} />
+      {open && <Suspense fallback={<p role="status" className="text-center text-ink-muted">가져오는 중…</p>}>
+        <TeamMemberModal m={open} onClose={() => setOpen(null)} />
+      </Suspense>}
     </section>
   )
 }
