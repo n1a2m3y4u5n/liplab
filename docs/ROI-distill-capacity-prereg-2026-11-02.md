@@ -81,3 +81,7 @@ WASM은 lab-sub CNSAI2025의 설치된 onnxruntime-web1.19.2, Node24, WASM CPU E
 검증문장CER은12/25/38이각각0.7169538589/0.7278726698/0.7007728014(선생0.6769461876)이며보조보고로만남긴다.선택된38도자유문장CER이높고,검증화자는여러선택에이미사용됐다.**검증12명개발선택·판정없음·깨끗한평가대기**이며전역최소구조나독립성능통과를주장하지않는다.앱·기본플래그·배포변경없음.
 
 산출물은지정out/distill_capacity의capacity-curve.json·csv·png및25/38의model.pt·train_summary.json·architecture.json·selection.json·export.json·teacher/student.onnx·wasm.json·로그·모델카드다.최종모델은38/model.pt와38/student.onnx다.새구조·시드·저장형식·시간재측정으로선택하지않았다.공유원본은읽기만하고자기입력/선생캐시를정리한다.
+
+### 후속 seed1 재현 확인
+
+별도등록2760dd78의동일38%학생seed1은선생대비−2.3025%p로하한−2%p를넘어미재현이다.**38%선택:seed1 미재현**을주석으로붙인다.현재원시seed0용량선택과곡선은역사적기록으로그대로보존하며재현실패를뒤집는새시드선택·재측정은하지않는다.세부결과는ROI-distill38-repro-prereg-2026-11-02.md와out/distill38_repro에있다.검증12명개발확인·판정없음은그대로다.
