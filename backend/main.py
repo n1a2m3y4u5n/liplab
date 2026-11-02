@@ -340,6 +340,8 @@ async def register(user_data: UserRegister, request: Request, db: AsyncSession =
           dependencies=[Depends(ratelimit.rate_limit(10, 60, "auth"))])
 async def login(credentials: UserLogin, request: Request, db: AsyncSession = Depends(get_db)):
     """Authenticate user and return JWT token"""
+    from login_guard import reserve_attempt, clear_attempts
+    await reserve_attempt(str(credentials.email), db)
     user = await authenticate_user(credentials.email, credentials.password, db)
 
     if not user:
@@ -349,6 +351,7 @@ async def login(credentials: UserLogin, request: Request, db: AsyncSession = Dep
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    await clear_attempts(str(credentials.email), db)
     token_response = create_token_response(user)
     from usage_events import record_auth
     await record_auth(db, user.id, 'login', request)

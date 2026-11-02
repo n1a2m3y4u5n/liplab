@@ -5,7 +5,6 @@ Supports both SQLite (development) and PostgreSQL (production)
 import os
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, ForeignKey, Boolean, UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base as async_declarative_base
@@ -34,6 +33,14 @@ AsyncSessionLocal = sessionmaker(
 )
 
 Base = async_declarative_base()
+
+
+class LoginAttempt(Base):
+    """이메일 대신 HMAC만 저장하는 로그인 잠금. 15분 뒤 자동 만료된다."""
+    __tablename__ = "login_attempts"
+    key = Column(String(64), primary_key=True)
+    attempts = Column(Integer, nullable=False, default=0)
+    expires_at = Column(DateTime, nullable=False, index=True)
 
 
 class RevokedToken(Base):
