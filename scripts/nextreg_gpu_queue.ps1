@@ -47,8 +47,8 @@ if($Mode -eq 'black') {
     $run=Join-Path (Split-Path $Root) 'data\run_base'
     if($env:COMPUTERNAME -eq 'CNSAI2025'){$run='D:\work\hq\projects\liplab-lab\data\roi-kmsav\run_base'}
     if($env:COMPUTERNAME -eq 'CNSAI') {
-        & ollama stop qwen3.6:35b-a3b *> "$Root\ollama-stop.log"
-        if($LASTEXITCODE){throw 'Ollama stop failed; do not start GPU training'}
+        $body=@{model='qwen3.6:35b-a3b';keep_alive=0;stream=$false} | ConvertTo-Json
+        Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:11434/api/generate' -Body $body -ContentType 'application/json' -TimeoutSec 30 | ConvertTo-Json | Set-Content "$Root\ollama-stop.log"
     }
     $stable=0
     while($stable -lt 3){if(IdleGPU){$stable++}else{$stable=0}; Log "waiting GPU idle checks=$stable"; if($stable -lt 3){Start-Sleep 30}}
