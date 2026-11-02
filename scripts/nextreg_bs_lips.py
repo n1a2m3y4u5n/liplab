@@ -25,6 +25,10 @@ def main():
     class InputBench(Bench):
         def __init__(self, path):
             super().__init__(path)
+            # Use the same frame mask for both conditions, including idle runs.
+            # Otherwise missing lip coordinates could change the sampled padding.
+            common_invalid = ~np.isfinite(self.lips).all(axis=1)
+            self.bs[common_invalid] = np.nan
             if a.lips:
                 self.bs = np.concatenate([self.bs, self.lips], axis=1)
                 self.bs_names = self.bs_names + ['lip%d' % i for i in range(80)]
