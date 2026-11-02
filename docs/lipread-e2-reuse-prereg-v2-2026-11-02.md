@@ -54,3 +54,20 @@ MediaPipe0.10.14, 88×88흑백30fps·margin2·smooth15·roll보정·가운데80�
 | prereg-before-seal.md (등록 본문 고정 복사본) | f0f19ba0feae0d9426b8e3add240f3745a919ebb2636562fe29e93acb9aaee51 |
 
 등록 본문 고정 복사본을 봉인에 넣어 이 절의 해시 추가가 원장 순환참조를 만들지 않게 했다. 모든1246파일을 다시 해시 검증했고 평가용mp4/wav 복사본이 E2원본과 바이트 단위로 같음을 확인했다. 후보모델/선택JSON 해시는 경로 통지 후 별도 추가커밋이 필요하다. 판정 실행기는 그 최종seal.json·릴리스JSON이 없으면 실행하지 못하고, 실행 전 모든해시를 확인하며 JUDGE_ONCE로 중복실행을 막는다. 현재 JUDGE_ONCE·독화점수·verdict 파일이 없다. 새AI Hub요청0·키조사0·푸시0·배포0. 여기서 멈추고 통지를 기다린다.
+
+## 8. 선택 모델 최종 봉인과 시작 통지 (17:17, 추론 전)
+
+오케스트레이터가 KMSAV 판정 완료 및 E2 v2 시작을 통지했다. 기존 판정은 K1s0 47.5%, B33s0 53.4%로 불통과이나, 이 등록의 고정 주비교 K−B33을 그대로 수행한다. 검증 선택 JSON은 `roi-kmsav/judge/sel.json`(K1s0,dup1)과 `sel_b33.json`(B33s0,dup1)이며 E2 점수로 선택을 바꾸지 않았다.
+
+선택 JSON과 가중치의 고정 복사본을 평가 루트의 `models/`에 두고 원본과 해시가 같음을 검사했다. 자료 봉인의 모든 파일이 바뀌지 않았음을 확인한 뒤 모델까지 포함한 최종 `seal.json`(1252파일)을 만들었다. **아래 해시를 커밋한 뒤 CPU로만 단회 판정한다. 이 절 작성까지 후보 추론0회다.**
+
+| 항목 | sha256 |
+|---|---|
+| 최종 seal.json | df424c36e38c1280e626981fe386ce887ba8170fd373d15e35699b68a64edd2b |
+| models/K.pt | b36847cb10912f1343bd04de9ee5b14198cf326c0243b495a0d82fc7616005f1 |
+| models/K-selection.json | 16a0eb9e2109d26da96e9c685aaa8c95f2d1dd3fe7833fcae6beef34389e0a67 |
+| models/B33.pt | d499c9f26affd57ef9cc4014c48337669ecfed7466a1ef8ac81c68742007ca1a |
+| models/B33-selection.json | dfe6291cb3fccea236950b16886db0fcef6ba8c25112f41c08f0ae75991638ba |
+| models/R2.onnx (보고용) | d3c01830f4397955d658545a623df0f0aa662fce86dca51803c1198df9acaa36 |
+
+**절반 1 14명, E2 코호트 재사용, R2 겹침 미확인.** 모델/데이터/코드 해시를 추론 직전에 전부 다시 확인하고 JUDGE_ONCE로 중복 실행을 거부한다. CPU2스레드·GPU미사용으로 실행한다. 앱은 자동으로 켜지 않는다.
