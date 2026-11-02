@@ -11,7 +11,8 @@ REPO = Path(__file__).resolve().parents[1]
 
 def main():
     prep = json.loads((ROOT/'data/roi-kmsav/run_base/prep.json').read_text(encoding='utf-8'))
-    allowed = {c['clip']: c['spk'] for c in prep['clips']}
+    train_indices = {int(item[0]) for item in prep['sent']}
+    allowed = {c['clip']: c['spk'] for i, c in enumerate(prep['clips']) if c['role'] == 'val' or i in train_indices}
     speakers = set(prep['meta']['train_spk']) | set(prep['meta']['val_spk'])
     assert len(speakers) == 45 and {c['role'] for c in prep['clips']} == {'train', 'val'}
     spans = {}
