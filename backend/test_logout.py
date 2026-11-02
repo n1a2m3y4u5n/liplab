@@ -12,6 +12,11 @@ from fastapi.testclient import TestClient
 from auth import jwt, SECRET_KEY, ALGORITHM
 import main
 with TestClient(main.app) as c:
+    csp = c.get('/api/auth/me').headers['content-security-policy']
+    assert "default-src 'self'" in csp
+    assert "script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net" in csp
+    assert "worker-src 'self' blob:" in csp
+    assert "'unsafe-eval'" not in csp
     a = c.post('/api/auth/demo').json()
     b = c.post('/api/auth/demo').json()
     assert a['access_token'] != b['access_token']
