@@ -336,6 +336,35 @@ def cmd_prep(a):
 
 
 # ───────────────────────────── 자료(메모리 매핑) ─────────────────────────────
+class FileFrames:
+    """정렬된 프레임 번호를 파일 읽기로 돌려준다(memmap과 같은 값, 작업 집합에 pack이 쌓이지 않음)."""
+
+    def __init__(self, path, frames, S):
+        self.f = open(path, 'rb', buffering=0)
+        self.shape = (frames, S, S)
+        self.fb = S * S
+
+    def __getitem__(self, uq):
+        uq = np.asarray(uq, np.int64)
+        out = np.empty((len(uq), self.shape[1], self.shape[2]), np.uint8)
+        if not len(uq):
+            return out
+        cut = np.nonzero(np.diff(uq) != 1)[0] + 1
+        p = 0
+        for g in np.split(uq, cut):
+            self.f.seek(int(g[0]) * self.fb)
+            want = len(g) * self.fb
+            mv = memoryview(out[p:p + len(g)]).cast('B')
+            got = 0
+            while got < want:
+                n = self.f.readinto(mv[got:])
+                if not n:
+                    raise IOError('pack 파일이 짧음')
+                got += n
+            p += len(g)
+        return out
+
+
 class Run:
     def __init__(self, run):
         self.dir = run
@@ -345,9 +374,14 @@ class Run:
         self.lead = {s: [(ci, np.array(fr, np.int64)) for ci, fr in v] for s, v in d['lead'].items()}
         self.tail = {s: [(ci, np.array(fr, np.int64)) for ci, fr in v] for s, v in d['tail'].items()}
         self.val_items, self.val_sent = d['val_items'], d['val_sent']
+        self.kms = d.get('kms', [])                    # KMSAV 문장 항목(roi_kmsav.py prep-k, 없으면 빈 목록)
         S = self.meta['S']
-        self.roi = np.memmap(os.path.join(run, 'pack', 'roi_u8.bin'), np.uint8, 'r', shape=(self.meta['frames'], S, S))
-        self.off = np.array([c['off'] for c in self.clips], np.int64)
+        pack = os.path.join(run, 'pack', 'roi_u8.bin')
+        if os.environ.get('ROI_PACK_READ') == 'file':   # 큰 pack을 프로세스 메모리에 매핑하지 않는다(메모리가 빠듯한 PC)
+            self.roi = FileFrames(pack, self.meta['frames'], S)
+        else:
+            self.roi = np.memmap(pack, np.uint8, 'r', shape=(self.meta['frames'], S, S))
+        self.off =np.array([c['off'] for c in self.clips], np.int64)
         self.T = np.array([c['T'] for c in self.clips], np.int64)
         self.spk = [c['spk'] for c in self.clips]
         tp = os.path.join(run, 'pack', 'wavlm_f16.bin')
@@ -744,7 +778,9 @@ def cmd_train(a):
     if a.init:
         ck = torch.load(a.init, map_location='cpu', weights_only=False)
         front.load_state_dict(ck['front'])
-        log(f'[train] 전단 초기화 ← {a.init} (사전학습 ep{ck["meta"]["epoch"]})')
+        if a.init_head:
+            head.load_state_dict(ck['head'])
+        log(f'[train] 전단 초기화 ← {a.init} (사전학습 ep{ck["meta"]["epoch"]}, 머리도={bool(a.init_head)})')
     front.to(dev)
     head.to(dev)
     params = list(front.parameters()) + list(head.parameters())
@@ -797,7 +833,15 @@ def cmd_train(a):
         head.train()
         if dev == 'cuda':
             torch.cuda.reset_peak_memory_stats()
-        items = [('s', (s[0], s[1])) for s in run.sent] + [('w', tuple(w)) for w in run.words]
+        items = [] if a.kms_only else [('s', (s[0], s[1])) for s in run.sent] + [('w', tuple(w)) for w in run.words]
+        if a.kms_frames:                                 # 에폭마다 KMSAV 문장을 프레임 수 상한까지 새로 뽑는다
+            acc = 0
+            for j in rng.permutation(len(run.kms)):
+                ci, tg = run.kms[int(j)]
+                items.append(('s', (ci, tg)))
+                acc += int(run.T[ci])
+                if acc >= a.kms_frames:
+                    break
         items = chunked_order(items, run, rng)
         if a.max_items:
             items = items[:a.max_items]
@@ -1041,6 +1085,29 @@ def load_model(path, dev):
     return front.to(dev).eval(), head.to(dev).eval(), ck
 
 
+def score4_onnx(path, seqs, items, gather):
+    """앱용 ONNX(입력 roi_z [1,T,80,80], 정규화는 그래프 밖, docs/lipread-roi-2026-10.md 13.1절)로 score4와 같은 4지를 낸다. dup1만."""
+    import onnxruntime as ort
+    import torch
+    s = ort.InferenceSession(path, providers=['CPUExecutionProvider'])
+    hits = defaultdict(list)
+    for i, g in enumerate(seqs):
+        it = items[i]
+        if g is None:
+            hits[it['spk']].append(0)
+            continue
+        X, lens = gather([g])
+        x = X[0, :int(lens[0])].astype(np.float64) / 255.0
+        x = x - x.mean()
+        x = x / max(float(np.sqrt((x * x).mean())), 1e-2)
+        lo = s.run(['logits'], {'roi_z': x[None].astype(np.float32)})[0][0]
+        lp = torch.log_softmax(torch.from_numpy(lo).float(), -1)
+        hits[it['spk']].append(int(int(np.argmax(ctc_scores(lp, it['labs']))) == it['tgt']))
+        if (i + 1) % 1000 == 0:
+            log(f'[p4 onnx] {i + 1}/{len(seqs)}')
+    return {1: {k: float(np.mean(v)) for k, v in hits.items()}, 2: {}}
+
+
 def cmd_p4(a):
     import torch
     from d_bench import Bench
@@ -1095,13 +1162,16 @@ def cmd_p4(a):
         for i, g in enumerate(gl):
             X[i, :len(g)] = g[:, c0:c0 + CROP, c0:c0 + CROP]
         return X, np.array([len(g) for g in gl], np.int64)
-    front, head, ck = load_model(a.model, dev)
-    by = score4(front, head, None, seqs, items, dev, a.amp, gather)
     if not items:
         print('ROI_P4_FAIL 문항 0개(화자가 벤치에 없음?)', flush=True)
         return 1
+    if a.onnx:
+        by = score4_onnx(a.onnx, seqs, items, gather)
+    else:
+        front, head, ck = load_model(a.model, dev)
+        by = score4(front, head, None, seqs, items, dev, a.amp, gather)
     acc = {str(d): float(np.mean(list(by[d].values()))) if by[d] else float('nan') for d in DUPS}
-    out = {'model': os.path.abspath(a.model), 'bench_id': b.bench_id, 'speakers': sorted(spks), 'n_items': len(items),
+    out = {'model': os.path.abspath(a.onnx or a.model), 'bench_id': b.bench_id, 'speakers': sorted(spks), 'n_items': len(items),
            'unseg': n_unseg, 'roi_missing': n_miss, 'acc_4way_hard': acc, 'by_spk': {str(d): by[d] for d in DUPS},
            'iids': [it['iid'] for it in items], 'judge': bool(a.judge), 'time_sec': round(time.time() - t0, 1)}
     wjson(out, a.out, indent=1)
@@ -1362,9 +1432,12 @@ def main(argv=None):
     p.add_argument('--epochs', type=int, default=20)
     p = sub.add_parser('train')
     _train_common(p)
-    p.add_argument('--cand', choices=['R1', 'R2'], required=True)
+    p.add_argument('--cand', choices=['R1', 'R2', 'K1', 'K2pre', 'K2', 'B33'], required=True)
     p.add_argument('--out', required=True)
     p.add_argument('--init', default=None)
+    p.add_argument('--init-head', action='store_true', help='--init에서 머리도 불러온다(K2 미세조정)')
+    p.add_argument('--kms-frames', type=int, default=0, help='에폭마다 뽑는 KMSAV 프레임 수(0 = 안 씀)')
+    p.add_argument('--kms-only', action='store_true', help='KMSAV 문장만 학습(K2 1단계)')
     p.add_argument('--epochs', type=int, default=60)
     p.add_argument('--eval-every', type=int, default=2)
     p.add_argument('--patience', type=int, default=10)
@@ -1374,7 +1447,8 @@ def main(argv=None):
     p.add_argument('--runs', required=True)
     p.add_argument('--out', required=True)
     p = sub.add_parser('p4')
-    p.add_argument('--model', required=True)
+    p.add_argument('--model', default=None)
+    p.add_argument('--onnx', default=None, help='pt 대신 앱용 ONNX(roi_z 입력, dup1만)로 채점')
     p.add_argument('--bench', required=True)
     p.add_argument('--npz', required=True)
     p.add_argument('--speakers', required=True)
