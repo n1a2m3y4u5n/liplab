@@ -52,7 +52,7 @@ function TaskRow({ label, cur, total, xp, claimed, onClick, onClaim, listen = fa
           <span className={`min-w-0 flex-1 break-keep text-[14px] lg:text-[15px] ${done ? 'text-ink-muted lg:text-ink' : 'text-ink'}`}>{label}</span>
           <span className={`shrink-0 whitespace-nowrap text-[12px] lg:text-[13px] ${listen ? 'text-listen-dark' : 'text-primary-500'}`}>{cur} / {total}{unit}</span>
         </div>
-        <div className="h-[7px] overflow-hidden rounded-full bg-fill lg:h-2">
+        <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={total} aria-valuenow={Math.min(cur, total)} aria-valuetext={`${cur} / ${total}${unit}`} className="h-[7px] overflow-hidden rounded-full bg-fill lg:h-2">
           <div className={`h-full rounded-full ${listen ? 'bg-listen' : 'bg-primary-500'}`} style={{ width: `${Math.min(100, (cur / total) * 100)}%` }} />
         </div>
       </div>
@@ -147,6 +147,7 @@ export default function TodayPage() {
         {next.retry && <button className="btn-secondary min-h-11" onClick={() => setReload((n) => n + 1)}>다시 가져오기</button>}
         <button className="btn-primary btn-lg w-full" onClick={() => navigate(next.to, { state: next.state })}>{next.label}</button>
       </section>
+      <div className="today-grid contents">
       {!due && <section className="card-flat flex flex-wrap items-center justify-between gap-2" role="alert"><p className="text-sm text-ink-muted">복습할 것을 가져오지 못했어요.</p><button className="btn-secondary min-h-11 px-3" onClick={() => setReload((n) => n + 1)}>다시 가져오기</button></section>}
       {!next.review && todayReviewCount(due) > 0 && <section id="review" className="card-flat flex flex-col gap-3">
         <h2 className="font-bold">오늘 복습 {todayReviewCount(due)}개</h2>
@@ -157,7 +158,7 @@ export default function TodayPage() {
       {/* 오늘의 과제 (137:187 / 238:250) */}
       <section id="tasks" className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px]">
         <div className="flex items-start justify-between gap-2 font-bold leading-figma">
-          <p className="text-[16px] text-ink lg:text-[17px]">오늘의 과제</p>
+          <h2 className="text-[16px] text-ink lg:text-[17px]">오늘의 과제</h2>
           <span className="text-[12px] text-ink-muted lg:text-[13px]">오늘 남은 시간 {hoursLeftToday()}시간</span>
         </div>
         {/* 오늘의 복습 정리: 예정 복습(독화·말하기, /api/review/due)이 남아 있으면 눌러서 그 복습 세션으로 간다(독화 먼저) */}
@@ -180,7 +181,7 @@ export default function TodayPage() {
           src: '/ui/lp-137-17-deco-doka.svg', size: 165, top: -61.22, right: -61.21, inset: [-7, -12, -17, -12],
           lg: { size: 198, top: -73.06, right: -73.06 },
         }}
-        className="h-[132px] w-full rounded-18 border-2 border-b-5 border-primary-600 bg-hero-brand pl-[18px] pt-[21px] lg:h-[158px] lg:rounded-20 bg-hero-brand lg:pl-[26px] lg:pt-[26px]">
+        className="min-h-[132px] w-full rounded-18 border-2 border-b-5 border-primary-600 bg-hero-brand pl-[18px] pt-[21px] lg:min-h-[158px] lg:rounded-20 bg-hero-brand lg:pl-[26px] lg:pt-[26px]">
         <div className="flex w-[250px] max-w-full flex-col gap-[9px] font-bold leading-figma text-white lg:w-[462px] lg:gap-2.5">
           <p className="text-[11px] tracking-[0.22px] lg:text-[13px] lg:tracking-[0.26px]">특별 과제</p>
           <p className="text-[18px] tracking-[-0.36px] lg:text-[23px] lg:tracking-[-0.46px]">{week?.label ?? '\u00a0'}</p>
@@ -188,12 +189,13 @@ export default function TodayPage() {
             <span className="opacity-90">{week ? `${weekCur} / ${weekTotal}일` : '…'}</span>
             <span className="opacity-90">{week ? `${week.claimed ? '받음 ' : ''}+${week.xp} 경험치` : ''}</span>
           </div>
-          <div className="h-2.5 overflow-hidden rounded-full bg-white/30 lg:h-3">
+          <div role="progressbar" aria-label="이번 주 도전" aria-valuemin={0} aria-valuemax={weekTotal} aria-valuenow={Math.min(weekCur, weekTotal)} aria-valuetext={`${weekCur} / ${weekTotal}일`} className="h-2.5 overflow-hidden rounded-full bg-white/30 lg:h-3">
             <div className="h-full rounded-full bg-white" style={{ width: `${Math.min(100, (weekCur / weekTotal) * 100)}%` }} />
           </div>
         </div>
       </WatermarkCard>}
 
+      </div>
       <RewardToast text={toast} />
     </AppShell>
   )

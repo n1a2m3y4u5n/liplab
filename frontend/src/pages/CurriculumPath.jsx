@@ -233,7 +233,7 @@ export default function CurriculumPath() {
 
   return (
     <AppShell active="learn">
-      <div className="mx-auto flex w-full max-w-[752px] flex-col items-center gap-3.5 lg:gap-6">
+      <div className="mx-auto flex w-full max-w-[752px] hub-path flex-col items-center gap-3.5 lg:gap-6">
         {/* 트랙 스위처(171:18 / 모바일 233:34 전체 폭) */}
         <LearnHeader /><h1 className="sr-only">{TRACK_LABEL[track]} · 단계</h1>
 
@@ -241,7 +241,7 @@ export default function CurriculumPath() {
         <div className="flex w-full items-center gap-3.5 rounded-16 border-b-4 border-track-dark bg-track py-[15px] pl-[17px] pr-[13px] text-white lg:rounded-18 lg:border-b-5 lg:py-5 lg:pl-[26px] lg:pr-5">
           <div className="flex min-w-0 flex-1 flex-col gap-[3px] font-bold leading-figma lg:gap-1">
             <span className="text-[11px] lg:text-[13px]">{TRACK_LABEL[track]} · {view ? `${view.no}단계` : '학습'}</span>
-            <span className="truncate text-[18px] tracking-[-0.36px] lg:text-[24px] lg:tracking-[-0.48px]">{view?.title || '커리큘럼'}</span>
+            <span className="break-words text-[18px] tracking-[-0.36px] lg:text-[24px] lg:tracking-[-0.48px]">{view?.title || '커리큘럼'}</span>
           </div>
           <button type="button" onClick={() => setGuideOpen(true)}
             className="shrink-0 rounded-10 border-1.5 border-white/35 bg-white/[0.08] px-3 py-[7px] text-[12px] font-bold leading-figma text-white transition hover:bg-white/[0.12] lg:rounded-[12px] lg:border-2 lg:border-white/40 lg:px-[18px] lg:py-3 lg:text-[14px]">
@@ -285,6 +285,7 @@ export default function CurriculumPath() {
         {/* 경로(61:18 / 모바일 233:45) — 모바일은 가운데, 데스크톱은 왼쪽(x 130)에 노드 열을 두고 오른쪽에 카드 */}
         <div className={`device-mobile-path relative w-full py-2 ${hasExtra ? 'max-lg:pb-[226px]' : 'max-lg:pb-[170px]'} ${loadFailed ? 'hidden' : ''}`}
           style={{ '--arrow-top': `${8 + vIdx * PITCH_MOBILE + 9}px` }}>
+          {!data[track] && <div role="status" className="flex min-h-[350px] items-center justify-center text-ink-muted">학습 단계를 가져오는 중…</div>}
           {list.length > 1 && (
             <>
               <StageArrow dir="prev" track={track} disabled={vIdx <= 0} onClick={() => go(-1)} />
@@ -292,7 +293,7 @@ export default function CurriculumPath() {
             </>
           )}
 
-          <div className="mx-auto flex w-[56px] flex-col items-center lg:mx-0 lg:ml-[130px] lg:w-[76px]">
+          <div className="path-nodes mx-auto flex w-[56px] flex-col items-center lg:mx-0 lg:ml-[130px] lg:w-[76px]">
             {list.map((s, i) => {
               const st = nodeStatus(s, i)
               const clickable = st !== 'locked'
@@ -321,7 +322,7 @@ export default function CurriculumPath() {
 
                     {/* 건너뛰기 확인(79:100) — 데스크톱은 노드 오른쪽 팝오버, 모바일은 아래 시트 */}
                     {st === 'skip' && skipTarget === s.key && (
-                      <div className="absolute left-full z-20 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-20 border-2 border-warn bg-white p-6 shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
+                      <div className="path-card absolute left-full z-20 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-20 border-2 border-warn bg-white p-6 shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
                         style={{ bottom: 'calc(50% - 21.5px)' }}>
                         <TailLeft className="bottom-[8.5px] left-[-15px]" edgeClass="text-warn" />
                         <p className="text-[21px] font-bold leading-figma tracking-[-0.42px] text-ink">정말로 건너뛰시겠어요?</p>
@@ -334,7 +335,7 @@ export default function CurriculumPath() {
 
                     {/* 레슨 카드(75:12 · 80:115) — 보고 있는 단계 노드 오른쪽(데스크톱). 모바일은 아래 시트. */}
                     {i === vIdx && viewOpen && (
-                      <div className="absolute left-full z-10 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-20 border-2 border-line bg-white px-6 py-[22px] shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
+                      <div className="path-card absolute left-full z-10 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-20 border-2 border-line bg-white px-6 py-[22px] shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
                         style={{ bottom: hasExtra ? 'calc(50% - 100.5px)' : 'calc(50% - 37.5px)' }}>
                         {/* 짝 맞추기 버튼(높이 49 + 간격 14)이 붙으면 카드가 위 배너를 덮지 않게 아래로 늘리고 꼬리도 그만큼 올린다 */}
                         <TailLeft className={`${hasExtra ? 'bottom-[87.5px]' : 'bottom-[24.5px]'} left-[-15px]`} />
@@ -344,7 +345,7 @@ export default function CurriculumPath() {
                             <span className="text-ink-muted">진행률</span>
                             <span className="text-track">{progLabel}</span>
                           </div>
-                          <div className="h-[10px] overflow-hidden rounded-full bg-fill">
+                          <div role="progressbar" aria-label={`${s.title} 진행률`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progPct)} aria-valuetext={progLabel} className="h-[10px] overflow-hidden rounded-full bg-fill">
                             <div className="h-full rounded-full bg-track" style={{ width: `${progPct}%` }} />
                           </div>
                         </div>
@@ -375,10 +376,10 @@ export default function CurriculumPath() {
         ) : view && viewOpen && (
           <div className="device-mobile-sheet fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 flex flex-col gap-[11px] rounded-t-22 border-t-2 border-line bg-white px-[18px] pb-5 pt-[18px] shadow-sheet lg:hidden">
             <div className="flex items-center justify-between gap-3 font-bold leading-figma">
-              <p className="min-w-0 truncate text-[17px] text-ink">{view.title}</p>
+              <p className="min-w-0 break-words text-[17px] text-ink">{view.title}</p>
               <span className="shrink-0 text-[13px] text-track">{progLabel}</span>
             </div>
-            <div className="h-[9px] overflow-hidden rounded-full bg-fill">
+            <div role="progressbar" aria-label={`${view.title} 진행률`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progPct)} aria-valuetext={progLabel} className="h-[9px] overflow-hidden rounded-full bg-fill">
               <div className="h-full rounded-full bg-track" style={{ width: `${progPct}%` }} />
             </div>
             <button type="button" onClick={() => navigate(view.route, { state: track === 'read' && view.stage >= 3 ? { from: 'path' } : undefined })} className="btn-primary w-full py-4 text-[16px]">{startLabel}</button>

@@ -16,7 +16,7 @@ test('연결 실패 뒤 같은 작업 재조회: 점수·소리 결과는 유지
   const h = harness(async (id) => { ids.push(id); if (ids.length === 1) throw Error('offline'); return { coaching: '잘했어요.' } })
   await h.run()
   assert.equal(h.state.coaching_retry, true)
-  assert.equal(h.state.coaching_error, '수신 지연')
+  assert.equal(h.state.coaching_error, '아직 받지 못했어요')
   assert.equal(h.state.coaching_pending, false)
   assert.equal(h.state.score, 83)
   assert.deepEqual(h.state.phones, initial().phones)

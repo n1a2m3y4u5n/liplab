@@ -35,7 +35,7 @@ export default function ListenBatchComplete({ result, data, onExit, onMore, onSt
       </div>
       <Card className="flex w-full flex-col gap-3 !p-4"><div className="flex items-center justify-between text-[14px] font-bold"><span>소리 듣기 오늘 몫</span><span>{task?.cur ?? '–'} / {task?.total ?? 2}</span></div>{task && <QuotaBar quota={{ today_n: task.cur, quota_n: task.total }} />}</Card>
       {result.mastered && <MotionPanel className="rounded-14 bg-track-tint px-4 py-3 text-[16px] font-bold text-track-dark">✓ {data.title} 숙달</MotionPanel>}
-      {result.skipped > 0 && <p role="status" className="text-[14px] text-ink-muted">소리 미수신 {result.skipped}문제</p>}
+      {result.skipped > 0 && <p role="status" className="text-[14px] text-ink-muted">소리를 가져오지 못한 {result.skipped}문제</p>}
       <div className="mt-auto flex w-full flex-col gap-2.5 pt-5 lg:mt-0"><button className="btn-primary btn-lg w-full" onClick={next.onClick}>{next.label}</button><button className="btn-secondary btn-lg w-full text-track-dark" onClick={q.met ? onMore : onExit}>{q.met ? '한 묶음 더 하기' : '학습 화면으로'}</button></div>
     </MotionPanel>
   </div>

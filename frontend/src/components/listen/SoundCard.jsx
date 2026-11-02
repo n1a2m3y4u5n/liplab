@@ -28,7 +28,7 @@ export default function SoundCard({ player, onPlay, clipState = 'ready', label, 
           <p className="text-[16px] font-bold leading-figma text-ink lg:text-[17px]">{label}</p>
           <ProgressLine phase={clipState === 'ready' ? player.phase : 'idle'} run={player.run} totalMs={player.totalMs} />
           <p id={statusId} role="status" aria-live="polite" className={`text-[13px] font-bold leading-snug ${player.busy ? 'text-track-dark' : 'text-ink-muted'}`}>
-            <span className="sr-only">{text}</span><span aria-hidden>{player.busy ? '▶ 재생 중' : clipState === 'loading' ? '준비 중' : clipState === 'missing' ? '미수신' : plays > 0 ? `✓ 완료 · ↻ ${plays}` : '준비'}</span>
+            <span className="sr-only">{text}</span><span aria-hidden>{player.busy ? '▶ 재생 중' : clipState === 'loading' ? '준비 중' : clipState === 'missing' ? '소리 없음' : plays > 0 ? `✓ 완료 · ↻ ${plays}` : '준비'}</span>
           </p>
         </div>
       </div>

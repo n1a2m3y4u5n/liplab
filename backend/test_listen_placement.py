@@ -283,6 +283,8 @@ with TestClient(main.app) as c:
         out["placement1"] = cur1.get("placement")
         r = c.post("/api/listen/placement/next", json={"answers": []}, headers=h).json()
         sess = r["session"]
+        bad_session = c.post("/api/listen/placement/next", json={"session": "?", "answers": []}, headers=h)
+        out["bad_session"] = [bad_session.status_code, bad_session.json()["detail"]]
         answers = []
         kinds = []
         while not r["done"]:
@@ -299,8 +301,9 @@ with TestClient(main.app) as c:
             r = c.post("/api/listen/placement/next", json={"session": sess, "answers": answers}, headers=h).json()
         out["result"] = r["result"]
         out["kinds"] = kinds
-        out["bad_key"] = c.post("/api/listen/placement/next", json={"session": sess, "answers": [{"item_key": "pl:pq:t999", "answer": ""}]},
-                                headers=h).status_code
+        bad_key = c.post("/api/listen/placement/next", json={"session": sess, "answers": [{"item_key": "pl:pq:t999", "answer": ""}]}, headers=h)
+        out["bad_key"] = bad_key.status_code
+        out["bad_key_detail"] = bad_key.json()["detail"]
         out["attempts_before"] = sql("select count(*) from listen_attempts where stage > 0")[0][0]
         ap = c.post("/api/listen/placement/apply", json={"session": sess, "answers": answers}, headers=h)
         out["apply"] = [ap.status_code, ap.json()]
@@ -364,6 +367,8 @@ def test_api_flag_on_flow():
     assert 4 <= res["items"] <= 16 and res["version"] == P.VERSION
     assert res["level2"] in (1, 2, 3) and res["level1"] in (1, 2, 3, 4) and res["upper"] in (3, 4, 5) and len(r["kinds"]) == res["items"]
     assert r["bad_key"] == 400
+    assert r["bad_key_detail"] == "문제와 답이 서로 달라요. 검사를 처음부터 다시 해 주세요."
+    assert r["bad_session"] == [400, "검사를 처음부터 다시 시작해 주세요."]
     assert r["attempts_before"] == 0 and r["attempts_after"] == 0          # 검사 답은 시행 기록에 넣지 않는다
     code, body = r["apply"]
     assert code == 200 and body["upper"] == res["upper"] and body["level1"] == res["level1"]

@@ -72,6 +72,7 @@ function MobileTopBar({ pink }) {
           className="grid size-11 shrink-0 place-items-center rounded-full border-0 bg-surface-inverse p-0 text-[12px] font-bold tracking-tight text-white">
           Aa
         </Button>
+        <div data-feedback-slot className="inline-flex shrink-0" />
 
       </div>
     </header>
@@ -134,6 +135,7 @@ export default function AppShell({ children, active, title, description, closeTo
             </button>
           )
         })}
+        <div data-feedback-slot className="inline-flex self-start" />
         <div className="mt-auto flex flex-wrap gap-3 pt-8 text-sm">
           <Stat icon="/ui/stat-streak.svg" box={18} value={stats.streak} className="gap-1 text-stat-streak" />
           <Stat icon="/ui/stat-xp.svg" box={18} value={stats.xp.toLocaleString()} className="gap-1 text-stat-xp" />
@@ -144,7 +146,7 @@ export default function AppShell({ children, active, title, description, closeTo
       {/* 본문: 모바일 232:51(좌우 18 · 간격 14), 데스크톱 58:11(32 · 20). 모바일 하단은 탭 바 높이만큼 비운다.
           세로 860px 이하 데스크톱(1366×768 등)은 위아래 여백·간격을 줄여 분석·과제가 한 화면에 들어오게 한다. */}
       {/* id="main-content"는 '본문으로 건너뛰기'(App.jsx SkipLink)의 대상이다. */}
-      <main id="main-content" className="mx-auto flex w-full min-w-0 max-w-[816px] flex-1 flex-col gap-3.5 pl-[max(18px,env(safe-area-inset-left))] pr-[max(18px,env(safe-area-inset-right))] pb-[calc(var(--tabbar-h)+18px+env(safe-area-inset-bottom))] pt-5 lg:gap-5 lg:px-8 lg:pb-10 lg:pt-8 lg:[@media(max-height:860px)]:gap-4 lg:[@media(max-height:860px)]:pb-5 lg:[@media(max-height:860px)]:pt-6">
+      <main id="main-content" data-hub={['/today', '/learn/path', '/records'].includes(location.pathname) ? activeKey : undefined} className="hub-main mx-auto flex w-full min-w-0 max-w-[816px] flex-1 flex-col gap-3.5 pl-[max(18px,env(safe-area-inset-left))] pr-[max(18px,env(safe-area-inset-right))] pb-[calc(var(--tabbar-h)+18px+env(safe-area-inset-bottom))] pt-5 lg:gap-5 lg:px-8 lg:pb-10 lg:pt-8 lg:[@media(max-height:860px)]:gap-4 lg:[@media(max-height:860px)]:pb-5 lg:[@media(max-height:860px)]:pt-6">
         {(backTo || closeTo) && <Link to={backTo || closeTo} className="inline-flex min-h-11 items-center gap-2 self-start font-bold text-track">‹ {backLabel}</Link>}
         {(title || description) && (
           <header className="flex flex-col gap-2 leading-figma">

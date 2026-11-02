@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import api from '../api'
 import useStore from '../store/useStore'
 import { SUS_QUESTIONS, SUS_LABELS, screenName } from '../lib/feedback'
+import Modal from './Modal'
 
 const context = () => ({ route: window.location.pathname, width: Math.min(20000, window.innerWidth), height: Math.min(20000, window.innerHeight) })
 
@@ -14,8 +16,21 @@ export default function Feedback() {
   const [text, setText] = useState('')
   const [state, setState] = useState('')
   const [busy, setBusy] = useState(false)
+  const [slots, setSlots] = useState([])
   useEffect(() => { api.get('/events/status').then(r => setEnabled(r.data.enabled)).catch(() => {}) }, [])
   useEffect(() => { setOpen(false); setText(''); setState('') }, [pathname, token])
+  // 셸이 늦게 나타나는 경로에서도 버튼은 헤더/메뉴 안에 둔다.
+  useEffect(() => {
+    if (!enabled || !token) return undefined
+    const update = () => {
+      const next = [...document.querySelectorAll('[data-feedback-slot]')]
+      setSlots(prev => prev.length === next.length && prev.every((el, i) => el === next[i]) ? prev : next)
+    }
+    update()
+    const observer = new MutationObserver(update)
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [enabled, token, pathname])
   if (!enabled || !token || pathname.startsWith('/admin/')) return null
   const send = async e => {
     e.preventDefault(); setBusy(true)
@@ -26,16 +41,22 @@ export default function Feedback() {
     } catch { setState('보내지 못했어요. 다시 시도해 주세요.') }
     finally { setBusy(false) }
   }
-  return <><SusCheck /><aside className="fixed bottom-20 right-3 z-40 text-sm">
-    {open && <form onSubmit={send} className="mb-2 flex max-w-[90vw] flex-col gap-2 rounded-xl border bg-white p-4 shadow-lg">
+  const trigger = <div className="inline-flex min-w-0 flex-col gap-1">
+    <button type="button" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-haspopup="dialog" className="min-h-11 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink-muted">피드백</button>
+    {!open && state && <span role="status" className="max-w-[12em] text-xs text-ink-muted">{state}</span>}
+  </div>
+  return <><SusCheck />
+    {slots.length ? slots.map((slot, i) => createPortal(trigger, slot, `feedback-${i}`)) : <aside className="flex justify-end px-4 pb-[calc(var(--tabbar-h)+18px+env(safe-area-inset-bottom))] pt-3 lg:pb-4">{trigger}</aside>}
+    <Modal open={open} onClose={() => setOpen(false)} title="피드백">
+      <form onSubmit={send} className="flex min-w-0 flex-col gap-3 text-sm">
       <label htmlFor="feedback-text">피드백 · {screenName(pathname)}</label>
       <textarea id="feedback-text" autoFocus required maxLength={500} value={text} onChange={e => setText(e.target.value)} placeholder="개인정보는 쓰지 마세요 (최대 500자)" className="border p-2" />
-      <button disabled={busy || !text.trim()} type="submit">보내기</button>
-      <button type="button" onClick={() => setOpen(false)}>닫기</button>
-    </form>}
-    <span role="status">{state}</span>
-    <button type="button" onClick={() => setOpen(v => !v)} className="rounded-lg border bg-white px-3 py-2 text-ink-muted">피드백</button>
-  </aside></>
+      <p role="status">{state}</p>
+      <button disabled={busy || !text.trim()} type="submit" className="btn-primary">보내기</button>
+      <button type="button" onClick={() => setOpen(false)} className="btn-secondary">닫기</button>
+      </form>
+    </Modal>
+  </>
 }
 
 export function SusCheck() {

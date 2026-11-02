@@ -350,8 +350,10 @@ export default function SummaryBody({ track = 'all' }) {
       </section>
 
       <Badges data={ov?.badges} />
+      <div className="records-charts contents">
       <ChartCard title="학습 시간 변화"><BarChart weeks={weeks} /></ChartCard>
       <ChartCard title="정답률 변화"><LineChart weeks={weeks} /></ChartCard>
+      </div>
       <SpeakTrend ov={ov} />
       <ListenSummary ov={ov} onOpen={() => navigate('/records?track=listen')} />
       <TrackLinks enabled={!!ov?.listen} navigate={navigate} />

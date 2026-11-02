@@ -1,3 +1,4 @@
+import { Progress } from '../components/UI'
 import { requestTrackedMedia, startUsage, endUsage } from '../lib/track'
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -656,9 +657,7 @@ export default function SpeakingPractice() {
           <button type="button" onClick={exit} aria-label="나가기" className="shrink-0">
             <img src={IC.close} alt="" className="size-8 lg:size-9" />
           </button>
-          <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
-            <div className="h-full rounded-full bg-track transition-[width] duration-500" style={{ width: `${barPct}%` }} />
-          </div>
+          <Progress value={barPct} label="레슨 진행률" animated className="lg:h-[14px]" />
           {total && <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{cur} / {total}</span>}
         </div>
       </div>

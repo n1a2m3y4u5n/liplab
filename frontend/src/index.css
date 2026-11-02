@@ -117,6 +117,25 @@ body,
   flex: 1 1 0%;
 }
 
+/* 허브만 넓힌다. 레슨 자극의 크기와 폰 배치는 유지한다. */
+@media (min-width: 1180px) {
+  .hub-main[data-hub] { max-width: 1240px; }
+  .hub-main[data-hub] .hub-path { max-width: none; }
+  .hub-path .path-nodes { margin-left: 22%; }
+  .hub-path .path-card { width: clamp(360px, 34vw, 480px); }
+  .hub-path .listen-road { padding-left: 0; }
+  .hub-path .listen-days { width: 35%; }
+  .hub-path section[aria-label="오늘 몫"] { left: 40%; width: min(48%, 420px); }
+  .today-grid, .records-charts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 20px;
+  }
+  .today-grid > * { min-width: 0; }
+  .today-grid > [role="alert"] { grid-column: 1 / -1; }
+}
+
 @layer base {
   /* 페이지 배경 = Figma surface/background(#f3f3f3). 흰 카드·셸은 각자 bg-white를 칠한다. */
   body {
