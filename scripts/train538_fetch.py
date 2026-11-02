@@ -140,7 +140,7 @@ class Budget:
 
 
 def auth_stopped():
-    return [p for p in (DATA / 'AUTH_STOP', E2_ROOT / 'AUTH_STOP', DATA / 'SLOW_STOP') if p.exists()]
+    return [p for p in (E2.GLOBAL_AUTH_STOP, DATA / 'AUTH_STOP', E2_ROOT / 'AUTH_STOP', DATA / 'SLOW_STOP') if p.exists()]
 
 
 def aihub_connections():
@@ -451,6 +451,8 @@ def main(argv=None):
     if a.dry_run:
         dry_run(queue, a.out)
         return
+    if auth_stopped():
+        raise AuthFailure('AI Hub stop file present; do not request or inspect keys')
     DATA.mkdir(parents=True, exist_ok=True)
     RAW.mkdir(parents=True, exist_ok=True)
     E2.ROOT = DATA   # Stream의 헤더 임시 파일·AUTH_STOP·SLOW_STOP·transfers.jsonl을 train538 쪽에 둔다
