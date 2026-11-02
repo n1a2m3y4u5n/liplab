@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import subprocess
 from clean_eval_prepare import ROOT,REPO,TOOLS,save
 
@@ -24,26 +25,37 @@ def main():
     audit=json.loads((ROOT/'final-cohort-audit.json').read_text(encoding='utf-8'))
     assert audit['status']=='items-prepared' and audit['persons']>=30
     models={};selections=[]
+    frozen=ROOT/'models';frozen.mkdir(exist_ok=True)
     for key,path in [('K',a.k_selection),('B33',a.b33_selection)]:
         d=json.loads(path.read_text(encoding='utf-8'))['selected']
         model=Path(d['model'])
         assert model.is_file(),str(model)
-        models[key]={'path':str(model),'sha256':sha(model),'dup':int(d['dup']),
-                      'selection':str(path),'selection_sha256':sha(path)}
-        selections.extend([path,model])
-    models['R2']={'path':str(a.r2),'sha256':sha(a.r2),'dup':1,'report_only':True}
+        target=frozen/(key+'.pt');selcopy=frozen/(key+'-selection.json')
+        shutil.copy2(model,target);shutil.copy2(path,selcopy)
+        assert sha(model)==sha(target) and sha(path)==sha(selcopy)
+        models[key]={'path':str(target),'sha256':sha(target),'dup':int(d['dup']),
+                      'selection':str(selcopy),'selection_sha256':sha(selcopy),'original_model':str(model)}
+        selections.extend([selcopy,target])
+    r2copy=frozen/'R2.onnx';shutil.copy2(a.r2,r2copy)
+    assert sha(a.r2)==sha(r2copy)
+    models['R2']={'path':str(r2copy),'sha256':sha(r2copy),'dup':1,'report_only':True,'original_model':str(a.r2)}
     save('models.json',models)
     wanted=['manifest.tsv','selected-meta.json','preparation-contract.json','bench_final.pkl','bench-metadata.json',
-        'items.json','item-parity.json','eval.txt','split.json','final-cohort-audit.json','roi-check.json','models.json','d/spans.jsonl']
+        'items.json','item-parity.json','eval.txt','split.json','final-cohort-audit.json','alignment-audit.json','roi-check.json','models.json','d/spans.jsonl']
     paths=[ROOT/n for n in wanted]
     for dirname,pattern in [('clips','*.mp4'),('clips','*.wav'),('bs','*.json'),('roi','*.npz')]:
         paths.extend(sorted((ROOT/dirname).glob(pattern)))
-    paths.extend(selections+[a.r2])
+    paths.extend(selections+[r2copy])
     paths.extend(REPO/'scripts'/n for n in ['clean_eval_prepare.py','clean_eval_prepare.ps1','clean_eval_items.py','clean_eval_judge.py','clean_eval_seal.py',
         'lipread_v1/v1_538_spans.py','lipread_roi/roi_train.py','lipread_roi/roi_pair.py'])
     paths.extend(TOOLS/n for n in ['d_bench.py','build_cd.py','train_lipread.py','folds.py','lip_roi_extract.py','extract_blendshapes.py','train_lip_roi.py','face_landmarker.task'])
     paths.append(REPO/'docs/lipread-e2-reuse-prereg-v2-2026-11-02.md')
     files=[{'path':str(p.resolve()),'bytes':p.stat().st_size,'sha256':sha(p)} for p in sorted(set(paths),key=str)]
+    source=ROOT.parent/'e2_538/clips'
+    for r in files:
+        p=Path(r['path'])
+        if p.parent==ROOT/'clips':
+            assert sha(source/p.name)==r['sha256'],'source/copy mismatch: '+p.name
     save('seal.json',{'status':'sealed','label':'절반 1 14명, E2 코호트 재사용, R2 겹침 미확인',
         'persons':audit['persons'],'halves':audit['halves'],'items':audit['items'],
         'files':files,'candidate_inference':0,'network_requests':0,

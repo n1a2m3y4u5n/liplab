@@ -15,6 +15,15 @@ from roi_pair import check_items
 
 
 def main():
+    spans=[json.loads(s) for s in (ROOT/'d/spans.jsonl').read_text(encoding='utf-8').splitlines() if s.strip()]
+    elig=[r for r in spans if r['status'] not in ('skip_chars','empty_text','no_bs','no_wav')]
+    usable=[r for r in elig if r['status']=='ok' and not r.get('flag')]
+    ratio=len(usable)/max(len(elig),1)
+    save('alignment-audit.json',{'rows':len(spans),'eligible':len(elig),'usable':len(usable),
+        'ratio':ratio,'status_counts':dict(collections.Counter(r['status'] for r in spans))})
+    if ratio<0.9:
+        save('status.json',{'status':'blocked','reason':'existing alignment usable/eligible gate below .9','ratio':ratio})
+        return 3
     b=Bench(str(ROOT/'bench_e2_reuse.pkl'))
     ck=json.loads((ROOT/'roi-check.json').read_text(encoding='utf-8'))
     if ck['fails']:
