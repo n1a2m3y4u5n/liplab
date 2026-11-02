@@ -3,6 +3,8 @@ JWT-based authentication system for LIPLAB
 Handles user registration, login, token generation and validation
 """
 import os
+import hashlib
+import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import Depends, HTTPException, status
@@ -14,7 +16,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import User, get_db
+from database import User, RevokedToken, get_db
 
 # Security configuration
 # JWT 서명키. 공개 기본값으로 서명되면 임의 user_id 토큰을 위조해 전 계정을 사칭할 수 있다.
@@ -116,7 +118,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "jti": uuid.uuid4().hex})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt if isinstance(encoded_jwt, str) else encoded_jwt.decode("utf-8")
 
@@ -147,6 +149,8 @@ async def get_current_user(
         raise credentials_exception
 
     # Fetch user from database
+    if await db.get(RevokedToken, hashlib.sha256(token.encode("utf-8")).hexdigest()):
+        raise credentials_exception
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
