@@ -98,10 +98,11 @@ export default function ReviewItems({ view = 'wrong', track = 'all' }) {
     let on = true
     setLoadState('loading')
     Promise.all([
-      reviewAPI.getDue(),
-      learningAPI.getReviewSentences(),
-      learningAPI.getBookmarks(),
-      listenAPI.review().then((r) => ({ ok: true, r })).catch((e) => { if (e?.response?.status === 404) return { ok: false, missing: true }; throw e }),
+      view === 'saved' ? Promise.resolve({}) : reviewAPI.getDue(),
+      view === 'saved' ? Promise.resolve([]) : learningAPI.getReviewSentences(),
+      view === 'saved' ? learningAPI.getBookmarks() : Promise.resolve([]),
+      view === 'saved' || !['all', 'listen'].includes(track) ? Promise.resolve({ ok: true, r: {} })
+        : listenAPI.review().then((r) => ({ ok: true, r })).catch((e) => { if (e?.response?.status === 404) return { ok: false, missing: true }; throw e }),
     ]).then(([dueRes, wrongRes, bmRes, lsRes]) => {
       if (!on) return
       // 말하기 예정(kind 'speak')은 /api/review/due의 speak로 따로 온다. 목록에서는 발화 배지로 보인다
@@ -204,7 +205,7 @@ export default function ReviewItems({ view = 'wrong', track = 'all' }) {
 
   return (
     <>
-      <button className="btn-secondary min-h-11 self-start px-4" onClick={() => navigate(view === 'saved' ? '/review/saved' : '/review/mistakes')}>{view === 'saved' ? '다시 연습' : '다시 풀기'}</button>
+      {shown.length > 0 && <button className="btn-secondary min-h-11 self-start px-4" onClick={() => navigate(view === 'saved' ? '/review/saved' : '/review/mistakes')}>{view === 'saved' ? '다시 연습' : '다시 풀기'}</button>}
       {/* 복습할 항목 (189:21 / 239:134) */}
       <section className={`flex w-full flex-col rounded-16 border-2 border-line bg-white lg:rounded-18 ${selectMode ? 'gap-3 px-5 pt-5' : 'gap-3 px-[18px] pt-[18px] lg:gap-4'} lg:px-[22px] lg:pt-[22px] ${padBottom}`}>
         {/* 모바일 머리 행(239:135 / 318:266) — 제목 + 지우기 또는 취소 */}
@@ -235,7 +236,7 @@ export default function ReviewItems({ view = 'wrong', track = 'all' }) {
         </div>
 
         {shown.length === 0 ? (
-          <p className="py-10 text-center text-sm text-ink-muted">복습할 것이 없어요. 잘하고 있어요!</p>
+          <p className="py-10 text-center text-sm text-ink-muted">{view === 'saved' ? '아직 저장한 문장이 없어요.' : '다시 풀 문장이 없어요.'}</p>
         ) : (
           /* 항목 묶음(316:33 / 316:35): 간격 0, 각 항목 위아래 패딩으로 구분선 위아래를 같게 */
           <ScrollHintList maxHeightClass="max-h-[241px] lg:max-h-[419px]" onOverflowChange={setListOverflow} resetKey={filter} label="문장 목록">

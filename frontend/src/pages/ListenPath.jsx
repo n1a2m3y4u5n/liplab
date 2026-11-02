@@ -56,7 +56,7 @@ export default function ListenPath() {
     <div className="mx-auto flex w-full max-w-[752px] flex-col items-center gap-3 lg:gap-6">
       <LearnHeader />
       {data?.is_demo && <span className="self-start rounded-full bg-track-tint px-3 py-1.5 text-[12px] font-bold text-track-dark">체험용 · 모든 단계 열림</span>}
-      {!data?.is_demo && data?.is_beta && <span className="self-start rounded-full bg-track-tint px-3 py-1.5 text-[12px] font-bold text-track-dark">베타 한정 · 모든 단계 열림</span>}
+      {!data?.is_demo && data?.is_beta && <span className="self-start rounded-full bg-track-tint px-3 py-1.5 text-[12px] font-bold text-track-dark">베타 · 모든 단계 열림</span>}
       {error ? <div role="alert" className="rounded-20 border-2 border-line bg-white p-5"><h1>경로를 가져오지 못했어요</h1><button className="btn-secondary btn-md mt-3" onClick={() => setRetry((n) => n + 1)}>다시 가져오기</button></div> : !stage ? <p role="status">불러오는 중</p> : <>
         <div className="flex min-h-[96px] w-full items-center justify-between gap-3 rounded-16 border-b-4 border-track-dark bg-track px-[18px] py-3.5 text-white lg:rounded-20 lg:p-6">
           <div className="flex min-w-0 flex-col gap-1"><span className="text-[12px] font-bold">소리 듣기 · {stage.stage + 1}단계</span><h1 className="text-[20px] font-black lg:text-[24px]">{stage.title}</h1>

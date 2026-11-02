@@ -8,15 +8,15 @@ export function RailLevelCard() {
   return (
     <div className="card-flat flex flex-col gap-4">
       <div className="flex items-center justify-between font-bold leading-figma">
-        <p className="text-[17px] text-ink">레벨 진행</p>
+        <p className="text-[17px] text-ink">경험치 진행</p>
         <p className="text-[14px] text-track">Lv.{p.level}</p>
       </div>
       <div className="flex flex-col gap-2">
         <div className="flex items-start justify-between text-[13px] font-bold leading-figma">
-          <p className="text-ink-muted">다음 레벨까지</p>
+          <p className="text-ink-muted">다음 목표까지</p>
           <p className="text-track">{p.remaining.toLocaleString()} 경험치 남음</p>
         </div>
-        <Progress value={p.pct} label="레벨 진행" animated className="flex-none" />
+        <Progress value={p.pct} label="경험치 진행" animated className="flex-none" />
       </div>
     </div>
   )

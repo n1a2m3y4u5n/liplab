@@ -23,7 +23,7 @@ const ANALYSIS_TABS = [
   { mode: 'activity', label: '활동' },
   { mode: 'visemes', label: '약한 입모양' },
   { mode: 'scores', label: '점수' },
-  { mode: 'history', label: '회차' },
+  { mode: 'history', label: '학습 횟수' },
 ]
 
 // 90일 활동 칸 색(분석 탭 활동 캘린더와 같은 heat 토큰) — 0 · 1~2 · 3~5 · 6 이상
@@ -125,7 +125,7 @@ export default function AnalysisDetail({ mode = 'activity' }) {
             <h2 className="text-[17px] font-bold leading-figma text-ink">헷갈린 입모양 (혼동 지도)</h2>
             <p className="mt-1 text-sm text-ink-muted">무엇을 무엇으로 읽었는지 · 입모양이 같아 구별 불가한 비율 {Math.round((confusion.same_viseme_ratio || 0) * 100)}%</p>
           </div>
-          <span className="shrink-0 text-xs text-ink-faint">{confusion.trials || 0}시행</span>
+          <span className="shrink-0 text-xs text-ink-faint">{confusion.trials || 0}회</span>
         </div>
         <div className="mt-4 flex flex-col gap-2">
           {cf.slice(0, 8).map((c, i) => (

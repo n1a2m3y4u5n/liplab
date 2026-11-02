@@ -234,7 +234,7 @@ export default function ProfilePage() {
         <h2 className="px-5 pt-4 font-bold">프로필</h2>
         <MenuRow first title="계정 설정" sub="이름 · 이메일 · 비밀번호 · 로그아웃" onClick={openAccount} />
         <MenuRow title="나에게 맞춘 안내" onClick={() => setModal('learner')} />
-        <MenuRow title="자가진단 다시 하기" onClick={() => navigate('/learn/placement')} />
+        <MenuRow title="시작 단계 다시 정하기" onClick={() => navigate('/learn/placement')} />
         <h2 className="px-5 pt-4 font-bold">설정</h2>
         <MenuRow title="접근성 설정" onClick={() => window.dispatchEvent(new Event('liplab:a11y-toggle'))} />
         <MenuRow title="소리와 함께 다시 보기" onClick={() => setModal('sound')} sub={sound.enabled ? '켜짐' : '꺼짐'} />

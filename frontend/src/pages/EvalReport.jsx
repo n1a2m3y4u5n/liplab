@@ -6,7 +6,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import { TRANSFER_NOISE_NOTE } from '../lib/talkers'
 import { changeTone, ciText, CHANGE_NOISE_NOTE } from '../lib/changeTone'
 
-// 학습 효과 리포트 — 개인별 시행 기록으로 학습곡선·단계 도달 시행수·초기 대비 최근 향상도를
+// 학습 변화 보고서 — 개인별 시행 기록으로 학습 변화·단계 도달 시행수·초기 대비 최근 향상도를
 // 시각화한다. 공모전 평가/효과성 근거용. 데이터가 적으면 각 카드가 '쌓이면 표시' 상태를 그린다.
 
 // 동형 폼 비교 문구 — 먼저 본 폼이 사전이다(파일럿에서 B를 먼저 보면 B(사전)·A(사후)).
@@ -17,9 +17,9 @@ const nonHomogeneousLabel = (prog) => {
   return v1 && v2 && v1 !== v2 ? `판본이 다른 검사 비교(${v1}→${v2}, 동형 아님)` : '가장 이른·최근 검사 비교'
 }
 
-// 새 가상 화자 조건(커리큘럼 계획 2-3): 사후 검사 문항 절반을 훈련에 없던 가상 화자로 봤을 때의 정답률. 한 얼굴 안에서 말 속도·입 벌림·
+// 새 가상 얼굴 조건(커리큘럼 계획 2-3): 사후 검사 문제 절반을 훈련에 없던 가상 화자로 봤을 때의 정답률. 한 얼굴 안에서 말 속도·입 벌림·
 // 입술을 바꾼 앱 안의 근거리 전이 지표이고, 실제 사람 입모양으로의 전이(계획 3-3)는 아니다. 사후 검사 한 번 안의 차이라 향상도가 아니다.
-// 문항 12개씩이라 한 사람의 차이는 잡음이 커서 색으로 좋고 나쁨을 매기지 않는다(9/29, 예전에는 −5%p 경계로 색을 바꿨다).
+// 문제 12개씩이라 한 사람의 차이는 잡음이 커서 색으로 좋고 나쁨을 매기지 않는다(9/29, 예전에는 −5%p 경계로 색을 바꿨다).
 const TRANSFER_NOTE = '같은 얼굴이 말하는 방식만 바꾼 앱 안의 가상 화자예요. 실제 사람 입모양으로 옮겨 가는지는 아직 재지 않았어요.'
 const signedPp = (x) => `${x >= 0 ? '+' : ''}${Math.round(x * 100)}%p`
 // 사전 검사를 연습을 꽤 한 뒤에 봤으면(서버 기준 PRETEST_TRIALS_FLAG, 9/29) 향상도가 작게 나올 수 있다고 알린다
@@ -31,14 +31,14 @@ function TalkerTransfer({ t }) {
   const n = t.new_talker
   return (
     <div className="mt-4 border-t border-line pt-3">
-      <p className="mb-2 text-[11px] font-bold text-ink-faint">새 가상 화자 조건 (사후 검사)</p>
+      <p className="mb-2 text-[11px] font-bold text-ink-faint">새 가상 얼굴 조건 (사후 검사)</p>
       <div className="flex flex-wrap items-end gap-6">
         <div>
-          <p className="text-[11px] font-bold text-ink-faint">기본 얼굴 {d.n}문항</p>
+          <p className="text-[11px] font-bold text-ink-faint">기본 얼굴 {d.n}문제</p>
           <p className="text-xl font-bold text-ink-muted">{Math.round((d.accuracy ?? 0) * 100)}%</p>
         </div>
         <div>
-          <p className="text-[11px] font-bold text-ink-faint">새 가상 화자 {n.n}문항</p>
+          <p className="text-[11px] font-bold text-ink-faint">새 가상 얼굴 {n.n}문제</p>
           <p className="text-xl font-bold text-primary-700">{Math.round((n.accuracy ?? 0) * 100)}%</p>
         </div>
         {t.gap != null && (
@@ -87,14 +87,14 @@ const LINE_TONE = {
 }
 function LineChart({ series, max = 1, fmt = (v) => `${Math.round(v * 100)}%`, tone = 'accuracy' }) {
   const t = LINE_TONE[tone] || LINE_TONE.accuracy
-  if (!series || series.length === 0) return <EmptyLine>기록이 쌓이면 학습곡선이 표시됩니다.</EmptyLine>
+  if (!series || series.length === 0) return <EmptyLine>기록이 쌓이면 학습 변화가 보여요.</EmptyLine>
   const W = 520, H = 140, PL = 34, PR = 12, PT = 12, PB = 22
   const n = series.length
   const x = (i) => PL + (n === 1 ? (W - PL - PR) / 2 : (i * (W - PL - PR)) / (n - 1))
   const y = (v) => PT + (1 - Math.min(v, max) / max) * (H - PT - PB)
   const pts = series.map((s, i) => `${x(i)},${y(s.value)}`).join(' ')
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="학습곡선">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="학습 변화">
       {[0, 0.5, 1].map((g) => (
         <g key={g}>
           <line x1={PL} x2={W - PR} y1={y(g * max)} y2={y(g * max)} className="stroke-line" strokeWidth="1" />
@@ -143,7 +143,7 @@ function PrintReport({ r }) {
       <h2 className="mt-5 text-[12.5pt] font-bold">1. 표준검사 이력</h2>
       {r.tests?.length ? (
         <table className="mt-1 w-full border-collapse">
-          <thead><tr><th className={th}>날짜</th><th className={th}>폼</th><th className={th}>판본</th><th className={th}>정답/문항</th><th className={th}>정답률</th><th className={th}>수준</th></tr></thead>
+          <thead><tr><th className={th}>날짜</th><th className={th}>폼</th><th className={th}>판본</th><th className={th}>정답/문제</th><th className={th}>정답률</th><th className={th}>수준</th></tr></thead>
           <tbody>
             {r.tests.map((t, i) => (
               <tr key={i}><td className={td}>{t.date || '–'}</td><td className={td}>{t.form || '배치'}</td><td className={td}>{t.form_version || '–'}</td>
@@ -159,9 +159,9 @@ function PrintReport({ r }) {
           <p>정답률 {pct(prog.pre.accuracy)} → {pct(prog.post.accuracy)} ({prog.accuracy_delta >= 0 ? '+' : ''}{Math.round(prog.accuracy_delta * 100)}%p
             {prog.accuracy_delta_ci95 ? `, ${ciText(prog.accuracy_delta_ci95)}` : ''}),
             수준 Lv.{prog.pre.level} → Lv.{prog.post.level}{prog.homogeneous ? ` · ${formPairLabel(prog)}` : ` · ${nonHomogeneousLabel(prog)}`}
-            {prog.talker_transfer ? ` · 사후는 기본 얼굴 ${prog.talker_transfer.default.n}문항` : ''}</p>
+            {prog.talker_transfer ? ` · 사후는 기본 얼굴 ${prog.talker_transfer.default.n}문제` : ''}</p>
           {prog.talker_transfer && (
-            <p className="mt-1">새 가상 화자 조건(사후): 기본 얼굴 {pct(prog.talker_transfer.default.accuracy)}, 새 가상 화자 {pct(prog.talker_transfer.new_talker.accuracy)}
+            <p className="mt-1">새 가상 얼굴 조건(사후): 기본 얼굴 {pct(prog.talker_transfer.default.accuracy)}, 새 가상 얼굴 {pct(prog.talker_transfer.new_talker.accuracy)}
               {prog.talker_transfer.gap != null ? ` (${signedPp(prog.talker_transfer.gap)})` : ''}. {TRANSFER_NOISE_NOTE} {TRANSFER_NOTE}</p>
           )}
           {prog.error_phoneme_change?.some((e) => e.before || e.after) && (
@@ -249,15 +249,15 @@ export default function EvalReport() {
     <>
       {report && <PrintReport r={report} />}
       <div className="print:hidden">
-      <AppShell backTo="/records" backLabel="기록" active="records" title="학습 효과 리포트"
-        description="문제를 푼 기록으로 학습곡선, 단계마다 숙달까지 걸린 시도 수, 처음보다 최근에 얼마나 늘었는지를 봐요.">
+      <AppShell backTo="/records" backLabel="기록" active="records" title="학습 변화 보고서"
+        description="문제를 푼 기록으로 학습 변화, 단계마다 숙달까지 걸린 시도 수, 처음보다 최근에 얼마나 늘었는지를 봐요.">
       <div className="flex w-full flex-col gap-5">
         {/* 표준검사 진입(축 I) — 난이도를 맞춘 동형 폼 A(사전)·B(사후). 훈련 전 A, 훈련 뒤 B를 보면
             아래 '통제 향상도'에 변화가 나온다. 배치검사 화면에는 모드 전환기가 없으므로 여기서 연다. */}
         <div className="flex flex-col gap-3 rounded-18 border-2 border-line bg-white p-5 sm:flex-row sm:items-center">
           <div className="flex-1">
             <p className="text-sm font-bold text-ink">표준검사 사전·사후</p>
-            <p className="mt-0.5 text-xs text-ink-muted">훈련 전에 사전 검사(A), 훈련 뒤에 사후 검사(B)를 한 번씩 보면 얼마나 늘었는지 비교해요. 각 24문항, 5분쯤 걸려요.</p>
+            <p className="mt-0.5 text-xs text-ink-muted">훈련 전에 사전 검사(A), 훈련 뒤에 사후 검사(B)를 한 번씩 보면 얼마나 늘었는지 비교해요. 각 24문제, 5분쯤 걸려요.</p>
             {latePretest && (
               <p className="mt-1 text-xs text-ink-muted">
                 이미 독화 연습을 {practiced}회 했어요. 지금 사전 검사를 봐도 되지만, 결과에 '연습 뒤 사전'으로 표시돼요.
@@ -279,7 +279,7 @@ export default function EvalReport() {
           <div className="rounded-18 border-2 border-line bg-white py-16 text-center text-sm text-ink-muted">리포트를 가져오지 못했습니다.</div>
         ) : noData ? (
           <div className="rounded-18 border-2 border-line bg-white px-5 py-16 text-center text-sm text-ink-muted">
-            아직 학습 기록이 없습니다. 입모양 인지·단어·문장 연습을 진행하면 학습곡선과 향상도가 여기에 표시됩니다.
+            아직 학습 기록이 없어요. 입모양·단어·문장을 연습하면 점수 변화를 여기서 볼 수 있어요.
           </div>
         ) : (
           <>
@@ -290,8 +290,8 @@ export default function EvalReport() {
               <Metric label="문장 평균점수" value={ov.sentence_avg_score} unit="점" />
             </div>
 
-            {/* 유형(입모양·단어·문맥) 고정효과를 뺀 정확도(docs/eval-metrics.md). 단계가 바뀌어 문항 유형이 달라지는 것만으로 꺾이지 않는다 */}
-            <Card title="학습곡선 (선다형 정답률)" hint="시간순 구간별 · 문항 유형 차이 보정">
+            {/* 유형(입모양·단어·문맥) 고정효과를 뺀 정확도(docs/eval-metrics.md). 단계가 바뀌어 문제 유형이 달라지는 것만으로 꺾이지 않는다 */}
+            <Card title="학습 변화 (선다형 정답률)" hint="시간순 구간별 · 문제 유형 차이 보정">
               <LineChart series={data.learning_curve} max={1} />
             </Card>
 
@@ -325,10 +325,10 @@ export default function EvalReport() {
                   </p>
                 )}
                 {prog.pre?.after_training && <p className="mt-1 text-[11px] text-ink-faint">{afterTrainingNote(prog.pre)}</p>}
-                {/* 사후 검사에 새 가상 화자 조건이 있으면 위 비교는 기본 얼굴 문항끼리다(계획 2-3). 옛 검사는 전 문항 그대로 */}
+                {/* 사후 검사에 새 가상 얼굴 조건이 있으면 위 비교는 기본 얼굴 문제끼리다(계획 2-3). 옛 검사는 전 문제 그대로 */}
                 {prog.talker_transfer && (
                   <p className="mt-2 text-[11px] text-ink-faint">
-                    기본 얼굴 문항끼리 비교: 사후는 {prog.talker_transfer.default.n}문항(전체 {prog.talker_transfer.default.n + prog.talker_transfer.new_talker.n}문항 정답률 {Math.round((prog.post.accuracy_all ?? 0) * 100)}%)
+                    기본 얼굴 문제끼리 비교: 사후는 {prog.talker_transfer.default.n}문제(전체 {prog.talker_transfer.default.n + prog.talker_transfer.new_talker.n}문제 정답률 {Math.round((prog.post.accuracy_all ?? 0) * 100)}%)
                   </p>
                 )}
                 {prog.error_phoneme_change?.some((e) => e.before || e.after) && (

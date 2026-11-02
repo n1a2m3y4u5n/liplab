@@ -147,6 +147,7 @@ export default function TodayPage() {
         {next.retry && <button className="btn-secondary min-h-11" onClick={() => setReload((n) => n + 1)}>다시 가져오기</button>}
         <button className="btn-primary btn-lg w-full" onClick={() => navigate(next.to, { state: next.state })}>{next.label}</button>
       </section>
+      {!due && <section className="card-flat flex flex-wrap items-center justify-between gap-2" role="alert"><p className="text-sm text-ink-muted">복습할 것을 가져오지 못했어요.</p><button className="btn-secondary min-h-11 px-3" onClick={() => setReload((n) => n + 1)}>다시 가져오기</button></section>}
       {!next.review && todayReviewCount(due) > 0 && <section id="review" className="card-flat flex flex-col gap-3">
         <h2 className="font-bold">오늘 복습 {todayReviewCount(due)}개</h2>
         <div className="flex flex-wrap gap-2">{[['입모양 읽기', due?.count, '/review/scheduled'], ['말하기', due?.speak_count, '/review/speaking'], ...(nextData.links?.listen_started ? [['소리 듣기', due?.listen_count, '/listen/review']] : [])].filter(([, n]) => n > 0).map(([label, n, to]) => <button key={to} className="btn-secondary min-h-11 px-3" onClick={() => navigate(to)}>{label} {n}개</button>)}</div>
@@ -169,6 +170,7 @@ export default function TodayPage() {
               unit={t.unit || (listen ? '분' : '')} onClick={open} onClaim={() => claim().catch(() => {})} />
           )
         })}
+        {tasks && daily.length === 0 && <p className="text-sm text-ink-muted">오늘의 과제가 없어요.</p>}
         {!tasks && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted"><p>과제를 가져오지 못했어요.</p><button className="btn-secondary min-h-11 px-3" onClick={() => setReload((n) => n + 1)}>다시 가져오기</button></div>}
       </section>
 
