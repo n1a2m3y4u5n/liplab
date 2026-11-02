@@ -309,6 +309,10 @@ from feedback import router as feedback_router
 app.include_router(feedback_router)
 from kmsav_review import router as kmsav_review_router
 app.include_router(kmsav_review_router)
+from real_face_probe import router as real_face_probe_router
+app.include_router(real_face_probe_router)
+from av_comparison import router as av_comparison_router
+app.include_router(av_comparison_router)
 
 # Authentication Endpoints
 # ============================================

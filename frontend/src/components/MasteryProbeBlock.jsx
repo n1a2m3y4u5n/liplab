@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { curriculumAPI, learningAPI } from '../api'
+import api from '../api'
 import MouthAvatar from './MouthAvatar'
 import useChoiceKeys from '../lib/useChoiceKeys'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, LESSON_AVATAR_VISEME, LESSON_OPTIONS, lessonPad } from '../lib/lessonLayout'
@@ -17,13 +18,25 @@ export default function MasteryProbeBlock({ items, onDone }) {
   const [selected, setSelected] = useState(null)
   const [sending, setSending] = useState(false)
   const seqRef = useRef(0)
+  const [media, setMedia] = useState('')
+  const [mediaError, setMediaError] = useState(false)
+  const [played, setPlayed] = useState(false)
+  const onsetRef = useRef(0)
   const it = items?.[idx]
 
   useEffect(() => {
     if (!it) return
     setFrames([])
     setSelected(null)
+    setPlayed(false); setMediaError(false); setMedia(''); onsetRef.current = 0
     const seq = ++seqRef.current
+    if (it.kind === 'real_face') {
+      let url
+      api.get(it.media, { responseType: 'blob' }).then(r => {
+        if (seq === seqRef.current) { url = URL.createObjectURL(r.data); setMedia(url) }
+      }).catch(() => { if (seq === seqRef.current) setMediaError(true) })
+      return () => { ++seqRef.current; if (url) URL.revokeObjectURL(url) }
+    }
     learningAPI.getVisemes(it.stimulus).then((f) => { if (seq === seqRef.current) setFrames(f) }).catch(() => {})
   }, [it])
 
@@ -33,7 +46,10 @@ export default function MasteryProbeBlock({ items, onDone }) {
   const confirm = async () => {
     if (!it || selected == null || sending) return
     setSending(true)
-    try { await curriculumAPI.answerMasteryProbe(it.id, selected) } catch { /* 기록 실패해도 진행 */ }
+    try {
+      if (it.kind === 'real_face') await api.post(`/probes/real-face/${it.id}/answer`, { chosen: selected, rt_ms: Math.max(0, Math.round(performance.now() - onsetRef.current)) })
+      else await curriculumAPI.answerMasteryProbe(it.id, selected)
+    } catch { /* 기록 실패해도 진행 */ }
     setSending(false)
     if (idx + 1 >= items.length) onDone?.()
     else setIdx(idx + 1)
@@ -59,7 +75,12 @@ export default function MasteryProbeBlock({ items, onDone }) {
           </div>
 
           <div className={it.kind === 'viseme' ? LESSON_AVATAR_VISEME : LESSON_AVATAR}>
-            <MouthAvatar frames={frames} height={null} className="h-full" speed={1} showTalker={false} />
+            {it.kind === 'real_face' ? <>
+              {media && <video src={media} muted playsInline controls controlsList="nodownload noplaybackrate" className="h-full w-full"
+                onPlay={e => { e.currentTarget.playbackRate = 1; if (!onsetRef.current) onsetRef.current = performance.now() }}
+                onEnded={() => setPlayed(true)} onError={() => setMediaError(true)} />}
+              {mediaError && <button type="button" onClick={() => idx + 1 >= items.length ? onDone?.() : setIdx(idx + 1)}>자료 대기 · 다음</button>}
+            </> : <MouthAvatar frames={frames} height={null} className="h-full" speed={1} showTalker={false} />}
           </div>
 
           <div className={LESSON_OPTIONS}>
@@ -80,7 +101,7 @@ export default function MasteryProbeBlock({ items, onDone }) {
       <div className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-line bg-white">
         <div className="mx-auto flex max-w-[676px] flex-col items-stretch px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-4 lg:h-[110px] lg:flex-row lg:items-center lg:justify-between lg:py-0">
           <p className="hidden text-[15px] leading-figma text-ink-faint lg:block">점수에 들어가지 않아요. 정답은 따로 알려 주지 않아요</p>
-          <button type="button" onClick={confirm} disabled={selected == null || sending}
+          <button type="button" onClick={confirm} disabled={selected == null || sending || (it.kind === 'real_face' && !played)}
             className="btn-primary btn-bar w-full shrink-0 max-lg:py-4 max-lg:text-[16px] lg:w-auto">
             다음
           </button>
