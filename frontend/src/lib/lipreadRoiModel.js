@@ -9,6 +9,22 @@ import { canLoadOptionalModel, configureWasm } from './modelCapability.js'
  */
 import { decomposeToJamo, logSoftmaxRows, rankByCtc } from './ctcScore.js'
 import { extractRoiSequence, roiModelInput, rgbaToGray, landmarkGeometry, ROI_CROP } from './lipRoi.js'
+import { landmarkLips80, coordinateSequence, fusionModelInput, fusionFeeds } from './lipFusion.js'
+
+// 기본 끔. 모델은 로컬 시험용 서버에서만 읽으며 public/배포에 포함하지 않는다.
+const FUSION = typeof import.meta.env !== 'undefined' && import.meta.env.VITE_LIPREAD_FUSION === '1'
+function fusionUrl(value) {
+  if (!import.meta.env?.DEV || !value) throw new Error('Fusion requires a local development model URL')
+  const url = new URL(value)
+  if (url.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) throw new Error('Fusion requires loopback HTTP')
+  return url.href
+}
+function modelUrls() {
+  return FUSION ? {
+    model: fusionUrl(import.meta.env.VITE_LIPREAD_FUSION_MODEL_URL),
+    meta: fusionUrl(import.meta.env.VITE_LIPREAD_FUSION_META_URL),
+  } : { model: ONNX_URL, meta: META_URL }
+}
 
 const ONNX_URL = '/models/roi/kr_lipread_roi.web.onnx'
 const META_URL = '/models/roi/kr_lipread_roi.web.meta.json'
@@ -22,7 +38,7 @@ let available = null
 
 export function lipreadRoiAvailable() {
   if (!available) {
-    available = fetch(META_URL)
+    available = Promise.resolve().then(() => fetch(modelUrls().meta))
       .then(async (r) => { if (r.ok) meta = await r.json(); return r.ok })
       .catch(() => false)
   }
@@ -39,8 +55,10 @@ export async function loadLipreadRoi() {
           ort = await import('onnxruntime-web')
           configureWasm(ort)
         }
-        const m = meta || await fetch(META_URL).then((r) => r.json())
-        const s = await ort.InferenceSession.create(ONNX_URL, { executionProviders: ['wasm'] })
+        const urls = modelUrls()
+        const m = meta || await fetch(urls.meta).then((r) => r.json())
+        const s = await ort.InferenceSession.create(urls.model, { executionProviders: ['wasm'] })
+        if (FUSION && (s.inputNames.length !== 2 || !s.inputNames.includes('roi_z') || !s.inputNames.includes('lips'))) throw new Error('Expected roi_z + lips')
         session = s; meta = m
         return { session, meta }
       } catch {
@@ -76,7 +94,11 @@ export function scoreLogits(logits, T, V, vocab, candidates = [], alpha = 1) {
 }
 
 /** 모델 입력 roi_z(Float32Array T·80·80, lipRoi.roiModelInput) → logits Float32Array(T·V). */
-export async function runRoiModel(s, data, T, ortMod = ort) {
+export async function runRoiModel(s, data, T, ortMod = ort, lips = null) {
+  if (FUSION) {
+    const out = await s.run(fusionFeeds(ortMod, data, T, lips, s.inputNames))
+    return out.logits.data
+  }
   const input = new ortMod.Tensor('float32', data, [1, T, ROI_CROP, ROI_CROP])
   const out = await s.run({ roi_z: input })
   return out.logits.data
@@ -94,8 +116,10 @@ export async function predictLipreadRoi(frames, W, H, candidates = []) {
     if (!seq) return null
     const nValid = seq.valid.filter(Boolean).length
     if (nValid < seq.valid.length * (1 - MAX_INVALID)) return null
-    const { data, T } = roiModelInput(seq.roi)
-    const logits = await runRoiModel(loaded.session, data, T)
+    const input = FUSION ? fusionModelInput(seq.roi, coordinateSequence(frames)) : roiModelInput(seq.roi)
+    if (FUSION && !input.valid.some(Boolean)) return null
+    const { data, T } = input
+    const logits = await runRoiModel(loaded.session, data, T, ort, input.lips)
     const V = loaded.meta.n_vocab
     return scoreLogits(logits, T, V, loaded.meta.vocab, candidates, loaded.meta.alpha ?? 1)
   } catch {
@@ -117,5 +141,7 @@ export function grabRoiFrame(video, landmarks, holder) {
   if (!holder.ctx) holder.ctx = c.getContext('2d', { willReadFrequently: true })
   holder.ctx.drawImage(video, 0, 0, W, H)
   const gray = rgbaToGray(holder.ctx.getImageData(0, 0, W, H).data, W * H)
-  return { t: video.currentTime * 1000, gray, geom: landmarks ? landmarkGeometry(landmarks, W, H) : null, W, H }
+  const frame = { t: video.currentTime * 1000, gray, geom: landmarks ? landmarkGeometry(landmarks, W, H) : null, W, H }
+  if (FUSION) frame.lips = landmarkLips80(landmarks, W, H)
+  return frame
 }
