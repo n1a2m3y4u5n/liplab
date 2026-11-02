@@ -1,3 +1,4 @@
+import useLessonCheckpoint from '../../hooks/useLessonCheckpoint'
 import { useEffect, useRef, useState } from 'react'
 import { listenAPI } from '../../api'
 import { voiceFor, contrastText } from '../../lib/listenMix'
@@ -18,18 +19,20 @@ import { Card, Heading, Option, optionState } from './ui'
  * 목소리는 voiceFor가 문항의 avoid_voices(정답 글을 구별되게 내지 못한 목소리)를 건너뛰어 고른다. 재생·미리 받기·답 기록이 같은 목소리다.
  * metaLabel을 주면 질문 아래 줄에 수준 대신 그 글을 쓴다(복습: '다시 듣는 낱말').
  */
-export default function WordId({ data, settings, voices, onProgress, finish, active, answerExtra = null, onAnswered = null, metaLabel = null }) {
+export default function WordId({ data: incomingData, settings, voices, onProgress, finish, active, answerExtra = null, onAnswered = null, metaLabel = null }) {
+  const [checkpoint, saveCheckpoint, clearCheckpoint, submission] = useLessonCheckpoint('listen-WordId')
+  const data = checkpoint?.data || incomingData
   const items = data.items || []
   const leveled = data.levels != null
-  const [k, setK] = useState(0)
-  const [res, setRes] = useState(null)
-  const [picked, setPicked] = useState(null)
+  const [k, setK] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'k') ? checkpoint.k : (0))
+  const [res, setRes] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'res') ? checkpoint.res : (null))
+  const [picked, setPicked] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'picked') ? checkpoint.picked : (null))
   const [err, setErr] = useState(null)
   const [sending, setSending] = useState(false)
-  const [plays, setPlays] = useState(0)
-  const [level, setLevel] = useState(data.level)
-  const [change, setChange] = useState(null)
-  const tally = useStageTally(data.status, onAnswered)
+  const [plays, setPlays] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'plays') ? checkpoint.plays : (0))
+  const [level, setLevel] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'level') ? checkpoint.level : (data.level))
+  const [change, setChange] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'change') ? checkpoint.change : (null))
+  const tally = useStageTally(data.status, onAnswered, checkpoint?.tally)
   const player = usePlayer()
   const t0 = useRef(Date.now())
   const it = items[k]
@@ -39,7 +42,7 @@ export default function WordId({ data, settings, voices, onProgress, finish, act
   const heard = useClip(res && !res.correct ? pickedWord : null, voice)
   usePrefetch(items[k + 1] ? [[items[k + 1].target, voiceFor(voices.train, k + 1, 0, data.voice_mode, data.voice_block, items[k + 1].avoid_voices)]] : [])
   useEffect(() => { onProgress(k, items.length) }, [k, items.length, onProgress])
-  useEffect(() => { setRes(null); setPicked(null); setErr(null); setPlays(0); setChange(null); player.reset(); t0.current = Date.now() }, [k, player.reset])
+  useEffect(() => { if (checkpoint?.k === k) return; setRes(null); setPicked(null); setErr(null); setPlays(0); setChange(null); player.reset(); t0.current = Date.now() }, [k, player.reset])
   const play = async (clip = target.clip) => {
     if (!clip || player.busy) return
     const ok = await player.play([{ clip, opts: { gainDb: settings.gainDb } }])
@@ -48,16 +51,18 @@ export default function WordId({ data, settings, voices, onProgress, finish, act
   const canAnswer = plays > 0 && !res && !sending
   const confirm = async () => {
     if (!canAnswer || pickedWord == null) return
+    if (!submission.begin(picked)) return
     player.stop()
     setSending(true)
     setErr(null)
     try {
       const r = await listenAPI.answer({ stage: 2, item_key: it.key, answer: pickedWord, level: it.level, plays, rt_ms: Date.now() - t0.current,
         voice, route: settings.route, pick: it.pick, ...(answerExtra || {}) })
+      submission.finish()
       setRes(r)
       tally.add(r.correct, r.status, r)
       if (r.level != null && leveled) { setChange(levelChangeText(level, r.level, data.levels)); setLevel(r.level) }
-    } catch { setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
+    } catch { submission.finish(); setK(n => n + 1); setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
     setSending(false)
   }
   const next = () => { player.stop(); setK(k + 1) }
@@ -65,6 +70,15 @@ export default function WordId({ data, settings, voices, onProgress, finish, act
   useListenKeys({ active: active && !!it, onPlay: () => play(), canPlay: target.state === 'ready' && !player.busy, optionCount: it?.options?.length || 0,
     canPick: canAnswer, onPick: setPicked,
     onEnter: res ? next : target.state === 'missing' ? skip : confirm, canEnter: res ? true : target.state === 'missing' || (canAnswer && picked != null) })
+
+  const recoveredRef = useRef(false)
+  useEffect(() => {
+    if (submission.sent && !recoveredRef.current) {
+      recoveredRef.current = true; submission.finish()
+      if (!res) setK(n => n + 1)
+    }
+  }, [])
+  saveCheckpoint({ data, k, picked, res, plays, level, change, tally: tally.checkpoint })
 
   if (!it) {
     const result = { reward: tally.reward, stage: 2, n: tally.n, c: tally.c, skipped: tally.skipped, mastered: tally.mastered, elapsed: tally.elapsed(), level, levels: data.levels }

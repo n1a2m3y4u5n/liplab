@@ -1,3 +1,4 @@
+import useLessonCheckpoint from '../../hooks/useLessonCheckpoint'
 import { useEffect, useRef, useState } from 'react'
 import { listenAPI } from '../../api'
 import ConsonantFeedback from '../ConsonantFeedback'
@@ -24,26 +25,28 @@ import { Card, Heading, inputClass, isDesktop } from './ui'
  */
 const SENTENCE_HINT = '맞힌 낱말은 그대로, 틀린 낱말은 글자마다 첫 자음만 보여요. 문장을 다시 듣고 한 번 더 써 보세요. 다시 쓴 답은 점수에 넣지 않아요.'
 
-export default function SentenceTask({ data, settings, voices, onProgress, onExit, finish, noisy, active, exitLabel = '학습 화면으로',
+export default function SentenceTask({ data: incomingData, settings, voices, onProgress, onExit, finish, noisy, active, exitLabel = '학습 화면으로',
   answerExtra = null, onAnswered = null, condition: condition0 = null, showStair = false, metaLabel = null }) {
+  const [checkpoint, saveCheckpoint, clearCheckpoint, submission] = useLessonCheckpoint('listen-SentenceTask')
+  const data = checkpoint?.data || incomingData
   const items = data.items || []
-  const [k, setK] = useState(0)
-  const [answer, setAnswer] = useState('')
-  const [first, setFirst] = useState(null)       // 첫 답 채점(세는 답)
-  const [retry, setRetry] = useState(null)       // 자음 단서를 본 뒤 다시 쓴 답(세지 않음). {skipped:true}는 다시 쓰지 않고 정답을 본 것
+  const [k, setK] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'k') ? checkpoint.k : (0))
+  const [answer, setAnswer] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'answer') ? checkpoint.answer : (''))
+  const [first, setFirst] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'first') ? checkpoint.first : (null))       // 첫 답 채점(세는 답)
+  const [retry, setRetry] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'retry') ? checkpoint.retry : (null))       // 자음 단서를 본 뒤 다시 쓴 답(세지 않음). {skipped:true}는 다시 쓰지 않고 정답을 본 것
   const [err, setErr] = useState(null)
   const [sending, setSending] = useState(false)
-  const [plays, setPlays] = useState(0)
+  const [plays, setPlays] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'plays') ? checkpoint.plays : (0))
   // 이번 문항의 조건·SNR은 문항이 바뀔 때만 정한다(답 뒤에 계단이 움직여도 다시 듣기는 같은 조건으로)
   const stair0 = normalizeStair(data.stair)
-  const [stair, setStair] = useState(stair0)
-  const [nextCond, setNextCond] = useState(data.next_condition || 'ao')
-  const [cond, setCond] = useState(data.next_condition || 'ao')
-  const [snrNow, setSnrNow] = useState(stair0?.[data.next_condition || 'ao']?.next_db ?? 10)
-  const [trace, setTrace] = useState(() => (Array.isArray(data.trace) ? data.trace : []))
-  const [scores, setScores] = useState([])
+  const [stair, setStair] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'stair') ? checkpoint.stair : (stair0))
+  const [nextCond, setNextCond] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'nextCond') ? checkpoint.nextCond : (data.next_condition || 'ao'))
+  const [cond, setCond] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'cond') ? checkpoint.cond : (data.next_condition || 'ao'))
+  const [snrNow, setSnrNow] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'snrNow') ? checkpoint.snrNow : (stair0?.[data.next_condition || 'ao']?.next_db ?? 10))
+  const [trace, setTrace] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'trace') ? checkpoint.trace : ((Array.isArray(data.trace) ? data.trace : [])))
+  const [scores, setScores] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'scores') ? checkpoint.scores : ([]))
   const [playFrames, setPlayFrames] = useState(null)
-  const tally = useStageTally(data.status, onAnswered)
+  const tally = useStageTally(data.status, onAnswered, checkpoint?.tally)
   const player = usePlayer()
   const t0 = useRef(Date.now())
   const inputRef = useRef(null)
@@ -65,6 +68,7 @@ export default function SentenceTask({ data, settings, voices, onProgress, onExi
   const needNoise = noisy || fixedNoise
   useEffect(() => { onProgress(k, items.length) }, [k, items.length, onProgress])
   useEffect(() => {
+    if (checkpoint?.k === k) return
     setAnswer(''); setFirst(null); setRetry(null); setErr(null); setPlays(0); setPlayFrames(null)
     clearTimeout(frameTimer.current); player.reset(); t0.current = Date.now()
   }, [k, player.reset])
@@ -122,6 +126,7 @@ export default function SentenceTask({ data, settings, voices, onProgress, onExi
   const canSubmit = !!answer.trim() && plays > 0 && !sending && !finished
   const submit = async () => {
     if (!canSubmit) return
+    if (!submission.begin(answer)) return
     player.stop()
     setSending(true)
     setErr(null)
@@ -133,6 +138,7 @@ export default function SentenceTask({ data, settings, voices, onProgress, onExi
     try {
       if (!first) {
         const r = await listenAPI.answer(body)
+        submission.finish()
         setFirst(r)
         tally.add(r.passed, r.status, r)
         setScores((s) => [...s, r.score || 0])
@@ -140,13 +146,24 @@ export default function SentenceTask({ data, settings, voices, onProgress, onExi
         if (r.next_condition) setNextCond(r.next_condition)
         if (noisy) setTrace((t) => [...t, { snr, correct: !!r.passed, cond }].slice(-24))
       } else {
-        setRetry(await listenAPI.answer({ ...body, practice: true }))
+        const response = await listenAPI.answer({ ...body, practice: true })
+        submission.finish()
+        setRetry(response)
       }
-    } catch { setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
+    } catch { submission.finish(); setK(n => n + 1); setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
     setSending(false)
   }
   useListenKeys({ active: active && !!it, onPlay: play, canPlay: ready && !player.busy,
     onEnter: finished ? goNext : clip.state === 'missing' ? skipItem : submit, canEnter: finished || clip.state === 'missing' || canSubmit })
+
+  const recoveredRef = useRef(false)
+  useEffect(() => {
+    if (submission.sent && !recoveredRef.current) {
+      recoveredRef.current = true; submission.finish()
+      if (!first) setK(n => n + 1)
+    }
+  }, [])
+  saveCheckpoint({ data, k, answer, first, retry, plays, stair, nextCond, cond, snrNow, trace, scores, tally: tally.checkpoint })
 
   if (!it) {
     const avgWords = scores.length ? `${Math.round((scores.reduce((x, y) => x + y, 0) / scores.length) * 100)}%` : '–'

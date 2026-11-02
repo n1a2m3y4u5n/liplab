@@ -1,3 +1,4 @@
+import useLessonCheckpoint from '../../hooks/useLessonCheckpoint'
 import { useEffect, useRef, useState } from 'react'
 import { listenAPI } from '../../api'
 import { voiceFor } from '../../lib/listenMix'
@@ -17,19 +18,21 @@ import { Card, Heading, Option, optionState } from './ui'
  *  - condition을 주면 조건을 고정하고 고르는 줄을 숨긴다(듣기 조건 연습). {kind, noise?, rt60?, snrDb?}
  */
 
-export default function ConvoTask({ data, settings, voices, onProgress, onExit, finish, active, exitLabel = '학습 화면으로',
+export default function ConvoTask({ data: incomingData, settings, voices, onProgress, onExit, finish, active, exitLabel = '학습 화면으로',
   answerExtra = null, onAnswered = null, condition = null }) {
+  const [checkpoint, saveCheckpoint, clearCheckpoint, submission] = useLessonCheckpoint('listen-ConvoTask')
+  const data = checkpoint?.data || incomingData
   const items = data.items || []
-  const [k, setK] = useState(0)
+  const [k, setK] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'k') ? checkpoint.k : (0))
   const cond = condition?.kind || 'quiet'
-  const [picked, setPicked] = useState(null)
-  const [res, setRes] = useState(null)
+  const [picked, setPicked] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'picked') ? checkpoint.picked : (null))
+  const [res, setRes] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'res') ? checkpoint.res : (null))
   const [err, setErr] = useState(null)
   const [sending, setSending] = useState(false)
-  const [repairs, setRepairs] = useState([])
-  const [plays, setPlays] = useState(0)
-  const [repairTotal, setRepairTotal] = useState(0)
-  const tally = useStageTally(data.status, onAnswered)
+  const [repairs, setRepairs] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'repairs') ? checkpoint.repairs : ([]))
+  const [plays, setPlays] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'plays') ? checkpoint.plays : (0))
+  const [repairTotal, setRepairTotal] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'repairTotal') ? checkpoint.repairTotal : (0))
+  const tally = useStageTally(data.status, onAnswered, checkpoint?.tally)
   const player = usePlayer()
   const t0 = useRef(Date.now())
   const it = items[k]
@@ -45,7 +48,7 @@ export default function ConvoTask({ data, settings, voices, onProgress, onExit, 
   const nz = useNoise(cond === 'noise', noiseName)
   const snrDb = condition?.snrDb ?? data.noise_snr_db ?? 5
   useEffect(() => { onProgress(k, items.length) }, [k, items.length, onProgress])
-  useEffect(() => { setRes(null); setPicked(null); setErr(null); setRepairs([]); setPlays(0); player.reset(); t0.current = Date.now() }, [k, player.reset])
+  useEffect(() => { if (checkpoint?.k === k) return; setRes(null); setPicked(null); setErr(null); setRepairs([]); setPlays(0); player.reset(); t0.current = Date.now() }, [k, player.reset])
   // 울리는 방은 문항마다 잔향 시간을 돌린다(여러 방에서 훈련할 때 새 방으로 옮겨 갔다)
   const rt = condition?.rt60 ?? (data.room_rt60 || [0.5])[k % (data.room_rt60?.length || 1)]
   const opts = { gainDb: settings.gainDb, phone: cond === 'phone', snrDb: cond === 'noise' ? snrDb : null, noise: cond === 'noise' ? nz.noise : null,
@@ -60,6 +63,7 @@ export default function ConvoTask({ data, settings, voices, onProgress, onExit, 
   const canAnswer = plays > 0 && !res && !sending
   const confirm = async () => {
     if (!canAnswer || picked == null) return
+    if (!submission.begin(picked)) return
     player.stop()
     setSending(true)
     setErr(null)
@@ -69,9 +73,10 @@ export default function ConvoTask({ data, settings, voices, onProgress, onExit, 
         // 5단계와 상황별 대화 듣기 연습에서는 어떤 잡음으로 들었는지가 비어 있었다
         repairs, plays, rt_ms: Date.now() - t0.current, voice, route: settings.route, ...(cond === 'noise' ? { noise: noiseName } : {}),
         ...(answerExtra || {}) })
+      submission.finish()
       setRes(r)
       tally.add(r.correct, r.status, r)
-    } catch { setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
+    } catch { submission.finish(); setK(n => n + 1); setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
     setSending(false)
   }
   const next = () => { player.stop(); setK(k + 1) }
@@ -79,6 +84,15 @@ export default function ConvoTask({ data, settings, voices, onProgress, onExit, 
   useListenKeys({ active: active && !!it, onPlay: () => play(line.clip), canPlay: ready && !player.busy, optionCount: it?.options?.length || 0,
     canPick: canAnswer, onPick: setPicked,
     onEnter: res ? next : line.state === 'missing' ? skip : confirm, canEnter: res ? true : line.state === 'missing' || (canAnswer && picked != null) })
+
+  const recoveredRef = useRef(false)
+  useEffect(() => {
+    if (submission.sent && !recoveredRef.current) {
+      recoveredRef.current = true; submission.finish()
+      if (!res) setK(n => n + 1)
+    }
+  }, [])
+  saveCheckpoint({ data, k, picked, res, repairs, plays, repairTotal, tally: tally.checkpoint })
 
   if (!it) {
     const result = { reward: tally.reward, stage: 5, n: tally.n, c: tally.c, skipped: tally.skipped, mastered: tally.mastered, elapsed: tally.elapsed(), repairs: repairTotal }

@@ -1,3 +1,4 @@
+import useLessonCheckpoint from '../hooks/useLessonCheckpoint'
 import { Progress } from '../components/UI'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -192,6 +193,8 @@ export default function Practice() {
   const navigate = useNavigate()
   const user = useStore((state) => state.user)
   const currentScenario = useStore((state) => state.currentScenario)
+  const [checkpoint, saveCheckpoint, clearCheckpoint, submission] = useLessonCheckpoint('sentence')
+  const resumed = checkpoint?.scenarioId === currentScenario?.scenario_id ? checkpoint : null
   const currentSentence = useStore((state) => state.currentSentence)
   const currentSentenceIndex = useStore((state) => state.currentSentenceIndex)
   const nextSentence = useStore((state) => state.nextSentence)
@@ -208,39 +211,41 @@ export default function Practice() {
   const reviewReturn = scenarioId.startsWith('mistake_review_') ? '/review/mistakes'
     : scenarioId.startsWith('bookmark_') ? '/review/saved' : null
 
+  const loadedRef = useRef(resumed ? currentSentence : null)
   const [visemes, setVisemes] = useState([])
   const shownVisemes = useSlowWeak(visemes)   // 약한 입모양은 조금 천천히(연습 화면)
-  const [lesson] = useLessonTalker('sentence')   // 상황(레슨)마다 가상 화자 한 명(계획 2-2)
+  const [lesson] = useLessonTalker('sentence', resumed?.lesson)   // 상황(레슨)마다 가상 화자 한 명(계획 2-2)
   // 숙달 지연 탐침(계획 C16): 레슨 가운데 문장 뒤에 한 번 끼운다. 틀린 문장 복습·북마크 연습 세션에는 내지 않는다(길이 0)
   const probes = useMasteryProbes(reviewReturn ? 0 : (currentScenario?.sentences?.length || 0))
   const [isPlaying, setIsPlaying] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [result, setResult] = useState(null)
+  const [result, setResult] = useState(() => resumed && Object.hasOwn(resumed, 'result') ? resumed.result : (null))
+  const [draft, setDraft] = useState(resumed?.draft || '')
   // 소리 조건(C17): 답을 채점한 뒤에만 문장을 소리와 함께 다시 보기(소리 → 소리 없이 한 번 더)
   const sound = useSoundCondition()
   const replay = useSoundReplay({ texts: currentSentence ? [currentSentence] : [], answered: !!result, enabled: sound.enabled,
     onPlayed: () => soundAPI.logReplay('sentence', currentSentence).catch(() => {}) })
   const [startTime, setStartTime] = useState(null)
-  const [hintLevel, setHintLevel] = useState(0)
+  const [hintLevel, setHintLevel] = useState(() => resumed && Object.hasOwn(resumed, 'hintLevel') ? resumed.hintLevel : (0))
   const [revealedTextIndex, setRevealedTextIndex] = useState(-1)
   const [subtitleRestartKey, setSubtitleRestartKey] = useState(0)
-  const [selectedChoice, setSelectedChoice] = useState(null) // 4지선다에서 고른 보기(확인 전)
+  const [selectedChoice, setSelectedChoice] = useState(() => resumed && Object.hasOwn(resumed, 'selectedChoice') ? resumed.selectedChoice : (null)) // 4지선다에서 고른 보기(확인 전)
   const [signOpen, setSignOpen] = useState(false)            // 수어 보기 모달
   const [bookmarks, setBookmarks] = useState({})             // 문장 텍스트 → 북마크 id (저장)
   const [booted, setBooted] = useState(false)                // 첫 문장 입모양을 받았는지(레슨 시작 전 로딩)
   const [introDone, setIntroDone] = useState(false)          // 레슨 시작 전 로딩 최소 표시 시간
-  const [tally, setTally] = useState({ n: 0, correct: 0 })   // 이번 레슨의 채점 문항·정답 수 → 완료 정답률
-  const [xpEarned, setXpEarned] = useState(0)                // 이번 레슨에서 서버가 준 XP 합(xp_gained)
-  const lessonStartRef = useRef(Date.now())
-  const [elapsedSec, setElapsedSec] = useState(0)
+  const [tally, setTally] = useState(() => resumed && Object.hasOwn(resumed, 'tally') ? resumed.tally : ({ n: 0, correct: 0 }))   // 이번 레슨의 채점 문항·정답 수 → 완료 정답률
+  const [xpEarned, setXpEarned] = useState(() => resumed && Object.hasOwn(resumed, 'xpEarned') ? resumed.xpEarned : (0))                // 이번 레슨에서 서버가 준 XP 합(xp_gained)
+  const lessonStartRef = useRef(resumed?.lessonStartRef ?? (Date.now()))
+  const [elapsedSec, setElapsedSec] = useState(() => resumed && Object.hasOwn(resumed, 'elapsedSec') ? resumed.elapsedSec : (0))
   const [visemeError, setVisemeError] = useState(false)      // 입모양을 받지 못함 → 다시 받기 안내
   const visemeReqRef = useRef(0)                             // 입모양 요청 순번(늦게 온 이전 문장의 응답은 버린다)
-  const answerShownRef = useRef(false)                       // 이 문장의 정답을 이미 보였는지(채점 결과에 정답이 나온다)
+  const answerShownRef = useRef(resumed?.answerShownRef ?? (false))                       // 이 문장의 정답을 이미 보였는지(채점 결과에 정답이 나온다)
   // 자음 피드백 단계(계획 C9): 주관식 첫 답이 합격선 아래면 정답 대신 낱말별 단서를 보이고 한 번 더 답하게 한다.
   // { feedback, first }: 서버 word_feedback과 첫 답의 채점 결과. 두 번째 답은 연습(practice_only)으로만 채점한다
-  const [retry, setRetry] = useState(null)
-  const [revealedAnswer, setRevealedAnswer] = useState(null)   // '정답 보기'로 끝낸 경우 결과 화면에 보일 첫 답
+  const [retry, setRetry] = useState(() => resumed && Object.hasOwn(resumed, 'retry') ? resumed.retry : (null))
+  const [revealedAnswer, setRevealedAnswer] = useState(() => resumed && Object.hasOwn(resumed, 'revealedAnswer') ? resumed.revealedAnswer : (null))   // '정답 보기'로 끝낸 경우 결과 화면에 보일 첫 답
   // 이 문장을 보는 동안 학습자가 고른 가장 느린 재생 속도(플레이어 onSpeedChange). 4지선다 카드는 속도 조절이 없어 1.0배다.
   // 답과 함께 유효 속도(학습자 속도 × 적응 감속)를 기록만 한다. 숙달에는 넣지 않는다(시뮬레이션 사전 기준 미달, docs/mastery-ewma.md 9절)
   const learnerSpeedRef = useRef(Infinity)
@@ -251,8 +256,9 @@ export default function Practice() {
   // 4지선다 보기 — 정답 + 서버가 고른 레슨 밖 문장 3개(음절 수가 가까운 것), 랜덤 순서. 예전 보기는 같은 레슨의 다른
   // 문장이라 뒤에 주관식으로 나올 문장이 먼저 보였고(그런 문항의 40~56%), 이미 푼 문장은 지울 수 있었고, 길이 차이로도
   // 골랐다(backend/sentence_options.py). 서버 보기를 못 받으면 예전 방식으로 낸다.
-  const [choices, setChoices] = useState([])
+  const [choices, setChoices] = useState(() => resumed && Object.hasOwn(resumed, 'choices') ? resumed.choices : ([]))
   useEffect(() => {
+    if (resumed?.sentence === currentSentence && resumed?.choices?.length) return undefined
     if (!currentScenario || !currentSentence || effectiveMode !== 'test-multiple') { setChoices([]); return undefined }
     let alive = true
     const local = () => currentScenario.sentences.filter((s) => s !== currentSentence).sort(() => Math.random() - 0.5).slice(0, 3)
@@ -315,6 +321,12 @@ export default function Practice() {
       return
     }
 
+    if (loadedRef.current === currentSentence) {
+      await fetchVisemes()
+      return
+    }
+    loadedRef.current = currentSentence
+    setDraft('')
     setResult(null)
     setRetry(null)
     setRevealedAnswer(null)
@@ -327,6 +339,7 @@ export default function Practice() {
   }
 
   const handleSubmitAnswer = async (userAnswer) => {
+    if (submitting || !submission.begin(userAnswer)) return
     setSubmitting(true)
     const timeSpent = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0
     // 정답을 이미 본 뒤의 제출(같은 문장 다시 도전)과 힌트 3(발음 자막)으로 문장을 본 뒤의 제출은 연습으로만 채점한다.
@@ -360,10 +373,12 @@ export default function Practice() {
       })
 
       // 주관식 첫 답이 합격선 아래이고 틀린 낱말이 있으면, 정답 문장을 보이지 않고 자음 단서를 보인 뒤 입모양을 다시 재생한다
+      submission.finish()
       const wf = response.word_feedback
       const needsRetry = effectiveMode !== 'test-multiple' && !practiceOnly && response.passed === false
         && Array.isArray(wf?.words) && wf.words.some((w) => !w.correct)
       if (needsRetry) {
+        setDraft('')
         setRetry({ feedback: wf, first: response, answer: userAnswer })
         setIsPlaying(true)
         setStartTime(Date.now())
@@ -386,6 +401,8 @@ export default function Practice() {
       if (response.xp_gained != null) updates.total_xp = (user?.total_xp || 0) + response.xp_gained
       if (Object.keys(updates).length > 0) updateUser(updates)
     } catch (error) {
+      submission.finish()
+      advance()
       console.error('Failed to submit answer:', error)
     } finally {
       setSubmitting(false)
@@ -394,6 +411,7 @@ export default function Practice() {
 
   // 다음 문장 — 마지막 문장 뒤에는 currentSentence가 비어 레슨 완료(93:12)가 뜬다(걸린 시간은 이 순간으로 고정).
   const advance = () => {
+    setDraft('')
     if (isLastSentence) setElapsedSec(Math.floor((Date.now() - lessonStartRef.current) / 1000))
     nextSentence()
     setResult(null)
@@ -408,6 +426,7 @@ export default function Practice() {
   const handleNext = () => { if (!probes.take(currentSentenceIndex + 1)) advance() }
 
   const handleRetry = () => {
+    setDraft('')
     setResult(null)
     setRetry(null)
     setRevealedAnswer(null)
@@ -466,6 +485,15 @@ export default function Practice() {
   const isLastSentence =
     currentSentenceIndex >= (currentScenario?.sentences?.length || 0) - 1
 
+  const recoveredRef = useRef(false)
+  useEffect(() => {
+    if (submission.sent && !recoveredRef.current) {
+      recoveredRef.current = true; submission.finish()
+      if (!result && !retry) advance()
+    }
+  }, [])
+
+  if (currentScenario) saveCheckpoint({ scenarioId: currentScenario.scenario_id, sentence: currentSentence, draft, result, hintLevel, selectedChoice, tally, xpEarned, elapsedSec, retry, revealedAnswer, choices, lesson, answerShownRef: answerShownRef.current, lessonStartRef: lessonStartRef.current })
   if (!currentScenario) return null
 
   // 레슨 시작 전 = 독화 트랙 로딩(223:30 / 모바일 243:81)
@@ -640,7 +668,8 @@ export default function Practice() {
                 <div className="mt-4">
                   <QuizForm
                     key={`${currentSentenceIndex}-${retry ? 'retry' : revealedAnswer != null ? 'reveal' : 'first'}`}
-                    initialAnswer={revealedAnswer || ''}
+                    initialAnswer={revealedAnswer || draft}
+                    onAnswerChange={setDraft}
                     onSubmit={handleSubmitAnswer}
                     onRetry={handleRetry}
                     loading={submitting}

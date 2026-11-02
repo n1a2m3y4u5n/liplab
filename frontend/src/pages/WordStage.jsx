@@ -1,3 +1,4 @@
+import useLessonCheckpoint from '../hooks/useLessonCheckpoint'
 import { Progress } from '../components/UI'
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -125,8 +126,10 @@ export default function WordStage() {
   )
 }
 
-function WordQuiz({ data, reload }) {
+function WordQuiz({ data: incomingData, reload }) {
   const navigate = useNavigate()
+  const [checkpoint, saveCheckpoint, clearCheckpoint, submission] = useLessonCheckpoint('word')
+  const data = checkpoint?.data || incomingData
   const [params] = useSearchParams()
   const endless = params.get('endless') === '1'   // 엔드리스 혼합 세션(단어 ↔ 문맥, G-6)
   const words = useMemo(() => data.words.map((w) => w.word), [data])
@@ -134,21 +137,21 @@ function WordQuiz({ data, reload }) {
   // 자주 쓰는 짧은 말(등급 1)이 입모양으로는 가장 어려워 표시가 거꾸로였다(9/27, 등급과 시각 난이도 순위상관 −0.35).
   const levelOf = useMemo(() => Object.fromEntries(data.words.map((w) => [w.word, visualLevel(w.quantile)])), [data])
   const byWord = useMemo(() => new Map(data.words.map((w) => [w.word, w])), [data])
-  const [q, setQ] = useState(null)
+  const [q, setQ] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'q') ? checkpoint.q : (null))
   // 문항 북마크 — 서버에 저장돼 복습 탭·저장한 문장에 나온다
   const [saved, toggleSaved] = useBookmark(q?.kind === 'context' ? q.full : q?.target, { situation: q?.kind === 'context' ? '문맥 추론' : '단어 독화' })
-  const [frames, setFrames] = useState([])
+  const [frames, setFrames] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'frames') ? checkpoint.frames : ([]))
   // 반응 시간 기준(파일럿 로그 P0): 이 문항의 입모양을 받아 재생을 시작한 때. 새 문항은 frames를 비웠다가 채운다
   const onsetRef = useRef(null)
   useEffect(() => { onsetRef.current = frames?.length ? Date.now() : null }, [frames])
   const visemeSeqRef = useRef(0)   // 입모양 요청 순번: 이전 문항의 늦은 응답이 새 문항 화면을 덮지 않게
-  const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
+  const [stat, setStat] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'stat') ? checkpoint.stat : ({ attempts: 0, mastery: 0, mastered: false }))
   // 약한 입모양은 조금 천천히(연습 화면). 숙달 추정값이 문턱(서버 natural_speed_gate, 70) 이상이면 감속을 끄고 자연 속도로
   // 낸다. 감속해 본 정답은 숙달에 0.5만 들어가서, 끄지 않으면 자연 속도로 잘 읽어도 숙달에 닿지 못할 수 있다(docs/mastery-ewma.md 7절).
   const estimate = stat.attempts > 0 ? stat.mastery : (data.mastery_score ?? 0)
   // 숙달한 뒤 엔드리스에서는 '빠른 말' 속도 단계를 고를 수 있다(1.0배 이상이라 숙달에는 정답 1로 들어간다). 서버가 연 단계
   // (speed_levels: 1.25 → 1.6 → 2.0배, 한 단계에서 최근 12문항 중 10문항을 맞히면 다음 단계). 엔진 1.0배는 실제 말의 약 절반 빠르기다.
-  const [fast, setFast] = useState(1)
+  const [fast, setFast] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'fast') ? checkpoint.fast : (1))
   const speedLevels = endless && (data.mastered || stat.mastered)
     ? (data.speed_levels?.length ? data.speed_levels : [FAST_SPEECH_SPEED]) : []
   const fastOk = speedLevels.length > 0
@@ -157,13 +160,13 @@ function WordQuiz({ data, reload }) {
   const shownFrames = useSlowWeak(frames, estimate < (data.natural_speed_gate ?? 70) && playSpeed <= 1)
   // 레슨마다 가상 화자 한 명(계획 2-2, 엔드리스는 단어·문맥 레슨을 한 줄로 센다). 화자의 말 속도는 숙달에 싣는 재생 속도
   // (effectiveSpeed)에 넣지 않는다. 사람마다 다른 자연 속도라 감속이 아니다(docs/talker-variation.md 3절).
-  const [lesson, nextLesson] = useLessonTalker(endless ? 'endless' : 'word')
+  const [lesson, nextLesson] = useLessonTalker(endless ? 'endless' : 'word', checkpoint?.lesson)
   // 숙달 지연 탐침(C16): 숙달한 단계가 있으면 레슨 가운데에 확인 문항을 끼운다(비율 상한은 서버, 숙달·XP에는 들어가지 않음)
   const probes = useMasteryProbes(QUIZ_LEN)
   // 학습자 정보 기본값(계획 2-6, 이 기기에만 저장): 짧은 힌트는 설명을 첫 문장만 먼저, 수어 보기는 틀린 단어의 수어 뜻을 바로 펼친다
   const { defaults: learner } = useLearnerInfo()
-  const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계)
-  const [result, setResult] = useState(null)
+  const [selected, setSelected] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'selected') ? checkpoint.selected : (null)) // 확인 전 선택(선택→확인 2단계)
+  const [result, setResult] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'result') ? checkpoint.result : (null))
   // 소리 조건(C17): 답한 뒤에만 '소리와 함께 다시 보기'(문맥 문항은 문장 전체). 답은 늘 소리 없이 한다
   const sound = useSoundCondition()
   const replay = useSoundReplay({
@@ -172,19 +175,19 @@ function WordQuiz({ data, reload }) {
   })
   const [compareOpen, setCompareOpen] = useState(false)   // 오답 뒤 정답·고른 말 입모양 나란히 비교(누를 때만 WebGL 둘 추가)
   const [submitting, setSubmitting] = useState(false)
-  const [qNum, setQNum] = useState(1)              // 레슨 내 문항 번호(진행바)
-  const [tally, setTally] = useState({ n: 0, correct: 0 })   // 이번 레슨에서 푼 문항·정답 수 → 완료 뷰 정답률
-  const [done, setDone] = useState(false)          // 12문항을 마치면 완료 뷰(93:12)
+  const [qNum, setQNum] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'qNum') ? checkpoint.qNum : (1)) // 레슨 내 문항 번호(진행바)
+  const [tally, setTally] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'tally') ? checkpoint.tally : ({ n: 0, correct: 0 })) // 이번 레슨에서 푼 문항·정답 수 → 완료 뷰 정답률
+  const [done, setDone] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'done') ? checkpoint.done : (false)) // 12문항을 마치면 완료 뷰(93:12)
   const [signOpen, setSignOpen] = useState(false)
   const closeSign = useCallback(() => setSignOpen(false), [])
   const signRef = useFocusTrap(signOpen, closeSign)          // 수어 모달 포커스 트랩·Esc
-  const [xpEarned, setXpEarned] = useState(0)      // 레슨 동안 서버가 준 XP 합(응답 xp_gained) → 완료 뷰
-  const startRef = useRef(Date.now())              // 레슨 시작 시각 → 걸린 시간
-  const [elapsedSec, setElapsedSec] = useState(0)
+  const [xpEarned, setXpEarned] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'xpEarned') ? checkpoint.xpEarned : (0)) // 레슨 동안 서버가 준 XP 합(응답 xp_gained) → 완료 뷰
+  const startRef = useRef(checkpoint?.startRef ?? (Date.now()))              // 레슨 시작 시각 → 걸린 시간
+  const [elapsedSec, setElapsedSec] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'elapsedSec') ? checkpoint.elapsedSec : (0))
 
   // 이번 레슨에서 이미 낸 단어. 예전에는 가중 복원추출이라 12문항 레슨의 33~39%에서 같은 단어가 다시 나와(앞에서 정답을 봤으니)
   // 기억으로 맞힌 답이 숙달에 들어갔다. 레슨 안에서는 뺀 채 가중 추출한다(새 레슨에서 초기화).
-  const askedRef = useRef(new Set())
+  const askedRef = useRef(checkpoint?.askedRef ?? (new Set()))
   // 레슨 문항 구성(lib/openSet), 레슨을 시작할 때 자리를 정한다.
   //  - 12문항 중 2문항은 문맥 문항(문장 속 빈칸, 보기는 입모양이 비슷한 단어, 계획 1-3). 이 답은 숙달에 넣지 않는다.
   //  - 숙달한 뒤에는 30%를 주관식(단어 입력)으로 낸다(계획 1-2).
@@ -192,8 +195,8 @@ function WordQuiz({ data, reload }) {
   //    보통 단어 문항이라 숙달에 똑같이 들어가고, 시행 기록에 탐색 표시(probe)가 남는다.
   const masteredRef = useRef(false)
   masteredRef.current = !!(data.mastered || stat.mastered)
-  const slotRef = useRef({ typed: new Set(), context: new Set(), probe: -1, pos: -1, ctx: 0 })
-  const [typedText, setTypedText] = useState('')
+  const slotRef = useRef(checkpoint?.slotRef ?? ({ typed: new Set(), context: new Set(), probe: -1, pos: -1, ctx: 0 }))
+  const [typedText, setTypedText] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'typedText') ? checkpoint.typedText : (''))
   const newQ = useCallback(async (fresh = false) => {
     const ctxItems = data.context_items || []
     if (fresh) {
@@ -241,7 +244,14 @@ function WordQuiz({ data, reload }) {
     try { const f = await learningAPI.getVisemes(target); if (seq === visemeSeqRef.current) setFrames(f) } catch { /* ignore */ }
   }, [data, words, byWord])
 
-  useEffect(() => { newQ(true) }, [newQ])
+  useEffect(() => { if (!checkpoint?.q) newQ(true) }, [newQ])
+  useEffect(() => {
+    if (!checkpoint?.q || checkpoint.frames?.length) return
+    let alive = true
+    learningAPI.getVisemes(checkpoint.q.kind === 'context' ? checkpoint.q.full : checkpoint.q.target)
+      .then(next => { if (alive) setFrames(next) }).catch(() => {})
+    return () => { alive = false }
+  }, [])
 
   // 보기 숫자 키 1~4(§4-03) — 채점 중·결과 표시 중·수어 창이 열려 있으면 받지 않는다.
   const typed = q?.kind === 'typed'
@@ -252,6 +262,7 @@ function WordQuiz({ data, reload }) {
   const answer = typed ? typedText.trim() : selected
   const confirm = async () => {
     if (result || submitting || !answer) return
+    if (!submission.begin(answer)) return
     setSubmitting(true)
     let correct = typed ? answer.replace(/\s+/g, '') === q.target : answer === q.target
     let verdict = correct ? 'correct' : 'wrong'
@@ -265,6 +276,7 @@ function WordQuiz({ data, reload }) {
         confusions = rc.confusions || []
         setXpEarned((x) => x + (rc.xp_gained || 0))
       } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
+      submission.finish()
       setResult({ correct, verdict: correct ? 'correct' : 'wrong', chosen: answer, confusions })
       setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
       return
@@ -279,6 +291,7 @@ function WordQuiz({ data, reload }) {
       if (typed && rr.verdict) { verdict = rr.verdict; correct = verdict === 'correct' }
       setXpEarned((x) => x + (rr.xp_gained || 0))
     } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
+    submission.finish()
     setResult({ correct, verdict, chosen: answer, confusions })
     setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
   }
@@ -303,6 +316,17 @@ function WordQuiz({ data, reload }) {
     newQ(true)
   }
 
+  const recoveredRef = useRef(false)
+  useEffect(() => {
+    if (submission.sent && !recoveredRef.current) {
+      recoveredRef.current = true
+      submission.finish()
+      if (!result) advance()
+    }
+  }, [])
+
+  if (q) saveCheckpoint({ data, q, frames, selected, typedText, result, stat, fast, qNum, tally, done, xpEarned, elapsedSec, lesson, askedRef: askedRef.current, slotRef: slotRef.current, startRef: startRef.current })
+
   if (!q) return null
 
   if (probes.open) return <MasteryProbeBlock items={probes.items} onDone={() => { probes.finish(); advance() }} />
@@ -313,7 +337,7 @@ function WordQuiz({ data, reload }) {
       // 다음 레슨: 단계를 숙달했으면 3단계 문장(시나리오 선택 ScenarioHub → /practice. CurriculumPath READ_ROUTE와
       // 같은 진입점), 아니면 이 단계의 다음 12문항. 엔드리스(?endless=1)에서는 문맥 레슨과 번갈아 이어진다(G-6).
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
-        onNext={() => (endless ? navigate('/learn/closure?endless=1') : stat.mastered ? navigate('/learn/scenario') : (reload ? reload() : restart()))}
+        onNext={() => (endless ? navigate('/learn/closure?endless=1') : stat.mastered ? navigate('/learn/scenario') : (reload ? (clearCheckpoint(), reload()) : restart()))}
         onHome={() => navigate(endless ? '/learn/endless' : '/learn/path')}
         homeLabel={endless ? '엔드리스 학습으로' : undefined}
         effort={{ lessonKind: 'word', stage: 2, nItems: tally.n, accuracy: tally.n ? tally.correct / tally.n : null }} />

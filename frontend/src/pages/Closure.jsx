@@ -1,3 +1,4 @@
+import useLessonCheckpoint from '../hooks/useLessonCheckpoint'
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -61,31 +62,33 @@ export default function Closure() {
   )
 }
 
-function ClosureQuiz({ items }) {
+function ClosureQuiz({ items: incomingItems }) {
+  const [checkpoint, saveCheckpoint, clearCheckpoint, submission] = useLessonCheckpoint('closure')
+  const items = checkpoint?.items || incomingItems
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const endless = params.get('endless') === '1'   // 엔드리스 혼합 세션: 끝나면 단어 레슨으로(G-6)
   // items 안의 위치(레슨이 이어져도 계속 다음 문항). 서버가 최근에 푼 문항을 뒤로 보내 주므로 화면을 열 때마다 처음부터 간다.
   // 예전에는 엔드리스에서 위치를 탭 세션에 두었는데, 서버 순서가 바뀐 뒤에도 그 위치로 가면 새 문항을 건너뛴다.
-  const [i, setI] = useState(0)
-  const [qNum, setQNum] = useState(1)
-  const [frames, setFrames] = useState([])
+  const [i, setI] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'i') ? checkpoint.i : (0))
+  const [qNum, setQNum] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'qNum') ? checkpoint.qNum : (1))
+  const [frames, setFrames] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'frames') ? checkpoint.frames : ([]))
   const shownFrames = useSlowWeak(frames)   // 약한 입모양은 조금 천천히(연습 화면)
-  const [lesson, nextLesson] = useLessonTalker(endless ? 'endless' : 'closure')   // 레슨마다 가상 화자 한 명(계획 2-2)
+  const [lesson, nextLesson] = useLessonTalker(endless ? 'endless' : 'closure', checkpoint?.lesson)   // 레슨마다 가상 화자 한 명(계획 2-2)
   const probes = useMasteryProbes(QUIZ_LEN)   // 숙달 지연 탐침(C16): 레슨 가운데 문항 뒤에 끼운다(숙달·XP에는 들어가지 않음)
-  const [selected, setSelected] = useState(null)
-  const [result, setResult] = useState(null)
+  const [selected, setSelected] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'selected') ? checkpoint.selected : (null))
+  const [result, setResult] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'result') ? checkpoint.result : (null))
   const [submitting, setSubmitting] = useState(false)
-  const [hint, setHint] = useState(false)
+  const [hint, setHint] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'hint') ? checkpoint.hint : (false))
   const sound = useSoundCondition()   // 소리 조건(C17): 답한 뒤에만 빈칸을 채운 문장을 소리와 함께 다시 보기
-  const [tally, setTally] = useState({ n: 0, correct: 0 })
-  const [xpEarned, setXpEarned] = useState(0)
-  const [done, setDone] = useState(false)
-  const startRef = useRef(Date.now())
-  const [elapsedSec, setElapsedSec] = useState(0)
+  const [tally, setTally] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'tally') ? checkpoint.tally : ({ n: 0, correct: 0 }))
+  const [xpEarned, setXpEarned] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'xpEarned') ? checkpoint.xpEarned : (0))
+  const [done, setDone] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'done') ? checkpoint.done : (false))
+  const startRef = useRef(checkpoint?.startRef ?? Date.now())
+  const [elapsedSec, setElapsedSec] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'elapsedSec') ? checkpoint.elapsedSec : (0))
 
   const item = items[i % items.length]
-  const choices = useMemo(() => shuffle(item.options), [item])
+  const choices = useMemo(() => checkpoint?.i === i ? checkpoint.choices : shuffle(item.options), [item])
   const full = item.display.replace('___', item.answer)
   // 문항 북마크 — 빈칸을 채운 문장을 저장해 '저장한 문장'에서 입모양을 다시 본다
   const [saved, toggleSaved] = useBookmark(full, { situation: '문맥 추론' })
@@ -94,7 +97,13 @@ function ClosureQuiz({ items }) {
 
   // 반응 시간 기준(파일럿 로그 P0): 입모양을 받아 재생을 시작한 때
   const onsetRef = useRef(null)
+  const shownItemRef = useRef(checkpoint ? full : null)
   useEffect(() => {
+    if (shownItemRef.current === full) {
+      if (!frames.length) learningAPI.getVisemes(full).then(setFrames).catch(() => {})
+      return
+    }
+    shownItemRef.current = full
     setResult(null); setSelected(null); setHint(false); setFrames([])
     onsetRef.current = null
     learningAPI.getVisemes(full).then(setFrames).catch(() => {})
@@ -105,6 +114,7 @@ function ClosureQuiz({ items }) {
 
   const confirm = async () => {
     if (result || submitting || selected == null) return
+    if (!submission.begin(selected)) return
     setSubmitting(true)
     let correct = selected === item.answer
     let confusions = []
@@ -115,6 +125,7 @@ function ClosureQuiz({ items }) {
       confusions = r.confusions || []
       setXpEarned((x) => x + (r.xp_gained || 0))
     } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
+    submission.finish()
     setResult({ correct, chosen: selected, confusions })
     setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
   }
@@ -138,6 +149,15 @@ function ClosureQuiz({ items }) {
   // 나가기: 정해진 곳으로 간다. 예전에는 뒤로 가기(navigate(-1))라, 엔드리스에서는 방금 끝낸 단어 레슨이 다시 열리고
   // 다른 사이트에서 바로 들어왔으면 앱을 떠났다.
   const exit = () => navigate(hubOf(endless))
+
+  const recoveredRef = useRef(false)
+  useEffect(() => {
+    if (submission.sent && !recoveredRef.current) {
+      recoveredRef.current = true; submission.finish()
+      if (!result) advance()
+    }
+  }, [])
+  saveCheckpoint({ items, choices, i, qNum, frames, selected, result, hint, tally, xpEarned, done, elapsedSec, lesson, startRef: startRef.current })
 
   if (probes.open) return <MasteryProbeBlock items={probes.items} onDone={() => { probes.finish(); advance() }} />
 

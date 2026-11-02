@@ -1,3 +1,4 @@
+import useLessonCheckpoint from '../hooks/useLessonCheckpoint'
 import { Progress } from '../components/UI'
 import { requestTrackedMedia, startUsage, endUsage } from '../lib/track'
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
@@ -87,22 +88,23 @@ export default function SpeakingPractice() {
   const reviewMode = searchParams.get('review') != null || location.pathname === '/review/speaking/session'   // 발음 복습 모드
   const selectedStageMenuItem = getSpeakingStageMenuItem(stageNo)
 
-  const [words, setWords] = useState([])
-  const [target, setTarget] = useState(null)
-  const [frames, setFrames] = useState([])
-  const [stageInfo, setStageInfo] = useState(null)   // 단계 콘텐츠(있으면 단계 모드)
-  const [reviewItems, setReviewItems] = useState(null)  // null=로딩, []=비어있음
-  const [itemIdx, setItemIdx] = useState(0)
-  const [progress, setProgress] = useState(null)     // 단계 진행률(마지막 채점 결과)
+  const [checkpoint, saveCheckpoint, clearCheckpoint, submission] = useLessonCheckpoint('speaking')
+  const [words, setWords] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'words') ? checkpoint.words : ([]))
+  const [target, setTarget] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'target') ? checkpoint.target : (null))
+  const [frames, setFrames] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'frames') ? checkpoint.frames : ([]))
+  const [stageInfo, setStageInfo] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'stageInfo') ? checkpoint.stageInfo : (null))   // 단계 콘텐츠(있으면 단계 모드)
+  const [reviewItems, setReviewItems] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'reviewItems') ? checkpoint.reviewItems : (null))  // null=로딩, []=비어있음
+  const [itemIdx, setItemIdx] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'itemIdx') ? checkpoint.itemIdx : (0))
+  const [progress, setProgress] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'progress') ? checkpoint.progress : (null))     // 단계 진행률(마지막 채점 결과)
   useEffect(() => { if (progress?.mastered) endUsage(true) }, [progress?.mastered])
   const [recording, setRecording] = useState(false)
   const [vol, setVol] = useState(0)
   const [pitch, setPitch] = useState(null)
   const [err, setErr] = useState(null)
   const [retry, setRetry] = useState(0)   // 로드 실패 시 '다시 불러오기'로 effect 재실행
-  const [summary, setSummary] = useState(null)
+  const [summary, setSummary] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'summary') ? checkpoint.summary : (null))
   const [assessing, setAssessing] = useState(false)
-  const [assessment, setAssessment] = useState(null)
+  const [assessment, setAssessment] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'assessment') ? checkpoint.assessment : (null))
   const [mirrorOn, setMirrorOn] = useState(false)   // 웹캠 미러(따라 말하기)
   const [showDetail, setShowDetail] = useState(false)   // 상세 분석 모달
   const [introDone, setIntroDone] = useState(false)  // 레슨 시작 전 트랙 로딩 최소 표시 시간
@@ -248,6 +250,7 @@ export default function SpeakingPractice() {
 
   useEffect(() => {
     let cancelled = false
+    if (checkpoint?.target && retry === 0) return () => { teardown() }
     framesRequestRef.current += 1
     setErr(null)
     setStageInfo(null)
@@ -463,13 +466,16 @@ export default function SpeakingPractice() {
       setAssessing(true)
       try {
         // 점수부터 받고 Claude 코칭은 뒤따라 받는다(docs/scorer-stream-latency-2026-10.md 10절). 코칭 내용은 기다릴 때와 같다
+        if (!submission.begin(target)) return
         const res = await speakAPI.assess(target, blob, metrics, { ...opts, coaching_async: true })
+        submission.finish()
         speakMark('speak:score')
         if (attempt !== attemptRef.current) return
         setAssessment(res)
         if (res.progress) { setProgress(res.progress); maybeAddProbes(res.progress, itemIdx) }
         if (res.coaching_pending && res.coaching_id) loadCoaching(res.coaching_id, attempt)
       } catch (e) {
+        submission.finish()
         if (attempt !== attemptRef.current) return
         setAssessment({ error: e?.response?.data?.detail || '발음 분석에 실패했어요. 잠시 후 다시 시도해 주세요.' })
       } finally {
@@ -647,6 +653,15 @@ export default function SpeakingPractice() {
 
   // 레슨 시작 전 = 발화 트랙 로딩(223:50 / 모바일 243:101) — 첫 문항·복습 목록을 받는 동안 + 최소 표시 시간.
   const pending = !err && (reviewMode ? reviewItems === null : stageNo != null ? !stageInfo : !target)
+  const recoveredRef = useRef(false)
+  useEffect(() => {
+    if (submission.sent && !recoveredRef.current) {
+      recoveredRef.current = true; submission.finish()
+      if (!assessment) nextItem()
+    }
+  }, [])
+  if (target) saveCheckpoint({ words, target, frames, stageInfo, reviewItems, itemIdx, progress, summary, assessment })
+
   if (pending || !introDone) return <LoadingScreen variant="brand" track="language" />
 
   return (

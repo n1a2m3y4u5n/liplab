@@ -1,3 +1,4 @@
+import useLessonCheckpoint from '../hooks/useLessonCheckpoint'
 import { Progress } from '../components/UI'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -41,32 +42,34 @@ const INTRO_MS = 1000
 export default function Conversation() {
   const navigate = useNavigate()
   const currentScenario = useStore((state) => state.currentScenario)
+  const [checkpoint, saveCheckpoint, clearCheckpoint, submission] = useLessonCheckpoint('conversation')
+  const resumed = checkpoint?.scenarioId === currentScenario?.scenario_id ? checkpoint : null
   const user = useStore((state) => state.user)
 
-  const [messages, setMessages] = useState([]) // {role: 'ai'|'user', text: string, visemes: []}
-  const [currentAIVisemes, setCurrentAIVisemes] = useState([])
+  const [messages, setMessages] = useState(() => resumed && Object.hasOwn(resumed, 'messages') ? resumed.messages : ([])) // {role: 'ai'|'user', text: string, visemes: []}
+  const [currentAIVisemes, setCurrentAIVisemes] = useState(() => resumed && Object.hasOwn(resumed, 'currentAIVisemes') ? resumed.currentAIVisemes : ([]))
   const shownAIVisemes = useSlowWeak(currentAIVisemes)   // 약한 입모양은 조금 천천히(연습 화면)
   // 대화 한 번 = 상대 한 사람: 대화마다 가상 화자 한 명(커리큘럼 계획 2-2, 다섯 번째 대화마다 기본 얼굴)
-  const [talkerLesson] = useLessonTalker('conversation')
-  const [currentAIText, setCurrentAIText] = useState('')
+  const [talkerLesson] = useLessonTalker('conversation', resumed?.talkerLesson)
+  const [currentAIText, setCurrentAIText] = useState(() => resumed && Object.hasOwn(resumed, 'currentAIText') ? resumed.currentAIText : (''))
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [userInput, setUserInput] = useState('')
-  const [phase, setPhase] = useState('watching') // 'watching' | 'answering' | 'done'
-  const [revealedText, setRevealedText] = useState(false)
-  const [turnCount, setTurnCount] = useState(0)
-  const [scores, setScores] = useState([])
+  const [userInput, setUserInput] = useState(() => resumed && Object.hasOwn(resumed, 'userInput') ? resumed.userInput : (''))
+  const [phase, setPhase] = useState(() => resumed && Object.hasOwn(resumed, 'phase') ? resumed.phase : ('watching')) // 'watching' | 'answering' | 'done'
+  const [revealedText, setRevealedText] = useState(() => resumed && Object.hasOwn(resumed, 'revealedText') ? resumed.revealedText : (false))
+  const [turnCount, setTurnCount] = useState(() => resumed && Object.hasOwn(resumed, 'turnCount') ? resumed.turnCount : (0))
+  const [scores, setScores] = useState(() => resumed && Object.hasOwn(resumed, 'scores') ? resumed.scores : ([]))
 
   const [introDone, setIntroDone] = useState(false)
   const [notice, setNotice] = useState('')   // 입모양을 받지 못해 재생 없이 답하게 됐을 때의 안내
-  const [baseFrames, setBaseFrames] = useState([])   // 이번 턴 원래 속도 입모양(되묻기 '천천히'의 기준)
-  const [repairs, setRepairs] = useState(0)          // 이번 턴 되묻기 횟수
-  const [totalRepairs, setTotalRepairs] = useState(0)
+  const [baseFrames, setBaseFrames] = useState(() => resumed && Object.hasOwn(resumed, 'baseFrames') ? resumed.baseFrames : ([]))   // 이번 턴 원래 속도 입모양(되묻기 '천천히'의 기준)
+  const [repairs, setRepairs] = useState(() => resumed && Object.hasOwn(resumed, 'repairs') ? resumed.repairs : (0))          // 이번 턴 되묻기 횟수
+  const [totalRepairs, setTotalRepairs] = useState(() => resumed && Object.hasOwn(resumed, 'totalRepairs') ? resumed.totalRepairs : (0))
   const [repairBusy, setRepairBusy] = useState(false)
   const [showTips, setShowTips] = useState(true)
-  const [level, setLevel] = useState(() => currentScenario?.level || 1)   // 대화 중 조정되는 난이도
-  const recentRef = useRef([])                                          // 난이도 조정용 최근 턴 이해도
-  const levelRef = useRef(currentScenario?.level || 1)
+  const [level, setLevel] = useState(() => resumed && Object.hasOwn(resumed, 'level') ? resumed.level : (currentScenario?.level || 1))   // 대화 중 조정되는 난이도
+  const recentRef = useRef(resumed?.recentRef ?? ([]))                                          // 난이도 조정용 최근 턴 이해도
+  const levelRef = useRef(resumed?.levelRef ?? (currentScenario?.level || 1))
 
   const chatBoxRef = useRef(null)    // 대화 기록 칸(자체 스크롤)
   const startedRef = useRef(false)   // 최초 AI 말풍선 중복 생성 방지(StrictMode)
@@ -87,7 +90,11 @@ export default function Conversation() {
     // ref 가드로 최초 1회만 대화를 시작한다.
     if (startedRef.current) return
     startedRef.current = true
-    sendAIMessage([])
+    if (!resumed?.messages?.length || resumed.awaitingAI) {
+      const history = resumed?.messages?.filter(m => m.role !== 'system').map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.text })) || []
+      sendAIMessage(history)
+    }
+    else if (resumed.phase === 'watching') setIsPlaying(true)
   }, [])
 
   useEffect(() => {
@@ -201,6 +208,7 @@ export default function Conversation() {
     if (!userInput.trim() || repairBusy) return
 
     const answer = userInput.trim()
+    if (!submission.begin(answer)) return
     setUserInput('')
 
     // 이해도 채점 — 방금 본 AI 문장(currentAIText)과 비교 (음운 유사도 엔진 재사용)
@@ -213,6 +221,7 @@ export default function Conversation() {
       turnScore = r.score
     } catch { /* 채점 실패해도 대화는 진행 */ }
 
+    submission.finish()
     setMessages((prev) => [...prev, { role: 'user', text: answer, score: turnScore }])
     if (turnScore != null && !practiceOnly) {
       setScores((prev) => [...prev, turnScore])
@@ -250,6 +259,21 @@ export default function Conversation() {
     navigate('/learn/path')
   }
 
+  const recoveredRef = useRef(false)
+  useEffect(() => {
+    if (submission.sent && !recoveredRef.current) {
+      recoveredRef.current = true
+      const answer = submission.sent.answer
+      submission.finish()
+      setUserInput('')
+      setMessages(prev => [...prev, { role: 'user', text: answer, score: null }])
+      setTurnCount(n => n + 1)
+      if (turnCount + 1 >= MAX_TURNS) setPhase('done')
+      else void sendAIMessage([...messages.filter(m => m.role !== 'system'), { role: 'user', text: answer }].map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.text })))
+    }
+  }, [])
+
+  if (currentScenario) saveCheckpoint({ scenarioId: currentScenario.scenario_id, awaitingAI: isLoading, messages, currentAIVisemes, currentAIText, userInput, phase, revealedText, turnCount, scores, baseFrames, repairs, totalRepairs, level, talkerLesson, recentRef: recentRef.current, levelRef: levelRef.current })
   if (!currentScenario) return null
 
   // 레슨 시작 전 = 독화 트랙 로딩(223:30 / 모바일 243:81) — 첫 AI 말(입모양)을 받는 동안 + 최소 표시 시간

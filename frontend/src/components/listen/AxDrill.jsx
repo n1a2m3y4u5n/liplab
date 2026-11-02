@@ -1,3 +1,4 @@
+import useLessonCheckpoint from '../../hooks/useLessonCheckpoint'
 import { useEffect, useRef, useState } from 'react'
 import { listenAPI } from '../../api'
 import { axVoices } from '../../lib/listenMix'
@@ -17,18 +18,20 @@ import { Heading, Option, optionState } from './ui'
  * 목소리는 lib/listenMix.axVoices로 고른다(문항의 avoid_voices를 건너뜀). 재생·미리 받기·답 기록이 같은 목소리를 쓴다.
  * answerExtra는 답에 그대로 붙는다(연습이면 {practice_mode}). 끝 처리는 finish(ListenComplete.TaskEnd).
  */
-export default function AxDrill({ data, settings, voices, onProgress, finish, active, answerExtra = null, onAnswered = null }) {
+export default function AxDrill({ data: incomingData, settings, voices, onProgress, finish, active, answerExtra = null, onAnswered = null }) {
+  const [checkpoint, saveCheckpoint, clearCheckpoint, submission] = useLessonCheckpoint('listen-AxDrill')
+  const data = checkpoint?.data || incomingData
   const items = data.items || []
   const leveled = data.levels != null
-  const [k, setK] = useState(0)
-  const [picked, setPicked] = useState(null)
-  const [res, setRes] = useState(null)
+  const [k, setK] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'k') ? checkpoint.k : (0))
+  const [picked, setPicked] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'picked') ? checkpoint.picked : (null))
+  const [res, setRes] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'res') ? checkpoint.res : (null))
   const [err, setErr] = useState(null)
   const [sending, setSending] = useState(false)
-  const [plays, setPlays] = useState(0)
-  const [level, setLevel] = useState(data.level)
-  const [change, setChange] = useState(null)
-  const tally = useStageTally(data.status, onAnswered)
+  const [plays, setPlays] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'plays') ? checkpoint.plays : (0))
+  const [level, setLevel] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'level') ? checkpoint.level : (data.level))
+  const [change, setChange] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'change') ? checkpoint.change : (null))
+  const tally = useStageTally(data.status, onAnswered, checkpoint?.tally)
   const player = usePlayer()
   const t0 = useRef(Date.now())
   const it = items[k]
@@ -39,7 +42,7 @@ export default function AxDrill({ data, settings, voices, onProgress, finish, ac
   const nv = nx ? axVoices(voices.train, k + 1, nx.voice_pair, data.voice_mode, data.voice_block, nx.avoid_voices) : null
   usePrefetch(nx ? [[nx.first, nv[0]], [nx.second, nv[1]]] : [])
   useEffect(() => { onProgress(k, items.length) }, [k, items.length, onProgress])
-  useEffect(() => { setRes(null); setPicked(null); setErr(null); setPlays(0); setChange(null); player.reset(); t0.current = Date.now() }, [k, player.reset])
+  useEffect(() => { if (checkpoint?.k === k) return; setRes(null); setPicked(null); setErr(null); setPlays(0); setChange(null); player.reset(); t0.current = Date.now() }, [k, player.reset])
   const ready = a.state === 'ready' && b.state === 'ready'
   const clipState = a.state === 'missing' || b.state === 'missing' ? 'missing' : ready ? 'ready' : 'loading'
   const play = async () => {
@@ -51,22 +54,33 @@ export default function AxDrill({ data, settings, voices, onProgress, finish, ac
   const canAnswer = plays > 0 && !res && !sending
   const confirm = async () => {
     if (!canAnswer || picked == null) return
+    if (!submission.begin(picked)) return
     player.stop()
     setSending(true)
     setErr(null)
     try {
       const r = await listenAPI.answer({ stage: 1, item_key: it.key, same: picked === 0, plays, rt_ms: Date.now() - t0.current, voice: v1, route: settings.route,
         pick: it.pick, ...(answerExtra || {}) })
+      submission.finish()
       setRes(r)
       tally.add(r.correct, r.status, r)
       if (r.level != null && leveled) { setChange(levelChangeText(level, r.level, data.levels)); setLevel(r.level) }
-    } catch { setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
+    } catch { submission.finish(); setK(n => n + 1); setErr('답을 보내지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.') }
     setSending(false)
   }
   const next = () => { player.stop(); setK(k + 1) }
   const skip = () => { tally.skip(); next() }
   useListenKeys({ active: active && !!it, onPlay: play, canPlay: ready && !player.busy, optionCount: 2, canPick: canAnswer, onPick: setPicked,
     onEnter: res ? next : clipState === 'missing' ? skip : confirm, canEnter: res ? true : clipState === 'missing' || (canAnswer && picked != null) })
+
+  const recoveredRef = useRef(false)
+  useEffect(() => {
+    if (submission.sent && !recoveredRef.current) {
+      recoveredRef.current = true; submission.finish()
+      if (!res) setK(n => n + 1)
+    }
+  }, [])
+  saveCheckpoint({ data, k, picked, res, plays, level, change, tally: tally.checkpoint })
 
   if (!it) {
     const result = { reward: tally.reward, stage: 1, n: tally.n, c: tally.c, skipped: tally.skipped, mastered: tally.mastered, elapsed: tally.elapsed(), level, levels: data.levels }

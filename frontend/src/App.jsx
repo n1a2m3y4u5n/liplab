@@ -230,6 +230,12 @@ function LoginRedirect() {
   return <Navigate to={loginDestination(location)} replace />
 }
 
+// 주소마다 독립된 레슨 상태를 복원한다. 같은 컴포넌트의 다른 단계도 섞이지 않는다.
+function LessonRoute({ component: Page }) {
+  const location = useLocation()
+  return <Page key={`${location.pathname}${location.search}`} />
+}
+
 /**
  * Main App component with routing
  */
@@ -252,11 +258,11 @@ function App() {
         <Route path="/dashboard" element={<LegacyRedirect to="/today" />} />
         <Route path="/today" element={<TodayPage />} />
         <Route path="/records" element={<RecordsPage />} />
-        <Route path="/practice" element={<StageGate stage={3}><Practice /></StageGate>} />
-        <Route path="/conversation" element={<StageGate stage={4}><Conversation /></StageGate>} />
+        <Route path="/practice" element={<StageGate stage={3}><LessonRoute component={Practice} /></StageGate>} />
+        <Route path="/conversation" element={<StageGate stage={4}><LessonRoute component={Conversation} /></StageGate>} />
         <Route path="/sign" element={<LegacyRedirect to="/learn/sign" />} />
-        <Route path="/learn/viseme" element={<VisemeLiteracy />} />
-        <Route path="/learn/word" element={<StageGate stage={2}><WordStage /></StageGate>} />
+        <Route path="/learn/viseme" element={<LessonRoute component={VisemeLiteracy} />} />
+        <Route path="/learn/word" element={<StageGate stage={2}><LessonRoute component={WordStage} /></StageGate>} />
         {/* 뜻 없는 말 짝 맞추기(C10): 1·2단계 사이 과제라 1단계를 숙달해야(2단계가 열려야) 연다 */}
         <Route path="/learn/nonsense" element={<StageGate stage={2}><NonsensePairing /></StageGate>} />
         <Route path="/learn/conversation-multi" element={<MultiConversation />} />
@@ -264,8 +270,8 @@ function App() {
         <Route path="/pilot/battery" element={<PilotBattery />} />
         {import.meta.env.VITE_AV_COMPARISON === '1' && <Route path="/pilot/av-comparison" element={<AvComparison />} />}
         <Route path="/learn/scenario" element={<ScenarioHub />} />
-        <Route path="/learn/speaking" element={<SpeakingPractice />} />
-        <Route path="/learn/listening" element={<ListeningPractice />} />
+        <Route path="/learn/speaking" element={<LessonRoute component={SpeakingPractice} />} />
+        <Route path="/learn/listening" element={<LessonRoute component={ListeningPractice} />} />
         <Route path="/listen/practice/:mode" element={<ListenPractice />} />
         <Route path="/listen/classroom" element={<ListenClassroom />} />
         <Route path="/listen/today" element={<ListenToday />} />
@@ -283,7 +289,7 @@ function App() {
         <Route path="/review/scheduled" element={<Review />} />
         <Route path="/review/mistakes" element={<ReviewLanding mode="mistakes" />} />
         <Route path="/review/speaking" element={<SpeakingReviewLanding />} />
-        <Route path="/review/speaking/session" element={<SpeakingPractice />} />
+        <Route path="/review/speaking/session" element={<LessonRoute component={SpeakingPractice} />} />
         <Route path="/review/saved" element={<Bookmarks />} />
         <Route path="/analysis/activity" element={<AnalysisDetail mode="activity" />} />
         <Route path="/analysis/visemes" element={<AnalysisDetail mode="visemes" />} />
@@ -299,7 +305,7 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/learn/path" element={<CurriculumPath />} />
         <Route path="/learn/endless" element={<EndlessPractice />} />
-        <Route path="/learn/closure" element={<Closure />} />
+        <Route path="/learn/closure" element={<LessonRoute component={Closure} />} />
         <Route path="/pronounce" element={<FreeSpeak />} />
         <Route path="/dev-viseme" element={<DevViseme />} />
         <Route path="/lab/cue-video" element={<CueVideoDemo />} />

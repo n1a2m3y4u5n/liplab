@@ -1,3 +1,4 @@
+import useLessonCheckpoint from '../hooks/useLessonCheckpoint'
 import { useEffect, useState } from 'react'
 import { startUsage, endUsage } from '../lib/track'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -26,19 +27,21 @@ export default function ListeningPractice() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const stage = Math.max(0, Math.min(5, Number(params.get('stage') ?? 0) || 0))
-  const [data, setData] = useState(null)
+  const [checkpoint, saveCheckpoint, clearCheckpoint] = useLessonCheckpoint('listening')
+  const [data, setData] = useState(checkpoint?.data || null)
   const [err, setErr] = useState(null)
   const [nonce, setNonce] = useState(0)
-  const [started, setStarted] = useState(false)
+  const [started, setStarted] = useState(checkpoint?.started || false)
   useEffect(() => {
     if (!started) return
     startUsage('bundle', `listen-${stage}`)
     return () => endUsage(false)
   }, [started, stage, nonce])
-  const [condition, setCondition] = useState('quiet')
+  const [condition, setCondition] = useState(checkpoint?.condition || 'quiet')
 
   useEffect(() => {
     let on = true
+    if (checkpoint?.data && nonce === 0) return
     setData(null)
     setStarted(false)
     setErr(null)
@@ -46,13 +49,14 @@ export default function ListeningPractice() {
     return () => { on = false }
   }, [stage, nonce])
   const exit = () => { stopAll(); navigate('/learn/path?track=listen') }
-  const reload = () => { stopAll(); setNonce((n) => n + 1) }
+  const reload = () => { clearCheckpoint(true); stopAll(); setNonce((n) => n + 1) }
   const goStage = (n) => { stopAll(); navigate(`/learn/listening?stage=${n}`) }
   const finish = { render: (result) => <ListenBatchComplete result={result} data={data} onExit={exit} onMore={reload} onStage={goStage} /> }
 
   const Task = data ? (data.mode === 'noise' && params.get('test') !== '1' ? SentenceTask : STAGE_TASK[data.mode]) : null
   const wordTest = stage === 2 && params.get('wordtest') === '1'
   // 시작 단계 정하기(?placement=1). 학습 화면은 서버가 플래그를 켰다고 알릴 때만 이 주소로 보낸다(꺼져 있으면 API가 404)
+  if (data && params.get('placement') !== '1' && params.get('wordtest') !== '1') saveCheckpoint({ data, started, condition })
   if (params.get('placement') === '1') {
     return (
       <ListenFrame key="placement" kicker="소리 듣기 · 시작 단계 정하기" onExit={exit} exitAria="나가기, 학습 화면으로">

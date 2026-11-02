@@ -24,6 +24,7 @@ const toneOf = (score) => TONE[score >= 80 ? 'good' : score >= 60 ? 'warn' : 'ba
 export default function QuizForm({
   onSubmit,
   onRetry,
+  onAnswerChange,
   loading = false,
   result = null,
   correctAnswer = '',
@@ -55,7 +56,7 @@ export default function QuizForm({
           <textarea
             id="answer"
             value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
+            onChange={(e) => { setAnswer(e.target.value); onAnswerChange?.(e.target.value) }}
             disabled={loading || result !== null}
             className="input-field resize-none h-24"
             placeholder={placeholder}

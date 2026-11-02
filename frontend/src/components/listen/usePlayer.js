@@ -1,5 +1,5 @@
 import { batchReward } from '../../lib/listenQuota'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { playClip, silence, stopAll } from '../../lib/listenAudio'
 import { listenKeyAction, sequenceMs } from '../../lib/listenView'
 
@@ -77,9 +77,9 @@ export function useListenKeys(cfg) {
  * 묶음 집계: 문항 수·정답 수·넘긴 수·이번 묶음에서 처음 숙달했는가·걸린 시간.
  * onAnswered(correct)를 주면 답마다 알린다(엔드리스 연습이 묶음을 넘어 합계를 낸다).
  */
-export function useStageTally(initialStatus, onAnswered = null) {
-  const [t, setT] = useState({ n: 0, c: 0, skipped: 0, mastered: false, reward: { xp: 0 } })
-  const start = useRef(Date.now())
+export function useStageTally(initialStatus, onAnswered = null, resumed = null) {
+  const [t, setT] = useState(resumed?.t || { n: 0, c: 0, skipped: 0, mastered: false, reward: { xp: 0 } })
+  const start = useRef(resumed?.start ?? Date.now())
   const cb = useRef(onAnswered)
   cb.current = onAnswered
   const add = (correct, status, response = null) => {
@@ -90,5 +90,6 @@ export function useStageTally(initialStatus, onAnswered = null) {
   }
   const skip = () => setT((s) => ({ ...s, skipped: s.skipped + 1 }))
   const elapsed = () => Math.floor((Date.now() - start.current) / 1000)
-  return { ...t, add, skip, elapsed }
+  const checkpoint = useMemo(() => ({ t, start: start.current }), [t])
+  return { ...t, add, skip, elapsed, checkpoint }
 }

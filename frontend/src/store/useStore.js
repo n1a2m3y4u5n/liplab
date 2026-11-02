@@ -1,3 +1,4 @@
+import { clearCheckpoints } from '../lib/lessonCheckpoint'
 import { flushTrack, usageHeaders } from '../lib/track'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -10,6 +11,7 @@ import { clearSignExplored } from '../lib/badges'
  */
 export function clearUserLocalData() {
   clearSignExplored()
+  clearCheckpoints()
   try { localStorage.removeItem(`liplab_last_track:${useStore.getState().user?.id ?? 'guest'}`) } catch {}
   try { localStorage.removeItem('liplab_onboarded') } catch { /* 저장소 차단 시 무시 */ }
 }
@@ -114,6 +116,10 @@ const useStore = create(
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
+        currentScenario: state.currentScenario,
+        currentSentence: state.currentSentence,
+        currentSentenceIndex: state.currentSentenceIndex,
+        practiceMode: state.practiceMode,
       }),
     }
   )

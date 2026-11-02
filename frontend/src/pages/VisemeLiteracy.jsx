@@ -1,3 +1,4 @@
+import useLessonCheckpoint from '../hooks/useLessonCheckpoint'
 import { Progress } from '../components/UI'
 import useStore from '../store/useStore'
 import { loadLastTrack, learnHref } from '../lib/lastTrack'
@@ -372,16 +373,18 @@ const AX_CHOICES = [
   { key: 'different', mark: '≠', label: '달라요' },
 ]
 
-function QuizPanel({ data }) {
+function QuizPanel({ data: incomingData }) {
   const navigate = useNavigate()
+  const [checkpoint, saveCheckpoint, clearCheckpoint, submission] = useLessonCheckpoint('viseme')
+  const data = checkpoint?.data || incomingData
   const { lessons } = data
   const quizzable = useMemo(() => lessons.filter((l) => l.quizzable), [lessons])
-  const [q, setQ] = useState(null)                 // 고르기 {kind:'pick', target, choices} | AX {kind:'ax', pair, frames}
+  const [q, setQ] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'q') ? checkpoint.q : (null)) // 고르기 {kind:'pick', target, choices} | AX {kind:'ax', pair, frames}
   // 반응 시간 기준(파일럿 로그 P0): 문항을 보인 때(AX는 두 음절 입모양을 받은 때 다시 잰다)
   const onsetRef = useRef(null)
   useEffect(() => { onsetRef.current = q ? Date.now() : null }, [q])
-  const [selected, setSelected] = useState(null)   // 확인 전 선택(선택→확인 2단계, 고르기 문항)
-  const [result, setResult] = useState(null)
+  const [selected, setSelected] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'selected') ? checkpoint.selected : (null)) // 확인 전 선택(선택→확인 2단계, 고르기 문항)
+  const [result, setResult] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'result') ? checkpoint.result : (null))
   const continueRef = useRef(null)
   const firstChoiceRef = useRef(null)
   // 답 공개 때 비활성화된 보기에서 다음 행동으로 초점을 옮긴다.
@@ -397,20 +400,20 @@ function QuizPanel({ data }) {
       : soundAPI.logReplay('trial', String(q.target.viseme_id), 'viseme')).catch(() => {}),
   })
   const [submitting, setSubmitting] = useState(false)
-  const [stat, setStat] = useState({ attempts: 0, mastery: 0, mastered: false })
-  const [qNum, setQNum] = useState(1)              // 레슨 내 문항 번호(진행바)
-  const [tally, setTally] = useState({ n: 0, correct: 0 })   // 이번 레슨에서 푼 문항·정답 수 → 완료 뷰 정답률
-  const [done, setDone] = useState(false)          // 12문항을 마치면 완료 뷰(93:12)
-  const [xpEarned, setXpEarned] = useState(0)      // 레슨 동안 서버가 준 XP 합(응답 xp_gained) → 완료 뷰
+  const [stat, setStat] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'stat') ? checkpoint.stat : ({ attempts: 0, mastery: 0, mastered: false }))
+  const [qNum, setQNum] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'qNum') ? checkpoint.qNum : (1)) // 레슨 내 문항 번호(진행바)
+  const [tally, setTally] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'tally') ? checkpoint.tally : ({ n: 0, correct: 0 })) // 이번 레슨에서 푼 문항·정답 수 → 완료 뷰 정답률
+  const [done, setDone] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'done') ? checkpoint.done : (false)) // 12문항을 마치면 완료 뷰(93:12)
+  const [xpEarned, setXpEarned] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'xpEarned') ? checkpoint.xpEarned : (0)) // 레슨 동안 서버가 준 XP 합(응답 xp_gained) → 완료 뷰
   const isAx = q?.kind === 'ax'
   // 문항 북마크 — 입모양 그룹의 대표 음절(없으면 이름)을 저장한다. 저장한 문장 화면에서 그 음절 입모양을 다시 본다.
   // AX 문항은 저장하지 않는다.
   const [saved, toggleSaved] = useBookmark(q && !isAx ? (q.target.demo_syllable || lessonLabel(q.target)) : null,
     { situation: q && !isAx ? `입모양 · ${q.target.name}` : '' })
-  const startRef = useRef(Date.now())              // 레슨 시작 시각 → 걸린 시간
-  const [elapsedSec, setElapsedSec] = useState(0)
+  const startRef = useRef(checkpoint?.startRef ?? (Date.now()))              // 레슨 시작 시각 → 걸린 시간
+  const [elapsedSec, setElapsedSec] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'elapsedSec') ? checkpoint.elapsedSec : (0))
   // 레슨마다 가상 화자 한 명(계획 2-2). 다섯 레슨마다 첫 레슨은 기본 화자다.
-  const [lesson, nextLesson] = useLessonTalker('viseme')
+  const [lesson, nextLesson] = useLessonTalker('viseme', checkpoint?.lesson)
   // 숙달 지연 탐침(C16): 숙달한 단계가 있으면 레슨 가운데에 확인 문항을 끼운다(비율 상한은 서버, 숙달·XP에는 들어가지 않음)
   const probes = useMasteryProbes(QUIZ_LEN)
   const { defaults: learner } = useLearnerInfo()   // 짧은 힌트(계획 2-6): 독화 포인트를 첫 문장만 먼저
@@ -419,7 +422,7 @@ function QuizPanel({ data }) {
   // 예전 매 문항 무작위는 한 레슨에서 무리 하나 이상이 빠질 확률이 56%였다.
   // 첫 바퀴(1~6번, 무리 여섯이 한 번씩) 뒤 7~12번 가운데 두 자리는 AX 문항(입 안쪽 짝 1, 보이는 짝 1)이다. AX 답은 1단계 숙달에
   // 넣지 않는다(docs/mastery-ewma.md 11.9절: 오답 −1로 넣는 설계는 거짓 숙달을 늘려 탈락, 숙달에서 뺀 설계가 확인을 통과).
-  const deckRef = useRef({ list: [], i: 0, axAt: new Set(), axItems: [], axI: 0 })
+  const deckRef = useRef(checkpoint?.deckRef ?? ({ list: [], i: 0, axAt: new Set(), axItems: [], axI: 0 }))
   const pickQ = useCallback(() => {
     const target = deckRef.current.list[deckRef.current.i++] || quizzable[0]
     // 오답은 화면에서 가를 수 있는 무리만(정답이 중설모음이면 입 안쪽 무리 제외, lib/visemeOptions).
@@ -451,18 +454,31 @@ function QuizPanel({ data }) {
       .catch(() => setQ((cur) => (cur === axQ ? pickQ() : cur)))
   }, [quizzable, pickQ])
 
-  useEffect(() => { newQ(true) }, [newQ])
+  useEffect(() => { if (!checkpoint?.q) newQ(true) }, [newQ])
+  useEffect(() => {
+    if (checkpoint?.q?.kind !== 'ax' || checkpoint.q.frames) return
+    let alive = true
+    const { a, b } = checkpoint.q.pair
+    Promise.all([learningAPI.getVisemes(a), learningAPI.getVisemes(b)])
+      .then(([fa, fb]) => { if (alive) setQ(cur => ({ ...cur, frames: axFrames(fa, fb) })) })
+      .catch(() => { if (alive) setQ(pickQ()) })
+    return () => { alive = false }
+  }, [])
 
   const answerAx = async (choice) => {
     if (!isAx || !q.frames || result || submitting) return
+    if (!submission.begin(choice)) return
     setSubmitting(true)
     try {
       const r = await curriculumAPI.submitRecognitionAx(q.pair.a, q.pair.b, choice, AX_CHOICES.map((c) => c.key),
         trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default', soundCondition: sound.enabled }))
+      submission.finish()
       setResult({ ...r, chosenKey: choice })
       setXpEarned((x) => x + (r.xp_gained || 0))
       setTally((t) => ({ n: t.n + 1, correct: t.correct + (r.correct ? 1 : 0) }))
     } catch {
+      submission.finish()
+      advance()
       /* 네트워크 실패는 조용히 무시 — 다시 시도 가능 */
     } finally {
       setSubmitting(false)
@@ -475,15 +491,19 @@ function QuizPanel({ data }) {
 
   const confirm = async () => {
     if (result || submitting || selected == null || isAx) return
+    if (!submission.begin(selected)) return
     setSubmitting(true)
     try {
       const r = await curriculumAPI.submitRecognition(q.target.viseme_id, selected, q.choices.map((c) => c.viseme_id),
         trialMeta({ onsetAt: onsetRef.current, talker: lesson.talker || 'default', soundCondition: sound.enabled }))
+      submission.finish()
       setResult({ ...r, chosenId: selected })
       setStat({ attempts: r.attempts, mastery: r.mastery_score, mastered: r.mastered })
       setXpEarned((x) => x + (r.xp_gained || 0))
       setTally((t) => ({ n: t.n + 1, correct: t.correct + (r.correct ? 1 : 0) }))
     } catch {
+      submission.finish()
+      advance()
       /* 네트워크 실패는 조용히 무시 — 다시 시도 가능 */
     } finally {
       setSubmitting(false)
@@ -509,6 +529,17 @@ function QuizPanel({ data }) {
     probes.reload()
     newQ(true, 1)
   }
+
+  const recoveredRef = useRef(false)
+  useEffect(() => {
+    if (submission.sent && !recoveredRef.current) {
+      recoveredRef.current = true
+      submission.finish()
+      if (!result) advance()
+    }
+  }, [])
+
+  if (q) saveCheckpoint({ data, q, selected, result, stat, qNum, tally, done, xpEarned, elapsedSec, lesson, deckRef: deckRef.current, startRef: startRef.current })
 
   if (!q) return null
 
