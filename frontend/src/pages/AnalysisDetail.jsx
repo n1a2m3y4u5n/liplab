@@ -13,7 +13,7 @@ import { activityCounts, recentDays } from '../lib/activityDays'
 const PAGE_META = {
   activity: { title: '학습 활동', description: '최근 90일 동안 언제, 얼마나 꾸준히 학습했는지 확인합니다.' },
   visemes: { title: '약한 입모양', description: '입모양 유형별 점수와 시도 횟수를 비교해 집중할 입모양을 찾습니다.' },
-  scores: { title: '평균 점수', description: '독화는 푼 문제 전체의 정답률, 말하기는 평균 발음 점수를 비교해요.' },
+  scores: { title: '평균 점수', description: '입모양 읽기는 정답률, 말하기는 평균 발음 점수예요.' },
   history: { title: '학습 기록', description: '날짜별 학습량과 누적 성과를 시간순으로 확인합니다.' },
 }
 
@@ -99,16 +99,20 @@ export default function AnalysisDetail({ mode = 'activity' }) {
       </div>
       <section className="card-flat">
         <h2 className="text-[17px] font-bold leading-figma text-ink">최근 90일 활동</h2>
-        <div className="mt-5 flex flex-wrap gap-1.5">
+        <p className="mt-2 text-xs text-ink-muted">{activityDays[0]?.key} ~ {activityDays.at(-1)?.key} · 칸 안 숫자는 활동 수</p>
+        <div aria-hidden="true" className="mt-5 flex flex-wrap gap-1.5">
           {activityDays.map((day) => (
-            <span key={day.key} title={`${day.key}: ${day.count}개`} className={`size-5 rounded-[5px] ${dayTone(day.count)}`} />
+            <span key={day.key} title={`${day.key}: ${day.count}개`} className={`grid size-6 place-items-center rounded-[5px] border border-line text-[10px] font-bold ${day.count >= 6 ? 'text-white' : 'text-ink'} ${dayTone(day.count)}`}>{day.count ? (day.count > 9 ? '9+' : day.count) : '–'}</span>
           ))}
         </div>
-        <div className="mt-4 flex items-center gap-2 text-xs text-ink-faint">
-          <span>적음</span>
-          {[0, 1, 3, 6].map((n) => <span key={n} className={`size-3 rounded ${dayTone(n)}`} />)}
-          <span>많음</span>
-        </div>
+        {activeDays.length ? <details className="mt-4">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-primary-700">날짜별 활동 수 보기 ({activeDays.length}일)</summary>
+          <table className="mt-2 w-full text-left text-sm tabular-nums">
+            <caption className="sr-only">최근 90일 중 활동한 날과 활동 수</caption>
+            <thead><tr className="border-b border-line"><th scope="col" className="py-2">날짜</th><th scope="col" className="py-2 text-right">활동 수 (개)</th></tr></thead>
+            <tbody>{recentActivity.map((day) => <tr key={day.key} className="border-b border-line"><th scope="row" className="py-2 font-normal">{day.key}</th><td className="py-2 text-right">{day.count}</td></tr>)}</tbody>
+          </table>
+        </details> : <p className="mt-4 text-sm text-ink-muted">최근 90일 동안 학습 활동이 없어요.</p>}
       </section>
     </>
   )
@@ -129,8 +133,8 @@ export default function AnalysisDetail({ mode = 'activity' }) {
         </div>
         <div className="mt-4 flex flex-col gap-2">
           {cf.slice(0, 8).map((c, i) => (
-            <div key={i} className="flex items-center gap-3 rounded-14 bg-surface-sunken p-3">
-              <span className="text-lg font-bold text-ink">‘{c.target}’ → ‘{c.read}’</span>
+            <div key={i} className="flex flex-wrap items-center gap-3 rounded-14 bg-surface-sunken p-3">
+              <span className="min-w-0 break-words text-lg font-bold text-ink">‘{c.target}’ → ‘{c.read}’</span>
               {c.same_viseme > 0 && <span className="rounded-full bg-warn-tint px-2 py-0.5 text-[11px] font-bold text-warn-text">입모양 동일</span>}
               <span className="ml-auto text-sm font-bold text-bad-text">{c.count}회</span>
             </div>
@@ -146,8 +150,8 @@ export default function AnalysisDetail({ mode = 'activity' }) {
           const acc = Math.max(0, Math.round(100 - (item.error_rate || 0)))
           return (
             <article key={item.viseme_id} className="card-flat">
-              <div className="flex items-center justify-between gap-4">
-                <div>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="min-w-0 break-words">
                   <span className="text-[11px] font-bold text-bad-text">집중 순위 {index + 1}</span>
                   <h2 className="mt-1 text-lg font-bold leading-figma text-ink">{item.feature}</h2>
                 </div>
@@ -170,19 +174,19 @@ export default function AnalysisDetail({ mode = 'activity' }) {
     // 막대 색은 트랙 색(§3.1) — 독화 보라, 말하기 분홍. 독화는 정확도(%)라 단위와 설명을 따로 둔다
     const read = overview?.tracks?.read
     const scores = [
-      { label: '독화', value: Math.round(Number(read?.accuracy || 0) * 1000) / 10, unit: '%', description: `정답률 · ${read?.questions || 0}문제`, tone: 'bg-primary-500' },
-      { label: '말하기', value: Number(speaking?.avg_score || 0), unit: '점', description: `평균 점수 · ${speaking?.total || 0}회 발화`, tone: 'bg-speak' },
+      { label: '입모양 읽기', value: read?.questions > 0 ? Math.round(Number(read.accuracy) * 1000) / 10 : null, unit: '%', description: !read ? '기록을 가져오지 못했어요' : read.questions > 0 ? `정답률 · ${read.questions}문제` : '아직 푼 문제가 없어요', tone: 'bg-primary-500' },
+      { label: '말하기', value: speaking?.total > 0 ? Number(speaking.avg_score) : null, unit: '점', description: !speaking ? '기록을 가져오지 못했어요' : speaking.total > 0 ? `평균 점수 · ${speaking.total}회 발화` : '아직 말하기 기록이 없어요', tone: 'bg-speak' },
     ]
     return (
       <div className="grid gap-4 lg:grid-cols-2">
         {scores.map((score) => (
           <article key={score.label} className="card-flat">
             <p className="text-sm font-bold text-ink-muted">{score.label}</p>
-            <p className="mt-3 text-4xl font-bold leading-figma text-ink">{score.value}<span className="text-base text-ink-faint">{score.unit}</span></p>
+            <p className="mt-3 text-4xl font-bold leading-figma text-ink tabular-nums">{score.value == null ? '–' : score.value}{score.value != null && <span className="text-base text-ink-faint">{score.unit}</span>}</p>
             <p className="mt-1 text-xs text-ink-faint">{score.description}</p>
-            <div className="mt-6 h-2 overflow-hidden rounded-full bg-fill">
+            {score.value != null && <div role="meter" aria-label={`${score.label} ${score.unit === '%' ? '정답률' : '평균 점수'}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={score.value} aria-valuetext={`${score.value}${score.unit}`} className="mt-6 h-2 overflow-hidden rounded-full bg-fill">
               <div className={`h-full rounded-full ${score.tone}`} style={{ width: `${Math.min(score.value, 100)}%` }} />
-            </div>
+            </div>}
           </article>
         ))}
       </div>
