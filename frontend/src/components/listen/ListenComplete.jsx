@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useListenKeys } from './usePlayer'
 import { OVERFLOW, releaseClickFocus } from './ui'
+import { Card, MotionPanel } from '../UI'
 
 /**
  * 묶음 끝 화면(독화 레슨 완료 93:12와 같은 결): 소리 듣기 DOKA + 스탯 칸 + 버튼 2개. 화면 전체를 덮는다.
@@ -13,7 +14,7 @@ export default function ListenComplete({ title, sub, stats = [], notes = [], pri
   useListenKeys({ onEnter: primary?.onClick })
   return (
     <div data-track="listen" className="fixed inset-0 z-50 overflow-y-auto bg-page" onClick={releaseClickFocus}>
-      <div className="mx-auto flex min-h-full w-full max-w-[640px] animate-fade-in flex-col items-center justify-center gap-6 px-[18px] py-12">
+      <MotionPanel kind="complete" className="mx-auto flex min-h-full w-full max-w-[640px] flex-col items-center justify-center gap-6 px-[18px] py-12">
         <span className="relative size-[112px] shrink-0 lg:size-[132px]">
           <img src="/ui/listen-node-current.svg" alt="" className="absolute max-w-none" style={OVERFLOW} />
         </span>
@@ -24,11 +25,11 @@ export default function ListenComplete({ title, sub, stats = [], notes = [], pri
         {stats.length > 0 && (
           <div className={`grid w-full gap-2.5 lg:gap-3.5 ${GRID[stats.length] || 'grid-cols-3'}`}>
             {stats.map((s) => (
-              <div key={s.label} className="flex min-w-0 flex-col gap-1.5 rounded-18 border-2 border-line bg-white p-3.5 lg:gap-2 lg:p-5">
+              <Card key={s.label} className="flex flex-col gap-1.5 !p-3.5 lg:gap-2 lg:!p-5">
                 <p className="break-keep text-[13px] font-bold leading-figma text-ink-soft">{s.label}</p>
                 <p className={`break-keep text-[19px] font-bold leading-figma tracking-[-0.4px] lg:text-[26px] ${s.main ? 'text-track-dark' : 'text-ink'}`}>{s.value}</p>
                 {s.note && <p className="break-keep text-[12px] leading-snug text-ink-faint">{s.note}</p>}
-              </div>
+              </Card>
             ))}
           </div>
         )}
@@ -40,7 +41,7 @@ export default function ListenComplete({ title, sub, stats = [], notes = [], pri
           {primary && <button type="button" onClick={primary.onClick} className="btn-primary btn-lg w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]">{primary.label}</button>}
           {secondary && <button type="button" onClick={secondary.onClick} className="btn-secondary btn-lg w-full text-track-dark max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]">{secondary.label}</button>}
         </div>
-      </div>
+      </MotionPanel>
     </div>
   )
 }

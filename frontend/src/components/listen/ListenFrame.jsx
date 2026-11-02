@@ -5,6 +5,7 @@ import ListenSetup from './ListenSetup'
 import ListenNotice from './ListenNotice'
 import { useListenSettings } from './useClip'
 import { IC, releaseClickFocus, SpeakerIcon } from './ui'
+import { Chip, Progress } from '../UI'
 
 /**
  * 소리 듣기 화면의 틀(레슨 집중 모드, 핸드오프 §3.4). 단계 레슨·연습 모드·오늘의 듣기·복습·소리 교실이 모두 이 틀을 쓴다.
@@ -34,18 +35,15 @@ export default function ListenFrame({ kicker, onExit, exitAria = '나가기', sh
   return (
     <div data-track="listen" className="flex min-h-[100dvh] flex-col bg-page" style={{ paddingBottom: 'var(--listen-bar-h, 0px)' }}
       onClick={releaseClickFocus}>
-      <div className="mx-auto flex w-full max-w-[676px] flex-1 flex-col px-[18px] pt-[18px] lg:pt-7 lg:[@media(max-height:860px)]:pt-5">
+      <div className="ui-lesson-frame lg:[@media(max-height:860px)]:pt-5">
         {/* 진행 헤더(독화 레슨 91:13): 나가기 X + 진행바 + n / 전체 */}
         <div className="flex items-center gap-3 lg:gap-[18px]">
-          <button type="button" onClick={exit} aria-label={exitAria} className="-m-1.5 shrink-0 rounded-full p-1.5">
+          <button type="button" onClick={exit} aria-label={exitAria} className="flex size-11 shrink-0 items-center justify-center rounded-full">
             <img src={IC.close} alt="" className="size-8 lg:size-9" />
           </button>
           {showProgress ? (
             <>
-              <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]" role="progressbar" aria-label="진행"
-                aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(barPct)} aria-valuetext={counter || '진행 전'}>
-                <div className="h-full rounded-full bg-track transition-[width] duration-500" style={{ width: `${barPct}%` }} />
-              </div>
+              <Progress value={barPct} label="진행" valueText={counter || '진행 전'} className="lg:h-[14px]" />
               <span className="min-w-[3.5em] shrink-0 text-right text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{!setup && counter}</span>
             </>
           ) : <span className="flex-1" />}
@@ -55,7 +53,7 @@ export default function ListenFrame({ kicker, onExit, exitAria = '나가기', sh
 
         <main className="mt-6 flex flex-1 flex-col gap-4 pb-6 lg:mt-5 lg:gap-5 lg:[@media(max-height:860px)]:mt-3.5">
           {kicker && <div className="flex items-center gap-3">
-            <p className="min-w-0 truncate text-[12px] font-bold text-track-dark lg:text-[13px]">{kicker}</p>
+            <Chip className="min-w-0 break-keep">{kicker}</Chip>
           </div>}
           {setup && (
             <ListenSetup initial={settings} onSave={(v) => { saveSettings(v); setEditing(false) }} onCancel={settings ? () => setEditing(false) : null} />

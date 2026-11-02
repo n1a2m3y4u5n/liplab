@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Card as SurfaceCard } from '../UI'
 
 /**
  * 소리 듣기 화면의 작은 조각(카드·질문·보기·재생 막대·불러오는 중). 레슨 틀은 독화·말하기 레슨과 같다(핸드오프 §3.4).
@@ -18,14 +19,14 @@ export const releaseClickFocus = (e) => {
 export const isDesktop = () => { try { return window.matchMedia('(min-width: 1024px)').matches } catch { return false } }
 
 export function Card({ children, className = '' }) {
-  return <div className={`rounded-18 border-2 border-line bg-white p-5 lg:rounded-22 lg:p-6 ${className}`}>{children}</div>
+  return <SurfaceCard className={className}>{children}</SurfaceCard>
 }
 
 /** 문항 질문(독화 레슨 91:19와 같은 크기). meta는 질문 아래 작은 줄(수준·보기 수 등). */
 export function Heading({ title }) {
   return (
     <div className="flex flex-col gap-1.5 leading-figma lg:gap-2">
-      <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[28px] lg:tracking-[-0.7px]">{title}</h1>
+      <h1 className="ui-lesson-title">{title}</h1>
     </div>
   )
 }

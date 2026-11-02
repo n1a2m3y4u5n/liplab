@@ -1,19 +1,17 @@
-import { Card } from './ui'
+import { Button, EmptyState } from '../UI'
 
 /** 상태 안내 카드(준비 전·오류·잠김·빈 목록). 다음 행동은 actions(첫 번째가 주 버튼). */
 export default function StateCard({ title, body, actions = [] }) {
   return (
-    <Card className="flex flex-col items-center gap-3 py-8 text-center">
-      <p role="status" className="text-[17px] font-bold leading-snug text-ink">{title}</p>
-      {body && <p className="max-w-[420px] break-keep text-[14px] leading-[1.6] text-ink-muted">{body}</p>}
+    <EmptyState title={title} body={body}>
       {actions.length > 0 && (
         <div className="mt-2 flex w-full max-w-[360px] flex-col gap-2">
           {actions.map((a, i) => (
-            <button key={a.label} type="button" onClick={a.onClick} className={`${i === 0 ? 'btn-primary' : 'btn-secondary'} py-3 text-[15px]`}>{a.label}</button>
+            <Button key={a.label} onClick={a.onClick} tone={i === 0 ? 'primary' : 'secondary'} className="py-3 text-[15px]">{a.label}</Button>
           ))}
         </div>
       )}
-    </Card>
+    </EmptyState>
   )
 }
 
