@@ -10,8 +10,8 @@ const QUESTION_TYPES = ['test', 'test-multiple', 'essay']
 const qTypes = (length) => Array.from({ length }, (_, index) => QUESTION_TYPES[index % QUESTION_TYPES.length]).sort(() => Math.random() - 0.5)
 
 const REVIEW_LINKS = [
-  { label: '독화', description: '독화 테스트에서 놓친 문장', to: '/review/mistakes', tone: 'bg-rose-50 text-rose-700' },
-  { label: '말하기', description: '다르게 인식된 발음과 억양', to: '/review/speaking', tone: 'bg-amber-50 text-amber-800' },
+  { label: '독화', description: '독화 테스트에서 놓친 문장', to: '/review/mistakes', tone: 'bg-bad-tint text-bad-dark' },
+  { label: '말하기', description: '다르게 인식된 발음과 억양', to: '/review/speaking', tone: 'bg-warn-tint text-warn-text' },
 ]
 
 function sumBuckets(buckets = {}) {
@@ -68,7 +68,7 @@ export default function ReviewLanding({ mode = 'today' }) {
           ) : mistakes.length ? (
             <>
               <div className="card flex flex-wrap items-center justify-between gap-3 max-sm:p-4">
-                <p className="text-sm text-gray-600">틀린 문장 <b className="text-gray-900">{mistakes.length}개</b>를 모아 다시 연습해보세요.</p>
+                <p className="text-sm text-ink-muted">틀린 문장 <b className="text-ink">{mistakes.length}개</b>를 모아 다시 연습해보세요.</p>
                 <button type="button" onClick={startMistakes} className="btn-primary py-2.5 text-sm">
                   {mistakes.length}문장 복습 시작
                 </button>
@@ -77,19 +77,19 @@ export default function ReviewLanding({ mode = 'today' }) {
                 {mistakes.map((item, index) => (
                   <article key={`${item.sentence}-${index}`} className="card max-sm:p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700">틀린 문장 {String(index + 1).padStart(2, '0')}</span>
-                      <span className="text-xs text-gray-400">{item.situation || '문장 독화'}</span>
+                      <span className="rounded-full bg-bad-tint px-2.5 py-1 text-[11px] font-semibold text-bad-dark">틀린 문장 {String(index + 1).padStart(2, '0')}</span>
+                      <span className="text-xs text-ink-caption">{item.situation || '문장 독화'}</span>
                     </div>
-                    <p className="mt-2 text-lg font-bold leading-relaxed text-gray-900 sm:mt-4">{item.sentence}</p>
-                    {item.user_answer && <p className="mt-2 text-sm text-gray-500">내 답: {item.user_answer}</p>}
+                    <p className="mt-2 text-lg font-bold leading-relaxed text-ink sm:mt-4">{item.sentence}</p>
+                    {item.user_answer && <p className="mt-2 text-sm text-ink-muted">내 답: {item.user_answer}</p>}
                   </article>
                 ))}
               </div>
             </>
           ) : (
             <div className="card text-center py-16">
-              <h2 className="text-xl font-bold text-gray-900 mb-1">다시 풀 문장이 없어요</h2>
-              <p className="text-gray-500 mb-5">새로운 문장 학습을 마치면 틀린 문장이 이곳에 모입니다.</p>
+              <h2 className="text-xl font-bold text-ink mb-1">다시 풀 문장이 없어요</h2>
+              <p className="text-ink-muted mb-5">새로운 문장 학습을 마치면 틀린 문장이 이곳에 모입니다.</p>
               <button type="button" onClick={() => navigate('/learn/scenario')} className="btn-primary">문장 학습으로</button>
             </div>
           )}
@@ -119,13 +119,13 @@ export default function ReviewLanding({ mode = 'today' }) {
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {REVIEW_LINKS.map((item) => (
-            <button key={item.to} type="button" onClick={() => navigate(item.to)} className="group rounded-[22px] border border-slate-200 bg-white p-5 text-left transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-lg">
+            <button key={item.to} type="button" onClick={() => navigate(item.to)} className="group rounded-[22px] border border-line bg-white p-5 text-left transition hover:-translate-y-0.5 hover:border-warn/40 hover:shadow-lg">
               <div className="flex items-center justify-between gap-3">
                 <span className={`rounded-full px-3 py-1 text-[11px] font-black ${item.tone}`}>{item.label}</span>
-                <span className="text-2xl font-black text-slate-900">{countFor(item.to)}</span>
+                <span className="text-2xl font-black text-ink">{countFor(item.to)}</span>
               </div>
-              <p className="mt-4 text-sm leading-relaxed text-slate-500">{item.description}</p>
-              <span className="mt-5 block text-sm font-black text-slate-800 transition group-hover:text-amber-700">페이지 열기 →</span>
+              <p className="mt-4 text-sm leading-relaxed text-ink-muted">{item.description}</p>
+              <span className="mt-5 block text-sm font-black text-ink transition group-hover:text-warn-text">페이지 열기 →</span>
             </button>
           ))}
         </div>

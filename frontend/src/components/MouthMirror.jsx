@@ -101,17 +101,17 @@ export default function MouthMirror({ compareVisemeId = null, compareLabel = '' 
   const disabled = modelStatus !== 'ready' || camStatus === 'error'
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3">
+    <div className="rounded-xl border border-line bg-white p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h4 className="text-sm font-bold text-gray-900">
+        <h4 className="text-sm font-bold text-ink">
           아바타 거울 {compareLabel ? `— ${compareLabel}` : ''}
         </h4>
-        <span className="text-[10px] text-gray-400">영상은 기기 안에서만 처리 · 저장하거나 보내지 않음</span>
+        <span className="text-[10px] text-ink-caption">영상은 기기 안에서만 처리 · 저장하거나 보내지 않음</span>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         {/* 내 얼굴 — 실제 거울처럼 좌우 반전 */}
-        <div className="relative overflow-hidden rounded-lg bg-gray-900" style={{ aspectRatio: '4/3' }}>
+        <div className="relative overflow-hidden rounded-lg bg-surface-inverse" style={{ aspectRatio: '4/3' }}>
           <video ref={videoRef} muted playsInline className="h-full w-full -scale-x-100 object-cover" />
           <span className="absolute left-1.5 top-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
             내 입
@@ -127,7 +127,7 @@ export default function MouthMirror({ compareVisemeId = null, compareLabel = '' 
         </div>
 
         {/* 아바타 — 내 입모양을 그대로 따라 함 */}
-        <div className="relative overflow-hidden rounded-lg bg-gray-100" style={{ aspectRatio: '4/3' }}>
+        <div className="relative overflow-hidden rounded-lg bg-surface-sunken" style={{ aspectRatio: '4/3' }}>
           <AvatarVRM visemeId={compareVisemeId ?? 15} mirrorRef={mirrorRef} />
           <span className="absolute left-1.5 top-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
             아바타
@@ -137,13 +137,13 @@ export default function MouthMirror({ compareVisemeId = null, compareLabel = '' 
 
       {running && (
         <div className="mt-2">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-fill-strong">
             <div
-              className="h-full rounded-full bg-slate-500 transition-all duration-100"
+              className="h-full rounded-full bg-ink-muted transition-all duration-100"
               style={{ width: `${Math.round(activity * 100)}%` }}
             />
           </div>
-          <p className="mt-1 text-center text-xs text-gray-500" aria-live="polite">
+          <p className="mt-1 text-center text-xs text-ink-muted" aria-live="polite">
             {faceOK ? '입을 움직이면 아바타가 따라 합니다' : '얼굴이 화면에 잘 보이게 해주세요'}
           </p>
         </div>
@@ -154,7 +154,7 @@ export default function MouthMirror({ compareVisemeId = null, compareLabel = '' 
           <button
             type="button"
             onClick={stop}
-            className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm font-bold text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border border-line-strong px-4 py-1.5 text-sm font-bold text-ink hover:bg-surface-muted"
           >
             멈추기
           </button>
@@ -163,7 +163,7 @@ export default function MouthMirror({ compareVisemeId = null, compareLabel = '' 
             type="button"
             onClick={start}
             disabled={disabled}
-            className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-bold text-white hover:bg-slate-700 disabled:opacity-40"
+            className="rounded-lg bg-surface-inverse px-4 py-1.5 text-sm font-bold text-white hover:bg-surface-inverse-muted disabled:opacity-40"
           >
             거울 켜기
           </button>

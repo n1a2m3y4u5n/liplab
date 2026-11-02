@@ -104,12 +104,12 @@ function VisemeAvatar({ visemeId, height = 300, className = '', talker = null, t
   }, [visemeId, talker, talkerSeed])
   return (
     <div className={className}>
-      <div className={`relative w-full overflow-hidden rounded-2xl shadow-xl bg-gradient-to-b from-slate-800 to-slate-900 ${height == null ? 'h-full' : ''}`}
+      <div className={`relative w-full overflow-hidden rounded-2xl shadow-xl bg-gradient-to-b from-surface-inverse-muted to-surface-inverse ${height == null ? 'h-full' : ''}`}
            style={height != null ? { height } : undefined}>
         <AvatarVRM visemeId={vid} xray={xray} transitionMs={tm.t} durationMs={tm.d} talker={talker} />
         <TalkerChip talker={talker} />
         {showTract && (
-          <div className="absolute bottom-2 right-2 w-36 sm:w-44 bg-slate-900/85 border border-slate-700 rounded-xl p-1 backdrop-blur-sm">
+          <div className="absolute bottom-2 right-2 w-36 sm:w-44 bg-surface-inverse/85 border border-ink-muted rounded-xl p-1 backdrop-blur-sm">
             <VocalTract visemeId={vid} vtl />
           </div>
         )}
@@ -244,14 +244,14 @@ function LearnPanel({ data }) {
           <div className="p-3 bg-surface-muted rounded-lg text-sm text-ink"><b>입모양</b> — {sel.look}</div>
           <div className="p-3 bg-warn-tint border border-warn/30 rounded-lg text-sm text-warn-text"><b>독화 포인트</b> — {sel.teach}</div>
           {sel.articulation && (
-            <div className="p-3 bg-sky-50 border border-sky-100 rounded-lg text-sm text-sky-900">
+            <div className="p-3 bg-pastel-sky border border-bookmark-line rounded-lg text-sm text-bookmark-dark">
               <div className="flex items-center gap-1.5 mb-0.5">
                 <b>소리 내는 법</b>
-                <span className="text-[11px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700">{sel.articulation.place}</span>
-                <span className="text-[11px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700">{sel.articulation.manner}</span>
-                {sel.articulation.nasal && <span className="text-[11px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700">비음</span>}
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-pastel-sky text-stat-level">{sel.articulation.place}</span>
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-pastel-sky text-stat-level">{sel.articulation.manner}</span>
+                {sel.articulation.nasal && <span className="text-[11px] px-1.5 py-0.5 rounded bg-primary-100 text-primary-700">비음</span>}
               </div>
-              <span className="text-sky-800">밖에서 안 보이는 혀·목 움직임 — {sel.articulation.guide}</span>
+              <span className="text-stat-level">밖에서 안 보이는 혀·목 움직임 — {sel.articulation.guide}</span>
             </div>
           )}
           {VISEME_GROUP_VTL[sel.viseme_id] && <GroupTract group={VISEME_GROUP_VTL[sel.viseme_id]} />}

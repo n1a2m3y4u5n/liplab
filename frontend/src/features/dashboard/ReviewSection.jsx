@@ -42,23 +42,23 @@ export default function ReviewSection() {
 
   const pillars = data ? [
     { key: 'read', icon: '👁️', label: '독화', b: data.read, onStart: startReadReview,
-      theme: { bg: 'bg-sky-50/40', border: 'border-sky-100', badge: 'bg-sky-100 text-sky-700', btn: 'bg-sky-600 hover:bg-sky-700' } },
+      theme: { bg: 'bg-pastel-sky/40', border: 'border-bookmark-line', badge: 'bg-pastel-sky text-stat-level', btn: 'bg-bookmark hover:bg-bookmark' } },
     { key: 'speak', icon: '🗣️', label: '말하기', b: data.speak, onStart: () => navigate('/review/speaking'),
-      theme: { bg: 'bg-rose-50/40', border: 'border-rose-100', badge: 'bg-rose-100 text-rose-700', btn: 'bg-rose-600 hover:bg-rose-700' } },
+      theme: { bg: 'bg-rose-50/40', border: 'border-rose-100', badge: 'bg-bad-tint text-bad-dark', btn: 'bg-bad hover:bg-rose-700' } },
   ] : []
 
   return (
     <motion.div id="daily-review" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card !p-4 scroll-mt-52">
       <div className="mb-0.5 flex items-center justify-between gap-3">
-        <h2 className="text-base font-bold text-gray-900">오늘의 복습</h2>
-        <span className="text-xs text-gray-400">두 기둥 · 예정·틀림·북마크</span>
+        <h2 className="text-base font-bold text-ink">오늘의 복습</h2>
+        <span className="text-xs text-ink-caption">두 기둥 · 예정·틀림·북마크</span>
       </div>
-      <p className="mb-3 text-xs text-gray-500">
+      <p className="mb-3 text-xs text-ink-muted">
         독화·말하기를 각각 <b>예정(간격반복)</b> · <b>틀린 문제</b> · <b>북마크</b>로 복습해요.
       </p>
 
       {!data ? (
-        <div className="py-4 text-center text-xs text-gray-400">가져오는 중...</div>
+        <div className="py-4 text-center text-xs text-ink-caption">가져오는 중...</div>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {pillars.map((p) => {
@@ -71,13 +71,13 @@ export default function ReviewSection() {
                 <div className="mb-2 grid grid-cols-3 gap-1.5">
                   {[['오늘 예정', p.b.due], ['틀린 문제', p.b.wrong], ['북마크', p.b.bookmark]].map(([lbl, n]) => (
                     <div key={lbl} className="rounded-xl bg-white p-2 text-center">
-                      <div className="text-lg font-bold text-gray-800">{n}</div>
-                      <div className="text-[11px] text-gray-500">{lbl}</div>
+                      <div className="text-lg font-bold text-ink">{n}</div>
+                      <div className="text-[11px] text-ink-muted">{lbl}</div>
                     </div>
                   ))}
                 </div>
                 <button onClick={p.onStart} disabled={total === 0}
-                  className={`w-full rounded-lg px-3 py-2 text-xs font-bold text-white transition disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 ${p.theme.btn}`}>
+                  className={`w-full rounded-lg px-3 py-2 text-xs font-bold text-white transition disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-ink-caption ${p.theme.btn}`}>
                   {total > 0 ? `복습 시작 (${total})` : '복습할 것 없음'}
                 </button>
               </div>

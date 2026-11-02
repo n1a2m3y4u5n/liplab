@@ -91,7 +91,7 @@ const MOUTH_CYCLE = ['closed', 'open', 'mid', 'open']
 // talker: 왼쪽 위 가상 화자 이름(앱 TalkerChip과 같은 모양). 독화 레슨에만 붙는다(말하기는 화자를 바꾸지 않는다).
 function FaceStage({ mouth = 'open', className = '', talker = null }) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 shadow-xl ${className}`}>
+    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-b from-surface-inverse-muted to-surface-inverse shadow-xl ${className}`}>
       <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 size-full">
         <defs>
           <radialGradient id="gm-skin" cx="160" cy="70" r="150" gradientUnits="userSpaceOnUse">
@@ -690,7 +690,7 @@ function TaskMock() {
               <span className={earned ? '' : 'opacity-50 grayscale'}>
                 {icon ? <img src={icon} alt="" className="size-14 max-w-none" /> : (
                   <span className="flex size-14 items-center justify-center rounded-full bg-pastel-mint">
-                    <span className="size-[39.3%] rotate-45 rounded-[18%] bg-emerald-500" />
+                    <span className="size-[39.3%] rotate-45 rounded-[18%] bg-good" />
                   </span>
                 )}
               </span>
@@ -881,7 +881,7 @@ function MenuRow({ id, title, sub, danger, first }) {
 function ProfileMock() {
   // 접근성 설정 Aa 버튼(A11ySettings). 휴대폰에서는 탭 바 위 왼쪽에 떠 있다
   const aa = (
-    <span {...area('a11y')} className="absolute bottom-[94px] left-4 z-40 grid size-11 place-items-center rounded-full bg-slate-900 text-[15px] font-bold tracking-tight text-white shadow-lg">Aa</span>
+    <span {...area('a11y')} className="absolute bottom-[94px] left-4 z-40 grid size-11 place-items-center rounded-full bg-surface-inverse text-[15px] font-bold tracking-tight text-white shadow-lg">Aa</span>
   )
   return (
     <MobileShell title="프로필" overlay={aa}>

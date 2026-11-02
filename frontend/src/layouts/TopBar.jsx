@@ -11,15 +11,15 @@ export default function TopBar() {
   const xp = user?.total_xp ?? 0
 
   return (
-    <div className="border-b border-slate-200 bg-white">
+    <div className="border-b border-line bg-white">
       <div className="mx-auto flex max-w-[1440px] items-center gap-4 px-4 py-2 sm:px-6">
-        <Link to="/dashboard" className="text-lg font-black tracking-tight text-slate-900">LIPLAB</Link>
+        <Link to="/dashboard" className="text-lg font-black tracking-tight text-ink">LIPLAB</Link>
 
-        <div className="ml-auto flex items-center gap-3 text-sm font-bold text-slate-700">
+        <div className="ml-auto flex items-center gap-3 text-sm font-bold text-ink">
           <span title="연속 학습일">🔥 {streak}일</span>
           <span title="레벨 · 모은 경험치">Lv.{level} · {xp.toLocaleString()} 경험치</span>
           {/* 캐릭터 미니 위젯 자리 — 디자인 확정 후 실제 캐릭터로 교체 */}
-          <span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-full bg-sky-100">🙂</span>
+          <span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-full bg-pastel-sky">🙂</span>
         </div>
       </div>
     </div>

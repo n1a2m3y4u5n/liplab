@@ -272,7 +272,7 @@ export default function CurriculumPath() {
             <span className="truncate text-[18px] tracking-[-0.36px] lg:text-[24px] lg:tracking-[-0.48px]">{view?.title || '커리큘럼'}</span>
           </div>
           <button type="button" onClick={() => setGuideOpen(true)}
-            className="shrink-0 rounded-10 border-1.5 border-white/35 bg-white/[0.18] px-3 py-[7px] text-[12px] font-bold leading-figma text-white transition hover:bg-white/30 lg:rounded-[12px] lg:border-2 lg:border-white/40 lg:px-[18px] lg:py-3 lg:text-[14px]">
+            className="shrink-0 rounded-10 border-1.5 border-white/35 bg-white/[0.08] px-3 py-[7px] text-[12px] font-bold leading-figma text-white transition hover:bg-white/[0.12] lg:rounded-[12px] lg:border-2 lg:border-white/40 lg:px-[18px] lg:py-3 lg:text-[14px]">
             가이드
           </button>
         </div>

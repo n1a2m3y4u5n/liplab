@@ -52,15 +52,15 @@ export default function Bookmarks() {
           <LoadingScreen variant="inline" />
         ) : bookmarks.length === 0 ? (
           <div className="card text-center py-16">
-            <p className="text-gray-500 font-medium">북마크한 문장이 없습니다.</p>
-            <p className="text-sm text-gray-400 mt-1">연습 중 어려운 문장은 질문 옆 북마크 버튼을 눌러 저장하세요.</p>
+            <p className="text-ink-muted font-medium">북마크한 문장이 없습니다.</p>
+            <p className="text-sm text-ink-faint mt-1">연습 중 어려운 문장은 질문 옆 북마크 버튼을 눌러 저장하세요.</p>
             <button onClick={() => navigate('/dashboard')} className="btn-primary mt-6">
               연습 시작하기
             </button>
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-gray-500">{bookmarks.length}개의 북마크된 문장</p>
+            <p className="text-sm text-ink-muted">{bookmarks.length}개의 북마크된 문장</p>
             <AnimatePresence>
               {bookmarks.map((bm) => (
                 <motion.div
@@ -71,8 +71,8 @@ export default function Bookmarks() {
                   className="card flex items-center gap-4"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 text-lg">{bm.sentence}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="font-semibold text-ink text-lg">{bm.sentence}</p>
+                    <p className="text-xs text-ink-faint mt-0.5">
                       {bm.situation || '상황 미지정'} · 레벨 {bm.level}
                     </p>
                   </div>
@@ -86,7 +86,7 @@ export default function Bookmarks() {
                     <button
                       onClick={() => remove(bm.id)}
                       disabled={removing === bm.id}
-                      className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 transition-colors"
+                      className="px-3 py-1.5 text-sm rounded-lg border border-line text-ink-muted hover:border-bad-line hover:text-bad-text transition-colors"
                     >
                       {removing === bm.id ? '...' : '지우기'}
                     </button>

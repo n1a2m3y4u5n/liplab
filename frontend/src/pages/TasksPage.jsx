@@ -77,13 +77,13 @@ function BadgeMedal({ b, size, markOnly = false }) {
     if (markOnly) {
       return (
         <span className={`flex items-center justify-center drop-shadow-[0_10px_12px_rgba(5,77,51,0.35)] ${size}`}>
-          <span className="size-[70.77%] rotate-45 rounded-[17.4%] bg-emerald-500" />
+          <span className="size-[70.77%] rotate-45 rounded-[17.4%] bg-good" />
         </span>
       )
     }
     return (
       <span className={`flex items-center justify-center rounded-full bg-pastel-mint ${size}`}>
-        <span className="size-[39.3%] rotate-45 rounded-[18%] bg-emerald-500" />
+        <span className="size-[39.3%] rotate-45 rounded-[18%] bg-good" />
       </span>
     )
   }
@@ -101,7 +101,7 @@ function Badge({ b, onSelect }) {
     <button type="button" onClick={() => onSelect(b)}
       className="flex min-w-0 flex-col items-center gap-[9px] rounded-2xl outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary-400">
       <span className={dim ? 'opacity-50 grayscale' : ''}><BadgeMedal b={b} size="size-14" /></span>
-      <span className={`text-center text-[11.5px] font-bold leading-figma ${b.earned ? 'text-ink' : 'text-ink-muted opacity-55'}`}>{b.label}</span>
+      <span className={`text-center text-[11.5px] font-bold leading-figma ${b.earned ? 'text-ink' : 'text-ink-muted'}`}>{b.label}</span>
     </button>
   )
 }
@@ -163,7 +163,7 @@ function RewardToast({ text }) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-24 z-40 flex justify-center px-4 lg:bottom-8">
       <p role="status" aria-live="polite"
-        className="rounded-full bg-slate-900 px-5 py-3 text-[14px] font-bold leading-figma text-white shadow-lg">{text}</p>
+        className="rounded-full bg-surface-inverse px-5 py-3 text-[14px] font-bold leading-figma text-white shadow-lg">{text}</p>
     </div>
   )
 }
@@ -254,9 +254,9 @@ export default function TasksPage() {
           src: '/ui/lp-137-17-deco-doka.svg', size: 165, top: -61.22, right: -61.21, inset: [-7, -12, -17, -12],
           lg: { size: 198, top: -73.06, right: -73.06 },
         }}
-        className="h-[132px] w-full rounded-18 border-2 border-b-5 border-primary-600 bg-[linear-gradient(158.74deg,var(--brand-light)_0%,var(--brand)_70.92%)] pl-[18px] pt-[21px] lg:h-[158px] lg:rounded-20 lg:bg-[linear-gradient(167.63deg,var(--brand-light)_0%,var(--brand)_70.92%)] lg:pl-[26px] lg:pt-[26px]">
+        className="h-[132px] w-full rounded-18 border-2 border-b-5 border-primary-600 bg-hero-brand pl-[18px] pt-[21px] lg:h-[158px] lg:rounded-20 bg-hero-brand lg:pl-[26px] lg:pt-[26px]">
         <div className="flex w-[250px] max-w-full flex-col gap-[9px] font-bold leading-figma text-white lg:w-[462px] lg:gap-2.5">
-          <p className="text-[11px] tracking-[0.22px] opacity-80 lg:text-[13px] lg:tracking-[0.26px]">특별 과제</p>
+          <p className="text-[11px] tracking-[0.22px] lg:text-[13px] lg:tracking-[0.26px]">특별 과제</p>
           <p className="text-[18px] tracking-[-0.36px] lg:text-[23px] lg:tracking-[-0.46px]">{week?.label ?? '\u00a0'}</p>
           <div className="flex justify-between text-[12px] lg:text-[14px]">
             <span className="opacity-90">{week ? `${weekCur} / ${weekTotal}일` : '…'}</span>

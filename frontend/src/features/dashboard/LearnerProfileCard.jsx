@@ -60,7 +60,7 @@ export default function LearnerProfileCard({ user, statistics, calendarData }) {
 
   return (
     <aside
-      className="flex h-full min-h-[460px] flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4 shadow-[0_16px_45px_rgba(15,23,42,0.08)] lg:min-h-0"
+      className="flex h-full min-h-[460px] flex-col overflow-hidden rounded-[24px] border border-line bg-gradient-to-b from-surface-muted to-white p-4 shadow-[0_16px_45px_rgba(15,23,42,0.08)] lg:min-h-0"
       aria-labelledby="learner-profile-heading"
     >
       <div className="flex items-center gap-3">
@@ -74,41 +74,41 @@ export default function LearnerProfileCard({ user, statistics, calendarData }) {
           aria-valuenow={Math.round(xpPercent)}
         >
           <div className="grid h-full w-full place-items-center rounded-full bg-white p-1">
-            <div className="grid h-full w-full place-items-center rounded-full bg-gradient-to-br from-sky-100 via-cyan-50 to-lime-100 text-3xl font-black text-sky-700 ring-1 ring-sky-100">
+            <div className="grid h-full w-full place-items-center rounded-full bg-gradient-to-br from-pastel-sky via-pastel-sky to-good-tint text-3xl font-black text-stat-level ring-1 ring-bookmark-line">
               {initial}
             </div>
           </div>
-          <span className="absolute -bottom-1 rounded-full bg-slate-950 px-2.5 py-0.5 text-[9px] font-black text-white shadow-lg">
+          <span className="absolute -bottom-1 rounded-full bg-surface-deep px-2.5 py-0.5 text-[9px] font-black text-white shadow-lg">
             {Math.round(xpPercent)}%
           </span>
         </div>
 
         <div className="min-w-0 flex-1 text-left">
-          <p className="text-[9px] font-black tracking-[0.14em] text-lime-700">MY PROFILE</p>
-          <h2 id="learner-profile-heading" className="mt-1 truncate text-lg font-black tracking-tight text-slate-950">{displayName}</h2>
-          <span className="mt-0.5 block text-sm font-black text-sky-600">Lv {level}</span>
-          <p className="mt-1 text-[10px] font-bold leading-tight text-slate-500">다음 레벨까지<br /><b className="text-slate-800">{remainingXp.toLocaleString()} 경험치</b></p>
-          <div className="mt-2 flex items-center justify-between text-[8px] font-bold text-slate-400">
+          <p className="text-[9px] font-black tracking-[0.14em] text-good-text">MY PROFILE</p>
+          <h2 id="learner-profile-heading" className="mt-1 truncate text-lg font-black tracking-tight text-ink">{displayName}</h2>
+          <span className="mt-0.5 block text-sm font-black text-stat-level">Lv {level}</span>
+          <p className="mt-1 text-[10px] font-bold leading-tight text-ink-muted">다음 레벨까지<br /><b className="text-ink">{remainingXp.toLocaleString()} 경험치</b></p>
+          <div className="mt-2 flex items-center justify-between text-[8px] font-bold text-ink-caption">
             <span>{earnedThisLevel.toLocaleString()}</span>
             <span>/ {xpNeededThisLevel.toLocaleString()} 경험치</span>
           </div>
         </div>
       </div>
 
-      <div className="mt-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-2.5 py-2">
+      <div className="mt-3 rounded-2xl border border-warn/40 bg-gradient-to-r from-warn-tint to-surface-muted px-2.5 py-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-orange-500 text-sm shadow-sm">🔥</span>
+            <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-warn-strong text-sm shadow-sm">🔥</span>
             <div className="min-w-0 text-left">
-              <p className="truncate text-xs font-black text-amber-950">{streak}일 연속 학습</p>
-              <p className="text-[9px] font-medium text-amber-700">오늘도 기록을 이어가세요</p>
+              <p className="truncate text-xs font-black text-ink">{streak}일 연속 학습</p>
+              <p className="text-[9px] font-medium text-warn-text">오늘도 기록을 이어가세요</p>
             </div>
           </div>
           <div className="flex shrink-0 gap-1" aria-label={`최근 연속 학습 ${streak}일`}>
             {Array.from({ length: 7 }, (_, index) => (
               <span
                 key={index}
-                className={`h-2 w-2 rounded-full ${index < Math.min(streak, 7) ? 'bg-orange-500' : 'bg-amber-200'}`}
+                className={`h-2 w-2 rounded-full ${index < Math.min(streak, 7) ? 'bg-warn-strong' : 'bg-warn-tint'}`}
                 aria-hidden="true"
               />
             ))}
@@ -116,10 +116,10 @@ export default function LearnerProfileCard({ user, statistics, calendarData }) {
         </div>
       </div>
 
-      <div className="mt-3 flex min-h-0 flex-1 flex-col rounded-[18px] bg-slate-50 p-3">
+      <div className="mt-3 flex min-h-0 flex-1 flex-col rounded-[18px] bg-surface-muted p-3">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-black text-slate-900">오늘의 과제</h3>
-          <span className="rounded-full bg-lime-100 px-2 py-1 text-[9px] font-black text-lime-700">
+          <h3 className="text-sm font-black text-ink">오늘의 과제</h3>
+          <span className="rounded-full bg-good-tint px-2 py-1 text-[9px] font-black text-good-text">
             {tasks.filter((task) => task.completed).length}/{tasks.length} 했어요
           </span>
         </div>
@@ -129,16 +129,16 @@ export default function LearnerProfileCard({ user, statistics, calendarData }) {
               <button
                 type="button"
                 onClick={() => navigate(task.to)}
-                className="group flex w-full items-center gap-2 rounded-xl bg-white px-2 py-1.5 text-left ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:ring-lime-300 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                className="group flex w-full items-center gap-2 rounded-xl bg-white px-2 py-1.5 text-left ring-1 ring-line transition hover:-translate-y-0.5 hover:ring-good-line focus:outline-none focus:ring-2 focus:ring-good"
               >
-                <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md text-[10px] font-black ${task.completed ? 'bg-lime-500 text-white' : 'border-2 border-slate-300 bg-white text-transparent'}`} aria-hidden="true">
+                <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md text-[10px] font-black ${task.completed ? 'bg-good text-white' : 'border-2 border-line-strong bg-white text-transparent'}`} aria-hidden="true">
                   ✓
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className={`block truncate text-[11px] font-black ${task.completed ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{task.label}</span>
-                  <span className="block truncate text-[9px] font-medium text-slate-400">{task.detail}</span>
+                  <span className={`block truncate text-[11px] font-black ${task.completed ? 'text-ink-muted line-through' : 'text-ink'}`}>{task.label}</span>
+                  <span className="block truncate text-[9px] font-medium text-ink-caption">{task.detail}</span>
                 </span>
-                <span aria-hidden="true" className="text-xs font-black text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-lime-600">›</span>
+                <span aria-hidden="true" className="text-xs font-black text-ink-inverse-muted transition group-hover:translate-x-0.5 group-hover:text-good-text">›</span>
               </button>
             </li>
           ))}

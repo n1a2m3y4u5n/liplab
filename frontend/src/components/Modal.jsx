@@ -4,7 +4,7 @@ import useFocusTrap from '../hooks/useFocusTrap'
 export function ModalClose({ onClose, className = '' }) {
   return (
     <button type="button" onClick={onClose} aria-label="닫기"
-      className={`size-9 shrink-0 rounded-full transition hover:brightness-95 ${className}`}>
+      className={`flex size-11 shrink-0 items-center justify-center rounded-full transition hover:brightness-95 ${className}`}>
       <img src="/ui/lp-210-189-modal-close.svg" alt="" className="size-9" />
     </button>
   )

@@ -55,16 +55,16 @@ export default function SpeakingReviewLanding() {
           <LoadingScreen variant="inline" />
         ) : error ? (
           <div className="card py-16 text-center">
-            <p className="text-lg font-bold text-gray-900">복습할 것을 가져오지 못했어요</p>
-            <p className="mt-1 text-sm text-gray-500">잠시 후 다시 시도해 주세요.</p>
+            <p className="text-lg font-bold text-ink">복습할 것을 가져오지 못했어요</p>
+            <p className="mt-1 text-sm text-ink-muted">잠시 후 다시 시도해 주세요.</p>
             <button type="button" onClick={() => setReloadKey((key) => key + 1)} className="btn-primary mt-5 px-6 py-2.5 text-sm">다시 가져오기</button>
           </div>
         ) : items.length ? (
           <>
             <section className="card flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-sm text-gray-600">다시 말해 볼 것이 <b className="text-gray-900">{items.length}개</b> 있어요.</p>
-                <p className="mt-1 text-xs text-gray-400">목록 순서대로 발음과 억양을 다시 연습합니다.</p>
+                <p className="text-sm text-ink-muted">다시 말해 볼 것이 <b className="text-ink">{items.length}개</b> 있어요.</p>
+                <p className="mt-1 text-xs text-ink-caption">목록 순서대로 발음과 억양을 다시 연습합니다.</p>
               </div>
               <button type="button" onClick={() => navigate('/review/speaking/session')} className="btn-primary py-2.5 text-sm">
                 {items.length}개 복습 시작
@@ -79,16 +79,16 @@ export default function SpeakingReviewLanding() {
                 return (
                   <li key={`${item.target}-${index}`} className="card">
                     <div className="flex items-start justify-between gap-3">
-                      <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700">
+                      <span className="rounded-full bg-bad-tint px-2.5 py-1 text-[11px] font-semibold text-bad-dark">
                         복습 {String(index + 1).padStart(2, '0')}
                       </span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-ink-caption">
                         {[stage?.label, modeLabel].filter(Boolean).join(' · ') || '말하기 복습'}
                       </span>
                     </div>
-                    <p className="mt-4 text-lg font-bold leading-relaxed text-gray-900">{item.target}</p>
+                    <p className="mt-4 text-lg font-bold leading-relaxed text-ink">{item.target}</p>
                     {item.last_score != null && Number.isFinite(Number(item.last_score)) && (
-                      <p className="mt-2 text-sm text-gray-500">이전 점수: <b className="text-rose-600">{Number(item.last_score)}점</b></p>
+                      <p className="mt-2 text-sm text-ink-muted">이전 점수: <b className="text-bad-dark">{Number(item.last_score)}점</b></p>
                     )}
                   </li>
                 )
@@ -97,8 +97,8 @@ export default function SpeakingReviewLanding() {
           </>
         ) : (
           <div className="card py-16 text-center">
-            <h2 className="mb-1 text-xl font-bold text-gray-900">다시 말해 볼 것이 없어요</h2>
-            <p className="mb-5 text-gray-500">새로운 말하기 학습을 마치면 다시 연습할 말이 이곳에 모입니다.</p>
+            <h2 className="mb-1 text-xl font-bold text-ink">다시 말해 볼 것이 없어요</h2>
+            <p className="mb-5 text-ink-muted">새로운 말하기 학습을 마치면 다시 연습할 말이 이곳에 모입니다.</p>
             <button type="button" onClick={() => navigate('/learn/speaking?stage=0')} className="btn-primary">말하기 학습으로</button>
           </div>
         )}

@@ -7,7 +7,7 @@ export default function StateCard({ title, body, actions = [] }) {
       {actions.length > 0 && (
         <div className="mt-2 flex w-full max-w-[360px] flex-col gap-2">
           {actions.map((a, i) => (
-            <Button key={a.label} onClick={a.onClick} tone={i === 0 ? 'primary' : 'secondary'} className="py-3 text-[15px]">{a.label}</Button>
+            <Button key={a.label} onClick={a.onClick} variant={i === 0 ? 'primary' : 'secondary'} className="py-3 text-[15px]">{a.label}</Button>
           ))}
         </div>
       )}

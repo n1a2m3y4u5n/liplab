@@ -126,12 +126,12 @@ export default function MouthCalibration({ landmarkerRef, modelStatus, onDone, o
   const step = STEPS[stepIdx]
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3">
+    <div className="rounded-xl border border-line bg-white p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-sm font-bold text-gray-900">입모양 본뜨기 <span className="text-xs font-medium text-gray-500">{stepIdx + 1}/{STEPS.length}</span></h4>
-        <button type="button" onClick={onCancel} className="text-xs text-gray-400 hover:text-gray-700">닫기</button>
+        <h4 className="text-sm font-bold text-ink">입모양 본뜨기 <span className="text-xs font-medium text-ink-muted">{stepIdx + 1}/{STEPS.length}</span></h4>
+        <button type="button" onClick={onCancel} className="text-xs text-ink-caption hover:text-ink">닫기</button>
       </div>
-      <div className="relative overflow-hidden rounded-lg bg-gray-900" style={{ aspectRatio: '4/3' }}>
+      <div className="relative overflow-hidden rounded-lg bg-surface-inverse" style={{ aspectRatio: '4/3' }}>
         <video ref={videoRef} muted playsInline className="h-full w-full -scale-x-100 object-cover" />
         {status === 'running' && (
           <div className="absolute inset-x-0 top-2 text-center">
@@ -151,9 +151,9 @@ export default function MouthCalibration({ landmarkerRef, modelStatus, onDone, o
       </div>
       {status === 'running' && (
         <div className="mt-2 flex flex-col items-center gap-1">
-          <p className="text-center text-xs text-gray-500">{stepGuide(step)}</p>
+          <p className="text-center text-xs text-ink-muted">{stepGuide(step)}</p>
           <button type="button" onClick={capture} disabled={collecting}
-            className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-bold text-white hover:bg-slate-700 disabled:opacity-40">
+            className="rounded-lg bg-surface-inverse px-4 py-1.5 text-sm font-bold text-white hover:bg-surface-inverse-muted disabled:opacity-40">
             이 입모양 본뜨기
           </button>
         </div>

@@ -204,7 +204,7 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
           </div>
           {fastOk && (
             <button type="button" onClick={() => setFast((v) => !v)} aria-pressed={fast}
-              className={`self-center rounded px-3 py-1 text-xs transition-colors ${fast ? 'bg-primary-500 font-semibold text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              className={`self-center rounded px-3 py-1 text-xs transition-colors ${fast ? 'bg-primary-500 font-semibold text-white' : 'bg-surface-sunken text-ink-muted hover:bg-fill-strong'}`}>
               빠른 말 {FAST_SPEECH_SPEED}x
             </button>
           )}

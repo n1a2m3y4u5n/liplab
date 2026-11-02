@@ -49,12 +49,12 @@ function MouthPlaceholder() {
 function CoverageBadge({ method, coverage }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-      <span className={`px-2 py-0.5 rounded-full font-medium ${method === 'llm' ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'}`}>
+      <span className={`px-2 py-0.5 rounded-full font-medium ${method === 'llm' ? 'bg-primary-100 text-primary-700' : 'bg-warn-tint text-warn-text'}`}>
         {method === 'llm' ? 'AI 번역(Claude)' : '규칙 근사'}
       </span>
-      <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700">수어 {coverage.matched}</span>
+      <span className="px-2 py-0.5 rounded-full bg-good-tint text-good-dark">수어 {coverage.matched}</span>
       {coverage.fingerspelled > 0 && (
-        <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">지문자 {coverage.fingerspelled}</span>
+        <span className="px-2 py-0.5 rounded-full bg-surface-sunken text-ink-muted">지문자 {coverage.fingerspelled}</span>
       )}
     </div>
   )
@@ -111,9 +111,9 @@ export default function SignPanel({ text, variant = 'default' }) {
   }
 
   if (!text) return null
-  if (loading) return <div className="py-14 text-center text-gray-500 text-sm">수어로 바꾸는 중…</div>
-  if (error) return <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</div>
-  if (!result || tokens.length === 0) return <div className="py-10 text-gray-500 text-sm text-center">수어로 바꿀 단어가 없습니다.</div>
+  if (loading) return <div className="py-14 text-center text-ink-muted text-sm">수어로 바꾸는 중…</div>
+  if (error) return <div className="text-sm text-bad-dark bg-bad-tint border border-bad-line rounded-lg px-3 py-2">{error}</div>
+  if (!result || tokens.length === 0) return <div className="py-10 text-ink-muted text-sm text-center">수어로 바꿀 단어가 없습니다.</div>
 
   return (
     <div>
@@ -121,7 +121,7 @@ export default function SignPanel({ text, variant = 'default' }) {
       <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
         <CoverageBadge method={result.method} coverage={result.coverage} />
         <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer select-none">
+          <label className="flex items-center gap-1 text-xs text-ink-muted cursor-pointer select-none">
             <input type="checkbox" checked={showMouth} onChange={(e) => setShowMouth(e.target.checked)} />
             입모양 함께
           </label>
@@ -132,11 +132,11 @@ export default function SignPanel({ text, variant = 'default' }) {
         </div>
       </div>
 
-      {result.notes && <p className="mb-2 text-xs text-gray-500">{result.notes}</p>}
+      {result.notes && <p className="mb-2 text-xs text-ink-muted">{result.notes}</p>}
       {result.annotations?.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1">
           {result.annotations.map((a, i) => (
-            <span key={i} className="text-[11px] px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">
+            <span key={i} className="text-[11px] px-2 py-0.5 rounded bg-primary-100 text-primary-700 border border-primary-line">
               {a.marker}: {a.note}
             </span>
           ))}
@@ -146,7 +146,7 @@ export default function SignPanel({ text, variant = 'default' }) {
       <div className="grid md:grid-cols-5 gap-4">
         {/* 메인: 수어 영상 (또는 지문자/수형설명) */}
         <div className={showMouth ? 'md:col-span-3' : 'md:col-span-5'}>
-          <div className="relative rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center" style={{ minHeight: 300 }}>
+          <div className="relative rounded-2xl overflow-hidden bg-surface-inverse flex items-center justify-center" style={{ minHeight: 300 }}>
             {token.type === 'sign' && token.video_url ? (
               <video
                 key={vKey}   // 같은 영상이 이어져도 새 요소로 처음부터 재생해 onEnded가 온다(signPlayback.js)
@@ -159,8 +159,8 @@ export default function SignPanel({ text, variant = 'default' }) {
               />
             ) : token.type === 'sign' ? (
               // 영상 해석 실패 → 수형설명 텍스트로 폴백
-              <div className="p-6 text-center text-slate-100">
-                <p className="text-sm text-slate-300 mb-2">수형 설명</p>
+              <div className="p-6 text-center text-ink-inverse">
+                <p className="text-sm text-ink-inverse-muted mb-2">수형 설명</p>
                 <p className="text-base leading-relaxed">{token.description || '설명 없음'}</p>
                 {token.dict_url && (
                   <a href={token.dict_url} target="_blank" rel="noopener noreferrer"
@@ -170,7 +170,7 @@ export default function SignPanel({ text, variant = 'default' }) {
             ) : (
               // 지문자(지화) — 자모별 손모양 이미지. 된소리·w 이중모음·겹받침은 있는 손모양 조각으로(ㄲ = ㄱ 두 번), 숫자·기호는 글자 폴백
               <div className="p-4 text-center w-full">
-                <p className="text-xs text-slate-400 mb-3">지문자 (지화) — 한 글자씩 손모양으로</p>
+                <p className="text-xs text-ink-caption mb-3">지문자 (지화) — 한 글자씩 손모양으로</p>
                 <div className="flex flex-wrap gap-3 justify-center items-end">
                   {token.jamo.map((group, gi) => (
                     <div key={gi} className="flex gap-1 items-end p-1.5 rounded-lg bg-white/5">
@@ -183,10 +183,10 @@ export default function SignPanel({ text, variant = 'default' }) {
                                 <img key={pi} src={p.src} alt={`지문자 ${p.jamo}`} loading="lazy"
                                   className="h-24 w-auto rounded bg-white object-contain" />
                               ) : (
-                                <div key={pi} className="h-24 w-14 rounded bg-white/90 flex items-center justify-center text-slate-800 text-2xl font-bold">{p.jamo}</div>
+                                <div key={pi} className="h-24 w-14 rounded bg-white/90 flex items-center justify-center text-ink text-2xl font-bold">{p.jamo}</div>
                               ))}
                             </div>
-                            <span className="mt-1 text-xs text-slate-200">{jamo}{parts.length > 1 && <span className="text-slate-400"> = {parts.map((p) => p.jamo).join('+')}</span>}</span>
+                            <span className="mt-1 text-xs text-ink-inverse">{jamo}{parts.length > 1 && <span className="text-ink-caption"> = {parts.map((p) => p.jamo).join('+')}</span>}</span>
                           </div>
                         )
                       })}
@@ -199,8 +199,8 @@ export default function SignPanel({ text, variant = 'default' }) {
             {/* 현재 단어 라벨 (별칭 치환은 투명하게 "밥 → 식사"로) */}
             <div className="absolute top-3 left-3 bg-black/55 text-white px-3 py-1 rounded-lg text-sm font-semibold">
               {token.word}
-              {token.signed_as && <span className="text-amber-300"> → {token.signed_as}</span>}
-              {token.negate && <span className="ml-1 text-red-300 text-xs">(부정)</span>}
+              {token.signed_as && <span className="text-warn-onDark"> → {token.signed_as}</span>}
+              {token.negate && <span className="ml-1 text-bad-onDark text-xs">(부정)</span>}
               <span className="ml-2 text-white/60 text-xs">{current + 1}/{tokens.length}</span>
             </div>
           </div>
@@ -210,20 +210,20 @@ export default function SignPanel({ text, variant = 'default' }) {
             <div className="mt-1.5">
               {token.signed_as && (
                 /^[\d.,]+$/.test(String(token.word)) ? (
-                  <p className="text-[11px] text-slate-500 mb-0.5">
+                  <p className="text-[11px] text-ink-muted mb-0.5">
                     숫자 ‘{token.word}’ → 수어 ‘{token.signed_as}’
                   </p>
                 ) : (
-                  <p className="text-[11px] text-amber-600 mb-0.5">
+                  <p className="text-[11px] text-warn-text mb-0.5">
                     ‘{token.word}’은 사전에 없어 비슷한 수어 ‘{token.signed_as}’로 표시합니다.
                   </p>
                 )
               )}
               <div className="flex items-start justify-between gap-2">
-                <p className="text-xs text-gray-500 line-clamp-2 flex-1">{token.description}</p>
+                <p className="text-xs text-ink-muted line-clamp-2 flex-1">{token.description}</p>
                 {token.dict_url && (
                   <a href={token.dict_url} target="_blank" rel="noopener noreferrer"
-                    className="text-[11px] text-gray-400 hover:text-primary-600 whitespace-nowrap">국립국어원 ↗</a>
+                    className="text-[11px] text-ink-caption hover:text-primary-600 whitespace-nowrap">국립국어원 ↗</a>
                 )}
               </div>
             </div>
@@ -233,8 +233,8 @@ export default function SignPanel({ text, variant = 'default' }) {
         {/* 옵션: 입모양(mouthing) */}
         {showMouth && (
           <div className="md:col-span-2">
-            <p className="text-xs text-gray-500 mb-1">입모양</p>
-            <Suspense fallback={<div className="py-10 text-center text-xs text-gray-400">입모양 가져오는 중…</div>}>
+            <p className="text-xs text-ink-muted mb-1">입모양</p>
+            <Suspense fallback={<div className="py-10 text-center text-xs text-ink-caption">입모양 가져오는 중…</div>}>
               <LipSyncPlayer3D visemes={token.visemes || []} isPlaying={false} />
             </Suspense>
           </div>
@@ -249,18 +249,18 @@ export default function SignPanel({ text, variant = 'default' }) {
             onClick={() => { setPlayingAll(false); setCurrent(i) }}
             className={`px-2.5 py-1 rounded-lg text-sm border transition-colors ${
               i === current ? 'border-primary-500 bg-primary-50 text-primary-700 font-semibold'
-              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+              : 'border-line bg-white text-ink-muted hover:border-line-strong'
             }`}
             title={t.type === 'sign' ? '수어' : '지문자'}
           >
             {t.word}
-            {t.type === 'fingerspell' && <span className="ml-1 text-[10px] text-gray-400">지문자</span>}
+            {t.type === 'fingerspell' && <span className="ml-1 text-[10px] text-ink-caption">지문자</span>}
           </button>
         ))}
       </div>
 
       {/* 출처표시 */}
-      <Attribution className="mt-4 border-t border-gray-100 pt-3 text-gray-400" />
+      <Attribution className="mt-4 border-t border-line pt-3 text-ink-caption" />
     </div>
   )
 }

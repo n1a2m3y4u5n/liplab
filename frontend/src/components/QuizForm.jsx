@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
+import { MotionPanel } from './UI'
 
 // 문장 점수 색 — 기준은 예전 그대로 80/60(핸드오프 §3.2는 음소·정답률 기준만 정한다), 색은 good/warn/bad 토큰.
 const TONE = {
@@ -83,10 +84,8 @@ export default function QuizForm({
       {/* Result Display */}
       <AnimatePresence>
         {result && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+          <MotionPanel
+            exit={{ opacity: 0 }}
             className="space-y-4"
           >
             {/* Score Display */}
@@ -96,15 +95,12 @@ export default function QuizForm({
               className={`card ${toneOf(result.score).card}`}
             >
               <div className="text-center">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 200 }}
+                <MotionPanel
                   className={`text-6xl font-bold mb-2 ${toneOf(result.score).text}`}
                 >
                   {Math.round(result.score)}
-                </motion.div>
-                <p className="text-lg font-semibold text-gray-700 mb-3">
+                </MotionPanel>
+                <p className="text-lg font-semibold text-ink mb-3">
                   {result.feedback?.message || '수고하셨습니다!'}
                 </p>
 
@@ -119,25 +115,25 @@ export default function QuizForm({
               {/* Phoneme Accuracy Breakdown */}
               {result.phoneme_accuracy && (
                 <div className="mt-6 space-y-2">
-                  <h4 className="font-semibold text-gray-700 text-sm">
+                  <h4 className="font-semibold text-ink text-sm">
                     소리별 정답률
                   </h4>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="bg-white rounded-lg p-3 text-center">
-                      <p className="text-xs text-gray-600 mb-1">초성</p>
-                      <p className="text-lg font-bold text-gray-900">
+                      <p className="text-xs text-ink-muted mb-1">초성</p>
+                      <p className="text-lg font-bold text-ink">
                         {result.phoneme_accuracy.initial}%
                       </p>
                     </div>
                     <div className="bg-white rounded-lg p-3 text-center">
-                      <p className="text-xs text-gray-600 mb-1">중성</p>
-                      <p className="text-lg font-bold text-gray-900">
+                      <p className="text-xs text-ink-muted mb-1">중성</p>
+                      <p className="text-lg font-bold text-ink">
                         {result.phoneme_accuracy.medial}%
                       </p>
                     </div>
                     <div className="bg-white rounded-lg p-3 text-center">
-                      <p className="text-xs text-gray-600 mb-1">종성</p>
-                      <p className="text-lg font-bold text-gray-900">
+                      <p className="text-xs text-ink-muted mb-1">종성</p>
+                      <p className="text-lg font-bold text-ink">
                         {result.phoneme_accuracy.final}%
                       </p>
                     </div>
@@ -147,8 +143,8 @@ export default function QuizForm({
 
               {/* Specific Feedback */}
               {result.feedback?.specific_tip && (
-                <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-blue-800">
+                <div className="mt-4 bg-bookmark-tint border border-bookmark-line rounded-lg p-3">
+                  <p className="text-sm text-bookmark-dark">
                     <strong>팁:</strong> {result.feedback.specific_tip}
                   </p>
                 </div>
@@ -157,17 +153,17 @@ export default function QuizForm({
 
             {/* Answer Comparison */}
             <div className="card">
-              <h4 className="font-semibold text-gray-700 mb-3">답변 비교</h4>
+              <h4 className="font-semibold text-ink mb-3">답변 비교</h4>
               <div className="space-y-2">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-600 mb-1">정답</p>
-                  <p className="text-base font-medium text-gray-900">
+                <div className="bg-surface-muted rounded-lg p-3">
+                  <p className="text-xs text-ink-muted mb-1">정답</p>
+                  <p className="text-base font-medium text-ink">
                     {correctAnswer}
                   </p>
                 </div>
-                <div className="bg-blue-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-600 mb-1">입력한 답</p>
-                  <p className="text-base font-medium text-blue-900">
+                <div className="bg-bookmark-tint rounded-lg p-3">
+                  <p className="text-xs text-ink-muted mb-1">입력한 답</p>
+                  <p className="text-base font-medium text-bookmark-dark">
                     {answer}
                   </p>
                 </div>
@@ -176,14 +172,12 @@ export default function QuizForm({
 
             {/* New Level Achievement */}
             {result.new_level && result.new_level > (result.old_level || 0) && (
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="card bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-center"
+              <MotionPanel kind="complete"
+                className="card bg-track-tint text-track-dark text-center"
               >
                 <p className="text-xl font-bold">레벨 업!</p>
                 <p className="text-lg">레벨 {result.new_level} 달성</p>
-              </motion.div>
+              </MotionPanel>
             )}
 
             {/* Retry button */}
@@ -195,7 +189,7 @@ export default function QuizForm({
                 같은 문장 다시 도전
               </button>
             )}
-          </motion.div>
+          </MotionPanel>
         )}
       </AnimatePresence>
     </div>

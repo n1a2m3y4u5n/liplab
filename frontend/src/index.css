@@ -25,8 +25,8 @@
   --radius-control: 14px;
   --radius-card: 18px;
   --space-card: 20px;
-  --text-body: 16px;
-  --text-title: 25px;
+  --text-body: 1rem;
+  --text-title: 1.5625rem;
   --motion-duration: 180ms;
   --motion-ease: cubic-bezier(.22, 1, .36, 1);
 
@@ -41,9 +41,11 @@
   --listen-tint: #d5f3f4;
   --listen-hover: #0c5e66;
   --bookmark: #2563eb;
+  --bookmark-dark: #1d4ed8;
   --bookmark-light: #60a5fa;
   --endless: #4f46e5;       /* 엔드리스 인디고 카드(endless / endless-light) */
   --endless-light: #818cf8;
+  --endless-dark: #3730a3;
 
   /* 점수 색(§3.2) */
   --good: #15803d;
@@ -56,6 +58,8 @@
   --bad: #dc2626;
   --bad-text: #b91c1c;
   --bad-tint: #feecec;
+  --bad-on-dark: #fca5a5;
+  --cue-air: #0284c7;
 
   /* 트랙 색(§3.1) — 기본은 독화 보라. data-track="speak" 아래에서는 분홍으로 바뀐다.
      tailwind의 bg-track·text-track·border-track(-dark/-tint)과 .btn-primary가 이 변수를 읽는다. */
@@ -86,6 +90,12 @@
   --track-hover: var(--brand-hover);
 }
 
+/* 어두운 미디어 표면의 보조 글자도 같은 의미 토큰으로 읽힌다. */
+:is(.bg-surface-inverse, .bg-surface-inverse-muted, .bg-surface-deep,
+    .from-surface-inverse, .from-surface-inverse-muted, .from-surface-deep) {
+  --caption-ink: #b9b9c8;
+}
+
 html,
 body,
 #root {
@@ -107,6 +117,7 @@ body,
   /* 페이지 배경 = Figma surface/background(#f3f3f3). 흰 카드·셸은 각자 bg-white를 칠한다. */
   body {
     @apply bg-page text-ink antialiased font-sans;
+    font-size: var(--text-body);
   }
 }
 
@@ -129,9 +140,17 @@ body,
   }
   .ui-lesson-title {
     @apply break-keep text-[25px] font-bold leading-snug tracking-tight text-ink lg:text-[30px];
+    font-size: var(--text-title);
+  }
+  .bg-hero-brand {
+    background-image: linear-gradient(145deg, var(--brand), var(--brand-dark));
+  }
+  .bg-hero-bookmark {
+    background-image: linear-gradient(145deg, var(--bookmark), var(--bookmark-dark));
   }
   @screen lg {
     .ui-card { --radius-card: 20px; --space-card: 24px; }
+    .ui-lesson-title { --text-title: 1.875rem; }
   }
 
   /* ── 버튼 (Figma "Button / Primary" 75:23 계열) ─────────────────────────────
@@ -178,6 +197,11 @@ body,
   }
 
   /* 크기 수정자 — 위 버튼 클래스 뒤에 둔다(같은 명시도라 나중 선언이 이긴다). lg:btn-lg처럼 반응형도 된다. */
+  .btn-primary, .btn-secondary, .btn-good, .btn-bad {
+    transition-duration: var(--motion-duration);
+    transition-timing-function: var(--motion-ease);
+  }
+
   .btn-lg {
     @apply rounded-16 border-b-6 px-8 py-[18px] text-[20px] tracking-[-0.2px];
   }
@@ -221,7 +245,7 @@ body,
            hover:bg-surface-muted;
   }
   .side-item-active {
-    @apply border-2 border-track bg-track-tint text-track hover:bg-track-tint;
+    @apply border-2 border-track bg-track-tint text-track-dark hover:bg-track-tint;
   }
 
   /* 마스크 아이콘 — 단색 SVG를 글자색(currentColor)으로 칠한다. style={{ '--icon': 'url(/ui/…svg)' }}.
@@ -257,17 +281,17 @@ body,
 
   /* 트랙별 로딩 그라데이션(Figma 223:30·223:50, 모바일 243:81·243:101 — 각도만 다르다) */
   .bg-loading-perception {
-    background-image: linear-gradient(121.64deg, #a78bfa 0%, #8b5cf6 39.286%, #6d3fc4 71.429%);
+    background-image: linear-gradient(121.64deg, var(--brand) 0%, var(--brand-dark) 100%);
   }
   .bg-loading-language {
-    background-image: linear-gradient(121.64deg, #fb7185 0%, #c02670 39.286%, #be185d 71.429%);
+    background-image: linear-gradient(121.64deg, var(--speak) 0%, var(--speak-hover) 100%);
   }
   @media (min-width: 1024px) {
     .bg-loading-perception {
-      background-image: linear-gradient(151.93deg, #a78bfa 0%, #8b5cf6 39.286%, #6d3fc4 71.429%);
+      background-image: linear-gradient(151.93deg, var(--brand) 0%, var(--brand-dark) 100%);
     }
     .bg-loading-language {
-      background-image: linear-gradient(151.93deg, #fb7185 0%, #c02670 39.286%, #be185d 71.429%);
+      background-image: linear-gradient(151.93deg, var(--speak) 0%, var(--speak-hover) 100%);
     }
   }
 

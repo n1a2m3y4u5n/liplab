@@ -31,14 +31,14 @@ export function useCuesEnabled() {
  * 숙달도가 오르면 백엔드가 strength를 낮춰 기호가 점진적으로 흐려진다(페이딩).
  */
 export const CUE_META = {
-  aspirated: { label: '기식(바람)', color: '#0284c7', bg: 'bg-sky-50 border-sky-200' },
-  tense: { label: '긴장(힘)', color: '#b45309', bg: 'bg-amber-50 border-amber-200' },
-  nasal: { label: '울림(코)', color: '#7c3aed', bg: 'bg-violet-50 border-violet-200' },
+  aspirated: { label: '기식(바람)', color: 'var(--cue-air)', bg: 'bg-pastel-sky border-bookmark-line' },
+  tense: { label: '긴장(힘)', color: 'var(--warn-text)', bg: 'bg-warn-tint border-warn/40' },
+  nasal: { label: '울림(코)', color: 'var(--brand-dark)', bg: 'bg-primary-100 border-primary-line' },
 }
 
 /** 자질별 SVG 글리프(16x16). 색은 currentColor. */
 export function CueGlyph({ cue, size = 14 }) {
-  const color = CUE_META[cue]?.color || '#666'
+  const color = CUE_META[cue]?.color || 'var(--ink-muted)'
   const common = { width: size, height: size, viewBox: '0 0 16 16', fill: 'none', stroke: color }
   if (cue === 'aspirated') {
     // 바람(기식) — 새어 나가는 공기 흐름
@@ -71,14 +71,14 @@ export function CueLegend() {
   const cuesOn = useCuesEnabled()
   if (cuesOn === false) return null
   return (
-    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+    <div className="flex flex-wrap items-center gap-3 text-xs text-ink-muted">
       {Object.entries(CUE_META).map(([k, s]) => (
         <span key={k} className="inline-flex items-center gap-1">
           <span className={`inline-flex h-5 w-5 items-center justify-center rounded border ${s.bg}`}><CueGlyph cue={k} /></span>
           {s.label}
         </span>
       ))}
-      <span className="text-gray-400">평음은 기준(기호 없음)</span>
+      <span className="text-ink-caption">평음은 기준(기호 없음)</span>
     </div>
   )
 }
@@ -107,7 +107,7 @@ export default function CueBadges({ text, showControls = false }) {
   })
 
   const badges = (
-    <span className="inline-flex items-end gap-0.5 rounded-lg border border-gray-200 bg-white px-2 py-1">
+    <span className="inline-flex items-end gap-0.5 rounded-lg border border-line bg-white px-2 py-1">
       {[...text].map((ch, i) => (
         <span key={i} className="inline-flex flex-col items-center">
           <span className="flex h-5 items-center gap-0.5">
@@ -122,7 +122,7 @@ export default function CueBadges({ text, showControls = false }) {
               </span>
             ))}
           </span>
-          <span className="text-lg font-semibold text-gray-800">{ch}</span>
+          <span className="text-lg font-semibold text-ink">{ch}</span>
         </span>
       ))}
     </span>
@@ -133,7 +133,7 @@ export default function CueBadges({ text, showControls = false }) {
   return (
     <span className="inline-flex flex-col gap-1.5">
       {badges}
-      <span className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-[11px] text-gray-500">
+      <span className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-[11px] text-ink-muted">
         <label className="inline-flex cursor-pointer items-center gap-1.5" title="아직 약한 소리에만 기호를 남겨요(내 학습 기록에 따라).">
           <input type="checkbox" checked={focus} onChange={(e) => setFocus(e.target.checked)} className="h-3 w-3 accent-violet-600" />
           약한 소리만 표시
@@ -141,7 +141,7 @@ export default function CueBadges({ text, showControls = false }) {
         <label className="inline-flex items-center gap-1.5" title="화면에 동시에 뜨는 기호 수를 제한해 너무 많아지지 않게 합니다.">
           최대 기호
           <input type="range" min="0" max="8" value={maxCues} onChange={(e) => setMaxCues(Number(e.target.value))} className="h-1 w-20 accent-violet-600" />
-          <span className="w-8 tabular-nums text-gray-600">{maxCues === 0 ? '무제한' : maxCues}</span>
+          <span className="w-8 tabular-nums text-ink-muted">{maxCues === 0 ? '무제한' : maxCues}</span>
         </label>
       </span>
     </span>

@@ -12,7 +12,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
  */
 const PET_THEMES = {
   viseme: {
-    grad: 'from-sky-300 via-sky-400 to-sky-600',
+    grad: 'from-bookmark-light via-bookmark-light to-bookmark',
     cheers: [
       '천천히 해도 괜찮아요!', '입모양 하나씩, 잘하고 있어요', '오늘도 시작이 반이에요 ✨', '눈으로 듣는 연습, 멋져요!',
       '조금씩, 하지만 꾸준히 💙', '어제보다 한 걸음 더!', '입술을 잘 보고 있네요 👀', '실수해도 괜찮아, 다시 해봐요',
@@ -20,7 +20,7 @@ const PET_THEMES = {
     ],
   },
   scenario: {
-    grad: 'from-cyan-300 via-cyan-400 to-blue-500',
+    grad: 'from-listen-tint via-bookmark-light to-bookmark',
     cheers: [
       '대화 문장, 자신 있게!', '상황 속으로 뛰어들어요', '한 문장씩 정복해요 💪', '오늘의 대화도 파이팅!',
       '문맥을 읽는 눈, 최고예요', '틀려도 배움이 남아요', '대화 감각이 자라고 있어요 🌱', '한 걸음씩 대화 고수로!',
@@ -28,7 +28,7 @@ const PET_THEMES = {
     ],
   },
   speaking: {
-    grad: 'from-rose-300 via-rose-400 to-pink-500',
+    grad: 'from-rose-300 via-rose-400 to-speak',
     cheers: [
       '또박또박 좋아요!', '소리 내는 게 용기예요', '억양까지 완벽해요 🎵', '입을 크게, 자신 있게!',
       '숨 고르고, 천천히 말해요', '목소리에 자신감이 붙었어요', '한 음절씩 또렷하게 🌟', '떨려도 괜찮아, 잘하고 있어요',
@@ -271,14 +271,14 @@ export default function DashboardPet({ slideId = 'viseme', obstacleSelector = '[
       style={{ willChange: 'transform' }}
     >
       {cheer && (
-        <div className={`pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-2xl bg-white px-3 py-1.5 text-[11px] font-black text-slate-800 shadow-lg ${bubbleBelow ? 'top-[72px]' : '-top-10'}`}>
+        <div className={`pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-2xl bg-white px-3 py-1.5 text-[11px] font-black text-ink shadow-lg ${bubbleBelow ? 'top-[72px]' : '-top-10'}`}>
           {cheer}
           <span className={`absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 bg-white ${bubbleBelow ? '-top-1' : '-bottom-1'}`} />
         </div>
       )}
       <div ref={bodyRef} style={{ willChange: 'transform' }} className={`relative h-16 w-16 rounded-[48%_44%_50%_46%] bg-gradient-to-br ${theme.grad} shadow-xl`}>
-        <span className="absolute left-[19px] top-[25px] h-2.5 w-2.5 rounded-full bg-slate-900" />
-        <span className="absolute left-[35px] top-[25px] h-2.5 w-2.5 rounded-full bg-slate-900" />
+        <span className="absolute left-[19px] top-[25px] h-2.5 w-2.5 rounded-full bg-surface-inverse" />
+        <span className="absolute left-[35px] top-[25px] h-2.5 w-2.5 rounded-full bg-surface-inverse" />
         <span className="absolute left-[21px] top-[35px] h-3.5 w-[22px] rounded-b-full  border-white/90" />
         <span className="absolute left-[7px] top-[30px] h-2 w-2 rounded-full bg-white/40" />
         <span className="absolute right-[7px] top-[30px] h-2 w-2 rounded-full bg-white/40" />

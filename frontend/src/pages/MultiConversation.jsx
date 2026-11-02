@@ -18,9 +18,9 @@ import CueBadges, { CueLegend } from '../components/CueBadges'
  * 9/26 변경 내역 §2·§5: 연습 탭의 '다자 대화' 기능은 없어지고, 상황별 시나리오 'AI 대화 → 여러 명 대화'가 이 화면으로 온다
  * (?speakers=2~4&situation=). 그래서 제목을 그 선택지 이름('여러 명 대화')으로 바꾸고 부제를 뺐다. 라우트·파일 삭제는 따로 정한다.
  */
-const SPK_COLOR = ['bg-sky-500', 'bg-rose-500', 'bg-amber-500', 'bg-teal-500']
-const SPK_RING = ['ring-sky-400', 'ring-rose-400', 'ring-amber-400', 'ring-teal-400']
-const SPK_TEXT = ['text-sky-600', 'text-rose-600', 'text-amber-600', 'text-teal-600']  // 선택 전 화자별 글자색(Figma: 화자마다 색)
+const SPK_COLOR = ['bg-bookmark', 'bg-bad', 'bg-warn', 'bg-listen']
+const SPK_RING = ['ring-bookmark-line', 'ring-bad', 'ring-warn', 'ring-listen']
+const SPK_TEXT = ['text-stat-level', 'text-bad-dark', 'text-warn-text', 'text-listen-dark']  // 선택 전 화자별 글자색(Figma: 화자마다 색)
 const SPK_NAME = ['A', 'B', 'C', 'D']
 // 듣는 사람의 맞장구 — 중립으로 있다가 잠깐 입술을 다문다('음'). 화자마다 길이를 달리해 박자가 겹치지 않게 한다.
 const BACKCHANNEL = [
@@ -216,7 +216,7 @@ export default function MultiConversation() {
       {/* 발화 순서 타임라인 — 푼 턴은 화자색, 현재는 링, 나머지는 회색(정답 미리보기 방지) */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
         {conv.turns.map((t, i) => {
-          const color = spkChoice[i] != null ? SPK_COLOR[t.speaker] : (i < idx ? 'bg-gray-300' : 'bg-gray-200')
+          const color = spkChoice[i] != null ? SPK_COLOR[t.speaker] : (i < idx ? 'bg-line-strong' : 'bg-fill-strong')
           return (
             <button key={i} type="button" onClick={() => setIdx(i)} aria-label={`${i + 1}번째 발화`}
               className={`h-3 w-6 shrink-0 rounded-full ${color} ${i === idx ? 'ring-2 ring-primary-500' : ''}`} />
@@ -227,15 +227,15 @@ export default function MultiConversation() {
 
       {/* 세션 종합 채점(축 H) — 서버 재채점. 종합 = 닮은꼴 문장 고르기 + 빈칸 문맥 추론, 화자 식별은 따로. */}
       {result && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[14px] border-2 border-emerald-200 bg-emerald-50/70 px-4 py-2.5">
-          <span className="text-sm font-bold text-emerald-800">이번 대화 종합 {result.combined}점</span>
-          <span className="text-xs text-emerald-700">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[14px] border-2 border-good-line bg-good-tint/70 px-4 py-2.5">
+          <span className="text-sm font-bold text-good-dark">이번 대화 종합 {result.combined}점</span>
+          <span className="text-xs text-good-dark">
             문장 {Math.round(result.read_accuracy * 100)}%
             {result.closure_correct != null && <> · 빈칸 {result.closure_correct ? '정답' : '틀림'}</>}
             {' '}· 말하는 사람 찾기 {Math.round(result.speaker_accuracy * 100)}%
           </span>
           {result.missed_visemes?.length > 0 && (
-            <span className="text-[11px] text-emerald-600">잘못 읽은 입모양 {result.missed_visemes.length}개를 약점 통계에 넣었어요(다음 추천에 반영)</span>
+            <span className="text-[11px] text-good-dark">잘못 읽은 입모양 {result.missed_visemes.length}개를 약점 통계에 넣었어요(다음 추천에 반영)</span>
           )}
         </div>
       )}
@@ -277,8 +277,8 @@ export default function MultiConversation() {
             const isWrongPick = answered && i === guess && guess !== turn.speaker
             const base = 'flex flex-1 items-center justify-center gap-1.5 rounded-[14px] py-4 text-[17px] font-bold transition-all'
             const cls = isAns ? `${SPK_COLOR[i]} border-2 border-b-2 border-transparent text-white`
-              : isWrongPick ? 'border-2 border-b-2 border-rose-300 bg-rose-50 text-rose-500 line-through'
-              : answered ? 'border-2 border-b-[5px] border-line bg-white text-gray-300'
+              : isWrongPick ? 'border-2 border-b-2 border-bad-line bg-bad-tint text-rose-500 line-through'
+              : answered ? 'border-2 border-b-[5px] border-line bg-white text-ink-inverse-muted'
               : `border-2 border-b-[5px] border-line bg-white ${SPK_TEXT[i]} hover:border-primary-300 active:translate-y-[1px] active:border-b-2`
             return (
               <button key={i} disabled={answered} onClick={() => chooseSpeaker(i)} className={`${base} ${cls}`}>
@@ -294,7 +294,7 @@ export default function MultiConversation() {
       <div className="card flex flex-col">
         <div className="min-h-[120px] flex-1">
           {!answered ? (
-            <p className="mt-2 rounded-[14px] border-2 border-dashed border-line py-10 text-center text-sm font-bold text-gray-400">
+            <p className="mt-2 rounded-[14px] border-2 border-dashed border-line py-10 text-center text-sm font-bold text-ink-caption">
               먼저 말하는 사람을 찾아 주세요
             </p>
           ) : isClosure ? (
@@ -313,11 +313,11 @@ export default function MultiConversation() {
               </div>
             ) : (
               <div className="mt-1 space-y-2">
-                <p className={`text-sm font-bold ${closureChoice === conv.closure.answer ? 'text-emerald-600' : 'text-rose-600'}`}>
+                <p className={`text-sm font-bold ${closureChoice === conv.closure.answer ? 'text-good-dark' : 'text-bad-dark'}`}>
                   {closureChoice === conv.closure.answer ? '정답! 문맥으로 골랐어요' : `아쉬워요 — 정답은 '${conv.closure.answer}'`}
                 </p>
                 <p className="text-lg font-bold text-ink">“{turn.text}”</p>
-                <div className="overflow-x-auto rounded-[12px] border border-gray-100 bg-gray-50 p-2.5">
+                <div className="overflow-x-auto rounded-[12px] border border-line bg-surface-muted p-2.5">
                   <CueBadges text={turn.text} />
                   <div className="mt-1.5"><CueLegend /></div>
                 </div>
@@ -337,11 +337,11 @@ export default function MultiConversation() {
             </div>
           ) : (
             <div className="mt-1 space-y-2">
-              <p className={`text-sm font-bold ${readGuess === turn.text ? 'text-emerald-600' : 'text-rose-600'}`}>
+              <p className={`text-sm font-bold ${readGuess === turn.text ? 'text-good-dark' : 'text-bad-dark'}`}>
                 {readGuess === turn.text ? '정답! 잘 읽었어요' : '아쉬워요 — 실제로는'}
               </p>
               <p className="text-lg font-bold text-ink">“{turn.text}”</p>
-              <div className="overflow-x-auto rounded-[12px] border border-gray-100 bg-gray-50 p-2.5">
+              <div className="overflow-x-auto rounded-[12px] border border-line bg-surface-muted p-2.5">
                 <CueBadges text={turn.text} />
                 <div className="mt-1.5"><CueLegend /></div>
               </div>
@@ -349,14 +349,14 @@ export default function MultiConversation() {
           )}
         </div>
         <div className="mt-4 flex items-center justify-between">
-          <span className="text-xs text-gray-400">{idx + 1} / {conv.turns.length}</span>
+          <span className="text-xs text-ink-caption">{idx + 1} / {conv.turns.length}</span>
           <div className="flex gap-2">
-            {idx > 0 && <button onClick={() => setIdx(idx - 1)} className="rounded-[12px] border-2 border-line px-3 py-1.5 text-sm font-bold text-ink hover:bg-gray-50">이전</button>}
+            {idx > 0 && <button onClick={() => setIdx(idx - 1)} className="rounded-[12px] border-2 border-line px-3 py-1.5 text-sm font-bold text-ink hover:bg-surface-muted">이전</button>}
             {!last ? (
               <button onClick={() => setIdx(idx + 1)} disabled={!done}
                 className="rounded-[12px] bg-primary-500 px-4 py-1.5 text-sm font-bold text-white hover:bg-primary-600 disabled:opacity-40">다음 발화 →</button>
             ) : (
-              <button onClick={load} className="rounded-[12px] bg-emerald-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-emerald-700">새 대화 ↻</button>
+              <button onClick={load} className="rounded-[12px] bg-good px-4 py-1.5 text-sm font-bold text-white hover:bg-good-dark">새 대화 ↻</button>
             )}
           </div>
         </div>

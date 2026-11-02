@@ -22,7 +22,7 @@ export default function VocalTract({ visemeId = 15, articulationRef = null, vtl 
     return (
       <div>
         <VocalTractVTL phoneme={phoneme} variant="dark" labels={false} fallback={<SchematicTract visemeId={visemeId} />} />
-        {KO[visemeId] && <p className="mt-0.5 text-center text-[10px] leading-none text-slate-400">{KO[visemeId]}</p>}
+        {KO[visemeId] && <p className="mt-0.5 text-center text-[10px] leading-none text-ink-caption">{KO[visemeId]}</p>}
       </div>
     )
   }

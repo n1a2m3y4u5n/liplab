@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { entranceMotion, UI_MOTION } from '../lib/uiMotion'
+export { default as Button } from './Button'
 
 const subscribe = (notify) => {
   const observer = new MutationObserver(notify)
@@ -37,11 +38,6 @@ export function Card({ children, className = '', as: Tag = 'div', ...props }) {
 
 export function Chip({ children, className = '', ...props }) {
   return <span {...props} className={`ui-chip ${className}`}>{children}</span>
-}
-
-export function Button({ children, tone = 'primary', className = '', ...props }) {
-  const style = { primary: 'btn-primary', secondary: 'btn-secondary', good: 'btn-good', bad: 'btn-bad' }[tone] || 'btn-secondary'
-  return <button type="button" {...props} className={`${style} ${className}`}>{children}</button>
 }
 
 /** 진행 막대만 움직인다. 검사에서는 animated=false로 즉시 갱신한다. */

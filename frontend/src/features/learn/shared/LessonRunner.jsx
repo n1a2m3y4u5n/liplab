@@ -16,14 +16,14 @@ import { getTrack } from '../../../config/tracks'
 export default function LessonRunner({ track: trackId, title, description, progress, onExit, footer, children }) {
   const navigate = useNavigate()
   const track = getTrack(trackId)
-  if (!track) return <p className="p-10 text-center text-sm text-slate-500">찾을 수 없는 학습이에요.</p>
+  if (!track) return <p className="p-10 text-center text-sm text-ink-muted">찾을 수 없는 학습이에요.</p>
 
   const percent = progress?.total > 0
     ? Math.min(100, Math.max(0, Math.round((progress.current / progress.total) * 100)))
     : null
 
   return (
-    <div className="lesson-runner min-h-[100dvh] bg-slate-50">
+    <div className="lesson-runner min-h-[100dvh] bg-surface-muted">
       <LearnHeader
         accent={track.accent}
         title={title || `${track.label} 레슨`}
@@ -33,26 +33,26 @@ export default function LessonRunner({ track: trackId, title, description, progr
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
         {percent != null && (
           <div className="mb-5">
-            <div className="flex items-center justify-between text-xs font-bold text-slate-500">
+            <div className="flex items-center justify-between text-xs font-bold text-ink-muted">
               <span>{progress.current} / {progress.total}</span>
               <span>{percent}%</span>
             </div>
             <div
-              className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-200"
+              className="mt-1.5 h-2 overflow-hidden rounded-full bg-fill-strong"
               role="progressbar"
               aria-label="레슨 진행"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={percent}
             >
-              <div className="h-full rounded-full bg-slate-900" style={{ width: `${percent}%` }} />
+              <div className="h-full rounded-full bg-surface-inverse" style={{ width: `${percent}%` }} />
             </div>
           </div>
         )}
 
         <section aria-label="레슨 내용">
           {children ?? (
-            <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-400">
+            <p className="rounded-2xl border border-dashed border-line-strong bg-white p-10 text-center text-sm text-ink-caption">
               레슨 콘텐츠가 들어갈 자리예요.
             </p>
           )}

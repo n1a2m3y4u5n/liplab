@@ -474,11 +474,11 @@ function historyRows(cal, acts) {
 const TRACK_CHIP = {
   read: { label: '독화', cls: 'bg-primary-100 text-primary-700' },
   speak: { label: '발화', cls: 'bg-speak-tint text-speak-dark' },
-  review: { label: '복습', cls: 'bg-blue-100 text-bookmark-dark' },
+  review: { label: '복습', cls: 'bg-bookmark-tint text-bookmark-dark' },
 }
 const isReview = (r) => r.kind === 'sentence' && /복습/.test(r.topic || '')
 // 정답률 색(§3.2 정답률 85/65 — lib/scoreTone의 판정) — 막대(329:58·60·66)와 % 글자(209:360·367·388)
-const ACC_BAR = { good: 'bg-green-500', warn: 'bg-warn', bad: 'bg-red-500' }
+const ACC_BAR = { good: 'bg-good', warn: 'bg-warn', bad: 'bg-bad' }
 const ACC_TEXT = { good: 'text-good-text', warn: 'text-warn-text', bad: 'text-bad-text' }
 // 날짜 칸 — Figma 209:22의 '오늘·어제·N일 전'. 원래 날짜는 툴팁으로 둔다.
 function relDay(iso) {
@@ -664,7 +664,7 @@ function SessionDetail({ row, onClose, onGo }) {
               <>
                 <Metric label="소리 점수" value={sm.sound != null ? Math.round(sm.sound) : null} cls="text-primary-500" />
                 <Divider />
-                <Metric label="입모양 점수" value={sm.mouth != null ? Math.round(sm.mouth) : null} cls="text-sky-500" />
+                <Metric label="입모양 점수" value={sm.mouth != null ? Math.round(sm.mouth) : null} cls="text-stat-level" />
                 <Divider />
                 {/* 융합 점수는 연구용 융합을 켠 기록에만 있다(9/24부터 입모양은 소리와 따로 보임) */}
                 {sm.fused != null && (
