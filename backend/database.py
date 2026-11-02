@@ -1000,3 +1000,15 @@ class FeedbackDaily(Base):
     kind = Column(String(12), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     __table_args__ = (UniqueConstraint('user_id', 'day', 'kind', name='uq_feedback_daily'),)
+
+
+class KmsavReview(Base):
+    """영상 파일 없이 영상별 검수 메타만 보관한다."""
+    __tablename__ = 'kmsav_reviews'
+    video_id = Column(String(11), primary_key=True)
+    source = Column(String(500), nullable=False)
+    license_label = Column(String(100), nullable=False)
+    evidence = Column(String(1000), nullable=False)
+    decision = Column(String(16), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)

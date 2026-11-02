@@ -307,6 +307,8 @@ from usage_events import router as usage_router
 app.include_router(usage_router)
 from feedback import router as feedback_router
 app.include_router(feedback_router)
+from kmsav_review import router as kmsav_review_router
+app.include_router(kmsav_review_router)
 
 # Authentication Endpoints
 # ============================================
