@@ -76,7 +76,7 @@ export default function QuizForm({
                 채점 중...
               </span>
             ) : (
-              '제출하기'
+              '확인'
             )}
           </button>
         )}

@@ -167,7 +167,7 @@ function ClosureQuiz({ items: incomingItems }) {
       <LessonComplete accuracy={accuracy} xp={xpEarned} elapsedSec={elapsedSec}
         onNext={endless ? () => navigate('/learn/word?endless=1') : restart}
         onHome={() => navigate(hubOf(endless))}
-        homeLabel={endless ? '엔드리스 학습으로' : '연습으로 돌아가기'}
+        homeLabel={endless ? '엔드리스 학습으로' : '자유 연습으로 돌아가기'}
         effort={{ lessonKind: 'closure', stage: 3, nItems: tally.n, accuracy: tally.n ? tally.correct / tally.n : null }} />
     )
   }

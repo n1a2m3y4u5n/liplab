@@ -559,7 +559,7 @@ export default function Practice() {
 
   return (
     <div className="min-h-[100dvh] bg-page">
-      <div className={`mx-auto flex w-full max-w-[676px] flex-col px-[18px] pt-[18px] lg:pt-7 ${multiple ? 'pb-[200px] lg:pb-[150px]' : 'pb-12'}`}>
+      <div className={`mx-auto flex w-full max-w-[676px] flex-col px-[18px] pt-[18px] lg:pt-7 ${multiple ? 'lesson-content pb-[200px] lg:pb-[150px]' : 'pb-12'}`}>
         {/* 진행 헤더(91:13 / 모바일 235:35) — 나가기 X + 트랙 + n / 전체 */}
         <div className="flex items-center gap-3 lg:gap-[18px]">
           <button type="button" onClick={handleFinish} aria-label="나가기" className="shrink-0">
@@ -701,7 +701,7 @@ export default function Practice() {
                       </p>
                     )}
                     <button type="button" onClick={handleNext} className="btn-primary w-full">
-                      {isLastSentence ? '마치기' : '다음 문장 →'}
+                      {isLastSentence ? '마치기' : '계속하기'}
                     </button>
                   </MotionPanel>
                 )}

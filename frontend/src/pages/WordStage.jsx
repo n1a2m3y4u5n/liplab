@@ -368,7 +368,7 @@ function WordQuiz({ data: incomingData, reload }) {
         <div className={LESSON_STACK}>
           {/* 질문 + 북마크(91:19 · 328:40 / 모바일 235:42 · 328:64) */}
           <div className="relative flex flex-col gap-1.5 pr-12 leading-figma lg:gap-2 lg:pr-[52px]">
-            <p className="text-[12px] font-bold text-track lg:text-[13px]">단어 독화{typed ? ' · 주관식' : isContext ? ' · 문맥' : ''}</p>
+            <p className="text-[12px] font-bold text-track lg:text-[13px]">입모양 읽기 · 단어{typed ? ' · 주관식' : isContext ? ' · 문맥' : ''}</p>
             <h1 className="text-[21px] font-bold tracking-[-0.525px] text-ink lg:text-[30px] lg:tracking-[-0.75px]">
               {typed ? '이 입모양은 어떤 단어일까요? 직접 적어 보세요' : isContext ? '빈칸에 들어갈 단어는 무엇일까요?' : '이 입모양은 어떤 단어일까요?'}
             </h1>

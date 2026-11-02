@@ -6,7 +6,7 @@
 // Tailwind가 클래스 이름을 읽어야 하므로 문자열을 조합하지 않고 통째로 적는다.
 
 // 본문 열. 모바일 아래 여백은 하단 바 높이(문제 98 / 결과 ~160)에 맞춰 lessonPad로 붙인다.
-export const LESSON_COL = 'mx-auto flex w-full max-w-[676px] flex-col px-[18px] pt-[18px] lg:pb-[130px] lg:pt-7 lg:[@media(max-height:860px)]:pt-5'
+export const LESSON_COL = 'lesson-content mx-auto flex w-full max-w-[676px] flex-col px-[18px] pt-[18px] lg:pb-[130px] lg:pt-7 lg:[@media(max-height:860px)]:pt-5'
 
 // 결과 메시지가 뜨면 모바일 하단 바가 높아지므로 그때만 여백을 늘린다.
 export const lessonPad = (tall) => (tall ? 'pb-[200px]' : 'pb-[120px]')
