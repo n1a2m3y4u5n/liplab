@@ -307,6 +307,12 @@ from usage_events import router as usage_router
 app.include_router(usage_router)
 from feedback import router as feedback_router
 app.include_router(feedback_router)
+from kmsav_review import router as kmsav_review_router
+app.include_router(kmsav_review_router)
+from real_face_probe import router as real_face_probe_router
+app.include_router(real_face_probe_router)
+from av_comparison import router as av_comparison_router
+app.include_router(av_comparison_router)
 
 # Authentication Endpoints
 # ============================================
@@ -3720,7 +3726,7 @@ def _admin_email_gate(user):
         raise HTTPException(status_code=403, detail="운영자 계정만 파일럿 자료를 내보낼 수 있습니다.")
 
 
-PILOT_EXPORT_VERSION = 7   # 7(10/7 밤): 날마다 학습량(reading_days, listen.days: 시행 수와 분, 용량·준수 분석), P3 SNR 계단 추정 방식·반전 수
+PILOT_EXPORT_VERSION = 8   # 8(11/02): 전이 탐침·소음 속 세 조건 비교. 경로·답 원문 없이 판본·조건·채점 수·반응 시간만.
 #   (battery[].snr_estimate_kind·snr_reversals, SNR 실패 제외 규칙), 유지 검사 예정(battery_schedule). docs/pilot/log-spec-audit-2026-10-07.md
 #   소리 듣기 연습 탭·복습 탭 답은 listen.practice_by_mode(session 'practice:*')로 따로 싣고 trials_by_stage에 넣지 않는다.
 # 6(10/7): 소리 듣기(listen: 검사 역치·잡음·모의 청취, 낱말 일반화 검사, 단계별 시행 수, trials=true면 시행 기록).
@@ -3932,6 +3938,7 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
 
     import assessment as _asmt
     profs = (await db.execute(select(LearningProfile).where(LearningProfile.pilot_code.is_not(None)))).scalars().all()
+    from transfer_export import export_transfer
     rows = []
     for pf in profs:
         uid = pf.user_id
@@ -3964,6 +3971,7 @@ async def pilot_export(tz_offset_min: int = -540, trials: bool = False, current_
             "reading_days": await reading_days(uid),
             "listen": await listen_export(uid, trials),
             "battery": await battery(uid),
+            "transfer": await export_transfer(db, uid, tz),
             # 유지 검사(R) 예정과 상태(B를 마친 날 + LIPLAB_RETENTION_DAYS). 날짜만
             "battery_schedule": _battery_retention_schedule(await _battery_rows(uid, db)),
             **(await measurement(uid)),

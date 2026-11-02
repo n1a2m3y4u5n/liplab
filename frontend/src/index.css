@@ -6,6 +6,10 @@
    캡션·버튼은 AA 대비에 맞게 보정하고 트랙별 색상 구분을 유지한다.
    클래스로 못 쓰는 곳(인라인 style·SVG·그라데이션)에서 var(--…)로 쓴다. */
 :root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
   --brand: #7446ce;         /* brand/primary */
   --brand-dark: #5f3ab8;    /* brand/primary-dark (3D 하단테두리) */
   --brand-tint: #efe9fc;    /* brand/primary-tint (활성 배경) */
@@ -456,4 +460,8 @@ html.a11y-contrast [data-track="listen"] .bg-fill { background-color: var(--line
 input::placeholder, textarea::placeholder {
   color: var(--ink-faint);
   opacity: 1;
+}
+
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: max(16px, 1em); }
 }

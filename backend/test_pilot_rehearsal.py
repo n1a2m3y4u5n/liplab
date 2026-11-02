@@ -69,7 +69,7 @@ def test_rehearsal_all_checks_and_fields_pass():
 
 def test_rehearsal_missing_media_path_and_battery_rows():
     ex = _rehearsal()["ex"]
-    assert ex["version"] == 7 and ex["n"] == 5
+    assert ex["version"] == 8 and ex["n"] == 5
     rows = [b for p in ex["participants"] for b in p["battery"]]
     word = [b for b in rows if b["layer"] == "word"]
     # 낱말 영상은 한 문항 건너 하나만 있다: 준비 12, 영상 준비 전 12. 응답은 준비된 문항에만

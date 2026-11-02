@@ -122,7 +122,7 @@ export default function PilotBattery() {
 }
 
 // ── 층 하나 진행 ───────────────────────────────────────
-function LayerRunner({ run, checks, onExit }) {
+export function LayerRunner({ run, checks, onExit, transport = batteryAPI }) {
   const maxPlays = run.playback?.max_plays || 2
   const [items, setItems] = useState(run.items)
   const q = useMemo(() => queueOf(items), [items])
@@ -143,18 +143,18 @@ function LayerRunner({ run, checks, onExit }) {
     setErr(null)
     const renderMode = usedVideo && usedAvatar ? 'mixed' : usedVideo ? 'video' : (webgl ? 'avatar3d' : 'avatar2d_fallback')
     try {
-      setSummary(await batteryAPI.finish({
+      setSummary(await transport.finish({
         session_id: run.session_id,
         render_log: buildRenderLog({ video: videoQ.current, renderMode, webgl }),
         ...(run.layer === 'av' || run.layer === 'snr' ? { headphone_check: checks.headphone, volume_fixed: checks.volume } : {}),
       }))
     } catch (e) { setErr(e?.response?.data?.detail || '검사 마치기를 보내지 못했어요. 다시 눌러 주세요.') }
-  }, [run, checks, usedVideo, usedAvatar, webgl])
+  }, [run, checks, usedVideo, usedAvatar, webgl, transport])
 
   const submit = async (body) => {
     setErr(null)
     try {
-      const r = await batteryAPI.answer({ session_id: run.session_id, item_id: item.id, ...body })
+      const r = await transport.answer({ session_id: run.session_id, item_id: item.id, ...body })
       if (r.staircase) setStair(r.staircase)
       setItems((xs) => xs.map((x) => (x.id === item.id ? { ...x, answered: true } : x)))
       return true
