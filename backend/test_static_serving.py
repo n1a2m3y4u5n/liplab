@@ -25,7 +25,7 @@ def _client(tmp_path):
     (dist / "models" / "m.onnx").write_bytes(_ONNX)
     (tmp_path / "secret.txt").write_text("nope", encoding="utf-8")
     made = S.precompress(str(dist))
-    app = FastAPI()
+    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
     @app.get("/api/ping")
     async def ping():
@@ -92,6 +92,8 @@ def test_spa_routes_missing_files_and_api(tmp_path):
     assert c.get("/sw.js").headers["cache-control"] == S.CACHE_REVALIDATE
     assert c.get("/models/missing.onnx").status_code == 404, "없는 파일에 index.html을 200으로 주면 서비스워커가 캐시한다"
     assert c.get("/api/nope").status_code == 404
+    for path in ("/docs", "/docs/", "/redoc", "/openapi.json", "/docs/oauth2-redirect"):
+        assert c.get(path).status_code == 404
     assert c.get("/api/ping").json() == {"ok": True}
     assert c.get("/%2e%2e/secret.txt").status_code == 404
 

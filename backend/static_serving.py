@@ -95,7 +95,7 @@ def mount_frontend(app, dist: str) -> None:
     @app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     async def serve_react_app(full_path: str, request: Request):
         """API가 아닌 경로: dist의 파일, 없으면 SPA 라우팅용 index.html."""
-        if full_path.startswith("api/"):
+        if full_path.startswith("api/") or full_path.rstrip("/") in {"docs", "redoc", "openapi.json", "docs/oauth2-redirect"}:
             raise HTTPException(status_code=404, detail="API endpoint not found")
         # full_path는 사용자 제어이므로 dist 밖으로 벗어나는 경로(../ 등)는 막는다(dist 밖 .env·DB 노출 방지).
         file_path = os.path.realpath(os.path.join(dist, full_path))
