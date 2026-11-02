@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import { authAPI, reviewAPI, learningAPI, tasksAPI } from '../api'
 import { dueCounts, dueStartPath, mistakeCount } from '../lib/reviewDue'
 import Logo from './Logo'
+import { Progress } from './UI'
 import { levelProgress } from '../lib/level'
 
 /**
@@ -184,9 +185,7 @@ export function RailLevelCard() {
           <p className="text-ink-muted">다음 레벨까지</p>
           <p className="text-track">{p.remaining.toLocaleString()} 경험치 남음</p>
         </div>
-        <div className="h-[12px] overflow-hidden rounded-full bg-fill">
-          <div className="h-full rounded-full bg-track" style={{ width: `${p.pct}%` }} />
-        </div>
+        <Progress value={p.pct} label="레벨 진행" animated className="flex-none" />
       </div>
     </div>
   )
@@ -220,7 +219,7 @@ export function RailWeekCard({ activeDays }) {
             {d.done
               ? <img src="/ui/review-daydone.svg" alt="" className="size-[30px]" />
               : <span className="size-[30px] rounded-full bg-fill" />}
-            <span className={`text-[12px] font-bold leading-figma ${d.done ? 'text-track' : 'text-ink-muted opacity-60'}`}>{d.label}</span>
+            <span className={`text-[12px] font-bold leading-figma ${d.done ? 'text-track' : 'text-ink-muted'}`}>{d.label}</span>
           </div>
         ))}
       </div>
@@ -294,7 +293,7 @@ function MobileTopBar({ pink }) {
         <Stat icon="/ui/stat-flame.svg" box={17} value={streak} className="gap-1 text-[14px] text-stat-streak" />
         <Stat icon="/ui/lp-232-48-star.svg" box={15} w={14.27} h={13.57} value={xp.toLocaleString()} className="gap-1 text-[14px] text-stat-xp" />
         <button type="button" onClick={() => window.dispatchEvent(new Event('liplab:a11y-toggle'))} aria-label="접근성 설정"
-          className="grid size-[30px] shrink-0 place-items-center rounded-full bg-slate-900 text-[12px] font-bold tracking-tight text-white">
+          className="grid size-[30px] shrink-0 place-items-center rounded-full bg-surface-inverse text-[12px] font-bold tracking-tight text-white">
           Aa
         </button>
         <button type="button" onClick={() => navigate('/profile')} aria-label="프로필" className="shrink-0 rounded-full">

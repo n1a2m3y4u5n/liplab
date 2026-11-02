@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { MotionPanel } from './UI'
 
 /**
  * 3단계 문장 주관식의 자음 피드백(계획 C9). 첫 답이 합격선 아래일 때 정답 문장 대신 보인다.
@@ -17,7 +17,7 @@ export default function ConsonantFeedback({ feedback, hint = null, tone = 'warn'
   if (words.length === 0) return null
   const t = TONE[tone] || TONE.warn
   return (
-    <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+    <MotionPanel
       className={`rounded-16 border-2 p-4 ${t.box}`} role="status" aria-live="polite">
       <p className={`text-[15px] font-bold ${t.title}`}>{title || (
         feedback.correct_words > 0 ? `${feedback.total_words}낱말 중 ${feedback.correct_words}낱말을 맞혔어요` : '조금 더 볼까요?')}
@@ -38,6 +38,6 @@ export default function ConsonantFeedback({ feedback, hint = null, tone = 'warn'
           </span>
         )))}
       </div>
-    </motion.div>
+    </MotionPanel>
   )
 }

@@ -48,15 +48,15 @@ function WeightTable({ id }) {
   return (
     <div style={{ fontFamily: 'monospace', fontSize: 12, lineHeight: 1.6 }}>
       {entries.length === 0 ? (
-        <span style={{ color: '#94a3b8' }}>(rest — 모프 없음)</span>
+        <span style={{ color: 'var(--ink-faint)' }}>(rest — 모프 없음)</span>
       ) : (
         entries.map(([k, val]) => (
           <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 150, color: '#334155' }}>{k}</span>
-            <div style={{ flex: 1, background: '#e2e8f0', borderRadius: 4, height: 8, maxWidth: 160 }}>
-              <div style={{ width: `${val * 100}%`, background: '#6366f1', height: 8, borderRadius: 4 }} />
+            <span style={{ width: 150, color: 'var(--ink)' }}>{k}</span>
+            <div style={{ flex: 1, background: 'var(--line)', borderRadius: 4, height: 8, maxWidth: 160 }}>
+              <div style={{ width: `${val * 100}%`, background: 'var(--brand)', height: 8, borderRadius: 4 }} />
             </div>
-            <span style={{ width: 36, textAlign: 'right', color: '#475569' }}>{val.toFixed(2)}</span>
+            <span style={{ width: 36, textAlign: 'right', color: 'var(--ink-muted)' }}>{val.toFixed(2)}</span>
           </div>
         ))
       )}
@@ -67,22 +67,22 @@ function WeightTable({ id }) {
 function Cell({ id, big }) {
   const size = big ? 420 : 200
   return (
-    <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
-      <div style={{ padding: '8px 12px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+    <div style={{ border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden', background: 'var(--surface)' }}>
+      <div style={{ padding: '8px 12px', background: 'var(--page)', borderBottom: '1px solid var(--line)' }}>
         <div style={{ fontWeight: 700, fontSize: big ? 18 : 13 }}>#{id} — {VISEME_LABELS[id]}</div>
       </div>
       <div style={{ display: 'flex', gap: 0 }}>
         {/* 3D */}
-        <div style={{ width: size, height: size, background: 'linear-gradient(#1e293b,#0f172a)' }}>
+        <div style={{ width: size, height: size, background: 'linear-gradient(var(--ink),var(--ink))' }}>
           <AvatarVRM visemeId={id} />
         </div>
         {/* 2D fallback */}
-        <div style={{ width: size, height: size, borderLeft: '1px solid #e2e8f0' }}>
+        <div style={{ width: size, height: size, borderLeft: '1px solid var(--line)' }}>
           <MouthFallback2D visemeId={id} />
         </div>
       </div>
       {big && (
-        <div style={{ padding: 12, borderTop: '1px solid #e2e8f0' }}>
+        <div style={{ padding: 12, borderTop: '1px solid var(--line)' }}>
           <WeightTable id={id} />
         </div>
       )}
@@ -103,10 +103,10 @@ export default function DevViseme() {
   const isAll = v === 'all'
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f1f5f9', padding: 24 }}>
+    <div style={{ minHeight: '100vh', background: 'var(--page)', padding: 24 }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>LIPLAB · Viseme 검사기</h1>
-        <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>
+        <p style={{ color: 'var(--ink-muted)', fontSize: 13, marginBottom: 16 }}>
           왼쪽 = 3D(realistic_face.glb), 오른쪽 = 2D SVG 폴백. 두 표현이 같은 조음을 나타내야 한다.
         </p>
 
@@ -118,9 +118,9 @@ export default function DevViseme() {
               onClick={() => setV(id)}
               style={{
                 padding: '6px 10px', borderRadius: 8, fontSize: 13, cursor: 'pointer',
-                border: '1px solid ' + (v === id ? '#4f46e5' : '#cbd5e1'),
-                background: v === id ? '#4f46e5' : '#fff',
-                color: v === id ? '#fff' : '#334155', fontWeight: v === id ? 700 : 400,
+                border: '1px solid ' + (v === id ? 'var(--brand)' : 'var(--line)'),
+                background: v === id ? 'var(--brand)' : 'var(--surface)',
+                color: v === id ? 'var(--surface)' : 'var(--ink)', fontWeight: v === id ? 700 : 400,
               }}
             >
               {id}
@@ -130,8 +130,8 @@ export default function DevViseme() {
             onClick={() => setV('all')}
             style={{
               padding: '6px 12px', borderRadius: 8, fontSize: 13, cursor: 'pointer',
-              border: '1px solid ' + (isAll ? '#4f46e5' : '#cbd5e1'),
-              background: isAll ? '#4f46e5' : '#fff', color: isAll ? '#fff' : '#334155',
+              border: '1px solid ' + (isAll ? 'var(--brand)' : 'var(--line)'),
+              background: isAll ? 'var(--brand)' : 'var(--surface)', color: isAll ? 'var(--surface)' : 'var(--ink)',
               fontWeight: isAll ? 700 : 400,
             }}
           >

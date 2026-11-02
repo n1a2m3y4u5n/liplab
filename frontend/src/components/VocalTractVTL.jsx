@@ -140,7 +140,7 @@ export default function VocalTractVTL({
     return fallback || <div className={`rounded-lg bg-surface-muted p-3 text-xs text-ink-faint ${className}`}>성도 옆모습을 가져오지 못했어요.</div>
   }
   if (status === 'loading' || !main) {
-    return <div className={`w-full animate-pulse rounded-lg ${dark ? 'bg-slate-800/60' : 'bg-surface-muted'} ${className}`}
+    return <div className={`w-full animate-pulse rounded-lg ${dark ? 'bg-surface-inverse-muted/60' : 'bg-surface-muted'} ${className}`}
       style={{ aspectRatio: `${VIEW.w} / ${VIEW.h}` }} aria-busy="true" />
   }
   return (

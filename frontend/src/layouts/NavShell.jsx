@@ -18,7 +18,7 @@ export default function NavShell() {
   const { pathname } = useLocation()
 
   return (
-    <nav aria-label="주요 메뉴" className="border-b border-slate-200 bg-white">
+    <nav aria-label="주요 메뉴" className="border-b border-line bg-white">
       <ul className="mx-auto flex max-w-[1440px] gap-1 overflow-x-auto px-2 sm:px-6">
         {NAV_ITEMS.map((item) => {
           const current = item.match.some((base) => isUnder(pathname, base))
@@ -27,7 +27,7 @@ export default function NavShell() {
               <Link
                 to={item.to}
                 aria-current={current ? 'page' : undefined}
-                className={`block border-b-2 px-4 py-2 text-sm font-bold ${current ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+                className={`block border-b-2 px-4 py-2 text-sm font-bold ${current ? 'border-bookmark text-stat-level' : 'border-transparent text-ink-muted hover:text-ink'}`}
               >
                 {item.label}
               </Link>

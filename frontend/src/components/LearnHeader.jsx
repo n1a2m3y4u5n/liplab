@@ -3,13 +3,13 @@ import { useLayoutEffect, useRef, useState } from 'react'
 // 학습 화면 상단 헤더 — 기둥(독화·말하기)별 단색 배경을 입히고,
 // '나가기'에 마우스를 올리면 그 글자 위치에서 붉은 물감이 퍼지듯 헤더를 덮는다.
 const HEADER_ACCENTS = {
-  reading: '#fef3c7',   // 독화 (연한 노랑)
-  speaking: '#ffe4e6',  // 말하기 (연한 로즈)
-  etc: '#e2e8f0',       // 기타(수어·분석 등, 연한 슬레이트)
+  reading: 'var(--warn-tint)',   // 독화 (연한 노랑)
+  speaking: 'var(--speak-tint)',  // 말하기 (연한 로즈)
+  etc: 'var(--fill-strong)',       // 기타(수어·분석 등, 연한 슬레이트)
 }
 
 // 나가기 호버 시 덮이는 붉은 물감 — 연한 단색 레드
-const RED_COLOR = '#fca5a5'
+const RED_COLOR = 'var(--bad-on-dark)'
 
 export default function LearnHeader({ title, description, accent = 'reading', onExit, maxWidth = 'max-w-5xl' }) {
   const [exitHover, setExitHover] = useState(false)
@@ -40,7 +40,7 @@ export default function LearnHeader({ title, description, accent = 'reading', on
   }, [])
 
   return (
-    <header ref={headerRef} className="relative overflow-hidden border-b border-slate-200" style={{ backgroundColor: bgColor }}>
+    <header ref={headerRef} className="relative overflow-hidden border-b border-line" style={{ backgroundColor: bgColor }}>
       {/* 나가기 호버 시 그 글자 위치에서 붉은 물감이 퍼진다 */}
       <div
         aria-hidden="true"
@@ -52,8 +52,8 @@ export default function LearnHeader({ title, description, accent = 'reading', on
       />
       <div className={`relative ${maxWidth} mx-auto flex items-center justify-between gap-4 px-4 py-4 sm:px-6`}>
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-          <p className="text-sm text-slate-700">{description}</p>
+          <h1 className="text-2xl font-bold text-ink">{title}</h1>
+          <p className="text-sm text-ink">{description}</p>
         </div>
         <button
           ref={btnRef}
@@ -61,7 +61,7 @@ export default function LearnHeader({ title, description, accent = 'reading', on
           onClick={onExit}
           onMouseEnter={() => setExitHover(true)}
           onMouseLeave={() => setExitHover(false)}
-          className={`shrink-0 text-sm font-bold transition-colors ${exitHover ? 'text-red-900' : 'text-slate-600 hover:text-slate-900'}`}
+          className={`shrink-0 text-sm font-bold transition-colors ${exitHover ? 'text-bad-dark' : 'text-ink-muted hover:text-ink'}`}
         >
           ✕ 나가기
         </button>

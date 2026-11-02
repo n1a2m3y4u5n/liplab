@@ -1,7 +1,7 @@
 import { requestTrackedMedia, startUsage, endUsage } from '../lib/track'
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { MotionPanel } from '../components/UI'
 import { curriculumAPI, learningAPI, speakAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
 import BookmarkButton from '../components/BookmarkButton'
@@ -718,7 +718,7 @@ export default function SpeakingPractice() {
                     {mirrorOn ? '웹캠 끄기' : '웹캠으로 내 입모양 보기'}
                   </button>
                   {mirrorOn && (
-                    <div className="mt-2 overflow-hidden rounded-14 bg-slate-900">
+                    <div className="mt-2 overflow-hidden rounded-14 bg-surface-inverse">
                       <video ref={attachVideo} autoPlay muted playsInline
                         className="w-full" style={{ transform: 'scaleX(-1)', maxHeight: 220, objectFit: 'cover' }} />
                       <p className="py-1 text-center text-[11px] text-white/70">거울처럼 좌우 반전 · 위 아바타 입모양과 내 입을 나란히 비교해보세요</p>
@@ -761,7 +761,7 @@ export default function SpeakingPractice() {
               </>
             ) : (
               /* 발음 결과(176:36 560×320 / 모바일 237:50) — 점수 + 음소 칩(§3.2) + 자세히 보기 */
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              <MotionPanel
                 className="mx-auto flex w-full max-w-[560px] flex-col items-center gap-3.5 rounded-18 border-2 border-line bg-white px-4 py-[18px] lg:gap-0 lg:rounded-22 lg:px-6 lg:py-[30px]">
                 <div className="flex flex-col items-center gap-0.5 font-bold leading-figma lg:gap-1">
                   <p className={`text-[44px] tracking-[-1.32px] lg:text-[52px] lg:tracking-[-1.56px] ${scoreTone(scoreNum, 'phone').text}`}>
@@ -801,7 +801,7 @@ export default function SpeakingPractice() {
                   className="btn-secondary rounded-[12px] border-b-4 px-[26px] py-3 text-[14px] lg:mt-[30px] lg:rounded-14 lg:border-b-5 lg:px-[30px] lg:py-[15px] lg:text-[16px]">
                   자세히 보기
                 </button>
-              </motion.div>
+              </MotionPanel>
             )}
           </div>
           )}

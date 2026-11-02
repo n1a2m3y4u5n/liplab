@@ -101,7 +101,7 @@ function ListenPanel({ item, lip, settings, voices, voiceList, active }) {
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <button type="button" onClick={playAlt} disabled={!ready || player.busy} className="btn-primary py-3 text-[15px] disabled:cursor-not-allowed disabled:border-inactive-line disabled:bg-inactive disabled:text-inactive-text">
-          번갈아 듣기 <span className="font-normal opacity-80">· A B A B</span>
+          번갈아 듣기 <span className="font-normal">· A B A B</span>
         </button>
         <button type="button" onClick={playVoices} disabled={a.state !== 'ready' || player.busy || train.length < 2} className="btn-secondary py-3 text-[15px] text-track-dark">
           같은 말, 다른 목소리

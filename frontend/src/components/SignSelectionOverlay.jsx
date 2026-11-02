@@ -99,20 +99,20 @@ export default function SignSelectionOverlay() {
             className="w-full max-w-2xl h-full bg-white shadow-2xl overflow-y-auto outline-none animate-[slideIn_.2s_ease]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between">
+            <div className="sticky top-0 bg-white border-b border-line px-5 py-3 flex items-center justify-between">
               <div className="min-w-0">
-                <p className="text-xs text-gray-400">이 문장을 수어로</p>
-                <p className="font-bold text-gray-900 truncate">{modalText}</p>
+                <p className="text-xs text-ink-caption">이 문장을 수어로</p>
+                <p className="font-bold text-ink truncate">{modalText}</p>
               </div>
               <button
                 onClick={() => setModalText(null)}
-                className="ml-3 shrink-0 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-lg"
+                className="ml-3 shrink-0 px-3 py-1.5 text-sm text-ink-muted hover:text-ink border border-line rounded-lg"
               >
                 닫기 ✕
               </button>
             </div>
             <div className="p-5">
-              <Suspense fallback={<div className="py-14 text-center text-gray-500 text-sm">가져오는 중…</div>}>
+              <Suspense fallback={<div className="py-14 text-center text-ink-muted text-sm">가져오는 중…</div>}>
                 <SignPanel text={modalText} />
               </Suspense>
             </div>
@@ -130,13 +130,13 @@ export default function SignSelectionOverlay() {
               <span className="icon-chip mx-auto mb-2 bg-pastel-mint" aria-hidden>
                 <img src="/ui/card-sign.svg" alt="" className="size-6" />
               </span>
-              <h3 className="text-lg font-bold text-gray-900">수어 번역, 이렇게 써요</h3>
-              <p className="text-sm text-gray-500 mt-1">어느 화면에서든 문장을 수어로 바꿔볼 수 있어요.</p>
+              <h3 className="text-lg font-bold text-ink">수어 번역, 이렇게 써요</h3>
+              <p className="text-sm text-ink-muted mt-1">어느 화면에서든 문장을 수어로 바꿔볼 수 있어요.</p>
             </div>
 
             {/* 미니 시연 */}
-            <div className="relative bg-gray-50 border border-gray-100 rounded-xl px-4 pt-5 pb-4 mb-4">
-              <p className="text-sm text-gray-700 leading-relaxed">
+            <div className="relative bg-surface-muted border border-line rounded-xl px-4 pt-5 pb-4 mb-4">
+              <p className="text-sm text-ink leading-relaxed">
                 오늘 날씨가 <span className="bg-primary-200/80 rounded px-0.5">참 좋네요</span>
               </p>
               <span className="absolute right-4 top-1 px-2.5 py-1 rounded-full bg-primary-600 text-white text-xs font-semibold shadow">수어로 보기</span>
@@ -150,7 +150,7 @@ export default function SignSelectionOverlay() {
               ].map(([n, t]) => (
                 <li key={n} className="flex gap-2.5 items-start">
                   <span className="shrink-0 w-5 h-5 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center mt-0.5">{n}</span>
-                  <span className="text-sm text-gray-600">{t}</span>
+                  <span className="text-sm text-ink-muted">{t}</span>
                 </li>
               ))}
             </ol>

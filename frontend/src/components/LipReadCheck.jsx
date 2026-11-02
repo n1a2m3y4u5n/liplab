@@ -166,12 +166,12 @@ export default function LipReadCheck({ target, candidates = [] }) {
 
   const hit = result?.matched && target && result.matched === target
   return (
-    <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-3">
+    <div className="rounded-xl border border-primary-line bg-primary-100/40 p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-sm font-bold text-violet-900">기계가 내 입모양 읽기 <span className="font-normal text-violet-500">{copy.tag}</span></h4>
-        <span className="text-[10px] text-gray-400">영상은 기기 안에서만 처리</span>
+        <h4 className="text-sm font-bold text-primary-700">기계가 내 입모양 읽기 <span className="font-normal text-primary-700">{copy.tag}</span></h4>
+        <span className="text-[10px] text-ink-caption">영상은 기기 안에서만 처리</span>
       </div>
-      <div className="relative overflow-hidden rounded-lg bg-gray-900" style={{ aspectRatio: '4/3' }}>
+      <div className="relative overflow-hidden rounded-lg bg-surface-inverse" style={{ aspectRatio: '4/3' }}>
         <video ref={videoRef} muted playsInline className="h-full w-full -scale-x-100 object-cover" />
         {status === 'recording' && (
           <div className="absolute inset-x-0 top-0 flex items-center justify-center gap-1.5 bg-rose-600/90 py-1 text-xs font-bold text-white">
@@ -189,21 +189,21 @@ export default function LipReadCheck({ target, candidates = [] }) {
       </div>
 
       {result && status === 'done' && (
-        <div className="mt-2 rounded-lg border border-violet-100 bg-white p-2.5">
+        <div className="mt-2 rounded-lg border border-primary-line bg-white p-2.5">
           {result.matched ? (
             <p className="text-center text-sm">
-              기계가 읽은 단어: <b className={hit ? 'text-emerald-600' : 'text-violet-800'}>“{result.matched}”</b>
-              {target && <span className={`ml-2 text-xs font-bold ${hit ? 'text-emerald-600' : 'text-rose-500'}`}>{hit ? '목표와 일치 ✓' : `목표: ${target}`}</span>}
+              기계가 읽은 단어: <b className={hit ? 'text-good-dark' : 'text-primary-700'}>“{result.matched}”</b>
+              {target && <span className={`ml-2 text-xs font-bold ${hit ? 'text-good-dark' : 'text-rose-500'}`}>{hit ? '목표와 일치 ✓' : `목표: ${target}`}</span>}
             </p>
           ) : (
-            <p className="text-center text-sm text-gray-600">읽은 자모: <b className="text-violet-800">{result.jamo || '(불명확)'}</b></p>
+            <p className="text-center text-sm text-ink-muted">읽은 자모: <b className="text-primary-700">{result.jamo || '(불명확)'}</b></p>
           )}
           {result.ranked?.length > 1 && (
-            <p className="mt-1 text-center text-[11px] text-gray-400">
+            <p className="mt-1 text-center text-[11px] text-ink-caption">
               후보 근접순: {result.ranked.slice(0, 3).map((r) => r.word).join(' · ')}
             </p>
           )}
-          <p className="mt-1 text-center text-[10px] text-gray-400">{copy.note}</p>
+          <p className="mt-1 text-center text-[10px] text-ink-caption">{copy.note}</p>
         </div>
       )}
 
@@ -211,12 +211,12 @@ export default function LipReadCheck({ target, candidates = [] }) {
         {status === 'idle' || status === 'loading' || status === 'error' ? (
           // 카메라·모델 오류 뒤에도 다시 켜 볼 수 있다. 받는 중·권한 창 대기 중에만 막는다
           <button type="button" onClick={startCam} disabled={status === 'loading' || starting}
-            className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-bold text-white hover:bg-slate-700 disabled:opacity-40">
+            className="rounded-lg bg-surface-inverse px-4 py-1.5 text-sm font-bold text-white hover:bg-surface-inverse-muted disabled:opacity-40">
             카메라 켜기
           </button>
         ) : (
           <button type="button" onClick={record} disabled={status === 'recording' || status === 'thinking'}
-            className="rounded-lg bg-violet-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50">
+            className="rounded-lg bg-primary-500 px-4 py-1.5 text-sm font-bold text-white hover:bg-primary-700 disabled:opacity-50">
             {status === 'recording' ? '읽는 중…' : status === 'done' ? '다시 읽히기' : `“${target}” 읽히기`}
           </button>
         )}

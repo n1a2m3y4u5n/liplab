@@ -16,10 +16,10 @@ export default function ActivityCalendar({ data }) {
   }, [data])
 
   const getColor = (count) => {
-    if (count === 0) return 'bg-gray-100'
-    if (count <= 2)  return 'bg-green-200'
-    if (count <= 5)  return 'bg-green-400'
-    return 'bg-green-600'
+    if (count === 0) return 'bg-surface-sunken'
+    if (count <= 2)  return 'bg-good-line'
+    if (count <= 5)  return 'bg-good'
+    return 'bg-good'
   }
 
   // 7행 열 배열로 변환 (일요일 시작)
@@ -41,9 +41,9 @@ export default function ActivityCalendar({ data }) {
           )
         )}
       </div>
-      <div className="flex items-center gap-1 mt-2 text-xs text-gray-400">
+      <div className="flex items-center gap-1 mt-2 text-xs text-ink-caption">
         <span>적음</span>
-        {['bg-gray-100','bg-green-200','bg-green-400','bg-green-600'].map(c => (
+        {['bg-surface-sunken','bg-good-line','bg-good','bg-good'].map(c => (
           <div key={c} className={`w-3 h-3 rounded-sm ${c}`} />
         ))}
         <span>많음</span>

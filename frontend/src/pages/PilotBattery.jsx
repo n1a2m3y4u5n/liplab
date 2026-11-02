@@ -251,7 +251,7 @@ function ItemView({ run, item, maxPlays, audio, snrDb, onVideoQuality, onSubmit 
   const hidden = item.modality === 'A' || run.layer === 'snr'   // 청각만: 영상은 가리고 소리만
   return (
     <section className="flex flex-col gap-4 rounded-16 border-2 border-line bg-white px-4 py-4 lg:px-6">
-      <div className="relative overflow-hidden rounded-14 bg-[#1a1a2e]" style={{ height: 300 }}>
+      <div className="relative overflow-hidden rounded-14 bg-surface-inverse" style={{ height: 300 }}>
         {item.frames ? (
           <LipSyncPlayer3D visemes={item.frames} isPlaying={playing} onComplete={onEnd} showControls={false} stageHeight={300}
             onFrameChange={(f) => { if (f.index === 0 && !f.completed) onStart() }} />
@@ -380,8 +380,8 @@ function VideoStim({ item, playing, hidden, audio, snrDb, onStart, onEnd, onQual
     <>
       <video ref={ref} src={url} playsInline preload="auto" muted={!needsAudio} onPlaying={onStart} onEnded={ended}
         className="h-full w-full object-contain" />
-      {hidden && <div className="absolute inset-0 flex items-center justify-center bg-[#1a1a2e] text-[15px] font-bold text-white/80">소리만 들어요</div>}
-      {noNoise && <div role="alert" className="absolute inset-0 flex items-center justify-center bg-[#1a1a2e] px-4 text-center text-[14px] font-bold text-white">잡음을 틀지 못해 재생하지 않았어요. 연구진에게 알려 주세요.</div>}
+      {hidden && <div className="absolute inset-0 flex items-center justify-center bg-surface-inverse text-[15px] font-bold text-white/80">소리만 들어요</div>}
+      {noNoise && <div role="alert" className="absolute inset-0 flex items-center justify-center bg-surface-inverse px-4 text-center text-[14px] font-bold text-white">잡음을 틀지 못해 재생하지 않았어요. 연구진에게 알려 주세요.</div>}
     </>
   )
 }

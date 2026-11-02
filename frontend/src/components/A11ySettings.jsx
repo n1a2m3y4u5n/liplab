@@ -94,7 +94,7 @@ export default function A11ySettings() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label="접근성 설정 열기"
-        className={`fixed bottom-[calc(var(--tabbar-h)+16px+env(safe-area-inset-bottom))] left-4 z-40 h-11 w-11 print:!hidden place-items-center rounded-full bg-slate-900 text-white shadow-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 lg:bottom-4 lg:grid ${hideMobile ? 'hidden' : 'grid'}`}
+        className={`fixed bottom-[calc(var(--tabbar-h)+16px+env(safe-area-inset-bottom))] left-4 z-40 h-11 w-11 print:!hidden place-items-center rounded-full bg-surface-inverse text-white shadow-lg hover:bg-surface-inverse-muted focus:outline-none focus:ring-2 focus:ring-bookmark-line lg:bottom-4 lg:grid ${hideMobile ? 'hidden' : 'grid'}`}
         title="접근성 설정"
       >
         {/* 글자·화면 표시 설정 — 이모지 대신 글자 표시 */}
@@ -102,21 +102,21 @@ export default function A11ySettings() {
       </button>
       {open && (
         <div role="dialog" aria-label="접근성 설정"
-          className={`fixed z-40 w-64 rounded-2xl border border-gray-200 bg-white p-3 shadow-xl lg:bottom-16 lg:left-4 lg:right-auto lg:top-auto ${inShell ? 'right-4 top-[64px]' : 'bottom-[calc(var(--tabbar-h)+64px+env(safe-area-inset-bottom))] left-4'}`}>
+          className={`fixed z-40 w-64 rounded-2xl border border-line bg-white p-3 shadow-xl lg:bottom-16 lg:left-4 lg:right-auto lg:top-auto ${inShell ? 'right-4 top-[64px]' : 'bottom-[calc(var(--tabbar-h)+64px+env(safe-area-inset-bottom))] left-4'}`}>
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-900">접근성 설정</span>
-            <button onClick={() => setOpen(false)} aria-label="닫기" className="text-gray-400 hover:text-gray-700">✕</button>
+            <span className="text-sm font-bold text-ink">접근성 설정</span>
+            <button onClick={() => setOpen(false)} aria-label="닫기" className="text-ink-caption hover:text-ink">✕</button>
           </div>
           <div className="space-y-1.5">
             {OPTS.map((o) => (
               <button key={o.key} type="button" onClick={() => toggle(o.key)}
                 role="switch" aria-checked={!!state[o.key]}
-                className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition ${state[o.key] ? 'border-sky-300 bg-sky-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>
+                className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition ${state[o.key] ? 'border-bookmark-line bg-pastel-sky' : 'border-line bg-white hover:bg-surface-muted'}`}>
                 <span>
-                  <span className="block text-sm font-semibold text-gray-800">{o.label}</span>
-                  <span className="block text-[11px] text-gray-500">{o.desc}</span>
+                  <span className="block text-sm font-semibold text-ink">{o.label}</span>
+                  <span className="block text-[11px] text-ink-muted">{o.desc}</span>
                 </span>
-                <span aria-hidden className={`ml-2 grid h-5 w-9 shrink-0 items-center rounded-full px-0.5 transition ${state[o.key] ? 'bg-sky-500' : 'bg-gray-300'}`}>
+                <span aria-hidden className={`ml-2 grid h-5 w-9 shrink-0 items-center rounded-full px-0.5 transition ${state[o.key] ? 'bg-bookmark' : 'bg-line-strong'}`}>
                   <span className={`h-4 w-4 rounded-full bg-white shadow transition ${state[o.key] ? 'translate-x-4' : ''}`} />
                 </span>
               </button>
@@ -125,17 +125,17 @@ export default function A11ySettings() {
 
           {/* 개인정보 열람·삭제권(§4.9) — 공용 데모 계정에는 노출하지 않음(방문자 간 데이터 격리) */}
           {!isDemo && (
-          <div className="mt-3 border-t border-gray-100 pt-2.5">
-            <p className="mb-1.5 text-xs font-semibold text-gray-500">내 기록</p>
+          <div className="mt-3 border-t border-line pt-2.5">
+            <p className="mb-1.5 text-xs font-semibold text-ink-muted">내 기록</p>
             <button type="button" onClick={exportData}
-              className="mb-1.5 flex w-full items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50">
-              내 학습 기록 내려받기 <span className="text-[11px] text-gray-400">(JSON)</span>
+              className="mb-1.5 flex w-full items-center gap-2 rounded-lg border border-line px-3 py-2 text-left text-sm font-medium text-ink hover:bg-surface-muted">
+              내 학습 기록 내려받기 <span className="text-[11px] text-ink-caption">(JSON)</span>
             </button>
             <button type="button" onClick={deleteAccount}
-              className="flex w-full items-center gap-2 rounded-lg border border-rose-200 px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50">
+              className="flex w-full items-center gap-2 rounded-lg border border-bad-line px-3 py-2 text-left text-sm font-medium text-bad-dark hover:bg-bad-tint">
               계정·데이터 삭제 <span className="text-[11px] text-rose-400">(프로필 → 계정 설정)</span>
             </button>
-            <p className="mt-1.5 text-[11px] leading-snug text-gray-400">웹캠 영상은 기기 안에서만 처리돼요. 목소리 녹음은 채점할 때만 서버로 보내 메모리에서 처리하고, 저장하지 않아요. 녹음을 글로 옮긴 것과 소리 수치는 학습 기록으로 저장돼요.</p>
+            <p className="mt-1.5 text-[11px] leading-snug text-ink-caption">웹캠 영상은 기기 안에서만 처리돼요. 목소리 녹음은 채점할 때만 서버로 보내 메모리에서 처리하고, 저장하지 않아요. 녹음을 글로 옮긴 것과 소리 수치는 학습 기록으로 저장돼요.</p>
           </div>
           )}
         </div>

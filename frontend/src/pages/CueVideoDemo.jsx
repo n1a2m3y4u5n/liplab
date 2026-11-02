@@ -117,7 +117,7 @@ export default function CueVideoDemo() {
 
   if (cuesOn === false) {
     return (
-      <div className="mx-auto max-w-3xl p-6 text-sm text-gray-600">
+      <div className="mx-auto max-w-3xl p-6 text-sm text-ink-muted">
         이 계정은 기호 없이 학습하는 연구 집단이라 이 화면을 열지 않아요.
       </div>
     )
@@ -126,25 +126,25 @@ export default function CueVideoDemo() {
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4 sm:p-6">
       <header className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">연구용 · J-9 · K-4</p>
-        <h1 className="text-xl font-bold text-gray-900">실제 영상 위 기호</h1>
-        <p className="text-sm text-gray-600">
+        <p className="text-xs font-semibold uppercase tracking-wide text-ink-caption">연구용 · J-9 · K-4</p>
+        <h1 className="text-xl font-bold text-ink">실제 영상 위 기호</h1>
+        <p className="text-sm text-ink-muted">
           촬영된 화자 영상에 강제정렬 음절 시각을 맞춰, 입모양으로는 안 보이는 자질 기호를 입 옆에 띄웁니다.
           영상은 이 브라우저 안에서만 재생됩니다.
         </p>
       </header>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-sm">
-        <label className="inline-flex cursor-pointer items-center rounded-lg border border-gray-300 px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-50">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-white p-3 text-sm">
+        <label className="inline-flex cursor-pointer items-center rounded-lg border border-line-strong px-3 py-1.5 font-medium text-ink hover:bg-surface-muted">
           묶음 열기
           <input type="file" multiple accept=".json,video/*" className="sr-only" onChange={onFiles} />
         </label>
-        <span className="text-gray-500">pack.json과 영상 파일을 함께 고릅니다. 묶음은 <code className="text-xs">tools/cue_video.py pack</code>으로 만듭니다.</span>
-        {err && <span className="w-full text-rose-600">{err}</span>}
+        <span className="text-ink-muted">pack.json과 영상 파일을 함께 고릅니다. 묶음은 <code className="text-xs">tools/cue_video.py pack</code>으로 만듭니다.</span>
+        {err && <span className="w-full text-bad-dark">{err}</span>}
       </div>
 
       {!pack && !err && (
-        <p className="text-sm text-gray-500">열린 묶음이 없습니다.</p>
+        <p className="text-sm text-ink-muted">열린 묶음이 없습니다.</p>
       )}
 
       {pack && clip && (
@@ -174,7 +174,7 @@ export default function CueVideoDemo() {
                         style={{ borderColor: CUE_META[c.cue]?.color }}
                       >
                         <CueGlyph cue={c.cue} size={22} />
-                        <span className="text-[10px] leading-none text-gray-600">{c.phoneme}</span>
+                        <span className="text-[10px] leading-none text-ink-muted">{c.phoneme}</span>
                       </div>
                     ))}
                   </div>
@@ -183,22 +183,22 @@ export default function CueVideoDemo() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-gray-500">속도</span>
+              <span className="text-ink-muted">속도</span>
               {RATES.map((r) => (
                 <button
                   key={r}
                   type="button"
                   onClick={() => setRate(r)}
-                  className={`rounded-md border px-2 py-0.5 ${rate === r ? 'border-gray-800 bg-gray-800 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                  className={`rounded-md border px-2 py-0.5 ${rate === r ? 'border-surface-inverse-muted bg-surface-inverse-muted text-white' : 'border-line-strong text-ink hover:bg-surface-muted'}`}
                 >
                   {r}×
                 </button>
               ))}
-              <span className="ml-auto text-xs text-gray-400">{clip.speaker} · {t.toFixed(2)}초</span>
+              <span className="ml-auto text-xs text-ink-caption">{clip.speaker} · {t.toFixed(2)}초</span>
             </div>
 
             {/* 문장: 지금 음절 강조, 기호가 있는 음절 위에 작은 기호. 누르면 그 음절로 이동 */}
-            <p className="rounded-xl border border-gray-200 bg-white p-3 text-lg leading-[2.6rem] text-gray-800">
+            <p className="rounded-xl border border-line bg-white p-3 text-lg leading-[2.6rem] text-ink">
               {(() => {
                 let k = -1
                 return [...clip.text].map((ch, ci) => {
@@ -213,7 +213,7 @@ export default function CueVideoDemo() {
                       type="button"
                       disabled={i == null}
                       onClick={() => seekTo(i)}
-                      className={`relative inline-block rounded px-0.5 ${on ? 'bg-gray-900 text-white' : 'hover:bg-gray-100'} ${i == null ? 'text-gray-400' : ''}`}
+                      className={`relative inline-block rounded px-0.5 ${on ? 'bg-surface-inverse text-white' : 'hover:bg-surface-sunken'} ${i == null ? 'text-ink-caption' : ''}`}
                     >
                       {s?.cues.length > 0 && (
                         <span className="absolute -top-3 left-1/2 flex -translate-x-1/2 gap-px">
@@ -228,8 +228,8 @@ export default function CueVideoDemo() {
             </p>
 
             {/* K 비음 확률(화자 영상) + 음절 눈금 */}
-            <div className="rounded-xl border border-gray-200 bg-white p-3">
-              <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
+            <div className="rounded-xl border border-line bg-white p-3">
+              <div className="mb-1 flex items-center justify-between text-xs text-ink-muted">
                 <span>K 비음 확률(이 화자 영상)</span>
                 <span>점선: 발화 중앙값 {clip.k_median?.toFixed(2) ?? '-'}</span>
               </div>
@@ -253,7 +253,7 @@ export default function CueVideoDemo() {
                   stroke={CUE_META.nasal.color} strokeWidth="1.8" />
                 <line x1={(t / duration) * CHART_W} x2={(t / duration) * CHART_W} y1={0} y2={CHART_H} stroke="#111827" strokeWidth="1.5" />
               </svg>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-ink-muted">
                 위 점: 보라 = 표준발음상 비음 음절, 회색 = 같은 입모양의 파열음 음절.
                 지금 음절의 K 값(중앙값 대비) {active ? fmtSigned(active.k_rel) : '-'}.
               </p>
@@ -261,15 +261,15 @@ export default function CueVideoDemo() {
           </div>
 
           <aside className="space-y-3">
-            <div className="rounded-xl border border-gray-200 bg-white p-3">
-              <p className="mb-2 text-xs font-semibold text-gray-500">클립</p>
+            <div className="rounded-xl border border-line bg-white p-3">
+              <p className="mb-2 text-xs font-semibold text-ink-muted">클립</p>
               <ul className="space-y-1">
                 {pack.clips.map((c, i) => (
                   <li key={c.clip}>
                     <button
                       type="button"
                       onClick={() => setSel(i)}
-                      className={`w-full rounded-lg px-2 py-1.5 text-left text-sm ${i === sel ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                      className={`w-full rounded-lg px-2 py-1.5 text-left text-sm ${i === sel ? 'bg-surface-inverse text-white' : 'text-ink hover:bg-surface-sunken'}`}
                     >
                       <span className="block text-[11px] opacity-70">{c.speaker}</span>
                       <span className="line-clamp-2">{c.text}</span>
@@ -279,17 +279,17 @@ export default function CueVideoDemo() {
               </ul>
             </div>
 
-            <div className="space-y-1.5 rounded-xl border border-gray-200 bg-white p-3 text-xs text-gray-600">
-              <p className="font-semibold text-gray-500">기호</p>
+            <div className="space-y-1.5 rounded-xl border border-line bg-white p-3 text-xs text-ink-muted">
+              <p className="font-semibold text-ink-muted">기호</p>
               {Object.entries(CUE_META).map(([k, m]) => (
                 <p key={k} className="flex items-center gap-1.5"><CueGlyph cue={k} size={14} /> {m.label}</p>
               ))}
-              <p className="text-gray-400">평음은 기준이라 기호가 없습니다. 기호 아래 글자는 해당 자음(표준발음)입니다.</p>
+              <p className="text-ink-caption">평음은 기준이라 기호가 없습니다. 기호 아래 글자는 해당 자음(표준발음)입니다.</p>
             </div>
 
             {pack.k4?.auc && (
-              <div className="space-y-1.5 rounded-xl border border-gray-200 bg-white p-3 text-xs leading-relaxed text-gray-600">
-                <p className="font-semibold text-gray-500">K가 울림 기호를 받쳐 주나(K-4)</p>
+              <div className="space-y-1.5 rounded-xl border border-line bg-white p-3 text-xs leading-relaxed text-ink-muted">
+                <p className="font-semibold text-ink-muted">K가 울림 기호를 받쳐 주나(K-4)</p>
                 <p>
                   화자 영상 {pack.k4.clips}클립({pack.k4.speakers}명)에서 K 비음 확률은 울림 음절
                   {` ${pack.k4.auc.n_pos}`}개와 같은 입모양 파열음 음절 {pack.k4.auc.n_neg}개를 가르지 못했습니다
@@ -305,7 +305,7 @@ export default function CueVideoDemo() {
               </div>
             )}
 
-            <p className="text-[11px] leading-relaxed text-gray-400">{pack.source} 정렬: {pack.alignment}.</p>
+            <p className="text-[11px] leading-relaxed text-ink-caption">{pack.source} 정렬: {pack.alignment}.</p>
           </aside>
         </div>
       )}

@@ -27,13 +27,13 @@ import { dueCounts, dueStartPath } from '../lib/reviewDue'
 const HERO = {
   // 오답(199:22 / 239:122) — 보라, 워터마크 X(308:32)
   mistake: {
-    card: 'border-primary-700 bg-[linear-gradient(137.7deg,var(--brand-light)_0%,var(--brand)_70.92%)] lg:bg-[linear-gradient(154.59deg,var(--brand-light)_0%,var(--brand)_70.92%)]',
+    card: 'border-primary-700 bg-hero-brand',
     btn: 'text-primary-700 lg:border-primary-line',
     deco: { src: '/ui/lp-100-15-deco-mistake.svg', size: 170, top: -63.01, right: -63.01, hideBelowLg: true },
   },
   // 북마크(199:29 / 239:128) — 파랑, 워터마크 북마크(308:36, -30°)
   bookmark: {
-    card: 'border-bookmark-dark bg-[linear-gradient(137.7deg,var(--bookmark-light)_0%,var(--bookmark)_70.92%)] lg:bg-[linear-gradient(154.59deg,var(--bookmark-light)_0%,var(--bookmark)_70.92%)]',
+    card: 'border-bookmark-dark bg-hero-bookmark',
     btn: 'text-bookmark-dark lg:border-bookmark-line',
     deco: { src: '/ui/lp-100-15-deco-bookmark.svg', size: 170, top: -87, right: -87.22, rotate: -30, hideBelowLg: true },
   },
@@ -48,7 +48,7 @@ function GradientCta({ tone, count, title, sub, subMobile, btn, onClick }) {
       <span className="flex flex-col gap-3 lg:gap-[18px]">
         <span className="flex flex-col gap-3 leading-figma text-white lg:gap-1.5">
           <span className="text-[17px] font-bold tracking-[-0.34px] lg:text-[22px] lg:tracking-[-0.44px]">{title} {count}개</span>
-          <span className="text-[12px] opacity-85 lg:text-[13.5px]">
+          <span className="text-[12px] lg:text-[13.5px]">
             <span className="lg:hidden">{subMobile}</span>
             <span className="hidden lg:inline">{sub}</span>
           </span>
@@ -295,7 +295,7 @@ export default function ReviewTab() {
               <button key={c.key} type="button" onClick={() => setFilter(c.key)} aria-pressed={filter === c.key}
                 className={`flex items-center gap-[5px] rounded-full px-[13px] py-2 font-bold leading-figma lg:gap-1.5 lg:px-4 lg:py-[9px] ${filter === c.key ? 'bg-primary-500 text-white' : 'bg-surface-sunken text-ink-muted'}`}>
                 <span className="text-[12.5px] lg:text-[13.5px]">{c.label}</span>
-                <span className={`text-[11px] lg:text-[12px] ${filter === c.key ? 'text-white/75' : 'text-ink-ghost'}`}>{c.n}</span>
+                <span className={`text-[11px] lg:text-[12px] ${filter === c.key ? 'text-white' : 'text-ink-ghost'}`}>{c.n}</span>
               </button>
             ))}
           </div>

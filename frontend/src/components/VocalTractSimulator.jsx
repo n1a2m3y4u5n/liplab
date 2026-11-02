@@ -223,16 +223,16 @@ export default function VocalTractSimulator() {
   }, [on])
 
   if (!supported) {
-    return <div className="p-3 text-sm text-gray-500 bg-gray-50 rounded-lg">이 브라우저에서는 소리를 만들 수 없습니다.</div>
+    return <div className="p-3 text-sm text-ink-muted bg-surface-muted rounded-lg">이 브라우저에서는 소리를 만들 수 없습니다.</div>
   }
 
   const [f1, f2] = formants(pos, round)
 
   // 색의 뜻은 성도 옆모습과 같다: 트랙색 = 지금 소리(학습자), 초록 = 목표 모음.
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3">
+    <div className="rounded-xl border border-line bg-white p-3">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-sm font-bold text-gray-800">성도 실험실 <span className="ml-1 font-normal text-gray-500">혀를 움직여 소리를 만들어 보세요</span></div>
+        <div className="text-sm font-bold text-ink">성도 실험실 <span className="ml-1 font-normal text-ink-muted">혀를 움직여 소리를 만들어 보세요</span></div>
         <button onClick={on ? stop : start}
           className={`px-3 py-1 rounded-lg border-2 text-sm font-semibold ${on ? 'border-track bg-white text-track' : 'border-track bg-track text-white hover:bg-track-hover'}`}>
           {on ? '■ 멈춤' : '▶ 발성'}
@@ -247,10 +247,10 @@ export default function VocalTractSimulator() {
           className="relative w-full rounded-lg border border-line bg-surface-muted cursor-crosshair select-none touch-none focus:outline-none focus:ring-2 focus:ring-primary-300"
           style={{ aspectRatio: '4 / 3' }}>
           {/* 축 라벨 */}
-          <span className="absolute left-1 top-1 text-[10px] text-gray-400">혀 앞·높음 (ㅣ)</span>
-          <span className="absolute right-1 top-1 text-[10px] text-gray-400">혀 뒤·높음 (ㅜ)</span>
-          <span className="absolute left-1 bottom-1 text-[10px] text-gray-400">혀 앞·낮음</span>
-          <span className="absolute right-1 bottom-1 text-[10px] text-gray-400">혀 뒤·낮음</span>
+          <span className="absolute left-1 top-1 text-[10px] text-ink-caption">혀 앞·높음 (ㅣ)</span>
+          <span className="absolute right-1 top-1 text-[10px] text-ink-caption">혀 뒤·높음 (ㅜ)</span>
+          <span className="absolute left-1 bottom-1 text-[10px] text-ink-caption">혀 앞·낮음</span>
+          <span className="absolute right-1 bottom-1 text-[10px] text-ink-caption">혀 뒤·낮음</span>
           {/* 모음 목표 마커 */}
           {VOWELS.map((v) => {
             const x = f2ToX(v.f2) * 100, y = f1ToY(v.f1) * 100
@@ -258,7 +258,7 @@ export default function VocalTractSimulator() {
             const isTarget = targetKo === v.ko
             return (
               <div key={v.ko}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-full text-xs font-bold transition-all ${hit ? 'bg-good text-white scale-125 shadow' : isTarget ? 'bg-white text-good-text border-2 border-good' : 'bg-white/80 text-gray-600 border border-gray-300'}`}
+                className={`absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-full text-xs font-bold transition-all ${hit ? 'bg-good text-white scale-125 shadow' : isTarget ? 'bg-white text-good-text border-2 border-good' : 'bg-white/80 text-ink-muted border border-line-strong'}`}
                 style={{ left: `${x}%`, top: `${y}%`, width: 26, height: 26 }}>
                 {v.ko}{v.round ? '°' : ''}
               </div>
@@ -276,7 +276,7 @@ export default function VocalTractSimulator() {
             <p className="text-[10px] text-ink-faint">VocalTractLab으로 미리 계산</p>
           </div>
           <VocalTractVTL className="mt-1" phoneme={targetId} estimate={{ f1, f2, round }} legend targetLabel={targetKo || ''}
-            fallback={<div className="mt-1 h-24 rounded-lg bg-slate-900/95 p-1"><VocalTract visemeId={15} articulationRef={artRef} /></div>} />
+            fallback={<div className="mt-1 h-24 rounded-lg bg-surface-inverse/95 p-1"><VocalTract visemeId={15} articulationRef={artRef} /></div>} />
           <div className="mt-2 flex flex-wrap items-center gap-1.5" role="group" aria-label="목표 모음 고르기">
             <span className="mr-0.5 text-[11px] text-ink-muted">목표</span>
             {VOWELS.map((v) => {
@@ -302,28 +302,28 @@ export default function VocalTractSimulator() {
 
       {/* 입술 원순 */}
       <div className="mt-2 flex items-center gap-2">
-        <span className="text-xs text-gray-500 w-16">입술 원순</span>
+        <span className="text-xs text-ink-muted w-16">입술 원순</span>
         <input type="range" min="0" max="1" step="0.01" value={round}
           onChange={(e) => setRound(parseFloat(e.target.value))} className="flex-1 accent-primary-500" />
-        <span className="text-xs text-gray-400 w-10 text-right">{Math.round(round * 100)}%</span>
+        <span className="text-xs text-ink-caption w-10 text-right">{Math.round(round * 100)}%</span>
       </div>
       <div className="mt-1.5 flex items-center gap-2">
-        <span className="text-xs text-gray-500 w-16">볼륨</span>
+        <span className="text-xs text-ink-muted w-16">볼륨</span>
         <input type="range" min="0" max="0.7" step="0.01" value={vol}
           onChange={(e) => setVol(parseFloat(e.target.value))} className="flex-1 accent-gray-400" />
-        <span className="text-xs text-gray-400 w-10 text-right">{Math.round(vol * 143)}%</span>
+        <span className="text-xs text-ink-caption w-10 text-right">{Math.round(vol * 143)}%</span>
       </div>
 
       {/* 읽기값 */}
       <div className="mt-2 flex items-center justify-between text-xs">
-        <div className="text-gray-500">F1 <b className="text-gray-700">{Math.round(f1)}</b> · F2 <b className="text-gray-700">{Math.round(f2)}</b> Hz</div>
+        <div className="text-ink-muted">F1 <b className="text-ink">{Math.round(f1)}</b> · F2 <b className="text-ink">{Math.round(f2)}</b> Hz</div>
         <div>
           {nearest
             ? <span className="text-good-text font-semibold">지금 소리: “{nearest.ko}”{nearest.round ? ' (원순)' : ''}</span>
-            : <span className="text-gray-400">모음 사이 소리</span>}
+            : <span className="text-ink-caption">모음 사이 소리</span>}
         </div>
       </div>
-      <p className="mt-1.5 text-[11px] leading-snug text-gray-400">
+      <p className="mt-1.5 text-[11px] leading-snug text-ink-caption">
         ㅗ·ㅜ는 입술 둥글림도 함께 올려야 제 소리가 나요. 소리 내기 버튼의 소리는 공명(F1·F2)만 흉내 낸 간단한 합성음이에요.
         단면 그림과 합성음은 VocalTractLab으로 미리 계산했어요. 같은 소리를 내는 혀 모양은 여러 가지라, 그림의 혀는 한 가지 예시예요.
       </p>

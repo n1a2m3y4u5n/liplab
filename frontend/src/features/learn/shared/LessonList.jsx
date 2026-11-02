@@ -4,12 +4,12 @@ import useTrackLessons from './useTrackLessons'
 import { isLockedStatus, lockHint } from './trackProgress'
 
 const STATUS_BADGE = {
-  mastered: { label: '숙달', cls: 'bg-green-100 text-green-700' },
-  in_progress: { label: '진행 중', cls: 'bg-blue-100 text-blue-700' },
-  unlocked: { label: '시작 가능', cls: 'bg-sky-100 text-sky-700' },
-  available: { label: '연습', cls: 'bg-gray-100 text-gray-600' },
-  locked: { label: '잠김', cls: 'bg-gray-100 text-gray-400' },
-  coming_soon: { label: '준비 중', cls: 'bg-gray-100 text-gray-400' },
+  mastered: { label: '숙달', cls: 'bg-good-tint text-good-dark' },
+  in_progress: { label: '진행 중', cls: 'bg-bookmark-tint text-bookmark-dark' },
+  unlocked: { label: '시작 가능', cls: 'bg-pastel-sky text-stat-level' },
+  available: { label: '연습', cls: 'bg-surface-sunken text-ink-muted' },
+  locked: { label: '잠김', cls: 'bg-surface-sunken text-ink-caption' },
+  coming_soon: { label: '준비 중', cls: 'bg-surface-sunken text-ink-caption' },
 }
 
 /**
@@ -28,7 +28,7 @@ export default function LessonList({ track: trackId }) {
     return () => window.clearTimeout(timer)
   }, [notice])
 
-  if (!track) return <p className="p-10 text-center text-sm text-slate-500">찾을 수 없는 학습이에요.</p>
+  if (!track) return <p className="p-10 text-center text-sm text-ink-muted">찾을 수 없는 학습이에요.</p>
 
   const open = (lesson) => {
     if (isLockedStatus(lesson.status)) { setNotice(lockHint(lessons, lesson)); return }
@@ -37,18 +37,18 @@ export default function LessonList({ track: trackId }) {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <Link to={track.basePath} className="text-sm font-bold text-slate-500 hover:text-slate-800">← {track.label} 트랙</Link>
-      <h1 className="mt-2 text-2xl font-black text-slate-900">{track.label} 레슨</h1>
+      <Link to={track.basePath} className="text-sm font-bold text-ink-muted hover:text-ink">← {track.label} 트랙</Link>
+      <h1 className="mt-2 text-2xl font-black text-ink">{track.label} 레슨</h1>
 
-      {failed && <p className="mt-2 text-xs text-slate-500">진행도를 가져오지 못해 잠금 표시 없이 보여드려요.</p>}
+      {failed && <p className="mt-2 text-xs text-ink-muted">진행도를 가져오지 못해 잠금 표시 없이 보여드려요.</p>}
       {notice && (
-        <p role="status" aria-live="polite" className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
+        <p role="status" aria-live="polite" className="mt-3 rounded-lg bg-warn-tint px-3 py-2 text-sm font-medium text-warn-text">
           🔒 {notice}
         </p>
       )}
 
       <section className="mt-5" aria-labelledby="lesson-list-curriculum">
-        <h2 id="lesson-list-curriculum" className="text-sm font-black text-slate-700">커리큘럼</h2>
+        <h2 id="lesson-list-curriculum" className="text-sm font-black text-ink">커리큘럼</h2>
         <ol className="mt-2 space-y-2">
           {lessons.map((lesson) => {
             const locked = isLockedStatus(lesson.status)
@@ -59,15 +59,15 @@ export default function LessonList({ track: trackId }) {
                   type="button"
                   onClick={() => open(lesson)}
                   aria-disabled={locked || undefined}
-                  className={`flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-slate-400 ${locked ? 'opacity-60' : ''}`}
+                  className={`flex w-full items-center gap-3 rounded-xl border border-line bg-white p-3 text-left hover:border-ink-faint ${locked ? 'opacity-60' : ''}`}
                 >
                   <span aria-hidden="true" className="text-xl">{lesson.icon}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-bold text-slate-900">{lesson.stage}단계 · {lesson.title}</span>
-                    <span className="block text-xs text-slate-500">{lesson.desc}</span>
+                    <span className="block text-sm font-bold text-ink">{lesson.stage}단계 · {lesson.title}</span>
+                    <span className="block text-xs text-ink-muted">{lesson.desc}</span>
                   </span>
                   {loading ? (
-                    <span className="text-xs text-slate-300">…</span>
+                    <span className="text-xs text-ink-inverse-muted">…</span>
                   ) : badge && (
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${badge.cls}`}>
                       {badge.label}
@@ -83,19 +83,19 @@ export default function LessonList({ track: trackId }) {
 
       {practice.length > 0 && (
         <section className="mt-6" aria-labelledby="lesson-list-practice">
-          <h2 id="lesson-list-practice" className="text-sm font-black text-slate-700">자유 연습·복습</h2>
+          <h2 id="lesson-list-practice" className="text-sm font-black text-ink">자유 연습·복습</h2>
           <ul className="mt-2 grid gap-2 sm:grid-cols-2">
             {practice.map((item) => (
               <li key={item.id}>
                 <button
                   type="button"
                   onClick={() => navigate(item.to)}
-                  className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-slate-400"
+                  className="flex w-full items-center gap-3 rounded-xl border border-line bg-white p-3 text-left hover:border-ink-faint"
                 >
                   <span aria-hidden="true" className="text-xl">{item.icon}</span>
                   <span className="min-w-0">
-                    <span className="block text-sm font-bold text-slate-900">{item.title}</span>
-                    <span className="block text-xs text-slate-500">{item.desc}</span>
+                    <span className="block text-sm font-bold text-ink">{item.title}</span>
+                    <span className="block text-xs text-ink-muted">{item.desc}</span>
                   </span>
                 </button>
               </li>

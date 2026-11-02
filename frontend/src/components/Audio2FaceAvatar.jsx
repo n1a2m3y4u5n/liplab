@@ -224,19 +224,19 @@ export default function Audio2FaceAvatar() {
         <h3 className="text-[17px] font-bold leading-figma text-ink">내 목소리로 아바타 움직이기</h3>
         <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 font-bold">AI 목소리 따라 하기 · A4</span>
       </div>
-      <p className="text-sm text-gray-500 mb-3">
+      <p className="text-sm text-ink-muted mb-3">
         {available === true
           ? '직접 말하거나 음성 파일을 올리면, 그 소리에서 입·턱·표정 움직임을 짐작해 아바타가 따라 합니다.'
           : '아래 준비된 음성을 누르면, A4 모델이 그 소리에서 짐작한 입모양으로 아바타가 립싱크합니다.'}
       </p>
-      <div className="relative w-full rounded-2xl overflow-hidden shadow-lg bg-gradient-to-b from-slate-800 to-slate-900"
+      <div className="relative w-full rounded-2xl overflow-hidden shadow-lg bg-gradient-to-b from-surface-inverse-muted to-surface-inverse"
         style={{ height: '320px' }}>
         <AvatarVRM visemeId={15} bsFrameRef={bsFrameRef} />
-        <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-xs">
+        <div className="absolute top-3 left-3 bg-surface-inverse backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-xs">
           목소리로 움직이는 아바타 · A4
         </div>
         {state === 'playing' && (
-          <div className="absolute top-3 right-3 bg-green-500/90 text-white px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5">
+          <div className="absolute top-3 right-3 bg-good/90 text-white px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" /> 립싱크 중
           </div>
         )}
@@ -253,7 +253,7 @@ export default function Audio2FaceAvatar() {
       {available === true && (
         <div className="mt-3 flex items-center gap-2">
           {state === 'recording' ? (
-            <button onClick={stopRec} className="flex-1 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium">
+            <button onClick={stopRec} className="flex-1 py-2.5 rounded-lg bg-bad hover:bg-bad text-white font-medium">
               녹음 종료 → 립싱크
             </button>
           ) : (
@@ -266,7 +266,7 @@ export default function Audio2FaceAvatar() {
             </button>
           )}
           <label aria-disabled={busy}
-            className={`py-2.5 px-3 rounded-lg bg-gray-100 text-gray-700 text-sm ${busy ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-200'}`}>
+            className={`py-2.5 px-3 rounded-lg bg-surface-sunken text-ink text-sm ${busy ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-fill-strong'}`}>
             파일
             <input type="file" accept="audio/*" onChange={onFile} disabled={busy} className="hidden" />
           </label>
@@ -276,11 +276,11 @@ export default function Audio2FaceAvatar() {
       {/* 예시 음성(프리컴퓨트) — 어디서나 A4 예측 시연 */}
       {examples.length > 0 && (
         <div className="mt-3">
-          <p className="text-xs text-gray-500 mb-1.5">준비된 음성으로 보기 {available === true ? '(또는 위에서 직접 말하기)' : ''}</p>
+          <p className="text-xs text-ink-muted mb-1.5">준비된 음성으로 보기 {available === true ? '(또는 위에서 직접 말하기)' : ''}</p>
           <div className="flex flex-wrap gap-2">
             {examples.map((ex) => (
               <button key={ex.id} onClick={() => playExample(ex)} disabled={state === 'playing' || busy}
-                className="px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-sm hover:bg-violet-100 disabled:opacity-50">
+                className="px-3 py-1.5 rounded-full border border-primary-line bg-primary-100 text-primary-700 text-sm hover:bg-primary-100 disabled:opacity-50">
                 {ex.text}
               </button>
             ))}
@@ -288,17 +288,17 @@ export default function Audio2FaceAvatar() {
         </div>
       )}
 
-      {available === null && <p className="mt-2 text-xs text-gray-400">모델 확인 중…</p>}
+      {available === null && <p className="mt-2 text-xs text-ink-faint">모델 확인 중…</p>}
       {/* 상태·오류 안내(접근성) — 스크린리더가 처리/오류 변화를 소리로 읽어 준다 */}
-      <p role="status" aria-live="assertive" className={err ? 'mt-2 text-xs text-amber-600' : 'sr-only'}>
+      <p role="status" aria-live="assertive" className={err ? 'mt-2 text-xs text-warn-text' : 'sr-only'}>
         {err || (state === 'processing' ? '음성 분석 중입니다' : state === 'playing' ? '아바타 립싱크 재생 중' : '')}
       </p>
       {nFrames > 0 && !err && (
-        <p className="mt-2 text-xs text-gray-400">
+        <p className="mt-2 text-xs text-ink-faint">
           {exLabel ? `"${exLabel}" — ` : '실제 음성에서 '}{nFrames}장면({(nFrames / fpsRef.current).toFixed(1)}초)의 얼굴 움직임을 A4가 짐작했어요.
         </p>
       )}
-      <p className="mt-1 text-[11px] text-gray-400 leading-relaxed">
+      <p className="mt-1 text-[11px] text-ink-faint leading-relaxed">
         직접 녹음한 목소리는 말하는 사람이 바뀌어도 같은 특징을 뽑는 모델(WavLM, 20명으로 학습)이 입모양을 짐작해요.
         처음 듣는 사람의 입 벌림 상관은 r≈0.66이에요. 다만 평가한 사람들로 학습을 멈출 때를 골라서, 실제보다 높게 나왔을 수 있어요.
         미리 준비한 음성 5개는 합성 음성(TTS)이고, 입모양은 같은 모델로 미리 계산해 둔 결과예요.

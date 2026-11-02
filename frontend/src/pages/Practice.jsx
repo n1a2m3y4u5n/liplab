@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { MotionPanel } from '../components/UI'
 import useStore from '../store/useStore'
 import { curriculumAPI, learningAPI } from '../api'
 import LipSyncPlayer3D from '../components/LipSyncPlayer3D'
@@ -48,20 +49,20 @@ function HintDisplay({ sentence, hintLevel, revealedTextIndex = -1 }) {
   if (hintLevel === 1) {
     // 음절 수만 표시
     return (
-      <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-        <p className="text-xs text-amber-600 font-medium mb-1">힌트 1 — 글자 수</p>
+      <div className="mt-3 p-3 bg-warn-tint border border-warn/40 rounded-lg">
+        <p className="text-xs text-warn-text font-medium mb-1">힌트 1 — 글자 수</p>
         <div className="flex flex-wrap gap-2">
           {words.map((word, wi) => (
             <div key={wi} className="flex gap-1">
               {word.split('').map((_, ci) => (
-                <span key={ci} className="w-7 h-7 rounded-full bg-amber-300 flex items-center justify-center text-amber-800 font-bold text-sm">
+                <span key={ci} className="w-7 h-7 rounded-full bg-warn-tint flex items-center justify-center text-warn-text font-bold text-sm">
                   ●
                 </span>
               ))}
             </div>
           ))}
         </div>
-        <p className="text-xs text-amber-500 mt-1">{chars.length}글자</p>
+        <p className="text-xs text-warn-text mt-1">{chars.length}글자</p>
       </div>
     )
   }
@@ -69,13 +70,13 @@ function HintDisplay({ sentence, hintLevel, revealedTextIndex = -1 }) {
   if (hintLevel === 2) {
     // 자음 골격: 음절마다 첫 자음만, 모음·받침은 입모양으로 읽는다
     return (
-      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-xs text-blue-600 font-medium mb-1">힌트 2 — 첫 자음</p>
+      <div className="mt-3 p-3 bg-bookmark-tint border border-bookmark-line rounded-lg">
+        <p className="text-xs text-bookmark-dark font-medium mb-1">힌트 2 — 첫 자음</p>
         <div className="flex flex-wrap gap-2">
           {sentenceSkeleton(sentence).map((word, wi) => (
             <div key={wi} className="flex gap-1">
               {word.map((ch, ci) => (
-                <span key={ci} className="w-7 h-7 rounded border-2 flex items-center justify-center text-sm font-bold bg-blue-100 border-blue-400 text-blue-800">
+                <span key={ci} className="w-7 h-7 rounded border-2 flex items-center justify-center text-sm font-bold bg-bookmark-tint border-bookmark text-bookmark-dark">
                   {ch}
                 </span>
               ))}
@@ -91,10 +92,10 @@ function HintDisplay({ sentence, hintLevel, revealedTextIndex = -1 }) {
     const sentenceChars = Array.from(sentence)
 
     return (
-      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-        <p className="text-xs text-green-600 font-medium mb-1">힌트 3 — 발음 자막</p>
+      <div className="mt-3 p-3 bg-good-tint border border-good-line rounded-lg">
+        <p className="text-xs text-good-dark font-medium mb-1">힌트 3 — 발음 자막</p>
         <p className="sr-only">{sentence}</p>
-        <p aria-hidden="true" className="text-lg font-bold text-green-800 tracking-wide">
+        <p aria-hidden="true" className="text-lg font-bold text-good-dark tracking-wide">
           {sentenceChars.map((char, index) => (
             <motion.span
               key={`${index}-${char}`}
@@ -109,7 +110,7 @@ function HintDisplay({ sentence, hintLevel, revealedTextIndex = -1 }) {
             </motion.span>
           ))}
         </p>
-        <p className="text-xs text-green-600/80 mt-1.5">
+        <p className="text-xs text-good-text/80 mt-1.5">
           입모양 재생에 맞춰 자막이 나타납니다.
         </p>
       </div>
@@ -583,11 +584,11 @@ export default function Practice() {
               {result && <SoundReplayBar sound={sound} replay={replay} />}
               {/* 결과 뒤 음절 기호(시각증강) — 교육 패널이라 유지, 고정 바 위 스크롤 영역 */}
               {result && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                <MotionPanel
                   className="overflow-x-auto rounded-16 border-2 border-line bg-white p-3">
                   <CueBadges text={currentSentence} showControls />
                   <div className="mt-1.5"><CueLegend /></div>
-                </motion.div>
+                </MotionPanel>
               )}
             </>
           ) : effectiveMode === 'study' ? (
@@ -664,7 +665,7 @@ export default function Practice() {
                 )}
 
                 {result && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-4">
+                  <MotionPanel className="mt-4">
                     <div className="mb-3"><SoundReplayBar sound={sound} replay={replay} /></div>
                     {result.streak_count > 1 && (
                       <p className="mb-2 text-center text-sm font-bold text-stat-streak">
@@ -674,7 +675,7 @@ export default function Practice() {
                     <button type="button" onClick={handleNext} className="btn-primary w-full">
                       {isLastSentence ? '마치기' : '다음 문장 →'}
                     </button>
-                  </motion.div>
+                  </MotionPanel>
                 )}
               </div>
             </>

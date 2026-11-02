@@ -28,9 +28,9 @@ import VocalTract from './VocalTract'
  * 모델 로딩은 useFaceLandmarker 훅이 담당한다(축 F 거울 모드와 공용).
  */
 function scoreColor(s) {
-  if (s >= 75) return 'text-emerald-600'
-  if (s >= 45) return 'text-amber-600'
-  return 'text-rose-600'
+  if (s >= 75) return 'text-good-dark'
+  if (s >= 45) return 'text-warn-text'
+  return 'text-bad-dark'
 }
 
 // 점수 창 길이(ms). 발음 정점을 잡으려 최근 이만큼의 최고점을 보인다. 프레임 수가 아니라 시간으로 잘라
@@ -270,13 +270,13 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3">
+    <div className="rounded-xl border border-line bg-white p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-sm font-bold text-gray-900">웹캠으로 따라하기 {visemeName ? `— ${visemeName}` : ''}</h4>
-        <span className="text-[10px] text-gray-400">영상은 기기 안에서만 처리 · 저장하거나 보내지 않음</span>
+        <h4 className="text-sm font-bold text-ink">웹캠으로 따라하기 {visemeName ? `— ${visemeName}` : ''}</h4>
+        <span className="text-[10px] text-ink-caption">영상은 기기 안에서만 처리 · 저장하거나 보내지 않음</span>
       </div>
       <div className={showMirror ? 'grid grid-cols-2 gap-2' : ''}>
-        <div className="relative overflow-hidden rounded-lg bg-gray-900" style={{ aspectRatio: '4/3' }}>
+        <div className="relative overflow-hidden rounded-lg bg-surface-inverse" style={{ aspectRatio: '4/3' }}>
           <video ref={videoRef} muted playsInline className="h-full w-full -scale-x-100 object-cover" />
           {status === 'running' && score !== null && (
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-2 pt-8">
@@ -285,7 +285,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
                 <span className="text-sm text-white/70">점</span>
               </div>
               <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-white/25">
-                <div className={`h-full rounded-full transition-all duration-150 ${score >= 75 ? 'bg-emerald-400' : score >= 45 ? 'bg-amber-400' : 'bg-rose-400'}`}
+                <div className={`h-full rounded-full transition-all duration-150 ${score >= 75 ? 'bg-good' : score >= 45 ? 'bg-warn' : 'bg-rose-400'}`}
                   style={{ width: `${score}%` }} />
               </div>
             </div>
@@ -298,7 +298,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
         </div>
         {/* 아바타 미러링(축 F) — 웹캠에서 읽은 입모양을 아바타가 그대로 따라한다 */}
         {showMirror && (
-          <div className="relative overflow-hidden rounded-lg bg-gradient-to-b from-slate-800 to-slate-900" style={{ aspectRatio: '4/3' }}>
+          <div className="relative overflow-hidden rounded-lg bg-gradient-to-b from-surface-inverse-muted to-surface-inverse" style={{ aspectRatio: '4/3' }}>
             <AvatarVRM visemeId={15} bsFrameRef={liveBsRef} xray={mirrorXray} />
             <div className="absolute top-1.5 left-1.5 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white/80">아바타가 따라해요</div>
             <button type="button" onClick={() => setMirrorXray((v) => !v)}
@@ -311,50 +311,50 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       {/* 성도 역추정(축 E) — 웹캠에서 읽은 개구·원순·폐쇄로 내 조음 단면을 그린다(혀는 목표 규칙값) */}
       {showMirror && (
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <div className="rounded-lg border border-gray-200 bg-slate-900/95 p-1">
-            <p className="px-1 pb-0.5 text-[10px] text-slate-300">내 입 안 모양(짐작)</p>
+          <div className="rounded-lg border border-line bg-surface-inverse/95 p-1">
+            <p className="px-1 pb-0.5 text-[10px] text-ink-inverse-muted">내 입 안 모양(짐작)</p>
             <div className="h-24"><VocalTract visemeId={visemeId} articulationRef={artRef} /></div>
           </div>
-          <div className="rounded-lg border border-gray-200 bg-slate-900/95 p-1">
-            <p className="px-1 pb-0.5 text-[10px] text-slate-300">목표 입 안 모양</p>
+          <div className="rounded-lg border border-line bg-surface-inverse/95 p-1">
+            <p className="px-1 pb-0.5 text-[10px] text-ink-inverse-muted">목표 입 안 모양</p>
             <div className="h-24"><VocalTract visemeId={visemeId} /></div>
           </div>
         </div>
       )}
       {status === 'running' && hint && (
-        <p className="mt-2 text-center text-sm font-medium text-gray-700">{hint}</p>
+        <p className="mt-2 text-center text-sm font-medium text-ink">{hint}</p>
       )}
       {articulationGuide && (
-        <p className="mt-1 text-center text-xs text-sky-700">
+        <p className="mt-1 text-center text-xs text-stat-level">
           <b>밖에서 안 보이는 혀·목 움직임</b> — {articulationGuide}
         </p>
       )}
       {/* 축 E: 조음 교정 — 관찰 계수(개구·원순·폐쇄)를 목표와 비교해 방향을 제시하고 계수를 노출한다 */}
       {status === 'running' && correction && (
-        <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50/60 p-2">
-          <p className="mb-1 text-center text-[10px] text-sky-600">입모양 맞추기 · 내 입 값</p>
-          <p className="text-center text-sm font-semibold text-sky-900">
+        <div className="mt-2 rounded-lg border border-bookmark-line bg-pastel-sky/60 p-2">
+          <p className="mb-1 text-center text-[10px] text-stat-level">입모양 맞추기 · 내 입 값</p>
+          <p className="text-center text-sm font-semibold text-bookmark-dark">
             {correction.ok ? '입모양이 목표에 가까워요' : correction.primary}
           </p>
           {obs && (
             <div className="mt-1.5 grid grid-cols-3 gap-2">
               {[['jaw', '입 벌림'], ['round', '입술 둥글림'], ['close', '입술 닫힘']].map(([k, label]) => (
                 <div key={k} className="text-center">
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-sky-100">
-                    <div className="h-full rounded-full bg-sky-500 transition-all" style={{ width: `${Math.round((obs[k] || 0) * 100)}%` }} />
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-pastel-sky">
+                    <div className="h-full rounded-full bg-bookmark transition-all" style={{ width: `${Math.round((obs[k] || 0) * 100)}%` }} />
                   </div>
-                  <span className="mt-0.5 block text-[10px] text-sky-600">{label}</span>
+                  <span className="mt-0.5 block text-[10px] text-stat-level">{label}</span>
                 </div>
               ))}
             </div>
           )}
           {correction.cues && correction.cues.length > 1 && (
-            <ul className="mt-1 space-y-0.5 text-center text-[11px] text-sky-700">
+            <ul className="mt-1 space-y-0.5 text-center text-[11px] text-stat-level">
               {correction.cues.slice(1).map((c, i) => <li key={i}>· {c.text}</li>)}
             </ul>
           )}
           {errTrend && (
-            <p className="mt-1 text-center text-[11px] tabular-nums text-sky-700">
+            <p className="mt-1 text-center text-[11px] tabular-nums text-stat-level">
               목표와의 차이 · 처음 {Math.round(errTrend.start * 100)} → 지금 {Math.round(errTrend.now * 100)}
             </p>
           )}
@@ -362,14 +362,14 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       )}
       {K_RESEARCH && status === 'running' && faceSig && (
         <div className="mt-2">
-          <p className="mb-1 text-center text-[10px] text-gray-400">입술 너머 신호 (연구용)</p>
+          <p className="mb-1 text-center text-[10px] text-ink-caption">입술 너머 신호 (연구용)</p>
           <div className="grid grid-cols-3 gap-2">
             {Object.entries(FACE_SIGNAL_LABELS).map(([k, label]) => (
               <div key={k} className="text-center">
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
-                  <div className="h-full rounded-full bg-slate-400 transition-all" style={{ width: `${Math.round((faceSig[k] || 0) * 100)}%` }} />
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-fill-strong">
+                  <div className="h-full rounded-full bg-line-strong transition-all" style={{ width: `${Math.round((faceSig[k] || 0) * 100)}%` }} />
                 </div>
-                <span className="mt-0.5 block text-[10px] text-gray-500">{label}</span>
+                <span className="mt-0.5 block text-[10px] text-ink-muted">{label}</span>
               </div>
             ))}
           </div>
@@ -377,12 +377,12 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       )}
       {status === 'running' && geo && (
         <div className="mt-2">
-          <p className="mb-1 text-center text-[10px] text-gray-400">입술 모양 값 (두 눈 사이 거리로 크기를 맞춘 값)</p>
+          <p className="mb-1 text-center text-[10px] text-ink-caption">입술 모양 값 (두 눈 사이 거리로 크기를 맞춘 값)</p>
           <div className="grid grid-cols-5 gap-1.5">
             {Object.entries(LIP_GEOMETRY_LABELS).map(([k, label]) => (
-              <div key={k} className="rounded-md bg-slate-50 py-1 text-center">
-                <span className="block text-[11px] font-bold tabular-nums text-slate-700">{geo[k]}</span>
-                <span className="mt-0.5 block text-[9px] text-slate-400">{label}</span>
+              <div key={k} className="rounded-md bg-surface-muted py-1 text-center">
+                <span className="block text-[11px] font-bold tabular-nums text-ink">{geo[k]}</span>
+                <span className="mt-0.5 block text-[9px] text-ink-caption">{label}</span>
               </div>
             ))}
           </div>
@@ -390,13 +390,13 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
       )}
       {/* 학습된 K 분류기 — 얼굴 표면신호로 '안 보이는' 비음 추정(계획서 K). 연구 빌드에서만, 기호와 잇지 않는다. */}
       {K_RESEARCH && status === 'running' && kPred && (
-        <div className="mt-2 rounded-lg border border-violet-200 bg-violet-50/60 p-2">
-          <p className="mb-1 text-center text-[10px] text-violet-600">입술 너머 자질 추정 · 학습모델(연구용, 음절 수준 검증 실패)</p>
+        <div className="mt-2 rounded-lg border border-primary-line bg-primary-100/60 p-2">
+          <p className="mb-1 text-center text-[10px] text-primary-700">입술 너머 자질 추정 · 학습모델(연구용, 음절 수준 검증 실패)</p>
           <div className="mx-auto max-w-[220px] text-center">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-violet-100">
-              <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${Math.round(kPred.nasal * 100)}%` }} />
+            <div className="h-2 w-full overflow-hidden rounded-full bg-primary-100">
+              <div className="h-full rounded-full bg-primary-500 transition-all" style={{ width: `${Math.round(kPred.nasal * 100)}%` }} />
             </div>
-            <span className="mt-0.5 block text-[11px] font-medium text-violet-700">
+            <span className="mt-0.5 block text-[11px] font-medium text-primary-700">
               비음(코울림) {Math.round(kPred.nasal * 100)}
             </span>
           </div>
@@ -407,15 +407,15 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
         {status === 'running' ? (
           <div className="flex gap-2">
             <button type="button" onClick={record} disabled={recorded || !faceReady}
-              className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
+              className="rounded-lg bg-good px-4 py-1.5 text-sm font-bold text-white transition hover:bg-good-dark disabled:opacity-50">
               {recorded ? '기록됨 ✓' : faceReady ? '익힘 기록' : '얼굴 인식 중…'}
             </button>
-            <button type="button" onClick={stop} className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm font-bold text-gray-700 hover:bg-gray-50">멈추기</button>
+            <button type="button" onClick={stop} className="rounded-lg border border-line-strong px-4 py-1.5 text-sm font-bold text-ink hover:bg-surface-muted">멈추기</button>
           </div>
         ) : (
           // 카메라 오류(권한·장치) 뒤에는 다시 켜 볼 수 있게 둔다. 모델이 준비되지 않았을 때만 막는다
           <button type="button" onClick={start} disabled={modelStatus !== 'ready' || starting}
-            className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-bold text-white hover:bg-slate-700 disabled:opacity-40">
+            className="rounded-lg bg-surface-inverse px-4 py-1.5 text-sm font-bold text-white hover:bg-surface-inverse-muted disabled:opacity-40">
             카메라 켜기
           </button>
         )}
@@ -423,11 +423,11 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
           {/* 본뜨기는 자기 카메라를 따로 연다(얼굴 모델은 이 화면 것을 쓴다). 이 화면의 카메라·교정 타이머를 먼저 멈춰, 가려진 채 옛 계수를 보내거나
               돌아왔을 때 검은 화면으로 남지 않게 한다(돌아오면 '카메라 켜기'로 다시 켠다). */}
           <button type="button" onClick={() => { stop(); setShowCalib(true) }}
-            className="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-800">
+            className="text-xs text-ink-muted underline underline-offset-2 hover:text-ink">
             {calibrated ? '✓ 내 얼굴 맞춤 적용됨 · 다시 본뜨기' : '더 정확하게 — 내 입모양 본뜨기'}
           </button>
           <button type="button" onClick={() => setShowMirror((v) => !v)}
-            className="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-800">
+            className="text-xs text-ink-muted underline underline-offset-2 hover:text-ink">
             {showMirror ? '아바타로 비추기 끄기' : '아바타로 내 입모양 비추기'}
           </button>
         </div>

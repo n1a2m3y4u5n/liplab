@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listenAPI } from '../api'
 import AppShell from '../components/AppShell'
+import { Card } from '../components/UI'
 import { MDC_DB, srtMeaning, splitTests, srtChange, testRows, axKindRows, confusionRows, dayBars } from '../lib/listenReport'
 import { fmtDb } from '../lib/listenView'
 
@@ -19,14 +20,14 @@ const day = (iso) => (iso || '').slice(0, 10).replaceAll('-', '.')
 
 function Section({ title, children, note, action }) {
   return (
-    <section className="flex min-w-0 flex-col gap-3 rounded-18 border-2 border-line bg-white p-5 lg:rounded-22 lg:p-6">
-      <div className="flex items-center justify-between gap-3">
+    <Card as="section" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-[17px] font-bold text-ink lg:text-[18px]">{title}</h2>
         {action}
       </div>
       {children}
       {note && <p className="break-keep text-[12px] leading-[1.6] text-ink-faint">{note}</p>}
-    </section>
+    </Card>
   )
 }
 

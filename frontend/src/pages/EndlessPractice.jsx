@@ -34,7 +34,7 @@ export default function EndlessPractice() {
     <AppShell active="practice" title="엔드리스 학습" closeTo="/practice/hub">
       {/* 엔드리스 시작 — Figma 인디고 그라데이션 히어로(3D 하단테두리) */}
       <section className="relative w-full overflow-hidden rounded-[20px] border-2 border-b-[5px] border-endless-dark p-6 sm:p-[26px]"
-        style={{ backgroundImage: 'linear-gradient(166deg, var(--endless-light) 0%, var(--endless) 71%)' }}>
+        style={{ backgroundImage: 'linear-gradient(166deg, var(--endless) 0%, var(--endless-dark) 100%)' }}>
         <div className="flex items-center justify-between gap-5">
           <div className="flex flex-col items-start gap-[18px] text-white">
             <p className="text-[24px] font-bold leading-tight tracking-[-0.48px]">약한 유형만 골라서 무한 연습</p>

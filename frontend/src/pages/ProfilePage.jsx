@@ -200,14 +200,14 @@ export default function ProfilePage() {
   return (
     <AppShell active="profile" title="프로필">
       {/* 내 프로필 — 그라데이션 3D 카드(107:145 / 241:121) */}
-      <section className="flex h-[150px] w-full items-start gap-3.5 overflow-hidden rounded-18 border-2 border-b-5 border-primary-600 bg-[linear-gradient(156.15deg,#a78bfa_0%,#7d53de_70.92%)] pl-[18px] pr-4 pt-[22px] lg:h-[176px] lg:items-center lg:gap-6 lg:rounded-22 lg:bg-[linear-gradient(166.28deg,#a78bfa_0%,#7d53de_70.92%)] lg:px-[30px] lg:pt-[3px]">
-        <div className="flex size-16 shrink-0 items-center justify-center rounded-full border-[3px] border-white/90 bg-white/20 text-2xl font-black text-white lg:size-[100px] lg:border-4 lg:text-4xl lg:shadow-[0px_4px_12px_0px_rgba(38,13,89,0.25)]">
+      <section className="flex h-[150px] w-full items-start gap-3.5 overflow-hidden rounded-18 border-2 border-b-5 border-primary-600 bg-hero-brand pl-[18px] pr-4 pt-[22px] lg:h-[176px] lg:items-center lg:gap-6 lg:rounded-22 bg-hero-brand lg:px-[30px] lg:pt-[3px]">
+        <div className="flex size-16 shrink-0 items-center justify-center rounded-full border-[3px] border-white/90 bg-white/[0.08] text-2xl font-black text-white lg:size-[100px] lg:border-4 lg:text-4xl lg:shadow-[0px_4px_12px_0px_rgba(38,13,89,0.25)]">
           {name[0]}
         </div>
         <div className="mt-[19px] flex min-w-0 flex-1 flex-col gap-2 font-bold leading-figma text-white lg:mt-0 lg:max-w-[500px] lg:gap-2.5">
           <div className="flex items-center gap-2 lg:gap-2.5">
             <span className="truncate text-[20px] tracking-[-0.4px] lg:text-[26px] lg:tracking-[-0.52px]">{name}</span>
-            <span className="shrink-0 rounded-full bg-white/[0.24] px-2.5 py-1 text-[11.5px] lg:px-3 lg:py-[5px] lg:text-[13px]">Lv.{lp.level}</span>
+            <span className="shrink-0 rounded-full bg-white/[0.08] px-2.5 py-1 text-[11.5px] lg:px-3 lg:py-[5px] lg:text-[13px]">Lv.{lp.level}</span>
           </div>
           <div className="flex justify-between text-[11.5px] lg:text-[13px]">
             <span className="opacity-85">다음 레벨까지</span>

@@ -31,8 +31,8 @@ const HERO_SLIDES = [
     navMenuId: 'reading',
     cta: '독화 학습 보기',
     background: 'from-[#fffede] via-[#fffbb6] to-[#fff58d]',
-    badge: 'bg-white/75 text-sky-700',
-    visual: { shape: 'from-sky-300 via-sky-400 to-sky-600', shadow: 'shadow-[0_30px_60px_rgba(2,132,199,0.28)]', first: '입', second: '문장', third: '독화', chip: 'bg-sky-100 text-sky-700' },
+    badge: 'bg-white/75 text-stat-level',
+    visual: { shape: 'from-bookmark-light via-bookmark-light to-bookmark', shadow: 'shadow-[0_30px_60px_rgba(2,132,199,0.28)]', first: '입', second: '문장', third: '독화', chip: 'bg-pastel-sky text-stat-level' },
   },
   {
     id: 'speaking',
@@ -44,8 +44,8 @@ const HERO_SLIDES = [
     navMenuId: 'speaking',
     cta: '말하기 학습 보기',
     background: 'from-[#fff6f7] via-[#ffe7eb] to-[#ffd5dc]',
-    badge: 'bg-white/80 text-rose-700',
-    visual: { shape: 'from-rose-300 via-rose-400 to-pink-500', shadow: 'shadow-[0_30px_60px_rgba(244,63,94,0.22)]', first: '소리', second: '억양', third: '발음', chip: 'bg-rose-100 text-rose-700' },
+    badge: 'bg-white/80 text-bad-dark',
+    visual: { shape: 'from-rose-300 via-rose-400 to-speak', shadow: 'shadow-[0_30px_60px_rgba(244,63,94,0.22)]', first: '소리', second: '억양', third: '발음', chip: 'bg-bad-tint text-bad-dark' },
   },
 ]
 
@@ -58,12 +58,12 @@ const TRACKS = [
 ]
 
 const STAGE_STATUS = {
-  mastered:    { label: '숙달',     cls: 'bg-green-100 text-green-700' },
-  in_progress: { label: '진행 중',  cls: 'bg-blue-100 text-blue-700' },
+  mastered:    { label: '숙달',     cls: 'bg-good-tint text-good-dark' },
+  in_progress: { label: '진행 중',  cls: 'bg-bookmark-tint text-bookmark-dark' },
   unlocked:    { label: '시작 가능', cls: 'bg-primary-100 text-primary-700' },
-  available:   { label: '연습',     cls: 'bg-gray-100 text-gray-600' },
-  locked:      { label: '잠김',     cls: 'bg-gray-100 text-gray-400' },
-  coming_soon: { label: '준비 중',  cls: 'bg-gray-100 text-gray-400' },
+  available:   { label: '연습',     cls: 'bg-surface-sunken text-ink-muted' },
+  locked:      { label: '잠김',     cls: 'bg-surface-sunken text-ink-caption' },
+  coming_soon: { label: '준비 중',  cls: 'bg-surface-sunken text-ink-caption' },
 }
 
 // 하위 카드는 같은 폴더의 파일로 분리했다(NextUpCard·LearnerProfileCard).
@@ -214,15 +214,15 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: -12, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
-            className="fixed right-4 top-44 z-[60] flex max-w-sm items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 shadow-xl sm:right-6"
+            className="fixed right-4 top-44 z-[60] flex max-w-sm items-start gap-3 rounded-2xl border border-warn/40 bg-warn-tint px-4 py-3 text-ink shadow-xl sm:right-6"
           >
-            <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-200 text-lg">🔒</span>
+            <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-warn-tint text-lg">🔒</span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-black">대화 실전은 아직 잠겨 있어요</p>
-              <p className="mt-0.5 text-xs leading-relaxed text-amber-800">{unlockNotice}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-warn-text">{unlockNotice}</p>
             </div>
             <button type="button" onClick={() => setUnlockNotice(null)} aria-label="열림 안내 닫기"
-              className="text-lg leading-none text-amber-600 hover:text-amber-900">×</button>
+              className="text-lg leading-none text-warn-text hover:text-warn-text">×</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -243,7 +243,7 @@ export default function Dashboard() {
               if (event.key === 'ArrowLeft') { event.preventDefault(); moveHeroSlide(-1) }
               if (event.key === 'ArrowRight') { event.preventDefault(); moveHeroSlide(1) }
             }}
-            className="relative min-h-[500px] overflow-hidden rounded-[24px] outline-none ring-sky-400 transition focus-visible:ring-2 focus-visible:ring-offset-2 lg:h-full lg:min-h-0"
+            className="relative min-h-[500px] overflow-hidden rounded-[24px] outline-none ring-bookmark-line transition focus-visible:ring-2 focus-visible:ring-offset-2 lg:h-full lg:min-h-0"
           >
             <AnimatePresence initial={false} mode="wait">
               <motion.article
@@ -266,7 +266,7 @@ export default function Dashboard() {
                 <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
                   <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/40 blur-3xl" />
                   <div className="absolute left-[46%] -top-16 h-64 w-64 rounded-full bg-white/30 blur-3xl" />
-                  <div className="absolute left-[36%] top-1/3 h-72 w-72 rounded-full bg-amber-200/30 blur-3xl animate-pulse-slow" />
+                  <div className="absolute left-[36%] top-1/3 h-72 w-72 rounded-full bg-warn-tint/30 blur-3xl animate-pulse-slow" />
                   <div className="absolute -bottom-10 left-[30%] h-56 w-56 rounded-full bg-white/25 blur-2xl" />
                 </div>
 
@@ -276,13 +276,13 @@ export default function Dashboard() {
                   <div className="absolute left-[63%] top-[15%] h-12 w-12 rotate-12 rounded-xl bg-white/60 shadow-md backdrop-blur-sm" />
                   <div className="absolute left-[38%] top-[60%] h-10 w-10 rotate-6 rounded-xl bg-white/50 shadow-md backdrop-blur-sm" />
                   <span className="absolute left-[57%] top-[58%] h-11 w-11 rounded-full border-2 border-white/60" />
-                  <span className="absolute left-[43%] top-[13%] h-8 w-8 rounded-full border-2 border-amber-300/60" />
+                  <span className="absolute left-[43%] top-[13%] h-8 w-8 rounded-full border-2 border-warn/40/60" />
                   <span className="absolute left-[41%] top-[50%] h-3.5 w-3.5 rounded-full bg-white/75" />
-                  <span className="absolute left-[54%] top-[40%] h-2.5 w-2.5 rounded-full bg-amber-400/70" />
+                  <span className="absolute left-[54%] top-[40%] h-2.5 w-2.5 rounded-full bg-warn/70" />
                   <span className="absolute left-[69%] top-[50%] h-3 w-3 rounded-full bg-white/65" />
-                  <span className="absolute left-[50%] top-[70%] h-2 w-2 rounded-full bg-slate-900/10" />
-                  <span className="absolute left-[52%] top-[30%] text-2xl text-amber-400/80">✦</span>
-                  <span className="absolute left-[67%] top-[33%] text-base text-amber-500/70">✦</span>
+                  <span className="absolute left-[50%] top-[70%] h-2 w-2 rounded-full bg-surface-inverse/10" />
+                  <span className="absolute left-[52%] top-[30%] text-2xl text-warn-onDark/80">✦</span>
+                  <span className="absolute left-[67%] top-[33%] text-base text-warn-text/70">✦</span>
                   <span className="absolute left-[47%] top-[43%] text-sm text-white/90 animate-pulse">✦</span>
                 </div>
 
@@ -291,15 +291,15 @@ export default function Dashboard() {
                     {/* data-hero-copy: 펫이 넘어오지 못하는 '학습 섹션' 장애물 영역 (실제 글자 폭에만 맞춤) */}
                     <div data-hero-copy className="w-fit">
                       <span className={`inline-flex rounded-full px-3 py-1.5 text-[11px] font-black shadow-sm ${currentHero.badge}`}>LIPLAB · {currentHero.eyebrow}</span>
-                      <h1 className="mt-4 text-3xl font-black leading-[1.13] tracking-[-0.045em] text-slate-950 sm:text-4xl lg:text-[36px] xl:text-[40px]">
+                      <h1 className="mt-4 text-3xl font-black leading-[1.13] tracking-[-0.045em] text-ink sm:text-4xl lg:text-[36px] xl:text-[40px]">
                         {currentHero.title[0]}<br />{currentHero.title[1]}
                       </h1>
-                      <p className="mt-3 max-w-md text-sm font-semibold leading-relaxed text-slate-600">{currentHero.description}</p>
+                      <p className="mt-3 max-w-md text-sm font-semibold leading-relaxed text-ink-muted">{currentHero.description}</p>
                       <button
                         type="button"
                         onPointerDown={(event) => event.stopPropagation()}
                         onClick={() => requestNavMenu(currentHero.navMenuId)}
-                        className="mt-5 rounded-full bg-slate-950 px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+                        className="mt-5 rounded-full bg-surface-deep px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-bookmark focus:outline-none focus:ring-2 focus:ring-ink focus:ring-offset-2"
                       >
                         {currentHero.cta}
                       </button>
@@ -309,18 +309,18 @@ export default function Dashboard() {
 
                 <div aria-hidden="true" className="pointer-events-none absolute -bottom-10 -right-10 hidden h-[330px] w-[360px] md:block">
                   <div className={`absolute bottom-12 right-12 h-52 w-52 rotate-[-5deg] rounded-[48%_44%_50%_46%] bg-gradient-to-br ${currentHero.visual.shape} ${currentHero.visual.shadow}`}>
-                    <span className="absolute left-[75px] top-[64px] h-5 w-5 rounded-full bg-slate-800" />
-                    <span className="absolute left-[113px] top-[61px] h-5 w-5 rounded-full bg-slate-800" />
+                    <span className="absolute left-[75px] top-[64px] h-5 w-5 rounded-full bg-surface-inverse-muted" />
+                    <span className="absolute left-[113px] top-[61px] h-5 w-5 rounded-full bg-surface-inverse-muted" />
                     <span className="absolute left-[58px] top-[100px] h-10 w-[92px] rounded-b-full rounded-t-[42%] border-b-[12px] border-white/90" />
                     <span className="absolute left-[40px] top-[78px] h-4 w-4 rounded-full bg-white/40" />
                     <span className="absolute right-[40px] top-[78px] h-4 w-4 rounded-full bg-white/40" />
-                    <span className="absolute -right-7 top-20 h-20 w-14 rotate-12 rounded-[55%_45%_55%_45%] bg-slate-900/20" />
+                    <span className="absolute -right-7 top-20 h-20 w-14 rotate-12 rounded-[55%_45%_55%_45%] bg-surface-inverse/20" />
                   </div>
-                  <div className="absolute right-20 top-2 grid h-16 min-w-16 rotate-12 place-items-center rounded-2xl bg-white px-2 text-sm font-black text-slate-800 shadow-xl">{currentHero.visual.first}</div>
+                  <div className="absolute right-20 top-2 grid h-16 min-w-16 rotate-12 place-items-center rounded-2xl bg-white px-2 text-sm font-black text-ink shadow-xl">{currentHero.visual.first}</div>
                   <div className={`absolute right-3 top-24 grid h-14 min-w-14 -rotate-6 place-items-center rounded-2xl px-2 text-xs font-black shadow-xl ${currentHero.visual.chip}`}>{currentHero.visual.second}</div>
-                  <div className="absolute left-8 top-16 grid h-14 min-w-14 rotate-[-12deg] place-items-center rounded-full bg-white/90 px-2 text-xs font-black text-slate-700 shadow-xl">{currentHero.visual.third}</div>
-                  <span className="absolute left-8 top-2 text-3xl text-amber-400">✦</span>
-                  <span className="absolute right-8 top-3 text-xl text-amber-500">✦</span>
+                  <div className="absolute left-8 top-16 grid h-14 min-w-14 rotate-[-12deg] place-items-center rounded-full bg-white/90 px-2 text-xs font-black text-ink shadow-xl">{currentHero.visual.third}</div>
+                  <span className="absolute left-8 top-2 text-3xl text-warn-onDark">✦</span>
+                  <span className="absolute right-8 top-3 text-xl text-warn-text">✦</span>
                 </div>
               </motion.article>
             </AnimatePresence>
@@ -332,7 +332,7 @@ export default function Dashboard() {
               type="button"
               onClick={() => moveHeroSlide(-1)}
               aria-label="이전 맞춤 학습"
-              className="absolute left-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-slate-950/70 text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-white sm:left-4"
+              className="absolute left-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-surface-deep/70 text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-surface-deep focus:outline-none focus:ring-2 focus:ring-white sm:left-4"
             >
               <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
             </button>
@@ -340,7 +340,7 @@ export default function Dashboard() {
               type="button"
               onClick={() => moveHeroSlide(1)}
               aria-label="다음 맞춤 학습"
-              className="absolute right-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-slate-950/70 text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-white sm:right-4"
+              className="absolute right-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-surface-deep/70 text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-surface-deep focus:outline-none focus:ring-2 focus:ring-white sm:right-4"
             >
               <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
             </button>
@@ -354,7 +354,7 @@ export default function Dashboard() {
                   aria-selected={heroSlide === index}
                   aria-label={`${slide.tab} 슬라이드`}
                   onClick={() => selectHeroSlide(index)}
-                  className={`rounded-full px-3 py-2 text-[11px] font-black transition sm:px-4 ${heroSlide === index ? 'bg-slate-950 text-white shadow-sm' : 'text-slate-500 hover:bg-white hover:text-slate-900'}`}
+                  className={`rounded-full px-3 py-2 text-[11px] font-black transition sm:px-4 ${heroSlide === index ? 'bg-surface-deep text-white shadow-sm' : 'text-ink-muted hover:bg-white hover:text-ink'}`}
                 >
                   {slide.tab}
                 </button>

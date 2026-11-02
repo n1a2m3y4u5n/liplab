@@ -268,11 +268,11 @@ export default function CurriculumPath() {
         {/* 유닛 헤더(61:12 / 모바일 233:39) — 트랙색 + 3D 하단테두리 + 가이드(사용법 가이드 모달) */}
         <div className="flex w-full items-center gap-3.5 rounded-16 border-b-4 border-track-dark bg-track py-[15px] pl-[17px] pr-[13px] text-white lg:rounded-18 lg:border-b-5 lg:py-5 lg:pl-[26px] lg:pr-5">
           <div className="flex min-w-0 flex-1 flex-col gap-[3px] font-bold leading-figma lg:gap-1">
-            <span className="text-[11px] opacity-[0.85] lg:text-[13px]">{TRACK_LABEL[track]} · {view ? `${view.no}단계` : '학습'}</span>
+            <span className="text-[11px] lg:text-[13px]">{TRACK_LABEL[track]} · {view ? `${view.no}단계` : '학습'}</span>
             <span className="truncate text-[18px] tracking-[-0.36px] lg:text-[24px] lg:tracking-[-0.48px]">{view?.title || '커리큘럼'}</span>
           </div>
           <button type="button" onClick={() => setGuideOpen(true)}
-            className="shrink-0 rounded-10 border-1.5 border-white/35 bg-white/[0.18] px-3 py-[7px] text-[12px] font-bold leading-figma text-white transition hover:bg-white/30 lg:rounded-[12px] lg:border-2 lg:border-white/40 lg:px-[18px] lg:py-3 lg:text-[14px]">
+            className="shrink-0 rounded-10 border-1.5 border-white/35 bg-white/[0.08] px-3 py-[7px] text-[12px] font-bold leading-figma text-white transition hover:bg-white/[0.12] lg:rounded-[12px] lg:border-2 lg:border-white/40 lg:px-[18px] lg:py-3 lg:text-[14px]">
             가이드
           </button>
         </div>

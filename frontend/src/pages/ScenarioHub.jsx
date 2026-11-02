@@ -141,9 +141,9 @@ export default function ScenarioHub() {
     <AppShell active="practice" title="상황별 시나리오" closeTo="/practice/hub">
       {notice && (
         <div role="status" aria-live="polite"
-          className="fixed left-1/2 top-4 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl bg-amber-100 px-4 py-2 text-sm font-medium text-amber-900 shadow-lg">
+          className="fixed left-1/2 top-4 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl bg-warn-tint px-4 py-2 text-sm font-medium text-warn-text shadow-lg">
           <span>{notice}</span>
-          <button type="button" onClick={() => setNotice('')} aria-label="안내 닫기" className="text-amber-500 hover:text-amber-700">✕</button>
+          <button type="button" onClick={() => setNotice('')} aria-label="안내 닫기" className="text-warn-text hover:text-warn-text">✕</button>
         </div>
       )}
 
