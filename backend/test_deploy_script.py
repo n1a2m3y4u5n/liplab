@@ -23,20 +23,32 @@ FAKE_FLY = r'''@echo off
 echo Connecting to fake-host... 1>&2
 echo [fly] progress line on stderr 1>&2
 if "%1"=="machines" goto machines
+if "%1"=="machine" goto machine
 if "%1"=="ssh" goto ssh
 if "%1"=="deploy" goto deploy
 exit /b 1
 :machines
-echo [{"config":{"image":"registry.fly.io/liplab-dev:deployment-PREV"}}]
+if "%FAKE_FLY_STOPPED%"=="1" if not exist "%FAKE_FLY_LOG%.started" echo [{"id":"m1","state":"stopped","config":{"image":"registry.fly.io/liplab-dev:deployment-PREV"}}]& exit /b 0
+echo [{"id":"m1","state":"started","config":{"image":"registry.fly.io/liplab-dev:deployment-PREV"}}]
+exit /b 0
+:machine
+echo started> "%FAKE_FLY_LOG%.started"
 exit /b 0
 :ssh
+if "%FAKE_FLY_STOPPED%"=="1" if not exist "%FAKE_FLY_LOG%.started" echo Error: app liplab-dev has no started VMs 1>&2& exit /b 1
 if "%FAKE_FLY_SSH_FAIL%"=="1" exit /b 1
 echo SNAPSHOT /data/backup/pre-20261103T000000Z.db 4096
 exit /b 0
 :deploy
+>> "%FAKE_FLY_LOG%" echo CWD=%CD%
+if "%FAKE_FLY_DEPLOY_FAIL%"=="1" goto deployfail
 echo Deploying... 1>&2
 echo ok
 exit /b 0
+:deployfail
+for /l %%i in (1,1,60) do echo build line %%i 1>&2
+echo Authorization: Bearer abcdefgh12345678 1>&2
+exit /b 1
 '''
 
 
@@ -121,3 +133,37 @@ def test_token_like_text_is_not_written_to_report(tmp_path, ready_server):
     for name in os.listdir(out):
         assert "SECRETVALUE123" not in (out / name).read_text(encoding="utf-8-sig", errors="replace")
     assert "SECRETVALUE123" not in r.stdout
+
+
+def test_stopped_machine_is_started_and_awaited_before_ssh(tmp_path, ready_server):
+    root, gate, fly = _repo(tmp_path)
+    out = tmp_path / "out"
+    r = _run(root, gate, fly, out, ready_server, {"FAKE_FLY_STOPPED": "1"})
+    assert "DEPLOY_OK" in r.stdout, r.stdout[-1500:] + r.stderr[-1500:]
+    calls = (tmp_path / "fly.log").read_text(encoding="utf-8", errors="replace")
+    assert "machine start m1" in calls
+    assert calls.index("machine start m1") < calls.index("ssh console") < calls.index("deploy -c")
+
+
+def test_deploy_runs_in_context_dir_with_relative_config(tmp_path, ready_server):
+    root, gate, fly = _repo(tmp_path)
+    ctx = tmp_path / "ctx"
+    ctx.mkdir()
+    for f in ("Dockerfile", "fly.dev.toml"):
+        shutil.copy(root / f, ctx / f)
+    r = _run(root, gate, fly, tmp_path / "out", ready_server, extra_args=("-ContextDirectory", str(ctx)))
+    assert "DEPLOY_OK" in r.stdout, r.stdout[-1500:] + r.stderr[-1500:]
+    calls = (tmp_path / "fly.log").read_text(encoding="utf-8", errors="replace")
+    assert "deploy -c fly.dev.toml -a liplab-dev --remote-only" in calls and "--dockerfile" not in calls
+    assert f"CWD={ctx}" in calls
+
+
+def test_failed_deploy_leaves_last_40_output_lines_in_report(tmp_path, ready_server):
+    root, gate, fly = _repo(tmp_path)
+    out = tmp_path / "out"
+    r = _run(root, gate, fly, out, ready_server, {"FAKE_FLY_DEPLOY_FAIL": "1", "FLY_API_TOKEN": "FlyV1 fm2_SECRETVALUE123"})
+    assert r.returncode != 0 and "DEPLOY_OK" not in r.stdout
+    report = (out / "deploy-report.txt").read_text(encoding="utf-8-sig")
+    assert "status: failed" in report and "flyctl 실패 출력 끝 40줄" in report
+    assert "build line 60" in report and "build line 1 " not in report and "build line 20 " not in report
+    assert "abcdefgh12345678" not in report and "Bearer ***" in report

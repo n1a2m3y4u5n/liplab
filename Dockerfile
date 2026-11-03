@@ -70,6 +70,8 @@ COPY backend/requirements-infer.txt ./
 # A4 아바타 백본(WavLM-large)은 받기·int8 변환·fp32 삭제를 이 한 RUN에서 끝낸다. 예전에는 받은 fp32(약 1.2GB)가 이 층에 남고 뒤 층에서 지워
 # 이미지가 그만큼 컸다(층은 지워도 줄지 않는다). 변환 도구 quant_int8.py만 먼저 가져온다(torch·transformers 외 의존 없음).
 # 변환 결과는 /app/models/wavlm_large_int8이고, 모델 COPY는 그 뒤라 같은 폴더에 합쳐진다.
+# 11/03 v37·v38 이미지가 모두 3.3GB였던 원인 추정: huggingface_hub 1.x(hf-xet)는 받은 조각을 $HF_HOME/xet에도 캐시하는데, 아래 rm은 hub/ 폴더만 지웠다.
+# 같은 RUN에서 xet 캐시와 락도 지우고, 층 끝에 HF_HOME·models·site-packages 크기를 빌드 기록에 찍어 다음 빌드에서 확인한다.
 COPY backend/quant_int8.py ./
 RUN if [ "$WITH_ML" = "1" ]; then \
       pip install --no-cache-dir torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu && \
@@ -78,7 +80,8 @@ RUN if [ "$WITH_ML" = "1" ]; then \
 k='kresnik/wav2vec2-large-xlsr-korean'; \
 '$DGOP_MODEL' == 'kresnik' and (AutoProcessor.from_pretrained(k), AutoModelForCTC.from_pretrained(k))" && \
       python -c "import quant_int8 as Q; print('wavlm int8:', Q.export_base('microsoft/wavlm-large', 'models/wavlm_large_int8'))" && \
-      rm -rf "$HF_HOME/hub/models--microsoft--wavlm-large"; \
+      rm -rf "$HF_HOME/hub/models--microsoft--wavlm-large" "$HF_HOME/xet" "$HF_HOME/hub/.locks" && \
+      du -sh "$HF_HOME" /app/models /usr/local/lib/python3.11/site-packages 2>/dev/null; \
     fi
 
 # torch CPU 색인이 주는 setuptools 78.1은 알려진 취약점이 있다(pip-audit 관문). 위 층의 캐시를 비우지 않게 따로 올린다.

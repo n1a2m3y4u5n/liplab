@@ -84,8 +84,26 @@ function Invoke-Fly([string[]]$FlyArgs) {
     $errText = Hide-Secrets ((@($lines) | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | ForEach-Object { "$_" }) -join "`n")
     $out = Hide-Secrets ((@($lines) | Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] } | ForEach-Object { "$_" }) -join "`n")
     foreach ($l in (($errText + "`n" + $out) -split "`n")) { if ($l.Trim()) { $log.Add("  | " + $l.TrimEnd()) | Out-Null } }
-    if ($code -ne 0) { Stop-Deploy "flyctl 실패(종료 코드 $code): $($FlyArgs[0..1] -join ' ')" }
+    if ($code -ne 0) {
+        # 실패하면 flyctl 출력의 끝 40줄을 따로 남긴다(v38에서는 deploy가 왜 1로 끝났는지 기록이 없었다). 순서는 터미널에 나온 그대로다.
+        $all = @(@($lines) | ForEach-Object { Hide-Secrets "$_" } | Where-Object { $_.Trim() })
+        $tail = @($all | Select-Object -Last 40)
+        $log.Add("--- flyctl 실패 출력 끝 $($tail.Count)줄 ($($FlyArgs[0..1] -join ' ')) ---") | Out-Null
+        foreach ($t in $tail) { $log.Add("  ! " + $t.TrimEnd()) | Out-Null }
+        $log.Add('--- 끝 ---') | Out-Null
+        Stop-Deploy "flyctl 실패(종료 코드 $code): $($FlyArgs[0..1] -join ' ')"
+    }
     return $out
+}
+
+# /health/ready가 200이 될 때까지 기다린다. 멈춘(scale to zero) 머신은 이 요청만으로도 fly 프록시가 깨운다.
+function Wait-Ready {
+    $until = (Get-Date).AddSeconds($ReadyTimeoutSec)
+    while ((Get-Date) -lt $until) {
+        try { $r = Invoke-WebRequest -Uri "$BaseUrl/health/ready" -UseBasicParsing -TimeoutSec 30; if ($r.StatusCode -eq 200) { return $true } } catch { }
+        Start-Sleep -Seconds 10
+    }
+    return $false
 }
 
 try {
@@ -98,6 +116,18 @@ try {
         @{ app = $App; image = $prevImage; recorded_utc = (Get-Date).ToUniversalTime().ToString('o'); deploying_commit = $head } |
             ConvertTo-Json | Set-Content -LiteralPath (Join-Path $OutDirectory 'previous-image.json') -Encoding utf8
         Say "직전 이미지 기록: $prevImage"
+    }
+
+    # 3.5) 머신 깨우기: 멈춘 머신에는 `flyctl ssh console`이 "has no started VMs"로 끝난다(v38 사고). ssh 전에 깨우고 ready를 기다린다.
+    if ($DryRun) {
+        Say '(dry-run) 멈춘 머신이 있으면 flyctl machine start → /health/ready 대기 → ssh'
+    } else {
+        $stopped = @(@($m) | Where-Object { $_.state -in @('stopped', 'suspended') })
+        foreach ($mm in $stopped) { Invoke-Fly @('machine', 'start', "$($mm.id)", '-a', $App) | Out-Null }
+        if ($stopped.Count -gt 0) { Say "멈춘 머신 $($stopped.Count)개를 시작했다" }
+        try { Invoke-WebRequest -Uri "$BaseUrl/health" -UseBasicParsing -TimeoutSec 30 | Out-Null } catch { }
+        if (!(Wait-Ready)) { Stop-Deploy "머신이 $ReadyTimeoutSec 초 안에 ready가 되지 않았다(ssh·배포 전에 멈춘다)" }
+        Say '머신 ready 확인(ssh 전)'
     }
 
     # 4) DB 사본(/data/backup/pre-<UTC>.db, 최근 3개만 남긴다)
@@ -117,18 +147,12 @@ try {
     }
 
     # 5) 배포
-    $depOut = Invoke-Fly @('deploy', '-c', (Join-Path $ContextDirectory 'fly.dev.toml'), '-a', $App, '--remote-only', '--dockerfile', (Join-Path $ContextDirectory 'Dockerfile'))
+    # 손으로 성공한 방식과 같게: context 폴더로 옮겨 상대 경로 `-c fly.dev.toml`로 부른다(절대 경로 -c·--dockerfile은 종료 코드 1로 끝났다).
+    Push-Location $ContextDirectory
+    try { $depOut = Invoke-Fly @('deploy', '-c', 'fly.dev.toml', '-a', $App, '--remote-only') } finally { Pop-Location }
     if (!$DryRun) { Set-Content -LiteralPath (Join-Path $OutDirectory 'fly-deploy.log') -Value $depOut -Encoding utf8 }
 
     # 6) /health/ready, 7) 스모크
-    function Wait-Ready {
-        $until = (Get-Date).AddSeconds($ReadyTimeoutSec)
-        while ((Get-Date) -lt $until) {
-            try { $r = Invoke-WebRequest -Uri "$BaseUrl/health/ready" -UseBasicParsing -TimeoutSec 30; if ($r.StatusCode -eq 200) { return $true } } catch { }
-            Start-Sleep -Seconds 10
-        }
-        return $false
-    }
     if ($DryRun) {
         Say "(dry-run) /health/ready 대기 → scripts\smoke_dev.py 실행 → 실패하면 --image $prevImage 로 되돌림"
     } else {
@@ -139,7 +163,8 @@ try {
         } elseif ($ready) { $smokeOk = $true } else { $smokeOk = $false }
         if (!$smokeOk) {
             Say "배포 검증 실패(ready=$ready) → 직전 이미지로 되돌림"
-            Invoke-Fly @('deploy', '-c', (Join-Path $ContextDirectory 'fly.dev.toml'), '-a', $App, '--image', $prevImage) | Out-Null
+            Push-Location $ContextDirectory
+            try { Invoke-Fly @('deploy', '-c', 'fly.dev.toml', '-a', $App, '--image', $prevImage) | Out-Null } finally { Pop-Location }
             $rolledBack = $true
             Say ("되돌린 뒤 /health/ready: " + (Wait-Ready))
         }
