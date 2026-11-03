@@ -222,7 +222,7 @@ function GlobalOverlays() {
 /** 없는 주소(Figma 404 438:83 / 438:123): 예전에는 학습 경로로 조용히 돌려보냈다(변경 내역 §1). */
 function NotFound() {
   const navigate = useNavigate()
-  return <ErrorScreen kind="notfound" onHome={() => navigate('/learn/path')} />
+  return <ErrorScreen kind="notfound" onHome={() => navigate('/today')} />   // IA 표·ErrorBoundary와 같은 홈(오늘)
 }
 
 function LoginRedirect() {

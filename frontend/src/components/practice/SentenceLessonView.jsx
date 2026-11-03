@@ -1,3 +1,4 @@
+import LessonA11yButton from '../LessonA11yButton'
 import { HintDisplay, BAR_BTN, OPTION_CLASS } from '../../components/practice/SentencePresentation'
 import { Progress } from '../../components/UI'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -6,12 +7,13 @@ import MouthAvatar from '../../components/MouthAvatar'
 import QuizForm from '../../components/QuizForm'
 import SignPanel from '../../components/SignPanel'
 import BookmarkButton from '../../components/BookmarkButton'
+import SubmitRetry from '../../components/SubmitRetry'
 import { ModalClose } from '../../components/Modal'
 import CueBadges, { CueLegend } from '../../components/CueBadges'
 import ConsonantFeedback from '../../components/ConsonantFeedback'
 import SoundReplayBar from '../../components/SoundReplayBar'
 
-export default function SentenceLessonView({ multiple, handleFinish, answered, total, currentSentenceIndex, currentScenario, questionTitle, isBookmarked, toggleBookmark, visemeError, fetchVisemes, shownVisemes, result, currentSentence, lesson, replay, choices, submitting, setSelectedChoice, selectedChoice, optionState, sound, effectiveMode, player, setSignOpen, handleNext, isLastSentence, handleSubtitleFrame, subtitleRestartKey, hintLevel, showNextHint, retry, revealedTextIndex, revealedAnswer, draft, setDraft, handleSubmitAnswer, handleRetry, revealAfterRetry, mcCorrect, signOpen, signRef }) {
+export default function SentenceLessonView({ multiple, handleFinish, answered, total, currentSentenceIndex, currentScenario, questionTitle, isBookmarked, toggleBookmark, visemeError, fetchVisemes, submitFail, resendAnswer, skipFailedAnswer, shownVisemes, result, currentSentence, lesson, replay, choices, submitting, setSelectedChoice, selectedChoice, optionState, sound, effectiveMode, player, setSignOpen, handleNext, isLastSentence, handleSubtitleFrame, subtitleRestartKey, hintLevel, showNextHint, retry, revealedTextIndex, revealedAnswer, draft, setDraft, handleSubmitAnswer, handleRetry, revealAfterRetry, mcCorrect, signOpen, signRef }) {
 return (
     <div className="min-h-[100dvh] bg-page">
       <div className={`mx-auto flex w-full max-w-[676px] flex-col px-[18px] pt-[18px] lg:pt-7 ${multiple ? 'lesson-content pb-[200px] lg:pb-[150px]' : 'pb-12'}`}>
@@ -21,6 +23,7 @@ return (
             <img src="/ui/lp-91-12-close.svg" alt="" className="size-8 lg:size-9" />
           </button>
           <Progress value={(answered / total) * 100} label="레슨 진행률" animated className="lg:h-[14px]" />
+          <LessonA11yButton />
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{currentSentenceIndex + 1} / {total}</span>
         </div>
 
@@ -41,6 +44,8 @@ return (
               <button type="button" onClick={fetchVisemes} className="shrink-0 underline">다시 가져오기</button>
             </div>
           )}
+
+          {submitFail && <SubmitRetry onResend={resendAnswer} onSkip={skipFailedAnswer} busy={submitting} />}
 
           {multiple ? (
             <>

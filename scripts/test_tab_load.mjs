@@ -19,9 +19,7 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     const errors = []
     page.on('pageerror', (e) => errors.push(String(e)))
     await page.goto(`${base}/learn/path?track=listen`)
-    await page.getByRole('dialog', { name: '수어 번역 사용법 안내' }).waitFor()
-    assert.equal(await page.locator('dialog[open]').count(), 0)
-    await page.getByRole('button', { name: '알겠어요' }).click()
+    // 수어 사용법 안내는 문장을 드래그해 수어 패널을 열 때만 뜬다(처음 방문 대기열에서 빠졌다). 첫 방문 안내는 듣기 안내 하나다
     await page.getByRole('dialog', { name: '소리 듣기 안내', exact: true }).waitFor()
     assert.equal(await page.getByRole('dialog', { name: '수어 번역 사용법 안내' }).count(), 0)
     await page.getByRole('button', { name: '안내 닫기' }).click()
@@ -34,9 +32,6 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
       localStorage.removeItem('liplab_listen_notice')
     })
     await page.goto(`${base}/listen/today`)
-    await page.getByRole('dialog', { name: '수어 번역 사용법 안내' }).waitFor()
-    assert.equal(await page.locator('dialog[open]').count(), 0)
-    await page.getByRole('button', { name: '알겠어요', exact: true }).click()
     await page.getByRole('dialog', { name: '소리 듣기 안내', exact: true }).waitFor()
     await page.keyboard.press('Escape')
     await page.getByRole('dialog').waitFor({ state: 'detached' })
@@ -44,7 +39,7 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     const cases = [
       ['/records?view=wrong', ['/api/review/due'], '문장 목록'],
       ['/records?view=wrong', ['/api/review-sentences'], '문장 목록'],
-      ['/records?view=wrong', ['/api/bookmarks'], '문장 목록'],
+      ['/records?view=saved', ['/api/bookmarks'], '문장 목록'],
       ['/records?view=wrong', ['/api/listen/review'], '문장 목록'],
       ['/today', ['/api/tasks'], '오늘의 과제'],
       ['/records', ['/api/analysis/overview'], '학습 시간 변화'],
@@ -67,6 +62,36 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
       await retry.waitFor({ state: 'detached' })
       await page.getByText(ready, { exact: false }).first().waitFor()
       console.log(`${name}: ${path} ${endpoints.join()} failure + recovery OK`)
+    }
+    // 입모양 API 실패 → 안내와 다시 받기(배치검사는 문항을 내지 않고 재시도 화면에 머문다), 복구 뒤 문항이 나온다
+    {
+      const failViseme = (route) => new URL(route.request().url()).pathname.startsWith('/api/viseme') ? route.abort() : route.continue()
+      await page.route('**/api/**', failViseme)
+      await page.goto(base + '/learn/placement')
+      const alert = page.getByText('입모양을 불러오지 못했어요', { exact: false }).first()
+      await alert.waitFor({ timeout: 15000 }).catch(async (e) => { console.log('Failure state:', (await page.locator('body').innerText()).slice(0, 1500)); throw e })
+      await page.unroute('**/api/**', failViseme)
+      await page.getByRole('button', { name: '다시 시도', exact: true }).click()
+      await alert.waitFor({ state: 'detached', timeout: 15000 })
+      console.log(`${name}: placement viseme failure + retry OK`)
+    }
+    // 단어 레슨: 답 기록을 보내지 못하면 다음 문항으로 조용히 넘어가지 않고 안내(다시 보내기·건너뛰기)를 보인다. 폰 헤더의 접근성 Aa 버튼도 열린다
+    {
+      await page.goto(base + '/learn/word')
+      await page.getByRole('button', { name: '접근성 설정', exact: true }).first().waitFor({ timeout: 15000 })
+      const failSubmit = (route) => new URL(route.request().url()).pathname.includes('/word-answer') ? route.abort() : route.continue()
+      await page.route('**/api/**', failSubmit)
+      const choice = page.locator('button').filter({ hasText: /^[1-4]?\s*[가-힣]+$/ }).first()
+      await choice.waitFor({ timeout: 15000 })
+      await choice.click()
+      await page.getByRole('button', { name: '확인', exact: true }).click()
+      await page.getByText('기록을 보내지 못했어요').waitFor({ timeout: 10000 })
+      await page.unroute('**/api/**', failSubmit)
+      await page.getByRole('button', { name: '다시 보내기', exact: true }).click()
+      await page.getByText('기록을 보내지 못했어요').waitFor({ state: 'detached', timeout: 10000 })
+      await page.getByRole('button', { name: '접근성 설정', exact: true }).first().click()
+      await page.getByRole('dialog', { name: '접근성 설정' }).waitFor()
+      console.log(`${name}: word submit failure + resend, header Aa OK`)
     }
     assert.deepEqual(errors, [])
     await context.close()

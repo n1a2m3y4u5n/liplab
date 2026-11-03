@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { curriculumAPI, learningAPI } from '../api'
+import { curriculumAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
+import useVisemeLoad from '../hooks/useVisemeLoad'
+import VisemeRetry from '../components/VisemeRetry'
 import { TRAINING_TALKERS } from '../lib/talkers'
 import { useGpuConstrained } from '../lib/gpuBudget'
 import AppShell from '../components/AppShell'
@@ -46,6 +48,7 @@ export default function MultiConversation() {
   const [conv, setConv] = useState(null)
   const [idx, setIdx] = useState(0)
   const [frames, setFrames] = useState([])
+  const viseme = useVisemeLoad(setFrames)
   const [loading, setLoading] = useState(true)
   const [spkChoice, setSpkChoice] = useState([])     // 턴별로 고른 화자
   const [readChoice, setReadChoice] = useState([])   // 턴별로 고른 문장(빈칸 턴은 null)
@@ -71,7 +74,6 @@ export default function MultiConversation() {
       .then((d) => setFaces(Array.isArray(d?.faces) ? d.faces.filter((f) => typeof f?.url === 'string') : []))
       .catch(() => setFaces([]))
   }, [])
-  const framesReqRef = useRef(0)   // 입모양 요청 번호 — 빨리 넘기면 늦게 온 이전 턴 응답을 버린다
 
   const load = useCallback(async () => {
     setLoading(true); setLoadError(false)
@@ -88,10 +90,9 @@ export default function MultiConversation() {
   useEffect(() => {
     if (!conv) return
     const t = conv.turns[idx]
-    const req = ++framesReqRef.current
-    setFrames([])
-    if (t) learningAPI.getVisemes(t.text).then((f) => { if (framesReqRef.current === req) setFrames(f) }).catch(() => {})
-  }, [conv, idx])
+    if (t) viseme.load(t.text); else { viseme.cancel(); setFrames([]) }
+    return () => viseme.cancel()
+  }, [conv, idx])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const closureIdx = conv?.closure ? conv.closure.index : -1
 
@@ -247,6 +248,7 @@ export default function MultiConversation() {
           <p className="text-[13px] font-bold text-ink-muted">{idx + 1} / {conv.turns.length}턴</p>
         </div>
 
+        {viseme.error && <VisemeRetry onRetry={viseme.retry} className="mb-3" />}
         <div className={`grid gap-2.5 ${conv.speakers >= 4 ? 'grid-cols-2 lg:grid-cols-4' : conv.speakers === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
           {Array.from({ length: conv.speakers }).map((_, s) => {
             const speaking = s === turn.speaker

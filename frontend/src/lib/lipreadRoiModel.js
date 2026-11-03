@@ -45,6 +45,19 @@ export function lipreadRoiAvailable() {
   return available
 }
 
+/** 화면을 떠날 때 ORT 세션을 놓는다(저메모리 폰에서 세션이 쌓이지 않게, F15). 적재 중이면 끝나길 기다렸다 놓는다. 다시 쓰면 새로 적재한다. */
+export async function releaseLipreadRoi() {
+  const pending = loading
+  let target = session
+  session = null
+  loading = null
+  if (!target && pending) {
+    try { const r = await pending; target = r?.session ?? r } catch { target = null }
+    session = null
+  }
+  try { await target?.release?.() } catch { /* 이미 놓았거나 지원하지 않음 */ }
+}
+
 export async function loadLipreadRoi() {
   if (!canLoadOptionalModel()) return null
   if (session && meta) return { session, meta }

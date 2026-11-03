@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { curriculumAPI, learningAPI } from '../api'
+import { curriculumAPI } from '../api'
+import useVisemeLoad from '../hooks/useVisemeLoad'
+import VisemeRetry from './VisemeRetry'
 import api from '../api'
 import MouthAvatar from './MouthAvatar'
 import useChoiceKeys from '../lib/useChoiceKeys'
@@ -15,6 +17,7 @@ import { probeOptionLabel } from '../lib/measurement'
 export default function MasteryProbeBlock({ items, onDone }) {
   const [idx, setIdx] = useState(0)
   const [frames, setFrames] = useState([])
+  const viseme = useVisemeLoad(setFrames)
   const [selected, setSelected] = useState(null)
   const [sending, setSending] = useState(false)
   const seqRef = useRef(0)
@@ -37,8 +40,8 @@ export default function MasteryProbeBlock({ items, onDone }) {
       }).catch(() => { if (seq === seqRef.current) setMediaError(true) })
       return () => { ++seqRef.current; if (url) URL.revokeObjectURL(url) }
     }
-    learningAPI.getVisemes(it.stimulus).then((f) => { if (seq === seqRef.current) setFrames(f) }).catch(() => {})
-  }, [it])
+    viseme.load(it.stimulus)
+  }, [it])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const options = it?.options || []
   useChoiceKeys(options, (o) => setSelected(o.value), !!it && !sending)
@@ -74,6 +77,7 @@ export default function MasteryProbeBlock({ items, onDone }) {
             </h1>
           </div>
 
+          {viseme.error && it.kind !== 'real_face' && <VisemeRetry onRetry={viseme.retry} />}
           <div className={it.kind === 'viseme' ? LESSON_AVATAR_VISEME : LESSON_AVATAR}>
             {it.kind === 'real_face' ? <>
               {media && <video src={media} muted playsInline controls controlsList="nodownload noplaybackrate" className="h-full w-full"

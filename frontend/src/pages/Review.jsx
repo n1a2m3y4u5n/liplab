@@ -1,7 +1,11 @@
+import LessonA11yButton from '../components/LessonA11yButton'
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { curriculumAPI, reviewAPI, learningAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
+import useVisemeLoad from '../hooks/useVisemeLoad'
+import VisemeRetry from '../components/VisemeRetry'
+import SubmitRetry from '../components/SubmitRetry'
 import LoadingScreen from '../components/LoadingScreen'
 import LessonComplete from '../components/LessonComplete'
 import { LoadFailed } from '../components/ErrorScreen'
@@ -70,6 +74,8 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
   const navigate = useNavigate()
   const [idx, setIdx] = useState(0)
   const [frames, setFrames] = useState([])
+  const [submitFail, setSubmitFail] = useState(false)   // 복습 기록을 보내지 못함 → 다시 보내기·건너뛰기(건너뛰면 기록 없이 결과만 본다)
+  const viseme = useVisemeLoad(setFrames)
   const [selected, setSelected] = useState(null)
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -107,12 +113,12 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
   }, [item, lessons, bank, isViseme, isSentence])
 
   useEffect(() => {
-    setResult(null); setSelected(null); setFrames([]); setTyped('')
+    setResult(null); setSelected(null); setFrames([]); setTyped(''); setSubmitFail(false)
     itemStartRef.current = Date.now()
-    let alive = true   // 이전 항목의 늦은 입모양 응답이 다음 항목 화면을 덮지 않게(9/28 검토)
-    if (!isViseme) learningAPI.getVisemes(item.ref).then((f) => { if (alive) setFrames(f) }).catch(() => {})
-    return () => { alive = false }
-  }, [item, isViseme])
+    // 이전 항목의 늦은 입모양 응답은 버린다(9/28 검토). 실패하면 다시 받기를 보인다
+    if (isViseme) viseme.cancel(); else viseme.load(item.ref)
+    return () => viseme.cancel()
+  }, [item, isViseme])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useChoiceKeys(choices, (c) => setSelected(c.key), !result && !submitting && !done)
 
@@ -134,16 +140,20 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
     if (!res.failed) setTally((t) => ({ n: t.n + 1, correct: t.correct + (res.correct ? 1 : 0) }))
   }
 
-  const confirm = async () => {
+  const confirm = async (skipRecord = false) => {
     if (isSentence) return confirmSentence()
     if (result || submitting || selected == null) return
     setSubmitting(true)
+    setSubmitFail(false)
     const correct = selected === targetKey
     try {
+      if (skipRecord === true) throw new Error('skip')   // 건너뛰기: 기록 없이 결과로 간다
       // 입모양·단어 복습은 4지선다라 answer_mode 'choice'(정답이면 서버가 품질 3, 오답은 그대로 1). 속도도 함께 보낸다
       const r = await reviewAPI.answer(item.kind, item.ref, correct, { answer_mode: 'choice', speed: playSpeed })
       setXpEarned((x) => x + (r?.xp_gained || 0))
-    } catch { /* 기록 실패해도 진행 */ } finally { setSubmitting(false) }
+    } catch (e) {
+      if (e?.message !== 'skip') { setSubmitFail(true); setSubmitting(false); return }   // 조용히 넘어가면 복습 기록이 빠진다
+    } finally { setSubmitting(false) }
     setResult({ correct, chosen: selected })
     setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
   }
@@ -184,6 +194,7 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
           <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
             <div className="h-full rounded-full bg-track transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
+          <LessonA11yButton />
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{idx + 1} / {items.length}</span>
         </div>
 
@@ -197,6 +208,8 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
             </h1>
           </div>
 
+          {viseme.error && <VisemeRetry onRetry={viseme.retry} className="mx-auto w-full max-w-[560px]" />}
+          {submitFail && <SubmitRetry onResend={() => confirm()} onSkip={() => confirm(true)} busy={submitting} className="mx-auto w-full max-w-[560px]" />}
           <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
             <MouthAvatar height={null} className="h-full" speed={playSpeed}
               talker={talkerLesson.talker} talkerSeed={talkerLesson.seed}

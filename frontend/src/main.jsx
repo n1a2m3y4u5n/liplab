@@ -24,6 +24,12 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   })
 }
 
+// 새로 불러온 화면이 10초 동안 멀쩡하면 재로드 표시를 지운다. 안 지우면 같은 탭에서 두 번째 배포를 만났을 때
+// 표시가 남아 새로고침하지 않고 오류 화면이 뜬다(F30). 바로 지우지 않는 것은 조각이 계속 없을 때 무한 새로고침을 막으려는 것이다.
+window.addEventListener('load', () => {
+  setTimeout(() => { try { sessionStorage.removeItem('liplab_chunk_reload') } catch { /* 무시 */ } }, 10000)
+})
+
 // 배포 뒤 열려 있던 옛 화면이 사라진 조각 파일을 못 받으면 한 번만 새로 불러온다(무한 새로고침 방지).
 window.addEventListener('vite:preloadError', (e) => {
   // 연결이 끊기면 새로고침도 실패하므로 앱의 오류 화면을 그대로 남긴다.

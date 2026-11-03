@@ -3,7 +3,7 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { toBlendshapeMap, scorePercent, coachHint, loadCalibration } from '../lib/mouthScore'
 import { faceSignals, FACE_SIGNAL_LABELS } from '../lib/faceCues'
 import { lipGeometry, LIP_GEOMETRY_LABELS } from '../lib/lipGeometry'
-import { predictK, K_FACE_KEYS, K_WIN } from '../lib/kModel'
+import { predictK, K_FACE_KEYS, K_WIN, releaseK } from '../lib/kModel'
 import { errorEnds } from '../lib/correctionTrend'
 import { attemptScore, pushAttemptSample, pruneAttempt, MIN_FACE_FRAMES } from '../lib/mouthAttempt'
 
@@ -69,6 +69,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
   // RAF 루프가 항상 '현재' 목표·보정값을 보게 하는 ref (레슨 전환 후 옛 값으로 채점되던 버그 방지)
   const visemeIdRef = useRef(visemeId)
   const profilesRef = useRef(profiles)
+  useEffect(() => () => { releaseK() }, [])   // 화면을 떠날 때 ORT 세션을 놓는다
   useEffect(() => { visemeIdRef.current = visemeId }, [visemeId])
   useEffect(() => { profilesRef.current = profiles }, [profiles])
   const liveBsRef = useRef(null) // 웹캠 실시간 blendshape → 아바타 미러링(축 F)

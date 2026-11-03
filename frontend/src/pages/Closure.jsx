@@ -1,9 +1,13 @@
+import LessonA11yButton from '../components/LessonA11yButton'
 import useLessonCheckpoint from '../hooks/useLessonCheckpoint'
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { curriculumAPI, learningAPI } from '../api'
+import { curriculumAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
+import useVisemeLoad from '../hooks/useVisemeLoad'
+import VisemeRetry from '../components/VisemeRetry'
+import SubmitRetry from '../components/SubmitRetry'
 import BookmarkButton from '../components/BookmarkButton'
 import LoadingScreen from '../components/LoadingScreen'
 import LessonComplete from '../components/LessonComplete'
@@ -73,6 +77,8 @@ function ClosureQuiz({ items: incomingItems }) {
   const [i, setI] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'i') ? checkpoint.i : (0))
   const [qNum, setQNum] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'qNum') ? checkpoint.qNum : (1))
   const [frames, setFrames] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'frames') ? checkpoint.frames : ([]))
+  const [submitFail, setSubmitFail] = useState(false)   // 답 기록을 보내지 못함 → 다시 보내기·건너뛰기
+  const viseme = useVisemeLoad(setFrames)
   const shownFrames = useSlowWeak(frames)   // 약한 입모양은 조금 천천히(연습 화면)
   const [lesson, nextLesson] = useLessonTalker(endless ? 'endless' : 'closure', checkpoint?.lesson)   // 레슨마다 가상 화자 한 명(계획 2-2)
   const probes = useMasteryProbes(QUIZ_LEN)   // 숙달 지연 탐침(C16): 레슨 가운데 문항 뒤에 끼운다(숙달·XP에는 들어가지 않음)
@@ -100,21 +106,22 @@ function ClosureQuiz({ items: incomingItems }) {
   const shownItemRef = useRef(checkpoint ? full : null)
   useEffect(() => {
     if (shownItemRef.current === full) {
-      if (!frames.length) learningAPI.getVisemes(full).then(setFrames).catch(() => {})
+      if (!frames.length) viseme.load(full)
       return
     }
     shownItemRef.current = full
     setResult(null); setSelected(null); setHint(false); setFrames([])
     onsetRef.current = null
-    learningAPI.getVisemes(full).then(setFrames).catch(() => {})
-  }, [full])
+    viseme.load(full)
+  }, [full])  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (frames.length && onsetRef.current == null) onsetRef.current = Date.now() }, [frames])
 
   useChoiceKeys(choices, (w) => setSelected(w), !result && !submitting && !done)
 
-  const confirm = async () => {
+  const confirm = async (resend = false) => {
     if (result || submitting || selected == null) return
-    if (!submission.begin(selected)) return
+    if (resend !== true && !submission.begin(selected)) return   // 다시 보내기는 이미 begin한 같은 답이다
+    setSubmitFail(false)
     setSubmitting(true)
     let correct = selected === item.answer
     let confusions = []
@@ -124,12 +131,13 @@ function ClosureQuiz({ items: incomingItems }) {
       correct = !!r.correct
       confusions = r.confusions || []
       setXpEarned((x) => x + (r.xp_gained || 0))
-    } catch { advance(); return } finally { setSubmitting(false) }
+    } catch { setSubmitFail(true); return } finally { setSubmitting(false) }
     submission.finish()
     setResult({ correct, chosen: selected, confusions })
     setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
   }
   const advance = () => {
+    setSubmitFail(false)
     if (qNum >= QUIZ_LEN) {
       setElapsedSec(Math.floor((Date.now() - startRef.current) / 1000))
       setDone(true)
@@ -192,6 +200,7 @@ function ClosureQuiz({ items: incomingItems }) {
           <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
             <div className="h-full rounded-full bg-track transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
+          <LessonA11yButton />
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{qNum} / {QUIZ_LEN}</span>
         </div>
 
@@ -203,6 +212,8 @@ function ClosureQuiz({ items: incomingItems }) {
           </div>
 
           {/* 입모양 카드 — 문장 전체를 말한다. 보기는 입모양이 같아 문맥으로 골라야 한다 */}
+          {viseme.error && <VisemeRetry onRetry={viseme.retry} />}
+          {submitFail && <SubmitRetry onResend={() => confirm(true)} onSkip={advance} busy={submitting} />}
           <div className={LESSON_AVATAR_CLOSURE}>
             <MouthAvatar frames={shownFrames} height={null} className="h-full" talker={lesson.talker} talkerSeed={lesson.seed} override={replay.frame} />
           </div>

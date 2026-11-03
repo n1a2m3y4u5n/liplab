@@ -1,3 +1,4 @@
+import LessonA11yButton from '../LessonA11yButton'
 import useLessonCheckpoint from '../../hooks/useLessonCheckpoint'
 import { Progress } from '../UI'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
@@ -283,6 +284,7 @@ function QuizPanel({ data: incomingData }) {
             <img src="/ui/lp-91-12-close.svg" alt="" className="size-8 lg:size-9" />
           </button>
           <Progress value={pct} label="레슨 진행률" animated className="lg:h-[14px]" />
+          <LessonA11yButton />
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{qNum} / {QUIZ_LEN}</span>
         </div>
 

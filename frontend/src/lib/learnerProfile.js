@@ -119,6 +119,9 @@ export function saveAnswers(userKey, answers, storage = globalThis.localStorage)
   return a
 }
 
+/** 로그아웃: 계정 구분 없이 메모리 사본을 모두 비운다(저장소 키는 localDataKeys가 지운다). */
+export function clearAllAnswers() { memory.clear() }
+
 export function clearAnswers(userKey, storage = globalThis.localStorage) {
   const k = storageKey(userKey)
   memory.delete(k)

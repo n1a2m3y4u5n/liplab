@@ -1,3 +1,4 @@
+import LessonA11yButton from '../components/LessonA11yButton'
 import useLessonCheckpoint from '../hooks/useLessonCheckpoint'
 import { Progress } from '../components/UI'
 import { useState, useEffect, useRef } from 'react'
@@ -290,6 +291,7 @@ export default function Conversation() {
             <img src="/ui/lp-91-12-close.svg" alt="" className="size-8 lg:size-9" />
           </button>
           <Progress value={(turnCount / MAX_TURNS) * 100} label="레슨 진행률" animated className="lg:h-[14px]" />
+          <LessonA11yButton />
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{turnCount} / {MAX_TURNS}</span>
         </div>
       </div>

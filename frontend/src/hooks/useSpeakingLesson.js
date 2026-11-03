@@ -336,7 +336,8 @@ export default function useSpeakingLesson() {
       const ac = new AC(); acRef.current = ac
       // 중요: 사용자 제스처 없이 만든 AudioContext는 suspended 상태로 시작할 수 있어
       // 분석 버퍼가 0으로만 읽힌다("소리 안 잡힘"의 주범) → 반드시 resume.
-      if (ac.state === 'suspended') { try { await ac.resume() } catch { /* noop */ } }
+      // iOS Safari가 resume 약속을 붙잡아 두면 녹음 버튼이 계속 막히므로 listenAudio와 같이 800 ms까지만 기다린다
+      if (ac.state === 'suspended') { try { await Promise.race([ac.resume(), new Promise((r) => setTimeout(r, 800))]) } catch { /* noop */ } }
       if (gen !== mediaGenRef.current) { stream.getTracks().forEach((t) => t.stop()); closeContext(ac); return }
       const src = ac.createMediaStreamSource(stream)
       const analyser = ac.createAnalyser(); analyser.fftSize = 2048

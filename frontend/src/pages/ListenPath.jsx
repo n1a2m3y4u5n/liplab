@@ -1,3 +1,4 @@
+import { lsGet, lsSet } from '../lib/safeStorage'
 import LearnHeader from '../components/learn/LearnHeader'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -26,7 +27,7 @@ export default function ListenPath() {
   const [params, setParams] = useSearchParams()
   const [data, setData] = useState(null)
   const [error, setError] = useState(false)
-  const [notice, setNotice] = useState(() => localStorage.getItem('liplab_listen_notice') !== '1')
+  const [notice, setNotice] = useState(() => lsGet('liplab_listen_notice') !== '1')
   const [guide, setGuide] = useState(false)
   const [retry, setRetry] = useState(0)
   const [skip, setSkip] = useState(false)
@@ -44,7 +45,7 @@ export default function ListenPath() {
   const q = quotaView(stage?.quota)
   const locked = stage?.status === 'locked'
   const days = pathDays(stage?.quota, kstDate())
-  const closeNotice = () => { localStorage.setItem('liplab_listen_notice', '1'); setNotice(false) }
+  const closeNotice = () => { lsSet('liplab_listen_notice', '1'); setNotice(false) }
   const start = () => navigate(`/learn/listening?stage=${stage.stage}`)
   const doSkip = async () => {
     setSkipping(true); setSkipError(false)

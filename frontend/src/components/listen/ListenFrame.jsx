@@ -1,3 +1,4 @@
+import { lsGet, lsSet } from '../../lib/safeStorage'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { loadVoices, setSimMode, stopAll } from '../../lib/listenAudio'
 import { voiceRoles } from '../../lib/listenMix'
@@ -19,7 +20,7 @@ import { Chip, Progress } from '../UI'
 export default function ListenFrame({ kicker, onExit, exitAria = '나가기', showProgress = true, children }) {
   const [settings, saveSettings] = useListenSettings()
   const [editing, setEditing] = useState(false)
-  const [notice, setNotice] = useState(() => localStorage.getItem('liplab_listen_notice') !== '1')
+  const [notice, setNotice] = useState(() => lsGet('liplab_listen_notice') !== '1')
   const [voiceList, setVoiceList] = useState(null)
   const [prog, setProg] = useState({ cur: 0, total: 0, label: null })
   const voices = useMemo(() => voiceRoles(voiceList || []), [voiceList])
@@ -63,7 +64,7 @@ export default function ListenFrame({ kicker, onExit, exitAria = '나가기', sh
           </div>
         </main>
       </div>
-      {notice && <ListenNotice onClose={() => { localStorage.setItem('liplab_listen_notice', '1'); setNotice(false) }} />}
+      {notice && <ListenNotice onClose={() => { lsSet('liplab_listen_notice', '1'); setNotice(false) }} />}
     </div>
   )
 }

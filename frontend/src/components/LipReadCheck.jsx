@@ -1,12 +1,12 @@
 import { requestTrackedMedia } from '../lib/track'
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { toBlendshapeMap } from '../lib/mouthScore'
-import { predictLipread, loadLipread, lipreadAvailable } from '../lib/lipreadModel'
+import { predictLipread, loadLipread, lipreadAvailable, releaseLipread } from '../lib/lipreadModel'
 import { resampleFrames } from '../lib/frameRate'
 import { mediaErrorMessage } from '../lib/mediaError'
 import { memoUntilFail } from '../lib/sharedRequest'
 import { lipreadCheckCopy, lipreadRoiOn } from '../lib/lipreadGate'
-import { predictLipreadRoi, loadLipreadRoi, lipreadRoiAvailable, grabRoiFrame } from '../lib/lipreadRoiModel'
+import { predictLipreadRoi, loadLipreadRoi, lipreadRoiAvailable, grabRoiFrame, releaseLipreadRoi } from '../lib/lipreadRoiModel'
 
 /**
  * 축 D — 기계가 내 입모양을 읽어본다(자체 립리딩). 사용자가 목표 단어를 입모양으로 말하면
@@ -159,6 +159,7 @@ export default function LipReadCheck({ target, candidates = [] }) {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
     landmarkerRef.current = null
+    releaseLipread(); releaseLipreadRoi()   // ORT 세션을 놓는다(저메모리 폰 누적 방지). 다시 열면 새로 적재한다
   }, [])
 
   if (modelOK === false) return null  // 모델 없으면 조용히 숨김

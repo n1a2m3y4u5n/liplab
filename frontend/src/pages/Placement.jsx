@@ -1,7 +1,9 @@
+import LessonA11yButton from '../components/LessonA11yButton'
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { curriculumAPI, learningAPI } from '../api'
+import { curriculumAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
+import useVisemeLoad from '../hooks/useVisemeLoad'
 import LoadingScreen from '../components/LoadingScreen'
 import { LoadFailed } from '../components/ErrorScreen'
 import useChoiceKeys from '../lib/useChoiceKeys'
@@ -48,6 +50,7 @@ export default function Placement() {
   const [idx, setIdx] = useState(0)
   const [responses, setResponses] = useState({})
   const [frames, setFrames] = useState([])
+  const viseme = useVisemeLoad(setFrames)   // 입모양 받기 실패는 삼키지 않고 재시도 화면을 보인다
   const [result, setResult] = useState(null)
   const [delta, setDelta] = useState(null)  // 같은 종류의 앞선 검사 대비 향상도 — 짝이 있을 때만(aa28c05, 9/29 같은 종류끼리)
   const [hist, setHist] = useState(null)    // 비교 종류(comparison)·사전 검사를 봤는지(pretest_taken)
@@ -92,9 +95,9 @@ export default function Placement() {
 
   useEffect(() => {
     if (!items || !items[idx]) return
-    setFrames([])
-    learningAPI.getVisemes(items[idx].word).then(setFrames).catch(() => {})
-  }, [items, idx])
+    viseme.load(items[idx].word)
+    return () => viseme.cancel()
+  }, [items, idx])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // 확정한 답을 기록하고 다음 문항으로 가거나 채점한다. 보내지 못하면 false(안내를 띄우고 confirm이 고른 보기를 되살린다).
   const choose = async (word) => {
@@ -168,6 +171,8 @@ export default function Placement() {
   if (loading) return <LoadingScreen />
   const failed = <LoadFailed message="문제를 가져오지 못했어요." onRetry={() => start(mode)} onExit={() => navigate('/learn/path')} />
   if (loadError || !items) return failed
+  // 입모양이 없으면 문항을 내지 않는다(빈 아바타를 보고 답하면 배치가 틀어진다). 문항·채점은 그대로이고 입모양만 다시 받는다.
+  if (viseme.error && !result) return <LoadFailed message="입모양을 불러오지 못했어요." onRetry={viseme.retry} onExit={() => navigate('/learn/path')} />
 
   if (result && mode === 'placement') {
     // 결과(배치 모드) — Figma 85:9 / 모바일 244:99. 이것뿐인 단순 화면(§4-01).
@@ -402,6 +407,7 @@ export default function Placement() {
           <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
             <div className="h-full rounded-full bg-track transition-all" style={{ width: `${((idx + 1) / total) * 100}%` }} />
           </div>
+          <LessonA11yButton />
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{idx + 1} / {mode === 'placement' ? `최대 ${total}` : total}</span>
         </div>
 

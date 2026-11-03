@@ -67,6 +67,12 @@ function RealisticFace({ visemeId = 15, xray = false, bsFrameRef = null, mirrorR
     })
     return c
   }, [shared])
+  // 복제한 재질은 인스턴스 것이라 화면을 떠날 때 놓는다(형상·텍스처는 useGLTF 캐시가 공유하므로 건드리지 않는다, F16)
+  useEffect(() => () => {
+    scene.traverse((o) => {
+      if (o.isMesh && o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose?.())
+    })
+  }, [scene])
   const meshesRef = useRef([])
   const tongueMeshRef = useRef(null)
   const jawRef = useRef(null)          // { bone, restZ } — 턱 뼈와 기본 각도

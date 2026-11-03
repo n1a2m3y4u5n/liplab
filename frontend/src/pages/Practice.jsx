@@ -79,6 +79,8 @@ export default function Practice() {
   const [xpEarned, setXpEarned] = useState(() => sessionCheckpoint && Object.hasOwn(sessionCheckpoint, 'xpEarned') ? sessionCheckpoint.xpEarned : (0))                // 이번 레슨에서 서버가 준 XP 합(xp_gained)
   const lessonStartRef = useRef(sessionCheckpoint?.lessonStartRef ?? (Date.now()))
   const [elapsedSec, setElapsedSec] = useState(() => sessionCheckpoint && Object.hasOwn(sessionCheckpoint, 'elapsedSec') ? sessionCheckpoint.elapsedSec : (0))
+  const [submitFail, setSubmitFail] = useState(false)          // 답 기록을 보내지 못함 → 다시 보내기·건너뛰기 안내
+  const failedAnswerRef = useRef('')
   const [visemeError, setVisemeError] = useState(false)      // 입모양을 받지 못함 → 다시 받기 안내
   const visemeReqRef = useRef(0)                             // 입모양 요청 순번(늦게 온 이전 문장의 응답은 버린다)
   const answerShownRef = useRef(resumed?.answerShownRef ?? (false))                       // 이 문장의 정답을 이미 보였는지(채점 결과에 정답이 나온다)
@@ -178,8 +180,10 @@ export default function Practice() {
     await fetchVisemes()
   }
 
-  const handleSubmitAnswer = async (userAnswer) => {
-    if (submitting || !submission.begin(userAnswer)) return
+  // resend: 보내기에 실패한 같은 답을 한 번 더 보낸다(begin은 이미 했으므로 건너뛰고, submitting이 중복 전송을 막는다)
+  const handleSubmitAnswer = async (userAnswer, resend = false) => {
+    if (submitting || (!resend && !submission.begin(userAnswer))) return
+    setSubmitFail(false)
     setSubmitting(true)
     const timeSpent = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0
     // 정답을 이미 본 뒤의 제출(같은 문장 다시 도전)과 힌트 3(발음 자막)으로 문장을 본 뒤의 제출은 연습으로만 채점한다.
@@ -241,7 +245,8 @@ export default function Practice() {
       if (response.xp_gained != null) updates.total_xp = (user?.total_xp || 0) + response.xp_gained
       if (Object.keys(updates).length > 0) updateUser(updates)
     } catch (error) {
-      advance()
+      failedAnswerRef.current = userAnswer
+      setSubmitFail(true)   // 예전에는 안내 없이 다음 문장으로 넘어가 숙달·경험치가 조용히 빠졌다
       console.error('Failed to submit answer:', error)
     } finally {
       setSubmitting(false)
@@ -249,7 +254,10 @@ export default function Practice() {
   }
 
   // 다음 문장 — 마지막 문장 뒤에는 currentSentence가 비어 레슨 완료(93:12)가 뜬다(걸린 시간은 이 순간으로 고정).
+  const resendAnswer = () => handleSubmitAnswer(failedAnswerRef.current, true)
+  const skipFailedAnswer = () => { setSubmitFail(false); advance() }
   const advance = () => {
+    setSubmitFail(false)
     setDraft('')
     if (isLastSentence) setElapsedSec(Math.floor((Date.now() - lessonStartRef.current) / 1000))
     nextSentence()
@@ -396,5 +404,5 @@ export default function Practice() {
     </div>
   )
 
-  return <SentenceLessonView {...{ multiple, handleFinish, answered, total, currentSentenceIndex, currentScenario, questionTitle, isBookmarked, toggleBookmark, visemeError, fetchVisemes, shownVisemes, result, currentSentence, lesson, replay, choices, submitting, setSelectedChoice, selectedChoice, optionState, sound, effectiveMode, player, setSignOpen, handleNext, isLastSentence, handleSubtitleFrame, subtitleRestartKey, hintLevel, showNextHint, retry, revealedTextIndex, revealedAnswer, draft, setDraft, handleSubmitAnswer, handleRetry, revealAfterRetry, mcCorrect, signOpen, signRef }} />
+  return <SentenceLessonView {...{ multiple, handleFinish, answered, total, currentSentenceIndex, currentScenario, questionTitle, isBookmarked, toggleBookmark, visemeError, fetchVisemes, submitFail, resendAnswer, skipFailedAnswer, shownVisemes, result, currentSentence, lesson, replay, choices, submitting, setSelectedChoice, selectedChoice, optionState, sound, effectiveMode, player, setSignOpen, handleNext, isLastSentence, handleSubtitleFrame, subtitleRestartKey, hintLevel, showNextHint, retry, revealedTextIndex, revealedAnswer, draft, setDraft, handleSubmitAnswer, handleRetry, revealAfterRetry, mcCorrect, signOpen, signRef }} />
 }

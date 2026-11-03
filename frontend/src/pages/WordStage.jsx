@@ -1,10 +1,14 @@
+import LessonA11yButton from '../components/LessonA11yButton'
 import useLessonCheckpoint from '../hooks/useLessonCheckpoint'
 import { Progress } from '../components/UI'
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { curriculumAPI, learningAPI } from '../api'
+import { curriculumAPI } from '../api'
 import MouthAvatar from '../components/MouthAvatar'
+import useVisemeLoad from '../hooks/useVisemeLoad'
+import VisemeRetry from '../components/VisemeRetry'
+import SubmitRetry from '../components/SubmitRetry'
 import BookmarkButton from '../components/BookmarkButton'
 import WatermarkCard from '../components/WatermarkCard'
 import LoadingScreen from '../components/LoadingScreen'
@@ -144,7 +148,8 @@ function WordQuiz({ data: incomingData, reload }) {
   // 반응 시간 기준(파일럿 로그 P0): 이 문항의 입모양을 받아 재생을 시작한 때. 새 문항은 frames를 비웠다가 채운다
   const onsetRef = useRef(null)
   useEffect(() => { onsetRef.current = frames?.length ? Date.now() : null }, [frames])
-  const visemeSeqRef = useRef(0)   // 입모양 요청 순번: 이전 문항의 늦은 응답이 새 문항 화면을 덮지 않게
+  const [submitFail, setSubmitFail] = useState(false)   // 답 기록을 보내지 못함 → 다시 보내기·건너뛰기
+  const viseme = useVisemeLoad(setFrames)   // 입모양 요청 순번·실패 안내: 이전 문항의 늦은 응답은 버리고, 실패하면 다시 받기를 보인다
   const [stat, setStat] = useState(() => checkpoint && Object.hasOwn(checkpoint, 'stat') ? checkpoint.stat : ({ attempts: 0, mastery: 0, mastered: false }))
   // 약한 입모양은 조금 천천히(연습 화면). 숙달 추정값이 문턱(서버 natural_speed_gate, 70) 이상이면 감속을 끄고 자연 속도로
   // 낸다. 감속해 본 정답은 숙달에 0.5만 들어가서, 끄지 않으면 자연 속도로 잘 읽어도 숙달에 닿지 못할 수 있다(docs/mastery-ewma.md 7절).
@@ -215,9 +220,7 @@ function WordQuiz({ data: incomingData, reload }) {
       const item = ctxItems[slotRef.current.ctx++ % ctxItems.length]
       const full = item.display.replace('___', item.answer)
       setQ({ kind: 'context', item, full, target: item.answer, choices: shuffle(item.options) })
-      setFrames([])
-      const seq = ++visemeSeqRef.current
-      try { const f = await learningAPI.getVisemes(full); if (seq === visemeSeqRef.current) setFrames(f) } catch { /* ignore */ }
+      viseme.load(full)
       return
     }
     const kind = slotRef.current.typed.has(slotRef.current.pos) ? 'typed' : 'choice'
@@ -225,9 +228,7 @@ function WordQuiz({ data: incomingData, reload }) {
     if (probe) {
       askedRef.current.add(probe.word)
       setQ({ target: probe.word, choices: shuffle([probe.word, ...probe.distractors.slice(0, 3)]), kind: 'choice', probe: probe.probe })
-      setFrames([])
-      const seq = ++visemeSeqRef.current
-      try { const f = await learningAPI.getVisemes(probe.word); if (seq === visemeSeqRef.current) setFrames(f) } catch { /* ignore */ }
+      viseme.load(probe.word)
       return
     }
     const left = data.words.filter((w) => !askedRef.current.has(w.word))
@@ -239,19 +240,15 @@ function WordQuiz({ data: incomingData, reload }) {
     askedRef.current.add(target)
     const distractors = pickDistractors(target, byWord, words)
     setQ({ target, choices: shuffle([target, ...distractors]), kind })
-    setFrames([])
-    const seq = ++visemeSeqRef.current
-    try { const f = await learningAPI.getVisemes(target); if (seq === visemeSeqRef.current) setFrames(f) } catch { /* ignore */ }
-  }, [data, words, byWord])
+    viseme.load(target)
+  }, [data, words, byWord])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (!checkpoint?.q) newQ(true) }, [newQ])
   useEffect(() => {
     if (!checkpoint?.q || checkpoint.frames?.length) return
-    let alive = true
-    learningAPI.getVisemes(checkpoint.q.kind === 'context' ? checkpoint.q.full : checkpoint.q.target)
-      .then(next => { if (alive) setFrames(next) }).catch(() => {})
-    return () => { alive = false }
-  }, [])
+    viseme.load(checkpoint.q.kind === 'context' ? checkpoint.q.full : checkpoint.q.target)
+    return () => viseme.cancel()
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // 보기 숫자 키 1~4(§4-03) — 채점 중·결과 표시 중·수어 창이 열려 있으면 받지 않는다.
   const typed = q?.kind === 'typed'
@@ -260,9 +257,10 @@ function WordQuiz({ data: incomingData, reload }) {
 
   // 주관식은 서버가 채점한다(visual_difficulty.typed_word_verdict): 정답, '입모양은 맞음'(입모양이 똑같은 다른 말, 숙달에 0.5), 오답.
   const answer = typed ? typedText.trim() : selected
-  const confirm = async () => {
+  const confirm = async (resend = false) => {
     if (result || submitting || !answer) return
-    if (!submission.begin(answer)) return
+    if (resend !== true && !submission.begin(answer)) return   // 다시 보내기는 이미 begin한 같은 답이다
+    setSubmitFail(false)
     setSubmitting(true)
     let correct = typed ? answer.replace(/\s+/g, '') === q.target : answer === q.target
     let verdict = correct ? 'correct' : 'wrong'
@@ -275,7 +273,7 @@ function WordQuiz({ data: incomingData, reload }) {
         correct = !!rc.correct
         confusions = rc.confusions || []
         setXpEarned((x) => x + (rc.xp_gained || 0))
-      } catch { advance(); return } finally { setSubmitting(false) }
+      } catch { setSubmitFail(true); return } finally { setSubmitting(false) }
       submission.finish()
       setResult({ correct, verdict: correct ? 'correct' : 'wrong', chosen: answer, confusions })
       setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
@@ -290,13 +288,14 @@ function WordQuiz({ data: incomingData, reload }) {
       confusions = rr.confusions || []
       if (typed && rr.verdict) { verdict = rr.verdict; correct = verdict === 'correct' }
       setXpEarned((x) => x + (rr.xp_gained || 0))
-    } catch { advance(); return } finally { setSubmitting(false) }
+    } catch { setSubmitFail(true); return } finally { setSubmitting(false) }
     submission.finish()
     setResult({ correct, verdict, chosen: answer, confusions })
     setTally((t) => ({ n: t.n + 1, correct: t.correct + (correct ? 1 : 0) }))
   }
   // 계속하기 — 12번째 문항 뒤에는 완료 뷰로(걸린 시간은 이 순간으로 고정).
   const advance = () => {
+    setSubmitFail(false)
     if (qNum >= QUIZ_LEN) {
       setElapsedSec(Math.floor((Date.now() - startRef.current) / 1000))
       setDone(true)
@@ -362,6 +361,7 @@ function WordQuiz({ data: incomingData, reload }) {
             <img src="/ui/lp-91-12-close.svg" alt="" className="size-8 lg:size-9" />
           </button>
           <Progress value={pct} label="레슨 진행률" animated className="lg:h-[14px]" />
+          <LessonA11yButton />
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{qNum} / {QUIZ_LEN}</span>
         </div>
 
@@ -387,6 +387,8 @@ function WordQuiz({ data: incomingData, reload }) {
           </div>
 
           {/* 입모양 카드(91:22 560×370 / 모바일 235:45 전체 폭×214) — 아바타만, 무한 반복(다시 보기 없음) */}
+          {viseme.error && <VisemeRetry onRetry={viseme.retry} />}
+          {submitFail && <SubmitRetry onResend={() => confirm(true)} onSkip={advance} busy={submitting} />}
           <div className={LESSON_AVATAR}>
             {/* 시각증강 기호(축 J-3)는 답을 확인한 뒤에만 — 보기가 최소대립 짝이라 문제 중에 보이면 기호만으로 답이 드러난다.
                 확인 뒤에는 약한 표적 입모양 음절에만 입꼬리 옆에 겹쳐 무엇이 달랐는지 보여 준다(숙달되면 흐려짐). */}

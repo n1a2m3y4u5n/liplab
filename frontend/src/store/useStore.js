@@ -3,6 +3,9 @@ import { flushTrack, usageHeaders } from '../lib/track'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { clearSignExplored } from '../lib/badges'
+import { clearUserKeys } from '../lib/localDataKeys'
+import { clearCalibration } from '../lib/mouthScore'
+import { clearAllAnswers } from '../lib/learnerProfile'
 
 /**
  * 계정마다 다른 브라우저 저장값을 지운다(로그아웃·학습 초기화). 공용 기기에서 다음 사람에게 넘어가지 않게 한다.
@@ -12,6 +15,9 @@ import { clearSignExplored } from '../lib/badges'
 export function clearUserLocalData() {
   clearSignExplored()
   clearCheckpoints()
+  clearCalibration()   // 얼굴 보정값(호출하는 곳이 없어 로그아웃 뒤에도 남던 값)
+  clearAllAnswers()    // 학습자 답(보청기·인공와우·청력 손실 시기)의 메모리 사본
+  clearUserKeys()      // 위 값과 듣기 설정·화자·소리 조건 등 사용자 값 키 전부
   try { localStorage.removeItem(`liplab_last_track:${useStore.getState().user?.id ?? 'guest'}`) } catch {}
   try { localStorage.removeItem('liplab_onboarded') } catch { /* 저장소 차단 시 무시 */ }
 }
