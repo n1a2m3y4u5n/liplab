@@ -186,13 +186,13 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-[676px] flex-col px-[18px] pb-[200px] pt-[18px] lg:pb-[150px] lg:pt-7">
+      <main className="mx-auto flex w-full max-w-[676px] flex-col px-[18px] pb-[200px] pt-[18px] lg:pb-[150px] lg:pt-7">
         <div className="flex items-center gap-3 lg:gap-[18px]">
           <button type="button" onClick={() => navigate('/today')} aria-label="나가기" className="shrink-0">
             <img src="/ui/lp-91-12-close.svg" alt="" className="size-8 lg:size-9" />
           </button>
           <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
-            <div className="h-full rounded-full bg-track transition-all duration-500" style={{ width: `${pct}%` }} />
+            <div className="h-full rounded-full bg-track transition-[width] duration-500" style={{ width: `${pct}%` }} />
           </div>
           <LessonA11yButton />
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{idx + 1} / {items.length}</span>
@@ -241,7 +241,7 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
             </div>
           )}
         </div>
-      </div>
+      </main>
 
       <div className={`fixed inset-x-0 bottom-0 z-40 border-t-2 ${!result ? 'border-line bg-white' : result.correct ? 'border-good bg-good-tint lg:border-good/35' : 'border-bad bg-bad-tint lg:border-bad/35'}`}>
         <div className="mx-auto flex max-w-[676px] flex-col items-stretch gap-3 px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-4 lg:h-[110px] lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:py-0">

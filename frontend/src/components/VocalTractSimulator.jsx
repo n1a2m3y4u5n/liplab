@@ -258,7 +258,7 @@ export default function VocalTractSimulator() {
             const isTarget = targetKo === v.ko
             return (
               <div key={v.ko}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-full text-xs font-bold transition-all ${hit ? 'bg-good text-white scale-125 shadow' : isTarget ? 'bg-white text-good-text border border-good' : 'bg-white/80 text-ink-muted border border-line-strong'}`}
+                className={`absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-full text-xs font-bold transition-[transform,background-color,border-color,color] ${hit ? 'bg-good text-white scale-125 shadow' : isTarget ? 'bg-white text-good-text border border-good' : 'bg-white/80 text-ink-muted border border-line-strong'}`}
                 style={{ left: `${x}%`, top: `${y}%`, width: 26, height: 26 }}>
                 {v.ko}{v.round ? '°' : ''}
               </div>

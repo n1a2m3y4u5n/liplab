@@ -12,6 +12,7 @@ import { ModalClose } from '../../components/Modal'
 import CueBadges, { CueLegend } from '../../components/CueBadges'
 import ConsonantFeedback from '../../components/ConsonantFeedback'
 import SoundReplayBar from '../../components/SoundReplayBar'
+import OptionKey from '../OptionKey'
 
 export default function SentenceLessonView({ multiple, handleFinish, answered, total, currentSentenceIndex, currentScenario, questionTitle, isBookmarked, toggleBookmark, visemeError, fetchVisemes, submitFail, resendAnswer, skipFailedAnswer, shownVisemes, result, currentSentence, lesson, replay, choices, submitting, setSelectedChoice, selectedChoice, optionState, sound, effectiveMode, player, setSignOpen, handleNext, isLastSentence, handleSubtitleFrame, subtitleRestartKey, hintLevel, showNextHint, retry, revealedTextIndex, revealedAnswer, draft, setDraft, handleSubmitAnswer, handleRetry, revealAfterRetry, mcCorrect, signOpen, signRef }) {
 return (
@@ -62,7 +63,7 @@ return (
                 {choices.map((c, i) => (
                   <button key={c} type="button" disabled={!!result || submitting} onClick={() => setSelectedChoice(c)}
                     aria-pressed={!result ? selectedChoice === c : undefined} className={OPTION_CLASS[optionState(c)]}>
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold leading-figma text-ink-muted lg:size-7 lg:rounded-lg lg:text-[13px]">{i + 1}</span>
+                    <OptionKey n={i + 1} state={optionState(c)} />
                     <span className="flex-1 text-[18px] font-bold leading-figma lg:text-[20px]">{c}</span>
                   </button>
                 ))}

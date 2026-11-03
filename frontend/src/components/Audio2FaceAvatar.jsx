@@ -222,7 +222,7 @@ export default function Audio2FaceAvatar() {
     // 카드 틀은 자유 발화 화면의 다른 카드(Figma 225:140 — 2px 테두리, r18, p22)와 맞춘다.
     <div className="w-full rounded-16 border border-line bg-white p-[18px] lg:p-[22px]">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-[17px] font-bold leading-figma text-ink">내 목소리로 아바타 움직이기</h3>
+        <h2 className="text-[17px] font-bold leading-figma text-ink">내 목소리로 아바타 움직이기</h2>
         <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 font-bold">AI 목소리 따라 하기 · A4</span>
       </div>
       <p className="text-sm text-ink-muted mb-3">

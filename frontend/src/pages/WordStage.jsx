@@ -36,6 +36,7 @@ import useSoundReplay from '../hooks/useSoundReplay'
 import SoundReplayBar from '../components/SoundReplayBar'
 import { soundAPI } from '../api'
 import { lipreadCheckVisible } from '../lib/lipreadGate'
+import OptionKey from '../components/OptionKey'
 
 // 트랙B(언어+독화) 앵커링: 단어의 뜻을 수어로 확인. 무거우니 열 때만 로드.
 const SignPanel = lazy(() => import('../components/SignPanel'))
@@ -354,7 +355,7 @@ function WordQuiz({ data: incomingData, reload }) {
 
   return (
     <>
-      <div className={`${LESSON_COL} ${lessonPad(!!result)}`}>
+      <main className={`${LESSON_COL} ${lessonPad(!!result)}`}>
         {/* 진행 헤더(91:13 / 모바일 235:35) — 나가기 X + 트랙 + n / 12 */}
         <div className="flex items-center gap-3 lg:gap-[18px]">
           <button type="button" onClick={() => navigate(endless ? '/learn/endless' : '/learn/path')} aria-label="나가기" className="shrink-0">
@@ -424,7 +425,7 @@ function WordQuiz({ data: incomingData, reload }) {
             {q.choices.map((w, i) => (
               <button key={w} type="button" disabled={!!result || submitting} onClick={() => setSelected(w)}
                 aria-pressed={!result ? selected === w : undefined} className={OPTION_CLASS[optionState(w)]}>
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold leading-figma text-ink-muted lg:size-7 lg:rounded-lg lg:text-[13px]">{i + 1}</span>
+                <OptionKey n={i + 1} state={optionState(w)} />
                 <span className="flex-1 text-[18px] font-bold leading-figma lg:text-[20px]">{w}</span>
               </button>
             ))}
@@ -499,7 +500,7 @@ function WordQuiz({ data: incomingData, reload }) {
             )}
           </AnimatePresence>
         </div>
-      </div>
+      </main>
 
       {/* 하단 고정 바 — 문제(130:17) · 정답(94:133) · 오답(94:175). lg 미만(235:68 · 235:105)은 힌트 없이
           메시지 위·전체 폭 버튼 아래로 쌓는다(§4-12 "모바일 레슨의 하단 버튼은 전체 폭"). */}

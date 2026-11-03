@@ -144,7 +144,14 @@ body,
   body {
     @apply bg-page text-ink antialiased font-sans;
     font-size: var(--text-body);
+    -webkit-tap-highlight-color: transparent;
   }
+  /* 브라우저가 그리는 부분(글자 선택·입력 커서)도 트랙 색을 따른다 */
+  ::selection { background: var(--track-tint); color: var(--track-dark); }
+  input, textarea { caret-color: var(--track); }
+  /* 숫자가 바뀌는 자리(진행 n / 12, 점수, 경험치)는 폭이 흔들리지 않게 고정폭 숫자 */
+  .tabular, [role="progressbar"] + span { font-variant-numeric: tabular-nums; }
+  button, a, [role="button"] { touch-action: manipulation; }
 }
 
 @layer components {
@@ -234,7 +241,7 @@ body,
     font-size: 16px; /* iOS 포커스 확대를 막고 입력 글자를 읽기 쉽게 한다. */
     @apply w-full px-4 py-3 border border-line-strong rounded-[12px] bg-white
            focus:outline-none focus:ring-2 focus:ring-primary-200
-           focus:border-primary-400 focus:bg-white transition-all duration-200;
+           focus:border-primary-400 focus:bg-white transition-colors duration-200;
   }
 
   /* 카드 — 11/03부터 1px 테두리만(그림자 없음), 반경 16으로 통일. */

@@ -173,7 +173,7 @@ export function LayerRunner({ run, checks, onExit, transport = batteryAPI }) {
           <button type="button" onClick={onExit} className="btn-secondary px-4 py-2 text-[14px]">나가기</button>
         </div>
         <div className="h-2.5 overflow-hidden rounded-full bg-fill-strong">
-          <div className="h-full rounded-full bg-track transition-all" style={{ width: `${q.nReady ? (q.nDone / q.nReady) * 100 : 100}%` }} />
+          <div className="h-full rounded-full bg-track transition-[width]" style={{ width: `${q.nReady ? (q.nDone / q.nReady) * 100 : 100}%` }} />
         </div>
         <p className="text-[13px] text-ink-muted">
           {q.nDone} / {q.nReady}문제{run.layer === 'snr' && stair ? ` · 들은 문장 ${stair.n_trials}` : ''}

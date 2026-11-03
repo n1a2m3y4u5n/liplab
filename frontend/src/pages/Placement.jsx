@@ -398,14 +398,14 @@ export default function Placement() {
   const total = mode === 'placement' ? n : items.length
   return (
     <div className="min-h-[100dvh] bg-page">
-      <div className={`${LESSON_COL} ${lessonPad(!!submitError)}`}>
+      <main className={`${LESSON_COL} ${lessonPad(!!submitError)}`}>
         {/* 진행 헤더(385:83 / 모바일 385:121) — 나가기 X + 트랙 + n / 전체(채움 = 현재 문항까지) */}
         <div className="flex items-center gap-3 lg:gap-[18px]">
           <button type="button" onClick={() => navigate('/learn/path')} aria-label="나가기" className="shrink-0">
             <img src="/ui/lp-91-12-close.svg" alt="" className="size-8 lg:size-9" />
           </button>
           <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
-            <div className="h-full rounded-full bg-track transition-all" style={{ width: `${((idx + 1) / total) * 100}%` }} />
+            <div className="h-full rounded-full bg-track transition-[width]" style={{ width: `${((idx + 1) / total) * 100}%` }} />
           </div>
           <LessonA11yButton />
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{idx + 1} / {mode === 'placement' ? `최대 ${total}` : total}</span>
@@ -438,7 +438,7 @@ export default function Placement() {
             })}
           </div>
         </div>
-      </div>
+      </main>
 
       {/* 하단 고정 바(385:113 / 모바일 385:152) — 데스크톱: 왼쪽 안내 + 오른쪽 '다음', lg 미만: 안내 없이 전체 폭 '다음' */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-line bg-white">

@@ -286,7 +286,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
                 <span className="text-sm text-white/70">점</span>
               </div>
               <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-white/25">
-                <div className={`h-full rounded-full transition-all duration-150 ${score >= 75 ? 'bg-good' : score >= 45 ? 'bg-warn' : 'bg-rose-400'}`}
+                <div className={`h-full rounded-full transition-[width,background-color] duration-150 ${score >= 75 ? 'bg-good' : score >= 45 ? 'bg-warn' : 'bg-rose-400'}`}
                   style={{ width: `${score}%` }} />
               </div>
             </div>
@@ -342,7 +342,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
               {[['jaw', '입 벌림'], ['round', '입술 둥글림'], ['close', '입술 닫힘']].map(([k, label]) => (
                 <div key={k} className="text-center">
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-pastel-sky">
-                    <div className="h-full rounded-full bg-bookmark transition-all" style={{ width: `${Math.round((obs[k] || 0) * 100)}%` }} />
+                    <div className="h-full rounded-full bg-bookmark transition-[width]" style={{ width: `${Math.round((obs[k] || 0) * 100)}%` }} />
                   </div>
                   <span className="mt-0.5 block text-[10px] text-stat-level">{label}</span>
                 </div>
@@ -368,7 +368,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
             {Object.entries(FACE_SIGNAL_LABELS).map(([k, label]) => (
               <div key={k} className="text-center">
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-fill-strong">
-                  <div className="h-full rounded-full bg-line-strong transition-all" style={{ width: `${Math.round((faceSig[k] || 0) * 100)}%` }} />
+                  <div className="h-full rounded-full bg-line-strong transition-[width]" style={{ width: `${Math.round((faceSig[k] || 0) * 100)}%` }} />
                 </div>
                 <span className="mt-0.5 block text-[10px] text-ink-muted">{label}</span>
               </div>
@@ -395,7 +395,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
           <p className="mb-1 text-center text-[10px] text-primary-700">입술 너머 자질 추정 · 학습모델(연구용, 음절 수준 검증 실패)</p>
           <div className="mx-auto max-w-[220px] text-center">
             <div className="h-2 w-full overflow-hidden rounded-full bg-primary-100">
-              <div className="h-full rounded-full bg-primary-500 transition-all" style={{ width: `${Math.round(kPred.nasal * 100)}%` }} />
+              <div className="h-full rounded-full bg-primary-500 transition-[width]" style={{ width: `${Math.round(kPred.nasal * 100)}%` }} />
             </div>
             <span className="mt-0.5 block text-[11px] font-medium text-primary-700">
               비음(코울림) {Math.round(kPred.nasal * 100)}

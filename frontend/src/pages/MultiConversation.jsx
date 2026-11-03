@@ -277,7 +277,7 @@ export default function MultiConversation() {
           {Array.from({ length: conv.speakers }).map((_, i) => {
             const isAns = answered && i === turn.speaker
             const isWrongPick = answered && i === guess && guess !== turn.speaker
-            const base = 'flex flex-1 items-center justify-center gap-1.5 rounded-[14px] py-4 text-[17px] font-bold transition-all'
+            const base = 'flex flex-1 items-center justify-center gap-1.5 rounded-[14px] py-4 text-[17px] font-bold transition-colors'
             const cls = isAns ? `${SPK_COLOR[i]} border border-b-2 border-transparent text-white`
               : isWrongPick ? 'border border-b-2 border-bad-line bg-bad-tint text-rose-500 line-through'
               : answered ? 'border border-line bg-white text-ink-inverse-muted'

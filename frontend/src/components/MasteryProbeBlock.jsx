@@ -64,7 +64,7 @@ export default function MasteryProbeBlock({ items, onDone }) {
       <div className={`${LESSON_COL} ${lessonPad(false)}`}>
         <div className="flex items-center gap-3 lg:gap-[18px]">
           <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
-            <div className="h-full rounded-full bg-track transition-all" style={{ width: `${((idx + 1) / items.length) * 100}%` }} />
+            <div className="h-full rounded-full bg-track transition-[width]" style={{ width: `${((idx + 1) / items.length) * 100}%` }} />
           </div>
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{idx + 1} / {items.length}</span>
         </div>

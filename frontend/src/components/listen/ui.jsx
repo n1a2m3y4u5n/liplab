@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Card as SurfaceCard } from '../UI'
+import OptionKey from '../OptionKey'
 
 /**
  * 소리 듣기 화면의 작은 조각(카드·질문·보기·재생 막대·불러오는 중). 레슨 틀은 독화·말하기 레슨과 같다(핸드오프 §3.4).
@@ -78,7 +79,7 @@ export function Option({ index, label, state = 'idle', disabled, waiting, onClic
     <button type="button" disabled={disabled} onClick={onClick} aria-pressed={state === 'selected' || state === 'idle' ? state === 'selected' : undefined}
       aria-label={`${index + 1}번 ${label}${OPTION_SR[state] || ''}`}
       className={`${OPTION_CLASS[state]} ${waiting ? 'opacity-50' : ''}`}>
-      <span aria-hidden className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold leading-figma text-ink-muted lg:size-7 lg:rounded-lg lg:text-[13px]">{index + 1}</span>
+      <OptionKey n={index + 1} state={state} />
       <span className={`min-w-0 flex-1 break-keep font-bold leading-snug ${big ? 'text-[19px] lg:text-[21px]' : 'text-[16px] lg:text-[17px]'}`}>{label}</span>
     </button>
   )

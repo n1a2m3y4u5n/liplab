@@ -26,7 +26,7 @@ function LearnPanel({ data }) {
           const active = sel.viseme_id === l.viseme_id
           return (
             <button key={l.viseme_id} onClick={() => setSel(l)}
-              className={`p-3 rounded-14 border text-center transition-all ${active ? 'border-primary-500 bg-primary-50' : 'border-line bg-white hover:border-primary-300'}`}>
+              className={`p-3 rounded-14 border text-center transition-colors ${active ? 'border-primary-500 bg-primary-50' : 'border-line bg-white hover:border-primary-300'}`}>
               <div className="text-xs font-bold leading-snug text-ink sm:text-sm">{lessonLabel(l)}</div>
               <div className={`mt-1 inline-block text-[10px] px-1.5 py-0.5 rounded-full border ${b.cls}`}>{b.label}</div>
             </button>

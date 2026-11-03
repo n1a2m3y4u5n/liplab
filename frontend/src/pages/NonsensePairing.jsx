@@ -10,6 +10,7 @@ import { SHAPES } from '../lib/nonsenseShapes'
 import { HINT_MS, trialOrder, gridOrder, usedToday, saveUsedToday, timeUp, blockSummary } from '../lib/nonsensePairing'
 import { LESSON_COL, LESSON_STACK, LESSON_AVATAR, lessonPad } from '../lib/lessonLayout'
 import { trialMeta } from '../lib/measurement'
+import OptionKey from '../components/OptionKey'
 
 /**
  * 뜻 없는 말 짝 맞추기(/learn/nonsense, 계획 C10, docs/nonsense-pairing.md). 1·2단계 사이의 하루 10분 이하 과제다.
@@ -174,7 +175,7 @@ export default function NonsensePairing() {
     }[endReason]
     return (
       <div className="min-h-[100dvh] bg-page">
-        <div className={LESSON_COL}>
+        <main className={LESSON_COL}>
           {exitBtn}
           <div className="mt-10 flex flex-col items-center gap-4 rounded-16 border border-line bg-white px-6 py-10 text-center">
             <p className="text-[21px] font-bold leading-figma text-ink lg:text-[26px]">{title}</p>
@@ -182,7 +183,7 @@ export default function NonsensePairing() {
             {view?.today && <p className="text-[13px] text-ink-faint">오늘 {view.today.n}번 골랐어요</p>}
             <button type="button" onClick={() => navigate('/learn/path')} className="btn-primary mt-2 px-8 py-3 text-[16px]">학습 화면으로</button>
           </div>
-        </div>
+        </main>
       </div>
     )
   }
@@ -199,11 +200,11 @@ export default function NonsensePairing() {
     const last = introIdx >= words.length - 1
     return (
       <div className="min-h-[100dvh] bg-page">
-        <div className={`${LESSON_COL} ${lessonPad(false)}`}>
+        <main className={`${LESSON_COL} ${lessonPad(false)}`}>
           <div className="flex items-center gap-3 lg:gap-[18px]">
             {exitBtn}
             <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
-              <div className="h-full rounded-full bg-track transition-all duration-500" style={{ width: `${((introIdx + 1) / words.length) * 100}%` }} />
+              <div className="h-full rounded-full bg-track transition-[width] duration-500" style={{ width: `${((introIdx + 1) / words.length) * 100}%` }} />
             </div>
             <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{introIdx + 1} / {words.length}</span>
           </div>
@@ -223,7 +224,7 @@ export default function NonsensePairing() {
               </div>
             </div>
           </div>
-        </div>
+        </main>
         <div className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-line bg-white">
           <div className="mx-auto flex max-w-[676px] flex-col items-stretch gap-3 px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-4 lg:h-[110px] lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:py-0">
             <span className="text-[15px] leading-figma text-ink-faint">입모양이 되풀이돼요. 충분히 보고 넘어가요.</span>
@@ -242,14 +243,14 @@ export default function NonsensePairing() {
   if (phase === 'between') {
     return (
       <div className="min-h-[100dvh] bg-page">
-        <div className={LESSON_COL}>
+        <main className={LESSON_COL}>
           {exitBtn}
           <div className="mt-10 flex flex-col items-center gap-4 rounded-16 border border-line bg-white px-6 py-10 text-center">
             <p className="text-[19px] font-bold leading-figma text-ink lg:text-[22px]">{doneBlock.correct} / {doneBlock.size}</p>
             <p role="status" className="text-[15px] leading-relaxed text-ink-muted">{blockSummary(doneBlock)}</p>
             <button type="button" onClick={() => startBlock(view)} className="btn-primary mt-2 px-8 py-3 text-[16px]">계속하기</button>
           </div>
-        </div>
+        </main>
       </div>
     )
   }
@@ -264,11 +265,11 @@ export default function NonsensePairing() {
   }
   return (
     <div className="min-h-[100dvh] bg-page">
-      <div className={`${LESSON_COL} ${lessonPad(!!result)}`}>
+      <main className={`${LESSON_COL} ${lessonPad(!!result)}`}>
         <div className="flex items-center gap-3 lg:gap-[18px]">
           {exitBtn}
           <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
-            <div className="h-full rounded-full bg-track transition-all duration-500" style={{ width: `${(answered / words.length) * 100}%` }} />
+            <div className="h-full rounded-full bg-track transition-[width] duration-500" style={{ width: `${(answered / words.length) * 100}%` }} />
           </div>
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{Math.min(answered + (result ? 0 : 1), words.length)} / {words.length}</span>
         </div>
@@ -305,12 +306,12 @@ export default function NonsensePairing() {
               <button key={w} type="button" disabled={hinting || !!result || submitting} onClick={() => pick(w)}
                 aria-label={`도형 ${i + 1}`} className={`${OPTION_CLASS[state(w)]} disabled:cursor-default`}>
                 <Shape id={shapeOf[w]} className="size-11 lg:size-14" />
-                <span className="absolute left-2 top-2 flex size-6 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold text-ink-muted" aria-hidden>{i + 1}</span>
+                <OptionKey n={i + 1} state={state(w)} className="absolute left-2 top-2" />
               </button>
             ))}
           </div>
         </div>
-      </div>
+      </main>
 
       <div className={`fixed inset-x-0 bottom-0 z-40 border-t-2 ${!result ? 'border-line bg-white' : result.correct ? 'border-good bg-good-tint lg:border-good/35' : 'border-bad bg-bad-tint lg:border-bad/35'}`}>
         <div className="mx-auto flex max-w-[676px] flex-col items-stretch gap-3 px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-4 lg:h-[110px] lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:py-0">

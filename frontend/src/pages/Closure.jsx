@@ -24,6 +24,7 @@ import useSoundCondition from '../hooks/useSoundCondition'
 import useSoundReplay from '../hooks/useSoundReplay'
 import SoundReplayBar from '../components/SoundReplayBar'
 import { soundAPI } from '../api'
+import OptionKey from '../components/OptionKey'
 
 /**
  * 문맥 추론(Closure) — 독화 레슨 공통 템플릿(핸드오프 §4-03, WordStage와 같은 틀).
@@ -191,14 +192,14 @@ function ClosureQuiz({ items: incomingItems }) {
 
   return (
     <>
-      <div className={`${LESSON_COL} ${lessonPad(!!result)}`}>
+      <main className={`${LESSON_COL} ${lessonPad(!!result)}`}>
         {/* 진행 헤더 — 나가기 X + 트랙 + n / 12 */}
         <div className="flex items-center gap-3 lg:gap-[18px]">
           <button type="button" onClick={exit} aria-label="나가기" className="shrink-0">
             <img src="/ui/lp-91-12-close.svg" alt="" className="size-8 lg:size-9" />
           </button>
           <div className="h-3 flex-1 overflow-hidden rounded-full bg-fill-strong lg:h-[14px]">
-            <div className="h-full rounded-full bg-track transition-all duration-500" style={{ width: `${pct}%` }} />
+            <div className="h-full rounded-full bg-track transition-[width] duration-500" style={{ width: `${pct}%` }} />
           </div>
           <LessonA11yButton />
           <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{qNum} / {QUIZ_LEN}</span>
@@ -235,7 +236,7 @@ function ClosureQuiz({ items: incomingItems }) {
             {choices.map((w, k) => (
               <button key={w} type="button" disabled={!!result || submitting} onClick={() => setSelected(w)}
                 aria-pressed={!result ? selected === w : undefined} className={OPTION_CLASS[optionState(w)]}>
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold leading-figma text-ink-muted lg:size-7 lg:rounded-lg lg:text-[13px]">{k + 1}</span>
+                <OptionKey n={k + 1} state={optionState(w)} />
                 <span className="flex-1 text-[18px] font-bold leading-figma lg:text-[20px]">{w}</span>
               </button>
             ))}
@@ -259,7 +260,7 @@ function ClosureQuiz({ items: incomingItems }) {
             )}
           </AnimatePresence>
         </div>
-      </div>
+      </main>
 
       {/* 하단 고정 바 — 문제 · 정답 · 오답(WordStage와 같은 규격) */}
       <div className={`fixed inset-x-0 bottom-0 z-40 border-t-2 ${!result ? 'border-line bg-white' : result.correct ? 'border-good bg-good-tint lg:border-good/35' : 'border-bad bg-bad-tint lg:border-bad/35'}`}>

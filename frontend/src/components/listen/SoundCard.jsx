@@ -20,7 +20,7 @@ export default function SoundCard({ player, onPlay, clipState = 'ready', label, 
       <div className="flex items-center gap-4 lg:gap-5">
         <button type="button" onClick={player.busy ? undefined : onPlay} disabled={off && !player.busy} aria-disabled={player.busy || off}
           aria-describedby={statusId} aria-label={player.busy ? '소리가 나오고 있어요' : `${label}, 스페이스 키`}
-          className={`flex size-[72px] shrink-0 items-center justify-center rounded-full border text-white transition-all duration-100 disabled:cursor-not-allowed disabled:border-inactive-line disabled:bg-inactive disabled:text-inactive-text lg:size-[80px] ${
+          className={`flex size-[72px] shrink-0 items-center justify-center rounded-full border text-white transition-colors duration-100 disabled:cursor-not-allowed disabled:border-inactive-line disabled:bg-inactive disabled:text-inactive-text lg:size-[80px] ${
             player.busy ? 'cursor-default border-track-dark bg-track-dark' : 'border-track-dark bg-track hover:bg-track-hover'}`}>
           <SpeakerIcon playing={player.busy} />
         </button>

@@ -114,7 +114,7 @@ export default function Login({ initialMode = 'login' }) {
   }
 
   return (
-    <div className="flex min-h-[100dvh] bg-white">
+    <main className="flex min-h-[100dvh] bg-white">
       {/* 좌: 브랜드 패널 (Figma "Brand panel" 560px, 126deg 그라데이션) */}
       <div className="relative hidden w-1/2 max-w-[560px] shrink-0 overflow-hidden lg:block"
         style={{ backgroundColor: 'var(--brand)' }}>
@@ -218,6 +218,6 @@ export default function Login({ initialMode = 'login' }) {
           </p>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

@@ -27,6 +27,7 @@ import useSoundReplay from '../../hooks/useSoundReplay'
 import SoundReplayBar from '../SoundReplayBar'
 import { soundAPI } from '../../api'
 import { lessonLabel, shuffle } from './VisemeParts'
+import OptionKey from '../OptionKey'
 const QUIZ_LEN = 12  // 레슨 1회 문항 수(진행바 분모) — 숙달 판정과 별개
 
 const fmtDuration = (sec) => `${Math.floor(sec / 60)}분 ${sec % 60}초`
@@ -277,7 +278,7 @@ function QuizPanel({ data: incomingData }) {
 
   return (
     <>
-      <div className={`${LESSON_COL} ${lessonPad(!!result)}`}>
+      <main className={`${LESSON_COL} ${lessonPad(!!result)}`}>
         {/* 진행 헤더(91:13 / 모바일 235:35) — 나가기 X + 트랙 + n / 12 */}
         <div className="flex items-center gap-3 lg:gap-[18px]">
           <button type="button" onClick={() => navigate('/learn/path')} aria-label="나가기" className="shrink-0">
@@ -313,7 +314,7 @@ function QuizPanel({ data: incomingData }) {
                   aria-label={c.label} className={`${AX_BTN_CLASS[axState(c)]} disabled:cursor-default`}>
                   <span className="text-[44px] font-bold leading-none lg:text-[52px]" aria-hidden>{c.mark}</span>
                   <span className="text-[17px] font-bold leading-figma lg:text-[19px]">{c.label}</span>
-                  <span className="absolute left-3 top-3 flex size-6 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold text-ink-muted" aria-hidden>{i + 1}</span>
+                  <OptionKey n={i + 1} state={axState(c)} className="absolute left-3 top-3" />
                 </button>
               ))}
             </div>
@@ -323,7 +324,7 @@ function QuizPanel({ data: incomingData }) {
               {q.choices.map((c, i) => (
                 <button ref={i === 0 ? firstChoiceRef : undefined} key={c.viseme_id} type="button" disabled={!!result || submitting} onClick={() => setSelected(c.viseme_id)}
                   aria-pressed={!result ? selected === c.viseme_id : undefined} className={OPTION_CLASS[optionState(c)]}>
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold leading-figma text-ink-muted lg:size-7 lg:rounded-lg lg:text-[13px]">{i + 1}</span>
+                  <OptionKey n={i + 1} state={optionState(c)} />
                   <span className="flex-1 text-[18px] font-bold leading-figma lg:text-[20px]">{c.name}</span>
                 </button>
               ))}
@@ -337,12 +338,12 @@ function QuizPanel({ data: incomingData }) {
                 <SoundReplayBar sound={sound} replay={replay} />
                 {isAx ? (
                   <div className={axSameLooking
-                    ? 'rounded-16 border border-warn/40 bg-warn-tint px-4 py-3 text-[13px] text-warn-text'
-                    : 'rounded-16 border border-line bg-white p-3 text-[13px] text-ink-muted'}>
+                    ? 'rounded-16 border border-warn/40 bg-warn-tint px-4 py-3 text-[14px] leading-relaxed text-warn-text lg:text-[15px]'
+                    : 'rounded-16 border border-line bg-white px-4 py-3 text-[14px] leading-relaxed text-ink-soft lg:text-[15px]'}>
                     <b>「{q.pair.a}」·「{q.pair.b}」</b> {axExplain(q.pair)}
                   </div>
                 ) : (
-                  <div className="rounded-16 border border-line bg-white p-3 text-[13px] text-ink-muted">
+                  <div className="rounded-16 border border-line bg-white px-4 py-3 text-[14px] leading-relaxed text-ink-soft lg:text-[15px]">
                     <ShortText key={result.target.viseme_id} text={result.target.teach} short={learner.shortHints} />
                   </div>
                 )}
@@ -350,7 +351,7 @@ function QuizPanel({ data: incomingData }) {
             )}
           </AnimatePresence>
         </div>
-      </div>
+      </main>
 
       {/* 하단 고정 바 — 문제(130:17) · 정답(94:133) · 오답(94:175). lg 미만(235:68 · 235:105)은 힌트 없이
           메시지 위·전체 폭 버튼 아래로 쌓는다(§4-12 "모바일 레슨의 하단 버튼은 전체 폭"). AX는 버튼을 누르면 바로 채점해 확인 버튼이 없다. */}

@@ -252,7 +252,7 @@ export default function Landing() {
   ))
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-page">
+    <main className="flex min-h-[100dvh] flex-col bg-page">
       {/* Hero, above the fold (14:2) */}
       <div className="overflow-hidden bg-page">
         <div className="relative mx-auto max-w-[1440px] px-4 pb-16 sm:px-8 lg:px-16 xl:min-h-[1024px] xl:pb-0 xl:pl-[128px] xl:pr-[160px]">
@@ -310,6 +310,6 @@ export default function Landing() {
           <p className="text-[14px] leading-figma text-ink-muted">© 2026 LIPLAB</p>
         </div>
       </footer>
-    </div>
+    </main>
   )
 }
