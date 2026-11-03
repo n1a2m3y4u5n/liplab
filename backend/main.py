@@ -2,6 +2,7 @@
 LIPLAB FastAPI Main Application
 Serves API endpoints and React static files for production deployment
 """
+import importlib
 import os
 import asyncio
 import time
@@ -11,7 +12,7 @@ security_logging.install()
 import ratelimit
 import llm_budget
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Request, Response
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from dotenv import load_dotenv
@@ -29,20 +30,10 @@ from auth import (
 
 # Import engines (will be created in next steps)
 # These imports will work once we create the modules
-try:
-    from engine import text_to_visemes
-    from llm_service import generate_adaptive_scenario, generate_conversation_turn
-    from scoring import calculate_score
-except ImportError:
-    # Placeholder functions for initial setup
-    async def text_to_visemes(text: str):
-        return []
-    async def generate_adaptive_scenario(user_id: int, situation: str, level: int, db):
-        return {"sentences": [], "situation": situation, "level": level}
-    async def calculate_score(correct: str, user_answer: str):
-        return {"score": 0, "details": {}}
-    async def generate_conversation_turn(situation: str, level: int, history: list):
-        return {"text": "안녕하세요."}
+# 의존성이 없으면 대체 함수로 넘어가지 않고 바로 실패한다(대체 함수는 호출부 시그니처와 맞지 않아 배포 결함을 숨겼다).
+from engine import text_to_visemes
+from llm_service import generate_adaptive_scenario, generate_conversation_turn
+from scoring import calculate_score
 
 
 def _warmup_models():
@@ -142,13 +133,6 @@ if _origins_env:
 else:
     _allow_origins = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8080"]
     _allow_credentials = False  # 앱은 Bearer 토큰(헤더) 인증이라 쿠키 credentials 불필요
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_allow_origins,
-    allow_credentials=_allow_credentials,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Usage-Device-Id", "X-Usage-Session-Id"],
-)
 
 
 from fastapi.responses import JSONResponse as _JSONResponse
@@ -159,32 +143,6 @@ async def _unhandled_exception(request, exc):
     return _JSONResponse(status_code=500, content={"detail": "서버 오류가 발생했습니다."})
 
 
-# 보안 응답 헤더(§4.9) — 다운그레이드·MIME 스니핑·클릭재킹·레퍼러 유출 방어.
-# 자원 로딩을 제한하는 script/style/connect-src 류 CSP는 이 앱이 SPA(/assets·MediaPipe CDN·모델)를
-# 함께 서빙해 잘못 좁히면 깨진다 → 정책 수립·검증 전까지 보류. 다만 자원 로딩에 영향 없는
-# 안전한 지시어(object/frame-ancestors/base-uri)는 지금 적용해 클릭재킹·플러그인·base 하이재킹을 막는다.
-@app.middleware("http")
-async def _security_headers(request, call_next):
-    resp = await call_next(request)
-    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
-    resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
-    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-    # Vite 빌드: MediaPipe/ONNX WASM은 jsDelivr, 얼굴 모델은 Google Storage에서 받는다.
-    # WASM 컴파일만 허용하고 일반 JS eval/인라인 스크립트는 허용하지 않는다.
-    resp.headers.setdefault("Content-Security-Policy", "; ".join([
-        "default-src 'self'",
-        "script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net",
-        "worker-src 'self' blob:",
-        "connect-src 'self' blob: data: https://cdn.jsdelivr.net https://storage.googleapis.com",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data: blob:",
-        "media-src 'self' data: blob:",
-        "object-src 'none'", "frame-ancestors 'self'", "base-uri 'self'", "form-action 'self'",
-    ]))
-    # HSTS는 HTTPS에서만 의미(브라우저가 http에선 무시). fly는 force_https라 실서비스에서 적용됨.
-    resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-    return resp
 
 
 # 요청 본문 상한. FastAPI는 인증·속도 제한보다 먼저 본문을 모두 읽으므로(JSON은 메모리, 멀티파트는 임시 파일),
@@ -215,6 +173,45 @@ async def _limit_body(request, call_next):
         chunks.append(chunk)
     request._body = b"".join(chunks)
     return await call_next(request)
+
+
+# 미들웨어 순서: 나중에 더한 것이 바깥이다. 본문 상한(413)·출처 검사(403)가 가장 안쪽의 이 두 미들웨어보다 바깥에서 응답을 만들어도
+# 보안 헤더와 CORS 헤더가 붙도록 _limit_body 뒤에 더한다(CORS가 가장 바깥이라 413/403도 브라우저가 CORS 오류로 오해하지 않는다).
+# 보안 응답 헤더(§4.9) — 다운그레이드·MIME 스니핑·클릭재킹·레퍼러 유출 방어.
+# 자원 로딩을 제한하는 script/style/connect-src 류 CSP는 이 앱이 SPA(/assets·MediaPipe CDN·모델)를
+# 함께 서빙해 잘못 좁히면 깨진다 → 정책 수립·검증 전까지 보류. 다만 자원 로딩에 영향 없는
+# 안전한 지시어(object/frame-ancestors/base-uri)는 지금 적용해 클릭재킹·플러그인·base 하이재킹을 막는다.
+@app.middleware("http")
+async def _security_headers(request, call_next):
+    resp = await call_next(request)
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    # Vite 빌드: MediaPipe/ONNX WASM은 jsDelivr, 얼굴 모델은 Google Storage에서 받는다.
+    # WASM 컴파일만 허용하고 일반 JS eval/인라인 스크립트는 허용하지 않는다.
+    resp.headers.setdefault("Content-Security-Policy", "; ".join([
+        "default-src 'self'",
+        "script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net",
+        "worker-src 'self' blob:",
+        "connect-src 'self' blob: data: https://cdn.jsdelivr.net https://storage.googleapis.com",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: blob:",
+        "media-src 'self' data: blob: https://sldict.korean.go.kr",
+        "object-src 'none'", "frame-ancestors 'self'", "base-uri 'self'", "form-action 'self'",
+    ]))
+    # HSTS는 HTTPS에서만 의미(브라우저가 http에선 무시). fly는 force_https라 실서비스에서 적용됨.
+    resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return resp
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allow_origins,
+    allow_credentials=_allow_credentials,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Usage-Device-Id", "X-Usage-Session-Id"],
+)
 
 
 # 서버 추론(발음 채점·음성구동 아바타·전사) 동시 실행 수. 추론 하나가 수백 MB를 더 쓰므로 여러 개가 겹치면 4GB 기계가
@@ -384,7 +381,7 @@ async def demo_login(request: Request, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if user is None:
-        user = User(email=email, username="게스트", hashed_password=get_password_hash("liplab-demo-guest"))
+        user = User(email=email, username="게스트", hashed_password=await asyncio.to_thread(get_password_hash, "liplab-demo-guest"))
         db.add(user)
         try:
             await db.commit()
@@ -506,7 +503,7 @@ async def account_delete(req: AccountDeleteReq, confirm: bool = False,
         raise HTTPException(status_code=400, detail="삭제를 확인하려면 confirm=true가 필요합니다.")
     if (current_user.email or "").lower() == _DEMO_EMAIL:
         raise HTTPException(status_code=403, detail="공용 데모 계정은 삭제할 수 없습니다.")
-    if not verify_password(req.password or "", current_user.hashed_password):
+    if not await asyncio.to_thread(verify_password, req.password or "", current_user.hashed_password):
         raise HTTPException(status_code=403, detail="비밀번호가 일치하지 않습니다.")
     from sqlalchemy import delete as _delete
     from database import User as _User
@@ -569,7 +566,7 @@ async def account_update_profile(req: ProfileUpdateReq,
         if email != (current_user.email or "").lower():
             # 이메일은 로그인 식별자라, 바꿀 때는 현재 비밀번호로 본인임을 다시 확인한다(§4.9 재인증).
             from auth import verify_password
-            if not verify_password(req.current_password or "", current_user.hashed_password):
+            if not await asyncio.to_thread(verify_password, req.current_password or "", current_user.hashed_password):
                 raise HTTPException(status_code=403, detail="이메일을 바꾸려면 현재 비밀번호가 필요합니다.")
         dupe = (await db.execute(_select(_User).where(_func.lower(_User.email) == email,
                                                       _User.id != current_user.id))).scalar_one_or_none()
@@ -588,14 +585,14 @@ async def account_change_password(req: PasswordChangeReq,
     from auth import verify_password, get_password_hash
     if (current_user.email or "").lower() == _DEMO_EMAIL:
         raise HTTPException(status_code=403, detail="공용 데모 계정은 비밀번호를 변경할 수 없습니다.")
-    if not verify_password(req.current_password or "", current_user.hashed_password):
+    if not await asyncio.to_thread(verify_password, req.current_password or "", current_user.hashed_password):
         raise HTTPException(status_code=403, detail="현재 비밀번호가 일치하지 않습니다.")
     if len(req.new_password or "") < 8:
         raise HTTPException(status_code=400, detail="새 비밀번호는 8자 이상이어야 합니다.")
     from auth import password_fits, PASSWORD_TOO_LONG
     if not password_fits(req.new_password):
         raise HTTPException(status_code=400, detail=PASSWORD_TOO_LONG)
-    current_user.hashed_password = get_password_hash(req.new_password)
+    current_user.hashed_password = await asyncio.to_thread(get_password_hash, req.new_password)
     # 토큰 버전을 올려 다른 기기·탈취된 토큰을 모두 무효화하고, 이 기기에는 새 토큰을 준다.
     current_user.token_version = (current_user.token_version or 0) + 1
     await db.commit()
@@ -666,8 +663,8 @@ class ProgressResponse(BaseModel):
     word_feedback: Optional[dict] = None
 
 
-@app.get("/api/viseme", response_model=List[VisemeFrame])
-async def get_visemes(text: str):
+@app.get("/api/viseme", response_model=List[VisemeFrame], dependencies=[Depends(ratelimit.rate_limit(120, 60, "viseme"))])
+async def get_visemes(text: str = Query(..., max_length=_TEXT_MAX)):
     """
     Convert Korean text to viseme animation frames
     Returns array of viseme IDs with duration and transition timing
@@ -805,7 +802,7 @@ async def avatar_audio2face(audio: UploadFile = File(...), current_user=Depends(
         import audio2face
     except Exception:
         raise HTTPException(status_code=503, detail="audio2face 모듈 로드 실패")
-    if not audio2face.is_available():
+    if not await asyncio.to_thread(audio2face.is_available):   # 처음 부르면 torch를 불러오므로 루프 밖에서
         raise HTTPException(status_code=503, detail="서버에 음성구동 아바타 모델(A4)이 없습니다.")
     data = await _read_audio_limited(audio)
     _ml_admit()
@@ -898,17 +895,23 @@ async def _bump_weak_visemes(user_id: int, viseme_ids, error_ids, features: dict
     from datetime import datetime as _dt2
     when = when or _dt2.utcnow()
     error_ids = set(error_ids or [])
-    for vid in viseme_ids:
-        if not (1 <= vid <= 10):
-            continue
-        r = await db.execute(select(WeakViseme).where(
-            WeakViseme.user_id == user_id, WeakViseme.viseme_id == vid))
-        wv = r.scalars().first()
+    wanted = [v for v in viseme_ids if 1 <= v <= 10]
+    if not wanted:
+        return
+    # 한 번에 조회한다(예전에는 입모양마다 한 번씩). 같은 id가 중복돼도 행은 하나이고 시도는 나온 횟수만큼 쌓인다.
+    r = await db.execute(select(WeakViseme).where(
+        WeakViseme.user_id == user_id, WeakViseme.viseme_id.in_(set(wanted))))
+    rows = {}
+    for row in r.scalars().all():
+        rows.setdefault(row.viseme_id, row)
+    for vid in wanted:
+        wv = rows.get(vid)
         if wv is None:
             wv = WeakViseme(user_id=user_id, viseme_id=vid, error_count=0,
                             total_attempts=0,
                             phonological_feature=(features or {}).get(str(vid), "unknown"))
             db.add(wv)
+            rows[vid] = wv
         wv.total_attempts += 1
         if vid in error_ids:
             wv.error_count += 1
@@ -1328,7 +1331,6 @@ async def get_analysis(current_user=Depends(get_current_user), db: AsyncSession 
 
     except Exception as e:
         print(f"[ERROR] get_analysis failed: {type(e).__name__}")
-        traceback.print_exc()
         raise _server_error(e, "분석 데이터 로드 실패")
 
 
@@ -4528,8 +4530,8 @@ async def post_articulation_feedback(req: ArticulationFeedbackReq,
 
 
 class PlacementScoreReq(BaseModel):
-    items: list
-    responses: dict
+    items: list = Field(..., max_length=200)
+    responses: dict = Field(..., max_length=200)
     form: str = "placement"   # placement | A(사전) | B(사후)
 
 
@@ -4564,8 +4566,8 @@ async def assessment_placement(n: int = 8, form: str = None,
 
 
 class PlacementNextReq(BaseModel):
-    asked: list = []
-    responses: dict = {}
+    asked: list = Field(default_factory=list, max_length=200)
+    responses: dict = Field(default_factory=dict, max_length=200)
     n: int = 12    # 최대 문항 수. 그 전에 시작 단계가 분명해지면 끝낸다(docs/assessment-design.md 12절)
 
 
@@ -5062,6 +5064,7 @@ async def conversation_multi(speakers: int = 2, turns: int = 6, scene: Optional[
     key = {"uid": current_user.id, "sp": [t["speaker"] for t in conv["turns"]],
            "tx": [t["text"] for t in conv["turns"]],
            "cl": (conv.get("closure") or {}).get("answer"),
+           "typ": "conv_key",   # 로그인 토큰과 구분(같은 서명 키를 쓰므로)
            "exp": _dt.utcnow() + _td(hours=3)}
     conv["answer_key"] = _jwt.encode(key, SECRET_KEY, algorithm=ALGORITHM)
     return conv
@@ -5072,12 +5075,12 @@ class MultiConvResultReq(BaseModel):
     speaker_total: int = 0
     read_correct: int = 0
     read_total: int = 0
-    read_hits: List[str] = []    # 립리딩(문맥추론) 정답 발화 텍스트
-    read_misses: List[str] = []  # 오독 발화 텍스트
+    read_hits: List[str] = Field(default_factory=list, max_length=100)    # 립리딩(문맥추론) 정답 발화 텍스트
+    read_misses: List[str] = Field(default_factory=list, max_length=100)  # 오독 발화 텍스트
     # 서버 재채점(H-9) — answer_key가 있으면 아래 선택으로 서버가 다시 채점하고 위 집계값은 무시한다.
     answer_key: Optional[str] = None
-    speaker_choices: List[Optional[int]] = []   # 턴별로 고른 화자 번호
-    read_choices: List[Optional[str]] = []      # 턴별로 고른 문장(원문 또는 닮은꼴)
+    speaker_choices: List[Optional[int]] = Field(default_factory=list, max_length=100)   # 턴별로 고른 화자 번호
+    read_choices: List[Optional[str]] = Field(default_factory=list, max_length=100)      # 턴별로 고른 문장(원문 또는 닮은꼴)
     closure_choice: Optional[str] = None        # 빈칸 턴에서 고른 단어
 
 
@@ -5103,6 +5106,8 @@ async def conversation_multi_result(req: MultiConvResultReq,
         try:
             key = _jwt.decode(req.answer_key, SECRET_KEY, algorithms=[ALGORITHM])
         except _JWTError:
+            raise HTTPException(status_code=400, detail="대화 정답 키가 유효하지 않습니다(만료 또는 변조).")
+        if key.get("typ", "conv_key") != "conv_key":   # 옛 키(typ 없음)는 그대로 받는다
             raise HTTPException(status_code=400, detail="대화 정답 키가 유효하지 않습니다(만료 또는 변조).")
         if key.get("uid") != current_user.id:
             raise HTTPException(status_code=403, detail="다른 사용자의 대화입니다.")
@@ -5560,6 +5565,7 @@ async def speak_stream_chunk(stream_id: str, request: Request, current_user=Depe
     body = await request.body()
     if len(body) > _STREAM_CHUNK_MAX:
         raise HTTPException(status_code=413, detail="조각이 너무 커요.")
+    _ml_admit()   # 다른 추론 경로와 같이 대기열 상한을 지킨다
     async with _ml_slot():
         ran = await asyncio.to_thread(sess.feed_pcm16, body)
     st = sess.stitcher
@@ -5660,7 +5666,7 @@ async def speak_assess(
         stream_sess = _pop_speak_stream(stream_id, current_user.id)
         if dgop_aligner_id or stream_sess is not None:
             try:
-                import dgop_acoustic
+                dgop_acoustic = await asyncio.to_thread(importlib.import_module, "dgop_acoustic")   # torch를 끌고 오는 import는 루프 밖에서
                 if not dgop_acoustic.HAS_ACOUSTIC:
                     raise RuntimeError("torch/torchaudio/transformers 미설치")
                 async with _ml_slot():
@@ -5712,7 +5718,7 @@ async def speak_assess(
             assessment_method = "asr_transcript"
         elif assessment_method != "dgop":
             from speak_service import transcribe, is_available
-            if not is_available():
+            if not await asyncio.to_thread(is_available):
                 raise HTTPException(status_code=503, detail="서버에 음성인식 모델(faster-whisper)이 없습니다.")
             try:
                 async with _ml_slot():
@@ -6059,7 +6065,7 @@ async def speak_review(current_user=Depends(get_current_user), db: AsyncSession 
 class ConversationRequest(BaseModel):
     situation: str
     level: int = 1
-    history: List[dict] = []
+    history: List[dict] = Field(default_factory=list, max_length=100)
 
 
 class ConversationResponse(BaseModel):

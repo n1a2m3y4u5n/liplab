@@ -28,6 +28,23 @@ engine = create_async_engine(
     pool_pre_ping=True,
 )
 
+if DATABASE_URL.startswith("sqlite"):
+    from sqlalchemy import event as _sa_event
+
+    @_sa_event.listens_for(engine.sync_engine, "connect")
+    def _sqlite_pragmas(dbapi_conn, _record):
+        """동시 쓰기에서 'database is locked'를 줄인다: WAL(읽기·쓰기가 서로 막지 않음) + 잠금 대기 5초.
+        foreign_keys는 켜면 삭제 동작이 바뀌므로 건드리지 않는다. 메모리 DB는 WAL을 못 쓰므로 실패해도 넘어간다."""
+        cur = dbapi_conn.cursor()
+        try:
+            cur.execute("PRAGMA busy_timeout=5000")
+            cur.execute("PRAGMA journal_mode=WAL")
+        except Exception:
+            pass
+        finally:
+            cur.close()
+
+
 AsyncSessionLocal = sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )

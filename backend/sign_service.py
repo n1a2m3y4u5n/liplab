@@ -267,6 +267,7 @@ def split_numeric(word: str) -> List[Tuple[str, str]]:
 # origin_no에서 이 경로를 유도할 공식이 없어(항목마다 DATE/ID 상이), 상세 페이지를
 # 1회 조회해 추출하고 캐시한다. (robots.txt의 /front/sign 차단은 Googlebot 전용)
 _VIDEO_CACHE: Dict[str, Optional[str]] = {}
+_VIDEO_CACHE_MAX = 2000
 _MOV_RE = re.compile(r'(multimedia/multimedia_files/convert/\d+/\d+/MOV\d+)_\d+X\d+\.(?:jpg|png)', re.I)
 
 
@@ -288,7 +289,10 @@ def _resolve_video_url_sync(origin_no: str) -> Optional[str]:
             url = f"{SLDICT_BASE}/{m.group(1)}_700X466.mp4"
     except Exception:
         url = None
-    _VIDEO_CACHE[origin_no] = url
+    if url is not None:   # 실패(None)는 캐시하지 않는다: 일시 오류가 프로세스가 사는 동안 굳지 않게
+        if len(_VIDEO_CACHE) >= _VIDEO_CACHE_MAX:
+            _VIDEO_CACHE.pop(next(iter(_VIDEO_CACHE)), None)   # 가장 오래된 것부터 버린다(삽입 순서)
+        _VIDEO_CACHE[origin_no] = url
     return url
 
 
@@ -341,16 +345,29 @@ _KSL_SYSTEM_PROMPT = """당신은 한국어를 한국수어(KSL) 문법으로 �
  "notes":"간단한 번역 메모"}"""
 
 
+_CLIENT_CACHE: Dict[str, object] = {}
+
+
+def _llm_client(api_key: str):
+    """요청마다 새로 만들지 않고 키별로 한 번 만든 클라이언트를 쓴다(연결 재사용)."""
+    c = _CLIENT_CACHE.get(api_key)
+    if c is None:
+        from anthropic import AsyncAnthropic
+        import llm_budget
+        c = llm_budget.guard(AsyncAnthropic(api_key=api_key, timeout=30.0, max_retries=1))   # llm_service와 같은 제한·하루 한도
+        _CLIENT_CACHE.clear()
+        _CLIENT_CACHE[api_key] = c
+    return c
+
+
 async def _gloss_via_llm(text: str) -> Optional[Dict]:
     """Claude로 KSL gloss 생성. 실패(키 없음/오류/파싱실패) 시 None."""
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         return None
     try:
-        from anthropic import AsyncAnthropic
-        import llm_budget
         import llm_models
-        client = llm_budget.guard(AsyncAnthropic(api_key=api_key, timeout=30.0, max_retries=1))   # llm_service와 같은 제한·하루 한도
+        client = _llm_client(api_key)
         response = await client.messages.create(
             **llm_models.request("quality", max_tokens=800),
             system=_KSL_SYSTEM_PROMPT,

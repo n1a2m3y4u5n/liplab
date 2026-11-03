@@ -2,6 +2,7 @@
 JWT-based authentication system for LIPLAB
 Handles user registration, login, token generation and validation
 """
+import asyncio
 import os
 import hashlib
 import uuid
@@ -145,6 +146,8 @@ async def get_current_user(
     try:
         token = credentials.credentials
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("typ") == "conv_key":   # 대화 정답 키는 로그인 토큰으로 쓸 수 없다
+            raise credentials_exception
         user_id = payload.get("sub")
         if user_id is None:
             raise credentials_exception
@@ -179,7 +182,7 @@ async def authenticate_user(email: str, password: str, db: AsyncSession) -> Opti
 
     if not user:
         return None
-    if not verify_password(password, user.hashed_password):
+    if not await asyncio.to_thread(verify_password, password, user.hashed_password):   # bcrypt는 CPU를 쓰므로 이벤트 루프 밖에서
         return None
 
     return user
@@ -206,7 +209,7 @@ async def register_user(user_data: UserRegister, db: AsyncSession) -> User:
         )
 
     # Create new user
-    hashed_password = get_password_hash(user_data.password)
+    hashed_password = await asyncio.to_thread(get_password_hash, user_data.password)
     new_user = User(
         email=email,
         username=user_data.username,

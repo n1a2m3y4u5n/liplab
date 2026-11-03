@@ -570,7 +570,7 @@ def fallback_turn(situation: str, level: int, history: List[Dict]) -> str:
     세는 기록 길이가 2씩 늘어 두 대사만 번갈아 나왔고, 1단계에도 18자 대사('어서 오세요. 무엇으로 드릴까요?')가 나갔다(9/28 감사)."""
     lines = FALLBACK_TURNS.get(situation) or FALLBACK_TURNS_GENERIC
     fits = [t for t in lines if conv_turn_ok(t, level)] or [min(lines, key=len)]
-    said = [_norm_turn(h.get("content", "")) for h in (history or []) if h.get("role") == "assistant"]
+    said = [_norm_turn(h.get("content", "") if isinstance(h.get("content", ""), str) else "") for h in (history or []) if h.get("role") == "assistant"]
     fresh = [t for t in fits if _norm_turn(t) not in said]
     if fresh:
         return fresh[0]
@@ -672,7 +672,8 @@ async def generate_conversation_turn(
         clean = []
         for h in history:
             role = "assistant" if h.get("role") == "assistant" else "user"
-            content = h.get("content", "").strip()
+            content = h.get("content", "")
+            content = content.strip() if isinstance(content, str) else ""   # 문자열이 아닌 값은 비어 있는 것으로 본다(500 방지)
             if not content:
                 continue
             if role == "user":
