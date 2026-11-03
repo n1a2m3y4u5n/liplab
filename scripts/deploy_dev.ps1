@@ -60,11 +60,31 @@ $prevImage = $null
 $snapshot = $null
 $rolledBack = $false
 $smokeOk = $null
+# stderr 문구(Connecting to ... 같은 진행 표시)를 오류로 보지 않는다: Windows PowerShell 5.1은 $ErrorActionPreference='Stop'일 때
+# `& flyctl ... 2>&1`의 stderr 줄을 NativeCommandError로 던진다(v38 사고). native 호출 동안만 Continue로 두고 종료 코드로만 성패를 가린다.
+# stderr·stdout 문구는 로그에 남기되 토큰처럼 보이는 값은 가린다.
+function Hide-Secrets([string]$t) {
+    $t = [regex]::Replace($t, '(?i)(FlyV1|Bearer)\s+\S+', '$1 ***')
+    foreach ($v in @($env:FLY_API_TOKEN, $env:FLY_ACCESS_TOKEN)) {
+        if ($v -and $v.Length -ge 8) { $t = $t.Replace($v, '***') }
+        foreach ($part in ($v -split '\s+')) { if ($part.Length -ge 8) { $t = $t.Replace($part, '***') } }
+    }
+    return $t
+}
 function Invoke-Fly([string[]]$FlyArgs) {
     Say ("flyctl " + ($FlyArgs -join ' '))
     if ($DryRun) { return '' }
-    $out = & $fly @FlyArgs 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) { Stop-Deploy "flyctl 실패(종료 코드 $LASTEXITCODE): $($FlyArgs[0..1] -join ' ')" }
+    $saved = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $lines = & $fly @FlyArgs 2>&1
+        $code = $LASTEXITCODE
+    } finally { $ErrorActionPreference = $saved }
+    # stderr(오류 레코드)와 stdout을 나눈다: --json 결과에 진행 문구가 섞이면 파싱이 깨진다. 둘 다 로그에는 남기고 반환값은 stdout뿐이다.
+    $errText = Hide-Secrets ((@($lines) | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | ForEach-Object { "$_" }) -join "`n")
+    $out = Hide-Secrets ((@($lines) | Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] } | ForEach-Object { "$_" }) -join "`n")
+    foreach ($l in (($errText + "`n" + $out) -split "`n")) { if ($l.Trim()) { $log.Add("  | " + $l.TrimEnd()) | Out-Null } }
+    if ($code -ne 0) { Stop-Deploy "flyctl 실패(종료 코드 $code): $($FlyArgs[0..1] -join ' ')" }
     return $out
 }
 
@@ -90,6 +110,7 @@ try {
     $snapOut = Invoke-Fly @('ssh', 'console', '-a', $App, '-C', "/bin/sh -c 'echo $b64 | base64 -d | python'")
     if (!$DryRun) {
         $line = ($snapOut -split "`n" | Where-Object { $_ -match 'SNAPSHOT' } | Select-Object -First 1)
+        if (!$line) { $line = ($log | Where-Object { $_ -match 'SNAPSHOT' } | Select-Object -First 1) -replace '^\s*\|\s*', '' }   # 원격 출력이 stderr로 올 때
         if (!$line) { Stop-Deploy "DB 사본을 만들지 못했다" }
         $snapshot = $line.Trim()
         Say $snapshot
