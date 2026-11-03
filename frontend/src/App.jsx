@@ -3,7 +3,6 @@ import { saveLastTrack } from './lib/lastTrack'
 import { loginDestination } from './lib/loginDestination'
 import LegacyRedirect from './components/LegacyRedirect'
 import Feedback from './components/Feedback'
-const AdminFeedback = lazy(() => import('./pages/AdminFeedback'))
 import { initTrack, track, trackRoute } from './lib/track'
 import { Component, lazy, Suspense, useState, useEffect, useLayoutEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
@@ -36,6 +35,7 @@ import { authAPI, curriculumAPI, seedAPI } from './api'
 import SignSelectionOverlay from './components/SignSelectionOverlay'
 import A11ySettings from './components/A11ySettings'
 import LoadingScreen from './components/LoadingScreen'
+const AdminFeedback = lazy(() => import('./pages/AdminFeedback'))
 const Login = lazy(() => import('./pages/Login'))
 const Landing = lazy(() => import('./pages/Landing'))
 // Bookmarks는 /review/saved에서만 쓰이므로 지연로딩 —

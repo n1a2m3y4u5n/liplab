@@ -18,7 +18,7 @@ export default function ConsonantFeedback({ feedback, hint = null, tone = 'warn'
   const t = TONE[tone] || TONE.warn
   return (
     <MotionPanel
-      className={`rounded-16 border-2 p-4 ${t.box}`} role="status" aria-live="polite">
+      className={`rounded-16 border p-4 ${t.box}`} role="status" aria-live="polite">
       <p className={`text-[15px] font-bold ${t.title}`}>{title || (
         feedback.correct_words > 0 ? `${feedback.total_words}낱말 중 ${feedback.correct_words}낱말을 맞혔어요` : '조금 더 볼까요?')}
       </p>
@@ -31,7 +31,7 @@ export default function ConsonantFeedback({ feedback, hint = null, tone = 'warn'
         ) : (
           <span key={i} className="flex gap-1" aria-label={`틀린 낱말, 첫 자음 ${w.skeleton.join(' ')}`}>
             {w.skeleton.map((ch, j) => (
-              <span key={j} className={`flex size-8 items-center justify-center rounded-md border-2 text-[16px] font-bold text-ink ${t.cell}`}>
+              <span key={j} className={`flex size-8 items-center justify-center rounded-md border text-[16px] font-bold text-ink ${t.cell}`}>
                 {ch}
               </span>
             ))}

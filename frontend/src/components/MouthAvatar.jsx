@@ -110,7 +110,7 @@ export default function MouthAvatar({ frames: rawFrames, visemeId, height = 300,
   const shownTiming = overriding ? { t: override.transition_ms, d: override.duration_ms, lv: override.coart_v, curve: override.coart_curve } : timing
   const active = shownSyl != null ? cues.filter((c) => c.syllable_index === shownSyl && (c.strength ?? 1) > 0.05) : []
   return (
-    <div className={`relative w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-surface-inverse-muted to-surface-inverse [container-type:size] ${className}`}
+    <div className={`relative w-full rounded-2xl overflow-hidden bg-surface-inverse [container-type:size] ${className}`}
          style={height != null ? { height } : undefined}>
       <AvatarVRM loadingHint={loadingHint} visemeId={shownVid} modelUrl={modelUrl} flat={flat} transitionMs={shownTiming.t} durationMs={shownTiming.d} talker={talker} lipVowel={shownTiming.lv} lipCurve={shownTiming.curve} />
       {showTalker && <TalkerChip talker={talker} />}

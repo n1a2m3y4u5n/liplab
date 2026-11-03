@@ -28,7 +28,7 @@ export function LearnCard({ card, onClick, off = null }) {
       type="button"
       onClick={onClick}
       disabled={!!off}
-      className="flex items-center gap-3.5 rounded-16 border-2 border-b-5 border-line bg-white p-4 text-left transition-transform enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed lg:flex-col lg:items-start lg:rounded-20 lg:px-[22px] lg:py-6"
+      className="flex items-center gap-3.5 rounded-16 border border-line bg-white p-4 text-left transition-transform enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed lg:flex-col lg:items-start lg:rounded-20 lg:px-[22px] lg:py-6"
     >
       <span className={`icon-chip-sm lg:icon-chip ${card.chip || 'bg-listen-tint'} ${off ? 'opacity-50 grayscale' : ''}`}>
         <CardIcon card={card} />

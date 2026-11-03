@@ -59,7 +59,7 @@ export default function ListenSetup({ initial, onSave, onCancel }) {
         <ChoiceGroup legend="쓰는 기기" options={DEVICES} value={device} onChange={setDevice} cols="grid-cols-1 sm:grid-cols-2" />
         <ChoiceGroup legend="듣는 방법" options={ROUTES} value={route} onChange={setRoute} cols="grid-cols-1" />
         {showSim && (
-          <label className="flex min-h-[48px] items-start gap-3 rounded-13 border-2 border-line bg-surface-sunken px-4 py-3">
+          <label className="flex min-h-[48px] items-start gap-3 rounded-13 border border-line bg-surface-sunken px-4 py-3">
             <input type="checkbox" checked={sim} onChange={(e) => setSim(e.target.checked)} className="mt-1 size-4 accent-[var(--track)]" />
             <span className="text-[13px] leading-[1.6] text-ink">
               <b>인공와우 모의(연구용)</b> · 청인 참여자가 인공와우를 흉내 낸 소리(8채널 보코더)로 들어요. 예비 시범 연구에서만 켜요.

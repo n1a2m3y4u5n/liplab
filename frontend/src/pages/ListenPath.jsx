@@ -58,12 +58,12 @@ export default function ListenPath() {
       <LearnHeader />
       {data?.is_demo && <span className="self-start rounded-full bg-track-tint px-3 py-1.5 text-[12px] font-bold text-track-dark">체험용 · 모든 단계 열림</span>}
       {!data?.is_demo && data?.is_beta && <span className="self-start rounded-full bg-track-tint px-3 py-1.5 text-[12px] font-bold text-track-dark">베타 · 모든 단계 열림</span>}
-      {error ? <div role="alert" className="rounded-20 border-2 border-line bg-white p-5"><h1>경로를 가져오지 못했어요</h1><button className="btn-secondary btn-md mt-3" onClick={() => setRetry((n) => n + 1)}>다시 가져오기</button></div> : !stage ? <p role="status">불러오는 중</p> : <>
-        <div className="flex min-h-[96px] w-full items-center justify-between gap-3 rounded-16 border-b-4 border-track-dark bg-track px-[18px] py-3.5 text-white lg:rounded-20 lg:p-6">
-          <div className="flex min-w-0 flex-col gap-1"><span className="text-[12px] font-bold">소리 듣기 · {stage.stage + 1}단계</span><h1 className="text-[20px] font-black lg:text-[24px]">{stage.title}</h1>
-            {stage.status === 'mastered' ? <span className="text-[12px] font-bold">✓ 숙달</span> : stage.levels ? <span role="img" aria-label={`연습 ${stage.level || 1}/${stage.levels}`} className="flex h-4 items-end gap-[3px]">{Array.from({ length: stage.levels }, (_, i) => i + 1).map((n) => <span key={n} className={`w-1.5 rounded-sm border border-white ${n <= (stage.level || 1) ? 'bg-white' : ''}`} style={{ height: `${n * 3 + 3}px` }} />)}</span> : null}
+      {error ? <div role="alert" className="rounded-20 border border-line bg-white p-5"><h1>경로를 가져오지 못했어요</h1><button className="btn-secondary btn-md mt-3" onClick={() => setRetry((n) => n + 1)}>다시 가져오기</button></div> : !stage ? <p role="status">불러오는 중</p> : <>
+        <div className="flex min-h-[88px] w-full items-center justify-between gap-3 rounded-16 border border-line bg-white px-[18px] py-3.5 lg:px-6 lg:py-5">
+          <div className="flex min-w-0 flex-col gap-1"><span className="text-[12px] font-semibold text-track-dark lg:text-[13px]">소리 듣기 · {stage.stage + 1}단계</span><h1 className="text-[20px] font-bold tracking-[-0.4px] text-ink lg:text-[24px]">{stage.title}</h1>
+            {stage.status === 'mastered' ? <span className="text-[12px] font-semibold text-good-text">✓ 숙달</span> : stage.levels ? <span role="img" aria-label={`연습 ${stage.level || 1}/${stage.levels}`} className="flex h-4 items-end gap-[3px]">{Array.from({ length: stage.levels }, (_, i) => i + 1).map((n) => <span key={n} className={`w-1.5 rounded-sm border border-track ${n <= (stage.level || 1) ? 'bg-track' : ''}`} style={{ height: `${n * 3 + 3}px` }} />)}</span> : null}
           </div>
-          <div className="flex gap-2"><button className="min-h-11 rounded-14 border-2 border-white/50 px-3 text-[14px] font-bold" onClick={() => setGuide(true)}>가이드</button><button className="size-11 rounded-14 border-2 border-white/50 text-xl" aria-label="소리 듣기 안내" onClick={() => setNotice(true)}>ⓘ</button></div>
+          <div className="flex gap-2"><button className="btn-secondary px-4 py-2 text-[14px]" onClick={() => setGuide(true)}>가이드</button><button className="btn-secondary size-11 p-0 text-xl" aria-label="소리 듣기 안내" onClick={() => setNotice(true)}>ⓘ</button></div>
         </div>
         {data.placement?.available && !data.placement?.completed && <button className="btn-secondary btn-md w-full" onClick={() => navigate('/learn/listening?placement=1')}>시작 단계 정하기</button>}
         <div className="listen-road relative flex w-full flex-col items-center justify-center pb-[285px] pt-1 lg:min-h-[550px] lg:flex-row lg:items-start lg:justify-start lg:pb-5 lg:pl-[110px]" style={{ '--card-top': `${Math.max(0, days.length * 124 - 24)}px` }}>
@@ -80,7 +80,7 @@ export default function ListenPath() {
             <span className="my-1 h-7 w-[5px] rounded-full bg-fill-strong lg:h-10" /><DayNode label="내일" state="locked" />
             <span className="my-1 h-7 w-[5px] rounded-full bg-fill-strong lg:h-10" /><DayNode label="숙달" state={stage.status === 'mastered' ? 'mastered' : 'locked'} />
           </div>
-          <section aria-label="오늘 몫" className="device-mobile-sheet fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 flex max-h-[65dvh] flex-col gap-3 overflow-y-auto rounded-t-22 bg-white px-[18px] pb-2 pt-[18px] shadow-sheet lg:absolute lg:inset-x-auto lg:bottom-auto lg:left-[300px] lg:top-[var(--card-top)] lg:w-[310px] lg:rounded-20 lg:border-2 lg:border-line lg:p-5 lg:shadow-card">
+          <section aria-label="오늘 몫" className="device-mobile-sheet fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 flex max-h-[65dvh] flex-col gap-3 overflow-y-auto rounded-t-22 bg-white px-[18px] pb-2 pt-[18px] shadow-sheet lg:absolute lg:inset-x-auto lg:bottom-auto lg:left-[300px] lg:top-[var(--card-top)] lg:w-[310px] lg:rounded-20 lg:border lg:border-line lg:p-5 lg:shadow-card">
             <div className="flex items-center justify-between gap-2"><h2 className="text-[20px] font-black">오늘 몫 {q.filled} / {q.total}</h2><button onClick={() => navigate('/learn/listening?stage=0')} className="btn-secondary min-h-11 px-2 text-[12px] text-track-dark">{data.ling_today ? '✓ 소리 확인' : '소리 확인 · 1분'}</button></div>
             <div className="flex items-center gap-3"><QuotaBar quota={stage.quota} /><span className="text-[14px] font-bold text-ink-muted">◷ {Math.max(0, (q.total - q.filled) * 4)}분</span></div>
             <button id="listen-start" disabled={locked} onClick={q.met ? () => navigate('/records?track=listen') : start} className="btn-primary min-h-[56px] w-full rounded-16 text-[17px]">{locked ? '잠김' : q.met ? '결과 보기' : q.done || stage.quota?.partial_n ? `다음 묶음 듣기 (${q.filled + 1}/${q.total})` : '오늘 몫 시작하기'}</button>
@@ -91,7 +91,7 @@ export default function ListenPath() {
         </div>
       </>}
       {guide && <GuideModal open onClose={() => setGuide(false)} initialKey="listening" />}
-      <Modal open={skip} onClose={() => { if (!skipping) setSkip(false) }} title="정말로 건너뛰시겠어요?" cardClass="border-2 border-warn">
+      <Modal open={skip} onClose={() => { if (!skipping) setSkip(false) }} title="정말로 건너뛰시겠어요?" cardClass="border border-warn">
         {skipError && <p role="alert" className="text-[14px] text-bad-text">단계를 열지 못했어요</p>}
         <div className="flex gap-2.5"><button disabled={skipping} onClick={() => setSkip(false)} className="btn-secondary btn-md flex-1">아니오</button><button disabled={skipping} onClick={doSkip} className="btn-primary btn-md flex-1">{skipping ? '여는 중' : '예, 건너뛸게요'}</button></div>
       </Modal>

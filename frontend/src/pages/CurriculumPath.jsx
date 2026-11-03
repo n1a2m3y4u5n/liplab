@@ -237,14 +237,14 @@ export default function CurriculumPath() {
         {/* 트랙 스위처(171:18 / 모바일 233:34 전체 폭) */}
         <LearnHeader /><h1 className="sr-only">{TRACK_LABEL[track]} · 단계</h1>
 
-        {/* 유닛 헤더(61:12 / 모바일 233:39) — 트랙색 + 3D 하단테두리 + 가이드(사용법 가이드 모달) */}
-        <div className="flex w-full items-center gap-3.5 rounded-16 border-b-4 border-track-dark bg-track py-[15px] pl-[17px] pr-[13px] text-white lg:rounded-18 lg:border-b-5 lg:py-5 lg:pl-[26px] lg:pr-5">
-          <div className="flex min-w-0 flex-1 flex-col gap-[3px] font-bold leading-figma lg:gap-1">
-            <span className="text-[11px] lg:text-[13px]">{TRACK_LABEL[track]} · {view ? `${view.no}단계` : '학습'}</span>
-            <span className="break-words text-[18px] tracking-[-0.36px] lg:text-[24px] lg:tracking-[-0.48px]">{view?.title || '커리큘럼'}</span>
+        {/* 유닛 헤더 — 11/03부터 흰 카드: 트랙·단계는 트랙색 작은 글자, 제목은 진한 글자 + 가이드(사용법 가이드 모달) */}
+        <div className="flex w-full items-center gap-3.5 rounded-16 border border-line bg-white py-[15px] pl-[18px] pr-[14px] lg:py-5 lg:pl-6 lg:pr-5">
+          <div className="flex min-w-0 flex-1 flex-col gap-1 leading-figma">
+            <span className="text-[12px] font-semibold text-track-dark lg:text-[13px]">{TRACK_LABEL[track]} · {view ? `${view.no}단계` : '학습'}</span>
+            <span className="break-words text-[20px] font-bold tracking-[-0.4px] text-ink lg:text-[24px] lg:tracking-[-0.48px]">{view?.title || '커리큘럼'}</span>
           </div>
           <button type="button" onClick={() => setGuideOpen(true)}
-            className="shrink-0 rounded-10 border-1.5 border-white/35 bg-white/[0.08] px-3 py-[7px] text-[12px] font-bold leading-figma text-white transition hover:bg-white/[0.12] lg:rounded-[12px] lg:border-2 lg:border-white/40 lg:px-[18px] lg:py-3 lg:text-[14px]">
+            className="btn-secondary shrink-0 px-4 py-2 text-[14px]">
             가이드
           </button>
         </div>
@@ -314,7 +314,7 @@ export default function CurriculumPath() {
                     {/* 건너뛰기 말풍선(78:131) — 같은 경로 위 현재 노드를 가리지 않게 노드 오른쪽에 둔다 */}
                     {st === 'skip' && skipTarget !== s.key && (
                       <button type="button" onClick={() => { setViewIdx(i); setSkipTarget(s.key) }}
-                        className="absolute left-full top-1/2 z-10 ml-4 -translate-y-1/2 whitespace-nowrap rounded-13 border-2 border-line bg-white px-2.5 py-2 text-[12px] font-bold leading-figma text-track-dark shadow-[0px_6px_16px_-2px_rgba(26,13,64,0.1)] lg:ml-[34px] lg:rounded-14 lg:px-5 lg:py-3 lg:text-[15px]">
+                        className="absolute left-full top-1/2 z-10 ml-4 -translate-y-1/2 whitespace-nowrap rounded-13 border border-line bg-white px-2.5 py-2 text-[12px] font-bold leading-figma text-track-dark shadow-[0px_6px_16px_-2px_rgba(26,13,64,0.1)] lg:ml-[34px] lg:rounded-14 lg:px-5 lg:py-3 lg:text-[15px]">
                         여기로 건너뛸까요?
                         <TailLeft className="left-[-15px] top-1/2 -translate-y-1/2" />
                       </button>
@@ -322,7 +322,7 @@ export default function CurriculumPath() {
 
                     {/* 건너뛰기 확인(79:100) — 데스크톱은 노드 오른쪽 팝오버, 모바일은 아래 시트 */}
                     {st === 'skip' && skipTarget === s.key && (
-                      <div className="path-card absolute left-full z-20 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-20 border-2 border-warn bg-white p-6 shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
+                      <div className="path-card absolute left-full z-20 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-20 border border-warn bg-white p-6 shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
                         style={{ bottom: 'calc(50% - 21.5px)' }}>
                         <TailLeft className="bottom-[8.5px] left-[-15px]" edgeClass="text-warn" />
                         <p className="text-[21px] font-bold leading-figma tracking-[-0.42px] text-ink">정말로 건너뛰시겠어요?</p>
@@ -335,7 +335,7 @@ export default function CurriculumPath() {
 
                     {/* 레슨 카드(75:12 · 80:115) — 보고 있는 단계 노드 오른쪽(데스크톱). 모바일은 아래 시트. */}
                     {i === vIdx && viewOpen && (
-                      <div className="path-card absolute left-full z-10 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-20 border-2 border-line bg-white px-6 py-[22px] shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
+                      <div className="path-card absolute left-full z-10 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-20 border border-line bg-white px-6 py-[22px] shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
                         style={{ bottom: hasExtra ? 'calc(50% - 100.5px)' : 'calc(50% - 37.5px)' }}>
                         {/* 짝 맞추기 버튼(높이 49 + 간격 14)이 붙으면 카드가 위 배너를 덮지 않게 아래로 늘리고 꼬리도 그만큼 올린다 */}
                         <TailLeft className={`${hasExtra ? 'bottom-[87.5px]' : 'bottom-[24.5px]'} left-[-15px]`} />

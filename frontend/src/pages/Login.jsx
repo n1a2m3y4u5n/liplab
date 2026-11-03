@@ -44,7 +44,7 @@ function AgreeCheck({ checked, onChange, children }) {
       <span aria-hidden className="flex size-[19px] shrink-0 rounded-md peer-focus-visible:ring-2 peer-focus-visible:ring-primary-300 peer-focus-visible:ring-offset-1 lg:size-5">
         {checked
           ? <img src="/ui/lp-318-33-checkbox-on.svg" alt="" className="size-full" />
-          : <span className="size-full rounded-md border-2 border-line bg-white" />}
+          : <span className="size-full rounded-md border border-line bg-white" />}
       </span>
       <span className="text-[12.5px] leading-figma text-ink-muted lg:text-[13.5px]">{children}</span>
     </label>

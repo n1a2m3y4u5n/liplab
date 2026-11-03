@@ -9,11 +9,11 @@ import { MotionPanel } from './UI'
  * effort({lessonKind, stage, nItems, accuracy})를 주면 레슨별 정신적 노력 한 문항(C14, EffortCheck)을 스탯 아래에 붙인다.
  */
 const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }   // 마스코트 SVG 그림자 여백(Figma inset)
-const STAT_CARD = 'flex min-w-0 flex-1 flex-col gap-2 rounded-18 border-2 border-line bg-white p-3.5 lg:p-5'
+const STAT_CARD = 'flex min-w-0 flex-1 flex-col gap-2 rounded-18 border border-line bg-white p-3.5 lg:p-5'
 const STAT_LABEL = 'text-[13px] font-bold leading-figma text-ink-soft'
 const STAT_VALUE = 'text-[20px] font-bold leading-figma tracking-[-0.5px] lg:text-[28px] lg:tracking-[-0.7px]'
 // 완료 버튼 — 데스크톱 75:23(btn-lg), lg 미만은 모바일 버튼 규격(r14·b5, py16, 16px)
-const DONE_BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]'
+const DONE_BTN = 'w-full max-lg:rounded-14 max-lg:py-4 max-lg:text-[16px]'
 const fmtDuration = (sec) => `${Math.floor(sec / 60)}분 ${sec % 60}초`
 
 export default function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, homeLabel = '학습 화면으로 돌아가기', effort }) {

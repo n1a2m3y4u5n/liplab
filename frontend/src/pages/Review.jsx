@@ -210,7 +210,7 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
 
           {viseme.error && <VisemeRetry onRetry={viseme.retry} className="mx-auto w-full max-w-[560px]" />}
           {submitFail && <SubmitRetry onResend={() => confirm()} onSkip={() => confirm(true)} busy={submitting} className="mx-auto w-full max-w-[560px]" />}
-          <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
+          <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
             <MouthAvatar height={null} className="h-full" speed={playSpeed}
               talker={talkerLesson.talker} talkerSeed={talkerLesson.seed}
               frames={isViseme ? undefined : frames} visemeId={isViseme ? parseInt(item.ref, 10) : undefined} />
@@ -227,7 +227,7 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
               <label htmlFor="review-sentence" className="text-[13px] font-bold text-ink-muted">입모양을 보고 문장을 입력하세요</label>
               <input id="review-sentence" type="text" value={typed} onChange={(e) => setTyped(e.target.value)}
                 disabled={!!result || submitting} autoComplete="off" placeholder="여기에 읽은 문장을 입력하세요"
-                className="w-full rounded-14 border-2 border-line bg-white px-4 py-3.5 text-[17px] font-bold text-ink outline-none focus:border-track disabled:bg-surface-muted" />
+                className="w-full rounded-14 border border-line bg-white px-4 py-3.5 text-[17px] font-bold text-ink outline-none focus:border-track disabled:bg-surface-muted" />
             </form>
           ) : (
             <div className="flex flex-col gap-2.5 lg:gap-3">
@@ -276,8 +276,8 @@ const BAR_BTN = 'w-full shrink-0 max-lg:py-4 max-lg:text-[16px] lg:w-auto'
 const OPTION_BASE = 'flex w-full items-center gap-3.5 rounded-14 px-[18px] py-[15px] text-left transition-colors lg:gap-4 lg:rounded-16 lg:px-5 lg:py-4'
 // 정답·오답 공개(2.5px 테두리)는 하단 테두리가 5 → 2.5px로 얇아지므로 위 패딩을 2px 더해 보기 높이를 맞춘다(변경 내역 §0-4).
 const OPTION_CLASS = {
-  idle: `${OPTION_BASE} border-2 border-b-5 border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
-  selected: `${OPTION_BASE} border-2 border-b-5 border-track bg-track-tint text-ink`,
+  idle: `${OPTION_BASE} border border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
+  selected: `${OPTION_BASE} border border-track bg-track-tint text-ink`,
   correct: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-good-tint text-good-text`,
   target: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-white text-ink`,
   wrong: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-bad bg-bad-tint text-bad-text`,

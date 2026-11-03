@@ -19,7 +19,7 @@ function MaskIcon({ src, className = '' }) {
 
 function Avatar({ className = '' }) {
   return (
-    <span className={`flex shrink-0 items-center justify-center rounded-full border-2 border-primary-200 bg-primary-100 font-black text-primary-600 ${className}`}>
+    <span className={`flex shrink-0 items-center justify-center rounded-full border border-primary-200 bg-primary-100 font-black text-primary-600 ${className}`}>
       {USER.initial}
     </span>
   )
@@ -219,7 +219,7 @@ function RailTask({ label, cur, total }) {
     <div className="flex items-center gap-3">
       {cur >= total
         ? <img src="/ui/lp-318-33-checkbox-on.svg" alt="" className="size-[22px] shrink-0" />
-        : <span className="size-[22px] shrink-0 rounded-[7px] border-2 border-line" />}
+        : <span className="size-[22px] shrink-0 rounded-[7px] border border-line" />}
       <span className="min-w-0 flex-1 text-[15px] font-medium leading-figma text-ink-muted">{label}</span>
       <span className="shrink-0 text-[13px] font-bold leading-figma text-ink-muted">{cur}/{total}</span>
     </div>

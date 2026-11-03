@@ -319,7 +319,7 @@ export default function Conversation() {
           </div>
 
           {notice && (
-            <div role="alert" className="rounded-14 border-2 border-bad-line bg-bad-tint px-4 py-2.5 text-[13.5px] font-bold text-bad-text">
+            <div role="alert" className="rounded-14 border border-bad-line bg-bad-tint px-4 py-2.5 text-[13.5px] font-bold text-bad-text">
               {notice}
             </div>
           )}
@@ -331,7 +331,7 @@ export default function Conversation() {
                 {[['again', '다시'], ['slow', '천천히'], ['other', '다른 말로']].map(([k, label]) => (
                   <button key={k} type="button" onClick={() => handleRepair(k)}
                     disabled={repairs >= MAX_REPAIRS || repairBusy}
-                    className="rounded-14 border-2 border-line bg-white py-2 text-[13.5px] font-bold text-ink transition hover:bg-fill disabled:opacity-40">
+                    className="rounded-14 border border-line bg-white py-2 text-[13.5px] font-bold text-ink transition hover:bg-fill disabled:opacity-40">
                     {k === 'other' && repairBusy ? '바꾸는 중…' : label}
                   </button>
                 ))}

@@ -53,7 +53,7 @@ function ReviewItem({ track, word, meta, rel, onClick, first, selectMode, checke
       <button data-print-record-item type="button" onClick={onClick} aria-pressed={checked} className={row}>
         {checked
           ? <img src="/ui/lp-318-33-checkbox-on.svg" alt="" className="size-[22px] shrink-0" />
-          : <span className="size-[22px] shrink-0 rounded-[7px] border-2 border-line" />}
+          : <span className="size-[22px] shrink-0 rounded-[7px] border border-line" />}
         {badge}
         {text}
       </button>
@@ -197,7 +197,7 @@ export default function ReviewItems({ view = 'wrong', track = 'all' }) {
     <>
       {shown.length > 0 && <button className="btn-secondary min-h-11 self-start px-4" onClick={() => navigate(view === 'saved' ? '/review/saved' : '/review/mistakes')}>{view === 'saved' ? '다시 연습' : '다시 풀기'}</button>}
       {/* 복습할 항목 (189:21 / 239:134) */}
-      <section className={`flex w-full flex-col rounded-16 border-2 border-line bg-white lg:rounded-18 ${selectMode ? 'gap-3 px-5 pt-5' : 'gap-3 px-[18px] pt-[18px] lg:gap-4'} lg:px-[22px] lg:pt-[22px] ${padBottom}`}>
+      <section className={`flex w-full flex-col rounded-16 border border-line bg-white lg:rounded-18 ${selectMode ? 'gap-3 px-5 pt-5' : 'gap-3 px-[18px] pt-[18px] lg:gap-4'} lg:px-[22px] lg:pt-[22px] ${padBottom}`}>
         {/* 모바일 머리 행(239:135 / 318:266) — 제목 + 지우기 또는 취소 */}
         <div className="flex items-center justify-between lg:hidden">
           <p className="text-[16px] font-bold leading-figma text-ink">문장 목록</p>

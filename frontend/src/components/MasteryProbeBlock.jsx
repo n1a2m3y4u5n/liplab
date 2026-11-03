@@ -92,7 +92,7 @@ export default function MasteryProbeBlock({ items, onDone }) {
               const on = selected === o.value
               return (
                 <button key={o.value} type="button" disabled={sending} onClick={() => setSelected(o.value)} aria-pressed={on}
-                  className={`flex w-full items-center gap-3.5 rounded-14 border-2 border-b-5 px-[18px] py-[15px] text-left transition-colors disabled:opacity-60 enabled:active:scale-[0.99] lg:gap-4 lg:rounded-16 lg:px-5 lg:py-4 ${on ? 'border-track bg-track-tint' : 'border-line bg-white enabled:hover:border-primary-300'}`}>
+                  className={`flex w-full items-center gap-3.5 rounded-14 border px-[18px] py-[15px] text-left transition-colors disabled:opacity-60 enabled:active:scale-[0.99] lg:gap-4 lg:rounded-16 lg:px-5 lg:py-4 ${on ? 'border-track bg-track-tint' : 'border-line bg-white enabled:hover:border-primary-300'}`}>
                   <span className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold leading-figma text-ink-muted lg:size-7 lg:rounded-lg lg:text-[13px]">{i + 1}</span>
                   <span className={`flex-1 font-bold leading-figma text-ink ${it.kind === 'sentence' ? 'text-[16px] lg:text-[18px]' : 'text-[18px] lg:text-[20px]'}`}>{probeOptionLabel(it, o)}</span>
                 </button>

@@ -42,7 +42,7 @@ export default function Feedback() {
     finally { setBusy(false) }
   }
   const trigger = <div className="inline-flex min-w-0 flex-col gap-1">
-    <button type="button" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-haspopup="dialog" className="min-h-11 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink-muted">피드백</button>
+    <button type="button" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-haspopup="dialog" className="min-h-11 rounded-full border border-line-strong bg-white px-3.5 py-2 text-[13px] font-medium text-ink-muted hover:bg-surface-muted">피드백</button>
     {!open && state && <span role="status" className="max-w-[12em] text-xs text-ink-muted">{state}</span>}
   </div>
   return <><SusCheck />

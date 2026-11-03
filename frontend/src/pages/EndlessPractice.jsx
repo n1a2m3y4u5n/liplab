@@ -33,14 +33,14 @@ export default function EndlessPractice() {
   return (
     <AppShell active="learn" title="엔드리스 학습" backTo="/learn/path?section=free" backLabel="자유 연습">
       {/* 엔드리스 시작 — Figma 인디고 그라데이션 히어로(3D 하단테두리) */}
-      <section className="relative w-full overflow-hidden rounded-[20px] border-2 border-b-[5px] border-endless-dark p-6 sm:p-[26px]"
+      <section className="relative w-full overflow-hidden rounded-[20px] border border-b-[5px] border-endless-dark p-6 sm:p-[26px]"
         style={{ backgroundImage: 'linear-gradient(166deg, var(--endless) 0%, var(--endless-dark) 100%)' }}>
         <div className="flex items-center justify-between gap-5">
           <div className="flex flex-col items-start gap-[18px] text-white">
             <p className="text-[24px] font-bold leading-tight tracking-[-0.48px]">약한 유형만 골라서 무한 연습</p>
             <p className="text-[14px] leading-relaxed opacity-85">숙달도가 낮은 소리가 자주 나와요. 원할 때 멈출 수 있어요.</p>
             <button type="button" onClick={() => navigate('/learn/word?endless=1')}
-              className="inline-flex items-center rounded-[13px] border-2 border-b-4 border-endless-line bg-white px-[30px] py-[14px] text-[16px] font-bold text-endless-dark transition active:translate-y-[1px] active:border-b-2">
+              className="inline-flex items-center rounded-[13px] border border-endless-line bg-white px-[30px] py-[14px] text-[16px] font-bold text-endless-dark transition">
               시작하기 →
             </button>
           </div>

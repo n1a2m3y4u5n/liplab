@@ -22,7 +22,7 @@ function Question({ label, title }) {
     <div className="relative flex flex-col gap-1.5 pr-12 leading-figma">
       <p className="text-[12px] font-bold text-track">{label}</p>
       <p className="text-[21px] font-bold tracking-[-0.525px] text-ink">{title}</p>
-      <span {...area('bookmark')} className="absolute right-0 top-[14px] flex size-[38px] items-center justify-center rounded-full border-2 border-line bg-white">
+      <span {...area('bookmark')} className="absolute right-0 top-[14px] flex size-[38px] items-center justify-center rounded-full border border-line bg-white">
         <img src="/ui/lp-328-8-bookmark-default.svg" alt="" className="size-[16.29px]" />
       </span>
     </div>
@@ -31,8 +31,8 @@ function Question({ label, title }) {
 
 const OPT = 'flex w-full items-center gap-3.5 rounded-14 px-[18px] transition-colors duration-300 ease-out'
 const OPT_CLASS = {
-  idle: `${OPT} py-3 border-2 border-b-5 border-line bg-white text-ink`,
-  selected: `${OPT} py-3 border-2 border-b-5 border-track bg-track-tint text-ink`,
+  idle: `${OPT} py-3 border border-line bg-white text-ink`,
+  selected: `${OPT} py-3 border border-track bg-track-tint text-ink`,
   correct: `${OPT} pb-3 pt-[14px] border-[2.5px] border-good bg-good-tint text-good-text`,
   target: `${OPT} pb-3 pt-[14px] border-[2.5px] border-good bg-white text-ink`,
   wrong: `${OPT} pb-3 pt-[14px] border-[2.5px] border-bad bg-bad-tint text-bad-text`,
@@ -71,13 +71,13 @@ function ReadMock({ wrong = false, scene, tick, running }) {
   ) : (
     <div key="ask" className="border-t-2 border-line bg-white px-[18px] pb-4 pt-3">
       <span className={`btn-primary btn-bar block w-full py-3 text-center text-[16px] ${
-        s === 'play' ? '!border-inactive-line !bg-inactive !text-inactive-text' : s === 'confirm' ? 'translate-y-[2px] !border-b-2' : ''}`}>확인</span>
+        s === 'play' ? '!border-inactive-line !bg-inactive !text-inactive-text' : s === 'confirm' ? '' : ''}`}>확인</span>
     </div>
   )
   return (
     <LessonShell done={shown ? 1 : 0} bar={<div {...area('resultBar')}>{bar}</div>}>
       <Question label="단어 독화" title="이 입모양은 어떤 단어일까요?" />
-      <div {...area('stage')} className="h-[158px] w-full rounded-18 border-2 border-line bg-white p-4">
+      <div {...area('stage')} className="h-[158px] w-full rounded-18 border border-line bg-white p-4">
         <FaceStage mouth={mouthAt(tick, running)} className="h-full" talker="사람 2" />
       </div>
       <div {...area('options')} className="flex flex-col gap-2.5">
@@ -111,7 +111,7 @@ function SpeakMock({ result = false, scene, tick, running }) {
     const ready = s === 'result'
     const good = PHONES.filter(([, v]) => scoreTone(v).level === 'good').length
     body = (
-      <div className="flex w-full flex-col items-center gap-3 rounded-18 border-2 border-line bg-white px-4 py-4">
+      <div className="flex w-full flex-col items-center gap-3 rounded-18 border border-line bg-white px-4 py-4">
         <div {...area('score')} className="flex flex-col items-center gap-0.5 font-bold leading-figma">
           {ready
             ? <p key="score" className={`text-[44px] tracking-[-1.32px] ${FADE} ${scoreTone(84).text}`}>84%</p>
@@ -121,14 +121,14 @@ function SpeakMock({ result = false, scene, tick, running }) {
         <div {...area('chips')} className="flex justify-center gap-2">
           {PHONES.map(([p, v], i) => (
             ready ? (
-              <span key={`r${i}`} className={`flex size-12 items-center justify-center rounded-13 border-2 ${RISE} ${scoreTone(v).chip}`}
+              <span key={`r${i}`} className={`flex size-12 items-center justify-center rounded-13 border ${RISE} ${scoreTone(v).chip}`}
                 style={{ animationDelay: `${120 + i * 90}ms` }}>
                 <span className="text-[20px] font-bold leading-figma">{p}</span>
               </span>
-            ) : <span key={`w${i}`} className="size-12 rounded-13 border-2 border-dashed border-line bg-surface-muted" />
+            ) : <span key={`w${i}`} className="size-12 rounded-13 border border-dashed border-line bg-surface-muted" />
           ))}
         </div>
-        <span {...area('detail')} className={`btn-secondary rounded-[12px] border-b-4 px-[26px] py-3 text-[14px] transition-opacity duration-300 ${ready ? '' : 'opacity-50'}`}>자세히 보기</span>
+        <span {...area('detail')} className={`btn-secondary rounded-[12px] px-[26px] py-3 text-[14px] transition-opacity duration-300 ${ready ? '' : 'opacity-50'}`}>자세히 보기</span>
       </div>
     )
     bar = ready ? (
@@ -151,7 +151,7 @@ function SpeakMock({ result = false, scene, tick, running }) {
   } else {
     const rec = s === 'rec'
     body = (
-      <div {...area('stage')} className="w-full overflow-hidden rounded-18 border-2 border-line bg-white">
+      <div {...area('stage')} className="w-full overflow-hidden rounded-18 border border-line bg-white">
         <div className="px-4 pt-4"><FaceStage mouth={mouthAt(tick, running)} className="h-[120px]" /></div>
         <div className="flex h-[46px] items-center justify-center">
           {rec
@@ -167,7 +167,7 @@ function SpeakMock({ result = false, scene, tick, running }) {
             <img key="rec" src="/ui/speak-recording.svg" alt="" className="absolute max-w-none animate-pulse"
               style={{ top: '-16.67%', left: '-16.67%', width: '133.33%', height: '133.33%' }} />
           ) : (
-            <span key="mic" className="flex size-[72px] items-center justify-center rounded-full border-2 border-b-6 border-track-dark bg-track">
+            <span key="mic" className="flex size-[72px] items-center justify-center rounded-full border border-track-dark bg-track">
               <img src="/ui/speak-mic.svg" alt="" className="size-8" />
             </span>
           )}

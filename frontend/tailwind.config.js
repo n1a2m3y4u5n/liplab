@@ -41,10 +41,10 @@ export default {
           tick: '#68687b',     // 슬라이더 눈금 숫자(아직 안 지난 칸, 449:91)
         },
         line: {
-          DEFAULT: '#e2e2e8',  // border/default
+          DEFAULT: '#e6e6ec',  // border/default — 11/03 1px 테두리로 바꾸며 흰 바탕 대비 약 1.2:1로 맞춤
           strong: '#d4d4de',   // 어두운 딤 위 흰 버튼 테두리(313:230 배지 모달 닫기)
         },
-        page: '#f3f3f3',       // surface/background — 모바일 페이지·레슨 배경
+        page: '#f5f5f7',       // surface/background — 모바일 페이지·레슨 배경(11/03 중립 회색)
         surface: {
           deep: '#101021',
           inverse: '#1a1a2e',
@@ -99,20 +99,23 @@ export default {
       },
       fontFamily: {
         // 설치된 한글 글꼴은 오프라인에도 굵기를 제공한다. 일부 WebKit의 웹 글꼴 굵기 누락도 피한다.
-        sans: ['"Apple SD Gothic Neo"', '"Malgun Gothic"', '"Noto Sans KR"', 'system-ui', '-apple-system', 'sans-serif'],
+        // 11/03부터 본문은 번들에 넣은 Pretendard 가변 글꼴(main.jsx). 받기 전·실패 때는 설치 글꼴로 그린다.
+        sans: ['"Pretendard Variable"', 'Pretendard', '"Apple SD Gothic Neo"', '"Malgun Gothic"', '"Noto Sans KR"', 'system-ui', '-apple-system', 'sans-serif'],
         display: ['Rowdies', '"Noto Sans KR"', 'sans-serif'],
       },
       // Figma 글자 상자의 "leading normal" — Noto Sans KR에서 글자 크기의 1.2배(16px→19, 30px→36).
       // 브라우저의 line-height: normal(≈1.45)과 달라서 토큰으로 둔다.
       lineHeight: { figma: '1.2' },
+      // 굵게(700)를 650으로 — Pretendard 700은 화면 전체에 쓰기엔 무겁다. 가변 글꼴이 아닌 대체 글꼴은 700으로 그린다.
+      fontWeight: { bold: '650' },
       borderWidth: { 1.5: '1.5px', 3: '3px', 5: '5px', 6: '6px' },  // Figma 구분선 1.5 / 슬라이더 손잡이 3(449:98) / 3D 하단테두리 5·6
       // Figma 반경 — rounded-14(버튼·칩) 16(주 버튼) 18(정보 카드) 20(카드) 22(모달) 24(가이드 모달)
       borderRadius: {
-        '2xl': '1rem', '10': '10px', '13': '13px', '14': '14px', '15': '15px', '16': '16px',
+        '2xl': '1rem', '10': '10px', '12': '12px', '13': '13px', '14': '14px', '15': '15px', '16': '16px',
         '18': '18px', '20': '20px', '22': '22px', '24': '24px',
       },
       boxShadow: {
-        card: '0 2px 12px -2px rgba(26,13,64,0.06)',
+        card: '0 0 #0000',  // 11/03: 쉬는 카드는 그림자 없이 1px 테두리만
         modal: '0px 18px 44px -6px rgba(13,5,31,0.32)',
         sheet: '0px -4px 16px -2px rgba(26,13,64,0.12)',  // 모바일 레슨 시트(233:61)
         art: '0px 14px 30px -4px rgba(26,13,64,0.14)',    // 랜딩 섹션 그림 카드(54:6·54:17)

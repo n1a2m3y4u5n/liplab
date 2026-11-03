@@ -39,7 +39,7 @@ return (
 
           {/* 입모양을 받지 못했을 때: 이전 문장 입모양은 비운 채 다시 받기를 둔다(문항 상태는 그대로) */}
           {visemeError && (
-            <div role="alert" className="flex items-center justify-between gap-3 rounded-14 border-2 border-bad-line bg-bad-tint px-4 py-2.5 text-[13.5px] font-bold text-bad-text">
+            <div role="alert" className="flex items-center justify-between gap-3 rounded-14 border border-bad-line bg-bad-tint px-4 py-2.5 text-[13.5px] font-bold text-bad-text">
               입모양을 가져오지 못했어요.
               <button type="button" onClick={fetchVisemes} className="shrink-0 underline">다시 가져오기</button>
             </div>
@@ -50,7 +50,7 @@ return (
           {multiple ? (
             <>
               {/* 입모양 카드(91:22 / 모바일 235:45) — 아바타만, 무한 반복(다시 보기·속도·프레임 조작 없음) */}
-              <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
+              <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
                 {/* 시각증강 기호(축 J-3)는 답을 확인한 뒤에만 — 문제 중에 보이면 보기끼리 다른 자질이 기호로 드러나 답이 된다.
                     그 뒤에는 약한 표적 입모양 음절에만 입꼬리 옆에 겹쳐 '왜 헷갈렸는지'를 보여 준다(숙달되면 흐려짐). */}
                 <MouthAvatar frames={shownVisemes} height={null} className="h-full" cueText={result ? currentSentence : null} cueFocus
@@ -72,7 +72,7 @@ return (
               {/* 결과 뒤 음절 기호(시각증강) — 교육 패널이라 유지, 고정 바 위 스크롤 영역 */}
               {result && (
                 <MotionPanel
-                  className="overflow-x-auto rounded-16 border-2 border-line bg-white p-3">
+                  className="overflow-x-auto rounded-16 border border-line bg-white p-3">
                   <CueBadges text={currentSentence} showControls />
                   <div className="mt-1.5"><CueLegend /></div>
                 </MotionPanel>
@@ -82,7 +82,7 @@ return (
             <>
               {player({ loop: true })}
               <div className="card flex flex-col gap-4">
-                <div className="rounded-14 border-2 border-good-line bg-good-tint p-4">
+                <div className="rounded-14 border border-good-line bg-good-tint p-4">
                   <p className="text-2xl font-bold leading-relaxed tracking-wide text-good-text">{currentSentence}</p>
                 </div>
                 <button type="button" onClick={() => setSignOpen(true)} className="btn-secondary w-full py-2.5 text-[14px] text-track">

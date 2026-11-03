@@ -19,15 +19,15 @@
   --ink: #1a1a2e;           /* text/primary */
   --ink-muted: #5a5a6e;     /* text/secondary */
   --ink-faint: #68687b;
-  --line: #e2e2e8;          /* border/default */
+  --line: #e6e6ec;          /* border/default */
   --surface: #ffffff;       /* surface/card */
-  --page: #f3f3f3;          /* surface/background */
+  --page: #f5f5f7;          /* surface/background */
   --fill: #ededf3;
   --fill-strong: #e4e4ec;
   --focus-ring: var(--track-dark);
   --control-min: 44px;
-  --radius-control: 14px;
-  --radius-card: 18px;
+  --radius-control: 12px;
+  --radius-card: 16px;
   --space-card: 20px;
   --text-body: 1rem;
   --text-title: 1.5625rem;
@@ -153,7 +153,7 @@ body,
     min-width: 0;
     border-radius: var(--radius-card);
     padding: var(--space-card);
-    @apply border-2 border-line bg-surface shadow-card;
+    @apply border border-line bg-surface;
   }
   .ui-chip {
     @apply inline-flex max-w-full items-center gap-1.5 rounded-full bg-track-tint px-3 py-1.5 text-[13px] font-bold leading-snug text-track-dark;
@@ -168,90 +168,82 @@ body,
     @apply break-keep text-[25px] font-bold leading-snug tracking-tight text-ink lg:text-[30px];
     font-size: var(--text-title);
   }
-  .bg-hero-brand {
-    background-image: linear-gradient(145deg, var(--brand), var(--brand-dark));
-  }
-  .bg-hero-bookmark {
-    background-image: linear-gradient(145deg, var(--bookmark), var(--bookmark-dark));
-  }
+  /* 11/03: 그라데이션을 걷고 한 색으로 칠한다. */
+  .bg-hero-brand { background-color: var(--brand); }
+  .bg-hero-bookmark { background-color: var(--bookmark); }
   @screen lg {
-    .ui-card { --radius-card: 20px; --space-card: 24px; }
+    .ui-card { --radius-card: 16px; --space-card: 24px; }
     .ui-lesson-title { --text-title: 1.875rem; }
   }
 
-  /* ── 버튼 (Figma "Button / Primary" 75:23 계열) ─────────────────────────────
-     3D 하단테두리 + 누르면 내려앉음. 색은 트랙 변수(--track)를 따른다: 셸(AppShell)이나
-     레슨 루트에 data-track="speak"가 있으면 분홍(#EC4899 / #BE185D)이 된다(§3.1).
-     기본 모양은 r14·b5(레슨 하단 바·모바일 버튼). Figma 크기는 아래 수정자로 맞춘다.
-       .btn-lg  = 75:23 Button / Primary (r16·b6, 32/18, 20px)
-       .btn-md  = 59:43 오른쪽 패널 "복습하기" (r16·b6, 18/14, 17px)
-       .btn-bar = 130:20·94:138 레슨 하단 바 "확인·계속하기" (r14·b5, 40/15, 17px)
-     비활성은 Figma "확인 (비활성)"(130:20) 회색. */
+  /* ── 버튼 ─────────────────────────────────────────────────────────────────
+     11/03 다시 그림: 3D 하단테두리(눌리면 내려앉는 모양)를 걷고 평평한 면 + 1px 테두리로 바꿨다.
+     색은 트랙 변수(--track)를 따른다: 셸이나 레슨 루트에 data-track="speak"면 분홍, "listen"이면 청록(§3.1).
+     크기 수정자: .btn-lg(큰 주 버튼) .btn-md(카드 안) .btn-bar(레슨 하단 바). 비활성은 회색. */
   /* 공통 컨트롤의 최소 높이: 모바일 터치와 줄바꿈 때도 유지한다. */
   .btn-primary, .btn-secondary, .btn-good, .btn-bad {
     min-height: var(--control-min);
   }
 
   .btn-primary {
-    @apply px-6 py-3 rounded-14 border-2 border-b-5 font-bold leading-figma
-           bg-track border-track-dark text-white
-           hover:bg-track-hover focus:outline-none
-           transition-[color,background-color,border-color,transform] duration-[180ms] active:translate-y-[2px] active:border-b-2
-           disabled:cursor-not-allowed disabled:bg-inactive disabled:border-inactive-line disabled:text-inactive-text;
+    @apply px-6 py-3 rounded-12 border font-semibold leading-figma
+           bg-track border-track text-white
+           hover:bg-track-hover hover:border-track-hover focus:outline-none
+           transition-[color,background-color,border-color,opacity] duration-[180ms] active:opacity-90
+           disabled:cursor-not-allowed disabled:bg-inactive disabled:border-inactive disabled:text-inactive-text;
   }
 
-  /* 보조 버튼 — 흰 바탕 + 라인 테두리(222:225 "취소", 179:21 "자세히 보기").
-     글자를 트랙색으로 할 때(227:69 "둘러보기", 93:12 "커리큘럼으로 돌아가기")는 text-track을 덧붙인다. */
+  /* 보조 버튼 — 흰 바탕 + 한 단계 진한 테두리. 글자를 트랙색으로 할 때는 text-track을 덧붙인다. */
   .btn-secondary {
-    @apply px-6 py-3 rounded-14 border-2 border-b-5 border-line bg-white font-bold leading-figma text-ink-muted
-           hover:bg-surface-muted focus:outline-none
-           transition-[color,background-color,border-color,transform] duration-[180ms] active:translate-y-[1px] active:border-b-2
+    @apply px-6 py-3 rounded-12 border border-line-strong bg-white font-semibold leading-figma text-ink
+           hover:bg-surface-muted hover:border-ink-pale focus:outline-none
+           transition-[color,background-color,border-color] duration-[180ms] active:bg-surface-sunken
            disabled:cursor-not-allowed disabled:opacity-60;
   }
 
-  /* 정답·오답 하단 바의 주 버튼(94:138 초록 / 94:180·186:63 빨강). 같은 바의 흰 보조 버튼은
+  /* 정답·오답 하단 바의 주 버튼. 같은 바의 흰 보조 버튼은
      .btn-secondary + border-good-line text-good-text / border-bad-line text-bad-text. */
   .btn-good {
-    @apply px-6 py-3 rounded-14 border-2 border-b-5 font-bold leading-figma
-           bg-good border-good-dark text-white focus:outline-none
-           transition-[color,background-color,border-color,transform] duration-[180ms] active:translate-y-[2px] active:border-b-2;
+    @apply px-6 py-3 rounded-12 border font-semibold leading-figma
+           bg-good border-good text-white focus:outline-none
+           transition-[color,background-color,border-color,opacity] duration-[180ms] active:opacity-90;
   }
   .btn-bad {
-    @apply px-6 py-3 rounded-14 border-2 border-b-5 font-bold leading-figma
-           bg-bad border-bad-dark text-white focus:outline-none
-           transition-[color,background-color,border-color,transform] duration-[180ms] active:translate-y-[2px] active:border-b-2;
+    @apply px-6 py-3 rounded-12 border font-semibold leading-figma
+           bg-bad border-bad text-white focus:outline-none
+           transition-[color,background-color,border-color,opacity] duration-[180ms] active:opacity-90;
   }
 
-  /* 크기 수정자 — 위 버튼 클래스 뒤에 둔다(같은 명시도라 나중 선언이 이긴다). lg:btn-lg처럼 반응형도 된다. */
   .btn-primary, .btn-secondary, .btn-good, .btn-bad {
     transition-duration: var(--motion-duration);
     transition-timing-function: var(--motion-ease);
   }
 
+  /* 크기 수정자 — 위 버튼 클래스 뒤에 둔다(같은 명시도라 나중 선언이 이긴다). lg:btn-lg처럼 반응형도 된다. */
   .btn-lg {
-    @apply rounded-16 border-b-6 px-8 py-[18px] text-[20px] tracking-[-0.2px];
+    @apply rounded-14 px-7 py-[15px] text-[17px];
   }
   .btn-md {
-    @apply rounded-16 border-b-6 px-[18px] py-[14px] text-[17px] tracking-[-0.17px];
+    @apply rounded-12 px-[18px] py-3 text-[16px];
   }
   .btn-bar {
-    @apply rounded-14 border-b-5 px-10 py-[15px] text-[17px];
+    @apply rounded-12 px-10 py-[14px] text-[17px];
   }
 
   .input-field {
     font-size: 16px; /* iOS 포커스 확대를 막고 입력 글자를 읽기 쉽게 한다. */
-    @apply w-full px-4 py-3 border-2 border-line rounded-[12px] bg-surface-muted
+    @apply w-full px-4 py-3 border border-line-strong rounded-[12px] bg-white
            focus:outline-none focus:ring-2 focus:ring-primary-200
            focus:border-primary-400 focus:bg-white transition-all duration-200;
   }
 
-  /* 카드 — Figma 카드(2px 테두리 + 옅은 그림자, rounded-20). */
+  /* 카드 — 11/03부터 1px 테두리만(그림자 없음), 반경 16으로 통일. */
   .card {
-    @apply bg-white rounded-20 p-6 border-2 border-line shadow-card;
+    @apply bg-white rounded-16 p-6 border border-line;
   }
-  /* 얕은 카드 — 정보 카드(59:23 오늘의 과제 등: r18·p20·2px). */
+  /* 얕은 카드 — 정보 카드(오늘의 과제 등). */
   .card-flat {
-    @apply bg-white rounded-18 p-5 border-2 border-line;
+    @apply bg-white rounded-16 p-5 border border-line;
   }
   /* 파스텔 아이콘 칩(52px) — 카드 상단 아이콘 배경. */
   .icon-chip {
@@ -265,14 +257,16 @@ body,
   }
 
   /* 좌측 내비 항목(58:22) — 활성(58:19)만 2px 테두리가 붙어 50→54px가 된다. 색은 트랙을 따른다. */
+  /* 11/03: 활성은 테두리 없는 회색 알약 + 진한 글자. 트랙색은 아이콘에만 남긴다. */
   .side-item {
-    @apply flex items-center gap-3.5 px-3.5 py-[13px] rounded-14 w-full
-           font-bold text-[16px] leading-figma text-ink-muted transition-colors
-           hover:bg-surface-muted;
+    @apply flex items-center gap-3 px-3 py-[10px] rounded-10 w-full
+           font-medium text-[15px] leading-figma text-ink-muted transition-colors
+           hover:bg-surface-sunken hover:text-ink;
   }
   .side-item-active {
-    @apply border-2 border-track bg-track-tint text-track-dark hover:bg-track-tint;
+    @apply bg-surface-hover font-semibold text-ink hover:bg-surface-hover;
   }
+  .side-item-active > :first-child { color: var(--track); }
 
   /* 마스크 아이콘 — 단색 SVG를 글자색(currentColor)으로 칠한다. style={{ '--icon': 'url(/ui/…svg)' }}.
      활성 탭·트랙색 틴트처럼 에셋 하나를 여러 색으로 쓸 때 쓴다. 크기는 size-* 로 준다. */
@@ -305,21 +299,9 @@ body,
     }
   }
 
-  /* 트랙별 로딩 그라데이션(Figma 223:30·223:50, 모바일 243:81·243:101 — 각도만 다르다) */
-  .bg-loading-perception {
-    background-image: linear-gradient(121.64deg, var(--brand) 0%, var(--brand-dark) 100%);
-  }
-  .bg-loading-language {
-    background-image: linear-gradient(121.64deg, var(--speak) 0%, var(--speak-hover) 100%);
-  }
-  @media (min-width: 1024px) {
-    .bg-loading-perception {
-      background-image: linear-gradient(151.93deg, var(--brand) 0%, var(--brand-dark) 100%);
-    }
-    .bg-loading-language {
-      background-image: linear-gradient(151.93deg, var(--speak) 0%, var(--speak-hover) 100%);
-    }
-  }
+  /* 트랙별 로딩 바탕 — 11/03부터 그라데이션 없이 한 색. */
+  .bg-loading-perception { background-color: var(--brand); }
+  .bg-loading-language { background-color: var(--speak); }
 
   .label {
     @apply block text-sm font-medium text-gray-700 mb-2;
@@ -333,16 +315,16 @@ body,
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: #d4d4de;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #b9b9c8;
 }
 
 /* Loading spinner animation */
@@ -499,9 +481,9 @@ html.a11y-contrast [data-track="listen"] .bg-fill { background-color: var(--line
 
 /* hover 없이도 현재 조작 위치를 찾는다. 기존 focus:outline-none보다 우선한다. */
 :is(button, a[href], input, select, textarea, [tabindex]):focus-visible {
-  outline: 3px solid var(--focus-ring) !important;
-  outline-offset: 3px;
-  box-shadow: 0 0 0 3px var(--surface) !important;
+  outline: 2px solid var(--focus-ring) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--surface) !important;
 }
 input::placeholder, textarea::placeholder {
   color: var(--ink-faint);

@@ -69,7 +69,7 @@ export default function LingCheck({ data, settings, onProgress, onExit, finish, 
           {(data.sounds || []).map((s) => {
             const ok = summary.heard.includes(s.key)
             return (
-              <div key={s.key} className={`flex flex-col items-center gap-0.5 rounded-14 border-2 py-3 ${ok ? 'border-good/40 bg-good-tint' : 'border-bad/30 bg-bad-tint'}`}>
+              <div key={s.key} className={`flex flex-col items-center gap-0.5 rounded-14 border py-3 ${ok ? 'border-good/40 bg-good-tint' : 'border-bad/30 bg-bad-tint'}`}>
                 <span className="text-[20px] font-bold text-ink">{s.label}</span>
                 <span className="text-[12px] text-ink-muted">{s.band}</span>
                 <span className={`text-[12px] font-bold ${ok ? 'text-good-text' : 'text-bad-text'}`}>{ok ? '들림' : '안 들림'}</span>

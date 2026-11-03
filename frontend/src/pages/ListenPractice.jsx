@@ -91,7 +91,7 @@ function PlaceChooser({ onPick, onExit }) {
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:gap-3">
         {places.map((p) => (
           <button key={p.key} type="button" onClick={() => onPick({ place: p.key })}
-            className="flex min-h-[64px] flex-col items-start justify-center gap-0.5 rounded-14 border-2 border-b-5 border-line bg-white px-4 py-3 text-left transition-colors hover:border-track lg:rounded-16">
+            className="flex min-h-[64px] flex-col items-start justify-center gap-0.5 rounded-14 border border-line bg-white px-4 py-3 text-left transition-colors hover:border-track lg:rounded-16">
             <span className="break-keep text-[16px] font-bold leading-snug text-ink">{p.label}</span>
             {p.n != null && <span className="text-[12px] text-ink-muted">{p.n}문제</span>}
           </button>

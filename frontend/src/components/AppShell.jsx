@@ -69,7 +69,7 @@ function MobileTopBar({ pink }) {
         <Stat icon="/ui/stat-flame.svg" box={17} value={streak} className="gap-1 text-[14px] text-stat-streak" />
         <Stat icon="/ui/lp-232-48-star.svg" box={15} w={14.27} h={13.57} value={xp.toLocaleString()} className="gap-1 text-[14px] text-stat-xp" />
         <Button variant="secondary" onClick={() => window.dispatchEvent(new Event('liplab:a11y-toggle'))} aria-label="접근성 설정"
-          className="grid size-11 shrink-0 place-items-center rounded-full border-0 bg-surface-inverse p-0 text-[12px] font-bold tracking-tight text-white">
+          className="grid size-11 shrink-0 place-items-center rounded-full border border-line-strong bg-white p-0 text-[13px] font-semibold tracking-tight text-ink hover:bg-surface-muted">
           Aa
         </Button>
         <div data-feedback-slot className="inline-flex shrink-0" />
@@ -136,7 +136,8 @@ export default function AppShell({ children, active, title, description, closeTo
           )
         })}
         <div data-feedback-slot className="inline-flex self-start" />
-        <div className="mt-auto flex flex-wrap gap-3 pt-8 text-sm">
+        {/* 왼쪽 아래에 떠 있는 Aa 버튼(A11ySettings, 44px)을 피해 스탯을 오른쪽으로 민다 */}
+        <div className="mt-auto flex min-h-11 flex-wrap items-center gap-3 pl-[52px] pt-8 text-sm">
           <Stat icon="/ui/stat-streak.svg" box={18} value={stats.streak} className="gap-1 text-stat-streak" />
           <Stat icon="/ui/stat-xp.svg" box={18} value={stats.xp.toLocaleString()} className="gap-1 text-stat-xp" />
           <Stat icon="/ui/stat-level.svg" box={18} value={`Lv.${stats.level}`} className="gap-1 text-stat-level" />

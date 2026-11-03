@@ -1,6 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
+// 본문 글꼴 — Pretendard 가변 글꼴(유니코드 범위별로 필요한 조각만 받는다)
+import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'
 import './index.css'
 
 // Load optional web fonts after the first render without inline CSP handlers.

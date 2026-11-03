@@ -45,7 +45,7 @@ function LearnMock({ motion }) {
         <span className="flex-1 rounded-10 bg-white py-[9px] text-center text-[14px] font-bold leading-figma text-track shadow-[0px_2px_5px_0px_rgba(26,13,64,0.1)]">독화</span>
         <span className="flex-1 rounded-10 py-[9px] text-center text-[14px] font-bold leading-figma text-ink-faint">발화</span>
       </div>
-      <div className="flex w-full items-center gap-3.5 rounded-16 border-b-4 border-track-dark bg-track py-[15px] pl-[17px] pr-[13px] text-white">
+      <div className="flex w-full items-center gap-3.5 rounded-16 border-track-dark bg-track py-[15px] pl-[17px] pr-[13px] text-white">
         <div className="flex min-w-0 flex-1 flex-col gap-[3px] font-bold leading-figma">
           <span className="text-[11px] opacity-[0.85]">독화 · 2단계</span>
           <span className="text-[18px] tracking-[-0.36px]">음절·단어</span>
@@ -62,7 +62,7 @@ function LearnMock({ motion }) {
               <div className="relative">
                 <Node status={st} glow={motion} />
                 {st === 'skip' && (
-                  <span className="absolute left-full top-1/2 z-10 ml-4 -translate-y-1/2 whitespace-nowrap rounded-13 border-2 border-line bg-white px-2.5 py-2 text-[12px] font-bold leading-figma text-track-dark shadow-[0px_6px_16px_-2px_rgba(26,13,64,0.1)]">
+                  <span className="absolute left-full top-1/2 z-10 ml-4 -translate-y-1/2 whitespace-nowrap rounded-13 border border-line bg-white px-2.5 py-2 text-[12px] font-bold leading-figma text-track-dark shadow-[0px_6px_16px_-2px_rgba(26,13,64,0.1)]">
                     여기로 건너뛸까요?
                     <TailLeft className="left-[-15px] top-1/2 -translate-y-1/2" />
                   </span>
@@ -96,7 +96,7 @@ function TaskRow({ label, cur, total, xp }) {
     <div className="flex items-center gap-3.5">
       {done
         ? <img src="/ui/task-done.svg" alt="" className="size-[26px] shrink-0" />
-        : <span className="size-[26px] shrink-0 rounded-full border-2 border-line" />}
+        : <span className="size-[26px] shrink-0 rounded-full border border-line" />}
       <div className="flex min-w-0 flex-1 flex-col gap-[7px]">
         <div className="flex items-center justify-between font-bold leading-figma">
           <span className="text-[15px] text-ink">{label}</span>
@@ -123,7 +123,7 @@ function TaskMock() {
 // ── 08 복습 ──────────────────────────────────────────────────────────────────
 function ReviewCta({ id, title, sub, btn, card, btnCls }) {
   return (
-    <div {...area(id)} className={`h-[150px] min-w-0 flex-1 rounded-18 border-2 border-b-5 px-3.5 pt-[27px] ${card}`}>
+    <div {...area(id)} className={`h-[150px] min-w-0 flex-1 rounded-18 border px-3.5 pt-[27px] ${card}`}>
       <span className="flex flex-col gap-3">
         <span className="flex flex-col gap-3 leading-figma text-white">
           <span className="text-[17px] font-bold tracking-[-0.34px]">{title}</span>
@@ -156,7 +156,7 @@ const WEEK_ACC = [68, 71, 70, 75, 74, 79, 82]
 
 function ChartCard({ id, title, children }) {
   return (
-    <section {...area(id)} className="flex w-full flex-col gap-[18px] rounded-18 border-2 border-line bg-white p-[22px]">
+    <section {...area(id)} className="flex w-full flex-col gap-[18px] rounded-18 border border-line bg-white p-[22px]">
       <div className="flex items-center justify-between font-bold leading-figma">
         <p className="text-[17px] text-ink">{title}</p>
         <span className="text-[13px] text-ink-muted">최근 7주</span>
@@ -182,7 +182,7 @@ function AnalysisMock() {
       <div {...area('stats')} className="flex w-full gap-3.5">
         {[['clock', '총 학습', '3시간 40분', '지난주보다 +25분', 'text-stat-xp'], ['percent', '평균 정답률', '82%', '지난주 +3%p', 'text-stat-accuracy'],
           ['flame', '연속 학습', `${USER.streak}일`, '최고 기록 15일', 'text-stat-streak']].map(([deco, label, value, delta, color]) => (
-          <div key={deco} className="relative isolate flex min-w-0 flex-1 flex-col gap-[7px] overflow-hidden rounded-18 border-2 border-line bg-white p-5 leading-figma">
+          <div key={deco} className="relative isolate flex min-w-0 flex-1 flex-col gap-[7px] overflow-hidden rounded-18 border border-line bg-white p-5 leading-figma">
             <WatermarkDeco {...STAT_DECO[deco]} />
             <span className="text-[13px] font-bold text-ink-soft">{label}</span>
             <span className={`whitespace-nowrap text-[27px] font-bold tracking-[-0.675px] ${color}`}>{value}</span>
@@ -228,7 +228,7 @@ function AnalysisMock() {
       </ChartCard>
       <div className="flex w-full gap-3">
         {[['calendar', '활동 캘린더'], ['history', '학습 내역'], ['fullStats', '전체 통계']].map(([k, label]) => (
-          <span key={k} {...area(k)} className="flex flex-1 items-center justify-between rounded-16 border-2 border-b-5 border-line bg-white py-[18px] pl-5 pr-[18px] text-[15px] font-bold leading-figma text-ink">
+          <span key={k} {...area(k)} className="flex flex-1 items-center justify-between rounded-16 border border-line bg-white py-[18px] pl-5 pr-[18px] text-[15px] font-bold leading-figma text-ink">
             {label}
             <span className="relative h-3.5 w-[7px] shrink-0">
               <img src="/ui/menu-arrow.svg" alt="" className="absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2" />
@@ -262,7 +262,7 @@ function ProfileMock() {
   )
   return (
     <MobileShell title="프로필" overlay={aa}>
-      <section className="flex h-[150px] w-full items-start gap-3.5 overflow-hidden rounded-18 border-2 border-b-5 border-primary-600 bg-[linear-gradient(156.15deg,var(--brand-light)_0%,var(--brand)_70.92%)] pl-[18px] pr-4 pt-[22px]">
+      <section className="flex h-[150px] w-full items-start gap-3.5 overflow-hidden rounded-18 border border-primary-600 bg-[linear-gradient(156.15deg,var(--brand-light)_0%,var(--brand)_70.92%)] pl-[18px] pr-4 pt-[22px]">
         <div className="flex size-16 shrink-0 items-center justify-center rounded-full border-[3px] border-white/90 bg-white/20 text-2xl font-black text-white">{USER.initial}</div>
         <div className="mt-[19px] flex min-w-0 flex-1 flex-col gap-2 font-bold leading-figma text-white">
           <div className="flex items-center gap-2">
@@ -278,7 +278,7 @@ function ProfileMock() {
           </div>
         </div>
       </section>
-      <section className="w-full overflow-hidden rounded-16 border-2 border-line bg-white">
+      <section className="w-full overflow-hidden rounded-16 border border-line bg-white">
         <MenuRow first id="placement" title="시작 단계 다시 정하기" sub="지금 수준으로 단계 재추천" />
         <MenuRow id="account" title="계정 설정" sub="이름 · 이메일 · 비밀번호 · 로그아웃" />
         <MenuRow id="reset" danger title="학습 초기화" sub="기록을 모두 지우고 처음부터" />
@@ -416,7 +416,7 @@ export default function GuideMock({ name, w, h, scene = null, tick = 0, running 
       </svg>
       {(hit || []).map((r, i) => (
         <span key={`${active}-${i}`} aria-hidden="true"
-          className="pointer-events-none absolute animate-[gm-fade_250ms_ease-out_both] rounded-[10px] border-2 border-primary-500 shadow-[0_0_0_4px_rgba(125,83,222,0.16)]"
+          className="pointer-events-none absolute animate-[gm-fade_250ms_ease-out_both] rounded-[10px] border border-primary-500 shadow-[0_0_0_4px_rgba(125,83,222,0.16)]"
           style={{ left: r.x - HOLE_PAD, top: r.y - HOLE_PAD, width: r.w + HOLE_PAD * 2, height: r.h + HOLE_PAD * 2 }} />
       ))}
 

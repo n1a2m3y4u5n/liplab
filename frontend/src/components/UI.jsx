@@ -39,7 +39,7 @@ export function Card({ children, className = '', as: Tag = 'div', ...props }) {
 /** 좁은 기기에서도 표의 열을 숨기지 않고 키보드·터치로 이동한다. */
 export function TableRegion({ label, children, className = '' }) {
   return <div role="region" aria-label={label} tabIndex={0}
-    className={`min-w-0 max-w-full overflow-x-auto rounded-14 border-2 border-line focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-track ${className}`}>
+    className={`min-w-0 max-w-full overflow-x-auto rounded-14 border border-line focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-track ${className}`}>
     {children}
   </div>
 }

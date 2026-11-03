@@ -39,10 +39,10 @@ export function WatermarkDeco({ src, size, top, right, rotate = -20, inset, lg, 
  * 기본 모양 = Figma 스탯 카드(93:22·104:135): 흰 바탕, 2px 라인 테두리, r18, p20, 세로 간격 8,
  * 가로 줄에서 똑같이 나눠 갖는 flex-1. className을 넘기면 기본 모양 대신 그 클래스를 쓴다(히어로·모바일 카드 등).
  */
-export default function WatermarkCard({ as: Tag = 'div', deco, className = 'flex min-w-0 flex-1 flex-col gap-2 rounded-18 border-2 border-line bg-white p-5', children, ...rest }) {
+export default function WatermarkCard({ as: Tag = 'div', deco, className = 'flex min-w-0 flex-1 flex-col gap-2 rounded-18 border border-line bg-white p-5', children, ...rest }) {
   return (
     <Tag className={`relative isolate overflow-hidden ${className}`} {...rest}>
-      {deco && <WatermarkDeco {...deco} />}
+      {/* 11/03: 카드 모서리에 걸친 큰 장식 아이콘은 그리지 않는다(숫자 카드가 장식 없이 숫자로 읽히게). deco 값은 호출부에 그대로 둔다. */}
       {children}
     </Tag>
   )

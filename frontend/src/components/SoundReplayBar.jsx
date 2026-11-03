@@ -20,7 +20,7 @@ export default function SoundReplayBar({ sound, replay }) {
   if (!sound.enabled) {
     if (!shouldSuggest(sound)) return null
     return (
-      <div className="flex flex-wrap items-center gap-2 rounded-16 border-2 border-line bg-white p-3 text-[13px] leading-snug text-ink-muted">
+      <div className="flex flex-wrap items-center gap-2 rounded-16 border border-line bg-white p-3 text-[13px] leading-snug text-ink-muted">
         <p className="min-w-0 flex-1">보청기나 인공와우를 쓰신다면, 답한 뒤 소리와 함께 한 번 더 볼 수 있어요. 답은 늘 소리 없이 해요.</p>
         <button type="button" onClick={() => sound.setEnabled(true)} className="btn-secondary px-3 py-2 text-[13px] text-track">켜기</button>
         <button type="button" onClick={sound.dismiss} className="min-h-11 px-2 py-2 text-[13px] text-ink-faint hover:text-ink">괜찮아요</button>

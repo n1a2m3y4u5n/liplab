@@ -12,7 +12,7 @@ import { markSignExplored } from '../lib/badges'
  */
 
 // 카드 틀(226:142) — 2px 테두리, r18, p22, 머리-본문 16
-const CARD = 'flex w-full flex-col gap-4 rounded-18 border-2 border-line bg-white p-[18px] lg:p-[22px]'
+const CARD = 'flex w-full flex-col gap-4 rounded-18 border border-line bg-white p-[18px] lg:p-[22px]'
 
 export default function Sign() {
   const [text, setText] = useState('')
@@ -55,7 +55,7 @@ export default function Sign() {
             enterKeyHint="go"
             aria-label="수어로 볼 한국어 문장"
             placeholder="수어로 볼 한국어 문장을 입력하세요 (예: 학교에 갔어요)"
-            className="h-[58px] w-full rounded-14 border-2 border-line bg-white px-4 text-[15.5px] text-ink placeholder:text-placeholder focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+            className="h-[58px] w-full rounded-14 border border-line bg-white px-4 text-[15.5px] text-ink placeholder:text-placeholder focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
           />
         </form>
       </section>

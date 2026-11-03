@@ -254,7 +254,7 @@ export default function EvalReport() {
       <div className="flex w-full flex-col gap-5">
         {/* 표준검사 진입(축 I) — 난이도를 맞춘 동형 폼 A(사전)·B(사후). 훈련 전 A, 훈련 뒤 B를 보면
             아래 '통제 향상도'에 변화가 나온다. 배치검사 화면에는 모드 전환기가 없으므로 여기서 연다. */}
-        <div className="flex flex-col gap-3 rounded-18 border-2 border-line bg-white p-5 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 rounded-18 border border-line bg-white p-5 sm:flex-row sm:items-center">
           <div className="flex-1">
             <p className="text-sm font-bold text-ink">표준검사 사전·사후</p>
             <p className="mt-0.5 text-xs text-ink-muted">훈련 전에 사전 검사(A), 훈련 뒤에 사후 검사(B)를 한 번씩 보면 얼마나 늘었는지 비교해요. 각 24문제, 5분쯤 걸려요.</p>
@@ -276,9 +276,9 @@ export default function EvalReport() {
         {loading ? (
           <LoadingScreen variant="inline" />
         ) : !data ? (
-          <div className="rounded-18 border-2 border-line bg-white py-16 text-center text-sm text-ink-muted">리포트를 가져오지 못했습니다.</div>
+          <div className="rounded-18 border border-line bg-white py-16 text-center text-sm text-ink-muted">리포트를 가져오지 못했습니다.</div>
         ) : noData ? (
-          <div className="rounded-18 border-2 border-line bg-white px-5 py-16 text-center text-sm text-ink-muted">
+          <div className="rounded-18 border border-line bg-white px-5 py-16 text-center text-sm text-ink-muted">
             아직 학습 기록이 없어요. 입모양·단어·문장을 연습하면 점수 변화를 여기서 볼 수 있어요.
           </div>
         ) : (

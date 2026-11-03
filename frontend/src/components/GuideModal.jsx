@@ -182,7 +182,7 @@ function StatusCard({ c }) {
   const rule = ruleText(c)
   const line = 'break-keep text-[12.5px] leading-[1.58] text-ink-muted'
   return (
-    <section aria-label="지금 내 상태" className="mb-[22px] flex flex-col gap-3 rounded-18 border-2 border-line bg-surface-muted p-5">
+    <section aria-label="지금 내 상태" className="mb-[22px] flex flex-col gap-3 rounded-18 border border-line bg-surface-muted p-5">
       <div className="flex items-center justify-between gap-3 font-bold leading-figma">
         <span className="text-[11.5px] tracking-[0.345px] text-ink-hint">지금 내 상태</span>
         <span className="shrink-0 rounded-full bg-track-tint px-2.5 py-1 text-[12px] text-track">{c.statusLabel}</span>
@@ -248,7 +248,7 @@ const TIPS = [
   ['06', '모르면 되물어요', '전부 읽을 필요는 없어요. 핵심만 되물어 확인해요. 대화 연습의 되묻기 버튼으로 연습해 봐요.', (
     <div className="flex items-center gap-1.5">
       {['다시', '천천히', '다른 말로'].map((t) => (
-        <span key={t} className="rounded-[10px] border-2 border-line bg-white px-2.5 py-1 text-[12.5px] font-bold leading-figma text-ink">{t}</span>
+        <span key={t} className="rounded-[10px] border border-line bg-white px-2.5 py-1 text-[12.5px] font-bold leading-figma text-ink">{t}</span>
       ))}
     </div>
   )],

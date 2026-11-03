@@ -88,7 +88,7 @@ function BadgeDetailModal({ badge, onClose }) {
 
         {/* 닫기(313:230) */}
         <button type="button" onClick={onClose}
-          className="mt-8 w-[220px] rounded-14 border-2 border-b-5 border-line-strong bg-white py-[15px] text-[17px] font-bold leading-figma text-ink transition-all active:translate-y-[1px] active:border-b-2">
+          className="mt-8 w-[220px] rounded-14 border border-line-strong bg-white py-[15px] text-[17px] font-bold leading-figma text-ink transition-all">
           닫기
         </button>
       </div>

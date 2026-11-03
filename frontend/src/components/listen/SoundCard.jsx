@@ -16,12 +16,12 @@ export default function SoundCard({ player, onPlay, clipState = 'ready', label, 
   // 재생 중에는 버튼을 회색으로 끄지 않고 눌린 모양(트랙색)으로 둔다. 회색은 '지금 들을 수 없음'일 때만
   const off = disabled || clipState !== 'ready' || limit
   return (
-    <div className="rounded-18 border-2 border-line bg-white px-4 py-4 lg:rounded-22 lg:px-6 lg:py-5">
+    <div className="rounded-18 border border-line bg-white px-4 py-4 lg:rounded-22 lg:px-6 lg:py-5">
       <div className="flex items-center gap-4 lg:gap-5">
         <button type="button" onClick={player.busy ? undefined : onPlay} disabled={off && !player.busy} aria-disabled={player.busy || off}
           aria-describedby={statusId} aria-label={player.busy ? '소리가 나오고 있어요' : `${label}, 스페이스 키`}
-          className={`flex size-[72px] shrink-0 items-center justify-center rounded-full border-2 text-white transition-all duration-100 disabled:cursor-not-allowed disabled:border-inactive-line disabled:bg-inactive disabled:text-inactive-text lg:size-[80px] ${
-            player.busy ? 'translate-y-[2px] cursor-default border-b-2 border-track-dark bg-track-dark' : 'border-b-5 border-track-dark bg-track hover:bg-track-hover active:translate-y-[2px] active:border-b-2'}`}>
+          className={`flex size-[72px] shrink-0 items-center justify-center rounded-full border text-white transition-all duration-100 disabled:cursor-not-allowed disabled:border-inactive-line disabled:bg-inactive disabled:text-inactive-text lg:size-[80px] ${
+            player.busy ? 'cursor-default border-track-dark bg-track-dark' : 'border-track-dark bg-track hover:bg-track-hover'}`}>
           <SpeakerIcon playing={player.busy} />
         </button>
         <div className="flex min-w-0 flex-1 flex-col gap-2">

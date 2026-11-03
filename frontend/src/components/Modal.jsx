@@ -32,7 +32,7 @@ export default function Modal({ open, onClose, title, subtitle, children, maxW =
       <div
         ref={cardRef}
         role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}
-        className={`flex w-full flex-col ${gap} ${maxW} max-h-[86vh] overflow-hidden rounded-22 bg-white shadow-modal ${danger ? 'border-2 border-bad-line' : ''} ${cardClass}`}
+        className={`flex w-full flex-col ${gap} ${maxW} max-h-[86vh] overflow-hidden rounded-22 bg-white shadow-modal ${danger ? 'border border-bad-line' : ''} ${cardClass}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex w-full shrink-0 items-start justify-between px-[28px] pt-[26px]">

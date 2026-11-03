@@ -8,7 +8,6 @@ import LoadingScreen from '../../components/LoadingScreen'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Modal from '../../components/Modal'
-import WatermarkCard from '../../components/WatermarkCard'
 import { learningAPI, listenAPI } from '../../api'
 import { listenOverview } from '../../lib/listenFlow'
 import { fmtDb } from '../../lib/listenView'
@@ -29,22 +28,14 @@ import { speakTrendView } from '../../lib/speakTrend'
  * 10/15: 소리 듣기 칸 아래 '함께 하면 좋은 연습'(TrackLinks, 소리 듣기 ↔ 독화)을 더했다.
  */
 
-// 스탯 워터마크(326:33/36/41 · 모바일 326:83/86/91) — 회전 -20°, 오른쪽 위로 걸쳐 잘림
-const STAT_DECO = {
-  clock: { src: '/ui/lp-104-15-deco-clock.svg', size: 70, top: -32.86, right: -34.86, lg: { size: 124, top: -49.47, right: -47.47 } },
-  percent: { src: '/ui/lp-104-15-deco-percent.svg', size: 70, top: -32.86, right: -34.86, lg: { size: 124, top: -49.47, right: -47.47 } },
-  flame: { src: '/ui/lp-104-15-deco-flame.svg', size: 95, top: -48.88, right: -50.88, lg: { size: 167, top: -77.02, right: -75.03 } },
-}
-
-/** 스탯 카드(135:17 / 240:122) — 라벨·값(+ 데스크톱만 증감 줄), 왼쪽 정렬. */
-function StatCard({ deco, label, value, delta, color }) {
+/** 스탯 한 칸 — 라벨 위 · 값 아래(+ 데스크톱만 증감 줄), 왼쪽 정렬. 11/03부터 세 칸을 한 카드에 세로 줄로 나눠 담는다. */
+function StatCard({ label, value, delta }) {
   return (
-    <WatermarkCard deco={STAT_DECO[deco]}
-      className="flex min-w-0 flex-1 flex-col gap-1 rounded-14 border-2 border-line bg-white p-3.5 leading-figma lg:gap-[7px] lg:rounded-18 lg:p-5 lg:[@media(max-height:860px)]:p-4">
-      <span className="text-[11.5px] font-bold text-ink-faint lg:text-[13px] lg:text-ink-soft">{label}</span>
-      <span className={`text-[19px] font-bold tracking-[-0.38px] lg:text-[27px] lg:tracking-[-0.675px] ${color}`}>{value}</span>
-      {delta && <span className="hidden text-[12px] font-bold text-ink-faint lg:block">{delta}</span>}
-    </WatermarkCard>
+    <div className="flex min-w-0 flex-1 flex-col gap-1 px-3.5 py-3.5 leading-figma lg:gap-1.5 lg:px-6 lg:py-5 lg:[@media(max-height:860px)]:py-4">
+      <span className="text-[12px] font-medium text-ink-muted lg:text-[13px]">{label}</span>
+      <span className="break-keep text-[19px] font-bold tabular-nums tracking-[-0.38px] text-ink lg:text-[26px] lg:tracking-[-0.52px]">{value}</span>
+      {delta && <span className="hidden text-[12px] font-medium text-ink-muted lg:block">{delta}</span>}
+    </div>
   )
 }
 
@@ -79,7 +70,7 @@ function ListenSummary({ ov, onOpen }) {
     { label: '소리 구별 정답률', value: l.axAccuracy == null ? '–' : `${Math.round(l.axAccuracy * 100)}%`, note: '같다·다르다 문제' },
   ]
   return (
-    <section data-track="listen" className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
+    <section data-track="listen" className="flex w-full flex-col gap-3.5 rounded-16 border border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
       <div className="flex items-center justify-between font-bold leading-figma">
         <p className="text-[16px] text-ink lg:text-[17px]">소리 듣기</p>
         <button type="button" onClick={onOpen} className="flex min-h-[32px] items-center gap-2 text-[12px] text-listen-dark hover:underline lg:text-[13px]">
@@ -118,7 +109,7 @@ export function TrackLinks({ enabled, navigate }) {
   ].filter((g) => g.items.length)
   if (!enabled || !d?.listen_started || !groups.length) return null
   return (
-    <section data-track="listen" aria-label="함께 하면 좋은 연습" className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px]">
+    <section data-track="listen" aria-label="함께 하면 좋은 연습" className="flex w-full flex-col gap-3.5 rounded-16 border border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px]">
       <div className="flex flex-col gap-1 leading-figma">
         <p className="text-[16px] font-bold text-ink lg:text-[17px]">함께 하면 좋은 연습</p>
         <p className="break-keep text-[12px] text-ink-muted lg:text-[13px]">입모양으로 알기 어려운 소리는 듣기로 연습해요. 듣기로 알기 어려운 소리는 입모양으로 연습해요.</p>
@@ -146,7 +137,7 @@ export function TrackLinks({ enabled, navigate }) {
 /** 차트 카드(197:21 / 240:133) — 머리(제목·'최근 7주') + 플롯. tag는 제목 옆 작은 글(문장 점수 추세 카드의 '참고, 기계 전사 기준'). */
 function ChartCard({ title, tag = null, track = null, children }) {
   return (
-    <section data-track={track || undefined} className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
+    <section data-track={track || undefined} className="flex w-full flex-col gap-3.5 rounded-16 border border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
       <div className="flex items-center justify-between gap-3 font-bold leading-figma">
         <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-[16px] text-ink lg:text-[17px]">
           {title}{tag && <span className="text-[12px] font-bold text-track-dark lg:text-[13px]">{tag}</span>}
@@ -282,7 +273,7 @@ function Chevron() {
 function DetailLink({ label, onClick }) {
   return (
     <button type="button" onClick={onClick}
-      className="flex flex-1 items-center justify-between rounded-14 border-2 border-b-5 border-line bg-white py-3 pl-[18px] pr-4 text-[14.5px] font-bold leading-figma text-ink transition-all active:translate-y-[1px] active:border-b-2 lg:rounded-16 lg:py-[18px] lg:[@media(max-height:860px)]:py-[15px] lg:pl-5 lg:pr-[18px] lg:text-[15px]">
+      className="flex flex-1 items-center justify-between rounded-14 border border-line bg-white py-3 pl-[18px] pr-4 text-[14.5px] font-bold leading-figma text-ink transition-all lg:rounded-16 lg:py-[18px] lg:[@media(max-height:860px)]:py-[15px] lg:pl-5 lg:pr-[18px] lg:text-[15px]">
       {label}
       <Chevron />
     </button>
@@ -329,12 +320,12 @@ export default function SummaryBody({ track = 'all' }) {
 
   return (
     <>
-      <section className="flex w-full gap-2.5 lg:gap-3.5">
-        <StatCard deco="clock" label="총 학습" value={ov ? fmtDur(ov.total_minutes) : '–'} delta={minDelta} color="text-stat-xp" />
-        <StatCard deco="percent" label="평균 정답률"
-          value={ov?.accuracy != null ? `${Math.round(ov.accuracy * 100)}%` : '–'} delta={accDelta} color="text-stat-accuracy" />
-        <StatCard deco="flame" label="연속 학습" value={`${ov?.streak_current ?? 0}일`}
-          delta={ov ? `최고 기록 ${ov.streak_best}일` : null} color="text-stat-streak" />
+      <section className="flex w-full divide-x divide-line rounded-16 border border-line bg-white">
+        <StatCard label="총 학습" value={ov ? fmtDur(ov.total_minutes) : '–'} delta={minDelta} />
+        <StatCard label="평균 정답률"
+          value={ov?.accuracy != null ? `${Math.round(ov.accuracy * 100)}%` : '–'} delta={accDelta} />
+        <StatCard label="연속 학습" value={`${ov?.streak_current ?? 0}일`}
+          delta={ov ? `최고 기록 ${ov.streak_best}일` : null} />
       </section>
 
       <Badges data={ov?.badges} />

@@ -43,7 +43,7 @@ function Skeleton({ word, className = '' }) {
 
 const OPTION_BASE = 'relative flex h-[76px] w-full items-center justify-center rounded-16 transition-colors lg:h-[92px] lg:rounded-18'
 const OPTION_CLASS = {
-  idle: `${OPTION_BASE} border-2 border-b-5 border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
+  idle: `${OPTION_BASE} border border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
   correct: `${OPTION_BASE} border-[2.5px] border-good bg-good-tint text-good-text`,
   target: `${OPTION_BASE} border-[2.5px] border-good bg-white text-ink`,
   wrong: `${OPTION_BASE} border-[2.5px] border-bad bg-bad-tint text-bad-text`,
@@ -176,7 +176,7 @@ export default function NonsensePairing() {
       <div className="min-h-[100dvh] bg-page">
         <div className={LESSON_COL}>
           {exitBtn}
-          <div className="mt-10 flex flex-col items-center gap-4 rounded-20 border-2 border-line bg-white px-6 py-10 text-center">
+          <div className="mt-10 flex flex-col items-center gap-4 rounded-20 border border-line bg-white px-6 py-10 text-center">
             <p className="text-[21px] font-bold leading-figma text-ink lg:text-[26px]">{title}</p>
             <p className="text-[15px] leading-relaxed text-ink-muted">{body}</p>
             {view?.today && <p className="text-[13px] text-ink-faint">오늘 {view.today.n}번 골랐어요</p>}
@@ -214,11 +214,11 @@ export default function NonsensePairing() {
               <p className="text-[14px] text-ink-muted">뜻이 없는 말이에요. 입모양과 자음만 보고 도형과 짝지어요.</p>
             </div>
             <div className="flex items-stretch gap-3">
-              <div className="flex w-[36%] shrink-0 flex-col items-center justify-center gap-3 rounded-18 border-2 border-line bg-white p-4 lg:rounded-22">
+              <div className="flex w-[36%] shrink-0 flex-col items-center justify-center gap-3 rounded-18 border border-line bg-white p-4 lg:rounded-22">
                 <Shape id={w.shape} className="size-20 text-ink lg:size-28" />
                 <Skeleton word={w.word} className="text-[20px] lg:text-[26px]" />
               </div>
-              <div className="h-[clamp(150px,calc(100dvh_-_420px),300px)] min-w-0 flex-1 rounded-18 border-2 border-line bg-white p-3 lg:rounded-22">
+              <div className="h-[clamp(150px,calc(100dvh_-_420px),300px)] min-w-0 flex-1 rounded-18 border border-line bg-white p-3 lg:rounded-22">
                 <MouthAvatar frames={frames[w.word]} height={null} className="h-full" />
               </div>
             </div>
@@ -244,7 +244,7 @@ export default function NonsensePairing() {
       <div className="min-h-[100dvh] bg-page">
         <div className={LESSON_COL}>
           {exitBtn}
-          <div className="mt-10 flex flex-col items-center gap-4 rounded-20 border-2 border-line bg-white px-6 py-10 text-center">
+          <div className="mt-10 flex flex-col items-center gap-4 rounded-20 border border-line bg-white px-6 py-10 text-center">
             <p className="text-[19px] font-bold leading-figma text-ink lg:text-[22px]">{doneBlock.correct} / {doneBlock.size}</p>
             <p role="status" className="text-[15px] leading-relaxed text-ink-muted">{blockSummary(doneBlock)}</p>
             <button type="button" onClick={() => startBlock(view)} className="btn-primary mt-2 px-8 py-3 text-[16px]">계속하기</button>
@@ -283,7 +283,7 @@ export default function NonsensePairing() {
             </div>
             {/* 골격 보고 블록은 아바타가 말하는 동안에도, 확인 블록은 답한 뒤에만 정답 낱말의 골격을 보인다 */}
             {!hinting && cur && (hint || result) && (
-              <div className="shrink-0 rounded-13 border-2 border-line bg-white px-3 py-1.5">
+              <div className="shrink-0 rounded-13 border border-line bg-white px-3 py-1.5">
                 <Skeleton word={result ? result.answer : cur} className="text-[16px] lg:text-[19px]" />
               </div>
             )}

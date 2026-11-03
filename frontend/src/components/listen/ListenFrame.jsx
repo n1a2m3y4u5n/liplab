@@ -48,7 +48,7 @@ export default function ListenFrame({ kicker, onExit, exitAria = '나가기', sh
               <span className="min-w-[3.5em] shrink-0 text-right text-[13px] font-bold leading-figma text-ink-muted lg:text-[15px]">{!setup && counter}</span>
             </>
           ) : <span className="flex-1" />}
-          {settings && !editing && <button type="button" onClick={() => { stopAll(); setEditing(true) }} aria-label="소리 크기" className="flex size-11 shrink-0 items-center justify-center rounded-14 border-2 border-line bg-white text-track-dark"><SpeakerIcon playing size={22} /></button>}
+          {settings && !editing && <button type="button" onClick={() => { stopAll(); setEditing(true) }} aria-label="소리 크기" className="flex size-11 shrink-0 items-center justify-center rounded-14 border border-line bg-white text-track-dark"><SpeakerIcon playing size={22} /></button>}
           <button type="button" onClick={() => { stopAll(); setNotice(true) }} aria-label="소리 듣기 안내" className="size-11 shrink-0 rounded-14 text-xl text-track-dark">ⓘ</button>
         </div>
 

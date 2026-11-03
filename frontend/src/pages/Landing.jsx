@@ -190,7 +190,7 @@ function Developers() {
   return (
     <section className="bg-white">
       <div className="mx-auto max-w-[1440px] px-4 py-16 sm:px-8 lg:px-16 lg:py-20 xl:px-[120px]">
-        <div className="flex flex-col gap-7 rounded-[28px] border-2 border-line bg-page p-5 sm:p-8 lg:p-10">
+        <div className="flex flex-col gap-7 rounded-[28px] border border-line bg-page p-5 sm:p-8 lg:p-10">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex flex-col items-start gap-4">
               <p className="inline-flex items-center gap-2 rounded-full bg-primary-100 px-4 py-2 text-[14px] font-bold leading-figma text-primary-700">
@@ -213,7 +213,7 @@ function Developers() {
             {TEAM.map((m, i) => (
               <li key={m.name}>
                 <button type="button" onClick={() => setOpen(m)} aria-haspopup="dialog"
-                  className="flex w-full items-center gap-4 rounded-18 border-2 border-line bg-white px-5 py-4 text-left transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-sm">
+                  className="flex w-full items-center gap-4 rounded-18 border border-line bg-white px-5 py-4 text-left transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-sm">
                   <TeamAvatar m={m} index={i} />
                   <div className="flex min-w-0 flex-1 flex-col gap-1 leading-figma">
                     <p className="text-[17px] font-bold text-ink">{m.name}</p>
@@ -263,7 +263,7 @@ export default function Landing() {
             <div className="flex w-full min-w-0 flex-col gap-8 lg:flex-1 lg:py-10 xl:gap-[19px] xl:pb-0 xl:pt-[185px]">
               {/* Text(14:5) — Figma에서도 512px 상자가 내용 칸(494)보다 조금 넓다 */}
               <div className="flex flex-col gap-6 xl:w-[512px]">
-                <h1 className="text-[34px] font-bold leading-none tracking-[-0.1em] text-black sm:text-[48px] xl:text-[64px]">
+                <h1 className="text-[34px] font-bold leading-[1.2] tracking-[-0.03em] text-ink sm:text-[48px] xl:text-[64px]">
                   독화를 가장 편리하게<br />배우는 방법
                 </h1>
                 <p className="break-keep text-[16px] font-medium leading-[1.6] tracking-[-0.01em] text-black/55 sm:text-[20px]">

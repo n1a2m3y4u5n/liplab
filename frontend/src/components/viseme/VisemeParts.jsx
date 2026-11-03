@@ -53,7 +53,7 @@ function VisemeAvatar({ visemeId, height = 300, className = '', talker = null, t
   }, [visemeId, talker, talkerSeed])
   return (
     <div className={className}>
-      <div className={`relative w-full overflow-hidden rounded-2xl shadow-xl bg-gradient-to-b from-surface-inverse-muted to-surface-inverse ${height == null ? 'h-full' : ''}`}
+      <div className={`relative w-full overflow-hidden rounded-2xl bg-surface-inverse ${height == null ? 'h-full' : ''}`}
            style={height != null ? { height } : undefined}>
         <AvatarVRM visemeId={vid} xray={xray} transitionMs={tm.t} durationMs={tm.d} talker={talker} />
         <TalkerChip talker={talker} />

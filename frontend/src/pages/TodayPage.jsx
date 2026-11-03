@@ -9,7 +9,6 @@ import LoadingScreen from '../components/LoadingScreen'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../components/AppShell'
-import WatermarkCard from '../components/WatermarkCard'
 import { reviewAPI, tasksAPI, curriculumAPI, speakAPI, listenAPI } from '../api'
 import useStore from '../store/useStore'
 import { rewardMessage } from '../lib/reviewDue'
@@ -45,7 +44,7 @@ function TaskRow({ label, cur, total, xp, claimed, onClick, onClaim, listen = fa
       {done ? (
         <img src="/ui/task-done.svg" alt="" className="size-6 shrink-0 lg:size-[26px]" />
       ) : (
-        <span className="size-6 shrink-0 rounded-full border-2 border-line lg:size-[26px]" />
+        <span className="size-6 shrink-0 rounded-full border border-line lg:size-[26px]" />
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 lg:gap-[7px]">
         <div className="flex items-start justify-between gap-2 font-bold leading-figma">
@@ -134,21 +133,24 @@ export default function TodayPage() {
 
   return (
     <AppShell active="today" title="오늘">
-      <section className="card-flat flex flex-col gap-3">
-        {next.line && <p className="text-sm text-ink-muted">{next.line}</p>}
-        {next.retry && <button className="btn-secondary min-h-11" onClick={retryLoad}>다시 가져오기</button>}
-        <button className="btn-primary btn-lg w-full" onClick={() => navigate(next.to, { state: next.state })}>{next.label}</button>
+      {/* 다음 할 일: 데스크톱은 설명 왼쪽 · 버튼 오른쪽 한 줄, 폰은 위아래 */}
+      <section className="card-flat flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+        <div className="flex min-w-0 flex-col gap-3">
+          {next.line && <p className="break-keep text-[17px] font-semibold leading-snug text-ink">{next.line}</p>}
+          {next.retry && <button className="btn-secondary min-h-11 self-start" onClick={retryLoad}>다시 가져오기</button>}
+        </div>
+        <button className="btn-primary btn-lg w-full shrink-0 lg:w-auto lg:min-w-[240px]" onClick={() => navigate(next.to, { state: next.state })}>{next.label}</button>
       </section>
       <div className="today-grid contents">
       {!due && <section className="card-flat flex flex-wrap items-center justify-between gap-2" role="alert"><p className="text-sm text-ink-muted">복습할 것을 가져오지 못했어요.</p><button className="btn-secondary min-h-11 px-3" onClick={retryLoad}>다시 가져오기</button></section>}
       {!next.review && todayReviewCount(due) > 0 && <section id="review" className="card-flat flex flex-col gap-3">
-        <h2 className="font-bold">오늘 복습 {todayReviewCount(due)}개</h2>
-        <div className="flex flex-wrap gap-2">{[['입모양 읽기', due?.count, '/review/scheduled'], ['말하기', due?.speak_count, '/review/speaking'], ...(nextData.links?.listen_started ? [['소리 듣기', due?.listen_count, '/listen/review']] : [])].filter(([, n]) => n > 0).map(([label, n, to]) => <button key={to} className="btn-secondary min-h-11 px-3" onClick={() => navigate(to)}>{label} {n}개</button>)}</div>
+        <h2 className="text-[16px] font-semibold text-ink lg:text-[17px]">오늘 복습 <span className="tabular-nums">{todayReviewCount(due)}</span>개</h2>
+        <div className="flex flex-wrap gap-2">{[['입모양 읽기', due?.count, '/review/scheduled'], ['말하기', due?.speak_count, '/review/speaking'], ...(nextData.links?.listen_started ? [['소리 듣기', due?.listen_count, '/listen/review']] : [])].filter(([, n]) => n > 0).map(([label, n, to]) => <button key={to} className="min-h-11 rounded-full bg-surface-sunken px-4 text-[14px] font-medium text-ink transition-colors hover:bg-surface-hover" onClick={() => navigate(to)}>{label} <span className="font-semibold tabular-nums">{n}</span>개</button>)}</div>
         <button className="btn-secondary btn-md" onClick={() => navigate(todayReviewStart(due))}>복습 시작하기</button>
       </section>}
       {nextData.links?.listen_started && <button className="card-flat min-h-11 text-left font-bold" onClick={() => navigate('/listen/today?from=today')}>오늘의 듣기 · 15분</button>}
       {/* 오늘의 과제 (137:187 / 238:250) */}
-      <section id="tasks" className="flex w-full flex-col gap-3.5 rounded-16 border-2 border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px]">
+      <section id="tasks" className="flex w-full flex-col gap-3.5 rounded-16 border border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px]">
         <div className="flex items-start justify-between gap-2 font-bold leading-figma">
           <h2 className="text-[16px] text-ink lg:text-[17px]">오늘의 과제</h2>
           <span className="text-[12px] text-ink-muted lg:text-[13px]">오늘 남은 시간 {hoursLeftToday()}시간</span>
@@ -167,25 +169,20 @@ export default function TodayPage() {
         {!tasks && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted"><p>과제를 가져오지 못했어요.</p><button className="btn-secondary min-h-11 px-3" onClick={retryLoad}>다시 가져오기</button></div>}
       </section>
 
-      {/* 이번 주 도전 (141:18 / 238:285) — 워터마크 DOKA(306:32 / 306:39, -20°, 잘림) */}
-      {week && <WatermarkCard as="section"
-        deco={{
-          src: '/ui/lp-137-17-deco-doka.svg', size: 165, top: -61.22, right: -61.21, inset: [-7, -12, -17, -12],
-          lg: { size: 198, top: -73.06, right: -73.06 },
-        }}
-        className="min-h-[132px] w-full rounded-18 border-2 border-b-5 border-primary-600 bg-hero-brand pl-[18px] pt-[21px] lg:min-h-[158px] lg:rounded-20 bg-hero-brand lg:pl-[26px] lg:pt-[26px]">
-        <div className="flex w-[250px] max-w-full flex-col gap-[9px] font-bold leading-figma text-white lg:w-[462px] lg:gap-2.5">
-          <p className="text-[11px] tracking-[0.22px] lg:text-[13px] lg:tracking-[0.26px]">특별 과제</p>
-          <p className="text-[18px] tracking-[-0.36px] lg:text-[23px] lg:tracking-[-0.46px]">{week?.label ?? '\u00a0'}</p>
-          <div className="flex justify-between text-[12px] lg:text-[14px]">
-            <span className="opacity-90">{week ? `${weekCur} / ${weekTotal}일` : '…'}</span>
-            <span className="opacity-90">{week ? `${week.claimed ? '받음 ' : ''}+${week.xp} 경험치` : ''}</span>
-          </div>
-          <div role="progressbar" aria-label="이번 주 도전" aria-valuemin={0} aria-valuemax={weekTotal} aria-valuenow={Math.min(weekCur, weekTotal)} aria-valuetext={`${weekCur} / ${weekTotal}일`} className="h-2.5 overflow-hidden rounded-full bg-white/30 lg:h-3">
-            <div className="h-full rounded-full bg-white" style={{ width: `${Math.min(100, (weekCur / weekTotal) * 100)}%` }} />
-          </div>
+      {/* 이번 주 도전 — 11/03부터 보라 바탕·워터마크 대신 흰 카드 + 트랙색 진행 막대 */}
+      {week && <section className="flex w-full flex-col gap-3 rounded-16 border border-line bg-white p-[18px] leading-figma lg:p-[22px]">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-[12px] font-medium text-ink-muted lg:text-[13px]">특별 과제</p>
+          <span className="text-[12px] font-semibold text-primary-700 lg:text-[13px]">{week.claimed ? '받음 ' : ''}+{week.xp} 경험치</span>
         </div>
-      </WatermarkCard>}
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="break-keep text-[17px] font-semibold text-ink lg:text-[18px]">{week.label}</p>
+          <span className="shrink-0 text-[14px] font-semibold tabular-nums text-ink">{weekCur} / {weekTotal}일</span>
+        </div>
+        <div role="progressbar" aria-label="이번 주 도전" aria-valuemin={0} aria-valuemax={weekTotal} aria-valuenow={Math.min(weekCur, weekTotal)} aria-valuetext={`${weekCur} / ${weekTotal}일`} className="h-2 overflow-hidden rounded-full bg-fill">
+          <div className="h-full rounded-full bg-primary-500" style={{ width: `${Math.min(100, (weekCur / weekTotal) * 100)}%` }} />
+        </div>
+      </section>}
 
       </div>
       <RewardToast text={toast} />

@@ -208,7 +208,7 @@ export default function MultiConversation() {
         {speakerToggle}
       </div>
       {loadError && (
-        <div role="alert" className="flex items-center justify-between gap-3 rounded-14 border-2 border-bad-line bg-bad-tint px-4 py-2.5 text-[13.5px] font-bold text-bad-text">
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-14 border border-bad-line bg-bad-tint px-4 py-2.5 text-[13.5px] font-bold text-bad-text">
           새 대화를 가져오지 못했어요.
           <button type="button" onClick={load} className="shrink-0 underline">다시 가져오기</button>
         </div>
@@ -228,7 +228,7 @@ export default function MultiConversation() {
 
       {/* 세션 종합 채점(축 H) — 서버 재채점. 종합 = 닮은꼴 문장 고르기 + 빈칸 문맥 추론, 화자 식별은 따로. */}
       {result && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[14px] border-2 border-good-line bg-good-tint/70 px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[14px] border border-good-line bg-good-tint/70 px-4 py-2.5">
           <span className="text-sm font-bold text-good-dark">이번 대화 종합 {result.combined}점</span>
           <span className="text-xs text-good-dark">
             문장 {Math.round(result.read_accuracy * 100)}%
@@ -278,10 +278,10 @@ export default function MultiConversation() {
             const isAns = answered && i === turn.speaker
             const isWrongPick = answered && i === guess && guess !== turn.speaker
             const base = 'flex flex-1 items-center justify-center gap-1.5 rounded-[14px] py-4 text-[17px] font-bold transition-all'
-            const cls = isAns ? `${SPK_COLOR[i]} border-2 border-b-2 border-transparent text-white`
-              : isWrongPick ? 'border-2 border-b-2 border-bad-line bg-bad-tint text-rose-500 line-through'
-              : answered ? 'border-2 border-b-[5px] border-line bg-white text-ink-inverse-muted'
-              : `border-2 border-b-[5px] border-line bg-white ${SPK_TEXT[i]} hover:border-primary-300 active:translate-y-[1px] active:border-b-2`
+            const cls = isAns ? `${SPK_COLOR[i]} border border-b-2 border-transparent text-white`
+              : isWrongPick ? 'border border-b-2 border-bad-line bg-bad-tint text-rose-500 line-through'
+              : answered ? 'border border-b-[5px] border-line bg-white text-ink-inverse-muted'
+              : `border border-b-[5px] border-line bg-white ${SPK_TEXT[i]} hover:border-primary-300`
             return (
               <button key={i} disabled={answered} onClick={() => chooseSpeaker(i)} className={`${base} ${cls}`}>
                 <span className="grid h-5 w-5 place-items-center rounded-full bg-black/10 text-xs">{SPK_NAME[i]}</span>
@@ -296,7 +296,7 @@ export default function MultiConversation() {
       <div className="card flex flex-col">
         <div className="min-h-[120px] flex-1">
           {!answered ? (
-            <p className="mt-2 rounded-[14px] border-2 border-dashed border-line py-10 text-center text-sm font-bold text-ink-caption">
+            <p className="mt-2 rounded-[14px] border border-dashed border-line py-10 text-center text-sm font-bold text-ink-caption">
               먼저 말하는 사람을 찾아 주세요
             </p>
           ) : isClosure ? (
@@ -307,7 +307,7 @@ export default function MultiConversation() {
                 <div className="flex flex-wrap gap-2">
                   {conv.closure.options.map((w) => (
                     <button key={w} onClick={() => chooseClosure(w)}
-                      className="rounded-[12px] border-2 border-line bg-white px-5 py-3 text-[16px] font-bold text-ink transition hover:border-primary-300 hover:bg-primary-50">
+                      className="rounded-[12px] border border-line bg-white px-5 py-3 text-[16px] font-bold text-ink transition hover:border-primary-300 hover:bg-primary-50">
                       {w}
                     </button>
                   ))}
@@ -331,7 +331,7 @@ export default function MultiConversation() {
               <div className="space-y-2">
                 {readOptions[idx].map((opt) => (
                   <button key={opt} onClick={() => chooseRead(opt)}
-                    className="block w-full rounded-[12px] border-2 border-line bg-white px-4 py-3 text-left text-[15px] font-medium text-ink transition hover:border-primary-300 hover:bg-primary-50">
+                    className="block w-full rounded-[12px] border border-line bg-white px-4 py-3 text-left text-[15px] font-medium text-ink transition hover:border-primary-300 hover:bg-primary-50">
                     {opt}
                   </button>
                 ))}
@@ -353,7 +353,7 @@ export default function MultiConversation() {
         <div className="mt-4 flex items-center justify-between">
           <span className="text-xs text-ink-caption">{idx + 1} / {conv.turns.length}</span>
           <div className="flex gap-2">
-            {idx > 0 && <button onClick={() => setIdx(idx - 1)} className="rounded-[12px] border-2 border-line px-3 py-1.5 text-sm font-bold text-ink hover:bg-surface-muted">이전</button>}
+            {idx > 0 && <button onClick={() => setIdx(idx - 1)} className="rounded-[12px] border border-line px-3 py-1.5 text-sm font-bold text-ink hover:bg-surface-muted">이전</button>}
             {!last ? (
               <button onClick={() => setIdx(idx + 1)} disabled={!done}
                 className="rounded-[12px] bg-primary-500 px-4 py-1.5 text-sm font-bold text-white hover:bg-primary-600 disabled:opacity-40">다음 발화 →</button>

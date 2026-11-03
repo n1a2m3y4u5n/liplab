@@ -185,7 +185,7 @@ export default function QuizForm({
             {onRetry && (
               <button
                 onClick={handleRetry}
-                className="w-full py-2.5 rounded-lg border-2 border-primary-400 text-primary-600 font-medium hover:bg-primary-50 transition-colors text-sm"
+                className="w-full py-2.5 rounded-lg border border-primary-400 text-primary-600 font-medium hover:bg-primary-50 transition-colors text-sm"
               >
                 같은 문장 다시 도전
               </button>

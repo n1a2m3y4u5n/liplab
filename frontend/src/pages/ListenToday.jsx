@@ -64,7 +64,7 @@ function TodayIntro({ plan, onStart, active }) {
         </div>
         <Progress value={(doneMin / target) * 100} label="오늘 들은 시간" valueText={`${fmtGoalMinutes(doneMin)} / ${target}분`} animated />
       </Card>
-      <ol className="flex flex-col overflow-hidden rounded-18 border-2 border-line bg-white lg:rounded-22">
+      <ol className="flex flex-col overflow-hidden rounded-18 border border-line bg-white lg:rounded-22">
         {plan.blocks.map((b, i) => (
           <li key={`${b.stage}-${i}`} aria-current={b.stage === plan.recommended ? "step" : undefined} className={`flex items-center gap-4 px-5 py-4 ${b.stage === plan.recommended ? "bg-track-tint" : ""} ${i ? 'border-t-1.5 border-line' : ''}`}>
             <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-track-tint text-[14px] font-bold text-track-dark">{b.stage === plan.recommended ? "▶" : b.stage === 0 && plan.quotas?.[0]?.today_n > 0 ? "✓" : "◷"}</span>
@@ -145,7 +145,7 @@ export default function ListenToday() {
                   <div className="h-2.5 w-full overflow-hidden rounded-full bg-fill" role="img" aria-label={`목표 ${target}분 중 ${fmtGoalMinutes(t.minutes)}`}>
                     <div className="h-full rounded-full bg-track" style={{ width: `${t.goalPct}%` }} />
                   </div>
-                  <ul className="flex w-full flex-col overflow-hidden rounded-18 border-2 border-line bg-white">
+                  <ul className="flex w-full flex-col overflow-hidden rounded-18 border border-line bg-white">
                     {results.map(({ block, result }, i) => (
                       <li key={block.key} className={`flex items-center justify-between gap-3 px-4 py-3 text-[14px] ${i ? 'border-t-1.5 border-line' : ''}`}>
                         <span className="font-bold text-ink">{block.title}</span>

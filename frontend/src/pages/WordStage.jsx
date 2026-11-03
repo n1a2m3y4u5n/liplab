@@ -60,11 +60,11 @@ const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }   /
 const fmtDuration = (sec) => `${Math.floor(sec / 60)}분 ${sec % 60}초`
 
 // 레슨 완료 스탯 카드(93:22) — 모바일은 카드 폭이 좁아 여백·값 글자를 줄인다(모바일 프레임 없음).
-const STAT_CARD = 'flex min-w-0 flex-1 flex-col gap-2 rounded-18 border-2 border-line bg-white p-3.5 lg:p-5'
+const STAT_CARD = 'flex min-w-0 flex-1 flex-col gap-2 rounded-18 border border-line bg-white p-3.5 lg:p-5'
 const STAT_LABEL = 'text-[13px] font-bold leading-figma text-ink-soft'
 const STAT_VALUE = 'text-[20px] font-bold leading-figma tracking-[-0.5px] lg:text-[28px] lg:tracking-[-0.7px]'
 // 완료 버튼 — 데스크톱 75:23(btn-lg), lg 미만은 모바일 버튼 규격(r14·b5, py16, 16px)
-const DONE_BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]'
+const DONE_BTN = 'w-full max-lg:rounded-14 max-lg:py-4 max-lg:text-[16px]'
 
 // Figma "Lesson / 4. 완료"(93:12) — 레슨 컴포넌트의 마지막 상태. DOKA + 워터마크 스탯 3칸 + 버튼 2개.
 function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, homeLabel = '학습 화면으로 돌아가기', effort }) {
@@ -413,7 +413,7 @@ function WordQuiz({ data: incomingData, reload }) {
             <form onSubmit={(e) => { e.preventDefault(); confirm() }} className={LESSON_OPTIONS}>
               <input type="text" value={typedText} onChange={(e) => setTypedText(e.target.value)} disabled={!!result || submitting}
                 maxLength={20} autoComplete="off" aria-label="읽은 단어 입력" placeholder="읽은 단어를 적어 주세요"
-                className={`w-full rounded-14 border-2 px-[18px] py-[15px] text-[18px] font-bold text-ink outline-none lg:rounded-16 lg:px-5 lg:py-4 lg:text-[20px] ${
+                className={`w-full rounded-14 border px-[18px] py-[15px] text-[18px] font-bold text-ink outline-none lg:rounded-16 lg:px-5 lg:py-4 lg:text-[20px] ${
                   !result ? 'border-line bg-white focus:border-track'
                     : result.verdict === 'correct' ? 'border-good bg-good-tint text-good-text'
                       : result.verdict === 'homophene' ? 'border-warn bg-warn-tint text-warn-text' : 'border-bad bg-bad-tint text-bad-text'}`} />
@@ -437,14 +437,14 @@ function WordQuiz({ data: incomingData, reload }) {
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
                 <SoundReplayBar sound={sound} replay={replay} />
                 {result.verdict === 'homophene' && (
-                  <div className="rounded-16 border-2 border-warn/40 bg-warn-tint p-4 text-[13px] leading-snug text-warn-text">
+                  <div className="rounded-16 border border-warn/40 bg-warn-tint p-4 text-[13px] leading-snug text-warn-text">
                     <p className="text-xs font-bold">입모양은 맞았어요</p>
                     <p className="mt-1"><ShortText key={q.target} short={learner.shortHints}
                       text={`「${result.chosen}」와 「${q.target}」는 입모양이 똑같아요. 입만 보고는 가를 수 없는 차이라 틀린 답으로 보지 않고 절반만 인정해요. 실제 대화에서는 앞뒤 문맥으로 가려요.`} /></p>
                   </div>
                 )}
                 {!result.correct && result.verdict !== 'homophene' && result.confusions?.length > 0 && (
-                  <div className="space-y-1.5 rounded-16 border-2 border-warn/40 bg-warn-tint p-4">
+                  <div className="space-y-1.5 rounded-16 border border-warn/40 bg-warn-tint p-4">
                     <p className="text-xs font-bold text-warn-text">어디서 헷갈렸나요?</p>
                     {result.confusions.map((cf, i) => (
                       <p key={i} className="text-[13px] leading-snug text-warn-text">
@@ -457,7 +457,7 @@ function WordQuiz({ data: incomingData, reload }) {
                   </div>
                 )}
                 {isContext && (
-                  <div className="rounded-16 border-2 border-line bg-white p-4 text-[13px] leading-snug text-ink-muted">
+                  <div className="rounded-16 border border-line bg-white p-4 text-[13px] leading-snug text-ink-muted">
                     <p className="text-xs font-bold text-ink">문장으로 고르는 문제예요</p>
                     <p className="mt-1"><ShortText key={q.target} short={learner.shortHints}
                       text="보기는 모두 입모양이 비슷해서 눈만으로는 고르기 어려워요. 앞뒤 말의 흐름으로 고르는 연습이에요. 이 문제는 단어 단계 숙달에는 들어가지 않아요." /></p>
@@ -471,7 +471,7 @@ function WordQuiz({ data: incomingData, reload }) {
                       「{q.target}」과 「{result.chosen}」 입모양 나란히 비교
                     </button>)}
                 {!isContext && (<>
-                <div className="rounded-16 border-2 border-line bg-white p-3">
+                <div className="rounded-16 border border-line bg-white p-3">
                   <div className="flex items-center gap-2">
                     <CueBadges text={q.target} />
                     {levelOf[q.target] && <span className="text-[11px] text-ink-faint">읽기 어려운 정도 {levelOf[q.target]}/5</span>}
@@ -479,7 +479,7 @@ function WordQuiz({ data: incomingData, reload }) {
                   <div className="mt-1.5"><CueLegend /></div>
                 </div>
                 {learner.signView && !result.correct ? (
-                  <div className="rounded-16 border-2 border-line bg-white p-3">
+                  <div className="rounded-16 border border-line bg-white p-3">
                     <p className="mb-2 text-xs font-bold text-ink">"{q.target}" 수어 뜻</p>
                     <Suspense fallback={null}><SignPanel key={q.target} text={q.target} /></Suspense>
                   </div>
@@ -561,8 +561,8 @@ const BAR_BTN = 'w-full shrink-0 max-lg:py-4 max-lg:text-[16px] lg:w-auto'
 const OPTION_BASE = 'flex w-full items-center gap-3.5 rounded-14 px-[18px] py-[15px] text-left transition-colors lg:gap-4 lg:rounded-16 lg:px-5 lg:py-4'
 // 정답·오답 공개(2.5px 테두리)는 하단 테두리가 5 → 2.5px로 얇아지므로 위 패딩을 2px 더해 보기 높이를 맞춘다(변경 내역 §0-4).
 const OPTION_CLASS = {
-  idle: `${OPTION_BASE} border-2 border-b-5 border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
-  selected: `${OPTION_BASE} border-2 border-b-5 border-track bg-track-tint text-ink`,
+  idle: `${OPTION_BASE} border border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
+  selected: `${OPTION_BASE} border border-track bg-track-tint text-ink`,
   correct: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-good-tint text-good-text`,   // 고른 답이 정답
   target: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-white text-ink`,              // 오답일 때 정답 표시
   wrong: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-bad bg-bad-tint text-bad-text`,        // 고른 오답

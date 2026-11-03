@@ -41,7 +41,7 @@ function HintDisplay({ sentence, hintLevel, revealedTextIndex = -1 }) {
           {sentenceSkeleton(sentence).map((word, wi) => (
             <div key={wi} className="flex gap-1">
               {word.map((ch, ci) => (
-                <span key={ci} className="w-7 h-7 rounded border-2 flex items-center justify-center text-sm font-bold bg-bookmark-tint border-bookmark text-bookmark-dark">
+                <span key={ci} className="w-7 h-7 rounded border flex items-center justify-center text-sm font-bold bg-bookmark-tint border-bookmark text-bookmark-dark">
                   {ch}
                 </span>
               ))}
@@ -93,10 +93,10 @@ const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }   /
 const fmtDuration = (sec) => `${Math.floor(sec / 60)}분 ${sec % 60}초`
 
 // 레슨 완료 스탯 카드(93:22) — 모바일은 카드 폭이 좁아 여백·값 글자를 줄인다(모바일 프레임 없음).
-const STAT_CARD = 'flex min-w-0 flex-1 flex-col gap-2 rounded-18 border-2 border-line bg-white p-3.5 lg:p-5'
+const STAT_CARD = 'flex min-w-0 flex-1 flex-col gap-2 rounded-18 border border-line bg-white p-3.5 lg:p-5'
 const STAT_LABEL = 'text-[13px] font-bold leading-figma text-ink-soft'
 const STAT_VALUE = 'text-[20px] font-bold leading-figma tracking-[-0.5px] lg:text-[28px] lg:tracking-[-0.7px]'
-const DONE_BTN = 'w-full max-lg:rounded-14 max-lg:border-b-5 max-lg:py-4 max-lg:text-[16px]'
+const DONE_BTN = 'w-full max-lg:rounded-14 max-lg:py-4 max-lg:text-[16px]'
 
 // Figma "Lesson / 4. 완료"(93:12) — 마지막 문장 뒤 레슨 컴포넌트의 마지막 상태.
 function LessonComplete({ accuracy, xp, elapsedSec, onNext, onHome, effort }) {
@@ -139,8 +139,8 @@ const BAR_BTN = 'w-full shrink-0 max-lg:py-4 max-lg:text-[16px] lg:w-auto'
 const OPTION_BASE = 'flex w-full items-center gap-3.5 rounded-14 px-[18px] py-[15px] text-left transition-colors lg:gap-4 lg:rounded-16 lg:px-5 lg:py-4'
 // 정답·오답 공개(2.5px 테두리)는 하단 테두리가 5 → 2.5px로 얇아지므로 위 패딩을 2px 더해 보기 높이를 맞춘다(변경 내역 §0-4).
 const OPTION_CLASS = {
-  idle: `${OPTION_BASE} border-2 border-b-5 border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
-  selected: `${OPTION_BASE} border-2 border-b-5 border-track bg-track-tint text-ink`,
+  idle: `${OPTION_BASE} border border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
+  selected: `${OPTION_BASE} border border-track bg-track-tint text-ink`,
   correct: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-good-tint text-good-text`,
   target: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-white text-ink`,
   wrong: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-bad bg-bad-tint text-bad-text`,

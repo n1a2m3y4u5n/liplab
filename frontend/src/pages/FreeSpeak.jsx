@@ -67,7 +67,7 @@ export default function FreeSpeak() {
     <AppShell active="learn" title="내 문장 입모양 보기" backTo="/learn/path?track=speak&section=free" backLabel="자유 연습">
       {/* Card / 내 문장 입모양 보기 (445:82): 입력 · 구분선 · 입모양|성도 옆모습 · 구분선 · 지금 발음 중 */}
       <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-        className="flex w-full flex-col gap-[18px] rounded-18 border-2 border-line bg-white p-[18px] lg:p-[22px]">
+        className="flex w-full flex-col gap-[18px] rounded-18 border border-line bg-white p-[18px] lg:p-[22px]">
         <p className="text-[17px] font-bold leading-figma text-ink">무엇을 발음해 볼까요?</p>
         <form onSubmit={onSubmit}>
           <input
@@ -78,7 +78,7 @@ export default function FreeSpeak() {
             aria-busy={loading}
             aria-label="발음해 볼 글자나 문장"
             placeholder="예: 안녕하세요, 오늘 날씨 좋네요"
-            className="h-[58px] w-full rounded-14 border-2 border-line bg-white px-4 text-[16px] text-ink placeholder:text-placeholder focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+            className="h-[58px] w-full rounded-14 border border-line bg-white px-4 text-[16px] text-ink placeholder:text-placeholder focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
           />
         </form>
         {error && <p role="alert" className="-mt-2 text-sm text-bad">{error}</p>}

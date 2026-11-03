@@ -9,7 +9,7 @@ import { ONSET_OPTIONS, DEVICE_OPTIONS, SIGN_OPTIONS, normalizeAnswers, toggleDe
 function Chip({ on, onClick, children }) {
   return (
     <button type="button" aria-pressed={on} onClick={onClick}
-      className={`rounded-full border-2 px-4 py-2 text-[14px] font-bold leading-figma transition-colors ${
+      className={`rounded-full border px-4 py-2 text-[14px] font-bold leading-figma transition-colors ${
         on ? 'border-primary-500 bg-primary-100 text-primary-700' : 'border-line bg-white text-ink-muted hover:border-primary-300'}`}>
       {children}
     </button>

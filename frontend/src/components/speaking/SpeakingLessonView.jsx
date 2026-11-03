@@ -26,7 +26,7 @@ return (
 
       <main className="mx-auto w-full max-w-[676px] flex-1 px-[18px] pb-8 pt-6 lg:pt-5 lg:[@media(max-height:860px)]:pb-4 lg:[@media(max-height:860px)]:pt-3.5">
           {exitError ? (
-            <div className="flex flex-col items-center gap-2 rounded-22 border-2 border-line bg-white px-6 py-16 text-center">
+            <div className="flex flex-col items-center gap-2 rounded-22 border border-line bg-white px-6 py-16 text-center">
               <p className="text-lg font-bold text-ink">단계를 가져오지 못했어요</p>
               <p className="mb-3 text-sm text-ink-faint">{err} 네트워크를 확인하고 다시 시도해 주세요.</p>
               <div className="flex justify-center gap-2">
@@ -35,7 +35,7 @@ return (
               </div>
             </div>
           ) : reviewEmpty ? (
-            <div className="flex flex-col items-center gap-2 rounded-22 border-2 border-line bg-white px-6 py-16 text-center">
+            <div className="flex flex-col items-center gap-2 rounded-22 border border-line bg-white px-6 py-16 text-center">
               <p className="text-lg font-bold text-ink">복습할 발음이 없어요</p>
               <p className="mb-3 text-sm text-ink-faint">최근 발음이 다 좋았어요. 단계 연습을 이어가 볼까요?</p>
               <button type="button" onClick={() => { teardown(); navigate('/review/speaking') }} className="btn-primary px-6 py-2.5 text-sm">목록으로</button>
@@ -62,7 +62,7 @@ return (
               <>
                 {/* 입모양(175:36 560×300 / 모바일 236:79 전체 폭×200): 3D 아바타 + 안내.
                     세로 860px 이하 데스크톱은 위 여백·간격을 줄여 웹캠 버튼까지 하단 바 위에 보이게 한다. */}
-                <div className="mx-auto w-full max-w-[560px] overflow-hidden rounded-18 border-2 border-line bg-white lg:rounded-22">
+                <div className="mx-auto w-full max-w-[560px] overflow-hidden rounded-18 border border-line bg-white lg:rounded-22">
                   <div className="px-4 pt-4 lg:pt-6 lg:[@media(max-height:860px)]:pt-4">
                     <MouthAvatar loadingHint frames={frames} height={null} className="h-[134px] lg:h-[209px]" />
                   </div>
@@ -89,7 +89,7 @@ return (
 
                 {/* 실시간 파형·볼륨·피치(녹음 중) — 귀 대신 눈. 사용법 가이드 '발화 레슨'의 실시간 피드백 */}
                 {recording && (
-                  <div className="mx-auto w-full max-w-[560px] rounded-18 border-2 border-line bg-white p-4 lg:rounded-22">
+                  <div className="mx-auto w-full max-w-[560px] rounded-18 border border-line bg-white p-4 lg:rounded-22">
                     <canvas ref={canvasRef} width={480} height={120}
                       className="w-full rounded-14 border border-fill bg-surface-muted" style={{ height: 120 }} />
                     <div className="mt-4">
@@ -123,7 +123,7 @@ return (
             ) : (
               /* 발음 결과(176:36 560×320 / 모바일 237:50) — 점수 + 음소 칩(§3.2) + 자세히 보기 */
               <MotionPanel
-                className="mx-auto flex w-full max-w-[560px] flex-col items-center gap-3.5 rounded-18 border-2 border-line bg-white px-4 py-[18px] lg:gap-0 lg:rounded-22 lg:px-6 lg:py-[30px]">
+                className="mx-auto flex w-full max-w-[560px] flex-col items-center gap-3.5 rounded-18 border border-line bg-white px-4 py-[18px] lg:gap-0 lg:rounded-22 lg:px-6 lg:py-[30px]">
                 <div className="flex flex-col items-center gap-0.5 font-bold leading-figma lg:gap-1">
                   <p className={`text-[44px] tracking-[-1.32px] lg:text-[52px] lg:tracking-[-1.56px] ${scoreTone(scoreNum, 'phone').text}`}>
                     {assessing && scoreNum == null ? '…' : scoreNum != null ? `${scoreNum}%` : '-'}
@@ -138,7 +138,7 @@ return (
                       const ref = p.reliable === false
                       return (
                         <div key={i} title={ref ? `점수 ${v} · 참고` : `점수 ${v} · 확실한 정도 ${Math.round((p.confidence ?? 0) * 100)}`}
-                          className={`flex size-12 items-center justify-center rounded-13 lg:size-[52px] lg:rounded-14 ${ref ? 'border-1.5' : 'border-2'} ${phoneTone(p).chip}`}>
+                          className={`flex size-12 items-center justify-center rounded-13 lg:size-[52px] lg:rounded-14 ${ref ? 'border-1.5' : 'border'} ${phoneTone(p).chip}`}>
                           <span className="text-[20px] font-bold leading-figma lg:text-[22px]">{p.label || '·'}</span>
                         </div>
                       )
@@ -152,14 +152,14 @@ return (
 
                 {assessing && !metricMode && (
                   <div className="flex items-center gap-2 text-sm text-track-dark lg:mt-6">
-                    <span className="spinner size-4 rounded-full border-2 border-speak/40 border-t-speak-dark" />
+                    <span className="spinner size-4 rounded-full border border-speak/40 border-t-speak-dark" />
                     발음을 분석하는 중…
                   </div>
                 )}
 
                 {/* 자세히 보기(179:21 / 모바일 237:74) — 쉐브론 없음 */}
                 <button type="button" onClick={() => setShowDetail(true)}
-                  className="btn-secondary rounded-[12px] border-b-4 px-[26px] py-3 text-[14px] lg:mt-[30px] lg:rounded-14 lg:border-b-5 lg:px-[30px] lg:py-[15px] lg:text-[16px]">
+                  className="btn-secondary rounded-[12px] px-[26px] py-3 text-[14px] lg:mt-[30px] lg:rounded-14 lg:px-[30px] lg:py-[15px] lg:text-[16px]">
                   자세히 보기
                 </button>
               </MotionPanel>
@@ -203,7 +203,7 @@ return (
             <div className="mx-auto flex max-w-[676px] flex-col items-center gap-2.5 px-[18px] pb-[calc(26px+env(safe-area-inset-bottom))] pt-[18px] lg:h-[148px] lg:justify-center lg:gap-3 lg:py-0">
               {!recording ? (
                 <button type="button" onClick={start} aria-label="눌러서 말하기" disabled={starting}
-                  className="flex size-[72px] items-center justify-center rounded-full border-2 border-b-6 border-track-dark bg-track transition-transform hover:scale-105 active:scale-95">
+                  className="flex size-[72px] items-center justify-center rounded-full border border-track-dark bg-track transition-transform hover:scale-105 active:scale-95">
                   <img src={IC.mic} alt="" className="size-8" />
                 </button>
               ) : (

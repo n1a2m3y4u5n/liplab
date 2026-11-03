@@ -234,7 +234,7 @@ export default function VocalTractSimulator() {
       <div className="flex items-center justify-between mb-2">
         <div className="text-sm font-bold text-ink">성도 실험실 <span className="ml-1 font-normal text-ink-muted">혀를 움직여 소리를 만들어 보세요</span></div>
         <button onClick={on ? stop : start}
-          className={`px-3 py-1 rounded-lg border-2 text-sm font-semibold ${on ? 'border-track bg-white text-track' : 'border-track bg-track text-white hover:bg-track-hover'}`}>
+          className={`px-3 py-1 rounded-lg border text-sm font-semibold ${on ? 'border-track bg-white text-track' : 'border-track bg-track text-white hover:bg-track-hover'}`}>
           {on ? '■ 멈춤' : '▶ 발성'}
         </button>
       </div>
@@ -258,14 +258,14 @@ export default function VocalTractSimulator() {
             const isTarget = targetKo === v.ko
             return (
               <div key={v.ko}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-full text-xs font-bold transition-all ${hit ? 'bg-good text-white scale-125 shadow' : isTarget ? 'bg-white text-good-text border-2 border-good' : 'bg-white/80 text-ink-muted border border-line-strong'}`}
+                className={`absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-full text-xs font-bold transition-all ${hit ? 'bg-good text-white scale-125 shadow' : isTarget ? 'bg-white text-good-text border border-good' : 'bg-white/80 text-ink-muted border border-line-strong'}`}
                 style={{ left: `${x}%`, top: `${y}%`, width: 26, height: 26 }}>
                 {v.ko}{v.round ? '°' : ''}
               </div>
             )
           })}
           {/* 현재 혀 위치 */}
-          <div className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-track border-2 border-white shadow-lg pointer-events-none"
+          <div className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-track border border-white shadow-lg pointer-events-none"
             style={{ left: `${pos.x * 100}%`, top: `${pos.y * 100}%`, width: 18, height: 18, opacity: on ? 1 : 0.6 }} />
         </div>
 
@@ -284,13 +284,13 @@ export default function VocalTractSimulator() {
               return (
                 <button key={v.ko} type="button" aria-pressed={picked === v.ko}
                   onClick={() => setPicked((p) => (p === v.ko ? null : v.ko))}
-                  className={`h-7 min-w-7 rounded-10 border-2 px-1.5 text-xs font-bold transition-colors ${active ? 'border-good bg-good-tint text-good-text' : 'border-line bg-white text-ink-muted hover:border-primary-300'}`}>
+                  className={`h-7 min-w-7 rounded-10 border px-1.5 text-xs font-bold transition-colors ${active ? 'border-good bg-good-tint text-good-text' : 'border-line bg-white text-ink-muted hover:border-primary-300'}`}>
                   {v.ko}
                 </button>
               )
             })}
             <button type="button" onClick={playTarget} disabled={!targetId}
-              className="ml-auto h-7 rounded-10 border-2 border-line bg-white px-2 text-xs font-bold text-ink-muted transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50">
+              className="ml-auto h-7 rounded-10 border border-line bg-white px-2 text-xs font-bold text-ink-muted transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50">
               {playing ? '재생 중' : `${targetKo ? `${targetKo} ` : ''}합성음 듣기`}
             </button>
           </div>

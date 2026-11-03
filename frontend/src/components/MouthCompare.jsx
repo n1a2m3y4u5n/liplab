@@ -25,7 +25,7 @@ export default function MouthCompare({ target, chosen, sameLooking = false }) {
     </div>
   )
   return (
-    <div className="space-y-2 rounded-16 border-2 border-line bg-white p-3">
+    <div className="space-y-2 rounded-16 border border-line bg-white p-3">
       <div className="flex gap-3">
         {col(target, '정답', 'text-good-text')}
         {col(chosen, '내가 고른 말', 'text-bad-text')}

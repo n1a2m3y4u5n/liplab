@@ -62,7 +62,7 @@ export default function PilotBattery() {
         {error && <p role="alert" className="rounded-13 bg-bad-tint px-4 py-3 text-[14px] font-bold text-bad-text">{error}</p>}
         {status && (
           <>
-            <section className="flex flex-col gap-1.5 rounded-16 border-2 border-line bg-white px-5 py-4 text-[14px] text-ink">
+            <section className="flex flex-col gap-1.5 rounded-16 border border-line bg-white px-5 py-4 text-[14px] text-ink">
               <p><b>참여 순번</b> {status.seq} · <b>폼 순서</b> {status.order.split('').join(' → ')}</p>
               <p className="text-ink-muted">목록 {status.manifest.version}{status.manifest.status === 'draft' ? ' (초안)' : ''}
                 {status.snr_calibrated_db != null && ` · 개인 SNR ${status.snr_calibrated_db} dB`}</p>
@@ -74,7 +74,7 @@ export default function PilotBattery() {
               )}
             </section>
 
-            <section className="flex flex-col gap-2 rounded-16 border-2 border-line bg-white px-5 py-4 text-[14px] text-ink">
+            <section className="flex flex-col gap-2 rounded-16 border border-line bg-white px-5 py-4 text-[14px] text-ink">
               <p className="font-bold">소음 속 검사 전에 확인</p>
               <label className="flex items-center gap-2"><input type="checkbox" checked={checks.headphone}
                 onChange={(e) => setChecks((c) => ({ ...c, headphone: e.target.checked }))} />헤드폰을 썼어요</label>
@@ -83,7 +83,7 @@ export default function PilotBattery() {
             </section>
 
             {status.labels.map((L) => (
-              <section key={L.label} className={`flex flex-col gap-3 rounded-16 border-2 bg-white px-5 py-4 ${status.next_label === L.label ? 'border-track' : 'border-line'}`}>
+              <section key={L.label} className={`flex flex-col gap-3 rounded-16 border bg-white px-5 py-4 ${status.next_label === L.label ? 'border-track' : 'border-line'}`}>
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[17px] font-bold text-ink">{L.label} <span className="text-[14px] font-bold text-ink-muted">· 폼 {L.form}</span></p>
                   <span className="text-[13px] font-bold text-ink-muted">{L.done ? '회차 마침' : L.available ? '진행할 수 있어요' : '앞 회차를 먼저 마쳐요'}</span>
@@ -182,7 +182,7 @@ export function LayerRunner({ run, checks, onExit, transport = batteryAPI }) {
         {err && <p role="alert" className="rounded-13 bg-bad-tint px-4 py-3 text-[14px] font-bold text-bad-text">{err}</p>}
 
         {finished ? (
-          <section className="flex flex-col items-center gap-3 rounded-16 border-2 border-line bg-white px-5 py-8 text-center">
+          <section className="flex flex-col items-center gap-3 rounded-16 border border-line bg-white px-5 py-8 text-center">
             {summary ? (
               <>
                 <p className="text-[19px] font-bold text-ink">이 검사를 마쳤어요</p>
@@ -198,7 +198,7 @@ export function LayerRunner({ run, checks, onExit, transport = batteryAPI }) {
             )}
           </section>
         ) : audio.enabled && audio.status !== 'ready' ? (
-          <section role="status" className="rounded-16 border-2 border-line bg-white px-5 py-8 text-center text-[15px] font-bold text-ink-muted">
+          <section role="status" className="rounded-16 border border-line bg-white px-5 py-8 text-center text-[15px] font-bold text-ink-muted">
             {audio.status === 'loading' ? '잡음 소리를 준비하고 있어요…'
               : '잡음 소리를 가져오지 못해 이 검사를 할 수 없어요. 연구진에게 알려 주세요.'}
           </section>
@@ -250,7 +250,7 @@ function ItemView({ run, item, maxPlays, audio, snrDb, onVideoQuality, onSubmit 
 
   const hidden = item.modality === 'A' || run.layer === 'snr'   // 청각만: 영상은 가리고 소리만
   return (
-    <section className="flex flex-col gap-4 rounded-16 border-2 border-line bg-white px-4 py-4 lg:px-6">
+    <section className="flex flex-col gap-4 rounded-16 border border-line bg-white px-4 py-4 lg:px-6">
       <div className="relative overflow-hidden rounded-14 bg-surface-inverse" style={{ height: 300 }}>
         {item.frames ? (
           <LipSyncPlayer3D visemes={item.frames} isPlaying={playing} onComplete={onEnd} showControls={false} stageHeight={300}
@@ -285,7 +285,7 @@ function ChoiceAnswer({ options = [], disabled, onSend }) {
       <div className="grid grid-cols-2 gap-2.5">
         {options.map((o, i) => (
           <button key={o} type="button" disabled={disabled} onClick={() => setSel(o)} aria-pressed={sel === o}
-            className={`flex items-center gap-3 rounded-14 border-2 border-b-5 px-4 py-3.5 text-left disabled:opacity-60 ${sel === o ? 'border-track bg-track-tint' : 'border-line bg-white'}`}>
+            className={`flex items-center gap-3 rounded-14 border px-4 py-3.5 text-left disabled:opacity-60 ${sel === o ? 'border-track bg-track-tint' : 'border-line bg-white'}`}>
             <span className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-fill text-[12px] font-bold text-ink-muted">{i + 1}</span>
             <span className="text-[18px] font-bold text-ink">{o}</span>
           </button>
@@ -302,7 +302,7 @@ function TypedAnswer({ disabled, onSend }) {
     <form className="flex flex-col gap-2.5" onSubmit={(e) => { e.preventDefault(); if (!disabled) onSend(text) }}>
       <input value={text} onChange={(e) => setText(e.target.value)} disabled={disabled} maxLength={200} autoComplete="off"
         autoCorrect="off" autoCapitalize="off" spellCheck={false} placeholder="본 문장을 써 주세요(일부만 알아도 써요)"
-        className="w-full rounded-13 border-2 border-line px-4 py-3 text-[17px] outline-none focus:border-primary-400 disabled:opacity-60" />
+        className="w-full rounded-13 border border-line px-4 py-3 text-[17px] outline-none focus:border-primary-400 disabled:opacity-60" />
       <div className="flex gap-2.5">
         <button type="button" disabled={disabled} onClick={() => onSend('')} className="btn-secondary flex-1 py-3.5 text-[15px] disabled:opacity-50">모르겠어요</button>
         <button type="submit" disabled={disabled || !text.trim()} className="btn-primary flex-[2] py-3.5 text-[16px] disabled:opacity-50">다음</button>
@@ -325,7 +325,7 @@ function ConsonantAnswer({ sets = {}, vowels = [], disabled, onSend }) {
           <div className="flex flex-wrap gap-1.5">
             {(sets[pos] || []).map((c) => (
               <button key={c} type="button" disabled={disabled} onClick={() => pick(i, c)} aria-pressed={ch[i] === c}
-                className={`size-11 rounded-10 border-2 text-[18px] font-bold disabled:opacity-60 ${ch[i] === c ? 'border-track bg-track-tint text-ink' : 'border-line bg-white text-ink'}`}>
+                className={`size-11 rounded-10 border text-[18px] font-bold disabled:opacity-60 ${ch[i] === c ? 'border-track bg-track-tint text-ink' : 'border-line bg-white text-ink'}`}>
                 {c}
               </button>
             ))}

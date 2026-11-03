@@ -219,7 +219,7 @@ function ClosureQuiz({ items: incomingItems }) {
           </div>
 
           {/* 빈칸 문장 + 힌트 */}
-          <div className="flex flex-col items-center gap-2.5 rounded-18 border-2 border-line bg-white px-4 py-4 lg:rounded-22">
+          <div className="flex flex-col items-center gap-2.5 rounded-18 border border-line bg-white px-4 py-4 lg:rounded-22">
             <p className="text-center text-[21px] font-bold leading-figma tracking-[-0.3px] text-ink lg:text-[24px]">
               {result
                 ? full
@@ -245,7 +245,7 @@ function ClosureQuiz({ items: incomingItems }) {
           <AnimatePresence>
             {result && !result.correct && result.confusions?.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                className="space-y-1.5 rounded-16 border-2 border-warn/40 bg-warn-tint p-4">
+                className="space-y-1.5 rounded-16 border border-warn/40 bg-warn-tint p-4">
                 <p className="text-xs font-bold text-warn-text">왜 헷갈렸나요?</p>
                 {result.confusions.map((cf, k) => (
                   <p key={k} className="text-[13px] leading-snug text-warn-text">
@@ -287,8 +287,8 @@ const BAR_BTN = 'w-full shrink-0 max-lg:py-4 max-lg:text-[16px] lg:w-auto'
 const OPTION_BASE = 'flex w-full items-center gap-3.5 rounded-14 px-[18px] py-[15px] text-left transition-colors lg:gap-4 lg:rounded-16 lg:px-5 lg:py-4'
 // 정답·오답 공개(2.5px 테두리)는 하단 테두리가 5 → 2.5px로 얇아지므로 위 패딩을 2px 더해 보기 높이를 맞춘다(변경 내역 §0-4).
 const OPTION_CLASS = {
-  idle: `${OPTION_BASE} border-2 border-b-5 border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
-  selected: `${OPTION_BASE} border-2 border-b-5 border-track bg-track-tint text-ink`,
+  idle: `${OPTION_BASE} border border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
+  selected: `${OPTION_BASE} border border-track bg-track-tint text-ink`,
   correct: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-good-tint text-good-text`,
   target: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-white text-ink`,
   wrong: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-bad bg-bad-tint text-bad-text`,

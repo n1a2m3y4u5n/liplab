@@ -8,7 +8,7 @@
 export default function BookmarkButton({ active = false, onToggle, disabled = false, label = '북마크', className = '' }) {
   return (
     <button type="button" onClick={onToggle} disabled={disabled} aria-label={label} aria-pressed={active}
-      className={`flex size-[38px] shrink-0 items-center justify-center rounded-full border-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50 lg:size-[42px] ${
+      className={`flex size-[38px] shrink-0 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-50 lg:size-[42px] ${
         active ? 'border-primary-500 bg-primary-100' : 'border-line bg-white'} ${className}`}>
       <img src={active ? '/ui/lp-328-8-bookmark-active.svg' : '/ui/lp-328-8-bookmark-default.svg'} alt=""
         className="size-[16.29px] lg:size-[18px]" />

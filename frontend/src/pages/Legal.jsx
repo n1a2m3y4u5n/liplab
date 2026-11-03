@@ -52,7 +52,7 @@ export default function Legal() {
 
   return (
     <main className="min-h-[100dvh] bg-page px-4 py-10">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 rounded-22 border-2 border-line bg-white p-8 sm:p-10">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 rounded-22 border border-line bg-white p-8 sm:p-10">
         <div className="flex items-center justify-between">
           <Logo size={24} />
           <Button variant="secondary" onClick={close}>닫기</Button>

@@ -29,9 +29,9 @@ const LEVEL_LABEL = { 1: '아주 쉬움', 2: '쉬움', 3: '보통', 4: '어려�
 // 선택 카드(연습 방식 407:107/112, 인원 407:132/134): 고른 것은 틴트 + 2.5px 보라 테두리, 나머지는 흰 바탕 + 3D 하단 테두리.
 // 고르면 하단 테두리가 5 → 2.5px로 얇아지므로 위 패딩을 2px 더해 높이를 맞춘다(변경 내역 §0-4).
 const MODE_ON = 'border-[2.5px] border-primary-500 bg-primary-100 pb-4 pt-[18px]'
-const MODE_OFF = 'border-2 border-b-5 border-line bg-white py-4 transition-colors hover:border-primary-300'
+const MODE_OFF = 'border border-line bg-white py-4 transition-colors hover:border-primary-300'
 const PEOPLE_ON = 'border-[2.5px] border-primary-500 bg-primary-100 pb-[13px] pt-[15px] text-primary-700'
-const PEOPLE_OFF = 'border-2 border-b-5 border-line bg-white py-[13px] text-ink transition-colors hover:border-primary-300'
+const PEOPLE_OFF = 'border border-line bg-white py-[13px] text-ink transition-colors hover:border-primary-300'
 
 const Divider = () => <div className="h-[1.5px] w-full shrink-0 bg-line" />
 
@@ -150,13 +150,13 @@ export default function ScenarioHub() {
       )}
 
       {/* Card / 시나리오 설정 (447:82): 테두리 하나 안에 구분선으로 세 구역 */}
-      <section className="flex w-full flex-col gap-5 rounded-18 border-2 border-line bg-white p-[18px] lg:p-[22px]">
+      <section className="flex w-full flex-col gap-5 rounded-18 border border-line bg-white p-[18px] lg:p-[22px]">
         {/* 어떤 상황인가요? (407:82) */}
         <div className="flex flex-col gap-3.5">
           <label htmlFor="scenario-situation" className="text-[17px] font-bold leading-figma text-ink">어떤 상황인가요?</label>
           <input id="scenario-situation" value={situation} onChange={(e) => setSituation(e.target.value)} maxLength={30}
             onKeyDown={(e) => { if (e.key === 'Enter') start() }} placeholder="예: 카페에서 음료 주문하기"
-            className="h-14 w-full rounded-14 border-2 border-line bg-white px-4 text-[15.5px] text-ink outline-none transition placeholder:text-placeholder focus:border-primary-500" />
+            className="h-14 w-full rounded-14 border border-line bg-white px-4 text-[15.5px] text-ink outline-none transition placeholder:text-placeholder focus:border-primary-500" />
         </div>
 
         <Divider />
@@ -192,7 +192,7 @@ export default function ScenarioHub() {
                   <span className={`text-[16.5px] font-bold leading-[1.5] ${active ? 'text-primary-700' : 'text-ink'}`}>{m.title}</span>
                   {active
                     ? <img src="/ui/lp-407-115-radio-on.svg" alt="" className="size-5 shrink-0" />
-                    : <span className="size-5 shrink-0 rounded-full border-2 border-line" />}
+                    : <span className="size-5 shrink-0 rounded-full border border-line" />}
                 </button>
               )
             })}

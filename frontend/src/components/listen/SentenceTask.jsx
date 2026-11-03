@@ -196,7 +196,7 @@ export default function SentenceTask({ data: incomingData, settings, voices, onP
       {clip.state === 'missing' ? missingCard(clip, skipItem) : needNoise && nz.state === 'missing' ? noiseMissingCard(nz, onExit, exitLabel) : (
         <>
           {av && (
-            <div className="overflow-hidden rounded-18 border-2 border-line bg-white lg:rounded-22">
+            <div className="overflow-hidden rounded-18 border border-line bg-white lg:rounded-22">
               <MouthAvatar frames={playFrames} once height={null} className="h-[150px] lg:h-[220px]" showTalker={false} />
             </div>
           )}

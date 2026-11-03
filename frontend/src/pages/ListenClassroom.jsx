@@ -43,7 +43,7 @@ function Chip({ on, onClick, children }) {
 function PairButton({ item, on, lip, onClick }) {
   return (
     <button type="button" onClick={onClick} aria-pressed={on}
-      className={`flex min-h-[64px] flex-col items-start justify-center gap-1 rounded-14 border-2 px-3.5 py-2.5 text-left transition-colors lg:rounded-16 ${on ? 'border-track bg-track-tint' : 'border-line bg-white hover:border-track'}`}>
+      className={`flex min-h-[64px] flex-col items-start justify-center gap-1 rounded-14 border px-3.5 py-2.5 text-left transition-colors lg:rounded-16 ${on ? 'border-track bg-track-tint' : 'border-line bg-white hover:border-track'}`}>
       <span className="break-keep text-[17px] font-bold leading-snug text-ink">{item.a} <span className="text-ink-faint">·</span> {item.b}</span>
       <span className="text-[12px] font-bold text-ink-muted">{lip == null ? ' ' : LIP_TEXT[lip].label}</span>
     </button>
@@ -88,7 +88,7 @@ function ListenPanel({ item, lip, settings, voices, voiceList, active }) {
     : !ready ? soundStatusText('loading')
       : player.busy ? `${what || ''} 나오는 중${player.parts > 1 ? ` · ${player.part} / ${player.parts}` : ''}`
         : player.phase === 'done' ? '소리가 끝났어요' : '버튼을 누르면 소리가 나와요'
-  const big = 'flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-16 border-2 border-b-5 px-2 py-3 transition-all disabled:cursor-not-allowed disabled:opacity-50 lg:min-h-[104px] lg:rounded-18'
+  const big = 'flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-16 border px-2 py-3 transition-all disabled:cursor-not-allowed disabled:opacity-50 lg:min-h-[104px] lg:rounded-18'
   return (
     <Card className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2.5 lg:gap-3">
