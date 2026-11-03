@@ -26,7 +26,7 @@ return (
 
       <main className="mx-auto w-full max-w-[676px] flex-1 px-[18px] pb-8 pt-6 lg:pt-5 lg:[@media(max-height:860px)]:pb-4 lg:[@media(max-height:860px)]:pt-3.5">
           {exitError ? (
-            <div className="flex flex-col items-center gap-2 rounded-22 border border-line bg-white px-6 py-16 text-center">
+            <div className="flex flex-col items-center gap-2 rounded-16 border border-line bg-white px-6 py-16 text-center">
               <p className="text-lg font-bold text-ink">단계를 가져오지 못했어요</p>
               <p className="mb-3 text-sm text-ink-faint">{err} 네트워크를 확인하고 다시 시도해 주세요.</p>
               <div className="flex justify-center gap-2">
@@ -35,7 +35,7 @@ return (
               </div>
             </div>
           ) : reviewEmpty ? (
-            <div className="flex flex-col items-center gap-2 rounded-22 border border-line bg-white px-6 py-16 text-center">
+            <div className="flex flex-col items-center gap-2 rounded-16 border border-line bg-white px-6 py-16 text-center">
               <p className="text-lg font-bold text-ink">복습할 발음이 없어요</p>
               <p className="mb-3 text-sm text-ink-faint">최근 발음이 다 좋았어요. 단계 연습을 이어가 볼까요?</p>
               <button type="button" onClick={() => { teardown(); navigate('/review/speaking') }} className="btn-primary px-6 py-2.5 text-sm">목록으로</button>
@@ -50,7 +50,7 @@ return (
             </div>
 
             {/* 말할 단어(175:31 / 모바일 236:74) — 가운데 정렬 분홍 카드. 들어보기 버튼 없음(§3.4 청각장애 대상) */}
-            <div className="flex items-center justify-center rounded-16 bg-track-tint py-[18px] pl-[22px] pr-4 lg:rounded-18 lg:py-5 lg:pl-7 lg:pr-5">
+            <div className="flex items-center justify-center rounded-16 bg-track-tint py-[18px] pl-[22px] pr-4 lg:py-5 lg:pl-7 lg:pr-5">
               <p className="text-center text-[32px] font-bold leading-figma tracking-[-0.64px] text-track-dark lg:text-[38px] lg:tracking-[-0.76px]">{target || '…'}</p>
             </div>
 
@@ -62,11 +62,11 @@ return (
               <>
                 {/* 입모양(175:36 560×300 / 모바일 236:79 전체 폭×200): 3D 아바타 + 안내.
                     세로 860px 이하 데스크톱은 위 여백·간격을 줄여 웹캠 버튼까지 하단 바 위에 보이게 한다. */}
-                <div className="mx-auto w-full max-w-[560px] overflow-hidden rounded-18 border border-line bg-white lg:rounded-22">
+                <div className="mx-auto w-full max-w-[560px] overflow-hidden rounded-16 bg-surface-inverse">
                   <div className="px-4 pt-4 lg:pt-6 lg:[@media(max-height:860px)]:pt-4">
                     <MouthAvatar loadingHint frames={frames} height={null} className="h-[134px] lg:h-[209px]" />
                   </div>
-                  <p className="pb-5 pt-2.5 text-center text-[13px] font-bold leading-figma text-ink-faint lg:pb-[34px] lg:pt-3 lg:text-[14px] lg:[@media(max-height:860px)]:pb-4">
+                  <p className="pb-5 pt-2.5 text-center text-[13px] font-semibold leading-figma text-white/70 lg:pb-[34px] lg:pt-3 lg:text-[14px] lg:[@media(max-height:860px)]:pb-4">
                     {metricMode ? '아래 그래프로 목소리 크기·억양을 확인해요' : '입모양을 따라 해보세요'}
                   </p>
                 </div>
@@ -89,7 +89,7 @@ return (
 
                 {/* 실시간 파형·볼륨·피치(녹음 중) — 귀 대신 눈. 사용법 가이드 '발화 레슨'의 실시간 피드백 */}
                 {recording && (
-                  <div className="mx-auto w-full max-w-[560px] rounded-18 border border-line bg-white p-4 lg:rounded-22">
+                  <div className="mx-auto w-full max-w-[560px] rounded-16 border border-line bg-white p-4">
                     <canvas ref={canvasRef} width={480} height={120}
                       className="w-full rounded-14 border border-fill bg-surface-muted" style={{ height: 120 }} />
                     <div className="mt-4">
@@ -123,7 +123,7 @@ return (
             ) : (
               /* 발음 결과(176:36 560×320 / 모바일 237:50) — 점수 + 음소 칩(§3.2) + 자세히 보기 */
               <MotionPanel
-                className="mx-auto flex w-full max-w-[560px] flex-col items-center gap-3.5 rounded-18 border border-line bg-white px-4 py-[18px] lg:gap-0 lg:rounded-22 lg:px-6 lg:py-[30px]">
+                className="mx-auto flex w-full max-w-[560px] flex-col items-center gap-3.5 rounded-16 border border-line bg-white px-4 py-[18px] lg:gap-0 lg:px-6 lg:py-[30px]">
                 <div className="flex flex-col items-center gap-0.5 font-bold leading-figma lg:gap-1">
                   <p className={`text-[44px] tracking-[-1.32px] lg:text-[52px] lg:tracking-[-1.56px] ${scoreTone(scoreNum, 'phone').text}`}>
                     {assessing && scoreNum == null ? '…' : scoreNum != null ? `${scoreNum}%` : '-'}

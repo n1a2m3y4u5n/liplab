@@ -41,7 +41,7 @@ export default function Onboarding() {
   if (step === 'info') {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-page px-[22px] py-8 lg:px-4">
-        <div className="flex w-full max-w-[460px] flex-col gap-5 rounded-22 border border-line bg-white p-6 lg:p-8">
+        <div className="flex w-full max-w-[460px] flex-col gap-5 rounded-16 border border-line bg-white p-6 lg:p-8">
           <div className="flex flex-col gap-1.5">
             <h1 className="text-[22px] font-bold leading-figma tracking-[-0.44px] text-ink lg:text-[26px]">나에게 맞게 시작해요</h1>
             <p className="text-[14px] leading-[1.6] text-ink-muted">모두 고르지 않아도 돼요. 고른 것에 맞게 화면을 바꿔 둘게요.</p>

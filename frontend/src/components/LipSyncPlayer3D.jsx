@@ -208,7 +208,7 @@ export default function LipSyncPlayer3D({
 
   if (!visemes || visemes.length === 0) {
     return (
-      <div className="w-full aspect-square bg-gradient-to-br from-surface-inverse to-surface-inverse-muted rounded-2xl flex items-center justify-center">
+      <div className="w-full aspect-square bg-surface-inverse rounded-2xl flex items-center justify-center">
         <p className="text-ink-caption text-sm">텍스트를 입력하면 여기에 입모양이 나타납니다</p>
       </div>
     )
@@ -225,7 +225,7 @@ export default function LipSyncPlayer3D({
   return (
     <div className="relative w-full">
       {/* VRM Avatar Viewport */}
-      <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-b from-surface-inverse-muted to-surface-inverse [container-type:size]"
+      <div className="relative w-full rounded-2xl overflow-hidden bg-surface-inverse [container-type:size]"
         style={{ height: `${stageHeight}px` }}
       >
         <AvatarVRM
@@ -278,7 +278,7 @@ export default function LipSyncPlayer3D({
       {/* Progress bar */}
       <div className="mt-3 bg-fill-strong rounded-full h-1.5 overflow-hidden">
         <motion.div
-          className="bg-gradient-to-r from-bookmark to-primary-500 h-full rounded-full"
+          className="bg-track h-full rounded-full"
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.2 }}
         />

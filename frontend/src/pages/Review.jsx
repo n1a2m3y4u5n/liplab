@@ -210,14 +210,14 @@ function ReviewSession({ items, lessons, bank, masteredStages }) {
 
           {viseme.error && <VisemeRetry onRetry={viseme.retry} className="mx-auto w-full max-w-[560px]" />}
           {submitFail && <SubmitRetry onResend={() => confirm()} onSkip={() => confirm(true)} busy={submitting} className="mx-auto w-full max-w-[560px]" />}
-          <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
+          <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-16 bg-surface-inverse p-4 lg:h-[370px]">
             <MouthAvatar height={null} className="h-full" speed={playSpeed}
               talker={talkerLesson.talker} talkerSeed={talkerLesson.seed}
               frames={isViseme ? undefined : frames} visemeId={isViseme ? parseInt(item.ref, 10) : undefined} />
           </div>
           {fastOk && (
             <button type="button" onClick={() => setFast((v) => !v)} aria-pressed={fast}
-              className={`self-center rounded px-3 py-1 text-xs transition-colors ${fast ? 'bg-primary-500 font-semibold text-white' : 'bg-surface-sunken text-ink-muted hover:bg-fill-strong'}`}>
+              className={`self-center rounded-full px-4 py-1.5 text-[13px] transition-colors ${fast ? 'bg-surface-inverse font-semibold text-white' : 'bg-surface-sunken font-medium text-ink-muted hover:bg-surface-hover'}`}>
               빠른 말 {FAST_SPEECH_SPEED}x
             </button>
           )}

@@ -7,7 +7,7 @@ export default function LessonA11yButton() {
   return (
     <button type="button" aria-label="접근성 설정" title="접근성 설정"
       onClick={() => window.dispatchEvent(new Event('liplab:a11y-toggle'))}
-      className="grid size-8 shrink-0 place-items-center rounded-full border border-line-strong bg-white text-[12px] font-semibold tracking-tight text-ink lg:hidden">
+      className="grid size-8 shrink-0 place-items-center rounded-full text-[14px] font-semibold tracking-tight text-ink-muted hover:bg-surface-sunken lg:hidden">
       Aa
     </button>
   )

@@ -32,20 +32,16 @@ export default function EndlessPractice() {
 
   return (
     <AppShell active="learn" title="엔드리스 학습" backTo="/learn/path?section=free" backLabel="자유 연습">
-      {/* 엔드리스 시작 — Figma 인디고 그라데이션 히어로(3D 하단테두리) */}
-      <section className="relative w-full overflow-hidden rounded-[20px] border border-b-[5px] border-endless-dark p-6 sm:p-[26px]"
-        style={{ backgroundImage: 'linear-gradient(166deg, var(--endless) 0%, var(--endless-dark) 100%)' }}>
-        <div className="flex items-center justify-between gap-5">
-          <div className="flex flex-col items-start gap-[18px] text-white">
-            <p className="text-[24px] font-bold leading-tight tracking-[-0.48px]">약한 유형만 골라서 무한 연습</p>
-            <p className="text-[14px] leading-relaxed opacity-85">숙달도가 낮은 소리가 자주 나와요. 원할 때 멈출 수 있어요.</p>
-            <button type="button" onClick={() => navigate('/learn/word?endless=1')}
-              className="inline-flex items-center rounded-[13px] border border-endless-line bg-white px-[30px] py-[14px] text-[16px] font-bold text-endless-dark transition">
-              시작하기 →
-            </button>
-          </div>
-          <img src="/ui/prac-endless.svg" alt="" className="hidden h-20 w-20 shrink-0 opacity-90 sm:block" />
+      {/* 엔드리스 시작 — 11/03부터 흰 카드 + 주 버튼(그라데이션·3D 하단테두리 없음) */}
+      <section className="card-flat flex w-full items-center justify-between gap-5">
+        <div className="flex flex-col items-start gap-3">
+          <p className="text-[20px] font-bold leading-tight tracking-[-0.4px] text-ink lg:text-[22px]">약한 유형만 골라서 무한 연습</p>
+          <p className="text-[14px] leading-relaxed text-ink-muted">숙달도가 낮은 소리가 자주 나와요. 원할 때 멈출 수 있어요.</p>
+          <button type="button" onClick={() => navigate('/learn/word?endless=1')} className="btn-primary btn-md mt-1 px-7">
+            시작하기 →
+          </button>
         </div>
+        <img src="/ui/prac-endless.svg" alt="" className="hidden h-16 w-16 shrink-0 sm:block" />
       </section>
 
       {/* 문맥 추론 이어 하기 — 입모양이 같은 단어를 문장 흐름으로 고른다. 약한 입모양이 든 문항부터 나온다(축 G-6). */}

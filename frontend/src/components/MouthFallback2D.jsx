@@ -6,7 +6,7 @@
 export default function MouthFallback2D({ visemeId = 15 }) {
   const id = visemeId >= 1 && visemeId <= 15 ? visemeId : 15
   return (
-    <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-surface-sunken to-fill-strong">
+    <div className="w-full h-full flex items-center justify-center bg-surface-sunken">
       <img
         src={`/visemes/${id}.svg`}
         alt={`입모양 ${id}`}

@@ -220,7 +220,7 @@ export default function Audio2FaceAvatar() {
 
   return (
     // 카드 틀은 자유 발화 화면의 다른 카드(Figma 225:140 — 2px 테두리, r18, p22)와 맞춘다.
-    <div className="w-full rounded-18 border border-line bg-white p-[18px] lg:p-[22px]">
+    <div className="w-full rounded-16 border border-line bg-white p-[18px] lg:p-[22px]">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-[17px] font-bold leading-figma text-ink">내 목소리로 아바타 움직이기</h3>
         <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 font-bold">AI 목소리 따라 하기 · A4</span>
@@ -230,7 +230,7 @@ export default function Audio2FaceAvatar() {
           ? '직접 말하거나 음성 파일을 올리면, 그 소리에서 입·턱·표정 움직임을 짐작해 아바타가 따라 합니다.'
           : '아래 준비된 음성을 누르면, A4 모델이 그 소리에서 짐작한 입모양으로 아바타가 립싱크합니다.'}
       </p>
-      <div className="relative w-full rounded-2xl overflow-hidden shadow-lg bg-gradient-to-b from-surface-inverse-muted to-surface-inverse"
+      <div className="relative w-full rounded-2xl overflow-hidden bg-surface-inverse"
         style={{ height: '320px' }}>
         <AvatarVRM visemeId={15} bsFrameRef={bsFrameRef} />
         <div className="absolute top-3 left-3 bg-surface-inverse backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-xs">

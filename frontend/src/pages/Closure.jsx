@@ -219,7 +219,7 @@ function ClosureQuiz({ items: incomingItems }) {
           </div>
 
           {/* 빈칸 문장 + 힌트 */}
-          <div className="flex flex-col items-center gap-2.5 rounded-18 border border-line bg-white px-4 py-4 lg:rounded-22">
+          <div className="flex flex-col items-center gap-2.5 rounded-16 border border-line bg-white px-4 py-4">
             <p className="text-center text-[21px] font-bold leading-figma tracking-[-0.3px] text-ink lg:text-[24px]">
               {result
                 ? full
@@ -285,11 +285,11 @@ function ClosureQuiz({ items: incomingItems }) {
 
 const BAR_BTN = 'w-full shrink-0 max-lg:py-4 max-lg:text-[16px] lg:w-auto'
 const OPTION_BASE = 'flex w-full items-center gap-3.5 rounded-14 px-[18px] py-[15px] text-left transition-colors lg:gap-4 lg:rounded-16 lg:px-5 lg:py-4'
-// 정답·오답 공개(2.5px 테두리)는 하단 테두리가 5 → 2.5px로 얇아지므로 위 패딩을 2px 더해 보기 높이를 맞춘다(변경 내역 §0-4).
+// 11/03: 고름·정답·오답은 1px 테두리 안쪽에 1px 링을 더해 2px처럼 보이게 한다(box-shadow라 보기 높이가 바뀌지 않는다).
 const OPTION_CLASS = {
   idle: `${OPTION_BASE} border border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
-  selected: `${OPTION_BASE} border border-track bg-track-tint text-ink`,
-  correct: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-good-tint text-good-text`,
-  target: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-white text-ink`,
-  wrong: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-bad bg-bad-tint text-bad-text`,
+  selected: `${OPTION_BASE} border border-track ring-1 ring-inset ring-track bg-track-tint text-ink`,
+  correct: `${OPTION_BASE} border border-good ring-1 ring-inset ring-good bg-good-tint text-good-text`,
+  target: `${OPTION_BASE} border border-good ring-1 ring-inset ring-good bg-white text-ink`,
+  wrong: `${OPTION_BASE} border border-bad ring-1 ring-inset ring-bad bg-bad-tint text-bad-text`,
 }

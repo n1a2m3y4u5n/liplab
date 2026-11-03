@@ -41,12 +41,12 @@ function Skeleton({ word, className = '' }) {
   )
 }
 
-const OPTION_BASE = 'relative flex h-[76px] w-full items-center justify-center rounded-16 transition-colors lg:h-[92px] lg:rounded-18'
+const OPTION_BASE = 'relative flex h-[76px] w-full items-center justify-center rounded-16 transition-colors lg:h-[92px]'
 const OPTION_CLASS = {
   idle: `${OPTION_BASE} border border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
-  correct: `${OPTION_BASE} border-[2.5px] border-good bg-good-tint text-good-text`,
-  target: `${OPTION_BASE} border-[2.5px] border-good bg-white text-ink`,
-  wrong: `${OPTION_BASE} border-[2.5px] border-bad bg-bad-tint text-bad-text`,
+  correct: `${OPTION_BASE} border border-good ring-1 ring-inset ring-good bg-good-tint text-good-text`,
+  target: `${OPTION_BASE} border border-good ring-1 ring-inset ring-good bg-white text-ink`,
+  wrong: `${OPTION_BASE} border border-bad ring-1 ring-inset ring-bad bg-bad-tint text-bad-text`,
 }
 const BAR_BTN = 'w-full shrink-0 max-lg:py-4 max-lg:text-[16px] lg:w-auto'
 
@@ -176,7 +176,7 @@ export default function NonsensePairing() {
       <div className="min-h-[100dvh] bg-page">
         <div className={LESSON_COL}>
           {exitBtn}
-          <div className="mt-10 flex flex-col items-center gap-4 rounded-20 border border-line bg-white px-6 py-10 text-center">
+          <div className="mt-10 flex flex-col items-center gap-4 rounded-16 border border-line bg-white px-6 py-10 text-center">
             <p className="text-[21px] font-bold leading-figma text-ink lg:text-[26px]">{title}</p>
             <p className="text-[15px] leading-relaxed text-ink-muted">{body}</p>
             {view?.today && <p className="text-[13px] text-ink-faint">오늘 {view.today.n}번 골랐어요</p>}
@@ -214,11 +214,11 @@ export default function NonsensePairing() {
               <p className="text-[14px] text-ink-muted">뜻이 없는 말이에요. 입모양과 자음만 보고 도형과 짝지어요.</p>
             </div>
             <div className="flex items-stretch gap-3">
-              <div className="flex w-[36%] shrink-0 flex-col items-center justify-center gap-3 rounded-18 border border-line bg-white p-4 lg:rounded-22">
+              <div className="flex w-[36%] shrink-0 flex-col items-center justify-center gap-3 rounded-16 border border-line bg-white p-4">
                 <Shape id={w.shape} className="size-20 text-ink lg:size-28" />
                 <Skeleton word={w.word} className="text-[20px] lg:text-[26px]" />
               </div>
-              <div className="h-[clamp(150px,calc(100dvh_-_420px),300px)] min-w-0 flex-1 rounded-18 border border-line bg-white p-3 lg:rounded-22">
+              <div className="h-[clamp(150px,calc(100dvh_-_420px),300px)] min-w-0 flex-1 rounded-16 border border-line bg-white p-3">
                 <MouthAvatar frames={frames[w.word]} height={null} className="h-full" />
               </div>
             </div>
@@ -244,7 +244,7 @@ export default function NonsensePairing() {
       <div className="min-h-[100dvh] bg-page">
         <div className={LESSON_COL}>
           {exitBtn}
-          <div className="mt-10 flex flex-col items-center gap-4 rounded-20 border border-line bg-white px-6 py-10 text-center">
+          <div className="mt-10 flex flex-col items-center gap-4 rounded-16 border border-line bg-white px-6 py-10 text-center">
             <p className="text-[19px] font-bold leading-figma text-ink lg:text-[22px]">{doneBlock.correct} / {doneBlock.size}</p>
             <p role="status" className="text-[15px] leading-relaxed text-ink-muted">{blockSummary(doneBlock)}</p>
             <button type="button" onClick={() => startBlock(view)} className="btn-primary mt-2 px-8 py-3 text-[16px]">계속하기</button>

@@ -18,6 +18,9 @@ import { rateCueView } from '../lib/speakCue'
 import { phoneChipView } from '../lib/phoneChips'
 import { DGOP_STREAM_ENABLED, startSpeakStream } from '../lib/speakStream'
 import { MAX_REC_MS, speakMark, INTRO_MS, cssVar, VISEME_ERR, PROSODY_SCORE_LABEL, closeContext } from '../components/speaking/speakingSupport'
+
+const DRILL_LABEL = { long: '길게 말하기', rise: '올리는 억양', fall: '내리는 억양', soft: '작게 말하기', loud: '크게 말하기' }
+
 export default function useSpeakingLesson() {
   useEffect(() => { startUsage('lesson', 'speaking'); return () => endUsage(false) }, [])
   const navigate = useNavigate()
@@ -544,10 +547,11 @@ export default function useSpeakingLesson() {
   const cur = total ? itemIdx + 1 : null
   const barPct = total ? ((itemIdx + (summary ? 1 : 0)) / total) * 100 : (progress ? Math.min(progress.mastery_score, 100) : 8)
 
+  // 레슨 위 작은 머리: 크기·억양 연습(drill)은 키 대신 한국어 이름을 보인다(예전에는 'loud'가 그대로 보였다)
   const category = reviewMode
     ? '말하기 복습'
     : isProbe ? PROBE_CATEGORY
-      : (drill || stageInfo?.title || selectedStageMenuItem?.label || '발음 연습')
+      : (DRILL_LABEL[drill] || stageInfo?.title || selectedStageMenuItem?.label || '발음 연습')
   const heading = isProbe ? PROBE_HEADING : (prompt || '이 단어를 소리 내어 말해보세요')
   const probeLine = progress?.mastered ? null : probeStatusText(progress?.probe)
 

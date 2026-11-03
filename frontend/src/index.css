@@ -11,7 +11,7 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
   --brand: #7446ce;         /* brand/primary */
-  --brand-dark: #5f3ab8;    /* brand/primary-dark (3D 하단테두리) */
+  --brand-dark: #5f3ab8;    /* brand/primary-dark */
   --brand-tint: #efe9fc;    /* brand/primary-tint (활성 배경) */
   --brand-hover: #6d3fc4;
   --brand-light: #a78bfa;   /* 보라 그라데이션 시작색(primary-light) */
@@ -483,7 +483,6 @@ html.a11y-contrast [data-track="listen"] .bg-fill { background-color: var(--line
 :is(button, a[href], input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--focus-ring) !important;
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--surface) !important;
 }
 input::placeholder, textarea::placeholder {
   color: var(--ink-faint);

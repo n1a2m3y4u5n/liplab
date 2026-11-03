@@ -299,7 +299,7 @@ export default function WebcamMouthCheck({ visemeId, visemeName, articulationGui
         </div>
         {/* 아바타 미러링(축 F) — 웹캠에서 읽은 입모양을 아바타가 그대로 따라한다 */}
         {showMirror && (
-          <div className="relative overflow-hidden rounded-lg bg-gradient-to-b from-surface-inverse-muted to-surface-inverse" style={{ aspectRatio: '4/3' }}>
+          <div className="relative overflow-hidden rounded-lg bg-surface-inverse" style={{ aspectRatio: '4/3' }}>
             <AvatarVRM visemeId={15} bsFrameRef={liveBsRef} xray={mirrorXray} />
             <div className="absolute top-1.5 left-1.5 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white/80">아바타가 따라해요</div>
             <button type="button" onClick={() => setMirrorXray((v) => !v)}

@@ -85,7 +85,7 @@ export default function LoadingScreen({ label = '로딩 중', variant = 'plain',
         </span>
         <Dots onBrand />
         {/* 팁 카드 — 모바일 전체 폭(390 기준 322) p20 r18 / lg 560 px30 py24 r20 */}
-        <div className="flex w-full flex-col items-center gap-2.5 rounded-18 border border-white/30 bg-white/[0.08] p-5 lg:w-[560px] lg:max-w-full lg:gap-3 lg:rounded-20 lg:px-[30px] lg:py-6">
+        <div className="flex w-full flex-col items-center gap-2.5 rounded-16 border border-white/30 bg-white/[0.08] p-5 lg:w-[560px] lg:max-w-full lg:gap-3 lg:px-[30px] lg:py-6">
           <span className="rounded-full bg-overlay/10 px-3 py-[5px] text-[11px] font-bold leading-figma tracking-[0.22px] text-white lg:px-3.5 lg:py-1.5 lg:text-[12px] lg:tracking-[0.24px]">{ui.badge}</span>
           <p className="text-center text-[15px] font-bold leading-[1.7] tracking-[-0.225px] text-white lg:text-[19px] lg:leading-[1.65] lg:tracking-[-0.285px]">
             {ui.tip[0]}<br />{ui.tip[1]}

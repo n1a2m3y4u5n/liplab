@@ -391,7 +391,7 @@ export default function Practice() {
 
   // 입모양 재생(주관식·서술형·학습) — 흰 카드 안 3D 플레이어. 로딩 중에는 스피너.
   const player = (extra = {}) => (
-    <div className="rounded-18 border border-line bg-white p-4 lg:rounded-22">
+    <div className="rounded-16 border border-line bg-white p-4 lg:rounded-16">
       {loading ? (
         <div className="flex flex-col items-center justify-center gap-3 py-16">
           <div className="spinner size-10 rounded-full border-4 border-primary-200 border-t-primary-600" />

@@ -62,14 +62,14 @@ export function ProgressLine({ phase, run, totalMs }) {
   )
 }
 
-// 보기(독화 레슨 91:29와 같은 결). 정답·오답 공개는 2.5px 테두리(높이를 맞추려고 위 패딩 2px 더함).
+// 보기(독화 레슨 91:29와 같은 결). 정답·오답 공개는 1px 테두리 + 같은 색 안쪽 링(높이가 바뀌지 않는다).
 const OPTION_BASE = 'flex min-h-[56px] w-full items-center gap-2 rounded-14 px-3 py-[13px] text-left transition-colors lg:gap-4 lg:rounded-16 lg:px-5 lg:py-4'
 const OPTION_CLASS = {
   idle: `${OPTION_BASE} border border-line bg-white text-ink enabled:hover:border-track enabled:active:scale-[0.99] disabled:cursor-not-allowed`,
-  selected: `${OPTION_BASE} border border-track bg-track-tint text-ink`,
-  correct: `${OPTION_BASE} pt-[15px] lg:pt-[18px] border-[2.5px] border-good bg-good-tint text-good-text`,
-  target: `${OPTION_BASE} pt-[15px] lg:pt-[18px] border-[2.5px] border-good bg-white text-ink`,
-  wrong: `${OPTION_BASE} pt-[15px] lg:pt-[18px] border-[2.5px] border-bad bg-bad-tint text-bad-text`,
+  selected: `${OPTION_BASE} border border-track ring-1 ring-inset ring-track bg-track-tint text-ink`,
+  correct: `${OPTION_BASE} border border-good ring-1 ring-inset ring-good bg-good-tint text-good-text`,
+  target: `${OPTION_BASE} border border-good ring-1 ring-inset ring-good bg-white text-ink`,
+  wrong: `${OPTION_BASE} border border-bad ring-1 ring-inset ring-bad bg-bad-tint text-bad-text`,
 }
 const OPTION_SR = { correct: ', 정답, 고른 답', target: ', 정답', wrong: ', 고른 답, 틀린 답' }
 
@@ -96,7 +96,7 @@ export function Skeleton() {
   return (
     <div role="status" aria-label="가져오는 중" className="flex animate-pulse-slow flex-col gap-4 lg:gap-5">
       <div className="h-7 w-3/4 rounded-10 bg-fill lg:h-9" />
-      <div className="h-[104px] rounded-18 border border-line bg-white lg:h-[124px] lg:rounded-22" />
+      <div className="h-[104px] rounded-16 border border-line bg-white lg:h-[124px]" />
       <div className="grid grid-cols-2 gap-2.5 lg:gap-3">
         {[0, 1, 2, 3].map((i) => <div key={i} className="h-[56px] rounded-14 bg-fill lg:h-[60px]" />)}
       </div>

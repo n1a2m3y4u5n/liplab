@@ -15,11 +15,11 @@ export const lessonPad = (tall) => (tall ? 'pb-[200px]' : 'pb-[120px]')
 export const LESSON_STACK = 'mt-6 flex flex-col gap-4 lg:mt-5 lg:gap-5 lg:[@media(max-height:860px)]:mt-3.5 lg:[@media(max-height:860px)]:gap-3.5'
 
 // 입모양 카드(560×370 / 모바일 전체 폭×214). 아바타는 부모 높이를 따른다.
-export const LESSON_AVATAR = 'mx-auto h-[clamp(150px,calc(100dvh_-_548px),214px)] w-full max-w-[560px] rounded-18 border border-line bg-white p-4 lg:h-[clamp(200px,calc(100dvh_-_464px),370px)] lg:rounded-22'
+export const LESSON_AVATAR = 'mx-auto h-[clamp(150px,calc(100dvh_-_548px),214px)] w-full max-w-[560px] rounded-16 bg-surface-inverse p-4 lg:h-[clamp(200px,calc(100dvh_-_464px),370px)]'
 // 입모양 인지는 보기 이름(이중모음(ㅘ, ㅙ, …))이 격자 한 칸에서 두 줄이 되기도 해 그 두 줄 몫을 남긴다.
-export const LESSON_AVATAR_VISEME = 'mx-auto h-[clamp(150px,calc(100dvh_-_596px),214px)] w-full max-w-[560px] rounded-18 border border-line bg-white p-4 lg:h-[clamp(200px,calc(100dvh_-_500px),370px)] lg:rounded-22'
+export const LESSON_AVATAR_VISEME = 'mx-auto h-[clamp(150px,calc(100dvh_-_596px),214px)] w-full max-w-[560px] rounded-16 bg-surface-inverse p-4 lg:h-[clamp(200px,calc(100dvh_-_500px),370px)]'
 // 문맥 추론은 빈칸 문장 카드가 더 있어 그만큼 낮춘다(보기는 한 줄이라 일부 상쇄).
-export const LESSON_AVATAR_CLOSURE = 'mx-auto h-[clamp(150px,calc(100dvh_-_590px),214px)] w-full max-w-[560px] rounded-18 border border-line bg-white p-4 lg:h-[clamp(180px,calc(100dvh_-_476px),370px)] lg:rounded-22'
+export const LESSON_AVATAR_CLOSURE = 'mx-auto h-[clamp(150px,calc(100dvh_-_590px),214px)] w-full max-w-[560px] rounded-16 bg-surface-inverse p-4 lg:h-[clamp(180px,calc(100dvh_-_476px),370px)]'
 
 // 보기 목록. 모바일은 한 줄씩, 데스크톱은 격자(키보드 1~4 순서 = 왼→오, 위→아래).
 export const LESSON_OPTIONS = 'flex flex-col gap-2.5 lg:grid lg:grid-cols-2 lg:gap-3'

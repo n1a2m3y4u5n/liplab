@@ -28,16 +28,17 @@ export function LearnCard({ card, onClick, off = null }) {
       type="button"
       onClick={onClick}
       disabled={!!off}
-      className="flex items-center gap-3.5 rounded-16 border border-line bg-white p-4 text-left transition-transform enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed lg:flex-col lg:items-start lg:rounded-20 lg:px-[22px] lg:py-6"
+      className="flex items-center gap-3.5 rounded-16 border border-line bg-white p-4 text-left transition-colors enabled:hover:border-line-strong enabled:hover:bg-surface-muted disabled:cursor-not-allowed lg:flex-col lg:items-start lg:px-[22px] lg:py-6"
     >
-      <span className={`icon-chip-sm lg:icon-chip ${card.chip || 'bg-listen-tint'} ${off ? 'opacity-50 grayscale' : ''}`}>
+      {/* 11/03: 아이콘 칸은 카드마다 다른 파스텔 대신 중립 회색 한 가지(card.chip 값은 데이터에 남겨 두고 여기서는 쓰지 않는다) */}
+      <span className={`icon-chip-sm lg:icon-chip bg-surface-sunken ${off ? 'opacity-50 grayscale' : ''}`}>
         <CardIcon card={card} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-[3px] leading-figma lg:gap-3.5">
-        <span className={`text-[16px] font-bold lg:text-[19px] lg:tracking-[-0.38px] ${off ? 'text-ink-muted' : 'text-ink'}`}>
+        <span className={`text-[16px] font-semibold lg:text-[18px] lg:tracking-[-0.36px] ${off ? 'text-ink-muted' : 'text-ink'}`}>
           {card.title}{off && <span className="ml-2 align-middle text-[12px] font-bold text-ink-faint lg:text-[13px]">잠김</span>}
         </span>
-        <span className="text-[12.5px] text-ink-muted lg:text-[14px] lg:leading-[1.65]">{typeof off === 'string' ? off : card.desc}</span>
+        <span className="text-[13px] text-ink-muted lg:text-[14px] lg:leading-[1.6]">{typeof off === 'string' ? off : card.desc}</span>
       </span>
       {/* 모바일 행 화살표(238:131 = review-arrow, 6×12 칸에 8×14 에셋) */}
       <span aria-hidden className={`relative h-3 w-1.5 shrink-0 lg:hidden ${off ? 'opacity-0' : ''}`}>

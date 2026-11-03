@@ -88,7 +88,7 @@ function ListenPanel({ item, lip, settings, voices, voiceList, active }) {
     : !ready ? soundStatusText('loading')
       : player.busy ? `${what || ''} 나오는 중${player.parts > 1 ? ` · ${player.part} / ${player.parts}` : ''}`
         : player.phase === 'done' ? '소리가 끝났어요' : '버튼을 누르면 소리가 나와요'
-  const big = 'flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-16 border px-2 py-3 transition-all disabled:cursor-not-allowed disabled:opacity-50 lg:min-h-[104px] lg:rounded-18'
+  const big = 'flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-16 border px-2 py-3 transition-all disabled:cursor-not-allowed disabled:opacity-50 lg:min-h-[104px]'
   return (
     <Card className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2.5 lg:gap-3">

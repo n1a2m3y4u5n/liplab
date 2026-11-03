@@ -322,7 +322,7 @@ export default function CurriculumPath() {
 
                     {/* 건너뛰기 확인(79:100) — 데스크톱은 노드 오른쪽 팝오버, 모바일은 아래 시트 */}
                     {st === 'skip' && skipTarget === s.key && (
-                      <div className="path-card absolute left-full z-20 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-20 border border-warn bg-white p-6 shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
+                      <div className="path-card absolute left-full z-20 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-16 border border-warn bg-white p-6 shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
                         style={{ bottom: 'calc(50% - 21.5px)' }}>
                         <TailLeft className="bottom-[8.5px] left-[-15px]" edgeClass="text-warn" />
                         <p className="text-[21px] font-bold leading-figma tracking-[-0.42px] text-ink">정말로 건너뛰시겠어요?</p>
@@ -335,7 +335,7 @@ export default function CurriculumPath() {
 
                     {/* 레슨 카드(75:12 · 80:115) — 보고 있는 단계 노드 오른쪽(데스크톱). 모바일은 아래 시트. */}
                     {i === vIdx && viewOpen && (
-                      <div className="path-card absolute left-full z-10 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-20 border border-line bg-white px-6 py-[22px] shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
+                      <div className="path-card absolute left-full z-10 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-16 border border-line bg-white px-6 py-[22px] shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
                         style={{ bottom: hasExtra ? 'calc(50% - 100.5px)' : 'calc(50% - 37.5px)' }}>
                         {/* 짝 맞추기 버튼(높이 49 + 간격 14)이 붙으면 카드가 위 배너를 덮지 않게 아래로 늘리고 꼬리도 그만큼 올린다 */}
                         <TailLeft className={`${hasExtra ? 'bottom-[87.5px]' : 'bottom-[24.5px]'} left-[-15px]`} />

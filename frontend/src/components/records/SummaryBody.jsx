@@ -70,7 +70,7 @@ function ListenSummary({ ov, onOpen }) {
     { label: '소리 구별 정답률', value: l.axAccuracy == null ? '–' : `${Math.round(l.axAccuracy * 100)}%`, note: '같다·다르다 문제' },
   ]
   return (
-    <section data-track="listen" className="flex w-full flex-col gap-3.5 rounded-16 border border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
+    <section data-track="listen" className="flex w-full flex-col gap-3.5 rounded-16 border border-line bg-white p-[18px] lg:gap-[18px] lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
       <div className="flex items-center justify-between font-bold leading-figma">
         <p className="text-[16px] text-ink lg:text-[17px]">소리 듣기</p>
         <button type="button" onClick={onOpen} className="flex min-h-[32px] items-center gap-2 text-[12px] text-listen-dark hover:underline lg:text-[13px]">
@@ -109,7 +109,7 @@ export function TrackLinks({ enabled, navigate }) {
   ].filter((g) => g.items.length)
   if (!enabled || !d?.listen_started || !groups.length) return null
   return (
-    <section data-track="listen" aria-label="함께 하면 좋은 연습" className="flex w-full flex-col gap-3.5 rounded-16 border border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px]">
+    <section data-track="listen" aria-label="함께 하면 좋은 연습" className="flex w-full flex-col gap-3.5 rounded-16 border border-line bg-white p-[18px] lg:gap-[18px] lg:p-[22px]">
       <div className="flex flex-col gap-1 leading-figma">
         <p className="text-[16px] font-bold text-ink lg:text-[17px]">함께 하면 좋은 연습</p>
         <p className="break-keep text-[12px] text-ink-muted lg:text-[13px]">입모양으로 알기 어려운 소리는 듣기로 연습해요. 듣기로 알기 어려운 소리는 입모양으로 연습해요.</p>
@@ -137,7 +137,7 @@ export function TrackLinks({ enabled, navigate }) {
 /** 차트 카드(197:21 / 240:133) — 머리(제목·'최근 7주') + 플롯. tag는 제목 옆 작은 글(문장 점수 추세 카드의 '참고, 기계 전사 기준'). */
 function ChartCard({ title, tag = null, track = null, children }) {
   return (
-    <section data-track={track || undefined} className="flex w-full flex-col gap-3.5 rounded-16 border border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
+    <section data-track={track || undefined} className="flex w-full flex-col gap-3.5 rounded-16 border border-line bg-white p-[18px] lg:gap-[18px] lg:p-[22px] lg:[@media(max-height:860px)]:gap-3.5 lg:[@media(max-height:860px)]:p-[18px]">
       <div className="flex items-center justify-between gap-3 font-bold leading-figma">
         <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-[16px] text-ink lg:text-[17px]">
           {title}{tag && <span className="text-[12px] font-bold text-track-dark lg:text-[13px]">{tag}</span>}
@@ -160,7 +160,8 @@ function GridLines() {
  *  모바일 플롯은 Figma 110px에서 줄였다(390×844에서 상세 링크까지 한 화면에 들어오게). */
 function BarChart({ weeks }) {
   const max = Math.max(1, ...weeks.map((w) => w.minutes))
-  const fmt = (m) => `${Math.floor(m / 60)}h ${m % 60}m`
+  // 막대 아래 값: 1시간 미만은 '27분', 넘으면 '1시간 5분'(예전 '0h 27m' 영어 표기를 바꿨다)
+  const fmt = (m) => (m < 60 ? `${m}분` : `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}`)
   return (
     <div className="relative h-[96px] w-full lg:h-[150px]">
       <GridLines />
@@ -269,11 +270,11 @@ function Chevron() {
   )
 }
 
-/** 상세 링크(198:29 / 240:159) — 3D 하단테두리(2/2/2/5) 카드형 버튼. */
+/** 상세 링크(198:29 / 240:159) — 1px 테두리 카드형 버튼. */
 function DetailLink({ label, onClick }) {
   return (
     <button type="button" onClick={onClick}
-      className="flex flex-1 items-center justify-between rounded-14 border border-line bg-white py-3 pl-[18px] pr-4 text-[14.5px] font-bold leading-figma text-ink transition-all lg:rounded-16 lg:py-[18px] lg:[@media(max-height:860px)]:py-[15px] lg:pl-5 lg:pr-[18px] lg:text-[15px]">
+      className="flex flex-1 items-center justify-between rounded-14 border border-line bg-white py-3 pl-[18px] pr-4 text-[14.5px] font-semibold leading-figma text-ink transition-colors hover:bg-surface-muted lg:rounded-16 lg:py-[18px] lg:[@media(max-height:860px)]:py-[15px] lg:pl-5 lg:pr-[18px] lg:text-[15px]">
       {label}
       <Chevron />
     </button>

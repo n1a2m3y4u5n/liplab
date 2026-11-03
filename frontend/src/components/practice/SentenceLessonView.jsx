@@ -50,7 +50,7 @@ return (
           {multiple ? (
             <>
               {/* 입모양 카드(91:22 / 모바일 235:45) — 아바타만, 무한 반복(다시 보기·속도·프레임 조작 없음) */}
-              <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-18 border border-line bg-white p-4 lg:h-[370px] lg:rounded-22">
+              <div className="mx-auto h-[214px] w-full max-w-[560px] rounded-16 bg-surface-inverse p-4 lg:h-[370px]">
                 {/* 시각증강 기호(축 J-3)는 답을 확인한 뒤에만 — 문제 중에 보이면 보기끼리 다른 자질이 기호로 드러나 답이 된다.
                     그 뒤에는 약한 표적 입모양 음절에만 입꼬리 옆에 겹쳐 '왜 헷갈렸는지'를 보여 준다(숙달되면 흐려짐). */}
                 <MouthAvatar frames={shownVisemes} height={null} className="h-full" cueText={result ? currentSentence : null} cueFocus

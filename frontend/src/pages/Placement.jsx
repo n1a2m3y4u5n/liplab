@@ -186,7 +186,7 @@ export default function Placement() {
         </h1>
         {/* 진단 요약(9/28): 예전에는 어디서 시작하는지·무엇이 약한지 보여 주지 않고 버튼만 있었다(가이드 점검). 검사가 5~12문항으로
             적응형이라 문항 수도 함께 보인다. */}
-        <div className="flex w-full max-w-[640px] flex-col gap-3 rounded-22 border border-line bg-white px-5 py-4 lg:px-6">
+        <div className="flex w-full max-w-[640px] flex-col gap-3 rounded-16 border border-line bg-white px-5 py-4 lg:px-6">
           <div className="flex items-center gap-3">
             <span className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-primary-500 text-[16px] font-bold text-white">
               {result.recommended_start?.stage ?? STAGE_NUM[result.recommended_start?.key] ?? 1}
@@ -211,7 +211,7 @@ export default function Placement() {
         {/* 사전 검사 권유(9/29): 사전(A)은 학습 효과 리포트 안에서 언제든 볼 수 있어 연습을 한참 한 뒤에 보는 경우가 있었다.
             자가진단 바로 뒤가 연습 전이라 여기서 권한다. 막지 않고 건너뛰어도 된다 */}
         {hist && !hist.pretest_taken && (
-          <div className="flex w-full max-w-[640px] flex-col gap-2 rounded-22 border border-line bg-white px-5 py-4 sm:flex-row sm:items-center lg:px-6">
+          <div className="flex w-full max-w-[640px] flex-col gap-2 rounded-16 border border-line bg-white px-5 py-4 sm:flex-row sm:items-center lg:px-6">
             <p className="flex-1 text-[13px] leading-relaxed text-ink-muted">
               학습 효과를 재고 싶다면 연습을 시작하기 전에 사전 검사(A)를 봐 두세요. 24문제, 5분 안팎이에요.
               나중에 분석의 학습 효과 리포트에서도 볼 수 있어요.
@@ -241,7 +241,7 @@ export default function Placement() {
         <h1 className="text-center text-[25px] font-bold leading-figma tracking-[-0.625px] text-ink lg:text-[32px] lg:tracking-[-0.8px]">
           유지 검사를 마쳤어요
         </h1>
-        <div className="flex w-full max-w-[640px] flex-col gap-3 rounded-22 border border-line bg-white px-5 py-4 lg:px-6">
+        <div className="flex w-full max-w-[640px] flex-col gap-3 rounded-16 border border-line bg-white px-5 py-4 lg:px-6">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[13px] font-bold text-ink-muted">사후 검사</p>
             <p className="text-[18px] font-bold text-ink">{pct(result.post_accuracy)}</p>
@@ -266,7 +266,7 @@ export default function Placement() {
       <div className="min-h-[100dvh] bg-page">
         <div className="mx-auto flex min-h-[100dvh] max-w-[596px] flex-col justify-center gap-6 px-[18px] py-8">
           {/* 결과 히어로 (그라데이션 카드) */}
-          <div className="bg-loading-perception overflow-hidden rounded-22">
+          <div className="bg-loading-perception overflow-hidden rounded-16">
             <div className="flex flex-col items-center gap-1.5 px-6 py-8 text-white">
               <img src="/ui/onb-mascot-light.svg" alt="" className="h-16 w-16" />
               <p className="text-[13px] font-bold opacity-85">{MODE_LABEL[mode]} 결과</p>
@@ -276,7 +276,7 @@ export default function Placement() {
           </div>
 
           {/* 결과 리포트 카드 */}
-          <div className="flex flex-col gap-[22px] rounded-22 border border-line bg-white p-7">
+          <div className="flex flex-col gap-[22px] rounded-16 border border-line bg-white p-7">
             <div className="flex flex-col gap-3">
               <p className="text-[13px] font-bold text-ink-muted">추천 시작 단계</p>
               <div className="flex flex-col items-center gap-2.5 rounded-16 bg-primary-100 px-4 py-[18px]">

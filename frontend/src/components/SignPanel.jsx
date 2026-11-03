@@ -286,7 +286,7 @@ function SplitView({ single = false, text, loading, error, result, tokens, token
   const ready = !!(text && !loading && !error && result && tokens.length && token)
   let signStage
   if (!text) {
-    signStage = single ? null : <img src="/ui/lp-226-32-hand.svg" alt="" aria-hidden className="size-[72px]" />
+    signStage = <img src="/ui/lp-226-32-hand.svg" alt="" aria-hidden className={single ? 'size-14 opacity-40' : 'size-[72px]'} />
   } else if (loading) {
     signStage = <p role="status" className="text-[13.5px] font-bold text-stat-accuracy">수어로 바꾸는 중…</p>
   } else if (error) {
@@ -345,7 +345,7 @@ function SplitView({ single = false, text, loading, error, result, tokens, token
     <div className="flex flex-col gap-4">
       {single ? (
         /* Player / 수어 영상(226:161): 회색 칸 하나, 높이 222 */
-        <div className="flex h-[222px] w-full items-center justify-center overflow-hidden rounded-16 bg-fill-strong py-4">
+        <div className="flex h-[222px] w-full items-center justify-center overflow-hidden rounded-16 bg-surface-sunken py-4">
           {signStage}
         </div>
       ) : (

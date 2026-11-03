@@ -109,11 +109,11 @@ export default function ReviewLanding({ mode = 'today' }) {
   return (
     <AppShell backTo="/records?view=wrong" backLabel="틀린 문장" active="records" title="오늘의 복습" description="독화·말하기별 복습 내용을 확인하고 원하는 영역으로 이동하세요">
       <div className="w-full space-y-5">
-        <section className="rounded-[24px] p-6 text-white" style={{ backgroundImage: 'linear-gradient(160deg, var(--brand-light) 0%, var(--brand) 71%)' }}>
+        <section className="rounded-16 border border-line bg-white p-6">
           <div>
-            <p className="text-xs font-bold tracking-[0.12em] text-white/80">TODAY</p>
-            <h2 className="mt-2 text-2xl font-black">{loading ? '복습 항목을 확인하고 있어요' : `${total}개 항목이 기다리고 있어요`}</h2>
-            <p className="mt-2 text-sm text-white/85">독화·말하기 중 필요한 복습을 골라서 진행하세요.</p>
+            <p className="text-[12px] font-semibold text-track-dark">TODAY</p>
+            <h2 className="mt-2 text-[22px] font-bold tracking-[-0.44px] text-ink">{loading ? '복습 항목을 확인하고 있어요' : `${total}개 항목이 기다리고 있어요`}</h2>
+            <p className="mt-2 text-sm text-ink-muted">독화·말하기 중 필요한 복습을 골라서 진행하세요.</p>
           </div>
         </section>
 

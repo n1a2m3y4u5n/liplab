@@ -150,7 +150,7 @@ export default function TodayPage() {
       </section>}
       {nextData.links?.listen_started && <button className="card-flat min-h-11 text-left font-bold" onClick={() => navigate('/listen/today?from=today')}>오늘의 듣기 · 15분</button>}
       {/* 오늘의 과제 (137:187 / 238:250) */}
-      <section id="tasks" className="flex w-full flex-col gap-3.5 rounded-16 border border-line bg-white p-[18px] lg:gap-[18px] lg:rounded-18 lg:p-[22px]">
+      <section id="tasks" className="flex w-full flex-col gap-3.5 rounded-16 border border-line bg-white p-[18px] lg:gap-[18px] lg:p-[22px]">
         <div className="flex items-start justify-between gap-2 font-bold leading-figma">
           <h2 className="text-[16px] text-ink lg:text-[17px]">오늘의 과제</h2>
           <span className="text-[12px] text-ink-muted lg:text-[13px]">오늘 남은 시간 {hoursLeftToday()}시간</span>

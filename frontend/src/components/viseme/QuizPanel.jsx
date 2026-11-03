@@ -33,7 +33,7 @@ const fmtDuration = (sec) => `${Math.floor(sec / 60)}분 ${sec % 60}초`
 const OVERFLOW = { top: '-7%', left: '-12%', width: '124%', height: '124%' }   // 마스코트 SVG 그림자 여백(Figma inset)
 
 // 레슨 완료 스탯 카드(93:22) — 모바일은 카드 폭이 좁아 여백·값 글자를 줄인다(모바일 프레임 없음).
-const STAT_CARD = 'flex min-w-0 flex-1 flex-col gap-2 rounded-18 border border-line bg-white p-3.5 lg:p-5'
+const STAT_CARD = 'flex min-w-0 flex-1 flex-col gap-2 rounded-16 border border-line bg-white p-3.5 lg:p-5'
 const STAT_LABEL = 'text-[13px] font-bold leading-figma text-ink-soft'
 const STAT_VALUE = 'text-[20px] font-bold leading-figma tracking-[-0.5px] lg:text-[28px] lg:tracking-[-0.7px]'
 const DONE_BTN = 'w-full max-lg:rounded-14 max-lg:py-4 max-lg:text-[16px]'
@@ -385,24 +385,24 @@ function QuizPanel({ data: incomingData }) {
 // 하단 바 버튼 — 데스크톱 .btn-bar(40/15, 17px) 오른쪽, lg 미만 전체 폭 py16·16px(235:69 · 235:109)
 const BAR_BTN = 'w-full shrink-0 max-lg:py-4 max-lg:text-[16px] lg:w-auto'
 
-// 보기 한 줄(91:29 / 모바일 235:52) — 기본 3D 하단테두리. 정답·오답 공개(94:119 · 94:161 · 94:169)는 2.5px 테두리.
+// 보기 한 줄(91:29 / 모바일 235:52) — 1px 테두리. 정답·오답 공개(94:119 · 94:161 · 94:169)는 같은 색 안쪽 링을 더한다.
 const OPTION_BASE = 'flex w-full items-center gap-3.5 rounded-14 px-[18px] py-[15px] text-left transition-colors lg:gap-4 lg:rounded-16 lg:px-5 lg:py-4'
-// 정답·오답 공개(2.5px 테두리)는 하단 테두리가 5 → 2.5px로 얇아지므로 위 패딩을 2px 더해 보기 높이를 맞춘다(변경 내역 §0-4).
+// 11/03: 고름·정답·오답은 1px 테두리 안쪽에 1px 링을 더해 2px처럼 보이게 한다(box-shadow라 보기 높이가 바뀌지 않는다).
 const OPTION_CLASS = {
   idle: `${OPTION_BASE} border border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
-  selected: `${OPTION_BASE} border border-track bg-track-tint text-ink`,
-  correct: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-good-tint text-good-text`,   // 고른 답이 정답
-  target: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-good bg-white text-ink`,              // 오답일 때 정답 표시
-  wrong: `${OPTION_BASE} pt-[17px] lg:pt-[18px] border-[2.5px] border-bad bg-bad-tint text-bad-text`,        // 고른 오답
+  selected: `${OPTION_BASE} border border-track ring-1 ring-inset ring-track bg-track-tint text-ink`,
+  correct: `${OPTION_BASE} border border-good ring-1 ring-inset ring-good bg-good-tint text-good-text`,   // 고른 답이 정답
+  target: `${OPTION_BASE} border border-good ring-1 ring-inset ring-good bg-white text-ink`,              // 오답일 때 정답 표시
+  wrong: `${OPTION_BASE} border border-bad ring-1 ring-inset ring-bad bg-bad-tint text-bad-text`,        // 고른 오답
 }
 
-// AX 답 버튼(같아요 · 달라요). 보기와 같은 3D 하단테두리·공개 색을 쓰고, 글 대신 큰 기호가 눈에 먼저 들어오게 세로로 쌓는다.
+// AX 답 버튼(같아요 · 달라요). 보기와 같은 테두리·공개 색을 쓰고, 글 대신 큰 기호가 눈에 먼저 들어오게 세로로 쌓는다.
 const AX_BTN_BASE = 'relative flex h-[112px] w-full flex-col items-center justify-center gap-1.5 rounded-16 transition-colors lg:h-[132px]'
 const AX_BTN_CLASS = {
   idle: `${AX_BTN_BASE} border border-line bg-white text-ink enabled:hover:border-primary-300 enabled:active:scale-[0.99]`,
-  correct: `${AX_BTN_BASE} border-[2.5px] border-good bg-good-tint text-good-text`,
-  target: `${AX_BTN_BASE} border-[2.5px] border-good bg-white text-ink`,
-  wrong: `${AX_BTN_BASE} border-[2.5px] border-bad bg-bad-tint text-bad-text`,
+  correct: `${AX_BTN_BASE} border border-good ring-1 ring-inset ring-good bg-good-tint text-good-text`,
+  target: `${AX_BTN_BASE} border border-good ring-1 ring-inset ring-good bg-white text-ink`,
+  wrong: `${AX_BTN_BASE} border border-bad ring-1 ring-inset ring-bad bg-bad-tint text-bad-text`,
 }
 
 export default QuizPanel

@@ -280,8 +280,8 @@ export default function MultiConversation() {
             const base = 'flex flex-1 items-center justify-center gap-1.5 rounded-[14px] py-4 text-[17px] font-bold transition-all'
             const cls = isAns ? `${SPK_COLOR[i]} border border-b-2 border-transparent text-white`
               : isWrongPick ? 'border border-b-2 border-bad-line bg-bad-tint text-rose-500 line-through'
-              : answered ? 'border border-b-[5px] border-line bg-white text-ink-inverse-muted'
-              : `border border-b-[5px] border-line bg-white ${SPK_TEXT[i]} hover:border-primary-300`
+              : answered ? 'border border-line bg-white text-ink-inverse-muted'
+              : `border border-line bg-white ${SPK_TEXT[i]} hover:border-primary-300`
             return (
               <button key={i} disabled={answered} onClick={() => chooseSpeaker(i)} className={`${base} ${cls}`}>
                 <span className="grid h-5 w-5 place-items-center rounded-full bg-black/10 text-xs">{SPK_NAME[i]}</span>

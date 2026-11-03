@@ -40,13 +40,15 @@ function Chevron() {
   )
 }
 
+const GROUP_HEAD = 'px-[18px] pb-1 pt-5 text-[13px] font-semibold text-ink-muted lg:px-[22px]'
+
 function MenuRow({ title, sub, onClick, first, danger }) {
   return (
     <button type="button" onClick={onClick}
-      className={`flex w-full items-center justify-between py-[15px] pl-[18px] pr-4 text-left leading-figma hover:bg-surface-muted lg:px-[22px] lg:py-[18px] ${first ? '' : 'border-t-1.5 border-line'}`}>
+      className={`flex w-full items-center justify-between py-[15px] pl-[18px] pr-4 text-left leading-figma hover:bg-surface-muted lg:px-[22px] lg:py-[18px] ${first ? '' : 'border-t border-line'}`}>
       <span className="flex flex-col gap-[3px]">
-        <span className={`text-[15px] font-bold lg:text-[16px] ${danger ? 'text-bad-text' : 'text-ink'}`}>{title}</span>
-        <span className="text-[12px] text-ink-muted lg:text-[13px]">{sub}</span>
+        <span className={`text-[15px] font-semibold lg:text-[16px] ${danger ? 'text-bad-text' : 'text-ink'}`}>{title}</span>
+        {sub && <span className="text-[12px] text-ink-muted lg:text-[13px]">{sub}</span>}
       </span>
       <Chevron />
     </button>
@@ -228,17 +230,18 @@ export default function ProfilePage() {
       </section>
 
       {/* 설정(107:175 / 241:145) */}
-      <section className="w-full overflow-hidden rounded-16 border border-line bg-white lg:rounded-18">
-        <h2 className="px-5 pt-4 font-bold">프로필</h2>
+      <section className="w-full overflow-hidden rounded-16 border border-line bg-white">
+        {/* 묶음 머리는 작은 회색 글자, 묶음 사이는 1px 줄. 머리 바로 아래 줄은 위 테두리를 빼서 줄이 겹치지 않게 한다 */}
+        <h2 className={GROUP_HEAD}>프로필</h2>
         <MenuRow first title="계정 설정" sub="이름 · 이메일 · 비밀번호 · 로그아웃" onClick={openAccount} />
         <MenuRow title="나에게 맞춘 안내" onClick={() => setModal('learner')} />
         <MenuRow title="시작 단계 다시 정하기" onClick={() => setModal('placement')} />
-        <h2 className="px-5 pt-4 font-bold">설정</h2>
-        <MenuRow title="접근성 설정" onClick={() => window.dispatchEvent(new Event('liplab:a11y-toggle'))} />
+        <h2 className={`${GROUP_HEAD} border-t border-line`}>설정</h2>
+        <MenuRow first title="접근성 설정" onClick={() => window.dispatchEvent(new Event('liplab:a11y-toggle'))} />
         <MenuRow title="소리와 함께 다시 보기" onClick={() => setModal('sound')} sub={sound.enabled ? '켜짐' : '꺼짐'} />
         <MenuRow title="소리 확인" onClick={() => navigate('/learn/listening?stage=0')} />
-        <h2 className="px-5 pt-4 font-bold">도움말</h2>
-        <MenuRow title="사용법 가이드" onClick={() => setGuideOpen(true)} />
+        <h2 className={`${GROUP_HEAD} border-t border-line`}>도움말</h2>
+        <MenuRow first title="사용법 가이드" onClick={() => setGuideOpen(true)} />
         <MenuRow title="이용약관" onClick={() => navigate('/terms')} />
         <MenuRow title="개인정보처리방침" onClick={() => navigate('/privacy')} />
         {pilot?.enabled && (

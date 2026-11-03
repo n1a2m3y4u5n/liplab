@@ -54,7 +54,7 @@ function Stat({ label, value, sub, main }) {
 function ReportSkeleton() {
   return (
     <div role="status" aria-label="가져오는 중" className="flex animate-pulse-slow flex-col gap-4">
-      {[148, 120, 160].map((h, i) => <div key={i} className="rounded-18 border border-line bg-white lg:rounded-22" style={{ height: h }} />)}
+      {[148, 120, 160].map((h, i) => <div key={i} className="rounded-16 border border-line bg-white lg:rounded-16" style={{ height: h }} />)}
       <span className="sr-only">가져오는 중이에요</span>
     </div>
   )

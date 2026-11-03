@@ -117,7 +117,7 @@ export default function Login({ initialMode = 'login' }) {
     <div className="flex min-h-[100dvh] bg-white">
       {/* 좌: 브랜드 패널 (Figma "Brand panel" 560px, 126deg 그라데이션) */}
       <div className="relative hidden w-1/2 max-w-[560px] shrink-0 overflow-hidden lg:block"
-        style={{ backgroundImage: 'linear-gradient(126deg, var(--brand-light) 0%, var(--brand-hover) 71.4%)' }}>
+        style={{ backgroundColor: 'var(--brand)' }}>
         {/* Blob 1 / Blob 2 — 흰 반투명 원(227:37 · 227:38) */}
         <div className="absolute -left-[130px] -top-[110px] h-[420px] w-[420px] rounded-full bg-white/10" />
         <div className="absolute left-[420px] top-[780px] h-[320px] w-[320px] rounded-full bg-white/[0.08]" />
@@ -146,7 +146,7 @@ export default function Login({ initialMode = 'login' }) {
             </span>
           )}
           {/* 로고(모바일 243:44 24px / 데스크톱 227:51 28px) */}
-          <Link to="/about" aria-label="LIPLAB 소개" className="self-start">
+          <Link to="/about" aria-label="LIPLAB 소개" className="inline-flex items-center self-center lg:self-start">
             <Logo size={24} className="lg:hidden" />
             <Logo size={28} className="hidden lg:inline-block" />
           </Link>
@@ -210,9 +210,9 @@ export default function Login({ initialMode = 'login' }) {
             </button>
           )}
 
-          <p className="flex justify-center gap-[5px] text-[13px] leading-figma text-ink-muted lg:gap-1.5 lg:text-[14px]">
+          <p className="flex items-center justify-center gap-[5px] text-[13px] leading-figma text-ink-muted lg:gap-1.5 lg:text-[14px]">
             {signup ? '이미 계정이 있으신가요?' : '아직 계정이 없으신가요?'}
-            <button type="button" onClick={toggle} className="font-bold text-primary-500 hover:underline">
+            <button type="button" onClick={toggle} className="inline-flex items-center px-1 font-semibold text-primary-600 hover:underline">
               {signup ? '로그인' : '회원가입'}
             </button>
           </p>
