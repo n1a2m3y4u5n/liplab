@@ -61,7 +61,7 @@ export default function SpeakingReviewLanding() {
           </div>
         ) : items.length ? (
           <>
-            <section className="card flex flex-wrap items-center justify-between gap-4">
+            <section className="card-flat flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-ink-muted">다시 말해 볼 것이 <b className="text-ink">{items.length}개</b> 있어요.</p>
                 <p className="mt-1 text-xs text-ink-caption">목록 순서대로 발음과 억양을 다시 연습합니다.</p>
@@ -71,25 +71,21 @@ export default function SpeakingReviewLanding() {
               </button>
             </section>
 
-            <ol className="grid gap-3 sm:grid-cols-2">
+            {/* 11/03: 낱말 하나에 큰 카드 하나씩이던 목록을 한 카드 안의 행 목록으로(점수는 오른쪽 숫자) */}
+            <ol aria-label="복습할 말" className="divide-y divide-line overflow-hidden rounded-16 border border-line bg-white">
               {items.map((item, index) => {
                 const stageNo = item.stage == null ? null : Number(item.stage)
                 const stage = stageNo == null ? null : getSpeakingStageMenuItem(stageNo)
                 const modeLabel = MODE_LABELS[item.mode]
+                const score = item.last_score != null && Number.isFinite(Number(item.last_score)) ? Number(item.last_score) : null
                 return (
-                  <li key={`${item.target}-${index}`} className="card">
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="rounded-full bg-bad-tint px-2.5 py-1 text-[11px] font-semibold text-bad-dark">
-                        복습 {String(index + 1).padStart(2, '0')}
-                      </span>
-                      <span className="text-xs text-ink-caption">
-                        {[stage?.label, modeLabel].filter(Boolean).join(' · ') || '말하기 복습'}
-                      </span>
-                    </div>
-                    <p className="mt-4 text-lg font-bold leading-relaxed text-ink">{item.target}</p>
-                    {item.last_score != null && Number.isFinite(Number(item.last_score)) && (
-                      <p className="mt-2 text-sm text-ink-muted">이전 점수: <b className="text-bad-dark">{Number(item.last_score)}점</b></p>
-                    )}
+                  <li key={`${item.target}-${index}`} className="flex min-h-[60px] items-center gap-3.5 px-4 py-3 lg:px-5">
+                    <span className="w-6 shrink-0 text-right text-[13px] font-semibold tabular-nums text-ink-faint">{index + 1}</span>
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5 leading-figma">
+                      <span className="break-keep text-[16px] font-semibold text-ink lg:text-[17px]">{item.target}</span>
+                      <span className="text-[13px] text-ink-muted">{[stage?.label, modeLabel].filter(Boolean).join(' · ') || '말하기 복습'}</span>
+                    </span>
+                    {score != null && <span className="shrink-0 text-right text-[13px] text-ink-muted">이전 점수 <b className="tabular-nums text-bad-text">{score}점</b></span>}
                   </li>
                 )
               })}

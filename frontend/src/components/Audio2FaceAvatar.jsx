@@ -299,11 +299,15 @@ export default function Audio2FaceAvatar() {
           {exLabel ? `"${exLabel}" — ` : '실제 음성에서 '}{nFrames}장면({(nFrames / fpsRef.current).toFixed(1)}초)의 얼굴 움직임을 A4가 짐작했어요.
         </p>
       )}
-      <p className="mt-1 text-[11px] text-ink-faint leading-relaxed">
+      {/* 11/03: 모델 설명은 접어 둔다(문구 그대로). 처음 쓰는 사람에게 기술 용어가 먼저 보이지 않게 */}
+      <details className="mt-1 text-[13px] text-ink-muted">
+        <summary className="min-h-11 cursor-pointer py-2.5 font-semibold text-ink-soft">어떻게 작동하나요?</summary>
+      <p className="leading-relaxed">
         직접 녹음한 목소리는 말하는 사람이 바뀌어도 같은 특징을 뽑는 모델(WavLM, 20명으로 학습)이 입모양을 짐작해요.
         처음 듣는 사람의 입 벌림 상관은 r≈0.66이에요. 다만 평가한 사람들로 학습을 멈출 때를 골라서, 실제보다 높게 나왔을 수 있어요.
         미리 준비한 음성 5개는 합성 음성(TTS)이고, 입모양은 같은 모델로 미리 계산해 둔 결과예요.
       </p>
+      </details>
     </div>
   )
 }

@@ -2,6 +2,7 @@ import usePageLoad from '../../hooks/usePageLoad'
 import { dayCounts, historyRows, calSubtitle, ActivityCalendar, HistoryList, SessionDetail, FullStats } from './RecordDetails'
 import { RailLevelCard, RailWeekCard } from './ProgressCards'
 import Badges from '../today/Badges'
+import { Row, RowList, SectionTitle } from '../learn/LearnRows'
 import TrackSummary from './TrackSummary'
 import ErrorScreen from '../../components/ErrorScreen'
 import LoadingScreen from '../../components/LoadingScreen'
@@ -205,7 +206,7 @@ function LineChart({ weeks, empty = '아직 채점된 기록이 없어요', tone
   const vals = weeks.map((w) => (w.accuracy == null ? null : Math.round(w.accuracy * 100)))
   const known = vals.filter((v) => v != null)
   if (!known.length) {
-    return <p className="flex h-[96px] items-center justify-center break-keep px-4 text-center text-[14px] text-ink-muted lg:h-[150px]">{empty}</p>
+    return <p className="break-keep py-2 text-[14px] text-ink-muted">{empty}</p>
   }
   let lo = Math.min(...known)
   let hi = Math.max(...known)
@@ -260,27 +261,6 @@ export function SpeakTrend({ ov }) {
   )
 }
 
-/** 오른쪽 화살표 — 모바일 6×12 칸(240:161, 8.2×14.2 에셋) · 데스크톱 7×14 칸(198:31 = menu-arrow). */
-function Chevron() {
-  return (
-    <span aria-hidden className="relative h-3 w-1.5 shrink-0 lg:h-3.5 lg:w-[7px]">
-      <img src="/ui/lp-240-34-arrow.svg" alt="" className="absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 lg:hidden" />
-      <img src="/ui/menu-arrow.svg" alt="" className="absolute left-1/2 top-1/2 hidden max-w-none -translate-x-1/2 -translate-y-1/2 lg:block" />
-    </span>
-  )
-}
-
-/** 상세 링크(198:29 / 240:159) — 1px 테두리 카드형 버튼. */
-function DetailLink({ label, onClick }) {
-  return (
-    <button type="button" onClick={onClick}
-      className="flex flex-1 items-center justify-between rounded-14 border border-line bg-white py-3 pl-[18px] pr-4 text-[14.5px] font-semibold leading-figma text-ink transition-colors hover:bg-surface-muted lg:rounded-16 lg:py-[18px] lg:[@media(max-height:860px)]:py-[15px] lg:pl-5 lg:pr-[18px] lg:text-[15px]">
-      {label}
-      <Chevron />
-    </button>
-  )
-}
-
 export default function SummaryBody({ track = 'all' }) {
   const navigate = useNavigate()
   const [modal, setModal] = useState(null)   // 'calendar' | 'history' | 'stats'
@@ -329,7 +309,11 @@ export default function SummaryBody({ track = 'all' }) {
           delta={ov ? `최고 기록 ${ov.streak_best}일` : null} />
       </section>
 
-      <Badges data={ov?.badges} />
+      {/* 11/03 순서: 숫자 → 이번 주(출석·경험치) → 변화 그래프 → 트랙별 → 학습 상 → 자세히 보기. 예전에는 상이 맨 위, 경험치·주간이 맨 아래였다 */}
+      <div className="grid w-full gap-3.5 lg:grid-cols-2 lg:gap-5">
+        <RailWeekCard activeDays={new Set(Object.keys(acts || cal || {}))} />
+        <RailLevelCard />
+      </div>
       <div className="records-charts contents">
       <ChartCard title="학습 시간 변화"><BarChart weeks={weeks} /></ChartCard>
       <ChartCard title="정답률 변화"><LineChart weeks={weeks} /></ChartCard>
@@ -337,14 +321,16 @@ export default function SummaryBody({ track = 'all' }) {
       <SpeakTrend ov={ov} />
       <ListenSummary ov={ov} onOpen={() => navigate('/records?track=listen')} />
       <TrackLinks enabled={!!ov?.listen} navigate={navigate} />
+      <Badges data={ov?.badges} />
 
-      <div className="flex w-full flex-col gap-[9px] lg:flex-row lg:gap-3">
-        <DetailLink label="활동 캘린더" onClick={() => setModal('calendar')} />
-        <DetailLink label="학습 내역" onClick={() => setModal('history')} />
-        <DetailLink label="전체 통계" onClick={() => setModal('stats')} />
-      </div>
-
-      <RailLevelCard /><RailWeekCard activeDays={new Set(Object.keys(acts || cal || {}))} />
+      <section aria-labelledby="records-more" className="flex w-full flex-col gap-2.5">
+        <SectionTitle id="records-more">자세히 보기</SectionTitle>
+        <RowList label="자세히 보기">
+          <Row title="활동 캘린더" onClick={() => setModal('calendar')} />
+          <Row title="학습 내역" onClick={() => setModal('history')} />
+          <Row title="전체 통계" onClick={() => setModal('stats')} />
+        </RowList>
+      </section>
       <Modal open={modal === 'calendar'} onClose={() => setModal(null)} title="활동 캘린더"
         subtitle={calSubtitle(counts, ov?.session_days)} maxW="max-w-[900px]">
         <ActivityCalendar counts={counts} />

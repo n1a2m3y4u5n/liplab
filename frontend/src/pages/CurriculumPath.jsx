@@ -1,8 +1,10 @@
 import LearnHeader from '../components/learn/LearnHeader'
-import { Fragment, useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import AppShell from '../components/AppShell'
-import DokaNode, { DokaConnector } from '../components/DokaNode'
+import { DOKA_ASSETS } from '../components/DokaNode'
+import LearnExtras from '../components/learn/LearnExtras'
+import { Row, RowList, SectionTitle, StageMark } from '../components/learn/LearnRows'
 import GuideModal from '../components/GuideModal'
 import LoadingScreen from '../components/LoadingScreen'
 import RetentionPrompt from '../components/RetentionPrompt'
@@ -33,55 +35,6 @@ import { pathNodeState } from '../lib/pathNodes'
 import { TRACK_LABEL } from '../lib/iaLabels'
 import { normalizeRead, normalizeSpeak } from '../lib/trackPath'
 const TRACKS = Object.keys(TRACK_LABEL)
-
-// 단계 이동 화살표 에셋 — 데스크톱 44 슬롯(58:11) / 모바일 38 슬롯(232:35). 둘 다 그림자 여백만큼 위 4·좌우 7 넘친다.
-// 발화 모바일 프레임은 없어 데스크톱 분홍 에셋을 줄여 쓴다.
-const ARROW = {
-  read: {
-    prev: '/ui/stage-arrow-prev.svg', next: '/ui/stage-arrow-next.svg',
-    prevMobile: '/ui/lp-232-35-stage-arrow-prev.svg', nextMobile: '/ui/lp-232-35-stage-arrow-next.svg',
-  },
-  speak: {
-    prev: '/ui/lp-171-38-stage-arrow-prev.svg', next: '/ui/lp-171-38-stage-arrow-next.svg',
-    prevMobile: null, nextMobile: null,
-  },
-  listen: {
-    prev: '/ui/listen-stage-arrow-prev.svg', next: '/ui/listen-stage-arrow-next.svg',
-    prevMobile: null, nextMobile: null,
-  },
-}
-const ARROW_OVERFLOW = { top: -4, left: -7, width: 'calc(100% + 14px)', height: 'calc(100% + 14px)' }
-// 노드 간격(슬롯 + 연결선 − 겹침): 모바일 56+28−10 = 74, lg 76+58−16 = 118 — 모바일 화살표를 보고 있는 노드 높이에 맞춘다.
-const PITCH_MOBILE = 74
-
-function StageArrow({ dir, onClick, disabled, track, style }) {
-  const a = ARROW[track] || ARROW.read
-  const desktop = dir === 'prev' ? a.prev : a.next
-  const mobile = (dir === 'prev' ? a.prevMobile : a.nextMobile) || desktop
-  return (
-    <button type="button" onClick={onClick} disabled={disabled} aria-label={dir === 'prev' ? '이전 단계' : '다음 단계'} style={style}
-      className={`absolute z-10 size-[38px] transition top-[var(--arrow-top)] disabled:cursor-not-allowed disabled:opacity-30 enabled:hover:opacity-80 enabled:active:scale-95 lg:top-1/2 lg:size-11 lg:-translate-y-1/2 ${
-        dir === 'prev' ? 'left-0.5 lg:left-[27px]' : 'right-0.5 lg:right-[52px]'}`}>
-      <picture>
-        <source media="(min-width: 1024px)" srcSet={desktop} />
-        <img src={mobile} alt="" className="absolute max-w-none" style={ARROW_OVERFLOW} />
-      </picture>
-    </button>
-  )
-}
-
-// 말풍선·팝오버 꼬리(Figma Tail face + Tail edge). 왼쪽을 가리키는 꼬리 16×22 — 테두리 선은 에셋 그대로(line)
-// 또는 mask로 토큰 색을 칠한다(건너뛰기 확인의 앰버 테두리와 맞추려고).
-function TailLeft({ className = '', edgeClass = '' }) {
-  return (
-    <span aria-hidden className={`pointer-events-none absolute h-[22px] w-4 ${className}`}>
-      <img src="/ui/lp-80-6-tail-face.svg" alt="" className="absolute inset-0 size-full max-w-none" />
-      {edgeClass
-        ? <span className={`mask-icon absolute ${edgeClass}`} style={{ '--icon': 'url(/ui/lp-80-6-tail-edge.svg)', left: -1, top: -0.825, width: 17.566, height: 23.648 }} />
-        : <img src="/ui/lp-80-6-tail-edge.svg" alt="" className="absolute max-w-none" style={{ left: -1, top: -0.825, width: 17.566, height: 23.648 }} />}
-    </span>
-  )
-}
 
 /** 두 트랙의 단계 목록을 같은 모양으로 정규화: { key, stage, no, title, route, status, attempts, total }
  *  + 사용법 가이드 '지금 내 상태' 카드용 desc·guide·mastery·pass(서버가 보내는 값을 버리지 않고 싣는다). */
@@ -218,7 +171,6 @@ export default function CurriculumPath() {
     },
   } : null
 
-  const switchTrack = (k) => setSearchParams(k === 'read' ? {} : { track: k }, { replace: true })
   const doSkip = async (s) => {
     try {
       if (track === 'read') await curriculumAPI.setTrack(data.readTrack || 'perception', s.stage)   // 학습자의 트랙은 그대로
@@ -229,163 +181,108 @@ export default function CurriculumPath() {
     setViewIdx(null)
     await load()
   }
-  const go = (d) => { setSkipTarget(null); setViewIdx(Math.min(list.length - 1, Math.max(0, vIdx + d))) }
+
+  const open = (s) => navigate(s.route, { state: track === 'read' && s.stage >= 3 ? { from: 'path' } : undefined })
+  // 단계 행의 오른쪽 상태 글자: 숙달 · 진행(n / 최소 시도) · 건너뛰기 · 잠김
+  const rowMeta = (s, st) => {
+    if (st === 'mastered') return s.status === 'mastered' ? '숙달' : '지나옴'
+    if (st === 'current') {
+      const total = s.total || 8
+      const cur = Math.min(total, s.attempts ?? 0)
+      return s.progText || (cur >= total ? '숙달 중' : cur === 0 ? '시작 전' : `${cur} / ${total}`)
+    }
+    if (st === 'skip') return '건너뛰기'
+    return '잠김'
+  }
 
   return (
     <AppShell active="learn">
-      <div className="mx-auto flex w-full max-w-[752px] hub-path flex-col items-center gap-3.5 lg:gap-6">
-        {/* 트랙 스위처(171:18 / 모바일 233:34 전체 폭) */}
-        <LearnHeader /><h1 className="sr-only">{TRACK_LABEL[track]} · 단계</h1>
+      <div className="learn-hub mx-auto grid w-full max-w-[1120px] grid-cols-1 gap-5 lg:gap-6 min-[1180px]:grid-cols-[minmax(0,1fr)_360px] min-[1180px]:gap-x-8">
+        <div className="min-[1180px]:col-span-2"><LearnHeader /></div>
+        <h1 className="sr-only">{TRACK_LABEL[track]}</h1>
 
-        {/* 유닛 헤더 — 11/03부터 흰 카드: 트랙·단계는 트랙색 작은 글자, 제목은 진한 글자 + 가이드(사용법 가이드 모달) */}
-        <div className="flex w-full items-center gap-3.5 rounded-16 border border-line bg-white py-[15px] pl-[18px] pr-[14px] lg:py-5 lg:pl-6 lg:pr-5">
-          <div className="flex min-w-0 flex-1 flex-col gap-1 leading-figma">
-            <span className="text-[12px] font-semibold text-track-dark lg:text-[13px]">{TRACK_LABEL[track]} · {view ? `${view.no}단계` : '학습'}</span>
-            <span className="break-words text-[20px] font-bold tracking-[-0.4px] text-ink lg:text-[24px] lg:tracking-[-0.48px]">{view?.title || '커리큘럼'}</span>
-          </div>
-          <button type="button" onClick={() => setGuideOpen(true)}
-            className="btn-secondary shrink-0 px-4 py-2 text-[14px]">
-            가이드
-          </button>
-        </div>
+        <div className="flex min-w-0 flex-col gap-5 lg:gap-6">
+          {/* 지연 유지 검사(C7): 볼 때가 아니면 그리지 않는다 */}
+          <RetentionPrompt />
 
-        {/* 소리 듣기: 진단·치료가 아니라는 안내(설계 8절, 첫 화면과 결과에 둔다)와 결과 화면으로 가는 길 */}
-        {track === 'listen' && !loadFailed && (
-          <div className="flex w-full items-center justify-between gap-3 rounded-14 bg-surface-sunken px-4 py-2.5">
-            <p className="min-w-0 break-keep text-[12px] leading-[1.6] text-ink-muted lg:text-[13px]">소리 듣기는 청력을 진단하거나 치료하지 않아요.</p>
-            <div className="flex shrink-0 items-center">
-              <button type="button" onClick={() => navigate('/listen/classroom')}
-                className="min-h-[44px] rounded-10 px-2 text-[13px] font-bold text-track-dark hover:underline">소리 교실</button>
-              <span aria-hidden className="h-3 w-px bg-line-strong" />
-              <button type="button" onClick={() => navigate('/analysis/listening')}
-                className="min-h-[44px] rounded-10 px-2 text-[13px] font-bold text-track-dark hover:underline">결과 보기</button>
+          {loadFailed ? (
+            <div className="card flex w-full flex-col items-center gap-3 py-16 text-center">
+              <p role="alert" className="text-[15px] font-bold text-ink">학습 단계를 가져오지 못했어요.</p>
+              <button type="button" onClick={retry} className="btn-primary">다시 가져오기</button>
             </div>
-          </div>
-        )}
-
-        {/* 시작 단계 정하기(배치검사 후보 D): 서버 플래그가 켜져 있고 아직 1~5단계를 시작하지 않았을 때만 보인다 */}
-        {track === 'listen' && !loadFailed && data.listenPlacement?.available && (
-          <div className="card flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <p className="min-w-0 break-keep text-[14px] leading-[1.6] text-ink-muted">몇 가지 소리를 듣고, 어느 연습부터 할지 정할 수 있어요. 5분쯤 걸려요.</p>
-            <button type="button" onClick={() => navigate('/learn/listening?placement=1')} className="btn-primary shrink-0 whitespace-nowrap">시작 단계 정하기</button>
-          </div>
-        )}
-
-        {/* 지연 유지 검사(C7): 사후 검사 뒤 정해진 날수가 지났을 때만 조용히 권한다(막지 않음, 볼 때가 아니면 그리지 않음) */}
-        <RetentionPrompt />
-
-        {/* 단계를 불러오지 못했으면 빈 경로 대신 안내와 다시 불러오기(여러 명 대화의 실패 카드와 같은 모양) */}
-        {loadFailed && (
-          <div className="card flex w-full flex-col items-center gap-3 py-16 text-center">
-            <p role="alert" className="text-[15px] font-bold text-ink">학습 단계를 가져오지 못했어요.</p>
-            <button type="button" onClick={retry} className="btn-primary">다시 가져오기</button>
-          </div>
-        )}
-
-        {/* 경로(61:18 / 모바일 233:45) — 모바일은 가운데, 데스크톱은 왼쪽(x 130)에 노드 열을 두고 오른쪽에 카드 */}
-        <div className={`device-mobile-path relative w-full py-2 ${hasExtra ? 'max-lg:pb-[226px]' : 'max-lg:pb-[170px]'} ${loadFailed ? 'hidden' : ''}`}
-          style={{ '--arrow-top': `${8 + vIdx * PITCH_MOBILE + 9}px` }}>
-          {!data[track] && <div role="status" className="flex min-h-[350px] items-center justify-center text-ink-muted">학습 단계를 가져오는 중…</div>}
-          {list.length > 1 && (
-            <>
-              <StageArrow dir="prev" track={track} disabled={vIdx <= 0} onClick={() => go(-1)} />
-              <StageArrow dir="next" track={track} disabled={vIdx >= list.length - 1} onClick={() => go(1)} />
-            </>
+          ) : view && (
+            /* 지금 할 단계(11/03): 예전 경로의 레슨 카드·모바일 시트를 화면 맨 위 카드 하나로 합쳤다 */
+            <section aria-labelledby="learn-now" className="flex flex-col gap-4 rounded-16 border border-line bg-white p-5 lg:gap-5 lg:p-7">
+              <div className="flex items-center gap-4">
+                {/* 마스코트(DOKA)는 지금 단계 카드에 하나만 크게 둔다. 그림은 그림자 여백까지 담아 칸보다 크다 */}
+                <span className="relative size-[56px] shrink-0 lg:size-[72px]" aria-hidden>
+                  <img src={viewOpen ? (DOKA_ASSETS[track] || DOKA_ASSETS.read).current : DOKA_ASSETS.locked} alt="" className="absolute max-w-none" style={{ top: '-7%', left: '-12%', width: '124%', height: '124%' }} />
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col gap-1 leading-figma">
+                  <h2 id="learn-now" className="break-keep text-[22px] font-bold tracking-[-0.44px] text-ink lg:text-[28px] lg:tracking-[-0.56px]">{view.title}</h2>
+                  <p className="text-[14px] text-ink-muted lg:text-[15px]">{view.no}단계 · {viewLabel}{view.desc ? ` · ${view.desc}` : ''}</p>
+                </div>
+                <button type="button" onClick={() => setGuideOpen(true)} className="btn-secondary shrink-0 px-3.5 py-2 text-[14px]">가이드</button>
+              </div>
+              {viewOpen ? (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between text-[14px] font-semibold leading-figma">
+                      <span className="text-ink-muted">진행률</span>
+                      <span className="tabular-nums text-track-dark">{progLabel}</span>
+                    </div>
+                    <div role="progressbar" aria-label={`${view.title} 진행률`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progPct)} aria-valuetext={progLabel} className="h-2.5 overflow-hidden rounded-full bg-fill">
+                      <div className="h-full rounded-full bg-track" style={{ width: `${progPct}%` }} />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2.5 sm:flex-row">
+                    <button type="button" onClick={() => open(view)} className="btn-primary btn-lg w-full sm:w-auto sm:min-w-[220px]">{startLabel}</button>
+                    {extraBtn('sm:w-auto py-3 text-[15px]')}
+                  </div>
+                </>
+              ) : (
+                <p className="text-[14px] text-ink-muted">앞 단계를 마치면 열려요.</p>
+              )}
+            </section>
           )}
 
-          <div className="path-nodes mx-auto flex w-[56px] flex-col items-center lg:mx-0 lg:ml-[130px] lg:w-[76px]">
-            {list.map((s, i) => {
-              const st = nodeStatus(s, i)
-              const clickable = st !== 'locked'
-              const onClick = () => {
-                if (st === 'skip') { setViewIdx(i); setSkipTarget(s.key) }
-                else if (clickable) navigate(s.route, { state: track === 'read' && s.stage >= 3 ? { from: 'path' } : undefined })
-              }
-              return (
-                <Fragment key={s.key}>
-                  {i > 0 && <DokaConnector done={list[i - 1].status === 'mastered'} />}
-                  <div className="relative">
-                    <button type="button" disabled={!clickable} onClick={onClick}
-                      aria-label={`${s.no}단계 ${s.title}${st === 'mastered' ? ' 숙달' : st === 'current' ? ' 진행 중' : st === 'skip' ? ' 건너뛰기 가능' : ' 잠김'}`}
-                      className={clickable ? 'block cursor-pointer' : 'block cursor-not-allowed'}>
-                      <DokaNode status={st} track={track} />
-                    </button>
-
-                    {/* 건너뛰기 말풍선(78:131) — 같은 경로 위 현재 노드를 가리지 않게 노드 오른쪽에 둔다 */}
-                    {st === 'skip' && skipTarget !== s.key && (
-                      <button type="button" onClick={() => { setViewIdx(i); setSkipTarget(s.key) }}
-                        className="absolute left-full top-1/2 z-10 ml-4 -translate-y-1/2 whitespace-nowrap rounded-13 border border-line bg-white px-2.5 py-2 text-[12px] font-bold leading-figma text-track-dark shadow-[0px_6px_16px_-2px_rgba(26,13,64,0.1)] lg:ml-[34px] lg:rounded-14 lg:px-5 lg:py-3 lg:text-[15px]">
-                        여기로 건너뛸까요?
-                        <TailLeft className="left-[-15px] top-1/2 -translate-y-1/2" />
-                      </button>
-                    )}
-
-                    {/* 건너뛰기 확인(79:100) — 데스크톱은 노드 오른쪽 팝오버, 모바일은 아래 시트 */}
-                    {st === 'skip' && skipTarget === s.key && (
-                      <div className="path-card absolute left-full z-20 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-16 border border-warn bg-white p-6 shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
-                        style={{ bottom: 'calc(50% - 21.5px)' }}>
-                        <TailLeft className="bottom-[8.5px] left-[-15px]" edgeClass="text-warn" />
-                        <p className="text-[21px] font-bold leading-figma tracking-[-0.42px] text-ink">정말로 건너뛰시겠어요?</p>
-                        <div className="flex gap-2.5">
-                          <button type="button" onClick={() => setSkipTarget(null)} className="btn-secondary flex-1 whitespace-nowrap px-2 py-[15px] text-[16px]">아니오</button>
-                          <button type="button" onClick={() => doSkip(s)} className="btn-primary flex-1 whitespace-nowrap px-2 py-[15px] text-[16px]">예, 건너뛸게요</button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 레슨 카드(75:12 · 80:115) — 보고 있는 단계 노드 오른쪽(데스크톱). 모바일은 아래 시트. */}
-                    {i === vIdx && viewOpen && (
-                      <div className="path-card absolute left-full z-10 ml-[34px] hidden w-[360px] flex-col gap-3.5 rounded-16 border border-line bg-white px-6 py-[22px] shadow-[0px_10px_28px_-4px_rgba(26,13,64,0.12)] lg:flex"
-                        style={{ bottom: hasExtra ? 'calc(50% - 100.5px)' : 'calc(50% - 37.5px)' }}>
-                        {/* 짝 맞추기 버튼(높이 49 + 간격 14)이 붙으면 카드가 위 배너를 덮지 않게 아래로 늘리고 꼬리도 그만큼 올린다 */}
-                        <TailLeft className={`${hasExtra ? 'bottom-[87.5px]' : 'bottom-[24.5px]'} left-[-15px]`} />
-                        <p className="text-[22px] font-bold leading-figma tracking-[-0.44px] text-ink">{s.title}</p>
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center justify-between text-[13px] font-bold leading-figma">
-                            <span className="text-ink-muted">진행률</span>
-                            <span className="text-track">{progLabel}</span>
-                          </div>
-                          <div role="progressbar" aria-label={`${s.title} 진행률`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progPct)} aria-valuetext={progLabel} className="h-[10px] overflow-hidden rounded-full bg-fill">
-                            <div className="h-full rounded-full bg-track" style={{ width: `${progPct}%` }} />
+          {!loadFailed && list.length > 0 && (
+            <section aria-labelledby="learn-stages" className="flex flex-col gap-2.5">
+              <SectionTitle id="learn-stages" aside={<span className="text-[13px] font-semibold tabular-nums text-ink-muted">{list.filter((s) => s.status === 'mastered').length} / {list.length} 숙달</span>}>전체 단계</SectionTitle>
+              <RowList label="전체 단계">
+                {list.map((s, i) => {
+                  const st = nodeStatus(s, i)
+                  const confirming = st === 'skip' && skipTarget === s.key
+                  return (
+                    <Row key={s.key}
+                      lead={<StageMark status={st} no={s.no} />}
+                      title={`${s.no}. ${s.title}`}
+                      desc={s.desc}
+                      meta={rowMeta(s, st)}
+                      metaClass={st === 'current' ? 'text-track-dark' : st === 'skip' ? 'text-track-dark' : 'text-ink-muted'}
+                      current={st === 'current'}
+                      onClick={st === 'locked' ? undefined : st === 'skip' ? () => setSkipTarget(confirming ? null : s.key) : () => open(s)}>
+                      {/* 건너뛰기 확인: 그 행 바로 아래에 펼친다 */}
+                      {confirming && (
+                        <div className="flex flex-col gap-3 border-t border-warn/40 bg-warn-tint px-4 py-4 lg:px-5">
+                          <p className="text-[15px] font-bold text-ink">정말로 건너뛰시겠어요?</p>
+                          <div className="flex gap-2.5">
+                            <button type="button" onClick={() => setSkipTarget(null)} className="btn-secondary btn-md flex-1">아니오</button>
+                            <button type="button" onClick={() => doSkip(s)} className="btn-primary btn-md flex-1">예, 건너뛸게요</button>
                           </div>
                         </div>
-                        {/* 처음이면 80:125 "학습 시작하기"(r15·py17·17px), 이어서면 75:23 "이어서 학습하기"(btn-lg) */}
-                        <button type="button" onClick={() => navigate(s.route, { state: track === 'read' && s.stage >= 3 ? { from: 'path' } : undefined })}
-                          className={(s.attempts ?? 0) === 0 ? 'btn-primary w-full rounded-15 py-[17px] text-[17px]' : 'btn-primary btn-lg w-full'}>
-                          {startLabel}
-                        </button>
-                        {extraBtn('py-3 text-[15px]')}
-                      </div>
-                    )}
-                  </div>
-                </Fragment>
-              )
-            })}
-          </div>
+                      )}
+                    </Row>
+                  )
+                })}
+              </RowList>
+            </section>
+          )}
         </div>
 
-        {/* 레슨 시트(모바일 233:61) — 탭 바 바로 위. 건너뛰기 확인 중이면 확인(79:100)을 이 자리에 띄운다. */}
-        {skipStage ? (
-          <div className="device-mobile-sheet fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 flex flex-col gap-[11px] rounded-t-22 border-t-2 border-warn bg-white px-[18px] pb-5 pt-[18px] shadow-sheet lg:hidden">
-            <p className="text-[17px] font-bold leading-figma text-ink">정말로 건너뛰시겠어요?</p>
-            <div className="flex gap-2.5">
-              <button type="button" onClick={() => setSkipTarget(null)} className="btn-secondary flex-1 whitespace-nowrap px-2 py-4 text-[16px]">아니오</button>
-              <button type="button" onClick={() => doSkip(skipStage)} className="btn-primary flex-1 whitespace-nowrap px-2 py-4 text-[16px]">예, 건너뛸게요</button>
-            </div>
-          </div>
-        ) : view && viewOpen && (
-          <div className="device-mobile-sheet fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] z-20 flex flex-col gap-[11px] rounded-t-22 border-t-2 border-line bg-white px-[18px] pb-5 pt-[18px] shadow-sheet lg:hidden">
-            <div className="flex items-center justify-between gap-3 font-bold leading-figma">
-              <p className="min-w-0 break-words text-[17px] text-ink">{view.title}</p>
-              <span className="shrink-0 text-[13px] text-track">{progLabel}</span>
-            </div>
-            <div role="progressbar" aria-label={`${view.title} 진행률`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progPct)} aria-valuetext={progLabel} className="h-[9px] overflow-hidden rounded-full bg-fill">
-              <div className="h-full rounded-full bg-track" style={{ width: `${progPct}%` }} />
-            </div>
-            <button type="button" onClick={() => navigate(view.route, { state: track === 'read' && view.stage >= 3 ? { from: 'path' } : undefined })} className="btn-primary w-full py-4 text-[16px]">{startLabel}</button>
-            {extraBtn('py-3 text-[15px]')}
-          </div>
-        )}
+        <aside className="flex min-w-0 flex-col gap-5 lg:gap-6" aria-label="연습과 자료">
+          <LearnExtras track={track} />
+        </aside>
       </div>
 
       <GuideModal open={guideOpen} onClose={closeGuide} initialKey={guideTab} context={guideContext} />

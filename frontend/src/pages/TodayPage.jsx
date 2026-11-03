@@ -12,6 +12,7 @@ import AppShell from '../components/AppShell'
 import { reviewAPI, tasksAPI, curriculumAPI, speakAPI, listenAPI } from '../api'
 import useStore from '../store/useStore'
 import { rewardMessage } from '../lib/reviewDue'
+import { Row, RowList } from '../components/learn/LearnRows'
 
 /**
  * 과제 탭 (Figma 137:17 · 모바일 238:160) — 일일 과제 진행/보상 + 주간 도전 + 배지.
@@ -118,6 +119,8 @@ export default function TodayPage() {
   const weekCur = week?.cur ?? 0
   const weekTotal = week?.total || 5
   const next = todayNext({ ...nextData, due, tasks })
+  // 복습이 먼저일 때도 이어서 할 단계를 한 줄로 보여 준다(복습 수를 0으로 두고 같은 규칙으로 고른다)
+  const study = next.review ? todayNext({ ...nextData, due: null, tasks }) : null
   useEffect(() => {
     if (loadState !== 'ready' || !location.hash) return
     document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' })
@@ -133,22 +136,25 @@ export default function TodayPage() {
 
   return (
     <AppShell active="today" title="오늘">
-      {/* 다음 할 일: 데스크톱은 설명 왼쪽 · 버튼 오른쪽 한 줄, 폰은 위아래 */}
-      <section className="card-flat flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
-        <div className="flex min-w-0 flex-col gap-3">
-          {next.line && <p className="break-keep text-[17px] font-semibold leading-snug text-ink">{next.line}</p>}
-          {next.retry && <button className="btn-secondary min-h-11 self-start" onClick={retryLoad}>다시 가져오기</button>}
+      {/* 지금 할 일(11/03): 위는 가장 먼저 할 것 하나와 큰 버튼, 아래 줄은 그 다음 갈 곳(이어서 할 단계·오늘의 듣기) */}
+      <section className="overflow-hidden rounded-16 border border-line bg-white">
+        <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between lg:gap-6 lg:p-6">
+          <div className="flex min-w-0 flex-col gap-3">
+            {next.line && <p className="break-keep text-[19px] font-bold leading-snug tracking-[-0.3px] text-ink lg:text-[22px]">{next.line}</p>}
+            {next.retry && <button className="btn-secondary min-h-11 self-start" onClick={retryLoad}>다시 가져오기</button>}
+          </div>
+          <button className="btn-primary btn-lg w-full shrink-0 lg:w-auto lg:min-w-[240px]" onClick={() => navigate(next.to, { state: next.state })}>{next.label}</button>
         </div>
-        <button className="btn-primary btn-lg w-full shrink-0 lg:w-auto lg:min-w-[240px]" onClick={() => navigate(next.to, { state: next.state })}>{next.label}</button>
+        {((study && !study.retry && study.line) || nextData.links?.listen_started) && (
+          <ul aria-label="바로 가기" className="divide-y divide-line border-t border-line">
+            {study && !study.retry && study.line && <Row title={study.line} meta={study.label} metaClass="text-track-dark" onClick={() => navigate(study.to, { state: study.state })} />}
+            {nextData.links?.listen_started && <Row title="오늘의 듣기" meta="소리 듣기 · 15분" onClick={() => navigate('/listen/today?from=today')} />}
+          </ul>
+        )}
       </section>
-      <div className="today-grid contents">
       {!due && <section className="card-flat flex flex-wrap items-center justify-between gap-2" role="alert"><p className="text-sm text-ink-muted">복습할 것을 가져오지 못했어요.</p><button className="btn-secondary min-h-11 px-3" onClick={retryLoad}>다시 가져오기</button></section>}
-      {!next.review && todayReviewCount(due) > 0 && <section id="review" className="card-flat flex flex-col gap-3">
-        <h2 className="text-[16px] font-semibold text-ink lg:text-[17px]">오늘 복습 <span className="tabular-nums">{todayReviewCount(due)}</span>개</h2>
-        <div className="flex flex-wrap gap-2">{[['입모양 읽기', due?.count, '/review/scheduled'], ['말하기', due?.speak_count, '/review/speaking'], ...(nextData.links?.listen_started ? [['소리 듣기', due?.listen_count, '/listen/review']] : [])].filter(([, n]) => n > 0).map(([label, n, to]) => <button key={to} className="min-h-11 rounded-full bg-surface-sunken px-4 text-[14px] font-medium text-ink transition-colors hover:bg-surface-hover" onClick={() => navigate(to)}>{label} <span className="font-semibold tabular-nums">{n}</span>개</button>)}</div>
-        <button className="btn-secondary btn-md" onClick={() => navigate(todayReviewStart(due))}>복습 시작하기</button>
-      </section>}
-      {nextData.links?.listen_started && <button className="card-flat min-h-11 text-left font-bold" onClick={() => navigate('/listen/today?from=today')}>오늘의 듣기 · 15분</button>}
+      <div className="grid items-start gap-3.5 lg:gap-5 min-[1180px]:grid-cols-2">
+      <div className="flex min-w-0 flex-col gap-3.5 lg:gap-5">
       {/* 오늘의 과제 (137:187 / 238:250) */}
       <section id="tasks" className="flex w-full flex-col gap-3.5 rounded-16 border border-line bg-white p-[18px] lg:gap-[18px] lg:p-[22px]">
         <div className="flex items-start justify-between gap-2 font-bold leading-figma">
@@ -169,6 +175,13 @@ export default function TodayPage() {
         {!tasks && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted"><p>과제를 가져오지 못했어요.</p><button className="btn-secondary min-h-11 px-3" onClick={retryLoad}>다시 가져오기</button></div>}
       </section>
 
+      </div>
+      <div className="flex min-w-0 flex-col gap-3.5 lg:gap-5">
+      {!next.review && todayReviewCount(due) > 0 && <section id="review" className="card-flat flex flex-col gap-3">
+        <h2 className="text-[16px] font-semibold text-ink lg:text-[17px]">오늘 복습 <span className="tabular-nums">{todayReviewCount(due)}</span>개</h2>
+        <div className="flex flex-wrap gap-2">{[['입모양 읽기', due?.count, '/review/scheduled'], ['말하기', due?.speak_count, '/review/speaking'], ...(nextData.links?.listen_started ? [['소리 듣기', due?.listen_count, '/listen/review']] : [])].filter(([, n]) => n > 0).map(([label, n, to]) => <button key={to} className="min-h-11 rounded-full bg-surface-sunken px-4 text-[14px] font-medium text-ink transition-colors hover:bg-surface-hover" onClick={() => navigate(to)}>{label} <span className="font-semibold tabular-nums">{n}</span>개</button>)}</div>
+        <button className="btn-secondary btn-md" onClick={() => navigate(todayReviewStart(due))}>복습 시작하기</button>
+      </section>}
       {/* 이번 주 도전 — 11/03부터 보라 바탕·워터마크 대신 흰 카드 + 트랙색 진행 막대 */}
       {week && <section className="flex w-full flex-col gap-3 rounded-16 border border-line bg-white p-[18px] leading-figma lg:p-[22px]">
         <div className="flex items-baseline justify-between gap-3">
@@ -184,6 +197,7 @@ export default function TodayPage() {
         </div>
       </section>}
 
+      </div>
       </div>
       <RewardToast text={toast} />
     </AppShell>

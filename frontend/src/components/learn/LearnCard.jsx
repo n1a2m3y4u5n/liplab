@@ -13,7 +13,7 @@ export const LISTEN_CARDS = [
   { key: 'classroom', title: '소리 교실', desc: '소리 짝을 여러 목소리로 들어 봐요', to: '/listen/classroom' },
 ]
 
-function CardIcon({ card }) {
+export function CardIcon({ card }) {
   if (card.icon) return <img src={card.icon} alt="" className="size-[22px] lg:size-6" />
   return (
     <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="size-[22px] text-listen-dark lg:size-6">

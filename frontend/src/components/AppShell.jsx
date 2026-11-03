@@ -58,16 +58,15 @@ function Stat({ icon, box, w = box, h = box, value, className }) {
   )
 }
 
-/** 모바일 상단 바(232:36) — 로고 + 불꽃·별·아바타(→ /profile). 배경은 페이지색이라 본문과 이어진다. */
+/** 모바일 상단 바(232:36) — 로고 + 연속 학습(불꽃) + Aa + 피드백. 11/03: 별(경험치)은 내 정보·기록에 있어 상단에서 뺐다. 배경은 페이지색이라 본문과 이어진다. */
 function MobileTopBar({ pink }) {
   const navigate = useNavigate()
-  const { xp, streak } = useStats()
+  const { streak } = useStats()
   return (
     <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-x-2 bg-page pl-[max(18px,env(safe-area-inset-left))] pr-[max(18px,env(safe-area-inset-right))] pb-[14px] pt-[max(16px,env(safe-area-inset-top))] lg:hidden">
       <Link to="/about" aria-label="LIPLAB 소개" className="inline-flex min-h-11 shrink-0 items-center"><Logo size={20} pink={pink} /></Link>
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <Stat icon="/ui/stat-flame.svg" box={17} value={streak} className="gap-1 text-[14px] text-stat-streak" />
-        <Stat icon="/ui/lp-232-48-star.svg" box={15} w={14.27} h={13.57} value={xp.toLocaleString()} className="gap-1 text-[14px] text-stat-xp" />
         <Button variant="secondary" onClick={() => window.dispatchEvent(new Event('liplab:a11y-toggle'))} aria-label="접근성 설정"
           className="grid size-11 shrink-0 place-items-center rounded-full border-0 bg-transparent p-0 text-[15px] font-semibold tracking-tight text-ink-muted hover:bg-surface-sunken hover:text-ink">
           Aa
