@@ -1,0 +1,30 @@
+{
+  "backend/models/dgop_ours/aligner/model.int8.safetensors": {
+    "bytes": 355370604,
+    "sha256": "18681947f740b7486f8fa4f93c7c0f68fe1595ac4fa9822800dfd38d713f5e66"
+  },
+  "backend/models/dgop_ours/scorer/model.int8.safetensors": {
+    "bytes": 355370604,
+    "sha256": "e8340d58dd911e380eca508815526eb77ec658560456ce1fe4c16b9b6e3654c4"
+  },
+  "backend/models/dgop_stream/calibration.json": {
+    "bytes": 1092,
+    "sha256": "7e12e8a40184400e526b0387381b47883780f9b83b608c547b17678c90016a5e"
+  },
+  "backend/models/dgop_stream/student_w8.onnx": {
+    "bytes": 104603007,
+    "sha256": "b1faf8cf6c440506a3cbe37f5541144c2cda21529e82175984dfda04be94c82a"
+  },
+  "backend/models/kr_a4_wavlm.pt": {
+    "bytes": 9534078,
+    "sha256": "b0e2b6a27c3017b0d2fb2a05e05dc4ef576e12dfda5d6116959f5843c8d2773e"
+  },
+  "frontend/public/models/roi/kr_lipread_roi.web.meta.json": {
+    "bytes": 1228,
+    "sha256": "f0bf487ef4d145c3ca9cfddf4de05c0d8652475bda0cd1916dc4f2f45090f5bb"
+  },
+  "frontend/public/models/roi/kr_lipread_roi.web.onnx": {
+    "bytes": 6096954,
+    "sha256": "d3c01830f4397955d658545a623df0f0aa662fce86dca51803c1198df9acaa36"
+  }
+}

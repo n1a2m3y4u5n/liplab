@@ -20,3 +20,14 @@ frontend/dist
 **/.env.*
 !**/.env.example
 **/.pytest_cache
+
+# 빌드에 쓰지 않는 큰 폴더·문서·테스트(11/03 검토 O7). 업로드 context가 932MB까지 커졌고 코드 한 줄에도 전부 올라갔다.
+# 이미지가 읽는 것은 frontend/, backend/(테스트 제외), scripts/pilot_retention.py, Dockerfile뿐이다.
+out
+data_out
+docs
+hardware
+*.pdf
+backend/test_*.py
+backend/conftest.py
+backend/__pycache__

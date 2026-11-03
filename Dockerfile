@@ -28,8 +28,9 @@ RUN if [ "$LIPREAD_ROI" = "1" ]; then \
       || { echo "frontend/public/models/roi/ 모델이 없다(DEPLOY.md 11항)"; exit 1; }; \
     else rm -rf public/models/roi; fi
 
-# Build for production
-RUN npm run build
+# Build for production. ORT wasm(약 11MB)은 앱이 jsDelivr에서 받으므로(lib/modelCapability.js wasmPaths) 이미지에서 뺀다.
+# 자체 호스팅으로 바꾸면 이 줄도 함께 지운다(둘 중 하나만).
+RUN npm run build && rm -f dist/assets/ort-wasm-*.wasm
 
 # Stage 2: Python backend with FastAPI
 FROM python:3.11-slim
@@ -66,20 +67,29 @@ ARG WITH_ML=0
 # 9/26부터는 미리 변환한 int8 파일(model.int8.safetensors, 모델당 355MB)을 싣는다. fp32(1.26GB)도 받지만 켜질 때 느리다.
 ARG DGOP_MODEL=kresnik
 COPY backend/requirements-infer.txt ./
+# A4 아바타 백본(WavLM-large)은 받기·int8 변환·fp32 삭제를 이 한 RUN에서 끝낸다. 예전에는 받은 fp32(약 1.2GB)가 이 층에 남고 뒤 층에서 지워
+# 이미지가 그만큼 컸다(층은 지워도 줄지 않는다). 변환 도구 quant_int8.py만 먼저 가져온다(torch·transformers 외 의존 없음).
+# 변환 결과는 /app/models/wavlm_large_int8이고, 모델 COPY는 그 뒤라 같은 폴더에 합쳐진다.
+COPY backend/quant_int8.py ./
 RUN if [ "$WITH_ML" = "1" ]; then \
       pip install --no-cache-dir torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu && \
       pip install --no-cache-dir -r requirements-infer.txt && \
-      python -c "from transformers import AutoModel, AutoModelForCTC, AutoProcessor; \
+      python -c "from transformers import AutoModelForCTC, AutoProcessor; \
 k='kresnik/wav2vec2-large-xlsr-korean'; \
-'$DGOP_MODEL' == 'kresnik' and (AutoProcessor.from_pretrained(k), AutoModelForCTC.from_pretrained(k)); \
-AutoModel.from_pretrained('microsoft/wavlm-large')"; \
+'$DGOP_MODEL' == 'kresnik' and (AutoProcessor.from_pretrained(k), AutoModelForCTC.from_pretrained(k))" && \
+      python -c "import quant_int8 as Q; print('wavlm int8:', Q.export_base('microsoft/wavlm-large', 'models/wavlm_large_int8'))" && \
+      rm -rf "$HF_HOME/hub/models--microsoft--wavlm-large"; \
     fi
 
 # torch CPU 색인이 주는 setuptools 78.1은 알려진 취약점이 있다(pip-audit 관문). 위 층의 캐시를 비우지 않게 따로 올린다.
 RUN if [ "$WITH_ML" = "1" ]; then pip install --no-cache-dir --upgrade "setuptools>=84.1.0"; fi
 
-# Copy backend source
-COPY backend/ ./
+# 모델(가장 크고 드물게 바뀜)을 코드보다 먼저 싣는다: 코드 한 줄을 고쳐도 모델 층을 다시 올리지 않는다(11/03 검토 O6).
+COPY backend/models/ ./models/
+# Copy backend source (모델 폴더는 위에서 실었다. backend 최상위의 .py·.json과 data/ — 새 최상위 폴더가 생기면 여기에 더한다)
+COPY backend/*.py backend/*.json ./
+COPY backend/data/ ./data/
+RUN test -s main.py && test -d data && test -d models
 # 자체 학습 채점 모델로 빌드할 때는 체크포인트가 빌드 폴더에 있어야 한다(없으면 D-GOP가 전사로 폴백하므로 빌드를 멈춘다).
 # 켜질 때와 같은 적재 경로(backbone_service._load_ctc, fly.dev.toml의 BACKBONE_QUANT=int8)로 전처리기까지 실제로 올려 본다
 # (이 이미지의 torch·transformers로 못 읽으면 배포 전에 빌드에서 멈춘다). int8 파일로 올렸는지(file) 실행 중 변환인지(runtime)와
@@ -97,12 +107,10 @@ x=torch.zeros(1, 16000); \
 print('dgop_ours ok:', [(d, getattr(m, 'liplab_quant_from', None)) for d, p, m in rs], 'torch', torch.__version__, 'transformers', transformers.__version__)"; \
     fi
 
-# A4 아바타 백본(WavLM-large)을 int8로 바꿔 싣고 fp32 허브 캐시는 지운다(9/27 세션 10 관문 통과: jawOpen 상관 0.9995,
+# A4 아바타 백본(WavLM-large)의 int8 변환·fp32 삭제는 위 ML RUN에서 끝났다(9/27 세션 10 관문 통과: jawOpen 상관 0.9995,
 # 앱 프로세스 메모리 약 0.87GiB 감소, 켜질 때 읽는 양 1.26GB → 0.36GB, 추론 1.08배, docs/speed-int8-a4.md). audio2face는
 # models/wavlm_large_int8의 원본 id(source)가 체크포인트 백본과 같을 때 그 폴더를 쓴다. 켜질 때와 같은 경로로 올려 본다.
 RUN if [ "$WITH_ML" = "1" ]; then \
-      python -c "import quant_int8 as Q; print('wavlm int8:', Q.export_base('microsoft/wavlm-large', 'models/wavlm_large_int8'))" && \
-      rm -rf "$HF_HOME/hub/models--microsoft--wavlm-large" && \
       python -c "import torch, backbone_service as B, audio2face as A; torch.set_grad_enabled(False); \
 loc = A._backbone_location('microsoft/wavlm-large'); p, m = B._load_base(loc, 'cpu'); m(torch.zeros(1, 16000)); \
 print('a4 backbone ok:', loc, m.liplab_quant_from, 'torch', torch.__version__)"; \

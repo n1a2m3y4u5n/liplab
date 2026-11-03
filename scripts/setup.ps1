@@ -1,4 +1,4 @@
-# LIPLAB Setup Script for Windows (PowerShell)
+﻿# LIPLAB Setup Script for Windows (PowerShell)
 
 Write-Host "🚀 LIPLAB Setup Script" -ForegroundColor Cyan
 Write-Host "=====================" -ForegroundColor Cyan
@@ -35,9 +35,12 @@ if (-not (Test-Path .env)) {
 Write-Host "🔧 Setting up backend..." -ForegroundColor Cyan
 Set-Location backend
 python -m venv venv
+if ($LASTEXITCODE -ne 0) { Write-Host "가상환경을 만들지 못했어요." -ForegroundColor Red; exit 1 }
 .\venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
+if ($LASTEXITCODE -ne 0) { Write-Host "pip 업그레이드에 실패했어요." -ForegroundColor Red; exit 1 }
 pip install -r requirements.txt
+if ($LASTEXITCODE -ne 0) { Write-Host "백엔드 의존성 설치에 실패했어요(위 오류를 확인하세요)." -ForegroundColor Red; exit 1 }
 Set-Location ..
 Write-Host "✅ Backend setup complete" -ForegroundColor Green
 Write-Host ""
@@ -46,6 +49,7 @@ Write-Host ""
 Write-Host "🎨 Setting up frontend..." -ForegroundColor Cyan
 Set-Location frontend
 npm install
+if ($LASTEXITCODE -ne 0) { Write-Host "프론트 의존성 설치에 실패했어요." -ForegroundColor Red; exit 1 }
 Write-Host "✅ Frontend setup complete" -ForegroundColor Green
 Write-Host ""
 

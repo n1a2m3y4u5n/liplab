@@ -421,51 +421,62 @@ fly secrets unset KEY --app liplab
 
 ### 데이터베이스 관리
 
-#### PostgreSQL 접속
-```bash
-fly postgres connect -a liplab-db
+liplab-dev와 전시앱은 SQLite 파일(`/data/liplab.db`, 볼륨 `liplab_data`)을 쓴다. 옛 PostgreSQL 절차(`fly postgres ...`)는 쓰지 않는다.
+
+#### 백업(11/03 추가)
+- **켜질 때 자동**: 행을 지우거나 표를 다시 만드는 마이그레이션(중복 정리, `usage_events` 재구성)이 필요하면 먼저
+  `/data/backup/pre-<UTC>.db`로 `VACUUM INTO` 사본을 남기고 최근 3개만 둔다(`backend/ops_safety.py`, `LIPLAB_BACKUP_KEEP`로 조절).
+  지운 행 수는 로그에 `[MIGRATE] 표: 중복 N행 삭제`로 남는다.
+- **배포 때**: `scripts/deploy_dev.ps1`이 배포 직전에 같은 이름의 사본을 한 번 더 남긴다.
+- 볼륨 스냅샷 보존 기간은 사람이 정한다(비용). 사본은 같은 볼륨 안이라 볼륨이 사라지면 함께 사라진다 — 오래 둘 사본은 따로 내려받는다.
+
+```powershell
+# 사본 목록과 내려받기(전시앱은 -a liplab, 여기서는 dev)
+flyctl ssh console -a liplab-dev -C "ls -la /data/backup"
+flyctl ssh sftp get /data/backup/pre-<UTC>.db -a liplab-dev
 ```
 
-#### 백업
-```bash
-# 자동 백업은 Fly.io가 관리
-# 수동 백업
-fly postgres backup --app liplab-db
+#### 복원(DB 되돌리기)
+이미지 되돌리기는 DB를 되돌리지 않는다. DB가 망가졌을 때만 한다. 복원 전에 현재 파일을 따로 복사해 둔다.
+```powershell
+flyctl ssh console -a liplab-dev -C "cp /data/liplab.db /data/liplab.broken.db"
+flyctl ssh console -a liplab-dev -C "cp /data/backup/pre-<UTC>.db /data/liplab.db"
+flyctl machine restart -a liplab-dev     # 켜질 때 마이그레이션을 다시 돈다
 ```
+복원 뒤 `https://liplab-dev.fly.dev/health/ready`가 200인지 확인한다.
 
-#### 복원
-```bash
-fly postgres restore --app liplab-db --backup <backup-id>
+#### 준비 점검
+`GET /health/ready`: DB 질의, 켜질 때 마이그레이션 경고 수, 데이터 폴더 쓰기·여유 공간(50MB 미만이면 503)을 본다.
+`/health`(fly 상태 점검 경로)는 그대로 고정 응답이다.
+
+### 배포와 롤백(liplab-dev)
+
+배포는 `scripts/deploy_dev.ps1`로 한다(전시앱 `liplab`에는 쓰지 않는다. 앱 이름이 `liplab-dev`가 아니면 스크립트가 중단한다).
+```powershell
+# 1) 관문(커밋된 상태에서). 통과하면 <보고 폴더>\PREDEPLOY_DEV_OK.json이 남는다
+powershell -File scripts\predeploy_dev.ps1 -ReportDirectory <보고 폴더>
+# 2) 배포: 관문 표식 대조 → 직전 이미지 기록 → DB 사본 → 배포 → /health/ready → 채점 포함 스모크 → 실패 시 직전 이미지로 되돌림
+powershell -File scripts\deploy_dev.ps1 -GateReport <보고 폴더> -OutDirectory <배포 기록 폴더>
+# 계획만 보려면 -DryRun
 ```
-
-### 롤백
-
-#### 이전 버전으로 복구
-```bash
-# 릴리스 히스토리 확인
-fly releases --app liplab
-
-# 특정 버전으로 롤백
-fly releases rollback <version> --app liplab
-```
+기록 폴더에 `previous-image.json`(직전 이미지), `deploy-report.txt`(커밋·DB 사본 경로·스모크 결과), `smoke-results.json`이 남는다.
+수동으로 되돌릴 때: `flyctl deploy -c fly.dev.toml -a liplab-dev --image <previous-image.json의 image>`(옛 `fly releases rollback`은 쓰지 않는다).
 
 ### SSH 접속
 
 ```bash
-fly ssh console --app liplab
+flyctl ssh console -a liplab-dev
 ```
 
 컨테이너 내부에서:
 ```bash
 # 데이터베이스 확인
-python -c "from database import engine; print(engine.url)"
-
-# 로그 확인
-tail -f /var/log/*.log
+ls -la /data /data/backup
 
 # 프로세스 확인
 ps aux | grep uvicorn
 ```
+로그는 파일이 아니라 `flyctl logs -a liplab-dev`로 본다.
 
 ---
 
@@ -732,6 +743,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\predeploy_dev.ps1
 먼저 int8 정렬기·채점기, S4 학생·보정, A4 파일과 dev 빌드 인자를 확인한다.
 v16의 `WITH_ML=1`, `DGOP_MODEL=ours`, `DGOP_STREAM=1`을 유지하고 로컬 Vite 빌드에도
 `VITE_DGOP_STREAM=1`을 적용한다. E/E2·V15·ROI 등 기본 꺼진 실험 플래그는 켜지 않는다.
+
+> 11/03부터 아래 수작업 단계(직전 이미지 기록·DB 사본·채점 스모크·되돌림)는 `scripts/deploy_dev.ps1`이 묶어서 한다(위 '배포와 롤백').
 
 토큰이 주입되고 관문이 통과한 뒤, 배포 전 `fly releases -a liplab-dev --image`로 직전 이미지 전체 주소를 기록한다.
 배포 및 이미지 되돌리기는 모두 dev 앱을 명시한다(볼륨·DB 변경은 이미지 되돌리기에 포함되지 않는다).

@@ -1,11 +1,17 @@
-param(
+﻿param(
     [string]$Python = '',
-    [string]$ReportDirectory = ''
+    [string]$ReportDirectory = '',
+    [string]$BaseRef = 'origin/main',   # fly.toml(전시앱)·Dockerfile ARG 기본값을 대조할 기준 판
+    [switch]$AllowConfigChange          # 전시앱 설정이나 ARG 기본값을 의도해서 바꿀 때만
 )
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-if (!$Python) { $Python = Join-Path $root '.venv\Scripts\python.exe' }
+# 기본 Python은 관문 전용 gate-venv다(운영 규칙). 없을 때만 저장소의 .venv로 물러난다.
+if (!$Python) {
+    $gatePython = 'D:\work\hq\projects\liplab-wt\gate-venv\Scripts\python.exe'
+    $Python = if (Test-Path -LiteralPath $gatePython) { $gatePython } else { Join-Path $root '.venv\Scripts\python.exe' }
+}
 if (!$ReportDirectory) { $ReportDirectory = Join-Path $root 'out' }
 $Python = (Resolve-Path -LiteralPath $Python).Path
 New-Item -ItemType Directory -Force -Path $ReportDirectory | Out-Null
@@ -24,6 +30,16 @@ try {
     foreach ($name in $settings.Keys) {
         $savedEnv[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
         [Environment]::SetEnvironmentVariable($name, $settings[$name], 'Process')
+    }
+    Invoke-Gate 'frontend node_modules matches package-lock.json' { & node scripts/check_node_lock.mjs frontend }
+    Invoke-Gate 'gate script unit tests (node)' { & node --test scripts/check_node_lock.test.mjs }
+    Invoke-Gate 'model sha256 vs expected (scripts/dev_assets.sha256.json)' {
+        & $Python -X utf8 scripts/check_assets.py --report (Join-Path $ReportDirectory 'model-hashes.json')
+    }
+    Invoke-Gate 'fly.toml / Dockerfile ARG defaults unchanged + gate meta' {
+        $cfgArgs = @('--base', $BaseRef, '--meta', (Join-Path $ReportDirectory 'gate-meta.json'))
+        if ($AllowConfigChange) { $cfgArgs += '--allow-change' }
+        & $Python -X utf8 scripts/check_config.py @cfgArgs
     }
     Invoke-Gate 'API security inventory' { & $Python -X utf8 scripts/api_security_inventory.py --check }
     Invoke-Gate 'installed runtime dependency closure' {
@@ -89,6 +105,10 @@ print('liplab-dev config OK; DGOP_STREAM=1; LIPREAD_ROI=1; experimental flags of
     Invoke-Gate 'scoring regression quick' {
         & $Python -X utf8 scripts/scoring_regress.py --quick --report (Join-Path $ReportDirectory 'scoring-regress-quick.md')
     }
+    # deploy_dev.ps1이 읽는 통과 표식(같은 커밋·트리인지 배포 직전에 대조한다)
+    $meta = Get-Content -LiteralPath (Join-Path $ReportDirectory 'gate-meta.json') -Raw | ConvertFrom-Json
+    @{ ok = $true; commit = $meta.commit; tree = $meta.tree; at_utc = (Get-Date).ToUniversalTime().ToString('o') } |
+        ConvertTo-Json | Set-Content -LiteralPath (Join-Path $ReportDirectory 'PREDEPLOY_DEV_OK.json') -Encoding utf8
     Write-Host 'PREDEPLOY_DEV_OK'
 } catch {
     Write-Host "PREDEPLOY_DEV_FAILED: $_"

@@ -2,8 +2,11 @@
 Database configuration and models for LIPLAB
 Supports both SQLite (development) and PostgreSQL (production)
 """
+import asyncio
 import os
 from datetime import datetime
+
+import ops_safety
 from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, ForeignKey, Boolean, UniqueConstraint
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -818,6 +821,10 @@ _ADD_COLUMNS = (
 
 async def init_db():
     """Initialize database tables"""
+    # 켜질 때 행을 지우거나 표를 다시 만들 일이 있으면 먼저 사본을 남긴다(ops_safety, 최근 3개만 보존)
+    _path = ops_safety.sqlite_path(DATABASE_URL)
+    if _path:
+        await asyncio.to_thread(ops_safety.backup_before_migration, _path, _UNIQUE_KEYS)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await _add_missing_columns(conn)
@@ -865,7 +872,7 @@ async def _add_missing_columns(conn, columns=_ADD_COLUMNS) -> list:
                 await conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {col} {ddl_type}")
             added.append((table, col))
         except Exception as e:   # 켜지는 것을 막지 않는다. 다만 조용히 넘기지 않는다
-            print(f"[WARN] {table}.{col} 컬럼 추가 실패: {e}")
+            ops_safety.record_warning(f"[WARN] {table}.{col} 컬럼 추가 실패: {e}")
     return added
 
 
@@ -894,13 +901,13 @@ async def _pilot_seq_index(conn) -> None:
             await conn.exec_driver_sql(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ux_learning_profiles_pilot_seq ON learning_profiles (pilot_seq)")
     except Exception as e:
-        print(f"[WARN] learning_profiles.pilot_seq 고유 인덱스 실패(겹친 순번 확인 필요): {e}")
+        ops_safety.record_warning(f"[WARN] learning_profiles.pilot_seq 고유 인덱스 실패(겹친 순번 확인 필요): {e}")
     try:   # 유지 검사(C7)는 사후 검사 하나에 한 행(두 번 눌러 두 행이 생기던 것)
         async with _Isolated(conn):
             await conn.exec_driver_sql(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ux_retention_results_user_post ON retention_results (user_id, post_result_id)")
     except Exception as e:
-        print(f"[WARN] retention_results 고유 인덱스 실패(겹친 행 확인 필요): {e}")
+        ops_safety.record_warning(f"[WARN] retention_results 고유 인덱스 실패(겹친 행 확인 필요): {e}")
 
 
 async def _listen_test_index(conn) -> None:
@@ -913,7 +920,7 @@ async def _listen_test_index(conn) -> None:
                 "CREATE UNIQUE INDEX IF NOT EXISTS ux_listen_attempts_test_item ON listen_attempts (user_id, session, item_key) "
                 "WHERE session LIKE 'test:%' OR session LIKE 'wtest:%'")
     except Exception as e:
-        print(f"[WARN] listen_attempts 검사 문항 고유 인덱스 실패(겹친 답 확인 필요): {e}")
+        ops_safety.record_warning(f"[WARN] listen_attempts 검사 문항 고유 인덱스 실패(겹친 답 확인 필요): {e}")
 
 
 async def _dedupe_and_index(conn) -> None:
@@ -923,14 +930,16 @@ async def _dedupe_and_index(conn) -> None:
             async with _Isolated(conn):
                 await _dedupe_one(conn, table, key, order, name)
         except Exception as e:   # 켜지는 것을 막지 않는다(조회 쪽도 여러 행에서 첫 행을 쓴다)
-            print(f"[WARN] {table} 중복 정리·고유 인덱스 실패: {e}")
+            ops_safety.record_warning(f"[WARN] {table} 중복 정리·고유 인덱스 실패: {e}")
 
 
 async def _dedupe_one(conn, table: str, key: str, order: str, name: str) -> None:
-    await conn.exec_driver_sql(
+    res = await conn.exec_driver_sql(
         f"DELETE FROM {table} WHERE id IN (SELECT id FROM ("
         f"SELECT id, ROW_NUMBER() OVER (PARTITION BY {key} ORDER BY {order}) AS rn FROM {table}"
         f") AS ranked WHERE rn > 1)")
+    if res.rowcount and res.rowcount > 0:   # 지운 행 수를 남긴다(값은 남기지 않는다)
+        print(f"[MIGRATE] {table}: 중복 {res.rowcount}행 삭제")
     await conn.exec_driver_sql(f"CREATE UNIQUE INDEX IF NOT EXISTS {name} ON {table} ({key})")
 
 
@@ -963,7 +972,7 @@ async def _user_indexes(conn) -> None:
             async with _Isolated(conn):
                 await conn.exec_driver_sql(f"CREATE INDEX IF NOT EXISTS {name} ON {table} ({cols})")
         except Exception as e:   # 켜지는 것을 막지 않는다
-            print(f"[WARN] {table} 인덱스 실패: {e}")
+            ops_safety.record_warning(f"[WARN] {table} 인덱스 실패: {e}")
 
 
 async def close_db():

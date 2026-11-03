@@ -155,7 +155,7 @@ _MAX_BODY_OTHER = 2 * 1024 * 1024
 async def _limit_body(request, call_next):
     # Cloudflare 앞단을 쓰면(LIPLAB_ORIGIN_SECRET) fly 주소로 바로 오는 요청을 막는다. 공격자가 방화벽을 건너뛰지 못하게.
     # /health는 fly 상태 점검이 기계에 직접 부르므로 뺀다.
-    if request.url.path != "/health" and not ratelimit.origin_ok(request):
+    if request.url.path not in ("/health", "/health/ready") and not ratelimit.origin_ok(request):
         return _JSONResponse(status_code=403, content={"detail": "forbidden"})
     llm_budget.current_client.set(ratelimit._client_key(request))   # LLM 하루 한도의 IP별 계수(llm_budget)
     cl = request.headers.get("content-length")
@@ -7465,6 +7465,29 @@ async def health_check():
         "service": "LIPLAB API",
         "version": "1.0.0"
     }
+
+
+@app.get("/health/ready")
+async def health_ready():
+    """준비 점검(fly 상태 점검 경로는 그대로 /health). DB 질의, 켜질 때 마이그레이션 경고, 데이터 폴더 쓰기·여유 공간을 본다.
+    값·경로는 내지 않는다. 하나라도 못 쓰면 503, 마이그레이션 경고만 있으면 200 'degraded'."""
+    import ops_safety
+    from database import AsyncSessionLocal, DATABASE_URL
+    from sqlalchemy import text
+    checks = {"db": False}
+    try:
+        async with AsyncSessionLocal() as db:
+            await db.execute(text("SELECT 1"))
+        checks["db"] = True
+    except Exception as e:
+        logging.getLogger("liplab").error("ready db: %s", type(e).__name__)
+    data = await asyncio.to_thread(ops_safety.data_dir_status, ops_safety.sqlite_path(DATABASE_URL))
+    checks["data"] = data
+    warnings = len(ops_safety.MIGRATION_WARNINGS)
+    ok = checks["db"] and (not data.get("checked") or (data["writable"] and data["enough_space"]))
+    body = {"status": "ready" if ok and not warnings else "degraded" if ok else "not_ready",
+            "checks": checks, "schema_warnings": warnings}
+    return _JSONResponse(status_code=200 if ok else 503, content=body)
 
 
 # ============================================
