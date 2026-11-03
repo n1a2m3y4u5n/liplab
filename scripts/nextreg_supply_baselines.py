@@ -4,10 +4,12 @@ from pathlib import Path
 import subprocess
 import time
 
+from hosts_config import host
+
 ROOT = Path(r'D:\work\hq\projects\liplab-lab\data\nextreg_2026-11')
 BASE = Path(r'D:\work\hq\projects\liplab-lab\data\roi-kmsav\run_base')
-BLACK = 'cnsai@100.87.95.61:D:/work/liplab-gpu3/nextreg_2026-11/'
-MAIN = 'korea@100.84.54.20:D:/work/hq/projects/liplab-gpu2/data/run_base/run_B33s1/'
+BLACK = host('black') + ':D:/work/liplab-gpu3/nextreg_2026-11/'   # 주소·계정은 저장소 밖 설정(hosts_config.py)
+MAIN = host('lab_main') + ':D:/work/hq/projects/liplab-gpu2/data/run_base/run_B33s1/'
 
 
 def call(args):

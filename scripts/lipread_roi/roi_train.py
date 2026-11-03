@@ -1108,6 +1108,34 @@ def score4_onnx(path, seqs, items, gather):
     return {1: {k: float(np.mean(v)) for k, v in hits.items()}, 2: {}}
 
 
+def score4_onnx_fusion(path, seqs, items, gather, gather_lips):
+    """결합 웹 그래프(입력 roi_z [1,T,80,80] + lips [1,T,80])로 score4_onnx와 같은 4지를 낸다. dup1만.
+    기존 score4_onnx·score4는 바꾸지 않았고, 이 함수는 판정에 쓰지 않는다(웹 그래프가 학습 그래프와 같은 답을 내는지 보는 검증 도구, 11/03 M20).
+    gather_lips([g]) → (L, lens): L[0, :lens[0]]은 선택 프레임의 lips 좌표 (T,80) float32."""
+    import onnxruntime as ort
+    import torch
+    s = ort.InferenceSession(path, providers=['CPUExecutionProvider'])
+    names = [i.name for i in s.get_inputs()]
+    assert sorted(names) == ['lips', 'roi_z'], names
+    hits = defaultdict(list)
+    for i, g in enumerate(seqs):
+        it = items[i]
+        if g is None:
+            hits[it['spk']].append(0)
+            continue
+        X, lens = gather([g])
+        x = X[0, :int(lens[0])].astype(np.float64) / 255.0
+        x = x - x.mean()
+        x = x / max(float(np.sqrt((x * x).mean())), 1e-2)
+        L, llens = gather_lips([g])
+        lips = np.asarray(L[0, :int(llens[0])], np.float32)
+        assert lips.shape[0] == x.shape[0], (lips.shape, x.shape)
+        lo = s.run(['logits'], {'roi_z': x[None].astype(np.float32), 'lips': lips[None]})[0][0]
+        lp = torch.log_softmax(torch.from_numpy(lo).float(), -1)
+        hits[it['spk']].append(int(int(np.argmax(ctc_scores(lp, it['labs']))) == it['tgt']))
+    return {1: {k: float(np.mean(v)) for k, v in hits.items()}, 2: {}}
+
+
 def cmd_p4(a):
     import torch
     from d_bench import Bench

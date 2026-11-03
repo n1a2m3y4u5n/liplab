@@ -45,3 +45,12 @@ export function lipreadCheckCopy(env = ENV) {
 export function lipreadRoiOn(env = ENV) {
   return String(env.VITE_LIPREAD_ROI || '').trim() === '1'
 }
+
+/**
+ * 후보 입술 읽기 모델 ID(VITE_LIPREAD_MODEL, 기본 끔, 11/03 검토 M3). 비어 있거나 '0'이면 null이고, 앱은 지금 경로(R2/BS)를 그대로 쓴다.
+ * 값이 있으면 /models/lipread/manifest.json에서 그 ID의 항목을 고른다(lipreadManifest.js). 판정 전에는 fly 설정·Dockerfile에 넣지 않는다.
+ */
+export function lipreadModelId(env = ENV) {
+  const v = String(env.VITE_LIPREAD_MODEL || '').trim()
+  return v && v !== '0' ? v : null
+}

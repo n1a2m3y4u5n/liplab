@@ -97,6 +97,9 @@ print('liplab-dev config OK; DGOP_STREAM=1; LIPREAD_ROI=1; experimental flags of
     Push-Location (Join-Path $root 'backend')
     try { Invoke-Gate 'backend pytest' { & $Python -X utf8 -m pytest -q } }
     finally { Pop-Location }
+    Invoke-Gate 'lipread candidate wiring off = identical to pre-wiring (grab / input / logits / scores)' {
+        & node scripts/lipread_off_identity.mjs (Join-Path $ReportDirectory 'lipread-off-identity.json')
+    }
     Push-Location (Join-Path $root 'frontend')
     try {
         Invoke-Gate 'frontend npm test' { & npm.cmd test }

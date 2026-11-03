@@ -10,6 +10,8 @@ import { canLoadOptionalModel, configureWasm } from './modelCapability.js'
 import { decomposeToJamo, logSoftmaxRows, rankByCtc } from './ctcScore.js'
 import { extractRoiSequence, roiModelInput, rgbaToGray, landmarkGeometry, ROI_CROP } from './lipRoi.js'
 import { landmarkLips80, coordinateSequence, fusionModelInput, fusionFeeds } from './lipFusion.js'
+import { lipreadModelId } from './lipreadGate.js'
+import { MANIFEST_URL, resolveModel, bytesMatchSha256 } from './lipreadManifest.js'
 
 // 기본 끔. 모델은 로컬 시험용 서버에서만 읽으며 public/배포에 포함하지 않는다.
 const FUSION = typeof import.meta.env !== 'undefined' && import.meta.env.VITE_LIPREAD_FUSION === '1'
@@ -18,6 +20,20 @@ function fusionUrl(value) {
   const url = new URL(value)
   if (url.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) throw new Error('Fusion requires loopback HTTP')
   return url.href
+}
+// 후보 모델 ID(VITE_LIPREAD_MODEL, 기본 끔). 비어 있으면 아래 매니페스트 경로는 전혀 타지 않고 지금 경로(R2/BS) 그대로다.
+const MODEL_ID = lipreadModelId(import.meta.env)
+let candidate = null   // 매니페스트에서 고른 항목 { model, meta, fusion, sha256 } 또는 null(없음·형식 오류)
+let candidateTried = false
+async function loadCandidate() {
+  if (!candidateTried) {
+    candidateTried = true
+    try {
+      const r = await fetch(MANIFEST_URL)
+      candidate = r.ok ? resolveModel(await r.json(), MODEL_ID) : null
+    } catch { candidate = null }
+  }
+  return candidate
 }
 function modelUrls() {
   return FUSION ? {
@@ -35,10 +51,11 @@ let session = null
 let meta = null
 let loading = null
 let available = null
+let sessionFusion = FUSION   // 지금 세션이 결합(roi_z + lips) 모델인가. 후보 경로가 아니면 늘 FUSION과 같다
 
 export function lipreadRoiAvailable() {
   if (!available) {
-    available = Promise.resolve().then(() => fetch(modelUrls().meta))
+    available = Promise.resolve().then(async () => fetch(MODEL_ID ? (await loadCandidate()).meta : modelUrls().meta))
       .then(async (r) => { if (r.ok) meta = await r.json(); return r.ok })
       .catch(() => false)
   }
@@ -60,7 +77,7 @@ export async function releaseLipreadRoi() {
 
 export async function loadLipreadRoi() {
   if (!canLoadOptionalModel()) return null
-  if (session && meta) return { session, meta }
+  if (session && meta) return { session, meta, fusion: sessionFusion }
   if (!loading) {
     loading = (async () => {
       try {
@@ -68,12 +85,25 @@ export async function loadLipreadRoi() {
           ort = await import('onnxruntime-web')
           configureWasm(ort)
         }
-        const urls = modelUrls()
-        const m = meta || await fetch(urls.meta).then((r) => r.json())
-        const s = await ort.InferenceSession.create(urls.model, { executionProviders: ['wasm'] })
-        if (FUSION && (s.inputNames.length !== 2 || !s.inputNames.includes('roi_z') || !s.inputNames.includes('lips'))) throw new Error('Expected roi_z + lips')
-        session = s; meta = m
-        return { session, meta }
+        let s, m, fusion = FUSION
+        if (MODEL_ID) {
+          // 후보 경로: 매니페스트 항목의 sha256이 받은 바이트와 같을 때만 쓴다(틀리면 null → 칸이 조용히 숨는다)
+          const entry = await loadCandidate()
+          if (!entry) throw new Error('No manifest entry')
+          const bytes = new Uint8Array(await fetch(entry.model).then((r) => { if (!r.ok) throw new Error('model fetch'); return r.arrayBuffer() }))
+          if (!(await bytesMatchSha256(bytes, entry.sha256))) throw new Error('sha256 mismatch')
+          m = meta || await fetch(entry.meta).then((r) => r.json())
+          s = await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] })
+          fusion = entry.fusion
+          if (fusion ? (s.inputNames.length !== 2 || !s.inputNames.includes('roi_z') || !s.inputNames.includes('lips')) : !s.inputNames.includes('roi_z')) throw new Error('Unexpected inputs')
+        } else {
+          const urls = modelUrls()
+          m = meta || await fetch(urls.meta).then((r) => r.json())
+          s = await ort.InferenceSession.create(urls.model, { executionProviders: ['wasm'] })
+          if (FUSION && (s.inputNames.length !== 2 || !s.inputNames.includes('roi_z') || !s.inputNames.includes('lips'))) throw new Error('Expected roi_z + lips')
+        }
+        session = s; meta = m; sessionFusion = fusion
+        return { session, meta, fusion }
       } catch {
         loading = null
         return null
@@ -108,7 +138,7 @@ export function scoreLogits(logits, T, V, vocab, candidates = [], alpha = 1) {
 
 /** 모델 입력 roi_z(Float32Array T·80·80, lipRoi.roiModelInput) → logits Float32Array(T·V). */
 export async function runRoiModel(s, data, T, ortMod = ort, lips = null) {
-  if (FUSION) {
+  if (FUSION || (MODEL_ID && sessionFusion)) {
     const out = await s.run(fusionFeeds(ortMod, data, T, lips, s.inputNames))
     return out.logits.data
   }
@@ -129,8 +159,9 @@ export async function predictLipreadRoi(frames, W, H, candidates = []) {
     if (!seq) return null
     const nValid = seq.valid.filter(Boolean).length
     if (nValid < seq.valid.length * (1 - MAX_INVALID)) return null
-    const input = FUSION ? fusionModelInput(seq.roi, coordinateSequence(frames)) : roiModelInput(seq.roi)
-    if (FUSION && !input.valid.some(Boolean)) return null
+    const fusion = !!loaded.fusion
+    const input = fusion ? fusionModelInput(seq.roi, coordinateSequence(frames)) : roiModelInput(seq.roi)
+    if (fusion && !input.valid.some(Boolean)) return null
     const { data, T } = input
     const logits = await runRoiModel(loaded.session, data, T, ort, input.lips)
     const V = loaded.meta.n_vocab
@@ -155,6 +186,6 @@ export function grabRoiFrame(video, landmarks, holder) {
   holder.ctx.drawImage(video, 0, 0, W, H)
   const gray = rgbaToGray(holder.ctx.getImageData(0, 0, W, H).data, W * H)
   const frame = { t: video.currentTime * 1000, gray, geom: landmarks ? landmarkGeometry(landmarks, W, H) : null, W, H }
-  if (FUSION) frame.lips = landmarkLips80(landmarks, W, H)
+  if (FUSION || candidate?.fusion) frame.lips = landmarkLips80(landmarks, W, H)
   return frame
 }

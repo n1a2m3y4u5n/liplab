@@ -109,3 +109,5 @@ release/
 
 # P3 검사 영상·음성(얼굴이 나오는 개인정보라 저장소에 넣지 않는다, docs/pilot/battery.md)
 backend/data/pilot/media/
+# 후보 입술 읽기 모델(매니페스트와 내보낸 ONNX). 판정 전에는 배포에 넣지 않는다(11/03 검토 묶음 D)
+frontend/public/models/lipread/

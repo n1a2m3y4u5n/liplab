@@ -6,9 +6,11 @@ import shutil
 import subprocess
 import time
 
+from hosts_config import host
+
 ROOT = Path(r'D:\work\hq\projects\liplab-lab\data\nextreg_2026-11')
 BASE = Path(r'D:\work\hq\projects\liplab-lab\data\roi-kmsav\run_base')
-HOST = 'korea@100.84.54.20'
+HOST = host('lab_main')   # 주소·계정은 저장소 밖 설정(hosts_config.py)
 REMOTE = 'D:/work/hq/projects/liplab-gpu2/nextreg_2026-11'
 PYTHON = r'D:\work\hq\projects\liplab\.venv\Scripts\python.exe'
 QUEUE = r'D:\work\hq\projects\liplab-wt\nextreg\scripts\nextreg_gpu_queue.ps1'
